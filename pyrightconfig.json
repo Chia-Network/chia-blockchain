@@ -1,0 +1,18 @@
+{
+    "exclude": [ ".venv", "./lib"],
+    "venvPath": "./.venv/",
+    "typingsPath": "./typestubs",
+    "reportTypeshedErrors": true,
+    "reportMissingImports": false,
+    "reportMissingTypeStubs": false,
+
+    "executionEnvironments": [
+      {
+        "root": "./",
+        "venv": "./",
+        "extraPaths": [
+          "./lib"
+        ]
+      }
+    ]
+  }
