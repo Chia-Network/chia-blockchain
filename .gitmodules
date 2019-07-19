@@ -1,0 +1,3 @@
+[submodule "lib/chiapos"]
+	path = lib/chiapos
+	url = git@github.com:Chia-Network/proof-of-space.git
