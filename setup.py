@@ -5,7 +5,7 @@ dependencies = ['pytest', 'flake8', 'blspy==0.1.9']
 
 setup(
     name='chiablockchain',
-    version='0.2.1',
+    version='0.1.1',
     author='Mariano Sorgente',
     author_email='mariano@chia.net',
     description='Chia proof of space plotting, proving, and verifying (wraps C++)',
