@@ -21,6 +21,8 @@ pip-delete-this-directory.txt
 .cache
 .pytest_cache/
 
+# PoSpace plots
+**/*.dat
 *.mo
 *.pot
 

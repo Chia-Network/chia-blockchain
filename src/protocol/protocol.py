@@ -4,6 +4,23 @@ from cbor2 import dumps, loads
 LENGTH_BYTES: int = 5
 
 
+def transform_to_streamable(d):
+    """
+    Drill down through dictionaries and lists and transform objects with "as_bin" to bytes.
+    """
+    print("?")
+    if hasattr(d, "as_bin"):
+        return d.as_bin()
+    if isinstance(d, (str, bytes, int)):
+        return d
+    if isinstance(d, dict):
+        new_d = {}
+        for k, v in d.items():
+            new_d[transform_to_streamable(k)] = transform_to_streamable(v)
+        return new_d
+    return [transform_to_streamable(_) for _ in d]
+
+
 class ChiaProtocol(asyncio.Protocol):
     def __init__(self, on_con_lost, loop, api):
         self.loop_ = loop
@@ -23,18 +40,17 @@ class ChiaProtocol(asyncio.Protocol):
         else:
             print(f'Connection lost to {peername} exception {exc}')
 
-    def send(self, function, data):
-        encoded = dumps({"function": function, "data": data})
-        self.transport_.write(len(encoded).to_bytes(5, "big") + encoded)
+    async def send(self, function, data):
+        encoded = dumps({"function": function, "data": transform_to_streamable(data)})
+        await self.transport_.write(len(encoded).to_bytes(LENGTH_BYTES, "big") + encoded)
 
     def data_received(self, data):
         peername = self.transport_.get_extra_info('peername')
-        print(f'Received data: {data} from {peername}')
         if data is not None:
             self.message_ += data
             full_message_length = 0
             if len(self.message_) >= LENGTH_BYTES:
-                ful_message_length = int.from_bytes(self.message_[:LENGTH_BYTES], "big")
+                full_message_length = int.from_bytes(self.message_[:LENGTH_BYTES], "big")
                 if len(self.message_) - LENGTH_BYTES < full_message_length:
                     return
             else:
