@@ -1,20 +1,45 @@
 import asyncio
-from protocol import ChiaProtocol
+import cbor2
 from src.plotter import Plotter
 
 
-async def main(api_cls):
-    loop = asyncio.get_running_loop()
+LENGTH_BYTES: int = 5
 
-    on_con_lost = loop.create_future()
+class ChiaConnection:
+    def __init__(self):
+        pass
 
-    server = await loop.create_server(
-        lambda: ChiaProtocol(on_con_lost, loop, api_cls()),
-        '127.0.0.1', 8888, start_serving=False)
 
-    print(f'Starting {api_cls.__name__} server')
+async def new_connection(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+    peername = writer.get_extra_info('peername')
+    print(f'Connection from {peername}')
+    size = await reader.read(LENGTH_BYTES)
+    full_message_length = int.from_bytes(size, "big")
+    full_message = await reader.read(full_message_length)
+
+    decoded = cbor2.loads(full_message)
+    function: str = decoded["function"]
+    function_data: bytes = decoded["data"]
+
+    f = getattr(self.api_, function)
+    if f is not None:
+        print(f'Message of size {full_message_length}: {function}({function_data[:100]}) from {peername}')
+        f(function_data)
+    else:
+        print(f'Invalid message: {function} from {peername}')
+
+
+async def main(api):
+
+    async def new_connection(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+    server = await asyncio.start_server(
+        lambda x, y: ChiaConnection(x, y, api), '127.0.0.1', 8888)
+
+    addr = server.sockets[0].getsockname()
+    print(f'Serving on {addr}')
 
     async with server:
         await server.serve_forever()
 
-asyncio.run(main(Plotter))
+asyncio.run(main(Plotter()))
+# # TODO: run other servers (farmer, full node, timelord)
