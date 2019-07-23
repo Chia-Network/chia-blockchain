@@ -1,17 +1,10 @@
 {
-    "exclude": [ ".venv", "./lib"],
-    "typingsPath": "./typestubs",
-    "reportTypeshedErrors": false,
-    "reportMissingImports": false,
-    "reportMissingTypeStubs": false,
+    "ignore": ["./src/server/server.py",
+                "./src/util/streamable.py",
+                "./src/util/byte_types.py"],
+    "include": ["./src"],
     "pythonVersion": "3.7",
-
-    "executionEnvironments": [
-      {
-        "root": "./",
-        "extraPaths": [
-          "./lib"
-        ]
-      }
-    ]
+    "venvPath": ".",
+    "venv": "./.venv",
+    "reportMissingImports": false
   }

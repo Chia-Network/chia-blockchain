@@ -3,8 +3,8 @@ import secrets
 import logging
 import os
 import os.path
-from typing import List
-from blspy import PrivateKey
+from typing import List, Optional
+from blspy import PrivateKey, PublicKey, InsecureSignature
 from chiapos import DiskPlotter, DiskProver
 from .util.api_decorators import api_request
 from .util.ints import uint32, uint8
@@ -20,6 +20,17 @@ pool_pubkey = None
 plots = {}
 
 log = logging.getLogger(__name__)
+
+
+def get_quality_id(plot_seed: bytes32, index: uint8) -> uint32:
+    return uint32(index + (int.from_bytes(plot_seed[:3], "big") << 8))
+
+
+def quality_id_matches(plot_seed: bytes32, quality_id: uint32) -> Optional[uint8]:
+    index = uint8(quality_id % 256)
+    if (int.from_bytes(plot_seed[:3], "big") << 8) != (quality_id - index):
+        return None
+    return index
 
 
 @api_request(plotter_handshake=plotter_protocol.PlotterHandshake.from_bin)
@@ -81,9 +92,22 @@ async def request_proof_of_space(request: plotter_protocol.RequestProofOfSpace,
                                  source_connection: ChiaConnection,
                                  all_connections: List[ChiaConnection] = []):
     log.info(f"Calling request_proof_of_space {request}")
-    # TODO: Lookup private key, plot id
-    pass
+    for plot_seed, (sk, prover) in plots.items():
+        # Using the response id, find the right plot and index from our solutions
+        index: Optional[uint8] = quality_id_matches(plot_seed, request.response_id)
+        if index is not None:
+            proof_of_space: bytes = prover.get_full_proof(request.challenge_hash, index)
 
+            agg_pubkey = PublicKey.aggregate_insecure([pool_pubkey, sk.get_public_key()])
+            # We use a basic "insecure" signature here, which can be aggregated with
+            # the pools signature
+            plotter_signature_share: InsecureSignature = sk.sign_insecure(
+                agg_pubkey.serialize() + request.block_hash)
 
-def get_quality_id(plot_seed: bytes32, index: uint8) -> uint32:
-    return uint32(index + (int.from_bytes(plot_seed[:3], "big") << 8))
+            response: plotter_protocol.ProofOfSpaceResponse = plotter_protocol.ProofOfSpaceResponse(
+                request.block_hash,
+                plotter_signature_share,
+                proof_of_space
+            )
+            await source_connection.send("proof_of_space_response", response)
+            return

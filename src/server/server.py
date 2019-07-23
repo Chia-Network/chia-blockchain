@@ -3,6 +3,7 @@ import cbor2
 import logging
 from asyncio import IncompleteReadError
 from src.util.streamable import transform_to_streamable
+from asyncio.events import AbstractServer
 
 
 log = logging.getLogger(__name__)
@@ -37,8 +38,8 @@ class ChiaConnection:
                     raise RuntimeError("This object already has open")
                 self.open_ = True
 
-        peername = writer.get_extra_info('peername')
-        log.info(f'Connected to {peername}')
+        self.peername_ = writer.get_extra_info('peername')
+        log.info(f'Connected to {self.peername_}')
 
         try:
             while not reader.at_eof():
@@ -54,9 +55,9 @@ class ChiaConnection:
                 if f is not None:
                     await f(function_data, self, server_connections)
                 else:
-                    log.error(f'Invalid message: {function} from {peername}')
+                    log.error(f'Invalid message: {function} from {self.peername_}')
         except IncompleteReadError:
-            log.error("Received EOF, closing connection")
+            log.error(f"Received EOF from {self.peername_}, closing connection")
         finally:
             writer.close()
 
@@ -89,7 +90,7 @@ async def start_server(api, host: str, port: int):
         server_connections.append(connection)
         await connection.new_connection(reader, writer)
 
-    server = await asyncio.start_server(
+    server: AbstractServer = await asyncio.start_server(
         callback, host, port)
 
     addr = server.sockets[0].getsockname()

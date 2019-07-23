@@ -1,11 +1,11 @@
 import dataclasses
 
-from typing import Type, BinaryIO, get_type_hints
+from typing import Type, BinaryIO, get_type_hints, Any
 
 from .bin_methods import bin_methods
 
 
-def streamable(cls):
+def streamable(cls: Any):
     """
     This is a decorator for class definitions. It applies the dataclasses.dataclass
     decorator, and also allows fields to be cast to their expected type. The resulting
@@ -55,7 +55,7 @@ def streamable(cls):
                 else:
                     raise NotImplementedError(f"can't stream {v}, {f_name}")
 
-    cls1 = dataclasses.dataclass(_cls=cls, frozen=True, init=False)
+    cls1 = dataclasses.dataclass(_cls=cls, init=False, frozen=True)
 
     cls2 = type(cls.__name__, (cls1, bin_methods, _local), {})
     return cls2
