@@ -1,15 +1,14 @@
 {
     "exclude": [ ".venv", "./lib"],
-    "venvPath": "./.venv/",
     "typingsPath": "./typestubs",
-    "reportTypeshedErrors": true,
+    "reportTypeshedErrors": false,
     "reportMissingImports": false,
     "reportMissingTypeStubs": false,
+    "pythonVersion": "3.7",
 
     "executionEnvironments": [
       {
         "root": "./",
-        "venv": "./",
         "extraPaths": [
           "./lib"
         ]
