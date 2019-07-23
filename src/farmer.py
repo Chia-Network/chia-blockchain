@@ -21,8 +21,9 @@ async def challenge_response(challenge_response: plotter_protocol.ChallengeRespo
 
     quality = int.from_bytes(sha256(challenge_response.quality).digest(), "big")
 
-    # TODO: Check the real quality
-    if quality < (2 ** 254):
+    # TODO: Calculate the number of iterations using the difficulty, and compare to block time
+    if quality < (2 ** 255):
+        print("Good quality")
         # TODO: lookup the actual block hash
         block_hash = secrets.token_bytes(32)
         request = plotter_protocol.RequestProofOfSpace(challenge_response.challenge_hash,

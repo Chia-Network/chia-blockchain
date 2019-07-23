@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 from setuptools import setup
 
-dependencies = ['pytest', 'flake8', 'blspy==0.1.9']
+dependencies = ['blspy', 'cbor2']
+dev_dependencies = ['pytest', 'flake8', 'ipython']
 
 setup(
     name='chiablockchain',
@@ -12,7 +13,7 @@ setup(
     license='Apache License',
     python_requires='>=3.7',
     keywords='chia blockchain node',
-    install_requires=dependencies,
+    install_requires=dependencies + dev_dependencies,
     long_description=open('README.md').read(),
     zip_safe=False,
 )

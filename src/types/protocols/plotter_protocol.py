@@ -1,4 +1,4 @@
-from blspy import PublicKey, PrependSignature
+from blspy import PublicKey, InsecureSignature
 from src.util.streamable import streamable
 from src.util.ints import uint32
 from src.types.sized_bytes import bytes32
@@ -35,7 +35,12 @@ class RequestProofOfSpace:
 
 @streamable
 class ProofOfSpaceResponse:
-    proof: ProofOfSpace
     block_hash: bytes32
-    block_hash_signature: PrependSignature
-    proof_of_possession: PrependSignature
+    block_hash_signature_share: InsecureSignature
+    proof: ProofOfSpace
+
+    @classmethod
+    def parse(cls, f):
+        return cls(f.read(32),
+                   InsecureSignature.from_bytes(f.read(InsecureSignature.SIGNATURE_SIZE)),
+                   f.read())
