@@ -1,10 +1,12 @@
 import asyncio
 import secrets
-from blspy import PrivateKey
+import logging
 
 from src import farmer
 from src.server.server import ChiaConnection
 from src.types.protocols.plotter_protocol import PlotterHandshake, NewChallenge
+
+logging.basicConfig(format='Farmer %(name)-12s: %(levelname)-8s %(message)s', level=logging.INFO)
 
 
 async def timeout_loop(client_con: ChiaConnection):
@@ -16,12 +18,9 @@ async def timeout_loop(client_con: ChiaConnection):
 async def main():
     client_con = ChiaConnection(farmer)
     client_server = await client_con.open_connection('127.0.0.1', 8000)
-    ppk = PrivateKey.from_seed(b"123").get_public_key()
 
-    await client_con.send("plotter_handshake", PlotterHandshake(ppk))
+    await client_con.send("plotter_handshake", PlotterHandshake([sk.get_public_key() for sk in farmer.db.pool_sks]))
     timeout = asyncio.create_task(timeout_loop(client_con))
-
-    print("After timeout")
     await asyncio.gather(client_server, timeout)
 
 asyncio.run(main())

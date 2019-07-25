@@ -16,7 +16,6 @@ def make_sized_bytes(size):
         v = bytes(v)
         if not isinstance(v, bytes) or len(v) != size:
             raise ValueError("bad %s initializer %s" % (name, v))
-        print("Creating new bytesl", self, v)
         return bytes.__new__(self, v)
 
     @classmethod

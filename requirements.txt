@@ -6,7 +6,7 @@ bitstring==3.1.6
 blspy==0.1.9
 cbor2==4.1.2
 chiablockchain==0.1.1
-chiapos==0.2.1
+chiapos==0.2.2
 cppimport==18.11.8
 decorator==4.4.0
 entrypoints==0.3

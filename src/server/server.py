@@ -7,7 +7,6 @@ from asyncio.events import AbstractServer
 
 
 log = logging.getLogger(__name__)
-logging.basicConfig(format='%(name)s - %(message)s', level=logging.INFO)
 
 LENGTH_BYTES: int = 5
 
@@ -29,7 +28,6 @@ class ChiaConnection:
         async with self.write_lock_:
             self.reader_ = reader
             self.writer_ = writer
-        log.info("Calling new_connection")
         if not self.client_opened_:
             # Prevents up from opening two connections on the same object
             async with self.open_lock_:
@@ -50,7 +48,6 @@ class ChiaConnection:
                 decoded = cbor2.loads(full_message)
                 function: str = decoded["function"]
                 function_data: bytes = decoded["data"]
-                log.info(f"will call {function} {function_data}")
                 f = getattr(self.api_, function)
                 if f is not None:
                     await f(function_data, self, server_connections)
@@ -63,23 +60,25 @@ class ChiaConnection:
 
     # Opens up a connection with a server
     async def open_connection(self, url: str, port: int):
-        log.info("Calling open_connection")
+        log.info("Opening connection")
         self.client_opened_ = True
         async with self.open_lock_:
             if self.open_:
                 raise RuntimeError("Already open")
             self.open_ = True
         reader, writer = await asyncio.open_connection(url, port)
+        server_connections.append(self)
         self.open_ = True
         self.reader_ = reader
         self.writer_ = writer
+        self.peername_ = writer.get_extra_info('peername')
         return asyncio.create_task(self.new_connection(reader, writer))
 
     async def send(self, function_name: str, data: bytes):
+        log.info(f"Sending {function_name} to peer {self.peername_}")
         async with self.write_lock_:
             transformed = transform_to_streamable(data)
             encoded = cbor2.dumps({"function": function_name, "data": transformed})
-            log.info(f"Sending message {function_name}: {transformed[:100]}...")
             self.writer_.write(len(encoded).to_bytes(LENGTH_BYTES, "big") + encoded)
             await self.writer_.drain()
 
