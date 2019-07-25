@@ -6,7 +6,7 @@ dev_dependencies = ['pytest', 'flake8', 'ipython']
 
 setup(
     name='chiablockchain',
-    version='0.1.1',
+    version='0.1.2',
     author='Mariano Sorgente',
     author_email='mariano@chia.net',
     description='Chia proof of space plotting, proving, and verifying (wraps C++)',
