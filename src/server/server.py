@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import asyncio
 import cbor2
 import logging
-from asyncio import IncompleteReadError
+from asyncio import IncompleteReadError, Lock
 from src.util.streamable import transform_to_streamable
+from typing import List
 from asyncio.events import AbstractServer
 
 
@@ -11,17 +14,41 @@ log = logging.getLogger(__name__)
 LENGTH_BYTES: int = 5
 
 
-server_connections = []
+class PeerConnections():
+    def __init__(self, all_connections: List[ChiaConnection] = []):
+        self.connections_lock_ = Lock()
+        self.all_connections_ = all_connections
+
+    async def add(self, connection: ChiaConnection):
+        async with self.connections_lock_:
+            self.all_connections_.append(connection)
+
+    async def remove(self, connection: ChiaConnection):
+        async with self.connections_lock_:
+            self.all_connections_.remove(connection)
+
+    async def get_lock(self):
+        return self.connections_lock_
+
+    async def get_connections(self):
+        return self.all_connections_
+
+
+peer_connections = PeerConnections()
 
 
 # A new ChiaConnection object is created every time a connection is opened
 class ChiaConnection:
-    def __init__(self, api):
+    def __init__(self, api, connection_type=""):
         self.api_ = api
         self.open_ = False
         self.open_lock_ = asyncio.Lock()
         self.write_lock_ = asyncio.Lock()
         self.client_opened_ = False
+        self.connection_type_ = connection_type
+
+    def get_connection_type(self):
+        return self.connection_type_
 
     # Handles an open connection, infinite loop, until EOF
     async def new_connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
@@ -37,7 +64,6 @@ class ChiaConnection:
                 self.open_ = True
 
         self.peername_ = writer.get_extra_info('peername')
-        log.info(f'Connected to {self.peername_}')
 
         try:
             while not reader.at_eof():
@@ -50,24 +76,24 @@ class ChiaConnection:
                 function_data: bytes = decoded["data"]
                 f = getattr(self.api_, function)
                 if f is not None:
-                    await f(function_data, self, server_connections)
+                    await f(function_data, self, peer_connections)
                 else:
                     log.error(f'Invalid message: {function} from {self.peername_}')
         except IncompleteReadError:
-            log.error(f"Received EOF from {self.peername_}, closing connection")
+            log.warn(f"Received EOF from {self.peername_}, closing connection")
         finally:
+            await peer_connections.remove(self)
             writer.close()
 
     # Opens up a connection with a server
     async def open_connection(self, url: str, port: int):
-        log.info("Opening connection")
         self.client_opened_ = True
         async with self.open_lock_:
             if self.open_:
                 raise RuntimeError("Already open")
             self.open_ = True
         reader, writer = await asyncio.open_connection(url, port)
-        server_connections.append(self)
+        await peer_connections.add(self)
         self.open_ = True
         self.reader_ = reader
         self.writer_ = writer
@@ -83,10 +109,10 @@ class ChiaConnection:
             await self.writer_.drain()
 
 
-async def start_server(api, host: str, port: int):
+async def start_server(api, host: str, port: int, connection_type=""):
     async def callback(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        connection = ChiaConnection(api)
-        server_connections.append(connection)
+        connection = ChiaConnection(api, connection_type)
+        await peer_connections.add(connection)
         await connection.new_connection(reader, writer)
 
     server: AbstractServer = await asyncio.start_server(

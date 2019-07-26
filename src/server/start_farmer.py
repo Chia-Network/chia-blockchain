@@ -1,26 +1,33 @@
 import asyncio
-import secrets
 import logging
 
 from src import farmer
-from src.server.server import ChiaConnection
-from src.types.protocols.plotter_protocol import PlotterHandshake, NewChallenge
+from src.server.server import ChiaConnection, start_server
+from src.types.protocols.plotter_protocol import PlotterHandshake
 
-logging.basicConfig(format='Farmer %(name)-12s: %(levelname)-8s %(message)s', level=logging.INFO)
-
-
-async def timeout_loop(client_con: ChiaConnection):
-    while True:
-        await asyncio.sleep(5)
-        await client_con.send("new_challenge", NewChallenge(secrets.token_bytes(32)))
+logging.basicConfig(format='Farmer %(name)-23s: %(levelname)-8s %(message)s', level=logging.INFO)
 
 
 async def main():
     client_con = ChiaConnection(farmer)
-    client_server = await client_con.open_connection('127.0.0.1', 8000)
+    total_time: int = 0
+    succeeded: bool = False
+    while total_time < 20 and not succeeded:
+        try:
+            client_con = ChiaConnection(farmer, "plotter")
+            await client_con.open_connection(farmer.plotter_ip, farmer.plotter_port)
+            succeeded = True
+        except ConnectionRefusedError:
+            print(f"Connection to {farmer.plotter_ip}:{farmer.plotter_port} refused.")
+            await asyncio.sleep(5)
+        total_time += 5
+    if not succeeded:
+        raise TimeoutError("Failed to connect to plotter.")
 
-    await client_con.send("plotter_handshake", PlotterHandshake([sk.get_public_key() for sk in farmer.db.pool_sks]))
-    timeout = asyncio.create_task(timeout_loop(client_con))
-    await asyncio.gather(client_server, timeout)
+    # Sends a handshake to the plotter
+    await client_con.send("plotter_handshake",
+                          PlotterHandshake([sk.get_public_key() for sk in farmer.db.pool_sks]))
+    # Starts the farmer server (which full nodes can connect to)
+    await start_server(farmer, '127.0.0.1', farmer.farmer_port, "full_node")
 
 asyncio.run(main())
