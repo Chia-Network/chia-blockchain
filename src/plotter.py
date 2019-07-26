@@ -4,7 +4,7 @@ import logging
 import os
 import os.path
 from asyncio import Lock
-from typing import List, Dict, Tuple
+from typing import Dict, Tuple
 from blspy import PrivateKey, PublicKey, PrependSignature
 from chiapos import DiskPlotter, DiskProver
 from src.util.api_decorators import api_request
@@ -12,11 +12,12 @@ from src.util.ints import uint8
 from src.types.protocols import plotter_protocol
 from src.types.sized_bytes import bytes32
 from src.types.proof_of_space import ProofOfSpace
-from src.server.server import ChiaConnection
+from src.server.server import ChiaConnection, PeerConnections
 
 # TODO: use config file
 PLOT_SIZE = 19
 PLOT_FILENAME = "plot-1-" + str(PLOT_SIZE) + ".dat"
+plotter_port = 8000
 
 
 # TODO: store on disk
@@ -37,7 +38,7 @@ log = logging.getLogger(__name__)
 @api_request(plotter_handshake=plotter_protocol.PlotterHandshake.from_bin)
 async def plotter_handshake(plotter_handshake: plotter_protocol.PlotterHandshake,
                             source_connection: ChiaConnection,
-                            all_connections: List[ChiaConnection] = []):
+                            all_connections: PeerConnections):
     """
     Handshake between the plotter and farmer. The plotter receives the pool public keys,
     which must be put into the plots, before the plotting process begins. We cannot
@@ -72,7 +73,7 @@ async def plotter_handshake(plotter_handshake: plotter_protocol.PlotterHandshake
 @api_request(new_challenge=plotter_protocol.NewChallenge.from_bin)
 async def new_challenge(new_challenge: plotter_protocol.NewChallenge,
                         source_connection: ChiaConnection,
-                        all_connections: List[ChiaConnection] = []):
+                        all_connections: PeerConnections):
     """
     The plotter receives a new challenge from the farmer, and looks up the quality
     for any proofs of space that are are found in the plots. If proofs are found, a
@@ -87,17 +88,18 @@ async def new_challenge(new_challenge: plotter_protocol.NewChallenge,
     async with db.lock:
         prover = db.prover
         try:
-            qualities = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
+            quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
         except RuntimeError:
+            log.warn("Error using prover object. Reinitializing prover object.")
             db.prover = DiskProver(PLOT_FILENAME)
-            qualities = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
-        for index, quality in enumerate(qualities):
+            quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
+        for index, quality_string in enumerate(quality_strings):
             response_id = sha256(db.plot_seed + uint8(index).to_bytes(1, "big")).digest()
             db.challenge_hashes[response_id] = (new_challenge.challenge_hash, index)
             response: plotter_protocol.ChallengeResponse = plotter_protocol.ChallengeResponse(
                 new_challenge.challenge_hash,
                 response_id,
-                quality
+                quality_string
             )
             all_responses.append(response)
 
@@ -108,7 +110,7 @@ async def new_challenge(new_challenge: plotter_protocol.NewChallenge,
 @api_request(request=plotter_protocol.RequestHeaderSignature.from_bin)
 async def request_header_signature(request: plotter_protocol.RequestHeaderSignature,
                                    source_connection: ChiaConnection,
-                                   all_connections: List[ChiaConnection] = []):
+                                   all_connections: PeerConnections):
     """
     The farmer requests a signature on the header hash, for one of the proofs that we found.
     We look up the correct plot based on the response id, lookup the proof, and sign
@@ -148,7 +150,7 @@ async def request_header_signature(request: plotter_protocol.RequestHeaderSignat
 @api_request(request=plotter_protocol.RequestPartialProof.from_bin)
 async def request_partial_proof(request: plotter_protocol.RequestPartialProof,
                                 source_connection: ChiaConnection,
-                                all_connections: List[ChiaConnection] = []):
+                                all_connections: PeerConnections):
     """
     The farmer requests a signature on the farmer_target, for one of the proofs that we found.
     We look up the correct plot based on the response id, lookup the proof, and sign
@@ -165,6 +167,7 @@ async def request_partial_proof(request: plotter_protocol.RequestPartialProof,
             try:
                 proof_xs: bytes = db.prover.get_full_proof(challenge_hash, index)
             except RuntimeError:
+                log.warn("Error using prover object. Reinitializing prover object.")
                 db.prover = DiskProver(PLOT_FILENAME)
                 proof_xs: bytes = db.prover.get_full_proof(challenge_hash, index)
 

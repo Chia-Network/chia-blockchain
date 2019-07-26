@@ -19,7 +19,7 @@ class NewChallenge:
 class ChallengeResponse:
     challenge_hash: bytes32
     response_id: bytes32
-    quality: bytes
+    quality_string: bytes
 
 
 @streamable
