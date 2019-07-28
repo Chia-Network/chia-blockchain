@@ -1,13 +1,32 @@
 from chiabip158 import PyBIP158
 from array import *
+from hashlib import sha256
+import random
 
-a = [1,2,3]
-b = [4,5,6]
-c = [a,b]
-d = [7,8,9]
+print("BIP 158 test")
 
-pl = PyBIP158(c)
-if pl.Match(a):
+hsharray=[]
+
+for i in range (1000):
+    hsh=bytearray(sha256(i.to_bytes(4, "big")).digest())
+    hsharray.append(hsh)
+
+pl = PyBIP158(hsharray)
+
+while True:
+  print("*** Match Test ***")
+  matcharray=[]
+  for j in range (10):
+    rando=random.randint(0,6000);
+    matchhash=bytearray(sha256(rando.to_bytes(4, "big")).digest())
+    if pl.Match(matchhash):
+        print(str(rando)+" OK")
+    else:
+        print(str(rando)+" not found")
+    matcharray.append(matchhash)
+
+  if pl.MatchAny(matcharray):
     print("OK")
-else:
-    print("NOT FOUND")
+  else:
+    print("NONE FOUND")
+    break;
