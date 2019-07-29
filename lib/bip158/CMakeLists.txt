@@ -21,7 +21,9 @@ ADD_LIBRARY(biplib ${MyCSources})
 
 add_subdirectory(lib/pybind11)
 
-pybind11_add_module(chiabip158 ${CMAKE_CURRENT_SOURCE_DIR}/python-bindings/chiabip158.cpp)
+pybind11_add_module(chiabip158 
+  ${CMAKE_CURRENT_SOURCE_DIR}/python-bindings/chiabip158.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/python-bindings/PyBIP158.cpp)
 
 add_executable(bip158
     main.cpp
