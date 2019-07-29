@@ -1,10 +1,11 @@
 import dataclasses
+import hashlib
 import json
 
 
-def sizedclass(cls, size):
+def sizedclass(factory, size):
     return dataclasses.field(
-        default_factory = cls,
+        default_factory = factory,
         metadata = {'size': size}
     )
 
@@ -20,7 +21,7 @@ def with_slots(cls):
 
 class Transportable:
     @classmethod
-    def import(cls, compact: bytes):
+    def import_compact(cls, compact: bytes):
         args = []
         i = 0
         for field in dataclasses.fields(cls):
@@ -29,7 +30,7 @@ class Transportable:
             i += size
         return cls(*args)
     
-    def export(self):
+    def export_compact(self):
         ans = []
         for field in dataclasses.fields(self):
             ans.extend(getattr(self, field.name))
@@ -37,6 +38,13 @@ class Transportable:
 
     def export_json(self):
         return json.dumps(asdict(self))
+
+    def export_hash(self):
+        return hashlib.sha256(self.export_compact()).digest()
+
+    def __iter__(self):
+        for field in dataclasses.fields(self):
+            yield from getattr(self, field.name)
 
 
 @with_slots
@@ -101,8 +109,8 @@ class Challenge(Transportable):
 @with_slots
 @dataclasses.dataclass
 class Block(Transportable):
-    header: Header = sizedclass(Header.import, 200)
-    body: Body = sizedclass(Body.import, 184)
-    proof_time: ProofOfTime = sizedclass(ProofOfTime.import, 112)
-    proof_space: ProofOfSpace = sizedclass(ProofOfSpace.import, 584)
-    challenge: Challenge = sizedclass(Challenge.import, 80)
+    header: Header = sizedclass(Header.import_compact, 200)
+    body: Body = sizedclass(Body.import_compact, 184)
+    proof_time: ProofOfTime = sizedclass(ProofOfTime.import_compact, 112)
+    proof_space: ProofOfSpace = sizedclass(ProofOfSpace.import_compact, 584)
+    challenge: Challenge = sizedclass(Challenge.import_compact, 80)
