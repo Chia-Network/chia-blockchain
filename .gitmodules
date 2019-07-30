@@ -1,3 +1,6 @@
 [submodule "lib/chiapos"]
 	path = lib/chiapos
 	url = git@github.com:Chia-Network/proof-of-space.git
+[submodule "lib/bip158/lib/pybind11"]
+	path = lib/bip158/lib/pybind11
+	url = https://github.com/pybind/pybind11.git
