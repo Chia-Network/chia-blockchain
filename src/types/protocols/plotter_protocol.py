@@ -18,31 +18,39 @@ class NewChallenge:
 @streamable
 class ChallengeResponse:
     challenge_hash: bytes32
-    response_id: bytes32
-    quality_string: bytes
+    quality: bytes32
+
+
+@streamable
+class RequestProofOfSpace:
+    quality: bytes32
+
+
+@streamable
+class RespondProofOfSpace:
+    quality: bytes32
+    proof: ProofOfSpace
 
 
 @streamable
 class RequestHeaderSignature:
-    response_id: bytes32
+    quality: bytes32
     header_hash: bytes32
 
 
 @streamable
 class HeaderSignature:
-    response_id: bytes32
+    quality: bytes32
     header_hash_signature: PrependSignature
-    proof: ProofOfSpace
 
 
 @streamable
 class RequestPartialProof:
-    response_id: bytes32
+    quality: bytes32
     farmer_target_hash: bytes32
 
 
 @streamable
 class PartialProof:
-    response_id: bytes32
+    quality: bytes32
     farmer_target_signature: PrependSignature
-    proof: ProofOfSpace

@@ -1,15 +1,13 @@
 from blspy import PrependSignature, Signature
 from src.util.streamable import streamable
-from src.types.sized_bytes import bytes32
 from src.types.coinbase import CoinbaseInfo
-from src.types.fee_target import FeesTarget
-from typing import List
+from src.types.fees_target import FeesTarget
 
 
 @streamable
 class BlockBody:
-    coinbase_info: CoinbaseInfo
+    coinbase: CoinbaseInfo
     coinbase_signature: PrependSignature
     fees_target_info: FeesTarget
-    solutions_generator: List[bytes32]  # TODO: use actual transactions
     aggregated_signature: Signature
+    solutions_generator: bytes  # TODO: use actual transactions
