@@ -94,17 +94,52 @@ async def new_challenge(new_challenge: plotter_protocol.NewChallenge,
             db.prover = DiskProver(PLOT_FILENAME)
             quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
         for index, quality_string in enumerate(quality_strings):
-            response_id = sha256(db.plot_seed + uint8(index).to_bytes(1, "big")).digest()
-            db.challenge_hashes[response_id] = (new_challenge.challenge_hash, index)
+            quality = sha256(new_challenge.challenge_hash + quality_string).digest()
+            db.challenge_hashes[quality] = (new_challenge.challenge_hash, index)
             response: plotter_protocol.ChallengeResponse = plotter_protocol.ChallengeResponse(
                 new_challenge.challenge_hash,
-                response_id,
-                quality_string
+                quality
             )
             all_responses.append(response)
 
     for response in all_responses:
         await source_connection.send("challenge_response", response)
+
+
+@api_request(request=plotter_protocol.RequestProofOfSpace.from_bin)
+async def request_proof_of_space(request: plotter_protocol.RequestProofOfSpace,
+                                 source_connection: ChiaConnection,
+                                 all_connections: PeerConnections):
+    """
+    The farmer requests a signature on the header hash, for one of the proofs that we found.
+    We look up the correct plot based on the quality, lookup the proof, and return it.
+    """
+
+    async with db.lock:
+        try:
+            # Using the quality find the right plot and index from our solutions
+            challenge_hash, index = db.challenge_hashes[request.quality]
+        except KeyError:
+            log.warn(f"Quality {request.quality} not found")
+            return
+        if index is not None:
+            try:
+                proof_xs: bytes = db.prover.get_full_proof(challenge_hash, index)
+            except RuntimeError:
+                db.prover = DiskProver(PLOT_FILENAME)
+                proof_xs: bytes = db.prover.get_full_proof(challenge_hash, index)
+
+            proof_of_space: ProofOfSpace = ProofOfSpace(db.pool_pubkey,
+                                                        db.sk.get_public_key(),
+                                                        uint8(db.prover.get_size()),
+                                                        proof_xs)
+
+            response: plotter_protocol.RespondProofOfSpace = plotter_protocol.RespondProofOfSpace(
+                request.quality,
+                proof_of_space
+            )
+            await source_connection.send("respond_proof_of_space", response)
+            return
 
 
 @api_request(request=plotter_protocol.RequestHeaderSignature.from_bin)
@@ -113,38 +148,21 @@ async def request_header_signature(request: plotter_protocol.RequestHeaderSignat
                                    all_connections: PeerConnections):
     """
     The farmer requests a signature on the header hash, for one of the proofs that we found.
-    We look up the correct plot based on the response id, lookup the proof, and sign
-    the header hash using the plot private key.
+    A signature is created on the header hash using the plot private key.
     """
 
     async with db.lock:
-        try:
-            # Using the response id, find the right plot and index from our solutions
-            challenge_hash, index = db.challenge_hashes[request.response_id]
-        except KeyError:
-            log.warn(f"Response id {request.response_id} not found")
-            return
-        if index is not None:
-            try:
-                proof_xs: bytes = db.prover.get_full_proof(challenge_hash, index)
-            except RuntimeError:
-                db.prover = DiskProver(PLOT_FILENAME)
-                proof_xs: bytes = db.prover.get_full_proof(challenge_hash, index)
+        # TODO: when we have multiple plots, use the right sk based on request.quality
+        assert request.quality in db.challenge_hashes
 
-            proof_of_space: ProofOfSpace = ProofOfSpace(db.pool_pubkey,
-                                                        db.sk.get_public_key(),
-                                                        uint8(db.prover.get_size()),
-                                                        proof_xs)
+        header_hash_signature: PrependSignature = db.sk.sign_prepend(request.header_hash)
 
-            header_hash_signature: PrependSignature = db.sk.sign_prepend(request.header_hash)
-
-            response: plotter_protocol.HeaderSignature = plotter_protocol.HeaderSignature(
-                request.response_id,
-                header_hash_signature,
-                proof_of_space
-            )
-            await source_connection.send("header_signature", response)
-            return
+        response: plotter_protocol.HeaderSignature = plotter_protocol.HeaderSignature(
+            request.quality,
+            header_hash_signature,
+        )
+        await source_connection.send("header_signature", response)
+        return
 
 
 @api_request(request=plotter_protocol.RequestPartialProof.from_bin)
@@ -153,35 +171,16 @@ async def request_partial_proof(request: plotter_protocol.RequestPartialProof,
                                 all_connections: PeerConnections):
     """
     The farmer requests a signature on the farmer_target, for one of the proofs that we found.
-    We look up the correct plot based on the response id, lookup the proof, and sign
+    We look up the correct plot based on the quality, lookup the proof, and sign
     the farmer target hash using the plot private key. This will be used as a pool share.
     """
     async with db.lock:
-        try:
-            # Using the response id, find the right plot and index from our solutions
-            challenge_hash, index = db.challenge_hashes[request.response_id]
-        except KeyError:
-            log.warn(f"Response id {request.response_id} not found")
-            return
-        if index is not None:
-            try:
-                proof_xs: bytes = db.prover.get_full_proof(challenge_hash, index)
-            except RuntimeError:
-                log.warn("Error using prover object. Reinitializing prover object.")
-                db.prover = DiskProver(PLOT_FILENAME)
-                proof_xs: bytes = db.prover.get_full_proof(challenge_hash, index)
+        # TODO: when we have multiple plots, use the right sk based on request.quality
+        farmer_target_signature: PrependSignature = db.sk.sign_prepend(request.farmer_target_hash)
 
-            proof_of_space: ProofOfSpace = ProofOfSpace(db.pool_pubkey,
-                                                        db.sk.get_public_key(),
-                                                        uint8(db.prover.get_size()),
-                                                        proof_xs)
-
-            farmer_target_signature: PrependSignature = db.sk.sign_prepend(request.farmer_target_hash)
-
-            response: plotter_protocol.PartialProof = plotter_protocol.PartialProof(
-                request.response_id,
-                farmer_target_signature,
-                proof_of_space
-            )
-            await source_connection.send("partial_proof", response)
-            return
+        response: plotter_protocol.PartialProof = plotter_protocol.PartialProof(
+            request.quality,
+            farmer_target_signature
+        )
+        await source_connection.send("partial_proof", response)
+        return

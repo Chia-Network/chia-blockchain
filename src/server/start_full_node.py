@@ -19,7 +19,7 @@ async def timeout_loop(client_con: ChiaConnection):
         await client_con.send("proof_of_space_finalized",
                               ProofOfSpaceFinalized(secrets.token_bytes(32),
                                                     height,
-                                                    secrets.token_bytes(5)))
+                                                    secrets.token_bytes(32)))
 
 
 async def main():
