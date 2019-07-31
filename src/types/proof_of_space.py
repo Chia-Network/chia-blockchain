@@ -1,6 +1,6 @@
 from blspy import PublicKey
-from ..util.streamable import streamable
-from ..util.ints import uint8
+from src.util.streamable import streamable, StreamableList
+from src.util.ints import uint8
 
 
 @streamable
@@ -8,4 +8,4 @@ class ProofOfSpace:
     pool_pubkey: PublicKey
     plot_pubkey: PublicKey
     size: uint8
-    proof: bytes
+    proof: StreamableList(uint8)

@@ -1,9 +1,9 @@
 import dataclasses
 from blspy import PublicKey, Signature, PrependSignature
-from typing import Type, BinaryIO, get_type_hints, Any
-from src.util.ints import uint16
-
-from .bin_methods import bin_methods
+from typing import Type, BinaryIO, get_type_hints, Any, Optional, List
+from src.util.ints import uint32, uint8
+from src.util.type_checking import ArgTypeChecker
+from src.util.bin_methods import BinMethods
 
 
 # TODO: Remove hack, this allows streaming these objects from binary
@@ -22,33 +22,15 @@ def streamable(cls: Any):
     have it.
     """
 
-    class _local:
-        def __init__(self, *args):
-            fields = get_type_hints(self)
-            la, lf = len(args), len(fields)
-            if la != lf:
-                raise ValueError("got %d and expected %d args" % (la, lf))
-            for a, (f_name, f_type) in zip(args, fields.items()):
-                if not isinstance(a, f_type):
-                    a = f_type(a)
-                if not isinstance(a, f_type):
-                    raise ValueError("wrong type for %s" % f_name)
-                object.__setattr__(self, f_name, a)
-
+    class _Local:
         @classmethod
         def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:
             values = []
-            saw_bytes = False
             for f_name, f_type in get_type_hints(cls).items():
-                if saw_bytes:
-                    raise ValueError("Bytes can only be the last object")
                 if hasattr(f_type, "parse"):
                     values.append(f_type.parse(f))
                 elif hasattr(f_type, "from_bytes") and size_hints[f_type.__name__]:
                     values.append(f_type.from_bytes(f.read(size_hints[f_type.__name__])))
-                elif f_type == bytes:
-                    values.append(f.read())
-                    saw_bytes = True
                 else:
                     raise NotImplementedError
             return cls(*values)
@@ -60,26 +42,22 @@ def streamable(cls: Any):
                     v.stream(f)
                 elif hasattr(f_type, "serialize"):
                     f.write(v.serialize())
-                elif isinstance(v, bytes):
-                    f.write(v)
                 else:
                     raise NotImplementedError(f"can't stream {v}, {f_name}")
 
     cls1 = dataclasses.dataclass(_cls=cls, init=False, frozen=True)
-
-    cls2 = type(cls.__name__, (cls1, bin_methods, _local), {})
-    return cls2
+    return type(cls.__name__, (cls1, BinMethods, ArgTypeChecker, _Local), {})
 
 
 def StreamableList(the_type):
     """
     This creates a streamable homogenous list of the given streamable object. It has
-    a 16-bit unsigned prefix length, so lists are limited to a length of 65535.
+    a 32-bit unsigned prefix length, so lists are limited to a length of 2^32 - 1.
     """
 
     cls_name = "%sList" % the_type.__name__
 
-    def __init__(self, items):
+    def __init__(self, items: List[the_type]):
         self._items = tuple(items)
 
     def __iter__(self):
@@ -87,7 +65,7 @@ def StreamableList(the_type):
 
     @classmethod
     def parse(cls: Type[cls_name], f: BinaryIO) -> cls_name:
-        count = uint16.parse(f)
+        count = uint32.parse(f)
         items = []
         for _ in range(count):
             if hasattr(the_type, "parse"):
@@ -99,7 +77,7 @@ def StreamableList(the_type):
         return cls(items)
 
     def stream(self, f: BinaryIO) -> None:
-        count = uint16(len(self._items))
+        count = uint32(len(self._items))
         count.stream(f)
         for item in self._items:
             if hasattr(type(item), "stream"):
@@ -118,21 +96,54 @@ def StreamableList(the_type):
     namespace = dict(
         __init__=__init__, __iter__=__iter__, parse=parse,
         stream=stream, __str__=__str__, __repr__=__repr__)
-    streamable_list_type = type(cls_name, (bin_methods,), namespace)
+    streamable_list_type = type(cls_name, (BinMethods,), namespace)
     return streamable_list_type
 
 
-def transform_to_streamable(d):
+def StreamableOptional(the_type):
     """
-    Drill down through dictionaries and lists and transform objects with "as_bin" to bytes.
+    This creates a streamable optional of the given streamable object. It has
+    a 1 byte big-endian prefix which is equal to 1 if the element is there,
+    and 0 if the element is not there.
     """
-    if hasattr(d, "as_bin"):
-        return d.as_bin()
-    if isinstance(d, (str, bytes, int)):
-        return d
-    if isinstance(d, dict):
-        new_d = {}
-        for k, v in d.items():
-            new_d[transform_to_streamable(k)] = transform_to_streamable(v)
-        return new_d
-    return [transform_to_streamable(_) for _ in d]
+
+    cls_name = "%sOptional" % the_type.__name__
+
+    def __init__(self, item: Optional[the_type]):
+        self._item = item
+
+    @classmethod
+    def parse(cls: Type[cls_name], f: BinaryIO) -> cls_name:
+        is_present: bool = (uint8.parse(f) == 1)
+        item: Optional[the_type] = None
+        if is_present:
+            if hasattr(the_type, "parse"):
+                item = the_type.parse(f)
+            elif hasattr(the_type, "from_bytes") and size_hints[the_type.__name__]:
+                item = the_type.from_bytes(f.read(size_hints[the_type.__name__]))
+            else:
+                raise ValueError("wrong type for %s" % the_type)
+        return cls(item)
+
+    def stream(self, f: BinaryIO) -> None:
+        is_present: uint8 = uint8(1) if self._item else uint8(0)
+        is_present.stream(f)
+        if is_present == 1:
+            if hasattr(type(self._item), "stream"):
+                self._item.stream(f)
+            elif hasattr(type(self._item), "serialize"):
+                f.write(self._item.serialize())
+            else:
+                raise NotImplementedError(f"can't stream {type(self._item)}")
+
+    def __str__(self):
+        return str(self._item)
+
+    def __repr__(self):
+        return repr(self._item)
+
+    namespace = dict(
+        __init__=__init__, parse=parse,
+        stream=stream, __str__=__str__, __repr__=__repr__)
+    streamable_optional_type = type(cls_name, (BinMethods,), namespace)
+    return streamable_optional_type

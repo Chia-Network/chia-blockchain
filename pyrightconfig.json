@@ -1,6 +1,10 @@
 {
     "ignore": ["./src/server/server.py",
+                "./src/chaintypes.py",
                 "./src/util/streamable.py",
+                "./src/util/type_checking.py",
+                "./src/util/cbor_message.py",
+                "./src/util/cbor.py",
                 "./src/util/byte_types.py"],
     "include": ["./src"],
     "pythonVersion": "3.7",

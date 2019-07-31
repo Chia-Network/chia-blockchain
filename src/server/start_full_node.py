@@ -4,10 +4,15 @@ import logging
 import random
 
 from src import full_node
-from src.server.server import ChiaConnection, start_server
-from src.types.protocols.farmer_protocol import ProofOfSpaceFinalized
+from src.server.server import start_server
+from src.server.chia_connection import ChiaConnection
+from src.server.peer_connections import PeerConnections
+from src.protocols.farmer_protocol import ProofOfSpaceFinalized
 
 logging.basicConfig(format='Farmer %(name)-23s: %(levelname)-8s %(message)s', level=logging.INFO)
+
+
+global_connections = PeerConnections()
 
 
 async def timeout_loop(client_con: ChiaConnection):
@@ -23,12 +28,12 @@ async def timeout_loop(client_con: ChiaConnection):
 
 
 async def main():
-    client_con = ChiaConnection(full_node)
+    client_con = ChiaConnection(full_node, global_connections)
     total_time: int = 0
     succeeded: bool = False
     while total_time < 20 and not succeeded:
         try:
-            client_con = ChiaConnection(full_node, "farmer")
+            client_con = ChiaConnection(full_node, global_connections, "farmer")
             await client_con.open_connection(full_node.farmer_ip, full_node.farmer_port)
             succeeded = True
         except ConnectionRefusedError:
@@ -40,7 +45,8 @@ async def main():
 
     # Starts the full node server (which full nodes can connect to)
     server = asyncio.create_task(start_server(full_node, '127.0.0.1',
-                                              full_node.full_node_port, "full_node"))
+                                              full_node.full_node_port, global_connections,
+                                              "full_node"))
 
     # Starts a (hack) timeout to create challenges
     timeout = asyncio.create_task(timeout_loop(client_con))

@@ -29,7 +29,7 @@ class Transportable:
             args.append(field.default_factory(compact[i : i + size]))
             i += size
         return cls(*args)
-    
+
     def export_compact(self):
         ans = []
         for field in dataclasses.fields(self):
