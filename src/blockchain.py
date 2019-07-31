@@ -1,7 +1,8 @@
+from collections import defaultdict
 from hashlib import sha256
 from typing import List, Dict
 from src.types.sized_bytes import bytes32
-from src.types.foliage_block import FoliageBlock
+from src.types.trunk_block import TrunkBlock
 from src.types.block_body import BlockBody
 from src.types.block_header import BlockHeader
 from src.types.full_block import FullBlock
@@ -11,31 +12,68 @@ genesis_block_bytes: bytes = b'\x87\xe9x\x8aDk\xd7\x0f\xec\xab\xa7d\xb2y\x1afW:\
 
 
 class Blockchain:
-    heads: List[FoliageBlock] = []
-    blocks: Dict[bytes32, FoliageBlock] = {}
-
     def __init__(self):
-        pass
-        # genesis_block: FullBlock = FullBlock.from_bytes(genesis_block_bytes)
-        # self.heads = [genesis_block.foliage_block]
-        # self.blocks[sha256(genesis_block.foliage_block.header.serialize()).digest()] = genesis_block.foliage_block
+        genesis_trunk = FullBlock.from_bytes(genesis_block_bytes).trunk_block
+        self.heads: List[TrunkBlock] = [genesis_trunk]
+        self.blocks: Dict[bytes32, TrunkBlock] = {
+            genesis_trunk.header.header_hash: genesis_trunk
+        }
+        # Block is unconnected iff floating_demand[prev_hash] contains header_hash
+        self.floating_demand: Dict[bytes32, List[bytes32]] = \
+            collections.defaultdict(list)
 
-    def get_current_heads(self) -> FoliageBlock:
+
+    def get_current_heads(self) -> List[TrunkBlock]:
         return self.heads
 
-    def add_block(self, new_block_foliage, new_block_body: BlockBody) -> bool:
-        if new_block_foliage.challenge.height > min([b.challenge.height for b in self.heads]):
-            self.heads.append(new_block_foliage)
-            self.heads = sorted(self.heads, key=lambda b: b.challenge.height)[1:4]
-            return True
 
+    def _reconsider_heads(self, trunk: TrunkBlock) -> bool:
+        if trunk.challenge.height > min(t.challenge.height for t in self.heads):
+            self.heads.append(trunk)
+            while len(self.heads) >= 4:
+                self.heads.sort(key = lambda b: b.challenge.height, reverse = True)
+                self.heads.pop()
+            return True
         return False
 
-    def block_can_be_added(self, new_block_header: BlockHeader, new_block_body: BlockBody):
-        # new_block_header.data.previous_header_hash
-        # hashes: List[bytes32] = [sha256(h.header.data).digest() for h in self.heads]
-        # if new_block_header.data.previous_header_hash not in hashes:
-        #     return False
 
-        # TODO: validate everything
-        return True
+    def add_block(self, block: FullBlock) -> bool:
+        if not block.is_valid():
+            # TODO: discredit/blacklist sender
+            return False
+        
+        trunk = block.trunk_block
+        prev_hash = trunk.prev_header_hash
+        prev_trunk = self.blocks[prev_hash]
+        header_hash = trunk.header.header_hash
+        height = trunk.challenge.height
+
+        self.blocks[header_hash] = trunk
+        added_to_head = False
+
+        # if this block is connected...
+        if prev_hash in self.floating_demand.get(prev_trunk.prev_header_hash, ()):
+            added_to_head |= self._reconsider_heads(block)
+            
+            # DFS to connect floating chain
+            if (stack := self.floating_demand.pop(prev_hash, [])):
+                while stack:
+                    sky_block_hash = stack.pop()
+                    added_to_head |= self._reconsider_heads(self.blocks[sky_block_hash])
+                    stack.extend(self.floating_demand.pop(sky_block_hash, []))
+        else:
+            # Block is floating
+            self.floating_demand[prev_hash].append(header_hash)
+        
+        return added_to_head
+
+
+    def heads_lca(self):
+        cur = self.heads[:]
+        heights = [t.challenge.height for t in cur]
+        while any(h != heights[0] for h in heights):
+            i = heights.index(max(heights))
+            cur[i] = self.blocks[cur[i].prev_header_hash]
+            heights[i] = cur[i].challenge.height
+        return cur[0]
+

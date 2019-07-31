@@ -12,3 +12,7 @@ class BlockBody:
     fees_target_info: FeesTarget
     aggregated_signature: Signature
     solutions_generator: bytes32  # TODO: use actual transactions
+
+    def is_valid(self):
+        # TODO
+        return True

@@ -9,3 +9,7 @@ class ProofOfSpace:
     plot_pubkey: PublicKey
     size: uint8
     proof: StreamableList(uint8)
+
+    def is_valid(self):
+        # TODO
+        return True
