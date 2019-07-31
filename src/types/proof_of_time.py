@@ -16,3 +16,7 @@ class ProofOfTime:
     output: ProofOfTimeOutput
     witness_type: uint8
     witness: StreamableList(ClassgroupElement)
+
+    def is_valid(self):
+        # TODO
+        return True

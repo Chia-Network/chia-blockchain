@@ -1,5 +1,5 @@
 import dataclasses
-from blspy import PublicKey, Signature, PrependSignature
+#from blspy import PublicKey, Signature, PrependSignature
 from typing import Type, BinaryIO, get_type_hints, Any, Optional, List
 from src.util.ints import uint32, uint8
 from src.util.type_checking import ArgTypeChecker
@@ -7,6 +7,13 @@ from src.util.bin_methods import BinMethods
 
 
 # TODO: Remove hack, this allows streaming these objects from binary
+"""
+size_hints = {
+    "PublicKey": PublicKey.PUBLIC_KEY_SIZE,
+    "Signature": Signature.SIGNATURE_SIZE,
+    "PrependSignature": PrependSignature.SIGNATURE_SIZE
+}
+"""
 size_hints = {
     "PublicKey": PublicKey.PUBLIC_KEY_SIZE,
     "Signature": Signature.SIGNATURE_SIZE,
@@ -17,9 +24,9 @@ size_hints = {
 def streamable(cls: Any):
     """
     This is a decorator for class definitions. It applies the dataclasses.dataclass
-    decorator, and also allows fields to be cast to their expected type. The resulting
-    class also gets parse and stream for free, as long as all its constituent elements
-    have it.
+    decorator, places each field into slots, and also allows fields to be cast to their
+    expected type. The resulting class also gets parse and stream for free, as long as 
+    all its constituent elements have it.
     """
 
     class _Local:
@@ -45,8 +52,13 @@ def streamable(cls: Any):
                 else:
                     raise NotImplementedError(f"can't stream {v}, {f_name}")
 
-    cls1 = dataclasses.dataclass(_cls=cls, init=False, frozen=True)
-    return type(cls.__name__, (cls1, BinMethods, ArgTypeChecker, _Local), {})
+    clsdict = dict(cls.__dict__)
+    clsdict['__slots__'] = tuple(vars(cls)['__annotations__'].keys())
+    for key in clsdict['__slots__']:
+        clsdict.pop(key, None)
+    clsdict.pop('__dict__', None)
+    cls1 = dataclasses.dataclass(cls, init=False, frozen=True)
+    return type(cls.__name__, (cls1, BinMethods, ArgTypeChecker, _Local), clsdict)
 
 
 def StreamableList(the_type):

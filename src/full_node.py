@@ -14,7 +14,7 @@ from src.server.peer_connections import PeerConnections
 from src.types.sized_bytes import bytes32
 from src.util.block_rewards import calculate_block_reward
 from src.types.block_body import BlockBody
-from src.types.foliage_block import FoliageBlock
+from src.types.trunk_block import TrunkBlock
 from src.types.block_header import BlockHeaderData, BlockHeader
 from src.types.proof_of_space import ProofOfSpace
 from src.types.classgroup import ClassgroupElement
@@ -61,8 +61,8 @@ async def request_header_hash(request: farmer_protocol.RequestHeaderHash,
 
     async with db.lock:
         # Retrieves the correct head for the challenge
-        heads: List[FoliageBlock] = db.blockchain.get_current_heads()
-        target_head: Optional[FoliageBlock] = None
+        heads: List[TrunkBlock] = db.blockchain.get_current_heads()
+        target_head: Optional[TrunkBlock] = None
         for head in heads:
             if sha256(head.challenge.serialize()).digest() == request.challenge_hash:
                 target_head = head
@@ -90,8 +90,8 @@ async def request_header_hash(request: farmer_protocol.RequestHeaderHash,
                                     fees, aggregate_sig, transactions_generator)
 
         # Creates the block header
-        # previous_header_hash: bytes32 = sha256(target_head.header).digest()
-        previous_header_hash: bytes32 = bytes32([0] * 32)
+        # prev_header_hash: bytes32 = sha256(target_head.header).digest()
+        prev_header_hash: bytes32 = bytes32([0] * 32)
         timestamp: uint64 = uint64(time.time())
 
         # TODO: use a real BIP158 filter based on transactions
@@ -99,7 +99,7 @@ async def request_header_hash(request: farmer_protocol.RequestHeaderHash,
         proof_of_space_hash: bytes32 = sha256(request.proof_of_space.serialize()).digest()
         body_hash: BlockBody = sha256(body.serialize()).digest()
         extension_data: bytes32 = bytes32([0] * 32)
-        block_header_data: BlockHeaderData = BlockHeaderData(previous_header_hash, timestamp,
+        block_header_data: BlockHeaderData = BlockHeaderData(prev_header_hash, timestamp,
                                                              filter_hash, proof_of_space_hash,
                                                              body_hash, extension_data)
 
@@ -136,8 +136,8 @@ async def header_signature(header_signature: farmer_protocol.HeaderSignature,
         pot_proof = ProofOfTime(pot_output, 1, [ClassgroupElement(0, 0)])
 
         chall: Challenge = Challenge(sha256(pos.serialize()).digest(), sha256(pot_output.serialize()).digest(), 0, 0)
-        foliage: FoliageBlock = FoliageBlock(pos, pot_output, pot_proof, chall, block_header)
-        genesis_block: FullBlock = FullBlock(foliage, block_body)
+        trunk: TrunkBlock = TrunkBlock(pos, pot_output, pot_proof, chall, block_header)
+        genesis_block: FullBlock = FullBlock(trunk, block_body)
 
         log.error(f"FULL GENESIS BLOC: {genesis_block.serialize()}")
 
