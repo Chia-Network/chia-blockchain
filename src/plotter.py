@@ -9,10 +9,11 @@ from blspy import PrivateKey, PublicKey, PrependSignature
 from chiapos import DiskPlotter, DiskProver
 from src.util.api_decorators import api_request
 from src.util.ints import uint8
-from src.types.protocols import plotter_protocol
+from src.protocols import plotter_protocol
 from src.types.sized_bytes import bytes32
 from src.types.proof_of_space import ProofOfSpace
-from src.server.server import ChiaConnection, PeerConnections
+from src.server.chia_connection import ChiaConnection
+from src.server.peer_connections import PeerConnections
 
 # TODO: use config file
 PLOT_SIZE = 19
@@ -35,7 +36,7 @@ db: Database = Database()
 log = logging.getLogger(__name__)
 
 
-@api_request(plotter_handshake=plotter_protocol.PlotterHandshake.from_bin)
+@api_request
 async def plotter_handshake(plotter_handshake: plotter_protocol.PlotterHandshake,
                             source_connection: ChiaConnection,
                             all_connections: PeerConnections):
@@ -57,7 +58,7 @@ async def plotter_handshake(plotter_handshake: plotter_protocol.PlotterHandshake
     sk: PrivateKey = PrivateKey.from_seed(seed)
 
     public_key_ser = sk.get_public_key().serialize()
-    pool_pubkey: PublicKey = list(plotter_handshake.pool_pubkeys)[0]
+    pool_pubkey: PublicKey = plotter_handshake.pool_pubkeys[0]
 
     plot_seed: bytes32 = sha256(pool_pubkey.serialize() + public_key_ser).digest()
     plotter: DiskPlotter = DiskPlotter()
@@ -70,7 +71,7 @@ async def plotter_handshake(plotter_handshake: plotter_protocol.PlotterHandshake
         db.sk = sk
 
 
-@api_request(new_challenge=plotter_protocol.NewChallenge.from_bin)
+@api_request
 async def new_challenge(new_challenge: plotter_protocol.NewChallenge,
                         source_connection: ChiaConnection,
                         all_connections: PeerConnections):
@@ -106,7 +107,7 @@ async def new_challenge(new_challenge: plotter_protocol.NewChallenge,
         await source_connection.send("challenge_response", response)
 
 
-@api_request(request=plotter_protocol.RequestProofOfSpace.from_bin)
+@api_request
 async def request_proof_of_space(request: plotter_protocol.RequestProofOfSpace,
                                  source_connection: ChiaConnection,
                                  all_connections: PeerConnections):
@@ -132,7 +133,7 @@ async def request_proof_of_space(request: plotter_protocol.RequestProofOfSpace,
             proof_of_space: ProofOfSpace = ProofOfSpace(db.pool_pubkey,
                                                         db.sk.get_public_key(),
                                                         uint8(db.prover.get_size()),
-                                                        proof_xs)
+                                                        list(proof_xs))
 
             response: plotter_protocol.RespondProofOfSpace = plotter_protocol.RespondProofOfSpace(
                 request.quality,
@@ -142,7 +143,7 @@ async def request_proof_of_space(request: plotter_protocol.RequestProofOfSpace,
             return
 
 
-@api_request(request=plotter_protocol.RequestHeaderSignature.from_bin)
+@api_request
 async def request_header_signature(request: plotter_protocol.RequestHeaderSignature,
                                    source_connection: ChiaConnection,
                                    all_connections: PeerConnections):
@@ -157,15 +158,15 @@ async def request_header_signature(request: plotter_protocol.RequestHeaderSignat
 
         header_hash_signature: PrependSignature = db.sk.sign_prepend(request.header_hash)
 
-        response: plotter_protocol.HeaderSignature = plotter_protocol.HeaderSignature(
+        response: plotter_protocol.RespondHeaderSignature = plotter_protocol.RespondHeaderSignature(
             request.quality,
             header_hash_signature,
         )
-        await source_connection.send("header_signature", response)
+        await source_connection.send("respond_header_signature", response)
         return
 
 
-@api_request(request=plotter_protocol.RequestPartialProof.from_bin)
+@api_request
 async def request_partial_proof(request: plotter_protocol.RequestPartialProof,
                                 source_connection: ChiaConnection,
                                 all_connections: PeerConnections):
@@ -178,9 +179,9 @@ async def request_partial_proof(request: plotter_protocol.RequestPartialProof,
         # TODO: when we have multiple plots, use the right sk based on request.quality
         farmer_target_signature: PrependSignature = db.sk.sign_prepend(request.farmer_target_hash)
 
-        response: plotter_protocol.PartialProof = plotter_protocol.PartialProof(
+        response: plotter_protocol.RespondPartialProof = plotter_protocol.RespondPartialProof(
             request.quality,
             farmer_target_signature
         )
-        await source_connection.send("partial_proof", response)
+        await source_connection.send("respond_partial_proof", response)
         return

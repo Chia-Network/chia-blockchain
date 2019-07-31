@@ -2,10 +2,10 @@ import struct
 
 from typing import Any, BinaryIO
 
-from .bin_methods import bin_methods
+from src.util.bin_methods import BinMethods
 
 
-class struct_stream(bin_methods):
+class StructStream(BinMethods):
     PACK = ""
     """
     Create a class that can parse and stream itself based on a struct.pack template string.

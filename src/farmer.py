@@ -5,8 +5,9 @@ from blspy import PrivateKey, Util, PrependSignature
 from src.util.api_decorators import api_request
 from src.types.proof_of_space import ProofOfSpace
 from src.types.coinbase import CoinbaseInfo
-from src.types.protocols import plotter_protocol, farmer_protocol
-from src.server.server import ChiaConnection, PeerConnections
+from src.protocols import plotter_protocol, farmer_protocol
+from src.server.chia_connection import ChiaConnection
+from src.server.peer_connections import PeerConnections
 import secrets
 from hashlib import sha256
 from chiapos import Verifier
@@ -30,8 +31,8 @@ class Database:
     plotter_responses_challenge: Dict[bytes32, bytes32] = {}
     plotter_responses_proofs: Dict[bytes32, ProofOfSpace] = {}
     plotter_responses_proof_hash_to_qual: Dict[bytes32, bytes32] = {}
-    pool_share_threshold = 1.5 * (2 ** 255)
-    propagate_threshold = 1.8 * (2 ** 254)
+    pool_share_threshold = 1.2 * (2 ** 255)
+    propagate_threshold = 1.2 * (2 ** 254)
     challenges: Dict[uint32, List[farmer_protocol.ProofOfSpaceFinalized]] = {}
     challenge_to_height: Dict[bytes32, uint32] = {}
     current_heads: List[Tuple[bytes32, uint32]] = []
@@ -51,7 +52,7 @@ PLOTTER PROTOCOL (FARMER <-> PLOTTER)
 """
 
 
-@api_request(challenge_response=plotter_protocol.ChallengeResponse.from_bin)
+@api_request
 async def challenge_response(challenge_response: plotter_protocol.ChallengeResponse,
                              source_connection: ChiaConnection,
                              all_connections: PeerConnections):
@@ -70,7 +71,7 @@ async def challenge_response(challenge_response: plotter_protocol.ChallengeRespo
             await source_connection.send("request_proof_of_space", request)
 
 
-@api_request(response=plotter_protocol.RespondProofOfSpace.from_bin)
+@api_request
 async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace,
                                  source_connection: ChiaConnection,
                                  all_connections: PeerConnections):
@@ -89,13 +90,13 @@ async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace,
 
     v: Verifier = Verifier()
     computed_quality_str = v.validate_proof(plot_seed, response.proof.size, bytes(challenge_hash),
-                                            response.proof.proof)
+                                            bytes(response.proof.proof))
     computed_quality = sha256(challenge_hash + computed_quality_str).digest()
     assert response.quality == computed_quality
 
     async with db.lock:
         db.plotter_responses_proofs[response.quality] = response.proof
-        db.plotter_responses_proof_hash_to_qual[sha256(response.proof.as_bin()).digest()] = response.quality
+        db.plotter_responses_proof_hash_to_qual[sha256(response.proof.serialize()).digest()] = response.quality
 
     quality_num: int = int.from_bytes(response.quality, "big")
     if quality_num < db.pool_share_threshold:
@@ -119,10 +120,10 @@ async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace,
                     await connection.send("request_header_hash", request)
 
 
-@api_request(response=plotter_protocol.HeaderSignature.from_bin)
-async def header_signature(response: plotter_protocol.HeaderSignature,
-                           source_connection: ChiaConnection,
-                           all_connections: PeerConnections):
+@api_request
+async def respond_header_signature(response: plotter_protocol.RespondHeaderSignature,
+                                   source_connection: ChiaConnection,
+                                   all_connections: PeerConnections):
     """
     Receives a signature on a block header hash, which is required for submitting
     a block to the blockchain.
@@ -136,7 +137,7 @@ async def header_signature(response: plotter_protocol.HeaderSignature,
                                                      [plot_pubkey])
 
         # TODO: wait a while if it's a good quality, but not so good.
-        pos_hash: bytes32 = sha256(proof_of_space.as_bin()).digest()
+        pos_hash: bytes32 = sha256(proof_of_space.serialize()).digest()
     request = farmer_protocol.HeaderSignature(pos_hash, header_hash, response.header_hash_signature)
 
     async with await all_connections.get_lock():
@@ -145,10 +146,10 @@ async def header_signature(response: plotter_protocol.HeaderSignature,
                 await connection.send("header_signature", request)
 
 
-@api_request(response=plotter_protocol.PartialProof.from_bin)
-async def partial_proof(response: plotter_protocol.PartialProof,
-                        source_connection: ChiaConnection,
-                        all_connections: PeerConnections):
+@api_request
+async def respond_partial_proof(response: plotter_protocol.RespondPartialProof,
+                                source_connection: ChiaConnection,
+                                all_connections: PeerConnections):
     """
     Receives a signature on the hash of the farmer payment target, which is used in a pool
     share, to tell the pool where to pay the farmer.
@@ -168,7 +169,7 @@ FARMER PROTOCOL (FARMER <-> FULL NODE)
 """
 
 
-@api_request(response=farmer_protocol.HeaderHash.from_bin)
+@api_request
 async def header_hash(response: farmer_protocol.HeaderHash,
                       source_connection: ChiaConnection,
                       all_connections: PeerConnections):
@@ -190,7 +191,7 @@ async def header_hash(response: farmer_protocol.HeaderHash,
                 await connection.send("request_header_signature", request)
 
 
-@api_request(proof_of_space_finalized=farmer_protocol.ProofOfSpaceFinalized.from_bin)
+@api_request
 async def proof_of_space_finalized(proof_of_space_finalized: farmer_protocol.ProofOfSpaceFinalized,
                                    source_connection: ChiaConnection,
                                    all_connections: PeerConnections):
@@ -210,7 +211,7 @@ async def proof_of_space_finalized(proof_of_space_finalized: farmer_protocol.Pro
                 # TODO: ask the pool for this information
                 coinbase: CoinbaseInfo = CoinbaseInfo(db.current_height, calculate_block_reward(db.current_height),
                                                       db.pool_target)
-                coinbase_signature: PrependSignature = db.pool_sks[0].sign_prepend(coinbase.as_bin())
+                coinbase_signature: PrependSignature = db.pool_sks[0].sign_prepend(coinbase.serialize())
                 db.coinbase_rewards[db.current_height] = (coinbase, coinbase_signature)
 
             log.info(f"Current height set to {db.current_height}")
@@ -229,7 +230,7 @@ async def proof_of_space_finalized(proof_of_space_finalized: farmer_protocol.Pro
                                           plotter_protocol.NewChallenge(proof_of_space_finalized.challenge_hash))
 
 
-@api_request(proof_of_space_arrived=farmer_protocol.ProofOfSpaceArrived.from_bin)
+@api_request
 async def proof_of_space_arrived(proof_of_space_arrived: farmer_protocol.ProofOfSpaceArrived,
                                  source_connection: ChiaConnection,
                                  all_connections: PeerConnections):
@@ -245,7 +246,7 @@ async def proof_of_space_arrived(proof_of_space_arrived: farmer_protocol.ProofOf
                     proof_of_space_arrived.quality_string)
 
 
-@api_request(deep_reorg_notification=farmer_protocol.DeepReorgNotification.from_bin)
+@api_request
 async def deep_reorg_notification(deep_reorg_notification: farmer_protocol.DeepReorgNotification,
                                   source_connection: ChiaConnection,
                                   all_connections: PeerConnections):
@@ -253,7 +254,7 @@ async def deep_reorg_notification(deep_reorg_notification: farmer_protocol.DeepR
     log.error(f"Deep reorg notification not implemented.")
 
 
-@api_request(proof_of_time_rate=farmer_protocol.ProofOfTimeRate.from_bin)
+@api_request
 async def proof_of_time_rate(proof_of_time_rate: farmer_protocol.ProofOfTimeRate,
                              source_connection: ChiaConnection,
                              all_connections: PeerConnections):
