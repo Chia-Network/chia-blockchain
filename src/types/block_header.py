@@ -1,3 +1,4 @@
+from hashlib import sha256
 from blspy import PrependSignature
 from src.util.streamable import streamable
 from src.util.ints import uint64
@@ -24,11 +25,7 @@ class BlockHeader:
     plotter_signature: PrependSignature
 
     def is_valid(self):
-        return all(
-            component.is_valid()
-            for key in self.__slots__
-            if (component := getattr(self, key, None)) is not None
-        )
+        return True
 
     @property
     def header_hash(self):
