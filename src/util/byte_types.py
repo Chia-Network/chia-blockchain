@@ -5,7 +5,7 @@ from .bin_methods import BinMethods
 
 def make_sized_bytes(size):
     """
-    Create a streamable type that subclasses "hexbytes" but requires instances
+    Create a streamable type that subclasses "bytes" but requires instances
     to be a certain, fixed size.
     """
     name = "bytes%d" % size
