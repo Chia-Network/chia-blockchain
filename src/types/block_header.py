@@ -25,6 +25,7 @@ class BlockHeader:
     plotter_signature: PrependSignature
 
     def is_valid(self):
+        # TODO: Check that data is valid, and that signature signs data
         return True
 
     @property

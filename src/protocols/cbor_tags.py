@@ -1,5 +1,4 @@
 from typing import Dict, Type
-from collections import ChainMap
 import importlib
 
 
@@ -13,7 +12,15 @@ filenames = ["src.protocols.farmer_protocol",
 
 mods = [importlib.import_module(filename) for filename in filenames]
 
-custom_tags_separate = [dict([(cls, cls.__tag__) for _, cls in mod.__dict__.items()
-                              if hasattr(cls, "__tag__")]) for mod in mods]
+custom_tags: Dict[Type, int] = {}
 
-custom_tags: Dict[Type, int] = dict(ChainMap(*custom_tags_separate))
+# Looks at each file in the list
+for mod in mods:
+    # Grabs all classes from that file
+    for _, cls in mod.__dict__.items():
+        # If the __tag__ attribute exists (using @cbor_message decorator)
+        if hasattr(cls, "__tag__"):
+            # Check if tag or class has already been seen, to catch typos
+            if cls in custom_tags.keys() or cls.__tag__ in custom_tags.values():
+                raise RuntimeError("Class defined twice, or tag defined twice")
+            custom_tags[cls] = cls.__tag__
