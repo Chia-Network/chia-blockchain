@@ -1,4 +1,5 @@
 # chia-blockchain
+Python 3.7 is used for this project.
 
 ### Install
 
@@ -16,4 +17,15 @@ Run the servers in the following order:
 ipython src/server/start_plotter.py
 ipython src/server/start_farmer.py
 ipython src/server/start_full_node.py
+```
+
+### Run tests
+```bash
+py.test tests -s -v
+```
+
+### Run linting
+```bash
+flake8 src
+pyright
 ```

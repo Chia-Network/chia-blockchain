@@ -69,7 +69,6 @@ async def request_header_hash(request: farmer_protocol.RequestHeaderHash,
         if target_head is None:
             log.warn(f"Challenge hash: {request.challenge_hash} not in one of three heads")
             # TODO: remove hack
-            # retur
 
         # Checks that the coinbase is well formed
         # TODO: remove redundant checks after they are added to Blockchain class
@@ -139,6 +138,6 @@ async def header_signature(header_signature: farmer_protocol.HeaderSignature,
         trunk: TrunkBlock = TrunkBlock(pos, pot_output, pot_proof, chall, block_header)
         genesis_block: FullBlock = FullBlock(trunk, block_body)
 
-        log.error(f"FULL GENESIS BLOC: {genesis_block.serialize()}")
+        log.error(f"FULL GENESIS BLOCK: {genesis_block.serialize()}")
 
         # TODO: propagate to full nodes and to timelords

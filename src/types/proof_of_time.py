@@ -1,4 +1,5 @@
-from src.util.streamable import streamable, StreamableList
+from typing import List
+from src.util.streamable import streamable
 from src.types.sized_bytes import bytes32
 from src.types.classgroup import ClassgroupElement
 from src.util.ints import uint8, uint64
@@ -15,7 +16,7 @@ class ProofOfTimeOutput:
 class ProofOfTime:
     output: ProofOfTimeOutput
     witness_type: uint8
-    witness: StreamableList(ClassgroupElement)
+    witness: List[ClassgroupElement]
 
     def is_valid(self):
         # TODO

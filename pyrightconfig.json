@@ -1,6 +1,6 @@
 {
     "ignore": ["./src/server/server.py",
-                "./src/chaintypes.py",
+                "./src/types/block_header.py",
                 "./src/util/streamable.py",
                 "./src/util/type_checking.py",
                 "./src/util/cbor_message.py",

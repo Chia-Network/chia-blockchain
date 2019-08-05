@@ -29,7 +29,8 @@ def default_encoder(encoder, value: Any):
 
 def tag_hook(decoder, tag, shareable_index=None):
     """
-    If we find a custom tag, decode this. Otherwise, just return the tag (no decoding).
+    If we find a custom tag, decode this by calling the constructor with the
+    member data items. Otherwise, just return the tag (no decoding).
     """
     for (cls, cls_tag) in custom_tags.items():
         if tag.tag == cls_tag:
