@@ -17,10 +17,7 @@ from src.types.block_body import BlockBody
 from src.types.trunk_block import TrunkBlock
 from src.types.block_header import BlockHeaderData, BlockHeader
 from src.types.proof_of_space import ProofOfSpace
-from src.types.classgroup import ClassgroupElement
-from src.types.challenge import Challenge
 from src.types.full_block import FullBlock
-from src.types.proof_of_time import ProofOfTime, ProofOfTimeOutput
 from src.types.fees_target import FeesTarget
 from src.blockchain import Blockchain
 
@@ -35,7 +32,14 @@ class Database:
     lock: Lock = Lock()
     blockchain: Blockchain = Blockchain()  # Should be stored in memory
     bodies: Dict[uint32, List[BlockBody]] = {}
+
+    # These are the blocks that we created, but don't have the PoS from farmer yet,
+    # keyed from the proof of space hash
     candidate_blocks: Dict[bytes32, Tuple[BlockBody, BlockHeaderData, ProofOfSpace]] = {}
+
+    # These are the blocks that we created, have PoS, but not PoT yet, keyed from the
+    # block header hash
+    unfinished_blocks: Dict[bytes32, FullBlock] = {}
 
 
 log = logging.getLogger(__name__)
@@ -131,13 +135,14 @@ async def header_signature(header_signature: farmer_protocol.HeaderSignature,
 
         assert db.blockchain.block_can_be_added(block_header, block_body)
 
-        pot_output = ProofOfTimeOutput(bytes32([0]*32), 0, ClassgroupElement(0, 0))
-        pot_proof = ProofOfTime(pot_output, 1, [ClassgroupElement(0, 0)])
+        # pot_output = ProofOfTimeOutput(bytes32([0]*32), 0, ClassgroupElement(0, 0))
+        # pot_proof = ProofOfTime(pot_output, 1, [ClassgroupElement(0, 0)])
+        # chall: Challenge = Challenge(sha256(pos.serialize()).digest(), sha256(pot_output.serialize()).digest(), 0, 0)
+        trunk: TrunkBlock = TrunkBlock(pos, None, None, None, block_header)
+        unfinished_block: FullBlock = FullBlock(trunk, block_body)
 
-        chall: Challenge = Challenge(sha256(pos.serialize()).digest(), sha256(pot_output.serialize()).digest(), 0, 0)
-        trunk: TrunkBlock = TrunkBlock(pos, pot_output, pot_proof, chall, block_header)
-        genesis_block: FullBlock = FullBlock(trunk, block_body)
+        db.unfinished_blocks[unfinished_block.trunk_block.header.header_hash] = unfinished_block
 
-        log.error(f"FULL GENESIS BLOCK: {genesis_block.serialize()}")
+        log.info(f"Created unfinished block: {unfinished_block}")
 
-        # TODO: propagate to full nodes and to timelords
+        # TODO: propagate to full nodes and to timelords, so they can add the PoT

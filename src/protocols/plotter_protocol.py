@@ -4,6 +4,10 @@ from src.util.streamable import List
 from src.types.sized_bytes import bytes32
 from src.types.proof_of_space import ProofOfSpace
 
+"""
+Protocol between plotter and farmer.
+"""
+
 
 @cbor_message(tag=1000)
 class PlotterHandshake:

@@ -5,6 +5,10 @@ from src.util.ints import uint64, uint32
 from src.types.proof_of_space import ProofOfSpace
 from src.types.coinbase import CoinbaseInfo
 
+"""
+Protocol between farmer and full node.
+"""
+
 
 @cbor_message(tag=2000)
 class ProofOfSpaceFinalized:
