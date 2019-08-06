@@ -18,7 +18,7 @@ class ProofOfSpaceFinalized:
 
 
 @cbor_message(tag=2001)
-class ProofOfSpaceArrived():
+class ProofOfSpaceArrived:
     height: uint32
     quality: bytes32
 

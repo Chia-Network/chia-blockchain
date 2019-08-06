@@ -5,19 +5,19 @@ from typing import List
 
 class PeerConnections():
     def __init__(self, all_connections: List[ChiaConnection] = []):
-        self.connections_lock_ = Lock()
-        self.all_connections_ = all_connections
+        self._connections_lock = Lock()
+        self._all_connections = all_connections
 
     async def add(self, connection: ChiaConnection):
-        async with self.connections_lock_:
-            self.all_connections_.append(connection)
+        async with self._connections_lock:
+            self._all_connections.append(connection)
 
     async def remove(self, connection: ChiaConnection):
-        async with self.connections_lock_:
-            self.all_connections_.remove(connection)
+        async with self._connections_lock:
+            self._all_connections.remove(connection)
 
     async def get_lock(self):
-        return self.connections_lock_
+        return self._connections_lock
 
     async def get_connections(self):
-        return self.all_connections_
+        return self._all_connections

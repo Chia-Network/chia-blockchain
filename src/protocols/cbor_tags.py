@@ -8,7 +8,11 @@ and decoded by src.util.cbor_serialization.
 """
 
 filenames = ["src.protocols.farmer_protocol",
-             "src.protocols.plotter_protocol"]
+             "src.protocols.plotter_protocol",
+             "src.protocols.peer_protocol",
+             "src.protocols.pool_protocol",
+             "src.protocols.timelord_protocol",
+             "src.protocols.wallet_protocol"]
 
 mods = [importlib.import_module(filename) for filename in filenames]
 
