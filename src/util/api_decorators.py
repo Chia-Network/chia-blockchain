@@ -5,21 +5,12 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def transform_args(kwarg_transformers, message):
-    if not isinstance(message, dict):
-        return message
-    new_message = dict(message)
-    for k, v in kwarg_transformers.items():
-        new_message[k] = v(message[k])
-    return new_message
-
-
 def api_request(f):
     """
     This decorator will log the request.
     @api_request
-    def accept_block(block):
-        # do some stuff with block as Block rather than bytes
+    def new_challenge(challenge):
+        # handle request
     """
     @functools.wraps(f)
     def f_substitute(*args, **kwargs):
