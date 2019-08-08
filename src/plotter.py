@@ -1,11 +1,10 @@
 from hashlib import sha256
-import secrets
 import logging
 import os
 import os.path
 from asyncio import Lock
 from typing import Dict, Tuple
-from blspy import PrivateKey, PublicKey, PrependSignature
+from blspy import PrivateKey, PublicKey, PrependSignature, Util
 from chiapos import DiskPlotter, DiskProver
 from src.util.api_decorators import api_request
 from src.util.ints import uint8
@@ -16,20 +15,19 @@ from src.server.chia_connection import ChiaConnection
 from src.server.peer_connections import PeerConnections
 
 # TODO: use config file
-PLOT_SIZE = 19
-PLOT_FILENAME = "plot-1-" + str(PLOT_SIZE) + ".dat"
+# SECRET_KEY: PrivateKey =
+POOL_PK: PublicKey = PrivateKey.from_seed(b'pool key 0').get_public_key()
+PLOTS = {f"plot-{n}-19.dat": (19, PrivateKey.from_seed(b'plot sk' + bytes([n])), POOL_PK) for n in range(8)}
 plotter_port = 8000
 
 
 # TODO: store on disk
-# TODO: generalize to multiple plots
 class Database:
-    pool_pubkey: PublicKey = None
-    sk: PrivateKey = None
-    plot_seed: bytes32 = None
-    prover: DiskProver = None
+    # From filename to prover
+    provers: Dict[str, DiskProver] = {}
     lock: Lock = Lock()
-    challenge_hashes: Dict[bytes32, Tuple[bytes32, uint8]] = {}
+    # From quality to (challenge_hash, filename, index)
+    challenge_hashes: Dict[bytes32, Tuple[bytes32, str, uint8]] = {}
 
 
 db: Database = Database()
@@ -45,30 +43,21 @@ async def plotter_handshake(plotter_handshake: plotter_protocol.PlotterHandshake
     which must be put into the plots, before the plotting process begins. We cannot
     use any plots which don't have one of the pool keys.
     """
-
-    if os.path.isfile(PLOT_FILENAME) and db.pool_pubkey in plotter_handshake.pool_pubkeys:
-        return
-
-    # TODO: Don't plot here; instead, filter active plots based on pks
-
-    # Uses python secure random number generation
-    seed: bytes32 = secrets.token_bytes(32)
-
-    # Creates a private key and stores it in memory
-    sk: PrivateKey = PrivateKey.from_seed(seed)
-
-    public_key_ser = sk.get_public_key().serialize()
-    pool_pubkey: PublicKey = plotter_handshake.pool_pubkeys[0]
-
-    plot_seed: bytes32 = sha256(pool_pubkey.serialize() + public_key_ser).digest()
-    plotter: DiskPlotter = DiskPlotter()
-    plotter.create_plot_disk(PLOT_FILENAME, PLOT_SIZE, bytes([]), plot_seed)
-
-    async with db.lock:
-        db.prover = DiskProver(PLOT_FILENAME)
-        db.pool_pubkey = pool_pubkey
-        db.plot_seed = plot_seed
-        db.sk = sk
+    for filename, (k, sk, pool_pubkey) in PLOTS.items():
+        # Only use plots that correct pools associated with them
+        if pool_pubkey in plotter_handshake.pool_pubkeys:
+            if not os.path.isfile(filename):
+                # Create  temporary PoSpace object, to call the calculate_plot_seed function
+                plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(pool_pubkey, sk.get_public_key())
+                plotter: DiskPlotter = DiskPlotter()
+                plotter.create_plot_disk(filename, k, bytes([]), plot_seed)
+            else:
+                # TODO: check plots are correct
+                pass
+            async with db.lock:
+                db.provers[filename] = DiskProver(filename)
+        else:
+            log.warn(f"Plot {filename} has an invalid pool key.")
 
 
 @api_request
@@ -84,24 +73,24 @@ async def new_challenge(new_challenge: plotter_protocol.NewChallenge,
     if len(new_challenge.challenge_hash) != 32:
         raise ValueError("Invalid challenge size")
 
-    # TODO: Check that the DiskProver object is fine, otherwise create a new one
     all_responses = []
     async with db.lock:
-        prover = db.prover
-        try:
-            quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
-        except RuntimeError:
-            log.warn("Error using prover object. Reinitializing prover object.")
-            db.prover = DiskProver(PLOT_FILENAME)
-            quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
-        for index, quality_string in enumerate(quality_strings):
-            quality = sha256(new_challenge.challenge_hash + quality_string).digest()
-            db.challenge_hashes[quality] = (new_challenge.challenge_hash, index)
-            response: plotter_protocol.ChallengeResponse = plotter_protocol.ChallengeResponse(
-                new_challenge.challenge_hash,
-                quality
-            )
-            all_responses.append(response)
+        for filename, prover in db.provers.items():
+            try:
+                quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
+            except RuntimeError:
+                log.warn("Error using prover object. Reinitializing prover object.")
+                db.provers[filename] = DiskProver(filename)
+                quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
+            for index, quality_string in enumerate(quality_strings):
+                quality = sha256(new_challenge.challenge_hash + quality_string).digest()
+                db.challenge_hashes[quality] = (new_challenge.challenge_hash, filename, index)
+                response: plotter_protocol.ChallengeResponse = plotter_protocol.ChallengeResponse(
+                    new_challenge.challenge_hash,
+                    quality,
+                    prover.get_size()
+                )
+                all_responses.append(response)
 
     for response in all_responses:
         await source_connection.send("challenge_response", response)
@@ -119,20 +108,20 @@ async def request_proof_of_space(request: plotter_protocol.RequestProofOfSpace,
     async with db.lock:
         try:
             # Using the quality find the right plot and index from our solutions
-            challenge_hash, index = db.challenge_hashes[request.quality]
+            challenge_hash, filename, index = db.challenge_hashes[request.quality]
         except KeyError:
             log.warn(f"Quality {request.quality} not found")
             return
         if index is not None:
             try:
-                proof_xs: bytes = db.prover.get_full_proof(challenge_hash, index)
+                proof_xs: bytes = db.provers[filename].get_full_proof(challenge_hash, index)
             except RuntimeError:
-                db.prover = DiskProver(PLOT_FILENAME)
-                proof_xs: bytes = db.prover.get_full_proof(challenge_hash, index)
+                db.provers[filename] = DiskProver(filename)
+                proof_xs: bytes = db.provers[filename].get_full_proof(challenge_hash, index)
 
-            proof_of_space: ProofOfSpace = ProofOfSpace(db.pool_pubkey,
-                                                        db.sk.get_public_key(),
-                                                        uint8(db.prover.get_size()),
+            proof_of_space: ProofOfSpace = ProofOfSpace(PLOTS[filename][2],
+                                                        PLOTS[filename][1].get_public_key(),
+                                                        uint8(PLOTS[filename][0]),
                                                         list(proof_xs))
 
             response: plotter_protocol.RespondProofOfSpace = plotter_protocol.RespondProofOfSpace(
@@ -153,17 +142,20 @@ async def request_header_signature(request: plotter_protocol.RequestHeaderSignat
     """
 
     async with db.lock:
-        # TODO: when we have multiple plots, use the right sk based on request.quality
-        assert request.quality in db.challenge_hashes
+        _, filename, _ = db.challenge_hashes[request.quality]
 
-        header_hash_signature: PrependSignature = db.sk.sign_prepend(request.header_hash)
+    header_hash_signature: PrependSignature = PLOTS[filename][1].sign_prepend(request.header_hash)
+    assert(header_hash_signature.verify([Util.hash256(request.header_hash)], [PLOTS[filename][1].get_public_key()]))
+    log.error(f"VERIFIED using {PLOTS[filename][1].get_public_key()} and {request.header_hash}")
+    log.error(f"SIG: {header_hash_signature}")
 
-        response: plotter_protocol.RespondHeaderSignature = plotter_protocol.RespondHeaderSignature(
-            request.quality,
-            header_hash_signature,
-        )
-        await source_connection.send("respond_header_signature", response)
-        return
+    response: plotter_protocol.RespondHeaderSignature = plotter_protocol.RespondHeaderSignature(
+        request.quality,
+        header_hash_signature,
+    )
+    log.error(f"Sending good signature: {response}")
+    await source_connection.send("respond_header_signature", response)
+    return
 
 
 @api_request
@@ -176,8 +168,8 @@ async def request_partial_proof(request: plotter_protocol.RequestPartialProof,
     the farmer target hash using the plot private key. This will be used as a pool share.
     """
     async with db.lock:
-        # TODO: when we have multiple plots, use the right sk based on request.quality
-        farmer_target_signature: PrependSignature = db.sk.sign_prepend(request.farmer_target_hash)
+        _, filename, _ = db.challenge_hashes[request.quality]
+        farmer_target_signature: PrependSignature = PLOTS[filename][1].sign_prepend(request.farmer_target_hash)
 
         response: plotter_protocol.RespondPartialProof = plotter_protocol.RespondPartialProof(
             request.quality,

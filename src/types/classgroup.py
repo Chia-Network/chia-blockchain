@@ -1,8 +1,8 @@
 from ..util.streamable import streamable
-from ..util.ints import uint1024
+from ..util.ints import int1024
 
 
 @streamable
 class ClassgroupElement:
-    a: uint1024
-    b: uint1024
+    a: int1024
+    b: int1024

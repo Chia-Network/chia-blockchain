@@ -38,6 +38,7 @@ class ChiaConnection:
                 self._open = True
 
         self._peername = writer.get_extra_info('peername')
+        log.info(f"New connection with {self._connection_type} {self._peername}")
 
         try:
             while not reader.at_eof():
@@ -54,7 +55,7 @@ class ChiaConnection:
                 else:
                     log.error(f'Invalid message: {function} from {self._peername}')
         except IncompleteReadError:
-            log.warn(f"Received EOF from {self._peername}, closing connection")
+            log.warn(f"Received EOF from {self._connection_type} {self._peername}, closing connection")
         finally:
             await self._peer_connections.remove(self)
             writer.close()

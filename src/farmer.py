@@ -10,10 +10,10 @@ from src.server.chia_connection import ChiaConnection
 from src.server.peer_connections import PeerConnections
 import secrets
 from hashlib import sha256
-from chiapos import Verifier
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
-from src.util.block_rewards import calculate_block_reward
+from src.consensus.block_rewards import calculate_block_reward
+from src.consensus.pot_iterations import calculate_iterations_quality
 
 # TODO: use config file
 farmer_port = 8001
@@ -21,18 +21,18 @@ plotter_ip = "127.0.0.1"
 plotter_port = 8000
 farmer_sk = PrivateKey.from_seed(secrets.token_bytes(32))
 farmer_target = sha256(farmer_sk.get_public_key().serialize()).digest()
+pool_share_threshold = 20  # To send to pool, must be expected to take less than these seconds
+propagate_threshold = 5  # To propagate to network, must be expected to take less than these seconds
 
 
 class Database:
-    pool_sks = [PrivateKey.from_seed(b'0'), PrivateKey.from_seed(b'1')]
-    pool_target = sha256(PrivateKey.from_seed(b'0').get_public_key().serialize()).digest()
     lock = asyncio.Lock()
+    pool_sks = [PrivateKey.from_seed(b'pool key 0'), PrivateKey.from_seed(b'pool key 1')]
+    pool_target = sha256(PrivateKey.from_seed(b'0').get_public_key().serialize()).digest()
     plotter_responses_header_hash: Dict[bytes32, bytes32] = {}
     plotter_responses_challenge: Dict[bytes32, bytes32] = {}
     plotter_responses_proofs: Dict[bytes32, ProofOfSpace] = {}
     plotter_responses_proof_hash_to_qual: Dict[bytes32, bytes32] = {}
-    pool_share_threshold = 1.2 * (2 ** 255)
-    propagate_threshold = 1.2 * (2 ** 254)
     challenges: Dict[uint32, List[farmer_protocol.ProofOfSpaceFinalized]] = {}
     challenge_to_height: Dict[bytes32, uint32] = {}
     current_heads: List[Tuple[bytes32, uint32]] = []
@@ -40,7 +40,7 @@ class Database:
     unfinished_challenges: Dict[uint32, List[bytes32]] = {}
     current_height: uint32 = uint32(0)
     coinbase_rewards: Dict[uint32, Any] = {}
-    proof_of_time_estimate_ips: uint64 = uint64(1000)
+    proof_of_time_estimate_ips: uint64 = uint64(3000)
 
 
 log = logging.getLogger(__name__)
@@ -61,14 +61,29 @@ async def challenge_response(challenge_response: plotter_protocol.ChallengeRespo
     of space is sufficiently good, and if so, we ask for the whole proof.
     """
 
-    quality: int = int.from_bytes(challenge_response.quality, "big")
-
-    # TODO: Calculate the number of iterations using the difficulty, and compare to block time
     async with db.lock:
-        if quality < db.pool_share_threshold or quality < db.propagate_threshold:
+        if challenge_response.quality in db.plotter_responses_challenge:
+            log.warn(f"Have already seen quality {challenge_response.quality}")
+            return
+        height: uint32 = db.challenge_to_height[challenge_response.challenge_hash]
+        difficulty: uint64 = uint64(0)
+        for posf in db.challenges[height]:
+            if posf.challenge_hash == challenge_response.challenge_hash:
+                difficulty = posf.difficulty
+        if difficulty == 0:
+            raise RuntimeError("Did not find challenge")
+
+        number_iters: uint64 = calculate_iterations_quality(challenge_response.quality,
+                                                            challenge_response.plot_size,
+                                                            difficulty)
+        estimate_secs: float = number_iters / db.proof_of_time_estimate_ips
+
+    # height: uint32 = db.challenge_to_height[challenge_response.]
+    if estimate_secs < pool_share_threshold or estimate_secs < propagate_threshold:
+        async with db.lock:
             db.plotter_responses_challenge[challenge_response.quality] = challenge_response.challenge_hash
-            request = plotter_protocol.RequestProofOfSpace(challenge_response.quality)
-            await source_connection.send("request_proof_of_space", request)
+        request = plotter_protocol.RequestProofOfSpace(challenge_response.quality)
+        await source_connection.send("request_proof_of_space", request)
 
 
 @api_request
@@ -76,43 +91,48 @@ async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace,
                                  source_connection: ChiaConnection,
                                  all_connections: PeerConnections):
     """
-    This is a response from the plotter with a proof of space. We check it's validy,
+    This is a response from the plotter with a proof of space. We check it's validity,
     and request a pool partial, a header signature, or both, if the proof is good enough.
     """
 
     async with db.lock:
         assert response.proof.pool_pubkey in [sk.get_public_key() for sk in db.pool_sks]
 
-    plot_seed: bytes32 = sha256(response.proof.pool_pubkey.serialize() +
-                                response.proof.plot_pubkey.serialize()).digest()
-    async with db.lock:
         challenge_hash: bytes32 = db.plotter_responses_challenge[response.quality]
+        challenge_height: uint32 = db.challenge_to_height[challenge_hash]
+        new_proof_height: uint32 = uint32(challenge_height + 1)
+        difficulty: uint64 = uint64(0)
+        for posf in db.challenges[challenge_height]:
+            if posf.challenge_hash == challenge_hash:
+                difficulty = posf.difficulty
+        if difficulty == 0:
+            raise RuntimeError("Did not find challenge")
 
-    v: Verifier = Verifier()
-    computed_quality_str = v.validate_proof(plot_seed, response.proof.size, bytes(challenge_hash),
-                                            bytes(response.proof.proof))
-    computed_quality = sha256(challenge_hash + computed_quality_str).digest()
+    computed_quality = response.proof.verify_and_get_quality(challenge_hash)
     assert response.quality == computed_quality
 
     async with db.lock:
         db.plotter_responses_proofs[response.quality] = response.proof
-        db.plotter_responses_proof_hash_to_qual[sha256(response.proof.serialize()).digest()] = response.quality
+        db.plotter_responses_proof_hash_to_qual[response.proof.get_hash()] = response.quality
 
-    quality_num: int = int.from_bytes(response.quality, "big")
-    if quality_num < db.pool_share_threshold:
+    number_iters: uint64 = calculate_iterations_quality(computed_quality,
+                                                        response.proof.size,
+                                                        difficulty)
+    async with db.lock:
+        estimate_secs: float = number_iters / db.proof_of_time_estimate_ips
+    if estimate_secs < pool_share_threshold:
         request = plotter_protocol.RequestPartialProof(response.quality,
                                                        sha256(farmer_target).digest())
         await source_connection.send("request_partial_proof", request)
-    if quality_num < db.propagate_threshold:
+    if estimate_secs < propagate_threshold:
+        async with db.lock:
+            if new_proof_height not in db.coinbase_rewards:
+                log.error(f"Don't have coinbase transaction for height {new_proof_height}, cannot submit PoS")
+                return
 
-        new_proof_height: uint32 = db.challenge_to_height[challenge_hash]
-        if new_proof_height not in db.coinbase_rewards:
-            log.error(f"Don't have coinbase transaction for height {new_proof_height}, cannot submit PoS")
-            return
-
-        coinbase, signature = db.coinbase_rewards[new_proof_height]
-        request = farmer_protocol.RequestHeaderHash(challenge_hash, coinbase,
-                                                    signature, farmer_target, response.proof)
+            coinbase, signature = db.coinbase_rewards[new_proof_height]
+            request = farmer_protocol.RequestHeaderHash(challenge_hash, coinbase,
+                                                        signature, farmer_target, response.proof)
 
         async with await all_connections.get_lock():
             for connection in await all_connections.get_connections():
@@ -133,11 +153,13 @@ async def respond_header_signature(response: plotter_protocol.RespondHeaderSigna
         proof_of_space: bytes32 = db.plotter_responses_proofs[response.quality]
         plot_pubkey = db.plotter_responses_proofs[response.quality].plot_pubkey
 
+        log.info(f"VERIFYING {header_hash}, {plot_pubkey}")
+        log.info(f"SIG: {response.header_hash_signature}")
         assert response.header_hash_signature.verify([Util.hash256(header_hash)],
                                                      [plot_pubkey])
 
         # TODO: wait a while if it's a good quality, but not so good.
-        pos_hash: bytes32 = sha256(proof_of_space.serialize()).digest()
+        pos_hash: bytes32 = proof_of_space.get_hash()
     request = farmer_protocol.HeaderSignature(pos_hash, header_hash, response.header_hash_signature)
 
     async with await all_connections.get_lock():
@@ -181,9 +203,10 @@ async def header_hash(response: farmer_protocol.HeaderHash,
     async with db.lock:
         quality: bytes32 = db.plotter_responses_proof_hash_to_qual[response.pos_hash]
         db.plotter_responses_header_hash[quality] = header_hash
+        log.error(f"Mapping quality to header has: {quality} {header_hash}")
 
     request = plotter_protocol.RequestHeaderSignature(quality, header_hash)
-
+    log.error(f"SENDING: {request}")
     async with await all_connections.get_lock():
         for connection in await all_connections.get_connections():
             if connection.get_connection_type() == "plotter":
@@ -208,11 +231,11 @@ async def proof_of_space_finalized(proof_of_space_finalized: farmer_protocol.Pro
             if (proof_of_space_finalized.height > db.current_height):
                 db.current_height = proof_of_space_finalized.height
 
-                # TODO: ask the pool for this information
-                coinbase: CoinbaseInfo = CoinbaseInfo(db.current_height, calculate_block_reward(db.current_height),
-                                                      db.pool_target)
-                coinbase_signature: PrependSignature = db.pool_sks[0].sign_prepend(coinbase.serialize())
-                db.coinbase_rewards[db.current_height] = (coinbase, coinbase_signature)
+            # TODO: ask the pool for this information
+            coinbase: CoinbaseInfo = CoinbaseInfo(db.current_height + 1, calculate_block_reward(db.current_height),
+                                                  db.pool_target)
+            coinbase_signature: PrependSignature = db.pool_sks[0].sign_prepend(coinbase.serialize())
+            db.coinbase_rewards[uint32(db.current_height + 1)] = (coinbase, coinbase_signature)
 
             log.info(f"Current height set to {db.current_height}")
         db.seen_challenges.add(proof_of_space_finalized.challenge_hash)

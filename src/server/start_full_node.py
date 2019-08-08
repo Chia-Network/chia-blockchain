@@ -1,56 +1,33 @@
 import asyncio
-import secrets
 import logging
-import random
-
 from src import full_node
-from src.server.server import start_server
-from src.server.chia_connection import ChiaConnection
+from src.server.server import start_server, retry_connection
 from src.server.peer_connections import PeerConnections
-from src.protocols.farmer_protocol import ProofOfSpaceFinalized
-
-logging.basicConfig(format='Farmer %(name)-23s: %(levelname)-8s %(message)s', level=logging.INFO)
 
 
+logging.basicConfig(format='FullNode %(name)-23s: %(levelname)-8s %(message)s', level=logging.INFO)
 global_connections = PeerConnections()
 
 
-async def timeout_loop(client_con: ChiaConnection):
-    height = 0
-    while True:
-        await asyncio.sleep(random.randint(1, 10))
-        if random.random() < 0.7:
-            height += 1
-        await client_con.send("proof_of_space_finalized",
-                              ProofOfSpaceFinalized(secrets.token_bytes(32),
-                                                    height,
-                                                    secrets.token_bytes(32)))
-
-
 async def main():
-    client_con = ChiaConnection(full_node, global_connections)
-    total_time: int = 0
-    succeeded: bool = False
-    while total_time < 20 and not succeeded:
-        try:
-            client_con = ChiaConnection(full_node, global_connections, "farmer")
-            await client_con.open_connection(full_node.farmer_ip, full_node.farmer_port)
-            succeeded = True
-        except ConnectionRefusedError:
-            print(f"Connection to {full_node.farmer_ip}:{full_node.farmer_port} refused.")
-            await asyncio.sleep(5)
-        total_time += 5
-    if not succeeded:
-        raise TimeoutError("Failed to connect to plotter.")
+    farmer_con_fut = retry_connection(full_node, full_node.farmer_ip, full_node.farmer_port,
+                                      "farmer", global_connections)
 
+    timelord_con_fut = retry_connection(full_node, full_node.timelord_ip, full_node.timelord_port,
+                                        "timelord", global_connections)
     # Starts the full node server (which full nodes can connect to)
     server = asyncio.create_task(start_server(full_node, '127.0.0.1',
                                               full_node.full_node_port, global_connections,
                                               "full_node"))
 
-    # Starts a (hack) timeout to create challenges
-    timeout = asyncio.create_task(timeout_loop(client_con))
+    # Both connections to farmer and timelord have been started
+    await asyncio.gather(farmer_con_fut, timelord_con_fut)
 
-    await asyncio.gather(timeout, server)
+    # Sends the latest heads and PoT rates to farmers
+    farmer_update = full_node.send_heads_to_farmers(global_connections)
+    timelord_update = full_node.send_challenges_to_timelords(global_connections)
+
+    # Waits as long as the server is active
+    await asyncio.gather(farmer_update, timelord_update, server)
 
 asyncio.run(main())

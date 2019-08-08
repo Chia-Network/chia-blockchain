@@ -3,6 +3,7 @@ from src.util.cbor_message import cbor_message
 from src.util.streamable import List
 from src.types.sized_bytes import bytes32
 from src.types.proof_of_space import ProofOfSpace
+from src.util.ints import uint8
 
 """
 Protocol between plotter and farmer.
@@ -23,6 +24,7 @@ class NewChallenge:
 class ChallengeResponse:
     challenge_hash: bytes32
     quality: bytes32
+    plot_size: uint8
 
 
 @cbor_message(tag=1003)

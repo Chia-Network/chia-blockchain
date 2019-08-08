@@ -15,6 +15,7 @@ class ProofOfSpaceFinalized:
     challenge_hash: bytes32
     height: uint32
     quality: bytes32
+    difficulty: uint64
 
 
 @cbor_message(tag=2001)
