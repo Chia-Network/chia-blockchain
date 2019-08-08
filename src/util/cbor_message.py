@@ -4,7 +4,7 @@ from src.util.type_checking import strictdataclass
 
 def cbor_message(tag: int):
     """
-    Decorator, converts a class into a data class, which checks all arguments to make sure
+    Decorator, converts a class into a strictdataclass, which checks all arguments to make sure
     they are the right type.
     """
     def apply_cbor_code(cls: Any) -> Type:

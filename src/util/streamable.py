@@ -1,7 +1,9 @@
 from __future__ import annotations
-from blspy import PublicKey, Signature, PrependSignature
 from typing import Type, BinaryIO, get_type_hints, Any, List
+from hashlib import sha256
+from blspy import PublicKey, Signature, PrependSignature
 from src.util.type_checking import strictdataclass, is_type_List, is_type_SpecificOptional
+from src.types.sized_bytes import bytes32
 from src.util.bin_methods import BinMethods
 from src.util.ints import uint32
 
@@ -21,13 +23,15 @@ def streamable(cls: Any):
     and adds parse, from bytes, stream, and serialize methods.
 
     Serialization format:
-        * Each field is serialized in order, by calling parse/serialize.
-        * For Lists, there is a 4 byte prefix for the list length.
-        * For Optionals, there is a one byte prefix, 1 iff object is present, 0 iff not.
+    - Each field is serialized in order, by calling parse/serialize.
+    - For Lists, there is a 4 byte prefix for the list length.
+    - For Optionals, there is a one byte prefix, 1 iff object is present, 0 iff not.
 
     All of the constituents must have parse/from_bytes, and stream/serialize and therefore
     be of fixed size. For example, int cannot be a constituent since it is not a fixed size,
     whereas uint32 can be.
+
+    Furthermore, a get_hash() member is added, which performs a serialization and a sha256.
 
     This class is used for deterministic serialization and hashing, for consensus critical
     objects such as the block header.
@@ -90,6 +94,9 @@ def streamable(cls: Any):
         def stream(self, f: BinaryIO) -> None:
             for f_name, f_type in get_type_hints(self).items():
                 self.stream_one_item(f_type, getattr(self, f_name), f)
+
+        def get_hash(self) -> bytes32:
+            return bytes32(sha256(self.serialize()).digest())
 
     cls1 = strictdataclass(cls)
     return type(cls.__name__, (cls1, BinMethods, _Local), {})

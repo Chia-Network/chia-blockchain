@@ -2,7 +2,7 @@ from typing import List
 from src.util.cbor_message import cbor_message
 from src.types.sized_bytes import bytes32
 from src.types.transaction import Transaction
-from src.types.proof_of_time import ProofOfTime, ProofOfTimeOutput
+from src.types.proof_of_time import ProofOfTime
 from src.types.full_block import FullBlock
 from src.types.peer_info import PeerInfo
 
@@ -18,13 +18,12 @@ class NewTransaction:
 
 @cbor_message(tag=4001)
 class NewProofOfTime:
-    output: ProofOfTimeOutput
     proof: ProofOfTime
 
 
 @cbor_message(tag=4002)
 class UnfinishedBlock:
-    # Block that does not have ProofOfTimeOutput, ProofOfTime, and Challenge
+    # Block that does not have ProofOfTime and Challenge
     block: FullBlock
 
 

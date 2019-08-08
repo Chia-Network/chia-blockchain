@@ -34,10 +34,11 @@ class uint64(int, StructStream):
     PACK = "!Q"
 
 
-class uint1024(int):
+class int1024(int):
+    # Uses 129 bytes to fit in the sign bit
     @classmethod
     def parse(cls, f: BinaryIO) -> Any:
-        return cls(int.from_bytes(f.read(128), "big"))
+        return cls(int.from_bytes(f.read(129), "big", signed=True))
 
     def stream(self, f):
-        f.write(self.to_bytes(128, "big"))
+        f.write(self.to_bytes(129, "big", signed=True))

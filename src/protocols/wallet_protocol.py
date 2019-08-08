@@ -5,7 +5,7 @@ from src.types.sized_bytes import bytes32
 from src.types.block_body import BlockBody
 from src.types.challenge import Challenge
 from src.types.proof_of_space import ProofOfSpace
-from src.types.proof_of_time import ProofOfTime, ProofOfTimeOutput
+from src.types.proof_of_time import ProofOfTime
 from src.types.transaction import Transaction
 
 """
@@ -32,7 +32,6 @@ class RequestHeaders:
 
 @cbor_message(tag=6003)
 class Headers:
-    proof_of_time_output: ProofOfTimeOutput
     proof_of_time: ProofOfTime
     proof_of_space: ProofOfSpace
     challenge: Challenge

@@ -1,7 +1,7 @@
 from src.util.cbor_message import cbor_message
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
-from src.types.proof_of_time import ProofOfTime, ProofOfTimeOutput
+from src.types.proof_of_time import ProofOfTime
 
 """
 Protocol between timelord and full node.
@@ -9,10 +9,7 @@ Protocol between timelord and full node.
 
 
 @cbor_message(tag=3000)
-class ProofOfTime:
-    challenge_hash: bytes32
-    iterations: uint64
-    output: ProofOfTimeOutput
+class ProofOfTimeFinished:
     proof: ProofOfTime
 
 

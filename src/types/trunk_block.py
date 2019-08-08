@@ -3,13 +3,12 @@ from src.util.streamable import streamable
 from src.types.block_header import BlockHeader
 from src.types.challenge import Challenge
 from src.types.proof_of_space import ProofOfSpace
-from src.types.proof_of_time import ProofOfTime, ProofOfTimeOutput
+from src.types.proof_of_time import ProofOfTime
 
 
 @streamable
 class TrunkBlock:
     proof_of_space: ProofOfSpace
-    proof_of_time_output: Optional[ProofOfTimeOutput]
     proof_of_time: Optional[ProofOfTime]
     challenge: Optional[Challenge]
     header: BlockHeader

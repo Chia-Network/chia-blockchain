@@ -1,3 +1,4 @@
+from typing import Optional
 from blspy import PrependSignature, Signature
 from src.util.streamable import streamable
 from src.types.coinbase import CoinbaseInfo
@@ -10,9 +11,9 @@ class BlockBody:
     coinbase: CoinbaseInfo
     coinbase_signature: PrependSignature
     fees_target_info: FeesTarget
-    aggregated_signature: Signature
+    aggregated_signature: Optional[Signature]
     solutions_generator: bytes32  # TODO: use actual transactions
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
         # TODO
         return True

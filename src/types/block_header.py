@@ -1,4 +1,3 @@
-from hashlib import sha256
 from blspy import PrependSignature
 from src.util.streamable import streamable
 from src.util.ints import uint64
@@ -27,7 +26,3 @@ class BlockHeader:
     def is_valid(self):
         # TODO: Check that data is valid, and that signature signs data
         return True
-
-    @property
-    def header_hash(self):
-        return sha256(self.serialize()).digest()

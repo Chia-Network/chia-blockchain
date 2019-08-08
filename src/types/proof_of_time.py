@@ -16,7 +16,7 @@ class ProofOfTimeOutput:
 class ProofOfTime:
     output: ProofOfTimeOutput
     witness_type: uint8
-    witness: List[ClassgroupElement]
+    witness: List[uint8]
 
     def is_valid(self):
         # TODO
