@@ -1,6 +1,6 @@
 from hashlib import sha256
 
-from .primes import is_probable_prime, odd_primes_below_n
+from lib.chiavdf.inkfish.primes import is_probable_prime, odd_primes_below_n
 
 
 # incrementing by an amount with lots of prime factors to make results smoother

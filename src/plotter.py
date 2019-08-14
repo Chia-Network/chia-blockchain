@@ -146,14 +146,11 @@ async def request_header_signature(request: plotter_protocol.RequestHeaderSignat
 
     header_hash_signature: PrependSignature = PLOTS[filename][1].sign_prepend(request.header_hash)
     assert(header_hash_signature.verify([Util.hash256(request.header_hash)], [PLOTS[filename][1].get_public_key()]))
-    log.error(f"VERIFIED using {PLOTS[filename][1].get_public_key()} and {request.header_hash}")
-    log.error(f"SIG: {header_hash_signature}")
 
     response: plotter_protocol.RespondHeaderSignature = plotter_protocol.RespondHeaderSignature(
         request.quality,
         header_hash_signature,
     )
-    log.error(f"Sending good signature: {response}")
     await source_connection.send("respond_header_signature", response)
     return
 

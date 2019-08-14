@@ -14,7 +14,7 @@ class BlockHeaderData:
     extension_data: bytes32
 
     def is_valid(self):
-        # TODO
+        # TODO:
         return True
 
 
