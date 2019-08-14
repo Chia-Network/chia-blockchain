@@ -1,7 +1,7 @@
 import hashlib
 import math
 
-from .primes import is_probable_prime
+from lib.chiavdf.inkfish.primes import is_probable_prime
 
 
 def approximate_parameters(T):

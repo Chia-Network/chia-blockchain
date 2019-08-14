@@ -1,4 +1,4 @@
-from . import mod
+from lib.chiavdf.inkfish import mod
 
 
 class ClassGroup(tuple):

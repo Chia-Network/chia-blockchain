@@ -2,10 +2,10 @@ import hashlib
 import math
 from multiprocessing import Pipe, Process
 
-from .classgroup import ClassGroup
-from .iterate_squarings import iterate_squarings
-from . import proof_pietrzak
-from . import proof_wesolowski
+from lib.chiavdf.inkfish.classgroup import ClassGroup
+from lib.chiavdf.inkfish.iterate_squarings import iterate_squarings
+from lib.chiavdf.inkfish import proof_pietrzak
+from lib.chiavdf.inkfish import proof_wesolowski
 
 
 def generate_r_value(x, y, sqrt_mu, int_size_bits):
@@ -42,7 +42,7 @@ def create_proof_of_time_wesolowski(discriminant, x, iterations, int_size_bits):
     y = powers[iterations]
     identity = ClassGroup.identity_for_discriminant(discriminant)
     proof = proof_wesolowski.generate_proof(identity, x, y, iterations, k, L, powers)
-    return y.serialize(), serialize_proof([proof])
+    return y, serialize_proof([proof])
 
 
 def create_proof_of_time_nwesolowski(discriminant, x, iterations,
@@ -117,7 +117,7 @@ def check_proof_of_time_wesolowski(discriminant, x, proof_blob,
 
 
 def check_proof_of_time_nwesolowski(discriminant, x, proof_blob,
-                                    iterations, int_size_bits):
+                                    iterations, int_size_bits, recursion):
     """
     Recursive verification function for nested wesolowski. The proof blob
     includes the output of the VDF, along with the proof. The following
@@ -132,10 +132,12 @@ def check_proof_of_time_nwesolowski(discriminant, x, proof_blob,
     int_size = (int_size_bits + 16) >> 4
     result_bytes = proof_blob[: (2 * int_size)]
     proof_bytes = proof_blob[(2 * int_size):]
+    y = ClassGroup.from_bytes(result_bytes, discriminant)
 
     proof = deserialize_proof(proof_bytes, discriminant)
+    if recursion * 2 + 1 != len(proof):
+        raise ValueError("Invalid n-wesolowski proof length.")
 
-    y = ClassGroup.from_bytes(result_bytes, discriminant)
     try:
         if len(proof) == 1:
             return proof_wesolowski.verify_proof(x, y, proof[-1], iterations)
@@ -148,10 +150,9 @@ def check_proof_of_time_nwesolowski(discriminant, x, proof_blob,
 
             ver_outer = proof_wesolowski.verify_proof(x, proof[-2],
                                                       proof[-1], iterations_1)
-
             return ver_outer and check_proof_of_time_nwesolowski(discriminant, proof[-2],
                                                                  serialize_proof([y] + proof[:-2]),
-                                                                 iterations_2, int_size_bits)
+                                                                 iterations_2, int_size_bits, recursion-1)
 
     except Exception:
         return False

@@ -12,12 +12,12 @@ pip install lib/chiapos
 ```
 
 ### Run servers
-Run the servers in the following order:
+Run the servers in the following order (you can also use ipython):
 ```bash
-ipython src/server/start_plotter.py
-ipython src/server/start_timelord.py
-ipython src/server/start_farmer.py
-ipython src/server/start_full_node.py
+python -m src.server.start_plotter
+python -m src.server.start_timelord
+python -m src.server.start_farmer
+python -m src.server.start_full_node
 ```
 
 ### Run tests

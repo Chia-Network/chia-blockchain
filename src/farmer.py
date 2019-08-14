@@ -21,8 +21,8 @@ plotter_ip = "127.0.0.1"
 plotter_port = 8000
 farmer_sk = PrivateKey.from_seed(secrets.token_bytes(32))
 farmer_target = sha256(farmer_sk.get_public_key().serialize()).digest()
-pool_share_threshold = 20  # To send to pool, must be expected to take less than these seconds
-propagate_threshold = 5  # To propagate to network, must be expected to take less than these seconds
+pool_share_threshold = 30  # To send to pool, must be expected to take less than these seconds
+propagate_threshold = 15  # To propagate to network, must be expected to take less than these seconds
 
 
 class Database:
@@ -78,7 +78,6 @@ async def challenge_response(challenge_response: plotter_protocol.ChallengeRespo
                                                             difficulty)
         estimate_secs: float = number_iters / db.proof_of_time_estimate_ips
 
-    # height: uint32 = db.challenge_to_height[challenge_response.]
     if estimate_secs < pool_share_threshold or estimate_secs < propagate_threshold:
         async with db.lock:
             db.plotter_responses_challenge[challenge_response.quality] = challenge_response.challenge_hash
@@ -153,8 +152,6 @@ async def respond_header_signature(response: plotter_protocol.RespondHeaderSigna
         proof_of_space: bytes32 = db.plotter_responses_proofs[response.quality]
         plot_pubkey = db.plotter_responses_proofs[response.quality].plot_pubkey
 
-        log.info(f"VERIFYING {header_hash}, {plot_pubkey}")
-        log.info(f"SIG: {response.header_hash_signature}")
         assert response.header_hash_signature.verify([Util.hash256(header_hash)],
                                                      [plot_pubkey])
 
@@ -203,10 +200,8 @@ async def header_hash(response: farmer_protocol.HeaderHash,
     async with db.lock:
         quality: bytes32 = db.plotter_responses_proof_hash_to_qual[response.pos_hash]
         db.plotter_responses_header_hash[quality] = header_hash
-        log.error(f"Mapping quality to header has: {quality} {header_hash}")
 
     request = plotter_protocol.RequestHeaderSignature(quality, header_hash)
-    log.error(f"SENDING: {request}")
     async with await all_connections.get_lock():
         for connection in await all_connections.get_connections():
             if connection.get_connection_type() == "plotter":

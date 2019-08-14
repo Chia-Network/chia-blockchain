@@ -1,5 +1,5 @@
 {
-    "ignore": ["./lib/**/*",
+    "ignore": ["./lib",
                 "./src/server/server.py",
                 "./src/types/block_header.py",
                 "./src/util/streamable.py",
