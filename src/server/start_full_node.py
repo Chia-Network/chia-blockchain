@@ -3,6 +3,7 @@ import logging
 from src import full_node
 from src.server.server import start_server, retry_connection
 from src.server.peer_connections import PeerConnections
+from src.server.new_server import start_chia_server
 
 
 logging.basicConfig(format='FullNode %(name)-23s: %(levelname)-8s %(message)s', level=logging.INFO)
@@ -16,9 +17,7 @@ async def main():
     timelord_con_fut = retry_connection(full_node, full_node.timelord_ip, full_node.timelord_port,
                                         "timelord", global_connections)
     # Starts the full node server (which full nodes can connect to)
-    server = asyncio.create_task(start_server(full_node, '127.0.0.1',
-                                              full_node.full_node_port, global_connections,
-                                              "full_node"))
+    await start_chia_server("127.0.0.1", full_node.full_node_port, full_node, "full_node")
 
     # Both connections to farmer and timelord have been started
     await asyncio.gather(farmer_con_fut, timelord_con_fut)
