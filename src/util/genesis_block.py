@@ -58,7 +58,7 @@ def create_genesis_block(challenge_hash=bytes([0]*32)) -> FullBlock:
     os.remove(filename)
 
     number_iters: uint64 = pot_iterations.calculate_iterations(proof_of_space, challenge_hash,
-                                                               uint64(constants.STARTING_DIFFICULTY))
+                                                               uint64(constants.DIFFICULTY_STARTING))
 
     disc: int = create_discriminant(challenge_hash, constants.DISCRIMINANT_SIZE_BITS)
     start_x: ClassGroup = ClassGroup.from_ab_discriminant(2, 1, disc)
@@ -89,10 +89,10 @@ def create_genesis_block(challenge_hash=bytes([0]*32)) -> FullBlock:
     header: BlockHeader = BlockHeader(header_data, header_sig)
 
     print(proof_of_space.get_hash(), proof_of_time.get_hash(), 0,
-          uint64(constants.STARTING_DIFFICULTY))
+          uint64(constants.DIFFICULTY_STARTING))
 
     challenge = Challenge(proof_of_space.get_hash(), proof_of_time.get_hash(), 0,
-                          uint64(constants.STARTING_DIFFICULTY))
+                          uint64(constants.DIFFICULTY_STARTING))
     trunk_block = TrunkBlock(proof_of_space, proof_of_time, challenge, header)
 
     full_block: FullBlock = FullBlock(trunk_block, body)
