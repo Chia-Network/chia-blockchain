@@ -4,3 +4,6 @@
 [submodule "lib/bip158/lib/pybind11"]
 	path = lib/bip158/lib/pybind11
 	url = https://github.com/pybind/pybind11.git
+[submodule "aiter"]
+	path = lib/aiter
+	url = https://github.com/richardkiss/aiter.git
