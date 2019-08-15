@@ -63,7 +63,6 @@ class Blockchain:
                     and block_header.data.timestamp > trunk.header.data.timestamp):
                 # TODO:  "foliage arrow" ?
                 return True
-
         return False
 
     def get_trunk_block(self, header_hash: bytes32) -> TrunkBlock:
@@ -89,49 +88,17 @@ class Blockchain:
         trunk = self.blocks.get(header_hash, None)
         if trunk is None:
             raise Exception("No block found for given header_hash")
-
-        height = trunk.challenge.height
-
-        if height <= DIFFICULTY_DELAY:
+        elif trunk is self.genesis_trunk:
             return uint64(DIFFICULTY_STARTING)
-        elif height <= DIFFICULTY_EPOCH + DIFFICULTY_DELAY:
-            return uint64(DIFFICULTY_FACTOR * DIFFICULTY_STARTING)
-        elif height % DIFFICULTY_EPOCH != DIFFICULTY_DELAY + 1:
-            # This block is not at the start of an era
-            prev_trunk = self.blocks.get(trunk.prev_header_hash, None)
-            if prev_trunk is None:
-                raise Exception("Requested block is not connected, so difficulty cannot be calculated")
-            return uint64(trunk.challenge.total_weight - prev_trunk.challenge.total_weight)
-
-        if header_hash in self.floating_demand.get(trunk.prev_header_hash, ()):
-            raise Exception("Requested block is not connected, so difficulty cannot be calculated")
-
-        # T_p and T_c as in the Chia greenpaper
-        Tc = self.get_difficulty(trunk.prev_header_hash)
-        warp = header_hash
-        for _ in range(DIFFICULTY_WARP_FACTOR):
-            warp = self.header_warp[warp]
-        Tp = self.get_difficulty(self.blocks[warp].prev_header_hash)
-
-        # X_i : timestamp of i-th block, EPOCH divides i, genesis is block height 1
-        # Current block @header_hash is i+1 + DELAY
-        temp_trunk = self.blocks[self.header_warp[header_hash]]
-        timestamp1 = temp_trunk.header.data.timestamp  # X_{i+1}
-        temp_trunk = self.blocks[warp]
-        timestamp2 = temp_trunk.header.data.timestamp  # X_{i+1-EPOCH+DELAY}
-        temp_trunk = self.blocks[self.header_warp[temp_trunk.header.header_hash]]
-        timestamp3 = temp_trunk.header.data.timestamp  # X_{i+1-EPOCH}
-
-        diff_natural = (DIFFICULTY_EPOCH - DIFFICULTY_DELAY) * Tc * (timestamp2 - timestamp3)
-        diff_natural += DIFFICULTY_DELAY * Tp * (timestamp1 - timestamp2)
-        diff_natural *= DIFFICULTY_TARGET
-        diff_natural //= (timestamp1 - timestamp2) * (timestamp2 - timestamp3)
-        difficulty = max(min(diff_natural, Tc * 4), Tc // 4)  # truncated comparison
-        return difficulty
+        
+        prev_trunk = self.blocks.get(trunk.prev_header_hash, None)
+        if prev_trunk is None:
+            raise Exception("No previous block found to compare total weight to")
+        return trunk.challenge.total_weight - prev_trunk.challenge.total_weight
 
     def get_next_difficulty(self, header_hash: bytes32) -> uint64:
-        # Returns the difficulty of the next block. Used to calculate the number
-        # of iterations.
+        # Returns the difficulty of the next block that extends onto header_hash.
+        # Used to calculate the number of iterations.
         # TODO:  Assumes header_hash is of a connected block
 
         trunk = self.blocks.get(header_hash, None)
@@ -176,6 +143,7 @@ class Blockchain:
     def add_block(self, block: FullBlock) -> bool:
         if not block.is_valid():
             # TODO(alex): discredit/blacklist sender
+            log.info("block is not valid")
             return False
 
         trunk = block.trunk_block
@@ -194,7 +162,7 @@ class Blockchain:
             # Now connect any children demanding this block
 
             # TODO(alex): verify block is consistent with blockchain
-            stack = self.floating_demand.pop(header_hash, [])
+            stack = [header_hash]
 
             while stack:  # DFS
                 sky_block_hash = stack.pop()
