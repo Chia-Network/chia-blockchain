@@ -59,10 +59,11 @@ class Blockchain:
         """
         prev_header_hash = block_header.data.prev_header_hash
         for trunk in self.heads:
-            if (prev_header_hash == trunk.prev_header_hash
-                    and block_header.timestamp > trunk.header.data.timestamp):
+            if (prev_header_hash == trunk.header.header_hash
+                    and block_header.data.timestamp > trunk.header.data.timestamp):
                 # TODO:  "foliage arrow" ?
                 return True
+
         return False
 
     def get_trunk_block(self, header_hash: bytes32) -> TrunkBlock:
