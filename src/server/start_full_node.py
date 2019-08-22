@@ -1,9 +1,8 @@
 import asyncio
 import logging
 from src import full_node
-from src.server.server import start_server, retry_connection
-from src.server.peer_connections import PeerConnections
-from src.server.new_server import start_chia_server
+from src.server.connection import PeerConnections
+from src.server.server import start_chia_server, start_chia_client
 
 
 logging.basicConfig(format='FullNode %(name)-23s: %(levelname)-8s %(message)s', level=logging.INFO)
@@ -11,22 +10,21 @@ global_connections = PeerConnections()
 
 
 async def main():
-    farmer_con_fut = retry_connection(full_node, full_node.farmer_ip, full_node.farmer_port,
-                                      "farmer", global_connections)
+    farmer_con_task, farmer_client = await start_chia_client(full_node.farmer_ip, full_node.farmer_port,
+                                                             full_node, "farmer")
 
-    timelord_con_fut = retry_connection(full_node, full_node.timelord_ip, full_node.timelord_port,
-                                        "timelord", global_connections)
+    timelord_con_task, timelord_client = await start_chia_client(full_node.timelord_ip, full_node.timelord_port,
+                                                                 full_node, "timelord")
+
     # Starts the full node server (which full nodes can connect to)
-    await start_chia_server("127.0.0.1", full_node.full_node_port, full_node, "full_node")
-
-    # Both connections to farmer and timelord have been started
-    await asyncio.gather(farmer_con_fut, timelord_con_fut)
+    server, _ = await start_chia_server("127.0.0.1", full_node.full_node_port, full_node, "full_node")
 
     # Sends the latest heads and PoT rates to farmers
-    farmer_update = full_node.send_heads_to_farmers(global_connections)
-    timelord_update = full_node.send_challenges_to_timelords(global_connections)
+    async for msg in full_node.send_heads_to_farmers():
+        farmer_client.push(msg)
+    async for msg in full_node.send_challenges_to_timelords():
+        timelord_client.push(msg)
 
-    # Waits as long as the server is active
-    await asyncio.gather(farmer_update, timelord_update, server)
+    await asyncio.gather(farmer_con_task, timelord_con_task, server)
 
 asyncio.run(main())
