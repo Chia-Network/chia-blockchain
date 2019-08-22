@@ -123,7 +123,7 @@ async def request_proof_of_space(request: plotter_protocol.RequestProofOfSpace):
                 proof_of_space
             )
     if response:
-        yield OutboundMessage("farmer", "response_proof_of_space", response, True, False)
+        yield OutboundMessage("farmer", "respond_proof_of_space", response, True, False)
 
 
 @api_request
@@ -143,7 +143,7 @@ async def request_header_signature(request: plotter_protocol.RequestHeaderSignat
         request.quality,
         header_hash_signature,
     )
-    yield OutboundMessage("farmer", "response_header_signature", response, True, False)
+    yield OutboundMessage("farmer", "respond_header_signature", response, True, False)
 
 
 @api_request
@@ -161,4 +161,4 @@ async def request_partial_proof(request: plotter_protocol.RequestPartialProof):
             request.quality,
             farmer_target_signature
         )
-    yield OutboundMessage("farmer", "response_partial_proof", response, True, False)
+    yield OutboundMessage("farmer", "respond_partial_proof", response, True, False)

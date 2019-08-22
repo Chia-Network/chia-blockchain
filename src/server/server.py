@@ -1,8 +1,9 @@
 import logging
 import asyncio
 from typing import Tuple, AsyncGenerator
-from types import ModuleType, GeneratorType
+from types import ModuleType
 from src.util import cbor
+from src.util import partial_func
 from lib.aiter.aiter.server import start_server_aiter
 from lib.aiter.aiter import parallel_map_aiter, map_aiter, join_aiters, iter_to_aiter
 from lib.aiter.aiter.push_aiter import push_aiter
@@ -66,11 +67,12 @@ async def handle_message(api: ModuleType, pair: Tuple[Connection, bytes]) -> Asy
     function_data: bytes = decoded["data"]
     f = getattr(api, function)
     if f is not None:
-        if isinstance(f, GeneratorType):
-            async for outbound_message in f(function_data):
+        result = f(function_data)
+        if isinstance(result, AsyncGenerator):
+            async for outbound_message in result:
                 yield connection, outbound_message
         else:
-            await f(function_data)
+            await result
     else:
         log.error(f'Invalid message: {function} from {connection.get_peername()}')
 
@@ -101,19 +103,9 @@ async def expand_outbound_messages(pair: Tuple[Connection, OutboundMessage]) -> 
 async def serve_forever(aiter: AsyncGenerator[Tuple[asyncio.StreamReader, asyncio.StreamWriter], None],
                         api: ModuleType, connection_type: str,
                         outbound_aiter: AsyncGenerator[OutboundMessage, None]) -> None:
-    def partial_async_gen(f, first_param):
-        async def inner(second_param):
-            async for x in f(first_param, second_param):
-                yield x
-        return inner
-
-    def partial_async(f, first_param):
-        async def inner(second_param):
-            return await f(first_param, second_param)
-        return inner
 
     # Maps a stream reader and writer to connection object
-    connections_aiter = map_aiter(partial_async(stream_reader_writer_to_connection, connection_type),
+    connections_aiter = map_aiter(partial_func.partial_async(stream_reader_writer_to_connection, connection_type),
                                   aiter)
 
     # Reads messages one at a time from the TCP connection
@@ -121,7 +113,7 @@ async def serve_forever(aiter: AsyncGenerator[Tuple[asyncio.StreamReader, asynci
 
     # Handles each message one at a time, and yields responses to send back or broadcast
     responses_aiter = join_aiters(parallel_map_aiter(
-        partial_async_gen(handle_message, api),
+        partial_func.partial_async_gen(handle_message, api),
         100, messages_aiter))
 
     if outbound_aiter is not None:
