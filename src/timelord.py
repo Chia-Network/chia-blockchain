@@ -50,6 +50,7 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
         # TODO: Start a VDF process
 
 
+@api_request
 async def challenge_end(challenge_end: timelord_protocol.ChallengeEnd):
     """
     A challenge is no longer active, so stop the process for this challenge, if it
@@ -60,6 +61,7 @@ async def challenge_end(challenge_end: timelord_protocol.ChallengeEnd):
         db.process_running = False
 
 
+@api_request
 async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpaceInfo):
     """
     Notification from full node about a new proof of space for a challenge. If we already
