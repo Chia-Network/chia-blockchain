@@ -3,7 +3,7 @@ import logging
 import os
 import os.path
 from asyncio import Lock
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 from blspy import PrivateKey, PublicKey, PrependSignature, Util
 from chiapos import DiskPlotter, DiskProver
 from src.util.api_decorators import api_request
@@ -11,8 +11,8 @@ from src.util.ints import uint8
 from src.protocols import plotter_protocol
 from src.types.sized_bytes import bytes32
 from src.types.proof_of_space import ProofOfSpace
-from src.server.chia_connection import ChiaConnection
-from src.server.peer_connections import PeerConnections
+from src.server.outbound_message import OutboundMessage
+
 
 # TODO: use config file
 # SECRET_KEY: PrivateKey =
@@ -35,9 +35,7 @@ log = logging.getLogger(__name__)
 
 
 @api_request
-async def plotter_handshake(plotter_handshake: plotter_protocol.PlotterHandshake,
-                            source_connection: ChiaConnection,
-                            all_connections: PeerConnections):
+async def plotter_handshake(plotter_handshake: plotter_protocol.PlotterHandshake):
     """
     Handshake between the plotter and farmer. The plotter receives the pool public keys,
     which must be put into the plots, before the plotting process begins. We cannot
@@ -61,9 +59,7 @@ async def plotter_handshake(plotter_handshake: plotter_protocol.PlotterHandshake
 
 
 @api_request
-async def new_challenge(new_challenge: plotter_protocol.NewChallenge,
-                        source_connection: ChiaConnection,
-                        all_connections: PeerConnections):
+async def new_challenge(new_challenge: plotter_protocol.NewChallenge):
     """
     The plotter receives a new challenge from the farmer, and looks up the quality
     for any proofs of space that are are found in the plots. If proofs are found, a
@@ -93,18 +89,16 @@ async def new_challenge(new_challenge: plotter_protocol.NewChallenge,
                 all_responses.append(response)
 
     for response in all_responses:
-        await source_connection.send("challenge_response", response)
+        yield OutboundMessage("farmer", "challenge_response", response, True, False)
 
 
 @api_request
-async def request_proof_of_space(request: plotter_protocol.RequestProofOfSpace,
-                                 source_connection: ChiaConnection,
-                                 all_connections: PeerConnections):
+async def request_proof_of_space(request: plotter_protocol.RequestProofOfSpace):
     """
     The farmer requests a signature on the header hash, for one of the proofs that we found.
     We look up the correct plot based on the quality, lookup the proof, and return it.
     """
-
+    response: Optional[plotter_protocol.RespondProofOfSpace] = None
     async with db.lock:
         try:
             # Using the quality find the right plot and index from our solutions
@@ -124,18 +118,16 @@ async def request_proof_of_space(request: plotter_protocol.RequestProofOfSpace,
                                                         uint8(PLOTS[filename][0]),
                                                         list(proof_xs))
 
-            response: plotter_protocol.RespondProofOfSpace = plotter_protocol.RespondProofOfSpace(
+            response = plotter_protocol.RespondProofOfSpace(
                 request.quality,
                 proof_of_space
             )
-            await source_connection.send("respond_proof_of_space", response)
-            return
+    if response:
+        yield OutboundMessage("farmer", "response_proof_of_space", response, True, False)
 
 
 @api_request
-async def request_header_signature(request: plotter_protocol.RequestHeaderSignature,
-                                   source_connection: ChiaConnection,
-                                   all_connections: PeerConnections):
+async def request_header_signature(request: plotter_protocol.RequestHeaderSignature):
     """
     The farmer requests a signature on the header hash, for one of the proofs that we found.
     A signature is created on the header hash using the plot private key.
@@ -151,14 +143,11 @@ async def request_header_signature(request: plotter_protocol.RequestHeaderSignat
         request.quality,
         header_hash_signature,
     )
-    await source_connection.send("respond_header_signature", response)
-    return
+    yield OutboundMessage("farmer", "response_header_signature", response, True, False)
 
 
 @api_request
-async def request_partial_proof(request: plotter_protocol.RequestPartialProof,
-                                source_connection: ChiaConnection,
-                                all_connections: PeerConnections):
+async def request_partial_proof(request: plotter_protocol.RequestPartialProof):
     """
     The farmer requests a signature on the farmer_target, for one of the proofs that we found.
     We look up the correct plot based on the quality, lookup the proof, and sign
@@ -172,5 +161,4 @@ async def request_partial_proof(request: plotter_protocol.RequestPartialProof,
             request.quality,
             farmer_target_signature
         )
-        await source_connection.send("respond_partial_proof", response)
-        return
+    yield OutboundMessage("farmer", "response_partial_proof", response, True, False)
