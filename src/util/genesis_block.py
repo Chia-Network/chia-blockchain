@@ -63,10 +63,9 @@ def create_genesis_block(challenge_hash=bytes([0]*32)) -> FullBlock:
     disc: int = create_discriminant(challenge_hash, constants.DISCRIMINANT_SIZE_BITS)
     start_x: ClassGroup = ClassGroup.from_ab_discriminant(2, 1, disc)
 
-    y, proof_bytes = create_proof_of_time_nwesolowski(disc, start_x, number_iters,
-                                                      constants.DISCRIMINANT_SIZE_BITS, n_wesolowski)
-    y_cl = ClassGroup.from_bytes(y, disc)
-    print(y_cl)
+    y_cl, proof_bytes = create_proof_of_time_nwesolowski(
+        disc, start_x, number_iters, constants.DISCRIMINANT_SIZE_BITS, n_wesolowski)
+
     output = ProofOfTimeOutput(challenge_hash, number_iters,
                                ClassgroupElement(y_cl[0], y_cl[1]))
 
