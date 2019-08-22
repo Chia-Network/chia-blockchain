@@ -198,6 +198,7 @@ async def proof_of_time_finished(request: timelord_protocol.ProofOfTimeFinished,
     A proof of time, received by a peer timelord. We can use this to complete a block,
     and call the block routine (which handles propagation and verification of blocks).
     """
+    log.info("POT finished!")
     async with db.lock:
         dict_key = (request.proof.output.challenge_hash, request.proof.output.number_of_iterations)
         unfinished_block_obj: FullBlock = db.unfinished_blocks[dict_key]
@@ -311,7 +312,6 @@ async def block(block: peer_protocol.Block,
         if header_hash in db.bodies and block.block.body in db.bodies[header_hash]:
             log.info(f"Already have block {header_hash}")
             return
-
         # TODO(alex): Check if we care about this block, we don't want to add random
         # disconnected blocks. For example if it's on one of the heads, or if it's an older
         # block that we need
