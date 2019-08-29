@@ -7,7 +7,11 @@ from src.types.proof_of_time import ProofOfTime
 Protocol between timelord and full node.
 """
 
-
+"""
+If don't have the unfinished block, ignore
+Validate PoT
+Call self.Block
+"""
 @cbor_message(tag=3000)
 class ProofOfTimeFinished:
     proof: ProofOfTime

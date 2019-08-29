@@ -4,7 +4,7 @@ from secrets import token_bytes
 from hashlib import sha256
 from chiapos import Verifier
 from blspy import Util, Signature, PrivateKey
-from asyncio import Lock
+from asyncio import Lock, sleep
 from typing import Dict, List, Tuple, Optional
 from src.util.api_decorators import api_request
 from src.protocols import farmer_protocol
@@ -18,6 +18,7 @@ from src.types.challenge import Challenge
 from src.types.block_header import BlockHeaderData, BlockHeader
 from src.types.proof_of_space import ProofOfSpace
 from src.consensus.pot_iterations import calculate_iterations
+from src.consensus.constants import DIFFICULTY_TARGET
 from src.types.full_block import FullBlock
 from src.types.fees_target import FeesTarget
 from src.blockchain import Blockchain
@@ -30,6 +31,7 @@ farmer_ip = "127.0.0.1"
 farmer_port = 8001
 timelord_ip = "127.0.0.1"
 timelord_port = 8003
+update_pot_estimate_interval: int = 30
 
 
 class Database:
@@ -44,7 +46,7 @@ class Database:
     # These are the blocks that we created, have PoS, but not PoT yet, keyed from the
     # block header hash
     unfinished_blocks: Dict[Tuple[bytes32, int], FullBlock] = {}
-    proof_of_time_estimate_ips: uint64 = uint64(3000)
+    proof_of_time_estimate_ips: uint64 = uint64(1500)
 
 
 log = logging.getLogger(__name__)
@@ -84,6 +86,16 @@ async def send_challenges_to_timelords():
             requests.append(timelord_protocol.ChallengeStart(challenge_hash))
     for request in requests:
         yield OutboundMessage("timelord", "challenge_start", request, False, True)
+
+
+async def proof_of_time_estimate_interval():
+    while True:
+        estimated_ips: Optional[uint64] = db.blockchain.get_vdf_rate_estimate()
+        async with db.lock:
+            if estimated_ips is not None:
+                db.proof_of_time_estimate_ips = estimated_ips
+            log.info(f"Updated proof of time estimate to {estimated_ips} iterations per second.")
+        await sleep(update_pot_estimate_interval)
 
 
 @api_request
@@ -167,15 +179,13 @@ async def header_signature(header_signature: farmer_protocol.HeaderSignature):
                                                         [pos.plot_pubkey])
 
         block_header: BlockHeader = BlockHeader(block_header_data, header_signature.header_signature)
-
-        assert db.blockchain.block_can_be_added(block_header, block_body)
-
         trunk: TrunkBlock = TrunkBlock(pos, None, None, block_header)
         unfinished_block_obj: FullBlock = FullBlock(trunk, block_body)
 
     # Propagate to ourselves (which validates and does further propagations)
     request = peer_protocol.UnfinishedBlock(unfinished_block_obj)
     async for m in unfinished_block(request):
+        # Yield all new messages (propagation to peers)
         yield m
 
 
@@ -188,6 +198,9 @@ async def proof_of_time_finished(request: timelord_protocol.ProofOfTimeFinished)
     """
     async with db.lock:
         dict_key = (request.proof.output.challenge_hash, request.proof.output.number_of_iterations)
+        if dict_key not in db.unfinished_blocks:
+            log.warn(f"Received a proof of time that we cannot use to complete a block {dict_key}")
+            return
         unfinished_block_obj: FullBlock = db.unfinished_blocks[dict_key]
         prev_block: TrunkBlock = db.blockchain.get_trunk_block(unfinished_block_obj.trunk_block.prev_header_hash)
         difficulty: uint64 = db.blockchain.get_next_difficulty(unfinished_block_obj.trunk_block.prev_header_hash)
@@ -195,7 +208,8 @@ async def proof_of_time_finished(request: timelord_protocol.ProofOfTimeFinished)
     challenge: Challenge = Challenge(unfinished_block_obj.trunk_block.proof_of_space.get_hash(),
                                      request.proof.output.get_hash(),
                                      prev_block.challenge.height + 1,
-                                     prev_block.challenge.total_weight + difficulty)
+                                     prev_block.challenge.total_weight + difficulty,
+                                     prev_block.challenge.total_iters + request.proof.output.number_of_iterations)
 
     new_trunk_block = TrunkBlock(unfinished_block_obj.trunk_block.proof_of_space,
                                  request.proof,
@@ -240,7 +254,10 @@ async def unfinished_block(unfinished_block: peer_protocol.UnfinishedBlock):
     timelords.
     """
     async with db.lock:
-        # TODO: verify block using blockchain class, including coinbase rewards
+        if not db.blockchain.is_child_of_head(unfinished_block.block):
+            return
+
+        # TODO(alex): verify block using blockchain class, including coinbase rewards
         prev_block: TrunkBlock = db.blockchain.get_trunk_block(
             unfinished_block.block.trunk_block.prev_header_hash)
 
@@ -255,8 +272,14 @@ async def unfinished_block(unfinished_block: peer_protocol.UnfinishedBlock):
             log.info(f"Have already seen unfinished block {(challenge_hash, iterations_needed)}")
             return
 
+        expected_time: float = iterations_needed / db.proof_of_time_estimate_ips
+
+        # TODO(alex): tweak this
+        log.info(f"Expected finish time: {expected_time}")
+        if expected_time > 10 * DIFFICULTY_TARGET:
+            return
+
         db.unfinished_blocks[(challenge_hash, iterations_needed)] = unfinished_block.block
-        # TODO: Only propagate if it's actually good
 
     timelord_request = timelord_protocol.ProofOfSpaceInfo(challenge_hash, iterations_needed)
     yield OutboundMessage("timelord", "proof_of_space_info", timelord_request, False, True)
@@ -286,7 +309,6 @@ async def block(block: peer_protocol.Block):
         if header_hash in db.bodies and block.block.body in db.bodies[header_hash]:
             log.info(f"Already have block {header_hash}")
             return
-
         # TODO(alex): Check if we care about this block, we don't want to add random
         # disconnected blocks. For example if it's on one of the heads, or if it's an older
         # block that we need

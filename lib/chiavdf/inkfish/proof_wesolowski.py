@@ -24,6 +24,7 @@ def approximate_parameters(T):
 
     # 1/w is the approximate proportion of time spent on the proof
     w = math.floor(T / (T/k + L * pow(2, k+1))) - 2
+    w = max(w, 0)
 
     return (L, k, w)
 

@@ -20,6 +20,6 @@ def api_request(f):
         inter = dict(binding.arguments)
         print_args = {k: v for (k, v) in inter.items() if k != "source_connection"
                       and k != "all_connections"}
-        log.info(f"{f.__name__}({print_args})")
+        log.info(f"{f.__name__}({print_args})"[:200])
         return f(**inter)
     return f_substitute
