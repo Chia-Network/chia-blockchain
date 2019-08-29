@@ -243,6 +243,7 @@ async def proof_of_space_arrived(proof_of_space_arrived: farmer_protocol.ProofOf
 @api_request
 async def deep_reorg_notification(deep_reorg_notification: farmer_protocol.DeepReorgNotification):
     # TODO: implement
+    # TODO: "forget everything and start over (reset db)"
     log.error(f"Deep reorg notification not implemented.")
 
 

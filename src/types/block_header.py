@@ -30,4 +30,4 @@ class BlockHeader:
 
     @property
     def header_hash(self):
-        return sha256(self.serialize()).digest()
+        return bytes32(sha256(self.serialize()).digest())

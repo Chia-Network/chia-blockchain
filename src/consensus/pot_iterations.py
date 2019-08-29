@@ -43,7 +43,7 @@ def calculate_iterations_quality(quality: bytes32, size: uint8, difficulty: uint
     between 0 and 1, then divided by expected plot size, and finally multiplied by the
     difficulty.
     """
-    dec_iters = (Decimal(int(difficulty)) *
+    dec_iters = (Decimal(int(difficulty) << 32) *
                  (_quality_to_decimal(quality) / _expected_plot_size(size)))
     return uint64(max(MIN_VDF_ITERATIONS, int(dec_iters.to_integral_exact(rounding=ROUND_UP))))
 

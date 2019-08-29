@@ -9,7 +9,10 @@ from src.types.coinbase import CoinbaseInfo
 Protocol between farmer and full node.
 """
 
-
+"""
+Farmer <- Full node
+Update current height
+"""
 @cbor_message(tag=2000)
 class ProofOfSpaceFinalized:
     challenge_hash: bytes32
