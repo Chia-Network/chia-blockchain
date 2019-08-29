@@ -9,6 +9,7 @@ class Challenge:
     proof_of_time_output_hash: bytes32
     height: uint32
     total_weight: uint64
+    total_iters: uint64
 
     def is_valid(self) -> bool:
         # TODO

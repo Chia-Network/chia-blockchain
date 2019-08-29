@@ -4,17 +4,17 @@ import time
 import io
 from asyncio import Lock
 from typing import Dict
+
+from lib.chiavdf.inkfish.create_discriminant import create_discriminant
+from lib.chiavdf.inkfish.proof_of_time import check_proof_of_time_nwesolowski
+from lib.chiavdf.inkfish.classgroup import ClassGroup
 from src.util.api_decorators import api_request
-from src.server.chia_connection import ChiaConnection
-from src.server.peer_connections import PeerConnections
 from src.protocols import timelord_protocol
 from src.types.proof_of_time import ProofOfTimeOutput, ProofOfTime
 from src.types.classgroup import ClassgroupElement
 from src.util.ints import uint8
 from src.consensus import constants
-from lib.chiavdf.inkfish.create_discriminant import create_discriminant
-from lib.chiavdf.inkfish.proof_of_time import check_proof_of_time_nwesolowski
-from lib.chiavdf.inkfish.classgroup import ClassGroup
+from src.server.outbound_message import OutboundMessage
 
 
 # TODO: use config file
@@ -36,9 +36,7 @@ db = Database()
 
 
 @api_request
-async def challenge_start(challenge_start: timelord_protocol.ChallengeStart,
-                          source_connection: ChiaConnection,
-                          all_connections: PeerConnections):
+async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
     """
     The full node notifies the timelord node that a new challenge is active, and work
     should be started on it. We can generate a classgroup (discriminant), and start
@@ -53,9 +51,7 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart,
 
 
 @api_request
-async def challenge_end(challenge_end: timelord_protocol.ChallengeEnd,
-                        source_connection: ChiaConnection,
-                        all_connections: PeerConnections):
+async def challenge_end(challenge_end: timelord_protocol.ChallengeEnd):
     """
     A challenge is no longer active, so stop the process for this challenge, if it
     exists.
@@ -66,9 +62,7 @@ async def challenge_end(challenge_end: timelord_protocol.ChallengeEnd,
 
 
 @api_request
-async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpaceInfo,
-                              source_connection: ChiaConnection,
-                              all_connections: PeerConnections):
+async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpaceInfo):
     """
     Notification from full node about a new proof of space for a challenge. If we already
     have a process for this challenge, we should communicate to the process to tell it how
@@ -128,4 +122,4 @@ async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpac
     proof_of_time = ProofOfTime(output, n_wesolowski, [uint8(b) for b in proof_bytes])
     response = timelord_protocol.ProofOfTimeFinished(proof_of_time)
 
-    await source_connection.send("proof_of_time_finished", response)
+    yield OutboundMessage("full_node", "proof_of_time_finished", response, True, True)
