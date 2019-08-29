@@ -1,19 +1,20 @@
 import logging
 import asyncio
+import secrets
+from hashlib import sha256
 from typing import List, Dict, Set, Tuple, Any
+
 from blspy import PrivateKey, Util, PrependSignature
 from src.util.api_decorators import api_request
 from src.types.proof_of_space import ProofOfSpace
 from src.types.coinbase import CoinbaseInfo
 from src.protocols import plotter_protocol, farmer_protocol
-from src.server.chia_connection import ChiaConnection
-from src.server.peer_connections import PeerConnections
-import secrets
-from hashlib import sha256
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
 from src.consensus.block_rewards import calculate_block_reward
 from src.consensus.pot_iterations import calculate_iterations_quality
+from src.server.outbound_message import OutboundMessage
+
 
 # TODO: use config file
 farmer_port = 8001
@@ -53,9 +54,7 @@ PLOTTER PROTOCOL (FARMER <-> PLOTTER)
 
 
 @api_request
-async def challenge_response(challenge_response: plotter_protocol.ChallengeResponse,
-                             source_connection: ChiaConnection,
-                             all_connections: PeerConnections):
+async def challenge_response(challenge_response: plotter_protocol.ChallengeResponse):
     """
     This is a response from the plotter, for a NewChallenge. Here we check if the proof
     of space is sufficiently good, and if so, we ask for the whole proof.
@@ -82,13 +81,12 @@ async def challenge_response(challenge_response: plotter_protocol.ChallengeRespo
         async with db.lock:
             db.plotter_responses_challenge[challenge_response.quality] = challenge_response.challenge_hash
         request = plotter_protocol.RequestProofOfSpace(challenge_response.quality)
-        await source_connection.send("request_proof_of_space", request)
+
+        yield OutboundMessage("plotter", "request_proof_of_space", request, True, False)
 
 
 @api_request
-async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace,
-                                 source_connection: ChiaConnection,
-                                 all_connections: PeerConnections):
+async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace):
     """
     This is a response from the plotter with a proof of space. We check it's validity,
     and request a pool partial, a header signature, or both, if the proof is good enough.
@@ -122,7 +120,7 @@ async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace,
     if estimate_secs < pool_share_threshold:
         request = plotter_protocol.RequestPartialProof(response.quality,
                                                        sha256(farmer_target).digest())
-        await source_connection.send("request_partial_proof", request)
+        yield OutboundMessage("plotter", "request_partial_proof", request, True, False)
     if estimate_secs < propagate_threshold:
         async with db.lock:
             if new_proof_height not in db.coinbase_rewards:
@@ -133,16 +131,11 @@ async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace,
             request = farmer_protocol.RequestHeaderHash(challenge_hash, coinbase,
                                                         signature, farmer_target, response.proof)
 
-        async with await all_connections.get_lock():
-            for connection in await all_connections.get_connections():
-                if connection.get_connection_type() == "full_node":
-                    await connection.send("request_header_hash", request)
+        yield OutboundMessage("full_node", "request_header_hash", request, False, True)
 
 
 @api_request
-async def respond_header_signature(response: plotter_protocol.RespondHeaderSignature,
-                                   source_connection: ChiaConnection,
-                                   all_connections: PeerConnections):
+async def respond_header_signature(response: plotter_protocol.RespondHeaderSignature):
     """
     Receives a signature on a block header hash, which is required for submitting
     a block to the blockchain.
@@ -157,18 +150,13 @@ async def respond_header_signature(response: plotter_protocol.RespondHeaderSigna
 
         # TODO: wait a while if it's a good quality, but not so good.
         pos_hash: bytes32 = proof_of_space.get_hash()
-    request = farmer_protocol.HeaderSignature(pos_hash, header_hash, response.header_hash_signature)
 
-    async with await all_connections.get_lock():
-        for connection in await all_connections.get_connections():
-            if connection.get_connection_type() == "full_node":
-                await connection.send("header_signature", request)
+    request = farmer_protocol.HeaderSignature(pos_hash, header_hash, response.header_hash_signature)
+    yield OutboundMessage("full_node", "header_signature", request, True, True)
 
 
 @api_request
-async def respond_partial_proof(response: plotter_protocol.RespondPartialProof,
-                                source_connection: ChiaConnection,
-                                all_connections: PeerConnections):
+async def respond_partial_proof(response: plotter_protocol.RespondPartialProof):
     """
     Receives a signature on the hash of the farmer payment target, which is used in a pool
     share, to tell the pool where to pay the farmer.
@@ -189,9 +177,7 @@ FARMER PROTOCOL (FARMER <-> FULL NODE)
 
 
 @api_request
-async def header_hash(response: farmer_protocol.HeaderHash,
-                      source_connection: ChiaConnection,
-                      all_connections: PeerConnections):
+async def header_hash(response: farmer_protocol.HeaderHash):
     """
     Full node responds with the hash of the created header
     """
@@ -201,18 +187,13 @@ async def header_hash(response: farmer_protocol.HeaderHash,
         quality: bytes32 = db.plotter_responses_proof_hash_to_qual[response.pos_hash]
         db.plotter_responses_header_hash[quality] = header_hash
 
+    # TODO: only send to the plotter who made the proof of space, not all plotters
     request = plotter_protocol.RequestHeaderSignature(quality, header_hash)
-    async with await all_connections.get_lock():
-        for connection in await all_connections.get_connections():
-            if connection.get_connection_type() == "plotter":
-                # TODO: only send to the plotter who made the proof of space, not all plotters
-                await connection.send("request_header_signature", request)
+    yield OutboundMessage("plotter", "request_header_signature", request, True, True)
 
 
 @api_request
-async def proof_of_space_finalized(proof_of_space_finalized: farmer_protocol.ProofOfSpaceFinalized,
-                                   source_connection: ChiaConnection,
-                                   all_connections: PeerConnections):
+async def proof_of_space_finalized(proof_of_space_finalized: farmer_protocol.ProofOfSpaceFinalized):
     """
     Full node notifies farmer that a proof of space has been completed. It gets added to the
     challenges list at that height, and height is updated if necessary
@@ -241,17 +222,12 @@ async def proof_of_space_finalized(proof_of_space_finalized: farmer_protocol.Pro
         db.challenge_to_height[proof_of_space_finalized.challenge_hash] = proof_of_space_finalized.height
 
     if get_proofs:
-        async with await all_connections.get_lock():
-            for connection in await all_connections.get_connections():
-                if connection.get_connection_type() == "plotter":
-                    await connection.send("new_challenge",
-                                          plotter_protocol.NewChallenge(proof_of_space_finalized.challenge_hash))
+        message = plotter_protocol.NewChallenge(proof_of_space_finalized.challenge_hash)
+        yield OutboundMessage("plotter", "new_challenge", message, True, True)
 
 
 @api_request
-async def proof_of_space_arrived(proof_of_space_arrived: farmer_protocol.ProofOfSpaceArrived,
-                                 source_connection: ChiaConnection,
-                                 all_connections: PeerConnections):
+async def proof_of_space_arrived(proof_of_space_arrived: farmer_protocol.ProofOfSpaceArrived):
     """
     Full node notifies the farmer that a new proof of space was created. The farmer can use this
     information to decide whether to propagate a proof.
@@ -265,16 +241,13 @@ async def proof_of_space_arrived(proof_of_space_arrived: farmer_protocol.ProofOf
 
 
 @api_request
-async def deep_reorg_notification(deep_reorg_notification: farmer_protocol.DeepReorgNotification,
-                                  source_connection: ChiaConnection,
-                                  all_connections: PeerConnections):
+async def deep_reorg_notification(deep_reorg_notification: farmer_protocol.DeepReorgNotification):
     # TODO: implement
+    # TODO: "forget everything and start over (reset db)"
     log.error(f"Deep reorg notification not implemented.")
 
 
 @api_request
-async def proof_of_time_rate(proof_of_time_rate: farmer_protocol.ProofOfTimeRate,
-                             source_connection: ChiaConnection,
-                             all_connections: PeerConnections):
+async def proof_of_time_rate(proof_of_time_rate: farmer_protocol.ProofOfTimeRate):
     async with db.lock:
         db.proof_of_time_estimate_ips = proof_of_time_rate.pot_estimate_ips
