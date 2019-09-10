@@ -19,8 +19,6 @@ python3 python-bindings/test.py
 
 ### Installation steps on a fresh OSX image
 
-xcode-select install
-
 Install brew:
 
 ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
