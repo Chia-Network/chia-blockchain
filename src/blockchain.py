@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 class Blockchain:
     def __init__(self):
         try:
-            self.genesis_trunk = FullBlock.from_bytes(genesis_block_hardcoded).trunk_block
+            self.genesis_trunk = self.get_genesis_block().trunk_block
         except ValueError:
             raise ValueError("Failed to parse genesis block.")
         self.heads: List[TrunkBlock] = [self.genesis_trunk]
@@ -34,6 +34,10 @@ class Blockchain:
         # For blocks with height % DIFFICULTY_DELAY == 1, a link to the hash of
         # the (DIFFICULTY_DELAY)-th parent of this block
         self.header_warp: Dict[bytes32, bytes32] = {}
+
+    @staticmethod
+    def get_genesis_block() -> FullBlock:
+        return FullBlock.from_bytes(genesis_block_hardcoded)
 
     def get_current_heads(self) -> List[TrunkBlock]:
         return self.heads
@@ -228,7 +232,7 @@ class Blockchain:
         Block validation algorithm. Returns true iff the candidate block is fully valid,
         and extends one of the current heads.
         1. Takes in chain: Blockchain, candidate: FullBlock
-        2. Check previous pointer(s)
+        2. Check previous pointer(s) / flyclient
         3. Check Now+2hrs > timestamp > avg timestamp of last 11 blocks
         4. Check filter hash is correct
         5. Check proof of space hash

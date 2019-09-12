@@ -14,12 +14,13 @@ from src.types.proof_of_time import ProofOfTimeOutput, ProofOfTime
 from src.types.classgroup import ClassgroupElement
 from src.util.ints import uint8
 from src.consensus import constants
-from src.server.outbound_message import OutboundMessage
+from src.server.outbound_message import OutboundMessage, Message
 
 
 # TODO: use config file
-timelord_port = 8003
-full_node_ip = "127.0.0.1"
+host = "127.0.0.1"
+port = 8003
+full_node_host = "127.0.0.1"
 full_node_port = 8002
 iterations_per_sec = 3000
 n_wesolowski = 3
@@ -122,4 +123,4 @@ async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpac
     proof_of_time = ProofOfTime(output, n_wesolowski, [uint8(b) for b in proof_bytes])
     response = timelord_protocol.ProofOfTimeFinished(proof_of_time)
 
-    yield OutboundMessage("full_node", "proof_of_time_finished", response, True, True)
+    yield OutboundMessage("full_node", Message("proof_of_time_finished", response), True, True)

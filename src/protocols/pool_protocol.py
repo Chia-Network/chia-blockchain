@@ -42,5 +42,5 @@ class Partial:
 
 
 @cbor_message(tag=5003)
-class Ack:
+class PartialAck:
     pass
