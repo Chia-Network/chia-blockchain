@@ -11,14 +11,14 @@ from src.util.ints import uint8
 from src.protocols import plotter_protocol
 from src.types.sized_bytes import bytes32
 from src.types.proof_of_space import ProofOfSpace
-from src.server.outbound_message import OutboundMessage
+from src.server.outbound_message import OutboundMessage, Message
 
 
 # TODO: use config file
-# SECRET_KEY: PrivateKey =
 POOL_PK: PublicKey = PrivateKey.from_seed(b'pool key 0').get_public_key()
 PLOTS = {f"plot-{n}-19.dat": (19, PrivateKey.from_seed(b'plot sk' + bytes([n])), POOL_PK) for n in range(8)}
-plotter_port = 8000
+host = "127.0.0.1"
+port = 8000
 
 
 # TODO: store on disk
@@ -89,7 +89,7 @@ async def new_challenge(new_challenge: plotter_protocol.NewChallenge):
                 all_responses.append(response)
 
     for response in all_responses:
-        yield OutboundMessage("farmer", "challenge_response", response, True, False)
+        yield OutboundMessage("farmer", Message("challenge_response", response), True, False)
 
 
 @api_request
@@ -123,7 +123,7 @@ async def request_proof_of_space(request: plotter_protocol.RequestProofOfSpace):
                 proof_of_space
             )
     if response:
-        yield OutboundMessage("farmer", "respond_proof_of_space", response, True, False)
+        yield OutboundMessage("farmer", Message("respond_proof_of_space", response), True, False)
 
 
 @api_request
@@ -143,7 +143,7 @@ async def request_header_signature(request: plotter_protocol.RequestHeaderSignat
         request.quality,
         header_hash_signature,
     )
-    yield OutboundMessage("farmer", "respond_header_signature", response, True, False)
+    yield OutboundMessage("farmer", Message("respond_header_signature", response), True, False)
 
 
 @api_request
@@ -161,4 +161,4 @@ async def request_partial_proof(request: plotter_protocol.RequestPartialProof):
             request.quality,
             farmer_target_signature
         )
-    yield OutboundMessage("farmer", "respond_partial_proof", response, True, False)
+    yield OutboundMessage("farmer", Message("respond_partial_proof", response), True, False)

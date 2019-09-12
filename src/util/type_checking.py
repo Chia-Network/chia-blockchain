@@ -55,5 +55,10 @@ def strictdataclass(cls: Any):
             for a, (f_name, f_type) in zip(args, fields.items()):
                 object.__setattr__(self, f_name, self.parse_item(a, f_name, f_type))
 
+    class NoTypeChecking:
+        __no_type_check__ = True
+
     cls1 = dataclasses.dataclass(_cls=cls, init=False, frozen=True)
+    if dataclasses.fields(cls1) == ():
+        return type(cls.__name__, (cls1, _Local, NoTypeChecking), {})
     return type(cls.__name__, (cls1, _Local), {})

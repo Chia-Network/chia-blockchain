@@ -5,12 +5,12 @@ from hashlib import sha256
 from chiapos import Verifier
 from blspy import Util, Signature, PrivateKey
 from asyncio import Lock, sleep
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, AsyncGenerator
 from src.util.api_decorators import api_request
 from src.protocols import farmer_protocol
 from src.protocols import timelord_protocol
 from src.protocols import peer_protocol
-from src.util.ints import uint32, uint64
+from src.util.ints import uint64
 from src.types.sized_bytes import bytes32
 from src.types.block_body import BlockBody
 from src.types.trunk_block import TrunkBlock
@@ -22,22 +22,27 @@ from src.consensus.constants import DIFFICULTY_TARGET
 from src.types.full_block import FullBlock
 from src.types.fees_target import FeesTarget
 from src.blockchain import Blockchain
-from src.server.outbound_message import OutboundMessage
+from src.server.outbound_message import OutboundMessage, Message
 
 
 # TODO: use config file
-full_node_port = 8002
-farmer_ip = "127.0.0.1"
+host = "127.0.0.1"
+port = 8002
+farmer_host = "127.0.0.1"
 farmer_port = 8001
-timelord_ip = "127.0.0.1"
+timelord_host = "127.0.0.1"
 timelord_port = 8003
+initial_peers = [("127.0.0.1", 8002),
+                 ("127.0.0.1", 8004),
+                 ("127.0.0.1", 8005)]
 update_pot_estimate_interval: int = 30
+genesis_block: FullBlock = Blockchain.get_genesis_block()
 
 
 class Database:
     lock: Lock = Lock()
     blockchain: Blockchain = Blockchain()  # Should be stored in memory
-    bodies: Dict[uint32, List[BlockBody]] = {}
+    full_blocks: Dict[str, FullBlock] = {genesis_block.trunk_block.header.header_hash: genesis_block}
 
     # These are the blocks that we created, but don't have the PoS from farmer yet,
     # keyed from the proof of space hash
@@ -53,7 +58,7 @@ log = logging.getLogger(__name__)
 db = Database()
 
 
-async def send_heads_to_farmers():
+async def send_heads_to_farmers() -> AsyncGenerator[OutboundMessage, None]:
     """
     Sends all of the current heads to all farmer peers. Also sends the latest
     estimated proof of time rate, so farmer can calulate which proofs are good.
@@ -70,12 +75,12 @@ async def send_heads_to_farmers():
                                                                   quality, difficulty))
         proof_of_time_rate: uint64 = db.proof_of_time_estimate_ips
     for request in requests:
-        yield OutboundMessage("farmer", "proof_of_space_finalized", request, False, True)
+        yield OutboundMessage("farmer", Message("proof_of_space_finalized", request), False, True)
     rate_update = farmer_protocol.ProofOfTimeRate(proof_of_time_rate)
-    yield OutboundMessage("farmer", "proof_of_time_rate", rate_update, False, True)
+    yield OutboundMessage("farmer", Message("proof_of_time_rate", rate_update), False, True)
 
 
-async def send_challenges_to_timelords():
+async def send_challenges_to_timelords() -> AsyncGenerator[OutboundMessage, None]:
     """
     Sends all of the current heads to all timelord peers.
     """
@@ -85,7 +90,7 @@ async def send_challenges_to_timelords():
             challenge_hash = head.challenge.get_hash()
             requests.append(timelord_protocol.ChallengeStart(challenge_hash))
     for request in requests:
-        yield OutboundMessage("timelord", "challenge_start", request, False, True)
+        yield OutboundMessage("timelord", Message("challenge_start", request), False, True)
 
 
 async def proof_of_time_estimate_interval():
@@ -98,8 +103,19 @@ async def proof_of_time_estimate_interval():
         await sleep(update_pot_estimate_interval)
 
 
+async def on_connect() -> AsyncGenerator[OutboundMessage, None]:
+    blocks: List[FullBlock] = []
+    async with db.lock:
+        heads: List[TrunkBlock] = db.blockchain.get_current_heads()
+        for h in heads:
+            blocks.append(db.full_blocks[h.header.get_hash()])
+    for block in blocks:
+        request = peer_protocol.Block(block)
+        yield OutboundMessage("full_node", Message("block", request), True, False)
+
+
 @api_request
-async def request_header_hash(request: farmer_protocol.RequestHeaderHash):
+async def request_header_hash(request: farmer_protocol.RequestHeaderHash) -> AsyncGenerator[OutboundMessage, None]:
     """
     Creates a block body and header, with the proof of space, coinbase, and fee targets provided
     by the farmer, and sends the hash of the header data back to the farmer.
@@ -154,11 +170,11 @@ async def request_header_hash(request: farmer_protocol.RequestHeaderHash):
         db.candidate_blocks[proof_of_space_hash] = (body, block_header_data, request.proof_of_space)
 
     message = farmer_protocol.HeaderHash(proof_of_space_hash, block_header_data_hash)
-    yield OutboundMessage("farmer", "header_hash", message, True, False)
+    yield OutboundMessage("farmer", Message("header_hash", message), True, False)
 
 
 @api_request
-async def header_signature(header_signature: farmer_protocol.HeaderSignature):
+async def header_signature(header_signature: farmer_protocol.HeaderSignature) -> AsyncGenerator[OutboundMessage, None]:
     """
     Signature of header hash, by the plotter. This is enough to create an unfinished
     block, which only needs a Proof of Time to be finished. If the signature is valid,
@@ -191,7 +207,8 @@ async def header_signature(header_signature: farmer_protocol.HeaderSignature):
 
 # TIMELORD PROTOCOL
 @api_request
-async def proof_of_time_finished(request: timelord_protocol.ProofOfTimeFinished):
+async def proof_of_time_finished(request: timelord_protocol.ProofOfTimeFinished) -> \
+        AsyncGenerator[OutboundMessage, None]:
     """
     A proof of time, received by a peer timelord. We can use this to complete a block,
     and call the block routine (which handles propagation and verification of blocks).
@@ -224,7 +241,7 @@ async def proof_of_time_finished(request: timelord_protocol.ProofOfTimeFinished)
 # PEER PROTOCOL
 
 @api_request
-async def new_proof_of_time(new_proof_of_time: peer_protocol.NewProofOfTime):
+async def new_proof_of_time(new_proof_of_time: peer_protocol.NewProofOfTime) -> AsyncGenerator[OutboundMessage, None]:
     """
     A proof of time, received by a peer full node. If we have the rest of the block,
     we can complete it. Otherwise, we just verify and propagate the proof.
@@ -243,11 +260,11 @@ async def new_proof_of_time(new_proof_of_time: peer_protocol.NewProofOfTime):
             yield msg
     if propagate_proof:
         # TODO: perhaps don't propagate everything, this is a DoS vector
-        yield OutboundMessage("full_node", "new_proof_of_time", new_proof_of_time, False, True)
+        yield OutboundMessage("full_node", Message("new_proof_of_time", new_proof_of_time), False, True)
 
 
 @api_request
-async def unfinished_block(unfinished_block: peer_protocol.UnfinishedBlock):
+async def unfinished_block(unfinished_block: peer_protocol.UnfinishedBlock) -> AsyncGenerator[OutboundMessage, None]:
     """
     We have received an unfinished block, either created by us, or from another peer.
     We can validate it and if it's a good block, propagate it to other peers and
@@ -282,12 +299,12 @@ async def unfinished_block(unfinished_block: peer_protocol.UnfinishedBlock):
         db.unfinished_blocks[(challenge_hash, iterations_needed)] = unfinished_block.block
 
     timelord_request = timelord_protocol.ProofOfSpaceInfo(challenge_hash, iterations_needed)
-    yield OutboundMessage("timelord", "proof_of_space_info", timelord_request, False, True)
-    yield OutboundMessage("full_node", "unfinished_block", unfinished_block, False, True)
+    yield OutboundMessage("timelord", Message("proof_of_space_info", timelord_request), False, True)
+    yield OutboundMessage("full_node", Message("unfinished_block", unfinished_block), False, True)
 
 
 @api_request
-async def block(block: peer_protocol.Block):
+async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, None]:
     """
     Receive a full block from a peer full node (or ourselves).
     Pseudocode:
@@ -306,13 +323,14 @@ async def block(block: peer_protocol.Block):
     propagate: bool = False
     header_hash = block.block.trunk_block.header.get_hash()
     async with db.lock:
-        if header_hash in db.bodies and block.block.body in db.bodies[header_hash]:
+        if header_hash in db.full_blocks:
             log.info(f"Already have block {header_hash}")
             return
         # TODO(alex): Check if we care about this block, we don't want to add random
         # disconnected blocks. For example if it's on one of the heads, or if it's an older
         # block that we need
         added = db.blockchain.add_block(block.block)
+        db.full_blocks[header_hash] = block.block
         if not added:
             log.info("Block not added!!")
             # TODO(alex): is this correct? What if we already have it?
@@ -332,11 +350,11 @@ async def block(block: peer_protocol.Block):
         timelord_request_end = timelord_protocol.ChallengeStart(block.block.trunk_block.proof_of_time.
                                                                 output.challenge_hash)
         # Tell timelord to stop previous challenge and start with new one
-        yield OutboundMessage("timelord", "challenge_end", timelord_request_end, True, True)
-        yield OutboundMessage("timelord", "challenge_start", timelord_request, True, True)
+        yield OutboundMessage("timelord", Message("challenge_end", timelord_request_end), True, True)
+        yield OutboundMessage("timelord", Message("challenge_start", timelord_request), True, True)
 
         # Tell full nodes about the new block
-        yield OutboundMessage("full_node", "block", block, False, True)
+        yield OutboundMessage("full_node", Message("block", block), False, True)
 
         # Tell fammer about the new block
-        yield OutboundMessage("farmer", "proof_of_space_finalized", farmer_request, True, True)
+        yield OutboundMessage("farmer", Message("proof_of_space_finalized", farmer_request), True, True)

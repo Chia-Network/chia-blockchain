@@ -84,6 +84,13 @@ class TestStrictClass(unittest.TestCase):
         good = TestClass(12, None, 13, None)
         assert good
 
+    def test_StrictDataClassEmpty(self):
+        @strictdataclass
+        class A:
+            pass
+
+        A()
+
 
 if __name__ == '__main__':
     unittest.main()
