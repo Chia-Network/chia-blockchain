@@ -10,6 +10,7 @@ from src.types.proof_of_space import ProofOfSpace
 from src.types.coinbase import CoinbaseInfo
 from src.protocols import plotter_protocol, farmer_protocol
 from src.types.sized_bytes import bytes32
+from src.types.peer_info import PeerInfo
 from src.util.ints import uint32, uint64
 from src.consensus.block_rewards import calculate_block_reward
 from src.consensus.pot_iterations import calculate_iterations_quality
@@ -19,8 +20,7 @@ from src.server.outbound_message import OutboundMessage, Message
 # TODO: use config file
 host = "127.0.0.1"
 port = 8001
-plotter_host = "127.0.0.1"
-plotter_port = 8000
+plotter_peer = PeerInfo("127.0.0.1", 8000, sha256(b"plotter:127.0.0.1:8000").digest())
 farmer_sk = PrivateKey.from_seed(secrets.token_bytes(32))
 farmer_target = sha256(farmer_sk.get_public_key().serialize()).digest()
 pool_share_threshold = 30  # To send to pool, must be expected to take less than these seconds

@@ -32,24 +32,22 @@ async def main():
 
     waitable_tasks = [server]
     if connect_to_farmer:
-        farmer_con_task, farmer_client = await start_chia_client(full_node.farmer_host,
-                                                                 full_node.farmer_port, full_node, "farmer")
+        farmer_con_task, farmer_client = await start_chia_client(full_node.farmer_peer, full_node, "farmer")
         async for msg in full_node.send_heads_to_farmers():
             farmer_client.push(msg)
         waitable_tasks.append(farmer_con_task)
 
     if connect_to_timelord:
-        timelord_con_task, timelord_client = await start_chia_client(full_node.timelord_host,
-                                                                     full_node.timelord_port, full_node, "timelord")
+        timelord_con_task, timelord_client = await start_chia_client(full_node.timelord_peer, full_node, "timelord")
         async for msg in full_node.send_challenges_to_timelords():
             timelord_client.push(msg)
         waitable_tasks.append(timelord_con_task)
 
     peer_tasks = []
-    for peer_host, peer_port in full_node.initial_peers:
-        if not (host == peer_host and port == peer_port):
+    for peer in full_node.initial_peers:
+        if not (host == peer.host and port == peer.port):
             # TODO: check if not in blacklist
-            peer_task = start_chia_client(peer_host, peer_port, full_node, "full_node")
+            peer_task = start_chia_client(peer, full_node, "full_node")
             peer_tasks.append(peer_task)
     awaited = await asyncio.gather(*peer_tasks, return_exceptions=True)
     connected_tasks = [response[0] for response in awaited if not isinstance(response, asyncio.CancelledError)]
