@@ -63,8 +63,10 @@ class PeerConnections:
         return self._all_connections
 
     async def already_have_connection(self, node_id: bytes32):
+        ret = False
         async with self._connections_lock:
             for c in self._all_connections:
                 if c.node_id == node_id:
-                    return True
-        return False
+                    ret = True
+                    break
+        return ret

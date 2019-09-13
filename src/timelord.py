@@ -20,8 +20,6 @@ from src.server.outbound_message import OutboundMessage, Message
 # TODO: use config file
 host = "127.0.0.1"
 port = 8003
-full_node_host = "127.0.0.1"
-full_node_port = 8002
 iterations_per_sec = 3000
 n_wesolowski = 3
 

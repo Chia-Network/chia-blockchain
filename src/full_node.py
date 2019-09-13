@@ -7,20 +7,21 @@ from blspy import Util, Signature, PrivateKey
 from asyncio import Lock, sleep
 from typing import Dict, List, Tuple, Optional, AsyncGenerator
 from src.util.api_decorators import api_request
+from src.util.ints import uint64
 from src.protocols import farmer_protocol
 from src.protocols import timelord_protocol
 from src.protocols import peer_protocol
-from src.util.ints import uint64
 from src.types.sized_bytes import bytes32
 from src.types.block_body import BlockBody
 from src.types.trunk_block import TrunkBlock
 from src.types.challenge import Challenge
 from src.types.block_header import BlockHeaderData, BlockHeader
 from src.types.proof_of_space import ProofOfSpace
-from src.consensus.pot_iterations import calculate_iterations
-from src.consensus.constants import DIFFICULTY_TARGET
 from src.types.full_block import FullBlock
 from src.types.fees_target import FeesTarget
+from src.types.peer_info import PeerInfo
+from src.consensus.pot_iterations import calculate_iterations
+from src.consensus.constants import DIFFICULTY_TARGET
 from src.blockchain import Blockchain
 from src.server.outbound_message import OutboundMessage, Message
 
@@ -28,13 +29,11 @@ from src.server.outbound_message import OutboundMessage, Message
 # TODO: use config file
 host = "127.0.0.1"
 port = 8002
-farmer_host = "127.0.0.1"
-farmer_port = 8001
-timelord_host = "127.0.0.1"
-timelord_port = 8003
-initial_peers = [("127.0.0.1", 8002),
-                 ("127.0.0.1", 8004),
-                 ("127.0.0.1", 8005)]
+farmer_peer = PeerInfo("127.0.0.1", 8001, sha256(b"farmer:127.0.0.1:8001").digest())
+timelord_peer = PeerInfo("127.0.0.1", 8003, sha256(b"timelord:127.0.0.1:8003").digest())
+initial_peers = [PeerInfo("127.0.0.1", 8002, sha256(b"full_node:127.0.0.1:8002").digest()),
+                 PeerInfo("127.0.0.1", 8004, sha256(b"full_node:127.0.0.1:8004").digest()),
+                 PeerInfo("127.0.0.1", 8005, sha256(b"full_node:127.0.0.1:8005").digest())]
 update_pot_estimate_interval: int = 30
 genesis_block: FullBlock = Blockchain.get_genesis_block()
 

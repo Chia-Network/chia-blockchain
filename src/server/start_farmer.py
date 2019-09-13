@@ -11,14 +11,11 @@ logging.basicConfig(format='Farmer %(name)-23s: %(levelname)-8s %(message)s', le
 
 
 async def main():
-    plotter_con_task, plotter_client = await start_chia_client(farmer.plotter_host,
-                                                               farmer.plotter_port, farmer, "plotter")
+    plotter_con_task, plotter_client = await start_chia_client(farmer.plotter_peer, farmer, "plotter")
 
     # Sends a handshake to the plotter
-    print("sending handshake")
     msg = PlotterHandshake([sk.get_public_key() for sk in farmer.db.pool_sks])
     plotter_client.push(OutboundMessage("plotter", Message("plotter_handshake", msg), True, True))
-    print("pushed handshake")
 
     # Starts the farmer server (which full nodes can connect to)
     host, port = parse_host_port(farmer)
