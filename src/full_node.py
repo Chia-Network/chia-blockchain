@@ -1,13 +1,16 @@
 import logging
 import time
+import asyncio
+import collections
 from secrets import token_bytes
 from hashlib import sha256
 from chiapos import Verifier
 from blspy import Util, Signature, PrivateKey
-from asyncio import Lock, sleep
-from typing import Dict, List, Tuple, Optional, AsyncGenerator
+from asyncio import Lock, sleep, Event
+from typing import Dict, List, Tuple, Optional, AsyncGenerator, Counter
 from src.util.api_decorators import api_request
 from src.util.ints import uint64
+from src.util import errors
 from src.protocols import farmer_protocol
 from src.protocols import timelord_protocol
 from src.protocols import peer_protocol
@@ -20,10 +23,11 @@ from src.types.proof_of_space import ProofOfSpace
 from src.types.full_block import FullBlock
 from src.types.fees_target import FeesTarget
 from src.types.peer_info import PeerInfo
+from src.consensus.weight_verifier import verify_weight
 from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.constants import DIFFICULTY_TARGET
 from src.blockchain import Blockchain
-from src.server.outbound_message import OutboundMessage, Message
+from src.server.outbound_message import OutboundMessage, Delivery, NodeType, Message
 
 
 # TODO: use config file
@@ -37,11 +41,24 @@ initial_peers = [PeerInfo("127.0.0.1", 8002, sha256(b"full_node:127.0.0.1:8002")
 update_pot_estimate_interval: int = 30
 genesis_block: FullBlock = Blockchain.get_genesis_block()
 
+# Don't send any more than these number of trunks and blocks, in one message
+max_trunks_to_send = 100
+max_blocks_to_send = 10
+
 
 class Database:
     lock: Lock = Lock()
     blockchain: Blockchain = Blockchain()  # Should be stored in memory
     full_blocks: Dict[str, FullBlock] = {genesis_block.trunk_block.header.header_hash: genesis_block}
+
+    sync_mode: bool = True
+    # Block headers for blocks which we think might be heads, but we haven't verified yet
+    potential_heads: Counter[str] = collections.Counter()
+    # Headers/trunks downloaded for the during sync, by height
+    potential_trunks: Dict[uint64, TrunkBlock] = {}
+    # Blocks downloaded during sync, by height
+    potential_blocks: Dict[uint64, FullBlock] = {}
+    potential_blocks_received: Dict[uint64, Event] = {}
 
     # These are the blocks that we created, but don't have the PoS from farmer yet,
     # keyed from the proof of space hash
@@ -74,9 +91,9 @@ async def send_heads_to_farmers() -> AsyncGenerator[OutboundMessage, None]:
                                                                   quality, difficulty))
         proof_of_time_rate: uint64 = db.proof_of_time_estimate_ips
     for request in requests:
-        yield OutboundMessage("farmer", Message("proof_of_space_finalized", request), False, True)
+        yield OutboundMessage(NodeType.FARMER, Message("proof_of_space_finalized", request), Delivery.BROADCAST)
     rate_update = farmer_protocol.ProofOfTimeRate(proof_of_time_rate)
-    yield OutboundMessage("farmer", Message("proof_of_time_rate", rate_update), False, True)
+    yield OutboundMessage(NodeType.FARMER, Message("proof_of_time_rate", rate_update), Delivery.BROADCAST)
 
 
 async def send_challenges_to_timelords() -> AsyncGenerator[OutboundMessage, None]:
@@ -89,10 +106,13 @@ async def send_challenges_to_timelords() -> AsyncGenerator[OutboundMessage, None
             challenge_hash = head.challenge.get_hash()
             requests.append(timelord_protocol.ChallengeStart(challenge_hash))
     for request in requests:
-        yield OutboundMessage("timelord", Message("challenge_start", request), False, True)
+        yield OutboundMessage(NodeType.TIMELORD, Message("challenge_start", request), Delivery.BROADCAST)
 
 
 async def proof_of_time_estimate_interval():
+    """
+    Periodic function that updates our estimate of the PoT rate, based on the last few blocks.
+    """
     while True:
         estimated_ips: Optional[uint64] = db.blockchain.get_vdf_rate_estimate()
         async with db.lock:
@@ -103,6 +123,9 @@ async def proof_of_time_estimate_interval():
 
 
 async def on_connect() -> AsyncGenerator[OutboundMessage, None]:
+    """
+    Whenever we connect to another full node, send them our current heads.
+    """
     blocks: List[FullBlock] = []
     async with db.lock:
         heads: List[TrunkBlock] = db.blockchain.get_current_heads()
@@ -110,7 +133,163 @@ async def on_connect() -> AsyncGenerator[OutboundMessage, None]:
             blocks.append(db.full_blocks[h.header.get_hash()])
     for block in blocks:
         request = peer_protocol.Block(block)
-        yield OutboundMessage("full_node", Message("block", request), True, False)
+        yield OutboundMessage(NodeType.FULL_NODE, Message("block", request), Delivery.RESPOND)
+
+
+async def sync():
+    """
+    Performs a full sync of the blockchain.
+        - Check which are the heaviest tips
+        - Request headers for the heaviest
+        - Verify the weight of the tip, using the headers
+        - Blacklist peers that provide invalid stuff
+        - Sync blockchain up to heads (request blocks in batches, and add to queue)
+    """
+
+    # Wait for us to receive heads from peers
+    for _ in range(4):
+        await asyncio.sleep(2)
+        async with db.lock:
+            log.warning("Still waiting to receive tips from peers.")
+            # TODO: better way to tell that we have finished receiving tips
+            if sum(db.potential_heads.values()) > 10:
+                break
+
+    highest_weight: uint64 = uint64(0)
+    tip_block: FullBlock = None
+    tip_height = 0
+
+    # Based on responses from peers about the current heads, see which head is the heaviest
+    # (similar to longest chain rule).
+    async with db.lock:
+        for header_hash, _ in db.potential_heads:
+            block = db.full_blocks[header_hash]
+            if block.trunk_block.challenge.weight > highest_weight:
+                highest_weight = block.trunk_block.challenge.weight
+                tip_block = block
+                tip_height = block.trunk_block.challenge.height
+        if highest_weight <= max([t.challenge.total_weight for t in db.blockchain.get_current_heads()]):
+            log.info("Not performing sync, already caught up")
+            db.sync_mode = False
+            return
+
+    # Now, we download all of the headers in order to verify the weight
+    # TODO: use queue here, request a few at a time
+    # TODO: send multiple API calls out at once
+    timeout = 20
+    sleep_interval = 3
+    total_time_slept = 0
+    trunks = []
+    while total_time_slept < timeout:
+        request = peer_protocol.RequestTrunkBlocks(tip_block.trunk_block.header.hash(),
+                                                   [h for h in range(0, tip_height)])
+        # TODO: should we ask the same peer as before, for the trunks?
+        yield OutboundMessage(NodeType.FULL_NODE, Message("request_trunk_blocks", request), Delivery.RANDOM)
+        await asyncio.sleep(sleep_interval)
+        total_time_slept += sleep_interval
+        async with db.lock:
+            received_all_trunks = True
+            local_trunks = []
+            for height in range(0, tip_height):
+                if height not in db.potential_trunks:
+                    received_all_trunks = False
+                    break
+                local_trunks.append(db.potential_trunks[uint64(height)])
+            if received_all_trunks:
+                trunks = local_trunks
+                break
+
+    if not verify_weight(tip_block.trunk_block, trunks):
+        # TODO: ban peers that provided the invalid heads or proofs
+        raise errors.InvalidWeight(f"Weight of {tip_block.trunk_block.header.hash()} not valid.")
+
+    for height in range(0, tip_height):
+        # Only download from fork point (what we don't have)
+        async with db.lock:
+            if trunks[height].header.hash() in db.full_blocks:
+                continue
+        request = peer_protocol.RequestSyncBlocks(tip_block.trunk_block.header.header_hash, [1])
+        async with db.lock:
+            db.potential_blocks_received[uint64(height)] = Event()
+        yield OutboundMessage(NodeType.FULL_NODE, Message("request_sync_blocks", request), Delivery.RANDOM)
+
+        await asyncio.wait_for(db.potential_blocks_received[uint64(height)].wait(), timeout=10)
+
+        async with db.lock:
+            # TODO: ban peers that provide bad blocks
+            assert db.blockchain.add_block(db.potential_blocks[uint64(height)])
+            log.error(f"ADDED BLOCK AT HEIGHT: {height}")
+    async with db.lock:
+        db.sync_mode = False
+
+
+@api_request
+async def request_trunk_blocks(request: peer_protocol.RequestTrunkBlocks) \
+            -> AsyncGenerator[OutboundMessage, None]:
+    """
+    A peer requests a list of trunk blocks, by height. Used for syncing or light clients.
+    """
+    if len(request.heights) > max_trunks_to_send:
+        raise errors.TooManyTrunksRequested(f"The max number of trunks is {max_trunks_to_send},\
+                                             but requested {len(request.heights)}")
+    async with db.lock:
+        trunks: List[TrunkBlock] = db.blockchain.get_trunk_blocks_by_height(request.heights, request.tip_header_hash)
+    response = peer_protocol.TrunkBlocks(request.tip_header_hash, trunks)
+
+    yield OutboundMessage(NodeType.FULL_NODE, Message("trunk_blocks", response), Delivery.RESPOND)
+
+
+@api_request
+async def trunk_blocks(request: peer_protocol.TrunkBlocks) \
+            -> AsyncGenerator[OutboundMessage, None]:
+    """
+    Receive trunk blocks from a peer.
+    """
+    async with db.lock:
+        for trunk_block in request.trunk_blocks:
+            db.potential_trunks[trunk_block.challenge.height] = trunk_block
+
+    # Yield nothing
+    for _ in []:
+        yield _
+
+
+@api_request
+async def request_sync_blocks(request: peer_protocol.RequestSyncBlocks) -> AsyncGenerator[OutboundMessage, None]:
+    """
+    Responsd to a peers request for syncing blocks.
+    """
+    async with db.lock:
+        if request.tip_header_hash not in db.full_blocks:
+            # We don't have the blocks that the client is looking for
+            log.info("Peer requested tip {request.tip_header_hash} that we don't have")
+            return
+        if len(request.heights) > max_blocks_to_send:
+            raise errors.TooManyTrunksRequested(f"The max number of blocks is {max_blocks_to_send},\
+                                                but requested {len(request.heights)}")
+        blocks = db.blockchain.get_blocks_by_height(request.heights, request.tip_header_hash)
+
+    response = peer_protocol.SyncBlocks(request.tip_header_hash, blocks)
+    yield OutboundMessage(NodeType.FULL_NODE, response, Delivery.RESPOND)
+
+
+@api_request
+async def sync_blocks(request: peer_protocol.SyncBlocks) -> AsyncGenerator[OutboundMessage, None]:
+    """
+    We have received the blocks that we needed for syncing. Add them to processing queue.
+    """
+    # TODO: use an actual queue?
+    async with db.lock:
+        if not db.sync_mode:
+            log.warning("Receiving sync blocks when we are not in sync mode.")
+            return
+        for block in request.blocks:
+            db.potential_blocks[block.trunk_block.challenge.height] = block
+            db.potential_blocks_received[block.trunk_block.challenge.height].set()
+
+    # Yield nothing
+    for _ in []:
+        yield _
 
 
 @api_request
@@ -135,7 +314,7 @@ async def request_header_hash(request: farmer_protocol.RequestHeaderHash) -> Asy
             if head.challenge.get_hash() == request.challenge_hash:
                 target_head = head
         if target_head is None:
-            log.warn(f"Challenge hash: {request.challenge_hash} not in one of three heads")
+            log.warning(f"Challenge hash: {request.challenge_hash} not in one of three heads")
             return
 
         # TODO: use mempool to grab best transactions, for the selected head
@@ -169,7 +348,7 @@ async def request_header_hash(request: farmer_protocol.RequestHeaderHash) -> Asy
         db.candidate_blocks[proof_of_space_hash] = (body, block_header_data, request.proof_of_space)
 
     message = farmer_protocol.HeaderHash(proof_of_space_hash, block_header_data_hash)
-    yield OutboundMessage("farmer", Message("header_hash", message), True, False)
+    yield OutboundMessage(NodeType.FARMER, Message("header_hash", message), Delivery.RESPOND)
 
 
 @api_request
@@ -181,7 +360,7 @@ async def header_signature(header_signature: farmer_protocol.HeaderSignature) ->
     """
     async with db.lock:
         if header_signature.pos_hash not in db.candidate_blocks:
-            log.warn(f"PoS hash {header_signature.pos_hash} not found in database")
+            log.warning(f"PoS hash {header_signature.pos_hash} not found in database")
             return
         # Verifies that we have the correct header and body stored
         block_body, block_header_data, pos = db.candidate_blocks[header_signature.pos_hash]
@@ -215,7 +394,7 @@ async def proof_of_time_finished(request: timelord_protocol.ProofOfTimeFinished)
     async with db.lock:
         dict_key = (request.proof.output.challenge_hash, request.proof.output.number_of_iterations)
         if dict_key not in db.unfinished_blocks:
-            log.warn(f"Received a proof of time that we cannot use to complete a block {dict_key}")
+            log.warning(f"Received a proof of time that we cannot use to complete a block {dict_key}")
             return
         unfinished_block_obj: FullBlock = db.unfinished_blocks[dict_key]
         prev_block: TrunkBlock = db.blockchain.get_trunk_block(unfinished_block_obj.trunk_block.prev_header_hash)
@@ -259,7 +438,7 @@ async def new_proof_of_time(new_proof_of_time: peer_protocol.NewProofOfTime) -> 
             yield msg
     if propagate_proof:
         # TODO: perhaps don't propagate everything, this is a DoS vector
-        yield OutboundMessage("full_node", Message("new_proof_of_time", new_proof_of_time), False, True)
+        yield OutboundMessage(NodeType.FULL_NODE, Message("new_proof_of_time", new_proof_of_time), Delivery.BROADCAST)
 
 
 @api_request
@@ -298,8 +477,8 @@ async def unfinished_block(unfinished_block: peer_protocol.UnfinishedBlock) -> A
         db.unfinished_blocks[(challenge_hash, iterations_needed)] = unfinished_block.block
 
     timelord_request = timelord_protocol.ProofOfSpaceInfo(challenge_hash, iterations_needed)
-    yield OutboundMessage("timelord", Message("proof_of_space_info", timelord_request), False, True)
-    yield OutboundMessage("full_node", Message("unfinished_block", unfinished_block), False, True)
+    yield OutboundMessage(NodeType.TIMELORD, Message("proof_of_space_info", timelord_request), Delivery.BROADCAST)
+    yield OutboundMessage(NodeType.FULL_NODE, Message("unfinished_block", unfinished_block), Delivery.BROADCAST)
 
 
 @api_request
@@ -321,7 +500,14 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
     """
     propagate: bool = False
     header_hash = block.block.trunk_block.header.get_hash()
+
     async with db.lock:
+        if db.sync_mode:
+            # Add the block to our potential heads list
+            db.full_blocks[header_hash] = block.block
+            db.potential_heads[header_hash] += 1
+            return
+
         if header_hash in db.full_blocks:
             log.info(f"Already have block {header_hash}")
             return
@@ -349,11 +535,11 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
         timelord_request_end = timelord_protocol.ChallengeStart(block.block.trunk_block.proof_of_time.
                                                                 output.challenge_hash)
         # Tell timelord to stop previous challenge and start with new one
-        yield OutboundMessage("timelord", Message("challenge_end", timelord_request_end), True, True)
-        yield OutboundMessage("timelord", Message("challenge_start", timelord_request), True, True)
+        yield OutboundMessage(NodeType.TIMELORD, Message("challenge_end", timelord_request_end), Delivery.BROADCAST)
+        yield OutboundMessage(NodeType.TIMELORD, Message("challenge_start", timelord_request), Delivery.BROADCAST)
 
         # Tell full nodes about the new block
-        yield OutboundMessage("full_node", Message("block", block), False, True)
+        yield OutboundMessage(NodeType.FULL_NODE, Message("block", block), Delivery.BROADCAST)
 
-        # Tell fammer about the new block
-        yield OutboundMessage("farmer", Message("proof_of_space_finalized", farmer_request), True, True)
+        # Tell farmer about the new block
+        yield OutboundMessage(NodeType.FARMER, Message("proof_of_space_finalized", farmer_request), Delivery.BROADCAST)

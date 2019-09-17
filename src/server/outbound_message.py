@@ -1,5 +1,24 @@
 from typing import Any
+from enum import Enum
 from dataclasses import dataclass
+
+
+class NodeType(Enum):
+    FULL_NODE = 1
+    PLOTTER = 2
+    FARMER = 3
+    TIMELORD = 4
+
+
+class Delivery(Enum):
+    # A message is sent to the same peer that we received a message from
+    RESPOND = 1
+    # A message is sent to all peers
+    BROADCAST = 2
+    # A message is sent to all peers except the one from which we received the API call
+    BROADCAST_TO_OTHERS = 3
+    # A message is sent to a random peer
+    RANDOM = 4
 
 
 @dataclass
@@ -13,10 +32,7 @@ class Message:
 @dataclass
 class OutboundMessage:
     # Type of the peer, 'farmer', 'plotter', 'full_node', etc.
-    peer_type: str
+    peer_type: NodeType
     # Message to send
     message: Message
-    # If true, a message is sent to the same peer that we received a message from
-    respond: bool
-    # If true, a message is sent to all other peers
-    broadcast: bool
+    delivery_method: Delivery

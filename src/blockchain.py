@@ -1,5 +1,6 @@
 from collections import defaultdict
-from typing import List, Dict, Optional
+from src.util.errors import BlockNotInBlockchain
+from typing import List, Dict, Optional, Tuple
 import logging
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
@@ -29,6 +30,7 @@ class Blockchain:
         self.blocks: Dict[bytes32, TrunkBlock] = {
             self.genesis_trunk.header.get_hash(): self.genesis_trunk
         }
+        self.height_to_hash: Dict[uint64, bytes32] = {}
         # Block is unconnected iff floating_demand[prev_hash] contains header_hash
         self.floating_demand: Dict[bytes32, List[bytes32]] = defaultdict(list)
         # For blocks with height % DIFFICULTY_DELAY == 1, a link to the hash of
@@ -54,6 +56,44 @@ class Blockchain:
 
     def get_trunk_block(self, header_hash: bytes32) -> TrunkBlock:
         return self.blocks[header_hash]
+
+    def get_trunk_blocks_by_height(self, heights: List[uint64], tip_header_hash: bytes32) -> List[TrunkBlock]:
+        """
+        Returns a list of trunk blocks, one for each height requested.
+        """
+        # TODO: optimize, don't look at all blocks
+        sorted_heights = sorted([(height, index) for index, height in enumerate(heights)], reverse=True)
+
+        if tip_header_hash not in self.blocks:
+            raise BlockNotInBlockchain(f"Header hash {tip_header_hash} not present in chain.")
+        curr_block: FullBlock = self.blocks[tip_header_hash]
+        trunks: List[Tuple[int, TrunkBlock]] = []
+        for height, index in sorted_heights:
+            if height > curr_block.trunk_block.challenge.height:
+                raise ValueError("Height is not valid for tip {tip_header_hash}")
+            while height < curr_block.trunk.block.challenge.height:
+                curr_block = self.blocks[curr_block.trunk_block.header.data.prev_header_hash]
+            trunks.append((index, curr_block.trunk_block))
+        return [b for index, b in sorted(trunks)]
+
+    def get_blocks_by_height(self, heights: List[uint64], tip_header_hash: bytes32) -> List[FullBlock]:
+        """
+        Returns a list of blocks, one for each height requested.
+        """
+        # TODO: optimize, don't look at all blocks
+        sorted_heights = sorted([(height, index) for index, height in enumerate(heights)], reverse=True)
+
+        if tip_header_hash not in self.blocks:
+            raise BlockNotInBlockchain(f"Header hash {tip_header_hash} not present in chain.")
+        curr_block: FullBlock = self.blocks[tip_header_hash]
+        blocks: List[Tuple[int, TrunkBlock]] = []
+        for height, index in sorted_heights:
+            if height > curr_block.trunk_block.challenge.height:
+                raise ValueError("Height is not valid for tip {tip_header_hash}")
+            while height < curr_block.trunk.block.challenge.height:
+                curr_block = self.blocks[curr_block.trunk_block.header.data.prev_header_hash]
+            blocks.append((index, curr_block))
+        return [b for index, b in sorted(blocks)]
 
     def get_difficulty(self, header_hash: bytes32) -> uint64:
         trunk = self.blocks.get(header_hash, None)

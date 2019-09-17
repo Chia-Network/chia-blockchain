@@ -14,7 +14,7 @@ from src.types.peer_info import PeerInfo
 from src.util.ints import uint32, uint64
 from src.consensus.block_rewards import calculate_block_reward
 from src.consensus.pot_iterations import calculate_iterations_quality
-from src.server.outbound_message import OutboundMessage, Message
+from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
 
 
 # TODO: use config file
@@ -63,7 +63,7 @@ async def challenge_response(challenge_response: plotter_protocol.ChallengeRespo
 
     async with db.lock:
         if challenge_response.quality in db.plotter_responses_challenge:
-            log.warn(f"Have already seen quality {challenge_response.quality}")
+            log.warning(f"Have already seen quality {challenge_response.quality}")
             return
         height: uint32 = db.challenge_to_height[challenge_response.challenge_hash]
         difficulty: uint64 = uint64(0)
@@ -83,7 +83,7 @@ async def challenge_response(challenge_response: plotter_protocol.ChallengeRespo
             db.plotter_responses_challenge[challenge_response.quality] = challenge_response.challenge_hash
         request = plotter_protocol.RequestProofOfSpace(challenge_response.quality)
 
-        yield OutboundMessage("plotter", Message("request_proof_of_space", request), True, False)
+        yield OutboundMessage(NodeType.PLOTTER, Message("request_proof_of_space", request), Delivery.RESPOND)
 
 
 @api_request
@@ -121,7 +121,7 @@ async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace)
     if estimate_secs < pool_share_threshold:
         request = plotter_protocol.RequestPartialProof(response.quality,
                                                        sha256(farmer_target).digest())
-        yield OutboundMessage("plotter", Message("request_partial_proof", request), True, False)
+        yield OutboundMessage(NodeType.PLOTTER, Message("request_partial_proof", request), Delivery.RESPOND)
     if estimate_secs < propagate_threshold:
         async with db.lock:
             if new_proof_height not in db.coinbase_rewards:
@@ -132,7 +132,7 @@ async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace)
             request = farmer_protocol.RequestHeaderHash(challenge_hash, coinbase,
                                                         signature, farmer_target, response.proof)
 
-        yield OutboundMessage("full_node", Message("request_header_hash", request), False, True)
+        yield OutboundMessage(NodeType.FULL_NODE, Message("request_header_hash", request), Delivery.BROADCAST)
 
 
 @api_request
@@ -153,7 +153,7 @@ async def respond_header_signature(response: plotter_protocol.RespondHeaderSigna
         pos_hash: bytes32 = proof_of_space.get_hash()
 
     request = farmer_protocol.HeaderSignature(pos_hash, header_hash, response.header_hash_signature)
-    yield OutboundMessage("full_node", Message("header_signature", request), True, True)
+    yield OutboundMessage(NodeType.FULL_NODE, Message("header_signature", request), Delivery.BROADCAST)
 
 
 @api_request
@@ -190,7 +190,7 @@ async def header_hash(response: farmer_protocol.HeaderHash):
 
     # TODO: only send to the plotter who made the proof of space, not all plotters
     request = plotter_protocol.RequestHeaderSignature(quality, header_hash)
-    yield OutboundMessage("plotter", Message("request_header_signature", request), True, True)
+    yield OutboundMessage(NodeType.PLOTTER, Message("request_header_signature", request), Delivery.BROADCAST)
 
 
 @api_request
@@ -224,7 +224,7 @@ async def proof_of_space_finalized(proof_of_space_finalized: farmer_protocol.Pro
 
     if get_proofs:
         message = plotter_protocol.NewChallenge(proof_of_space_finalized.challenge_hash)
-        yield OutboundMessage("plotter", Message("new_challenge", message), True, True)
+        yield OutboundMessage(NodeType.PLOTTER, Message("new_challenge", message), Delivery.BROADCAST)
 
 
 @api_request

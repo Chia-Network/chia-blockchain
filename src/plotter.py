@@ -11,7 +11,7 @@ from src.util.ints import uint8
 from src.protocols import plotter_protocol
 from src.types.sized_bytes import bytes32
 from src.types.proof_of_space import ProofOfSpace
-from src.server.outbound_message import OutboundMessage, Message
+from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
 
 
 # TODO: use config file
@@ -55,7 +55,7 @@ async def plotter_handshake(plotter_handshake: plotter_protocol.PlotterHandshake
             async with db.lock:
                 db.provers[filename] = DiskProver(filename)
         else:
-            log.warn(f"Plot {filename} has an invalid pool key.")
+            log.warning(f"Plot {filename} has an invalid pool key.")
 
 
 @api_request
@@ -75,7 +75,7 @@ async def new_challenge(new_challenge: plotter_protocol.NewChallenge):
             try:
                 quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
             except RuntimeError:
-                log.warn("Error using prover object. Reinitializing prover object.")
+                log.warning("Error using prover object. Reinitializing prover object.")
                 db.provers[filename] = DiskProver(filename)
                 quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
             for index, quality_string in enumerate(quality_strings):
@@ -89,7 +89,7 @@ async def new_challenge(new_challenge: plotter_protocol.NewChallenge):
                 all_responses.append(response)
 
     for response in all_responses:
-        yield OutboundMessage("farmer", Message("challenge_response", response), True, False)
+        yield OutboundMessage(NodeType.FARMER, Message("challenge_response", response), Delivery.RESPOND)
 
 
 @api_request
@@ -104,7 +104,7 @@ async def request_proof_of_space(request: plotter_protocol.RequestProofOfSpace):
             # Using the quality find the right plot and index from our solutions
             challenge_hash, filename, index = db.challenge_hashes[request.quality]
         except KeyError:
-            log.warn(f"Quality {request.quality} not found")
+            log.warning(f"Quality {request.quality} not found")
             return
         if index is not None:
             try:
@@ -123,7 +123,7 @@ async def request_proof_of_space(request: plotter_protocol.RequestProofOfSpace):
                 proof_of_space
             )
     if response:
-        yield OutboundMessage("farmer", Message("respond_proof_of_space", response), True, False)
+        yield OutboundMessage(NodeType.FARMER, Message("respond_proof_of_space", response), Delivery.RESPOND)
 
 
 @api_request
@@ -143,7 +143,7 @@ async def request_header_signature(request: plotter_protocol.RequestHeaderSignat
         request.quality,
         header_hash_signature,
     )
-    yield OutboundMessage("farmer", Message("respond_header_signature", response), True, False)
+    yield OutboundMessage(NodeType.FARMER, Message("respond_header_signature", response), Delivery.RESPOND)
 
 
 @api_request
@@ -161,4 +161,4 @@ async def request_partial_proof(request: plotter_protocol.RequestPartialProof):
             request.quality,
             farmer_target_signature
         )
-    yield OutboundMessage("farmer", Message("respond_partial_proof", response), True, False)
+    yield OutboundMessage(NodeType.FARMER, Message("respond_partial_proof", response), Delivery.RESPOND)
