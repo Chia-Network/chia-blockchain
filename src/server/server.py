@@ -207,7 +207,12 @@ async def initialize_pipeline(aiter: AsyncGenerator[Tuple[asyncio.StreamReader, 
     async def serve_forever():
         async for connection, message in expanded_messages_aiter:
             log.info(f"Sending {message.function} to peer {connection.get_peername()}")
-            await connection.send(message)
+            try:
+                await connection.send(message)
+            except asyncio.CancelledError:
+                raise
+            except ConnectionResetError:
+                log.error(f"Cannot write to {connection}, already closed")
 
     # We will return a task for this, so user of start_chia_server or start_chia_client can wait until
     # the server is closed.

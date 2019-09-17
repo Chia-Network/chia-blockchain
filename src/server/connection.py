@@ -1,4 +1,3 @@
-from ast import NodeTransformer
 from asyncio import StreamReader, StreamWriter
 from asyncio import Lock
 from typing import List
@@ -43,6 +42,9 @@ class Connection:
     def close(self):
         self.writer.close()
 
+    def __str__(self) -> str:
+        return f"Connection({self.get_peername()})"
+
 
 class PeerConnections:
     def __init__(self, all_connections: List[Connection] = []):
@@ -55,7 +57,8 @@ class PeerConnections:
 
     async def remove(self, connection: Connection):
         async with self._connections_lock:
-            self._all_connections.remove(connection)
+            if connection in self._all_connections:
+                self._all_connections.remove(connection)
 
     def get_lock(self):
         return self._connections_lock
