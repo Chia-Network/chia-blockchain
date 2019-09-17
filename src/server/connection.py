@@ -1,8 +1,9 @@
+from ast import NodeTransformer
 from asyncio import StreamReader, StreamWriter
 from asyncio import Lock
 from typing import List
 from src.util import cbor
-from src.server.outbound_message import Message
+from src.server.outbound_message import Message, NodeType
 from src.types.sized_bytes import bytes32
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
@@ -10,7 +11,7 @@ LENGTH_BYTES: int = 5
 
 
 class Connection:
-    def __init__(self, connection_type: str, sr: StreamReader, sw: StreamWriter):
+    def __init__(self, connection_type: NodeType, sr: StreamReader, sw: StreamWriter):
         self.connection_type = connection_type
         self.reader = sr
         self.writer = sw

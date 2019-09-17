@@ -14,7 +14,7 @@ from src.types.proof_of_time import ProofOfTimeOutput, ProofOfTime
 from src.types.classgroup import ClassgroupElement
 from src.util.ints import uint8
 from src.consensus import constants
-from src.server.outbound_message import OutboundMessage, Message
+from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
 
 
 # TODO: use config file
@@ -69,21 +69,21 @@ async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpac
     """
     async with db.lock:
         if proof_of_space_info.challenge_hash not in db.challenges:
-            log.warn(f"Have not seen challenge {proof_of_space_info.challenge_hash} yet.")
+            log.warning(f"Have not seen challenge {proof_of_space_info.challenge_hash} yet.")
             return
         time_recvd, disc, iters = db.challenges[proof_of_space_info.challenge_hash]
         if iters:
             if proof_of_space_info.iterations_needed == iters:
-                log.warn(f"Have already seen this challenge with {proof_of_space_info.iterations_needed}\
+                log.warning(f"Have already seen this challenge with {proof_of_space_info.iterations_needed}\
                           iterations. Ignoring.")
                 return
             elif proof_of_space_info.iterations_needed > iters:
                 # TODO: don't ignore, communicate to process
-                log.warn(f"Too many iterations required. Already executing {iters} iters")
+                log.warning(f"Too many iterations required. Already executing {iters} iters")
                 return
         if db.process_running:
             # TODO: don't ignore, start a new process
-            log.warn("Already have a running process. Ignoring.")
+            log.warning("Already have a running process. Ignoring.")
             return
         db.process_running = True
 
@@ -121,4 +121,4 @@ async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpac
     proof_of_time = ProofOfTime(output, n_wesolowski, [uint8(b) for b in proof_bytes])
     response = timelord_protocol.ProofOfTimeFinished(proof_of_time)
 
-    yield OutboundMessage("full_node", Message("proof_of_time_finished", response), True, True)
+    yield OutboundMessage(NodeType.FULL_NODE, Message("proof_of_time_finished", response), Delivery.RESPOND)
