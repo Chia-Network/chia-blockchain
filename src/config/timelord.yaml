@@ -1,0 +1,6 @@
+host: "127.0.0.1"
+port: 8003
+
+# How much recursion to use for the wesolowski VDF proof. This increases the size
+# of the proofs.
+n_wesolowski: 3

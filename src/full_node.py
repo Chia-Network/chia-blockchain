@@ -2,6 +2,7 @@ import logging
 import time
 import asyncio
 import collections
+import yaml
 from secrets import token_bytes
 from hashlib import sha256
 from chiapos import Verifier
@@ -22,7 +23,6 @@ from src.types.block_header import BlockHeaderData, BlockHeader
 from src.types.proof_of_space import ProofOfSpace
 from src.types.full_block import FullBlock
 from src.types.fees_target import FeesTarget
-from src.types.peer_info import PeerInfo
 from src.consensus.weight_verifier import verify_weight
 from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.constants import DIFFICULTY_TARGET
@@ -30,26 +30,11 @@ from src.blockchain import Blockchain
 from src.server.outbound_message import OutboundMessage, Delivery, NodeType, Message
 
 
-# TODO: use config file
-host = "127.0.0.1"
-port = 8002
-farmer_peer = PeerInfo("127.0.0.1", 8001, sha256(b"farmer:127.0.0.1:8001").digest())
-timelord_peer = PeerInfo("127.0.0.1", 8003, sha256(b"timelord:127.0.0.1:8003").digest())
-initial_peers = [PeerInfo("127.0.0.1", 8002, sha256(b"full_node:127.0.0.1:8002").digest()),
-                 PeerInfo("127.0.0.1", 8004, sha256(b"full_node:127.0.0.1:8004").digest()),
-                 PeerInfo("127.0.0.1", 8005, sha256(b"full_node:127.0.0.1:8005").digest())]
-update_pot_estimate_interval: int = 30
-genesis_block: FullBlock = Blockchain.get_genesis_block()
-
-# Don't send any more than these number of trunks and blocks, in one message
-max_trunks_to_send = 100
-max_blocks_to_send = 10
-
-
 class Database:
     lock: Lock = Lock()
     blockchain: Blockchain = Blockchain()  # Should be stored in memory
-    full_blocks: Dict[str, FullBlock] = {genesis_block.trunk_block.header.header_hash: genesis_block}
+    full_blocks: Dict[str, FullBlock] = {Blockchain.get_genesis_block().trunk_block.header.header_hash:
+                                         Blockchain.get_genesis_block()}
 
     sync_mode: bool = True
     # Block headers for blocks which we think might be heads, but we haven't verified yet
@@ -70,6 +55,7 @@ class Database:
     proof_of_time_estimate_ips: uint64 = uint64(1500)
 
 
+config = yaml.safe_load(open("src/config/full_node.yaml", "r"))
 log = logging.getLogger(__name__)
 db = Database()
 
@@ -119,7 +105,7 @@ async def proof_of_time_estimate_interval():
             if estimated_ips is not None:
                 db.proof_of_time_estimate_ips = estimated_ips
             log.info(f"Updated proof of time estimate to {estimated_ips} iterations per second.")
-        await sleep(update_pot_estimate_interval)
+        await sleep(config['update_pot_estimate_interval'])
 
 
 async def on_connect() -> AsyncGenerator[OutboundMessage, None]:
@@ -229,8 +215,8 @@ async def request_trunk_blocks(request: peer_protocol.RequestTrunkBlocks) \
     """
     A peer requests a list of trunk blocks, by height. Used for syncing or light clients.
     """
-    if len(request.heights) > max_trunks_to_send:
-        raise errors.TooManyTrunksRequested(f"The max number of trunks is {max_trunks_to_send},\
+    if len(request.heights) > config['max_trunks_to_send']:
+        raise errors.TooManyTrunksRequested(f"The max number of trunks is {config['max_trunks_to_send']},\
                                              but requested {len(request.heights)}")
     async with db.lock:
         trunks: List[TrunkBlock] = db.blockchain.get_trunk_blocks_by_height(request.heights, request.tip_header_hash)
@@ -264,8 +250,8 @@ async def request_sync_blocks(request: peer_protocol.RequestSyncBlocks) -> Async
             # We don't have the blocks that the client is looking for
             log.info("Peer requested tip {request.tip_header_hash} that we don't have")
             return
-        if len(request.heights) > max_blocks_to_send:
-            raise errors.TooManyTrunksRequested(f"The max number of blocks is {max_blocks_to_send},\
+        if len(request.heights) > config['max_blocks_to_send']:
+            raise errors.TooManyTrunksRequested(f"The max number of blocks is {config['max_blocks_to_send']},\
                                                 but requested {len(request.heights)}")
         blocks = db.blockchain.get_blocks_by_height(request.heights, request.tip_header_hash)
 

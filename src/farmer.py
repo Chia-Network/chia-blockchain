@@ -1,6 +1,6 @@
 import logging
 import asyncio
-import secrets
+import yaml
 from hashlib import sha256
 from typing import List, Dict, Set, Tuple, Any
 
@@ -10,21 +10,10 @@ from src.types.proof_of_space import ProofOfSpace
 from src.types.coinbase import CoinbaseInfo
 from src.protocols import plotter_protocol, farmer_protocol
 from src.types.sized_bytes import bytes32
-from src.types.peer_info import PeerInfo
 from src.util.ints import uint32, uint64
 from src.consensus.block_rewards import calculate_block_reward
 from src.consensus.pot_iterations import calculate_iterations_quality
 from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
-
-
-# TODO: use config file
-host = "127.0.0.1"
-port = 8001
-plotter_peer = PeerInfo("127.0.0.1", 8000, sha256(b"plotter:127.0.0.1:8000").digest())
-farmer_sk = PrivateKey.from_seed(secrets.token_bytes(32))
-farmer_target = sha256(farmer_sk.get_public_key().serialize()).digest()
-pool_share_threshold = 30  # To send to pool, must be expected to take less than these seconds
-propagate_threshold = 15  # To propagate to network, must be expected to take less than these seconds
 
 
 class Database:
@@ -45,6 +34,7 @@ class Database:
     proof_of_time_estimate_ips: uint64 = uint64(3000)
 
 
+config = yaml.safe_load(open("src/config/farmer.yaml", "r"))
 log = logging.getLogger(__name__)
 db = Database()
 
@@ -78,7 +68,7 @@ async def challenge_response(challenge_response: plotter_protocol.ChallengeRespo
                                                             difficulty)
         estimate_secs: float = number_iters / db.proof_of_time_estimate_ips
 
-    if estimate_secs < pool_share_threshold or estimate_secs < propagate_threshold:
+    if estimate_secs < config['pool_share_threshold'] or estimate_secs < config['propagate_threshold']:
         async with db.lock:
             db.plotter_responses_challenge[challenge_response.quality] = challenge_response.challenge_hash
         request = plotter_protocol.RequestProofOfSpace(challenge_response.quality)
@@ -118,19 +108,19 @@ async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace)
                                                         difficulty)
     async with db.lock:
         estimate_secs: float = number_iters / db.proof_of_time_estimate_ips
-    if estimate_secs < pool_share_threshold:
+    if estimate_secs < config['pool_share_threshold']:
         request = plotter_protocol.RequestPartialProof(response.quality,
-                                                       sha256(farmer_target).digest())
+                                                       sha256(bytes.fromhex(config['farmer_target'])).digest())
         yield OutboundMessage(NodeType.PLOTTER, Message("request_partial_proof", request), Delivery.RESPOND)
-    if estimate_secs < propagate_threshold:
+    if estimate_secs < config['propagate_threshold']:
         async with db.lock:
             if new_proof_height not in db.coinbase_rewards:
                 log.error(f"Don't have coinbase transaction for height {new_proof_height}, cannot submit PoS")
                 return
 
             coinbase, signature = db.coinbase_rewards[new_proof_height]
-            request = farmer_protocol.RequestHeaderHash(challenge_hash, coinbase,
-                                                        signature, farmer_target, response.proof)
+            request = farmer_protocol.RequestHeaderHash(challenge_hash, coinbase, signature,
+                                                        bytes.fromhex(config['farmer_target']), response.proof)
 
         yield OutboundMessage(NodeType.FULL_NODE, Message("request_header_hash", request), Delivery.BROADCAST)
 
@@ -164,7 +154,7 @@ async def respond_partial_proof(response: plotter_protocol.RespondPartialProof):
     """
 
     async with db.lock:
-        farmer_target_hash = sha256(farmer_target).digest()
+        farmer_target_hash = sha256(bytes.fromhex(config['farmer_target'])).digest()
         plot_pubkey = db.plotter_responses_proofs[response.quality].plot_pubkey
 
     assert response.farmer_target_signature.verify([Util.hash256(farmer_target_hash)],

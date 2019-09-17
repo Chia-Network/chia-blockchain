@@ -2,6 +2,7 @@ import logging
 import asyncio
 import time
 import io
+import yaml
 from asyncio import Lock
 from typing import Dict
 
@@ -17,19 +18,13 @@ from src.consensus import constants
 from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
 
 
-# TODO: use config file
-host = "127.0.0.1"
-port = 8003
-iterations_per_sec = 3000
-n_wesolowski = 3
-
-
 class Database:
     lock: Lock = Lock()
     challenges: Dict = {}
     process_running: bool = False
 
 
+config = yaml.safe_load(open("src/config/timelord.yaml", "r"))
 log = logging.getLogger(__name__)
 db = Database()
 
@@ -87,7 +82,7 @@ async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpac
             return
         db.process_running = True
 
-    command = (f"python -m lib.chiavdf.inkfish.cmds -t n-wesolowski -l 1024 -d {n_wesolowski} " +
+    command = (f"python -m lib.chiavdf.inkfish.cmds -t n-wesolowski -l 1024 -d {config['n_wesolowski']} " +
                f"{proof_of_space_info.challenge_hash.hex()} {proof_of_space_info.iterations_needed}")
     log.info(f"Executing VDF command with new process: {command}")
 
@@ -118,7 +113,7 @@ async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpac
     output = ProofOfTimeOutput(proof_of_space_info.challenge_hash,
                                proof_of_space_info.iterations_needed,
                                ClassgroupElement(y.a, y.b))
-    proof_of_time = ProofOfTime(output, n_wesolowski, [uint8(b) for b in proof_bytes])
+    proof_of_time = ProofOfTime(output, config['n_wesolowski'], [uint8(b) for b in proof_bytes])
     response = timelord_protocol.ProofOfTimeFinished(proof_of_time)
 
     yield OutboundMessage(NodeType.FULL_NODE, Message("proof_of_time_finished", response), Delivery.RESPOND)

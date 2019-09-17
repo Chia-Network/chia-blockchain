@@ -1,0 +1,28 @@
+# How often to update our current estimate of VDF speed, in seconds
+update_pot_estimate_interval: 30
+
+# Don't send any more than these number of trunks and blocks, in one message
+max_trunks_to_send: 100
+max_blocks_to_send: 10
+
+host: "127.0.0.1"
+port: 8002
+
+farmer_peer:
+    host: "127.0.0.1"
+    port: 8001
+    node_id: "d73266f173ea17bcf07e610436b2495d72b4c367dadad77ef63980a285804e9a"
+timelord_peer:
+    host: "127.0.0.1"
+    port: 8003
+    node_id: "4e8d5857b55916d9fb38848b264ac3f1b934a98ea08eb17632a89402347b0d64"
+initial_peers:
+  - host: "127.0.0.1"
+    port: 8002
+    node_id: "69b2f2337eef0c6bd1bf0cf00c425dfbcfebeda52a3dee9648442b8d2f929f49"
+  - host: "127.0.0.1"
+    port: 8004
+    node_id: "e22d54e5daa9bb2c9dba5d035abf6182b0dfae963dd7bbbf6d65e3bee29d8d14"
+  - host: "127.0.0.1"
+    port: 8005
+    node_id: "4da13f8406831987a0c844bf5a031c48a32bcacc412dd0335fd7732c1e35bea5"

@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from src.types.peer_info import PeerInfo
 
 from src import farmer
 from src.server.server import start_chia_client, start_chia_server
@@ -11,8 +12,10 @@ logging.basicConfig(format='Farmer %(name)-23s: %(levelname)-8s %(message)s', le
 
 
 async def main():
-    plotter_con_task, plotter_client = await start_chia_client(farmer.plotter_peer,
-                                                               farmer, NodeType.PLOTTER)
+    plotter_peer = PeerInfo(farmer.config['plotter_peer']['host'],
+                            farmer.config['plotter_peer']['port'],
+                            bytes.fromhex(farmer.config['plotter_peer']['node_id']))
+    plotter_con_task, plotter_client = await start_chia_client(plotter_peer, farmer, NodeType.PLOTTER)
 
     # Sends a handshake to the plotter
     msg = PlotterHandshake([sk.get_public_key() for sk in farmer.db.pool_sks])
