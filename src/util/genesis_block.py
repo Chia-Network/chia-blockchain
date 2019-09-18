@@ -89,9 +89,6 @@ def create_genesis_block(challenge_hash=bytes([0]*32)) -> FullBlock:
     header_sig: PrependSignature = sk.sign_prepend(header_data.serialize())
     header: BlockHeader = BlockHeader(header_data, header_sig)
 
-    print(proof_of_space.get_hash(), proof_of_time.get_hash(), 0,
-          uint64(constants.DIFFICULTY_STARTING))
-
     challenge = Challenge(proof_of_space.get_hash(), proof_of_time.get_hash(), 0,
                           uint64(constants.DIFFICULTY_STARTING), 0)
     trunk_block = TrunkBlock(proof_of_space, proof_of_time, challenge, header)

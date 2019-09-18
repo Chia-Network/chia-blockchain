@@ -66,34 +66,15 @@ class Blockchain:
 
         if tip_header_hash not in self.blocks:
             raise BlockNotInBlockchain(f"Header hash {tip_header_hash} not present in chain.")
-        curr_block: FullBlock = self.blocks[tip_header_hash]
+        curr_block: TrunkBlock = self.blocks[tip_header_hash]
         trunks: List[Tuple[int, TrunkBlock]] = []
         for height, index in sorted_heights:
-            if height > curr_block.trunk_block.challenge.height:
+            if height > curr_block.challenge.height:
                 raise ValueError("Height is not valid for tip {tip_header_hash}")
-            while height < curr_block.trunk.block.challenge.height:
-                curr_block = self.blocks[curr_block.trunk_block.header.data.prev_header_hash]
-            trunks.append((index, curr_block.trunk_block))
+            while height < curr_block.challenge.height:
+                curr_block = self.blocks[curr_block.header.data.prev_header_hash]
+            trunks.append((index, curr_block))
         return [b for index, b in sorted(trunks)]
-
-    def get_blocks_by_height(self, heights: List[uint64], tip_header_hash: bytes32) -> List[FullBlock]:
-        """
-        Returns a list of blocks, one for each height requested.
-        """
-        # TODO: optimize, don't look at all blocks
-        sorted_heights = sorted([(height, index) for index, height in enumerate(heights)], reverse=True)
-
-        if tip_header_hash not in self.blocks:
-            raise BlockNotInBlockchain(f"Header hash {tip_header_hash} not present in chain.")
-        curr_block: FullBlock = self.blocks[tip_header_hash]
-        blocks: List[Tuple[int, TrunkBlock]] = []
-        for height, index in sorted_heights:
-            if height > curr_block.trunk_block.challenge.height:
-                raise ValueError("Height is not valid for tip {tip_header_hash}")
-            while height < curr_block.trunk.block.challenge.height:
-                curr_block = self.blocks[curr_block.trunk_block.header.data.prev_header_hash]
-            blocks.append((index, curr_block))
-        return [b for index, b in sorted(blocks)]
 
     def get_difficulty(self, header_hash: bytes32) -> uint64:
         trunk = self.blocks.get(header_hash, None)
@@ -108,48 +89,50 @@ class Blockchain:
         return trunk.challenge.total_weight - prev_trunk.challenge.total_weight
 
     def get_next_difficulty(self, header_hash: bytes32) -> uint64:
-        # Returns the difficulty of the next block that extends onto header_hash.
-        # Used to calculate the number of iterations.
-        # TODO:  Assumes header_hash is of a connected block
+        return self.get_difficulty(header_hash)
 
-        trunk = self.blocks.get(header_hash, None)
-        if trunk is None:
-            raise Exception("Given header_hash must reference block already added")
-        height = trunk.challenge.height
-        if height % DIFFICULTY_EPOCH != DIFFICULTY_DELAY:
-            # Not at a point where difficulty would change
-            return self.get_difficulty(header_hash)
-        elif height == DIFFICULTY_DELAY:
-            return uint64(DIFFICULTY_FACTOR * DIFFICULTY_STARTING)
+        # # Returns the difficulty of the next block that extends onto header_hash.
+        # # Used to calculate the number of iterations.
+        # # TODO:  Assumes header_hash is of a connected block
 
-        # The current block has height i + DELAY.
-        Tc = self.get_difficulty(header_hash)
-        warp = header_hash
-        for _ in range(DIFFICULTY_DELAY - 1):
-            warp = self.blocks[warp].header.header_hash
-        # warp: header_hash of height {i + 1}
+        # trunk = self.blocks.get(header_hash, None)
+        # if trunk is None:
+        #     raise Exception("Given header_hash must reference block already added")
+        # height = trunk.challenge.height
+        # if height % DIFFICULTY_EPOCH != DIFFICULTY_DELAY:
+        #     # Not at a point where difficulty would change
+        #     return self.get_difficulty(header_hash)
+        # elif height == DIFFICULTY_DELAY:
+        #     return uint64(DIFFICULTY_FACTOR * DIFFICULTY_STARTING)
 
-        warp2 = warp
-        for _ in range(DIFFICULTY_WARP_FACTOR - 1):
-            warp2 = self.header_warp.get(warp2, None)
-        # warp2: header_hash of height {i + 1 - EPOCH + DELAY}
-        Tp = self.get_difficulty(self.blocks[warp2].prev_header_hash)
+        # # The current block has height i + DELAY.
+        # Tc = self.get_difficulty(header_hash)
+        # warp = header_hash
+        # for _ in range(DIFFICULTY_DELAY - 1):
+        #     warp = self.blocks[warp].header.header_hash
+        # # warp: header_hash of height {i + 1}
 
-        # X_i : timestamp of i-th block, (EPOCH divides i, genesis is block height 1)
-        # Current block @warp is i+1
-        temp_trunk = self.blocks[warp]
-        timestamp1 = temp_trunk.header.data.timestamp  # X_{i+1}
-        temp_trunk = self.blocks[warp2]
-        timestamp2 = temp_trunk.header.data.timestamp  # X_{i+1-EPOCH+DELAY}
-        temp_trunk = self.blocks[self.header_warp[temp_trunk.header.header_hash]]
-        timestamp3 = temp_trunk.header.data.timestamp  # X_{i+1-EPOCH}
+        # warp2 = warp
+        # for _ in range(DIFFICULTY_WARP_FACTOR - 1):
+        #     warp2 = self.header_warp.get(warp2, None)
+        # # warp2: header_hash of height {i + 1 - EPOCH + DELAY}
+        # Tp = self.get_difficulty(self.blocks[warp2].prev_header_hash)
 
-        diff_natural = (DIFFICULTY_EPOCH - DIFFICULTY_DELAY) * Tc * (timestamp2 - timestamp3)
-        diff_natural += DIFFICULTY_DELAY * Tp * (timestamp1 - timestamp2)
-        diff_natural *= DIFFICULTY_TARGET
-        diff_natural //= (timestamp1 - timestamp2) * (timestamp2 - timestamp3)
-        difficulty = max(min(diff_natural, Tc * 4), Tc // 4)  # truncated comparison
-        return difficulty
+        # # X_i : timestamp of i-th block, (EPOCH divides i, genesis is block height 1)
+        # # Current block @warp is i+1
+        # temp_trunk = self.blocks[warp]
+        # timestamp1 = temp_trunk.header.data.timestamp  # X_{i+1}
+        # temp_trunk = self.blocks[warp2]
+        # timestamp2 = temp_trunk.header.data.timestamp  # X_{i+1-EPOCH+DELAY}
+        # temp_trunk = self.blocks[self.header_warp[temp_trunk.header.header_hash]]
+        # timestamp3 = temp_trunk.header.data.timestamp  # X_{i+1-EPOCH}
+
+        # diff_natural = (DIFFICULTY_EPOCH - DIFFICULTY_DELAY) * Tc * (timestamp2 - timestamp3)
+        # diff_natural += DIFFICULTY_DELAY * Tp * (timestamp1 - timestamp2)
+        # diff_natural *= DIFFICULTY_TARGET
+        # diff_natural //= (timestamp1 - timestamp2) * (timestamp2 - timestamp3)
+        # difficulty = max(min(diff_natural, Tc * 4), Tc // 4)  # truncated comparison
+        # return difficulty
 
     def get_vdf_rate_estimate(self) -> Optional[uint64]:
         """
