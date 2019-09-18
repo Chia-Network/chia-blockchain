@@ -1,17 +1,18 @@
 import logging
 import asyncio
-from src.types.peer_info import PeerInfo
+import random
 from typing import Tuple, AsyncGenerator, Callable, Optional
 from types import ModuleType
-from src.util import partial_func
 from lib.aiter.aiter.server import start_server_aiter
 from lib.aiter.aiter import parallel_map_aiter, map_aiter, join_aiters, iter_to_aiter, aiter_forker
 from lib.aiter.aiter.push_aiter import push_aiter
+from src.types.peer_info import PeerInfo
 from src.types.sized_bytes import bytes32
 from src.server.connection import Connection, PeerConnections
 from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
-from src.util.errors import InvalidHandshake, IncompatibleProtocolVersion, DuplicateConnection
 from src.protocols.shared_protocol import Handshake, HandshakeAck, protocol_version
+from src.util import partial_func
+from src.util.errors import InvalidHandshake, IncompatibleProtocolVersion, DuplicateConnection
 from src.util.network import create_node_id
 
 
@@ -106,6 +107,8 @@ async def connection_to_message(connection: Connection) -> AsyncGenerator[Tuple[
             yield (connection, message)
     except asyncio.IncompleteReadError:
         log.warning(f"Received EOF from {connection.get_peername()}, closing connection.")
+    except ConnectionError:
+        log.warning(f"Connection error by peer {connection.get_peername()}, closing connection.")
     finally:
         # Removes the connection from the global list, so we don't try to send things to it
         await global_connections.remove(connection)
@@ -130,7 +133,7 @@ async def handle_message(pair: Tuple[Connection, bytes], api: ModuleType) -> Asy
                 await result
         else:
             log.error(f'Invalid message: {full_message.function} from {connection.get_peername()}')
-    except BaseException as e:
+    except Exception as e:
         log.error(f"Error {e}, closing connection {connection}")
         await global_connections.remove(connection)
         connection.close()
@@ -142,10 +145,23 @@ async def expand_outbound_messages(pair: Tuple[Connection, OutboundMessage]) -> 
     Expands each of the outbound messages into it's own message.
     """
     connection, outbound_message = pair
+
     if connection and outbound_message.delivery_method == Delivery.RESPOND:
+        # Only select this peer.
         yield connection, outbound_message.message
+    elif outbound_message.delivery_method == Delivery.RANDOM:
+        # Select a random peer.
+        to_yield = None
+        async with global_connections.get_lock():
+            typed_peers = [peer for peer in await global_connections.get_connections()
+                           if peer.connection_type == outbound_message.peer_type]
+            if len(typed_peers) == 0:
+                return
+            to_yield = (random.choice(typed_peers), outbound_message.message)
+        yield to_yield
     elif (outbound_message.delivery_method == Delivery.BROADCAST or
           outbound_message.delivery_method == Delivery.BROADCAST_TO_OTHERS):
+        # Broadcast to all peers.
         to_yield = []
         async with global_connections.get_lock():
             for peer in await global_connections.get_connections():
