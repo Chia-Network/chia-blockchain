@@ -10,7 +10,3 @@ class Challenge:
     height: uint32
     total_weight: uint64
     total_iters: uint64
-
-    def is_valid(self) -> bool:
-        # TODO
-        return True

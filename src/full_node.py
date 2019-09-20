@@ -28,7 +28,7 @@ from src.types.fees_target import FeesTarget
 from src.consensus.weight_verifier import verify_weight
 from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.constants import DIFFICULTY_TARGET
-from src.blockchain import Blockchain
+from src.blockchain import Blockchain, ReceiveBlockResult
 from src.server.outbound_message import OutboundMessage, Delivery, NodeType, Message
 
 
@@ -229,7 +229,7 @@ async def sync():
                 block = db.potential_blocks[uint64(height)]
 
             start = time.time()
-            db.blockchain.add_block(block)
+            db.blockchain.receive_block(block)
             log.info(f"Took {time.time() - start}")
             assert max([h.challenge.height for h in db.blockchain.get_current_heads()]) >= height
             db.full_blocks[block.trunk_block.header.get_hash()] = block
@@ -537,7 +537,6 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
         propagate challenge to farmers
         propagate challenge to timelords
     """
-    propagate: bool = False
     header_hash = block.block.trunk_block.header.get_hash()
 
     async with db.lock:
@@ -553,11 +552,9 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
         # TODO(alex): Check if we care about this block, we don't want to add random
         # disconnected blocks. For example if it's on one of the heads, or if it's an older
         # block that we need
-        added = db.blockchain.add_block(block.block)
+        added: ReceiveBlockResult = db.blockchain.receive_block(block.block)
 
-    if not added:
-        log.info("Block not added!!")
-        # TODO(alex): is this correct? What if we already have it?
+    if not (added == ReceiveBlockResult.ADDED_TO_HEAD or added == ReceiveBlockResult.ADDED_AS_ORPHAN):
         async with db.lock:
             tip_height = max([head.challenge.height for head in db.blockchain.get_current_heads()])
         if block.block.trunk_block.challenge.height > tip_height + config["sync_blocks_behind_threshold"]:
@@ -592,27 +589,24 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
     async with db.lock:
         db.full_blocks[header_hash] = block.block
 
-    propagate = True
     difficulty = db.blockchain.get_difficulty(header_hash)
 
-    if propagate:
-        # TODO(alex): don't reverify, just get the quality
-        pos_quality = block.block.trunk_block.proof_of_space.verify_and_get_quality(
-            block.block.trunk_block.proof_of_time.output.challenge_hash
-        )
-        farmer_request = farmer_protocol.ProofOfSpaceFinalized(block.block.trunk_block.challenge.get_hash(),
-                                                               block.block.trunk_block.challenge.height,
-                                                               pos_quality,
-                                                               difficulty)
-        timelord_request = timelord_protocol.ChallengeStart(block.block.trunk_block.challenge.get_hash())
-        timelord_request_end = timelord_protocol.ChallengeStart(block.block.trunk_block.proof_of_time.
-                                                                output.challenge_hash)
-        # Tell timelord to stop previous challenge and start with new one
-        yield OutboundMessage(NodeType.TIMELORD, Message("challenge_end", timelord_request_end), Delivery.BROADCAST)
-        yield OutboundMessage(NodeType.TIMELORD, Message("challenge_start", timelord_request), Delivery.BROADCAST)
+    pos_quality = block.block.trunk_block.proof_of_space.verify_and_get_quality(
+        block.block.trunk_block.proof_of_time.output.challenge_hash
+    )
+    farmer_request = farmer_protocol.ProofOfSpaceFinalized(block.block.trunk_block.challenge.get_hash(),
+                                                            block.block.trunk_block.challenge.height,
+                                                            pos_quality,
+                                                            difficulty)
+    timelord_request = timelord_protocol.ChallengeStart(block.block.trunk_block.challenge.get_hash())
+    timelord_request_end = timelord_protocol.ChallengeStart(block.block.trunk_block.proof_of_time.
+                                                            output.challenge_hash)
+    # Tell timelord to stop previous challenge and start with new one
+    yield OutboundMessage(NodeType.TIMELORD, Message("challenge_end", timelord_request_end), Delivery.BROADCAST)
+    yield OutboundMessage(NodeType.TIMELORD, Message("challenge_start", timelord_request), Delivery.BROADCAST)
 
-        # Tell full nodes about the new block
-        yield OutboundMessage(NodeType.FULL_NODE, Message("block", block), Delivery.BROADCAST_TO_OTHERS)
+    # Tell full nodes about the new block
+    yield OutboundMessage(NodeType.FULL_NODE, Message("block", block), Delivery.BROADCAST_TO_OTHERS)
 
-        # Tell farmer about the new block
-        yield OutboundMessage(NodeType.FARMER, Message("proof_of_space_finalized", farmer_request), Delivery.BROADCAST)
+    # Tell farmer about the new block
+    yield OutboundMessage(NodeType.FARMER, Message("proof_of_space_finalized", farmer_request), Delivery.BROADCAST)
