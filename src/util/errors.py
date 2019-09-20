@@ -27,8 +27,13 @@ class BlockNotInBlockchain(Exception):
     """Block not in blockchain"""
     pass
 
-# Consensus errors
 
+class PeersDontHaveBlock(Exception):
+    """None of our peers have the block we want"""
+    pass
+
+
+# Consensus errors
 class InvalidWeight(Exception):
     """The weight of this block can not be validated"""
     pass

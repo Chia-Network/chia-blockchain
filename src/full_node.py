@@ -1,8 +1,10 @@
 import logging
+from src.util.errors import BlockNotInBlockchain, PeersDontHaveBlock
 import time
 import asyncio
 import collections
 import yaml
+import concurrent
 from secrets import token_bytes
 from hashlib import sha256
 from chiapos import Verifier
@@ -145,7 +147,6 @@ async def sync():
     # (similar to longest chain rule).
     async with db.lock:
         potential_heads = db.potential_heads.items()
-        assert len(potential_heads) >= 3
         log.info(f"Have collected {len(potential_heads)} potential heads")
         for header_hash, _ in potential_heads:
             block = db.potential_heads_full_blocks[header_hash]
@@ -197,7 +198,10 @@ async def sync():
     log.error(f"Downloaded trunks up to tip height: {tip_height}")
     assert tip_height + 1 == len(trunks)
 
-    for height in range(1, tip_height + 1):
+    async with db.lock:
+        fork_point: TrunkBlock = db.blockchain.find_fork_point(trunks)
+
+    for height in range(fork_point.challenge.height + 1, tip_height + 1):
         # Only download from fork point (what we don't have)
         async with db.lock:
             have_block = trunks[height].header.get_hash() in db.potential_heads_full_blocks
@@ -206,24 +210,30 @@ async def sync():
             request = peer_protocol.RequestSyncBlocks(tip_block.trunk_block.header.header_hash, [height])
             async with db.lock:
                 db.potential_blocks_received[uint64(height)] = Event()
-            yield OutboundMessage(NodeType.FULL_NODE, Message("request_sync_blocks", request), Delivery.RANDOM)
-
-            log.info(f"Waiting for block at height {uint64(height)}")
-            await asyncio.wait_for(db.potential_blocks_received[uint64(height)].wait(), timeout=10)
-
+            found = False
+            for _ in range(30):
+                yield OutboundMessage(NodeType.FULL_NODE, Message("request_sync_blocks", request), Delivery.RANDOM)
+                try:
+                    await asyncio.wait_for(db.potential_blocks_received[uint64(height)].wait(), timeout=2)
+                    found = True
+                    break
+                except concurrent.futures._base.TimeoutError:
+                    log.info("Did not receive desired block")
+            if not found:
+                raise PeersDontHaveBlock(f"Did not receive desired block at height {height}")
         async with db.lock:
-            log.info(f"Will add block: {height}")
             # TODO: ban peers that provide bad blocks
             if have_block:
-                log.info("Have")
                 block = db.potential_heads_full_blocks[trunks[height].header.get_hash()]
             else:
-                log.info("Don't have")
                 block = db.potential_blocks[uint64(height)]
 
-            assert db.blockchain.add_block(block)
+            start = time.time()
+            db.blockchain.add_block(block)
+            log.info(f"Took {time.time() - start}")
+            assert max([h.challenge.height for h in db.blockchain.get_current_heads()]) >= height
             db.full_blocks[block.trunk_block.header.get_hash()] = block
-            log.error(f"ADDED BLOCK AT HEIGHT: {height}")
+
     async with db.lock:
         log.info(f"Finished sync up to height {tip_height}")
         db.potential_heads.clear()
@@ -244,9 +254,17 @@ async def request_trunk_blocks(request: peer_protocol.RequestTrunkBlocks) \
         raise errors.TooManyTrunksRequested(f"The max number of trunks is {config['max_trunks_to_send']},\
                                              but requested {len(request.heights)}")
     async with db.lock:
-        trunks: List[TrunkBlock] = db.blockchain.get_trunk_blocks_by_height(request.heights, request.tip_header_hash)
-    response = peer_protocol.TrunkBlocks(request.tip_header_hash, trunks)
+        try:
+            trunks: List[TrunkBlock] = db.blockchain.get_trunk_blocks_by_height(request.heights,
+                                                                                request.tip_header_hash)
+        except KeyError:
+            log.info("Do not have required blocks")
+            return
+        except BlockNotInBlockchain as e:
+            log.info(f"{e}")
+            return
 
+    response = peer_protocol.TrunkBlocks(request.tip_header_hash, trunks)
     yield OutboundMessage(NodeType.FULL_NODE, Message("trunk_blocks", response), Delivery.RESPOND)
 
 
@@ -260,8 +278,7 @@ async def trunk_blocks(request: peer_protocol.TrunkBlocks) \
         for trunk_block in request.trunk_blocks:
             db.potential_trunks[trunk_block.challenge.height] = trunk_block
 
-    # Yield nothing
-    for _ in []:
+    for _ in []:  # Yields nothing
         yield _
 
 
@@ -270,18 +287,26 @@ async def request_sync_blocks(request: peer_protocol.RequestSyncBlocks) -> Async
     """
     Responsd to a peers request for syncing blocks.
     """
+    blocks: List[FullBlock] = []
     async with db.lock:
-        if request.tip_header_hash not in db.full_blocks:
+        if request.tip_header_hash in db.full_blocks:
+            if len(request.heights) > config['max_blocks_to_send']:
+                raise errors.TooManyTrunksRequested(f"The max number of blocks is {config['max_blocks_to_send']},"
+                                                    f"but requested {len(request.heights)}")
+            try:
+                trunk_blocks: List[TrunkBlock] = db.blockchain.get_trunk_blocks_by_height(request.heights,
+                                                                                          request.tip_header_hash)
+                blocks = [db.full_blocks[t.header.get_hash()] for t in trunk_blocks]
+            except KeyError:
+                log.info("Do not have required blocks")
+                return
+            except BlockNotInBlockchain as e:
+                log.info(f"{e}")
+                return
+        else:
             # We don't have the blocks that the client is looking for
-            log.info("Peer requested tip {request.tip_header_hash} that we don't have")
+            log.info(f"Peer requested tip {request.tip_header_hash} that we don't have")
             return
-        if len(request.heights) > config['max_blocks_to_send']:
-            raise errors.TooManyTrunksRequested(f"The max number of blocks is {config['max_blocks_to_send']},\
-                                                but requested {len(request.heights)}")
-        trunk_blocks: List[TrunkBlock] = db.blockchain.get_trunk_blocks_by_height(request.heights,
-                                                                                  request.tip_header_hash)
-        blocks: List[FullBlock] = [db.full_blocks[t.header.get_hash()] for t in trunk_blocks]
-
     response = Message("sync_blocks", peer_protocol.SyncBlocks(request.tip_header_hash, blocks))
     yield OutboundMessage(NodeType.FULL_NODE, response, Delivery.RESPOND)
 
@@ -296,12 +321,12 @@ async def sync_blocks(request: peer_protocol.SyncBlocks) -> AsyncGenerator[Outbo
         if not db.sync_mode:
             log.warning("Receiving sync blocks when we are not in sync mode.")
             return
+
         for block in request.blocks:
             db.potential_blocks[block.trunk_block.challenge.height] = block
             db.potential_blocks_received[block.trunk_block.challenge.height].set()
 
-    # Yield nothing
-    for _ in []:
+    for _ in []:  # Yields nothing
         yield _
 
 
@@ -491,7 +516,8 @@ async def unfinished_block(unfinished_block: peer_protocol.UnfinishedBlock) -> A
 
     timelord_request = timelord_protocol.ProofOfSpaceInfo(challenge_hash, iterations_needed)
     yield OutboundMessage(NodeType.TIMELORD, Message("proof_of_space_info", timelord_request), Delivery.BROADCAST)
-    yield OutboundMessage(NodeType.FULL_NODE, Message("unfinished_block", unfinished_block), Delivery.BROADCAST)
+    yield OutboundMessage(NodeType.FULL_NODE, Message("unfinished_block", unfinished_block),
+                          Delivery.BROADCAST_TO_OTHERS)
 
 
 @api_request
@@ -528,31 +554,47 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
         # disconnected blocks. For example if it's on one of the heads, or if it's an older
         # block that we need
         added = db.blockchain.add_block(block.block)
-        if not added:
-            log.info("Block not added!!")
-            # TODO(alex): is this correct? What if we already have it?
+
+    if not added:
+        log.info("Block not added!!")
+        # TODO(alex): is this correct? What if we already have it?
+        async with db.lock:
             tip_height = max([head.challenge.height for head in db.blockchain.get_current_heads()])
-            if block.block.trunk_block.challenge.height > tip_height + 3:
+        if block.block.trunk_block.challenge.height > tip_height + config["sync_blocks_behind_threshold"]:
+            async with db.lock:
                 db.potential_heads.clear()
                 db.potential_heads[header_hash] += 1
                 db.potential_heads_full_blocks[header_hash] = block.block
-                log.info(f"We are too far behind this block. Our height is {tip_height} and block is at\
-                     {block.block.trunk_block.challenge.height}")
-                # Perform a sync if we have to
-                db.sync_mode = True
+            log.info(f"We are too far behind this block. Our height is {tip_height} and block is at"
+                     f"{block.block.trunk_block.challenge.height}")
+            # Perform a sync if we have to
+            db.sync_mode = True
+            try:
                 async for msg in sync():
                     log.error(f"Yielding {msg}")
                     yield msg
-            elif block.block.trunk_block.challenge.height > tip_height + 1:
-                log.info(f"We are a few blocks behind, our height is {tip_height} and block is at \
-                    {block.block.trunk_block.challenge.height} so we will request these blocks.")
-                pass
-            return
+            except asyncio.CancelledError:
+                log.warning("Syncing failed")
+            except BaseException as e:
+                log.warning(f"Error {e} with syncing")
+            finally:
+                return
 
+        elif block.block.trunk_block.challenge.height > tip_height + 1:
+            log.info(f"We are a few blocks behind, our height is {tip_height} and block is at"
+                     f"{block.block.trunk_block.challenge.height} so we will request these blocks.")
+            while True:
+                # TODO: download a few blocks and add them to chain
+                # prev_block_hash = block.block.trunk_block.header.data.prev_header_hash
+                break
+        return
+
+    async with db.lock:
         db.full_blocks[header_hash] = block.block
 
-        propagate = True
-        difficulty = db.blockchain.get_difficulty(header_hash)
+    propagate = True
+    difficulty = db.blockchain.get_difficulty(header_hash)
+
     if propagate:
         # TODO(alex): don't reverify, just get the quality
         pos_quality = block.block.trunk_block.proof_of_space.verify_and_get_quality(
@@ -570,7 +612,7 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
         yield OutboundMessage(NodeType.TIMELORD, Message("challenge_start", timelord_request), Delivery.BROADCAST)
 
         # Tell full nodes about the new block
-        yield OutboundMessage(NodeType.FULL_NODE, Message("block", block), Delivery.BROADCAST)
+        yield OutboundMessage(NodeType.FULL_NODE, Message("block", block), Delivery.BROADCAST_TO_OTHERS)
 
         # Tell farmer about the new block
         yield OutboundMessage(NodeType.FARMER, Message("proof_of_space_finalized", farmer_request), Delivery.BROADCAST)

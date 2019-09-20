@@ -42,8 +42,12 @@ async def main():
     waitable_tasks = waitable_tasks + connected_tasks
     log.info(f"Connected to {len(connected_tasks)} peers.")
 
-    async for msg in full_node.sync():
-        client.push(msg)
+    try:
+        async for msg in full_node.sync():
+            client.push(msg)
+    except BaseException as e:
+        log.info(f"Error syncing {e}")
+        raise
 
     if connect_to_farmer:
         try:

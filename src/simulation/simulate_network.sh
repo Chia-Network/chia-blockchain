@@ -1,10 +1,11 @@
+ps -e | grep python | grep "start_" | awk '{print $1}' | xargs -L1  kill -9
 python -m src.server.start_plotter &
 P1=$!
 python -m src.server.start_timelord &
 P2=$!
 python -m src.server.start_farmer &
 P3=$!
-python -m src.server.start_full_node "127.0.0.1" 8002 &
+python -m src.server.start_full_node "127.0.0.1" 8002 "-f" "-t" &
 P4=$!
 python -m src.server.start_full_node "127.0.0.1" 8004 &
 P5=$!

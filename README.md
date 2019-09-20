@@ -17,8 +17,16 @@ Run the servers in the following order (you can also use ipython):
 python -m src.server.start_plotter
 python -m src.server.start_timelord
 python -m src.server.start_farmer
-python -m src.server.start_full_node
+python -m src.server.start_full_node "127.0.0.1" 8002 "-f" "-t"
+python -m src.server.start_full_node "127.0.0.1" 8004
+
 ```
+You can also run the simulation, which runs all servers at once.
+
+```bash
+./src/simulation/simulate_network.sh
+```
+
 
 ### Run tests
 ```bash
