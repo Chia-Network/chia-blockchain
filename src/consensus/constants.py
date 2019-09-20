@@ -1,4 +1,4 @@
-DIFFICULTY_STARTING = 30  # These are in units of 2^32
+DIFFICULTY_STARTING = 60  # These are in units of 2^32
 DIFFICULTY_EPOCH = 10  # The number of blocks per epoch
 DIFFICULTY_TARGET = 10  # The target number of seconds per block
 DIFFICULTY_FACTOR = 4  # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]

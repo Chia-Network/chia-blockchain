@@ -1,7 +1,8 @@
 from collections import defaultdict
-from src.util.errors import BlockNotInBlockchain
-from typing import List, Dict, Optional, Tuple
+import time
 import logging
+from typing import List, Dict, Optional, Tuple
+from src.util.errors import BlockNotInBlockchain
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
 from src.util.genesis_block import genesis_block_hardcoded
@@ -30,7 +31,9 @@ class Blockchain:
         self.blocks: Dict[bytes32, TrunkBlock] = {
             self.genesis_trunk.header.get_hash(): self.genesis_trunk
         }
-        self.height_to_hash: Dict[uint64, bytes32] = {}
+        self.height_to_hash: Dict[uint64, bytes32] = {
+            uint64(0): self.genesis_trunk.header.get_hash()
+        }
         # Block is unconnected iff floating_demand[prev_hash] contains header_hash
         self.floating_demand: Dict[bytes32, List[bytes32]] = defaultdict(list)
         # For blocks with height % DIFFICULTY_DELAY == 1, a link to the hash of
@@ -61,6 +64,7 @@ class Blockchain:
         """
         Returns a list of trunk blocks, one for each height requested.
         """
+        log.info("Starting get trunks by height")
         # TODO: optimize, don't look at all blocks
         sorted_heights = sorted([(height, index) for index, height in enumerate(heights)], reverse=True)
 
@@ -74,7 +78,38 @@ class Blockchain:
             while height < curr_block.challenge.height:
                 curr_block = self.blocks[curr_block.header.data.prev_header_hash]
             trunks.append((index, curr_block))
+        log.info("Returning get trunks by height")
         return [b for index, b in sorted(trunks)]
+
+    def find_fork_point(self, alternate_chain: List[TrunkBlock]):
+        """
+        Takes in an alternate blockchain (trunks), and compares it to self. Returns the last trunk
+        where both blockchains are equal.
+        """
+        lca: TrunkBlock = self.heads_lca()
+        assert lca.challenge.height < alternate_chain[-1].challenge.height
+        low = 0
+        high = lca.challenge.height
+        while low + 1 < high:
+            mid = (low + high) // 2
+            if self.height_to_hash[uint64(mid)] != alternate_chain[mid].header.get_hash():
+                high = mid
+            else:
+                low = mid
+        if low == high and low == 0:
+            assert self.height_to_hash[uint64(0)] == alternate_chain[0].header.get_hash()
+            return alternate_chain[0]
+        assert low + 1 == high
+        if self.height_to_hash[uint64(low)] == alternate_chain[low].header.get_hash():
+            if self.height_to_hash[uint64(high)] == alternate_chain[high].header.get_hash():
+                return alternate_chain[high]
+            else:
+                return alternate_chain[low]
+        elif low > 0:
+            assert self.height_to_hash[uint64(low - 1)] == alternate_chain[low - 1].header.get_hash()
+            return alternate_chain[low - 1]
+        else:
+            raise ValueError("Invalid genesis block")
 
     def get_difficulty(self, header_hash: bytes32) -> uint64:
         trunk = self.blocks.get(header_hash, None)
@@ -161,15 +196,21 @@ class Blockchain:
         return uint64(total_iterations_performed // time_elapsed_secs)
 
     def add_block(self, block: FullBlock) -> bool:
+        start = time.time()
         if not block.is_valid():
             # TODO(alex): discredit/blacklist sender
             log.info("block is not valid")
+            print(f"Not valid: Time taken: {time.time() - start}")
             return False
+        print(f"Time taken: {time.time() - start}")
 
         trunk = block.trunk_block
         header_hash = trunk.header.header_hash
         prev_hash = trunk.prev_header_hash
         self.blocks[header_hash] = trunk
+
+        # TODO: only do this up to LCA
+        self.height_to_hash[uint64(trunk.challenge.height)] = header_hash
         added_to_head = False
 
         prev_trunk = self.blocks.get(prev_hash, None)
@@ -199,6 +240,7 @@ class Blockchain:
             trunk = block.trunk_block
             header_hash = trunk.header.header_hash
             self.blocks[header_hash] = trunk
+            self.height_to_hash[uint64(trunk.challengel.height)] = header_hash
             self._reconsider_heads(trunk)
 
         # Mark all header_hashes connected from a head to genesis

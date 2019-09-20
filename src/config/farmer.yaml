@@ -7,8 +7,8 @@ farmer_sk: "43aead2006e8c67126adb596ce8f47aa01b956daa0214e06cd1a82ebd73aa88d"
 # sha256(farmer_sk.get_public_key()).digest()
 farmer_target: "c28592540bd281f603bb479b3692139339f10464413b2d307a25d8d145ce1833"
 
-pool_share_threshold: 30  # To send to pool, must be expected to take less than these seconds
-propagate_threshold: 15  # To propagate to network, must be expected to take less than these seconds
+pool_share_threshold: 50  # To send to pool, must be expected to take less than these seconds
+propagate_threshold: 30  # To propagate to network, must be expected to take less than these seconds
 
 plotter_peer:
     host: "127.0.0.1"
