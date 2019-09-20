@@ -14,3 +14,19 @@ class FullBlock:
         return (self.trunk_block.header.data.body_hash == body_hash
                 and self.trunk_block.is_valid()
                 and self.body.is_valid())
+
+    @property
+    def prev_hash(self):
+        return self.trunk_block.header.data.prev_header_hash
+
+    @property
+    def height(self):
+        return self.trunk_block.challenge.height
+
+    @property
+    def weight(self):
+        return self.trunk_block.challenge.total_weight
+
+    @property
+    def header_hash(self):
+        return self.trunk_block.header.header_hash

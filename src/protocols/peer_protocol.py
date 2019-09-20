@@ -14,10 +14,7 @@ Protocol between full nodes.
 
 
 """
-If already seen, ignore
-Validate transaction
-If consistent with at least 1/3 heads, store in mempool
-Propagate transaction
+Receive a transaction from a peer.
 """
 @cbor_message(tag=4000)
 class NewTransaction:
@@ -25,11 +22,7 @@ class NewTransaction:
 
 
 """
-TODO(alex): update this
-If already seen, ignore
-If prev block not a head, ignore
-Call self.ProofOfTimeFinished
-Propagate PoT (?)
+Receive a new proof of time from a peer.
 """
 @cbor_message(tag=4001)
 class NewProofOfTime:
@@ -37,10 +30,7 @@ class NewProofOfTime:
 
 
 """
-TODO(alex): update this
-If not a child of a head, ignore
-If we have a PoT to complete this block, call self.Block
-Otherwise: validate, store, and propagate
+Receive an unfinished block from a peer.
 """
 @cbor_message(tag=4002)
 class UnfinishedBlock:
@@ -49,8 +39,7 @@ class UnfinishedBlock:
 
 
 """
-If have block, return block
-TODO: request blocks?
+Requests a block from a peer.
 """
 @cbor_message(tag=4003)
 class RequestBlock:
@@ -58,12 +47,7 @@ class RequestBlock:
 
 
 """
-TODO(alex): update this
-If already have, ignore
-If not child of a head, or ancestor of a head, ignore
-Add block to head
-    - Validate block
-If heads updated, propagate block to full nodes, farmers, timelords
+Receive a block from a peer.
 """
 @cbor_message(tag=4004)
 class Block:
