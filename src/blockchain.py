@@ -1,12 +1,12 @@
 from src.consensus.block_rewards import calculate_block_reward
 import logging
 from enum import Enum
+import time
 import blspy
 from typing import List, Dict, Optional, Tuple
 from src.util.errors import BlockNotInBlockchain
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64, uint32
-from src.util.genesis_block import genesis_block_hardcoded
 from src.types.trunk_block import TrunkBlock
 from src.types.full_block import FullBlock
 from src.consensus.pot_iterations import calculate_iterations, calculate_iterations_quality
@@ -18,7 +18,8 @@ from src.consensus.constants import (
     DIFFICULTY_WARP_FACTOR,
     DIFFICULTY_FACTOR,
     NUMBER_OF_TIMESTAMPS,
-    MAX_FUTURE_TIME
+    MAX_FUTURE_TIME,
+    GENESIS_BLOCK
 )
 
 log = logging.getLogger(__name__)
@@ -38,11 +39,12 @@ class ReceiveBlockResult(Enum):
 
 
 class Blockchain:
-    def __init__(self):
-        try:
-            genesis = self.get_genesis_block()
-        except ValueError:
-            raise ValueError("Failed to parse genesis block.")
+    def __init__(self, genesis: Optional[FullBlock] = None):
+        if not genesis:
+            try:
+                genesis = self.get_genesis_block()
+            except ValueError:
+                raise ValueError("Failed to parse genesis block.")
 
         self.heads: List[FullBlock] = []
         self.lca_block: FullBlock = None
@@ -58,7 +60,7 @@ class Blockchain:
 
     @staticmethod
     def get_genesis_block() -> FullBlock:
-        return FullBlock.from_bytes(genesis_block_hardcoded)
+        return FullBlock.from_bytes(GENESIS_BLOCK)
 
     def get_current_heads(self) -> List[TrunkBlock]:
         """
@@ -259,7 +261,7 @@ class Blockchain:
             prev_time: uint64 = uint64(sum(last_timestamps) / len(last_timestamps))
             if block.trunk_block.header.data.timestamp < prev_time:
                 return False
-            if block.trunk_block.header.data.timestamp > prev_time + MAX_FUTURE_TIME:
+            if block.trunk_block.header.data.timestamp > time.time() + MAX_FUTURE_TIME:
                 return False
         else:
             prev_block: Optional[FullBlock] = None

@@ -28,6 +28,11 @@ class BlockNotInBlockchain(Exception):
     pass
 
 
+class NoProofsOfSpaceFound(Exception):
+    """No proofs of space found for this challenge"""
+    pass
+
+
 class PeersDontHaveBlock(Exception):
     """None of our peers have the block we want"""
     pass
