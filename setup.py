@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 from setuptools import setup
 
-dependencies = ['blspy', 'cbor2']
+dependencies = ['blspy', 'cbor2', 'pyyaml']
 dev_dependencies = ['pytest', 'flake8', 'ipython']
 
 setup(
