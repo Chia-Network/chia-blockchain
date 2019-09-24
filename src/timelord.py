@@ -2,6 +2,7 @@ import logging
 import asyncio
 import time
 import io
+import yaml
 from asyncio import Lock
 from typing import Dict
 
@@ -14,15 +15,7 @@ from src.types.proof_of_time import ProofOfTimeOutput, ProofOfTime
 from src.types.classgroup import ClassgroupElement
 from src.util.ints import uint8
 from src.consensus import constants
-from src.server.outbound_message import OutboundMessage
-
-
-# TODO: use config file
-timelord_port = 8003
-full_node_ip = "127.0.0.1"
-full_node_port = 8002
-iterations_per_sec = 3000
-n_wesolowski = 3
+from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
 
 
 class Database:
@@ -31,6 +24,7 @@ class Database:
     process_running: bool = False
 
 
+config = yaml.safe_load(open("src/config/timelord.yaml", "r"))
 log = logging.getLogger(__name__)
 db = Database()
 
@@ -70,25 +64,25 @@ async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpac
     """
     async with db.lock:
         if proof_of_space_info.challenge_hash not in db.challenges:
-            log.warn(f"Have not seen challenge {proof_of_space_info.challenge_hash} yet.")
+            log.warning(f"Have not seen challenge {proof_of_space_info.challenge_hash} yet.")
             return
         time_recvd, disc, iters = db.challenges[proof_of_space_info.challenge_hash]
         if iters:
             if proof_of_space_info.iterations_needed == iters:
-                log.warn(f"Have already seen this challenge with {proof_of_space_info.iterations_needed}\
+                log.warning(f"Have already seen this challenge with {proof_of_space_info.iterations_needed}\
                           iterations. Ignoring.")
                 return
             elif proof_of_space_info.iterations_needed > iters:
                 # TODO: don't ignore, communicate to process
-                log.warn(f"Too many iterations required. Already executing {iters} iters")
+                log.warning(f"Too many iterations required. Already executing {iters} iters")
                 return
         if db.process_running:
             # TODO: don't ignore, start a new process
-            log.warn("Already have a running process. Ignoring.")
+            log.warning("Already have a running process. Ignoring.")
             return
         db.process_running = True
 
-    command = (f"python -m lib.chiavdf.inkfish.cmds -t n-wesolowski -l 1024 -d {n_wesolowski} " +
+    command = (f"python -m lib.chiavdf.inkfish.cmds -t n-wesolowski -l 1024 -d {config['n_wesolowski']} " +
                f"{proof_of_space_info.challenge_hash.hex()} {proof_of_space_info.iterations_needed}")
     log.info(f"Executing VDF command with new process: {command}")
 
@@ -119,7 +113,7 @@ async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpac
     output = ProofOfTimeOutput(proof_of_space_info.challenge_hash,
                                proof_of_space_info.iterations_needed,
                                ClassgroupElement(y.a, y.b))
-    proof_of_time = ProofOfTime(output, n_wesolowski, [uint8(b) for b in proof_bytes])
+    proof_of_time = ProofOfTime(output, config['n_wesolowski'], [uint8(b) for b in proof_bytes])
     response = timelord_protocol.ProofOfTimeFinished(proof_of_time)
 
-    yield OutboundMessage("full_node", "proof_of_time_finished", response, True, True)
+    yield OutboundMessage(NodeType.FULL_NODE, Message("proof_of_time_finished", response), Delivery.RESPOND)

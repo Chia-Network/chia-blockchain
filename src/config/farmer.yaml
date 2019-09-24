@@ -1,0 +1,27 @@
+host: "127.0.0.1"
+port: 8001
+
+# Private key used for spending farming rewards
+farmer_sk: "43aead2006e8c67126adb596ce8f47aa01b956daa0214e06cd1a82ebd73aa88d"
+
+# Address where the money will be sent
+# sha256(farmer_sk.get_public_key()).digest()
+farmer_target: "c28592540bd281f603bb479b3692139339f10464413b2d307a25d8d145ce1833"
+
+# Private keys of pool operators
+# [PrivateKey.from_seed(b'pool key 0'), PrivateKey.from_seed(b'pool key 1')]
+pool_sks:
+    - "4c7c4ca5c7cf99e1e6dbd64a61d20698270a6e1939b2b2eb2e1e034f9568712a"
+    - "0c225913cb84b4601f83c89e369dd3ac696e37facce3ebfab4b87abe611db309"
+
+# Address of pool operator
+# sha256(PrivateKey.from_seed(b'0').get_public_key().serialize()).digest()
+pool_target: "9940b95222a1d19abb73c192f2c10dc65b32bcc7a703db1b40456f2dbf1e416e"
+
+pool_share_threshold: 50  # To send to pool, must be expected to take less than these seconds
+propagate_threshold: 30  # To propagate to network, must be expected to take less than these seconds
+
+plotter_peer:
+    host: "127.0.0.1"
+    port: 8000
+    node_id: "4475e2b622d7024d72500b7e6d61b544f8bcaa7ad4ba142a18bae365c803dbcb"

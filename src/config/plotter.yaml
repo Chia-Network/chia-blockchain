@@ -1,0 +1,41 @@
+host: "127.0.0.1"
+port: 8000
+
+# Public key of the pool, goes into the plot.
+# blspy.PrivateKey.from_seed(b'pool key 0').get_public_key()
+pool_pk: "09f7fc056d8dcbec761f1efabaf378eb567987d2859dd236ee26dde8bbe6e22731f034544a33f84f85f0413aed4dadff"
+
+# Plots on this machine, keyed by filename, along with their corresponding key pairs
+plots:
+    plot-0-19.dat:
+        k: 19
+        sk: "0741ebcf2f16e89133b644be8f0b7f5a42aa8e68461c304c4a2d8bb01797eb21"
+        pool_pk: "09f7fc056d8dcbec761f1efabaf378eb567987d2859dd236ee26dde8bbe6e22731f034544a33f84f85f0413aed4dadff"
+    plot-1-19.dat:
+        k: 19
+        sk: "56d3c228e38c908faece3557620b4305ea6a9a6dfd8ec74be264a479429eed6c"
+        pool_pk: "09f7fc056d8dcbec761f1efabaf378eb567987d2859dd236ee26dde8bbe6e22731f034544a33f84f85f0413aed4dadff"
+    plot-2-19.dat:
+        k: 19
+        sk: "1567a7ff22e00656a669fa5458d68890b4a38ea49e4161380382bb35840f938f"
+        pool_pk: "09f7fc056d8dcbec761f1efabaf378eb567987d2859dd236ee26dde8bbe6e22731f034544a33f84f85f0413aed4dadff"
+    plot-3-19.dat:
+        k: 19
+        sk: "3c2839005dd0077d6cf1ba7e95eff5b7ecca70c2db221c751d75586ae5318784"
+        pool_pk: "09f7fc056d8dcbec761f1efabaf378eb567987d2859dd236ee26dde8bbe6e22731f034544a33f84f85f0413aed4dadff"
+    plot-4-19.dat:
+        k: 19
+        sk: "523e4733eec0c13117b86ee3f681a427db3c207fb0fd877bf6dd9112581aa139"
+        pool_pk: "09f7fc056d8dcbec761f1efabaf378eb567987d2859dd236ee26dde8bbe6e22731f034544a33f84f85f0413aed4dadff"
+    plot-5-19.dat:
+        k: 19
+        sk: "0f564326f7e9399da07ffefd488e1df0f5c54e3dd8ce11d6c676c7c0a8c2e422"
+        pool_pk: "09f7fc056d8dcbec761f1efabaf378eb567987d2859dd236ee26dde8bbe6e22731f034544a33f84f85f0413aed4dadff"
+    plot-6-19.dat:
+        k: 19
+        sk: "16edc760389512b3e84a10ae4d9f04c3df3e1aeb1f5f67d86e95b4fa9f13815c"
+        pool_pk: "09f7fc056d8dcbec761f1efabaf378eb567987d2859dd236ee26dde8bbe6e22731f034544a33f84f85f0413aed4dadff"
+    plot-7-19.dat:
+        k: 19
+        sk: "3a241d89f0c68a5833019ac0e1c4c6d85ef76ce467d6257dc8fae2987b26387f"
+        pool_pk: "09f7fc056d8dcbec761f1efabaf378eb567987d2859dd236ee26dde8bbe6e22731f034544a33f84f85f0413aed4dadff"

@@ -1,7 +1,7 @@
-from hashlib import sha256
 import logging
 import os
 import os.path
+import yaml
 from asyncio import Lock
 from typing import Dict, Tuple, Optional
 from blspy import PrivateKey, PublicKey, PrependSignature, Util
@@ -11,14 +11,7 @@ from src.util.ints import uint8
 from src.protocols import plotter_protocol
 from src.types.sized_bytes import bytes32
 from src.types.proof_of_space import ProofOfSpace
-from src.server.outbound_message import OutboundMessage
-
-
-# TODO: use config file
-# SECRET_KEY: PrivateKey =
-POOL_PK: PublicKey = PrivateKey.from_seed(b'pool key 0').get_public_key()
-PLOTS = {f"plot-{n}-19.dat": (19, PrivateKey.from_seed(b'plot sk' + bytes([n])), POOL_PK) for n in range(8)}
-plotter_port = 8000
+from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
 
 
 # TODO: store on disk
@@ -30,6 +23,7 @@ class Database:
     challenge_hashes: Dict[bytes32, Tuple[bytes32, str, uint8]] = {}
 
 
+config = yaml.safe_load(open("src/config/plotter.yaml", "r"))
 db: Database = Database()
 log = logging.getLogger(__name__)
 
@@ -41,21 +35,23 @@ async def plotter_handshake(plotter_handshake: plotter_protocol.PlotterHandshake
     which must be put into the plots, before the plotting process begins. We cannot
     use any plots which don't have one of the pool keys.
     """
-    for filename, (k, sk, pool_pubkey) in PLOTS.items():
+    for filename, plot_config in config['plots'].items():
+        sk = PrivateKey.from_bytes(bytes.fromhex(plot_config['sk']))
+        pool_pubkey = PublicKey.from_bytes(bytes.fromhex(plot_config['pool_pk']))
         # Only use plots that correct pools associated with them
         if pool_pubkey in plotter_handshake.pool_pubkeys:
             if not os.path.isfile(filename):
                 # Create  temporary PoSpace object, to call the calculate_plot_seed function
                 plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(pool_pubkey, sk.get_public_key())
                 plotter: DiskPlotter = DiskPlotter()
-                plotter.create_plot_disk(filename, k, bytes([]), plot_seed)
+                plotter.create_plot_disk(filename, plot_config['k'], bytes([]), plot_seed)
             else:
                 # TODO: check plots are correct
                 pass
             async with db.lock:
                 db.provers[filename] = DiskProver(filename)
         else:
-            log.warn(f"Plot {filename} has an invalid pool key.")
+            log.warning(f"Plot {filename} has an invalid pool key.")
 
 
 @api_request
@@ -75,11 +71,11 @@ async def new_challenge(new_challenge: plotter_protocol.NewChallenge):
             try:
                 quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
             except RuntimeError:
-                log.warn("Error using prover object. Reinitializing prover object.")
+                log.warning("Error using prover object. Reinitializing prover object.")
                 db.provers[filename] = DiskProver(filename)
                 quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
-            for index, quality_string in enumerate(quality_strings):
-                quality = sha256(new_challenge.challenge_hash + quality_string).digest()
+            for index, quality_str in enumerate(quality_strings):
+                quality = ProofOfSpace.quality_str_to_quality(new_challenge.challenge_hash, quality_str)
                 db.challenge_hashes[quality] = (new_challenge.challenge_hash, filename, index)
                 response: plotter_protocol.ChallengeResponse = plotter_protocol.ChallengeResponse(
                     new_challenge.challenge_hash,
@@ -89,7 +85,7 @@ async def new_challenge(new_challenge: plotter_protocol.NewChallenge):
                 all_responses.append(response)
 
     for response in all_responses:
-        yield OutboundMessage("farmer", "challenge_response", response, True, False)
+        yield OutboundMessage(NodeType.FARMER, Message("challenge_response", response), Delivery.RESPOND)
 
 
 @api_request
@@ -104,7 +100,7 @@ async def request_proof_of_space(request: plotter_protocol.RequestProofOfSpace):
             # Using the quality find the right plot and index from our solutions
             challenge_hash, filename, index = db.challenge_hashes[request.quality]
         except KeyError:
-            log.warn(f"Quality {request.quality} not found")
+            log.warning(f"Quality {request.quality} not found")
             return
         if index is not None:
             try:
@@ -113,9 +109,11 @@ async def request_proof_of_space(request: plotter_protocol.RequestProofOfSpace):
                 db.provers[filename] = DiskProver(filename)
                 proof_xs: bytes = db.provers[filename].get_full_proof(challenge_hash, index)
 
-            proof_of_space: ProofOfSpace = ProofOfSpace(PLOTS[filename][2],
-                                                        PLOTS[filename][1].get_public_key(),
-                                                        uint8(PLOTS[filename][0]),
+            pool_pubkey = PublicKey.from_bytes(bytes.fromhex(config['plots'][filename]['pool_pk']))
+            plot_pubkey = PrivateKey.from_bytes(bytes.fromhex(config['plots'][filename]['sk'])).get_public_key()
+            proof_of_space: ProofOfSpace = ProofOfSpace(pool_pubkey,
+                                                        plot_pubkey,
+                                                        uint8(config['plots'][filename]['k']),
                                                         list(proof_xs))
 
             response = plotter_protocol.RespondProofOfSpace(
@@ -123,7 +121,7 @@ async def request_proof_of_space(request: plotter_protocol.RequestProofOfSpace):
                 proof_of_space
             )
     if response:
-        yield OutboundMessage("farmer", "respond_proof_of_space", response, True, False)
+        yield OutboundMessage(NodeType.FARMER, Message("respond_proof_of_space", response), Delivery.RESPOND)
 
 
 @api_request
@@ -136,14 +134,15 @@ async def request_header_signature(request: plotter_protocol.RequestHeaderSignat
     async with db.lock:
         _, filename, _ = db.challenge_hashes[request.quality]
 
-    header_hash_signature: PrependSignature = PLOTS[filename][1].sign_prepend(request.header_hash)
-    assert(header_hash_signature.verify([Util.hash256(request.header_hash)], [PLOTS[filename][1].get_public_key()]))
+    plot_sk = PrivateKey.from_bytes(bytes.fromhex(config['plots'][filename]['sk']))
+    header_hash_signature: PrependSignature = plot_sk.sign_prepend(request.header_hash)
+    assert(header_hash_signature.verify([Util.hash256(request.header_hash)], [plot_sk.get_public_key()]))
 
     response: plotter_protocol.RespondHeaderSignature = plotter_protocol.RespondHeaderSignature(
         request.quality,
         header_hash_signature,
     )
-    yield OutboundMessage("farmer", "respond_header_signature", response, True, False)
+    yield OutboundMessage(NodeType.FARMER, Message("respond_header_signature", response), Delivery.RESPOND)
 
 
 @api_request
@@ -155,10 +154,11 @@ async def request_partial_proof(request: plotter_protocol.RequestPartialProof):
     """
     async with db.lock:
         _, filename, _ = db.challenge_hashes[request.quality]
-        farmer_target_signature: PrependSignature = PLOTS[filename][1].sign_prepend(request.farmer_target_hash)
+        plot_sk = PrivateKey.from_bytes(bytes.fromhex(config['plots'][filename]['sk']))
+        farmer_target_signature: PrependSignature = plot_sk.sign_prepend(request.farmer_target_hash)
 
         response: plotter_protocol.RespondPartialProof = plotter_protocol.RespondPartialProof(
             request.quality,
             farmer_target_signature
         )
-    yield OutboundMessage("farmer", "respond_partial_proof", response, True, False)
+    yield OutboundMessage(NodeType.FARMER, Message("respond_partial_proof", response), Delivery.RESPOND)

@@ -1,6 +1,6 @@
 import logging
 import asyncio
-import secrets
+import yaml
 from hashlib import sha256
 from typing import List, Dict, Set, Tuple, Any
 
@@ -13,23 +13,11 @@ from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
 from src.consensus.block_rewards import calculate_block_reward
 from src.consensus.pot_iterations import calculate_iterations_quality
-from src.server.outbound_message import OutboundMessage
-
-
-# TODO: use config file
-farmer_port = 8001
-plotter_ip = "127.0.0.1"
-plotter_port = 8000
-farmer_sk = PrivateKey.from_seed(secrets.token_bytes(32))
-farmer_target = sha256(farmer_sk.get_public_key().serialize()).digest()
-pool_share_threshold = 30  # To send to pool, must be expected to take less than these seconds
-propagate_threshold = 15  # To propagate to network, must be expected to take less than these seconds
+from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
 
 
 class Database:
     lock = asyncio.Lock()
-    pool_sks = [PrivateKey.from_seed(b'pool key 0'), PrivateKey.from_seed(b'pool key 1')]
-    pool_target = sha256(PrivateKey.from_seed(b'0').get_public_key().serialize()).digest()
     plotter_responses_header_hash: Dict[bytes32, bytes32] = {}
     plotter_responses_challenge: Dict[bytes32, bytes32] = {}
     plotter_responses_proofs: Dict[bytes32, ProofOfSpace] = {}
@@ -44,6 +32,7 @@ class Database:
     proof_of_time_estimate_ips: uint64 = uint64(3000)
 
 
+config = yaml.safe_load(open("src/config/farmer.yaml", "r"))
 log = logging.getLogger(__name__)
 db = Database()
 
@@ -62,7 +51,7 @@ async def challenge_response(challenge_response: plotter_protocol.ChallengeRespo
 
     async with db.lock:
         if challenge_response.quality in db.plotter_responses_challenge:
-            log.warn(f"Have already seen quality {challenge_response.quality}")
+            log.warning(f"Have already seen quality {challenge_response.quality}")
             return
         height: uint32 = db.challenge_to_height[challenge_response.challenge_hash]
         difficulty: uint64 = uint64(0)
@@ -77,12 +66,12 @@ async def challenge_response(challenge_response: plotter_protocol.ChallengeRespo
                                                             difficulty)
         estimate_secs: float = number_iters / db.proof_of_time_estimate_ips
 
-    if estimate_secs < pool_share_threshold or estimate_secs < propagate_threshold:
+    if estimate_secs < config['pool_share_threshold'] or estimate_secs < config['propagate_threshold']:
         async with db.lock:
             db.plotter_responses_challenge[challenge_response.quality] = challenge_response.challenge_hash
         request = plotter_protocol.RequestProofOfSpace(challenge_response.quality)
 
-        yield OutboundMessage("plotter", "request_proof_of_space", request, True, False)
+        yield OutboundMessage(NodeType.PLOTTER, Message("request_proof_of_space", request), Delivery.RESPOND)
 
 
 @api_request
@@ -93,7 +82,8 @@ async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace)
     """
 
     async with db.lock:
-        assert response.proof.pool_pubkey in [sk.get_public_key() for sk in db.pool_sks]
+        pool_sks: List[PrivateKey] = [PrivateKey.from_bytes(bytes.fromhex(ce)) for ce in config["pool_sks"]]
+        assert response.proof.pool_pubkey in [sk.get_public_key() for sk in pool_sks]
 
         challenge_hash: bytes32 = db.plotter_responses_challenge[response.quality]
         challenge_height: uint32 = db.challenge_to_height[challenge_hash]
@@ -117,21 +107,21 @@ async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace)
                                                         difficulty)
     async with db.lock:
         estimate_secs: float = number_iters / db.proof_of_time_estimate_ips
-    if estimate_secs < pool_share_threshold:
+    if estimate_secs < config['pool_share_threshold']:
         request = plotter_protocol.RequestPartialProof(response.quality,
-                                                       sha256(farmer_target).digest())
-        yield OutboundMessage("plotter", "request_partial_proof", request, True, False)
-    if estimate_secs < propagate_threshold:
+                                                       sha256(bytes.fromhex(config['farmer_target'])).digest())
+        yield OutboundMessage(NodeType.PLOTTER, Message("request_partial_proof", request), Delivery.RESPOND)
+    if estimate_secs < config['propagate_threshold']:
         async with db.lock:
             if new_proof_height not in db.coinbase_rewards:
                 log.error(f"Don't have coinbase transaction for height {new_proof_height}, cannot submit PoS")
                 return
 
             coinbase, signature = db.coinbase_rewards[new_proof_height]
-            request = farmer_protocol.RequestHeaderHash(challenge_hash, coinbase,
-                                                        signature, farmer_target, response.proof)
+            request = farmer_protocol.RequestHeaderHash(challenge_hash, coinbase, signature,
+                                                        bytes.fromhex(config['farmer_target']), response.proof)
 
-        yield OutboundMessage("full_node", "request_header_hash", request, False, True)
+        yield OutboundMessage(NodeType.FULL_NODE, Message("request_header_hash", request), Delivery.BROADCAST)
 
 
 @api_request
@@ -152,7 +142,7 @@ async def respond_header_signature(response: plotter_protocol.RespondHeaderSigna
         pos_hash: bytes32 = proof_of_space.get_hash()
 
     request = farmer_protocol.HeaderSignature(pos_hash, header_hash, response.header_hash_signature)
-    yield OutboundMessage("full_node", "header_signature", request, True, True)
+    yield OutboundMessage(NodeType.FULL_NODE, Message("header_signature", request), Delivery.BROADCAST)
 
 
 @api_request
@@ -163,7 +153,7 @@ async def respond_partial_proof(response: plotter_protocol.RespondPartialProof):
     """
 
     async with db.lock:
-        farmer_target_hash = sha256(farmer_target).digest()
+        farmer_target_hash = sha256(bytes.fromhex(config['farmer_target'])).digest()
         plot_pubkey = db.plotter_responses_proofs[response.quality].plot_pubkey
 
     assert response.farmer_target_signature.verify([Util.hash256(farmer_target_hash)],
@@ -189,7 +179,7 @@ async def header_hash(response: farmer_protocol.HeaderHash):
 
     # TODO: only send to the plotter who made the proof of space, not all plotters
     request = plotter_protocol.RequestHeaderSignature(quality, header_hash)
-    yield OutboundMessage("plotter", "request_header_signature", request, True, True)
+    yield OutboundMessage(NodeType.PLOTTER, Message("request_header_signature", request), Delivery.BROADCAST)
 
 
 @api_request
@@ -208,9 +198,12 @@ async def proof_of_space_finalized(proof_of_space_finalized: farmer_protocol.Pro
                 db.current_height = proof_of_space_finalized.height
 
             # TODO: ask the pool for this information
-            coinbase: CoinbaseInfo = CoinbaseInfo(db.current_height + 1, calculate_block_reward(db.current_height),
-                                                  db.pool_target)
-            coinbase_signature: PrependSignature = db.pool_sks[0].sign_prepend(coinbase.serialize())
+            coinbase: CoinbaseInfo = CoinbaseInfo(uint32(db.current_height + 1),
+                                                  calculate_block_reward(db.current_height),
+                                                  bytes.fromhex(config["pool_target"]))
+
+            pool_sks: List[PrivateKey] = [PrivateKey.from_bytes(bytes.fromhex(ce)) for ce in config["pool_sks"]]
+            coinbase_signature: PrependSignature = pool_sks[0].sign_prepend(coinbase.serialize())
             db.coinbase_rewards[uint32(db.current_height + 1)] = (coinbase, coinbase_signature)
 
             log.info(f"Current height set to {db.current_height}")
@@ -223,7 +216,7 @@ async def proof_of_space_finalized(proof_of_space_finalized: farmer_protocol.Pro
 
     if get_proofs:
         message = plotter_protocol.NewChallenge(proof_of_space_finalized.challenge_hash)
-        yield OutboundMessage("plotter", "new_challenge", message, True, True)
+        yield OutboundMessage(NodeType.PLOTTER, Message("new_challenge", message), Delivery.BROADCAST)
 
 
 @api_request
