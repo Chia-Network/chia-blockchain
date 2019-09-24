@@ -4,7 +4,11 @@ import random
 from typing import Tuple, AsyncGenerator, Callable, Optional
 from types import ModuleType
 from lib.aiter.aiter.server import start_server_aiter
-from lib.aiter.aiter import parallel_map_aiter, map_aiter, join_aiters, iter_to_aiter, aiter_forker
+from lib.aiter.aiter.map_aiter import map_aiter
+from lib.aiter.aiter.join_aiters import join_aiters
+from lib.aiter.aiter.parallel_map_aiter import parallel_map_aiter
+from lib.aiter.aiter.iter_to_aiter import iter_to_aiter
+from lib.aiter.aiter.aiter_forker import aiter_forker
 from lib.aiter.aiter.push_aiter import push_aiter
 from src.types.peer_info import PeerInfo
 from src.types.sized_bytes import bytes32
@@ -43,7 +47,7 @@ async def stream_reader_writer_to_connection(pair: Tuple[asyncio.StreamReader, a
 
 async def connection_to_outbound(connection: Connection,
                                  on_connect: Callable[[], AsyncGenerator[OutboundMessage, None]]) -> AsyncGenerator[
-            OutboundMessage, None]:
+            Tuple[Connection, OutboundMessage], None]:
     """
     Async generator which calls the on_connect async generator method, and yields any outbound messages.
     """
@@ -115,7 +119,7 @@ async def connection_to_message(connection: Connection) -> AsyncGenerator[Tuple[
         connection.close()
 
 
-async def handle_message(pair: Tuple[Connection, bytes], api: ModuleType) -> AsyncGenerator[
+async def handle_message(pair: Tuple[Connection, Message], api: ModuleType) -> AsyncGenerator[
         Tuple[Connection, OutboundMessage], None]:
     """
     Async generator which takes messages, parses, them, executes the right
@@ -175,11 +179,11 @@ async def expand_outbound_messages(pair: Tuple[Connection, OutboundMessage]) -> 
             yield item
 
 
-async def initialize_pipeline(aiter: AsyncGenerator[Tuple[asyncio.StreamReader, asyncio.StreamWriter], None],
+async def initialize_pipeline(aiter,
                               api: ModuleType, connection_type: NodeType,
                               on_connect: Callable[[], AsyncGenerator[OutboundMessage, None]] = None,
-                              outbound_aiter: AsyncGenerator[OutboundMessage, None] = None,
-                              wait_for_handshake=False) -> None:
+                              outbound_aiter=None,
+                              wait_for_handshake=False) -> asyncio.Task:
 
     # Maps a stream reader and writer to connection object
     connections_aiter = map_aiter(partial_func.partial_async(stream_reader_writer_to_connection,

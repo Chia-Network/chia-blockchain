@@ -1,5 +1,4 @@
 from blspy import PrependSignature
-from hashlib import sha256
 from src.util.streamable import streamable
 from src.util.ints import uint64
 from src.types.sized_bytes import bytes32
@@ -22,4 +21,4 @@ class BlockHeader:
 
     @property
     def header_hash(self):
-        return bytes32(sha256(self.serialize()).digest())
+        return self.get_hash()

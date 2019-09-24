@@ -1,5 +1,5 @@
-from ..util.streamable import streamable
-from ..util.ints import int1024
+from src.util.streamable import streamable
+from src.util.ints import int1024
 
 
 @streamable

@@ -14,7 +14,7 @@ class TrunkBlock:
     header: BlockHeader
 
     @property
-    def prev_hash(self):
+    def prev_header_hash(self):
         return self.header.data.prev_header_hash
 
     @property
