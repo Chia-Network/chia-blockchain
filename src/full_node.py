@@ -201,6 +201,7 @@ async def sync():
     async with db.lock:
         fork_point: TrunkBlock = db.blockchain.find_fork_point(trunks)
 
+    # TODO: optimize, send many requests at once, and for more blocks
     for height in range(fork_point.challenge.height + 1, tip_height + 1):
         # Only download from fork point (what we don't have)
         async with db.lock:
@@ -368,7 +369,6 @@ async def request_header_hash(request: farmer_protocol.RequestHeaderHash) -> Asy
 
         # Creates the block header
         prev_header_hash: bytes32 = target_head.header.get_hash()
-        # prev_header_hash: bytes32 = bytes32([0] * 32)
         timestamp: uint64 = uint64(time.time())
 
         # TODO: use a real BIP158 filter based on transactions
@@ -524,18 +524,6 @@ async def unfinished_block(unfinished_block: peer_protocol.UnfinishedBlock) -> A
 async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, None]:
     """
     Receive a full block from a peer full node (or ourselves).
-    Pseudocode:
-    if we have block:
-        return
-    if we don't care about block:
-        return
-    if block invalid:
-        return
-    Store block
-    if block actually good:
-        propagate to other full nodes
-        propagate challenge to farmers
-        propagate challenge to timelords
     """
     header_hash = block.block.trunk_block.header.get_hash()
 
@@ -595,9 +583,9 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
         block.block.trunk_block.proof_of_time.output.challenge_hash
     )
     farmer_request = farmer_protocol.ProofOfSpaceFinalized(block.block.trunk_block.challenge.get_hash(),
-                                                            block.block.trunk_block.challenge.height,
-                                                            pos_quality,
-                                                            difficulty)
+                                                           block.block.trunk_block.challenge.height,
+                                                           pos_quality,
+                                                           difficulty)
     timelord_request = timelord_protocol.ChallengeStart(block.block.trunk_block.challenge.get_hash())
     timelord_request_end = timelord_protocol.ChallengeStart(block.block.trunk_block.proof_of_time.
                                                             output.challenge_hash)

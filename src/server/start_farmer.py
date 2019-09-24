@@ -1,8 +1,9 @@
 import asyncio
 import logging
-from src.types.peer_info import PeerInfo
-
+from typing import List
+from blspy import PrivateKey
 from src import farmer
+from src.types.peer_info import PeerInfo
 from src.server.server import start_chia_client, start_chia_server
 from src.protocols.plotter_protocol import PlotterHandshake
 from src.server.outbound_message import OutboundMessage, Message, Delivery, NodeType
@@ -18,7 +19,8 @@ async def main():
     plotter_con_task, plotter_client = await start_chia_client(plotter_peer, farmer, NodeType.PLOTTER)
 
     # Sends a handshake to the plotter
-    msg = PlotterHandshake([sk.get_public_key() for sk in farmer.db.pool_sks])
+    pool_sks: List[PrivateKey] = [PrivateKey.from_bytes(bytes.fromhex(ce)) for ce in farmer.config["pool_sks"]]
+    msg = PlotterHandshake([sk.get_public_key() for sk in pool_sks])
     plotter_client.push(OutboundMessage(NodeType.PLOTTER, Message("plotter_handshake", msg), Delivery.BROADCAST))
 
     # Starts the farmer server (which full nodes can connect to)

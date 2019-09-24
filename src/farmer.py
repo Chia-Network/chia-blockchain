@@ -18,8 +18,6 @@ from src.server.outbound_message import OutboundMessage, Delivery, Message, Node
 
 class Database:
     lock = asyncio.Lock()
-    pool_sks = [PrivateKey.from_seed(b'pool key 0'), PrivateKey.from_seed(b'pool key 1')]
-    pool_target = sha256(PrivateKey.from_seed(b'0').get_public_key().serialize()).digest()
     plotter_responses_header_hash: Dict[bytes32, bytes32] = {}
     plotter_responses_challenge: Dict[bytes32, bytes32] = {}
     plotter_responses_proofs: Dict[bytes32, ProofOfSpace] = {}
@@ -84,7 +82,8 @@ async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace)
     """
 
     async with db.lock:
-        assert response.proof.pool_pubkey in [sk.get_public_key() for sk in db.pool_sks]
+        pool_sks: List[PrivateKey] = [PrivateKey.from_bytes(bytes.fromhex(ce)) for ce in config["pool_sks"]]
+        assert response.proof.pool_pubkey in [sk.get_public_key() for sk in pool_sks]
 
         challenge_hash: bytes32 = db.plotter_responses_challenge[response.quality]
         challenge_height: uint32 = db.challenge_to_height[challenge_hash]
@@ -199,9 +198,12 @@ async def proof_of_space_finalized(proof_of_space_finalized: farmer_protocol.Pro
                 db.current_height = proof_of_space_finalized.height
 
             # TODO: ask the pool for this information
-            coinbase: CoinbaseInfo = CoinbaseInfo(db.current_height + 1, calculate_block_reward(db.current_height),
-                                                  db.pool_target)
-            coinbase_signature: PrependSignature = db.pool_sks[0].sign_prepend(coinbase.serialize())
+            coinbase: CoinbaseInfo = CoinbaseInfo(uint32(db.current_height + 1),
+                                                  calculate_block_reward(db.current_height),
+                                                  bytes.fromhex(config["pool_target"]))
+
+            pool_sks: List[PrivateKey] = [PrivateKey.from_bytes(bytes.fromhex(ce)) for ce in config["pool_sks"]]
+            coinbase_signature: PrependSignature = pool_sks[0].sign_prepend(coinbase.serialize())
             db.coinbase_rewards[uint32(db.current_height + 1)] = (coinbase, coinbase_signature)
 
             log.info(f"Current height set to {db.current_height}")

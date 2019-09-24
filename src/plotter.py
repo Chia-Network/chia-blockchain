@@ -1,4 +1,3 @@
-from hashlib import sha256
 import logging
 import os
 import os.path
@@ -75,8 +74,8 @@ async def new_challenge(new_challenge: plotter_protocol.NewChallenge):
                 log.warning("Error using prover object. Reinitializing prover object.")
                 db.provers[filename] = DiskProver(filename)
                 quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
-            for index, quality_string in enumerate(quality_strings):
-                quality = sha256(new_challenge.challenge_hash + quality_string).digest()
+            for index, quality_str in enumerate(quality_strings):
+                quality = ProofOfSpace.quality_str_to_quality(new_challenge.challenge_hash, quality_str)
                 db.challenge_hashes[quality] = (new_challenge.challenge_hash, filename, index)
                 response: plotter_protocol.ChallengeResponse = plotter_protocol.ChallengeResponse(
                     new_challenge.challenge_hash,

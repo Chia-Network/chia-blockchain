@@ -8,5 +8,5 @@ class Challenge:
     proof_of_space_hash: bytes32
     proof_of_time_output_hash: bytes32
     height: uint32
-    total_weight: uint64
-    total_iters: uint64
+    total_weight: uint64  # Total weight up to this point, not counting
+    total_iters: uint64  # Total iterations done up to this point, counting new PoT

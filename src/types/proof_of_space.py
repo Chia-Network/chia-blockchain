@@ -14,6 +14,8 @@ class ProofOfSpace:
     size: uint8
     proof: List[uint8]
 
+    _cached_quality = None
+
     def get_plot_seed(self) -> bytes32:
         return self.calculate_plot_seed(self.pool_pubkey, self.plot_pubkey)
 
@@ -26,10 +28,14 @@ class ProofOfSpace:
                                        bytes(self.proof))
         if not quality_str:
             return None
-        self._cached_quality = sha256(challenge_hash + quality_str).digest()
+        self._cached_quality: bytes32 = self.quality_str_to_quality(challenge_hash, quality_str)
         return self._cached_quality
 
     @staticmethod
     def calculate_plot_seed(pool_pubkey: PublicKey, plot_pubkey: PublicKey) -> bytes32:
         return bytes32(sha256(pool_pubkey.serialize() +
                               plot_pubkey.serialize()).digest())
+
+    @staticmethod
+    def quality_str_to_quality(challenge_hash: bytes32, quality_str: bytes) -> bytes32:
+        return bytes32(sha256(challenge_hash + quality_str).digest())
