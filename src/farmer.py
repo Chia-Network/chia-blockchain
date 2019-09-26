@@ -206,7 +206,7 @@ async def proof_of_space_finalized(proof_of_space_finalized: farmer_protocol.Pro
             coinbase_signature: PrependSignature = pool_sks[0].sign_prepend(coinbase.serialize())
             db.coinbase_rewards[uint32(db.current_height + 1)] = (coinbase, coinbase_signature)
 
-            log.info(f"Current height set to {db.current_height}")
+            log.info(f"\tCurrent height set to {db.current_height}")
         db.seen_challenges.add(proof_of_space_finalized.challenge_hash)
         if proof_of_space_finalized.height not in db.challenges:
             db.challenges[proof_of_space_finalized.height] = [proof_of_space_finalized]

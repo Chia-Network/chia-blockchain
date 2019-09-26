@@ -1,5 +1,4 @@
 import logging
-from src.util.errors import BlockNotInBlockchain, PeersDontHaveBlock
 import time
 import asyncio
 import collections
@@ -30,6 +29,7 @@ from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.constants import DIFFICULTY_TARGET
 from src.blockchain import Blockchain, ReceiveBlockResult
 from src.server.outbound_message import OutboundMessage, Delivery, NodeType, Message
+from src.util.errors import BlockNotInBlockchain, PeersDontHaveBlock, InvalidUnfinishedBlock
 
 
 class Database:
@@ -108,7 +108,7 @@ async def proof_of_time_estimate_interval():
         async with db.lock:
             if estimated_ips is not None:
                 db.proof_of_time_estimate_ips = estimated_ips
-            log.info(f"Updated proof of time estimate to {estimated_ips} iterations per second.")
+                log.info(f"Updated proof of time estimate to {estimated_ips} iterations per second.")
         await sleep(config['update_pot_estimate_interval'])
 
 
@@ -476,7 +476,8 @@ async def new_proof_of_time(new_proof_of_time: peer_protocol.NewProofOfTime) -> 
             yield msg
     if propagate_proof:
         # TODO: perhaps don't propagate everything, this is a DoS vector
-        yield OutboundMessage(NodeType.FULL_NODE, Message("new_proof_of_time", new_proof_of_time), Delivery.BROADCAST)
+        yield OutboundMessage(NodeType.FULL_NODE, Message("new_proof_of_time", new_proof_of_time),
+                              Delivery.BROADCAST_TO_OTHERS)
 
 
 @api_request
@@ -490,7 +491,9 @@ async def unfinished_block(unfinished_block: peer_protocol.UnfinishedBlock) -> A
         if not db.blockchain.is_child_of_head(unfinished_block.block):
             return
 
-        # TODO(alex): verify block using blockchain class, including coinbase rewards
+        if not db.blockchain.validate_unfinished_block(unfinished_block.block):
+            raise InvalidUnfinishedBlock()
+
         prev_block: TrunkBlock = db.blockchain.get_trunk_block(
             unfinished_block.block.trunk_block.prev_header_hash)
 
@@ -502,13 +505,13 @@ async def unfinished_block(unfinished_block: peer_protocol.UnfinishedBlock) -> A
                                                          challenge_hash, difficulty)
 
         if (challenge_hash, iterations_needed) in db.unfinished_blocks:
-            log.info(f"Have already seen unfinished block {(challenge_hash, iterations_needed)}")
+            log.info(f"\tHave already seen unfinished block {(challenge_hash, iterations_needed)}")
             return
 
         expected_time: float = iterations_needed / db.proof_of_time_estimate_ips
 
         # TODO(alex): tweak this
-        log.info(f"Expected finish time: {expected_time}")
+        log.info(f"\tExpected finish time: {expected_time}")
         if expected_time > 10 * DIFFICULTY_TARGET:
             return
 
@@ -535,7 +538,7 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
             return
 
         if header_hash in db.full_blocks:
-            log.info(f"Already have block {header_hash} height {block.block.trunk_block.challenge.height}")
+            log.info(f"\tAlready have block {header_hash} height {block.block.trunk_block.challenge.height}")
             return
         # TODO(alex): Check if we care about this block, we don't want to add random
         # disconnected blocks. For example if it's on one of the heads, or if it's an older
