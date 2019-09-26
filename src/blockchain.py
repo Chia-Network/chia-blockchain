@@ -256,7 +256,7 @@ class Blockchain:
                     curr = self.blocks[curr.prev_header_hash]
                 except KeyError:
                     break
-            if len(last_timestamps) != NUMBER_OF_TIMESTAMPS and curr.trunk_block.challenge.height != 0:
+            if len(last_timestamps) != NUMBER_OF_TIMESTAMPS and curr.body.coinbase.height != 0:
                 return False
             prev_time: uint64 = uint64(sum(last_timestamps) / len(last_timestamps))
             if block.trunk_block.header.data.timestamp < prev_time:
@@ -300,7 +300,7 @@ class Blockchain:
                 return False
 
         # 10. Check coinbase amount
-        if calculate_block_reward(block.trunk_block.challenge.height) != block.body.coinbase.amount:
+        if calculate_block_reward(block.body.coinbase.height) != block.body.coinbase.amount:
             return False
 
         # 11. Check coinbase signature with pool pk
@@ -424,7 +424,7 @@ class Blockchain:
             while len(self.heads) >= 4:
                 self.heads.sort(key=lambda b: b.weight, reverse=True)
                 self.heads.pop()
-            log.info(f"Updated heads, new heights: {[b.height for b in self.heads]}")
+            log.info(f"\tUpdated heads, new heights: {[b.height for b in self.heads]}")
             self._reconsider_lca()
             return True
         return False
