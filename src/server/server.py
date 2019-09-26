@@ -226,7 +226,7 @@ async def initialize_pipeline(aiter,
     # length encoding and CBOR serialization
     async def serve_forever():
         async for connection, message in expanded_messages_aiter:
-            log.info(f"Sending {message.function} to peer {connection.get_peername()}")
+            log.info(f"-> {message.function} to peer {connection.get_peername()}")
             try:
                 await connection.send(message)
             except asyncio.CancelledError:

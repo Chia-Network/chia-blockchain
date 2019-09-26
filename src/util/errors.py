@@ -42,3 +42,8 @@ class PeersDontHaveBlock(Exception):
 class InvalidWeight(Exception):
     """The weight of this block can not be validated"""
     pass
+
+
+class InvalidUnfinishedBlock(Exception):
+    """The unfinished block we received is invalid"""
+    pass
