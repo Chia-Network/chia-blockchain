@@ -344,7 +344,7 @@ class Blockchain:
             return False
 
         # 4. Check PoT
-        if not block.trunk_block.proof_of_time.is_valid():
+        if not block.trunk_block.proof_of_time.is_valid() and not genesis:
             return False
 
         if block.body.coinbase.height != block.trunk_block.challenge.height:
