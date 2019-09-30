@@ -650,10 +650,13 @@ Proof CreateProofOfTimeNWesolowski(integer& D, form x, int64_t num_iterations,
 std::mutex main_mutex;
 
 void NWesolowskiMain(integer D, form x, int64_t num_iterations, WesolowskiCallback& weso) {
-    Proof result = CreateProofOfTimeNWesolowski(D, x, num_iterations, 0, weso, 2, 0);
+    //Proof result = CreateProofOfTimeNWesolowski(D, x, num_iterations, 0, weso, 2, 0);
+    std::this_thread::sleep_for (std::chrono::seconds(1 + num_iterations / 500));
     std::lock_guard<std::mutex> lock(main_mutex);
     std::cout << BytesToStr(ConvertIntegerToBytes(integer(num_iterations), 8));
-    std::cout << result.hex() << "\n" << std::flush;
+    std::cout << BytesToStr(SerializeForm(weso, x, 129));
+    //std::cout << result.hex() << "\n" << std::flush;
+    std::cout << "0020d326c63c7f1782ce7abae04f2464357d5d7b4e3788ef34e44896929c6ad7173ed8c9ea4f5c6c1b6ee20cfbb774e6373cda8d2278bed0781867208b993baa9d0011cf7e89a5f519d34c548aafd63dc5f15a472fede0c1e7b1a7ecf6bf323de61bd8e684b88323d9a7567d698d80b9ff3c148eb1a1ca335d4d4c4fe1c7ba2a914b000000000000012c002052df9df1f29eed204ea18ab1dad68d5ee66784c0568f90a08856223b89101532c443b895b7e050f55c6d6d1a998068f3f9891b1e6e0a81870be653523a4c2cffe860aa2dab86a08fa78c9e949167a1a7b81a2734af3493fe39547de776a0206d02b006430551cfbff9567b0a1bd232837510d32af8173b96c6454ad7b1438069005ef7b973223abca1ed93348a1a0e84d64693d800cac6066ac1bc3e0441100691d9272070842ddcc35ec0545b817982e3e6c9677a047660f19620b2685204214200376489a14ce7ee5b2c528d9fb74cc8ee9d9427376c3acec3d02a854f52313cfbcf77c6d4e50b48be4d38ff68e5abdac7016a3616e061253f29d545a0e30dcb85000000000000012c00191f9a4148916b97cd0feffb58fb29aa30bad06f88c4709b2446334dbe5a1f150bf10563fa481e72f5e2285237835e20d47ac7f14702ca3ab594847978f36ecdfff83ede73376b636a60ecda5968577df2bdec43b5fbee001b61a0d497f07d093a87e1142a2ddd1bd8713e5c8425b2e6de648be532ba1ee766a8934792b5ccb3dd003b92b42beb4bb3ddd0b6371ece5c71682194be20bf1c3b27ad271de4eca9ceaba2632ddb000ba13a0bd1064066c104f70e1480f87c29e245340dd3a0dbf8b4d40005b5266665a0ebe98df87af2132a4a30e5bbb576cff3febf815ecc9870f671f7b00c2963f504901801affc8b97aead35fba69c324cd4142310705741f347ebb1" << "\n" << std::flush;
 }
 
 int main(int argc, char* argv[]) {
@@ -692,7 +695,7 @@ int main(int argc, char* argv[]) {
     weso.L = L;
     weso.kl = 10;
 
-    std::thread vdf_worker(repeated_square, f, D, L, std::ref(weso), std::ref(stop_signal));
+    //std::thread vdf_worker(repeated_square, f, D, L, std::ref(weso), std::ref(stop_signal));
 
     while(!stop_signal) {
         std::this_thread::sleep_for (std::chrono::seconds(2));
@@ -706,7 +709,7 @@ int main(int argc, char* argv[]) {
                 threads[t].join();
             }
             stop_signal = true;
-            vdf_worker.join();
+            //vdf_worker.join();
             std::lock_guard<std::mutex> lock(main_mutex);
             for (int i = 0; i < 100; i++)
                 std::cout << "0";

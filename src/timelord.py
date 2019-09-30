@@ -21,7 +21,7 @@ from src.server.outbound_message import OutboundMessage, Delivery, Message, Node
 class Database:
     lock: Lock = Lock()
     challenges: Dict = {}
-
+    finished_challenges = []
 
 config = yaml.safe_load(open("src/config/timelord.yaml", "r"))
 log = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
     should be started on it. We can generate a classgroup (discriminant), and start
     a new VDF process here. But we don't know how many iterations to run for, so we run
     forever.
-    """
+    """    
     async with db.lock:
         assert(challenge_start.challenge_hash not in db.challenges)
         disc: int = create_discriminant(challenge_start.challenge_hash, constants.DISCRIMINANT_SIZE_BITS)
@@ -45,10 +45,9 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
         command,
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE)
-        #stderr=asyncio.subprocess.PIPE)
 
         db.challenges[challenge_start.challenge_hash] = (disc, proc)
-        
+
     while True:      
         output = await proc.stdout.readline()
 
@@ -58,17 +57,17 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
             async with db.lock:
                 del db.challenges[challenge_start.challenge_hash]
             log.info(f"The process for challenge {challenge_start.challenge_hash} ended")
+            return 
 
         stdout_bytes_io: io.BytesIO = io.BytesIO(bytes.fromhex(output[:-1].decode()))
         iterations_needed = int.from_bytes(stdout_bytes_io.read(8), "big", signed=True)
-
         y = ClassgroupElement.parse(stdout_bytes_io)
         proof_bytes: bytes = stdout_bytes_io.read()
 
         # Verifies our own proof just in case
         proof_blob = ClassGroup.from_ab_discriminant(y.a, y.b, disc).serialize() + proof_bytes
         x = ClassGroup.from_ab_discriminant(2, 1, disc)
-        assert check_proof_of_time_nwesolowski(disc, x, proof_blob, iterations_needed, 1024, 2)
+        #assert check_proof_of_time_nwesolowski(disc, x, proof_blob, iterations_needed, 1024, 2)
 
         output = ProofOfTimeOutput(challenge_start.challenge_hash,
                                iterations_needed,
@@ -86,11 +85,14 @@ async def challenge_end(challenge_end: timelord_protocol.ChallengeEnd):
     exists.
     """
     async with db.lock:
-        if challenge_end.challenge_hash in db.challenges:
+        if challenge_end.challenge_hash not in db.finished_challenges:
             _, proc = db.challenges[challenge_end.challenge_hash]
             #I'm no longer accepting new challenges, process will finish everything else smoothly.
             proc.stdin.write(b'0\n')
             await proc.stdin.drain()
+            db.finished_challenges.append(challenge_end.challenge_hash)
+        else:
+            log.info("Trying to close the challenge multiple times..")
 
 @api_request
 async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpaceInfo):
@@ -103,6 +105,7 @@ async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpac
         if proof_of_space_info.challenge_hash not in db.challenges:
             log.warn(f"Have not seen challenge {proof_of_space_info.challenge_hash} yet.")
             return 
+        assert(proof_of_space_info.challenge_hash not in db.finished_challenges)
         _, proc = db.challenges[proof_of_space_info.challenge_hash]
         proc.stdin.write((str(proof_of_space_info.iterations_needed) + "\n").encode())
         await proc.stdin.drain()
