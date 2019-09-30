@@ -76,7 +76,7 @@ async def new_challenge(new_challenge: plotter_protocol.NewChallenge):
                 quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
             for index, quality_str in enumerate(quality_strings):
                 quality = ProofOfSpace.quality_str_to_quality(new_challenge.challenge_hash, quality_str)
-                db.challenge_hashes[quality] = (new_challenge.challenge_hash, filename, index)
+                db.challenge_hashes[quality] = (new_challenge.challenge_hash, filename, uint8(index))
                 response: plotter_protocol.ChallengeResponse = plotter_protocol.ChallengeResponse(
                     new_challenge.challenge_hash,
                     quality,

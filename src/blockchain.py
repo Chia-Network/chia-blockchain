@@ -10,17 +10,8 @@ from src.util.ints import uint64, uint32
 from src.types.trunk_block import TrunkBlock
 from src.types.full_block import FullBlock
 from src.consensus.pot_iterations import calculate_iterations, calculate_iterations_quality
-from src.consensus.constants import (
-    DIFFICULTY_STARTING,
-    DIFFICULTY_TARGET,
-    DIFFICULTY_EPOCH,
-    DIFFICULTY_DELAY,
-    DIFFICULTY_WARP_FACTOR,
-    DIFFICULTY_FACTOR,
-    NUMBER_OF_TIMESTAMPS,
-    MAX_FUTURE_TIME,
-    GENESIS_BLOCK
-)
+from src.consensus.constants import constants as consensus_constants
+
 
 log = logging.getLogger(__name__)
 
@@ -39,28 +30,23 @@ class ReceiveBlockResult(Enum):
 
 
 class Blockchain:
-    def __init__(self, genesis: Optional[FullBlock] = None):
-        if not genesis:
-            try:
-                genesis = self.get_genesis_block()
-            except ValueError:
-                raise ValueError("Failed to parse genesis block.")
+    def __init__(self, override_constants: Dict = {}):
+        # Allow passing in custom overrides for any consesus parameters
+        self.constants: Dict = consensus_constants
+        for key, value in override_constants.items():
+            self.constants[key] = value
 
         self.heads: List[FullBlock] = []
         self.lca_block: FullBlock = None
         self.blocks: Dict[bytes32, FullBlock] = {}
         self.height_to_hash: Dict[uint64, bytes32] = {}
-        result = self.receive_block(genesis)
+        self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
+        result = self.receive_block(self.genesis)
         assert result == ReceiveBlockResult.ADDED_TO_HEAD
-        self.genesis = genesis
 
-        # For blocks with height % DIFFICULTY_DELAY == 1, a link to the hash of
-        # the (DIFFICULTY_DELAY)-th parent of this block
+        # For blocks with height % constants["DIFFICULTY_DELAY"] == 1, a link to the hash of
+        # the (constants["DIFFICULTY_DELAY"])-th parent of this block
         self.header_warp: Dict[bytes32, bytes32] = {}
-
-    @staticmethod
-    def get_genesis_block() -> FullBlock:
-        return FullBlock.from_bytes(GENESIS_BLOCK)
 
     def get_current_heads(self) -> List[TrunkBlock]:
         """
@@ -135,7 +121,7 @@ class Blockchain:
         if trunk is None:
             raise Exception("No block found for given header_hash")
         elif trunk is self.genesis.trunk_block:
-            return uint64(DIFFICULTY_STARTING)
+            return uint64(self.constants["DIFFICULTY_STARTING"])
 
         prev_block = self.blocks.get(trunk.prev_header_hash, None)
         if prev_block is None:
@@ -144,51 +130,82 @@ class Blockchain:
                       - prev_block.trunk_block.challenge.total_weight)
 
     def get_next_difficulty(self, header_hash: bytes32) -> uint64:
-        return self.get_difficulty(header_hash)
-
         # Returns the difficulty of the next block that extends onto header_hash.
         # Used to calculate the number of iterations.
-        # TODO:  Assumes header_hash is of a connected block
-
         block = self.blocks.get(header_hash, None)
+        next_height: uint32 = block.height + 1
         if block is None:
             raise Exception("Given header_hash must reference block already added")
-        if block.height % DIFFICULTY_EPOCH != DIFFICULTY_DELAY:
+        if next_height % self.constants["DIFFICULTY_EPOCH"] != self.constants["DIFFICULTY_DELAY"]:
             # Not at a point where difficulty would change
             return self.get_difficulty(header_hash)
-        elif block.height == DIFFICULTY_DELAY:
-            return uint64(DIFFICULTY_FACTOR * DIFFICULTY_STARTING)
+        elif next_height < self.constants["DIFFICULTY_EPOCH"]:
+            # We are in the first epoch
+            return uint64(self.constants["DIFFICULTY_STARTING"])
 
-        # The current block has height i + DELAY.
+        #       old diff                  curr diff       new diff
+        # ----------|-----|----------------------|-----|-----...
+        #           h1    h2                     h3   i-1
+        height1 = uint64(next_height - self.constants["DIFFICULTY_EPOCH"] - self.constants["DIFFICULTY_DELAY"] - 1)
+        height2 = uint64(next_height - self.constants["DIFFICULTY_EPOCH"] - 1)
+        height3 = uint64(next_height - self.constants["DIFFICULTY_DELAY"] - 1)
+
+        block1, block2, block3 = None, None, None
+        if block.trunk_block not in self.get_current_heads() or height3 not in self.height_to_hash:
+            # This means we are either on a fork, or on one of the chains, but after the LCA,
+            # so we manually backtrack.
+            curr = block
+            while (curr.height not in self.height_to_hash or self.height_to_hash[curr.height] != curr.header_hash):
+                if curr.height == height1:
+                    block1 = curr
+                elif curr.height == height2:
+                    block2 = curr
+                elif curr.height == height3:
+                    block3 = curr
+                curr = self.blocks[curr.prev_header_hash]
+        # Once we are before the fork point (and before the LCA), we can use the height_to_hash map
+        if not block1 and height1 >= 0:
+            # hiehgt1 could be -1, for the first difficulty calculation
+            block1 = self.blocks[self.height_to_hash[height1]]
+        if not block2:
+            block2 = self.blocks[self.height_to_hash[height2]]
+        if not block3:
+            block3 = self.blocks[self.height_to_hash[height3]]
+
+        # Current difficulty parameter (diff of block h = i - 1)
         Tc = self.get_difficulty(header_hash)
-        warp = header_hash
-        for _ in range(DIFFICULTY_DELAY - 1):
-            warp = self.blocks[warp].hash
-        # warp: header_hash of height {i + 1}
 
-        warp2 = warp
-        for _ in range(DIFFICULTY_WARP_FACTOR - 1):
-            warp2 = self.header_warp.get(warp2, None)
-        # warp2: header_hash of height {i + 1 - EPOCH + DELAY}
-        Tp = self.get_difficulty(self.blocks[warp2].prev_header_hash)
+        # Previous difficulty parameter (diff of block h = i - 2048 - 1)
+        Tp = self.get_difficulty(block2.header_hash)
+        if block1:
+            timestamp1 = block1.trunk_block.header.data.timestamp  # i - 512 - 1
+        else:
+            # In the case of height == -1, there is no timestamp here, so assume the genesis block
+            # took constants["BLOCK_TIME_TARGET"] seconds to mine.
+            timestamp1 = (self.blocks[self.height_to_hash[uint64(0)]].trunk_block.header.data.timestamp
+                          - self.constants["BLOCK_TIME_TARGET"])
+        timestamp2 = block2.trunk_block.header.data.timestamp  # i - 2048 + 512 - 1
+        timestamp3 = block3.trunk_block.header.data.timestamp  # i - 512 - 1
 
-        # X_i : timestamp of i-th block, (EPOCH divides i)
-        # Current block @warp is i+1
-        temp_block = self.blocks[warp]
-        timestamp1 = temp_block.trunk_block.header.data.timestamp  # X_{i+1}
-        temp_block = self.blocks[warp2]
-        timestamp2 = temp_block.trunk_block.header.data.timestamp  # X_{i+1-EPOCH+DELAY}
-        temp_block = self.blocks[self.header_warp[temp_block.hash]]
-        timestamp3 = temp_block.trunk_block.header.data.timestamp  # X_{i+1-EPOCH}
+        # Numerator fits in 128 bits, so big int is not necessary
+        # We multiply by the denominators here, so we only have one fraction in the end (avoiding floating point)
+        term1 = (self.constants["DIFFICULTY_DELAY"] * Tp * (timestamp3 - timestamp2) *
+                 self.constants["BLOCK_TIME_TARGET"])
+        term2 = ((self.constants["DIFFICULTY_WARP_FACTOR"] - 1) * (self.constants["DIFFICULTY_EPOCH"] -
+                                                                   self.constants["DIFFICULTY_DELAY"]) * Tc
+                 * (timestamp2 - timestamp1) * self.constants["BLOCK_TIME_TARGET"])
 
-        diff_natural = (
-            (DIFFICULTY_EPOCH - DIFFICULTY_DELAY) * Tc * (timestamp2 - timestamp3)
-        )
-        diff_natural += DIFFICULTY_DELAY * Tp * (timestamp1 - timestamp2)
-        diff_natural *= DIFFICULTY_TARGET
-        diff_natural //= (timestamp1 - timestamp2) * (timestamp2 - timestamp3)
-        difficulty = max(min(diff_natural, Tc * 4), Tc // 4)  # truncated comparison
-        return difficulty
+        # Round down after the division
+        new_difficulty: uint64 = uint64((term1 + term2) //
+                                        (self.constants["DIFFICULTY_WARP_FACTOR"] *
+                                         (timestamp3 - timestamp2) *
+                                         (timestamp2 - timestamp1)))
+
+        # Only change by a max factor, to prevent attacks, as in greenpaper, and must be at least 1
+        if new_difficulty >= Tc:
+            return min(new_difficulty, uint64(self.constants["DIFFICULTY_FACTOR"] * Tc))
+        else:
+            return max([uint64(1), new_difficulty, uint64(Tc // self.constants["DIFFICULTY_FACTOR"])])
 
     def get_vdf_rate_estimate(self) -> Optional[uint64]:
         """
@@ -250,18 +267,18 @@ class Blockchain:
             last_timestamps: List[uint64] = []
             prev_block: Optional[FullBlock] = self.blocks[block.prev_header_hash]
             curr = prev_block
-            while len(last_timestamps) < NUMBER_OF_TIMESTAMPS:
+            while len(last_timestamps) < self.constants["NUMBER_OF_TIMESTAMPS"]:
                 last_timestamps.append(curr.trunk_block.header.data.timestamp)
                 try:
                     curr = self.blocks[curr.prev_header_hash]
                 except KeyError:
                     break
-            if len(last_timestamps) != NUMBER_OF_TIMESTAMPS and curr.body.coinbase.height != 0:
+            if len(last_timestamps) != self.constants["NUMBER_OF_TIMESTAMPS"] and curr.body.coinbase.height != 0:
                 return False
             prev_time: uint64 = uint64(sum(last_timestamps) / len(last_timestamps))
             if block.trunk_block.header.data.timestamp < prev_time:
                 return False
-            if block.trunk_block.header.data.timestamp > time.time() + MAX_FUTURE_TIME:
+            if block.trunk_block.header.data.timestamp > time.time() + self.constants["MAX_FUTURE_TIME"]:
                 return False
         else:
             prev_block: Optional[FullBlock] = None
@@ -328,7 +345,7 @@ class Blockchain:
         if not genesis:
             difficulty: uint64 = self.get_next_difficulty(block.prev_header_hash)
         else:
-            difficulty: uint64 = uint64(DIFFICULTY_STARTING)
+            difficulty: uint64 = uint64(self.constants["DIFFICULTY_STARTING"])
 
         # 2. Check proof of space hash
         if block.trunk_block.proof_of_space.get_hash() != block.trunk_block.challenge.proof_of_space_hash:
@@ -344,7 +361,7 @@ class Blockchain:
             return False
 
         # 4. Check PoT
-        if not block.trunk_block.proof_of_time.is_valid():
+        if not block.trunk_block.proof_of_time.is_valid(self.constants["DISCRIMINANT_SIZE_BITS"]):
             return False
 
         if block.body.coinbase.height != block.trunk_block.challenge.height:
@@ -428,20 +445,3 @@ class Blockchain:
             self._reconsider_lca()
             return True
         return False
-
-    def _get_warpable_trunk(self, trunk: TrunkBlock) -> TrunkBlock:
-        height = trunk.challenge.height
-        while height % DIFFICULTY_DELAY != 1:
-            trunk = self.blocks[trunk.header.header_hash].trunk_block
-            height = trunk.challenge.height
-        return trunk
-
-    def _consider_warping_link(self, trunk: TrunkBlock):
-        # Assumes trunk is already connected
-        if trunk.challenge.height % DIFFICULTY_DELAY != 1:
-            return
-        warped_trunk: TrunkBlock = self.blocks[trunk.prev_header_hash].trunk_block
-        while warped_trunk and warped_trunk.challenge.height % DIFFICULTY_DELAY != 1:
-            warped_trunk = self.blocks.get(warped_trunk.prev_header_hash, None).trunk_block
-        if warped_trunk is not None:
-            self.header_warp[trunk.header.header_hash] = warped_trunk.header.header_hash
