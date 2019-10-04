@@ -93,7 +93,7 @@ public:
     bool deferred;
     int64_t switch_iters = -1;
     int64_t switch_index;
-    int64_t iterations;
+    int64_t iterations = 0; // This must be intialized to zero at start
 
     integer D;
     integer L;
@@ -698,6 +698,9 @@ void session(tcp::socket sock) {
         char disc_size[5];
         boost::system::error_code error;
 
+        memset(disc,0x00,sizeof(disc)); // For null termination
+        memset(disc_size,0x00,sizeof(disc_size)); // For null termination
+        
         boost::asio::read(sock, boost::asio::buffer(disc_size, 3), error);
         int disc_int_size = atoi(disc_size);
 
