@@ -760,6 +760,7 @@ void session(tcp::socket sock) {
             memset(data, 0, sizeof(data));
             boost::asio::read(sock, boost::asio::buffer(data, 1), error);
             int size = data[0] - '0';
+            memset(data, 0, sizeof(data));
             boost::asio::read(sock, boost::asio::buffer(data, size), error);
             int iters = atoi(data);
             std::cout << "Got iterations " << iters << "\n";
@@ -788,6 +789,7 @@ void session(tcp::socket sock) {
         std::cout << "Stopped everything! Ready for the next challenge.\n";
 
         char ack[5];
+        memset(ack,0x00,sizeof(ack));
         boost::asio::read(sock, boost::asio::buffer(ack, 3), error);
         assert (strncmp(ack, "ACK", 3) == 0);
     } catch (std::exception& e) {
