@@ -2,6 +2,7 @@ import logging
 import asyncio
 import time
 import io
+import sys
 import yaml
 from asyncio import Lock
 from typing import Dict
@@ -17,15 +18,16 @@ from src.util.ints import uint8
 from src.consensus import constants
 from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
 
-
 class Database:
     lock: Lock = Lock()
-    challenges: Dict = {}
-    finished_challenges = []
+    free_servers = []
+    active_discriminants: Dict = {}
+    done_discriminants = []
 
-config = yaml.safe_load(open("src/config/timelord.yaml", "r"))
 log = logging.getLogger(__name__)
+config = yaml.safe_load(open("src/config/timelord.yaml", "r"))
 db = Database()
+db.free_servers.append(8889)
 
 @api_request
 async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
@@ -34,50 +36,77 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
     should be started on it. We can generate a classgroup (discriminant), and start
     a new VDF process here. But we don't know how many iterations to run for, so we run
     forever.
-    """    
+    """            
+
+    disc: int = create_discriminant(challenge_start.challenge_hash, constants.DISCRIMINANT_SIZE_BITS)
+
+    #Wait for a server to become free.
+    port = None
+    while (port is None):
+        async with db.lock:
+            if (len(db.free_servers) != 0):
+                port = db.free_servers[0]
+                db.free_servers = db.free_servers[1:]
+                log.info(f"Discriminant {disc} attached to port {port}.")
+        #Poll until a server becomes free.
+        if (port is None):
+            await asyncio.sleep(3)
+    
+    #TODO(Florin): Handle connection failure (attempt another server)
+    try:
+        reader, writer = await asyncio.open_connection('127.0.0.1', port)
+    except Exception as e:
+        e_to_str = str(e)
+        log.error(f"Connection to VDF server error message: {e_to_str}")
+
+    writer.write((str(len(str(disc))) + str(disc)).encode())
+    await writer.drain()
+
+    ok = await reader.readexactly(2)
+    assert(ok.decode() == "OK")
+    
+    log.info("Got handshake with VDF server.")
+
     async with db.lock:
-        assert(challenge_start.challenge_hash not in db.challenges)
-        disc: int = create_discriminant(challenge_start.challenge_hash, constants.DISCRIMINANT_SIZE_BITS)
-        command = (f"./lib/chiavdf/fast_vdf/vdf {disc}")
-        log.info(f"Executing VDF process for discriminant: {disc}")
-        
-        proc = await asyncio.create_subprocess_shell(
-        command,
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE)
+        db.active_discriminants[challenge_start.challenge_hash] = writer
 
-        db.challenges[challenge_start.challenge_hash] = (disc, proc)
-
-    while True:      
-        output = await proc.stdout.readline()
-
-        # Signal that process finished all challenges.
-        if (output.decode() == "0"*100 + "\n"):
-            await proc.wait()
+    #Listen to the server until "STOP" is received.
+    while(True):
+        data = await reader.readexactly(4)
+        if (data.decode() == "STOP"):
+            #Server is now available.
             async with db.lock:
-                del db.challenges[challenge_start.challenge_hash]
-            log.info(f"The process for challenge {challenge_start.challenge_hash} ended")
-            return 
+                writer.write(b"ACK")
+                await writer.drain()
+                db.free_servers.append(port)
+            break
+        else:
+            try:
+                #This must be a proof, read the continuation.
+                proof = await reader.readexactly(1860)
+                stdout_bytes_io: io.BytesIO = io.BytesIO(bytes.fromhex(data.decode() + proof.decode()))
+                iterations_needed = int.from_bytes(stdout_bytes_io.read(8), "big", signed=True)
+                y = ClassgroupElement.parse(stdout_bytes_io)
+                proof_bytes: bytes = stdout_bytes_io.read()
 
-        stdout_bytes_io: io.BytesIO = io.BytesIO(bytes.fromhex(output[:-1].decode()))
-        iterations_needed = int.from_bytes(stdout_bytes_io.read(8), "big", signed=True)
-        y = ClassgroupElement.parse(stdout_bytes_io)
-        proof_bytes: bytes = stdout_bytes_io.read()
+                # Verifies our own proof just in case
+                proof_blob = ClassGroup.from_ab_discriminant(y.a, y.b, disc).serialize() + proof_bytes
+                x = ClassGroup.from_ab_discriminant(2, 1, disc)
+                assert check_proof_of_time_nwesolowski(disc, x, proof_blob, iterations_needed, 1024, 2)
 
-        # Verifies our own proof just in case
-        proof_blob = ClassGroup.from_ab_discriminant(y.a, y.b, disc).serialize() + proof_bytes
-        x = ClassGroup.from_ab_discriminant(2, 1, disc)
-        #assert check_proof_of_time_nwesolowski(disc, x, proof_blob, iterations_needed, 1024, 2)
+                output = ProofOfTimeOutput(challenge_start.challenge_hash,
+                                iterations_needed,
+                                ClassgroupElement(y.a, y.b))
+                proof_of_time = ProofOfTime(output, config['n_wesolowski'], [uint8(b) for b in proof_bytes])
+                response = timelord_protocol.ProofOfTimeFinished(proof_of_time)
 
-        output = ProofOfTimeOutput(challenge_start.challenge_hash,
-                               iterations_needed,
-                               ClassgroupElement(y.a, y.b))
-        proof_of_time = ProofOfTime(output, config['n_wesolowski'], [uint8(b) for b in proof_bytes])
-        response = timelord_protocol.ProofOfTimeFinished(proof_of_time)
+                log.info(f"Got PoT for challenge {challenge_start.challenge_hash}")
+                yield OutboundMessage(NodeType.FULL_NODE, Message("proof_of_time_finished", response), Delivery.RESPOND)
+            except Exception as e:
+                e_to_str = str(e)
+                log.error(f"Socket error: {e_to_str}")
 
-        log.info(f"Got PoT for challenge {challenge_start.challenge_hash}")
-        yield OutboundMessage(NodeType.FULL_NODE, Message("proof_of_time_finished", response), Delivery.RESPOND)
-
+            
 @api_request
 async def challenge_end(challenge_end: timelord_protocol.ChallengeEnd):
     """
@@ -85,14 +114,14 @@ async def challenge_end(challenge_end: timelord_protocol.ChallengeEnd):
     exists.
     """
     async with db.lock:
-        if challenge_end.challenge_hash not in db.finished_challenges:
-            _, proc = db.challenges[challenge_end.challenge_hash]
-            #I'm no longer accepting new challenges, process will finish everything else smoothly.
-            proc.stdin.write(b'0\n')
-            await proc.stdin.drain()
-            db.finished_challenges.append(challenge_end.challenge_hash)
-        else:
-            log.info("Trying to close the challenge multiple times..")
+        if (challenge_end.challenge_hash in db.done_discriminants):
+            return 
+        if (challenge_end.challenge_hash in db.active_discriminants):
+            writer = db.active_discriminants[challenge_end.challenge_hash]
+            writer.write(b'10')
+            await writer.drain()
+            del db.active_discriminants[challenge_end.challenge_hash]
+            db.done_discriminants.append(challenge_end.challenge_hash)
 
 @api_request
 async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpaceInfo):
@@ -101,11 +130,16 @@ async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpac
     have a process for this challenge, we should communicate to the process to tell it how
     many iterations to run for. TODO: process should be started in challenge_start instead.
     """
-    async with db.lock:
-        if proof_of_space_info.challenge_hash not in db.challenges:
-            log.warn(f"Have not seen challenge {proof_of_space_info.challenge_hash} yet.")
-            return 
-        assert(proof_of_space_info.challenge_hash not in db.finished_challenges)
-        _, proc = db.challenges[proof_of_space_info.challenge_hash]
-        proc.stdin.write((str(proof_of_space_info.iterations_needed) + "\n").encode())
-        await proc.stdin.drain()
+
+    while (True):
+        async with db.lock:
+            if (proof_of_space_info.challenge_hash in db.active_discriminants):
+                writer = db.active_discriminants[proof_of_space_info.challenge_hash]
+                writer.write((str(len(str(proof_of_space_info.iterations_needed))) 
+                            + str(proof_of_space_info.iterations_needed)).encode())
+                await writer.drain()
+                return 
+            if (proof_of_space_info.challenge_hash in db.done_discriminants):
+                log.info("Got iters for a finished challenge")
+                return 
+        await asyncio.sleep(3)

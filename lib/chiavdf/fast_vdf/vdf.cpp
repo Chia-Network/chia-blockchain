@@ -41,7 +41,12 @@
 #include "ClassGroup.h"
 #include "Reducer.h"
 
+#include <boost/asio.hpp>
+
 bool warn_on_corruption_in_production=false;
+
+using boost::asio::ip::tcp;
+
 
 struct akashnil_form {
     // y = ax^2 + bxy + y^2
@@ -227,6 +232,11 @@ void repeated_square(form f, const integer& D, const integer& L, WesolowskiCallb
 
     while (!stopped) {
         uint64 c_checkpoint_interval=checkpoint_interval;
+
+        if (weso.iterations >= 500000) {
+            std::cout << "Stopping weso at 500000 iterations!\n";
+            return ;
+        }
         
         #ifdef VDF_TEST
             form f_copy;
@@ -438,7 +448,7 @@ struct Proof {
 
 #define PULMARK 1
 
-form GenerateProof(form &y, form &x_init, integer &D, uint64_t done_iterations, uint64_t num_iterations, uint64_t k, uint64_t l, WesolowskiCallback& weso) {
+form GenerateProof(form &y, form &x_init, integer &D, uint64_t done_iterations, uint64_t num_iterations, uint64_t k, uint64_t l, WesolowskiCallback& weso, bool& stop_signal) {
     auto t1 = std::chrono::high_resolution_clock::now();
 
 #if PULMARK
@@ -465,7 +475,7 @@ form GenerateProof(form &y, form &x_init, integer &D, uint64_t done_iterations, 
             ys[i] = form::identity(D);  
 
         form *tmp;
-        for (uint64_t i = 0; i < ceil(1.0 * num_iterations / (k * l)); i++) {
+        for (uint64_t i = 0; !stop_signal && i < ceil(1.0 * num_iterations / (k * l)); i++) {
             if (num_iterations >= k * (i * l + j + 1)) {
                 uint64_t b = GetBlock(i*l + j, k, num_iterations, B);
                 tmp = weso.GetForm(done_iterations + i * k * l);
@@ -487,9 +497,12 @@ form GenerateProof(form &y, form &x_init, integer &D, uint64_t done_iterations, 
             }
         }
 
-        for (uint64_t b1 = 0; b1 < (1 << k1); b1++) {
+        if (stop_signal)
+            return form();
+
+        for (uint64_t b1 = 0; b1 < (1 << k1) && !stop_signal; b1++) {
             form z = form::identity(D);    
-            for (uint64_t b0 = 0; b0 < (1 << k0); b0++) {
+            for (uint64_t b0 = 0; b0 < (1 << k0) && !stop_signal; b0++) {
                 nucomp_form(z, z, ys[b1 * (1 << k0) + b0], D, L);
 #if PULMARK
                 // Pulmark reduce based on Akashnil reduce
@@ -510,9 +523,9 @@ form GenerateProof(form &y, form &x_init, integer &D, uint64_t done_iterations, 
             x = x * z;
         }
 
-        for (uint64_t b0 = 0; b0 < (1 << k0); b0++) {
+        for (uint64_t b0 = 0; b0 < (1 << k0) && !stop_signal; b0++) {
             form z = form::identity(D);    
-            for (uint64_t b1 = 0; b1 < (1 << k1); b1++) {
+            for (uint64_t b1 = 0; b1 < (1 << k1) && !stop_signal; b1++) {
                 nucomp_form(z, z, ys[b1 * (1 << k0) + b0], D, L);
 #if PULMARK
                 // Pulmark reduce based on Akashnil reduce
@@ -532,6 +545,9 @@ form GenerateProof(form &y, form &x_init, integer &D, uint64_t done_iterations, 
             z = FastPowForm(z, D, b0);
             x = x * z;
         }
+
+        if (stop_signal)
+            return form();
     }
 
 #if PULMARK
@@ -558,12 +574,12 @@ form GenerateProof(form &y, form &x_init, integer &D, uint64_t done_iterations, 
 }
 
 void GenerateProofThreaded(std::promise<form> && form_promise, form y, form x_init, integer D, uint64_t done_iterations, uint64_t num_iterations, uint64_t
-k, uint64_t l, WesolowskiCallback& weso) {
-    form proof = GenerateProof(y, x_init, D, done_iterations, num_iterations, k, l, weso);
+k, uint64_t l, WesolowskiCallback& weso, bool& stop_signal) {
+    form proof = GenerateProof(y, x_init, D, done_iterations, num_iterations, k, l, weso, stop_signal);
     form_promise.set_value(proof);
 }
 
-Proof CreateProofOfTimeWesolowski(integer& D, form x, int64_t num_iterations, uint64_t done_iterations, WesolowskiCallback& weso) {
+Proof CreateProofOfTimeWesolowski(integer& D, form x, int64_t num_iterations, uint64_t done_iterations, WesolowskiCallback& weso, bool& stop_signal) {
     uint64_t l, k, w;
     form x_init = x;
     integer L=root(-D, 4);
@@ -572,12 +588,18 @@ Proof CreateProofOfTimeWesolowski(integer& D, form x, int64_t num_iterations, ui
     w = 2;
     l = (num_iterations >= 10000000) ? 10 : 1;
 
-    while (weso.iterations < done_iterations + num_iterations) {
+    while (!stop_signal && weso.iterations < done_iterations + num_iterations) {
         std::this_thread::sleep_for (std::chrono::seconds(3));
     }
+
+    if (stop_signal)
+        return Proof();
     
     form y = weso.GetFormFromCheckpoint(done_iterations + num_iterations);    
-    auto proof = GenerateProof(y, x_init, D, done_iterations, num_iterations, k, l, weso);
+    auto proof = GenerateProof(y, x_init, D, done_iterations, num_iterations, k, l, weso, stop_signal);
+
+    if (stop_signal)
+        return Proof();
 
     int int_size = (D.num_bits() + 16) >> 4;
 
@@ -589,7 +611,7 @@ Proof CreateProofOfTimeWesolowski(integer& D, form x, int64_t num_iterations, ui
 }
 
 Proof CreateProofOfTimeNWesolowski(integer& D, form x, int64_t num_iterations, 
-                                   uint64_t done_iterations, WesolowskiCallback& weso, int depth_limit, int depth) {
+                                   uint64_t done_iterations, WesolowskiCallback& weso, int depth_limit, int depth, bool& stop_signal) {
     uint64_t l, k, w;
     int64_t iterations1, iterations2;
     integer L=root(-D, 4);
@@ -609,26 +631,30 @@ Proof CreateProofOfTimeNWesolowski(integer& D, form x, int64_t num_iterations,
     iterations1 = iterations1 - iterations1 % 100;
     iterations2 = num_iterations - iterations1;
 
-    while (weso.iterations < done_iterations + iterations1) {
+    while (!stop_signal && weso.iterations < done_iterations + iterations1) {
         std::this_thread::sleep_for (std::chrono::seconds(3));
     }
-    
+
+    if (stop_signal)
+        return Proof();    
 
     form y1 = *weso.GetForm(done_iterations + iterations1);
 
     std::promise<form> form_promise;
     auto form_future = form_promise.get_future();
 
-    std::thread t(&GenerateProofThreaded, std::move(form_promise), y1, x_init, D, done_iterations, iterations1, k, l, std::ref(weso));
+    std::thread t(&GenerateProofThreaded, std::move(form_promise), y1, x_init, D, done_iterations, iterations1, k, l, std::ref(weso), std::ref(stop_signal));
 
     Proof proof2;
     if (depth < depth_limit - 1) {
-        proof2 = CreateProofOfTimeNWesolowski(D, y1, iterations2, done_iterations + iterations1, weso, depth_limit, depth + 1);
+        proof2 = CreateProofOfTimeNWesolowski(D, y1, iterations2, done_iterations + iterations1, weso, depth_limit, depth + 1, stop_signal);
     } else {
-        proof2 = CreateProofOfTimeWesolowski(D, y1, iterations2, done_iterations + iterations1, weso);
+        proof2 = CreateProofOfTimeWesolowski(D, y1, iterations2, done_iterations + iterations1, weso, stop_signal);
     }
 
     t.join();
+    if (stop_signal)    
+        return Proof();
     form proof = form_future.get();
 
     int int_size = (D.num_bits() + 16) >> 4;
@@ -647,78 +673,154 @@ Proof CreateProofOfTimeNWesolowski(integer& D, form x, int64_t num_iterations,
     return final_proof;
 } 
 
-std::mutex main_mutex;
+std::mutex socket_mutex;
 
-void NWesolowskiMain(integer D, form x, int64_t num_iterations, WesolowskiCallback& weso) {
-    //Proof result = CreateProofOfTimeNWesolowski(D, x, num_iterations, 0, weso, 2, 0);
-    std::this_thread::sleep_for (std::chrono::seconds(1 + num_iterations / 500));
-    std::lock_guard<std::mutex> lock(main_mutex);
-    std::cout << BytesToStr(ConvertIntegerToBytes(integer(num_iterations), 8));
-    std::cout << BytesToStr(SerializeForm(weso, x, 129));
-    //std::cout << result.hex() << "\n" << std::flush;
-    std::cout << "0020d326c63c7f1782ce7abae04f2464357d5d7b4e3788ef34e44896929c6ad7173ed8c9ea4f5c6c1b6ee20cfbb774e6373cda8d2278bed0781867208b993baa9d0011cf7e89a5f519d34c548aafd63dc5f15a472fede0c1e7b1a7ecf6bf323de61bd8e684b88323d9a7567d698d80b9ff3c148eb1a1ca335d4d4c4fe1c7ba2a914b000000000000012c002052df9df1f29eed204ea18ab1dad68d5ee66784c0568f90a08856223b89101532c443b895b7e050f55c6d6d1a998068f3f9891b1e6e0a81870be653523a4c2cffe860aa2dab86a08fa78c9e949167a1a7b81a2734af3493fe39547de776a0206d02b006430551cfbff9567b0a1bd232837510d32af8173b96c6454ad7b1438069005ef7b973223abca1ed93348a1a0e84d64693d800cac6066ac1bc3e0441100691d9272070842ddcc35ec0545b817982e3e6c9677a047660f19620b2685204214200376489a14ce7ee5b2c528d9fb74cc8ee9d9427376c3acec3d02a854f52313cfbcf77c6d4e50b48be4d38ff68e5abdac7016a3616e061253f29d545a0e30dcb85000000000000012c00191f9a4148916b97cd0feffb58fb29aa30bad06f88c4709b2446334dbe5a1f150bf10563fa481e72f5e2285237835e20d47ac7f14702ca3ab594847978f36ecdfff83ede73376b636a60ecda5968577df2bdec43b5fbee001b61a0d497f07d093a87e1142a2ddd1bd8713e5c8425b2e6de648be532ba1ee766a8934792b5ccb3dd003b92b42beb4bb3ddd0b6371ece5c71682194be20bf1c3b27ad271de4eca9ceaba2632ddb000ba13a0bd1064066c104f70e1480f87c29e245340dd3a0dbf8b4d40005b5266665a0ebe98df87af2132a4a30e5bbb576cff3febf815ecc9870f671f7b00c2963f504901801affc8b97aead35fba69c324cd4142310705741f347ebb1" << "\n" << std::flush;
+void NWesolowskiMain(integer D, form x, int64_t num_iterations, WesolowskiCallback& weso, bool& stop_signal, tcp::socket& sock) {
+    Proof result = CreateProofOfTimeNWesolowski(D, x, num_iterations, 0, weso, 2, 0, stop_signal);
+    if (stop_signal == true) {
+        std::cout << "Got stop signal before completing the proof!\n";
+        return ;
+    }
+    std::vector<unsigned char> bytes = ConvertIntegerToBytes(integer(num_iterations), 8);
+    bytes.insert(bytes.end(), result.y.begin(), result.y.end());
+    bytes.insert(bytes.end(), result.proof.begin(), result.proof.end());  
+    std::string str_result = BytesToStr(bytes);  
+    std::cout << "Generated proof = " << str_result << "\n";
+    std::lock_guard<std::mutex> lock(socket_mutex);
+    boost::asio::write(sock, boost::asio::buffer(str_result.c_str(), str_result.size()));
 }
 
-int main(int argc, char* argv[]) {
-    if (getenv( "warn_on_corruption_in_production" )!=nullptr) {
-        warn_on_corruption_in_production=true;
-    }
-    if (is_vdf_test) {
-        print( "=== Test mode ===" );
-    }
-    if (warn_on_corruption_in_production) {
-        print( "=== Warn on corruption enabled ===" );
-    }
-    assert(is_vdf_test); //assertions should be disabled in VDF_MODE==0
-    init_gmp();
-    allow_integer_constructor=true; //make sure the old gmp allocator isn't used
-    set_rounding_mode();
-    vdf_original::init();
+const int max_length = 2048;
 
-    integer D(argv[1]);
-    integer L=root(-D, 4);
-    form f=form::generator(D);
+void session(tcp::socket sock) {
+    try {
+        char disc[350];
+        char disc_size[5];
+        boost::system::error_code error;
 
-    bool stop_signal = false;
-    uint64_t num_iterations;
-    std::set<uint64_t> seen_iterations;
+        boost::asio::read(sock, boost::asio::buffer(disc_size, 3), error);
+        int disc_int_size = atoi(disc_size);
 
-    std::vector<std::thread> threads;
-    WesolowskiCallback weso(100000000);
-    
-    mpz_init(weso.forms[0].a.impl);
-    mpz_init(weso.forms[0].b.impl);
-    mpz_init(weso.forms[0].c.impl);
-    
-    weso.forms[0]=f;
-    weso.D = D;
-    weso.L = L;
-    weso.kl = 10;
+        boost::asio::read(sock, boost::asio::buffer(disc, disc_int_size), error);
 
-    //std::thread vdf_worker(repeated_square, f, D, L, std::ref(weso), std::ref(stop_signal));
+        integer D(disc);
 
-    while(!stop_signal) {
-        std::this_thread::sleep_for (std::chrono::seconds(2));
+        std::cout << "Discriminant = " << D.impl << "\n";
 
-        cin >> num_iterations;
-        if (seen_iterations.size() > 0 && num_iterations >= *seen_iterations.begin())
-            continue;
+        // Init VDF the discriminant...
 
-        if (num_iterations == 0) {
-            for (int t = 0; t < threads.size(); t++) {
-                threads[t].join();
+        if (error == boost::asio::error::eof)
+            return ; // Connection closed cleanly by peer.
+        else if (error)
+            throw boost::system::system_error(error); // Some other error.
+
+        if (getenv( "warn_on_corruption_in_production" )!=nullptr) {
+            warn_on_corruption_in_production=true;
+        }
+        if (is_vdf_test) {
+            print( "=== Test mode ===" );
+        }
+        if (warn_on_corruption_in_production) {
+            print( "=== Warn on corruption enabled ===" );
+        }
+        assert(is_vdf_test); //assertions should be disabled in VDF_MODE==0
+        init_gmp();
+        allow_integer_constructor=true; //make sure the old gmp allocator isn't used
+        set_rounding_mode();
+        vdf_original::init();
+
+        integer L=root(-D, 4);
+        form f=form::generator(D);
+
+        bool stop_signal = false;
+        std::set<uint64_t> seen_iterations;
+
+        std::vector<std::thread> threads;
+        WesolowskiCallback weso(1000000);
+        
+        mpz_init(weso.forms[0].a.impl);
+        mpz_init(weso.forms[0].b.impl);
+        mpz_init(weso.forms[0].c.impl);
+        
+        weso.forms[0]=f;
+        weso.D = D;
+        weso.L = L;
+        weso.kl = 10;
+
+        bool stopped = false;
+        std::thread vdf_worker(repeated_square, f, D, L, std::ref(weso), std::ref(stopped));
+
+        // Tell client that I'm ready to get the challenges. 
+        boost::asio::write(sock, boost::asio::buffer("OK", 2));
+        char data[10];
+
+        while (!stopped) {
+            memset(data, 0, sizeof(data));
+            boost::asio::read(sock, boost::asio::buffer(data, 1), error);
+            int size = data[0] - '0';
+            boost::asio::read(sock, boost::asio::buffer(data, size), error);
+            int iters = atoi(data);
+            std::cout << "Got iterations " << iters << "\n";
+            if (seen_iterations.size() > 0 && iters != 0) {
+                std::cout << "Ignoring..." << iters << "\n";
+                continue;
             }
-            stop_signal = true;
-            //vdf_worker.join();
-            std::lock_guard<std::mutex> lock(main_mutex);
-            for (int i = 0; i < 100; i++)
-                std::cout << "0";
-            std::cout << "\n" << std::flush;
-        } else {
-            if (seen_iterations.find(num_iterations) == seen_iterations.end()) {
-                seen_iterations.insert(num_iterations);
-                threads.push_back(std::thread(NWesolowskiMain, D, f, num_iterations, std::ref(weso)));
+
+            if (iters == 0) {
+                stopped = true;
+                for (int t = 0; t < threads.size(); t++) {
+                    threads[t].join();
+                }
+                vdf_worker.join();
+            } else {
+                if (seen_iterations.find(iters) == seen_iterations.end()) {
+                    seen_iterations.insert(iters);
+                    threads.push_back(std::thread(NWesolowskiMain, D, f, iters, std::ref(weso), std::ref(stopped), 
+                                                  std::ref(sock)));
+                }
             }
         }
+        // Tell client I've stopped everything, wait for ACK and close.
+        std::lock_guard<std::mutex> lock(socket_mutex);
+        boost::asio::write(sock, boost::asio::buffer("STOP", 4));
+        std::cout << "Stopped everything! Ready for the next challenge.\n";
+
+        char ack[5];
+        boost::asio::read(sock, boost::asio::buffer(ack, 3), error);
+        assert (strncmp(ack, "ACK", 3) == 0);
+    } catch (std::exception& e) {
+        std::cerr << "Exception in thread: " << e.what() << "\n";
     }
+}
+
+void server(boost::asio::io_context& io_context, unsigned short port)
+{
+  tcp::acceptor a(io_context, tcp::endpoint(tcp::v4(), port));
+  for (;;)
+  {
+    std::thread t(session, a.accept());
+    t.join();
+  }
+}
+
+int main(int argc, char* argv[])
+{
+  try
+  {
+    if (argc != 2)
+    {
+      std::cerr << "Usage: blocking_tcp_echo_server <port>\n";
+      return 1;
+    }
+
+    boost::asio::io_context io_context;
+
+    server(io_context, std::atoi(argv[1]));
+  }
+  catch (std::exception& e)
+  {
+    std::cerr << "Exception: " << e.what() << "\n";
+  }
+
+  return 0;
 }
