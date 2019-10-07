@@ -15,7 +15,7 @@ from src.protocols import timelord_protocol
 from src.types.proof_of_time import ProofOfTimeOutput, ProofOfTime
 from src.types.classgroup import ClassgroupElement
 from src.util.ints import uint8
-from src.consensus import constants
+from src.consensus.constants import constants
 from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
 
 class Database:
@@ -39,7 +39,7 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
     forever.
     """            
 
-    disc: int = create_discriminant(challenge_start.challenge_hash, constants.DISCRIMINANT_SIZE_BITS)
+    disc: int = create_discriminant(challenge_start.challenge_hash, constants["DISCRIMINANT_SIZE_BITS"])
 
     async with db.lock:
         if challenge_start.challenge_hash in db.done_discriminants:

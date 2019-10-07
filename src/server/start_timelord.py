@@ -5,7 +5,7 @@ from src.server.outbound_message import NodeType
 from src.util.network import parse_host_port
 from src import timelord
 
-logging.basicConfig(format='Timelord %(name)-23s: %(levelname)-8s %(message)s', level=logging.INFO)
+logging.basicConfig(format='Timelord %(name)-25s: %(levelname)-20s %(message)s', level=logging.INFO)
 
 async def main():
     host, port = parse_host_port(timelord)

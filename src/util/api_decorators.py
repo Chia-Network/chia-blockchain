@@ -18,8 +18,6 @@ def api_request(f):
         binding = sig.bind(*args, **kwargs)
         binding.apply_defaults()
         inter = dict(binding.arguments)
-        print_args = {k: v for (k, v) in inter.items() if k != "source_connection"
-                      and k != "all_connections"}
-        log.info(f"{f.__name__}({print_args})"[:200])
+        log.info(f"<- {f.__name__}")
         return f(**inter)
     return f_substitute
