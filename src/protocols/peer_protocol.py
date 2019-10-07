@@ -14,17 +14,33 @@ Protocol between full nodes.
 
 
 """
-Receive a transaction from a peer.
+Receive a transaction id from a peer.
 """
 @cbor_message(tag=4000)
-class NewTransaction:
+class TransactionId:
+    transaction_id: bytes32
+
+
+"""
+Request a transaction from a peer.
+"""
+@cbor_message(tag=4001)
+class RequestTransaction:
+    transaction_id: bytes32
+
+
+"""
+Receive a transaction from a peer.
+"""
+@cbor_message(tag=4002)
+class Transaction:
     transaction: Transaction
 
 
 """
 Receive a new proof of time from a peer.
 """
-@cbor_message(tag=4001)
+@cbor_message(tag=4003)
 class NewProofOfTime:
     proof: ProofOfTime
 
@@ -32,7 +48,7 @@ class NewProofOfTime:
 """
 Receive an unfinished block from a peer.
 """
-@cbor_message(tag=4002)
+@cbor_message(tag=4004)
 class UnfinishedBlock:
     # Block that does not have ProofOfTime and Challenge
     block: FullBlock
@@ -41,7 +57,7 @@ class UnfinishedBlock:
 """
 Requests a block from a peer.
 """
-@cbor_message(tag=4003)
+@cbor_message(tag=4005)
 class RequestBlock:
     header_hash: bytes32
 
@@ -49,7 +65,7 @@ class RequestBlock:
 """
 Receive a block from a peer.
 """
-@cbor_message(tag=4004)
+@cbor_message(tag=4006)
 class Block:
     block: FullBlock
 
@@ -57,7 +73,7 @@ class Block:
 """
 Return full list of peers
 """
-@cbor_message(tag=4005)
+@cbor_message(tag=4007)
 class RequestPeers:
     pass
 
@@ -65,7 +81,7 @@ class RequestPeers:
 """
 Update list of peers
 """
-@cbor_message(tag=4006)
+@cbor_message(tag=4008)
 class Peers:
     peer_list: List[PeerInfo]
 
@@ -73,7 +89,7 @@ class Peers:
 """
 Request trunks of blocks that are ancestors of the specified tip.
 """
-@cbor_message(tag=4007)
+@cbor_message(tag=4009)
 class RequestTrunkBlocks:
     tip_header_hash: bytes32
     heights: List[uint64]
@@ -82,7 +98,7 @@ class RequestTrunkBlocks:
 """
 Sends trunk blocks that are ancestors of the specified tip, at the specified heights.
 """
-@cbor_message(tag=4008)
+@cbor_message(tag=4010)
 class TrunkBlocks:
     tip_header_hash: bytes32
     trunk_blocks: List[TrunkBlock]
@@ -91,7 +107,7 @@ class TrunkBlocks:
 """
 Request download of blocks, in the blockchain that has 'tip_header_hash' as the tip
 """
-@cbor_message(tag=4009)
+@cbor_message(tag=4011)
 class RequestSyncBlocks:
     tip_header_hash: bytes32
     heights: List[uint64]
@@ -100,7 +116,7 @@ class RequestSyncBlocks:
 """
 Send blocks to peer.
 """
-@cbor_message(tag=4010)
+@cbor_message(tag=4012)
 class SyncBlocks:
     tip_header_hash: bytes32
     blocks: List[FullBlock]

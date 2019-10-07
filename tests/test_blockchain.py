@@ -1,3 +1,4 @@
+from src.consensus.constants import constants
 import time
 import pytest
 from blspy import PrivateKey
@@ -32,62 +33,67 @@ class TestBlockValidation():
     @pytest.fixture(scope="module")
     def initial_blockchain(self):
         """
-        Provides a list of 3 valid blocks, as well as a blockchain with 2 blocks added to it.
+        Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
         """
-        blocks = bt.get_consecutive_blocks(3)
-        b: Blockchain = Blockchain(blocks[0])
-        assert b.receive_block(blocks[1]) == ReceiveBlockResult.ADDED_TO_HEAD
+        blocks = bt.get_consecutive_blocks(10, 5, 16)
+        b: Blockchain = Blockchain({
+            "GENESIS_BLOCK": blocks[0].serialize(),
+            "DIFFICULTY_STARTING": 5,
+            "DISCRIMINANT_SIZE_BITS": 16
+        })
+        for i in range(1, 9):
+            assert b.receive_block(blocks[i]) == ReceiveBlockResult.ADDED_TO_HEAD
         return (blocks, b)
 
     def test_prev_pointer(self, initial_blockchain):
         blocks, b = initial_blockchain
         block_bad = FullBlock(TrunkBlock(
-                blocks[2].trunk_block.proof_of_space,
-                blocks[2].trunk_block.proof_of_time,
-                blocks[2].trunk_block.challenge,
+                blocks[9].trunk_block.proof_of_space,
+                blocks[9].trunk_block.proof_of_time,
+                blocks[9].trunk_block.challenge,
                 BlockHeader(BlockHeaderData(
                         bytes([1]*32),
-                        blocks[2].trunk_block.header.data.timestamp,
-                        blocks[2].trunk_block.header.data.filter_hash,
-                        blocks[2].trunk_block.header.data.proof_of_space_hash,
-                        blocks[2].trunk_block.header.data.body_hash,
-                        blocks[2].trunk_block.header.data.extension_data
-                ), blocks[2].trunk_block.header.plotter_signature)
-                ), blocks[2].body)
+                        blocks[9].trunk_block.header.data.timestamp,
+                        blocks[9].trunk_block.header.data.filter_hash,
+                        blocks[9].trunk_block.header.data.proof_of_space_hash,
+                        blocks[9].trunk_block.header.data.body_hash,
+                        blocks[9].trunk_block.header.data.extension_data
+                ), blocks[9].trunk_block.header.plotter_signature)
+                ), blocks[9].body)
         assert b.receive_block(block_bad) == ReceiveBlockResult.INVALID_BLOCK
 
     def test_timestamp(self, initial_blockchain):
         blocks, b = initial_blockchain
         # Time too far in the past
         block_bad = FullBlock(TrunkBlock(
-                blocks[2].trunk_block.proof_of_space,
-                blocks[2].trunk_block.proof_of_time,
-                blocks[2].trunk_block.challenge,
+                blocks[9].trunk_block.proof_of_space,
+                blocks[9].trunk_block.proof_of_time,
+                blocks[9].trunk_block.challenge,
                 BlockHeader(BlockHeaderData(
-                        blocks[2].trunk_block.header.data.prev_header_hash,
-                        blocks[2].trunk_block.header.data.timestamp - 1000,
-                        blocks[2].trunk_block.header.data.filter_hash,
-                        blocks[2].trunk_block.header.data.proof_of_space_hash,
-                        blocks[2].trunk_block.header.data.body_hash,
-                        blocks[2].trunk_block.header.data.extension_data
-                ), blocks[2].trunk_block.header.plotter_signature)
-                ), blocks[2].body)
+                        blocks[9].trunk_block.header.data.prev_header_hash,
+                        blocks[9].trunk_block.header.data.timestamp - 1000,
+                        blocks[9].trunk_block.header.data.filter_hash,
+                        blocks[9].trunk_block.header.data.proof_of_space_hash,
+                        blocks[9].trunk_block.header.data.body_hash,
+                        blocks[9].trunk_block.header.data.extension_data
+                ), blocks[9].trunk_block.header.plotter_signature)
+                ), blocks[9].body)
         assert b.receive_block(block_bad) == ReceiveBlockResult.INVALID_BLOCK
 
         # Time too far in the future
         block_bad = FullBlock(TrunkBlock(
-                blocks[2].trunk_block.proof_of_space,
-                blocks[2].trunk_block.proof_of_time,
-                blocks[2].trunk_block.challenge,
+                blocks[9].trunk_block.proof_of_space,
+                blocks[9].trunk_block.proof_of_time,
+                blocks[9].trunk_block.challenge,
                 BlockHeader(BlockHeaderData(
-                        blocks[2].trunk_block.header.data.prev_header_hash,
+                        blocks[9].trunk_block.header.data.prev_header_hash,
                         time.time() + 3600 * 3,
-                        blocks[2].trunk_block.header.data.filter_hash,
-                        blocks[2].trunk_block.header.data.proof_of_space_hash,
-                        blocks[2].trunk_block.header.data.body_hash,
-                        blocks[2].trunk_block.header.data.extension_data
-                ), blocks[2].trunk_block.header.plotter_signature)
-                ), blocks[2].body)
+                        blocks[9].trunk_block.header.data.filter_hash,
+                        blocks[9].trunk_block.header.data.proof_of_space_hash,
+                        blocks[9].trunk_block.header.data.body_hash,
+                        blocks[9].trunk_block.header.data.extension_data
+                ), blocks[9].trunk_block.header.plotter_signature)
+                ), blocks[9].body)
 
         assert b.receive_block(block_bad) == ReceiveBlockResult.INVALID_BLOCK
 
@@ -95,65 +101,87 @@ class TestBlockValidation():
         blocks, b = initial_blockchain
         # Time too far in the past
         block_bad = FullBlock(TrunkBlock(
-                blocks[2].trunk_block.proof_of_space,
-                blocks[2].trunk_block.proof_of_time,
-                blocks[2].trunk_block.challenge,
+                blocks[9].trunk_block.proof_of_space,
+                blocks[9].trunk_block.proof_of_time,
+                blocks[9].trunk_block.challenge,
                 BlockHeader(BlockHeaderData(
-                        blocks[2].trunk_block.header.data.prev_header_hash,
-                        blocks[2].trunk_block.header.data.timestamp,
-                        blocks[2].trunk_block.header.data.filter_hash,
-                        blocks[2].trunk_block.header.data.proof_of_space_hash,
+                        blocks[9].trunk_block.header.data.prev_header_hash,
+                        blocks[9].trunk_block.header.data.timestamp,
+                        blocks[9].trunk_block.header.data.filter_hash,
+                        blocks[9].trunk_block.header.data.proof_of_space_hash,
                         bytes([1]*32),
-                        blocks[2].trunk_block.header.data.extension_data
-                ), blocks[2].trunk_block.header.plotter_signature)
-                ), blocks[2].body)
+                        blocks[9].trunk_block.header.data.extension_data
+                ), blocks[9].trunk_block.header.plotter_signature)
+                ), blocks[9].body)
         assert b.receive_block(block_bad) == ReceiveBlockResult.INVALID_BLOCK
 
     def test_plotter_signature(self, initial_blockchain):
         blocks, b = initial_blockchain
         # Time too far in the past
         block_bad = FullBlock(TrunkBlock(
-                blocks[2].trunk_block.proof_of_space,
-                blocks[2].trunk_block.proof_of_time,
-                blocks[2].trunk_block.challenge,
+                blocks[9].trunk_block.proof_of_space,
+                blocks[9].trunk_block.proof_of_time,
+                blocks[9].trunk_block.challenge,
                 BlockHeader(
-                        blocks[2].trunk_block.header.data,
+                        blocks[9].trunk_block.header.data,
                         PrivateKey.from_seed(b'0').sign_prepend(b"random junk"))
-                ), blocks[2].body)
+                ), blocks[9].body)
         assert b.receive_block(block_bad) == ReceiveBlockResult.INVALID_BLOCK
 
     def test_invalid_pos(self, initial_blockchain):
         blocks, b = initial_blockchain
 
-        bad_pos = blocks[2].trunk_block.proof_of_space.proof
+        bad_pos = blocks[9].trunk_block.proof_of_space.proof
         bad_pos[0] = (bad_pos[0] + 1) % 256
         # Proof of space invalid
         block_bad = FullBlock(TrunkBlock(
                 ProofOfSpace(
-                    blocks[2].trunk_block.proof_of_space.pool_pubkey,
-                    blocks[2].trunk_block.proof_of_space.plot_pubkey,
-                    blocks[2].trunk_block.proof_of_space.size,
+                    blocks[9].trunk_block.proof_of_space.pool_pubkey,
+                    blocks[9].trunk_block.proof_of_space.plot_pubkey,
+                    blocks[9].trunk_block.proof_of_space.size,
                     bad_pos
                 ),
-                blocks[2].trunk_block.proof_of_time,
-                blocks[2].trunk_block.challenge,
-                blocks[2].trunk_block.header
-        ), blocks[2].body)
+                blocks[9].trunk_block.proof_of_time,
+                blocks[9].trunk_block.challenge,
+                blocks[9].trunk_block.header
+        ), blocks[9].body)
         assert b.receive_block(block_bad) == ReceiveBlockResult.INVALID_BLOCK
 
     def test_invalid_coinbase_height(self, initial_blockchain):
         blocks, b = initial_blockchain
 
         # Coinbase height invalid
-        block_bad = FullBlock(blocks[2].trunk_block, BlockBody(
+        block_bad = FullBlock(blocks[9].trunk_block, BlockBody(
                 CoinbaseInfo(
                         3,
-                        blocks[2].body.coinbase.amount,
-                        blocks[2].body.coinbase.puzzle_hash
+                        blocks[9].body.coinbase.amount,
+                        blocks[9].body.coinbase.puzzle_hash
                 ),
-                blocks[2].body.coinbase_signature,
-                blocks[2].body.fees_target_info,
-                blocks[2].body.aggregated_signature,
-                blocks[2].body.solutions_generator
+                blocks[9].body.coinbase_signature,
+                blocks[9].body.fees_target_info,
+                blocks[9].body.aggregated_signature,
+                blocks[9].body.solutions_generator
         ))
         assert b.receive_block(block_bad) == ReceiveBlockResult.INVALID_BLOCK
+
+    def test_difficulty_change(self):
+        num_blocks = 20
+        # Make it 5x faster than target time
+        blocks = bt.get_consecutive_blocks(num_blocks, 5, 16, 1)
+        b: Blockchain = Blockchain({
+            "GENESIS_BLOCK": blocks[0].serialize(),
+            "DIFFICULTY_STARTING": 5,
+            "DISCRIMINANT_SIZE_BITS": 16,
+            "BLOCK_TIME_TARGET": 10,
+            "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
+            "DIFFICULTY_WARP_FACTOR": 4,  # DELAY divides EPOCH in order to warp efficiently.
+            "DIFFICULTY_DELAY": 3  # EPOCH / WARP_FACTOR
+        })
+
+        for i in range(1, num_blocks):
+            assert b.receive_block(blocks[i]) == ReceiveBlockResult.ADDED_TO_HEAD
+
+        assert b.get_difficulty(blocks[14].header_hash) == b.get_difficulty(blocks[13].header_hash)
+        assert b.get_difficulty(blocks[15].header_hash) > b.get_difficulty(blocks[14].header_hash)
+        assert ((b.get_difficulty(blocks[15].header_hash) / b.get_difficulty(blocks[14].header_hash)
+                 <= constants["DIFFICULTY_FACTOR"]))

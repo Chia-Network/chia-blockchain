@@ -1,5 +1,4 @@
 import logging
-from src.util.errors import BlockNotInBlockchain, PeersDontHaveBlock
 import time
 import asyncio
 import collections
@@ -8,11 +7,11 @@ import concurrent
 from secrets import token_bytes
 from hashlib import sha256
 from chiapos import Verifier
-from blspy import Util, Signature, PrivateKey
+from blspy import Signature, PrivateKey
 from asyncio import Lock, sleep, Event
 from typing import Dict, List, Tuple, Optional, AsyncGenerator, Counter
 from src.util.api_decorators import api_request
-from src.util.ints import uint64
+from src.util.ints import uint64, uint32
 from src.util import errors
 from src.protocols import farmer_protocol
 from src.protocols import timelord_protocol
@@ -27,27 +26,31 @@ from src.types.full_block import FullBlock
 from src.types.fees_target import FeesTarget
 from src.consensus.weight_verifier import verify_weight
 from src.consensus.pot_iterations import calculate_iterations
-from src.consensus.constants import DIFFICULTY_TARGET
+from src.consensus.constants import constants
 from src.blockchain import Blockchain, ReceiveBlockResult
 from src.server.outbound_message import OutboundMessage, Delivery, NodeType, Message
+from src.util.errors import BlockNotInBlockchain, PeersDontHaveBlock, InvalidUnfinishedBlock
 
 
 class Database:
+    # This protects all other resources
     lock: Lock = Lock()
-    blockchain: Blockchain = Blockchain()  # Should be stored in memory
-    full_blocks: Dict[str, FullBlock] = {Blockchain.get_genesis_block().trunk_block.header.header_hash:
-                                         Blockchain.get_genesis_block()}
+    blockchain: Blockchain = Blockchain()
+    full_blocks: Dict[str, FullBlock] = {
+        FullBlock.from_bytes(constants["GENESIS_BLOCK"]).trunk_block.header.header_hash:
+        FullBlock.from_bytes(constants["GENESIS_BLOCK"])}
 
     sync_mode: bool = True
     # Block headers and blocks which we think might be heads, but we haven't verified yet.
+    # All these are used during sync mode
     potential_heads: Counter[bytes32] = collections.Counter()
     potential_heads_full_blocks: Dict[bytes32, FullBlock] = collections.Counter()
     # Headers/trunks downloaded for the during sync, by height
-    potential_trunks: Dict[uint64, TrunkBlock] = {}
+    potential_trunks: Dict[uint32, TrunkBlock] = {}
     # Blocks downloaded during sync, by height
-    potential_blocks: Dict[uint64, FullBlock] = {}
+    potential_blocks: Dict[uint32, FullBlock] = {}
     # Event, which gets set whenever we receive the block at each height. Waited for by sync().
-    potential_blocks_received: Dict[uint64, Event] = {}
+    potential_blocks_received: Dict[uint32, Event] = {}
 
     # These are the blocks that we created, but don't have the PoS from farmer yet,
     # keyed from the proof of space hash
@@ -55,7 +58,10 @@ class Database:
 
     # These are the blocks that we created, have PoS, but not PoT yet, keyed from the
     # block header hash
-    unfinished_blocks: Dict[Tuple[bytes32, int], FullBlock] = {}
+    unfinished_blocks: Dict[Tuple[bytes32, uint64], FullBlock] = {}
+    # Latest height with unfinished blocks, and expected timestamp of the finishing
+    unfinished_blocks_leader: Tuple[uint32, uint64] = (uint32(0), uint64(9999999999))
+
     proof_of_time_estimate_ips: uint64 = uint64(1500)
 
 
@@ -108,7 +114,7 @@ async def proof_of_time_estimate_interval():
         async with db.lock:
             if estimated_ips is not None:
                 db.proof_of_time_estimate_ips = estimated_ips
-            log.info(f"Updated proof of time estimate to {estimated_ips} iterations per second.")
+                log.info(f"Updated proof of time estimate to {estimated_ips} iterations per second.")
         await sleep(config['update_pot_estimate_interval'])
 
 
@@ -187,7 +193,7 @@ async def sync():
                 if height not in db.potential_trunks:
                     received_all_trunks = False
                     break
-                local_trunks.append(db.potential_trunks[uint64(height)])
+                local_trunks.append(db.potential_trunks[uint32(height)])
             if received_all_trunks:
                 trunks = local_trunks
                 break
@@ -210,12 +216,12 @@ async def sync():
         if not have_block:
             request = peer_protocol.RequestSyncBlocks(tip_block.trunk_block.header.header_hash, [height])
             async with db.lock:
-                db.potential_blocks_received[uint64(height)] = Event()
+                db.potential_blocks_received[uint32(height)] = Event()
             found = False
             for _ in range(30):
                 yield OutboundMessage(NodeType.FULL_NODE, Message("request_sync_blocks", request), Delivery.RANDOM)
                 try:
-                    await asyncio.wait_for(db.potential_blocks_received[uint64(height)].wait(), timeout=2)
+                    await asyncio.wait_for(db.potential_blocks_received[uint32(height)].wait(), timeout=2)
                     found = True
                     break
                 except concurrent.futures._base.TimeoutError:
@@ -227,7 +233,7 @@ async def sync():
             if have_block:
                 block = db.potential_heads_full_blocks[trunks[height].header.get_hash()]
             else:
-                block = db.potential_blocks[uint64(height)]
+                block = db.potential_blocks[uint32(height)]
 
             start = time.time()
             db.blockchain.receive_block(block)
@@ -353,6 +359,7 @@ async def request_header_hash(request: farmer_protocol.RequestHeaderHash) -> Asy
             if head.challenge.get_hash() == request.challenge_hash:
                 target_head = head
         if target_head is None:
+            # TODO: should we still allow the farmer to farm?
             log.warning(f"Challenge hash: {request.challenge_hash} not in one of three heads")
             return
 
@@ -404,11 +411,6 @@ async def header_signature(header_signature: farmer_protocol.HeaderSignature) ->
         block_body, block_header_data, pos = db.candidate_blocks[header_signature.pos_hash]
 
         assert block_header_data.get_hash() == header_signature.header_hash
-
-        # Verifies the plotter's signature
-        # TODO: remove redundant checks after they are added to Blockchain class
-        assert header_signature.header_signature.verify([Util.hash256(header_signature.header_hash)],
-                                                        [pos.plot_pubkey])
 
         block_header: BlockHeader = BlockHeader(block_header_data, header_signature.header_signature)
         trunk: TrunkBlock = TrunkBlock(pos, None, None, block_header)
@@ -468,7 +470,7 @@ async def new_proof_of_time(new_proof_of_time: peer_protocol.NewProofOfTime) -> 
         if (new_proof_of_time.proof.output.challenge_hash,
                 new_proof_of_time.proof.output.number_of_iterations) in db.unfinished_blocks:
             finish_block = True
-        elif new_proof_of_time.proof.is_valid():
+        elif new_proof_of_time.proof.is_valid(constants["DISCRIMINANT_SIZE_BITS"]):
             propagate_proof = True
     if finish_block:
         request = timelord_protocol.ProofOfTimeFinished(new_proof_of_time.proof)
@@ -476,7 +478,8 @@ async def new_proof_of_time(new_proof_of_time: peer_protocol.NewProofOfTime) -> 
             yield msg
     if propagate_proof:
         # TODO: perhaps don't propagate everything, this is a DoS vector
-        yield OutboundMessage(NodeType.FULL_NODE, Message("new_proof_of_time", new_proof_of_time), Delivery.BROADCAST)
+        yield OutboundMessage(NodeType.FULL_NODE, Message("new_proof_of_time", new_proof_of_time),
+                              Delivery.BROADCAST_TO_OTHERS)
 
 
 @api_request
@@ -490,7 +493,9 @@ async def unfinished_block(unfinished_block: peer_protocol.UnfinishedBlock) -> A
         if not db.blockchain.is_child_of_head(unfinished_block.block):
             return
 
-        # TODO(alex): verify block using blockchain class, including coinbase rewards
+        if not db.blockchain.validate_unfinished_block(unfinished_block.block):
+            raise InvalidUnfinishedBlock()
+
         prev_block: TrunkBlock = db.blockchain.get_trunk_block(
             unfinished_block.block.trunk_block.prev_header_hash)
 
@@ -502,14 +507,29 @@ async def unfinished_block(unfinished_block: peer_protocol.UnfinishedBlock) -> A
                                                          challenge_hash, difficulty)
 
         if (challenge_hash, iterations_needed) in db.unfinished_blocks:
-            log.info(f"Have already seen unfinished block {(challenge_hash, iterations_needed)}")
+            log.info(f"\tHave already seen unfinished block {(challenge_hash, iterations_needed)}")
             return
 
-        expected_time: float = iterations_needed / db.proof_of_time_estimate_ips
+    expected_time: uint64 = uint64(iterations_needed / db.proof_of_time_estimate_ips)
 
-        # TODO(alex): tweak this
-        log.info(f"Expected finish time: {expected_time}")
-        if expected_time > 10 * DIFFICULTY_TARGET:
+    if expected_time > constants["PROPAGATION_DELAY_THRESHOLD"]:
+        # If this block is slow, sleep to allow faster blocks to come out first
+        await asyncio.sleep(2)
+
+    async with db.lock:
+        if unfinished_block.block.height > db.unfinished_blocks_leader[0]:
+            # If this is the first block we see at this height, propagate
+            db.unfinished_blocks_leader = (unfinished_block.block.height, expected_time)
+        elif unfinished_block.block.height == db.unfinished_blocks_leader[0]:
+            if expected_time > db.unfinished_blocks_leader[1] + constants["PROPAGATION_THRESHOLD"]:
+                # If VDF is expected to finish X seconds later than the best, don't propagate
+                return
+            elif expected_time < db.unfinished_blocks_leader[1]:
+                # If this will be the first block to finalize, update our leader
+                db.unfinished_blocks_leader = (db.unfinished_blocks_leader[0], expected_time)
+        else:
+            # If we have seen an unfinished block at a greater or equal height, don't propagate
+            # TODO: should we?
             return
 
         db.unfinished_blocks[(challenge_hash, iterations_needed)] = unfinished_block.block
@@ -534,15 +554,14 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
             db.potential_heads_full_blocks[header_hash] = block.block
             return
 
-        if header_hash in db.full_blocks:
-            log.info(f"Already have block {header_hash} height {block.block.trunk_block.challenge.height}")
-            return
-        # TODO(alex): Check if we care about this block, we don't want to add random
-        # disconnected blocks. For example if it's on one of the heads, or if it's an older
-        # block that we need
         added: ReceiveBlockResult = db.blockchain.receive_block(block.block)
 
-    if not (added == ReceiveBlockResult.ADDED_TO_HEAD or added == ReceiveBlockResult.ADDED_AS_ORPHAN):
+    if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
+        log.info(f"\tAlready have block {header_hash} height {block.block.trunk_block.challenge.height}")
+        return
+    elif added == ReceiveBlockResult.INVALID_BLOCK:
+        log.warning(f"\tBlock {header_hash} at height {block.block.trunk_block.challenge.height} is invalid.")
+    elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
         async with db.lock:
             tip_height = max([head.challenge.height for head in db.blockchain.get_current_heads()])
         if block.block.trunk_block.challenge.height > tip_height + config["sync_blocks_behind_threshold"]:
@@ -555,8 +574,8 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
             # Perform a sync if we have to
             db.sync_mode = True
             try:
+                # Performs sync, and catch exceptions so we don't close the connection
                 async for msg in sync():
-                    log.error(f"Yielding {msg}")
                     yield msg
             except asyncio.CancelledError:
                 log.warning("Syncing failed")
@@ -577,24 +596,26 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
     async with db.lock:
         db.full_blocks[header_hash] = block.block
 
-    difficulty = db.blockchain.get_difficulty(header_hash)
+    if added == ReceiveBlockResult.ADDED_TO_HEAD:
+        # Only propagate blocks which extend the blockchain (one of the heads)
+        difficulty = db.blockchain.get_difficulty(header_hash)
 
-    pos_quality = block.block.trunk_block.proof_of_space.verify_and_get_quality(
-        block.block.trunk_block.proof_of_time.output.challenge_hash
-    )
-    farmer_request = farmer_protocol.ProofOfSpaceFinalized(block.block.trunk_block.challenge.get_hash(),
-                                                           block.block.trunk_block.challenge.height,
-                                                           pos_quality,
-                                                           difficulty)
-    timelord_request = timelord_protocol.ChallengeStart(block.block.trunk_block.challenge.get_hash())
-    timelord_request_end = timelord_protocol.ChallengeStart(block.block.trunk_block.proof_of_time.
-                                                            output.challenge_hash)
-    # Tell timelord to stop previous challenge and start with new one
-    yield OutboundMessage(NodeType.TIMELORD, Message("challenge_end", timelord_request_end), Delivery.BROADCAST)
-    yield OutboundMessage(NodeType.TIMELORD, Message("challenge_start", timelord_request), Delivery.BROADCAST)
+        pos_quality = block.block.trunk_block.proof_of_space.verify_and_get_quality(
+            block.block.trunk_block.proof_of_time.output.challenge_hash
+        )
+        farmer_request = farmer_protocol.ProofOfSpaceFinalized(block.block.trunk_block.challenge.get_hash(),
+                                                               block.block.trunk_block.challenge.height,
+                                                               pos_quality,
+                                                               difficulty)
+        timelord_request = timelord_protocol.ChallengeStart(block.block.trunk_block.challenge.get_hash())
+        timelord_request_end = timelord_protocol.ChallengeStart(block.block.trunk_block.proof_of_time.
+                                                                output.challenge_hash)
+        # Tell timelord to stop previous challenge and start with new one
+        yield OutboundMessage(NodeType.TIMELORD, Message("challenge_end", timelord_request_end), Delivery.BROADCAST)
+        yield OutboundMessage(NodeType.TIMELORD, Message("challenge_start", timelord_request), Delivery.BROADCAST)
 
-    # Tell full nodes about the new block
-    yield OutboundMessage(NodeType.FULL_NODE, Message("block", block), Delivery.BROADCAST_TO_OTHERS)
+        # Tell full nodes about the new block
+        yield OutboundMessage(NodeType.FULL_NODE, Message("block", block), Delivery.BROADCAST_TO_OTHERS)
 
-    # Tell farmer about the new block
-    yield OutboundMessage(NodeType.FARMER, Message("proof_of_space_finalized", farmer_request), Delivery.BROADCAST)
+        # Tell farmer about the new block
+        yield OutboundMessage(NodeType.FARMER, Message("proof_of_space_finalized", farmer_request), Delivery.BROADCAST)

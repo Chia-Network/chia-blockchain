@@ -23,6 +23,7 @@ python -m src.server.start_timelord
 python -m src.server.start_farmer
 python -m src.server.start_full_node "127.0.0.1" 8002 "-f" "-t"
 python -m src.server.start_full_node "127.0.0.1" 8004
+python -m src.server.start_full_node "127.0.0.1" 8005
 
 ```
 You can also run the simulation, which runs all servers at once.

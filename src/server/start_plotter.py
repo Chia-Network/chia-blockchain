@@ -5,7 +5,7 @@ from src.server.outbound_message import NodeType
 from src.util.network import parse_host_port
 from src import plotter
 
-logging.basicConfig(format='Plotter %(name)-23s: %(levelname)-8s %(message)s', level=logging.INFO)
+logging.basicConfig(format='Plotter %(name)-24s: %(levelname)-8s %(message)s', level=logging.INFO)
 
 
 async def main():

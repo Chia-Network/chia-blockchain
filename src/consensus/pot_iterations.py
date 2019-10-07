@@ -1,4 +1,3 @@
-from src.consensus.constants import MIN_VDF_ITERATIONS
 from src.util.ints import uint64, uint8
 from src.types.sized_bytes import bytes32
 from src.types.proof_of_space import ProofOfSpace
@@ -45,7 +44,7 @@ def calculate_iterations_quality(quality: bytes32, size: uint8, difficulty: uint
     """
     dec_iters = (Decimal(int(difficulty) << 32) *
                  (_quality_to_decimal(quality) / _expected_plot_size(size)))
-    return uint64(max(MIN_VDF_ITERATIONS, int(dec_iters.to_integral_exact(rounding=ROUND_UP))))
+    return uint64(max(1, int(dec_iters.to_integral_exact(rounding=ROUND_UP))))
 
 
 def calculate_iterations(proof_of_space: ProofOfSpace, challenge_hash: bytes32,
