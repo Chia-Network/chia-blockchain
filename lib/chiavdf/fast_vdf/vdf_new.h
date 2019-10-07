@@ -126,7 +126,7 @@ struct form {
     static form generator(const integer& d) {
         return from_abd(integer(2), integer(1), d);
     }
-
+    
     void reduce() {
         ::reduce(a, b, c);
     }

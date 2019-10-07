@@ -188,4 +188,15 @@ void nucomp_form(form &a, form &b, form &c, integer &D, integer &L) {
     fmpz_get_mpz(a.a.impl,fr.a);
     fmpz_get_mpz(a.b.impl,fr.b);
     fmpz_get_mpz(a.c.impl,fr.c);
+    fmpz_clear(fr.a);
+    fmpz_clear(fr.b);
+    fmpz_clear(fr.c);
+    fmpz_clear(fr2.a);
+    fmpz_clear(fr2.b);
+    fmpz_clear(fr2.c);
+    fmpz_clear(fr3.a);
+    fmpz_clear(fr3.b);
+    fmpz_clear(fr3.c);
+    fmpz_clear(anticD);
+    fmpz_clear(anticL);
 }
