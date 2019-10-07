@@ -21,6 +21,7 @@ from src.server.outbound_message import OutboundMessage, Delivery, Message, Node
 class Database:
     lock: Lock = Lock()
     free_servers = []
+    solved_discriminants = []
     active_discriminants: Dict = {}
     done_discriminants = []
 
@@ -39,6 +40,11 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
     """            
 
     disc: int = create_discriminant(challenge_start.challenge_hash, constants.DISCRIMINANT_SIZE_BITS)
+
+    async with db.lock:
+        if challenge_start.challenge_hash in db.done_discriminants:
+            log.info("This discriminant was already done..")
+            return
 
     #Wait for a server to become free.
     port = None
@@ -101,6 +107,11 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
                 response = timelord_protocol.ProofOfTimeFinished(proof_of_time)
 
                 log.info(f"Got PoT for challenge {challenge_start.challenge_hash}")
+                async with db.lock:
+                    if (challenge_start.challenge_hash in db.solved_discriminants):
+                        log.info("I've already propagated one proof... Ignoring for now...")
+                        continue
+                    db.solved_discriminants.append(challenge_start.challenge_hash)
                 yield OutboundMessage(NodeType.FULL_NODE, Message("proof_of_time_finished", response), Delivery.RESPOND)
             except Exception as e:
                 e_to_str = str(e)

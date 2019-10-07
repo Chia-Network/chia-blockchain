@@ -59,6 +59,8 @@ struct akashnil_form {
 const int64_t THRESH = 1UL<<31;
 const int64_t EXP_THRESH = 31;
 
+std::vector<form> forms;
+
 //always works
 void repeated_square_original(vdf_original &vdfo, form& f, const integer& D, const integer& L, uint64 base, uint64 iterations, INUDUPLListener *nuduplListener) {
     vdf_original::form f_in,*f_res;
@@ -83,7 +85,7 @@ class WesolowskiCallback :public INUDUPLListener {
 public:
     uint64_t kl;
 
-    struct form *forms;
+    //struct form *forms;
     form result;
 
     bool deferred;
@@ -100,14 +102,14 @@ public:
     vdf_original vdfo;
 
     WesolowskiCallback(uint64_t expected_space) {
-        forms = (form*) malloc(sizeof(struct form) * expected_space);
+        // = (form*) malloc(sizeof(struct form) * expected_space);
         
         t=new ClassGroupContext(4096);
         reducer=new Reducer(*t);
     }
 
     ~WesolowskiCallback() {
-        free(forms);
+        //free(forms);
         
         delete(reducer);
         delete(t);
@@ -169,7 +171,7 @@ public:
         {
             form *mulf=GetForm(iteration);
             // Initialize since it is raw memory
-            mpz_inits(mulf->a.impl,mulf->b.impl,mulf->c.impl,NULL);
+            // mpz_inits(mulf->a.impl,mulf->b.impl,mulf->c.impl,NULL);
             
             switch(type)
             {
@@ -740,11 +742,11 @@ void session(tcp::socket sock) {
         std::vector<std::thread> threads;
         WesolowskiCallback weso(1000000);
         
-        mpz_init(weso.forms[0].a.impl);
-        mpz_init(weso.forms[0].b.impl);
-        mpz_init(weso.forms[0].c.impl);
+        //mpz_init(weso.forms[0].a.impl);
+        //mpz_init(weso.forms[0].b.impl);
+        //mpz_init(weso.forms[0].c.impl);
         
-        weso.forms[0]=f;
+        forms[0]=f;
         weso.D = D;
         weso.L = L;
         weso.kl = 10;
@@ -764,7 +766,12 @@ void session(tcp::socket sock) {
             boost::asio::read(sock, boost::asio::buffer(data, size), error);
             int iters = atoi(data);
             std::cout << "Got iterations " << iters << "\n";
-            if (seen_iterations.size() > 3 && iters != 0) {
+            if (seen_iterations.size() > 0 && *seen_iterations.begin() <= iters) {
+                std::cout << "Ignoring..." << iters << "\n";
+                continue;
+            }
+
+            if (seen_iterations.size() > 2 && iters != 0) {
                 std::cout << "Ignoring..." << iters << "\n";
                 continue;
             }
@@ -808,7 +815,11 @@ void server(boost::asio::io_context& io_context, unsigned short port)
 }
 
 int main(int argc, char* argv[])
-{
+{ 
+  forms.reserve(1000000);
+  for (int i = 0; i < 1000000; i++) {
+      mpz_inits(forms[i].a.impl, forms[i].b.impl, forms[i].c.impl, NULL);
+  }
   try
   {
     if (argc != 2)
