@@ -107,11 +107,11 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
                 response = timelord_protocol.ProofOfTimeFinished(proof_of_time)
 
                 log.info(f"Got PoT for challenge {challenge_start.challenge_hash}")
-                async with db.lock:
-                    if (challenge_start.challenge_hash in db.solved_discriminants):
-                        log.info("I've already propagated one proof... Ignoring for now...")
-                        continue
-                    db.solved_discriminants.append(challenge_start.challenge_hash)
+                #async with db.lock:
+                #    if (challenge_start.challenge_hash in db.solved_discriminants):
+                #        log.info("I've already propagated one proof... Ignoring for now...")
+                #        continue
+                #    db.solved_discriminants.append(challenge_start.challenge_hash)
                 yield OutboundMessage(NodeType.FULL_NODE, Message("proof_of_time_finished", response), Delivery.RESPOND)
             except Exception as e:
                 e_to_str = str(e)
@@ -133,6 +133,7 @@ async def challenge_end(challenge_end: timelord_protocol.ChallengeEnd):
             await writer.drain()
             del db.active_discriminants[challenge_end.challenge_hash]
             db.done_discriminants.append(challenge_end.challenge_hash)
+    await asyncio.sleep(0.5)
 
 @api_request
 async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpaceInfo):
@@ -153,4 +154,4 @@ async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpac
             if (proof_of_space_info.challenge_hash in db.done_discriminants):
                 log.info("Got iters for a finished challenge")
                 return 
-        await asyncio.sleep(3)
+        await asyncio.sleep(0.5)

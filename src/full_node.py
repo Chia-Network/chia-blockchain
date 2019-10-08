@@ -545,6 +545,7 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
     """
     Receive a full block from a peer full node (or ourselves).
     """
+
     header_hash = block.block.trunk_block.header.get_hash()
 
     async with db.lock:
@@ -619,3 +620,11 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
 
         # Tell farmer about the new block
         yield OutboundMessage(NodeType.FARMER, Message("proof_of_space_finalized", farmer_request), Delivery.BROADCAST)
+    else:
+        # Note(Florin): This is a hack...
+        log.info("I've received a block, stopping the challenge to free up the VDF server...")
+        log.info(f"Height of received block = {block.block.trunk_block.challenge.height}")
+        timelord_request_end = timelord_protocol.ChallengeStart(block.block.trunk_block.proof_of_time.
+                                                                output.challenge_hash)
+        yield OutboundMessage(NodeType.TIMELORD, Message("challenge_end", timelord_request_end), Delivery.BROADCAST)
+
