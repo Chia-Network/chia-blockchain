@@ -99,18 +99,16 @@ public:
     ClassGroupContext *t;
     Reducer *reducer;
     
-    vdf_original vdfo;
+    vdf_original* vdfo;
 
     WesolowskiCallback(uint64_t expected_space) {
-        // = (form*) malloc(sizeof(struct form) * expected_space);
-        
+        vdfo = new vdf_original();
         t=new ClassGroupContext(4096);
         reducer=new Reducer(*t);
     }
 
     ~WesolowskiCallback() {
-        //free(forms);
-        
+        delete(vdfo);
         delete(reducer);
         delete(t);
     }
@@ -151,17 +149,6 @@ public:
         return &(forms[GetPosition(power)]);
     }
     
-    form GetFormFromCheckpoint(vdf_original &vdfo, int power) {
-        uint64 checkpoint = power - power % 100;
-        form checkpoint_form;
-        mpz_init(checkpoint_form.a.impl);
-        mpz_init(checkpoint_form.b.impl);
-        mpz_init(checkpoint_form.c.impl);
-        checkpoint_form = forms[GetPosition(checkpoint)];
-        repeated_square_original(vdfo, checkpoint_form, D, L, 0, power % 100, NULL);
-        return checkpoint_form;
-    }
-
     void OnIteration(int type, void *data, uint64 iteration)
     {
         iteration++;
@@ -255,7 +242,7 @@ void repeated_square(form f, const integer& D, const integer& L, WesolowskiCallb
 
         #ifdef ENABLE_TRACK_CYCLES
             print( "track cycles enabled; results will be wrong" );
-            repeated_square_original(weso.vdfo, f, D, L, 100); //randomize the a and b values
+            repeated_square_original(*weso.vdfo, f, D, L, 100); //randomize the a and b values
         #endif
 
         // This works single threaded
@@ -276,7 +263,7 @@ void repeated_square(form f, const integer& D, const integer& L, WesolowskiCallb
 
         if (actual_iterations==~uint64(0)) {
             //corruption; f is unchanged. do the entire batch with the slow algorithm
-            repeated_square_original(weso.vdfo, f, D, L, num_iterations, batch_size, &weso);
+            repeated_square_original(*weso.vdfo, f, D, L, num_iterations, batch_size, &weso);
             actual_iterations=batch_size;
 
             #ifdef VDF_TEST
@@ -292,7 +279,7 @@ void repeated_square(form f, const integer& D, const integer& L, WesolowskiCallb
             //the fast algorithm terminated prematurely for whatever reason. f is still valid
             //it might terminate prematurely again (e.g. gcd quotient too large), so will do one iteration of the slow algorithm
             //this will also reduce f if the fast algorithm terminated because it was too big
-            repeated_square_original(weso.vdfo, f, D, L, num_iterations+actual_iterations, 1, &weso);
+            repeated_square_original(*weso.vdfo, f, D, L, num_iterations+actual_iterations, 1, &weso);
 
 #ifdef VDF_TEST
                 ++num_iterations_slow;
@@ -312,7 +299,7 @@ void repeated_square(form f, const integer& D, const integer& L, WesolowskiCallb
                 form f_copy_2=f;
                 weso.reduce(f_copy_2);
 
-                repeated_square_original(weso.vdfo, f_copy, D, L, actual_iterations);
+                repeated_square_original(&weso.vdfo, f_copy, D, L, actual_iterations);
                 assert(f_copy==f_copy_2);
             }
         #endif
@@ -595,9 +582,15 @@ Proof CreateProofOfTimeWesolowski(integer& D, form x, int64_t num_iterations, ui
     if (stop_signal)
         return Proof();
     
-    vdf_original vdfo;
+    vdf_original vdfo_proof;
     
-    form y = weso.GetFormFromCheckpoint(vdfo, done_iterations + num_iterations);
+    uint64 checkpoint = (done_iterations + num_iterations) - (done_iterations + num_iterations) % 100;
+    //mpz_init(y.a.impl);
+    //mpz_init(y.b.impl);
+    //mpz_init(y.c.impl);
+    form y = forms[weso.GetPosition(checkpoint)];
+    repeated_square_original(vdfo_proof, y, D, L, 0, (done_iterations + num_iterations) % 100, NULL);
+
     auto proof = GenerateProof(y, x_init, D, done_iterations, num_iterations, k, l, weso, stop_signal);
 
     if (stop_signal)
@@ -687,8 +680,8 @@ void NWesolowskiMain(integer D, form x, int64_t num_iterations, WesolowskiCallba
     bytes.insert(bytes.end(), result.y.begin(), result.y.end());
     bytes.insert(bytes.end(), result.proof.begin(), result.proof.end());  
     std::string str_result = BytesToStr(bytes);  
-    std::cout << "Generated proof = " << str_result << "\n";
     std::lock_guard<std::mutex> lock(socket_mutex);
+    std::cout << "Generated proof = " << str_result << "\n";
     boost::asio::write(sock, boost::asio::buffer(str_result.c_str(), str_result.size()));
 }
 
