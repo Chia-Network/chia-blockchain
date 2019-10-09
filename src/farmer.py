@@ -63,7 +63,7 @@ async def challenge_response(challenge_response: plotter_protocol.ChallengeRespo
 
         number_iters: uint64 = calculate_iterations_quality(challenge_response.quality,
                                                             challenge_response.plot_size,
-                                                            difficulty)
+                                                            difficulty, db.proof_of_time_estimate_ips)
         estimate_secs: float = number_iters / db.proof_of_time_estimate_ips
 
     if estimate_secs < config['pool_share_threshold'] or estimate_secs < config['propagate_threshold']:
@@ -104,7 +104,8 @@ async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace)
 
     number_iters: uint64 = calculate_iterations_quality(computed_quality,
                                                         response.proof.size,
-                                                        difficulty)
+                                                        difficulty,
+                                                        db.proof_of_time_estimate_ips)
     async with db.lock:
         estimate_secs: float = number_iters / db.proof_of_time_estimate_ips
     if estimate_secs < config['pool_share_threshold']:
