@@ -24,9 +24,8 @@ class TestGenesisBlock():
         genesis_block = bc1.get_current_heads()[0]
         assert genesis_block.height == 0
         assert bc1.get_trunk_blocks_by_height([uint64(0)], genesis_block.header_hash)[0] == genesis_block
-        assert bc1.get_difficulty(genesis_block.header_hash) == genesis_block.challenge.total_weight
-        assert bc1.get_difficulty(genesis_block.header_hash) == bc1.get_next_difficulty(genesis_block.header_hash)
-        assert bc1.get_vdf_rate_estimate() is None
+        assert bc1.get_next_difficulty(genesis_block.header_hash) == genesis_block.challenge.total_weight
+        assert bc1.get_next_ips(genesis_block.header_hash) > 0
 
 
 class TestBlockValidation():
@@ -167,7 +166,7 @@ class TestBlockValidation():
     def test_difficulty_change(self):
         num_blocks = 20
         # Make it 5x faster than target time
-        blocks = bt.get_consecutive_blocks(num_blocks, 5, 16, 1)
+        blocks = bt.get_consecutive_blocks(num_blocks, 5, 16, 1, [])
         b: Blockchain = Blockchain({
             "GENESIS_BLOCK": blocks[0].serialize(),
             "DIFFICULTY_STARTING": 5,
@@ -179,9 +178,80 @@ class TestBlockValidation():
         })
 
         for i in range(1, num_blocks):
+            # print(f"Adding {i}")
             assert b.receive_block(blocks[i]) == ReceiveBlockResult.ADDED_TO_HEAD
 
-        assert b.get_difficulty(blocks[14].header_hash) == b.get_difficulty(blocks[13].header_hash)
-        assert b.get_difficulty(blocks[15].header_hash) > b.get_difficulty(blocks[14].header_hash)
-        assert ((b.get_difficulty(blocks[15].header_hash) / b.get_difficulty(blocks[14].header_hash)
+        assert b.get_next_difficulty(blocks[13].header_hash) == b.get_next_difficulty(blocks[12].header_hash)
+        assert b.get_next_difficulty(blocks[14].header_hash) > b.get_next_difficulty(blocks[13].header_hash)
+        assert ((b.get_next_difficulty(blocks[14].header_hash) / b.get_next_difficulty(blocks[13].header_hash)
                  <= constants["DIFFICULTY_FACTOR"]))
+        assert blocks[-1].trunk_block.challenge.total_iters == 176091
+
+        assert b.get_next_ips(blocks[1].header_hash) == constants["VDF_IPS_STARTING"]
+        assert b.get_next_ips(blocks[12].header_hash) == b.get_next_ips(blocks[11].header_hash)
+        assert b.get_next_ips(blocks[13].header_hash) == b.get_next_ips(blocks[12].header_hash)
+        assert b.get_next_ips(blocks[14].header_hash) > b.get_next_ips(blocks[13].header_hash)
+        assert b.get_next_ips(blocks[15].header_hash) == b.get_next_ips(blocks[14].header_hash)
+
+
+class TestReorgs():
+    def test_basic_reorg(self):
+        blocks = bt.get_consecutive_blocks(100, 5, 16, 9, [], 0)
+        b: Blockchain = Blockchain({
+            "GENESIS_BLOCK": blocks[0].serialize(),
+            "DIFFICULTY_STARTING": 5,
+            "DISCRIMINANT_SIZE_BITS": 16,
+            "BLOCK_TIME_TARGET": 10,
+            "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
+            "DIFFICULTY_WARP_FACTOR": 4,  # DELAY divides EPOCH in order to warp efficiently.
+            "DIFFICULTY_DELAY": 3  # EPOCH / WARP_FACTOR
+        })
+
+        for block in blocks:
+            b.receive_block(block)
+        assert b.get_current_heads()[0].height == 100
+
+        blocks_reorg_chain = bt.get_consecutive_blocks(30, 5, 16, 9, blocks[:90], 1)
+        for reorg_block in blocks_reorg_chain:
+            result = b.receive_block(reorg_block)
+            if reorg_block.height < 90:
+                assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
+            elif reorg_block.height < 99:
+                assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
+            elif reorg_block.height >= 100:
+                assert result == ReceiveBlockResult.ADDED_TO_HEAD
+        assert b.get_current_heads()[0].height == 119
+
+    def test_reorg_from_genesis(self):
+        blocks = bt.get_consecutive_blocks(20, 5, 16, 9, [], 0)
+
+        b: Blockchain = Blockchain({
+            "GENESIS_BLOCK": blocks[0].serialize(),
+            "DIFFICULTY_STARTING": 5,
+            "DISCRIMINANT_SIZE_BITS": 16,
+            "BLOCK_TIME_TARGET": 10,
+            "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
+            "DIFFICULTY_WARP_FACTOR": 4,  # DELAY divides EPOCH in order to warp efficiently.
+            "DIFFICULTY_DELAY": 3  # EPOCH / WARP_FACTOR
+        })
+        for block in blocks:
+            b.receive_block(block)
+        assert b.get_current_heads()[0].height == 20
+
+        # Reorg from genesis
+        blocks_reorg_chain = bt.get_consecutive_blocks(21, 5, 16, 9, [blocks[0]], 1)
+        for reorg_block in blocks_reorg_chain:
+            result = b.receive_block(reorg_block)
+            if reorg_block.height == 0:
+                assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
+            elif reorg_block.height < 19:
+                assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
+            else:
+                assert result == ReceiveBlockResult.ADDED_TO_HEAD
+        assert b.get_current_heads()[0].height == 21
+
+        # Reorg back to original branch
+        blocks_reorg_chain_2 = bt.get_consecutive_blocks(3, 5, 16, 9, blocks, 3)
+        b.receive_block(blocks_reorg_chain_2[20]) == ReceiveBlockResult.ADDED_AS_ORPHAN
+        assert b.receive_block(blocks_reorg_chain_2[21]) == ReceiveBlockResult.ADDED_TO_HEAD
+        assert b.receive_block(blocks_reorg_chain_2[22]) == ReceiveBlockResult.ADDED_TO_HEAD

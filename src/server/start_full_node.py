@@ -73,9 +73,6 @@ async def main():
         except asyncio.CancelledError:
             log.warning("Connection to timelord failed.")
 
-    # Periodically update our estimate of proof of time speeds
-    asyncio.create_task(full_node.proof_of_time_estimate_interval())
-
     await asyncio.gather(*waitable_tasks)
 
 asyncio.run(main())
