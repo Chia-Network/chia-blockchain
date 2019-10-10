@@ -208,5 +208,5 @@ class BlockTools:
 
 
 # print(create_genesis_block().serialize())
-# bt = BlockTools()
-# print(bt.create_genesis_block(bytes([4]*32)).serialize())
+bt = BlockTools()
+print(bt.create_genesis_block(bytes([4]*32)).serialize())

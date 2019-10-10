@@ -7,6 +7,7 @@ from src import timelord
 
 logging.basicConfig(format='Timelord %(name)-25s: %(levelname)-20s %(message)s', level=logging.INFO)
 
+
 async def main():
     host, port = parse_host_port(timelord)
     server, _ = await start_chia_server(host, port, timelord, NodeType.FULL_NODE)
