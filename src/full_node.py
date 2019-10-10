@@ -100,7 +100,7 @@ async def send_challenges_to_timelords() -> AsyncGenerator[OutboundMessage, None
     async with db.lock:
         for head in db.blockchain.get_current_heads():
             challenge_hash = head.challenge.get_hash()
-            requests.append(timelord_protocol.ChallengeStart(challenge_hash))
+            requests.append(timelord_protocol.ChallengeStart(challenge_hash, head.challenge.height))
     for request in requests:
         yield OutboundMessage(NodeType.TIMELORD, Message("challenge_start", request), Delivery.BROADCAST)
 
@@ -608,8 +608,9 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
                                                                block.block.trunk_block.challenge.height,
                                                                pos_quality,
                                                                difficulty)
-        timelord_request = timelord_protocol.ChallengeStart(block.block.trunk_block.challenge.get_hash())
-        timelord_request_end = timelord_protocol.ChallengeStart(block.block.trunk_block.proof_of_time.
+        timelord_request = timelord_protocol.ChallengeStart(block.block.trunk_block.challenge.get_hash(),
+                                                            block.block.trunk_block.challenge.height)
+        timelord_request_end = timelord_protocol.ChallengeEnd(block.block.trunk_block.proof_of_time.
                                                                 output.challenge_hash)
         # Tell timelord to stop previous challenge and start with new one
         yield OutboundMessage(NodeType.TIMELORD, Message("challenge_end", timelord_request_end), Delivery.BROADCAST)
@@ -620,10 +621,9 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
 
         # Tell farmer about the new block
         yield OutboundMessage(NodeType.FARMER, Message("proof_of_space_finalized", farmer_request), Delivery.BROADCAST)
-    else:
-        # Note(Florin): This is a hack...
-        log.info("I've received a block, stopping the challenge to free up the VDF server...")
-        log.info(f"Height of received block = {block.block.trunk_block.challenge.height}")
-        timelord_request_end = timelord_protocol.ChallengeStart(block.block.trunk_block.proof_of_time.
+    elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
+        log.info("I've received an orphan, stopping the proof of time challenge.")
+        log.info(f"Height of the orphan block is {block.block.trunk_block.challenge.height}")
+        timelord_request_end = timelord_protocol.ChallengeEnd(block.block.trunk_block.proof_of_time.
                                                                 output.challenge_hash)
         yield OutboundMessage(NodeType.TIMELORD, Message("challenge_end", timelord_request_end), Delivery.BROADCAST)
