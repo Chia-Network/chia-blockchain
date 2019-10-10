@@ -21,10 +21,11 @@ class Database:
     lock: Lock = Lock()
     free_servers: List[int] = []
     active_discriminants: Dict = {}
+    pending_iters: Dict = {}
+    best_height = 0
     done_discriminants = []
     seen_discriminants = []
-    counter = 0
-    active_counters = []
+    active_heights = []
 
 
 log = logging.getLogger(__name__)
@@ -43,27 +44,35 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
     """
 
     disc: int = create_discriminant(challenge_start.challenge_hash, constants["DISCRIMINANT_SIZE_BITS"])
-
     async with db.lock:
         if (challenge_start.challenge_hash in db.seen_discriminants):
             log.info("Already seen this one... Ignoring")
             return
         db.seen_discriminants.append(challenge_start.challenge_hash)
-        db.counter += 1
-        current_counter = db.counter
-        db.active_counters.append(db.counter)
+        db.active_heights.append(challenge_start.height)
+        db.best_height = max(db.best_height, challenge_start.height)
 
     # Wait for a server to become free.
     port: int = -1
     while port == -1:
         async with db.lock:
-            if (len(db.free_servers) != 0):
-                port = db.free_servers[0]
-                db.free_servers = db.free_servers[1:]
-                log.info(f"Discriminant {disc} attached to port {port}.")
+            if (challenge_start.height <= db.best_height - 5):
+                db.done_discriminants.append(challenge_start.challenge_hash)
+                db.active_heights.remove(challenge_start.height)
+                log.info(f"Stopping challenge at height {challenge_start.height}")
+                return
+            assert(len(db.active_heights) > 0)
+            if (challenge_start.height == max(db.active_heights)):
+                if (len(db.free_servers) != 0):
+                    port = db.free_servers[0]
+                    db.free_servers = db.free_servers[1:]
+                    log.info(f"Discriminant {disc} attached to port {port}.")
+                    log.info(f"Height attached is {challenge_start.height}")
+                    db.active_heights.remove(challenge_start.height)
+
         # Poll until a server becomes free.
         if port == -1:
-            await asyncio.sleep(3)
+            await asyncio.sleep(0.1)
 
     # TODO(Florin): Handle connection failure (attempt another server)
     try:
@@ -83,6 +92,13 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
     async with db.lock:
         db.active_discriminants[challenge_start.challenge_hash] = writer
 
+    async with db.lock:
+        if (challenge_start.challenge_hash in db.pending_iters):
+            for iter in db.pending_iters[challenge_start.challenge_hash]:
+                writer.write((str(len(str(iter)))
+                        + str(iter)).encode())
+                await writer.drain()
+
     # Listen to the server until "STOP" is received.
     while True:
         data = await reader.readexactly(4)
@@ -96,7 +112,7 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
         elif (data.decode() == "POLL"):
             async with db.lock:
                 # If I have a newer discriminant... Free up the VDF server
-                if (current_counter < max(db.active_counters)):
+                if (challenge_start.height < max(db.active_heights)):
                     log.info("Got poll, stopping the challenge!")
                     writer.write(b'10')
                     await writer.drain()
@@ -156,15 +172,16 @@ async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpac
     many iterations to run for.
     """
 
-    while True:
-        async with db.lock:
-            if (proof_of_space_info.challenge_hash in db.active_discriminants):
-                writer = db.active_discriminants[proof_of_space_info.challenge_hash]
-                writer.write((str(len(str(proof_of_space_info.iterations_needed)))
-                             + str(proof_of_space_info.iterations_needed)).encode())
-                await writer.drain()
-                return
-            if (proof_of_space_info.challenge_hash in db.done_discriminants):
-                log.info("Got iters for a finished challenge")
-                return
-        await asyncio.sleep(0.5)
+    async with db.lock:
+        if (proof_of_space_info.challenge_hash in db.active_discriminants):
+            writer = db.active_discriminants[proof_of_space_info.challenge_hash]
+            writer.write((str(len(str(proof_of_space_info.iterations_needed)))
+                        + str(proof_of_space_info.iterations_needed)).encode())
+            await writer.drain()
+            return
+        if (proof_of_space_info.challenge_hash in db.done_discriminants):
+            return
+        if (proof_of_space_info.challenge_hash not in db.pending_iters):
+            db.pending_iters[proof_of_space_info.challenge_hash] = []
+        db.pending_iters[proof_of_space_info.challenge_hash].append(proof_of_space_info.iterations_needed)
+

@@ -686,12 +686,12 @@ void NWesolowskiMain(integer D, form x, int64_t num_iterations, WesolowskiCallba
 }
 
 void PollTimelord(tcp::socket& sock, bool& got_iters) {
-    // Wait for 60s, if no iters come, poll each 15 seconds the timelord.
+    // Wait for 15s, if no iters come, poll each 5 seconds the timelord.
     int seconds = 0;
     while (!got_iters) {
         std::this_thread::sleep_for (std::chrono::seconds(1));
         seconds++;
-        if (seconds >= 60 && (seconds - 60) % 15 == 0) {
+        if (seconds >= 15 && (seconds - 15) % 5 == 0) {
             socket_mutex.lock();
             boost::asio::write(sock, boost::asio::buffer("POLL", 4));
             socket_mutex.unlock();
@@ -801,10 +801,18 @@ void session(tcp::socket sock) {
                 }
             }
         }
+    } catch (std::exception& e) {
+        std::cerr << "Exception in thread: " << e.what() << "\n";
+    }
+
+    try {
         // Tell client I've stopped everything, wait for ACK and close.
+        boost::system::error_code error;
+
+        std::cout << "Stopped everything! Ready for the next challenge.\n";
+
         std::lock_guard<std::mutex> lock(socket_mutex);
         boost::asio::write(sock, boost::asio::buffer("STOP", 4));
-        std::cout << "Stopped everything! Ready for the next challenge.\n";
 
         char ack[5];
         memset(ack,0x00,sizeof(ack));

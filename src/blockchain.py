@@ -361,7 +361,6 @@ class Blockchain:
             return False
 
         # 4. Check PoT
-        # TODO(Florin): Change the hardcode of the genesis with new pot format.
         if not block.trunk_block.proof_of_time.is_valid(self.constants["DISCRIMINANT_SIZE_BITS"]):
             return False
 
