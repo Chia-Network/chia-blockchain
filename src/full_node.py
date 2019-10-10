@@ -627,4 +627,3 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
         timelord_request_end = timelord_protocol.ChallengeStart(block.block.trunk_block.proof_of_time.
                                                                 output.challenge_hash)
         yield OutboundMessage(NodeType.TIMELORD, Message("challenge_end", timelord_request_end), Delivery.BROADCAST)
-
