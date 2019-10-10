@@ -3,7 +3,7 @@ import asyncio
 import io
 import yaml
 from asyncio import Lock
-from typing import Dict, Optional
+from typing import Dict, List
 
 from lib.chiavdf.inkfish.create_discriminant import create_discriminant
 from lib.chiavdf.inkfish.proof_of_time import check_proof_of_time_nwesolowski
@@ -19,16 +19,18 @@ from src.server.outbound_message import OutboundMessage, Delivery, Message, Node
 
 class Database:
     lock: Lock = Lock()
-    free_servers = []
-    solved_discriminants = []
+    free_servers: List[int] = []
     active_discriminants: Dict = {}
     done_discriminants = []
+    seen_discriminants = []
+    counter = 0
+    active_counters = []
 
 
 log = logging.getLogger(__name__)
 config = yaml.safe_load(open("src/config/timelord.yaml", "r"))
 db = Database()
-db.free_servers.append(8889)
+db.free_servers = config["vdf_server_ports"]
 
 
 @api_request
@@ -43,20 +45,24 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
     disc: int = create_discriminant(challenge_start.challenge_hash, constants["DISCRIMINANT_SIZE_BITS"])
 
     async with db.lock:
-        if challenge_start.challenge_hash in db.done_discriminants:
-            log.info("This discriminant was already done..")
+        if (challenge_start.challenge_hash in db.seen_discriminants):
+            log.info("Already seen this one... Ignoring")
             return
+        db.seen_discriminants.append(challenge_start.challenge_hash)
+        db.counter += 1
+        current_counter = db.counter
+        db.active_counters.append(db.counter)
 
     # Wait for a server to become free.
-    port: Optional[int] = None
-    while (port is None):
+    port: int = -1
+    while port == -1:
         async with db.lock:
             if (len(db.free_servers) != 0):
                 port = db.free_servers[0]
                 db.free_servers = db.free_servers[1:]
                 log.info(f"Discriminant {disc} attached to port {port}.")
         # Poll until a server becomes free.
-        if (port is None):
+        if port == -1:
             await asyncio.sleep(3)
 
     # TODO(Florin): Handle connection failure (attempt another server)
@@ -87,6 +93,15 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
                 await writer.drain()
                 db.free_servers.append(port)
             break
+        elif (data.decode() == "POLL"):
+            async with db.lock:
+                # If I have a newer discriminant... Free up the VDF server
+                if (current_counter < max(db.active_counters)):
+                    log.info("Got poll, stopping the challenge!")
+                    writer.write(b'10')
+                    await writer.drain()
+                    del db.active_discriminants[challenge_start.challenge_hash]
+                    db.done_discriminants.append(challenge_start.challenge_hash)
         else:
             try:
                 # This must be a proof, read the continuation.
@@ -99,7 +114,8 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
                 # Verifies our own proof just in case
                 proof_blob = ClassGroup.from_ab_discriminant(y.a, y.b, disc).serialize() + proof_bytes
                 x = ClassGroup.from_ab_discriminant(2, 1, disc)
-                assert check_proof_of_time_nwesolowski(disc, x, proof_blob, iterations_needed, 1024, 2)
+                assert check_proof_of_time_nwesolowski(disc, x, proof_blob, iterations_needed,
+                                                       constants["DISCRIMINANT_SIZE_BITS"], config["n_wesolowski"])
 
                 output = ProofOfTimeOutput(challenge_start.challenge_hash,
                                            iterations_needed,
@@ -108,11 +124,6 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
                 response = timelord_protocol.ProofOfTimeFinished(proof_of_time)
 
                 log.info(f"Got PoT for challenge {challenge_start.challenge_hash}")
-                # async with db.lock:
-                #    if (challenge_start.challenge_hash in db.solved_discriminants):
-                #        log.info("I've already propagated one proof... Ignoring for now...")
-                #        continue
-                #    db.solved_discriminants.append(challenge_start.challenge_hash)
                 yield OutboundMessage(NodeType.FULL_NODE, Message("proof_of_time_finished", response), Delivery.RESPOND)
             except Exception as e:
                 e_to_str = str(e)
@@ -142,7 +153,7 @@ async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpac
     """
     Notification from full node about a new proof of space for a challenge. If we already
     have a process for this challenge, we should communicate to the process to tell it how
-    many iterations to run for. TODO: process should be started in challenge_start instead.
+    many iterations to run for.
     """
 
     while True:

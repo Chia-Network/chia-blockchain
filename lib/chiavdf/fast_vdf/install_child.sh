@@ -9,9 +9,11 @@ if cat /proc/cpuinfo | grep -w avx2 | grep -w fma | grep -w -q adx; then
 fi
 echo "enable_all_instructions: $enable_all_instructions"
 
-sudo apt-get install libgmp3-dev -y
-sudo apt-get install libflint-dev -y
+# Use this for linux only
+# sudo apt-get install libgmp3-dev -y
+# sudo apt-get install libflint-dev -y
 
+# Remove -D CHIAOSX=1 for linux
 compile_flags="-std=c++1z -D CHIAOSX=1 -D VDF_MODE=0 -D ENABLE_ALL_INSTRUCTIONS=$enable_all_instructions -no-pie -march=native"
 link_flags="-no-pie -lgmpxx -lgmp -lflint -lpthread"
 

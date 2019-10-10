@@ -68,14 +68,14 @@ void repeated_square_original(vdf_original &vdfo, form& f, const integer& D, con
     f_in.b[0]=f.b.impl[0];
     f_in.c[0]=f.c.impl[0];
     f_res=&f_in;
-    
+
     for (uint64_t i=0; i < iterations; i++) {
         f_res = vdfo.square(*f_res);
-        
+
         if(nuduplListener!=NULL)
             nuduplListener->OnIteration(NL_FORM,f_res,base+i);
     }
-    
+
     mpz_set(f.a.impl, f_res->a);
     mpz_set(f.b.impl, f_res->b);
     mpz_set(f.c.impl, f_res->c);
@@ -98,7 +98,7 @@ public:
 
     ClassGroupContext *t;
     Reducer *reducer;
-    
+
     vdf_original* vdfo;
 
     WesolowskiCallback(uint64_t expected_space) {
@@ -122,9 +122,9 @@ public:
         mpz_set(t->a, inf.a.impl);
         mpz_set(t->b, inf.b.impl);
         mpz_set(t->c, inf.c.impl);
-    
+
         reducer->run();
-    
+
         mpz_set(inf.a.impl, t->a);
         mpz_set(inf.b.impl, t->b);
         mpz_set(inf.c.impl, t->c);
@@ -148,27 +148,27 @@ public:
     form *GetForm(int power) {
         return &(forms[GetPosition(power)]);
     }
-    
+
     void OnIteration(int type, void *data, uint64 iteration)
     {
         iteration++;
-        
+
         //cout << iteration << " " << maxiterations << endl;
         if(iteration%kl==0)
         {
             form *mulf=GetForm(iteration);
             // Initialize since it is raw memory
             // mpz_inits(mulf->a.impl,mulf->b.impl,mulf->c.impl,NULL);
-            
+
             switch(type)
             {
                 case NL_SQUARESTATE:
                 {
                     //cout << "NL_SQUARESTATE" << endl;
                     uint64 res;
-                
+
                     square_state_type *square_state=(square_state_type *)data;
-                    
+
                     if(!square_state->assign(mulf->a, mulf->b, mulf->c, res))
                         cout << "square_state->assign failed" << endl;
                     break;
@@ -176,9 +176,9 @@ public:
                 case NL_FORM:
                 {
                     //cout << "NL_FORM" << endl;
-                    
+
                     vdf_original::form *f=(vdf_original::form *)data;
-           
+
                     mpz_set(mulf->a.impl, f->a);
                     mpz_set(mulf->b.impl, f->b);
                     mpz_set(mulf->c.impl, f->c);
@@ -188,7 +188,7 @@ public:
                     cout << "Unknown case" << endl;
             }
             reduce(*mulf);
-            
+
             iterations=iteration; // safe to access now
         }
     }
@@ -224,7 +224,7 @@ void repeated_square(form f, const integer& D, const integer& L, WesolowskiCallb
             std::cout << "Stopping weso at 500000 iterations!\n";
             return ;
         }
-        
+
         #ifdef VDF_TEST
             form f_copy;
             form f_copy_3;
@@ -248,9 +248,9 @@ void repeated_square(form f, const integer& D, const integer& L, WesolowskiCallb
         // This works single threaded
         square_state_type square_state;
         square_state.pairindex=0;
-        
+
         uint64 actual_iterations=repeated_square_fast(square_state, f, D, L, num_iterations, batch_size, &weso);
-        
+
         #ifdef VDF_TEST
             ++num_calls_fast;
             if (actual_iterations!=~uint64(0)) num_iterations_fast+=actual_iterations;
@@ -293,7 +293,7 @@ void repeated_square(form f, const integer& D, const integer& L, WesolowskiCallb
         }
 
         num_iterations+=actual_iterations;
-        
+
         #ifdef VDF_TEST
             if (vdf_test_correctness) {
                 form f_copy_2=f;
@@ -340,7 +340,7 @@ integer HashPrime(std::vector<unsigned char> s) {
         input.insert(input.end(), s.begin(), s.end());
         std::vector<unsigned char> hash(picosha2::k_digest_size);
         picosha2::hash256(input.begin(), input.end(), hash.begin(), hash.end());
-        
+
         integer prime_integer;
         for (int i = 0; i < 16; i++) {
             prime_integer *= integer(256);
@@ -387,7 +387,7 @@ integer FastPow(uint64_t a, uint64_t b, integer& c) {
 form FastPowForm(form &x, const integer& D, uint64_t num_iterations) {
     if (num_iterations == 0)
         return form::identity(D);
-    
+
     form res = FastPowForm(x, D, num_iterations / 2);
     res = res * res;
     if (num_iterations % 2)
@@ -441,25 +441,25 @@ form GenerateProof(form &y, form &x_init, integer &D, uint64_t done_iterations, 
 #if PULMARK
     ClassGroupContext *t;
     Reducer *reducer;
-    
+
     t=new ClassGroupContext(4096);
     reducer=new Reducer(*t);
 #endif
-    
+
     integer B = GetB(weso, D, x_init, y);
     integer L=root(-D, 4);
 
     uint64_t k1 = k / 2;
     uint64_t k0 = k - k1;
 
-    form x = form::identity(D);    
+    form x = form::identity(D);
 
     for (int64_t j = l - 1; j >= 0; j--) {
         x=FastPowForm(x, D, (1 << k));
-     
+
         std::vector<form> ys((1 << k));
         for (uint64_t i = 0; i < (1 << k); i++)
-            ys[i] = form::identity(D);  
+            ys[i] = form::identity(D);
 
         form *tmp;
         for (uint64_t i = 0; !stop_signal && i < ceil(1.0 * num_iterations / (k * l)); i++) {
@@ -472,9 +472,9 @@ form GenerateProof(form &y, form &x_init, integer &D, uint64_t done_iterations, 
                 mpz_set(t->a, ys[b].a.impl);
                 mpz_set(t->b, ys[b].b.impl);
                 mpz_set(t->c, ys[b].c.impl);
-                
+
                 reducer->run();
-                
+
                 mpz_set(ys[b].a.impl, t->a);
                 mpz_set(ys[b].b.impl, t->b);
                 mpz_set(ys[b].c.impl, t->c);
@@ -488,7 +488,7 @@ form GenerateProof(form &y, form &x_init, integer &D, uint64_t done_iterations, 
             return form();
 
         for (uint64_t b1 = 0; b1 < (1 << k1) && !stop_signal; b1++) {
-            form z = form::identity(D);    
+            form z = form::identity(D);
             for (uint64_t b0 = 0; b0 < (1 << k0) && !stop_signal; b0++) {
                 nucomp_form(z, z, ys[b1 * (1 << k0) + b0], D, L);
 #if PULMARK
@@ -496,9 +496,9 @@ form GenerateProof(form &y, form &x_init, integer &D, uint64_t done_iterations, 
                 mpz_set(t->a, z.a.impl);
                 mpz_set(t->b, z.b.impl);
                 mpz_set(t->c, z.c.impl);
-                
+
                 reducer->run();
-                
+
                 mpz_set(z.a.impl, t->a);
                 mpz_set(z.b.impl, t->b);
                 mpz_set(z.c.impl, t->c);
@@ -511,7 +511,7 @@ form GenerateProof(form &y, form &x_init, integer &D, uint64_t done_iterations, 
         }
 
         for (uint64_t b0 = 0; b0 < (1 << k0) && !stop_signal; b0++) {
-            form z = form::identity(D);    
+            form z = form::identity(D);
             for (uint64_t b1 = 0; b1 < (1 << k1) && !stop_signal; b1++) {
                 nucomp_form(z, z, ys[b1 * (1 << k0) + b0], D, L);
 #if PULMARK
@@ -519,9 +519,9 @@ form GenerateProof(form &y, form &x_init, integer &D, uint64_t done_iterations, 
                 mpz_set(t->a, z.a.impl);
                 mpz_set(t->b, z.b.impl);
                 mpz_set(t->c, z.c.impl);
-                
+
                 reducer->run();
-                
+
                 mpz_set(z.a.impl, t->a);
                 mpz_set(z.b.impl, t->b);
                 mpz_set(z.c.impl, t->c);
@@ -542,19 +542,19 @@ form GenerateProof(form &y, form &x_init, integer &D, uint64_t done_iterations, 
     mpz_set(t->a, x.a.impl);
     mpz_set(t->b, x.b.impl);
     mpz_set(t->c, x.c.impl);
-    
+
     reducer->run();
-    
+
     mpz_set(x.a.impl, t->a);
     mpz_set(x.b.impl, t->b);
     mpz_set(x.c.impl, t->c);
-    
+
     delete(reducer);
     delete(t);
 #else
     x.reduce();
 #endif
-    
+
     auto t2 = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
     return x;
@@ -581,9 +581,9 @@ Proof CreateProofOfTimeWesolowski(integer& D, form x, int64_t num_iterations, ui
 
     if (stop_signal)
         return Proof();
-    
+
     vdf_original vdfo_proof;
-    
+
     uint64 checkpoint = (done_iterations + num_iterations) - (done_iterations + num_iterations) % 100;
     //mpz_init(y.a.impl);
     //mpz_init(y.b.impl);
@@ -605,19 +605,19 @@ Proof CreateProofOfTimeWesolowski(integer& D, form x, int64_t num_iterations, ui
     return final_proof;
 }
 
-Proof CreateProofOfTimeNWesolowski(integer& D, form x, int64_t num_iterations, 
+Proof CreateProofOfTimeNWesolowski(integer& D, form x, int64_t num_iterations,
                                    uint64_t done_iterations, WesolowskiCallback& weso, int depth_limit, int depth, bool& stop_signal) {
     uint64_t l, k, w;
     int64_t iterations1, iterations2;
     integer L=root(-D, 4);
     form x_init = x;
-    
+
     k = 10;
     w = 2;
     l = (num_iterations >= 10000000) ? 10 : 1;
     iterations1 = num_iterations * w / (w + 1);
-    
-    // NOTE(Florin): This is still suboptimal,  
+
+    // NOTE(Florin): This is still suboptimal,
     // some work can still be lost if weso iterations is in between iterations1 and num_iterations.
     if (weso.iterations >= done_iterations + num_iterations) {
         iterations1 = (done_iterations + num_iterations) / 3;
@@ -631,7 +631,7 @@ Proof CreateProofOfTimeNWesolowski(integer& D, form x, int64_t num_iterations,
     }
 
     if (stop_signal)
-        return Proof();    
+        return Proof();
 
     form y1 = *weso.GetForm(done_iterations + iterations1);
 
@@ -648,7 +648,7 @@ Proof CreateProofOfTimeNWesolowski(integer& D, form x, int64_t num_iterations,
     }
 
     t.join();
-    if (stop_signal)    
+    if (stop_signal)
         return Proof();
     form proof = form_future.get();
 
@@ -666,7 +666,7 @@ Proof CreateProofOfTimeNWesolowski(integer& D, form x, int64_t num_iterations,
     proof_bytes.insert(proof_bytes.end(), tmp.begin(), tmp.end());
     final_proof.proof = proof_bytes;
     return final_proof;
-} 
+}
 
 std::mutex socket_mutex;
 
@@ -678,11 +678,25 @@ void NWesolowskiMain(integer D, form x, int64_t num_iterations, WesolowskiCallba
     }
     std::vector<unsigned char> bytes = ConvertIntegerToBytes(integer(num_iterations), 8);
     bytes.insert(bytes.end(), result.y.begin(), result.y.end());
-    bytes.insert(bytes.end(), result.proof.begin(), result.proof.end());  
-    std::string str_result = BytesToStr(bytes);  
+    bytes.insert(bytes.end(), result.proof.begin(), result.proof.end());
+    std::string str_result = BytesToStr(bytes);
     std::lock_guard<std::mutex> lock(socket_mutex);
-    std::cout << "Generated proof = " << str_result << "\n";
+    std::cout << "VDF server: Generated proof = " << str_result << "\n";
     boost::asio::write(sock, boost::asio::buffer(str_result.c_str(), str_result.size()));
+}
+
+void PollTimelord(tcp::socket& sock, bool& got_iters) {
+    // Wait for 60s, if no iters come, poll each 15 seconds the timelord.
+    int seconds = 0;
+    while (!got_iters) {
+        std::this_thread::sleep_for (std::chrono::seconds(1));
+        seconds++;
+        if (seconds >= 60 && (seconds - 60) % 15 == 0) {
+            socket_mutex.lock();
+            boost::asio::write(sock, boost::asio::buffer("POLL", 4));
+            socket_mutex.unlock();
+        }
+    }
 }
 
 const int max_length = 2048;
@@ -695,7 +709,7 @@ void session(tcp::socket sock) {
 
         memset(disc,0x00,sizeof(disc)); // For null termination
         memset(disc_size,0x00,sizeof(disc_size)); // For null termination
-        
+
         boost::asio::read(sock, boost::asio::buffer(disc_size, 3), error);
         int disc_int_size = atoi(disc_size);
 
@@ -734,20 +748,22 @@ void session(tcp::socket sock) {
 
         std::vector<std::thread> threads;
         WesolowskiCallback weso(1000000);
-        
+
         //mpz_init(weso.forms[0].a.impl);
         //mpz_init(weso.forms[0].b.impl);
         //mpz_init(weso.forms[0].c.impl);
-        
+
         forms[0]=f;
         weso.D = D;
         weso.L = L;
         weso.kl = 10;
 
         bool stopped = false;
+        bool got_iters = false;
         std::thread vdf_worker(repeated_square, f, D, L, std::ref(weso), std::ref(stopped));
+        std::thread poll_thread(PollTimelord, std::ref(sock), std::ref(got_iters));
 
-        // Tell client that I'm ready to get the challenges. 
+        // Tell client that I'm ready to get the challenges.
         boost::asio::write(sock, boost::asio::buffer("OK", 2));
         char data[10];
 
@@ -759,6 +775,7 @@ void session(tcp::socket sock) {
             boost::asio::read(sock, boost::asio::buffer(data, size), error);
             int iters = atoi(data);
             std::cout << "Got iterations " << iters << "\n";
+            got_iters = true;
             if (seen_iterations.size() > 0 && *seen_iterations.begin() <= iters) {
                 std::cout << "Ignoring..." << iters << "\n";
                 continue;
@@ -771,6 +788,7 @@ void session(tcp::socket sock) {
 
             if (iters == 0) {
                 stopped = true;
+                poll_thread.join();
                 for (int t = 0; t < threads.size(); t++) {
                     threads[t].join();
                 }
@@ -778,7 +796,7 @@ void session(tcp::socket sock) {
             } else {
                 if (seen_iterations.find(iters) == seen_iterations.end()) {
                     seen_iterations.insert(iters);
-                    threads.push_back(std::thread(NWesolowskiMain, D, f, iters, std::ref(weso), std::ref(stopped), 
+                    threads.push_back(std::thread(NWesolowskiMain, D, f, iters, std::ref(weso), std::ref(stopped),
                                                   std::ref(sock)));
                 }
             }
@@ -808,7 +826,7 @@ void server(boost::asio::io_context& io_context, unsigned short port)
 }
 
 int main(int argc, char* argv[])
-{ 
+{
   forms.reserve(1000000);
   for (int i = 0; i < 1000000; i++) {
       mpz_inits(forms[i].a.impl, forms[i].b.impl, forms[i].c.impl, NULL);

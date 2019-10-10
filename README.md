@@ -24,6 +24,7 @@ pip install lib/chiapos
 Run the servers in the following order (you can also use ipython):
 ```bash
 ./lib/chiavdf/fast_vdf/vdf 8889
+./lib/chiavdf/fast_vdf/vdf 8890
 python -m src.server.start_plotter
 python -m src.server.start_timelord
 python -m src.server.start_farmer
