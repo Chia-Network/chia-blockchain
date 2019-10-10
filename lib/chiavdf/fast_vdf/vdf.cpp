@@ -685,6 +685,20 @@ void NWesolowskiMain(integer D, form x, int64_t num_iterations, WesolowskiCallba
     boost::asio::write(sock, boost::asio::buffer(str_result.c_str(), str_result.size()));
 }
 
+void PollTimelord(tcp::socket& sock, bool& got_iters) {
+    // Wait for 60s, if no iters come, poll each 15 seconds the timelord.
+    int seconds = 0;
+    while (!got_iters) {
+        std::this_thread::sleep_for (std::chrono::seconds(1));
+        seconds++;
+        if (seconds >= 60 && (seconds - 60) % 15 == 0) {
+            socket_mutex.lock();
+            boost::asio::write(sock, boost::asio::buffer("POLL", 4));
+            socket_mutex.unlock();
+        }
+    }
+}
+
 const int max_length = 2048;
 
 void session(tcp::socket sock) {
@@ -745,7 +759,9 @@ void session(tcp::socket sock) {
         weso.kl = 10;
 
         bool stopped = false;
+        bool got_iters = false;
         std::thread vdf_worker(repeated_square, f, D, L, std::ref(weso), std::ref(stopped));
+        std::thread poll_thread(PollTimelord, std::ref(sock), std::ref(got_iters));
 
         // Tell client that I'm ready to get the challenges. 
         boost::asio::write(sock, boost::asio::buffer("OK", 2));
@@ -759,6 +775,7 @@ void session(tcp::socket sock) {
             boost::asio::read(sock, boost::asio::buffer(data, size), error);
             int iters = atoi(data);
             std::cout << "Got iterations " << iters << "\n";
+            got_iters = true;
             if (seen_iterations.size() > 0 && *seen_iterations.begin() <= iters) {
                 std::cout << "Ignoring..." << iters << "\n";
                 continue;
@@ -771,6 +788,7 @@ void session(tcp::socket sock) {
 
             if (iters == 0) {
                 stopped = true;
+                poll_thread.join();
                 for (int t = 0; t < threads.size(); t++) {
                     threads[t].join();
                 }
