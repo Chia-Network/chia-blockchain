@@ -5,6 +5,14 @@ __pycache__/
 
 # C extensions
 *.so
+**/*.o
+**/*.DS_Store
+
+# VDF executables
+lib/chiavdf/fast_vdf/compile_asm
+lib/chiavdf/fast_vdf/vdf
+# Flint dependency
+lib/chiavdf/fast_vdf/flint
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

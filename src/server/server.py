@@ -197,19 +197,19 @@ async def initialize_pipeline(aiter,
     handshake_finished_3 = forker.fork(is_active=True)
 
     # Reads messages one at a time from the TCP connection
-    messages_aiter = join_aiters(parallel_map_aiter(connection_to_message, 100, handshake_finished_1))
+    messages_aiter = join_aiters(parallel_map_aiter(connection_to_message, handshake_finished_1, 100))
 
     # Handles each message one at a time, and yields responses to send back or broadcast
     responses_aiter = join_aiters(parallel_map_aiter(
         partial_func.partial_async_gen(handle_message, api),
-        100, messages_aiter))
+        messages_aiter, 100))
 
     if on_connect is not None:
         # Uses a forked aiter, and calls the on_connect function to send some initial messages
         # as soon as the connection is established
 
         on_connect_outbound_aiter = join_aiters(parallel_map_aiter(
-            partial_func.partial_async_gen(connection_to_outbound, on_connect), 100, handshake_finished_2))
+            partial_func.partial_async_gen(connection_to_outbound, on_connect), handshake_finished_2, 100))
 
         responses_aiter = join_aiters(iter_to_aiter([responses_aiter, on_connect_outbound_aiter]))
     if outbound_aiter is not None:
@@ -220,7 +220,7 @@ async def initialize_pipeline(aiter,
 
     # For each outbound message, replicate for each peer that we need to send to
     expanded_messages_aiter = join_aiters(parallel_map_aiter(
-        expand_outbound_messages, 100, responses_aiter))
+        expand_outbound_messages, responses_aiter, 100))
 
     # This will run forever. Sends each message through the TCP connection, using the
     # length encoding and CBOR serialization
