@@ -8,6 +8,11 @@ Python 3.7 is used for this project.
 sudo apt-get install build-essential cmake python3-dev --no-install-recommends
 
 git submodule update --init --recursive
+
+cd lib/chiavdf
+# Install libgmp, libboost, and libflint, and then run the following
+sh install.sh
+
 python3 -m venv .venv
 . .venv/bin/activate
 pip install wheel
@@ -18,6 +23,8 @@ pip install lib/chiapos
 ### Run servers
 Run the servers in the following order (you can also use ipython):
 ```bash
+./lib/chiavdf/fast_vdf/vdf 8889
+./lib/chiavdf/fast_vdf/vdf 8890
 python -m src.server.start_plotter
 python -m src.server.start_timelord
 python -m src.server.start_farmer
