@@ -1,7 +1,7 @@
-from src.consensus.constants import constants
 import time
 import pytest
 from blspy import PrivateKey
+from src.consensus.constants import constants
 from src.types.coinbase import CoinbaseInfo
 from src.types.block_body import BlockBody
 from src.types.proof_of_space import ProofOfSpace
@@ -15,6 +15,17 @@ from tests.block_tools import BlockTools
 
 
 bt = BlockTools()
+
+test_constants = {
+    "DIFFICULTY_STARTING": 5,
+    "DISCRIMINANT_SIZE_BITS": 16,
+    "BLOCK_TIME_TARGET": 10,
+    "MIN_BLOCK_TIME": 2,
+    "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
+    "DIFFICULTY_WARP_FACTOR": 4,  # DELAY divides EPOCH in order to warp efficiently.
+    "DIFFICULTY_DELAY": 3  # EPOCH / WARP_FACTOR
+}
+test_constants["GENESIS_BLOCK"] = bt.create_genesis_block(test_constants, bytes([0]*32), uint64(0)).serialize()
 
 
 class TestGenesisBlock():
@@ -34,12 +45,8 @@ class TestBlockValidation():
         """
         Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
         """
-        blocks = bt.get_consecutive_blocks(10, 5, 16)
-        b: Blockchain = Blockchain({
-            "GENESIS_BLOCK": blocks[0].serialize(),
-            "DIFFICULTY_STARTING": 5,
-            "DISCRIMINANT_SIZE_BITS": 16
-        })
+        blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
+        b: Blockchain = Blockchain(test_constants)
         for i in range(1, 9):
             assert b.receive_block(blocks[i]) == ReceiveBlockResult.ADDED_TO_HEAD
         return (blocks, b)
@@ -166,26 +173,16 @@ class TestBlockValidation():
     def test_difficulty_change(self):
         num_blocks = 20
         # Make it 5x faster than target time
-        blocks = bt.get_consecutive_blocks(num_blocks, 5, 16, 1, [])
-        b: Blockchain = Blockchain({
-            "GENESIS_BLOCK": blocks[0].serialize(),
-            "DIFFICULTY_STARTING": 5,
-            "DISCRIMINANT_SIZE_BITS": 16,
-            "BLOCK_TIME_TARGET": 10,
-            "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
-            "DIFFICULTY_WARP_FACTOR": 4,  # DELAY divides EPOCH in order to warp efficiently.
-            "DIFFICULTY_DELAY": 3  # EPOCH / WARP_FACTOR
-        })
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 2)
 
+        b: Blockchain = Blockchain(test_constants)
         for i in range(1, num_blocks):
-            # print(f"Adding {i}")
             assert b.receive_block(blocks[i]) == ReceiveBlockResult.ADDED_TO_HEAD
-
         assert b.get_next_difficulty(blocks[13].header_hash) == b.get_next_difficulty(blocks[12].header_hash)
         assert b.get_next_difficulty(blocks[14].header_hash) > b.get_next_difficulty(blocks[13].header_hash)
         assert ((b.get_next_difficulty(blocks[14].header_hash) / b.get_next_difficulty(blocks[13].header_hash)
                  <= constants["DIFFICULTY_FACTOR"]))
-        assert blocks[-1].trunk_block.challenge.total_iters == 176091
+        assert blocks[-1].trunk_block.challenge.total_iters == 142911
 
         assert b.get_next_ips(blocks[1].header_hash) == constants["VDF_IPS_STARTING"]
         assert b.get_next_ips(blocks[12].header_hash) == b.get_next_ips(blocks[11].header_hash)
@@ -196,22 +193,14 @@ class TestBlockValidation():
 
 class TestReorgs():
     def test_basic_reorg(self):
-        blocks = bt.get_consecutive_blocks(100, 5, 16, 9, [], 0)
-        b: Blockchain = Blockchain({
-            "GENESIS_BLOCK": blocks[0].serialize(),
-            "DIFFICULTY_STARTING": 5,
-            "DISCRIMINANT_SIZE_BITS": 16,
-            "BLOCK_TIME_TARGET": 10,
-            "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
-            "DIFFICULTY_WARP_FACTOR": 4,  # DELAY divides EPOCH in order to warp efficiently.
-            "DIFFICULTY_DELAY": 3  # EPOCH / WARP_FACTOR
-        })
+        blocks = bt.get_consecutive_blocks(test_constants, 100, [], 9)
+        b: Blockchain = Blockchain(test_constants)
 
         for block in blocks:
             b.receive_block(block)
         assert b.get_current_heads()[0].height == 100
 
-        blocks_reorg_chain = bt.get_consecutive_blocks(30, 5, 16, 9, blocks[:90], 1)
+        blocks_reorg_chain = bt.get_consecutive_blocks(test_constants, 30, blocks[:90], 9, uint64(1))
         for reorg_block in blocks_reorg_chain:
             result = b.receive_block(reorg_block)
             if reorg_block.height < 90:
@@ -223,23 +212,15 @@ class TestReorgs():
         assert b.get_current_heads()[0].height == 119
 
     def test_reorg_from_genesis(self):
-        blocks = bt.get_consecutive_blocks(20, 5, 16, 9, [], 0)
+        blocks = bt.get_consecutive_blocks(test_constants, 20, [], 9, uint64(0))
 
-        b: Blockchain = Blockchain({
-            "GENESIS_BLOCK": blocks[0].serialize(),
-            "DIFFICULTY_STARTING": 5,
-            "DISCRIMINANT_SIZE_BITS": 16,
-            "BLOCK_TIME_TARGET": 10,
-            "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
-            "DIFFICULTY_WARP_FACTOR": 4,  # DELAY divides EPOCH in order to warp efficiently.
-            "DIFFICULTY_DELAY": 3  # EPOCH / WARP_FACTOR
-        })
+        b: Blockchain = Blockchain(test_constants)
         for block in blocks:
             b.receive_block(block)
         assert b.get_current_heads()[0].height == 20
 
         # Reorg from genesis
-        blocks_reorg_chain = bt.get_consecutive_blocks(21, 5, 16, 9, [blocks[0]], 1)
+        blocks_reorg_chain = bt.get_consecutive_blocks(test_constants, 21, [blocks[0]], 9, uint64(1))
         for reorg_block in blocks_reorg_chain:
             result = b.receive_block(reorg_block)
             if reorg_block.height == 0:
@@ -251,7 +232,7 @@ class TestReorgs():
         assert b.get_current_heads()[0].height == 21
 
         # Reorg back to original branch
-        blocks_reorg_chain_2 = bt.get_consecutive_blocks(3, 5, 16, 9, blocks, 3)
+        blocks_reorg_chain_2 = bt.get_consecutive_blocks(test_constants, 3, blocks, 9, uint64(3))
         b.receive_block(blocks_reorg_chain_2[20]) == ReceiveBlockResult.ADDED_AS_ORPHAN
         assert b.receive_block(blocks_reorg_chain_2[21]) == ReceiveBlockResult.ADDED_TO_HEAD
         assert b.receive_block(blocks_reorg_chain_2[22]) == ReceiveBlockResult.ADDED_TO_HEAD

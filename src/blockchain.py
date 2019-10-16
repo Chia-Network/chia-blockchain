@@ -4,7 +4,7 @@ from enum import Enum
 import time
 import blspy
 from typing import List, Dict, Optional, Tuple
-from src.util.errors import BlockNotInBlockchain
+from src.util.errors import BlockNotInBlockchain, InvalidGenesisBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64, uint32
 from src.types.trunk_block import TrunkBlock
@@ -34,6 +34,7 @@ class ReceiveBlockResult(Enum):
 
 class Blockchain:
     def __init__(self, override_constants: Dict = {}):
+        print(consensus_constants["DIFFICULTY_STARTING"])
         # Allow passing in custom overrides for any consesus parameters
         self.constants: Dict = consensus_constants
         for key, value in override_constants.items():
@@ -45,7 +46,8 @@ class Blockchain:
         self.height_to_hash: Dict[uint64, bytes32] = {}
         self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
         result = self.receive_block(self.genesis)
-        assert result == ReceiveBlockResult.ADDED_TO_HEAD
+        if result != ReceiveBlockResult.ADDED_TO_HEAD:
+            raise InvalidGenesisBlock()
 
         # For blocks with height % constants["DIFFICULTY_DELAY"] == 1, a link to the hash of
         # the (constants["DIFFICULTY_DELAY"])-th parent of this block
@@ -237,7 +239,9 @@ class Blockchain:
             challenge_hash = block.trunk_block.proof_of_time.output.challenge_hash
             difficulty = self.get_next_difficulty(header_hash)
             iterations = block.trunk_block.challenge.total_iters - prev_block.trunk_block.challenge.total_iters
-            return calculate_ips_from_iterations(proof_of_space, challenge_hash, difficulty, iterations)
+            # print(f"secon {self.constants[]}")
+            return calculate_ips_from_iterations(proof_of_space, challenge_hash, difficulty, iterations,
+                                                 self.constants["MIN_BLOCK_TIME"])
 
         # ips (along with difficulty) will change in this block, so we need to calculate the new one.
         # The calculation is (iters_2 - iters_1) // (timestamp_2 - timestamp_1).
@@ -307,7 +311,6 @@ class Blockchain:
         (except for proof of time). The same as validate_block, but without proof of time
         and challenge validation.
         """
-
         # 1. Check previous pointer(s) / flyclient
         if not genesis and block.prev_header_hash not in self.blocks:
             return False
@@ -408,7 +411,7 @@ class Blockchain:
             block.trunk_block.proof_of_time.output.challenge_hash)
 
         number_of_iters: uint64 = calculate_iterations_quality(pos_quality, block.trunk_block.proof_of_space.size,
-                                                               difficulty, ips)
+                                                               difficulty, ips, self.constants["MIN_BLOCK_TIME"])
 
         if number_of_iters != block.trunk_block.proof_of_time.output.number_of_iterations:
             return False

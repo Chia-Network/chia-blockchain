@@ -3,4 +3,9 @@ port: 8003
 
 # How much recursion to use for the wesolowski VDF proof. This increases the size
 # of the proofs.
-n_wesolowski: 3
+n_wesolowski: 2
+
+# VDF servers must be started locally on these ports.
+vdf_server_ports:
+  - 8889
+  - 8890

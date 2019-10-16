@@ -1,7 +1,6 @@
 from src.util.ints import uint64, uint8
 from src.types.sized_bytes import bytes32
 from src.types.proof_of_space import ProofOfSpace
-from src.consensus.constants import constants
 from decimal import getcontext, Decimal, ROUND_UP
 
 # Sets a high precision so we can convert a 256 bit has to a decimal, and
@@ -37,13 +36,13 @@ def _quality_to_decimal(quality: bytes32) -> Decimal:
 
 
 def calculate_iterations_quality(quality: bytes32, size: uint8, difficulty: uint64,
-                                 vdf_ips: uint64) -> uint64:
+                                 vdf_ips: uint64, min_block_time: uint64) -> uint64:
     """
     Calculates the number of iterations from the quality. The quality is converted to a number
     between 0 and 1, then divided by expected plot size, and finally multiplied by the
     difficulty.
     """
-    min_iterations = constants["MIN_BLOCK_TIME"] * vdf_ips
+    min_iterations = min_block_time * vdf_ips
     dec_iters = (Decimal(int(difficulty) << 32) *
                  (_quality_to_decimal(quality) / _expected_plot_size(size)))
     iters_final = uint64(min_iterations + dec_iters.to_integral_exact(rounding=ROUND_UP))
@@ -52,17 +51,17 @@ def calculate_iterations_quality(quality: bytes32, size: uint8, difficulty: uint
 
 
 def calculate_iterations(proof_of_space: ProofOfSpace, challenge_hash: bytes32,
-                         difficulty: uint64, vdf_ips: uint64) -> uint64:
+                         difficulty: uint64, vdf_ips: uint64, min_block_time: uint64) -> uint64:
     """
     Convenience function to calculate the number of iterations using the proof instead
     of the quality. The quality must be retrieved from the proof.
     """
     quality: bytes32 = proof_of_space.verify_and_get_quality(challenge_hash)
-    return calculate_iterations_quality(quality, proof_of_space.size, difficulty, vdf_ips)
+    return calculate_iterations_quality(quality, proof_of_space.size, difficulty, vdf_ips, min_block_time)
 
 
 def calculate_ips_from_iterations(proof_of_space: ProofOfSpace, challenge_hash: bytes32,
-                                  difficulty: uint64, iterations: uint64) -> uint64:
+                                  difficulty: uint64, iterations: uint64, min_block_time: uint64) -> uint64:
     """
     Using the total number of iterations on a block (which is encoded in the block) along with
     other details, we can calculate the VDF speed (iterations per second) used to compute the
@@ -73,7 +72,7 @@ def calculate_ips_from_iterations(proof_of_space: ProofOfSpace, challenge_hash: 
                  (_quality_to_decimal(quality) / _expected_plot_size(proof_of_space.size)))
     iters_rounded = int(dec_iters.to_integral_exact(rounding=ROUND_UP))
     min_iterations = uint64(iterations - iters_rounded)
-    ips = min_iterations / constants["MIN_BLOCK_TIME"]
+    ips = min_iterations / min_block_time
     assert ips >= 1
     assert uint64(ips) == ips
     return uint64(ips)

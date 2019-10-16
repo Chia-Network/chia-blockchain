@@ -13,11 +13,18 @@ python3 -m venv .venv
 pip install wheel
 pip install .
 pip install lib/chiapos
+
+cd lib/chiavdf/fast_vdf
+# Install libgmp, libboost, and libflint, and then run the following
+sh install.sh
 ```
 
 ### Run servers
+When running the servers on Mac OS, allow the application to accept incoming connections.
 Run the servers in the following order (you can also use ipython):
 ```bash
+./lib/chiavdf/fast_vdf/vdf 8889
+./lib/chiavdf/fast_vdf/vdf 8890
 python -m src.server.start_plotter
 python -m src.server.start_timelord
 python -m src.server.start_farmer
