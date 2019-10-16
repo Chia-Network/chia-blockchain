@@ -35,7 +35,8 @@ class TestPotIterations():
         for b_index in range(total_blocks):
             qualities = [sha256(b_index.to_bytes(32, "big") + bytes(farmer_index)).digest()
                          for farmer_index in range(len(farmer_ks))]
-            iters = [calculate_iterations_quality(qualities[i], farmer_ks[i], uint64(50000000), uint64(5000))
+            iters = [calculate_iterations_quality(qualities[i], farmer_ks[i], uint64(50000000),
+                                                  uint64(5000), uint64(10))
                      for i in range(len(qualities))]
             # print(iters)
             wins[iters.index(min(iters))] += 1

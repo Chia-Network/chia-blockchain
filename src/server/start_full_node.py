@@ -8,7 +8,10 @@ from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
 
 
-logging.basicConfig(format='FullNode %(name)-23s: %(levelname)-8s %(message)s', level=logging.INFO)
+logging.basicConfig(format='FullNode %(name)-23s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s',
+                    level=logging.INFO,
+                    datefmt='%H:%M:%S'
+                    )
 log = logging.getLogger(__name__)
 
 """

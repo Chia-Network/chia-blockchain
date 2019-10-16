@@ -1,6 +1,3 @@
-# How often to update our current estimate of VDF speed, in seconds
-update_pot_estimate_interval: 30
-
 # Don't send any more than these number of trunks and blocks, in one message
 max_trunks_to_send: 100
 max_blocks_to_send: 10

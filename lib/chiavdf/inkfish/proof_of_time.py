@@ -81,7 +81,7 @@ def create_proof_of_time_nwesolowski(discriminant, x, iterations,
     proof = ClassGroup.from_bytes(receive_con.recv_bytes(), discriminant)
     p.join()
 
-    return y_2, proof_2 + serialize_proof([y_1, proof])
+    return y_2, proof_2 + iterations_1.to_bytes(8, byteorder="big") + serialize_proof([y_1, proof])
 
 
 def create_proof_of_time_pietrzak(discriminant, x, iterations, int_size_bits):
@@ -115,9 +115,21 @@ def check_proof_of_time_wesolowski(discriminant, x, proof_blob,
     except Exception:
         return False
 
-
 def check_proof_of_time_nwesolowski(discriminant, x, proof_blob,
                                     iterations, int_size_bits, recursion):
+    int_size = (int_size_bits + 16) >> 4
+    new_proof_blob = proof_blob[:4 * int_size]
+    iter_list = []
+    for i in range(4 * int_size, len(proof_blob), 4 * int_size + 8):
+        iter_list.append(int.from_bytes(proof_blob[i : (i + 8)], byteorder="big"))
+        new_proof_blob = new_proof_blob + proof_blob[(i + 8): (i + 8 + 4 * int_size)]
+
+    return check_proof_of_time_nwesolowski_inner(discriminant, x, new_proof_blob,
+                                    iterations, int_size_bits, iter_list, recursion)
+    
+
+def check_proof_of_time_nwesolowski_inner(discriminant, x, proof_blob,
+                                    iterations, int_size_bits, iter_list, recursion):
     """
     Recursive verification function for nested wesolowski. The proof blob
     includes the output of the VDF, along with the proof. The following
@@ -145,14 +157,14 @@ def check_proof_of_time_nwesolowski(discriminant, x, proof_blob,
             assert(len(proof) % 2 == 1 and len(proof) > 2)
             _, _, w = proof_wesolowski.approximate_parameters(iterations)
 
-            iterations_1 = (iterations * w) // (w + 1)
+            iterations_1 = iter_list[-1]
             iterations_2 = iterations - iterations_1
 
             ver_outer = proof_wesolowski.verify_proof(x, proof[-2],
                                                       proof[-1], iterations_1)
-            return ver_outer and check_proof_of_time_nwesolowski(discriminant, proof[-2],
+            return ver_outer and check_proof_of_time_nwesolowski_inner(discriminant, proof[-2],
                                                                  serialize_proof([y] + proof[:-2]),
-                                                                 iterations_2, int_size_bits, recursion-1)
+                                                                 iterations_2, int_size_bits, iter_list[:-1], recursion-1)
 
     except Exception:
         return False

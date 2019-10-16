@@ -47,3 +47,8 @@ class InvalidWeight(Exception):
 class InvalidUnfinishedBlock(Exception):
     """The unfinished block we received is invalid"""
     pass
+
+
+class InvalidGenesisBlock(Exception):
+    """Genesis block is not valid according to the consensus constants and rules"""
+    pass
