@@ -34,7 +34,6 @@ class ReceiveBlockResult(Enum):
 
 class Blockchain:
     def __init__(self, override_constants: Dict = {}):
-        print(consensus_constants["DIFFICULTY_STARTING"])
         # Allow passing in custom overrides for any consesus parameters
         self.constants: Dict = consensus_constants
         for key, value in override_constants.items():
@@ -48,10 +47,6 @@ class Blockchain:
         result = self.receive_block(self.genesis)
         if result != ReceiveBlockResult.ADDED_TO_HEAD:
             raise InvalidGenesisBlock()
-
-        # For blocks with height % constants["DIFFICULTY_DELAY"] == 1, a link to the hash of
-        # the (constants["DIFFICULTY_DELAY"])-th parent of this block
-        self.header_warp: Dict[bytes32, bytes32] = {}
 
     def get_current_heads(self) -> List[TrunkBlock]:
         """
@@ -237,9 +232,8 @@ class Blockchain:
                 raise Exception("Previous block is invalid.")
             proof_of_space = block.trunk_block.proof_of_space
             challenge_hash = block.trunk_block.proof_of_time.output.challenge_hash
-            difficulty = self.get_next_difficulty(header_hash)
+            difficulty = self.get_next_difficulty(prev_block.header_hash)
             iterations = block.trunk_block.challenge.total_iters - prev_block.trunk_block.challenge.total_iters
-            # print(f"secon {self.constants[]}")
             return calculate_ips_from_iterations(proof_of_space, challenge_hash, difficulty, iterations,
                                                  self.constants["MIN_BLOCK_TIME"])
 
@@ -287,6 +281,10 @@ class Blockchain:
         return uint64((iters2 - iters1) // (timestamp2 - timestamp1))
 
     def receive_block(self, block: FullBlock) -> ReceiveBlockResult:
+        """
+        Adds a new block into the blockchain, if it's valid and connected to the current
+        blockchain, regardless of whether it is the child of a head, or another block.
+        """
         genesis: bool = block.height == 0 and len(self.heads) == 0
 
         if block.header_hash in self.blocks:
@@ -505,7 +503,6 @@ class Blockchain:
             while len(self.heads) > self.constants["NUMBER_OF_HEADS"]:
                 self.heads.sort(key=lambda b: b.weight, reverse=True)
                 self.heads.pop()
-            log.info(f"\tUpdated heads, new heights: {[b.height for b in self.heads]}")
             self._reconsider_lca()
             return True
         return False

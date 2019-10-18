@@ -16,10 +16,7 @@ class FullBlock:
 
     @property
     def height(self) -> uint32:
-        if (self.trunk_block.challenge):
-            return self.trunk_block.challenge.height
-        else:
-            return uint32(0)
+        return self.body.coinbase.height
 
     @property
     def weight(self) -> uint64:

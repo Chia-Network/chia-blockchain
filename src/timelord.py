@@ -43,7 +43,6 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
     a new VDF process here. But we don't know how many iterations to run for, so we run
     forever.
     """
-
     disc: int = create_discriminant(challenge_start.challenge_hash, constants["DISCRIMINANT_SIZE_BITS"])
     async with db.lock:
         if (challenge_start.challenge_hash in db.seen_discriminants):
@@ -66,8 +65,8 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
                 if (len(db.free_servers) != 0):
                     port = db.free_servers[0]
                     db.free_servers = db.free_servers[1:]
-                    log.info(f"Discriminant {disc} attached to port {port}.")
-                    log.info(f"Height attached is {challenge_start.height}")
+                    log.info(f"Discriminant {str(disc)[:10]}... attached to port {port}.")
+                    log.info(f"Challenge/Height attached is {challenge_start}")
                     db.active_heights.remove(challenge_start.height)
 
         # Poll until a server becomes free.
@@ -75,11 +74,17 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
             await asyncio.sleep(0.1)
 
     # TODO(Florin): Handle connection failure (attempt another server)
-    try:
-        reader, writer = await asyncio.open_connection('127.0.0.1', port)
-    except Exception as e:
-        e_to_str = str(e)
-        log.error(f"Connection to VDF server error message: {e_to_str}")
+    writer, reader = None, None
+    for _ in range(10):
+        try:
+            reader, writer = await asyncio.open_connection('127.0.0.1', port)
+            break
+        except Exception as e:
+            e_to_str = str(e)
+            log.error(f"Connection to VDF server error message: {e_to_str}")
+        await asyncio.sleep(5)
+    if not writer:
+        raise Exception("Unable to connect to VDF server")
 
     writer.write((str(len(str(disc))) + str(disc)).encode())
     await writer.drain()
@@ -96,6 +101,7 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
     async with db.lock:
         if (challenge_start.challenge_hash in db.pending_iters):
             for iter in db.pending_iters[challenge_start.challenge_hash]:
+                log.info(f"Writing pending iters {challenge_start.challenge_hash}")
                 writer.write((str(len(str(iter))) + str(iter)).encode())
                 await writer.drain()
 
@@ -180,15 +186,19 @@ async def proof_of_space_info(proof_of_space_info: timelord_protocol.ProofOfSpac
     many iterations to run for.
     """
 
+    log.info(f"Got Pos info {proof_of_space_info}")
     async with db.lock:
         if (proof_of_space_info.challenge_hash in db.active_discriminants):
             writer = db.active_discriminants[proof_of_space_info.challenge_hash]
             writer.write(((str(len(str(proof_of_space_info.iterations_needed))) +
                           str(proof_of_space_info.iterations_needed)).encode()))
             await writer.drain()
+            print("Wrote")
             return
-        if (proof_of_space_info.challenge_hash in db.done_discriminants):
+        elif (proof_of_space_info.challenge_hash in db.done_discriminants):
+            print("ALready done")
             return
-        if (proof_of_space_info.challenge_hash not in db.pending_iters):
+        elif (proof_of_space_info.challenge_hash not in db.pending_iters):
             db.pending_iters[proof_of_space_info.challenge_hash] = []
+        print("Set to pending")
         db.pending_iters[proof_of_space_info.challenge_hash].append(proof_of_space_info.iterations_needed)
