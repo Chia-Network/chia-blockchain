@@ -8,7 +8,10 @@ from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
 
 
-logging.basicConfig(format='FullNode %(name)-23s: %(levelname)-8s %(message)s', level=logging.INFO)
+logging.basicConfig(format='FullNode %(name)-23s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s',
+                    level=logging.INFO,
+                    datefmt='%H:%M:%S'
+                    )
 log = logging.getLogger(__name__)
 
 """
@@ -72,9 +75,6 @@ async def main():
             waitable_tasks.append(timelord_con_task)
         except asyncio.CancelledError:
             log.warning("Connection to timelord failed.")
-
-    # Periodically update our estimate of proof of time speeds
-    asyncio.create_task(full_node.proof_of_time_estimate_interval())
 
     await asyncio.gather(*waitable_tasks)
 

@@ -8,7 +8,7 @@ from secrets import token_bytes
 from hashlib import sha256
 from chiapos import Verifier
 from blspy import Signature, PrivateKey
-from asyncio import Lock, sleep, Event
+from asyncio import Lock, Event
 from typing import Dict, List, Tuple, Optional, AsyncGenerator, Counter
 from src.util.api_decorators import api_request
 from src.util.ints import uint64, uint32
@@ -82,7 +82,10 @@ async def send_heads_to_farmers() -> AsyncGenerator[OutboundMessage, None]:
             challenge_hash = head.challenge.get_hash()
             height = head.challenge.height
             quality = head.proof_of_space.verify_and_get_quality(prev_challenge_hash)
-            difficulty: uint64 = db.blockchain.get_difficulty(head.header.get_hash())
+            if head.height > 0:
+                difficulty: uint64 = db.blockchain.get_next_difficulty(head.prev_header_hash)
+            else:
+                difficulty = head.weight
             requests.append(farmer_protocol.ProofOfSpaceFinalized(challenge_hash, height,
                                                                   quality, difficulty))
         proof_of_time_rate: uint64 = db.proof_of_time_estimate_ips
@@ -103,19 +106,6 @@ async def send_challenges_to_timelords() -> AsyncGenerator[OutboundMessage, None
             requests.append(timelord_protocol.ChallengeStart(challenge_hash, head.challenge.height))
     for request in requests:
         yield OutboundMessage(NodeType.TIMELORD, Message("challenge_start", request), Delivery.BROADCAST)
-
-
-async def proof_of_time_estimate_interval():
-    """
-    Periodic function that updates our estimate of the PoT rate, based on the last few blocks.
-    """
-    while True:
-        estimated_ips: Optional[uint64] = db.blockchain.get_vdf_rate_estimate()
-        async with db.lock:
-            if estimated_ips is not None:
-                db.proof_of_time_estimate_ips = estimated_ips
-                log.info(f"Updated proof of time estimate to {estimated_ips} iterations per second.")
-        await sleep(config['update_pot_estimate_interval'])
 
 
 async def on_connect() -> AsyncGenerator[OutboundMessage, None]:
@@ -224,7 +214,7 @@ async def sync():
                     await asyncio.wait_for(db.potential_blocks_received[uint32(height)].wait(), timeout=2)
                     found = True
                     break
-                except concurrent.futures._base.TimeoutError:
+                except concurrent.futures.TimeoutError:
                     log.info("Did not receive desired block")
             if not found:
                 raise PeersDontHaveBlock(f"Did not receive desired block at height {height}")
@@ -240,6 +230,7 @@ async def sync():
             log.info(f"Took {time.time() - start}")
             assert max([h.challenge.height for h in db.blockchain.get_current_heads()]) >= height
             db.full_blocks[block.trunk_block.header.get_hash()] = block
+            db.proof_of_time_estimate_ips = db.blockchain.get_next_ips(block.header_hash)
 
     async with db.lock:
         log.info(f"Finished sync up to height {tip_height}")
@@ -502,32 +493,40 @@ async def unfinished_block(unfinished_block: peer_protocol.UnfinishedBlock) -> A
         challenge_hash: bytes32 = prev_block.challenge.get_hash()
         difficulty: uint64 = db.blockchain.get_next_difficulty(
             unfinished_block.block.trunk_block.prev_header_hash)
+        vdf_ips: uint64 = db.blockchain.get_next_ips(
+            unfinished_block.block.trunk_block.prev_header_hash)
 
         iterations_needed: uint64 = calculate_iterations(unfinished_block.block.trunk_block.proof_of_space,
-                                                         challenge_hash, difficulty)
+                                                         challenge_hash, difficulty, vdf_ips,
+                                                         constants["MIN_BLOCK_TIME"])
 
         if (challenge_hash, iterations_needed) in db.unfinished_blocks:
-            log.info(f"\tHave already seen unfinished block {(challenge_hash, iterations_needed)}")
             return
 
     expected_time: uint64 = uint64(iterations_needed / db.proof_of_time_estimate_ips)
 
     if expected_time > constants["PROPAGATION_DELAY_THRESHOLD"]:
+        log.info("Block is slow, waiting")
         # If this block is slow, sleep to allow faster blocks to come out first
         await asyncio.sleep(2)
 
     async with db.lock:
         if unfinished_block.block.height > db.unfinished_blocks_leader[0]:
+            log.info(f"This is the first block at height {unfinished_block.block.height}, so propagate.")
             # If this is the first block we see at this height, propagate
             db.unfinished_blocks_leader = (unfinished_block.block.height, expected_time)
         elif unfinished_block.block.height == db.unfinished_blocks_leader[0]:
+            log.info(f"Same height {unfinished_block.block.height} as leader")
             if expected_time > db.unfinished_blocks_leader[1] + constants["PROPAGATION_THRESHOLD"]:
                 # If VDF is expected to finish X seconds later than the best, don't propagate
+                log.info(f"VDF will finish too late, retuning")
                 return
             elif expected_time < db.unfinished_blocks_leader[1]:
+                log.info(f"Setting new leader")
                 # If this will be the first block to finalize, update our leader
                 db.unfinished_blocks_leader = (db.unfinished_blocks_leader[0], expected_time)
         else:
+            log.info(f"Unfinished block at old height, returning")
             # If we have seen an unfinished block at a greater or equal height, don't propagate
             # TODO: should we?
             return
@@ -535,6 +534,7 @@ async def unfinished_block(unfinished_block: peer_protocol.UnfinishedBlock) -> A
         db.unfinished_blocks[(challenge_hash, iterations_needed)] = unfinished_block.block
 
     timelord_request = timelord_protocol.ProofOfSpaceInfo(challenge_hash, iterations_needed)
+
     yield OutboundMessage(NodeType.TIMELORD, Message("proof_of_space_info", timelord_request), Delivery.BROADCAST)
     yield OutboundMessage(NodeType.FULL_NODE, Message("unfinished_block", unfinished_block),
                           Delivery.BROADCAST_TO_OTHERS)
@@ -558,11 +558,12 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
         added: ReceiveBlockResult = db.blockchain.receive_block(block.block)
 
     if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
-        log.info(f"\tAlready have block {header_hash} height {block.block.trunk_block.challenge.height}")
         return
     elif added == ReceiveBlockResult.INVALID_BLOCK:
         log.warning(f"\tBlock {header_hash} at height {block.block.trunk_block.challenge.height} is invalid.")
+        return
     elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
+        log.warning(f"Disconnected block")
         async with db.lock:
             tip_height = max([head.challenge.height for head in db.blockchain.get_current_heads()])
         if block.block.trunk_block.challenge.height > tip_height + config["sync_blocks_behind_threshold"]:
@@ -598,8 +599,25 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
         db.full_blocks[header_hash] = block.block
 
     if added == ReceiveBlockResult.ADDED_TO_HEAD:
+
         # Only propagate blocks which extend the blockchain (one of the heads)
-        difficulty = db.blockchain.get_difficulty(header_hash)
+        ips_changed: bool = False
+        async with db.lock:
+            log.info(f"\tUpdated heads, new heights: {[b.height for b in db.blockchain.get_current_heads()]}")
+            difficulty = db.blockchain.get_next_difficulty(block.block.prev_header_hash)
+            old_ips = db.proof_of_time_estimate_ips
+            next_vdf_ips = db.blockchain.get_next_ips(block.block.header_hash)
+            log.info(f"Difficulty {difficulty} IPS {old_ips}")
+            if next_vdf_ips != db.proof_of_time_estimate_ips:
+                db.proof_of_time_estimate_ips = next_vdf_ips
+                ips_changed = True
+        if ips_changed:
+            if next_vdf_ips > old_ips:
+                # TODO: remove this for testnet/mainnet
+                # If rate dropped this much, don't send an update (for testing, blockchain offline, etc)
+                rate_update = farmer_protocol.ProofOfTimeRate(max(old_ips, next_vdf_ips))
+                log.error(f"Sending proof of time rate {max(old_ips, next_vdf_ips)}")
+                yield OutboundMessage(NodeType.FARMER, Message("proof_of_time_rate", rate_update), Delivery.BROADCAST)
 
         pos_quality = block.block.trunk_block.proof_of_space.verify_and_get_quality(
             block.block.trunk_block.proof_of_time.output.challenge_hash
@@ -611,7 +629,7 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
         timelord_request = timelord_protocol.ChallengeStart(block.block.trunk_block.challenge.get_hash(),
                                                             block.block.trunk_block.challenge.height)
         timelord_request_end = timelord_protocol.ChallengeEnd(block.block.trunk_block.proof_of_time.
-                                                                output.challenge_hash)
+                                                              output.challenge_hash)
         # Tell timelord to stop previous challenge and start with new one
         yield OutboundMessage(NodeType.TIMELORD, Message("challenge_end", timelord_request_end), Delivery.BROADCAST)
         yield OutboundMessage(NodeType.TIMELORD, Message("challenge_start", timelord_request), Delivery.BROADCAST)
@@ -625,5 +643,5 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
         log.info("I've received an orphan, stopping the proof of time challenge.")
         log.info(f"Height of the orphan block is {block.block.trunk_block.challenge.height}")
         timelord_request_end = timelord_protocol.ChallengeEnd(block.block.trunk_block.proof_of_time.
-                                                                output.challenge_hash)
+                                                              output.challenge_hash)
         yield OutboundMessage(NodeType.TIMELORD, Message("challenge_end", timelord_request_end), Delivery.BROADCAST)
