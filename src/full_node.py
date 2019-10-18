@@ -506,21 +506,27 @@ async def unfinished_block(unfinished_block: peer_protocol.UnfinishedBlock) -> A
     expected_time: uint64 = uint64(iterations_needed / db.proof_of_time_estimate_ips)
 
     if expected_time > constants["PROPAGATION_DELAY_THRESHOLD"]:
+        log.info("Block is slow, waiting")
         # If this block is slow, sleep to allow faster blocks to come out first
         await asyncio.sleep(2)
 
     async with db.lock:
         if unfinished_block.block.height > db.unfinished_blocks_leader[0]:
+            log.info(f"This is the first block at height {unfinished_block.block.height}, so propagate.")
             # If this is the first block we see at this height, propagate
             db.unfinished_blocks_leader = (unfinished_block.block.height, expected_time)
         elif unfinished_block.block.height == db.unfinished_blocks_leader[0]:
+            log.info(f"Same height {unfinished_block.block.height} as leader")
             if expected_time > db.unfinished_blocks_leader[1] + constants["PROPAGATION_THRESHOLD"]:
                 # If VDF is expected to finish X seconds later than the best, don't propagate
+                log.info(f"VDF will finish too late, retuning")
                 return
             elif expected_time < db.unfinished_blocks_leader[1]:
+                log.info(f"Setting new leader")
                 # If this will be the first block to finalize, update our leader
                 db.unfinished_blocks_leader = (db.unfinished_blocks_leader[0], expected_time)
         else:
+            log.info(f"Unfinished block at old height, returning")
             # If we have seen an unfinished block at a greater or equal height, don't propagate
             # TODO: should we?
             return
@@ -528,6 +534,7 @@ async def unfinished_block(unfinished_block: peer_protocol.UnfinishedBlock) -> A
         db.unfinished_blocks[(challenge_hash, iterations_needed)] = unfinished_block.block
 
     timelord_request = timelord_protocol.ProofOfSpaceInfo(challenge_hash, iterations_needed)
+
     yield OutboundMessage(NodeType.TIMELORD, Message("proof_of_space_info", timelord_request), Delivery.BROADCAST)
     yield OutboundMessage(NodeType.FULL_NODE, Message("unfinished_block", unfinished_block),
                           Delivery.BROADCAST_TO_OTHERS)
@@ -592,17 +599,25 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
         db.full_blocks[header_hash] = block.block
 
     if added == ReceiveBlockResult.ADDED_TO_HEAD:
+
+        # Only propagate blocks which extend the blockchain (one of the heads)
         ips_changed: bool = False
         async with db.lock:
-            # Only propagate blocks which extend the blockchain (one of the heads)
+            log.info(f"\tUpdated heads, new heights: {[b.height for b in db.blockchain.get_current_heads()]}")
             difficulty = db.blockchain.get_next_difficulty(block.block.prev_header_hash)
+            old_ips = db.proof_of_time_estimate_ips
             next_vdf_ips = db.blockchain.get_next_ips(block.block.header_hash)
+            log.info(f"Difficulty {difficulty} IPS {old_ips}")
             if next_vdf_ips != db.proof_of_time_estimate_ips:
                 db.proof_of_time_estimate_ips = next_vdf_ips
                 ips_changed = True
         if ips_changed:
-            rate_update = farmer_protocol.ProofOfTimeRate(next_vdf_ips)
-            yield OutboundMessage(NodeType.FARMER, Message("proof_of_time_rate", rate_update), Delivery.BROADCAST)
+            if next_vdf_ips > old_ips:
+                # TODO: remove this for testnet/mainnet
+                # If rate dropped this much, don't send an update (for testing, blockchain offline, etc)
+                rate_update = farmer_protocol.ProofOfTimeRate(max(old_ips, next_vdf_ips))
+                log.error(f"Sending proof of time rate {max(old_ips, next_vdf_ips)}")
+                yield OutboundMessage(NodeType.FARMER, Message("proof_of_time_rate", rate_update), Delivery.BROADCAST)
 
         pos_quality = block.block.trunk_block.proof_of_space.verify_and_get_quality(
             block.block.trunk_block.proof_of_time.output.challenge_hash

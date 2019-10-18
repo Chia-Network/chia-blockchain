@@ -261,5 +261,5 @@ class BlockTools:
 # This code generates a genesis block, uncomment to output genesis block to terminal
 # This might take a while, using the python VDF implementation.
 # Run by doing python -m tests.block_tools
-# bt = BlockTools()
-# print(bt.create_genesis_block({}, bytes([1]*32), uint64(0)).serialize())
+bt = BlockTools()
+print(bt.create_genesis_block({}, bytes([1]*32), uint64(0)).serialize())
