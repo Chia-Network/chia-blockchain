@@ -9,7 +9,10 @@ from src.protocols.plotter_protocol import PlotterHandshake
 from src.server.outbound_message import OutboundMessage, Message, Delivery, NodeType
 from src.util.network import parse_host_port
 
-logging.basicConfig(format='Farmer %(name)-25s: %(levelname)-8s %(message)s', level=logging.INFO)
+logging.basicConfig(format='Farmer %(name)-25s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s',
+                    level=logging.INFO,
+                    datefmt='%H:%M:%S'
+                    )
 
 
 async def main():

@@ -13,6 +13,7 @@ from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
 from src.consensus.block_rewards import calculate_block_reward
 from src.consensus.pot_iterations import calculate_iterations_quality
+from src.consensus.constants import constants
 from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
 
 
@@ -63,9 +64,12 @@ async def challenge_response(challenge_response: plotter_protocol.ChallengeRespo
 
         number_iters: uint64 = calculate_iterations_quality(challenge_response.quality,
                                                             challenge_response.plot_size,
-                                                            difficulty)
+                                                            difficulty,
+                                                            db.proof_of_time_estimate_ips,
+                                                            constants["MIN_BLOCK_TIME"])
         estimate_secs: float = number_iters / db.proof_of_time_estimate_ips
 
+    log.info(f"Estimate: {estimate_secs}, rate: {db.proof_of_time_estimate_ips}")
     if estimate_secs < config['pool_share_threshold'] or estimate_secs < config['propagate_threshold']:
         async with db.lock:
             db.plotter_responses_challenge[challenge_response.quality] = challenge_response.challenge_hash
@@ -104,7 +108,9 @@ async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace)
 
     number_iters: uint64 = calculate_iterations_quality(computed_quality,
                                                         response.proof.size,
-                                                        difficulty)
+                                                        difficulty,
+                                                        db.proof_of_time_estimate_ips,
+                                                        constants["MIN_BLOCK_TIME"])
     async with db.lock:
         estimate_secs: float = number_iters / db.proof_of_time_estimate_ips
     if estimate_secs < config['pool_share_threshold']:

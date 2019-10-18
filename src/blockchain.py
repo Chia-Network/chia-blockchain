@@ -4,12 +4,15 @@ from enum import Enum
 import time
 import blspy
 from typing import List, Dict, Optional, Tuple
-from src.util.errors import BlockNotInBlockchain
+from src.util.errors import BlockNotInBlockchain, InvalidGenesisBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64, uint32
 from src.types.trunk_block import TrunkBlock
 from src.types.full_block import FullBlock
-from src.consensus.pot_iterations import calculate_iterations, calculate_iterations_quality
+from src.consensus.pot_iterations import (
+    calculate_iterations_quality,
+    calculate_ips_from_iterations
+)
 from src.consensus.constants import constants as consensus_constants
 
 
@@ -42,11 +45,8 @@ class Blockchain:
         self.height_to_hash: Dict[uint64, bytes32] = {}
         self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
         result = self.receive_block(self.genesis)
-        assert result == ReceiveBlockResult.ADDED_TO_HEAD
-
-        # For blocks with height % constants["DIFFICULTY_DELAY"] == 1, a link to the hash of
-        # the (constants["DIFFICULTY_DELAY"])-th parent of this block
-        self.header_warp: Dict[bytes32, bytes32] = {}
+        if result != ReceiveBlockResult.ADDED_TO_HEAD:
+            raise InvalidGenesisBlock()
 
     def get_current_heads(self) -> List[TrunkBlock]:
         """
@@ -116,39 +116,42 @@ class Blockchain:
         else:
             raise ValueError("Invalid genesis block")
 
-    def get_difficulty(self, header_hash: bytes32) -> uint64:
-        trunk: TrunkBlock = self.blocks.get(header_hash, None).trunk_block
-        if trunk is None:
-            raise Exception("No block found for given header_hash")
-        elif trunk is self.genesis.trunk_block:
-            return uint64(self.constants["DIFFICULTY_STARTING"])
-
-        prev_block = self.blocks.get(trunk.prev_header_hash, None)
-        if prev_block is None:
-            raise Exception("No previous block found to compare total weight to")
-        return uint64(trunk.challenge.total_weight
-                      - prev_block.trunk_block.challenge.total_weight)
-
     def get_next_difficulty(self, header_hash: bytes32) -> uint64:
-        # Returns the difficulty of the next block that extends onto header_hash.
-        # Used to calculate the number of iterations.
+        """
+        Returns the difficulty of the next block that extends onto header_hash.
+        Used to calculate the number of iterations.
+        """
         block = self.blocks.get(header_hash, None)
-        next_height: uint32 = block.height + 1
         if block is None:
             raise Exception("Given header_hash must reference block already added")
-        if next_height % self.constants["DIFFICULTY_EPOCH"] != self.constants["DIFFICULTY_DELAY"]:
-            # Not at a point where difficulty would change
-            return self.get_difficulty(header_hash)
-        elif next_height < self.constants["DIFFICULTY_EPOCH"]:
+
+        next_height: uint32 = block.height + 1
+        if next_height < self.constants["DIFFICULTY_EPOCH"]:
             # We are in the first epoch
             return uint64(self.constants["DIFFICULTY_STARTING"])
+
+        # Epochs are diffined as intervals of DIFFICULTY_EPOCH blocks, inclusive and indexed at 0.
+        # For example, [0-2047], [2048-4095], etc. The difficulty changes DIFFICULTY_DELAY into the
+        # epoch, as opposed to the first block (as in Bitcoin).
+        elif next_height % self.constants["DIFFICULTY_EPOCH"] != self.constants["DIFFICULTY_DELAY"]:
+            # Not at a point where difficulty would change
+            prev_block = self.blocks.get(block.prev_header_hash, None)
+            if prev_block is None:
+                raise Exception("Previous block is invalid.")
+            return uint64(block.trunk_block.challenge.total_weight - prev_block.trunk_block.challenge.total_weight)
 
         #       old diff                  curr diff       new diff
         # ----------|-----|----------------------|-----|-----...
         #           h1    h2                     h3   i-1
+        # Height1 is the last block 2 epochs ago, so we can include the time to mine 1st block in previous epoch
         height1 = uint64(next_height - self.constants["DIFFICULTY_EPOCH"] - self.constants["DIFFICULTY_DELAY"] - 1)
+        # Height2 is the DIFFICULTY DELAYth block in the previous epoch
         height2 = uint64(next_height - self.constants["DIFFICULTY_EPOCH"] - 1)
+        # Height3 is the last block in the previous epoch
         height3 = uint64(next_height - self.constants["DIFFICULTY_DELAY"] - 1)
+
+        # h1 to h2 timestamps are mined on previous difficulty, while  and h2 to h3 timestamps are mined on the
+        # current difficulty
 
         block1, block2, block3 = None, None, None
         if block.trunk_block not in self.get_current_heads() or height3 not in self.height_to_hash:
@@ -165,7 +168,7 @@ class Blockchain:
                 curr = self.blocks[curr.prev_header_hash]
         # Once we are before the fork point (and before the LCA), we can use the height_to_hash map
         if not block1 and height1 >= 0:
-            # hiehgt1 could be -1, for the first difficulty calculation
+            # height1 could be -1, for the first difficulty calculation
             block1 = self.blocks[self.height_to_hash[height1]]
         if not block2:
             block2 = self.blocks[self.height_to_hash[height2]]
@@ -173,10 +176,10 @@ class Blockchain:
             block3 = self.blocks[self.height_to_hash[height3]]
 
         # Current difficulty parameter (diff of block h = i - 1)
-        Tc = self.get_difficulty(header_hash)
+        Tc = self.get_next_difficulty(block.prev_header_hash)
 
         # Previous difficulty parameter (diff of block h = i - 2048 - 1)
-        Tp = self.get_difficulty(block2.header_hash)
+        Tp = self.get_next_difficulty(block2.prev_header_hash)
         if block1:
             timestamp1 = block1.trunk_block.header.data.timestamp  # i - 512 - 1
         else:
@@ -207,33 +210,81 @@ class Blockchain:
         else:
             return max([uint64(1), new_difficulty, uint64(Tc // self.constants["DIFFICULTY_FACTOR"])])
 
-    def get_vdf_rate_estimate(self) -> Optional[uint64]:
+    def get_next_ips(self, header_hash) -> uint64:
         """
-        Returns an estimate of how fast VDFs are running in the network, in iterations per second.
-        Looks at the last N blocks from one of the heads, and divides timestamps. Returns None
-        if no time has elapsed, or if genesis block.
+        Returns the VDF speed in iterations per seconds, to be used for the next block. This depends on
+        the number of iterations of the last epoch, and changes at the same block as the difficulty.
         """
-        head: TrunkBlock = self.heads[0].trunk_block
-        curr = head
-        total_iterations_performed = 0
-        for _ in range(0, 200):
-            if curr.challenge.height > 1:
-                # Ignores the genesis block, since it may have an older timestamp
-                iterations_performed = calculate_iterations(curr.proof_of_space,
-                                                            curr.proof_of_time.output.challenge_hash,
-                                                            self.get_difficulty(curr.header.get_hash()))
-                total_iterations_performed += iterations_performed
-                curr: TrunkBlock = self.blocks[curr.header.data.prev_header_hash].trunk_block
-            else:
-                break
-        head_timestamp: int = int(head.header.data.timestamp)
-        curr_timestamp: int = int(curr.header.data.timestamp)
-        time_elapsed_secs: int = head_timestamp - curr_timestamp
-        if time_elapsed_secs == 0:
-            return None
-        return uint64(total_iterations_performed // time_elapsed_secs)
+        block = self.blocks.get(header_hash, None)
+        if block is None:
+            raise Exception("Given header_hash must reference block already added")
+
+        next_height: uint32 = block.height + 1
+        if next_height < self.constants["DIFFICULTY_EPOCH"]:
+            # First epoch has a hardcoded vdf speed
+            return self.constants["VDF_IPS_STARTING"]
+
+        elif next_height % self.constants["DIFFICULTY_EPOCH"] != self.constants["DIFFICULTY_DELAY"]:
+            # Not at a point where ips would change, so return the previous ips
+            # TODO: cache this for efficiency
+            prev_block = self.blocks.get(block.prev_header_hash, None)
+            if prev_block is None:
+                raise Exception("Previous block is invalid.")
+            proof_of_space = block.trunk_block.proof_of_space
+            challenge_hash = block.trunk_block.proof_of_time.output.challenge_hash
+            difficulty = self.get_next_difficulty(prev_block.header_hash)
+            iterations = block.trunk_block.challenge.total_iters - prev_block.trunk_block.challenge.total_iters
+            return calculate_ips_from_iterations(proof_of_space, challenge_hash, difficulty, iterations,
+                                                 self.constants["MIN_BLOCK_TIME"])
+
+        # ips (along with difficulty) will change in this block, so we need to calculate the new one.
+        # The calculation is (iters_2 - iters_1) // (timestamp_2 - timestamp_1).
+        # 1 and 2 correspond to height_1 and height_2, being the last block of the second to last, and last
+        # block of the last epochs. Basically, it's total iterations over time, of previous epoch.
+
+        # Height1 is the last block 2 epochs ago, so we can include the iterations taken for mining first block in epoch
+        height1 = uint64(next_height - self.constants["DIFFICULTY_EPOCH"] - self.constants["DIFFICULTY_DELAY"] - 1)
+        # Height2 is the last block in the previous epoch
+        height2 = uint64(next_height - self.constants["DIFFICULTY_DELAY"] - 1)
+
+        block1, block2 = None, None
+        if block.trunk_block not in self.get_current_heads() or height2 not in self.height_to_hash:
+            # This means we are either on a fork, or on one of the chains, but after the LCA,
+            # so we manually backtrack.
+            curr = block
+            while (curr.height not in self.height_to_hash or self.height_to_hash[curr.height] != curr.header_hash):
+                if curr.height == height1:
+                    block1 = curr
+                elif curr.height == height2:
+                    block2 = curr
+                curr = self.blocks[curr.prev_header_hash]
+        # Once we are before the fork point (and before the LCA), we can use the height_to_hash map
+        if not block1 and height1 >= 0:
+            # height1 could be -1, for the first difficulty calculation
+            block1 = self.blocks[self.height_to_hash[height1]]
+        if not block2:
+            block2 = self.blocks[self.height_to_hash[height2]]
+
+        if block1:
+            timestamp1 = block1.trunk_block.header.data.timestamp
+            iters1 = block1.trunk_block.challenge.total_iters
+        else:
+            # In the case of height == -1, there is no timestamp here, so assume the genesis block
+            # took constants["BLOCK_TIME_TARGET"] seconds to mine.
+            timestamp1 = (self.blocks[self.height_to_hash[uint64(0)]].trunk_block.header.data.timestamp
+                          - self.constants["BLOCK_TIME_TARGET"])
+            iters1 = self.blocks[self.height_to_hash[uint64(0)]].trunk_block.challenge.total_iters
+
+        timestamp2 = block2.trunk_block.header.data.timestamp
+        iters2 = block2.trunk_block.challenge.total_iters
+
+        return uint64((iters2 - iters1) // (timestamp2 - timestamp1))
 
     def receive_block(self, block: FullBlock) -> ReceiveBlockResult:
+        """
+        Adds a new block into the blockchain, if it's valid and connected to the current
+        blockchain, regardless of whether it is the child of a head, or another block.
+        """
         genesis: bool = block.height == 0 and len(self.heads) == 0
 
         if block.header_hash in self.blocks:
@@ -245,6 +296,7 @@ class Blockchain:
         if block.prev_header_hash not in self.blocks and not genesis:
             return ReceiveBlockResult.DISCONNECTED_BLOCK
 
+        # Block is valid and connected, so it can be added to the blockchain.
         self.blocks[block.header_hash] = block
         if self._reconsider_heads(block):
             return ReceiveBlockResult.ADDED_TO_HEAD
@@ -257,7 +309,6 @@ class Blockchain:
         (except for proof of time). The same as validate_block, but without proof of time
         and challenge validation.
         """
-
         # 1. Check previous pointer(s) / flyclient
         if not genesis and block.prev_header_hash not in self.blocks:
             return False
@@ -344,8 +395,10 @@ class Blockchain:
 
         if not genesis:
             difficulty: uint64 = self.get_next_difficulty(block.prev_header_hash)
+            ips: uint64 = self.get_next_ips(block.prev_header_hash)
         else:
             difficulty: uint64 = uint64(self.constants["DIFFICULTY_STARTING"])
+            ips: uint64 = uint64(self.constants["VDF_IPS_STARTING"])
 
         # 2. Check proof of space hash
         if block.trunk_block.proof_of_space.get_hash() != block.trunk_block.challenge.proof_of_space_hash:
@@ -356,7 +409,8 @@ class Blockchain:
             block.trunk_block.proof_of_time.output.challenge_hash)
 
         number_of_iters: uint64 = calculate_iterations_quality(pos_quality, block.trunk_block.proof_of_space.size,
-                                                               difficulty)
+                                                               difficulty, ips, self.constants["MIN_BLOCK_TIME"])
+
         if number_of_iters != block.trunk_block.proof_of_time.output.number_of_iterations:
             return False
 
@@ -426,6 +480,10 @@ class Blockchain:
                 curr_old = self.blocks[curr_old.prev_header_hash].trunk_block
 
     def _reconsider_lca(self):
+        """
+        Update the least common ancestor of the heads. This is useful, since we can just assume
+        there is one block per height before the LCA (and use the height_to_hash dict).
+        """
         cur: List[FullBlock] = self.heads[:]
         heights: List[uint32] = [b.height for b in cur]
         while any(h != heights[0] for h in heights):
@@ -436,12 +494,15 @@ class Blockchain:
         self.lca_block = cur[0]
 
     def _reconsider_heads(self, block: FullBlock) -> bool:
+        """
+        When a new block is added, this is called, to check if the new block is heavier
+        than one of the heads.
+        """
         if len(self.heads) == 0 or block.weight > min([b.weight for b in self.heads]):
             self.heads.append(block)
-            while len(self.heads) >= 4:
+            while len(self.heads) > self.constants["NUMBER_OF_HEADS"]:
                 self.heads.sort(key=lambda b: b.weight, reverse=True)
                 self.heads.pop()
-            log.info(f"\tUpdated heads, new heights: {[b.height for b in self.heads]}")
             self._reconsider_lca()
             return True
         return False

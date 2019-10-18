@@ -5,7 +5,7 @@ from decimal import getcontext, Decimal, ROUND_UP
 
 # Sets a high precision so we can convert a 256 bit has to a decimal, and
 # divide by a large number, while not losing any bits of precision.
-getcontext().prec = 200
+getcontext().prec = 600
 
 
 def _expected_plot_size(k: uint8) -> Decimal:
@@ -20,38 +20,59 @@ def _expected_plot_size(k: uint8) -> Decimal:
 
 def _quality_to_decimal(quality: bytes32) -> Decimal:
     """
-    Converts the quality, a 256 bit hash, into a decimal between 0 and 1, by adding
-    a radix point. So "01110101..." becomes 0.01110101...
-    Full precision is used, so the resulting decimal has 256 decimal places in binary
-    representation.
+    Takes a 256 bit quality, converts it to an integer between 0 and 2**256,
+    representing a decimal d=0.xxxxx..., where x are the bits of the quality.
+    Then we perform -log(d), using a pade approximation for log:
+    log(1+x) = x(6+x)/(6+4x)
+    This is a very good approximation for x when x is close to 1. However, we only
+    work with big ints, to avoid using decimals.
     """
-    sum_decimals = Decimal(0)
-    multiplier = Decimal(1)
-    for byte_index in range(0, 32):
-        byte = quality[byte_index]
-        for bit_index in range(0, 8):
-            multiplier /= 2
-            if (byte & (1 << (7 - bit_index))):
-                sum_decimals += multiplier
-    return sum_decimals
+    t = pow(2, 256)
+    xt = int.from_bytes(quality, "big") - t
+    numerator = xt * xt + 6 * (xt) * t
+    denominator = 6 * t + 4 * (xt)
+    # Performs big integer division, and then turns it into a decimal
+    return -Decimal(numerator // denominator) / Decimal(t)
 
 
-def calculate_iterations_quality(quality: bytes32, size: uint8, difficulty: uint64) -> uint64:
+def calculate_iterations_quality(quality: bytes32, size: uint8, difficulty: uint64,
+                                 vdf_ips: uint64, min_block_time: uint64) -> uint64:
     """
     Calculates the number of iterations from the quality. The quality is converted to a number
     between 0 and 1, then divided by expected plot size, and finally multiplied by the
     difficulty.
     """
+    min_iterations = min_block_time * vdf_ips
     dec_iters = (Decimal(int(difficulty) << 32) *
                  (_quality_to_decimal(quality) / _expected_plot_size(size)))
-    return uint64(max(1, int(dec_iters.to_integral_exact(rounding=ROUND_UP))))
+    iters_final = uint64(min_iterations + dec_iters.to_integral_exact(rounding=ROUND_UP))
+    assert iters_final >= 1
+    return iters_final
 
 
 def calculate_iterations(proof_of_space: ProofOfSpace, challenge_hash: bytes32,
-                         difficulty: uint64) -> uint64:
+                         difficulty: uint64, vdf_ips: uint64, min_block_time: uint64) -> uint64:
     """
     Convenience function to calculate the number of iterations using the proof instead
     of the quality. The quality must be retrieved from the proof.
     """
     quality: bytes32 = proof_of_space.verify_and_get_quality(challenge_hash)
-    return calculate_iterations_quality(quality, proof_of_space.size, difficulty)
+    return calculate_iterations_quality(quality, proof_of_space.size, difficulty, vdf_ips, min_block_time)
+
+
+def calculate_ips_from_iterations(proof_of_space: ProofOfSpace, challenge_hash: bytes32,
+                                  difficulty: uint64, iterations: uint64, min_block_time: uint64) -> uint64:
+    """
+    Using the total number of iterations on a block (which is encoded in the block) along with
+    other details, we can calculate the VDF speed (iterations per second) used to compute the
+    constant factor in iterations, which is not written into the block.
+    """
+    quality: bytes32 = proof_of_space.verify_and_get_quality(challenge_hash)
+    dec_iters = (Decimal(int(difficulty) << 32) *
+                 (_quality_to_decimal(quality) / _expected_plot_size(proof_of_space.size)))
+    iters_rounded = int(dec_iters.to_integral_exact(rounding=ROUND_UP))
+    min_iterations = uint64(iterations - iters_rounded)
+    ips = min_iterations / min_block_time
+    assert ips >= 1
+    assert uint64(ips) == ips
+    return uint64(ips)

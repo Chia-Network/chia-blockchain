@@ -220,10 +220,10 @@ void repeated_square(form f, const integer& D, const integer& L, WesolowskiCallb
     while (!stopped) {
         uint64 c_checkpoint_interval=checkpoint_interval;
 
-        if (weso.iterations >= 500000) {
-            std::cout << "Stopping weso at 500000 iterations!\n";
-            return ;
-        }
+        // if (weso.iterations >= 5000000) {
+        //     std::cout << "Stopping weso at 5000000 iterations!\n";
+        //     return ;
+        // }
 
         #ifdef VDF_TEST
             form f_copy;
