@@ -1,15 +1,14 @@
 import logging
 import time
 import asyncio
-import collections
 import yaml
 import concurrent
 from secrets import token_bytes
 from hashlib import sha256
 from chiapos import Verifier
 from blspy import Signature, PrivateKey
-from asyncio import Lock, Event
-from typing import Dict, List, Tuple, Optional, AsyncGenerator, Counter
+from asyncio import Event
+from typing import List, Optional, AsyncGenerator
 from src.util.api_decorators import api_request
 from src.util.ints import uint64, uint32
 from src.util import errors
@@ -21,7 +20,6 @@ from src.types.block_body import BlockBody
 from src.types.trunk_block import TrunkBlock
 from src.types.challenge import Challenge
 from src.types.block_header import BlockHeaderData, BlockHeader
-from src.types.proof_of_space import ProofOfSpace
 from src.types.full_block import FullBlock
 from src.types.fees_target import FeesTarget
 from src.consensus.weight_verifier import verify_weight
@@ -30,44 +28,14 @@ from src.consensus.constants import constants
 from src.blockchain import Blockchain, ReceiveBlockResult
 from src.server.outbound_message import OutboundMessage, Delivery, NodeType, Message
 from src.util.errors import BlockNotInBlockchain, PeersDontHaveBlock, InvalidUnfinishedBlock
-
-
-class Database:
-    # This protects all other resources
-    lock: Lock = Lock()
-    blockchain: Blockchain = Blockchain()
-    full_blocks: Dict[str, FullBlock] = {
-        FullBlock.from_bytes(constants["GENESIS_BLOCK"]).trunk_block.header.header_hash:
-        FullBlock.from_bytes(constants["GENESIS_BLOCK"])}
-
-    sync_mode: bool = True
-    # Block headers and blocks which we think might be heads, but we haven't verified yet.
-    # All these are used during sync mode
-    potential_heads: Counter[bytes32] = collections.Counter()
-    potential_heads_full_blocks: Dict[bytes32, FullBlock] = collections.Counter()
-    # Headers/trunks downloaded for the during sync, by height
-    potential_trunks: Dict[uint32, TrunkBlock] = {}
-    # Blocks downloaded during sync, by height
-    potential_blocks: Dict[uint32, FullBlock] = {}
-    # Event, which gets set whenever we receive the block at each height. Waited for by sync().
-    potential_blocks_received: Dict[uint32, Event] = {}
-
-    # These are the blocks that we created, but don't have the PoS from farmer yet,
-    # keyed from the proof of space hash
-    candidate_blocks: Dict[bytes32, Tuple[BlockBody, BlockHeaderData, ProofOfSpace]] = {}
-
-    # These are the blocks that we created, have PoS, but not PoT yet, keyed from the
-    # block header hash
-    unfinished_blocks: Dict[Tuple[bytes32, uint64], FullBlock] = {}
-    # Latest height with unfinished blocks, and expected timestamp of the finishing
-    unfinished_blocks_leader: Tuple[uint32, uint64] = (uint32(0), uint64(9999999999))
-
-    proof_of_time_estimate_ips: uint64 = uint64(1500)
+from src.store.full_node_store import FullNodeStore
 
 
 config = yaml.safe_load(open("src/config/full_node.yaml", "r"))
 log = logging.getLogger(__name__)
-db = Database()
+store = FullNodeStore()
+store.initialize()
+blockchain: Blockchain = Blockchain(store)
 
 
 async def send_heads_to_farmers() -> AsyncGenerator[OutboundMessage, None]:
@@ -76,19 +44,19 @@ async def send_heads_to_farmers() -> AsyncGenerator[OutboundMessage, None]:
     estimated proof of time rate, so farmer can calulate which proofs are good.
     """
     requests: List[farmer_protocol.ProofOfSpaceFinalized] = []
-    async with db.lock:
-        for head in db.blockchain.get_current_heads():
+    async with (await store.get_lock()):
+        for head in blockchain.get_current_heads():
             prev_challenge_hash = head.proof_of_time.output.challenge_hash
             challenge_hash = head.challenge.get_hash()
             height = head.challenge.height
             quality = head.proof_of_space.verify_and_get_quality(prev_challenge_hash)
             if head.height > 0:
-                difficulty: uint64 = db.blockchain.get_next_difficulty(head.prev_header_hash)
+                difficulty: uint64 = await blockchain.get_next_difficulty(head.prev_header_hash)
             else:
                 difficulty = head.weight
             requests.append(farmer_protocol.ProofOfSpaceFinalized(challenge_hash, height,
                                                                   quality, difficulty))
-        proof_of_time_rate: uint64 = db.proof_of_time_estimate_ips
+        proof_of_time_rate: uint64 = await store.get_proof_of_time_estimate_ips()
     for request in requests:
         yield OutboundMessage(NodeType.FARMER, Message("proof_of_space_finalized", request), Delivery.BROADCAST)
     rate_update = farmer_protocol.ProofOfTimeRate(proof_of_time_rate)
@@ -100,8 +68,8 @@ async def send_challenges_to_timelords() -> AsyncGenerator[OutboundMessage, None
     Sends all of the current heads to all timelord peers.
     """
     requests: List[timelord_protocol.ChallengeStart] = []
-    async with db.lock:
-        for head in db.blockchain.get_current_heads():
+    async with (await store.get_lock()):
+        for head in blockchain.get_current_heads():
             challenge_hash = head.challenge.get_hash()
             requests.append(timelord_protocol.ChallengeStart(challenge_hash, head.challenge.height))
     for request in requests:
@@ -113,10 +81,10 @@ async def on_connect() -> AsyncGenerator[OutboundMessage, None]:
     Whenever we connect to another full node, send them our current heads.
     """
     blocks: List[FullBlock] = []
-    async with db.lock:
-        heads: List[TrunkBlock] = db.blockchain.get_current_heads()
+    async with (await store.get_lock()):
+        heads: List[TrunkBlock] = blockchain.get_current_heads()
         for h in heads:
-            blocks.append(db.full_blocks[h.header.get_hash()])
+            blocks.append(blockchain.get_block(h.header.get_hash()))
     for block in blocks:
         request = peer_protocol.Block(block)
         yield OutboundMessage(NodeType.FULL_NODE, Message("block", request), Delivery.RESPOND)
@@ -141,23 +109,19 @@ async def sync():
 
     # Based on responses from peers about the current heads, see which head is the heaviest
     # (similar to longest chain rule).
-    async with db.lock:
-        potential_heads = db.potential_heads.items()
+    async with (await store.get_lock()):
+        potential_heads = await store.get_potential_heads.items()
         log.info(f"Have collected {len(potential_heads)} potential heads")
         for header_hash, _ in potential_heads:
-            block = db.potential_heads_full_blocks[header_hash]
+            block = await store.get_potential_heads_full_block(header_hash)
             if block.trunk_block.challenge.total_weight > highest_weight:
                 highest_weight = block.trunk_block.challenge.total_weight
                 tip_block = block
                 tip_height = block.trunk_block.challenge.height
-        if highest_weight <= max([t.challenge.total_weight for t in db.blockchain.get_current_heads()]):
+        if highest_weight <= max([t.challenge.total_weight for t in blockchain.get_current_heads()]):
             log.info("Not performing sync, already caught up.")
-            db.sync_mode = False
-            db.potential_heads.clear()
-            db.potential_heads_full_blocks.clear()
-            db.potential_trunks.clear()
-            db.potential_blocks.clear()
-            db.potential_blocks_received.clear()
+            await store.set_sync_mode(False)
+            await store.clear_sync_information()
             return
 
     # Now, we download all of the headers in order to verify the weight
@@ -176,14 +140,14 @@ async def sync():
             yield OutboundMessage(NodeType.FULL_NODE, Message("request_trunk_blocks", request), Delivery.RANDOM)
         await asyncio.sleep(sleep_interval)
         total_time_slept += sleep_interval
-        async with db.lock:
+        async with (await store.get_lock()):
             received_all_trunks = True
             local_trunks = []
             for height in range(0, tip_height + 1):
-                if height not in db.potential_trunks:
+                if await store.get_potential_trunk(uint32(height)) is None:
                     received_all_trunks = False
                     break
-                local_trunks.append(db.potential_trunks[uint32(height)])
+                local_trunks.append(await store.get_potential_trunk(uint32(height)))
             if received_all_trunks:
                 trunks = local_trunks
                 break
@@ -194,31 +158,32 @@ async def sync():
     log.error(f"Downloaded trunks up to tip height: {tip_height}")
     assert tip_height + 1 == len(trunks)
 
-    async with db.lock:
-        fork_point: TrunkBlock = db.blockchain.find_fork_point(trunks)
+    async with (await store.get_lock()):
+        fork_point: TrunkBlock = await blockchain.find_fork_point(trunks)
 
     # TODO: optimize, send many requests at once, and for more blocks
     for height in range(fork_point.challenge.height + 1, tip_height + 1):
         # Only download from fork point (what we don't have)
-        async with db.lock:
-            have_block = trunks[height].header.get_hash() in db.potential_heads_full_blocks
+        async with (await store.get_lock()):
+            have_block = await store.get_potential_heads_full_block(trunks[height].header_get_hash()) is not None
 
         if not have_block:
             request = peer_protocol.RequestSyncBlocks(tip_block.trunk_block.header.header_hash, [height])
-            async with db.lock:
-                db.potential_blocks_received[uint32(height)] = Event()
+            async with (await store.get_lock()):
+                await store.set_potential_blocks_received(uint32(height), Event())
             found = False
             for _ in range(30):
                 yield OutboundMessage(NodeType.FULL_NODE, Message("request_sync_blocks", request), Delivery.RANDOM)
                 try:
-                    await asyncio.wait_for(db.potential_blocks_received[uint32(height)].wait(), timeout=2)
+                    await asyncio.wait_for((await store.get_potential_blocks_received(uint32(height))).wait(),
+                                           timeout=2)
                     found = True
                     break
                 except concurrent.futures.TimeoutError:
                     log.info("Did not receive desired block")
             if not found:
                 raise PeersDontHaveBlock(f"Did not receive desired block at height {height}")
-        async with db.lock:
+        async with (await store.get_lock()):
             # TODO: ban peers that provide bad blocks
             if have_block:
                 block = db.potential_heads_full_blocks[trunks[height].header.get_hash()]
@@ -226,13 +191,13 @@ async def sync():
                 block = db.potential_blocks[uint32(height)]
 
             start = time.time()
-            db.blockchain.receive_block(block)
+            await blockchain.receive_block(block)
             log.info(f"Took {time.time() - start}")
-            assert max([h.challenge.height for h in db.blockchain.get_current_heads()]) >= height
-            db.full_blocks[block.trunk_block.header.get_hash()] = block
+            assert max([h.challenge.height for h in await blockchain.get_current_heads()]) >= height
+            # db.full_blocks[block.trunk_block.header.get_hash()] = block
             db.proof_of_time_estimate_ips = db.blockchain.get_next_ips(block.header_hash)
 
-    async with db.lock:
+    async with (await store.get_lock()):
         log.info(f"Finished sync up to height {tip_height}")
         db.potential_heads.clear()
         db.potential_heads_full_blocks.clear()
@@ -251,7 +216,7 @@ async def request_trunk_blocks(request: peer_protocol.RequestTrunkBlocks) \
     if len(request.heights) > config['max_trunks_to_send']:
         raise errors.TooManyTrunksRequested(f"The max number of trunks is {config['max_trunks_to_send']},\
                                              but requested {len(request.heights)}")
-    async with db.lock:
+    async with (await store.get_lock()):
         try:
             trunks: List[TrunkBlock] = db.blockchain.get_trunk_blocks_by_height(request.heights,
                                                                                 request.tip_header_hash)
@@ -272,7 +237,7 @@ async def trunk_blocks(request: peer_protocol.TrunkBlocks) \
     """
     Receive trunk blocks from a peer.
     """
-    async with db.lock:
+    async with (await store.get_lock()):
         for trunk_block in request.trunk_blocks:
             db.potential_trunks[trunk_block.challenge.height] = trunk_block
 
@@ -286,15 +251,16 @@ async def request_sync_blocks(request: peer_protocol.RequestSyncBlocks) -> Async
     Responsd to a peers request for syncing blocks.
     """
     blocks: List[FullBlock] = []
-    async with db.lock:
-        if request.tip_header_hash in db.full_blocks:
+    async with (await store.get_lock()):
+        tip_block: Optional[FullBlock] = await block.chain.get_block(request.tip_header_hash)
+        if tip_block is not None:
             if len(request.heights) > config['max_blocks_to_send']:
                 raise errors.TooManyTrunksRequested(f"The max number of blocks is {config['max_blocks_to_send']},"
                                                     f"but requested {len(request.heights)}")
             try:
-                trunk_blocks: List[TrunkBlock] = db.blockchain.get_trunk_blocks_by_height(request.heights,
-                                                                                          request.tip_header_hash)
-                blocks = [db.full_blocks[t.header.get_hash()] for t in trunk_blocks]
+                trunk_blocks: List[TrunkBlock] = await blockchain.get_trunk_blocks_by_height(request.heights,
+                                                                                             request.tip_header_hash)
+                blocks = [await blockchain.get_block(t.header.get_hash()) for t in trunk_blocks]
             except KeyError:
                 log.info("Do not have required blocks")
                 return
@@ -315,7 +281,7 @@ async def sync_blocks(request: peer_protocol.SyncBlocks) -> AsyncGenerator[Outbo
     We have received the blocks that we needed for syncing. Add them to processing queue.
     """
     # TODO: use an actual queue?
-    async with db.lock:
+    async with (await store.get_lock()):
         if not db.sync_mode:
             log.warning("Receiving sync blocks when we are not in sync mode.")
             return
@@ -342,7 +308,7 @@ async def request_header_hash(request: farmer_protocol.RequestHeaderHash) -> Asy
                                                       bytes(request.proof_of_space.proof))
     assert quality_string
 
-    async with db.lock:
+    async with (await store.get_lock()):
         # Retrieves the correct head for the challenge
         heads: List[TrunkBlock] = db.blockchain.get_current_heads()
         target_head: Optional[TrunkBlock] = None
@@ -394,7 +360,7 @@ async def header_signature(header_signature: farmer_protocol.HeaderSignature) ->
     block, which only needs a Proof of Time to be finished. If the signature is valid,
     we call the unfinished_block routine.
     """
-    async with db.lock:
+    async with (await store.get_lock()):
         if header_signature.pos_hash not in db.candidate_blocks:
             log.warning(f"PoS hash {header_signature.pos_hash} not found in database")
             return
@@ -422,7 +388,7 @@ async def proof_of_time_finished(request: timelord_protocol.ProofOfTimeFinished)
     A proof of time, received by a peer timelord. We can use this to complete a block,
     and call the block routine (which handles propagation and verification of blocks).
     """
-    async with db.lock:
+    async with (await store.get_lock()):
         dict_key = (request.proof.output.challenge_hash, request.proof.output.number_of_iterations)
         if dict_key not in db.unfinished_blocks:
             log.warning(f"Received a proof of time that we cannot use to complete a block {dict_key}")
@@ -457,7 +423,7 @@ async def new_proof_of_time(new_proof_of_time: peer_protocol.NewProofOfTime) -> 
     """
     finish_block: bool = False
     propagate_proof: bool = False
-    async with db.lock:
+    async with (await store.get_lock()):
         if (new_proof_of_time.proof.output.challenge_hash,
                 new_proof_of_time.proof.output.number_of_iterations) in db.unfinished_blocks:
             finish_block = True
@@ -480,7 +446,7 @@ async def unfinished_block(unfinished_block: peer_protocol.UnfinishedBlock) -> A
     We can validate it and if it's a good block, propagate it to other peers and
     timelords.
     """
-    async with db.lock:
+    async with (await store.get_lock()):
         if not db.blockchain.is_child_of_head(unfinished_block.block):
             return
 
@@ -510,7 +476,7 @@ async def unfinished_block(unfinished_block: peer_protocol.UnfinishedBlock) -> A
         # If this block is slow, sleep to allow faster blocks to come out first
         await asyncio.sleep(2)
 
-    async with db.lock:
+    async with (await store.get_lock()):
         if unfinished_block.block.height > db.unfinished_blocks_leader[0]:
             log.info(f"This is the first block at height {unfinished_block.block.height}, so propagate.")
             # If this is the first block we see at this height, propagate
@@ -548,11 +514,11 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
 
     header_hash = block.block.trunk_block.header.get_hash()
 
-    async with db.lock:
-        if db.sync_mode:
+    async with (await store.get_lock()):
+        if await store.get_sync_mode():
             # Add the block to our potential heads list
-            db.potential_heads[header_hash] += 1
-            db.potential_heads_full_blocks[header_hash] = block.block
+            await store.add_potential_head(header_hash)
+            await store.add_potential_heads_full_block(block.block)
             return
 
         added: ReceiveBlockResult = db.blockchain.receive_block(block.block)
@@ -564,17 +530,17 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
         return
     elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
         log.warning(f"Disconnected block")
-        async with db.lock:
+        async with (await store.get_lock()):
             tip_height = max([head.challenge.height for head in db.blockchain.get_current_heads()])
         if block.block.trunk_block.challenge.height > tip_height + config["sync_blocks_behind_threshold"]:
-            async with db.lock:
-                db.potential_heads.clear()
-                db.potential_heads[header_hash] += 1
-                db.potential_heads_full_blocks[header_hash] = block.block
+            async with (await store.get_lock()):
+                await store.clear_sync_information()
+                await store.add_potential_head(header_hash)
+                await store.add_potential_heads_full_block(block.block)
             log.info(f"We are too far behind this block. Our height is {tip_height} and block is at"
                      f"{block.block.trunk_block.challenge.height}")
             # Perform a sync if we have to
-            db.sync_mode = True
+            await store.set_sync_mode(True)
             try:
                 # Performs sync, and catch exceptions so we don't close the connection
                 async for msg in sync():
@@ -595,21 +561,17 @@ async def block(block: peer_protocol.Block) -> AsyncGenerator[OutboundMessage, N
                 break
         return
 
-    async with db.lock:
-        db.full_blocks[header_hash] = block.block
-
     if added == ReceiveBlockResult.ADDED_TO_HEAD:
-
         # Only propagate blocks which extend the blockchain (one of the heads)
         ips_changed: bool = False
-        async with db.lock:
-            log.info(f"\tUpdated heads, new heights: {[b.height for b in db.blockchain.get_current_heads()]}")
-            difficulty = db.blockchain.get_next_difficulty(block.block.prev_header_hash)
-            old_ips = db.proof_of_time_estimate_ips
-            next_vdf_ips = db.blockchain.get_next_ips(block.block.header_hash)
+        async with (await store.get_lock()):
+            log.info(f"\tUpdated heads, new heights: {[b.height for b in blockchain.get_current_heads()]}")
+            difficulty = await blockchain.get_next_difficulty(block.block.prev_header_hash)
+            old_ips = await store.get_proof_of_time_estimate_ips()
+            next_vdf_ips = await blockchain.get_next_ips(block.block.header_hash)
             log.info(f"Difficulty {difficulty} IPS {old_ips}")
-            if next_vdf_ips != db.proof_of_time_estimate_ips:
-                db.proof_of_time_estimate_ips = next_vdf_ips
+            if next_vdf_ips != await store.get_proof_of_time_estimate_ips():
+                await store.set_proof_of_time_estimate_ips(next_vdf_ips)
                 ips_changed = True
         if ips_changed:
             if next_vdf_ips > old_ips:

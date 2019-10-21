@@ -1,6 +1,6 @@
 import logging
 import asyncio
-import yaml
+from yaml import safe_load
 from hashlib import sha256
 from typing import List, Dict, Set, Tuple, Any
 
@@ -17,7 +17,7 @@ from src.consensus.constants import constants
 from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
 
 
-class Database:
+class FarmerState:
     lock = asyncio.Lock()
     plotter_responses_header_hash: Dict[bytes32, bytes32] = {}
     plotter_responses_challenge: Dict[bytes32, bytes32] = {}
@@ -33,9 +33,9 @@ class Database:
     proof_of_time_estimate_ips: uint64 = uint64(3000)
 
 
-config = yaml.safe_load(open("src/config/farmer.yaml", "r"))
+config = safe_load(open("src/config/farmer.yaml", "r"))
 log = logging.getLogger(__name__)
-db = Database()
+state: FarmerState = FarmerState()
 
 
 """
@@ -50,13 +50,13 @@ async def challenge_response(challenge_response: plotter_protocol.ChallengeRespo
     of space is sufficiently good, and if so, we ask for the whole proof.
     """
 
-    async with db.lock:
-        if challenge_response.quality in db.plotter_responses_challenge:
+    async with state.lock:
+        if challenge_response.quality in state.plotter_responses_challenge:
             log.warning(f"Have already seen quality {challenge_response.quality}")
             return
-        height: uint32 = db.challenge_to_height[challenge_response.challenge_hash]
+        height: uint32 = state.challenge_to_height[challenge_response.challenge_hash]
         difficulty: uint64 = uint64(0)
-        for posf in db.challenges[height]:
+        for posf in state.challenges[height]:
             if posf.challenge_hash == challenge_response.challenge_hash:
                 difficulty = posf.difficulty
         if difficulty == 0:
@@ -65,14 +65,14 @@ async def challenge_response(challenge_response: plotter_protocol.ChallengeRespo
         number_iters: uint64 = calculate_iterations_quality(challenge_response.quality,
                                                             challenge_response.plot_size,
                                                             difficulty,
-                                                            db.proof_of_time_estimate_ips,
+                                                            state.proof_of_time_estimate_ips,
                                                             constants["MIN_BLOCK_TIME"])
-        estimate_secs: float = number_iters / db.proof_of_time_estimate_ips
+        estimate_secs: float = number_iters / state.proof_of_time_estimate_ips
 
-    log.info(f"Estimate: {estimate_secs}, rate: {db.proof_of_time_estimate_ips}")
+    log.info(f"Estimate: {estimate_secs}, rate: {state.proof_of_time_estimate_ips}")
     if estimate_secs < config['pool_share_threshold'] or estimate_secs < config['propagate_threshold']:
-        async with db.lock:
-            db.plotter_responses_challenge[challenge_response.quality] = challenge_response.challenge_hash
+        async with state.lock:
+            state.plotter_responses_challenge[challenge_response.quality] = challenge_response.challenge_hash
         request = plotter_protocol.RequestProofOfSpace(challenge_response.quality)
 
         yield OutboundMessage(NodeType.PLOTTER, Message("request_proof_of_space", request), Delivery.RESPOND)
@@ -85,15 +85,15 @@ async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace)
     and request a pool partial, a header signature, or both, if the proof is good enough.
     """
 
-    async with db.lock:
+    async with state.lock:
         pool_sks: List[PrivateKey] = [PrivateKey.from_bytes(bytes.fromhex(ce)) for ce in config["pool_sks"]]
         assert response.proof.pool_pubkey in [sk.get_public_key() for sk in pool_sks]
 
-        challenge_hash: bytes32 = db.plotter_responses_challenge[response.quality]
-        challenge_height: uint32 = db.challenge_to_height[challenge_hash]
+        challenge_hash: bytes32 = state.plotter_responses_challenge[response.quality]
+        challenge_height: uint32 = state.challenge_to_height[challenge_hash]
         new_proof_height: uint32 = uint32(challenge_height + 1)
         difficulty: uint64 = uint64(0)
-        for posf in db.challenges[challenge_height]:
+        for posf in state.challenges[challenge_height]:
             if posf.challenge_hash == challenge_hash:
                 difficulty = posf.difficulty
         if difficulty == 0:
@@ -102,28 +102,28 @@ async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace)
     computed_quality = response.proof.verify_and_get_quality(challenge_hash)
     assert response.quality == computed_quality
 
-    async with db.lock:
-        db.plotter_responses_proofs[response.quality] = response.proof
-        db.plotter_responses_proof_hash_to_qual[response.proof.get_hash()] = response.quality
+    async with state.lock:
+        state.plotter_responses_proofs[response.quality] = response.proof
+        state.plotter_responses_proof_hash_to_qual[response.proof.get_hash()] = response.quality
 
     number_iters: uint64 = calculate_iterations_quality(computed_quality,
                                                         response.proof.size,
                                                         difficulty,
-                                                        db.proof_of_time_estimate_ips,
+                                                        state.proof_of_time_estimate_ips,
                                                         constants["MIN_BLOCK_TIME"])
-    async with db.lock:
-        estimate_secs: float = number_iters / db.proof_of_time_estimate_ips
+    async with state.lock:
+        estimate_secs: float = number_iters / state.proof_of_time_estimate_ips
     if estimate_secs < config['pool_share_threshold']:
         request = plotter_protocol.RequestPartialProof(response.quality,
                                                        sha256(bytes.fromhex(config['farmer_target'])).digest())
         yield OutboundMessage(NodeType.PLOTTER, Message("request_partial_proof", request), Delivery.RESPOND)
     if estimate_secs < config['propagate_threshold']:
-        async with db.lock:
-            if new_proof_height not in db.coinbase_rewards:
+        async with state.lock:
+            if new_proof_height not in state.coinbase_rewards:
                 log.error(f"Don't have coinbase transaction for height {new_proof_height}, cannot submit PoS")
                 return
 
-            coinbase, signature = db.coinbase_rewards[new_proof_height]
+            coinbase, signature = state.coinbase_rewards[new_proof_height]
             request = farmer_protocol.RequestHeaderHash(challenge_hash, coinbase, signature,
                                                         bytes.fromhex(config['farmer_target']), response.proof)
 
@@ -136,10 +136,10 @@ async def respond_header_signature(response: plotter_protocol.RespondHeaderSigna
     Receives a signature on a block header hash, which is required for submitting
     a block to the blockchain.
     """
-    async with db.lock:
-        header_hash: bytes32 = db.plotter_responses_header_hash[response.quality]
-        proof_of_space: bytes32 = db.plotter_responses_proofs[response.quality]
-        plot_pubkey = db.plotter_responses_proofs[response.quality].plot_pubkey
+    async with state.lock:
+        header_hash: bytes32 = state.plotter_responses_header_hash[response.quality]
+        proof_of_space: bytes32 = state.plotter_responses_proofs[response.quality]
+        plot_pubkey = state.plotter_responses_proofs[response.quality].plot_pubkey
 
         assert response.header_hash_signature.verify([Util.hash256(header_hash)],
                                                      [plot_pubkey])
@@ -158,9 +158,9 @@ async def respond_partial_proof(response: plotter_protocol.RespondPartialProof):
     share, to tell the pool where to pay the farmer.
     """
 
-    async with db.lock:
+    async with state.lock:
         farmer_target_hash = sha256(bytes.fromhex(config['farmer_target'])).digest()
-        plot_pubkey = db.plotter_responses_proofs[response.quality].plot_pubkey
+        plot_pubkey = state.plotter_responses_proofs[response.quality].plot_pubkey
 
     assert response.farmer_target_signature.verify([Util.hash256(farmer_target_hash)],
                                                    [plot_pubkey])
@@ -179,9 +179,9 @@ async def header_hash(response: farmer_protocol.HeaderHash):
     """
     header_hash: bytes32 = response.header_hash
 
-    async with db.lock:
-        quality: bytes32 = db.plotter_responses_proof_hash_to_qual[response.pos_hash]
-        db.plotter_responses_header_hash[quality] = header_hash
+    async with state.lock:
+        quality: bytes32 = state.plotter_responses_proof_hash_to_qual[response.pos_hash]
+        state.plotter_responses_header_hash[quality] = header_hash
 
     # TODO: only send to the plotter who made the proof of space, not all plotters
     request = plotter_protocol.RequestHeaderSignature(quality, header_hash)
@@ -195,30 +195,30 @@ async def proof_of_space_finalized(proof_of_space_finalized: farmer_protocol.Pro
     challenges list at that height, and height is updated if necessary
     """
     get_proofs: bool = False
-    async with db.lock:
-        if (proof_of_space_finalized.height >= db.current_height and
-                proof_of_space_finalized.challenge_hash not in db.seen_challenges):
+    async with state.lock:
+        if (proof_of_space_finalized.height >= state.current_height and
+                proof_of_space_finalized.challenge_hash not in state.seen_challenges):
             # Only get proofs for new challenges, at a current or new height
             get_proofs = True
-            if (proof_of_space_finalized.height > db.current_height):
-                db.current_height = proof_of_space_finalized.height
+            if (proof_of_space_finalized.height > state.current_height):
+                state.current_height = proof_of_space_finalized.height
 
             # TODO: ask the pool for this information
-            coinbase: CoinbaseInfo = CoinbaseInfo(uint32(db.current_height + 1),
-                                                  calculate_block_reward(db.current_height),
+            coinbase: CoinbaseInfo = CoinbaseInfo(uint32(state.current_height + 1),
+                                                  calculate_block_reward(state.current_height),
                                                   bytes.fromhex(config["pool_target"]))
 
             pool_sks: List[PrivateKey] = [PrivateKey.from_bytes(bytes.fromhex(ce)) for ce in config["pool_sks"]]
             coinbase_signature: PrependSignature = pool_sks[0].sign_prepend(coinbase.serialize())
-            db.coinbase_rewards[uint32(db.current_height + 1)] = (coinbase, coinbase_signature)
+            state.coinbase_rewards[uint32(state.current_height + 1)] = (coinbase, coinbase_signature)
 
-            log.info(f"\tCurrent height set to {db.current_height}")
-        db.seen_challenges.add(proof_of_space_finalized.challenge_hash)
-        if proof_of_space_finalized.height not in db.challenges:
-            db.challenges[proof_of_space_finalized.height] = [proof_of_space_finalized]
+            log.info(f"\tCurrent height set to {state.current_height}")
+        state.seen_challenges.add(proof_of_space_finalized.challenge_hash)
+        if proof_of_space_finalized.height not in state.challenges:
+            state.challenges[proof_of_space_finalized.height] = [proof_of_space_finalized]
         else:
-            db.challenges[proof_of_space_finalized.height].append(proof_of_space_finalized)
-        db.challenge_to_height[proof_of_space_finalized.challenge_hash] = proof_of_space_finalized.height
+            state.challenges[proof_of_space_finalized.height].append(proof_of_space_finalized)
+        state.challenge_to_height[proof_of_space_finalized.challenge_hash] = proof_of_space_finalized.height
 
     if get_proofs:
         message = plotter_protocol.NewChallenge(proof_of_space_finalized.challenge_hash)
@@ -231,11 +231,11 @@ async def proof_of_space_arrived(proof_of_space_arrived: farmer_protocol.ProofOf
     Full node notifies the farmer that a new proof of space was created. The farmer can use this
     information to decide whether to propagate a proof.
     """
-    async with db.lock:
-        if proof_of_space_arrived.height not in db.unfinished_challenges:
-            db.unfinished_challenges[proof_of_space_arrived.height] = []
+    async with state.lock:
+        if proof_of_space_arrived.height not in state.unfinished_challenges:
+            state.unfinished_challenges[proof_of_space_arrived.height] = []
         else:
-            db.unfinished_challenges[proof_of_space_arrived.height].append(
+            state.unfinished_challenges[proof_of_space_arrived.height].append(
                     proof_of_space_arrived.quality_string)
 
 
@@ -244,9 +244,11 @@ async def deep_reorg_notification(deep_reorg_notification: farmer_protocol.DeepR
     # TODO: implement
     # TODO: "forget everything and start over (reset db)"
     log.error(f"Deep reorg notification not implemented.")
+    async with state.lock:
+        pass
 
 
 @api_request
 async def proof_of_time_rate(proof_of_time_rate: farmer_protocol.ProofOfTimeRate):
-    async with db.lock:
-        db.proof_of_time_estimate_ips = proof_of_time_rate.pot_estimate_ips
+    async with state.lock:
+        state.proof_of_time_estimate_ips = proof_of_time_rate.pot_estimate_ips

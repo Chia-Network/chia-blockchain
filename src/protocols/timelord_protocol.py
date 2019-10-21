@@ -22,6 +22,7 @@ class ChallengeStart:
     challenge_hash: bytes32
     height: uint32
 
+
 @cbor_message(tag=3002)
 class ChallengeEnd:
     challenge_hash: bytes32
