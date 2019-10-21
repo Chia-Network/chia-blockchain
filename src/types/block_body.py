@@ -5,7 +5,6 @@ from src.types.coinbase import CoinbaseInfo
 from src.types.fees_target import FeesTarget
 from src.types.sized_bytes import bytes32
 
-
 @streamable
 class BlockBody:
     coinbase: CoinbaseInfo
