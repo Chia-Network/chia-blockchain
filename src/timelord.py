@@ -13,7 +13,8 @@ from src.util.api_decorators import api_request
 from src.protocols import timelord_protocol
 from src.types.proof_of_time import ProofOfTimeOutput, ProofOfTime
 from src.types.classgroup import ClassgroupElement
-from src.util.ints import uint8
+from src.types.sized_bytes import bytes32
+from src.util.ints import uint8, uint32, uint64
 from src.consensus.constants import constants
 from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
 
@@ -24,9 +25,9 @@ class TimelordState:
     active_discriminants: Dict = {}
     active_discriminants_start_time: Dict = {}
     pending_iters: Dict = {}
-    done_discriminants = []
-    seen_discriminants = []
-    active_heights = []
+    done_discriminants: List[bytes32] = []
+    seen_discriminants: List[bytes32] = []
+    active_heights: List[uint32] = []
 
 
 log = logging.getLogger(__name__)
@@ -83,7 +84,7 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
             e_to_str = str(e)
             log.error(f"Connection to VDF server error message: {e_to_str}")
         await asyncio.sleep(5)
-    if not writer:
+    if not writer or not reader:
         raise Exception("Unable to connect to VDF server")
 
     writer.write((str(len(str(disc))) + str(disc)).encode())
@@ -134,7 +135,7 @@ async def challenge_start(challenge_start: timelord_protocol.ChallengeStart):
                 e_to_str = str(e)
                 log.error(f"Socket error: {e_to_str}")
 
-            iterations_needed = int.from_bytes(stdout_bytes_io.read(8), "big", signed=True)
+            iterations_needed = uint64(int.from_bytes(stdout_bytes_io.read(8), "big", signed=True))
             y = ClassgroupElement.parse(stdout_bytes_io)
             proof_bytes: bytes = stdout_bytes_io.read()
 

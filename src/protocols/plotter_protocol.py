@@ -4,22 +4,26 @@ from src.util.streamable import List
 from src.types.sized_bytes import bytes32
 from src.types.proof_of_space import ProofOfSpace
 from src.util.ints import uint8
+from dataclasses import dataclass
 
 """
 Protocol between plotter and farmer.
 """
 
 
+@dataclass(frozen=True)
 @cbor_message(tag=1000)
 class PlotterHandshake:
     pool_pubkeys: List[PublicKey]
 
 
+@dataclass(frozen=True)
 @cbor_message(tag=1001)
 class NewChallenge:
     challenge_hash: bytes32
 
 
+@dataclass(frozen=True)
 @cbor_message(tag=1002)
 class ChallengeResponse:
     challenge_hash: bytes32
@@ -27,35 +31,41 @@ class ChallengeResponse:
     plot_size: uint8
 
 
+@dataclass(frozen=True)
 @cbor_message(tag=1003)
 class RequestProofOfSpace:
     quality: bytes32
 
 
+@dataclass(frozen=True)
 @cbor_message(tag=1004)
 class RespondProofOfSpace:
     quality: bytes32
     proof: ProofOfSpace
 
 
+@dataclass(frozen=True)
 @cbor_message(tag=1005)
 class RequestHeaderSignature:
     quality: bytes32
     header_hash: bytes32
 
 
+@dataclass(frozen=True)
 @cbor_message(tag=1006)
 class RespondHeaderSignature:
     quality: bytes32
     header_hash_signature: PrependSignature
 
 
+@dataclass(frozen=True)
 @cbor_message(tag=1007)
 class RequestPartialProof:
     quality: bytes32
     farmer_target_hash: bytes32
 
 
+@dataclass(frozen=True)
 @cbor_message(tag=1008)
 class RespondPartialProof:
     quality: bytes32

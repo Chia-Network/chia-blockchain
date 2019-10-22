@@ -1,12 +1,14 @@
 from src.util.ints import uint32, uint64
 from src.types.sized_bytes import bytes32
-from src.util.streamable import streamable
+from src.util.streamable import streamable, Streamable
 from src.types.block_body import BlockBody
 from src.types.trunk_block import TrunkBlock
+from dataclasses import dataclass
 
 
+@dataclass(frozen=True)
 @streamable
-class FullBlock:
+class FullBlock(Streamable):
     trunk_block: TrunkBlock
     body: BlockBody
 

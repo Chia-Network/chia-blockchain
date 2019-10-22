@@ -16,7 +16,7 @@ from src.server.outbound_message import OutboundMessage, Delivery, Message, Node
 
 class PlotterState:
     # From filename to prover
-    provers = {}
+    provers: Dict[str, DiskProver] = {}
     lock: Lock = Lock()
     # From quality to (challenge_hash, filename, index)
     challenge_hashes: Dict[bytes32, Tuple[bytes32, str, uint8]] = {}
@@ -102,18 +102,19 @@ async def request_proof_of_space(request: plotter_protocol.RequestProofOfSpace):
             log.warning(f"Quality {request.quality} not found")
             return
         if index is not None:
+            proof_xs: bytes
             try:
-                proof_xs: bytes = state.provers[filename].get_full_proof(challenge_hash, index)
+                proof_xs = state.provers[filename].get_full_proof(challenge_hash, index)
             except RuntimeError:
                 state.provers[filename] = DiskProver(filename)
-                proof_xs: bytes = state.provers[filename].get_full_proof(challenge_hash, index)
+                proof_xs = state.provers[filename].get_full_proof(challenge_hash, index)
 
             pool_pubkey = PublicKey.from_bytes(bytes.fromhex(config['plots'][filename]['pool_pk']))
             plot_pubkey = PrivateKey.from_bytes(bytes.fromhex(config['plots'][filename]['sk'])).get_public_key()
             proof_of_space: ProofOfSpace = ProofOfSpace(pool_pubkey,
                                                         plot_pubkey,
                                                         uint8(config['plots'][filename]['k']),
-                                                        list(proof_xs))
+                                                        [uint8(b) for b in proof_xs])
 
             response = plotter_protocol.RespondProofOfSpace(
                 request.quality,

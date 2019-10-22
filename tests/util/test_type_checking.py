@@ -1,4 +1,5 @@
 import unittest
+from dataclasses import dataclass
 from src.util.type_checking import is_type_List, is_type_SpecificOptional, strictdataclass
 from src.util.ints import uint8
 from typing import List, Dict, Tuple, Optional
@@ -12,7 +13,7 @@ class TestIsTypeList(unittest.TestCase):
         assert is_type_List(List[int])
         assert is_type_List(List[uint8])
         assert is_type_List(list)
-        assert not is_type_List(Tuple)
+        assert not is_type_List(Tuple)  # type: ignore
         assert not is_type_List(tuple)
         assert not is_type_List(dict)
 
@@ -29,6 +30,7 @@ class TestIsTypeSpecificOptional(unittest.TestCase):
 
 class TestStrictClass(unittest.TestCase):
     def test_StrictDataClass(self):
+        @dataclass(frozen=True)
         @strictdataclass
         class TestClass1:
             a: int
@@ -39,10 +41,11 @@ class TestStrictClass(unittest.TestCase):
         assert good
         assert good.a == 24
         assert good.b == "!@12"
-        good2 = TestClass1(52, bytes([1, 2, 3]))
+        good2 = TestClass1(52, bytes([1, 2, 3]))  # type: ignore
         assert good2.b == str(bytes([1, 2, 3]))
 
     def test_StrictDataClassBad(self):
+        @dataclass(frozen=True)
         @strictdataclass
         class TestClass2:
             a: int
@@ -50,12 +53,13 @@ class TestStrictClass(unittest.TestCase):
 
         assert TestClass2(25)
         try:
-            TestClass2(1, 2)
+            TestClass2(1, 2)  # type: ignore
             assert False
-        except ValueError:
+        except TypeError:
             pass
 
     def test_StrictDataClassLists(self):
+        @dataclass(frozen=True)
         @strictdataclass
         class TestClass:
             a: List[int]
@@ -63,17 +67,18 @@ class TestStrictClass(unittest.TestCase):
 
         assert TestClass([1, 2, 3], [[uint8(200), uint8(25)], [uint8(25)]])
         try:
-            TestClass([1, 2, 3], [[200, uint8(25)], [uint8(25)]])
+            TestClass([1, 2, 3], [[uint8(200), uint8(25)], [uint8(25)]])
             assert False
         except AssertionError:
             pass
         try:
-            TestClass([1, 2, 3], [uint8(200), uint8(25)])
+            TestClass([1, 2, 3], [uint8(200), uint8(25)])  # type: ignore
             assert False
         except ValueError:
             pass
 
     def test_StrictDataClassOptional(self):
+        @dataclass(frozen=True)
         @strictdataclass
         class TestClass:
             a: Optional[int]
@@ -85,6 +90,7 @@ class TestStrictClass(unittest.TestCase):
         assert good
 
     def test_StrictDataClassEmpty(self):
+        @dataclass(frozen=True)
         @strictdataclass
         class A:
             pass

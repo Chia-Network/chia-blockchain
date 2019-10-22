@@ -114,9 +114,9 @@ async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace)
     async with state.lock:
         estimate_secs: float = number_iters / state.proof_of_time_estimate_ips
     if estimate_secs < config['pool_share_threshold']:
-        request = plotter_protocol.RequestPartialProof(response.quality,
-                                                       sha256(bytes.fromhex(config['farmer_target'])).digest())
-        yield OutboundMessage(NodeType.PLOTTER, Message("request_partial_proof", request), Delivery.RESPOND)
+        request1 = plotter_protocol.RequestPartialProof(response.quality,
+                                                        sha256(bytes.fromhex(config['farmer_target'])).digest())
+        yield OutboundMessage(NodeType.PLOTTER, Message("request_partial_proof", request1), Delivery.RESPOND)
     if estimate_secs < config['propagate_threshold']:
         async with state.lock:
             if new_proof_height not in state.coinbase_rewards:
@@ -124,10 +124,10 @@ async def respond_proof_of_space(response: plotter_protocol.RespondProofOfSpace)
                 return
 
             coinbase, signature = state.coinbase_rewards[new_proof_height]
-            request = farmer_protocol.RequestHeaderHash(challenge_hash, coinbase, signature,
-                                                        bytes.fromhex(config['farmer_target']), response.proof)
+            request2 = farmer_protocol.RequestHeaderHash(challenge_hash, coinbase, signature,
+                                                         bytes.fromhex(config['farmer_target']), response.proof)
 
-        yield OutboundMessage(NodeType.FULL_NODE, Message("request_header_hash", request), Delivery.BROADCAST)
+        yield OutboundMessage(NodeType.FULL_NODE, Message("request_header_hash", request2), Delivery.BROADCAST)
 
 
 @api_request
@@ -235,8 +235,7 @@ async def proof_of_space_arrived(proof_of_space_arrived: farmer_protocol.ProofOf
         if proof_of_space_arrived.height not in state.unfinished_challenges:
             state.unfinished_challenges[proof_of_space_arrived.height] = []
         else:
-            state.unfinished_challenges[proof_of_space_arrived.height].append(
-                    proof_of_space_arrived.quality_string)
+            state.unfinished_challenges[proof_of_space_arrived.height].append(proof_of_space_arrived.quality)
 
 
 @api_request

@@ -14,7 +14,7 @@ class FullNodeStore:
     def __init__(self):
         self.lock = Lock()
 
-    def initialize(self):
+    async def initialize(self):
         self.full_blocks: Dict[str, FullBlock] = {}
 
         self.sync_mode: bool = True
@@ -48,7 +48,7 @@ class FullNodeStore:
         self.full_blocks[block.header_hash] = block
 
     async def get_block(self, header_hash: str) -> Optional[FullBlock]:
-        self.full_blocks.get(header_hash)
+        return self.full_blocks.get(header_hash)
 
     async def set_sync_mode(self, sync_mode: bool):
         self.sync_mode = sync_mode
