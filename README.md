@@ -54,3 +54,11 @@ py.test tests -s -v
 flake8 src
 pyright
 ```
+
+### Configure VS code
+1. Install Python extension
+2. Set the environment to ./.venv/bin/python
+3. Install mypy plugin
+4. Preferences > Settings > Python > Linting > flake8 enabled
+5. Preferences > Settings > Python > Linting > mypy enabled
+6. Preferences > Settings > mypy > Targets: set to ./src and ./tests

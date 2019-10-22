@@ -3,7 +3,7 @@ import os
 import sys
 from hashlib import sha256
 from chiapos import DiskPlotter, DiskProver
-from typing import List, Dict
+from typing import List, Dict, Any
 from blspy import PublicKey, PrivateKey, PrependSignature
 from src.types.sized_bytes import bytes32
 from src.types.full_block import FullBlock
@@ -27,7 +27,7 @@ from src.consensus.pot_iterations import calculate_ips_from_iterations
 
 
 # Can't go much lower than 19, since plots start having no solutions
-k = 19
+k: uint8 = uint8(19)
 # Uses many plots for testing, in order to guarantee proofs of space at every height
 num_plots = 80
 # Use the empty string as the seed for the private key
@@ -39,7 +39,7 @@ plot_pks: List[PublicKey] = [sk.get_public_key() for sk in plot_sks]
 farmer_sk: PrivateKey = PrivateKey.from_seed(b'coinbase')
 coinbase_target = sha256(farmer_sk.get_public_key().serialize()).digest()
 fee_target = sha256(farmer_sk.get_public_key().serialize()).digest()
-n_wesolowski = 3
+n_wesolowski = uint8(3)
 
 
 class BlockTools:
@@ -70,7 +70,7 @@ class BlockTools:
                                block_list: List[FullBlock] = [],
                                seconds_per_block=constants["BLOCK_TIME_TARGET"],
                                seed: uint64 = uint64(0)) -> List[FullBlock]:
-        test_constants = constants.copy()
+        test_constants: Dict[str, Any] = constants.copy()
         for key, value in input_constants.items():
             test_constants[key] = value
 
@@ -92,6 +92,7 @@ class BlockTools:
             curr_difficulty = block_list[-1].weight - block_list[-2].weight
             prev_difficulty = (block_list[-1 - test_constants["DIFFICULTY_EPOCH"]].weight -
                                block_list[-2 - test_constants["DIFFICULTY_EPOCH"]].weight)
+            assert block_list[-1].trunk_block.proof_of_time
             curr_ips = calculate_ips_from_iterations(block_list[-1].trunk_block.proof_of_space,
                                                      block_list[-1].trunk_block.proof_of_time.output.challenge_hash,
                                                      curr_difficulty,
@@ -110,15 +111,22 @@ class BlockTools:
                 height2 = uint64(next_height - (test_constants["DIFFICULTY_EPOCH"]) - 1)
                 height3 = uint64(next_height - (test_constants["DIFFICULTY_DELAY"]) - 1)
                 if height1 >= 0:
-                    timestamp1 = block_list[height1].trunk_block.header.data.timestamp
-                    iters1 = block_list[height1].trunk_block.challenge.total_iters
+                    block1 = block_list[height1]
+                    assert block1.trunk_block.challenge
+                    iters1 = block1.trunk_block.challenge.total_iters
+                    timestamp1 = block1.trunk_block.header.data.timestamp
                 else:
-                    timestamp1 = (block_list[0].trunk_block.header.data.timestamp -
+                    block1 = block_list[0]
+                    assert block1.trunk_block.challenge
+                    timestamp1 = (block1.trunk_block.header.data.timestamp -
                                   test_constants["BLOCK_TIME_TARGET"])
-                    iters1 = block_list[0].trunk_block.challenge.total_iters
+                    iters1 = block1.trunk_block.challenge.total_iters
                 timestamp2 = block_list[height2].trunk_block.header.data.timestamp
                 timestamp3 = block_list[height3].trunk_block.header.data.timestamp
-                iters3 = block_list[height3].trunk_block.challenge.total_iters
+
+                block3 = block_list[height3]
+                assert block3.trunk_block.challenge
+                iters3 = block3.trunk_block.challenge.total_iters
                 term1 = (test_constants["DIFFICULTY_DELAY"] * prev_difficulty *
                          (timestamp3 - timestamp2) * test_constants["BLOCK_TIME_TARGET"])
 
@@ -153,7 +161,7 @@ class BlockTools:
         """
         Creates the genesis block with the specified details.
         """
-        test_constants = constants.copy()
+        test_constants: Dict[str, Any] = constants.copy()
         for key, value in input_constants.items():
             test_constants[key] = value
 
@@ -164,7 +172,7 @@ class BlockTools:
             bytes([0]*32),
             uint64(0),
             uint64(0),
-            uint64(time.time()),
+            uint64(int(time.time())),
             uint64(test_constants["DIFFICULTY_STARTING"]),
             uint64(test_constants["VDF_IPS_STARTING"]),
             seed
@@ -176,14 +184,16 @@ class BlockTools:
         """
         Creates the next block with the specified details.
         """
-        test_constants = constants.copy()
+        test_constants: Dict[str, Any] = constants.copy()
         for key, value in input_constants.items():
             test_constants[key] = value
+
+        assert prev_block.trunk_block.challenge
 
         return self._create_block(
             test_constants,
             prev_block.trunk_block.challenge.get_hash(),
-            prev_block.height + 1,
+            uint32(prev_block.height + 1),
             prev_block.header_hash,
             prev_block.trunk_block.challenge.total_iters,
             prev_block.weight,
@@ -203,7 +213,7 @@ class BlockTools:
         prover = None
         plot_pk = None
         plot_sk = None
-        qualities = []
+        qualities: List[bytes] = []
         for pn in range(num_plots):
             seeded_pn = (pn + 17 * seed) % num_plots  # Allow passing in seed, to create reorgs and different chains
             filename = self.filenames[seeded_pn]
@@ -214,11 +224,14 @@ class BlockTools:
             if len(qualities) > 0:
                 break
 
+        assert prover
+        assert plot_pk
+        assert plot_sk
         if len(qualities) == 0:
             raise NoProofsOfSpaceFound("No proofs for this challenge")
 
         proof_xs: bytes = prover.get_full_proof(challenge_hash, 0)
-        proof_of_space: ProofOfSpace = ProofOfSpace(pool_pk, plot_pk, k, list(proof_xs))
+        proof_of_space: ProofOfSpace = ProofOfSpace(pool_pk, plot_pk, k, [uint8(b) for b in proof_xs])
         number_iters: uint64 = pot_iterations.calculate_iterations(proof_of_space, challenge_hash,
                                                                    difficulty, ips,
                                                                    test_constants["MIN_BLOCK_TIME"])
@@ -237,7 +250,7 @@ class BlockTools:
                                               coinbase_target)
         coinbase_sig: PrependSignature = pool_sk.sign_prepend(coinbase.serialize())
 
-        fees_target: FeesTarget = FeesTarget(fee_target, 0)
+        fees_target: FeesTarget = FeesTarget(fee_target, uint64(0))
 
         body: BlockBody = BlockBody(coinbase, coinbase_sig, fees_target, None, bytes([0]*32))
 
@@ -250,7 +263,7 @@ class BlockTools:
         header: BlockHeader = BlockHeader(header_data, header_hash_sig)
 
         challenge = Challenge(proof_of_space.get_hash(), proof_of_time.get_hash(), height,
-                              prev_weight + difficulty, prev_iters + number_iters)
+                              uint64(prev_weight + difficulty), uint64(prev_iters + number_iters))
         trunk_block = TrunkBlock(proof_of_space, proof_of_time, challenge, header)
 
         full_block: FullBlock = FullBlock(trunk_block, body)
@@ -261,5 +274,5 @@ class BlockTools:
 # This code generates a genesis block, uncomment to output genesis block to terminal
 # This might take a while, using the python VDF implementation.
 # Run by doing python -m tests.block_tools
-bt = BlockTools()
-print(bt.create_genesis_block({}, bytes([1]*32), uint64(0)).serialize())
+# bt = BlockTools()
+# print(bt.create_genesis_block({}, bytes([1]*32), uint64(0)).serialize())

@@ -1,13 +1,15 @@
 from typing import Optional
-from src.util.streamable import streamable
+from dataclasses import dataclass
+from src.util.streamable import streamable, Streamable
 from src.types.block_header import BlockHeader
 from src.types.challenge import Challenge
 from src.types.proof_of_space import ProofOfSpace
 from src.types.proof_of_time import ProofOfTime
 
 
+@dataclass(frozen=True)
 @streamable
-class TrunkBlock:
+class TrunkBlock(Streamable):
     proof_of_space: ProofOfSpace
     proof_of_time: Optional[ProofOfTime]
     challenge: Optional[Challenge]

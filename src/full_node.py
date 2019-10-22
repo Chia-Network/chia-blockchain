@@ -46,6 +46,7 @@ async def send_heads_to_farmers() -> AsyncGenerator[OutboundMessage, None]:
     requests: List[farmer_protocol.ProofOfSpaceFinalized] = []
     async with (await store.get_lock()):
         for head in blockchain.get_current_heads():
+            assert head.proof_of_time and head.challenge
             prev_challenge_hash = head.proof_of_time.output.challenge_hash
             challenge_hash = head.challenge.get_hash()
             height = head.challenge.height
@@ -70,6 +71,7 @@ async def send_challenges_to_timelords() -> AsyncGenerator[OutboundMessage, None
     requests: List[timelord_protocol.ChallengeStart] = []
     async with (await store.get_lock()):
         for head in blockchain.get_current_heads():
+            assert head.challenge
             challenge_hash = head.challenge.get_hash()
             requests.append(timelord_protocol.ChallengeStart(challenge_hash, head.challenge.height))
     for request in requests:
@@ -84,7 +86,7 @@ async def on_connect() -> AsyncGenerator[OutboundMessage, None]:
     async with (await store.get_lock()):
         heads: List[TrunkBlock] = blockchain.get_current_heads()
         for h in heads:
-            blocks.append(blockchain.get_block(h.header.get_hash()))
+            blocks.append(await blockchain.get_block(h.header.get_hash()))
     for block in blocks:
         request = peer_protocol.Block(block)
         yield OutboundMessage(NodeType.FULL_NODE, Message("block", request), Delivery.RESPOND)

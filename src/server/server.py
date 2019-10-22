@@ -1,7 +1,7 @@
 import logging
 import asyncio
 import random
-from typing import Tuple, AsyncGenerator, Callable, Optional
+from typing import Tuple, AsyncGenerator, Callable, Optional, List
 from types import ModuleType
 from lib.aiter.aiter.server import start_server_aiter
 from lib.aiter.aiter.map_aiter import map_aiter
@@ -155,18 +155,18 @@ async def expand_outbound_messages(pair: Tuple[Connection, OutboundMessage]) -> 
         yield connection, outbound_message.message
     elif outbound_message.delivery_method == Delivery.RANDOM:
         # Select a random peer.
-        to_yield = None
+        to_yield_single: Tuple[Connection, Message]
         async with global_connections.get_lock():
-            typed_peers = [peer for peer in await global_connections.get_connections()
-                           if peer.connection_type == outbound_message.peer_type]
+            typed_peers: List[Connection] = [peer for peer in await global_connections.get_connections()
+                                             if peer.connection_type == outbound_message.peer_type]
             if len(typed_peers) == 0:
                 return
-            to_yield = (random.choice(typed_peers), outbound_message.message)
-        yield to_yield
+            to_yield_single = (random.choice(typed_peers), outbound_message.message)
+        yield to_yield_single
     elif (outbound_message.delivery_method == Delivery.BROADCAST or
           outbound_message.delivery_method == Delivery.BROADCAST_TO_OTHERS):
         # Broadcast to all peers.
-        to_yield = []
+        to_yield: List[Tuple[Connection, Message]] = []
         async with global_connections.get_lock():
             for peer in await global_connections.get_connections():
                 if peer.connection_type == outbound_message.peer_type:

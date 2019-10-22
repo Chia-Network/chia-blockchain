@@ -45,7 +45,7 @@ def calculate_iterations_quality(quality: bytes32, size: uint8, difficulty: uint
     min_iterations = min_block_time * vdf_ips
     dec_iters = (Decimal(int(difficulty) << 32) *
                  (_quality_to_decimal(quality) / _expected_plot_size(size)))
-    iters_final = uint64(min_iterations + dec_iters.to_integral_exact(rounding=ROUND_UP))
+    iters_final = uint64(int(min_iterations + dec_iters.to_integral_exact(rounding=ROUND_UP)))
     assert iters_final >= 1
     return iters_final
 
@@ -74,5 +74,5 @@ def calculate_ips_from_iterations(proof_of_space: ProofOfSpace, challenge_hash: 
     min_iterations = uint64(iterations - iters_rounded)
     ips = min_iterations / min_block_time
     assert ips >= 1
-    assert uint64(ips) == ips
-    return uint64(ips)
+    assert uint64(int(ips)) == ips
+    return uint64(int(ips))
