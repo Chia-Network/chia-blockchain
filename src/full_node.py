@@ -39,14 +39,9 @@ class FullNode:
     blockchain: Blockchain
     config = yaml.safe_load(open("src/config/full_node.yaml", "r"))
 
-    async def initialize(self, store: Optional[FullNodeStore] = None):
-        if not store:
-            self.store = FullNodeStore()
-            await self.store.initialize()
-        else:
-            self.store = store
-        self.blockchain = Blockchain(self.store)
-        await self.blockchain.initialize()
+    def __init__(self, store: FullNodeStore, blockchain: Blockchain):
+        self.store = store
+        self.blockchain = blockchain
 
     async def send_heads_to_farmers(self) -> AsyncGenerator[OutboundMessage, None]:
         """
@@ -168,6 +163,7 @@ class FullNode:
             raise errors.InvalidWeight(f"Weight of {tip_block.trunk_block.header.get_hash()} not valid.")
 
         log.error(f"Downloaded trunks up to tip height: {tip_height}")
+        log.error(f"Tip height: {len(trunks)}")
         assert tip_height + 1 == len(trunks)
 
         async with (await self.store.get_lock()):

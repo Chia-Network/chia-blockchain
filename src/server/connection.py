@@ -55,10 +55,17 @@ class PeerConnections:
         async with self._connections_lock:
             self._all_connections.append(connection)
 
-    async def remove(self, connection: Connection):
+    async def close(self, connection: Connection):
         async with self._connections_lock:
             if connection in self._all_connections:
+                connection.close()
                 self._all_connections.remove(connection)
+
+    async def close_all_connections(self):
+        async with self._connections_lock:
+            for connection in self._all_connections:
+                connection.close()
+            self._all_connections = []
 
     def get_lock(self):
         return self._connections_lock
