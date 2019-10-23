@@ -1,11 +1,13 @@
 from blspy import PrependSignature
-from src.util.streamable import streamable
+from src.util.streamable import streamable, Streamable
 from src.util.ints import uint64
 from src.types.sized_bytes import bytes32
+from dataclasses import dataclass
 
 
+@dataclass(frozen=True)
 @streamable
-class BlockHeaderData:
+class BlockHeaderData(Streamable):
     prev_header_hash: bytes32
     timestamp: uint64
     filter_hash: bytes32
@@ -14,8 +16,9 @@ class BlockHeaderData:
     extension_data: bytes32
 
 
+@dataclass(frozen=True)
 @streamable
-class BlockHeader:
+class BlockHeader(Streamable):
     data: BlockHeaderData
     plotter_signature: PrependSignature
 

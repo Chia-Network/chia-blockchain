@@ -21,5 +21,5 @@ g++ -o compile_asm.o -c compile_asm.cpp $compile_flags -O0
 g++ -o compile_asm compile_asm.o $link_flags
 ./compile_asm
 as -o asm_compiled.o asm_compiled.s
-g++ -o vdf.o -c vdf.cpp $compile_flags -O3
-g++ -o vdf vdf.o asm_compiled.o $link_flags
+g++ -o server.o -c server.cpp $compile_flags -O3
+g++ -o server server.o asm_compiled.o $link_flags

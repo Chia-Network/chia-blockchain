@@ -1,11 +1,12 @@
 import asyncio
 import logging
-from src import full_node
+from src.full_node import FullNode
 import sys
 from src.server.server import start_chia_server, start_chia_client
 from src.util.network import parse_host_port
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
+from src.store.full_node_store import FullNodeStore
 
 
 logging.basicConfig(format='FullNode %(name)-23s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s',
@@ -25,6 +26,12 @@ Full node startup algorithm:
 
 
 async def main():
+    # Create the store (DB) and full node instance
+    store = FullNodeStore()
+    await store.initialize()
+    full_node = FullNode()
+    await full_node.initialize(store)
+
     # Starts the full node server (which full nodes can connect to)
     host, port = parse_host_port(full_node)
     server, client = await start_chia_server(host, port, full_node, NodeType.FULL_NODE, full_node.on_connect)

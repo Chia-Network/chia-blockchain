@@ -1,4 +1,6 @@
-constants = {
+from typing import Dict, Any
+
+constants: Dict[str, Any] = {
     "NUMBER_OF_HEADS": 3,  # The number of tips each full node keeps track of and propagates
     "DIFFICULTY_STARTING": 500,  # These are in units of 2^32
     "DIFFICULTY_FACTOR": 3,  # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]

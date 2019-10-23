@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import List
 from blspy import PrivateKey
-from src import farmer
+from src.farmer import Farmer
 from src.types.peer_info import PeerInfo
 from src.server.server import start_chia_client, start_chia_server
 from src.protocols.plotter_protocol import PlotterHandshake
@@ -16,6 +16,7 @@ logging.basicConfig(format='Farmer %(name)-25s: %(levelname)-8s %(asctime)s.%(ms
 
 
 async def main():
+    farmer = Farmer()
     plotter_peer = PeerInfo(farmer.config['plotter_peer']['host'],
                             farmer.config['plotter_peer']['port'],
                             bytes.fromhex(farmer.config['plotter_peer']['node_id']))

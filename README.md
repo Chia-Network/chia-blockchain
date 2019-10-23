@@ -23,17 +23,17 @@ sh install.sh
 When running the servers on Mac OS, allow the application to accept incoming connections.
 Run the servers in the following order (you can also use ipython):
 ```bash
-./lib/chiavdf/fast_vdf/vdf 8889
-./lib/chiavdf/fast_vdf/vdf 8890
+./lib/chiavdf/fast_vdf/server 8889
+./lib/chiavdf/fast_vdf/server 8890
 python -m src.server.start_plotter
 python -m src.server.start_timelord
 python -m src.server.start_farmer
-python -m src.server.start_full_node "127.0.0.1" 8002 "-f" "-t"
-python -m src.server.start_full_node "127.0.0.1" 8004
+python -m src.server.start_full_node "127.0.0.1" 8002 "-f"
+python -m src.server.start_full_node "127.0.0.1" 8004 "-t"
 python -m src.server.start_full_node "127.0.0.1" 8005
 
 ```
-Try running one of the full nodes after the other ones, to test initial sync.
+Try running one of the full nodes a few minutes after the other ones, to test initial sync.
 Configuration of peers can be changed in src/config.
 You can also run the simulation, which runs all servers at once.
 
@@ -54,3 +54,11 @@ py.test tests -s -v
 flake8 src
 pyright
 ```
+
+### Configure VS code
+1. Install Python extension
+2. Set the environment to ./.venv/bin/python
+3. Install mypy plugin
+4. Preferences > Settings > Python > Linting > flake8 enabled
+5. Preferences > Settings > Python > Linting > mypy enabled
+6. Preferences > Settings > mypy > Targets: set to ./src and ./tests

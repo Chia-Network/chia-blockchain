@@ -24,9 +24,9 @@ def strictdataclass(cls: Any):
         """
         def parse_item(self, item: Any, f_name: str, f_type: Type) -> Any:
             if is_type_List(f_type):
-                collected_list: f_type = []
+                collected_list: List = []
                 inner_type: Type = f_type.__args__[0]
-                assert inner_type != List.__args__[0]
+                assert inner_type != List.__args__[0]  # type: ignore
                 if not is_type_List(type(item)):
                     raise ValueError(f"Wrong type for {f_name}, need a list.")
                 for el in item:
@@ -36,7 +36,7 @@ def strictdataclass(cls: Any):
                 if item is None:
                     return None
                 else:
-                    inner_type: Type = f_type.__args__[0]
+                    inner_type: Type = f_type.__args__[0]  # type: ignore
                     return self.parse_item(item, f_name, inner_type)
             if not isinstance(item, f_type):
                 try:
@@ -47,18 +47,18 @@ def strictdataclass(cls: Any):
                 raise ValueError(f"Wrong type for {f_name}")
             return item
 
-        def __init__(self, *args):
+        def __post_init__(self):
             fields = get_type_hints(self)
-            la, lf = len(args), len(fields)
-            if la != lf:
-                raise ValueError("got %d and expected %d args" % (la, lf))
-            for a, (f_name, f_type) in zip(args, fields.items()):
-                object.__setattr__(self, f_name, self.parse_item(a, f_name, f_type))
+            data = self.__dict__
+            for (f_name, f_type) in fields.items():
+                if f_name not in data:
+                    raise ValueError(f"Field {f_name} not present")
+                object.__setattr__(self, f_name, self.parse_item(data[f_name], f_name, f_type))
 
     class NoTypeChecking:
         __no_type_check__ = True
 
-    cls1 = dataclasses.dataclass(_cls=cls, init=False, frozen=True)
+    cls1 = dataclasses.dataclass(_cls=cls, init=False, frozen=True)  # type: ignore
     if dataclasses.fields(cls1) == ():
         return type(cls.__name__, (cls1, _Local, NoTypeChecking), {})
     return type(cls.__name__, (cls1, _Local), {})
