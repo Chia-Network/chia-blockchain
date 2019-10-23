@@ -7,6 +7,7 @@ from src.util.network import parse_host_port
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
 from src.store.full_node_store import FullNodeStore
+from src.ui.full_node_ui import start_ui
 
 
 logging.basicConfig(format='FullNode %(name)-23s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s',
@@ -31,6 +32,7 @@ async def main():
     await store.initialize()
     full_node = FullNode()
     await full_node.initialize(store)
+    start_ui()
 
     # Starts the full node server (which full nodes can connect to)
     host, port = parse_host_port(full_node)

@@ -52,7 +52,7 @@ py.test tests -s -v
 ### Run linting
 ```bash
 flake8 src
-pyright
+mypy src tests
 ```
 
 ### Configure VS code
