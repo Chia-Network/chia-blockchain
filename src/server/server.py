@@ -1,8 +1,7 @@
 import logging
 import asyncio
 import random
-from typing import Tuple, AsyncGenerator, Callable, Optional, List
-from types import ModuleType
+from typing import Tuple, AsyncGenerator, Callable, Optional, List, Any
 from lib.aiter.aiter.server import start_server_aiter
 from lib.aiter.aiter.map_aiter import map_aiter
 from lib.aiter.aiter.join_aiters import join_aiters
@@ -119,7 +118,7 @@ async def connection_to_message(connection: Connection) -> AsyncGenerator[Tuple[
         connection.close()
 
 
-async def handle_message(pair: Tuple[Connection, Message], api: ModuleType) -> AsyncGenerator[
+async def handle_message(pair: Tuple[Connection, Message], api: Any) -> AsyncGenerator[
         Tuple[Connection, OutboundMessage], None]:
     """
     Async generator which takes messages, parses, them, executes the right
@@ -180,7 +179,7 @@ async def expand_outbound_messages(pair: Tuple[Connection, OutboundMessage]) -> 
 
 
 async def initialize_pipeline(aiter,
-                              api: ModuleType, connection_type: NodeType,
+                              api: Any, connection_type: NodeType,
                               on_connect: Callable[[], AsyncGenerator[OutboundMessage, None]] = None,
                               outbound_aiter=None,
                               wait_for_handshake=False) -> asyncio.Task:
@@ -246,7 +245,7 @@ async def initialize_pipeline(aiter,
     return ret_task
 
 
-async def start_chia_server(host: str, port: int, api: ModuleType, connection_type: NodeType,
+async def start_chia_server(host: str, port: int, api: Any, connection_type: NodeType,
                             on_connect: Optional[Callable[[], AsyncGenerator[OutboundMessage, None]]] = None) -> Tuple[
         asyncio.Task, push_aiter]:
     """
@@ -263,7 +262,7 @@ async def start_chia_server(host: str, port: int, api: ModuleType, connection_ty
 
 
 async def start_chia_client(target_node: PeerInfo,
-                            api: ModuleType, connection_type: NodeType) -> Tuple[
+                            api: Any, connection_type: NodeType) -> Tuple[
         asyncio.Task, push_aiter]:
     """
     Initiates a connection to the corresponding host and port, which serves the API provided. The connection
