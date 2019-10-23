@@ -14,7 +14,7 @@ logging.basicConfig(format='Plotter %(name)-24s: %(levelname)-8s %(asctime)s.%(m
 async def main():
     plotter = Plotter()
     host, port = parse_host_port(plotter)
-    server, _ = await start_chia_server(host, port, plotter, NodeType.FARMER)
+    server, _, _ = await start_chia_server(host, port, plotter, NodeType.FARMER)
     await server
 
 asyncio.run(main())
