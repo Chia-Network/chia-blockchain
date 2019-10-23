@@ -1,10 +1,12 @@
-from src.util.streamable import streamable
+from src.util.streamable import streamable, Streamable
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
+from dataclasses import dataclass
 
 
+@dataclass(frozen=True)
 @streamable
-class Challenge:
+class Challenge(Streamable):
     proof_of_space_hash: bytes32
     proof_of_time_output_hash: bytes32
     height: uint32

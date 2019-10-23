@@ -6,24 +6,28 @@ from src.util.ints import uint32, uint64
 from src.types.coinbase import CoinbaseInfo
 from src.types.challenge import Challenge
 from src.types.proof_of_space import ProofOfSpace
+from dataclasses import dataclass
 
 """
 Protocol between farmer and pool.
 """
 
 
+@dataclass(frozen=True)
 @streamable
 class SignedCoinbase:
     coinbase: CoinbaseInfo
     coinbase_signature: PrependSignature
 
 
+@dataclass(frozen=True)
 @cbor_message(tag=5000)
 class RequestData:
     min_height: Optional[uint32]
     farmer_id: Optional[str]
 
 
+@dataclass(frozen=True)
 @cbor_message(tag=5001)
 class RespondData:
     posting_url: str
@@ -32,6 +36,7 @@ class RespondData:
     coinbase_info: List[SignedCoinbase]
 
 
+@dataclass(frozen=True)
 @cbor_message(tag=5002)
 class Partial:
     challenge: Challenge
@@ -41,6 +46,7 @@ class Partial:
     signature: PrependSignature
 
 
+@dataclass(frozen=True)
 @cbor_message(tag=5003)
 class PartialAck:
     pass

@@ -1,6 +1,7 @@
 from typing import List
-from src.util.streamable import streamable
+from dataclasses import dataclass
 from src.types.sized_bytes import bytes32
+from src.util.streamable import streamable, Streamable
 from src.types.classgroup import ClassgroupElement
 from src.util.ints import uint8, uint64
 from lib.chiavdf.inkfish.proof_of_time import check_proof_of_time_nwesolowski
@@ -8,15 +9,17 @@ from lib.chiavdf.inkfish.create_discriminant import create_discriminant
 from lib.chiavdf.inkfish.classgroup import ClassGroup
 
 
+@dataclass(frozen=True)
 @streamable
-class ProofOfTimeOutput:
+class ProofOfTimeOutput(Streamable):
     challenge_hash: bytes32
     number_of_iterations: uint64
     output: ClassgroupElement
 
 
+@dataclass(frozen=True)
 @streamable
-class ProofOfTime:
+class ProofOfTime(Streamable):
     output: ProofOfTimeOutput
     witness_type: uint8
     witness: List[uint8]

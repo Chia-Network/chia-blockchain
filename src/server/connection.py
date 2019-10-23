@@ -1,6 +1,6 @@
 from asyncio import StreamReader, StreamWriter
 from asyncio import Lock
-from typing import List
+from typing import List, Any
 from src.util import cbor
 from src.server.outbound_message import Message, NodeType
 from src.types.sized_bytes import bytes32
@@ -35,9 +35,9 @@ class Connection:
     async def read_one_message(self) -> Message:
         size = await self.reader.readexactly(LENGTH_BYTES)
         full_message_length = int.from_bytes(size, "big")
-        full_message = await self.reader.readexactly(full_message_length)
-        full_message = cbor.loads(full_message)
-        return Message(full_message["function"], full_message["data"])
+        full_message: bytes = await self.reader.readexactly(full_message_length)
+        full_message_loaded: Any = cbor.loads(full_message)
+        return Message(full_message_loaded["function"], full_message_loaded["data"])
 
     def close(self):
         self.writer.close()
