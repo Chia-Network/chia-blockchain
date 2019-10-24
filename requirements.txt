@@ -19,6 +19,7 @@ Mako==1.1.0
 MarkupSafe==1.1.1
 mccabe==0.6.1
 more-itertools==7.2.0
+motor==2.0.0
 mypy==0.740
 mypy-extensions==0.4.3
 packaging==19.2
@@ -33,6 +34,7 @@ pybind11==2.4.3
 pycodestyle==2.5.0
 pyflakes==2.1.1
 Pygments==2.4.2
+pymongo==3.9.0
 pyparsing==2.4.2
 pytest==5.2.1
 pytest-asyncio==0.10.0
