@@ -167,7 +167,7 @@ class FullNode:
         assert tip_height + 1 == len(trunks)
 
         async with (await self.store.get_lock()):
-            fork_point: TrunkBlock = await self.blockchain.find_fork_point(trunks)
+            fork_point: TrunkBlock = self.blockchain.find_fork_point(trunks)
 
         # TODO: optimize, send many requests at once, and for more blocks
         for height in range(fork_point.height + 1, tip_height + 1):
@@ -223,10 +223,13 @@ class FullNode:
         if len(request.heights) > self.config['max_trunks_to_send']:
             raise errors.TooManyTrunksRequested(f"The max number of trunks is {self.config['max_trunks_to_send']},\
                                                 but requested {len(request.heights)}")
+        log.info("Getting lock")
         async with (await self.store.get_lock()):
             try:
+                log.info("Getting trunks")
                 trunks: List[TrunkBlock] = await self.blockchain.get_trunk_blocks_by_height(request.heights,
                                                                                             request.tip_header_hash)
+                log.info("Got trunks")
             except KeyError:
                 log.info("Do not have required blocks")
                 return
@@ -552,7 +555,7 @@ class FullNode:
                     await self.store.clear_sync_information()
                     await self.store.add_potential_head(header_hash)
                     await self.store.add_potential_heads_full_block(block.block)
-                log.info(f"We are too far behind this block. Our height is {tip_height} and block is at"
+                log.info(f"We are too far behind this block. Our height is {tip_height} and block is at "
                          f"{block.block.height}")
                 # Perform a sync if we have to
                 await self.store.set_sync_mode(True)
@@ -568,7 +571,7 @@ class FullNode:
                     return
 
             elif block.block.height > tip_height + 1:
-                log.info(f"We are a few blocks behind, our height is {tip_height} and block is at"
+                log.info(f"We are a few blocks behind, our height is {tip_height} and block is at "
                          f"{block.block.height} so we will request these blocks.")
                 while True:
                     # TODO: download a few blocks and add them to chain

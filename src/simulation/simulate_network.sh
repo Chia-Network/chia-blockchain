@@ -3,7 +3,7 @@ ps -e | grep "fast_vdf/server" | awk '{print $1}' | xargs -L1  kill -9
 
 ./lib/chiavdf/fast_vdf/server 8889 &
 P1=$!
-./lib/chiavdf/fast_vdf/server 8890 &
+# ./lib/chiavdf/fast_vdf/server 8890 &
 P2=$!
 python -m src.server.start_plotter &
 P3=$!

@@ -1,12 +1,16 @@
 import asyncio
 from typing import List, Callable
 import tkinter as tk
+import logging
 from src.store.full_node_store import FullNodeStore
 from src.blockchain import Blockchain
 
 
+log = logging.getLogger(__name__)
+
+
 class FullNodeUI(tk.Tk):
-    def __init__(self, loop, store: FullNodeStore, blockchain: Blockchain, close_cb: Callable, interval: float = 1):
+    def __init__(self, loop, store: FullNodeStore, blockchain: Blockchain, close_cb: Callable, interval: float = 1/60):
         super().__init__()
         self.loop = loop
         self.store = store
@@ -49,28 +53,38 @@ class FullNodeUI(tk.Tk):
         self.quit.pack(side="bottom")
 
     async def store_fetcher(self, interval):
-        while True:
-            print("Fetching")
-            async with (await self.store.get_lock()):
-                if (await self.store.get_sync_mode()):
-                    potential_heads = await self.store.get_potential_heads()
-                    fbs = [await self.store.get_potential_heads_full_block(ph) for ph in potential_heads]
-                    max_height = max([b.height for b in fbs])
-                    self.sync_mode["text"] = f"Syncing up to {str(max_height)}"
-                else:
-                    self.sync_mode["text"] = "Not syncing"
-                heads = self.blockchain.get_current_heads()
-                self.current_heads["text"] = str([h.height for h in heads])
+        try:
+            while True:
+                async with (await self.store.get_lock()):
+                    if (await self.store.get_sync_mode()):
+                        potential_heads = await self.store.get_potential_heads()
+                        fbs = [await self.store.get_potential_heads_full_block(ph) for ph in potential_heads]
+                        if len(fbs) > 0:
+                            max_height = max([b.height for b in fbs])
+                            self.sync_mode["text"] = f"Syncing up to {str(max_height)}"
+                        else:
+                            self.sync_mode["text"] = f"Syncing"
 
-            await asyncio.sleep(interval)
+                    else:
+                        self.sync_mode["text"] = "Not syncing"
+                    heads = self.blockchain.get_current_heads()
+                    self.current_heads["text"] = str([h.height for h in heads])
+
+                await asyncio.sleep(interval)
+        except Exception as e:
+            log.error(f"Exception in UI: {type(e)} {e}")
+            raise e
 
     async def updater(self, interval):
+        # try:
         while True:
-            print("Updating")
             self.update()
             await asyncio.sleep(interval)
+        # except asyncio.CancelledError:
+        #     return
 
 
 def start_ui(store: FullNodeStore, blockchain: Blockchain, close_cb: Callable):
-    loop = asyncio.get_event_loop()
-    FullNodeUI(loop, store, blockchain, close_cb)
+    loop = asyncio.get_running_loop()
+    ui = FullNodeUI(loop, store, blockchain, close_cb)
+    ui.wm_title('Chia Network Full Node')

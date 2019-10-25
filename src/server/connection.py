@@ -39,8 +39,9 @@ class Connection:
         full_message_loaded: Any = cbor.loads(full_message)
         return Message(full_message_loaded["function"], full_message_loaded["data"])
 
-    def close(self):
+    async def close(self):
         self.writer.close()
+        await self.writer.wait_closed()
 
     def __str__(self) -> str:
         return f"Connection({self.get_peername()})"
@@ -58,13 +59,13 @@ class PeerConnections:
     async def close(self, connection: Connection):
         async with self._connections_lock:
             if connection in self._all_connections:
-                connection.close()
+                await connection.close()
                 self._all_connections.remove(connection)
 
     async def close_all_connections(self):
         async with self._connections_lock:
             for connection in self._all_connections:
-                connection.close()
+                await connection.close()
             self._all_connections = []
 
     def get_lock(self):

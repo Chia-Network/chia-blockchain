@@ -20,7 +20,7 @@ async def main():
     plotter_peer = PeerInfo(farmer.config['plotter_peer']['host'],
                             farmer.config['plotter_peer']['port'],
                             bytes.fromhex(farmer.config['plotter_peer']['node_id']))
-    plotter_con_task, plotter_client, _ = await start_chia_client(plotter_peer, farmer, NodeType.PLOTTER)
+    plotter_con_task, plotter_client = await start_chia_client(plotter_peer, farmer, NodeType.PLOTTER)
 
     # Sends a handshake to the plotter
     pool_sks: List[PrivateKey] = [PrivateKey.from_bytes(bytes.fromhex(ce)) for ce in farmer.config["pool_sks"]]
@@ -29,7 +29,7 @@ async def main():
 
     # Starts the farmer server (which full nodes can connect to)
     host, port = parse_host_port(farmer)
-    server, _, _ = await start_chia_server(host, port, farmer, NodeType.FULL_NODE)
+    server, _ = await start_chia_server(host, port, farmer, NodeType.FULL_NODE)
 
     await asyncio.gather(plotter_con_task, server)
 

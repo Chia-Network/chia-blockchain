@@ -8,4 +8,4 @@ n_wesolowski: 2
 # VDF servers must be started locally on these ports.
 vdf_server_ports:
   - 8889
-  - 8890
+  # - 8890
