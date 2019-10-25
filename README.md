@@ -44,7 +44,7 @@ You can also run the simulation, which runs all servers at once.
 
 ### Run tests
 The first time the tests are run, BlockTools will create and persist many plots. These are used for creating
-proof of space during testing. The next time tests are run, this won't be necessary.
+proofs of space during testing. The next time tests are run, this won't be necessary.
 ```bash
 py.test tests -s -v
 ```

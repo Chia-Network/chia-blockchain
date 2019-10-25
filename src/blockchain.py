@@ -82,7 +82,6 @@ class Blockchain:
         Returns a list of trunk blocks, one for each height requested.
         """
         # TODO: optimize, don't look at all blocks
-
         sorted_heights = sorted([(height, index) for index, height in enumerate(heights)], reverse=True)
 
         curr_full_block: Optional[FullBlock] = await self.store.get_block(tip_header_hash)
@@ -95,11 +94,11 @@ class Blockchain:
             if height > curr_block.height:
                 raise ValueError("Height is not valid for tip {tip_header_hash}")
             while height < curr_block.height:
-                curr_full_block = (await self.store.get_block(curr_block.header.data.prev_header_hash)).trunk_block
+                curr_block = (await self.store.get_block(curr_block.header.data.prev_header_hash)).trunk_block
             trunks.append((index, curr_block))
         return [b for index, b in sorted(trunks)]
 
-    def find_fork_point(self, alternate_chain: List[TrunkBlock]):
+    def find_fork_point(self, alternate_chain: List[TrunkBlock]) -> TrunkBlock:
         """
         Takes in an alternate blockchain (trunks), and compares it to self. Returns the last trunk
         where both blockchains are equal.
@@ -309,11 +308,11 @@ class Blockchain:
         if await self.store.get_block(block.header_hash) is not None:
             return ReceiveBlockResult.ALREADY_HAVE_BLOCK
 
-        if not await self.validate_block(block, genesis):
-            return ReceiveBlockResult.INVALID_BLOCK
-
         if await self.store.get_block(block.prev_header_hash) is None and not genesis:
             return ReceiveBlockResult.DISCONNECTED_BLOCK
+
+        if not await self.validate_block(block, genesis):
+            return ReceiveBlockResult.INVALID_BLOCK
 
         # Block is valid and connected, so it can be added to the blockchain.
         await self.store.save_block(block)
