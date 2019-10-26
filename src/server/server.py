@@ -30,13 +30,13 @@ global_connections: PeerConnections = PeerConnections([])
 
 
 async def stream_reader_writer_to_connection(pair: Tuple[asyncio.StreamReader, asyncio.StreamWriter],
-                                             connection_type: NodeType) -> Connection:
+                                             connection_type: NodeType, server_port: int) -> Connection:
     """
     Maps a pair of (StreamReader, StreamWriter) to a Connection object,
     which also stores the type of connection (str). It is also added to the global list.
     """
     sr, sw = pair
-    con = Connection(connection_type, sr, sw)
+    con = Connection(connection_type, sr, sw, server_port)
 
     await global_connections.add(con)
 
@@ -50,11 +50,12 @@ async def connection_to_outbound(connection: Connection,
     """
     Async generator which calls the on_connect async generator method, and yields any outbound messages.
     """
+    log.info("Handshake finished 1")
     async for outbound_message in on_connect():
         yield connection, outbound_message
 
 
-async def perform_handshake(connection: Connection) -> AsyncGenerator[Connection, None]:
+async def perform_handshake(connection: Connection) -> AsyncGenerator[Optional[Connection], None]:
     """
     Performs handshake with this new connection, and yields the connection. If the handshake
     is unsuccessful, or we already have a connection with this peer, the connection is closed,
@@ -83,37 +84,39 @@ async def perform_handshake(connection: Connection) -> AsyncGenerator[Connection
             raise IncompatibleProtocolVersion(f"Our node version {protocol_version} is not compatible with peer\
                     {connection} version {inbound_handshake.version}")
         if await global_connections.already_have_connection(inbound_handshake.node_id):
+            connection.node_id = inbound_handshake.node_id
             raise DuplicateConnection(f"Already have connection to {connection}")
         connection.node_id = inbound_handshake.node_id
+        log.info((f"Handshake with {connection.connection_type} {connection.get_peername()} {connection.node_id}"
+                  f" established"))
+        # Only yield a connection if the handshake is succesful and the connection is not a duplicate.
+        yield connection
 
     except (IncompatibleProtocolVersion, InvalidHandshake, DuplicateConnection) as e:
         log.warning(f"{e}")
         await global_connections.close(connection)
-        return
-    log.info((f"Handshake with {connection.connection_type} {connection.get_peername()} {connection.node_id}"
-             " established"))
-    # Only yield a connection if the handshake is succesful and the connection is not a duplicate.
-    yield connection
+        yield None
 
 
-async def connection_to_message(connection: Connection) -> AsyncGenerator[Tuple[Connection, Message], None]:
+async def connection_to_message(connection: Optional[Connection]) -> AsyncGenerator[Tuple[Connection, Message], None]:
     """
     Async generator which yields complete binary messages from connections,
     along with a streamwriter to send back responses. On EOF received, the connection
     is removed from the global list.
     """
-    try:
-        while not connection.reader.at_eof():
-            message = await connection.read_one_message()
-            # Read one message at a time, forever
-            yield (connection, message)
-    except asyncio.IncompleteReadError:
-        log.warning(f"Received EOF from {connection.get_peername()}, closing connection.")
-    except ConnectionError:
-        log.warning(f"Connection error by peer {connection.get_peername()}, closing connection.")
-    finally:
-        # Removes the connection from the global list, so we don't try to send things to it
-        await global_connections.close(connection)
+    if connection is not None:
+        try:
+            while not connection.reader.at_eof():
+                message = await connection.read_one_message()
+                # Read one message at a time, forever
+                yield (connection, message)
+        except asyncio.IncompleteReadError:
+            log.warning(f"Received EOF from {connection.get_peername()}, closing connection.")
+        except ConnectionError:
+            log.warning(f"Connection error by peer {connection.get_peername()}, closing connection.")
+        finally:
+            # Removes the connection from the global list, so we don't try to send things to it
+            await global_connections.close(connection)
 
 
 async def handle_message(pair: Tuple[Connection, Message], api: Any) -> AsyncGenerator[
@@ -176,23 +179,23 @@ async def expand_outbound_messages(pair: Tuple[Connection, OutboundMessage]) -> 
 
 
 async def initialize_pipeline(aiter,
-                              api: Any, connection_type: NodeType,
+                              api: Any, server_port: int, connection_type: NodeType,
                               on_connect: Callable[[], AsyncGenerator[OutboundMessage, None]] = None,
                               outbound_aiter=None,
                               wait_for_handshake=False) -> asyncio.Task:
 
     # Maps a stream reader and writer to connection object
     connections_aiter = map_aiter(partial_func.partial_async(stream_reader_writer_to_connection,
-                                                             connection_type),
-                                  aiter)
+                                                             connection_type, server_port), aiter)
     # Performs a handshake with the peer
     handshaked_connections_aiter = join_aiters(map_aiter(perform_handshake, connections_aiter))
     forker = aiter_forker(handshaked_connections_aiter)
     handshake_finished_1 = forker.fork(is_active=True)
     handshake_finished_2 = forker.fork(is_active=True)
+    handshake_finished_3 = forker.fork(is_active=True)
 
     # Reads messages one at a time from the TCP connection
-    messages_aiter = join_aiters(parallel_map_aiter(connection_to_message, handshaked_connections_aiter, 100))
+    messages_aiter = join_aiters(parallel_map_aiter(connection_to_message, handshake_finished_1, 100))
 
     # Handles each message one at a time, and yields responses to send back or broadcast
     responses_aiter = join_aiters(parallel_map_aiter(
@@ -204,7 +207,7 @@ async def initialize_pipeline(aiter,
         # as soon as the connection is established
 
         on_connect_outbound_aiter = join_aiters(parallel_map_aiter(
-            partial_func.partial_async_gen(connection_to_outbound, on_connect), handshake_finished_1, 100))
+            partial_func.partial_async_gen(connection_to_outbound, on_connect), handshake_finished_2, 100))
 
         responses_aiter = join_aiters(iter_to_aiter([responses_aiter, on_connect_outbound_aiter]))
     if outbound_aiter is not None:
@@ -237,7 +240,7 @@ async def initialize_pipeline(aiter,
 
     if wait_for_handshake:
         # Waits for the handshake with the first connection
-        async for _ in handshake_finished_2:
+        async for _ in handshake_finished_3:
             break
 
     return ret_task
@@ -256,11 +259,12 @@ async def start_chia_server(host: str, port: int, api: Any, connection_type: Nod
 
     _, aiter = await start_server_aiter(port, host=host, reuse_address=True)
     log.info(f"Server started at {host}:{port}")
-    return (await initialize_pipeline(aiter, api, connection_type, on_connect, outbound_aiter, False),
+    return (await initialize_pipeline(aiter, api, port, connection_type, on_connect, outbound_aiter, False),
             outbound_aiter)
 
 
 async def start_chia_client(target_node: PeerInfo,
+                            server_port: int,
                             api: Any, connection_type: NodeType) -> Tuple[
         asyncio.Task, push_aiter]:
     """
@@ -283,7 +287,7 @@ async def start_chia_client(target_node: PeerInfo,
             reader, writer = await asyncio.open_connection(target_node.host, target_node.port)
             aiter = push_aiter()
             aiter.push((reader, writer))
-            return (await initialize_pipeline(aiter, api, connection_type, None, outbound_aiter, True),
+            return (await initialize_pipeline(aiter, api, server_port, connection_type, None, outbound_aiter, True),
                     outbound_aiter)
         except ConnectionRefusedError:
             log.warning(f"Connection to {target_node.host}:{target_node.port} refused.")
