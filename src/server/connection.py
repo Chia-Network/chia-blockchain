@@ -43,7 +43,7 @@ class Connection:
 
     async def close(self):
         self.writer.close()
-        # await self.writer.wait_closed()
+        await self.writer.wait_closed()
 
     def __str__(self) -> str:
         return f"Connection({self.get_peername()})"
@@ -51,8 +51,10 @@ class Connection:
 
 class PeerConnections:
     def __init__(self, all_connections: List[Connection] = []):
-        self._connections_lock = Lock()
         self._all_connections = all_connections
+
+    async def initialize(self):
+        self._connections_lock = Lock()
 
     async def add(self, connection: Connection):
         async with self._connections_lock:
