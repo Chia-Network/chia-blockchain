@@ -36,11 +36,14 @@ async def main():
     await store.initialize()
     blockchain = Blockchain(store)
     await blockchain.initialize()
+    await global_connections.initialize()
 
     full_node = FullNode(store, blockchain)
     waitable_tasks: List[asyncio.Task] = []
     sync_task: Optional[asyncio.Task] = None
     peer_tasks: List[asyncio.Task] = []
+
+    log.info(f"Loop: {asyncio.get_running_loop()}")
 
     def master_close_cb():
         log.info("Closing all connections...")

@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 class FullNodeUI(tk.Tk):
     def __init__(self, loop, store: FullNodeStore, blockchain: Blockchain,
-                 connections: PeerConnections, port: int, close_cb: Callable, interval: float = 1/60):
+                 connections: PeerConnections, port: int, close_cb_param: Callable, interval: float = 1/60):
         super().__init__()
         self.loop = loop
         self.store = store
@@ -23,7 +23,8 @@ class FullNodeUI(tk.Tk):
             for task in self.tasks:
                 task.cancel()
             self.destroy()
-            close_cb()
+            close_cb_param()
+
         self.close_cb = full_close
         self.protocol("WM_DELETE_WINDOW", self.close_cb)
 

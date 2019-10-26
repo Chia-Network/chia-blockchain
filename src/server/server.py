@@ -50,7 +50,6 @@ async def connection_to_outbound(connection: Connection,
     """
     Async generator which calls the on_connect async generator method, and yields any outbound messages.
     """
-    log.info("Handshake finished 1")
     async for outbound_message in on_connect():
         yield connection, outbound_message
 
