@@ -1,5 +1,6 @@
 from asyncio import StreamReader, StreamWriter
 from asyncio import Lock
+import logging
 from typing import List, Any
 from src.util import cbor
 from src.server.outbound_message import Message, NodeType
@@ -7,16 +8,17 @@ from src.types.sized_bytes import bytes32
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 LENGTH_BYTES: int = 5
+log = logging.getLogger(__name__)
 
 
 class Connection:
-    def __init__(self, connection_type: NodeType, sr: StreamReader, sw: StreamWriter):
+    def __init__(self, connection_type: NodeType, sr: StreamReader, sw: StreamWriter, server_port: int):
         self.connection_type = connection_type
         self.reader = sr
         self.writer = sw
         socket = self.writer.get_extra_info("socket")
         self.local_host = socket.getsockname()[0]
-        self.local_port = socket.getsockname()[1]
+        self.local_port = server_port
         self.peer_host, self.peer_port = self.writer.get_extra_info("peername")
         self.node_id = None
 
@@ -41,7 +43,7 @@ class Connection:
 
     async def close(self):
         self.writer.close()
-        await self.writer.wait_closed()
+        # await self.writer.wait_closed()
 
     def __str__(self) -> str:
         return f"Connection({self.get_peername()})"

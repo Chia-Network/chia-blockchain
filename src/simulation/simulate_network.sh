@@ -3,7 +3,7 @@ ps -e | grep "fast_vdf/server" | awk '{print $1}' | xargs -L1  kill -9
 
 ./lib/chiavdf/fast_vdf/server 8889 &
 P1=$!
-# ./lib/chiavdf/fast_vdf/server 8890 &
+./lib/chiavdf/fast_vdf/server 8890 &
 P2=$!
 python -m src.server.start_plotter &
 P3=$!
@@ -11,10 +11,10 @@ python -m src.server.start_timelord &
 P4=$!
 python -m src.server.start_farmer &
 P5=$!
-python -m src.server.start_full_node "127.0.0.1" 8002 "-f" "-t" &
+python -m src.server.start_full_node "127.0.0.1" 8002 "-f" &
 P6=$!
-# python -m src.server.start_full_node "127.0.0.1" 8004 "-t" &
-# P7=$!
+python -m src.server.start_full_node "127.0.0.1" 8004 "-t" &
+P7=$!
 python -m src.server.start_full_node "127.0.0.1" 8005 &
 P8=$!
 
