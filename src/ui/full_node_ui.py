@@ -1,7 +1,7 @@
 import asyncio
 from typing import List, Callable
 import tkinter as tk
-from tkinter import ttk, scrolledtext
+from tkinter import ttk, scrolledtext  # type: ignore
 import logging
 from src.store.full_node_store import FullNodeStore
 from src.blockchain import Blockchain
@@ -9,9 +9,6 @@ from src.server.connection import PeerConnections
 
 
 log = logging.getLogger(__name__)
-# ui_log = logging.handlers.QueueHandler()
-# ui_log.setLevel(logging.INFO)
-# logging.getLogger('').addHandler(ui_log)
 
 
 class FullNodeUI(tk.Tk):

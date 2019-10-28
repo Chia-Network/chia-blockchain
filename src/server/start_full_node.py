@@ -43,8 +43,6 @@ async def main():
     sync_task: Optional[asyncio.Task] = None
     peer_tasks: List[asyncio.Task] = []
 
-    log.info(f"Loop: {asyncio.get_running_loop()}")
-
     def master_close_cb():
         log.info("Closing all connections...")
         waitable_tasks[0].cancel()
