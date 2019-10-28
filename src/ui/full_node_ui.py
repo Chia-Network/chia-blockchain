@@ -1,6 +1,7 @@
 import asyncio
 from typing import List, Callable
 import tkinter as tk
+from tkinter import ttk, scrolledtext
 import logging
 from src.store.full_node_store import FullNodeStore
 from src.blockchain import Blockchain
@@ -8,6 +9,9 @@ from src.server.connection import PeerConnections
 
 
 log = logging.getLogger(__name__)
+# ui_log = logging.handlers.QueueHandler()
+# ui_log.setLevel(logging.INFO)
+# logging.getLogger('').addHandler(ui_log)
 
 
 class FullNodeUI(tk.Tk):
@@ -34,48 +38,67 @@ class FullNodeUI(tk.Tk):
         self.tasks.append(loop.create_task(self.updater(interval)))
 
     def create_widgets(self, port: int):
-        # canvas = tk.Canvas(self, height=600, width=600)
-        self.frame = tk.Frame(height=500, width=500, relief=tk.SUNKEN)
-        self.frame.pack(fill=tk.X, padx=5, pady=5)
-        self.frame.pack_propagate(0)
+        self.geometry("600x500")
+        self.notebook = ttk.Notebook(self)
+        self.notebook.pack(fill="both", expand="yes")
+
+        self.frame = ttk.Frame(self.notebook)
+        self.frame.pack()
+        self.notebook.add(self.frame, text="General")
+
+        self.logs = ttk.Frame(self.notebook)
+        self.logs.pack()
+        self.logs_data = scrolledtext.ScrolledText(self.logs)
+        self.logs_data.pack(fill='both', expand=True, padx=8, pady=8)
+        self.logs_data.insert("insert", f"This is a line \n Maybe add some more \nAnd some more")
+
+        self.notebook.add(self.logs, text="Logs")
 
         # canvas.pack()
-        self.port = tk.Label(self.frame)
+        self.port = ttk.Label(self.frame)
         self.port["text"] = f"Server running on port {port}"
         self.port.pack(side="top")
 
-        self.sync_mode = tk.Label(self.frame)
+        self.sync_mode = ttk.Label(self.frame)
         self.sync_mode["text"] = "Syncing"
         self.sync_mode.pack(side="top")
 
-        self.current_heads = tk.Label(self.frame)
+        self.current_heads = ttk.Label(self.frame)
         self.current_heads["text"] = "Heights of heads: " + str([0, 0, 0])
         self.current_heads.pack(side="top")
 
-        self.peers_title = tk.Label(self.frame)
+        self.peers_title = ttk.Label(self.frame)
         self.peers_title["text"] = "Peer connections"
         self.peers_title.pack()
-        self.peers = tk.Frame(self.frame, relief=tk.SUNKEN)
+        self.peers = ttk.Frame(self.frame)
         self.peers.pack()
-        self.quit_button = tk.Button(self.frame, text="QUIT", fg="red",
-                                     command=self.close_cb)
+        self.quit_button = ttk.Button(self.frame, text="Quit",
+                                      command=self.close_cb)
         self.quit_button.pack(side="bottom")
+
+    def convert_to_sync(self, async_func):
+        def inner():
+            self.loop.create_task(async_func())
+        return inner
 
     async def store_fetcher(self, interval):
         try:
             while True:
                 async with self.connections.get_lock():
                     fetched_connections = await self.connections.get_connections()
-                    self.connection_strs = [f"{con.connection_type} {con.get_peername()} "
-                                            f"{con.node_id.hex()[:10]}..."
-                                            for con in fetched_connections if con.node_id]
                 children = self.peers.winfo_children()
-                con_labels = [child["text"] for child in self.peers.winfo_children()]
-                for con_str in self.connection_strs:
+                con_labels = [child.winfo_children()[0]["text"] for child in children]
+                for con in fetched_connections:
+                    con_str = f"{con.connection_type} {con.get_peername()} {con.node_id.hex()[:10]}..."
                     if con_str not in con_labels:
-                        con_label = tk.Label(self.peers)
+                        row = ttk.Frame(self.peers)
+                        con_label = ttk.Label(row)
                         con_label["text"] = con_str
-                        con_label.pack()
+                        con_label.pack(side="left")
+                        disconnect_button = ttk.Button(row, text="Disconnect",
+                                                       command=self.convert_to_sync(con.close))
+                        disconnect_button.pack(side="left")
+                        row.pack(side="top")
                     else:
                         index = con_labels.index(con_str)
                         del con_labels[index]
