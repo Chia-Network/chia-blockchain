@@ -59,7 +59,7 @@ struct akashnil_form {
 const int64_t THRESH = 1UL<<31;
 const int64_t EXP_THRESH = 31;
 
-std::vector<form> forms;
+form* forms;
 
 //always works
 void repeated_square_original(vdf_original &vdfo, form& f, const integer& D, const integer& L, uint64 base, uint64 iterations, INUDUPLListener *nuduplListener) {
@@ -220,10 +220,10 @@ void repeated_square(form f, const integer& D, const integer& L, WesolowskiCallb
     while (!stopped) {
         uint64 c_checkpoint_interval=checkpoint_interval;
 
-        // if (weso.iterations >= 5000000) {
-        //     std::cout << "Stopping weso at 5000000 iterations!\n";
-        //     return ;
-        // }
+        if (weso.iterations >= 95000000) {
+            std::cout << "Stopping weso at 95000000 iterations!\n";
+            return ;
+        }
 
         #ifdef VDF_TEST
             form f_copy;
