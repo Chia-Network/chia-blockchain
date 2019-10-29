@@ -15,7 +15,7 @@ from src.server.connection import Connection, PeerConnections
 from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
 from src.protocols.shared_protocol import Handshake, HandshakeAck, protocol_version
 from src.util import partial_func
-from src.util.errors import InvalidHandshake, IncompatibleProtocolVersion, DuplicateConnection
+from src.util.errors import InvalidHandshake, IncompatibleProtocolVersion, DuplicateConnection, InvalidAck
 from src.util.network import create_node_id
 
 exited = False
@@ -37,8 +37,6 @@ async def stream_reader_writer_to_connection(pair: Tuple[asyncio.StreamReader, a
     """
     sr, sw = pair
     con = Connection(connection_type, sr, sw, server_port)
-
-    await global_connections.add(con)
 
     log.info(f"Connection with {connection_type} {con.get_peername()} established")
     return con
@@ -71,29 +69,35 @@ async def perform_handshake(connection: Connection) -> AsyncGenerator[Optional[C
         full_message = await connection.read_one_message()
         inbound_handshake = full_message.data
         if full_message.function != "handshake" or not inbound_handshake:
-            raise InvalidHandshake()
+            yield None
+
+        connection.node_id = inbound_handshake.node_id
+        await global_connections.add(connection)
+
         # Send Ack message
-        await connection.send(Message("handshake_ack", HandshakeAck()))
+        if not await connection.send(Message("handshake_ack", HandshakeAck())):
+            raise DuplicateConnection(f"Duplicate connection to {connection}")
 
         # Read Ack message
         full_message = await connection.read_one_message()
         if full_message.function != "handshake_ack":
-            raise InvalidHandshake()
+            raise InvalidAck()
+
         if inbound_handshake.version != protocol_version:
             raise IncompatibleProtocolVersion(f"Our node version {protocol_version} is not compatible with peer\
                     {connection} version {inbound_handshake.version}")
-        if await global_connections.already_have_connection(inbound_handshake.node_id):
-            connection.node_id = inbound_handshake.node_id
-            raise DuplicateConnection(f"Already have connection to {connection}")
-        connection.node_id = inbound_handshake.node_id
+
         log.info((f"Handshake with {connection.connection_type} {connection.get_peername()} {connection.node_id}"
                   f" established"))
         # Only yield a connection if the handshake is succesful and the connection is not a duplicate.
         yield connection
 
-    except (IncompatibleProtocolVersion, InvalidHandshake, DuplicateConnection) as e:
+    except (IncompatibleProtocolVersion, InvalidAck) as e:
         log.warning(f"{e}")
         await global_connections.close(connection)
+        yield None
+    except (DuplicateConnection, InvalidHandshake) as e:
+        log.warning(f"{e}")
         yield None
 
 

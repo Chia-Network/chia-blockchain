@@ -4,7 +4,6 @@ import logging
 from typing import List, Any
 from src.util import cbor
 from src.server.outbound_message import Message, NodeType
-from src.types.sized_bytes import bytes32
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 LENGTH_BYTES: int = 5
@@ -56,15 +55,20 @@ class PeerConnections:
     async def initialize(self):
         self._connections_lock = Lock()
 
-    async def add(self, connection: Connection):
+    async def add(self, connection: Connection) -> bool:
         async with self._connections_lock:
+            for c in self._all_connections:
+                if c.node_id == connection.node_id:
+                    return False
             self._all_connections.append(connection)
+            return True
 
     async def close(self, connection: Connection):
         async with self._connections_lock:
             if connection in self._all_connections:
                 await connection.close()
                 self._all_connections.remove(connection)
+                return
 
     async def close_all_connections(self):
         async with self._connections_lock:
@@ -77,12 +81,3 @@ class PeerConnections:
 
     async def get_connections(self):
         return self._all_connections
-
-    async def already_have_connection(self, node_id: bytes32):
-        ret = False
-        async with self._connections_lock:
-            for c in self._all_connections:
-                if c.node_id == node_id:
-                    ret = True
-                    break
-        return ret

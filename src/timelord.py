@@ -123,9 +123,13 @@ class Timelord:
                 log.info("Stopped server")
                 # Server is now available.
                 async with self.lock:
+                    log.info("Acquired lock")
                     writer.write(b"ACK")
+                    log.info("Wrote ack")
                     await writer.drain()
+                    log.info("Draineed")
                     await proc.wait()
+                    log.info("Waited")
                     self.free_servers.append(port)
                     if challenge_start.challenge_hash in self.active_discriminants:
                         del self.active_discriminants[challenge_start.challenge_hash]

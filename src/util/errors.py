@@ -3,6 +3,11 @@ class InvalidHandshake(Exception):
     pass
 
 
+class InvalidAck(Exception):
+    """Handshake message from peer is invalid"""
+    pass
+
+
 class IncompatibleProtocolVersion(Exception):
     """Protocol versions incompatible"""
     pass
