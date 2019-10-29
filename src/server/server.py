@@ -69,19 +69,23 @@ async def perform_handshake(connection: Connection) -> AsyncGenerator[Optional[C
         full_message = await connection.read_one_message()
         inbound_handshake = full_message.data
         if full_message.function != "handshake" or not inbound_handshake:
-            yield None
+            raise InvalidHandshake("Invalid handshake")
 
-        connection.node_id = inbound_handshake.node_id
-        await global_connections.add(connection)
+        # Makes sure that we only start one connection with each peer
+        async with global_connections.get_lock():
+            connection.node_id = inbound_handshake.node_id
+            if global_connections.have_connection_no_lock(connection):
+                raise DuplicateConnection(f"Duplicate connection to {connection}")
+
+            await global_connections.add_no_lock(connection)
 
         # Send Ack message
-        if not await connection.send(Message("handshake_ack", HandshakeAck())):
-            raise DuplicateConnection(f"Duplicate connection to {connection}")
+        await connection.send(Message("handshake_ack", HandshakeAck()))
 
         # Read Ack message
         full_message = await connection.read_one_message()
         if full_message.function != "handshake_ack":
-            raise InvalidAck()
+            raise InvalidAck("Invalid ack")
 
         if inbound_handshake.version != protocol_version:
             raise IncompatibleProtocolVersion(f"Our node version {protocol_version} is not compatible with peer\
@@ -92,11 +96,7 @@ async def perform_handshake(connection: Connection) -> AsyncGenerator[Optional[C
         # Only yield a connection if the handshake is succesful and the connection is not a duplicate.
         yield connection
 
-    except (IncompatibleProtocolVersion, InvalidAck) as e:
-        log.warning(f"{e}")
-        await global_connections.close(connection)
-        yield None
-    except (DuplicateConnection, InvalidHandshake) as e:
+    except (IncompatibleProtocolVersion, InvalidAck, DuplicateConnection, InvalidHandshake) as e:
         log.warning(f"{e}")
         yield None
 

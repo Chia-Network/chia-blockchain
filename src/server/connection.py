@@ -57,11 +57,20 @@ class PeerConnections:
 
     async def add(self, connection: Connection) -> bool:
         async with self._connections_lock:
-            for c in self._all_connections:
-                if c.node_id == connection.node_id:
-                    return False
-            self._all_connections.append(connection)
-            return True
+            return await self.add_no_lock(connection)
+
+    async def add_no_lock(self, connection: Connection) -> bool:
+        for c in self._all_connections:
+            if c.node_id == connection.node_id:
+                return False
+        self._all_connections.append(connection)
+        return True
+
+    def have_connection_no_lock(self, connection: Connection) -> bool:
+        for c in self._all_connections:
+            if c.node_id == connection.node_id:
+                return True
+        return False
 
     async def close(self, connection: Connection):
         async with self._connections_lock:
