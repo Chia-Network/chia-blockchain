@@ -46,7 +46,7 @@ class Timelord:
         disc: int = create_discriminant(challenge_start.challenge_hash, constants["DISCRIMINANT_SIZE_BITS"])
         async with self.lock:
             if (challenge_start.challenge_hash in self.seen_discriminants):
-                log.info("Already seen this one... Ignoring")
+                log.info("Already seen this challenge hash {challenge_start.challenge_hash}. Ignoring.")
                 return
             self.seen_discriminants.append(challenge_start.challenge_hash)
             self.active_heights.append(challenge_start.height)
@@ -58,7 +58,7 @@ class Timelord:
                 if (challenge_start.height <= max(self.active_heights) - 3):
                     self.done_discriminants.append(challenge_start.challenge_hash)
                     self.active_heights.remove(challenge_start.height)
-                    log.info(f"Will not execute challenge at height {challenge_start.height}, too old")
+                    log.info(f"Will not execute challenge at height {challenge_start}, too old")
                     return
                 assert(len(self.active_heights) > 0)
                 if (challenge_start.height == max(self.active_heights)):
@@ -71,7 +71,7 @@ class Timelord:
 
             # Poll until a server becomes free.
             if port == -1:
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(1)
 
         proc = await asyncio.create_subprocess_shell("./lib/chiavdf/fast_vdf/server " + str(port))
 
@@ -102,8 +102,8 @@ class Timelord:
 
         async with self.lock:
             if (challenge_start.challenge_hash in self.pending_iters):
+                log.info(f"Writing pending iters {challenge_start.challenge_hash}")
                 for iter in sorted(self.pending_iters[challenge_start.challenge_hash]):
-                    log.info(f"Writing pending iters {challenge_start.challenge_hash}")
                     writer.write((str(len(str(iter))) + str(iter)).encode())
                     await writer.drain()
 
@@ -111,6 +111,7 @@ class Timelord:
         while True:
             data = await reader.readexactly(4)
             if (data.decode() == "STOP"):
+                log.info("Stopped server")
                 # Server is now available.
                 async with self.lock:
                     writer.write(b"ACK")
@@ -121,7 +122,8 @@ class Timelord:
             elif (data.decode() == "POLL"):
                 async with self.lock:
                     # If I have a newer discriminant... Free up the VDF server
-                    if (len(self.active_heights) > 0 and challenge_start.height <= max(self.active_heights)):
+                    if (len(self.active_heights) > 0 and challenge_start.height <= max(self.active_heights)
+                            and challenge_start.challenge_hash in self.active_discriminants):
                         log.info("Got poll, stopping the challenge!")
                         writer.write(b'10')
                         await writer.drain()
@@ -145,7 +147,8 @@ class Timelord:
                 proof_blob = ClassGroup.from_ab_discriminant(y.a, y.b, disc).serialize() + proof_bytes
                 x = ClassGroup.from_ab_discriminant(2, 1, disc)
                 if (not check_proof_of_time_nwesolowski(disc, x, proof_blob, iterations_needed,
-                                                       constants["DISCRIMINANT_SIZE_BITS"], self.config["n_wesolowski"])):
+                                                        constants["DISCRIMINANT_SIZE_BITS"],
+                                                        self.config["n_wesolowski"])):
                     log.error("My proof is incorrect!")
 
                 output = ProofOfTimeOutput(challenge_start.challenge_hash,
@@ -155,10 +158,14 @@ class Timelord:
                 response = timelord_protocol.ProofOfTimeFinished(proof_of_time)
 
                 async with self.lock:
-                    time_taken = time.time() - self.active_discriminants_start_time[challenge_start.challenge_hash]
-                ips = int(iterations_needed / time_taken * 10)/10
-                log.info(f"Finished PoT, chall:{challenge_start.challenge_hash[:10].hex()}.. {iterations_needed}"
-                         f" iters. {int(time_taken*1000)/1000}s, {ips} ips")
+                    if challenge_start.challenge_hash in self.active_discriminants:
+                        time_taken = time.time() - self.active_discriminants_start_time[challenge_start.challenge_hash]
+                        ips = int(iterations_needed / time_taken * 10)/10
+                        log.info(f"Finished PoT, chall:{challenge_start.challenge_hash[:10].hex()}.."
+                                 f" {iterations_needed} iters. {int(time_taken*1000)/1000}s, {ips} ips")
+                    else:
+                        log.info(f"Finished PoT chall:{challenge_start.challenge_hash[:10].hex()}.. {iterations_needed}"
+                                 f" iters. But challenge not active anymore")
 
                 yield OutboundMessage(NodeType.FULL_NODE, Message("proof_of_time_finished", response), Delivery.RESPOND)
 
@@ -178,7 +185,6 @@ class Timelord:
                 del self.active_discriminants[challenge_end.challenge_hash]
                 del self.active_discriminants_start_time[challenge_end.challenge_hash]
                 self.done_discriminants.append(challenge_end.challenge_hash)
-        await asyncio.sleep(0.5)
 
     @api_request
     async def proof_of_space_info(self, proof_of_space_info: timelord_protocol.ProofOfSpaceInfo):
@@ -187,8 +193,10 @@ class Timelord:
         have a process for this challenge, we should communicate to the process to tell it how
         many iterations to run for.
         """
-
         async with self.lock:
+            log.info(f"{proof_of_space_info.challenge_hash in self.active_discriminants}")
+            log.info(f"{proof_of_space_info.challenge_hash in self.done_discriminants}")
+            log.info(f"{proof_of_space_info.challenge_hash in self.pending_iters}")
             if (proof_of_space_info.challenge_hash in self.active_discriminants):
                 writer = self.active_discriminants[proof_of_space_info.challenge_hash]
                 writer.write(((str(len(str(proof_of_space_info.iterations_needed))) +

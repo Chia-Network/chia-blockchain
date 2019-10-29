@@ -239,18 +239,20 @@ class Blockchain:
             # First epoch has a hardcoded vdf speed
             return self.constants["VDF_IPS_STARTING"]
 
-        elif next_height % self.constants["DIFFICULTY_EPOCH"] != self.constants["DIFFICULTY_DELAY"]:
+        prev_block = await self.store.get_block(block.prev_header_hash)
+        if prev_block is None:
+            raise Exception("Previous block is invalid.")
+        proof_of_space = block.trunk_block.proof_of_space
+        challenge_hash = block.trunk_block.proof_of_time.output.challenge_hash
+        difficulty = await self.get_next_difficulty(prev_block.header_hash)
+        iterations = block.trunk_block.challenge.total_iters - prev_block.trunk_block.challenge.total_iters
+        prev_ips = calculate_ips_from_iterations(proof_of_space, challenge_hash, difficulty, iterations,
+                                                 self.constants["MIN_BLOCK_TIME"])
+
+        if next_height % self.constants["DIFFICULTY_EPOCH"] != self.constants["DIFFICULTY_DELAY"]:
             # Not at a point where ips would change, so return the previous ips
             # TODO: cache this for efficiency
-            prev_block = await self.store.get_block(block.prev_header_hash)
-            if prev_block is None:
-                raise Exception("Previous block is invalid.")
-            proof_of_space = block.trunk_block.proof_of_space
-            challenge_hash = block.trunk_block.proof_of_time.output.challenge_hash
-            difficulty = await self.get_next_difficulty(prev_block.header_hash)
-            iterations = block.trunk_block.challenge.total_iters - prev_block.trunk_block.challenge.total_iters
-            return calculate_ips_from_iterations(proof_of_space, challenge_hash, difficulty, iterations,
-                                                 self.constants["MIN_BLOCK_TIME"])
+            return prev_ips
 
         # ips (along with difficulty) will change in this block, so we need to calculate the new one.
         # The calculation is (iters_2 - iters_1) // (timestamp_2 - timestamp_1).
@@ -296,7 +298,13 @@ class Blockchain:
         timestamp2 = block2.trunk_block.header.data.timestamp
         iters2 = block2.trunk_block.challenge.total_iters
 
-        return uint64((iters2 - iters1) // (timestamp2 - timestamp1))
+        new_ips = uint64((iters2 - iters1) // (timestamp2 - timestamp1))
+
+        # Only change by a max factor, and must be at least 1
+        if new_ips >= prev_ips:
+            return min(new_ips, uint64(self.constants["IPS_FACTOR"] * new_ips))
+        else:
+            return max([uint64(1), new_ips, uint64(prev_ips // self.constants["IPS_FACTOR"])])
 
     async def receive_block(self, block: FullBlock) -> ReceiveBlockResult:
         """
