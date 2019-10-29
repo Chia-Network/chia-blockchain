@@ -29,54 +29,44 @@ log = logging.getLogger(__name__)
 
 class FullNodeUI:
     def __init__(self, store: FullNodeStore, blockchain: Blockchain, connections: PeerConnections,
-                 port: int, close_cb: Callable, log_queue: Queue):
+                 port: int, ssh_port: int, ssh_key_filename: str, close_cb: Callable, log_queue: Queue):
         self.port = port
         self.store = store
         self.blockchain = blockchain
         self.connections = connections
-        self.close_cb = close_cb
         self.log_queue = log_queue
         self.logs: List[logging.LogRecord] = []
-        kb = self.setup_keybindings(close_cb)
-        self.draw_initial()
-        self.app = Application(layout=self.layout, full_screen=True, key_bindings=kb, mouse_support=True)
+        self.app: Optional[Application] = None
 
-        ui_future = self.app.run_async()
+        def close():
+            if self.app:
+                self.app.exit(0)
+            close_cb()
+        self.close_cb = close
+        kb = self.setup_keybindings()
+        self.draw_initial()
 
         async def interact() -> None:
-            res = await ui_future
-            if res:
-                print("Result", res)
-            # exception: Optional[Exception] = future.exception()
-            # if exception:
-            #     print(f"Raised UI exception {type(exception)}, {exception}")
-            self.close_cb()
+            self.app = Application(layout=self.layout, full_screen=True, key_bindings=kb, mouse_support=True)
+            await self.app.run_async()
 
         asyncio.get_running_loop().create_task(asyncssh.create_server(
             lambda: PromptToolkitSSHServer(interact),
             "",
-            port,
-            server_host_keys=["/Users/mariano/.ssh/id_rsa"],
+            ssh_port,
+            server_host_keys=[ssh_key_filename],
         ))
 
         asyncio.get_running_loop().create_task(self.update())
 
-    def setup_keybindings(self, close_cb: Callable) -> KeyBindings:
+    def setup_keybindings(self) -> KeyBindings:
         kb = KeyBindings()
         kb.add('tab')(focus_next)
         kb.add('s-tab')(focus_previous)
 
         @kb.add('c-c')
         def exit_(event):
-            print("CLOSING")
-            """
-            Pressing Ctrl-Q will exit the user interface.
-
-            Setting a return value means: quit the event loop that drives the user
-            interface and return this value from the `Application.run()` call.
-            """
-            event.app.exit()
-            close_cb()
+            self.close_cb()
         return kb
 
     def draw_initial(self):
@@ -85,7 +75,10 @@ class FullNodeUI:
         self.current_heads = TextArea(text=f'Current heads: [0, 0, 0]', focusable=False, height=1)
         self.con_rows = []
         self.connection_rows_vsplit = Window()
-        self.quit_button = Button('Quit', handler=self.close_cb)
+        if self.app is not None:
+            self.quit_button = Button('Quit', handler=self.close_cb)
+        else:
+            self.quit_button = Button('Quit', handler=self.close_cb)
 
         body = HSplit([self.server_msg, self.syncing, self.current_heads,
                        self.connection_rows_vsplit, self.quit_button],
@@ -104,7 +97,7 @@ class FullNodeUI:
             fetched_connections = await self.connections.get_connections()
         con_strs = []
         for con in fetched_connections:
-            con_str = f"{con.connection_type} {con.get_peername()} {con.node_id.hex()[:10]}..."
+            con_str = f"{con.connection_type} {con.get_peername()} con.node_id.hex()[:10]..."
             con_strs.append(con_str)
             labels = [row.children[0].content.text() for row in self.con_rows]
             if con_str not in labels:
@@ -134,24 +127,16 @@ class FullNodeUI:
                 self.syncing.text = "Not syncing"
             heads = self.blockchain.get_current_heads()
             self.current_heads.text = "Heights of heads: " + str([h.height for h in heads])
-        # self.content.body = [self.server_msg, self.quit_button]
         self.content.body = HSplit([self.server_msg, self.syncing, self.current_heads,
                                     new_con_rows, self.quit_button], width=D(), height=D())
 
     async def update(self):
         try:
             while True:
-                # try:
-                #     while True:
-                #         self.logs.append(self.log_queue.get_nowait())
-                # except Empty:
-                #     pass
-
-                # self.content.body = await self.get_body(i)
                 await self.update_draw()
-                if not self.app.invalidated:
-                    # print("invalidtiong")
+                if self.app and not self.app.invalidated:
                     self.app.invalidate()
                 await asyncio.sleep(1)
-        except Exception as e:
-            print(f"ERROR {type(e)} {e}")
+        except asyncio.CancelledError as e:
+            print(f"Exception thrown in UI update: {type(e)} {e}")
+            raise e

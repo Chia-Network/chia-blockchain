@@ -91,7 +91,7 @@ async def perform_handshake(connection: Connection) -> AsyncGenerator[Optional[C
         # Only yield a connection if the handshake is succesful and the connection is not a duplicate.
         yield connection
 
-    except (IncompatibleProtocolVersion, InvalidHandshake, DuplicateConnection) as e:
+    except (IncompatibleProtocolVersion, InvalidHandshake, DuplicateConnection, asyncio.IncompleteReadError) as e:
         log.warning(f"{e}")
         await global_connections.close(connection)
         yield None
