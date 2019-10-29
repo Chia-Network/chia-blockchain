@@ -17,7 +17,25 @@ from pygments.lexers.html import HtmlLexer
 
 from prompt_toolkit.lexers import PygmentsLexer
 
-from prompt_toolkit.completion import WordCompleter
+from prompt_toolkitl.completion import WordCompleter
+from prompt_toolkit.eventloop import use_asyncio_event_loop
+# from prompt_toolkit.contrib.telnet.server import TelnetServer
+from prompt_toolkit import Application
+from prompt_toolkit.layout.containers import VSplit, HSplit, Window
+from prompt_toolkit.layout.layout import Layout
+from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.widgets import (
+    Frame,
+    Label,
+    TextArea,
+    Button
+)
+from prompt_toolkit.layout.dimension import D
+from prompt_toolkit.key_binding.bindings.focus import (
+    focus_next,
+    focus_previous,
+)
+
 
 animal_completer = WordCompleter([
     'alligator', 'ant', 'ape', 'bat', 'bear', 'beaver', 'bee', 'bison',
@@ -69,6 +87,26 @@ async def interact() -> None:
     # Show input dialog
     await prompt_session.prompt_async('Showing input dialog... [ENTER]')
     await input_dialog("Input dialog", "Running over asyncssh").run_async()
+
+    kb = KeyBindings()
+    kb.add('tab')(focus_next)
+    kb.add('s-tab')(focus_previous)
+
+    @kb.add('c-c')
+    def exit_(event):
+        print("CLOSING")
+        """
+        Pressing Ctrl-Q will exit the user interface.
+
+        Setting a return value means: quit the event loop that drives the user
+        interface and return this value from the `Application.run()` call.
+        """
+        event.app.exit()
+    body = HSplit([label1, label2], height=D(), width=D()
+    content = Frame(title="Chia Full Node", body=body)
+    layout = Layout(VSplit([content], height=D(), width=D()))
+    app = Application(layout=layout, full_screen=True, key_bindings=kb, mouse_support=True).run_async()
+    await app
 
 
 def main(port=8222):
