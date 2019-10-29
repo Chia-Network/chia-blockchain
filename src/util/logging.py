@@ -13,7 +13,7 @@ def initialize_logging() -> Queue:
                         datefmt='%H:%M:%S'
                         )
     main_logger = logging.getLogger()
-    main_logger.handlers = []
+    # main_logger.handlers = []
     main_logger.addHandler(queue_handler)
     listener = QueueListener(log_queue)
     listener.start()
