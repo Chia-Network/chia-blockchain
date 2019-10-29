@@ -54,7 +54,9 @@ async def main():
         log.info("Server closed.")
     host, port = parse_host_port(full_node)
 
-    FullNodeUI(store, blockchain, global_connections, port, master_close_cb, log_queue)
+    if "-u" in sys.argv:
+        FullNodeUI(store, blockchain, global_connections, port, full_node.config['ssh_port'],
+                   full_node.config['ssh_filename'], master_close_cb, log_queue)
 
     # Starts the full node server (which full nodes can connect to)
     server, client = await start_chia_server(host, port, full_node, NodeType.FULL_NODE, full_node.on_connect)
@@ -75,7 +77,7 @@ async def main():
     connected_tasks = [response[0] for response in awaited if not isinstance(response, asyncio.CancelledError)]
     waitable_tasks = waitable_tasks + connected_tasks
     if server_closed:
-        quit()
+        return
 
     log.info(f"Connected to {len(connected_tasks)} peers.")
 
