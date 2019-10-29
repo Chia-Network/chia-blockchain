@@ -1,17 +1,14 @@
 from typing import Callable, List, Optional
-from src.store.full_node_store import FullNodeStore
-from src.blockchain import Blockchain
-from src.server.connection import PeerConnections
+import asyncio
+import logging
+from queue import Queue
+import asyncssh
 from prompt_toolkit.layout.dimension import D
+from prompt_toolkit.contrib.ssh import PromptToolkitSSHServer
 from prompt_toolkit.key_binding.bindings.focus import (
     focus_next,
     focus_previous,
 )
-import asyncio
-import logging
-from queue import Queue
-from prompt_toolkit.eventloop import use_asyncio_event_loop
-# from prompt_toolkit.contrib.telnet.server import TelnetServer
 from prompt_toolkit import Application
 from prompt_toolkit.layout.containers import VSplit, HSplit, Window
 from prompt_toolkit.layout.layout import Layout
@@ -22,6 +19,10 @@ from prompt_toolkit.widgets import (
     TextArea,
     Button
 )
+from src.store.full_node_store import FullNodeStore
+from src.blockchain import Blockchain
+from src.server.connection import PeerConnections
+
 
 log = logging.getLogger(__name__)
 
@@ -40,16 +41,24 @@ class FullNodeUI:
         self.draw_initial()
         self.app = Application(layout=self.layout, full_screen=True, key_bindings=kb, mouse_support=True)
 
-        use_asyncio_event_loop()
-        ui_future = self.app.run_async().to_asyncio_future()
+        ui_future = self.app.run_async()
 
-        def done_cb(future):
-            exception: Optional[Exception] = future.exception()
-            if exception:
-                print(f"Raised UI exception {type(exception)}, {exception}")
+        async def interact() -> None:
+            res = await ui_future
+            if res:
+                print("Result", res)
+            # exception: Optional[Exception] = future.exception()
+            # if exception:
+            #     print(f"Raised UI exception {type(exception)}, {exception}")
             self.close_cb()
 
-        ui_future.add_done_callback(done_cb)
+        asyncio.get_running_loop().create_task(asyncssh.create_server(
+            lambda: PromptToolkitSSHServer(interact),
+            "",
+            port,
+            server_host_keys=["/Users/mariano/.ssh/id_rsa"],
+        ))
+
         asyncio.get_running_loop().create_task(self.update())
 
     def setup_keybindings(self, close_cb: Callable) -> KeyBindings:

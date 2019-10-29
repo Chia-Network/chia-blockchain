@@ -17,9 +17,7 @@ from pygments.lexers.html import HtmlLexer
 
 from prompt_toolkit.lexers import PygmentsLexer
 
-from prompt_toolkitl.completion import WordCompleter
-from prompt_toolkit.eventloop import use_asyncio_event_loop
-# from prompt_toolkit.contrib.telnet.server import TelnetServer
+from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit import Application
 from prompt_toolkit.layout.containers import VSplit, HSplit, Window
 from prompt_toolkit.layout.layout import Layout
@@ -53,41 +51,6 @@ async def interact() -> None:
     that any prompt_toolkit application (dialogs, prompts, etc...) will use the
     SSH channel for input and output.
     """
-    prompt_session = PromptSession()
-
-    # Alias 'print_formatted_text', so that 'print' calls go to the SSH client.
-    print = print_formatted_text
-
-    print('We will be running a few prompt_toolkit applications through this ')
-    print('SSH connection.\n')
-
-    # Simple progress bar.
-    with ProgressBar() as pb:
-        for i in pb(range(50)):
-            await asyncio.sleep(.1)
-
-    # Normal prompt.
-    text = await prompt_session.prompt_async("(normal prompt) Type something: ")
-    print("You typed", text)
-
-    # Prompt with auto completion.
-    text = await prompt_session.prompt_async(
-        "(autocompletion) Type an animal: ", completer=animal_completer)
-    print("You typed", text)
-
-    # prompt with syntax highlighting.
-    text = await prompt_session.prompt_async("(HTML syntax highlighting) Type something: ",
-                                             lexer=PygmentsLexer(HtmlLexer))
-    print("You typed", text)
-
-    # Show yes/no dialog.
-    await prompt_session.prompt_async('Showing yes/no dialog... [ENTER]')
-    await yes_no_dialog("Yes/no dialog", "Running over asyncssh").run_async()
-
-    # Show input dialog
-    await prompt_session.prompt_async('Showing input dialog... [ENTER]')
-    await input_dialog("Input dialog", "Running over asyncssh").run_async()
-
     kb = KeyBindings()
     kb.add('tab')(focus_next)
     kb.add('s-tab')(focus_previous)
@@ -102,7 +65,10 @@ async def interact() -> None:
         interface and return this value from the `Application.run()` call.
         """
         event.app.exit()
-    body = HSplit([label1, label2], height=D(), width=D()
+
+    label1 = Label(text="label1")
+    label2 = Label(text="label2")
+    body = HSplit([label1, label2], height=D(), width=D())
     content = Frame(title="Chia Full Node", body=body)
     layout = Layout(VSplit([content], height=D(), width=D()))
     app = Application(layout=layout, full_screen=True, key_bindings=kb, mouse_support=True).run_async()
