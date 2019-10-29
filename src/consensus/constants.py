@@ -4,6 +4,7 @@ constants: Dict[str, Any] = {
     "NUMBER_OF_HEADS": 3,  # The number of tips each full node keeps track of and propagates
     "DIFFICULTY_STARTING": 500,  # These are in units of 2^32
     "DIFFICULTY_FACTOR": 3,  # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]
+    "IPS_FACTOR": 3,  # The next ips is truncated to range [prev / FACTOR, prev * FACTOR]
 
     # These 3 constants must be changed at the same time
     "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch

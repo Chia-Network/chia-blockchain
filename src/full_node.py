@@ -520,6 +520,7 @@ class FullNode:
 
         timelord_request = timelord_protocol.ProofOfSpaceInfo(challenge_hash, iterations_needed)
 
+        log.warn(f"Sending pos info height {unfinished_block.block.height}")
         yield OutboundMessage(NodeType.TIMELORD, Message("proof_of_space_info", timelord_request), Delivery.BROADCAST)
         yield OutboundMessage(NodeType.FULL_NODE, Message("unfinished_block", unfinished_block),
                               Delivery.BROADCAST_TO_OTHERS)
@@ -584,20 +585,16 @@ class FullNode:
             async with (await self.store.get_lock()):
                 log.info(f"\tUpdated heads, new heights: {[b.height for b in self.blockchain.get_current_heads()]}")
                 difficulty = await self.blockchain.get_next_difficulty(block.block.prev_header_hash)
-                old_ips = await self.store.get_proof_of_time_estimate_ips()
                 next_vdf_ips = await self.blockchain.get_next_ips(block.block.header_hash)
-                log.info(f"Difficulty {difficulty} IPS {old_ips}")
+                log.info(f"Difficulty {difficulty} IPS {next_vdf_ips}")
                 if next_vdf_ips != await self.store.get_proof_of_time_estimate_ips():
                     await self.store.set_proof_of_time_estimate_ips(next_vdf_ips)
                     ips_changed = True
             if ips_changed:
-                if next_vdf_ips > old_ips:
-                    # TODO: remove this for testnet/mainnet
-                    # If rate dropped this much, don't send an update (for testing, blockchain offline, etc)
-                    rate_update = farmer_protocol.ProofOfTimeRate(max(old_ips, next_vdf_ips))
-                    log.error(f"Sending proof of time rate {max(old_ips, next_vdf_ips)}")
-                    yield OutboundMessage(NodeType.FARMER, Message("proof_of_time_rate", rate_update),
-                                          Delivery.BROADCAST)
+                rate_update = farmer_protocol.ProofOfTimeRate(next_vdf_ips)
+                log.error(f"Sending proof of time rate {next_vdf_ips}")
+                yield OutboundMessage(NodeType.FARMER, Message("proof_of_time_rate", rate_update),
+                                      Delivery.BROADCAST)
             assert block.block.trunk_block.proof_of_time
             assert block.block.trunk_block.challenge
             pos_quality = block.block.trunk_block.proof_of_space.verify_and_get_quality(
