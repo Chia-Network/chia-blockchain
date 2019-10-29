@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import sys
+from queue import Queue
 from typing import List, Optional
 from src.full_node import FullNode
 from src.server.server import start_chia_server, start_chia_client, global_connections
@@ -9,14 +10,9 @@ from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
 from src.store.full_node_store import FullNodeStore
 from src.blockchain import Blockchain
-from src.ui.full_node_ui import start_ui
+from src.ui.prompt_ui import FullNodeUI
+from src.util.logging import initialize_logging
 
-
-logging.basicConfig(format='FullNode %(name)-23s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s',
-                    level=logging.INFO,
-                    datefmt='%H:%M:%S'
-                    )
-log = logging.getLogger(__name__)
 
 """
 Full node startup algorithm:
@@ -27,10 +23,13 @@ Full node startup algorithm:
 - If connected to timelord, send challenges
 """
 
+log = logging.getLogger(__name__)
 server_closed = False
 
 
 async def main():
+    log_queue: Queue = initialize_logging()
+
     # Create the store (DB) and full node instance
     store = FullNodeStore()
     await store.initialize()
@@ -55,7 +54,7 @@ async def main():
         log.info("Server closed.")
     host, port = parse_host_port(full_node)
 
-    start_ui(store, blockchain, global_connections, port, master_close_cb)
+    FullNodeUI(store, blockchain, global_connections, port, master_close_cb, log_queue)
 
     # Starts the full node server (which full nodes can connect to)
     server, client = await start_chia_server(host, port, full_node, NodeType.FULL_NODE, full_node.on_connect)

@@ -15,8 +15,8 @@ python -m src.server.start_full_node "127.0.0.1" 8002 "-f" &
 P6=$!
 python -m src.server.start_full_node "127.0.0.1" 8004 "-t" &
 P7=$!
-python -m src.server.start_full_node "127.0.0.1" 8005 &
-P8=$!
+# python -m src.server.start_full_node "127.0.0.1" 8005 &
+# P8=$!
 
 _term() {
   echo "Caught SIGTERM signal, killing all servers."
