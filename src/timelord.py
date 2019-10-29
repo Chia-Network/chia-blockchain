@@ -43,6 +43,7 @@ class Timelord:
         a new VDF process here. But we don't know how many iterations to run for, so we run
         forever.
         """
+        log.info(f"Called challenge start {challenge_start}")
         disc: int = create_discriminant(challenge_start.challenge_hash, constants["DISCRIMINANT_SIZE_BITS"])
         async with self.lock:
             if (challenge_start.challenge_hash in self.seen_discriminants):
@@ -50,17 +51,21 @@ class Timelord:
                 return
             self.seen_discriminants.append(challenge_start.challenge_hash)
             self.active_heights.append(challenge_start.height)
+        log.info(f"Added {challenge_start} to seen and active")
 
         # Wait for a server to become free.
         port: int = -1
         while port == -1:
+            log.info(f"Looping {challenge_start}")
             async with self.lock:
+                log.info(f"Acquired loop lock {challenge_start}")
                 if (challenge_start.height <= max(self.active_heights) - 3):
                     self.done_discriminants.append(challenge_start.challenge_hash)
                     self.active_heights.remove(challenge_start.height)
                     log.info(f"Will not execute challenge at height {challenge_start}, too old")
                     return
                 assert(len(self.active_heights) > 0)
+                log.info(f"{challenge_start.height}, max is {max(self.active_heights)}")
                 if (challenge_start.height == max(self.active_heights)):
                     if (len(self.free_servers) != 0):
                         port = self.free_servers[0]
@@ -68,12 +73,16 @@ class Timelord:
                         log.info(f"Discriminant {str(disc)[:10]}... attached to port {port}.")
                         log.info(f"Challenge/Height attached is {challenge_start}")
                         self.active_heights.remove(challenge_start.height)
+                    else:
+                        log.info(f"No Free servers")
 
             # Poll until a server becomes free.
             if port == -1:
                 await asyncio.sleep(1)
 
+        log.info(f"Creating server for {challenge_start}")
         proc = await asyncio.create_subprocess_shell("./lib/chiavdf/fast_vdf/server " + str(port))
+        log.info("Created")
 
         # TODO(Florin): Handle connection failure (attempt another server)
         writer, reader = None, None
@@ -118,6 +127,9 @@ class Timelord:
                     await writer.drain()
                     await proc.wait()
                     self.free_servers.append(port)
+                    if challenge_start.challenge_hash in self.active_discriminants:
+                        del self.active_discriminants[challenge_start.challenge_hash]
+                        del self.active_discriminants_start_time[challenge_start.challenge_hash]
                 break
             elif (data.decode() == "POLL"):
                 async with self.lock:

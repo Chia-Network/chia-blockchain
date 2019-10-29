@@ -501,7 +501,6 @@ class FullNode:
                 # If this is the first block we see at this height, propagate
                 await self.store.set_unfinished_block_leader((unfinished_block.block.height, expected_time))
             elif unfinished_block.block.height == leader[0]:
-                log.info(f"Same height {unfinished_block.block.height} as leader")
                 if expected_time > leader[1] + constants["PROPAGATION_THRESHOLD"]:
                     # If VDF is expected to finish X seconds later than the best, don't propagate
                     log.info(f"VDF will finish too late, retuning")
