@@ -73,6 +73,8 @@ class Timelord:
             if port == -1:
                 await asyncio.sleep(0.5)
 
+        proc = await asyncio.create_subprocess_shell("./lib/chiavdf/fast_vdf/server " + str(port))
+
         # TODO(Florin): Handle connection failure (attempt another server)
         writer, reader = None, None
         for _ in range(10):
@@ -113,12 +115,13 @@ class Timelord:
                 async with self.lock:
                     writer.write(b"ACK")
                     await writer.drain()
+                    await proc.wait()
                     self.free_servers.append(port)
                 break
             elif (data.decode() == "POLL"):
                 async with self.lock:
                     # If I have a newer discriminant... Free up the VDF server
-                    if (len(self.active_heights) > 0 and challenge_start.height < max(self.active_heights)):
+                    if (len(self.active_heights) > 0 and challenge_start.height <= max(self.active_heights)):
                         log.info("Got poll, stopping the challenge!")
                         writer.write(b'10')
                         await writer.drain()
@@ -141,8 +144,9 @@ class Timelord:
                 # Verifies our own proof just in case
                 proof_blob = ClassGroup.from_ab_discriminant(y.a, y.b, disc).serialize() + proof_bytes
                 x = ClassGroup.from_ab_discriminant(2, 1, disc)
-                assert check_proof_of_time_nwesolowski(disc, x, proof_blob, iterations_needed,
-                                                       constants["DISCRIMINANT_SIZE_BITS"], self.config["n_wesolowski"])
+                if (not check_proof_of_time_nwesolowski(disc, x, proof_blob, iterations_needed,
+                                                       constants["DISCRIMINANT_SIZE_BITS"], self.config["n_wesolowski"])):
+                    log.error("My proof is incorrect!")
 
                 output = ProofOfTimeOutput(challenge_start.challenge_hash,
                                            iterations_needed,

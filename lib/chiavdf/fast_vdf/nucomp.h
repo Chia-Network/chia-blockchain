@@ -27,7 +27,7 @@ typedef struct qfb
 typedef qfb qfb_t[1];
 
 // From Antic using Flint (works!)
-void qfb_nucomp(qfb_t r, const qfb_t f, const qfb_t g, fmpz_t D, fmpz_t L)
+void qfb_nucomp(qfb_t r, const qfb_t f, const qfb_t g, fmpz_t& D, fmpz_t& L)
 {
    fmpz_t a1, a2, c2, ca, cb, cc, k, s, sp, ss, m, t, u2, v1, v2;
 
