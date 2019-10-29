@@ -1,7 +1,6 @@
 from typing import Callable, List, Optional
 import asyncio
 import logging
-from queue import Queue
 import asyncssh
 from prompt_toolkit.layout.dimension import D
 from prompt_toolkit.contrib.ssh import PromptToolkitSSHServer
@@ -29,12 +28,11 @@ log = logging.getLogger(__name__)
 
 class FullNodeUI:
     def __init__(self, store: FullNodeStore, blockchain: Blockchain, connections: PeerConnections,
-                 port: int, ssh_port: int, ssh_key_filename: str, close_cb: Callable, log_queue: Queue):
+                 port: int, ssh_port: int, ssh_key_filename: str, close_cb: Callable):
         self.port = port
         self.store = store
         self.blockchain = blockchain
         self.connections = connections
-        self.log_queue = log_queue
         self.logs: List[logging.LogRecord] = []
         self.app: Optional[Application] = None
 
@@ -97,7 +95,7 @@ class FullNodeUI:
             fetched_connections = await self.connections.get_connections()
         con_strs = []
         for con in fetched_connections:
-            con_str = f"{con.connection_type} {con.get_peername()} con.node_id.hex()[:10]..."
+            con_str = f"{con.connection_type} {con.get_peername()} {con.node_id.hex()[:10]}..."
             con_strs.append(con_str)
             labels = [row.children[0].content.text() for row in self.con_rows]
             if con_str not in labels:
@@ -105,7 +103,6 @@ class FullNodeUI:
                 disconnect_button = Button("Disconnect", handler=self.convert_to_sync(con.close))
                 row = VSplit([con_label, disconnect_button])
                 self.con_rows.append(row)
-        # print("Con strs", con_strs, len(fetched_connections))
 
         self.con_rows = [row for row in self.con_rows if row.children[0].content.text() in con_strs]
         if len(self.con_rows):

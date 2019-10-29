@@ -1,22 +1,22 @@
-ps -e | grep python | grep "start_" | awk '{print $1}' | xargs -L1  kill -9
-ps -e | grep "fast_vdf/server" | awk '{print $1}' | xargs -L1  kill -9
+_kill_servers() {
+  ps -e | grep python | grep "start_" | awk '{print $1}' | xargs -L1  kill -9
+  ps -e | grep "fast_vdf/server" | awk '{print $1}' | xargs -L1  kill -9
+}
 
-./lib/chiavdf/fast_vdf/server 8889 &
-P1=$!
-./lib/chiavdf/fast_vdf/server 8890 &
-P2=$!
+_kill_servers
+
 python -m src.server.start_plotter &
-P3=$!
+P1=$!
 python -m src.server.start_timelord &
-P4=$!
+P2=$!
 python -m src.server.start_farmer &
-P5=$!
+P3=$!
 python -m src.server.start_full_node "127.0.0.1" 8002 "-f" &
-P6=$!
+P4=$!
 python -m src.server.start_full_node "127.0.0.1" 8004 "-t" "-u" &
-P7=$!
+P5=$!
 python -m src.server.start_full_node "127.0.0.1" 8005 &
-P8=$!
+P6=$!
 
 _term() {
   echo "Caught SIGTERM signal, killing all servers."
@@ -26,11 +26,10 @@ _term() {
   kill -TERM "$P4" 2>/dev/null
   kill -TERM "$P5" 2>/dev/null
   kill -TERM "$P6" 2>/dev/null
-  kill -TERM "$P7" 2>/dev/null
-  kill -TERM "$P8" 2>/dev/null
+  _kill_servers
 }
 
 trap _term SIGTERM
 trap _term SIGINT
 trap _term INT
-wait $P1 $P2 $P3 $P4 $P5 $P6 $P7 $P8
+wait $P1 $P2 $P3 $P4 $P5 $P6

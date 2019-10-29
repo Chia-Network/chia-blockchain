@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import sys
-from queue import Queue
 from typing import List, Optional
 from src.full_node import FullNode
 from src.server.server import start_chia_server, start_chia_client, global_connections
@@ -11,7 +10,6 @@ from src.types.peer_info import PeerInfo
 from src.store.full_node_store import FullNodeStore
 from src.blockchain import Blockchain
 from src.ui.prompt_ui import FullNodeUI
-from src.util.logging import initialize_logging
 
 
 """
@@ -23,13 +21,16 @@ Full node startup algorithm:
 - If connected to timelord, send challenges
 """
 
+logging.basicConfig(format='FullNode %(name)-23s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s',
+                    level=logging.INFO,
+                    datefmt='%H:%M:%S'
+                    )
+
 log = logging.getLogger(__name__)
 server_closed = False
 
 
 async def main():
-    log_queue: Queue = initialize_logging()
-
     # Create the store (DB) and full node instance
     store = FullNodeStore()
     await store.initialize()
@@ -44,11 +45,12 @@ async def main():
 
     def master_close_cb():
         log.info("Closing all connections...")
-        waitable_tasks[0].cancel()
-        if sync_task:
-            sync_task.cancel()
-        for task in peer_tasks:
-            task.cancel()
+        global_connections.close_all_connections()
+        # waitable_tasks[0].cancel()
+        # if sync_task:
+        #     sync_task.cancel()
+        # for task in peer_tasks:
+        #     task.cancel()
         global server_closed
         server_closed = True
         log.info("Server closed.")
@@ -56,7 +58,7 @@ async def main():
 
     if "-u" in sys.argv:
         FullNodeUI(store, blockchain, global_connections, port, full_node.config['ssh_port'],
-                   full_node.config['ssh_filename'], master_close_cb, log_queue)
+                   full_node.config['ssh_filename'], master_close_cb)
 
     # Starts the full node server (which full nodes can connect to)
     server, client = await start_chia_server(host, port, full_node, NodeType.FULL_NODE, full_node.on_connect)

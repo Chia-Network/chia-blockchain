@@ -24,8 +24,6 @@ sh install.sh
 When running the servers on Mac OS, allow the application to accept incoming connections.
 Run the servers in the following order (you can also use ipython):
 ```bash
-./lib/chiavdf/fast_vdf/server 8889
-./lib/chiavdf/fast_vdf/server 8890
 python -m src.server.start_plotter
 python -m src.server.start_timelord
 python -m src.server.start_farmer
