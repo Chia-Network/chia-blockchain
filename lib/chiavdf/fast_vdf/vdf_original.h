@@ -120,6 +120,7 @@ public:
 
         mpz_fdiv_q(x.c, x.c, denom);
         reduce(x);
+        mpz_clears(x.a, x.b, x.c, NULL);
         return x;
     }
 
