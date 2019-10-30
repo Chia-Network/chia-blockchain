@@ -12,5 +12,5 @@ def parse_host_port(api) -> Tuple[str, int]:
 
 
 def create_node_id(connection: Connection) -> bytes32:
-    return bytes32(sha256((str(connection.connection_type) + ":" + connection.local_host + ":" +
+    return bytes32(sha256((str(connection.local_type) + ":" + connection.local_host + ":" +
                           str(connection.local_port)).encode()).digest())

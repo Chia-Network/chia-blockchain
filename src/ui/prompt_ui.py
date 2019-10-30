@@ -35,8 +35,10 @@ class FullNodeUI:
         self.connections = connections
         self.logs: List[logging.LogRecord] = []
         self.app: Optional[Application] = None
+        self.closed = False
 
         def close():
+            self.closed = True
             if self.app:
                 self.app.exit(0)
             close_cb()
@@ -54,13 +56,16 @@ class FullNodeUI:
             ssh_port,
             server_host_keys=[ssh_key_filename],
         ))
-
-        asyncio.get_running_loop().create_task(self.update())
+        self.update_task = asyncio.get_running_loop().create_task(self.update())
 
     def setup_keybindings(self) -> KeyBindings:
         kb = KeyBindings()
         kb.add('tab')(focus_next)
         kb.add('s-tab')(focus_previous)
+        kb.add('down')(focus_next)
+        kb.add('up')(focus_previous)
+        kb.add('right')(focus_next)
+        kb.add('left')(focus_previous)
 
         @kb.add('c-c')
         def exit_(event):
@@ -104,7 +109,14 @@ class FullNodeUI:
                 row = VSplit([con_label, disconnect_button])
                 self.con_rows.append(row)
 
-        self.con_rows = [row for row in self.con_rows if row.children[0].content.text() in con_strs]
+        new_con_rows = [row for row in self.con_rows if row.children[0].content.text() in con_strs]
+        if new_con_rows != self.con_rows:
+            self.con_rows = new_con_rows
+            if len(self.con_rows) > 0:
+                self.layout.focus(self.con_rows[0])
+            else:
+                self.layout.focus(self.quit_button)
+
         if len(self.con_rows):
             new_con_rows = HSplit(self.con_rows, height=D())
         else:
@@ -129,11 +141,14 @@ class FullNodeUI:
 
     async def update(self):
         try:
-            while True:
+            while not self.closed:
                 await self.update_draw()
                 if self.app and not self.app.invalidated:
                     self.app.invalidate()
                 await asyncio.sleep(1)
-        except asyncio.CancelledError as e:
-            print(f"Exception thrown in UI update: {type(e)} {e}")
+        except Exception as e:
+            log.warn(f"Exception in UI {type(e)}: {e}")
             raise e
+
+    async def await_closed(self):
+        await self.update_task

@@ -22,7 +22,7 @@ def _quality_to_decimal(quality: bytes32) -> Decimal:
     """
     Takes a 256 bit quality, converts it to an integer between 0 and 2**256,
     representing a decimal d=0.xxxxx..., where x are the bits of the quality.
-    Then we perform -log(d), using a pade approximation for log:
+    Then we perform -log(d), using a Pade approximation for log:
     log(1+x) = x(6+x)/(6+4x)
     This is a very good approximation for x when x is close to 1. However, we only
     work with big ints, to avoid using decimals.
