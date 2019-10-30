@@ -1,4 +1,3 @@
-from bson.codec_options import TypeEncoder
 from bson.binary import Binary
 from src.util.streamable import Streamable
 from bson.codec_options import TypeRegistry
