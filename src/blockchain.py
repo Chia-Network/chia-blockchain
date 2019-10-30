@@ -524,11 +524,10 @@ class Blockchain:
         there is one block per height before the LCA (and use the height_to_hash dict).
         """
         cur: List[FullBlock] = self.heads[:]
-        heights: List[uint32] = [b.height for b in cur]
-        while any(h != heights[0] for h in heights):
+        while any(b.header_hash != cur[0].header_hash for b in cur):
+            heights = [b.height for b in cur]
             i = heights.index(max(heights))
             cur[i] = await self.store.get_block(cur[i].prev_header_hash)
-            heights[i] = cur[i].height
         if genesis:
             await self._reconsider_heights(None, cur[0])
         else:
