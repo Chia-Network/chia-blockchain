@@ -1,7 +1,7 @@
 import logging
 import asyncio
 import random
-from typing import Tuple, AsyncGenerator, Callable, Optional, List, Any
+from typing import Tuple, AsyncGenerator, Callable, Optional, List, Any, Dict
 from lib.aiter.aiter.server import start_server_aiter
 from lib.aiter.aiter.map_aiter import map_aiter
 from lib.aiter.aiter.join_aiters import join_aiters
@@ -28,42 +28,49 @@ log = logging.getLogger(__name__)
 
 class ChiaServer:
     global_connections: PeerConnections = PeerConnections([])
-    aiters: List[push_aiter] = []
 
-    def __init__(self, port: int, api: Any, connection_type: NodeType):
-        self.port = port
-        self.api = api
-        self.connection_type = connection_type
-        self.outbound_aiter = None
+    _server: Optional[asyncio.AbstractServer] = None
+    _srwt_aiter: Optional[push_aiter] = None
+    _pipeline_task: Optional[asyncio.Task] = None
+    _outbound_aiter: Optional[push_aiter] = None
 
-    async def start(self, host: str,
-                    on_connect: Optional[Callable[[], AsyncGenerator[OutboundMessage, None]]] = None) -> asyncio.Task:
-        """
-        Starts a server in the corresponding host and port, which serves the API provided. The connection
-        specifies the type of clients that the server will talk to. Returns a task that will run forever,
-        as well as a push_aiter that can be used to send messages to clients.
-        Client connections are stored in the global_connections object as they are created.
-        """
-        # if outb
-        await self.global_connections.initialize()
-        outbound_aiter = push_aiter()
+    # These will get called after a handshake is performed
+    _on_connect_callbacks: Dict[bytes32, Callable] = {}
+    _on_connect_generic_callback: Optional[Callable] = None
 
-        aiter = await start_server_aiter(self.port, host=host, reuse_address=True)
-        self.aiters.append(aiter)
-        self.aiters.append(outbound_aiter)
-        log.info(f"Server started at {host}:{self.port}")
-        return await self.initialize_pipeline(aiter, self.api, self.port, self.connection_type,
-                                              on_connect, outbound_aiter, False)
+    def __init__(self, port: int, api: Any, local_type: NodeType):
+        self._port = port
+        self._api = api
+        self._local_type = local_type
 
-    async def connect_to(self, target_node: PeerInfo) -> asyncio.Task:
-        """
-        Initiates a connection to the corresponding host and port, which serves the API provided. The connection
-        specifies the type of clients that the server will talk to. Returns a task that will run forever,
-        as well as a push_aiter that can be used to send messages to server. Performs several retries
-        if connection fails.
-        The server connection is stored in the global_connections object after it is created.
-        """
-        outbound_aiter = push_aiter()
+    async def start_server(self, host: str, connection_type: NodeType,
+                           on_connect: Optional[Callable[[], AsyncGenerator[OutboundMessage, None]]] = None) -> bool:
+        if self._server:
+            return False
+
+        if self._srwt_aiter is None:
+            await self._initialize()
+
+        assert self._srwt_aiter is not None
+
+        self._server, aiter = await start_server_aiter(self._port, host=host, reuse_address=True)
+        if on_connect is not None:
+            self._on_connect_generic_callback = on_connect
+
+        def add_connection_type(srw: Tuple[asyncio.StreamReader, asyncio.StreamWriter]) -> \
+                Tuple[asyncio.StreamReader, asyncio.StreamWriter, NodeType]:
+            return (srw[0], srw[1], connection_type)
+        srwt_aiter = map_aiter(add_connection_type, aiter)
+
+        asyncio.create_task(self._add_to_srwt_aiter(srwt_aiter))
+
+        log.info(f"Server started at {host}:{self._port}")
+        return True
+
+    async def start_client(self, target_node: PeerInfo, connection_type: NodeType,
+                           on_connect: Optional[Callable[[], AsyncGenerator[OutboundMessage, None]]] = None) -> bool:
+        if self._srwt_aiter is None:
+            await self._initialize()
 
         total_time: int = 0
         succeeded: bool = False
@@ -76,51 +83,59 @@ class ChiaServer:
             try:
                 reader, writer = await asyncio.open_connection(target_node.host, target_node.port)
                 succeeded = True
+                break
             except ConnectionRefusedError:
                 log.warning(f"Connection to {target_node.host}:{target_node.port} refused.")
                 await asyncio.sleep(RETRY_INTERVAL)
                 total_time += RETRY_INTERVAL
                 continue
-        aiter = push_aiter()
-        if succeeded:
-            aiter.push((reader, writer))
-            self.aiters.append(aiter)
-            self.aiters.append(outbound_aiter)
-            return await self.initialize_pipeline(aiter, self.api, self.port, self.connection_type,
-                                                  None, outbound_aiter, True)
-        else:
-            aiter.stop()
 
-            async def empty():
-                pass
-            return asyncio.create_task(asyncio.Task(empty()))
+        if not succeeded:
+            return False
+        if on_connect is not None:
+            self._on_connect_callbacks[target_node.node_id] = on_connect
+        asyncio.create_task(self._add_to_srwt_aiter(iter_to_aiter([(reader, writer, connection_type)])))
+        return True
 
-    async def close(self):
-        await self.global_connections.close_all_connections()
-        self.server.close()
-        await self.server.wait_closed()
-        for aiter in self.aiters:
-            aiter.stop()
+    async def _initialize(self):
+        self._srwt_aiter = push_aiter()
+        self._outbound_aiter = push_aiter()
+        await self.global_connections.initialize()
+        self._pipeline_task = self.initialize_pipeline(self._srwt_aiter, self._api, self._port)
 
-    async def process_message(self, outbound_message: OutboundMessage):
-        assert len(self.aiters) > 0
-        self.aiters[0].push(outbound_message)
+    async def _add_to_srwt_aiter(self, aiter: AsyncGenerator[Tuple[asyncio.StreamReader, asyncio.StreamWriter], None]):
+        assert self._srwt_aiter is not None
+        async for swr in aiter:
+            self._srwt_aiter.push(swr)
 
-    async def initialize_pipeline(self, aiter,
-                                  api: Any, server_port: int, connection_type: NodeType,
-                                  on_connect: Callable[[], AsyncGenerator[OutboundMessage, None]] = None,
-                                  outbound_aiter=None,
-                                  wait_for_handshake=False) -> asyncio.Task:
+    async def await_closed(self):
+        await self._pipeline_task
 
-        # Maps a stream reader and writer to connection object
+    def push_message(self, message: OutboundMessage):
+        assert self._outbound_aiter
+        if not self._outbound_aiter.is_stopped():
+            self._outbound_aiter.push(message)
+
+    def close_all(self):
+        async def async_close_all():
+            await self.global_connections.close_all_connections()
+            self._server.close()
+            if not self._outbound_aiter.is_stopped():
+                self._outbound_aiter.stop()
+            if not self._srwt_aiter.is_stopped():
+                self._srwt_aiter.stop()
+        asyncio.create_task(async_close_all())
+
+    def initialize_pipeline(self, aiter, api: Any, server_port: int) -> asyncio.Task:
+
+        # Maps a stream reader, writer and NodeType to a Connection object
         connections_aiter = map_aiter(partial_func.partial_async(self.stream_reader_writer_to_connection,
-                                                                 connection_type, server_port), aiter)
+                                                                 server_port), aiter)
         # Performs a handshake with the peer
         handshaked_connections_aiter = join_aiters(map_aiter(self.perform_handshake, connections_aiter))
         forker = aiter_forker(handshaked_connections_aiter)
         handshake_finished_1 = forker.fork(is_active=True)
         handshake_finished_2 = forker.fork(is_active=True)
-        handshake_finished_3 = forker.fork(is_active=True)
 
         # Reads messages one at a time from the TCP connection
         messages_aiter = join_aiters(parallel_map_aiter(self.connection_to_message, handshake_finished_1, 100))
@@ -130,19 +145,16 @@ class ChiaServer:
             partial_func.partial_async_gen(self.handle_message, api),
             messages_aiter, 100))
 
-        if on_connect is not None:
-            # Uses a forked aiter, and calls the on_connect function to send some initial messages
-            # as soon as the connection is established
+        # Uses a forked aiter, and calls the on_connect function to send some initial messages
+        # as soon as the connection is established
+        on_connect_outbound_aiter = join_aiters(parallel_map_aiter(self.connection_to_outbound,
+                                                                   handshake_finished_2, 100))
+        # Also uses the instance variable _outbound_aiter, which clients can use to send messages
+        # at any time, not just on_connect.
+        outbound_aiter_mapped = map_aiter(lambda x: (None, x), self._outbound_aiter)
 
-            on_connect_outbound_aiter = join_aiters(parallel_map_aiter(
-                partial_func.partial_async_gen(self.connection_to_outbound, on_connect), handshake_finished_2, 100))
-
-            responses_aiter = join_aiters(iter_to_aiter([responses_aiter, on_connect_outbound_aiter]))
-        if outbound_aiter is not None:
-            # Includes messages sent using the argument outbound_aiter, which are not triggered by
-            # network messages, but rather the node itself. (i.e: initialization, timer, etc).
-            outbound_aiter_mapped = map_aiter(lambda x: (None, x), outbound_aiter)
-            responses_aiter = join_aiters(iter_to_aiter([responses_aiter, outbound_aiter_mapped]))
+        responses_aiter = join_aiters(iter_to_aiter([responses_aiter, on_connect_outbound_aiter,
+                                                     outbound_aiter_mapped]))
 
         # For each outbound message, replicate for each peer that we need to send to
         expanded_messages_aiter = join_aiters(parallel_map_aiter(
@@ -160,43 +172,41 @@ class ChiaServer:
 
         # We will return a task for this, so user of start_chia_server or start_chia_client can wait until
         # the server is closed.
-        ret_task = asyncio.create_task(serve_forever())
+        return asyncio.get_running_loop().create_task(serve_forever())
 
-        if wait_for_handshake:
-            # Waits for the handshake with the first connection
-            async for _ in handshake_finished_3:
-                break
-
-        return ret_task
-
-    async def stream_reader_writer_to_connection(self, pair: Tuple[asyncio.StreamReader, asyncio.StreamWriter],
-                                                 connection_type: NodeType, server_port: int) -> Connection:
+    async def stream_reader_writer_to_connection(self,
+                                                 swrt: Tuple[asyncio.StreamReader, asyncio.StreamWriter, NodeType],
+                                                 server_port: int) -> Connection:
         """
         Maps a pair of (StreamReader, StreamWriter) to a Connection object,
         which also stores the type of connection (str). It is also added to the global list.
         """
-        sr, sw = pair
-        con = Connection(connection_type, sr, sw, server_port)
+        sr, sw, connection_type = swrt
+        con = Connection(self._local_type, connection_type, sr, sw, server_port)
 
         log.info(f"Connection with {connection_type} {con.get_peername()} established")
         return con
 
-    async def connection_to_outbound(self, connection: Connection,
-                                     on_connect: Callable[[], AsyncGenerator[OutboundMessage, None]]) -> AsyncGenerator[
+    async def connection_to_outbound(self, connection: Connection) -> AsyncGenerator[
                     Tuple[Connection, OutboundMessage], None]:
         """
         Async generator which calls the on_connect async generator method, and yields any outbound messages.
         """
-        async for outbound_message in on_connect():
-            yield connection, outbound_message
+        log.info(f"Calling connection to outbound with {connection}")
+        if connection.node_id in self._on_connect_callbacks:
+            on_connect = self._on_connect_callbacks[connection.node_id]
+            async for outbound_message in on_connect():
+                yield connection, outbound_message
+        if self._on_connect_generic_callback:
+            async for outbound_message in self._on_connect_generic_callback():
+                yield connection, outbound_message
 
-    async def perform_handshake(self, connection: Connection) -> AsyncGenerator[Optional[Connection], None]:
+    async def perform_handshake(self, connection: Connection) -> AsyncGenerator[Connection, None]:
         """
         Performs handshake with this new connection, and yields the connection. If the handshake
         is unsuccessful, or we already have a connection with this peer, the connection is closed,
         and nothing is yielded.
         """
-
         # Send handshake message
         node_id: bytes32 = create_node_id(connection)
         outbound_handshake = Message("handshake", Handshake(protocol_version, node_id))
@@ -237,28 +247,26 @@ class ChiaServer:
         except (IncompatibleProtocolVersion, InvalidAck, DuplicateConnection,
                 InvalidHandshake, asyncio.IncompleteReadError) as e:
             log.warning(f"{e}")
-            yield None
 
-    async def connection_to_message(self, connection: Optional[Connection]) -> AsyncGenerator[
+    async def connection_to_message(self, connection: Connection) -> AsyncGenerator[
                     Tuple[Connection, Message], None]:
         """
         Async generator which yields complete binary messages from connections,
         along with a streamwriter to send back responses. On EOF received, the connection
         is removed from the global list.
         """
-        if connection is not None:
-            try:
-                while not connection.reader.at_eof():
-                    message = await connection.read_one_message()
-                    # Read one message at a time, forever
-                    yield (connection, message)
-            except asyncio.IncompleteReadError:
-                log.warning(f"Received EOF from {connection.get_peername()}, closing connection.")
-            except ConnectionError:
-                log.warning(f"Connection error by peer {connection.get_peername()}, closing connection.")
-            finally:
-                # Removes the connection from the global list, so we don't try to send things to it
-                await self.global_connections.close(connection)
+        try:
+            while not connection.reader.at_eof():
+                message = await connection.read_one_message()
+                # Read one message at a time, forever
+                yield (connection, message)
+        except asyncio.IncompleteReadError:
+            log.warning(f"Received EOF from {connection.get_peername()}, closing connection.")
+        except ConnectionError:
+            log.warning(f"Connection error by peer {connection.get_peername()}, closing connection.")
+        finally:
+            # Removes the connection from the global list, so we don't try to send things to it
+            await self.global_connections.close(connection)
 
     async def handle_message(self, pair: Tuple[Connection, Message], api: Any) -> AsyncGenerator[
             Tuple[Connection, OutboundMessage], None]:
@@ -290,8 +298,9 @@ class ChiaServer:
         connection, outbound_message = pair
 
         if connection and outbound_message.delivery_method == Delivery.RESPOND:
-            # Only select this peer.
-            yield connection, outbound_message.message
+            if connection.connection_type == outbound_message.peer_type:
+                # Only select this peer, and only if it's the right type
+                yield connection, outbound_message.message
         elif outbound_message.delivery_method == Delivery.RANDOM:
             # Select a random peer.
             to_yield_single: Tuple[Connection, Message]
@@ -316,4 +325,3 @@ class ChiaServer:
                             to_yield.append((peer, outbound_message.message))
             for item in to_yield:
                 yield item
-

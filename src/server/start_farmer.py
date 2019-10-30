@@ -21,23 +21,19 @@ async def main():
                             farmer.config['plotter_peer']['port'],
                             bytes.fromhex(farmer.config['plotter_peer']['node_id']))
     host, port = parse_host_port(farmer)
-    server = ChiaServer(port=port, api=farmer, connection_type=NodeType.PLOTTER)
-    _ = await server.start(host)
-    # plotter_con_task, plotter_client = await server.start(host, None, )
-    # plotter_con_task, plotter_client = await start_chia_client(plotter_peer, port, farmer, NodeType.PLOTTER)
+    server = ChiaServer(port, farmer, NodeType.FARMER)
 
-    _ = await server.connect_to(plotter_peer)
+    _ = await server.start_server(host, NodeType.FULL_NODE, None)
 
-    # Sends a handshake to the plotter
-    pool_sks: List[PrivateKey] = [PrivateKey.from_bytes(bytes.fromhex(ce)) for ce in farmer.config["pool_sks"]]
-    msg = PlotterHandshake([sk.get_public_key() for sk in pool_sks])
+    async def on_connect():
+        # Sends a handshake to the plotter
+        pool_sks: List[PrivateKey] = [PrivateKey.from_bytes(bytes.fromhex(ce)) for ce in farmer.config["pool_sks"]]
+        msg = PlotterHandshake([sk.get_public_key() for sk in pool_sks])
+        yield OutboundMessage(NodeType.PLOTTER, Message("plotter_handshake", msg),
+                              Delivery.BROADCAST)
 
-    server.process_message(OutboundMessage(NodeType.PLOTTER, Message("plotter_handshake", msg),
-                           Delivery.BROADCAST))
+    _ = await server.start_client(plotter_peer, NodeType.PLOTTER, on_connect)
 
-    # Starts the farmer server (which full nodes can connect to)
-    server, _ = await start_chia_server(host, port, farmer, NodeType.FULL_NODE)
-
-    await asyncio.gather(plotter_con_task, server)
+    await server.await_closed()
 
 asyncio.run(main())

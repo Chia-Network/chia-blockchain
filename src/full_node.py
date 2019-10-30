@@ -78,6 +78,7 @@ class FullNode:
                 assert head.challenge
                 challenge_hash = head.challenge.get_hash()
                 requests.append(timelord_protocol.ChallengeStart(challenge_hash, head.challenge.height))
+
         for request in requests:
             yield OutboundMessage(NodeType.TIMELORD, Message("challenge_start", request), Delivery.BROADCAST)
 
@@ -86,6 +87,7 @@ class FullNode:
         Whenever we connect to another full node, send them our current heads.
         """
         blocks: List[FullBlock] = []
+
         async with (await self.store.get_lock()):
             heads: List[TrunkBlock] = self.blockchain.get_current_heads()
             for h in heads:
@@ -492,7 +494,7 @@ class FullNode:
         if expected_time > constants["PROPAGATION_DELAY_THRESHOLD"]:
             log.info("Block is slow, waiting")
             # If this block is slow, sleep to allow faster blocks to come out first
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)
 
         async with (await self.store.get_lock()):
             leader: Tuple[uint32, uint64] = await self.store.get_unfinished_block_leader()

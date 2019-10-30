@@ -11,7 +11,9 @@ log = logging.getLogger(__name__)
 
 
 class Connection:
-    def __init__(self, connection_type: NodeType, sr: StreamReader, sw: StreamWriter, server_port: int):
+    def __init__(self, local_type: NodeType, connection_type: NodeType, sr: StreamReader,
+                 sw: StreamWriter, server_port: int):
+        self.local_type = local_type
         self.connection_type = connection_type
         self.reader = sr
         self.writer = sw
@@ -51,9 +53,11 @@ class Connection:
 class PeerConnections:
     def __init__(self, all_connections: List[Connection] = []):
         self._all_connections = all_connections
+        self.initialized = False
 
     async def initialize(self):
         self._connections_lock = Lock()
+        self.initialized = True
 
     async def add(self, connection: Connection) -> bool:
         async with self._connections_lock:
