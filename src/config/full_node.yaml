@@ -11,21 +11,25 @@ short_sync_download_count: 6
 host: "127.0.0.1"
 port: 8002
 
+# SSH server started, for UI
+ssh_port: 8222
+ssh_filename: "src/config/ssh_host_key"
+
 farmer_peer:
     host: "127.0.0.1"
     port: 8001
-    node_id: "d73266f173ea17bcf07e610436b2495d72b4c367dadad77ef63980a285804e9a"
+    node_id: "8da6169716e18c4a182940d05063614932f0b161d54b1de0572170649ed69213"
 timelord_peer:
     host: "127.0.0.1"
     port: 8003
-    node_id: "4e8d5857b55916d9fb38848b264ac3f1b934a98ea08eb17632a89402347b0d64"
+    node_id: "974725f6147e0bf141523dab8a9fd8e641bc96f164a802199c0c089c9449ce46"
 initial_peers:
   - host: "127.0.0.1"
     port: 8002
-    node_id: "69b2f2337eef0c6bd1bf0cf00c425dfbcfebeda52a3dee9648442b8d2f929f49"
+    node_id: "4c24f6efd742d130f3c8067fc05b142e7fd70a12b36bfe6663f3944c9e9622eb"
   - host: "127.0.0.1"
     port: 8004
-    node_id: "e22d54e5daa9bb2c9dba5d035abf6182b0dfae963dd7bbbf6d65e3bee29d8d14"
+    node_id: "b2c5ed761a9a1d776e6bfa75f751b2fb110a62d87bec9fe4c9c904ab9532c8e3"
   - host: "127.0.0.1"
     port: 8005
-    node_id: "4da13f8406831987a0c844bf5a031c48a32bcacc412dd0335fd7732c1e35bea5"
+    node_id: "05cc78bf2d0aa3350750211b0d29f8c7e299bd2caa4064e1dfb45806f80a00b6"

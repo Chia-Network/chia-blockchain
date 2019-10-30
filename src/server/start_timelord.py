@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from src.server.server import start_chia_server
+from src.server.server import ChiaServer
 from src.server.outbound_message import NodeType
 from src.util.network import parse_host_port
 from src.timelord import Timelord
@@ -14,7 +14,8 @@ logging.basicConfig(format='Timelord %(name)-25s: %(levelname)-8s %(asctime)s.%(
 async def main():
     timelord = Timelord()
     host, port = parse_host_port(timelord)
-    server, _ = await start_chia_server(host, port, timelord, NodeType.FULL_NODE)
-    await server
+    server = ChiaServer(port, timelord, NodeType.TIMELORD)
+    _ = await server.start_server(host, NodeType.FULL_NODE, None)
+    await server.await_closed()
 
 asyncio.run(main())

@@ -9,7 +9,6 @@ void PrintInfo(std::string input) {
     print("VDF Server: " + input);
 }
 
-
 void CreateAndWriteProof(integer D, form x, int64_t num_iterations, WesolowskiCallback& weso, bool& stop_signal, tcp::socket& sock) {
     Proof result = CreateProofOfTimeNWesolowski(D, x, num_iterations, 0, weso, 2, 0, stop_signal);
     if (stop_signal == true) {
@@ -57,6 +56,10 @@ void session(tcp::socket sock) {
 
         integer D(disc);
         PrintInfo("Discriminant = " + to_string(D.impl));
+
+        const int kInitSpace = 10000000;
+        forms = (form*) malloc(kInitSpace * sizeof(form));
+        memset(forms,0x00,kInitSpace * sizeof(form));
 
         // Init VDF the discriminant...
 
@@ -115,7 +118,7 @@ void session(tcp::socket sock) {
             int iters = atoi(data);
             PrintInfo("Got iterations " + to_string(iters));
             got_iters = true;
-            if (seen_iterations.size() > 0 && *seen_iterations.begin() <= iters) {
+            if (seen_iterations.size() >= 2 && *seen_iterations.begin() <= iters) {
                 PrintInfo("Ignoring " + to_string(iters) + ", too high.");
                 continue;
             }
@@ -132,6 +135,7 @@ void session(tcp::socket sock) {
                     threads[t].join();
                 }
                 vdf_worker.join();
+                free(forms);
             } else {
                 if (seen_iterations.find(iters) == seen_iterations.end()) {
                     seen_iterations.insert(iters);
@@ -165,19 +169,12 @@ void session(tcp::socket sock) {
 void server(boost::asio::io_context& io_context, unsigned short port)
 {
   tcp::acceptor a(io_context, tcp::endpoint(tcp::v4(), port));
-  for (;;)
-  {
-    std::thread t(session, a.accept());
-    t.join();
-  }
+  std::thread t(session, a.accept());
+  t.join();
 }
 
 int main(int argc, char* argv[])
 {
-  forms.reserve(3000000);
-  for (int i = 0; i < 3000000; i++) {
-      mpz_inits(forms[i].a.impl, forms[i].b.impl, forms[i].c.impl, NULL);
-  }
   try
   {
     if (argc != 2)

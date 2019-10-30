@@ -147,9 +147,14 @@ class BlockTools:
                     new_difficulty = max([uint64(1), new_difficulty,
                                           uint64(curr_difficulty // test_constants["DIFFICULTY_FACTOR"])])
 
+                new_ips = uint64((iters3 - iters1)//(timestamp3 - timestamp1))
+                if new_ips >= curr_ips:
+                    curr_ips = min(new_ips, uint64(test_constants["IPS_FACTOR"] * new_ips))
+                else:
+                    curr_ips = max([uint64(1), new_ips, uint64(curr_ips // test_constants["IPS_FACTOR"])])
+
                 prev_difficulty = curr_difficulty
                 curr_difficulty = new_difficulty
-                curr_ips = uint64((iters3 - iters1)//(timestamp3 - timestamp1))
             time_taken = seconds_per_block
             timestamp += time_taken
             block_list.append(self.create_next_block(test_constants, block_list[-1], timestamp, curr_difficulty,

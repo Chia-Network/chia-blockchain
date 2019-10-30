@@ -82,7 +82,6 @@ class Blockchain:
         Returns a list of trunk blocks, one for each height requested.
         """
         # TODO: optimize, don't look at all blocks
-
         sorted_heights = sorted([(height, index) for index, height in enumerate(heights)], reverse=True)
 
         curr_full_block: Optional[FullBlock] = await self.store.get_block(tip_header_hash)
@@ -95,11 +94,11 @@ class Blockchain:
             if height > curr_block.height:
                 raise ValueError("Height is not valid for tip {tip_header_hash}")
             while height < curr_block.height:
-                curr_full_block = (await self.store.get_block(curr_block.header.data.prev_header_hash)).trunk_block
+                curr_block = (await self.store.get_block(curr_block.header.data.prev_header_hash)).trunk_block
             trunks.append((index, curr_block))
         return [b for index, b in sorted(trunks)]
 
-    def find_fork_point(self, alternate_chain: List[TrunkBlock]):
+    def find_fork_point(self, alternate_chain: List[TrunkBlock]) -> TrunkBlock:
         """
         Takes in an alternate blockchain (trunks), and compares it to self. Returns the last trunk
         where both blockchains are equal.
@@ -240,18 +239,20 @@ class Blockchain:
             # First epoch has a hardcoded vdf speed
             return self.constants["VDF_IPS_STARTING"]
 
-        elif next_height % self.constants["DIFFICULTY_EPOCH"] != self.constants["DIFFICULTY_DELAY"]:
+        prev_block = await self.store.get_block(block.prev_header_hash)
+        if prev_block is None:
+            raise Exception("Previous block is invalid.")
+        proof_of_space = block.trunk_block.proof_of_space
+        challenge_hash = block.trunk_block.proof_of_time.output.challenge_hash
+        difficulty = await self.get_next_difficulty(prev_block.header_hash)
+        iterations = block.trunk_block.challenge.total_iters - prev_block.trunk_block.challenge.total_iters
+        prev_ips = calculate_ips_from_iterations(proof_of_space, challenge_hash, difficulty, iterations,
+                                                 self.constants["MIN_BLOCK_TIME"])
+
+        if next_height % self.constants["DIFFICULTY_EPOCH"] != self.constants["DIFFICULTY_DELAY"]:
             # Not at a point where ips would change, so return the previous ips
             # TODO: cache this for efficiency
-            prev_block = await self.store.get_block(block.prev_header_hash)
-            if prev_block is None:
-                raise Exception("Previous block is invalid.")
-            proof_of_space = block.trunk_block.proof_of_space
-            challenge_hash = block.trunk_block.proof_of_time.output.challenge_hash
-            difficulty = await self.get_next_difficulty(prev_block.header_hash)
-            iterations = block.trunk_block.challenge.total_iters - prev_block.trunk_block.challenge.total_iters
-            return calculate_ips_from_iterations(proof_of_space, challenge_hash, difficulty, iterations,
-                                                 self.constants["MIN_BLOCK_TIME"])
+            return prev_ips
 
         # ips (along with difficulty) will change in this block, so we need to calculate the new one.
         # The calculation is (iters_2 - iters_1) // (timestamp_2 - timestamp_1).
@@ -297,7 +298,13 @@ class Blockchain:
         timestamp2 = block2.trunk_block.header.data.timestamp
         iters2 = block2.trunk_block.challenge.total_iters
 
-        return uint64((iters2 - iters1) // (timestamp2 - timestamp1))
+        new_ips = uint64((iters2 - iters1) // (timestamp2 - timestamp1))
+
+        # Only change by a max factor, and must be at least 1
+        if new_ips >= prev_ips:
+            return min(new_ips, uint64(self.constants["IPS_FACTOR"] * new_ips))
+        else:
+            return max([uint64(1), new_ips, uint64(prev_ips // self.constants["IPS_FACTOR"])])
 
     async def receive_block(self, block: FullBlock) -> ReceiveBlockResult:
         """
@@ -309,11 +316,11 @@ class Blockchain:
         if await self.store.get_block(block.header_hash) is not None:
             return ReceiveBlockResult.ALREADY_HAVE_BLOCK
 
-        if not await self.validate_block(block, genesis):
-            return ReceiveBlockResult.INVALID_BLOCK
-
         if await self.store.get_block(block.prev_header_hash) is None and not genesis:
             return ReceiveBlockResult.DISCONNECTED_BLOCK
+
+        if not await self.validate_block(block, genesis):
+            return ReceiveBlockResult.INVALID_BLOCK
 
         # Block is valid and connected, so it can be added to the blockchain.
         await self.store.save_block(block)
@@ -517,11 +524,10 @@ class Blockchain:
         there is one block per height before the LCA (and use the height_to_hash dict).
         """
         cur: List[FullBlock] = self.heads[:]
-        heights: List[uint32] = [b.height for b in cur]
-        while any(h != heights[0] for h in heights):
+        while any(b.header_hash != cur[0].header_hash for b in cur):
+            heights = [b.height for b in cur]
             i = heights.index(max(heights))
             cur[i] = await self.store.get_block(cur[i].prev_header_hash)
-            heights[i] = cur[i].height
         if genesis:
             await self._reconsider_heights(None, cur[0])
         else:

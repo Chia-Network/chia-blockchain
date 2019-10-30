@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 from setuptools import setup
 
-dependencies = ['blspy', 'cbor2', 'pyyaml']
-dev_dependencies = ['pytest', 'flake8', 'ipython', 'mypy', 'pytest-asyncio']
+dependencies = ['blspy', 'cbor2', 'pyyaml', 'prompt-toolkit']
+dev_dependencies = ['pytest', 'flake8', 'mypy', 'pytest-asyncio']
 
 setup(
     name='chiablockchain',

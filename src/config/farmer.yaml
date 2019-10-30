@@ -19,10 +19,10 @@ pool_sks:
 # sha256(PrivateKey.from_seed(b'0').get_public_key().serialize()).digest()
 pool_target: "9940b95222a1d19abb73c192f2c10dc65b32bcc7a703db1b40456f2dbf1e416e"
 
-pool_share_threshold: 1000  # To send to pool, must be expected to take less than these seconds
-propagate_threshold: 300  # To propagate to network, must be expected to take less than these seconds
+pool_share_threshold: 500  # To send to pool, must be expected to take less than these seconds
+propagate_threshold: 400  # To propagate to network, must be expected to take less than these seconds
 
 plotter_peer:
     host: "127.0.0.1"
     port: 8000
-    node_id: "4475e2b622d7024d72500b7e6d61b544f8bcaa7ad4ba142a18bae365c803dbcb"
+    node_id: "f196b7bf8dce5c558e9d8bb481ff9face05b850108aa81c2b430b5c0a78b7003"
