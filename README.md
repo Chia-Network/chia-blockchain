@@ -28,7 +28,7 @@ python -m src.server.start_plotter
 python -m src.server.start_timelord
 python -m src.server.start_farmer
 python -m src.server.start_full_node "127.0.0.1" 8002 "-f"
-python -m src.server.start_full_node "127.0.0.1" 8004 "-t"
+python -m src.server.start_full_node "127.0.0.1" 8004 "-t" "-u"
 python -m src.server.start_full_node "127.0.0.1" 8005
 
 ```
@@ -38,6 +38,11 @@ You can also run the simulation, which runs all servers at once.
 
 ```bash
 ./src/simulation/simulate_network.sh
+```
+
+You can also ssh into the UI for the full node:
+```bash
+ssh -p 8222 localhost
 ```
 
 
