@@ -13,6 +13,7 @@ python3 -m venv .venv
 pip install wheel
 pip install .
 pip install lib/chiapos
+pip install lib/python-prompt-toolkit
 
 cd lib/chiavdf/fast_vdf
 # Install libgmp, libboost, and libflint, and then run the following
@@ -23,13 +24,11 @@ sh install.sh
 When running the servers on Mac OS, allow the application to accept incoming connections.
 Run the servers in the following order (you can also use ipython):
 ```bash
-./lib/chiavdf/fast_vdf/server 8889
-./lib/chiavdf/fast_vdf/server 8890
 python -m src.server.start_plotter
 python -m src.server.start_timelord
 python -m src.server.start_farmer
 python -m src.server.start_full_node "127.0.0.1" 8002 "-f"
-python -m src.server.start_full_node "127.0.0.1" 8004 "-t"
+python -m src.server.start_full_node "127.0.0.1" 8004 "-t" "-u"
 python -m src.server.start_full_node "127.0.0.1" 8005
 
 ```
@@ -41,10 +40,15 @@ You can also run the simulation, which runs all servers at once.
 ./src/simulation/simulate_network.sh
 ```
 
+You can also ssh into the UI for the full node:
+```bash
+ssh -p 8222 localhost
+```
+
 
 ### Run tests
 The first time the tests are run, BlockTools will create and persist many plots. These are used for creating
-proof of space during testing. The next time tests are run, this won't be necessary.
+proofs of space during testing. The next time tests are run, this won't be necessary.
 ```bash
 py.test tests -s -v
 ```
@@ -52,7 +56,7 @@ py.test tests -s -v
 ### Run linting
 ```bash
 flake8 src
-pyright
+mypy src tests
 ```
 
 ### Configure VS code

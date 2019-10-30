@@ -7,3 +7,6 @@
 [submodule "aiter"]
 	path = lib/aiter
 	url = https://github.com/richardkiss/aiter.git
+[submodule "lib/python-prompt-toolkit"]
+	path = lib/python-prompt-toolkit
+	url = https://github.com/prompt-toolkit/python-prompt-toolkit

@@ -4,6 +4,7 @@ constants: Dict[str, Any] = {
     "NUMBER_OF_HEADS": 3,  # The number of tips each full node keeps track of and propagates
     "DIFFICULTY_STARTING": 500,  # These are in units of 2^32
     "DIFFICULTY_FACTOR": 3,  # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]
+    "IPS_FACTOR": 3,  # The next ips is truncated to range [prev / FACTOR, prev * FACTOR]
 
     # These 3 constants must be changed at the same time
     "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
@@ -23,10 +24,10 @@ constants: Dict[str, Any] = {
 
     # If an unfinished block is more than these many seconds slower than the best unfinished block,
     # don't propagate it.
-    "PROPAGATION_THRESHOLD": 300,
+    "PROPAGATION_THRESHOLD": 200,
     # If the expected time is more than these seconds, slightly delay the propagation of the unfinished
     # block, to allow better leaders to be released first. This is a slow block.
-    "PROPAGATION_DELAY_THRESHOLD": 600,
+    "PROPAGATION_DELAY_THRESHOLD": 200,
 
     # Hardcoded genesis block, generated using tests/block_tools.py
     # Replace this any time the above constants change.

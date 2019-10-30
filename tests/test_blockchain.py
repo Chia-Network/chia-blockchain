@@ -86,7 +86,7 @@ class TestBlockValidation():
                         blocks[9].trunk_block.header.data.extension_data
                 ), blocks[9].trunk_block.header.plotter_signature)
                 ), blocks[9].body)
-        assert (await b.receive_block(block_bad)) == ReceiveBlockResult.INVALID_BLOCK
+        assert (await b.receive_block(block_bad)) == ReceiveBlockResult.DISCONNECTED_BLOCK
 
     @pytest.mark.asyncio
     async def test_timestamp(self, initial_blockchain):

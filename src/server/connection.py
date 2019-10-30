@@ -1,22 +1,25 @@
 from asyncio import StreamReader, StreamWriter
 from asyncio import Lock
+import logging
 from typing import List, Any
 from src.util import cbor
 from src.server.outbound_message import Message, NodeType
-from src.types.sized_bytes import bytes32
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 LENGTH_BYTES: int = 5
+log = logging.getLogger(__name__)
 
 
 class Connection:
-    def __init__(self, connection_type: NodeType, sr: StreamReader, sw: StreamWriter):
+    def __init__(self, local_type: NodeType, connection_type: NodeType, sr: StreamReader,
+                 sw: StreamWriter, server_port: int):
+        self.local_type = local_type
         self.connection_type = connection_type
         self.reader = sr
         self.writer = sw
         socket = self.writer.get_extra_info("socket")
         self.local_host = socket.getsockname()[0]
-        self.local_port = socket.getsockname()[1]
+        self.local_port = server_port
         self.peer_host, self.peer_port = self.writer.get_extra_info("peername")
         self.node_id = None
 
@@ -39,8 +42,9 @@ class Connection:
         full_message_loaded: Any = cbor.loads(full_message)
         return Message(full_message_loaded["function"], full_message_loaded["data"])
 
-    def close(self):
+    async def close(self):
         self.writer.close()
+        await self.writer.wait_closed()
 
     def __str__(self) -> str:
         return f"Connection({self.get_peername()})"
@@ -48,29 +52,45 @@ class Connection:
 
 class PeerConnections:
     def __init__(self, all_connections: List[Connection] = []):
-        self._connections_lock = Lock()
         self._all_connections = all_connections
+        self.initialized = False
 
-    async def add(self, connection: Connection):
+    async def initialize(self):
+        self._connections_lock = Lock()
+        self.initialized = True
+
+    async def add(self, connection: Connection) -> bool:
         async with self._connections_lock:
-            self._all_connections.append(connection)
+            return await self.add_no_lock(connection)
 
-    async def remove(self, connection: Connection):
+    async def add_no_lock(self, connection: Connection) -> bool:
+        for c in self._all_connections:
+            if c.node_id == connection.node_id:
+                return False
+        self._all_connections.append(connection)
+        return True
+
+    def have_connection_no_lock(self, connection: Connection) -> bool:
+        for c in self._all_connections:
+            if c.node_id == connection.node_id:
+                return True
+        return False
+
+    async def close(self, connection: Connection):
         async with self._connections_lock:
             if connection in self._all_connections:
+                await connection.close()
                 self._all_connections.remove(connection)
+                return
+
+    async def close_all_connections(self):
+        async with self._connections_lock:
+            for connection in self._all_connections:
+                await connection.close()
+            self._all_connections = []
 
     def get_lock(self):
         return self._connections_lock
 
     async def get_connections(self):
         return self._all_connections
-
-    async def already_have_connection(self, node_id: bytes32):
-        ret = False
-        async with self._connections_lock:
-            for c in self._all_connections:
-                if c.node_id == node_id:
-                    ret = True
-                    break
-        return ret

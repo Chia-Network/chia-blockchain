@@ -105,6 +105,9 @@ class FullNodeStore:
     async def get_unfinished_block(self, key=Tuple[bytes32, uint64]) -> Optional[FullBlock]:
         return self.unfinished_blocks.get(key)
 
+    async def get_unfinished_blocks(self) -> Dict[Tuple[bytes32, uint64], FullBlock]:
+        return self.unfinished_blocks
+
     async def set_unfinished_block_leader(self, value: Tuple[uint32, uint64]):
         self.unfinished_blocks_leader = value
 

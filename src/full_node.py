@@ -39,14 +39,9 @@ class FullNode:
     blockchain: Blockchain
     config = yaml.safe_load(open("src/config/full_node.yaml", "r"))
 
-    async def initialize(self, store: Optional[FullNodeStore] = None):
-        if not store:
-            self.store = FullNodeStore()
-            await self.store.initialize()
-        else:
-            self.store = store
-        self.blockchain = Blockchain(self.store)
-        await self.blockchain.initialize()
+    def __init__(self, store: FullNodeStore, blockchain: Blockchain):
+        self.store = store
+        self.blockchain = blockchain
 
     async def send_heads_to_farmers(self) -> AsyncGenerator[OutboundMessage, None]:
         """
@@ -83,6 +78,7 @@ class FullNode:
                 assert head.challenge
                 challenge_hash = head.challenge.get_hash()
                 requests.append(timelord_protocol.ChallengeStart(challenge_hash, head.challenge.height))
+
         for request in requests:
             yield OutboundMessage(NodeType.TIMELORD, Message("challenge_start", request), Delivery.BROADCAST)
 
@@ -91,6 +87,7 @@ class FullNode:
         Whenever we connect to another full node, send them our current heads.
         """
         blocks: List[FullBlock] = []
+
         async with (await self.store.get_lock()):
             heads: List[TrunkBlock] = self.blockchain.get_current_heads()
             for h in heads:
@@ -168,10 +165,11 @@ class FullNode:
             raise errors.InvalidWeight(f"Weight of {tip_block.trunk_block.header.get_hash()} not valid.")
 
         log.error(f"Downloaded trunks up to tip height: {tip_height}")
+        log.error(f"Tip height: {len(trunks)}")
         assert tip_height + 1 == len(trunks)
 
         async with (await self.store.get_lock()):
-            fork_point: TrunkBlock = await self.blockchain.find_fork_point(trunks)
+            fork_point: TrunkBlock = self.blockchain.find_fork_point(trunks)
 
         # TODO: optimize, send many requests at once, and for more blocks
         for height in range(fork_point.height + 1, tip_height + 1):
@@ -227,10 +225,13 @@ class FullNode:
         if len(request.heights) > self.config['max_trunks_to_send']:
             raise errors.TooManyTrunksRequested(f"The max number of trunks is {self.config['max_trunks_to_send']},\
                                                 but requested {len(request.heights)}")
+        log.info("Getting lock")
         async with (await self.store.get_lock()):
             try:
+                log.info("Getting trunks")
                 trunks: List[TrunkBlock] = await self.blockchain.get_trunk_blocks_by_height(request.heights,
                                                                                             request.tip_header_hash)
+                log.info("Got trunks")
             except KeyError:
                 log.info("Do not have required blocks")
                 return
@@ -493,7 +494,7 @@ class FullNode:
         if expected_time > constants["PROPAGATION_DELAY_THRESHOLD"]:
             log.info("Block is slow, waiting")
             # If this block is slow, sleep to allow faster blocks to come out first
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)
 
         async with (await self.store.get_lock()):
             leader: Tuple[uint32, uint64] = await self.store.get_unfinished_block_leader()
@@ -502,13 +503,12 @@ class FullNode:
                 # If this is the first block we see at this height, propagate
                 await self.store.set_unfinished_block_leader((unfinished_block.block.height, expected_time))
             elif unfinished_block.block.height == leader[0]:
-                log.info(f"Same height {unfinished_block.block.height} as leader")
                 if expected_time > leader[1] + constants["PROPAGATION_THRESHOLD"]:
                     # If VDF is expected to finish X seconds later than the best, don't propagate
                     log.info(f"VDF will finish too late, retuning")
                     return
                 elif expected_time < leader[1]:
-                    log.info(f"Setting new leader")
+                    log.info(f"New best unfinished block at height {unfinished_block.block.height}")
                     # If this will be the first block to finalize, update our leader
                     await self.store.set_unfinished_block_leader((leader[0], expected_time))
             else:
@@ -556,7 +556,7 @@ class FullNode:
                     await self.store.clear_sync_information()
                     await self.store.add_potential_head(header_hash)
                     await self.store.add_potential_heads_full_block(block.block)
-                log.info(f"We are too far behind this block. Our height is {tip_height} and block is at"
+                log.info(f"We are too far behind this block. Our height is {tip_height} and block is at "
                          f"{block.block.height}")
                 # Perform a sync if we have to
                 await self.store.set_sync_mode(True)
@@ -572,7 +572,7 @@ class FullNode:
                     return
 
             elif block.block.height > tip_height + 1:
-                log.info(f"We are a few blocks behind, our height is {tip_height} and block is at"
+                log.info(f"We are a few blocks behind, our height is {tip_height} and block is at "
                          f"{block.block.height} so we will request these blocks.")
                 while True:
                     # TODO: download a few blocks and add them to chain
@@ -585,20 +585,16 @@ class FullNode:
             async with (await self.store.get_lock()):
                 log.info(f"\tUpdated heads, new heights: {[b.height for b in self.blockchain.get_current_heads()]}")
                 difficulty = await self.blockchain.get_next_difficulty(block.block.prev_header_hash)
-                old_ips = await self.store.get_proof_of_time_estimate_ips()
                 next_vdf_ips = await self.blockchain.get_next_ips(block.block.header_hash)
-                log.info(f"Difficulty {difficulty} IPS {old_ips}")
+                log.info(f"Difficulty {difficulty} IPS {next_vdf_ips}")
                 if next_vdf_ips != await self.store.get_proof_of_time_estimate_ips():
                     await self.store.set_proof_of_time_estimate_ips(next_vdf_ips)
                     ips_changed = True
             if ips_changed:
-                if next_vdf_ips > old_ips:
-                    # TODO: remove this for testnet/mainnet
-                    # If rate dropped this much, don't send an update (for testing, blockchain offline, etc)
-                    rate_update = farmer_protocol.ProofOfTimeRate(max(old_ips, next_vdf_ips))
-                    log.error(f"Sending proof of time rate {max(old_ips, next_vdf_ips)}")
-                    yield OutboundMessage(NodeType.FARMER, Message("proof_of_time_rate", rate_update),
-                                          Delivery.BROADCAST)
+                rate_update = farmer_protocol.ProofOfTimeRate(next_vdf_ips)
+                log.error(f"Sending proof of time rate {next_vdf_ips}")
+                yield OutboundMessage(NodeType.FARMER, Message("proof_of_time_rate", rate_update),
+                                      Delivery.BROADCAST)
             assert block.block.trunk_block.proof_of_time
             assert block.block.trunk_block.challenge
             pos_quality = block.block.trunk_block.proof_of_space.verify_and_get_quality(

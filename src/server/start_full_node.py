@@ -1,19 +1,16 @@
 import asyncio
 import logging
-from src.full_node import FullNode
 import sys
-from src.server.server import start_chia_server, start_chia_client
+from typing import Optional
+from src.full_node import FullNode
+from src.server.server import ChiaServer
 from src.util.network import parse_host_port
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
 from src.store.full_node_store import FullNodeStore
+from src.blockchain import Blockchain
+from src.ui.prompt_ui import FullNodeUI
 
-
-logging.basicConfig(format='FullNode %(name)-23s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s',
-                    level=logging.INFO,
-                    datefmt='%H:%M:%S'
-                    )
-log = logging.getLogger(__name__)
 
 """
 Full node startup algorithm:
@@ -24,65 +21,77 @@ Full node startup algorithm:
 - If connected to timelord, send challenges
 """
 
+logging.basicConfig(format='FullNode %(name)-23s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s',
+                    level=logging.INFO,
+                    datefmt='%H:%M:%S'
+                    )
+
+log = logging.getLogger(__name__)
+server_closed = False
+
 
 async def main():
     # Create the store (DB) and full node instance
     store = FullNodeStore()
     await store.initialize()
-    full_node = FullNode()
-    await full_node.initialize(store)
+    blockchain = Blockchain(store)
+    await blockchain.initialize()
 
+    full_node = FullNode(store, blockchain)
     # Starts the full node server (which full nodes can connect to)
     host, port = parse_host_port(full_node)
-    server, client = await start_chia_server(host, port, full_node, NodeType.FULL_NODE, full_node.on_connect)
+    server = ChiaServer(port, full_node, NodeType.FULL_NODE)
+    _ = await server.start_server(host, NodeType.FULL_NODE, full_node.on_connect)
+    ui: Optional[FullNodeUI] = None
+
+    def master_close_cb():
+        log.info("Closing all connections...")
+        server.close_all()
+        global server_closed
+        server_closed = True
+        log.info("Server closed.")
+
+    if "-u" in sys.argv:
+        ui = FullNodeUI(store, blockchain, server.global_connections, port, full_node.config['ssh_port'],
+                        full_node.config['ssh_filename'], master_close_cb)
+
     connect_to_farmer = ("-f" in sys.argv)
     connect_to_timelord = ("-t" in sys.argv)
-
-    waitable_tasks = [server]
 
     peer_tasks = []
     for peer in full_node.config['initial_peers']:
         if not (host == peer['host'] and port == peer['port']):
-            # TODO: check if not in blacklist
-            peer_task = start_chia_client(PeerInfo(peer['host'], peer['port'], bytes.fromhex(peer['node_id'])),
-                                          full_node, NodeType.FULL_NODE)
-            peer_tasks.append(peer_task)
-    awaited = await asyncio.gather(*peer_tasks, return_exceptions=True)
-    connected_tasks = [response[0] for response in awaited if not isinstance(response, asyncio.CancelledError)]
-    waitable_tasks = waitable_tasks + connected_tasks
-    log.info(f"Connected to {len(connected_tasks)} peers.")
+            peer_tasks.append(server.start_client(PeerInfo(peer['host'], peer['port'], bytes.fromhex(peer['node_id'])),
+                                                  NodeType.FULL_NODE, full_node.on_connect))
+    await asyncio.gather(*peer_tasks)
 
-    try:
-        async for msg in full_node.sync():
-            client.push(msg)
-    except BaseException as e:
-        log.info(f"Error syncing {e}")
-        raise
+    log.info("Waiting to perform handshake with all peers...")
+    # TODO: have a cleaner way to wait for all the handshakes
+    await asyncio.sleep(3)
+    if server_closed:
+        return
+
+    async with server.global_connections.get_lock():
+        log.info(f"Connected to {len(await server.global_connections.get_connections())} peers.")
+
+    async for msg in full_node.sync():
+        server.push_message(msg)
 
     if connect_to_farmer:
-        try:
-            peer_info = PeerInfo(full_node.config['farmer_peer']['host'],
-                                 full_node.config['farmer_peer']['port'],
-                                 bytes.fromhex(full_node.config['farmer_peer']['node_id']))
-            farmer_con_task, farmer_client = await start_chia_client(peer_info, full_node, NodeType.FARMER)
-            async for msg in full_node.send_heads_to_farmers():
-                farmer_client.push(msg)
-            waitable_tasks.append(farmer_con_task)
-        except asyncio.CancelledError:
-            log.warning("Connection to farmer failed.")
+        peer_info = PeerInfo(full_node.config['farmer_peer']['host'],
+                             full_node.config['farmer_peer']['port'],
+                             bytes.fromhex(full_node.config['farmer_peer']['node_id']))
+        _ = await server.start_client(peer_info, NodeType.FARMER, full_node.send_heads_to_farmers)
 
     if connect_to_timelord:
-        try:
-            peer_info = PeerInfo(full_node.config['timelord_peer']['host'],
-                                 full_node.config['timelord_peer']['port'],
-                                 bytes.fromhex(full_node.config['timelord_peer']['node_id']))
-            timelord_con_task, timelord_client = await start_chia_client(peer_info, full_node, NodeType.TIMELORD)
-            async for msg in full_node.send_challenges_to_timelords():
-                timelord_client.push(msg)
-            waitable_tasks.append(timelord_con_task)
-        except asyncio.CancelledError:
-            log.warning("Connection to timelord failed.")
+        peer_info = PeerInfo(full_node.config['timelord_peer']['host'],
+                             full_node.config['timelord_peer']['port'],
+                             bytes.fromhex(full_node.config['timelord_peer']['node_id']))
+        _ = await server.start_client(peer_info, NodeType.TIMELORD, full_node.send_challenges_to_timelords)
 
-    await asyncio.gather(*waitable_tasks)
+    await server.await_closed()
+    if ui is not None:
+        await ui.await_closed()
+
 
 asyncio.run(main())
