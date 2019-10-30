@@ -2,13 +2,13 @@ import logging
 import asyncio
 import random
 from typing import Tuple, AsyncGenerator, Callable, Optional, List, Any
-from lib.aiter.aiter.server import start_server_aiter
-from lib.aiter.aiter.map_aiter import map_aiter
-from lib.aiter.aiter.join_aiters import join_aiters
-from lib.aiter.aiter.parallel_map_aiter import parallel_map_aiter
-from lib.aiter.aiter.iter_to_aiter import iter_to_aiter
-from lib.aiter.aiter.aiter_forker import aiter_forker
-from lib.aiter.aiter.push_aiter import push_aiter
+from aiter.server import start_server_aiter
+from aiter.map_aiter import map_aiter
+from aiter.join_aiters import join_aiters
+from aiter.parallel_map_aiter import parallel_map_aiter
+from aiter.iter_to_aiter import iter_to_aiter
+from aiter.aiter_forker import aiter_forker
+from aiter.push_aiter import push_aiter
 from src.types.peer_info import PeerInfo
 from src.types.sized_bytes import bytes32
 from src.server.connection import Connection, PeerConnections
