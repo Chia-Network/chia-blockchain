@@ -106,7 +106,8 @@ class ChiaServer:
     async def _add_to_srwt_aiter(self, aiter: AsyncGenerator[Tuple[asyncio.StreamReader, asyncio.StreamWriter], None]):
         assert self._srwt_aiter is not None
         async for swr in aiter:
-            self._srwt_aiter.push(swr)
+            if not self._srwt_aiter.is_stopped():
+                self._srwt_aiter.push(swr)
 
     async def await_closed(self):
         await self._pipeline_task
