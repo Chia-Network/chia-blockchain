@@ -62,6 +62,7 @@ class FullNodeDatabase(Database):
         query = await self.full_blocks.find_one(header_hash)
         if query is not None:
             return FullBlock.from_bytes(query["block"])
+        return None
 
     async def set_sync_mode(self, sync_mode: bool) -> None:
         await self.sync_mode.update_one(
