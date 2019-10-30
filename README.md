@@ -13,7 +13,6 @@ python3 -m venv .venv
 pip install wheel
 pip install .
 pip install lib/chiapos
-pip install lib/python-prompt-toolkit
 
 cd lib/chiavdf/fast_vdf
 # Install libgmp, libboost, and libflint, and then run the following

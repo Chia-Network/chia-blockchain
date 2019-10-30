@@ -28,7 +28,6 @@ parso==0.5.1
 pexpect==4.7.0
 pickleshare==0.7.5
 pluggy==0.13.0
-prompt-toolkit==3.0.0
 ptyprocess==0.6.0
 py==1.8.0
 pybind11==2.4.3
@@ -47,3 +46,4 @@ typing-extensions==3.7.4
 wcwidth==0.1.7
 zipp==0.6.0
 -e lib/aiter
+-e lib/python-prompt-toolkit
