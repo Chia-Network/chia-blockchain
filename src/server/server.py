@@ -30,9 +30,9 @@ class ChiaServer:
     global_connections: PeerConnections = PeerConnections([])
 
     _server: Optional[asyncio.AbstractServer] = None
-    _srwt_aiter: Optional[push_aiter] = None
-    _pipeline_task: Optional[asyncio.Task] = None
-    _outbound_aiter: Optional[push_aiter] = None
+    _srwt_aiter: push_aiter
+    _pipeline_task: asyncio.Task
+    _outbound_aiter: push_aiter
 
     # These will get called after a handshake is performed
     _on_connect_callbacks: Dict[bytes32, Callable] = {}
@@ -42,16 +42,14 @@ class ChiaServer:
         self._port = port
         self._api = api
         self._local_type = local_type
+        self._srwt_aiter = push_aiter()
+        self._outbound_aiter = push_aiter()
+        self._pipeline_task = self.initialize_pipeline(self._srwt_aiter, self._api, self._port)
 
     async def start_server(self, host: str, connection_type: NodeType,
                            on_connect: Optional[Callable[[], AsyncGenerator[OutboundMessage, None]]] = None) -> bool:
-        if self._server:
+        if self._server is not None:
             return False
-
-        if self._srwt_aiter is None:
-            await self._initialize()
-
-        assert self._srwt_aiter is not None
 
         self._server, aiter = await start_server_aiter(self._port, host=host, reuse_address=True)
         if on_connect is not None:
@@ -69,16 +67,12 @@ class ChiaServer:
 
     async def start_client(self, target_node: PeerInfo, connection_type: NodeType,
                            on_connect: Optional[Callable[[], AsyncGenerator[OutboundMessage, None]]] = None) -> bool:
-        if self._srwt_aiter is None:
-            await self._initialize()
-
         total_time: int = 0
         succeeded: bool = False
-        async with self.global_connections.get_lock():
-            if any(((c.peer_host == target_node.host and c.peer_port == target_node.port)
-                    or (c.node_id == target_node.node_id))
-                    for c in await self.global_connections.get_connections()):
-                raise RuntimeError("Already have connection to {target_host}")
+        if any(((c.peer_host == target_node.host and c.peer_port == target_node.port)
+                or (c.node_id == target_node.node_id))
+                for c in self.global_connections.get_connections()):
+            raise RuntimeError("Already have connection to {target_host}")
         for _ in range(0, TOTAL_RETRY_SECONDS, RETRY_INTERVAL):
             try:
                 reader, writer = await asyncio.open_connection(target_node.host, target_node.port)
@@ -97,14 +91,7 @@ class ChiaServer:
         asyncio.create_task(self._add_to_srwt_aiter(iter_to_aiter([(reader, writer, connection_type)])))
         return True
 
-    async def _initialize(self):
-        self._srwt_aiter = push_aiter()
-        self._outbound_aiter = push_aiter()
-        await self.global_connections.initialize()
-        self._pipeline_task = self.initialize_pipeline(self._srwt_aiter, self._api, self._port)
-
     async def _add_to_srwt_aiter(self, aiter: AsyncGenerator[Tuple[asyncio.StreamReader, asyncio.StreamWriter], None]):
-        assert self._srwt_aiter is not None
         async for swr in aiter:
             if not self._srwt_aiter.is_stopped():
                 self._srwt_aiter.push(swr)
@@ -118,14 +105,12 @@ class ChiaServer:
             self._outbound_aiter.push(message)
 
     def close_all(self):
-        async def async_close_all():
-            await self.global_connections.close_all_connections()
-            self._server.close()
-            if not self._outbound_aiter.is_stopped():
-                self._outbound_aiter.stop()
-            if not self._srwt_aiter.is_stopped():
-                self._srwt_aiter.stop()
-        asyncio.create_task(async_close_all())
+        self.global_connections.close_all_connections()
+        self._server.close()
+        if not self._outbound_aiter.is_stopped():
+            self._outbound_aiter.stop()
+        if not self._srwt_aiter.is_stopped():
+            self._srwt_aiter.stop()
 
     def initialize_pipeline(self, aiter, api: Any, server_port: int) -> asyncio.Task:
 
@@ -221,12 +206,11 @@ class ChiaServer:
                 raise InvalidHandshake("Invalid handshake")
 
             # Makes sure that we only start one connection with each peer
-            async with self.global_connections.get_lock():
-                connection.node_id = inbound_handshake.node_id
-                if self.global_connections.have_connection_no_lock(connection):
-                    raise DuplicateConnection(f"Duplicate connection to {connection}")
+            connection.node_id = inbound_handshake.node_id
+            if self.global_connections.have_connection(connection):
+                raise DuplicateConnection(f"Duplicate connection to {connection}")
 
-                await self.global_connections.add_no_lock(connection)
+            self.global_connections.add(connection)
 
             # Send Ack message
             await connection.send(Message("handshake_ack", HandshakeAck()))
@@ -267,7 +251,7 @@ class ChiaServer:
             log.warning(f"Connection error by peer {connection.get_peername()}, closing connection.")
         finally:
             # Removes the connection from the global list, so we don't try to send things to it
-            await self.global_connections.close(connection)
+            self.global_connections.close(connection)
 
     async def handle_message(self, pair: Tuple[Connection, Message], api: Any) -> AsyncGenerator[
             Tuple[Connection, OutboundMessage], None]:
@@ -289,7 +273,7 @@ class ChiaServer:
                 log.error(f'Invalid message: {full_message.function} from {connection.get_peername()}')
         except Exception as e:
             log.error(f"Error {e}, closing connection {connection}")
-            await self.global_connections.close(connection)
+            self.global_connections.close(connection)
 
     async def expand_outbound_messages(self, pair: Tuple[Connection, OutboundMessage]) -> AsyncGenerator[
             Tuple[Connection, Message], None]:
@@ -305,24 +289,18 @@ class ChiaServer:
         elif outbound_message.delivery_method == Delivery.RANDOM:
             # Select a random peer.
             to_yield_single: Tuple[Connection, Message]
-            async with self.global_connections.get_lock():
-                typed_peers: List[Connection] = [peer for peer in await self.global_connections.get_connections()
-                                                 if peer.connection_type == outbound_message.peer_type]
-                if len(typed_peers) == 0:
-                    return
-                to_yield_single = (random.choice(typed_peers), outbound_message.message)
-            yield to_yield_single
+            typed_peers: List[Connection] = [peer for peer in self.global_connections.get_connections()
+                                             if peer.connection_type == outbound_message.peer_type]
+            if len(typed_peers) == 0:
+                return
+            yield (random.choice(typed_peers), outbound_message.message)
         elif (outbound_message.delivery_method == Delivery.BROADCAST or
               outbound_message.delivery_method == Delivery.BROADCAST_TO_OTHERS):
             # Broadcast to all peers.
-            to_yield: List[Tuple[Connection, Message]] = []
-            async with self.global_connections.get_lock():
-                for peer in await self.global_connections.get_connections():
-                    if peer.connection_type == outbound_message.peer_type:
-                        if peer == connection:
-                            if outbound_message.delivery_method == Delivery.BROADCAST:
-                                to_yield.append((peer, outbound_message.message))
-                        else:
-                            to_yield.append((peer, outbound_message.message))
-            for item in to_yield:
-                yield item
+            for peer in self.global_connections.get_connections():
+                if peer.connection_type == outbound_message.peer_type:
+                    if peer == connection:
+                        if outbound_message.delivery_method == Delivery.BROADCAST:
+                            yield (peer, outbound_message.message)
+                    else:
+                        yield (peer, outbound_message.message)

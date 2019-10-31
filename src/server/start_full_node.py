@@ -71,8 +71,7 @@ async def main():
     if server_closed:
         return
 
-    async with server.global_connections.get_lock():
-        log.info(f"Connected to {len(await server.global_connections.get_connections())} peers.")
+    log.info(f"Connected to {len(server.global_connections.get_connections())} peers.")
 
     async for msg in full_node.sync():
         server.push_message(msg)

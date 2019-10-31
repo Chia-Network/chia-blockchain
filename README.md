@@ -27,8 +27,8 @@ Run the servers in the following order (you can also use ipython):
 python -m src.server.start_plotter
 python -m src.server.start_timelord
 python -m src.server.start_farmer
-python -m src.server.start_full_node "127.0.0.1" 8002 "-f"
-python -m src.server.start_full_node "127.0.0.1" 8004 "-t" "-u"
+python -m src.server.start_full_node "127.0.0.1" 8002 -f
+python -m src.server.start_full_node "127.0.0.1" 8004 -t -u
 python -m src.server.start_full_node "127.0.0.1" 8005
 
 ```

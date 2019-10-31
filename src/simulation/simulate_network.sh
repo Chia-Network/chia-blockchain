@@ -11,9 +11,9 @@ python -m src.server.start_timelord &
 P2=$!
 python -m src.server.start_farmer &
 P3=$!
-python -m src.server.start_full_node "127.0.0.1" 8002 "-f" &
+python -m src.server.start_full_node "127.0.0.1" 8002 -f &
 P4=$!
-python -m src.server.start_full_node "127.0.0.1" 8004 "-t" "-u" &
+python -m src.server.start_full_node "127.0.0.1" 8004 -t -u &
 P5=$!
 python -m src.server.start_full_node "127.0.0.1" 8005 &
 P6=$!

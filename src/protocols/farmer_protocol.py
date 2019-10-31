@@ -62,3 +62,4 @@ class HeaderSignature:
 @cbor_message(tag=2006)
 class ProofOfTimeRate:
     pot_estimate_ips: uint64
+

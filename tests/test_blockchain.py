@@ -275,3 +275,28 @@ class TestReorgs():
         await b.receive_block(blocks_reorg_chain_2[20]) == ReceiveBlockResult.ADDED_AS_ORPHAN
         assert (await b.receive_block(blocks_reorg_chain_2[21])) == ReceiveBlockResult.ADDED_TO_HEAD
         assert (await b.receive_block(blocks_reorg_chain_2[22])) == ReceiveBlockResult.ADDED_TO_HEAD
+
+    @pytest.mark.asyncio
+    async def test_lca(self):
+        blocks = bt.get_consecutive_blocks(test_constants, 5, [], 9, uint64(0))
+        store = FullNodeStore()
+        await store.initialize()
+        b: Blockchain = Blockchain(store, test_constants)
+
+        await b.initialize()
+        for block in blocks:
+            await b.receive_block(block)
+
+        assert b.lca_block == blocks[2]
+        block_5_2 = bt.get_consecutive_blocks(test_constants, 1, blocks[:4], 9, uint64(1))[0]
+        block_5_3 = bt.get_consecutive_blocks(test_constants, 1, blocks[:4], 9, uint64(2))[0]
+
+        await b.receive_block(block_5_2)
+        assert b.lca_block == blocks[3]
+        await b.receive_block(block_5_3)
+        assert b.lca_block == blocks[3]
+
+        reorg = bt.get_consecutive_blocks(test_constants, 6, [], 9, uint64(3))
+        for block in reorg:
+            await b.receive_block(block)
+        assert b.lca_block == blocks[0]

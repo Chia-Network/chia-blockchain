@@ -119,5 +119,3 @@ class Streamable:
         f = io.BytesIO()
         self.stream(f)
         return bytes(f.getvalue())
-
-

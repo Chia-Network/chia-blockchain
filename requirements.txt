@@ -46,4 +46,5 @@ typed-ast==1.4.0
 typing-extensions==3.7.4
 wcwidth==0.1.7
 zipp==0.6.0
+-e lib/chiapos
 -e lib/aiter

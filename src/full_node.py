@@ -565,7 +565,7 @@ class FullNode:
                     async for msg in self.sync():
                         yield msg
                 except asyncio.CancelledError:
-                    log.warning("Syncing failed")
+                    log.warning("Syncing failed, CancelledError")
                 except BaseException as e:
                     log.warning(f"Error {e} with syncing")
                 finally:

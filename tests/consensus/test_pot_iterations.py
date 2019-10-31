@@ -38,7 +38,6 @@ class TestPotIterations():
             iters = [calculate_iterations_quality(qualities[i], farmer_ks[i], uint64(50000000),
                                                   uint64(5000), uint64(10))
                      for i in range(len(qualities))]
-            # print(iters)
             wins[iters.index(min(iters))] += 1
 
         win_percentage = [wins[w] / total_blocks for w in range(len(farmer_ks))]
