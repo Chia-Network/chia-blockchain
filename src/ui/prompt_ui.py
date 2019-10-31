@@ -22,6 +22,7 @@ from src.store.full_node_store import FullNodeStore
 from src.blockchain import Blockchain
 from src.types.trunk_block import TrunkBlock
 from src.types.full_block import FullBlock
+from src.types.sized_bytes import bytes32
 from src.server.connection import PeerConnections
 
 
@@ -31,26 +32,38 @@ log = logging.getLogger(__name__)
 class FullNodeUI:
     def __init__(self, store: FullNodeStore, blockchain: Blockchain, connections: PeerConnections,
                  port: int, ssh_port: int, ssh_key_filename: str, close_cb: Callable):
-        self.port = port
-        self.store = store
-        self.blockchain = blockchain
-        self.connections = connections
+        self.port: int = port
+        self.store: FullNodeStore = store
+        self.blockchain: Blockchain = blockchain
+        self.connections: PeerConnections = connections
         self.logs: List[logging.LogRecord] = []
         self.app: Optional[Application] = None
-        self.closed = False
-        self.num_blocks = 10
+        self.closed: bool = False
+        self.num_blocks: int = 10
+        self.prev_route: str = "home/"
+        self.route: str = "home/"
+        self.focused: bool = False
 
         def close():
+            log.info("Closing the UI")
             self.closed = True
+            self.route = "home/"
             if self.app:
                 self.app.exit(0)
+
+        def stop():
+            close()
             close_cb()
+
+        self.stop_cb = stop
         self.close_cb = close
         kb = self.setup_keybindings()
         self.draw_initial()
 
         async def interact() -> None:
             self.app = Application(layout=self.layout, full_screen=True, key_bindings=kb, mouse_support=True)
+            self.closed = False
+            self.update_task = asyncio.get_running_loop().create_task(self.update())
             await self.app.run_async()
 
         asyncio.get_running_loop().create_task(asyncssh.create_server(
@@ -59,7 +72,6 @@ class FullNodeUI:
             ssh_port,
             server_host_keys=[ssh_key_filename],
         ))
-        self.update_task = asyncio.get_running_loop().create_task(self.update())
 
     def setup_keybindings(self) -> KeyBindings:
         kb = KeyBindings()
@@ -91,16 +103,24 @@ class FullNodeUI:
         self.connection_rows_vsplit = Window()
 
         self.latest_blocks_msg = Label(text=f'Latest blocks')
-        self.latest_blocks_labels = [TextArea(focusable=True, height=1) for _ in range(self.num_blocks)]
-        if self.app is not None:
-            self.quit_button = Button('Quit', handler=self.close_cb)
-        else:
-            self.quit_button = Button('Quit', handler=self.close_cb)
+        self.latest_blocks_labels = [Button(text="block") for _ in range(self.num_blocks)]
+        self.quit_button = Button('Stop node and close UI', handler=self.stop_cb)
+        self.close_ui_button = Button('Close UI', handler=self.close_cb)
 
         body = HSplit([self.loading_msg, self.server_msg],
                       height=D(), width=D())
         self.content = Frame(title="Chia Full Node", body=body)
         self.layout = Layout(VSplit([self.content], height=D(), width=D()))
+
+        self.block_label = TextArea(focusable=True, scrollbar=True)
+        self.back_button = Button(text="Back", handler=self.change_route_handler("home/"))
+
+    def change_route_handler(self, route):
+        def change_route():
+            self.prev_route = self.route
+            self.route = route
+            self.focused = False
+        return change_route
 
     def convert_to_sync(self, async_func):
         def inner():
@@ -124,10 +144,8 @@ class FullNodeUI:
         return added_blocks
 
     async def draw_home(self):
-        async with self.connections.get_lock():
-            fetched_connections = await self.connections.get_connections()
         con_strs = []
-        for con in fetched_connections:
+        for con in self.connections.get_connections():
             con_str = f"{con.connection_type} {con.get_peername()} {con.node_id.hex()[:10]}..."
             con_strs.append(con_str)
             labels = [row.children[0].content.text() for row in self.con_rows]
@@ -175,27 +193,46 @@ class FullNodeUI:
         if len(latest_blocks) > 0:
             new_labels = []
             for i, b in enumerate(latest_blocks):
-                self.latest_blocks_labels[i].text = (f"{b.height}: {b.header_hash}"
-                                                     f" {'is LCA' if b.header_hash == lca_block.header_hash else ''}")
+                self.latest_blocks_labels[i].text = (
+                    f"{b.height}:{b.header_hash}"
+                    f" {'LCA' if b.header_hash == lca_block.header_hash else ''}"
+                    f" {'HEAD' if b.header_hash in [h.header_hash for h in heads] else ''}")
+                self.latest_blocks_labels[i].handler = self.change_route_handler(f"block/{b.header_hash}")
                 new_labels.append(self.latest_blocks_labels[i])
 
         self.lca_label.text = f"Current least common ancestor {lca_block.header_hash} height {lca_block.height}"
         self.current_heads_label.text = "Heights of heads: " + str([h.height for h in heads])
-        self.difficulty_label.text = f"Current difficulty: {difficulty}"
+        self.difficulty_label.text = f"Current difficuty: {difficulty}"
         self.ips_label.text = f"Current VDF iterations per second: {ips}"
         self.total_iters_label.text = f"Total iterations since genesis: {total_iters}"
-        self.content.body = HSplit([self.server_msg, self.syncing, self.lca_label, self.current_heads_label,
-                                    self.difficulty_label, self.ips_label, self.total_iters_label, self.connections_msg,
-                                    new_con_rows, self.empty_row, self.latest_blocks_msg, *new_labels,
-                                    self.quit_button], width=D(), height=D())
+        return HSplit([self.server_msg, self.syncing, self.lca_label, self.current_heads_label,
+                       self.difficulty_label, self.ips_label, self.total_iters_label, self.connections_msg,
+                       new_con_rows, self.empty_row, self.latest_blocks_msg, *new_labels,
+                       self.close_ui_button, self.quit_button], width=D(), height=D())
 
     async def draw_block(self):
-        pass
+        block_hash: str = self.route.split("block/")[1]
+        async with await self.store.get_lock():
+            block: Optional[FullBlock] = await self.store.get_block(bytes32(bytes.fromhex(block_hash)))
+        if block is not None:
+            if self.block_label.text != str(block):
+                self.block_label.text = str(block)
+        else:
+            self.block_label.text = f"Block hash {block_hash} not found"
+        return HSplit([self.block_label, self.back_button], width=D(), height=D())
 
     async def update(self):
         try:
             while not self.closed:
-                await self.draw_home()
+                if self.route.startswith("home/"):
+                    self.content.body = await self.draw_home()
+                elif self.route.startswith("block/"):
+                    self.content.body = await self.draw_block()
+
+                if self.prev_route != self.route and not self.focused:
+                    self.layout.focus_next()
+                    self.focused = True
+
                 if self.app and not self.app.invalidated:
                     self.app.invalidate()
                 await asyncio.sleep(2)

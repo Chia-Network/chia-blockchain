@@ -1,5 +1,4 @@
 from asyncio import StreamReader, StreamWriter
-from asyncio import Lock
 import logging
 from typing import List, Any
 from src.util import cbor
@@ -53,44 +52,30 @@ class Connection:
 class PeerConnections:
     def __init__(self, all_connections: List[Connection] = []):
         self._all_connections = all_connections
-        self.initialized = False
 
-    async def initialize(self):
-        self._connections_lock = Lock()
-        self.initialized = True
-
-    async def add(self, connection: Connection) -> bool:
-        async with self._connections_lock:
-            return await self.add_no_lock(connection)
-
-    async def add_no_lock(self, connection: Connection) -> bool:
+    def add(self, connection: Connection) -> bool:
         for c in self._all_connections:
             if c.node_id == connection.node_id:
                 return False
         self._all_connections.append(connection)
         return True
 
-    def have_connection_no_lock(self, connection: Connection) -> bool:
+    def have_connection(self, connection: Connection) -> bool:
         for c in self._all_connections:
             if c.node_id == connection.node_id:
                 return True
         return False
 
-    async def close(self, connection: Connection):
-        async with self._connections_lock:
-            if connection in self._all_connections:
-                await connection.close()
-                self._all_connections.remove(connection)
-                return
+    def close(self, connection: Connection):
+        if connection in self._all_connections:
+            connection.close()
+            self._all_connections.remove(connection)
+            return
 
-    async def close_all_connections(self):
-        async with self._connections_lock:
-            for connection in self._all_connections:
-                await connection.close()
-            self._all_connections = []
+    def close_all_connections(self):
+        for connection in self._all_connections:
+            connection.close()
+        self._all_connections = []
 
-    def get_lock(self):
-        return self._connections_lock
-
-    async def get_connections(self):
+    def get_connections(self):
         return self._all_connections
