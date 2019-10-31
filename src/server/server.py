@@ -5,7 +5,6 @@ from typing import Tuple, AsyncGenerator, Callable, Optional, List, Any, Dict
 from aiter.server import start_server_aiter
 from aiter.map_aiter import map_aiter
 from aiter.join_aiters import join_aiters
-from aiter.parallel_map_aiter import parallel_map_aiter
 from aiter.iter_to_aiter import iter_to_aiter
 from aiter.aiter_forker import aiter_forker
 from aiter.push_aiter import push_aiter
@@ -124,16 +123,16 @@ class ChiaServer:
         handshake_finished_2 = forker.fork(is_active=True)
 
         # Reads messages one at a time from the TCP connection
-        messages_aiter = join_aiters(parallel_map_aiter(self.connection_to_message, handshake_finished_1, 100))
+        messages_aiter = join_aiters(map_aiter(self.connection_to_message, handshake_finished_1, 100))
 
         # Handles each message one at a time, and yields responses to send back or broadcast
-        responses_aiter = join_aiters(parallel_map_aiter(
+        responses_aiter = join_aiters(map_aiter(
             partial_func.partial_async_gen(self.handle_message, api),
             messages_aiter, 100))
 
         # Uses a forked aiter, and calls the on_connect function to send some initial messages
         # as soon as the connection is established
-        on_connect_outbound_aiter = join_aiters(parallel_map_aiter(self.connection_to_outbound,
+        on_connect_outbound_aiter = join_aiters(map_aiter(self.connection_to_outbound,
                                                                    handshake_finished_2, 100))
         # Also uses the instance variable _outbound_aiter, which clients can use to send messages
         # at any time, not just on_connect.
@@ -143,7 +142,7 @@ class ChiaServer:
                                                      outbound_aiter_mapped]))
 
         # For each outbound message, replicate for each peer that we need to send to
-        expanded_messages_aiter = join_aiters(parallel_map_aiter(
+        expanded_messages_aiter = join_aiters(map_aiter(
             self.expand_outbound_messages, responses_aiter, 100))
 
         # This will run forever. Sends each message through the TCP connection, using the
