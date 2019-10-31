@@ -7,8 +7,6 @@ bitstring==3.1.6
 blspy==0.1.11
 cbor2==4.1.2
 cffi==1.13.1
-chiablockchain==0.1.2
-chiapos==0.2.2
 cppimport==18.11.8
 cryptography==2.8
 decorator==4.4.0
@@ -28,7 +26,6 @@ parso==0.5.1
 pexpect==4.7.0
 pickleshare==0.7.5
 pluggy==0.13.0
-prompt-toolkit==3.0.0
 ptyprocess==0.6.0
 py==1.8.0
 pybind11==2.4.3
@@ -48,3 +45,5 @@ wcwidth==0.1.7
 zipp==0.6.0
 -e lib/chiapos
 -e lib/aiter
+-e lib/chiapos
+-e lib/python-prompt-toolkit
