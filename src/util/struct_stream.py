@@ -7,16 +7,16 @@ from typing import Any, BinaryIO
 
 class StructStream(int):
     PACK = ""
-    bits = 1
 
     """
     Create a class that can parse and stream itself based on a struct.pack template string.
     """
     def __new__(cls: Any, value: int):
+        bits = struct.calcsize(cls.PACK) * 8
         value = int(value)
-        if value.bit_length() > cls.bits:
+        if value.bit_length() > bits:
             raise ValueError(f"Value {value} of size {value.bit_length()} does not fit into "
-                             f"{cls.__name__} of size {cls.bits}")
+                             f"{cls.__name__} of size {bits}")
 
         return int.__new__(cls, value)  # type: ignore
 
