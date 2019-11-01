@@ -295,6 +295,7 @@ class ChiaServer:
         try:
             f = getattr(api, full_message.function)
             if f is not None:
+                log.info(f"<- {f.__name__} from peer {connection.get_peername()}")
                 result = f(full_message.data)
                 if isinstance(result, AsyncGenerator):
                     async for outbound_message in result:

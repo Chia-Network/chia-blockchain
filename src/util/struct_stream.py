@@ -31,7 +31,7 @@ class StructStream(int):
         f = io.BytesIO(blob)
         return cls.parse(f)
 
-    def serialize(self: Any) -> bytes:
+    def __bytes__(self: Any) -> bytes:
         f = io.BytesIO()
         self.stream(f)
         return bytes(f.getvalue())

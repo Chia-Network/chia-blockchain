@@ -26,6 +26,5 @@ def api_request(f):
             if param_name != "return" and isinstance(inter[param_name], dict):
                 inter[param_name] = param_class(**inter[param_name])
 
-        log.info(f"<- {f.__name__}")
         return f(**inter)
     return f_substitute

@@ -50,8 +50,10 @@ async def main():
         log.info("Server closed.")
 
     if "-u" in sys.argv:
+        index = sys.argv.index("-u")
+        ui_ssh_port = int(sys.argv[index + 1])
         from src.ui.prompt_ui import FullNodeUI
-        ui = FullNodeUI(store, blockchain, server.global_connections, port, full_node.config['ssh_port'],
+        ui = FullNodeUI(store, blockchain, server.global_connections, port, ui_ssh_port,
                         full_node.config['ssh_filename'], master_close_cb)
 
     connect_to_farmer = ("-f" in sys.argv)
@@ -64,9 +66,9 @@ async def main():
                                                   NodeType.FULL_NODE, full_node.on_connect))
     await asyncio.gather(*peer_tasks)
 
-    log.info("Waiting to perform handshake with all peers...")
-    # TODO: have a cleaner way to wait for all the handshakes
+    log.info("Waiting to connect to some peers...")
     await asyncio.sleep(3)
+
     if server_closed:
         return
 

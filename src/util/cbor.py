@@ -19,7 +19,10 @@ def default_encoder(encoder, value: Any):
         fields: Dict = get_type_hints(value)
         els = {f_name: getattr(value, f_name) for f_name in fields.keys()}
         encoder.encode(els)
+    elif hasattr(type(value), "__bytes__"):
+        encoder.encode(bytes(value))
     elif hasattr(type(value), "serialize"):
+        # Useful for blspy objects
         encoder.encode(value.serialize())
     else:
         raise NotImplementedError(f"can't CBOR encode {type(value)}:{value}")
