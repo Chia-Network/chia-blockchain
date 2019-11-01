@@ -29,7 +29,7 @@ class Connection:
         return self.writer.get_extra_info("socket")
 
     async def send(self, message: Message):
-        encoded: bytes = cbor.dumps({"function": message.function, "data": message.data})
+        encoded: bytes = cbor.dumps({"f": message.function, "d": message.data})
         assert(len(encoded) < (2**(LENGTH_BYTES*8)))
         self.writer.write(len(encoded).to_bytes(LENGTH_BYTES, "big") + encoded)
         await self.writer.drain()
@@ -39,11 +39,10 @@ class Connection:
         full_message_length = int.from_bytes(size, "big")
         full_message: bytes = await self.reader.readexactly(full_message_length)
         full_message_loaded: Any = cbor.loads(full_message)
-        return Message(full_message_loaded["function"], full_message_loaded["data"])
+        return Message(full_message_loaded["f"], full_message_loaded["d"])
 
-    async def close(self):
+    def close(self):
         self.writer.close()
-        await self.writer.wait_closed()
 
     def __str__(self) -> str:
         return f"Connection({self.get_peername()})"

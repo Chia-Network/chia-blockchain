@@ -15,27 +15,27 @@ Protocol between wallet (SPV node) and full node.
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=6000)
+@cbor_message
 class SendTransaction:
     transaction: Transaction
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=6001)
+@cbor_message
 class NewHead:
     header_hash: bytes32
     height: uint32
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=6002)
+@cbor_message
 class RequestHeaders:
     header_hash: bytes32
     previous_heights_desired: List[uint32]
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=6003)
+@cbor_message
 class Headers:
     proof_of_time: ProofOfTime
     proof_of_space: ProofOfSpace
@@ -44,12 +44,12 @@ class Headers:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=6004)
+@cbor_message
 class RequestBody:
     body_hash: bytes32
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=6005)
+@cbor_message
 class RespondBody:
     body: BlockBody

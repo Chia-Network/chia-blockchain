@@ -12,7 +12,7 @@ Protocol between farmer and full node.
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=2000)
+@cbor_message
 class ProofOfSpaceFinalized:
     challenge_hash: bytes32
     height: uint32
@@ -21,20 +21,20 @@ class ProofOfSpaceFinalized:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=2001)
+@cbor_message
 class ProofOfSpaceArrived:
     height: uint32
     quality: bytes32
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=2002)
+@cbor_message
 class DeepReorgNotification:
     pass
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=2003)
+@cbor_message
 class RequestHeaderHash:
     challenge_hash: bytes32
     coinbase: CoinbaseInfo
@@ -44,14 +44,14 @@ class RequestHeaderHash:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=2004)
+@cbor_message
 class HeaderHash:
     pos_hash: bytes32
     header_hash: bytes32
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=2005)
+@cbor_message
 class HeaderSignature:
     pos_hash: bytes32
     header_hash: bytes32
@@ -59,7 +59,6 @@ class HeaderSignature:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=2006)
+@cbor_message
 class ProofOfTimeRate:
     pot_estimate_ips: uint64
-
