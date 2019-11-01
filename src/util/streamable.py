@@ -98,7 +98,10 @@ class Streamable:
                 self.stream_one_item(inner_type, item, f)
         elif hasattr(f_type, "stream"):
             item.stream(f)
+        elif hasattr(f_type, "__bytes__"):
+            f.write(bytes(item))
         elif hasattr(f_type, "serialize"):
+            # Useful for blspy objects
             f.write(item.serialize())
         else:
             raise NotImplementedError(f"can't stream {item}, {f_type}")
@@ -108,14 +111,14 @@ class Streamable:
             self.stream_one_item(f_type, getattr(self, f_name), f)
 
     def get_hash(self) -> bytes32:
-        return bytes32(sha256(self.serialize()).digest())
+        return bytes32(sha256(bytes(self)).digest())
 
     @classmethod
     def from_bytes(cls: Any, blob: bytes) -> Any:
         f = io.BytesIO(blob)
         return cls.parse(f)
 
-    def serialize(self: Any) -> bytes:
+    def __bytes__(self: Any) -> bytes:
         f = io.BytesIO()
         self.stream(f)
         return bytes(f.getvalue())

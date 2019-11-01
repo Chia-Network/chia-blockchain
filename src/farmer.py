@@ -205,7 +205,7 @@ class Farmer:
 
                 pool_sks: List[PrivateKey] = [PrivateKey.from_bytes(bytes.fromhex(ce))
                                               for ce in self.config["pool_sks"]]
-                coinbase_signature: PrependSignature = pool_sks[0].sign_prepend(coinbase.serialize())
+                coinbase_signature: PrependSignature = pool_sks[0].sign_prepend(bytes(coinbase))
                 self.coinbase_rewards[uint32(self.current_height + 1)] = (coinbase, coinbase_signature)
 
                 log.info(f"\tCurrent height set to {self.current_height}")

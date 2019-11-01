@@ -62,7 +62,6 @@ class Timelord:
                     log.info(f"Will not execute challenge at height {challenge_start}, too old")
                     return
                 assert(len(self.active_heights) > 0)
-                log.info(f"{challenge_start.height}, max is {max(self.active_heights)}")
                 if (challenge_start.height == max(self.active_heights)):
                     if (len(self.free_servers) != 0):
                         port = self.free_servers[0]
@@ -120,15 +119,10 @@ class Timelord:
                 log.info("Stopped server")
                 # Server is now available.
                 async with self.lock:
-                    log.info("Acquired lock for writing")
                     writer.write(b"ACK")
-                    log.info("Wrote ack to server")
                     await writer.drain()
-                    log.info("Drained VDF server")
                     await proc.wait()
-                    log.info("Waited for process to exit")
                     self.free_servers.append(port)
-                    log.info(f"Appended {port} to free ports")
                     if challenge_start.challenge_hash in self.active_discriminants:
                         del self.active_discriminants[challenge_start.challenge_hash]
                         del self.active_discriminants_start_time[challenge_start.challenge_hash]

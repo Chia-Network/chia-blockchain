@@ -11,8 +11,6 @@ short_sync_download_count: 6
 host: "127.0.0.1"
 port: 8002
 
-# SSH server started, for UI
-ssh_port: 8222
 ssh_filename: "src/config/ssh_host_key"
 
 farmer_peer:
