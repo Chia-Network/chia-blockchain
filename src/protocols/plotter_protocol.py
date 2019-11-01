@@ -12,19 +12,19 @@ Protocol between plotter and farmer.
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=1000)
+@cbor_message
 class PlotterHandshake:
     pool_pubkeys: List[PublicKey]
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=1001)
+@cbor_message
 class NewChallenge:
     challenge_hash: bytes32
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=1002)
+@cbor_message
 class ChallengeResponse:
     challenge_hash: bytes32
     quality: bytes32
@@ -32,41 +32,41 @@ class ChallengeResponse:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=1003)
+@cbor_message
 class RequestProofOfSpace:
     quality: bytes32
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=1004)
+@cbor_message
 class RespondProofOfSpace:
     quality: bytes32
     proof: ProofOfSpace
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=1005)
+@cbor_message
 class RequestHeaderSignature:
     quality: bytes32
     header_hash: bytes32
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=1006)
+@cbor_message
 class RespondHeaderSignature:
     quality: bytes32
     header_hash_signature: PrependSignature
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=1007)
+@cbor_message
 class RequestPartialProof:
     quality: bytes32
     farmer_target_hash: bytes32
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=1008)
+@cbor_message
 class RespondPartialProof:
     quality: bytes32
     farmer_target_signature: PrependSignature

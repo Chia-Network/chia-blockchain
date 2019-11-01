@@ -18,6 +18,14 @@ def api_request(f):
         binding = sig.bind(*args, **kwargs)
         binding.apply_defaults()
         inter = dict(binding.arguments)
+
+        # Converts each parameter from a Python dictionary, into an instance of the object
+        # specified by the type annotation (signature) of the function that is being called (f)
+        # The method can also be called with the target type instead of a dictionary.
+        for param_name, param_class in f.__annotations__.items():
+            if param_name != "return" and isinstance(inter[param_name], dict):
+                inter[param_name] = param_class(**inter[param_name])
+
         log.info(f"<- {f.__name__}")
         return f(**inter)
     return f_substitute

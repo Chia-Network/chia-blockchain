@@ -43,7 +43,6 @@ class Timelord:
         a new VDF process here. But we don't know how many iterations to run for, so we run
         forever.
         """
-        log.info(f"Called challenge start {challenge_start}")
         disc: int = create_discriminant(challenge_start.challenge_hash, constants["DISCRIMINANT_SIZE_BITS"])
         async with self.lock:
             if (challenge_start.challenge_hash in self.seen_discriminants):
@@ -56,9 +55,7 @@ class Timelord:
         # Wait for a server to become free.
         port: int = -1
         while port == -1:
-            log.info(f"Looping {challenge_start}")
             async with self.lock:
-                log.info(f"Acquired loop lock {challenge_start}")
                 if (challenge_start.height <= max(self.active_heights) - 3):
                     self.done_discriminants.append(challenge_start.challenge_hash)
                     self.active_heights.remove(challenge_start.height)
