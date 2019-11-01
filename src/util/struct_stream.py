@@ -13,6 +13,7 @@ class StructStream(int):
     Create a class that can parse and stream itself based on a struct.pack template string.
     """
     def __new__(cls: Any, value: int):
+        value = int(value)
         if value.bit_length() > cls.bits:
             raise ValueError(f"Value {value} of size {value.bit_length()} does not fit into "
                              f"{cls.__name__} of size {cls.bits}")
