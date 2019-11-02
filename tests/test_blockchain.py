@@ -83,7 +83,8 @@ class TestBlockValidation():
                         blocks[9].trunk_block.header.data.filter_hash,
                         blocks[9].trunk_block.header.data.proof_of_space_hash,
                         blocks[9].trunk_block.header.data.body_hash,
-                        blocks[9].trunk_block.header.data.extension_data
+                        blocks[9].trunk_block.header.data.extension_data,
+                        blocks[9].trunk_block.header.data.challenge_hash
                 ), blocks[9].trunk_block.header.plotter_signature)
                 ), blocks[9].body)
         assert (await b.receive_block(block_bad)) == ReceiveBlockResult.DISCONNECTED_BLOCK
@@ -102,7 +103,8 @@ class TestBlockValidation():
                         blocks[9].trunk_block.header.data.filter_hash,
                         blocks[9].trunk_block.header.data.proof_of_space_hash,
                         blocks[9].trunk_block.header.data.body_hash,
-                        blocks[9].trunk_block.header.data.extension_data
+                        blocks[9].trunk_block.header.data.extension_data,
+                        blocks[9].trunk_block.header.data.challenge_hash
                 ), blocks[9].trunk_block.header.plotter_signature)
                 ), blocks[9].body)
         assert (await b.receive_block(block_bad)) == ReceiveBlockResult.INVALID_BLOCK
@@ -118,7 +120,8 @@ class TestBlockValidation():
                         blocks[9].trunk_block.header.data.filter_hash,
                         blocks[9].trunk_block.header.data.proof_of_space_hash,
                         blocks[9].trunk_block.header.data.body_hash,
-                        blocks[9].trunk_block.header.data.extension_data
+                        blocks[9].trunk_block.header.data.extension_data,
+                        blocks[9].trunk_block.header.data.challenge_hash,
                 ), blocks[9].trunk_block.header.plotter_signature)
                 ), blocks[9].body)
 
@@ -126,6 +129,25 @@ class TestBlockValidation():
 
     @pytest.mark.asyncio
     async def test_body_hash(self, initial_blockchain):
+        blocks, b = initial_blockchain
+        block_bad = FullBlock(TrunkBlock(
+                blocks[9].trunk_block.proof_of_space,
+                blocks[9].trunk_block.proof_of_time,
+                blocks[9].trunk_block.challenge,
+                BlockHeader(BlockHeaderData(
+                        blocks[9].trunk_block.header.data.prev_header_hash,
+                        blocks[9].trunk_block.header.data.timestamp,
+                        blocks[9].trunk_block.header.data.filter_hash,
+                        blocks[9].trunk_block.header.data.proof_of_space_hash,
+                        bytes([1]*32),
+                        blocks[9].trunk_block.header.data.extension_data,
+                        blocks[9].trunk_block.header.data.challenge_hash,
+                ), blocks[9].trunk_block.header.plotter_signature)
+                ), blocks[9].body)
+        assert (await b.receive_block(block_bad)) == ReceiveBlockResult.INVALID_BLOCK
+
+    @pytest.mark.asyncio
+    async def test_challenge_hash(self, initial_blockchain):
         blocks, b = initial_blockchain
         # Time too far in the past
         block_bad = FullBlock(TrunkBlock(
@@ -137,8 +159,9 @@ class TestBlockValidation():
                         blocks[9].trunk_block.header.data.timestamp,
                         blocks[9].trunk_block.header.data.filter_hash,
                         blocks[9].trunk_block.header.data.proof_of_space_hash,
-                        bytes([1]*32),
-                        blocks[9].trunk_block.header.data.extension_data
+                        blocks[9].trunk_block.header.data.body_hash,
+                        blocks[9].trunk_block.header.data.extension_data,
+                        bytes([2]*32),
                 ), blocks[9].trunk_block.header.plotter_signature)
                 ), blocks[9].body)
         assert (await b.receive_block(block_bad)) == ReceiveBlockResult.INVALID_BLOCK

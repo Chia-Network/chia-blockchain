@@ -376,22 +376,26 @@ class Blockchain:
             assert prev_block
             assert prev_block.trunk_block.challenge
             challenge_hash = prev_block.trunk_block.challenge.get_hash()
+
+            # 7. Check challenge hash of prev is the same as in header
+            if challenge_hash != block.trunk_block.header.data.challenge_hash:
+                return False
         else:
             assert block.trunk_block.proof_of_time
             challenge_hash = block.trunk_block.proof_of_time.output.challenge_hash
 
-        # 7. Check plotter signature of header data is valid based on plotter key
+        # 8. Check plotter signature of header data is valid based on plotter key
         if not block.trunk_block.header.plotter_signature.verify(
                 [blspy.Util.hash256(block.trunk_block.header.data.get_hash())],
                 [block.trunk_block.proof_of_space.plot_pubkey]):
             return False
 
-        # 8. Check proof of space based on challenge
+        # 9. Check proof of space based on challenge
         pos_quality = block.trunk_block.proof_of_space.verify_and_get_quality(challenge_hash)
         if not pos_quality:
             return False
 
-        # 9. Check coinbase height = parent coinbase height + 1
+        # 10. Check coinbase height = parent coinbase height + 1
         if not genesis:
             assert prev_block
             if block.body.coinbase.height != prev_block.body.coinbase.height + 1:
@@ -400,21 +404,21 @@ class Blockchain:
             if block.body.coinbase.height != 0:
                 return False
 
-        # 10. Check coinbase amount
+        # 11. Check coinbase amount
         if calculate_block_reward(block.body.coinbase.height) != block.body.coinbase.amount:
             return False
 
-        # 11. Check coinbase signature with pool pk
+        # 12. Check coinbase signature with pool pk
         if not block.body.coinbase_signature.verify([blspy.Util.hash256(bytes(block.body.coinbase))],
                                                     [block.trunk_block.proof_of_space.pool_pubkey]):
             return False
 
-        # TODO: 12a. check transactions
-        # TODO: 12b. Aggregate transaction results into signature
+        # TODO: 13a. check transactions
+        # TODO: 13b. Aggregate transaction results into signature
         if block.body.aggregated_signature:
-            # TODO: 13. check that aggregate signature is valid, based on pubkeys, and messages
+            # TODO: 14. check that aggregate signature is valid, based on pubkeys, and messages
             pass
-        # TODO: 13. check fees
+        # TODO: 15. check fees
         return True
 
     async def validate_block(self, block: FullBlock, genesis: bool = False) -> bool:
@@ -456,6 +460,9 @@ class Blockchain:
             return False
 
         if block.body.coinbase.height != block.trunk_block.challenge.height:
+            return False
+
+        if block.trunk_block.proof_of_time.output.challenge_hash != block.trunk_block.header.data.challenge_hash:
             return False
 
         if not genesis:
