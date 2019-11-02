@@ -62,7 +62,7 @@ public:
         // Ensure a, b, c are shifted so that a : b : c ratios are same as
         // f.a : f.b : f.c. a, b, c will be used as approximations to f.a,
         // f.b, f.c
-        int_fast64_t max_exp(mm.second++); // for safety vs overflow
+        int_fast64_t max_exp(++mm.second); // for safety vs overflow
         a >>= (max_exp - a_exp);
         b >>= (max_exp - b_exp);
         c >>= (max_exp - c_exp);
@@ -175,9 +175,7 @@ private:
       w = w_;
       x = x_;
 
-      s = static_cast<int_fast64_t>(
-              (floorf(b / (static_cast<float>(c))) + 1)) >>
-          1;
+      s = b >= 0 ? (b+c) / (c<<1) : - (-b+c) / (c<<1);
 
       a_ = a;
       b_ = b;
