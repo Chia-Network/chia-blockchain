@@ -357,7 +357,7 @@ class FullNode:
             extension_data: bytes32 = bytes32([0] * 32)
             block_header_data: BlockHeaderData = BlockHeaderData(prev_header_hash, timestamp,
                                                                  filter_hash, proof_of_space_hash,
-                                                                 body_hash, extension_data)
+                                                                 body_hash, extension_data, request.challenge_hash)
 
             block_header_data_hash: bytes32 = block_header_data.get_hash()
 
