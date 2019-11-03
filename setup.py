@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 from setuptools import setup
 
-dependencies = ['blspy', 'cbor2', 'pyyaml', 'prompt-toolkit']
+dependencies = ['blspy', 'cbor2', 'pyyaml', 'asyncssh']
 dev_dependencies = ['pytest', 'flake8', 'mypy', 'pytest-asyncio']
 
 setup(

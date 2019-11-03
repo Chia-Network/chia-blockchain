@@ -492,7 +492,7 @@ class FullNode:
         expected_time: uint64 = uint64(int(iterations_needed / (await self.store.get_proof_of_time_estimate_ips())))
 
         if expected_time > constants["PROPAGATION_DELAY_THRESHOLD"]:
-            log.info("Block is slow, waiting")
+            log.info(f"Block is slow, expected {expected_time} seconds, waiting")
             # If this block is slow, sleep to allow faster blocks to come out first
             await asyncio.sleep(3)
 
@@ -505,16 +505,15 @@ class FullNode:
             elif unfinished_block.block.height == leader[0]:
                 if expected_time > leader[1] + constants["PROPAGATION_THRESHOLD"]:
                     # If VDF is expected to finish X seconds later than the best, don't propagate
-                    log.info(f"VDF will finish too late, retuning")
+                    log.info(f"VDF will finish too late {expected_time} seconds, so don't propagate")
                     return
                 elif expected_time < leader[1]:
                     log.info(f"New best unfinished block at height {unfinished_block.block.height}")
                     # If this will be the first block to finalize, update our leader
                     await self.store.set_unfinished_block_leader((leader[0], expected_time))
             else:
-                log.info(f"Unfinished block at old height, returning")
                 # If we have seen an unfinished block at a greater or equal height, don't propagate
-                # TODO: should we?
+                log.info(f"Unfinished block at old height, so don't propagate")
                 return
 
             await self.store.add_unfinished_block((challenge_hash, iterations_needed), unfinished_block.block)
@@ -545,7 +544,7 @@ class FullNode:
         if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return
         elif added == ReceiveBlockResult.INVALID_BLOCK:
-            log.warning(f"\tBlock {header_hash} at height {block.block.height} is invalid.")
+            log.warning(f"Block {header_hash} at height {block.block.height} is invalid.")
             return
         elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
             log.warning(f"Disconnected block")
@@ -565,7 +564,7 @@ class FullNode:
                     async for msg in self.sync():
                         yield msg
                 except asyncio.CancelledError:
-                    log.warning("Syncing failed")
+                    log.warning("Syncing failed, CancelledError")
                 except BaseException as e:
                     log.warning(f"Error {e} with syncing")
                 finally:

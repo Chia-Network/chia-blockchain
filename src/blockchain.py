@@ -405,7 +405,7 @@ class Blockchain:
             return False
 
         # 11. Check coinbase signature with pool pk
-        if not block.body.coinbase_signature.verify([blspy.Util.hash256(block.body.coinbase.serialize())],
+        if not block.body.coinbase_signature.verify([blspy.Util.hash256(bytes(block.body.coinbase))],
                                                     [block.trunk_block.proof_of_space.pool_pubkey]):
             return False
 

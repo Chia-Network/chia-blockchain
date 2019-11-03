@@ -29,7 +29,7 @@ def make_sized_bytes(size):
         f = io.BytesIO(blob)
         return cls.parse(f)
 
-    def serialize(self: Any) -> bytes:
+    def __bytes__(self: Any) -> bytes:
         f = io.BytesIO()
         self.stream(f)
         return bytes(f.getvalue())
@@ -41,6 +41,6 @@ def make_sized_bytes(size):
         return "<%s: %s>" % (self.__class__.__name__, str(self))
 
     namespace = dict(__new__=__new__, parse=parse, stream=stream, from_bytes=from_bytes,
-                     serialize=serialize, __str__=__str__, __repr__=__repr__)
+                     __bytes__=__bytes__, __str__=__str__, __repr__=__repr__)
 
     return type(name, (bytes,), namespace)

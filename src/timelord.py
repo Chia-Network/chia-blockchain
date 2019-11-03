@@ -43,7 +43,6 @@ class Timelord:
         a new VDF process here. But we don't know how many iterations to run for, so we run
         forever.
         """
-        log.info(f"Called challenge start {challenge_start}")
         disc: int = create_discriminant(challenge_start.challenge_hash, constants["DISCRIMINANT_SIZE_BITS"])
         async with self.lock:
             if (challenge_start.challenge_hash in self.seen_discriminants):
@@ -56,16 +55,13 @@ class Timelord:
         # Wait for a server to become free.
         port: int = -1
         while port == -1:
-            log.info(f"Looping {challenge_start}")
             async with self.lock:
-                log.info(f"Acquired loop lock {challenge_start}")
                 if (challenge_start.height <= max(self.active_heights) - 3):
                     self.done_discriminants.append(challenge_start.challenge_hash)
                     self.active_heights.remove(challenge_start.height)
                     log.info(f"Will not execute challenge at height {challenge_start}, too old")
                     return
                 assert(len(self.active_heights) > 0)
-                log.info(f"{challenge_start.height}, max is {max(self.active_heights)}")
                 if (challenge_start.height == max(self.active_heights)):
                     if (len(self.free_servers) != 0):
                         port = self.free_servers[0]
@@ -81,19 +77,19 @@ class Timelord:
                 await asyncio.sleep(1)
 
         log.info(f"Creating server for {challenge_start}")
-        proc = await asyncio.create_subprocess_shell("./lib/chiavdf/fast_vdf/server " + str(port))
+        proc = await asyncio.create_subprocess_shell("./lib/chiavdf/fast_vdf/vdf_server " + str(port))
         log.info("Created subprocess")
 
         # TODO(Florin): Handle connection failure (attempt another server)
         writer, reader = None, None
-        for _ in range(10):
+        for _ in range(50):
             try:
                 reader, writer = await asyncio.open_connection('127.0.0.1', port)
                 break
             except Exception as e:
                 e_to_str = str(e)
                 log.error(f"Connection to VDF server error message: {e_to_str}")
-            await asyncio.sleep(5)
+            await asyncio.sleep(1)
         if not writer or not reader:
             raise Exception("Unable to connect to VDF server")
 
@@ -123,15 +119,10 @@ class Timelord:
                 log.info("Stopped server")
                 # Server is now available.
                 async with self.lock:
-                    log.info("Acquired lock for writing")
                     writer.write(b"ACK")
-                    log.info("Wrote ack to server")
                     await writer.drain()
-                    log.info("Drained VDF server")
                     await proc.wait()
-                    log.info("Waited for process to exit")
                     self.free_servers.append(port)
-                    log.info(f"Appended {port} to free ports")
                     if challenge_start.challenge_hash in self.active_discriminants:
                         del self.active_discriminants[challenge_start.challenge_hash]
                         del self.active_discriminants_start_time[challenge_start.challenge_hash]

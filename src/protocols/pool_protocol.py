@@ -21,14 +21,14 @@ class SignedCoinbase:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=5000)
+@cbor_message
 class RequestData:
     min_height: Optional[uint32]
     farmer_id: Optional[str]
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=5001)
+@cbor_message
 class RespondData:
     posting_url: str
     pool_pubkey: PublicKey
@@ -37,7 +37,7 @@ class RespondData:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=5002)
+@cbor_message
 class Partial:
     challenge: Challenge
     proof_of_space: ProofOfSpace
@@ -47,6 +47,6 @@ class Partial:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=5003)
+@cbor_message
 class PartialAck:
     pass

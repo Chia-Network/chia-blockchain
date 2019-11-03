@@ -1,6 +1,8 @@
+. .venv/bin/activate
+
 _kill_servers() {
-  ps -e | grep python | grep "start_" | awk '{print $1}' | xargs -L1  kill -9
-  ps -e | grep "fast_vdf/server" | awk '{print $1}' | xargs -L1  kill -9
+  ps -e | grep python | awk '{print $1}' | xargs -L1  kill
+  ps -e | grep "vdf_server" | awk '{print $1}' | xargs -L1  kill
 }
 
 _kill_servers
@@ -11,9 +13,9 @@ python -m src.server.start_timelord &
 P2=$!
 python -m src.server.start_farmer &
 P3=$!
-python -m src.server.start_full_node "127.0.0.1" 8002 "-f" &
+python -m src.server.start_full_node "127.0.0.1" 8002 -f &
 P4=$!
-python -m src.server.start_full_node "127.0.0.1" 8004 "-t" "-u" &
+python -m src.server.start_full_node "127.0.0.1" 8004 -t -u 8222 &
 P5=$!
 python -m src.server.start_full_node "127.0.0.1" 8005 &
 P6=$!

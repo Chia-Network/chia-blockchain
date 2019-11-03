@@ -15,7 +15,7 @@ Protocol between full nodes.
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=4000)
+@cbor_message
 class TransactionId:
     """
     Receive a transaction id from a peer.
@@ -24,7 +24,7 @@ class TransactionId:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=4001)
+@cbor_message
 class RequestTransaction:
     """
     Request a transaction from a peer.
@@ -33,7 +33,7 @@ class RequestTransaction:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=4002)
+@cbor_message
 class NewTransaction:
     """
     Receive a transaction from a peer.
@@ -42,7 +42,7 @@ class NewTransaction:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=4003)
+@cbor_message
 class NewProofOfTime:
     """
     Receive a new proof of time from a peer.
@@ -51,7 +51,7 @@ class NewProofOfTime:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=4004)
+@cbor_message
 class UnfinishedBlock:
     """
     Receive an unfinished block from a peer.
@@ -61,7 +61,7 @@ class UnfinishedBlock:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=4005)
+@cbor_message
 class RequestBlock:
     """
     Requests a block from a peer.
@@ -70,7 +70,7 @@ class RequestBlock:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=4006)
+@cbor_message
 class Block:
     """
     Receive a block from a peer.
@@ -79,7 +79,7 @@ class Block:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=4007)
+@cbor_message
 class RequestPeers:
     """
     Return full list of peers
@@ -88,7 +88,7 @@ class RequestPeers:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=4008)
+@cbor_message
 class Peers:
     """
     Update list of peers
@@ -97,7 +97,7 @@ class Peers:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=4009)
+@cbor_message
 class RequestTrunkBlocks:
     """
     Request trunks of blocks that are ancestors of the specified tip.
@@ -107,7 +107,7 @@ class RequestTrunkBlocks:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=4010)
+@cbor_message
 class TrunkBlocks:
     """
     Sends trunk blocks that are ancestors of the specified tip, at the specified heights.
@@ -117,7 +117,7 @@ class TrunkBlocks:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=4011)
+@cbor_message
 class RequestSyncBlocks:
     """
     Request download of blocks, in the blockchain that has 'tip_header_hash' as the tip
@@ -127,7 +127,7 @@ class RequestSyncBlocks:
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=4012)
+@cbor_message
 class SyncBlocks:
     """
     Send blocks to peer.
