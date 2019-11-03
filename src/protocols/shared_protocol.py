@@ -8,13 +8,13 @@ protocol_version = "0.0.1"
 Handshake when establishing a connection between two servers.
 """
 @dataclass(frozen=True)
-@cbor_message(tag=7000)
+@cbor_message
 class Handshake:
     version: str
     node_id: bytes32
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=7001)
+@cbor_message
 class HandshakeAck:
     pass

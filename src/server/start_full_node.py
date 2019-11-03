@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import sys
-from typing import Optional
 from src.full_node import FullNode
 from src.server.server import ChiaServer
 from src.util.network import parse_host_port
@@ -9,7 +8,6 @@ from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
 from src.store.full_node_store import FullNodeStore
 from src.blockchain import Blockchain
-from src.ui.prompt_ui import FullNodeUI
 
 
 """
@@ -42,7 +40,7 @@ async def main():
     host, port = parse_host_port(full_node)
     server = ChiaServer(port, full_node, NodeType.FULL_NODE)
     _ = await server.start_server(host, NodeType.FULL_NODE, full_node.on_connect)
-    ui: Optional[FullNodeUI] = None
+    ui = None
 
     def master_close_cb():
         log.info("Closing all connections...")
@@ -52,7 +50,10 @@ async def main():
         log.info("Server closed.")
 
     if "-u" in sys.argv:
-        ui = FullNodeUI(store, blockchain, server.global_connections, port, full_node.config['ssh_port'],
+        index = sys.argv.index("-u")
+        ui_ssh_port = int(sys.argv[index + 1])
+        from src.ui.prompt_ui import FullNodeUI
+        ui = FullNodeUI(store, blockchain, server.global_connections, port, ui_ssh_port,
                         full_node.config['ssh_filename'], master_close_cb)
 
     connect_to_farmer = ("-f" in sys.argv)
@@ -65,14 +66,13 @@ async def main():
                                                   NodeType.FULL_NODE, full_node.on_connect))
     await asyncio.gather(*peer_tasks)
 
-    log.info("Waiting to perform handshake with all peers...")
-    # TODO: have a cleaner way to wait for all the handshakes
+    log.info("Waiting to connect to some peers...")
     await asyncio.sleep(3)
+
     if server_closed:
         return
 
-    async with server.global_connections.get_lock():
-        log.info(f"Connected to {len(await server.global_connections.get_connections())} peers.")
+    log.info(f"Connected to {len(server.global_connections.get_connections())} peers.")
 
     async for msg in full_node.sync():
         server.push_message(msg)

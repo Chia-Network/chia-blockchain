@@ -1,15 +1,16 @@
 # chia-blockchain
-Python 3.7 is used for this project.
+Python 3.7 is used for this project. Make sure your python version is >=3.7 by typing python3.
 
 ### Install
 
 ```bash
 # for Debian-based distros
-sudo apt-get install build-essential cmake python3-dev --no-install-recommends
+sudo apt-get install build-essential cmake python3-dev python3-venv --no-install-recommends
 
 git submodule update --init --recursive
 python3 -m venv .venv
 . .venv/bin/activate
+pip install wheel # For building blspy
 pip install -e .
 pip install -r requirements.txt
 
@@ -25,8 +26,8 @@ Run the servers in the following order (you can also use ipython):
 python -m src.server.start_plotter
 python -m src.server.start_timelord
 python -m src.server.start_farmer
-python -m src.server.start_full_node "127.0.0.1" 8002 "-f"
-python -m src.server.start_full_node "127.0.0.1" 8004 "-t" "-u"
+python -m src.server.start_full_node "127.0.0.1" 8002 -f
+python -m src.server.start_full_node "127.0.0.1" 8004 -t -u 8222
 python -m src.server.start_full_node "127.0.0.1" 8005
 
 ```

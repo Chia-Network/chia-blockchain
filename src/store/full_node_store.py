@@ -15,7 +15,7 @@ class FullNodeStore:
         self.lock = Lock()
 
     async def initialize(self):
-        self.full_blocks: Dict[str, FullBlock] = {}
+        self.full_blocks: Dict[bytes32, FullBlock] = {}
 
         self.sync_mode: bool = True
         # Block headers and blocks which we think might be heads, but we haven't verified yet.
@@ -47,7 +47,7 @@ class FullNodeStore:
     async def save_block(self, block: FullBlock):
         self.full_blocks[block.header_hash] = block
 
-    async def get_block(self, header_hash: str) -> Optional[FullBlock]:
+    async def get_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         return self.full_blocks.get(header_hash)
 
     async def set_sync_mode(self, sync_mode: bool):
@@ -72,7 +72,7 @@ class FullNodeStore:
     async def add_potential_heads_full_block(self, block: FullBlock):
         self.potential_heads_full_blocks[block.header_hash] = block
 
-    async def get_potential_heads_full_block(self, header_hash: str) -> Optional[FullBlock]:
+    async def get_potential_heads_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         return self.potential_heads_full_blocks.get(header_hash)
 
     async def add_potential_trunk(self, block: TrunkBlock):

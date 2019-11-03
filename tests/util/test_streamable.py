@@ -19,7 +19,7 @@ class TestStreamable(unittest.TestCase):
 
         a = TestClass(24, 352, [1, 2, 4], [[1, 2, 3], [3, 4]], 728, None)  # type: ignore
 
-        b: bytes = a.serialize()
+        b: bytes = bytes(a)
         assert a == TestClass.from_bytes(b)
 
     def test_variablesize(self):
@@ -32,7 +32,7 @@ class TestStreamable(unittest.TestCase):
 
         a = TestClass2(uint32(1), uint32(2), "3")
         try:
-            a.serialize()
+            bytes(a)
             assert False
         except NotImplementedError:
             pass
@@ -44,7 +44,7 @@ class TestStreamable(unittest.TestCase):
 
         b = TestClass3(1)
         try:
-            b.serialize()
+            bytes(b)
             assert False
         except NotImplementedError:
             pass

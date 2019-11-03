@@ -29,7 +29,7 @@ test_constants: Dict[str, Any] = {
     "DIFFICULTY_WARP_FACTOR": 4,  # DELAY divides EPOCH in order to warp efficiently.
     "DIFFICULTY_DELAY": 3  # EPOCH / WARP_FACTOR
 }
-test_constants["GENESIS_BLOCK"] = bt.create_genesis_block(test_constants, bytes([0]*32), uint64(0)).serialize()
+test_constants["GENESIS_BLOCK"] = bytes(bt.create_genesis_block(test_constants, bytes([0]*32), b'0'))
 
 
 @pytest.fixture(scope="module")
@@ -236,7 +236,7 @@ class TestReorgs():
             await b.receive_block(block)
         assert b.get_current_heads()[0].height == 100
 
-        blocks_reorg_chain = bt.get_consecutive_blocks(test_constants, 30, blocks[:90], 9, uint64(1))
+        blocks_reorg_chain = bt.get_consecutive_blocks(test_constants, 30, blocks[:90], 9, b'1')
         for reorg_block in blocks_reorg_chain:
             result = await b.receive_block(reorg_block)
             if reorg_block.height < 90:
@@ -249,7 +249,7 @@ class TestReorgs():
 
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self):
-        blocks = bt.get_consecutive_blocks(test_constants, 20, [], 9, uint64(0))
+        blocks = bt.get_consecutive_blocks(test_constants, 20, [], 9, b'0')
         store = FullNodeStore()
         await store.initialize()
         b: Blockchain = Blockchain(store, test_constants)
@@ -259,7 +259,7 @@ class TestReorgs():
         assert b.get_current_heads()[0].height == 20
 
         # Reorg from genesis
-        blocks_reorg_chain = bt.get_consecutive_blocks(test_constants, 21, [blocks[0]], 9, uint64(1))
+        blocks_reorg_chain = bt.get_consecutive_blocks(test_constants, 21, [blocks[0]], 9, b'1')
         for reorg_block in blocks_reorg_chain:
             result = await b.receive_block(reorg_block)
             if reorg_block.height == 0:
@@ -271,7 +271,31 @@ class TestReorgs():
         assert b.get_current_heads()[0].height == 21
 
         # Reorg back to original branch
-        blocks_reorg_chain_2 = bt.get_consecutive_blocks(test_constants, 3, blocks, 9, uint64(3))
+        blocks_reorg_chain_2 = bt.get_consecutive_blocks(test_constants, 3, blocks, 9, b'3')
         await b.receive_block(blocks_reorg_chain_2[20]) == ReceiveBlockResult.ADDED_AS_ORPHAN
         assert (await b.receive_block(blocks_reorg_chain_2[21])) == ReceiveBlockResult.ADDED_TO_HEAD
         assert (await b.receive_block(blocks_reorg_chain_2[22])) == ReceiveBlockResult.ADDED_TO_HEAD
+
+    @pytest.mark.asyncio
+    async def test_lca(self):
+        blocks = bt.get_consecutive_blocks(test_constants, 5, [], 9, b'0')
+        store = FullNodeStore()
+        await store.initialize()
+        b: Blockchain = Blockchain(store, test_constants)
+        await b.initialize()
+        for block in blocks:
+            await b.receive_block(block)
+
+        assert b.lca_block == blocks[3]
+        block_5_2 = bt.get_consecutive_blocks(test_constants, 1, blocks[:5], 9, b'1')[5]
+        block_5_3 = bt.get_consecutive_blocks(test_constants, 1, blocks[:5], 9, b'2')[5]
+
+        await b.receive_block(block_5_2)
+        assert b.lca_block == blocks[4]
+        await b.receive_block(block_5_3)
+        assert b.lca_block == blocks[4]
+
+        reorg = bt.get_consecutive_blocks(test_constants, 6, [], 9, b'3')
+        for block in reorg:
+            await b.receive_block(block)
+        assert b.lca_block == blocks[0]

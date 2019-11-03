@@ -6,7 +6,7 @@ from bson.codec_options import CodecOptions
 
 def fallback_encoder(obj):
     if isinstance(obj, Streamable):
-        return Binary(obj.serialize())
+        return Binary(bytes(obj))
     return obj
 
 

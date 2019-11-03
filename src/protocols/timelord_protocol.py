@@ -14,26 +14,26 @@ Validate PoT
 Call self.Block
 """
 @dataclass(frozen=True)
-@cbor_message(tag=3000)
+@cbor_message
 class ProofOfTimeFinished:
     proof: ProofOfTime
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=3001)
+@cbor_message
 class ChallengeStart:
     challenge_hash: bytes32
     height: uint32
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=3002)
+@cbor_message
 class ChallengeEnd:
     challenge_hash: bytes32
 
 
 @dataclass(frozen=True)
-@cbor_message(tag=3003)
+@cbor_message
 class ProofOfSpaceInfo:
     challenge_hash: bytes32
     iterations_needed: uint64

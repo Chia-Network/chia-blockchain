@@ -69,7 +69,7 @@ class BlockTools:
                                num_blocks: int,
                                block_list: List[FullBlock] = [],
                                seconds_per_block=constants["BLOCK_TIME_TARGET"],
-                               seed: uint64 = uint64(0)) -> List[FullBlock]:
+                               seed: bytes = b'') -> List[FullBlock]:
         test_constants: Dict[str, Any] = constants.copy()
         for key, value in input_constants.items():
             test_constants[key] = value
@@ -78,7 +78,7 @@ class BlockTools:
             if "GENESIS_BLOCK" in test_constants:
                 block_list.append(FullBlock.from_bytes(test_constants["GENESIS_BLOCK"]))
             else:
-                block_list.append(self.create_genesis_block(test_constants, bytes([(seed) % 256]*32), seed))
+                block_list.append(self.create_genesis_block(test_constants, sha256(seed).digest(), seed))
             prev_difficulty = test_constants["DIFFICULTY_STARTING"]
             curr_difficulty = prev_difficulty
             curr_ips = test_constants["VDF_IPS_STARTING"]
@@ -162,7 +162,7 @@ class BlockTools:
         return block_list
 
     def create_genesis_block(self, input_constants: Dict, challenge_hash=bytes([0]*32),
-                             seed: uint64 = uint64(0)) -> FullBlock:
+                             seed: bytes = b'') -> FullBlock:
         """
         Creates the genesis block with the specified details.
         """
@@ -185,7 +185,7 @@ class BlockTools:
 
     def create_next_block(self, input_constants: Dict, prev_block: FullBlock, timestamp: uint64,
                           difficulty: uint64, ips: uint64,
-                          seed: int = 0) -> FullBlock:
+                          seed: bytes = b'') -> FullBlock:
         """
         Creates the next block with the specified details.
         """
@@ -210,7 +210,7 @@ class BlockTools:
 
     def _create_block(self, test_constants: Dict, challenge_hash: bytes32, height: uint32, prev_header_hash: bytes32,
                       prev_iters: uint64, prev_weight: uint64, timestamp: uint64, difficulty: uint64,
-                      ips: uint64, seed: int) -> FullBlock:
+                      ips: uint64, seed: bytes) -> FullBlock:
         """
         Creates a block with the specified details. Uses the stored plots to create a proof of space,
         and also evaluates the VDF for the proof of time.
@@ -220,7 +220,8 @@ class BlockTools:
         plot_sk = None
         qualities: List[bytes] = []
         for pn in range(num_plots):
-            seeded_pn = (pn + 17 * seed) % num_plots  # Allow passing in seed, to create reorgs and different chains
+            # Allow passing in seed, to create reorgs and different chains
+            seeded_pn = (pn + 17 * int.from_bytes(seed, "big")) % num_plots
             filename = self.filenames[seeded_pn]
             plot_pk = plot_pks[seeded_pn]
             plot_sk = plot_sks[seeded_pn]
@@ -253,11 +254,12 @@ class BlockTools:
 
         coinbase: CoinbaseInfo = CoinbaseInfo(height, block_rewards.calculate_block_reward(uint32(height)),
                                               coinbase_target)
-        coinbase_sig: PrependSignature = pool_sk.sign_prepend(coinbase.serialize())
+        coinbase_sig: PrependSignature = pool_sk.sign_prepend(bytes(coinbase))
 
         fees_target: FeesTarget = FeesTarget(fee_target, uint64(0))
 
-        body: BlockBody = BlockBody(coinbase, coinbase_sig, fees_target, None, bytes([0]*32))
+        solutions_generator: bytes32 = sha256(seed).digest()
+        body: BlockBody = BlockBody(coinbase, coinbase_sig, fees_target, None, solutions_generator)
 
         header_data: BlockHeaderData = BlockHeaderData(prev_header_hash, timestamp, bytes([0]*32),
                                                        proof_of_space.get_hash(), body.get_hash(),
@@ -279,5 +281,5 @@ class BlockTools:
 # This code generates a genesis block, uncomment to output genesis block to terminal
 # This might take a while, using the python VDF implementation.
 # Run by doing python -m tests.block_tools
-# bt = BlockTools()
-# print(bt.create_genesis_block({}, bytes([1]*32), uint64(0)).serialize())
+bt = BlockTools()
+print(bytes(bt.create_genesis_block({}, bytes([1]*32), b'0')))
