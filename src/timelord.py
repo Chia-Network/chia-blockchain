@@ -77,19 +77,19 @@ class Timelord:
                 await asyncio.sleep(1)
 
         log.info(f"Creating server for {challenge_start}")
-        proc = await asyncio.create_subprocess_shell("./lib/chiavdf/fast_vdf/server " + str(port))
+        proc = await asyncio.create_subprocess_shell("./lib/chiavdf/fast_vdf/vdf_server " + str(port))
         log.info("Created subprocess")
 
         # TODO(Florin): Handle connection failure (attempt another server)
         writer, reader = None, None
-        for _ in range(10):
+        for _ in range(50):
             try:
                 reader, writer = await asyncio.open_connection('127.0.0.1', port)
                 break
             except Exception as e:
                 e_to_str = str(e)
                 log.error(f"Connection to VDF server error message: {e_to_str}")
-            await asyncio.sleep(5)
+            await asyncio.sleep(1)
         if not writer or not reader:
             raise Exception("Unable to connect to VDF server")
 

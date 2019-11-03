@@ -11,6 +11,8 @@ __pycache__/
 # VDF executables
 lib/chiavdf/fast_vdf/compile_asm
 lib/chiavdf/fast_vdf/vdf
+lib/chiavdf/fast_vdf/server
+lib/chiavdf/fast_vdf/vdf_server
 # Flint dependency
 lib/chiavdf/fast_vdf/flint
 
@@ -31,6 +33,7 @@ pip-delete-this-directory.txt
 
 # PoSpace plots
 **/*.dat
+**/*.dat.tmp
 *.mo
 *.pot
 
