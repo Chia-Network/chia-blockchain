@@ -52,7 +52,7 @@ class FullNode:
         async with (await self.store.get_lock()):
             for head in self.blockchain.get_current_heads():
                 assert head.proof_of_time and head.challenge
-                prev_challenge_hash = head.proof_of_time.output.challenge_hash
+                prev_challenge_hash = head.header.data.challenge_hash
                 challenge_hash = head.challenge.get_hash()
                 height = head.challenge.height
                 quality = head.proof_of_space.verify_and_get_quality(prev_challenge_hash)
@@ -84,7 +84,8 @@ class FullNode:
 
     async def on_connect(self) -> AsyncGenerator[OutboundMessage, None]:
         """
-        Whenever we connect to another full node, send them our current heads.
+        Whenever we connect to another node, send them our current heads. Also send heads to farmers
+        and challenges to timelords.
         """
         blocks: List[FullBlock] = []
 
@@ -97,6 +98,17 @@ class FullNode:
         for block in blocks:
             request = peer_protocol.Block(block)
             yield OutboundMessage(NodeType.FULL_NODE, Message("block", request), Delivery.RESPOND)
+
+        # Sleep until we're out of sync mode
+        while True:
+            async with (await self.store.get_lock()):
+                if not (await self.store.get_sync_mode()):
+                    break
+            await asyncio.sleep(5)
+        async for msg in self.send_heads_to_farmers():
+            yield msg
+        async for msg in self.send_challenges_to_timelords():
+            yield msg
 
     async def sync(self):
         """
@@ -357,7 +369,7 @@ class FullNode:
             extension_data: bytes32 = bytes32([0] * 32)
             block_header_data: BlockHeaderData = BlockHeaderData(prev_header_hash, timestamp,
                                                                  filter_hash, proof_of_space_hash,
-                                                                 body_hash, extension_data)
+                                                                 body_hash, extension_data, request.challenge_hash)
 
             block_header_data_hash: bytes32 = block_header_data.get_hash()
 
@@ -597,7 +609,7 @@ class FullNode:
             assert block.block.trunk_block.proof_of_time
             assert block.block.trunk_block.challenge
             pos_quality = block.block.trunk_block.proof_of_space.verify_and_get_quality(
-                block.block.trunk_block.proof_of_time.output.challenge_hash
+                block.block.trunk_block.header.data.challenge_hash
             )
             farmer_request = farmer_protocol.ProofOfSpaceFinalized(block.block.trunk_block.challenge.get_hash(),
                                                                    block.block.trunk_block.challenge.height,

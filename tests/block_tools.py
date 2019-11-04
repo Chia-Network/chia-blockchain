@@ -263,7 +263,7 @@ class BlockTools:
 
         header_data: BlockHeaderData = BlockHeaderData(prev_header_hash, timestamp, bytes([0]*32),
                                                        proof_of_space.get_hash(), body.get_hash(),
-                                                       bytes([0]*32))
+                                                       bytes([0]*32), challenge_hash)
 
         header_hash_sig: PrependSignature = plot_sk.sign_prepend(header_data.get_hash())
 
@@ -281,5 +281,5 @@ class BlockTools:
 # This code generates a genesis block, uncomment to output genesis block to terminal
 # This might take a while, using the python VDF implementation.
 # Run by doing python -m tests.block_tools
-bt = BlockTools()
-print(bytes(bt.create_genesis_block({}, bytes([1]*32), b'0')))
+# bt = BlockTools()
+# print(bytes(bt.create_genesis_block({}, bytes([1]*32), b'0')))

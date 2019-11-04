@@ -11,7 +11,7 @@ setup(
     author_email='mariano@chia.net',
     description='Chia proof of space plotting, proving, and verifying (wraps C++)',
     license='Apache License',
-    python_requires='>=3.7',
+    python_requires='>=3.7, <4',
     keywords='chia blockchain node',
     install_requires=dependencies + dev_dependencies,
     long_description=open('README.md').read(),

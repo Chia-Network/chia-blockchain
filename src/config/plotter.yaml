@@ -1,6 +1,11 @@
 host: "127.0.0.1"
 port: 8000
 
+farmer_peer:
+    host: "127.0.0.1"
+    port: 8001
+    node_id: "8da6169716e18c4a182940d05063614932f0b161d54b1de0572170649ed69213"
+
 # Plots on this machine, keyed by filename, along with their corresponding key pairs
 plots:
     plot-0-19.dat:

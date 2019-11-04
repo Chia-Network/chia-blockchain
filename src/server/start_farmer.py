@@ -20,10 +20,11 @@ async def main():
     plotter_peer = PeerInfo(farmer.config['plotter_peer']['host'],
                             farmer.config['plotter_peer']['port'],
                             bytes.fromhex(farmer.config['plotter_peer']['node_id']))
+    full_node_peer = PeerInfo(farmer.config['full_node_peer']['host'],
+                              farmer.config['full_node_peer']['port'],
+                              bytes.fromhex(farmer.config['full_node_peer']['node_id']))
     host, port = parse_host_port(farmer)
     server = ChiaServer(port, farmer, NodeType.FARMER)
-
-    _ = await server.start_server(host, NodeType.FULL_NODE, None)
 
     async def on_connect():
         # Sends a handshake to the plotter
@@ -32,7 +33,9 @@ async def main():
         yield OutboundMessage(NodeType.PLOTTER, Message("plotter_handshake", msg),
                               Delivery.BROADCAST)
 
-    _ = await server.start_client(plotter_peer, NodeType.PLOTTER, on_connect)
+    _ = await server.start_server(host, on_connect)
+    _ = await server.start_client(plotter_peer, on_connect)
+    _ = await server.start_client(full_node_peer, None)
 
     await server.await_closed()
 

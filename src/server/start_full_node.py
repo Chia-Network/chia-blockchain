@@ -10,15 +10,6 @@ from src.store.full_node_store import FullNodeStore
 from src.blockchain import Blockchain
 
 
-"""
-Full node startup algorithm:
-- Update peer list (?)
-- Start server
-- Sync
-- If connected to farmer, send challenges
-- If connected to timelord, send challenges
-"""
-
 logging.basicConfig(format='FullNode %(name)-23s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s',
                     level=logging.INFO,
                     datefmt='%H:%M:%S'
@@ -39,7 +30,7 @@ async def main():
     # Starts the full node server (which full nodes can connect to)
     host, port = parse_host_port(full_node)
     server = ChiaServer(port, full_node, NodeType.FULL_NODE)
-    _ = await server.start_server(host, NodeType.FULL_NODE, full_node.on_connect)
+    _ = await server.start_server(host, full_node.on_connect)
     ui = None
 
     def master_close_cb():
@@ -63,7 +54,7 @@ async def main():
     for peer in full_node.config['initial_peers']:
         if not (host == peer['host'] and port == peer['port']):
             peer_tasks.append(server.start_client(PeerInfo(peer['host'], peer['port'], bytes.fromhex(peer['node_id'])),
-                                                  NodeType.FULL_NODE, full_node.on_connect))
+                                                  full_node.on_connect))
     await asyncio.gather(*peer_tasks)
 
     log.info("Waiting to connect to some peers...")
@@ -81,13 +72,13 @@ async def main():
         peer_info = PeerInfo(full_node.config['farmer_peer']['host'],
                              full_node.config['farmer_peer']['port'],
                              bytes.fromhex(full_node.config['farmer_peer']['node_id']))
-        _ = await server.start_client(peer_info, NodeType.FARMER, full_node.send_heads_to_farmers)
+        _ = await server.start_client(peer_info, None)
 
     if connect_to_timelord:
         peer_info = PeerInfo(full_node.config['timelord_peer']['host'],
                              full_node.config['timelord_peer']['port'],
                              bytes.fromhex(full_node.config['timelord_peer']['node_id']))
-        _ = await server.start_client(peer_info, NodeType.TIMELORD, full_node.send_challenges_to_timelords)
+        _ = await server.start_client(peer_info, None)
 
     await server.await_closed()
     if ui is not None:

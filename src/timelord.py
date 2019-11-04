@@ -46,7 +46,7 @@ class Timelord:
         disc: int = create_discriminant(challenge_start.challenge_hash, constants["DISCRIMINANT_SIZE_BITS"])
         async with self.lock:
             if (challenge_start.challenge_hash in self.seen_discriminants):
-                log.info("Already seen this challenge hash {challenge_start.challenge_hash}. Ignoring.")
+                log.info(f"Already seen this challenge hash {challenge_start.challenge_hash}. Ignoring.")
                 return
             self.seen_discriminants.append(challenge_start.challenge_hash)
             self.active_heights.append(challenge_start.height)
