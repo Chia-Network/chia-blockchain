@@ -64,7 +64,7 @@ class ChiaServer:
         if self._server is not None:
             return False
 
-        self._server, aiter = await start_server_aiter(self._port, host=host, reuse_address=True)
+        self._server, aiter = await start_server_aiter(self._port, host=None, reuse_address=True)
         if on_connect is not None:
             self._on_connect_generic_callback = on_connect
 
@@ -76,7 +76,7 @@ class ChiaServer:
         # Push all aiters that come from the server, into the pipeline
         asyncio.create_task(self._add_to_srwt_aiter(srwt_aiter))
 
-        log.info(f"Server started at {host}:{self._port}")
+        log.info(f"Server started on port {self._port}")
         return True
 
     async def start_client(self, target_node: PeerInfo,
@@ -222,11 +222,12 @@ class ChiaServer:
         and nothing is yielded.
         """
         # Send handshake message
-        node_id: bytes32 = create_node_id(connection)
+        node_id: bytes32 = create_node_id(connection.local_host, connection.local_port, connection.local_type)
         outbound_handshake = Message("handshake", Handshake(protocol_version, node_id, self._local_type))
-        await connection.send(outbound_handshake)
 
         try:
+            await connection.send(outbound_handshake)
+
             # Read handshake message
             full_message = await connection.read_one_message()
             inbound_handshake = Handshake(**full_message.data)
@@ -237,7 +238,8 @@ class ChiaServer:
             connection.node_id = inbound_handshake.node_id
             connection.connection_type = inbound_handshake.node_type
             if self.global_connections.have_connection(connection):
-                raise DuplicateConnection(f"Duplicate connection to {connection}")
+                log.warning(f"Duplicate connection to {connection}")
+                return
 
             self.global_connections.add(connection)
 
@@ -258,10 +260,10 @@ class ChiaServer:
                       f" established"))
             # Only yield a connection if the handshake is succesful and the connection is not a duplicate.
             yield connection
-
-        except (IncompatibleProtocolVersion, InvalidAck, DuplicateConnection,
-                InvalidHandshake, asyncio.IncompleteReadError) as e:
-            log.warning(f"{e}")
+        except (IncompatibleProtocolVersion, InvalidAck,
+                InvalidHandshake, asyncio.IncompleteReadError, ConnectionResetError) as e:
+            log.warning(f"{e}, handshake not completed. Connection not created.")
+            connection.close()
 
     async def connection_to_message(self, connection: Connection) -> AsyncGenerator[
                     Tuple[Connection, Message], None]:
