@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Optional, Tuple
+from typing import Optional, Tuple, AsyncGenerator
 import asyncio
 import motor.motor_asyncio as maio
 from src.types.proof_of_space import ProofOfSpace
@@ -12,7 +12,6 @@ from src.util.ints import uint32, uint64
 from src.db.codecs import codec_options
 import subprocess
 
-
 class Database(ABC):
     # All databases must subclass this so that there's one client
     loop = asyncio.get_event_loop()
@@ -24,21 +23,28 @@ class Database(ABC):
         self.db = Database.client.get_database(db_name, codec_options=codec_options)
 
 
-class FullNodeDatabase(Database):
+class FullNodeStore(Database):
     def __init__(self, db_name):
         super().__init__(db_name)
 
+        # Stored on database
         getc = self.db.get_collection
         self.full_blocks = getc("full_blocks")
         self.potential_heads = getc("potential_heads")
-        # potential_heads entries:
-        # {_id: header_hash, block: Optional[FullBlock]}
-        self.potential_headers = getc("potential_headers")
+        self.potential_trunks = getc("potential_trunks")
         self.potential_blocks = getc("potential_blocks")
         self.candidate_blocks = getc("candidate_blocks")
         self.unfinished_blocks = getc("unfinished_blocks")
         self.unfinished_blocks_leader = getc("unfinished_blocks_leader")
         self.sync_mode = getc("sync_mode")
+
+        # Stored on memory
+        self.potential_blocks_received: Dict[uint32, Event] = {}
+        self.proof_of_time_estimate_ips: uint64 = uint64(3000)
+
+        # Lock
+        self.lock = asyncio.Lock()  # external
+
 
     async def _clear_database(self):
         await self.full_blocks.drop()
@@ -59,10 +65,13 @@ class FullNodeDatabase(Database):
         )
 
     async def get_block(self, header_hash: bytes32) -> Optional[FullBlock]:
-        query = await self.full_blocks.find_one(header_hash)
+        query = await self.full_blocks.find_one({"_id": header_hash})
         if query is not None:
             return FullBlock.from_bytes(query["block"])
-        return None
+
+    async def get_blocks(self) -> AsyncGenerator[FullBlock, None]:
+        async for query in self.full_blocks.find({}):
+            yield FullBlock.from_bytes(query["block"])
 
     async def set_sync_mode(self, sync_mode: bool) -> None:
         await self.sync_mode.update_one(
@@ -71,7 +80,7 @@ class FullNodeDatabase(Database):
 
     async def get_sync_mode(self) -> bool:
         query = await self.sync_mode.find_one({"_id": 0})
-        return query.get("value", False) if query else False
+        return query.get("value", True) if query else True
 
     async def _set_default_sync_mode(self, sync_mode):
         query = await self.sync_mode.find_one({"_id": 0})
@@ -85,6 +94,14 @@ class FullNodeDatabase(Database):
 
     async def get_potential_heads_number(self) -> int:
         return await self.potential_heads.count_documents({})
+
+    async def get_potential_heads_tuples(self) -> AsyncGenerator[Tuple[bytes32, FullBlock], None]:
+        async for query in self.potential_heads.find({}):
+            if query and "block" in query:
+                block = FullBlock.from_bytes(query["block"])
+            else:
+                block = None
+            yield bytes32(query["_id"]), block
 
     async def add_potential_head(
         self, header_hash: bytes32, block: Optional[FullBlock] = None
@@ -120,6 +137,12 @@ class FullNodeDatabase(Database):
     async def get_potential_block(self, height: uint32) -> Optional[FullBlock]:
         query = await self.potential_blocks.find_one({"_id": height})
         return FullBlock.from_bytes(query["block"]) if query else None
+
+    async def set_potential_blocks_received(self, height: uint32, event: asyncio.Event):
+        self.potential_blocks_received[height] = event
+
+    async def get_potential_blocks_received(self, height: uint32) -> asyncio.Event:
+        return self.potential_blocks_received[height]
 
     async def add_candidate_block(
         self,
@@ -172,13 +195,19 @@ class FullNodeDatabase(Database):
         query = await self.unfinished_blocks_leader.find_one({"_id": 0})
         return (query["header"], query["iters"]) if query else None
 
+    async def set_proof_of_time_estimate_ips(self, estimate: uint64):
+        self.proof_of_time_estimate_ips = estimate
+
+    async def get_proof_of_time_estimate_ips(self) -> uint64:
+        return self.proof_of_time_estimate_ips
+
 
 # TODO: remove below when tested better
 if __name__ == "__main__":
 
     async def tests():
         print("started testing")
-        db = FullNodeDatabase("test3")
+        db = FullNodeStore("test3")
         await db._clear_database()
 
         from src.consensus.constants import constants
@@ -237,4 +266,4 @@ if __name__ == "__main__":
 
         print("done testing")
 
-    Database.loop.run_until_complete(tests())
+    #Database.loop.run_until_complete(tests())

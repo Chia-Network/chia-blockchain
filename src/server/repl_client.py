@@ -6,7 +6,7 @@
 # from src.util.network import parse_host_port, create_node_id
 # from src.server.outbound_message import NodeType, OutboundMessage, Message, Delivery
 # from src.types.peer_info import PeerInfo
-# from src.store.full_node_store import FullNodeStore
+# from src.db.database import FullNodeStore
 # from src.blockchain import Blockchain
 
 

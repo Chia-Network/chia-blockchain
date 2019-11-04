@@ -20,7 +20,7 @@ from prompt_toolkit.widgets import (
     Button,
     SearchToolbar
 )
-from src.store.full_node_store import FullNodeStore
+from src.db.database import FullNodeStore
 from src.blockchain import Blockchain
 from src.types.header_block import HeaderBlock
 from src.types.full_block import FullBlock
@@ -222,7 +222,7 @@ class FullNodeUI:
             if max_block not in added_blocks:
                 added_blocks.append(max_block)
             heads.remove(max_block)
-            async with await self.store.get_lock():
+            async with self.store.lock:
                 prev: Optional[FullBlock] = await self.store.get_block(max_block.prev_header_hash)
                 if prev is not None:
                     heads.append(prev.header_block)
@@ -258,16 +258,17 @@ class FullNodeUI:
         else:
             new_con_rows = Window(width=D(), height=0)
 
-        async with (await self.store.get_lock()):
+        async with self.store.lock():
             if (await self.store.get_sync_mode()):
-                potential_heads = await self.store.get_potential_heads()
-                fbs = [await self.store.get_potential_heads_full_block(ph) for ph in potential_heads]
-                if len(fbs) > 0:
-                    max_height = max([b.height for b in fbs])
-                    self.syncing.text = f"Syncing up to {str(max_height)}"
+                max_height = -1
+                for _, block in await self.store.get_potential_heads_tuples():
+                    if block.height > max_height:
+                        max_height = block.height
+                
+                if max_height >= 0:
+                    self.syncing.text = f"Syncing up to {max_height}"
                 else:
                     self.syncing.text = f"Syncing"
-
             else:
                 self.syncing.text = "Not syncing"
             heads: List[HeaderBlock] = self.blockchain.get_current_tips()
@@ -318,7 +319,7 @@ class FullNodeUI:
 
     async def draw_block(self):
         block_hash: str = self.route.split("block/")[1]
-        async with await self.store.get_lock():
+        async with self.store.lock:
             block: Optional[FullBlock] = await self.store.get_block(bytes32(bytes.fromhex(block_hash)))
         if block is not None:
             self.block_msg.text = f"Block {str(block.header_hash)}"

@@ -1,4 +1,4 @@
-from src.store.full_node_store import FullNodeStore
+from src.db.database import FullNodeStore
 from src.consensus.block_rewards import calculate_block_reward
 import logging
 from enum import Enum
@@ -46,11 +46,21 @@ class Blockchain:
         self.height_to_hash: Dict[uint64, bytes32] = {}
 
     async def initialize(self):
-        self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
-        result = await self.receive_block(self.genesis)
-        if result != ReceiveBlockResult.ADDED_TO_HEAD:
-            raise InvalidGenesisBlock()
-        assert self.lca_block
+        async for block in self.store.get_blocks():
+            if not self.heads or block.height > self.heads[0].height:
+                self.heads = [block]
+            # TODO: are cases where the blockchain "fans out" handled appropriately?
+            self.height_to_hash[block.height] = block.header_hash
+        
+        if not self.heads:
+            self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
+
+            result = await self.receive_block(self.genesis)
+            if result != ReceiveBlockResult.ADDED_TO_HEAD:
+                raise InvalidGenesisBlock()
+            assert self.lca_block
+        else:
+            self.lca_block = self.heads[0]
 
     def get_current_tips(self) -> List[HeaderBlock]:
         """
@@ -310,7 +320,7 @@ class Blockchain:
         Adds a new block into the blockchain, if it's valid and connected to the current
         blockchain, regardless of whether it is the child of a head, or another block.
         """
-        genesis: bool = block.height == 0 and len(self.tips) == 0
+        genesis: bool = block.height == 0 and not self.tips
 
         if await self.store.get_block(block.header_hash) is not None:
             return ReceiveBlockResult.ALREADY_HAVE_BLOCK
