@@ -23,7 +23,7 @@ from src.blockchain import Blockchain
 from src.types.trunk_block import TrunkBlock
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
-from src.server.connection import PeerConnections
+from src.server.connection import PeerConnections, NodeType
 
 
 log = logging.getLogger(__name__)
@@ -122,12 +122,6 @@ class FullNodeUI:
             self.focused = False
         return change_route
 
-    def convert_to_sync(self, async_func):
-        def inner():
-            asyncio.get_running_loop().create_task(async_func())
-            self.layout.focus(self.quit_button)
-        return inner
-
     async def get_latest_blocks(self, heads: List[TrunkBlock]) -> List[TrunkBlock]:
         added_blocks: List[TrunkBlock] = []
         # index =
@@ -146,12 +140,17 @@ class FullNodeUI:
     async def draw_home(self):
         con_strs = []
         for con in self.connections.get_connections():
-            con_str = f"{con.connection_type} {con.get_peername()} {con.node_id.hex()[:10]}..."
+            con_str = f"{NodeType(con.connection_type).name} {con.get_peername()} {con.node_id.hex()[:10]}..."
             con_strs.append(con_str)
             labels = [row.children[0].content.text() for row in self.con_rows]
             if con_str not in labels:
                 con_label = Label(text=con_str)
-                disconnect_button = Button("Disconnect", handler=self.convert_to_sync(con.close))
+
+                def disconnect():
+                    con.close()
+                    self.layout.focus(self.quit_button)
+
+                disconnect_button = Button("Disconnect", handler=disconnect)
                 row = VSplit([con_label, disconnect_button])
                 self.con_rows.append(row)
 

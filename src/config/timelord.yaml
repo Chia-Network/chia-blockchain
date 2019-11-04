@@ -8,3 +8,9 @@ n_wesolowski: 2
 # VDF servers must be started locally on these ports.
 vdf_server_ports:
   - 8889
+
+full_node_peer:
+    host: "127.0.0.1"
+    port: 8004
+    node_id: "b2c5ed761a9a1d776e6bfa75f751b2fb110a62d87bec9fe4c9c904ab9532c8e3"
+
