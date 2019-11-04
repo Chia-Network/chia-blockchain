@@ -1,16 +1,16 @@
 from typing import Any
-from enum import Enum
+from enum import IntEnum
 from dataclasses import dataclass
 
 
-class NodeType(Enum):
+class NodeType(IntEnum):
     FULL_NODE = 1
     PLOTTER = 2
     FARMER = 3
     TIMELORD = 4
 
 
-class Delivery(Enum):
+class Delivery(IntEnum):
     # A message is sent to the same peer that we received a message from
     RESPOND = 1
     # A message is sent to all peers
