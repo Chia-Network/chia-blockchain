@@ -2,7 +2,7 @@ import sys
 from hashlib import sha256
 from typing import Tuple
 from src.types.sized_bytes import bytes32
-from src.server.connection import Connection
+from src.server.connection import NodeType
 
 
 def parse_host_port(api) -> Tuple[str, int]:
@@ -11,6 +11,5 @@ def parse_host_port(api) -> Tuple[str, int]:
     return (host, port)
 
 
-def create_node_id(connection: Connection) -> bytes32:
-    return bytes32(sha256((str(connection.local_type) + ":" + connection.local_host + ":" +
-                          str(connection.local_port)).encode()).digest())
+def create_node_id(host: str, port: int, connection_type: NodeType) -> bytes32:
+    return bytes32(sha256((f"{connection_type.name}:{host}:{str(port)}").encode()).digest())
