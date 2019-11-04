@@ -7,7 +7,7 @@ from src.server.server import ChiaServer
 from src.util.network import parse_host_port
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
-from src.store.full_node_store import FullNodeStore
+from src.db.database import FullNodeStore
 from src.blockchain import Blockchain
 
 
@@ -22,8 +22,11 @@ server_closed = False
 
 async def main():
     # Create the store (DB) and full node instance
-    store = FullNodeStore()
-    await store.initialize()
+    db_id = 0
+    if "-id" in sys.argv:
+        db_id = int(sys.argv[sys.argv.index("-id") + 1])
+    store = FullNodeStore(f"fndb_{db_id}")
+    
     blockchain = Blockchain(store)
     await blockchain.initialize()
 
@@ -95,5 +98,5 @@ async def main():
         await wait_for_ui()
     await asyncio.get_running_loop().shutdown_asyncgens()
 
-
-asyncio.run(main())
+#asyncio.run(main())
+FullNodeStore.loop.run_until_complete(main())
