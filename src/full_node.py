@@ -84,7 +84,8 @@ class FullNode:
 
     async def on_connect(self) -> AsyncGenerator[OutboundMessage, None]:
         """
-        Whenever we connect to another full node, send them our current heads.
+        Whenever we connect to another node, send them our current heads. Also send heads to farmers
+        and challenges to timelords.
         """
         blocks: List[FullBlock] = []
 
@@ -97,6 +98,17 @@ class FullNode:
         for block in blocks:
             request = peer_protocol.Block(block)
             yield OutboundMessage(NodeType.FULL_NODE, Message("block", request), Delivery.RESPOND)
+
+        # Sleep until we're out of sync mode
+        while True:
+            async with (await self.store.get_lock()):
+                if not (await self.store.get_sync_mode()):
+                    break
+            await asyncio.sleep(5)
+        async for msg in self.send_heads_to_farmers():
+            yield msg
+        async for msg in self.send_challenges_to_timelords():
+            yield msg
 
     async def sync(self):
         """

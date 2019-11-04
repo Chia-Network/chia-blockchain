@@ -29,5 +29,5 @@ plotter_peer:
 
 full_node_peer:
     host: "127.0.0.1"
-    port: 8004
-    node_id: "b2c5ed761a9a1d776e6bfa75f751b2fb110a62d87bec9fe4c9c904ab9532c8e3"
+    port: 8002
+    node_id: "4c24f6efd742d130f3c8067fc05b142e7fd70a12b36bfe6663f3944c9e9622eb"
