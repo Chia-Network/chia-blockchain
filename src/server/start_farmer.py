@@ -26,8 +26,6 @@ async def main():
     host, port = parse_host_port(farmer)
     server = ChiaServer(port, farmer, NodeType.FARMER)
 
-    _ = await server.start_server(host, None)
-
     async def on_connect():
         # Sends a handshake to the plotter
         pool_sks: List[PrivateKey] = [PrivateKey.from_bytes(bytes.fromhex(ce)) for ce in farmer.config["pool_sks"]]
@@ -35,8 +33,8 @@ async def main():
         yield OutboundMessage(NodeType.PLOTTER, Message("plotter_handshake", msg),
                               Delivery.BROADCAST)
 
+    _ = await server.start_server(host, on_connect)
     _ = await server.start_client(plotter_peer, on_connect)
-
     _ = await server.start_client(full_node_peer, None)
 
     await server.await_closed()

@@ -10,15 +10,6 @@ from src.store.full_node_store import FullNodeStore
 from src.blockchain import Blockchain
 
 
-"""
-Full node startup algorithm:
-- Update peer list (?)
-- Start server
-- Sync
-- If connected to farmer, send challenges
-- If connected to timelord, send challenges
-"""
-
 logging.basicConfig(format='FullNode %(name)-23s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s',
                     level=logging.INFO,
                     datefmt='%H:%M:%S'
@@ -81,13 +72,13 @@ async def main():
         peer_info = PeerInfo(full_node.config['farmer_peer']['host'],
                              full_node.config['farmer_peer']['port'],
                              bytes.fromhex(full_node.config['farmer_peer']['node_id']))
-        _ = await server.start_client(peer_info, full_node.send_heads_to_farmers)
+        _ = await server.start_client(peer_info, None)
 
     if connect_to_timelord:
         peer_info = PeerInfo(full_node.config['timelord_peer']['host'],
                              full_node.config['timelord_peer']['port'],
                              bytes.fromhex(full_node.config['timelord_peer']['node_id']))
-        _ = await server.start_client(peer_info, full_node.send_challenges_to_timelords)
+        _ = await server.start_client(peer_info, None)
 
     await server.await_closed()
     if ui is not None:

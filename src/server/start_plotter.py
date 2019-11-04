@@ -21,6 +21,7 @@ async def main():
     peer_info = PeerInfo(plotter.config['farmer_peer']['host'],
                          plotter.config['farmer_peer']['port'],
                          bytes.fromhex(plotter.config['farmer_peer']['node_id']))
+
     _ = await server.start_client(peer_info, None)
 
     await server.await_closed()
