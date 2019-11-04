@@ -1,6 +1,6 @@
 from asyncio import StreamReader, StreamWriter
 import logging
-from typing import List, Any
+from typing import List, Any, Optional
 from src.util import cbor
 from src.server.outbound_message import Message, NodeType
 
@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 
 
 class Connection:
-    def __init__(self, local_type: NodeType, connection_type: NodeType, sr: StreamReader,
+    def __init__(self, local_type: NodeType, connection_type: Optional[NodeType], sr: StreamReader,
                  sw: StreamWriter, server_port: int):
         self.local_type = local_type
         self.connection_type = connection_type

@@ -14,6 +14,7 @@ class BlockHeaderData(Streamable):
     proof_of_space_hash: bytes32
     body_hash: bytes32
     extension_data: bytes32
+    challenge_hash: bytes32
 
 
 @dataclass(frozen=True)
