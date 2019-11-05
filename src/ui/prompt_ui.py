@@ -90,6 +90,7 @@ class FullNodeUI:
     def draw_initial(self):
         self.empty_row = TextArea(focusable=False, height=1)
 
+        # home/
         self.loading_msg = Label(text=f'Initializing UI....')
         self.server_msg = Label(text=f'Server running on port {self.port}.')
         self.syncing = TextArea(focusable=False, height=1)
@@ -112,8 +113,14 @@ class FullNodeUI:
         self.content = Frame(title="Chia Full Node", body=body)
         self.layout = Layout(VSplit([self.content], height=D(), width=D()))
 
-        self.block_label = TextArea(focusable=True, scrollbar=True)
+        # block/
+        self.block_header_msg = Label(text=f'Block Header')
+        self.block_label = TextArea(focusable=False)
         self.back_button = Button(text="Back", handler=self.change_route_handler("home/"))
+        self.challenge_msg = Label(text=f'Block Header')
+        self.challenge = TextArea(focusable=False)
+
+        self.latest_blocks_msg = Label(text=f'Latest blocks')
 
     def change_route_handler(self, route):
         def change_route():
@@ -215,10 +222,19 @@ class FullNodeUI:
             block: Optional[FullBlock] = await self.store.get_block(bytes32(bytes.fromhex(block_hash)))
         if block is not None:
             if self.block_label.text != str(block):
-                self.block_label.text = str(block)
+                self.block_label.text = str(block.trunk_block.header)
+                self.challenge.text = str(block.trunk_block.challenge)
         else:
             self.block_label.text = f"Block hash {block_hash} not found"
-        return HSplit([self.block_label, self.back_button], width=D(), height=D())
+        try:
+            if not self.focused:
+                self.layout.focus(self.back_button)
+                self.focused = True
+        except ValueError:
+            # Not yet in layout
+            pass
+        return HSplit([self.block_header_msg,  self.block_label, self.challenge_msg, self.challenge,
+                       self.back_button], width=D(), height=D())
 
     async def update(self):
         try:
@@ -227,10 +243,6 @@ class FullNodeUI:
                     self.content.body = await self.draw_home()
                 elif self.route.startswith("block/"):
                     self.content.body = await self.draw_block()
-
-                if self.prev_route != self.route and not self.focused:
-                    self.layout.focus_next()
-                    self.focused = True
 
                 if self.app and not self.app.invalidated:
                     self.app.invalidate()

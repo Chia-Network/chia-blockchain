@@ -31,3 +31,6 @@ initial_peers:
   - host: "127.0.0.1"
     port: 8005
     node_id: "05cc78bf2d0aa3350750211b0d29f8c7e299bd2caa4064e1dfb45806f80a00b6"
+  # - host: "216.39.16.173"  # Chia beast
+  #   port: 8004
+  #   node_id: "131f4df3bf7d09f5cec91344047dca5c3744ceeb2d7971c19ea45fa61a5aca71"

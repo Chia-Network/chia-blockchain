@@ -1,6 +1,8 @@
 # flake8: noqa
 from __future__ import annotations
 import io
+import dataclasses
+import pprint
 from typing import Type, BinaryIO, get_type_hints, Any, List
 from hashlib import sha256
 from blspy import PublicKey, Signature, PrependSignature
@@ -8,6 +10,7 @@ from src.util.type_checking import strictdataclass, is_type_List, is_type_Specif
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32
 
+pp = pprint.PrettyPrinter(indent=4)
 
 # TODO: Remove hack, this allows streaming these objects from binary
 size_hints = {
@@ -122,3 +125,9 @@ class Streamable:
         f = io.BytesIO()
         self.stream(f)
         return bytes(f.getvalue())
+
+    def __str__(self: Any) -> str:
+        return self.__class__.__name__ + pp.pformat(dataclasses.asdict(self))
+
+    def __repr__(self: Any) -> str:
+        return self.__class__.__name__ + pp.pformat(dataclasses.asdict(self))

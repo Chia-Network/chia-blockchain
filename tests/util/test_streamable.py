@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 from src.util.streamable import streamable, Streamable
 from src.util.ints import uint32
+from blspy import PrivateKey
 
 
 class TestStreamable(unittest.TestCase):
@@ -16,8 +17,11 @@ class TestStreamable(unittest.TestCase):
             d: List[List[uint32]]
             e: Optional[uint32]
             f: Optional[uint32]
+            g: PrivateKey
 
-        a = TestClass(24, 352, [1, 2, 4], [[1, 2, 3], [3, 4]], 728, None)  # type: ignore
+
+        a = TestClass(24, 352, [1, 2, 4], [[1, 2, 3], [3, 4]], 728, None, PrivateKey.from_seed(b"123"))  # type: ignore
+        print(a)
 
         b: bytes = bytes(a)
         assert a == TestClass.from_bytes(b)
