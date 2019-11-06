@@ -53,6 +53,7 @@ class ChiaServer:
         self._srwt_aiter = push_aiter()
         self._outbound_aiter = push_aiter()
         self._pipeline_task = self.initialize_pipeline(self._srwt_aiter, self._api, self._port)
+        self._node_id = create_node_id()
 
     async def start_server(self, host: str,
                            on_connect: Optional[Callable[[], AsyncGenerator[OutboundMessage, None]]] = None) -> bool:
@@ -223,8 +224,7 @@ class ChiaServer:
         and nothing is yielded.
         """
         # Send handshake message
-        node_id: bytes32 = create_node_id(connection.local_host, connection.local_port, connection.local_type)
-        outbound_handshake = Message("handshake", Handshake(protocol_version, node_id, self._local_type))
+        outbound_handshake = Message("handshake", Handshake(protocol_version, self._node_id, self._local_type))
 
         try:
             await connection.send(outbound_handshake)
