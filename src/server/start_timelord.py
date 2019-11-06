@@ -19,8 +19,7 @@ async def main():
     _ = await server.start_server(host, None)
 
     full_node_peer = PeerInfo(timelord.config['full_node_peer']['host'],
-                              timelord.config['full_node_peer']['port'],
-                              bytes.fromhex(timelord.config['full_node_peer']['node_id']))
+                              timelord.config['full_node_peer']['port'])
 
     await server.start_client(full_node_peer, None)
 

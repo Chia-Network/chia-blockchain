@@ -18,11 +18,9 @@ logging.basicConfig(format='Farmer %(name)-25s: %(levelname)-8s %(asctime)s.%(ms
 async def main():
     farmer = Farmer()
     plotter_peer = PeerInfo(farmer.config['plotter_peer']['host'],
-                            farmer.config['plotter_peer']['port'],
-                            bytes.fromhex(farmer.config['plotter_peer']['node_id']))
+                            farmer.config['plotter_peer']['port'])
     full_node_peer = PeerInfo(farmer.config['full_node_peer']['host'],
-                              farmer.config['full_node_peer']['port'],
-                              bytes.fromhex(farmer.config['full_node_peer']['node_id']))
+                              farmer.config['full_node_peer']['port'])
     host, port = parse_host_port(farmer)
     server = ChiaServer(port, farmer, NodeType.FARMER)
 
