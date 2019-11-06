@@ -24,9 +24,7 @@ propagate_threshold: 1000  # To propagate to network, must be expected to take l
 plotter_peer:
     host: "127.0.0.1"
     port: 8000
-    node_id: "f196b7bf8dce5c558e9d8bb481ff9face05b850108aa81c2b430b5c0a78b7003"
 
 full_node_peer:
     host: "127.0.0.1"
     port: 8002
-    node_id: "4c24f6efd742d130f3c8067fc05b142e7fd70a12b36bfe6663f3944c9e9622eb"

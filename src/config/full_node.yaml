@@ -16,18 +16,13 @@ ssh_filename: "src/config/ssh_host_key"
 farmer_peer:
     host: "127.0.0.1"
     port: 8001
-    node_id: "8da6169716e18c4a182940d05063614932f0b161d54b1de0572170649ed69213"
 timelord_peer:
     host: "127.0.0.1"
     port: 8003
-    node_id: "974725f6147e0bf141523dab8a9fd8e641bc96f164a802199c0c089c9449ce46"
 initial_peers:
   - host: "127.0.0.1"
     port: 8002
-    node_id: "4c24f6efd742d130f3c8067fc05b142e7fd70a12b36bfe6663f3944c9e9622eb"
   - host: "127.0.0.1"
     port: 8004
-    node_id: "b2c5ed761a9a1d776e6bfa75f751b2fb110a62d87bec9fe4c9c904ab9532c8e3"
   - host: "127.0.0.1"
     port: 8005
-    node_id: "05cc78bf2d0aa3350750211b0d29f8c7e299bd2caa4064e1dfb45806f80a00b6"
