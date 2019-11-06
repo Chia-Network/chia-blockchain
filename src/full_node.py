@@ -237,15 +237,11 @@ class FullNode:
         if len(request.heights) > self.config['max_trunks_to_send']:
             raise errors.TooManyTrunksRequested(f"The max number of trunks is {self.config['max_trunks_to_send']},\
                                                 but requested {len(request.heights)}")
-        log.info("Getting lock")
         async with (await self.store.get_lock()):
             try:
-                log.info("Getting trunks")
                 trunks: List[TrunkBlock] = await self.blockchain.get_trunk_blocks_by_height(request.heights,
                                                                                             request.tip_header_hash)
-                log.info("Got trunks")
             except KeyError:
-                log.info("Do not have required blocks")
                 return
             except BlockNotInBlockchain as e:
                 log.info(f"{e}")

@@ -15,7 +15,7 @@ pool_sks:
     - "0c225913cb84b4601f83c89e369dd3ac696e37facce3ebfab4b87abe611db309"
 
 # Address of pool operator
-# sha256(PrivateKey.from_seed(b'0').get_public_key().serialize()).digest()
+# sha256(bytes(PrivateKey.from_seed(b'0').get_public_key())).digest()
 pool_target: "9940b95222a1d19abb73c192f2c10dc65b32bcc7a703db1b40456f2dbf1e416e"
 
 pool_share_threshold: 1500  # To send to pool, must be expected to take less than these seconds

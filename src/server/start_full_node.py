@@ -31,7 +31,7 @@ async def main():
     host, port = parse_host_port(full_node)
     server = ChiaServer(port, full_node, NodeType.FULL_NODE)
     _ = await server.start_server(host, full_node.on_connect)
-    ui = None
+    wait_for_ui = None
 
     def master_close_cb():
         log.info("Closing all connections...")
@@ -43,9 +43,9 @@ async def main():
     if "-u" in sys.argv:
         index = sys.argv.index("-u")
         ui_ssh_port = int(sys.argv[index + 1])
-        from src.ui.prompt_ui import FullNodeUI
-        ui = FullNodeUI(store, blockchain, server.global_connections, port, ui_ssh_port,
-                        full_node.config['ssh_filename'], master_close_cb)
+        from src.ui.prompt_ui import start_ssh_server
+        wait_for_ui = start_ssh_server(store, blockchain, server.global_connections, port, ui_ssh_port,
+                                       full_node.config['ssh_filename'], master_close_cb)
 
     connect_to_farmer = ("-f" in sys.argv)
     connect_to_timelord = ("-t" in sys.argv)
@@ -81,8 +81,8 @@ async def main():
         _ = await server.start_client(peer_info, None)
 
     await server.await_closed()
-    if ui is not None:
-        await ui.await_closed()
+    if wait_for_ui is not None:
+        await wait_for_ui()
 
 
 asyncio.run(main())

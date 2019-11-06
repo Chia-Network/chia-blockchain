@@ -9,6 +9,7 @@ from prompt_toolkit.key_binding.bindings.focus import (
     focus_previous,
 )
 from prompt_toolkit import Application
+from prompt_toolkit.styles import Style
 from prompt_toolkit.layout.containers import VSplit, HSplit, Window
 from prompt_toolkit.layout.layout import Layout
 from prompt_toolkit.key_binding import KeyBindings
@@ -16,7 +17,8 @@ from prompt_toolkit.widgets import (
     Frame,
     Label,
     TextArea,
-    Button
+    Button,
+    SearchToolbar
 )
 from src.store.full_node_store import FullNodeStore
 from src.blockchain import Blockchain
@@ -25,13 +27,47 @@ from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.server.connection import PeerConnections, NodeType
 
-
+import time
 log = logging.getLogger(__name__)
+
+
+def start_ssh_server(store: FullNodeStore, blockchain: Blockchain, connections: PeerConnections,
+                     port: int, ssh_port: int, ssh_key_filename: str, close_cb: Callable):
+    uis = []  # type: ignore
+
+    def intermediate_close_cb():
+        log.info("Closing all connected UIs")
+        nonlocal uis
+        for ui in uis:
+            ui.close()
+        close_cb()
+
+    async def await_all_closed():
+        nonlocal uis
+        while len(uis) > 0:
+            ui = uis[0]
+            await ui.await_closed()
+            uis = uis[1:]
+
+    async def interact() -> None:
+        nonlocal uis
+        ui = FullNodeUI(store, blockchain, connections, port, intermediate_close_cb)
+        assert ui.app
+        uis.append(ui)
+        await ui.app.run_async()
+
+    asyncio.get_running_loop().create_task(asyncssh.create_server(
+        lambda: PromptToolkitSSHServer(interact),
+        "",
+        ssh_port,
+        server_host_keys=[ssh_key_filename],
+    ))
+    return await_all_closed
 
 
 class FullNodeUI:
     def __init__(self, store: FullNodeStore, blockchain: Blockchain, connections: PeerConnections,
-                 port: int, ssh_port: int, ssh_key_filename: str, close_cb: Callable):
+                 port: int, parent_close_cb: Callable):
         self.port: int = port
         self.store: FullNodeStore = store
         self.blockchain: Blockchain = blockchain
@@ -43,35 +79,27 @@ class FullNodeUI:
         self.prev_route: str = "home/"
         self.route: str = "home/"
         self.focused: bool = False
+        self.parent_close_cb = parent_close_cb
+        self.kb = self.setup_keybindings()
+        self.draw_initial()
+        self.style = Style([
+            ('error', '#ff0044'),
+        ])
+        self.app = Application(style=self.style, layout=self.layout, full_screen=True,
+                               key_bindings=self.kb, mouse_support=True)
+        self.closed = False
+        self.update_task = asyncio.get_running_loop().create_task(self.update())
 
-        def close():
-            log.info("Closing the UI")
+    def close(self):
+        if not self.closed:
             self.closed = True
             self.route = "home/"
             if self.app:
                 self.app.exit(0)
 
-        def stop():
-            close()
-            close_cb()
-
-        self.stop_cb = stop
-        self.close_cb = close
-        kb = self.setup_keybindings()
-        self.draw_initial()
-
-        async def interact() -> None:
-            self.app = Application(layout=self.layout, full_screen=True, key_bindings=kb, mouse_support=True)
-            self.closed = False
-            self.update_task = asyncio.get_running_loop().create_task(self.update())
-            await self.app.run_async()
-
-        asyncio.get_running_loop().create_task(asyncssh.create_server(
-            lambda: PromptToolkitSSHServer(interact),
-            "",
-            ssh_port,
-            server_host_keys=[ssh_key_filename],
-        ))
+    def stop(self):
+        self.close()
+        self.parent_close_cb()
 
     def setup_keybindings(self) -> KeyBindings:
         kb = KeyBindings()
@@ -84,7 +112,7 @@ class FullNodeUI:
 
         @kb.add('c-c')
         def exit_(event):
-            self.close_cb()
+            self.close()
         return kb
 
     def draw_initial(self):
@@ -102,32 +130,47 @@ class FullNodeUI:
         self.con_rows = []
         self.connections_msg = Label(text=f'Connections')
         self.connection_rows_vsplit = Window()
-
         self.latest_blocks_msg = Label(text=f'Latest blocks')
         self.latest_blocks_labels = [Button(text="block") for _ in range(self.num_blocks)]
-        self.quit_button = Button('Stop node and close UI', handler=self.stop_cb)
-        self.close_ui_button = Button('Close UI', handler=self.close_cb)
+
+        self.search_block_msg = Label(text=f'Search block by hash')
+        search_field = SearchToolbar()
+        self.search_block_field = TextArea(height=1, prompt='>>> ', style='class:input-field',
+                                           multiline=False, wrap_lines=False, search_field=search_field)
+        self.search_block_field.accept_handler = self.search_block
+
+        self.close_ui_button = Button('Close UI', handler=self.close)
+        self.quit_button = Button('Stop node and close UI', handler=self.stop)
+        self.error_msg = Label(style='class:error', text=f'')
+
+        # block/
+        self.block_label = TextArea(focusable=True, scrollbar=True, focus_on_click=True)
+        self.back_button = Button(text="Back", handler=self.change_route_handler("home/"))
+        self.challenge_msg = Label(text=f'Block Header')
+        self.challenge = TextArea(focusable=False)
 
         body = HSplit([self.loading_msg, self.server_msg],
                       height=D(), width=D())
         self.content = Frame(title="Chia Full Node", body=body)
         self.layout = Layout(VSplit([self.content], height=D(), width=D()))
 
-        # block/
-        self.block_header_msg = Label(text=f'Block Header')
-        self.block_label = TextArea(focusable=False)
-        self.back_button = Button(text="Back", handler=self.change_route_handler("home/"))
-        self.challenge_msg = Label(text=f'Block Header')
-        self.challenge = TextArea(focusable=False)
-
-        self.latest_blocks_msg = Label(text=f'Latest blocks')
-
     def change_route_handler(self, route):
         def change_route():
             self.prev_route = self.route
             self.route = route
             self.focused = False
+            self.error_msg.text = ""
         return change_route
+
+    def search_block(self, buff):
+        async def search():
+            async with (await self.store.get_lock()):
+                block = await self.store.get_block(self.search_block_field.text)
+                if block is not None:
+                    self.change_route_handler(f"block/{block.header_hash}")()
+                else:
+                    self.error_msg.text = "Block not found"
+        asyncio.get_running_loop().create_task(search())
 
     async def get_latest_blocks(self, heads: List[TrunkBlock]) -> List[TrunkBlock]:
         added_blocks: List[TrunkBlock] = []
@@ -211,10 +254,23 @@ class FullNodeUI:
         self.difficulty_label.text = f"Current difficuty: {difficulty}"
         self.ips_label.text = f"Current VDF iterations per second: {ips}"
         self.total_iters_label.text = f"Total iterations since genesis: {total_iters}"
+        try:
+            if not self.focused:
+                self.layout.focus(self.close_ui_button)
+                self.focused = True
+        except ValueError:  # Not yet in layout
+            pass
         return HSplit([self.server_msg, self.syncing, self.lca_label, self.current_heads_label,
-                       self.difficulty_label, self.ips_label, self.total_iters_label, self.connections_msg,
-                       new_con_rows, self.empty_row, self.latest_blocks_msg, *new_labels,
-                       self.close_ui_button, self.quit_button], width=D(), height=D())
+                       self.difficulty_label, self.ips_label, self.total_iters_label,
+                       Window(height=1, char='-', style='class:line'),
+                       self.connections_msg,
+                       new_con_rows,
+                       Window(height=1, char='-', style='class:line'),
+                       self.latest_blocks_msg, *new_labels,
+                       Window(height=1, char='-', style='class:line'),
+                       self.search_block_msg, self.search_block_field,
+                       Window(height=1, char='-', style='class:line'),
+                       self.close_ui_button, self.quit_button, self.error_msg], width=D(), height=D())
 
     async def draw_block(self):
         block_hash: str = self.route.split("block/")[1]
@@ -222,23 +278,21 @@ class FullNodeUI:
             block: Optional[FullBlock] = await self.store.get_block(bytes32(bytes.fromhex(block_hash)))
         if block is not None:
             if self.block_label.text != str(block):
-                self.block_label.text = str(block.trunk_block.header)
-                self.challenge.text = str(block.trunk_block.challenge)
+                self.block_label.text = str(block)
         else:
             self.block_label.text = f"Block hash {block_hash} not found"
         try:
             if not self.focused:
                 self.layout.focus(self.back_button)
                 self.focused = True
-        except ValueError:
-            # Not yet in layout
+        except ValueError:  # Not yet in layout
             pass
-        return HSplit([self.block_header_msg,  self.block_label, self.challenge_msg, self.challenge,
-                       self.back_button], width=D(), height=D())
+        return HSplit([self.block_label, self.back_button], width=D(), height=D())
 
     async def update(self):
         try:
             while not self.closed:
+                start = time.time()
                 if self.route.startswith("home/"):
                     self.content.body = await self.draw_home()
                 elif self.route.startswith("block/"):
@@ -246,7 +300,9 @@ class FullNodeUI:
 
                 if self.app and not self.app.invalidated:
                     self.app.invalidate()
-                await asyncio.sleep(2)
+                end = time.time()
+                print("Time taken:", end-start)
+                await asyncio.sleep(0.5)
         except Exception as e:
             log.warn(f"Exception in UI {type(e)}: {e}")
             raise e
