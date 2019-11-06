@@ -9,4 +9,3 @@ from dataclasses import dataclass
 class PeerInfo(Streamable):
     host: str
     port: uint32
-    node_id: bytes32
