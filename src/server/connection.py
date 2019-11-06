@@ -19,6 +19,7 @@ class Connection:
         socket = self.writer.get_extra_info("socket")
         self.local_host = socket.getsockname()[0]
         self.local_port = server_port
+        print(self.writer.get_extra_info("peername"))
         self.peer_host, self.peer_port = self.writer.get_extra_info("peername")
         self.node_id = None
 

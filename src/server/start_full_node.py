@@ -44,7 +44,7 @@ async def main():
         index = sys.argv.index("-u")
         ui_ssh_port = int(sys.argv[index + 1])
         from src.ui.prompt_ui import start_ssh_server
-        wait_for_ui = start_ssh_server(store, blockchain, server.global_connections, port, ui_ssh_port,
+        wait_for_ui = start_ssh_server(store, blockchain, server, port, ui_ssh_port,
                                        full_node.config['ssh_filename'], master_close_cb)
 
     connect_to_farmer = ("-f" in sys.argv)
@@ -80,7 +80,10 @@ async def main():
                              bytes.fromhex(full_node.config['timelord_peer']['node_id']))
         _ = await server.start_client(peer_info, None)
 
+    # Awaits for server and all connections to close
     await server.await_closed()
+
+    # Awaits for all ui instances to close
     if wait_for_ui is not None:
         await wait_for_ui()
 
