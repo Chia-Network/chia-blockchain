@@ -1,5 +1,5 @@
 import sys
-from hashlib import sha256
+import secrets
 from typing import Tuple
 from src.types.sized_bytes import bytes32
 from src.server.connection import NodeType
@@ -11,5 +11,6 @@ def parse_host_port(api) -> Tuple[str, int]:
     return (host, port)
 
 
-def create_node_id(host: str, port: int, connection_type: NodeType) -> bytes32:
-    return bytes32(sha256((f"{connection_type.name}:{host}:{str(port)}").encode()).digest())
+def create_node_id() -> bytes32:
+    """Generates a transient random node_id."""
+    return bytes32(secrets.token_bytes(32))
