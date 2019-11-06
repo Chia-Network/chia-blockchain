@@ -53,7 +53,7 @@ async def main():
     peer_tasks = []
     for peer in full_node.config['initial_peers']:
         if not (host == peer['host'] and port == peer['port']):
-            peer_tasks.append(server.start_client(PeerInfo(peer['host'], peer['port'], bytes.fromhex(peer['node_id'])),
+            peer_tasks.append(server.start_client(PeerInfo(peer['host'], peer['port']),
                                                   full_node.on_connect))
     await asyncio.gather(*peer_tasks)
 
@@ -70,14 +70,12 @@ async def main():
 
     if connect_to_farmer:
         peer_info = PeerInfo(full_node.config['farmer_peer']['host'],
-                             full_node.config['farmer_peer']['port'],
-                             bytes.fromhex(full_node.config['farmer_peer']['node_id']))
+                             full_node.config['farmer_peer']['port'])
         _ = await server.start_client(peer_info, None)
 
     if connect_to_timelord:
         peer_info = PeerInfo(full_node.config['timelord_peer']['host'],
-                             full_node.config['timelord_peer']['port'],
-                             bytes.fromhex(full_node.config['timelord_peer']['node_id']))
+                             full_node.config['timelord_peer']['port'])
         _ = await server.start_client(peer_info, None)
 
     await server.await_closed()
