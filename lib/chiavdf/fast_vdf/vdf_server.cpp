@@ -86,7 +86,9 @@ void session(tcp::socket sock) {
         form f=form::generator(D);
 
         bool stop_signal = false;
-        std::set<uint64_t> seen_iterations;
+        // (iteration, thread_id)
+        std::set<std::pair<uint64_t, uint64_t> > seen_iterations;
+        bool stop_vector[100];
 
         std::vector<std::thread> threads;
         WesolowskiCallback weso(1000000);
@@ -116,31 +118,43 @@ void session(tcp::socket sock) {
             memset(data, 0, sizeof(data));
             boost::asio::read(sock, boost::asio::buffer(data, size), error);
             int iters = atoi(data);
-            PrintInfo("Got iterations " + to_string(iters));
             got_iters = true;
-            if (seen_iterations.size() >= 2 && *seen_iterations.begin() <= iters) {
-                PrintInfo("Ignoring " + to_string(iters) + ", too high.");
-                continue;
-            }
-
-            if (seen_iterations.size() > 2 && iters != 0) {
-                PrintInfo("Ignoring " + to_string(iters) + ", already have 3 iters.");
-                continue;
-            }
-
+        
             if (iters == 0) {
+                PrintInfo("Got stop signal!");
                 stopped = true;
                 poll_thread.join();
+                for (int i = 0; i < threads.size(); i++)
+                    stop_vector[i] = true;
                 for (int t = 0; t < threads.size(); t++) {
                     threads[t].join();
                 }
                 vdf_worker.join();
                 free(forms);
             } else {
-                if (seen_iterations.find(iters) == seen_iterations.end()) {
-                    seen_iterations.insert(iters);
-                    threads.push_back(std::thread(CreateAndWriteProof, D, f, iters, std::ref(weso), std::ref(stopped),
-                                                  std::ref(sock)));
+                int max_iter = 0;
+                int max_iter_thread_id;
+                int min_iter = std::numeric_limits<int> :: max();
+                for (auto active_iter: seen_iterations) {
+                    if (active_iter.first > max_iter) {
+                        max_iter = active_iter.first;
+                        max_iter_thread_id = active_iter.second;
+                    }
+                    if (active_iter.first < min_iter) {
+                        min_iter = active_iter.first;
+                    }
+                }
+                if (threads.size() < 3 || iters < min_iter) {
+                    seen_iterations.insert({iters, threads.size()});
+                    PrintInfo("Running proving for iter: " + to_string(iters));
+                    stop_vector[threads.size()] = false;
+                    threads.push_back(std::thread(CreateAndWriteProof, D, f, iters, std::ref(weso), 
+                                      std::ref(stop_vector[threads.size()]), std::ref(sock)));
+                    if (threads.size() > 3) {
+                        PrintInfo("Stopping proving for iter: " + to_string(max_iter));
+                        stop_vector[max_iter_thread_id] = true;
+                        seen_iterations.erase({max_iter, max_iter_thread_id});
+                    }
                 }
             }
         }
