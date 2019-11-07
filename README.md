@@ -20,11 +20,12 @@ sh install.sh
 ```
 
 ### Run servers
-First, create some  keys and plots by running the scripts:
+First, create some keys and plots (if you want to run a farmer) by running the scripts:
 ```bash
+python -m src.scrips.regenerate_keys
+python -m src.scrips.create_plots -k 20 -n 10
 ```
 
-When running the servers on Mac OS, allow the application to accept incoming connections.
 Run the servers in the following order (you can also use ipython):
 ```bash
 python -m src.server.start_plotter
@@ -34,12 +35,14 @@ python -m src.server.start_full_node "127.0.0.1" 8002 -f
 python -m src.server.start_full_node "127.0.0.1" 8004 -t -u 8222
 python -m src.server.start_full_node "127.0.0.1" 8005
 ```
+
+When running the servers on Mac OS, allow the application to accept incoming connections.
 Try running one of the full nodes a few minutes after the other ones, to test initial sync.
 Configuration of peers can be changed in src/config.
 You can also run the simulation, which runs all servers at once.
 
 ```bash
-./src/simulation/simulate_network.sh
+./src/scripts/simulate_network.sh
 ```
 
 You can also ssh into the UI for the full node:
