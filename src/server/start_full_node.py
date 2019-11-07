@@ -54,7 +54,7 @@ async def main():
     for peer in full_node.config['initial_peers']:
         if not (host == peer['host'] and port == peer['port']):
             peer_tasks.append(server.start_client(PeerInfo(peer['host'], peer['port']),
-                                                  full_node.on_connect))
+                                                  None))
     await asyncio.gather(*peer_tasks)
 
     log.info("Waiting to connect to some peers...")
