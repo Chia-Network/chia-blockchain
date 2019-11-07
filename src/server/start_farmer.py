@@ -32,7 +32,7 @@ async def main():
                               Delivery.BROADCAST)
 
     _ = await server.start_server(host, on_connect)
-    _ = await server.start_client(plotter_peer, on_connect)
+    _ = await server.start_client(plotter_peer, None)
     _ = await server.start_client(full_node_peer, None)
 
     await server.await_closed()
