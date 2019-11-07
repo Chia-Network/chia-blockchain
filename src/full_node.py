@@ -177,7 +177,6 @@ class FullNode:
             raise errors.InvalidWeight(f"Weight of {tip_block.trunk_block.header.get_hash()} not valid.")
 
         log.error(f"Downloaded trunks up to tip height: {tip_height}")
-        log.error(f"Tip height: {len(trunks)}")
         assert tip_height + 1 == len(trunks)
 
         async with (await self.store.get_lock()):
@@ -460,7 +459,6 @@ class FullNode:
             async for msg in self.proof_of_time_finished(request):
                 yield msg
         if propagate_proof:
-            # TODO: perhaps don't propagate everything, this is a DoS vector
             yield OutboundMessage(NodeType.FULL_NODE, Message("new_proof_of_time", new_proof_of_time),
                                   Delivery.BROADCAST_TO_OTHERS)
 

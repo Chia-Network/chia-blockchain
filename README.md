@@ -20,6 +20,10 @@ sh install.sh
 ```
 
 ### Run servers
+First, create some  keys and plots by running the scripts:
+```bash
+```
+
 When running the servers on Mac OS, allow the application to accept incoming connections.
 Run the servers in the following order (you can also use ipython):
 ```bash
@@ -29,7 +33,6 @@ python -m src.server.start_farmer
 python -m src.server.start_full_node "127.0.0.1" 8002 -f
 python -m src.server.start_full_node "127.0.0.1" 8004 -t -u 8222
 python -m src.server.start_full_node "127.0.0.1" 8005
-
 ```
 Try running one of the full nodes a few minutes after the other ones, to test initial sync.
 Configuration of peers can be changed in src/config.
@@ -65,3 +68,5 @@ mypy src tests
 4. Preferences > Settings > Python > Linting > flake8 enabled
 5. Preferences > Settings > Python > Linting > mypy enabled
 6. Preferences > Settings > mypy > Targets: set to ./src and ./tests
+
+### Node config

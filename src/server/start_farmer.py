@@ -28,7 +28,8 @@ async def main():
 
     async def on_connect():
         # Sends a handshake to the plotter
-        pool_sks: List[PrivateKey] = [PrivateKey.from_bytes(bytes.fromhex(ce)) for ce in farmer.config["pool_sks"]]
+        pool_sks: List[PrivateKey] = [PrivateKey.from_bytes(bytes.fromhex(ce))
+                                      for ce in farmer.key_config["pool_sks"]]
         msg = PlotterHandshake([sk.get_public_key() for sk in pool_sks])
         yield OutboundMessage(NodeType.PLOTTER, Message("plotter_handshake", msg),
                               Delivery.BROADCAST)

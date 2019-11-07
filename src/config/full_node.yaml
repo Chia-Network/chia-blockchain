@@ -8,9 +8,11 @@ sync_blocks_behind_threshold: 3
 # When we are > 1 but < sync_blocks_behind_threshold, download these many blocks
 short_sync_download_count: 6
 
+# The full node server will run on this host and port
 host: "127.0.0.1"
 port: 8002
 
+# This SSH key is for the ui SSH server
 ssh_filename: "src/config/ssh_host_key"
 
 farmer_peer:
