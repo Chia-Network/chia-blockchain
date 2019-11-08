@@ -1,0 +1,68 @@
+plotter:
+  # The plotter server (if run) will run on this host and port
+  host: 127.0.0.1
+  port: 8000
+  farmer_peer:
+    host: 127.0.0.1
+    port: 8001
+
+farmer:
+  # The farmer server (if run) will run on this host and port
+  host: 127.0.0.1
+  port: 8001
+  # The farmer will attempt to connect to this full node and plotter
+  full_node_peer:
+    host: 127.0.0.1
+    port: 8002
+  plotter_peer:
+    host: 127.0.0.1
+    port: 8000
+  # To send a share to a pool, a block must be faster than this, in seconds
+  pool_share_threshold: 1500
+  # To send to the full node, a block must be faster than this, in seconds
+  propagate_threshold: 1000
+
+timelord:
+  # The timelord server (if run) will run on this host and port
+  host: 127.0.0.1
+  port: 8003
+  # How much recursion to use for the wesolowski VDF proof. This increases the size
+  # of the proofs.
+  n_wesolowski: 2
+  # VDF servers will be spawned at these ports, and closed after generating proofs
+  # Adding more vdf servers will increase memory usage and CPU usage.
+  vdf_server_ports:
+    - 8889
+  full_node_peer:
+      host: 127.0.0.1
+      port: 8004
+
+full_node:
+  # The full node server (if run) will run on this host and port
+  host: "127.0.0.1"
+  port: 8002
+  # Don't send any more than these number of trunks and blocks, in one message
+  max_trunks_to_send: 100
+  max_blocks_to_send: 10
+  # If node is more than these blocks behind, will do a sync
+  sync_blocks_behind_threshold: 3
+  # When we are > 1 but < sync_blocks_behind_threshold, download these many blocks
+  short_sync_download_count: 6
+  # This SSH key is for the ui SSH server
+  ssh_filename: "src/config/ssh_host_key"
+
+  farmer_peer:
+      host: "127.0.0.1"
+      port: 8001
+  timelord_peer:
+      host: "127.0.0.1"
+      port: 8003
+  initial_peers:
+    - host: "127.0.0.1"
+      port: 8002
+    - host: "127.0.0.1"
+      port: 8004
+    - host: "127.0.0.1"
+      port: 8005
+    # - host: "216.39.16.173"  # Chia beast
+    #   port: 8004

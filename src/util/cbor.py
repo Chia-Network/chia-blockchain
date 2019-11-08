@@ -2,9 +2,8 @@ from typing import Any, Dict, get_type_hints
 import cbor2
 
 """
-Uses custom CBOR types to encode and decode messages.
-If messages don't have a custom CBOR tag, we call .serialize on
-them to convert them to bytes.
+Encode CBOR objects (python objects with @cbor_message decorator), as dictionaries.
+Everything else is encded by using bytes(obj), which calls obj.__bytes__.
 https://cbor2.readthedocs.io/en/latest/customizing.html
 """
 
@@ -21,9 +20,6 @@ def default_encoder(encoder, value: Any):
         encoder.encode(els)
     elif hasattr(type(value), "__bytes__"):
         encoder.encode(bytes(value))
-    elif hasattr(type(value), "serialize"):
-        # Useful for blspy objects
-        encoder.encode(value.serialize())
     else:
         raise NotImplementedError(f"can't CBOR encode {type(value)}:{value}")
 

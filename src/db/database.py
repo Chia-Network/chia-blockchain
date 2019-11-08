@@ -212,7 +212,7 @@ if __name__ == "__main__":
 
         # Add potential block
         await db.add_potential_block(genesis)
-        assert genesis == await db.get_potential_block(0)
+        assert genesis == await db.get_potential_block(uint32(0))
 
         # Add/get candidate block
         assert await db.get_candidate_block(0) is None
@@ -225,7 +225,7 @@ if __name__ == "__main__":
         assert await db.get_candidate_block(genesis.header_hash) == partial
 
         # Add/get unfinished block
-        key = (genesis.header_hash, 1000)
+        key = (genesis.header_hash, uint64(1000))
         assert await db.get_unfinished_block(key) is None
         await db.add_unfinished_block(key, genesis)
         assert await db.get_unfinished_block(key) == genesis

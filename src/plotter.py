@@ -1,11 +1,12 @@
 import logging
 import os
 import os.path
+from definitions import ROOT_DIR
 from yaml import safe_load
 from asyncio import Lock
 from typing import Dict, Tuple, Optional
 from blspy import PrivateKey, PublicKey, PrependSignature, Util
-from chiapos import DiskPlotter, DiskProver
+from chiapos import DiskProver
 from src.util.api_decorators import api_request
 from src.util.ints import uint8
 from src.protocols import plotter_protocol
@@ -19,7 +20,18 @@ log = logging.getLogger(__name__)
 
 class Plotter:
     def __init__(self):
-        self.config = safe_load(open("src/config/plotter.yaml", "r"))
+        config_filename = os.path.join(ROOT_DIR, "src", "config", "config.yaml")
+        plot_config_filename = os.path.join(ROOT_DIR, "src", "config", "plots.yaml")
+        key_config_filename = os.path.join(ROOT_DIR, "src", "config", "keys.yaml")
+
+        if not os.path.isfile(key_config_filename):
+            raise RuntimeError("Keys not generated. Run ./src/scripts/regenerate_keys.py.")
+        if not os.path.isfile(plot_config_filename):
+            raise RuntimeError("Plots not generated. Run ./src/scripts/create_plots.py.")
+
+        self.config = safe_load(open(config_filename, "r"))["plotter"]
+        self.key_config = safe_load(open(key_config_filename, "r"))
+        self.plot_config = safe_load(open(plot_config_filename, "r"))
         self.lock: Lock = Lock()
 
         # From filename to prover
@@ -35,23 +47,20 @@ class Plotter:
         which must be put into the plots, before the plotting process begins. We cannot
         use any plots which don't have one of the pool keys.
         """
-        for filename, plot_config in self.config['plots'].items():
-            sk = PrivateKey.from_bytes(bytes.fromhex(plot_config['sk']))
+        for partial_filename, plot_config in self.plot_config['plots'].items():
+            filename = os.path.join(ROOT_DIR, "plots", partial_filename)
             pool_pubkey = PublicKey.from_bytes(bytes.fromhex(plot_config['pool_pk']))
+
             # Only use plots that correct pools associated with them
             if pool_pubkey in plotter_handshake.pool_pubkeys:
-                if not os.path.isfile(filename):
-                    # Create  temporary PoSpace object, to call the calculate_plot_seed function
-                    plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(pool_pubkey, sk.get_public_key())
-                    plotter: DiskPlotter = DiskPlotter()
-                    plotter.create_plot_disk(filename, plot_config['k'], bytes([]), plot_seed)
+                if os.path.isfile(filename):
+                    async with self.lock:
+                        self.provers[partial_filename] = DiskProver(filename)
                 else:
-                    # TODO: check plots are correct
-                    pass
-                async with self.lock:
-                    self.provers[filename] = DiskProver(filename)
+                    log.warn(f"Plot at {filename} does not exist.")
+
             else:
-                log.warning(f"Plot {filename} has an invalid pool key.")
+                log.warning(f"Plot {filename} has a pool key that is not in the farmer's pool_pk list.")
 
     @api_request
     async def new_challenge(self, new_challenge: plotter_protocol.NewChallenge):
@@ -108,12 +117,12 @@ class Plotter:
                     self.provers[filename] = DiskProver(filename)
                     proof_xs = self.provers[filename].get_full_proof(challenge_hash, index)
 
-                pool_pubkey = PublicKey.from_bytes(bytes.fromhex(self.config['plots'][filename]['pool_pk']))
-                plot_pubkey = PrivateKey.from_bytes(bytes.fromhex(self.config['plots'][filename]['sk'])) \
+                pool_pubkey = PublicKey.from_bytes(bytes.fromhex(self.plot_config['plots'][filename]['pool_pk']))
+                plot_pubkey = PrivateKey.from_bytes(bytes.fromhex(self.plot_config['plots'][filename]['sk'])) \
                     .get_public_key()
                 proof_of_space: ProofOfSpace = ProofOfSpace(pool_pubkey,
                                                             plot_pubkey,
-                                                            uint8(self.config['plots'][filename]['k']),
+                                                            uint8(self.provers[filename].get_size()),
                                                             [uint8(b) for b in proof_xs])
 
                 response = plotter_protocol.RespondProofOfSpace(
@@ -133,7 +142,7 @@ class Plotter:
         async with self.lock:
             _, filename, _ = self.challenge_hashes[request.quality]
 
-        plot_sk = PrivateKey.from_bytes(bytes.fromhex(self.config['plots'][filename]['sk']))
+        plot_sk = PrivateKey.from_bytes(bytes.fromhex(self.plot_config['plots'][filename]['sk']))
         header_hash_signature: PrependSignature = plot_sk.sign_prepend(request.header_hash)
         assert(header_hash_signature.verify([Util.hash256(request.header_hash)], [plot_sk.get_public_key()]))
 
@@ -152,7 +161,7 @@ class Plotter:
         """
         async with self.lock:
             _, filename, _ = self.challenge_hashes[request.quality]
-            plot_sk = PrivateKey.from_bytes(bytes.fromhex(self.config['plots'][filename]['sk']))
+            plot_sk = PrivateKey.from_bytes(bytes.fromhex(self.plot_config['plots'][filename]['sk']))
             farmer_target_signature: PrependSignature = plot_sk.sign_prepend(request.farmer_target_hash)
 
             response: plotter_protocol.RespondPartialProof = plotter_protocol.RespondPartialProof(
