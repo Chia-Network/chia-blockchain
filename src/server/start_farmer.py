@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import signal
 from typing import List
 from blspy import PrivateKey
 from src.farmer import Farmer
@@ -21,12 +22,19 @@ async def main():
                             farmer.config['plotter_peer']['port'])
     full_node_peer = PeerInfo(farmer.config['full_node_peer']['host'],
                               farmer.config['full_node_peer']['port'])
+
+    def signal_received():
+        server.close_all()
+    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
+    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
+
     host, port = parse_host_port(farmer)
     server = ChiaServer(port, farmer, NodeType.FARMER)
 
     async def on_connect():
         # Sends a handshake to the plotter
-        pool_sks: List[PrivateKey] = [PrivateKey.from_bytes(bytes.fromhex(ce)) for ce in farmer.config["pool_sks"]]
+        pool_sks: List[PrivateKey] = [PrivateKey.from_bytes(bytes.fromhex(ce))
+                                      for ce in farmer.key_config["pool_sks"]]
         msg = PlotterHandshake([sk.get_public_key() for sk in pool_sks])
         yield OutboundMessage(NodeType.PLOTTER, Message("plotter_handshake", msg),
                               Delivery.BROADCAST)

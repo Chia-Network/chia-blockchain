@@ -1,10 +1,11 @@
 import logging
 import asyncio
+import os
 from yaml import safe_load
 from hashlib import sha256
 from typing import List, Dict, Set, Tuple, Any
-
 from blspy import PrivateKey, Util, PrependSignature
+from definitions import ROOT_DIR
 from src.util.api_decorators import api_request
 from src.types.proof_of_space import ProofOfSpace
 from src.types.coinbase import CoinbaseInfo
@@ -27,7 +28,12 @@ PLOTTER PROTOCOL (FARMER <-> PLOTTER)
 
 class Farmer:
     def __init__(self):
-        self.config = safe_load(open("src/config/farmer.yaml", "r"))
+        config_filename = os.path.join(ROOT_DIR, "src", "config", "config.yaml")
+        key_config_filename = os.path.join(ROOT_DIR, "src", "config", "keys.yaml")
+        if not os.path.isfile(key_config_filename):
+            raise RuntimeError("Keys not generated. Run ./src/scripts/regenerate_keys.py.")
+        self.config = safe_load(open(config_filename, "r"))["farmer"]
+        self.key_config = safe_load(open(key_config_filename, "r"))
         self.lock = asyncio.Lock()
         self.plotter_responses_header_hash: Dict[bytes32, bytes32] = {}
         self.plotter_responses_challenge: Dict[bytes32, bytes32] = {}
@@ -84,7 +90,8 @@ class Farmer:
         """
 
         async with self.lock:
-            pool_sks: List[PrivateKey] = [PrivateKey.from_bytes(bytes.fromhex(ce)) for ce in self.config["pool_sks"]]
+            pool_sks: List[PrivateKey] = [PrivateKey.from_bytes(bytes.fromhex(ce))
+                                          for ce in self.key_config["pool_sks"]]
             assert response.proof.pool_pubkey in [sk.get_public_key() for sk in pool_sks]
 
             challenge_hash: bytes32 = self.plotter_responses_challenge[response.quality]
@@ -114,7 +121,7 @@ class Farmer:
         if estimate_secs < self.config['pool_share_threshold']:
             request1 = plotter_protocol.RequestPartialProof(response.quality,
                                                             sha256(bytes.fromhex(
-                                                                   self.config['farmer_target'])).digest())
+                                                                   self.key_config['farmer_target'])).digest())
             yield OutboundMessage(NodeType.PLOTTER, Message("request_partial_proof", request1), Delivery.RESPOND)
         if estimate_secs < self.config['propagate_threshold']:
             async with self.lock:
@@ -124,7 +131,7 @@ class Farmer:
 
                 coinbase, signature = self.coinbase_rewards[new_proof_height]
                 request2 = farmer_protocol.RequestHeaderHash(challenge_hash, coinbase, signature,
-                                                             bytes.fromhex(self.config['farmer_target']),
+                                                             bytes.fromhex(self.key_config['farmer_target']),
                                                              response.proof)
 
             yield OutboundMessage(NodeType.FULL_NODE, Message("request_header_hash", request2), Delivery.BROADCAST)
@@ -143,7 +150,6 @@ class Farmer:
             assert response.header_hash_signature.verify([Util.hash256(header_hash)],
                                                          [plot_pubkey])
 
-            # TODO: wait a while if it's a good quality, but not so good.
             pos_hash: bytes32 = proof_of_space.get_hash()
 
         request = farmer_protocol.HeaderSignature(pos_hash, header_hash, response.header_hash_signature)
@@ -157,7 +163,7 @@ class Farmer:
         """
 
         async with self.lock:
-            farmer_target_hash = sha256(bytes.fromhex(self.config['farmer_target'])).digest()
+            farmer_target_hash = sha256(bytes.fromhex(self.key_config['farmer_target'])).digest()
             plot_pubkey = self.plotter_responses_proofs[response.quality].plot_pubkey
 
         assert response.farmer_target_signature.verify([Util.hash256(farmer_target_hash)],
@@ -201,10 +207,10 @@ class Farmer:
                 # TODO: ask the pool for this information
                 coinbase: CoinbaseInfo = CoinbaseInfo(uint32(self.current_height + 1),
                                                       calculate_block_reward(self.current_height),
-                                                      bytes.fromhex(self.config["pool_target"]))
+                                                      bytes.fromhex(self.key_config["pool_target"]))
 
                 pool_sks: List[PrivateKey] = [PrivateKey.from_bytes(bytes.fromhex(ce))
-                                              for ce in self.config["pool_sks"]]
+                                              for ce in self.key_config["pool_sks"]]
                 coinbase_signature: PrependSignature = pool_sks[0].sign_prepend(bytes(coinbase))
                 self.coinbase_rewards[uint32(self.current_height + 1)] = (coinbase, coinbase_signature)
 
@@ -234,13 +240,28 @@ class Farmer:
 
     @api_request
     async def deep_reorg_notification(self, deep_reorg_notification: farmer_protocol.DeepReorgNotification):
-        # TODO: implement
-        # TODO: "forget everything and start over (reset db)"
-        log.error(f"Deep reorg notification not implemented.")
+        """
+        Resets everything. This will be triggered when a long reorg happens, which means blocks of lower
+        height (but greater weight) might come.
+        """
         async with self.lock:
-            pass
+            self.plotter_responses_header_hash = {}
+            self.plotter_responses_challenge = {}
+            self.plotter_responses_proofs = {}
+            self.plotter_responses_proof_hash_to_qual = {}
+            self.challenges = {}
+            self.challenge_to_height = {}
+            self.current_heads = []
+            self.seen_challenges = set()
+            self.unfinished_challenges = {}
+            self.current_height = uint32(0)
+            self.coinbase_rewards = {}
 
     @api_request
     async def proof_of_time_rate(self, proof_of_time_rate: farmer_protocol.ProofOfTimeRate):
+        """
+        Updates our internal etimate of the iterations per second for the fastest proof of time
+        in the network.
+        """
         async with self.lock:
             self.proof_of_time_estimate_ips = proof_of_time_rate.pot_estimate_ips

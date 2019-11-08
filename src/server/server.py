@@ -3,18 +3,13 @@ import asyncio
 import random
 from typing import Tuple, AsyncGenerator, Callable, Optional, List, Any, Dict
 from aiter.server import start_server_aiter
-from aiter.map_aiter import map_aiter
-from aiter.join_aiters import join_aiters
-from aiter.iter_to_aiter import iter_to_aiter
-from aiter.aiter_forker import aiter_forker
-from aiter.push_aiter import push_aiter
+from aiter import push_aiter, map_aiter, join_aiters, iter_to_aiter, aiter_forker
 from src.types.peer_info import PeerInfo
-from src.types.sized_bytes import bytes32
 from src.server.connection import Connection, PeerConnections
 from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
 from src.protocols.shared_protocol import Handshake, HandshakeAck, protocol_version
 from src.util import partial_func
-from src.util.errors import InvalidHandshake, IncompatibleProtocolVersion, DuplicateConnection, InvalidAck
+from src.util.errors import InvalidHandshake, IncompatibleProtocolVersion, InvalidAck
 from src.util.network import create_node_id
 
 exited = False
@@ -31,6 +26,7 @@ class ChiaServer:
 
     # Optional listening server. You can also use this class without starting one.
     _server: Optional[asyncio.AbstractServer] = None
+    _host: Optional[str] = None
 
     # (StreamReader, StreamWriter, NodeType) aiter, gets things from server and clients and
     # sends them through the pipeline
@@ -62,8 +58,9 @@ class ChiaServer:
         connection, the on_connect asynchronous generator will be called, and responses will be sent.
         Whenever a new TCP connection is made, a new srwt tuple is sent through the pipeline.
         """
-        if self._server is not None:
+        if self._server is not None or self._pipeline_task.done():
             return False
+        self._host = host
 
         self._server, aiter = await start_server_aiter(self._port, host=None, reuse_address=True)
         if on_connect is not None:
@@ -86,15 +83,20 @@ class ChiaServer:
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
         An on connect method can also be specified, and this will be saved into the instance variables.
         """
+        if self._server is not None:
+            if self._host == target_node.host and self._port == target_node.port:
+                return False
         total_time: int = 0
         succeeded: bool = False
         for _ in range(0, TOTAL_RETRY_SECONDS, RETRY_INTERVAL):
+            if self._pipeline_task.done():
+                return False
             try:
-                reader, writer = await asyncio.open_connection(target_node.host, target_node.port)
+                reader, writer = await asyncio.open_connection(target_node.host, int(target_node.port))
                 succeeded = True
                 break
-            except ConnectionRefusedError:
-                log.warning(f"Connection to {target_node.host}:{target_node.port} refused.")
+            except (ConnectionRefusedError, TimeoutError, OSError) as e:
+                log.warning(f"{e}. Retrying.")
                 await asyncio.sleep(RETRY_INTERVAL)
                 total_time += RETRY_INTERVAL
                 continue
@@ -183,8 +185,8 @@ class ChiaServer:
                 log.info(f"-> {message.function} to peer {connection.get_peername()}")
                 try:
                     await connection.send(message)
-                except ConnectionResetError:
-                    log.error(f"Cannot write to {connection}, already closed")
+                except (ConnectionResetError, BrokenPipeError) as e:
+                    log.error(f"Cannot write to {connection}, already closed. Error {e}.")
 
         # We will return a task for this, so user of start_chia_server or start_chia_client can wait until
         # the server is closed.

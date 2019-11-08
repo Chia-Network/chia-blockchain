@@ -1,34 +1,45 @@
 # flake8: noqa
 from __future__ import annotations
 import io
+import dataclasses
+import pprint
 from typing import Type, BinaryIO, get_type_hints, Any, List
 from hashlib import sha256
-from blspy import PublicKey, Signature, PrependSignature
+from blspy import (PrivateKey, PublicKey, InsecureSignature, Signature, PrependSignature,
+                   ExtendedPrivateKey, ExtendedPublicKey, ChainCode)
 from src.util.type_checking import strictdataclass, is_type_List, is_type_SpecificOptional
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32
 
+pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
 
 # TODO: Remove hack, this allows streaming these objects from binary
 size_hints = {
+    "PrivateKey": PrivateKey.PRIVATE_KEY_SIZE,
     "PublicKey": PublicKey.PUBLIC_KEY_SIZE,
     "Signature": Signature.SIGNATURE_SIZE,
-    "PrependSignature": PrependSignature.SIGNATURE_SIZE
+    "InsecureSignature": InsecureSignature.SIGNATURE_SIZE,
+    "PrependSignature": PrependSignature.SIGNATURE_SIZE,
+    "ExtendedPublicKey": ExtendedPublicKey.EXTENDED_PUBLIC_KEY_SIZE,
+    "ExtendedPrivateKey": ExtendedPrivateKey.EXTENDED_PRIVATE_KEY_SIZE,
+    "ChainCode": ChainCode.CHAIN_CODE_KEY_SIZE
 }
+unhashable_types = [PrivateKey, PublicKey, Signature, PrependSignature, InsecureSignature,
+                    ExtendedPublicKey, ExtendedPrivateKey, ChainCode]
 
 
 def streamable(cls: Any):
     """
     This is a decorator for class definitions. It applies the strictdataclass decorator,
     which checks all types at construction. It also defines a simple serialization format,
-    and adds parse, from bytes, stream, and serialize methods.
+    and adds parse, from bytes, stream, and __bytes__ methods.
 
     Serialization format:
-    - Each field is serialized in order, by calling parse/serialize.
+    - Each field is serialized in order, by calling from_bytes/__bytes__.
     - For Lists, there is a 4 byte prefix for the list length.
     - For Optionals, there is a one byte prefix, 1 iff object is present, 0 iff not.
 
-    All of the constituents must have parse/from_bytes, and stream/serialize and therefore
+    All of the constituents must have parse/from_bytes, and stream/__bytes__ and therefore
     be of fixed size. For example, int cannot be a constituent since it is not a fixed size,
     whereas uint32 can be.
 
@@ -100,9 +111,6 @@ class Streamable:
             item.stream(f)
         elif hasattr(f_type, "__bytes__"):
             f.write(bytes(item))
-        elif hasattr(f_type, "serialize"):
-            # Useful for blspy objects
-            f.write(item.serialize())
         else:
             raise NotImplementedError(f"can't stream {item}, {f_type}")
 
@@ -122,3 +130,18 @@ class Streamable:
         f = io.BytesIO()
         self.stream(f)
         return bytes(f.getvalue())
+
+    def __str__(self: Any) -> str:
+        return pp.pformat(self.recurse_str(dataclasses.asdict(self)))
+
+    def __repr__(self: Any) -> str:
+        return pp.pformat(self.recurse_str(dataclasses.asdict(self)))
+
+    def recurse_str(self, d):
+        for key, value in d.items():
+            if type(value) in unhashable_types:
+                d[key] = str(value)
+            if isinstance(value, dict):
+                self.recurse_str(value)
+        return d
+

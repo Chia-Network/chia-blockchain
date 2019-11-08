@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import signal
 from src.server.server import ChiaServer
 from src.server.outbound_message import NodeType
 from src.util.network import parse_host_port
@@ -18,11 +19,15 @@ async def main():
     server = ChiaServer(port, plotter, NodeType.PLOTTER)
     _ = await server.start_server(host, None)
 
+    def signal_received():
+        server.close_all()
+    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
+    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
+
     peer_info = PeerInfo(plotter.config['farmer_peer']['host'],
                          plotter.config['farmer_peer']['port'])
 
     _ = await server.start_client(peer_info, None)
-
     await server.await_closed()
 
 asyncio.run(main())

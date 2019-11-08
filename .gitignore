@@ -16,6 +16,11 @@ lib/chiavdf/fast_vdf/vdf_server
 # Flint dependency
 lib/chiavdf/fast_vdf/flint
 
+# Keys and plot files
+src/config/keys.yaml
+src/config/plots.yaml
+
+
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.

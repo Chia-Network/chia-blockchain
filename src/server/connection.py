@@ -1,5 +1,6 @@
 from asyncio import StreamReader, StreamWriter
 import logging
+import time
 from typing import List, Any, Optional
 from src.util import cbor
 from src.server.outbound_message import Message, NodeType
@@ -10,6 +11,11 @@ log = logging.getLogger(__name__)
 
 
 class Connection:
+    """
+    Represents a connection to another node. Local host and port are ours, while peer host and
+    port are the host and port of the peer that we are connected to. Node_id and connection_type are
+    set after the handshake is performed in this connection.
+    """
     def __init__(self, local_type: NodeType, connection_type: Optional[NodeType], sr: StreamReader,
                  sw: StreamWriter, server_port: int):
         self.local_type = local_type
@@ -22,6 +28,11 @@ class Connection:
         self.peer_host, self.peer_port = self.writer.get_extra_info("peername")
         self.node_id = None
 
+        # Connection metrics
+        self.creation_type = time.time()
+        self.bytes_read = 0
+        self.bytes_written = 0
+
     def get_peername(self):
         return self.writer.get_extra_info("peername")
 
@@ -33,12 +44,14 @@ class Connection:
         assert(len(encoded) < (2**(LENGTH_BYTES*8)))
         self.writer.write(len(encoded).to_bytes(LENGTH_BYTES, "big") + encoded)
         await self.writer.drain()
+        self.bytes_written += (LENGTH_BYTES + len(encoded))
 
     async def read_one_message(self) -> Message:
         size = await self.reader.readexactly(LENGTH_BYTES)
         full_message_length = int.from_bytes(size, "big")
         full_message: bytes = await self.reader.readexactly(full_message_length)
         full_message_loaded: Any = cbor.loads(full_message)
+        self.bytes_read += (LENGTH_BYTES + full_message_length)
         return Message(full_message_loaded["f"], full_message_loaded["d"])
 
     def close(self):
