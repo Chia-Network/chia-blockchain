@@ -1,8 +1,0 @@
-# The plotter server will run on this host and port
-host: 127.0.0.1
-port: 8000
-
-farmer_peer:
-  host: 127.0.0.1
-  node_id: 8da6169716e18c4a182940d05063614932f0b161d54b1de0572170649ed69213
-  port: 8001

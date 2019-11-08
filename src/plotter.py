@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 
 class Plotter:
     def __init__(self):
-        plotter_config_filename = os.path.join(ROOT_DIR, "src", "config", "plotter.yaml")
+        config_filename = os.path.join(ROOT_DIR, "src", "config", "config.yaml")
         plot_config_filename = os.path.join(ROOT_DIR, "src", "config", "plots.yaml")
         key_config_filename = os.path.join(ROOT_DIR, "src", "config", "keys.yaml")
 
@@ -29,7 +29,7 @@ class Plotter:
         if not os.path.isfile(plot_config_filename):
             raise RuntimeError("Plots not generated. Run ./src/scripts/create_plots.py.")
 
-        self.config = safe_load(open(plotter_config_filename, "r"))
+        self.config = safe_load(open(config_filename, "r"))["plotter"]
         self.key_config = safe_load(open(key_config_filename, "r"))
         self.plot_config = safe_load(open(plot_config_filename, "r"))
         self.lock: Lock = Lock()

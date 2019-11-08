@@ -183,8 +183,8 @@ class ChiaServer:
                 log.info(f"-> {message.function} to peer {connection.get_peername()}")
                 try:
                     await connection.send(message)
-                except ConnectionResetError:
-                    log.error(f"Cannot write to {connection}, already closed")
+                except (ConnectionResetError, BrokenPipeError) as e:
+                    log.error(f"Cannot write to {connection}, already closed. Error {e}.")
 
         # We will return a task for this, so user of start_chia_server or start_chia_client can wait until
         # the server is closed.

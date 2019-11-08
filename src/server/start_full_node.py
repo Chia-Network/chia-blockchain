@@ -34,6 +34,7 @@ async def main():
     wait_for_ui = None
 
     def master_close_cb():
+        # Called by the UI, when node is closed, or when a signal is sent
         log.info("Closing all connections...")
         server.close_all()
         global server_closed
@@ -41,6 +42,7 @@ async def main():
         log.info("Server closed.")
 
     if "-u" in sys.argv:
+        # Starts the UI if -u is provided
         index = sys.argv.index("-u")
         ui_ssh_port = int(sys.argv[index + 1])
         from src.ui.prompt_ui import start_ssh_server

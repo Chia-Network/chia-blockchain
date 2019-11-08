@@ -103,6 +103,7 @@ class FullNodeUI:
         self.update_task = asyncio.get_running_loop().create_task(self.update())
 
     def close(self):
+        # Closes this instance of the UI
         if not self.closed:
             self.closed = True
             self.route = "home/"
@@ -110,6 +111,8 @@ class FullNodeUI:
                 self.app.exit(0)
 
     def stop(self):
+        # Closes this instance of the UI, and call parent close, which closes
+        # all other instances, and shuts down the full node.
         self.close()
         self.parent_close_cb()
 

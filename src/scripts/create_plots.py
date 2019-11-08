@@ -16,7 +16,7 @@ key_config_filename = os.path.join(ROOT_DIR, "src", "config", "keys.yaml")
 
 def main():
     """
-    Script for creating plots and adding them to the plotter's config.
+    Script for creating plots and adding them to the plot config file.
     """
 
     parser = argparse.ArgumentParser(
