@@ -5,9 +5,14 @@ port: 8003
 # of the proofs.
 n_wesolowski: 2
 
-# VDF servers must be started locally on these ports.
+vdf_server_ips:
+  - "127.0.0.1"
+  - "127.0.0.1"
+
+# VDF servers must be started locally on these ports. 
 vdf_server_ports:
   - 8889
+  - 8890
 
 full_node_peer:
     host: "127.0.0.1"
