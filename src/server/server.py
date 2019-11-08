@@ -5,7 +5,6 @@ from typing import Tuple, AsyncGenerator, Callable, Optional, List, Any, Dict
 from aiter.server import start_server_aiter
 from aiter import push_aiter, map_aiter, join_aiters, iter_to_aiter, aiter_forker
 from src.types.peer_info import PeerInfo
-from src.types.sized_bytes import bytes32
 from src.server.connection import Connection, PeerConnections
 from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
 from src.protocols.shared_protocol import Handshake, HandshakeAck, protocol_version
@@ -40,7 +39,7 @@ class ChiaServer:
     _outbound_aiter: push_aiter
 
     # These will get called after a handshake is performed
-    _on_connect_callbacks: Dict[bytes32, Callable] = {}
+    _on_connect_callbacks: Dict[PeerInfo, Callable] = {}
     _on_connect_generic_callback: Optional[Callable] = None
 
     def __init__(self, port: int, api: Any, local_type: NodeType):
@@ -50,6 +49,7 @@ class ChiaServer:
         self._srwt_aiter = push_aiter()
         self._outbound_aiter = push_aiter()
         self._pipeline_task = self.initialize_pipeline(self._srwt_aiter, self._api, self._port)
+        self._node_id = create_node_id()
 
     async def start_server(self, host: str,
                            on_connect: Optional[Callable[[], AsyncGenerator[OutboundMessage, None]]] = None) -> bool:
@@ -58,7 +58,7 @@ class ChiaServer:
         connection, the on_connect asynchronous generator will be called, and responses will be sent.
         Whenever a new TCP connection is made, a new srwt tuple is sent through the pipeline.
         """
-        if self._server is not None:
+        if self._server is not None or self._pipeline_task.done():
             return False
         self._host = host
 
@@ -89,6 +89,8 @@ class ChiaServer:
         total_time: int = 0
         succeeded: bool = False
         for _ in range(0, TOTAL_RETRY_SECONDS, RETRY_INTERVAL):
+            if self._pipeline_task.done():
+                return False
             try:
                 reader, writer = await asyncio.open_connection(target_node.host, int(target_node.port))
                 succeeded = True
@@ -102,7 +104,7 @@ class ChiaServer:
         if not succeeded:
             return False
         if on_connect is not None:
-            self._on_connect_callbacks[target_node.node_id] = on_connect
+            self._on_connect_callbacks[target_node] = on_connect
         asyncio.create_task(self._add_to_srwt_aiter(iter_to_aiter([(reader, writer)])))
         return True
 
@@ -208,8 +210,9 @@ class ChiaServer:
         """
         Async generator which calls the on_connect async generator method, and yields any outbound messages.
         """
-        if connection.node_id in self._on_connect_callbacks:
-            on_connect = self._on_connect_callbacks[connection.node_id]
+        peer = PeerInfo(connection.peer_host, connection.peer_port)
+        if peer in self._on_connect_callbacks:
+            on_connect = self._on_connect_callbacks[peer]
             async for outbound_message in on_connect():
                 yield connection, outbound_message
         if self._on_connect_generic_callback:
@@ -223,8 +226,7 @@ class ChiaServer:
         and nothing is yielded.
         """
         # Send handshake message
-        node_id: bytes32 = create_node_id(connection.local_host, connection.local_port, connection.local_type)
-        outbound_handshake = Message("handshake", Handshake(protocol_version, node_id, self._local_type))
+        outbound_handshake = Message("handshake", Handshake(protocol_version, self._node_id, self._local_type))
 
         try:
             await connection.send(outbound_handshake)

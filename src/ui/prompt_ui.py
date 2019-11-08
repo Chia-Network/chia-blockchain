@@ -40,13 +40,15 @@ def start_ssh_server(store: FullNodeStore, blockchain: Blockchain, server: ChiaS
     returns a coroutine that can be awaited, which returns when all ui instances have been closed.
     """
     uis = []  # type: ignore
+    permenantly_closed = False
 
-    def intermediate_close_cb():
+    def ui_close_cb():
         log.info("Closing all connected UIs")
-        nonlocal uis
+        nonlocal uis, permenantly_closed
         for ui in uis:
             ui.close()
         close_cb()
+        permenantly_closed = True
 
     async def await_all_closed():
         nonlocal uis
@@ -56,8 +58,10 @@ def start_ssh_server(store: FullNodeStore, blockchain: Blockchain, server: ChiaS
             uis = uis[1:]
 
     async def interact() -> None:
-        nonlocal uis
-        ui = FullNodeUI(store, blockchain, server, port, intermediate_close_cb)
+        nonlocal uis, permenantly_closed
+        if permenantly_closed:
+            return
+        ui = FullNodeUI(store, blockchain, server, port, ui_close_cb)
         assert ui.app
         uis.append(ui)
         await ui.app.run_async()
@@ -68,7 +72,7 @@ def start_ssh_server(store: FullNodeStore, blockchain: Blockchain, server: ChiaS
         ssh_port,
         server_host_keys=[ssh_key_filename],
     ))
-    return await_all_closed
+    return await_all_closed, ui_close_cb
 
 
 class FullNodeUI:

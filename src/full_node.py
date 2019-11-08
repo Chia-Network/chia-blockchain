@@ -102,17 +102,6 @@ class FullNode:
             request = peer_protocol.Block(block)
             yield OutboundMessage(NodeType.FULL_NODE, Message("block", request), Delivery.RESPOND)
 
-        # Sleep until we're out of sync mode
-        while True:
-            async with (await self.store.get_lock()):
-                if not (await self.store.get_sync_mode()):
-                    break
-            await asyncio.sleep(5)
-        async for msg in self.send_heads_to_farmers():
-            yield msg
-        async for msg in self.send_challenges_to_timelords():
-            yield msg
-
     async def sync(self):
         """
         Performs a full sync of the blockchain.
@@ -175,13 +164,12 @@ class FullNode:
                 if received_all_trunks:
                     trunks = local_trunks
                     break
-        log.error("Got to this part in sync")
-        # breakpoint()
+        log.error(f"Downloaded trunks up to tip height: {tip_height}")
         if not verify_weight(tip_block.trunk_block, trunks):
             # TODO: ban peers that provided the invalid heads or proofs
             raise errors.InvalidWeight(f"Weight of {tip_block.trunk_block.header.get_hash()} not valid.")
 
-        log.error(f"Downloaded trunks up to tip height: {tip_height}")
+        log.error(f"Validated weight of trunks.")
         assert tip_height + 1 == len(trunks)
 
         async with (await self.store.get_lock()):
@@ -230,7 +218,7 @@ class FullNode:
                 await self.store.set_proof_of_time_estimate_ips(await self.blockchain.get_next_ips(block.header_hash))
 
         async with (await self.store.get_lock()):
-            log.info(f"Finishead sync up to height {tip_height}")
+            log.info(f"Finished sync up to height {tip_height}")
             await self.store.set_sync_mode(False)
             await self.store.clear_sync_information()
 

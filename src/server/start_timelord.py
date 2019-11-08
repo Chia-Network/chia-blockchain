@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import signal
+import sys
 from src.types.peer_info import PeerInfo
 from src.server.server import ChiaServer
 from src.server.outbound_message import NodeType
@@ -18,9 +20,14 @@ async def main():
     server = ChiaServer(port, timelord, NodeType.TIMELORD)
     _ = await server.start_server(host, None)
 
+    def signal_received():
+        server.close_all()
+        sys.exit()
+    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
+    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
+
     full_node_peer = PeerInfo(timelord.config['full_node_peer']['host'],
-                              timelord.config['full_node_peer']['port'],
-                              bytes.fromhex(timelord.config['full_node_peer']['node_id']))
+                              timelord.config['full_node_peer']['port'])
 
     await server.start_client(full_node_peer, None)
 
