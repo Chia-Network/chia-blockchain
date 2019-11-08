@@ -282,6 +282,5 @@ class BlockTools:
 # This code generates a genesis block, uncomment to output genesis block to terminal
 # This might take a while, using the python VDF implementation.
 # Run by doing python -m tests.block_tools
-bt = BlockTools()
+# bt = BlockTools()
 # print(bytes(bt.create_genesis_block({}, bytes([1]*32), b'0')))
-print(bt.create_genesis_block({"DIFFICULTY_STARTING": 10}, bytes([1]*32), b'0'))

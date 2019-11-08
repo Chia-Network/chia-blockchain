@@ -48,7 +48,10 @@ class Plotter:
         use any plots which don't have one of the pool keys.
         """
         for partial_filename, plot_config in self.plot_config['plots'].items():
-            filename = os.path.join(ROOT_DIR, "plots", partial_filename)
+            if "plot_root" in self.config:
+                filename = os.path.join(self.config["plot_root"], partial_filename)
+            else:
+                filename = os.path.join(ROOT_DIR, "plots", partial_filename)
             pool_pubkey = PublicKey.from_bytes(bytes.fromhex(plot_config['pool_pk']))
 
             # Only use plots that correct pools associated with them

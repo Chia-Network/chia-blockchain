@@ -214,7 +214,6 @@ class FullNode:
                     raise RuntimeError(f"Invalid block {block.header_hash}")
                 log.info(f"Took {time.time() - start} seconds to validate and add block {block.height}.")
                 assert max([h.height for h in self.blockchain.get_current_heads()]) >= height
-                # db.full_blocks[block.trunk_block.header.get_hash()] = block
                 await self.store.set_proof_of_time_estimate_ips(await self.blockchain.get_next_ips(block.header_hash))
 
         async with (await self.store.get_lock()):
