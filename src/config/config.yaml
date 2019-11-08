@@ -5,6 +5,8 @@ plotter:
   farmer_peer:
     host: 127.0.0.1
     port: 8001
+  # Location of all the plots
+  # plot_root: "/mnt/pos"
 
 farmer:
   # The farmer server (if run) will run on this host and port

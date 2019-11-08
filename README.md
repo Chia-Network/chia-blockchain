@@ -22,7 +22,7 @@ sh install.sh
 ### Generate keys
 First, create some keys by running the following script:
 ```bash
-python -m src.scrips.regenerate_keys
+python -m src.scripts.regenerate_keys
 ```
 
 ### Run a full node
@@ -58,21 +58,18 @@ Configuration of peers can be changed in src/config/config.yaml.
 You can also run the simulation, which runs all servers and multiple full nodes, at once.
 
 ```bash
-./src/scripts/simulate_network.sh
+sh ./src/scripts/simulate_network.sh
 ```
 
-### Run tests
+### Run tests and linting
 The first time the tests are run, BlockTools will create and persist many plots. These are used for creating
 proofs of space during testing. The next time tests are run, this won't be necessary.
 ```bash
 py.test tests -s -v
-```
-
-### Run linting
-```bash
 flake8 src
 mypy src tests
 ```
+
 
 ### Configure VS code
 1. Install Python extension
