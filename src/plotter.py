@@ -3,7 +3,6 @@ import os
 import os.path
 from definitions import ROOT_DIR
 from yaml import safe_load
-from asyncio import Lock
 from typing import Dict, Tuple, Optional
 from blspy import PrivateKey, PublicKey, PrependSignature, Util
 from chiapos import DiskProver
@@ -32,7 +31,6 @@ class Plotter:
         self.config = safe_load(open(config_filename, "r"))["plotter"]
         self.key_config = safe_load(open(key_config_filename, "r"))
         self.plot_config = safe_load(open(plot_config_filename, "r"))
-        self.lock: Lock = Lock()
 
         # From filename to prover
         self.provers: Dict[str, DiskProver] = {}
@@ -57,8 +55,7 @@ class Plotter:
             # Only use plots that correct pools associated with them
             if pool_pubkey in plotter_handshake.pool_pubkeys:
                 if os.path.isfile(filename):
-                    async with self.lock:
-                        self.provers[partial_filename] = DiskProver(filename)
+                    self.provers[partial_filename] = DiskProver(filename)
                 else:
                     log.warn(f"Plot at {filename} does not exist.")
 
@@ -75,26 +72,23 @@ class Plotter:
 
         if len(new_challenge.challenge_hash) != 32:
             raise ValueError("Invalid challenge size")
-
         all_responses = []
-        async with self.lock:
-            for filename, prover in self.provers.items():
-                try:
-                    quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
-                except RuntimeError:
-                    log.warning("Error using prover object. Reinitializing prover object.")
-                    self.provers[filename] = DiskProver(filename)
-                    quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
-                for index, quality_str in enumerate(quality_strings):
-                    quality = ProofOfSpace.quality_str_to_quality(new_challenge.challenge_hash, quality_str)
-                    self.challenge_hashes[quality] = (new_challenge.challenge_hash, filename, uint8(index))
-                    response: plotter_protocol.ChallengeResponse = plotter_protocol.ChallengeResponse(
-                        new_challenge.challenge_hash,
-                        quality,
-                        prover.get_size()
-                    )
-                    all_responses.append(response)
-
+        for filename, prover in self.provers.items():
+            try:
+                quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
+            except RuntimeError:
+                log.warning("Error using prover object. Reinitializing prover object.")
+                self.provers[filename] = DiskProver(filename)
+                quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
+            for index, quality_str in enumerate(quality_strings):
+                quality = ProofOfSpace.quality_str_to_quality(new_challenge.challenge_hash, quality_str)
+                self.challenge_hashes[quality] = (new_challenge.challenge_hash, filename, uint8(index))
+                response: plotter_protocol.ChallengeResponse = plotter_protocol.ChallengeResponse(
+                    new_challenge.challenge_hash,
+                    quality,
+                    prover.get_size()
+                )
+                all_responses.append(response)
         for response in all_responses:
             yield OutboundMessage(NodeType.FARMER, Message("challenge_response", response), Delivery.RESPOND)
 
@@ -105,33 +99,32 @@ class Plotter:
         We look up the correct plot based on the quality, lookup the proof, and return it.
         """
         response: Optional[plotter_protocol.RespondProofOfSpace] = None
-        async with self.lock:
+        try:
+            # Using the quality find the right plot and index from our solutions
+            challenge_hash, filename, index = self.challenge_hashes[request.quality]
+        except KeyError:
+            log.warning(f"Quality {request.quality} not found")
+            return
+        if index is not None:
+            proof_xs: bytes
             try:
-                # Using the quality find the right plot and index from our solutions
-                challenge_hash, filename, index = self.challenge_hashes[request.quality]
-            except KeyError:
-                log.warning(f"Quality {request.quality} not found")
-                return
-            if index is not None:
-                proof_xs: bytes
-                try:
-                    proof_xs = self.provers[filename].get_full_proof(challenge_hash, index)
-                except RuntimeError:
-                    self.provers[filename] = DiskProver(filename)
-                    proof_xs = self.provers[filename].get_full_proof(challenge_hash, index)
+                proof_xs = self.provers[filename].get_full_proof(challenge_hash, index)
+            except RuntimeError:
+                self.provers[filename] = DiskProver(filename)
+                proof_xs = self.provers[filename].get_full_proof(challenge_hash, index)
 
-                pool_pubkey = PublicKey.from_bytes(bytes.fromhex(self.plot_config['plots'][filename]['pool_pk']))
-                plot_pubkey = PrivateKey.from_bytes(bytes.fromhex(self.plot_config['plots'][filename]['sk'])) \
-                    .get_public_key()
-                proof_of_space: ProofOfSpace = ProofOfSpace(pool_pubkey,
-                                                            plot_pubkey,
-                                                            uint8(self.provers[filename].get_size()),
-                                                            [uint8(b) for b in proof_xs])
+            pool_pubkey = PublicKey.from_bytes(bytes.fromhex(self.plot_config['plots'][filename]['pool_pk']))
+            plot_pubkey = PrivateKey.from_bytes(bytes.fromhex(self.plot_config['plots'][filename]['sk'])) \
+                .get_public_key()
+            proof_of_space: ProofOfSpace = ProofOfSpace(pool_pubkey,
+                                                        plot_pubkey,
+                                                        uint8(self.provers[filename].get_size()),
+                                                        [uint8(b) for b in proof_xs])
 
-                response = plotter_protocol.RespondProofOfSpace(
-                    request.quality,
-                    proof_of_space
-                )
+            response = plotter_protocol.RespondProofOfSpace(
+                request.quality,
+                proof_of_space
+            )
         if response:
             yield OutboundMessage(NodeType.FARMER, Message("respond_proof_of_space", response), Delivery.RESPOND)
 
@@ -142,8 +135,7 @@ class Plotter:
         A signature is created on the header hash using the plot private key.
         """
 
-        async with self.lock:
-            _, filename, _ = self.challenge_hashes[request.quality]
+        _, filename, _ = self.challenge_hashes[request.quality]
 
         plot_sk = PrivateKey.from_bytes(bytes.fromhex(self.plot_config['plots'][filename]['sk']))
         header_hash_signature: PrependSignature = plot_sk.sign_prepend(request.header_hash)
@@ -162,13 +154,12 @@ class Plotter:
         We look up the correct plot based on the quality, lookup the proof, and sign
         the farmer target hash using the plot private key. This will be used as a pool share.
         """
-        async with self.lock:
-            _, filename, _ = self.challenge_hashes[request.quality]
-            plot_sk = PrivateKey.from_bytes(bytes.fromhex(self.plot_config['plots'][filename]['sk']))
-            farmer_target_signature: PrependSignature = plot_sk.sign_prepend(request.farmer_target_hash)
+        _, filename, _ = self.challenge_hashes[request.quality]
+        plot_sk = PrivateKey.from_bytes(bytes.fromhex(self.plot_config['plots'][filename]['sk']))
+        farmer_target_signature: PrependSignature = plot_sk.sign_prepend(request.farmer_target_hash)
 
-            response: plotter_protocol.RespondPartialProof = plotter_protocol.RespondPartialProof(
-                request.quality,
-                farmer_target_signature
-            )
+        response: plotter_protocol.RespondPartialProof = plotter_protocol.RespondPartialProof(
+            request.quality,
+            farmer_target_signature
+        )
         yield OutboundMessage(NodeType.FARMER, Message("respond_partial_proof", response), Delivery.RESPOND)

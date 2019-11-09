@@ -209,7 +209,7 @@ class FullNodeUI:
         except ValueError:  # Not yet in layout
             self.error_msg.text = "Enter a valid IP and port in the following format: 10.5.4.3:8000"
             return
-        target_node: PeerInfo = PeerInfo(ip, uint32(int(port)), bytes32(bytes([0]*32)))
+        target_node: PeerInfo = PeerInfo(ip, uint32(int(port)))
         log.error(f"Want to connect to {ip}, {port}")
         if not (await self.node_server.start_client(target_node, None)):
             self.error_msg.text = f"Failed to connect to {ip}:{port}"
