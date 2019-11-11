@@ -24,6 +24,8 @@ async def main():
 
     await server.start_client(full_node_peer, None)
 
+    asyncio.create_task(timelord.manage_discriminant_queue())
+
     await server.await_closed()
 
 asyncio.run(main())

@@ -32,12 +32,30 @@ class Timelord:
         self.best_height_three_proofs: int = -1
         self.active_discriminants_start_time: Dict = {}
         self.pending_iters: Dict = {}
+        self.discriminant_to_server: Dict = {}
         self.done_discriminants: List[bytes32] = []
         self.seen_discriminants: List[bytes32] = []
         self.proof_count: Dict = {}
         self.avg_ips: Dict = {}
-        self.active_heights: List[uint32] = []
+        self.discriminant_queue: List[bytes32, uint32] = []
 
+    async def manage_discriminant_queue(self):
+        while(True):                
+            async with self.lock:
+                if (len(self.discriminant_queue) > 0):
+                    max_height = max([h for _, h in self.discriminant_queue])
+                    if (max_height <= self.best_height_three_proofs):
+                        self.done_discriminants.extend([d for d, _ in self.discriminant_queue])
+                        self.discriminant_queue.clear()
+                    else:
+                        disc = next(d for d, h in self.discriminant_queue if h == max_height)
+                        if (len(self.free_servers) != 0):
+                            ip, port = self.free_servers[0]
+                            self.free_servers = self.free_servers[1:]
+                            self.discriminant_to_server[disc] = (ip, port)
+                            self.discriminant_queue.remove((disc, max_height))
+            await asyncio.sleep(0.5)
+            
     @api_request
     async def challenge_start(self, challenge_start: timelord_protocol.ChallengeStart):
         """
@@ -52,7 +70,7 @@ class Timelord:
                 log.info(f"Already seen this challenge hash {challenge_start.challenge_hash}. Ignoring.")
                 return
             self.seen_discriminants.append(challenge_start.challenge_hash)
-            self.active_heights.append(challenge_start.height)
+            self.discriminant_queue.append((challenge_start.challenge_hash, challenge_start.height))
 
         async with self.lock:
             if (challenge_start.height <= self.best_height_three_proofs):
@@ -91,28 +109,15 @@ class Timelord:
                 del self.active_discriminants_start_time[stop_discriminant]
                 self.done_discriminants.append(stop_discriminant)
 
-        # Wait for a server to become free.
-        ip: Optional[str] = None
-        port: Optional[str] = None
-        while port == None:
+        while (True):
             async with self.lock:
-                if (challenge_start.height <= max(self.active_heights) - 3):
-                    self.done_discriminants.append(challenge_start.challenge_hash)
-                    self.active_heights.remove(challenge_start.height)
-                    log.info(f"Will not execute challenge at height {challenge_start}, too old")
+                if (challenge_start.challenge_hash in self.discriminant_to_server):
+                    ip, port = self.discriminant_to_server[challenge_start.challenge_hash]
+                    log.info(f"New discriminant got attached to port: {port}, ip: {ip}")
+                    break
+                if (challenge_start.challenge_hash in self.done_discriminants):
                     return
-                assert(len(self.active_heights) > 0)
-                if (challenge_start.height == max(self.active_heights)):
-                    if (len(self.free_servers) != 0):
-                        ip, port = self.free_servers[0]
-                        self.free_servers = self.free_servers[1:]
-                        log.info(f"Discriminant {str(disc)[:10]}... attached to machine {port}.")
-                        log.info(f"Challenge/Height attached is {challenge_start}")
-                        self.active_heights.remove(challenge_start.height)
-
-            # Poll until a server becomes free.
-            if port == None:
-                await asyncio.sleep(0.5)
+            await asyncio.sleep(0.5)
 
         log.info("Attempting SSH connection")
         #proc = await asyncio.create_subprocess_shell(f"ssh chia@{ip} '~/fast_vdf2/server {port} 2>&1 | tee -a ~/logs.txt'")
@@ -163,11 +168,12 @@ class Timelord:
                     self.free_servers.append((ip, port))
                     len_server = len(self.free_servers)
                     log.info(f"Process ended... Server length {len_server}")
+                    del self.discriminant_to_server[challenge_start.challenge_hash]
                 break
             elif (data.decode() == "POLL"):
                 async with self.lock:
                     # If I have a newer discriminant... Free up the VDF server
-                    if (len(self.active_heights) > 0 and challenge_start.height <= max(self.active_heights)
+                    if (len(self.discriminant_queue) > 0 and challenge_start.height < max([h for _, h in self.discriminant_queue])
                             and challenge_start.challenge_hash in self.active_discriminants):
                         log.info("Got poll, stopping the challenge!")
                         writer.write(b'10')
