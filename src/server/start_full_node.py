@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import sys
+import signal
 from src.full_node import FullNode
 from src.server.server import ChiaServer
 from src.util.network import parse_host_port
@@ -31,21 +32,29 @@ async def main():
     host, port = parse_host_port(full_node)
     server = ChiaServer(port, full_node, NodeType.FULL_NODE)
     _ = await server.start_server(host, full_node.on_connect)
-    ui = None
+    wait_for_ui, ui_close_cb = None, None
 
     def master_close_cb():
-        log.info("Closing all connections...")
+        # Called by the UI, when node is closed, or when a signal is sent
+        log.info("Closing all connections, and server...")
         server.close_all()
         global server_closed
         server_closed = True
-        log.info("Server closed.")
+
+    def signal_received():
+        if ui_close_cb:
+            ui_close_cb()
+        master_close_cb()
+    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
+    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
 
     if "-u" in sys.argv:
+        # Starts the UI if -u is provided
         index = sys.argv.index("-u")
         ui_ssh_port = int(sys.argv[index + 1])
-        from src.ui.prompt_ui import FullNodeUI
-        ui = FullNodeUI(store, blockchain, server.global_connections, port, ui_ssh_port,
-                        full_node.config['ssh_filename'], master_close_cb)
+        from src.ui.prompt_ui import start_ssh_server
+        wait_for_ui, ui_close_cb = start_ssh_server(store, blockchain, server, port, ui_ssh_port,
+                                                    full_node.config['ssh_filename'], master_close_cb)
 
     connect_to_farmer = ("-f" in sys.argv)
     connect_to_timelord = ("-t" in sys.argv)
@@ -53,36 +62,50 @@ async def main():
     peer_tasks = []
     for peer in full_node.config['initial_peers']:
         if not (host == peer['host'] and port == peer['port']):
-            peer_tasks.append(server.start_client(PeerInfo(peer['host'], peer['port'], bytes.fromhex(peer['node_id'])),
-                                                  full_node.on_connect))
+            peer_tasks.append(server.start_client(PeerInfo(peer['host'], peer['port']),
+                                                  None))
     await asyncio.gather(*peer_tasks)
 
     log.info("Waiting to connect to some peers...")
     await asyncio.sleep(3)
 
-    if server_closed:
-        return
-
     log.info(f"Connected to {len(server.global_connections.get_connections())} peers.")
+    if not server_closed:
+        try:
+            async for msg in full_node.sync():
+                if server_closed:
+                    print("Break")
+                    break
+                server.push_message(msg)
+        except BaseException as e:
+            log.error(f"Error syncing {type(e)}: {e}")
+            signal_received()
 
-    async for msg in full_node.sync():
-        server.push_message(msg)
-
-    if connect_to_farmer:
+    if connect_to_farmer and not server_closed:
         peer_info = PeerInfo(full_node.config['farmer_peer']['host'],
-                             full_node.config['farmer_peer']['port'],
-                             bytes.fromhex(full_node.config['farmer_peer']['node_id']))
+                             full_node.config['farmer_peer']['port'])
         _ = await server.start_client(peer_info, None)
+        async for msg in full_node.send_heads_to_farmers():
+            if server_closed:
+                break
+            server.push_message(msg)
 
-    if connect_to_timelord:
+    if connect_to_timelord and not server_closed:
         peer_info = PeerInfo(full_node.config['timelord_peer']['host'],
-                             full_node.config['timelord_peer']['port'],
-                             bytes.fromhex(full_node.config['timelord_peer']['node_id']))
+                             full_node.config['timelord_peer']['port'])
         _ = await server.start_client(peer_info, None)
+        async for msg in full_node.send_challenges_to_timelords():
+            if server_closed:
+                break
+            server.push_message(msg)
 
+    # Awaits for server and all connections to close
     await server.await_closed()
-    if ui is not None:
-        await ui.await_closed()
+
+    # Awaits for all ui instances to close
+    if wait_for_ui is not None:
+        await wait_for_ui()
+    await asyncio.get_running_loop().shutdown_asyncgens()
 
 
 asyncio.run(main())

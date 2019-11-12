@@ -37,8 +37,8 @@ plot_sks: List[PrivateKey] = [PrivateKey.from_seed(pn.to_bytes(4, "big")) for pn
 plot_pks: List[PublicKey] = [sk.get_public_key() for sk in plot_sks]
 
 farmer_sk: PrivateKey = PrivateKey.from_seed(b'coinbase')
-coinbase_target = sha256(farmer_sk.get_public_key().serialize()).digest()
-fee_target = sha256(farmer_sk.get_public_key().serialize()).digest()
+coinbase_target = sha256(bytes(farmer_sk.get_public_key())).digest()
+fee_target = sha256(bytes(farmer_sk.get_public_key())).digest()
 n_wesolowski = uint8(3)
 
 
@@ -52,15 +52,16 @@ class BlockTools:
         self.filenames: List[str] = [os.path.join("tests", "plots", "genesis-plots-" + str(k) +
                                                            sha256(int.to_bytes(i, 4, "big")).digest().hex() + ".dat")
                                      for i in range(num_plots)]
-
+        done_filenames = set()
         try:
             for pn, filename in enumerate(self.filenames):
                 if not os.path.exists(filename):
                     plotter = DiskPlotter()
                     plotter.create_plot_disk(filename, k, b"genesis", plot_seeds[pn])
+                    done_filenames.add(filename)
         except KeyboardInterrupt:
             for filename in self.filenames:
-                if os.path.exists(filename):
+                if filename not in done_filenames and os.path.exists(filename):
                     os.remove(filename)
             sys.exit(1)
 
