@@ -2,6 +2,7 @@ import logging
 import time
 import asyncio
 import yaml
+import os
 import concurrent
 from secrets import token_bytes
 from hashlib import sha256
@@ -9,6 +10,7 @@ from chiapos import Verifier
 from blspy import Signature, PrivateKey
 from asyncio import Event
 from typing import List, Optional, AsyncGenerator, Tuple
+from definitions import ROOT_DIR
 from src.util.api_decorators import api_request
 from src.util.ints import uint64, uint32
 from src.util import errors
@@ -37,9 +39,10 @@ log = logging.getLogger(__name__)
 class FullNode:
     store: FullNodeStore
     blockchain: Blockchain
-    config = yaml.safe_load(open("src/config/full_node.yaml", "r"))
 
     def __init__(self, store: FullNodeStore, blockchain: Blockchain):
+        config_filename = os.path.join(ROOT_DIR, "src", "config", "config.yaml")
+        self.config = yaml.safe_load(open(config_filename, "r"))["full_node"]
         self.store = store
         self.blockchain = blockchain
 
@@ -98,17 +101,6 @@ class FullNode:
         for block in blocks:
             request = peer_protocol.Block(block)
             yield OutboundMessage(NodeType.FULL_NODE, Message("block", request), Delivery.RESPOND)
-
-        # Sleep until we're out of sync mode
-        while True:
-            async with (await self.store.get_lock()):
-                if not (await self.store.get_sync_mode()):
-                    break
-            await asyncio.sleep(5)
-        async for msg in self.send_heads_to_farmers():
-            yield msg
-        async for msg in self.send_challenges_to_timelords():
-            yield msg
 
     async def sync(self):
         """
@@ -172,12 +164,12 @@ class FullNode:
                 if received_all_trunks:
                     trunks = local_trunks
                     break
+        log.error(f"Downloaded trunks up to tip height: {tip_height}")
         if not verify_weight(tip_block.trunk_block, trunks):
             # TODO: ban peers that provided the invalid heads or proofs
             raise errors.InvalidWeight(f"Weight of {tip_block.trunk_block.header.get_hash()} not valid.")
 
-        log.error(f"Downloaded trunks up to tip height: {tip_height}")
-        log.error(f"Tip height: {len(trunks)}")
+        log.error(f"Validated weight of trunks.")
         assert tip_height + 1 == len(trunks)
 
         async with (await self.store.get_lock()):
@@ -217,14 +209,15 @@ class FullNode:
                 assert block
 
                 start = time.time()
-                await self.blockchain.receive_block(block)
-                log.info(f"Took {time.time() - start}")
+                result = await self.blockchain.receive_block(block)
+                if result == ReceiveBlockResult.INVALID_BLOCK or result == ReceiveBlockResult.DISCONNECTED_BLOCK:
+                    raise RuntimeError(f"Invalid block {block.header_hash}")
+                log.info(f"Took {time.time() - start} seconds to validate and add block {block.height}.")
                 assert max([h.height for h in self.blockchain.get_current_heads()]) >= height
-                # db.full_blocks[block.trunk_block.header.get_hash()] = block
                 await self.store.set_proof_of_time_estimate_ips(await self.blockchain.get_next_ips(block.header_hash))
 
         async with (await self.store.get_lock()):
-            log.info(f"Finishead sync up to height {tip_height}")
+            log.info(f"Finished sync up to height {tip_height}")
             await self.store.set_sync_mode(False)
             await self.store.clear_sync_information()
 
@@ -237,15 +230,11 @@ class FullNode:
         if len(request.heights) > self.config['max_trunks_to_send']:
             raise errors.TooManyTrunksRequested(f"The max number of trunks is {self.config['max_trunks_to_send']},\
                                                 but requested {len(request.heights)}")
-        log.info("Getting lock")
         async with (await self.store.get_lock()):
             try:
-                log.info("Getting trunks")
                 trunks: List[TrunkBlock] = await self.blockchain.get_trunk_blocks_by_height(request.heights,
                                                                                             request.tip_header_hash)
-                log.info("Got trunks")
             except KeyError:
-                log.info("Do not have required blocks")
                 return
             except BlockNotInBlockchain as e:
                 log.info(f"{e}")
@@ -464,7 +453,6 @@ class FullNode:
             async for msg in self.proof_of_time_finished(request):
                 yield msg
         if propagate_proof:
-            # TODO: perhaps don't propagate everything, this is a DoS vector
             yield OutboundMessage(NodeType.FULL_NODE, Message("new_proof_of_time", new_proof_of_time),
                                   Delivery.BROADCAST_TO_OTHERS)
 
@@ -550,16 +538,19 @@ class FullNode:
                 await self.store.add_potential_head(header_hash)
                 await self.store.add_potential_heads_full_block(block.block)
                 return
+            # Record our minimum height, and whether we have a full set of heads
+            least_height: uint32 = min([h.height for h in self.blockchain.get_current_heads()])
+            full_heads: bool = len(self.blockchain.get_current_heads()) == constants["NUMBER_OF_HEADS"]
 
+            # Tries to add the block to the blockchain
             added: ReceiveBlockResult = await self.blockchain.receive_block(block.block)
-
         if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return
         elif added == ReceiveBlockResult.INVALID_BLOCK:
             log.warning(f"Block {header_hash} at height {block.block.height} is invalid.")
             return
         elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
-            log.warning(f"Disconnected block")
+            log.warning(f"Disconnected block {header_hash}")
             async with (await self.store.get_lock()):
                 tip_height = max([head.height for head in self.blockchain.get_current_heads()])
             if block.block.height > tip_height + self.config["sync_blocks_behind_threshold"]:
@@ -578,9 +569,12 @@ class FullNode:
                 except asyncio.CancelledError:
                     log.warning("Syncing failed, CancelledError")
                 except BaseException as e:
-                    log.warning(f"Error {e} with syncing")
+                    log.warning(f"Error {type(e)}{e} with syncing")
                 finally:
-                    return
+                    async with (await self.store.get_lock()):
+                        await self.store.set_sync_mode(False)
+                        await self.store.clear_sync_information()
+                        return
 
             elif block.block.height > tip_height + 1:
                 log.info(f"We are a few blocks behind, our height is {tip_height} and block is at "
@@ -591,10 +585,13 @@ class FullNode:
                     break
             return
         elif added == ReceiveBlockResult.ADDED_TO_HEAD:
-            # Only propagate blocks which extend the blockchain (one of the heads)
+            # Only propagate blocks which extend the blockchain (becomes one of the heads)
+            # A deep reorg happens can be deteceted when we add a block to the heads, that has a worse
+            # height than the worst one (assuming we had a full set of heads).
+            deep_reorg: bool = (block.block.height < least_height) and full_heads
             ips_changed: bool = False
             async with (await self.store.get_lock()):
-                log.info(f"\tUpdated heads, new heights: {[b.height for b in self.blockchain.get_current_heads()]}")
+                log.info(f"Updated heads, new heights: {[b.height for b in self.blockchain.get_current_heads()]}")
                 difficulty = await self.blockchain.get_next_difficulty(block.block.prev_header_hash)
                 next_vdf_ips = await self.blockchain.get_next_ips(block.block.header_hash)
                 log.info(f"Difficulty {difficulty} IPS {next_vdf_ips}")
@@ -606,6 +603,10 @@ class FullNode:
                 log.error(f"Sending proof of time rate {next_vdf_ips}")
                 yield OutboundMessage(NodeType.FARMER, Message("proof_of_time_rate", rate_update),
                                       Delivery.BROADCAST)
+            if deep_reorg:
+                reorg_msg = farmer_protocol.DeepReorgNotification()
+                yield OutboundMessage(NodeType.FARMER, Message("deep_reorg", reorg_msg), Delivery.BROADCAST)
+
             assert block.block.trunk_block.proof_of_time
             assert block.block.trunk_block.challenge
             pos_quality = block.block.trunk_block.proof_of_space.verify_and_get_quality(

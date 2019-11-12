@@ -1,5 +1,7 @@
 . .venv/bin/activate
 
+# Starts a plotter, farmer, timelord, and 3 full nodes.
+
 _kill_servers() {
   ps -e | grep python | awk '{print $1}' | xargs -L1  kill
   ps -e | grep "vdf_server" | awk '{print $1}' | xargs -L1  kill

@@ -1,11 +1,12 @@
 import logging
 import asyncio
 import io
-from yaml import safe_load
+import os
 import time
+from yaml import safe_load
 from asyncio import Lock
 from typing import Dict, List
-
+from definitions import ROOT_DIR
 from lib.chiavdf.inkfish.create_discriminant import create_discriminant
 from lib.chiavdf.inkfish.proof_of_time import check_proof_of_time_nwesolowski
 from lib.chiavdf.inkfish.classgroup import ClassGroup
@@ -24,9 +25,10 @@ log = logging.getLogger(__name__)
 
 class Timelord:
     def __init__(self):
-        self.config = safe_load(open("src/config/timelord.yaml", "r"))
-        self.lock: Lock = Lock()
+        config_filename = os.path.join(ROOT_DIR, "src", "config", "config.yaml")
+        self.config = safe_load(open(config_filename, "r"))["timelord"]
         self.free_servers: List[str, str] = list(zip(self.config["vdf_server_ips"], self.config["vdf_server_ports"]))
+        self.lock: Lock = Lock()
         self.server_count: int = len(self.free_servers)
         self.active_discriminants: Dict = {}
         self.best_height_three_proofs: int = -1
