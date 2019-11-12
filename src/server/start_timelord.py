@@ -31,6 +31,8 @@ async def main():
 
     await server.start_client(full_node_peer, None)
 
+    async for msg in timelord.manage_discriminant_queue():
+        server.push_message(msg)        
     await server.await_closed()
 
 asyncio.run(main())

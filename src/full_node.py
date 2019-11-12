@@ -621,7 +621,6 @@ class FullNode:
             timelord_request_end = timelord_protocol.ChallengeEnd(block.block.trunk_block.proof_of_time.
                                                                   output.challenge_hash)
             # Tell timelord to stop previous challenge and start with new one
-            yield OutboundMessage(NodeType.TIMELORD, Message("challenge_end", timelord_request_end), Delivery.BROADCAST)
             yield OutboundMessage(NodeType.TIMELORD, Message("challenge_start", timelord_request), Delivery.BROADCAST)
 
             # Tell full nodes about the new block
@@ -637,7 +636,6 @@ class FullNode:
             log.info(f"Height of the orphan block is {block.block.trunk_block.challenge.height}")
             timelord_request_end = timelord_protocol.ChallengeEnd(block.block.trunk_block.proof_of_time.
                                                                   output.challenge_hash)
-            yield OutboundMessage(NodeType.TIMELORD, Message("challenge_end", timelord_request_end), Delivery.BROADCAST)
         else:
             # Should never reach here, all the cases are covered
             assert False

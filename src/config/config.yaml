@@ -33,6 +33,8 @@ timelord:
   n_wesolowski: 2
   # VDF servers will be spawned at these ports, and closed after generating proofs
   # Adding more vdf servers will increase memory usage and CPU usage.
+  vdf_server_ips:
+    - 127.0.0.1
   vdf_server_ports:
     - 8889
   full_node_peer:
