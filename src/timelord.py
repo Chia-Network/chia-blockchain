@@ -124,7 +124,7 @@ class Timelord:
             except Exception as e:
                 e_to_str = str(e)
                 log.error(f"Connection to VDF server error message: {e_to_str}")
-            await asyncio.sleep(5)
+            await asyncio.sleep(1)
         if not writer or not reader:
             raise Exception("Unable to connect to VDF server")
 
