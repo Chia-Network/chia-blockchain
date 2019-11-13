@@ -4,7 +4,7 @@ from src.util.cbor_message import cbor_message
 from src.types.sized_bytes import bytes32
 from src.types.transaction import Transaction
 from src.types.proof_of_time import ProofOfTime
-from src.types.trunk_block import TrunkBlock
+from src.types.header_block import HeaderBlock
 from src.types.full_block import FullBlock
 from src.types.peer_info import PeerInfo
 from dataclasses import dataclass
@@ -98,9 +98,9 @@ class Peers:
 
 @dataclass(frozen=True)
 @cbor_message
-class RequestTrunkBlocks:
+class RequestHeaderBlocks:
     """
-    Request trunks of blocks that are ancestors of the specified tip.
+    Request headers of blocks that are ancestors of the specified tip.
     """
     tip_header_hash: bytes32
     heights: List[uint64]
@@ -108,12 +108,12 @@ class RequestTrunkBlocks:
 
 @dataclass(frozen=True)
 @cbor_message
-class TrunkBlocks:
+class HeaderBlocks:
     """
-    Sends trunk blocks that are ancestors of the specified tip, at the specified heights.
+    Sends header blocks that are ancestors of the specified tip, at the specified heights.
     """
     tip_header_hash: bytes32
-    trunk_blocks: List[TrunkBlock]
+    header_blocks: List[HeaderBlock]
 
 
 @dataclass(frozen=True)

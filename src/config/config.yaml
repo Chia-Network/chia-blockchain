@@ -1,5 +1,5 @@
-plotter:
-  # The plotter server (if run) will run on this host and port
+harvester:
+  # The harvester server (if run) will run on this host and port
   host: 127.0.0.1
   port: 8000
   farmer_peer:
@@ -12,11 +12,11 @@ farmer:
   # The farmer server (if run) will run on this host and port
   host: 127.0.0.1
   port: 8001
-  # The farmer will attempt to connect to this full node and plotter
+  # The farmer will attempt to connect to this full node and harvester
   full_node_peer:
     host: 127.0.0.1
     port: 8002
-  plotter_peer:
+  harvester_peer:
     host: 127.0.0.1
     port: 8000
   # To send a share to a pool, a block must be faster than this, in seconds
@@ -45,8 +45,8 @@ full_node:
   # The full node server (if run) will run on this host and port
   host: "127.0.0.1"
   port: 8002
-  # Don't send any more than these number of trunks and blocks, in one message
-  max_trunks_to_send: 100
+  # Don't send any more than these number of headers and blocks, in one message
+  max_headers_to_send: 100
   max_blocks_to_send: 10
   # If node is more than these blocks behind, will do a sync
   sync_blocks_behind_threshold: 3

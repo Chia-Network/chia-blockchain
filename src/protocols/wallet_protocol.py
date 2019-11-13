@@ -2,7 +2,7 @@ from typing import List
 from src.util.cbor_message import cbor_message
 from src.util.ints import uint32
 from src.types.sized_bytes import bytes32
-from src.types.block_body import BlockBody
+from src.types.body import Body
 from src.types.challenge import Challenge
 from src.types.proof_of_space import ProofOfSpace
 from src.types.proof_of_time import ProofOfTime
@@ -52,4 +52,4 @@ class RequestBody:
 @dataclass(frozen=True)
 @cbor_message
 class RespondBody:
-    body: BlockBody
+    body: Body

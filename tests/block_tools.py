@@ -7,12 +7,12 @@ from typing import List, Dict, Any
 from blspy import PublicKey, PrivateKey, PrependSignature
 from src.types.sized_bytes import bytes32
 from src.types.full_block import FullBlock
-from src.types.trunk_block import TrunkBlock
-from src.types.block_body import BlockBody
+from src.types.header_block import HeaderBlock
+from src.types.body import Body
 from src.types.challenge import Challenge
-from src.types.block_header import BlockHeader, BlockHeaderData
+from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
-from src.types.proof_of_time import ProofOfTime, ProofOfTimeOutput
+from src.types.proof_of_time import ProofOfTime
 from src.types.classgroup import ClassgroupElement
 from src.consensus import pot_iterations, block_rewards
 from src.util.ints import uint64, uint32, uint8
@@ -93,16 +93,15 @@ class BlockTools:
             curr_difficulty = block_list[-1].weight - block_list[-2].weight
             prev_difficulty = (block_list[-1 - test_constants["DIFFICULTY_EPOCH"]].weight -
                                block_list[-2 - test_constants["DIFFICULTY_EPOCH"]].weight)
-            assert block_list[-1].trunk_block.proof_of_time
-            curr_ips = calculate_ips_from_iterations(block_list[-1].trunk_block.proof_of_space,
-                                                     block_list[-1].trunk_block.proof_of_time.output.challenge_hash,
+            assert block_list[-1].header_block.proof_of_time
+            curr_ips = calculate_ips_from_iterations(block_list[-1].header_block.proof_of_space,
                                                      curr_difficulty,
-                                                     block_list[-1].trunk_block.proof_of_time.output
+                                                     block_list[-1].header_block.proof_of_time
                                                      .number_of_iterations,
                                                      test_constants["MIN_BLOCK_TIME"])
 
         starting_height = block_list[-1].height + 1
-        timestamp = block_list[-1].trunk_block.header.data.timestamp
+        timestamp = block_list[-1].header_block.header.data.timestamp
         for next_height in range(starting_height, starting_height + num_blocks):
             if (next_height > test_constants["DIFFICULTY_EPOCH"] and
                     next_height % test_constants["DIFFICULTY_EPOCH"] == test_constants["DIFFICULTY_DELAY"]):
@@ -113,21 +112,21 @@ class BlockTools:
                 height3 = uint64(next_height - (test_constants["DIFFICULTY_DELAY"]) - 1)
                 if height1 >= 0:
                     block1 = block_list[height1]
-                    assert block1.trunk_block.challenge
-                    iters1 = block1.trunk_block.challenge.total_iters
-                    timestamp1 = block1.trunk_block.header.data.timestamp
+                    assert block1.header_block.challenge
+                    iters1 = block1.header_block.challenge.total_iters
+                    timestamp1 = block1.header_block.header.data.timestamp
                 else:
                     block1 = block_list[0]
-                    assert block1.trunk_block.challenge
-                    timestamp1 = (block1.trunk_block.header.data.timestamp -
+                    assert block1.header_block.challenge
+                    timestamp1 = (block1.header_block.header.data.timestamp -
                                   test_constants["BLOCK_TIME_TARGET"])
-                    iters1 = block1.trunk_block.challenge.total_iters
-                timestamp2 = block_list[height2].trunk_block.header.data.timestamp
-                timestamp3 = block_list[height3].trunk_block.header.data.timestamp
+                    iters1 = block1.header_block.challenge.total_iters
+                timestamp2 = block_list[height2].header_block.header.data.timestamp
+                timestamp3 = block_list[height3].header_block.header.data.timestamp
 
                 block3 = block_list[height3]
-                assert block3.trunk_block.challenge
-                iters3 = block3.trunk_block.challenge.total_iters
+                assert block3.header_block.challenge
+                iters3 = block3.header_block.challenge.total_iters
                 term1 = (test_constants["DIFFICULTY_DELAY"] * prev_difficulty *
                          (timestamp3 - timestamp2) * test_constants["BLOCK_TIME_TARGET"])
 
@@ -194,14 +193,14 @@ class BlockTools:
         for key, value in input_constants.items():
             test_constants[key] = value
 
-        assert prev_block.trunk_block.challenge
+        assert prev_block.header_block.challenge
 
         return self._create_block(
             test_constants,
-            prev_block.trunk_block.challenge.get_hash(),
+            prev_block.header_block.challenge.get_hash(),
             uint32(prev_block.height + 1),
             prev_block.header_hash,
-            prev_block.trunk_block.challenge.total_iters,
+            prev_block.header_block.challenge.total_iters,
             prev_block.weight,
             timestamp,
             uint64(difficulty),
@@ -238,8 +237,8 @@ class BlockTools:
             raise NoProofsOfSpaceFound("No proofs for this challenge")
 
         proof_xs: bytes = prover.get_full_proof(challenge_hash, 0)
-        proof_of_space: ProofOfSpace = ProofOfSpace(pool_pk, plot_pk, k, [uint8(b) for b in proof_xs])
-        number_iters: uint64 = pot_iterations.calculate_iterations(proof_of_space, challenge_hash,
+        proof_of_space: ProofOfSpace = ProofOfSpace(challenge_hash, pool_pk, plot_pk, k, [uint8(b) for b in proof_xs])
+        number_iters: uint64 = pot_iterations.calculate_iterations(proof_of_space,
                                                                    difficulty, ips,
                                                                    test_constants["MIN_BLOCK_TIME"])
 
@@ -248,33 +247,31 @@ class BlockTools:
         y_cl, proof_bytes = create_proof_of_time_nwesolowski(
             disc, start_x, number_iters, disc, n_wesolowski)
 
-        output = ProofOfTimeOutput(challenge_hash, number_iters,
-                                   ClassgroupElement(y_cl[0], y_cl[1]))
+        output = ClassgroupElement(y_cl[0], y_cl[1])
 
-        proof_of_time = ProofOfTime(output, n_wesolowski, [uint8(b) for b in proof_bytes])
+        proof_of_time = ProofOfTime(challenge_hash, number_iters, output, n_wesolowski, [uint8(b) for b in proof_bytes])
 
         coinbase: CoinbaseInfo = CoinbaseInfo(height, block_rewards.calculate_block_reward(uint32(height)),
                                               coinbase_target)
         coinbase_sig: PrependSignature = pool_sk.sign_prepend(bytes(coinbase))
-
         fees_target: FeesTarget = FeesTarget(fee_target, uint64(0))
-
         solutions_generator: bytes32 = sha256(seed).digest()
-        body: BlockBody = BlockBody(coinbase, coinbase_sig, fees_target, None, solutions_generator)
+        cost = uint64(0)
+        body: Body = Body(coinbase, coinbase_sig, fees_target, None, solutions_generator, cost)
 
-        header_data: BlockHeaderData = BlockHeaderData(prev_header_hash, timestamp, bytes([0]*32),
-                                                       proof_of_space.get_hash(), body.get_hash(),
-                                                       bytes([0]*32), challenge_hash)
+        header_data: HeaderData = HeaderData(prev_header_hash, timestamp, bytes([0]*32),
+                                             proof_of_space.get_hash(), body.get_hash(),
+                                             bytes([0]*32))
 
         header_hash_sig: PrependSignature = plot_sk.sign_prepend(header_data.get_hash())
 
-        header: BlockHeader = BlockHeader(header_data, header_hash_sig)
+        header: Header = Header(header_data, header_hash_sig)
 
-        challenge = Challenge(proof_of_space.get_hash(), proof_of_time.get_hash(), height,
+        challenge = Challenge(challenge_hash, proof_of_space.get_hash(), proof_of_time.get_hash(), height,
                               uint64(prev_weight + difficulty), uint64(prev_iters + number_iters))
-        trunk_block = TrunkBlock(proof_of_space, proof_of_time, challenge, header)
+        header_block = HeaderBlock(proof_of_space, proof_of_time, challenge, header)
 
-        full_block: FullBlock = FullBlock(trunk_block, body)
+        full_block: FullBlock = FullBlock(header_block, body)
 
         return full_block
 

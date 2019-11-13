@@ -50,24 +50,24 @@ def calculate_iterations_quality(quality: bytes32, size: uint8, difficulty: uint
     return iters_final
 
 
-def calculate_iterations(proof_of_space: ProofOfSpace, challenge_hash: bytes32,
-                         difficulty: uint64, vdf_ips: uint64, min_block_time: uint64) -> uint64:
+def calculate_iterations(proof_of_space: ProofOfSpace, difficulty: uint64, vdf_ips: uint64,
+                         min_block_time: uint64) -> uint64:
     """
     Convenience function to calculate the number of iterations using the proof instead
     of the quality. The quality must be retrieved from the proof.
     """
-    quality: bytes32 = proof_of_space.verify_and_get_quality(challenge_hash)
+    quality: bytes32 = proof_of_space.verify_and_get_quality()
     return calculate_iterations_quality(quality, proof_of_space.size, difficulty, vdf_ips, min_block_time)
 
 
-def calculate_ips_from_iterations(proof_of_space: ProofOfSpace, challenge_hash: bytes32,
-                                  difficulty: uint64, iterations: uint64, min_block_time: uint64) -> uint64:
+def calculate_ips_from_iterations(proof_of_space: ProofOfSpace, difficulty: uint64,
+                                  iterations: uint64, min_block_time: uint64) -> uint64:
     """
     Using the total number of iterations on a block (which is encoded in the block) along with
     other details, we can calculate the VDF speed (iterations per second) used to compute the
     constant factor in iterations, which is not written into the block.
     """
-    quality: bytes32 = proof_of_space.verify_and_get_quality(challenge_hash)
+    quality: bytes32 = proof_of_space.verify_and_get_quality()
     dec_iters = (Decimal(int(difficulty) << 32) *
                  (_quality_to_decimal(quality) / _expected_plot_size(proof_of_space.size)))
     iters_rounded = int(dec_iters.to_integral_exact(rounding=ROUND_UP))

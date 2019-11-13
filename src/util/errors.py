@@ -18,8 +18,8 @@ class DuplicateConnection(Exception):
     pass
 
 
-class TooManyTrunksRequested(Exception):
-    """Requested too many trunk blocks"""
+class TooManyheadersRequested(Exception):
+    """Requested too many header blocks"""
     pass
 
 

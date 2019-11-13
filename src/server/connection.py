@@ -6,7 +6,7 @@ from src.util import cbor
 from src.server.outbound_message import Message, NodeType
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
-LENGTH_BYTES: int = 5
+LENGTH_BYTES: int = 4
 log = logging.getLogger(__name__)
 
 

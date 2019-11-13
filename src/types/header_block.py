@@ -1,7 +1,7 @@
 from typing import Optional
 from dataclasses import dataclass
 from src.util.streamable import streamable, Streamable
-from src.types.block_header import BlockHeader
+from src.types.header import Header
 from src.types.challenge import Challenge
 from src.types.proof_of_space import ProofOfSpace
 from src.types.proof_of_time import ProofOfTime
@@ -9,11 +9,11 @@ from src.types.proof_of_time import ProofOfTime
 
 @dataclass(frozen=True)
 @streamable
-class TrunkBlock(Streamable):
+class HeaderBlock(Streamable):
     proof_of_space: ProofOfSpace
     proof_of_time: Optional[ProofOfTime]
     challenge: Optional[Challenge]
-    header: BlockHeader
+    header: Header
 
     @property
     def prev_header_hash(self):

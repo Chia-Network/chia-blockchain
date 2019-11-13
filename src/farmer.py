@@ -8,7 +8,7 @@ from definitions import ROOT_DIR
 from src.util.api_decorators import api_request
 from src.types.proof_of_space import ProofOfSpace
 from src.types.coinbase import CoinbaseInfo
-from src.protocols import plotter_protocol, farmer_protocol
+from src.protocols import harvester_protocol, farmer_protocol
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
 from src.consensus.block_rewards import calculate_block_reward
@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 
 
 """
-PLOTTER PROTOCOL (FARMER <-> PLOTTER)
+HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 """
 
 
@@ -33,10 +33,10 @@ class Farmer:
             raise RuntimeError("Keys not generated. Run ./src/scripts/regenerate_keys.py.")
         self.config = safe_load(open(config_filename, "r"))["farmer"]
         self.key_config = safe_load(open(key_config_filename, "r"))
-        self.plotter_responses_header_hash: Dict[bytes32, bytes32] = {}
-        self.plotter_responses_challenge: Dict[bytes32, bytes32] = {}
-        self.plotter_responses_proofs: Dict[bytes32, ProofOfSpace] = {}
-        self.plotter_responses_proof_hash_to_qual: Dict[bytes32, bytes32] = {}
+        self.harvester_responses_header_hash: Dict[bytes32, bytes32] = {}
+        self.harvester_responses_challenge: Dict[bytes32, bytes32] = {}
+        self.harvester_responses_proofs: Dict[bytes32, ProofOfSpace] = {}
+        self.harvester_responses_proof_hash_to_qual: Dict[bytes32, bytes32] = {}
         self.challenges: Dict[uint32, List[farmer_protocol.ProofOfSpaceFinalized]] = {}
         self.challenge_to_height: Dict[bytes32, uint32] = {}
         self.challenge_to_best_iters: Dict[bytes32, uint64] = {}
@@ -48,13 +48,13 @@ class Farmer:
         self.proof_of_time_estimate_ips: uint64 = uint64(3000)
 
     @api_request
-    async def challenge_response(self, challenge_response: plotter_protocol.ChallengeResponse):
+    async def challenge_response(self, challenge_response: harvester_protocol.ChallengeResponse):
         """
-        This is a response from the plotter, for a NewChallenge. Here we check if the proof
+        This is a response from the harvester, for a NewChallenge. Here we check if the proof
         of space is sufficiently good, and if so, we ask for the whole proof.
         """
 
-        if challenge_response.quality in self.plotter_responses_challenge:
+        if challenge_response.quality in self.harvester_responses_challenge:
             log.warning(f"Have already seen quality {challenge_response.quality}")
             return
         height: uint32 = self.challenge_to_height[challenge_response.challenge_hash]
@@ -81,15 +81,15 @@ class Farmer:
 
         log.info(f"Estimate: {estimate_secs}, rate: {self.proof_of_time_estimate_ips}")
         if estimate_secs < self.config['pool_share_threshold'] or estimate_secs < self.config['propagate_threshold']:
-            self.plotter_responses_challenge[challenge_response.quality] = challenge_response.challenge_hash
-            request = plotter_protocol.RequestProofOfSpace(challenge_response.quality)
+            self.harvester_responses_challenge[challenge_response.quality] = challenge_response.challenge_hash
+            request = harvester_protocol.RequestProofOfSpace(challenge_response.quality)
 
-            yield OutboundMessage(NodeType.PLOTTER, Message("request_proof_of_space", request), Delivery.RESPOND)
+            yield OutboundMessage(NodeType.HARVESTER, Message("request_proof_of_space", request), Delivery.RESPOND)
 
     @api_request
-    async def respond_proof_of_space(self, response: plotter_protocol.RespondProofOfSpace):
+    async def respond_proof_of_space(self, response: harvester_protocol.RespondProofOfSpace):
         """
-        This is a response from the plotter with a proof of space. We check it's validity,
+        This is a response from the harvester with a proof of space. We check it's validity,
         and request a pool partial, a header signature, or both, if the proof is good enough.
         """
 
@@ -97,7 +97,7 @@ class Farmer:
                                       for ce in self.key_config["pool_sks"]]
         assert response.proof.pool_pubkey in [sk.get_public_key() for sk in pool_sks]
 
-        challenge_hash: bytes32 = self.plotter_responses_challenge[response.quality]
+        challenge_hash: bytes32 = self.harvester_responses_challenge[response.quality]
         challenge_height: uint32 = self.challenge_to_height[challenge_hash]
         new_proof_height: uint32 = uint32(challenge_height + 1)
         difficulty: uint64 = uint64(0)
@@ -107,11 +107,11 @@ class Farmer:
         if difficulty == 0:
             raise RuntimeError("Did not find challenge")
 
-        computed_quality = response.proof.verify_and_get_quality(challenge_hash)
+        computed_quality = response.proof.verify_and_get_quality()
         assert response.quality == computed_quality
 
-        self.plotter_responses_proofs[response.quality] = response.proof
-        self.plotter_responses_proof_hash_to_qual[response.proof.get_hash()] = response.quality
+        self.harvester_responses_proofs[response.quality] = response.proof
+        self.harvester_responses_proof_hash_to_qual[response.proof.get_hash()] = response.quality
 
         number_iters: uint64 = calculate_iterations_quality(computed_quality,
                                                             response.proof.size,
@@ -121,10 +121,10 @@ class Farmer:
         estimate_secs: float = number_iters / self.proof_of_time_estimate_ips
 
         if estimate_secs < self.config['pool_share_threshold']:
-            request1 = plotter_protocol.RequestPartialProof(response.quality,
-                                                            sha256(bytes.fromhex(
+            request1 = harvester_protocol.RequestPartialProof(response.quality,
+                                                              sha256(bytes.fromhex(
                                                                 self.key_config['farmer_target'])).digest())
-            yield OutboundMessage(NodeType.PLOTTER, Message("request_partial_proof", request1), Delivery.RESPOND)
+            yield OutboundMessage(NodeType.HARVESTER, Message("request_partial_proof", request1), Delivery.RESPOND)
         if estimate_secs < self.config['propagate_threshold']:
             if new_proof_height not in self.coinbase_rewards:
                 log.error(f"Don't have coinbase transaction for height {new_proof_height}, cannot submit PoS")
@@ -138,14 +138,14 @@ class Farmer:
             yield OutboundMessage(NodeType.FULL_NODE, Message("request_header_hash", request2), Delivery.BROADCAST)
 
     @api_request
-    async def respond_header_signature(self, response: plotter_protocol.RespondHeaderSignature):
+    async def respond_header_signature(self, response: harvester_protocol.RespondHeaderSignature):
         """
         Receives a signature on a block header hash, which is required for submitting
         a block to the blockchain.
         """
-        header_hash: bytes32 = self.plotter_responses_header_hash[response.quality]
-        proof_of_space: bytes32 = self.plotter_responses_proofs[response.quality]
-        plot_pubkey = self.plotter_responses_proofs[response.quality].plot_pubkey
+        header_hash: bytes32 = self.harvester_responses_header_hash[response.quality]
+        proof_of_space: bytes32 = self.harvester_responses_proofs[response.quality]
+        plot_pubkey = self.harvester_responses_proofs[response.quality].plot_pubkey
 
         assert response.header_hash_signature.verify([Util.hash256(header_hash)],
                                                      [plot_pubkey])
@@ -156,14 +156,14 @@ class Farmer:
         yield OutboundMessage(NodeType.FULL_NODE, Message("header_signature", request), Delivery.BROADCAST)
 
     @api_request
-    async def respond_partial_proof(self, response: plotter_protocol.RespondPartialProof):
+    async def respond_partial_proof(self, response: harvester_protocol.RespondPartialProof):
         """
         Receives a signature on the hash of the farmer payment target, which is used in a pool
         share, to tell the pool where to pay the farmer.
         """
 
         farmer_target_hash = sha256(bytes.fromhex(self.key_config['farmer_target'])).digest()
-        plot_pubkey = self.plotter_responses_proofs[response.quality].plot_pubkey
+        plot_pubkey = self.harvester_responses_proofs[response.quality].plot_pubkey
 
         assert response.farmer_target_signature.verify([Util.hash256(farmer_target_hash)],
                                                        [plot_pubkey])
@@ -180,12 +180,12 @@ class Farmer:
         """
         header_hash: bytes32 = response.header_hash
 
-        quality: bytes32 = self.plotter_responses_proof_hash_to_qual[response.pos_hash]
-        self.plotter_responses_header_hash[quality] = header_hash
+        quality: bytes32 = self.harvester_responses_proof_hash_to_qual[response.pos_hash]
+        self.harvester_responses_header_hash[quality] = header_hash
 
-        # TODO: only send to the plotter who made the proof of space, not all plotters
-        request = plotter_protocol.RequestHeaderSignature(quality, header_hash)
-        yield OutboundMessage(NodeType.PLOTTER, Message("request_header_signature", request), Delivery.BROADCAST)
+        # TODO: only send to the harvester who made the proof of space, not all plotters
+        request = harvester_protocol.RequestHeaderSignature(quality, header_hash)
+        yield OutboundMessage(NodeType.HARVESTER, Message("request_header_signature", request), Delivery.BROADCAST)
 
     @api_request
     async def proof_of_space_finalized(self, proof_of_space_finalized: farmer_protocol.ProofOfSpaceFinalized):
@@ -220,8 +220,8 @@ class Farmer:
         self.challenge_to_height[proof_of_space_finalized.challenge_hash] = proof_of_space_finalized.height
 
         if get_proofs:
-            message = plotter_protocol.NewChallenge(proof_of_space_finalized.challenge_hash)
-            yield OutboundMessage(NodeType.PLOTTER, Message("new_challenge", message), Delivery.BROADCAST)
+            message = harvester_protocol.NewChallenge(proof_of_space_finalized.challenge_hash)
+            yield OutboundMessage(NodeType.HARVESTER, Message("new_challenge", message), Delivery.BROADCAST)
 
     @api_request
     async def proof_of_space_arrived(self, proof_of_space_arrived: farmer_protocol.ProofOfSpaceArrived):
@@ -240,10 +240,10 @@ class Farmer:
         Resets everything. This will be triggered when a long reorg happens, which means blocks of lower
         height (but greater weight) might come.
         """
-        self.plotter_responses_header_hash = {}
-        self.plotter_responses_challenge = {}
-        self.plotter_responses_proofs = {}
-        self.plotter_responses_proof_hash_to_qual = {}
+        self.harvester_responses_header_hash = {}
+        self.harvester_responses_challenge = {}
+        self.harvester_responses_proofs = {}
+        self.harvester_responses_proof_hash_to_qual = {}
         self.challenges = {}
         self.challenge_to_height = {}
         self.current_heads = []
