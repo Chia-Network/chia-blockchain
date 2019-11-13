@@ -1,3 +1,8 @@
+class InvalidProtocolMessage(Exception):
+    """Invalid protocol message function name"""
+    pass
+
+
 class InvalidHandshake(Exception):
     """Handshake message from peer is invalid"""
     pass

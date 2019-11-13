@@ -21,7 +21,7 @@ async def main():
 
     def signal_received():
         server.close_all()
-        asyncio.create_task(timelord.shutdown())
+        asyncio.create_task(timelord._shutdown())
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
 
@@ -30,7 +30,7 @@ async def main():
 
     await server.start_client(full_node_peer, None)
 
-    async for msg in timelord.manage_discriminant_queue():
+    async for msg in timelord._manage_discriminant_queue():
         server.push_message(msg)
 
     await server.await_closed()
