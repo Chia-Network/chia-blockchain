@@ -1,5 +1,4 @@
 from src.util.streamable import streamable, Streamable
-from src.types.sized_bytes import bytes32
 from src.util.ints import uint32
 from dataclasses import dataclass
 

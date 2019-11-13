@@ -9,7 +9,7 @@ from src.server.connection import Connection, PeerConnections
 from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
 from src.protocols.shared_protocol import Handshake, HandshakeAck, protocol_version
 from src.util import partial_func
-from src.util.errors import InvalidHandshake, IncompatibleProtocolVersion, InvalidAck
+from src.util.errors import InvalidHandshake, IncompatibleProtocolVersion, InvalidAck, InvalidProtocolMessage
 from src.util.network import create_node_id
 
 exited = False
@@ -296,17 +296,21 @@ class ChiaServer:
         """
         connection, full_message = pair
         try:
+            if len(full_message.function) == 0 or full_message.function.startswith("_"):
+                # This prevents remote calling of private methods that start with "_"
+                raise InvalidProtocolMessage(full_message.function)
+
             f = getattr(api, full_message.function)
-            if f is not None:
-                log.info(f"<- {f.__name__} from peer {connection.get_peername()}")
-                result = f(full_message.data)
-                if isinstance(result, AsyncGenerator):
-                    async for outbound_message in result:
-                        yield connection, outbound_message
-                else:
-                    await result
+            if f is None:
+                raise InvalidProtocolMessage(full_message.function)
+
+            log.info(f"<- {f.__name__} from peer {connection.get_peername()}")
+            result = f(full_message.data)
+            if isinstance(result, AsyncGenerator):
+                async for outbound_message in result:
+                    yield connection, outbound_message
             else:
-                log.error(f'Invalid message: {full_message.function} from {connection.get_peername()}')
+                await result
         except Exception as e:
             log.error(f"Error {type(e)} {e}, closing connection {connection}")
             self.global_connections.close(connection)

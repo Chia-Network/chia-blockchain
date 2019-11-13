@@ -46,7 +46,7 @@ class FullNode:
         self.store = store
         self.blockchain = blockchain
 
-    async def send_heads_to_farmers(self) -> AsyncGenerator[OutboundMessage, None]:
+    async def _send_heads_to_farmers(self) -> AsyncGenerator[OutboundMessage, None]:
         """
         Sends all of the current heads to all farmer peers. Also sends the latest
         estimated proof of time rate, so farmer can calulate which proofs are good.
@@ -70,7 +70,7 @@ class FullNode:
         rate_update = farmer_protocol.ProofOfTimeRate(proof_of_time_rate)
         yield OutboundMessage(NodeType.FARMER, Message("proof_of_time_rate", rate_update), Delivery.BROADCAST)
 
-    async def send_challenges_to_timelords(self) -> AsyncGenerator[OutboundMessage, None]:
+    async def _send_challenges_to_timelords(self) -> AsyncGenerator[OutboundMessage, None]:
         """
         Sends all of the current heads to all timelord peers.
         """
@@ -84,7 +84,7 @@ class FullNode:
         for request in requests:
             yield OutboundMessage(NodeType.TIMELORD, Message("challenge_start", request), Delivery.BROADCAST)
 
-    async def on_connect(self) -> AsyncGenerator[OutboundMessage, None]:
+    async def _on_connect(self) -> AsyncGenerator[OutboundMessage, None]:
         """
         Whenever we connect to another node, send them our current heads. Also send heads to farmers
         and challenges to timelords.
@@ -101,7 +101,7 @@ class FullNode:
             request = peer_protocol.Block(block)
             yield OutboundMessage(NodeType.FULL_NODE, Message("block", request), Delivery.RESPOND)
 
-    async def sync(self):
+    async def _sync(self):
         """
         Performs a full sync of the blockchain.
             - Check which are the heaviest tips
@@ -566,7 +566,7 @@ class FullNode:
                 await self.store.set_sync_mode(True)
                 try:
                     # Performs sync, and catch exceptions so we don't close the connection
-                    async for msg in self.sync():
+                    async for msg in self._sync():
                         yield msg
                 except asyncio.CancelledError:
                     log.warning("Syncing failed, CancelledError")

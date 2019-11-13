@@ -17,7 +17,7 @@ python -m src.server.start_farmer &
 P3=$!
 python -m src.server.start_full_node "127.0.0.1" 8002 -f &
 P4=$!
-python -m src.server.start_full_node "127.0.0.1" 8004 -t -u 8222 &
+python -m src.server.start_full_node "127.0.0.1" 8444 -t -u 8222 &
 P5=$!
 python -m src.server.start_full_node "127.0.0.1" 8005 &
 P6=$!

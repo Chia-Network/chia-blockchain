@@ -11,7 +11,7 @@ _kill_servers
 
 python -m src.server.start_timelord &
 P1=$!
-python -m src.server.start_full_node "127.0.0.1" 8002 -t -u 8222 &
+python -m src.server.start_full_node "127.0.0.1" 8444 -t -u 8222 &
 P2=$!
 
 _term() {

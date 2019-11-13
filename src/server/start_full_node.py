@@ -31,7 +31,7 @@ async def main():
     # Starts the full node server (which full nodes can connect to)
     host, port = parse_host_port(full_node)
     server = ChiaServer(port, full_node, NodeType.FULL_NODE)
-    _ = await server.start_server(host, full_node.on_connect)
+    _ = await server.start_server(host, full_node._on_connect)
     wait_for_ui, ui_close_cb = None, None
 
     def master_close_cb():
@@ -72,9 +72,8 @@ async def main():
     log.info(f"Connected to {len(server.global_connections.get_connections())} peers.")
     if not server_closed:
         try:
-            async for msg in full_node.sync():
+            async for msg in full_node._sync():
                 if server_closed:
-                    print("Break")
                     break
                 server.push_message(msg)
         except BaseException as e:
@@ -85,7 +84,7 @@ async def main():
         peer_info = PeerInfo(full_node.config['farmer_peer']['host'],
                              full_node.config['farmer_peer']['port'])
         _ = await server.start_client(peer_info, None)
-        async for msg in full_node.send_heads_to_farmers():
+        async for msg in full_node._send_heads_to_farmers():
             if server_closed:
                 break
             server.push_message(msg)
@@ -94,7 +93,7 @@ async def main():
         peer_info = PeerInfo(full_node.config['timelord_peer']['host'],
                              full_node.config['timelord_peer']['port'])
         _ = await server.start_client(peer_info, None)
-        async for msg in full_node.send_challenges_to_timelords():
+        async for msg in full_node._send_challenges_to_timelords():
             if server_closed:
                 break
             server.push_message(msg)

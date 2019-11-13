@@ -2,7 +2,6 @@ import sys
 import secrets
 from typing import Tuple
 from src.types.sized_bytes import bytes32
-from src.server.connection import NodeType
 
 
 def parse_host_port(api) -> Tuple[str, int]:

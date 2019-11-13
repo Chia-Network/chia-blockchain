@@ -26,7 +26,8 @@ class Connection:
         socket.settimeout(None)
         self.local_host = socket.getsockname()[0]
         self.local_port = server_port
-        self.peer_host, self.peer_port = self.writer.get_extra_info("peername")
+        self.peer_host = self.writer.get_extra_info("peername")[0]
+        self.peer_port = self.writer.get_extra_info("peername")[1]
         self.node_id = None
 
         # Connection metrics

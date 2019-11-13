@@ -39,7 +39,7 @@ timelord:
     - 8889
   full_node_peer:
       host: 127.0.0.1
-      port: 8004
+      port: 8444
 
 full_node:
   # The full node server (if run) will run on this host and port
@@ -65,7 +65,7 @@ full_node:
     - host: "127.0.0.1"
       port: 8002
     - host: "127.0.0.1"
-      port: 8004
+      port: 8444
     - host: "127.0.0.1"
       port: 8005
     # - host: "216.39.16.173"  # Chia beast
