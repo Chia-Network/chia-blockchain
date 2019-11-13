@@ -11,6 +11,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 @streamable
 class ProofOfSpace(Streamable):
+    challenge_hash: bytes32
     pool_pubkey: PublicKey
     plot_pubkey: PublicKey
     size: uint8
@@ -19,14 +20,14 @@ class ProofOfSpace(Streamable):
     def get_plot_seed(self) -> bytes32:
         return self.calculate_plot_seed(self.pool_pubkey, self.plot_pubkey)
 
-    def verify_and_get_quality(self, challenge_hash: bytes32) -> Optional[bytes32]:
+    def verify_and_get_quality(self) -> Optional[bytes32]:
         v: Verifier = Verifier()
         plot_seed: bytes32 = self.get_plot_seed()
-        quality_str = v.validate_proof(plot_seed, self.size, challenge_hash,
+        quality_str = v.validate_proof(plot_seed, self.size, self.challenge_hash,
                                        bytes(self.proof))
         if not quality_str:
             return None
-        return self.quality_str_to_quality(challenge_hash, quality_str)
+        return self.quality_str_to_quality(self.challenge_hash, quality_str)
 
     @staticmethod
     def calculate_plot_seed(pool_pubkey: PublicKey, plot_pubkey: PublicKey) -> bytes32:

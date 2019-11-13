@@ -22,7 +22,7 @@ def str2bool(v: str) -> bool:
 
 def main():
     """
-    Allows replacing keys of farmer, plotter, and pool, all default to True.
+    Allows replacing keys of farmer, harvester, and pool, all default to True.
     """
 
     parser = argparse.ArgumentParser(
@@ -30,7 +30,7 @@ def main():
     )
     parser.add_argument("-f", "--farmer", type=str2bool, nargs='?', const=True, default=True,
                         help="Regenerate farmer key")
-    parser.add_argument("-p", "--plotter", type=str2bool, nargs='?', const=True, default=True,
+    parser.add_argument("-h", "--harvester", type=str2bool, nargs='?', const=True, default=True,
                         help="Regenerate plot key seed")
     parser.add_argument("-l", "--pool", type=str2bool, nargs='?', const=True, default=True,
                         help="Regenerate pool keys")
@@ -59,8 +59,8 @@ def main():
         key_config["farmer_target"] = farmer_target.hex()
         with open(key_config_filename, "w") as f:
             safe_dump(key_config, f)
-    if args.plotter:
-        # Replaces the plotter's sk seed. Used to generate plot private keys, which are
+    if args.harvester:
+        # Replaces the harvester's sk seed. Used to generate plot private keys, which are
         # used to sign farmed blocks.
         key_config["sk_seed"] = token_bytes(32).hex()
         with open(key_config_filename, "w") as f:

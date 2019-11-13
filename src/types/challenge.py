@@ -7,6 +7,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 @streamable
 class Challenge(Streamable):
+    prev_challenge_hash: bytes32
     proof_of_space_hash: bytes32
     proof_of_time_output_hash: bytes32
     height: uint32

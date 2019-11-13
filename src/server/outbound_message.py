@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 class NodeType(IntEnum):
     FULL_NODE = 1
-    PLOTTER = 2
+    HARVESTER = 2
     FARMER = 3
     TIMELORD = 4
 
@@ -31,7 +31,7 @@ class Message:
 
 @dataclass
 class OutboundMessage:
-    # Type of the peer, 'farmer', 'plotter', 'full_node', etc.
+    # Type of the peer, 'farmer', 'harvester', 'full_node', etc.
     peer_type: NodeType
     # Message to send
     message: Message

@@ -45,7 +45,7 @@ class ChiaServer:
     def __init__(self, port: int, api: Any, local_type: NodeType):
         self._port = port  # TCP port to identify our node
         self._api = api  # API module that will be called from the requests
-        self._local_type = local_type  # NodeType (farmer, full node, timelord, pool, plotter, wallet)
+        self._local_type = local_type  # NodeType (farmer, full node, timelord, pool, harvester, wallet)
         self._srwt_aiter = push_aiter()
         self._outbound_aiter = push_aiter()
         self._pipeline_task = self.initialize_pipeline(self._srwt_aiter, self._api, self._port)

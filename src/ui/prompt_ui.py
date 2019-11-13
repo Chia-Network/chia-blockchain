@@ -22,7 +22,7 @@ from prompt_toolkit.widgets import (
 )
 from src.store.full_node_store import FullNodeStore
 from src.blockchain import Blockchain
-from src.types.trunk_block import TrunkBlock
+from src.types.header_block import HeaderBlock
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.types.peer_info import PeerInfo
@@ -214,8 +214,8 @@ class FullNodeUI:
         if not (await self.node_server.start_client(target_node, None)):
             self.error_msg.text = f"Failed to connect to {ip}:{port}"
 
-    async def get_latest_blocks(self, heads: List[TrunkBlock]) -> List[TrunkBlock]:
-        added_blocks: List[TrunkBlock] = []
+    async def get_latest_blocks(self, heads: List[HeaderBlock]) -> List[HeaderBlock]:
+        added_blocks: List[HeaderBlock] = []
         while len(added_blocks) < self.num_blocks and len(heads) > 0:
             heads = sorted(heads, key=lambda b: b.height, reverse=True)
             max_block = heads[0]
@@ -225,7 +225,7 @@ class FullNodeUI:
             async with await self.store.get_lock():
                 prev: Optional[FullBlock] = await self.store.get_block(max_block.prev_header_hash)
                 if prev is not None:
-                    heads.append(prev.trunk_block)
+                    heads.append(prev.header_block)
         return added_blocks
 
     async def draw_home(self):
@@ -270,7 +270,7 @@ class FullNodeUI:
 
             else:
                 self.syncing.text = "Not syncing"
-            heads: List[TrunkBlock] = self.blockchain.get_current_heads()
+            heads: List[HeaderBlock] = self.blockchain.get_current_tips()
             lca_block: FullBlock = self.blockchain.lca_block
             if lca_block.height > 0:
                 difficulty = await self.blockchain.get_next_difficulty(lca_block.prev_header_hash)
@@ -278,8 +278,8 @@ class FullNodeUI:
             else:
                 difficulty = await self.blockchain.get_next_difficulty(lca_block.header_hash)
                 ips = await self.blockchain.get_next_ips(lca_block.header_hash)
-        total_iters = lca_block.trunk_block.challenge.total_iters
-        latest_blocks: List[TrunkBlock] = await self.get_latest_blocks(heads)
+        total_iters = lca_block.header_block.challenge.total_iters
+        latest_blocks: List[HeaderBlock] = await self.get_latest_blocks(heads)
         if len(latest_blocks) > 0:
             new_labels = []
             for i, b in enumerate(latest_blocks):

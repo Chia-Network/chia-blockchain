@@ -7,13 +7,13 @@ from src.util.ints import uint8
 from dataclasses import dataclass
 
 """
-Protocol between plotter and farmer.
+Protocol between harvester and farmer.
 """
 
 
 @dataclass(frozen=True)
 @cbor_message
-class PlotterHandshake:
+class HarvesterHandshake:
     pool_pubkeys: List[PublicKey]
 
 
