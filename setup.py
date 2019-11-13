@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 from setuptools import setup
 
-dependencies = ['blspy', 'cbor2', 'pyyaml', 'asyncssh']
-dev_dependencies = ['pytest', 'flake8', 'mypy', 'pytest-asyncio']
+dependencies = ["blspy", "cbor2", "pyyaml", "asyncssh"]
+dev_dependencies = ["pytest", "flake8", "mypy", "isort", "autoflake", "black", "pytest-asyncio"]
 
 setup(
     name='chiablockchain',
@@ -14,6 +14,6 @@ setup(
     python_requires='>=3.7, <4',
     keywords='chia blockchain node',
     install_requires=dependencies + dev_dependencies,
-    long_description=open('README.md').read(),
+    long_description=open("README.md").read(),
     zip_safe=False,
 )
