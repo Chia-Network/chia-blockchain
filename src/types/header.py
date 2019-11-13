@@ -7,21 +7,20 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 @streamable
-class BlockHeaderData(Streamable):
+class HeaderData(Streamable):
     prev_header_hash: bytes32
     timestamp: uint64
     filter_hash: bytes32
     proof_of_space_hash: bytes32
     body_hash: bytes32
     extension_data: bytes32
-    challenge_hash: bytes32
 
 
 @dataclass(frozen=True)
 @streamable
-class BlockHeader(Streamable):
-    data: BlockHeaderData
-    plotter_signature: PrependSignature
+class Header(Streamable):
+    data: HeaderData
+    harvester_signature: PrependSignature
 
     @property
     def header_hash(self):

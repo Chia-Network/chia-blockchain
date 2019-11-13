@@ -3,7 +3,7 @@ from src.types.sized_bytes import bytes32
 from src.server.connection import NodeType
 from dataclasses import dataclass
 
-protocol_version = "0.0.1"
+protocol_version = "0.0.2"
 
 """
 Handshake when establishing a connection between two servers.
@@ -19,4 +19,16 @@ class Handshake:
 @dataclass(frozen=True)
 @cbor_message
 class HandshakeAck:
+    pass
+
+
+@dataclass(frozen=True)
+@cbor_message
+class Ping:
+    pass
+
+
+@dataclass(frozen=True)
+@cbor_message
+class Pong:
     pass

@@ -1,6 +1,6 @@
 . .venv/bin/activate
 
-# Starts a plotter, farmer, and full node.
+# Starts a harvester, farmer, and full node.
 
 _kill_servers() {
   ps -e | grep python | awk '{print $1}' | xargs -L1  kill
@@ -8,11 +8,11 @@ _kill_servers() {
 
 _kill_servers
 
-python -m src.server.start_plotter &
+python -m src.server.start_harvester &
 P1=$!
 python -m src.server.start_farmer &
 P2=$!
-python -m src.server.start_full_node "127.0.0.1" 8002 -f -u 8222 &
+python -m src.server.start_full_node "127.0.0.1" 8002 -f -t -u 8222 &
 P3=$!
 
 _term() {

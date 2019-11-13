@@ -1,8 +1,8 @@
 from typing import List
-from src.types.trunk_block import TrunkBlock
+from src.types.header_block import HeaderBlock
 
 
-def verify_weight(tip: TrunkBlock, proof_blocks: List[TrunkBlock]) -> bool:
+def verify_weight(tip: HeaderBlock, proof_blocks: List[HeaderBlock]) -> bool:
     """
     Verifies whether the weight of the tip is valid or not. Naively, looks at every block
     from genesis, verifying proof of space, proof of time, and difficulty resets.

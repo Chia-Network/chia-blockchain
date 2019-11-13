@@ -2,9 +2,9 @@ from typing import Tuple, Optional, Dict, Counter
 import collections
 from asyncio import Lock, Event
 from src.types.proof_of_space import ProofOfSpace
-from src.types.block_header import BlockHeaderData
-from src.types.trunk_block import TrunkBlock
-from src.types.block_body import BlockBody
+from src.types.header import HeaderData
+from src.types.header_block import HeaderBlock
+from src.types.body import Body
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
@@ -22,8 +22,8 @@ class FullNodeStore:
         # All these are used during sync mode
         self.potential_heads: Counter[bytes32] = collections.Counter()
         self.potential_heads_full_blocks: Dict[bytes32, FullBlock] = collections.Counter()
-        # Headers/trunks downloaded for the during sync, by height
-        self.potential_trunks: Dict[uint32, TrunkBlock] = {}
+        # Headers/headers downloaded for the during sync, by height
+        self.potential_headers: Dict[uint32, HeaderBlock] = {}
         # Blocks downloaded during sync, by height
         self.potential_blocks: Dict[uint32, FullBlock] = {}
         # Event, which gets set whenever we receive the block at each height. Waited for by sync().
@@ -31,7 +31,7 @@ class FullNodeStore:
 
         # These are the blocks that we created, but don't have the PoS from farmer yet,
         # keyed from the proof of space hash
-        self.candidate_blocks: Dict[bytes32, Tuple[BlockBody, BlockHeaderData, ProofOfSpace]] = {}
+        self.candidate_blocks: Dict[bytes32, Tuple[Body, HeaderData, ProofOfSpace]] = {}
 
         # These are the blocks that we created, have PoS, but not PoT yet, keyed from the
         # challenge hash and iterations
@@ -59,7 +59,7 @@ class FullNodeStore:
     async def clear_sync_information(self):
         self.potential_heads.clear()
         self.potential_heads_full_blocks.clear()
-        self.potential_trunks.clear()
+        self.potential_headers.clear()
         self.potential_blocks.clear()
         self.potential_blocks_received.clear()
 
@@ -75,11 +75,11 @@ class FullNodeStore:
     async def get_potential_heads_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         return self.potential_heads_full_blocks.get(header_hash)
 
-    async def add_potential_trunk(self, block: TrunkBlock):
-        self.potential_trunks[block.height] = block
+    async def add_potential_header(self, block: HeaderBlock):
+        self.potential_headers[block.height] = block
 
-    async def get_potential_trunk(self, height: uint32) -> Optional[TrunkBlock]:
-        return self.potential_trunks.get(height)
+    async def get_potential_header(self, height: uint32) -> Optional[HeaderBlock]:
+        return self.potential_headers.get(height)
 
     async def add_potential_block(self, block: FullBlock):
         self.potential_blocks[block.height] = block
@@ -93,10 +93,10 @@ class FullNodeStore:
     async def get_potential_blocks_received(self, height: uint32) -> Event:
         return self.potential_blocks_received[height]
 
-    async def add_candidate_block(self, pos_hash: bytes32, block: Tuple[BlockBody, BlockHeaderData, ProofOfSpace]):
+    async def add_candidate_block(self, pos_hash: bytes32, block: Tuple[Body, HeaderData, ProofOfSpace]):
         self.candidate_blocks[pos_hash] = block
 
-    async def get_candidate_block(self, pos_hash: bytes32) -> Optional[Tuple[BlockBody, BlockHeaderData, ProofOfSpace]]:
+    async def get_candidate_block(self, pos_hash: bytes32) -> Optional[Tuple[Body, HeaderData, ProofOfSpace]]:
         return self.candidate_blocks.get(pos_hash)
 
     async def add_unfinished_block(self, key: Tuple[bytes32, uint64], block: FullBlock):

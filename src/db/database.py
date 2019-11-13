@@ -3,9 +3,9 @@ from typing import Optional, Tuple
 import asyncio
 import motor.motor_asyncio as maio
 from src.types.proof_of_space import ProofOfSpace
-from src.types.block_header import BlockHeaderData
-from src.types.trunk_block import TrunkBlock
-from src.types.block_body import BlockBody
+from src.types.header import HeaderData
+from src.types.header_block import HeaderBlock
+from src.types.body import Body
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
@@ -33,7 +33,7 @@ class FullNodeDatabase(Database):
         self.potential_heads = getc("potential_heads")
         # potential_heads entries:
         # {_id: header_hash, block: Optional[FullBlock]}
-        self.potential_trunks = getc("potential_trunks")
+        self.potential_headers = getc("potential_headers")
         self.potential_blocks = getc("potential_blocks")
         self.candidate_blocks = getc("candidate_blocks")
         self.unfinished_blocks = getc("unfinished_blocks")
@@ -43,7 +43,7 @@ class FullNodeDatabase(Database):
     async def _clear_database(self):
         await self.full_blocks.drop()
         await self.potential_heads.drop()
-        await self.potential_trunks.drop()
+        await self.potential_headers.drop()
         await self.potential_blocks.drop()
         await self.candidate_blocks.drop()
         await self.unfinished_blocks.drop()
@@ -80,7 +80,7 @@ class FullNodeDatabase(Database):
 
     async def clear_sync_info(self):
         await self.potential_heads.drop()
-        await self.potential_trunks.drop()
+        await self.potential_headers.drop()
         await self.potential_blocks.drop()
 
     async def get_potential_heads_number(self) -> int:
@@ -99,16 +99,16 @@ class FullNodeDatabase(Database):
         block = query.get("block", None) if query else None
         return FullBlock.from_bytes(block) if block else None
 
-    async def add_potential_trunk(self, block: TrunkBlock) -> None:
-        await self.potential_trunks.find_one_and_update(
+    async def add_potential_header(self, block: HeaderBlock) -> None:
+        await self.potential_headers.find_one_and_update(
             {"_id": block.height},
-            {"$set": {"_id": block.height, "trunk": block}},
+            {"$set": {"_id": block.height, "header": block}},
             upsert=True,
         )
 
-    async def get_potential_trunk(self, height: uint32) -> Optional[TrunkBlock]:
-        query = await self.potential_trunks.find_one({"_id": height})
-        return TrunkBlock.from_bytes(query["trunk"]) if query else None
+    async def get_potential_header(self, height: uint32) -> Optional[HeaderBlock]:
+        query = await self.potential_headers.find_one({"_id": height})
+        return HeaderBlock.from_bytes(query["header"]) if query else None
 
     async def add_potential_block(self, block: FullBlock) -> None:
         await self.potential_blocks.find_one_and_update(
@@ -124,8 +124,8 @@ class FullNodeDatabase(Database):
     async def add_candidate_block(
         self,
         pos_hash: bytes32,
-        body: BlockBody,
-        header: BlockHeaderData,
+        body: Body,
+        header: HeaderData,
         pos: ProofOfSpace,
     ):
         await self.candidate_blocks.find_one_and_update(
@@ -136,13 +136,13 @@ class FullNodeDatabase(Database):
 
     async def get_candidate_block(
         self, pos_hash: bytes32
-    ) -> Optional[Tuple[BlockBody, BlockHeaderData, ProofOfSpace]]:
+    ) -> Optional[Tuple[Body, HeaderData, ProofOfSpace]]:
         query = await self.candidate_blocks.find_one({"_id": pos_hash})
         if not query:
             return None
         return (
-            BlockBody.from_bytes(query["body"]),
-            BlockHeaderData.from_bytes(query["header"]),
+            Body.from_bytes(query["body"]),
+            HeaderData.from_bytes(query["header"]),
             ProofOfSpace.from_bytes(query["pos"]),
         )
 
@@ -205,10 +205,10 @@ if __name__ == "__main__":
         assert await db.get_potential_heads_number() == 1
         assert genesis == await db.get_potential_head(genesis.header_hash)
 
-        # add/get potential trunk
-        trunk = genesis.trunk_block
-        await db.add_potential_trunk(trunk)
-        assert await db.get_potential_trunk(genesis.height) == trunk
+        # add/get potential header
+        header = genesis.header_block
+        await db.add_potential_header(header)
+        assert await db.get_potential_header(genesis.height) == header
 
         # Add potential block
         await db.add_potential_block(genesis)
@@ -218,8 +218,8 @@ if __name__ == "__main__":
         assert await db.get_candidate_block(0) is None
         partial = (
             genesis.body,
-            genesis.trunk_block.header.data,
-            genesis.trunk_block.proof_of_space,
+            genesis.header_block.header.data,
+            genesis.header_block.proof_of_space,
         )
         await db.add_candidate_block(genesis.header_hash, *partial)
         assert await db.get_candidate_block(genesis.header_hash) == partial

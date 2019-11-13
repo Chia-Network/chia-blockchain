@@ -1,6 +1,6 @@
 . .venv/bin/activate
 
-# Starts a plotter, farmer, timelord, and 3 full nodes.
+# Starts a harvester, farmer, timelord, and 3 full nodes.
 
 _kill_servers() {
   ps -e | grep python | awk '{print $1}' | xargs -L1  kill
@@ -9,7 +9,7 @@ _kill_servers() {
 
 _kill_servers
 
-python -m src.server.start_plotter &
+python -m src.server.start_harvester &
 P1=$!
 python -m src.server.start_timelord &
 P2=$!
