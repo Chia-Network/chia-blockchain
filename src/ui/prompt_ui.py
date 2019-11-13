@@ -1,13 +1,9 @@
-from typing import Callable, List, Optional
 import asyncio
 import logging
+from typing import Callable, List, Optional
+
 import asyncssh
-from prompt_toolkit.layout.dimension import D
-from prompt_toolkit.contrib.ssh import PromptToolkitSSHServer
-from prompt_toolkit.key_binding.bindings.focus import (
-    focus_next,
-    focus_previous,
-)
+
 from prompt_toolkit import Application
 from prompt_toolkit.styles import Style
 from prompt_toolkit.layout.containers import VSplit, HSplit, Window
@@ -122,14 +118,14 @@ class FullNodeUI:
 
     def setup_keybindings(self) -> KeyBindings:
         kb = KeyBindings()
-        kb.add('tab')(focus_next)
-        kb.add('s-tab')(focus_previous)
-        kb.add('down')(focus_next)
-        kb.add('up')(focus_previous)
-        kb.add('right')(focus_next)
-        kb.add('left')(focus_previous)
+        kb.add("tab")(focus_next)
+        kb.add("s-tab")(focus_previous)
+        kb.add("down")(focus_next)
+        kb.add("up")(focus_previous)
+        kb.add("right")(focus_next)
+        kb.add("left")(focus_previous)
 
-        @kb.add('c-c')
+        @kb.add("c-c")
         def exit_(event):
             self.close()
         return kb
@@ -148,7 +144,7 @@ class FullNodeUI:
         self.ips_label = TextArea(focusable=False, height=1)
         self.total_iters_label = TextArea(focusable=False, height=2)
         self.con_rows = []
-        self.connections_msg = Label(text=f'Connections')
+        self.connections_msg = Label(text=f"Connections")
         self.connection_rows_vsplit = Window()
         self.add_connection_msg = Label(text=f'Add a connection ip:port')
         self.add_connection_field = TextArea(height=1, prompt='>>> ', style='class:input-field',
@@ -173,10 +169,10 @@ class FullNodeUI:
         self.challenge_msg = Label(text=f'Block Header')
         self.challenge = TextArea(focusable=False)
 
-        body = HSplit([self.loading_msg, self.server_msg],
-                      height=D(), width=D())
+        body = HSplit([self.loading_msg, self.server_msg], height=D(), width=D())
         self.content = Frame(title="Chia Full Node", body=body)
         self.layout = Layout(VSplit([self.content], height=D(), width=D()))
+
 
     def change_route_handler(self, route):
         def change_route():
@@ -223,7 +219,9 @@ class FullNodeUI:
                 added_blocks.append(max_block)
             heads.remove(max_block)
             async with self.store.lock:
-                prev: Optional[FullBlock] = await self.store.get_block(max_block.prev_header_hash)
+                prev: Optional[FullBlock] = await self.store.get_block(
+                    max_block.prev_header_hash
+                )
                 if prev is not None:
                     heads.append(prev.header_block)
         return added_blocks
@@ -236,7 +234,6 @@ class FullNodeUI:
             labels = [row.children[0].content.text() for row in self.con_rows]
             if con_str not in labels:
                 con_label = Label(text=con_str)
-
                 def disconnect():
                     con.close()
                     self.layout.focus(self.quit_button)
@@ -245,7 +242,9 @@ class FullNodeUI:
                 row = VSplit([con_label, disconnect_button])
                 self.con_rows.append(row)
 
-        new_con_rows = [row for row in self.con_rows if row.children[0].content.text() in con_strs]
+        new_con_rows = [
+            row for row in self.con_rows if row.children[0].content.text() in con_strs
+        ]
         if new_con_rows != self.con_rows:
             self.con_rows = new_con_rows
             if len(self.con_rows) > 0:
@@ -258,13 +257,13 @@ class FullNodeUI:
         else:
             new_con_rows = Window(width=D(), height=0)
 
-        async with self.store.lock():
-            if (await self.store.get_sync_mode()):
+        async with self.store.lock:
+            if await self.store.get_sync_mode():
                 max_height = -1
                 for _, block in await self.store.get_potential_heads_tuples():
                     if block.height > max_height:
                         max_height = block.height
-                
+
                 if max_height >= 0:
                     self.syncing.text = f"Syncing up to {max_height}"
                 else:
@@ -274,10 +273,14 @@ class FullNodeUI:
             heads: List[HeaderBlock] = self.blockchain.get_current_tips()
             lca_block: FullBlock = self.blockchain.lca_block
             if lca_block.height > 0:
-                difficulty = await self.blockchain.get_next_difficulty(lca_block.prev_header_hash)
+                difficulty = await self.blockchain.get_next_difficulty(
+                    lca_block.prev_header_hash
+                )
                 ips = await self.blockchain.get_next_ips(lca_block.prev_header_hash)
             else:
-                difficulty = await self.blockchain.get_next_difficulty(lca_block.header_hash)
+                difficulty = await self.blockchain.get_next_difficulty(
+                    lca_block.header_hash
+                )
                 ips = await self.blockchain.get_next_ips(lca_block.header_hash)
         total_iters = lca_block.header_block.challenge.total_iters
         latest_blocks: List[HeaderBlock] = await self.get_latest_blocks(heads)
@@ -287,12 +290,17 @@ class FullNodeUI:
                 self.latest_blocks_labels[i].text = (
                     f"{b.height}:{b.header_hash}"
                     f" {'LCA' if b.header_hash == lca_block.header_hash else ''}"
-                    f" {'HEAD' if b.header_hash in [h.header_hash for h in heads] else ''}")
-                self.latest_blocks_labels[i].handler = self.change_route_handler(f"block/{b.header_hash}")
+                    f" {'HEAD' if b.header_hash in [h.header_hash for h in heads] else ''}"
+                )
+                self.latest_blocks_labels[i].handler = self.change_route_handler(
+                    f"block/{b.header_hash}"
+                )
                 new_labels.append(self.latest_blocks_labels[i])
 
         self.lca_label.text = f"Current least common ancestor {lca_block.header_hash} height {lca_block.height}"
-        self.current_heads_label.text = "Heights of heads: " + str([h.height for h in heads])
+        self.current_heads_label.text = "Heights of heads: " + str(
+            [h.height for h in heads]
+        )
         self.difficulty_label.text = f"Current difficuty: {difficulty}"
         self.ips_label.text = f"Current VDF iterations per second: {ips}"
         self.total_iters_label.text = f"Total iterations since genesis: {total_iters}"
@@ -320,7 +328,9 @@ class FullNodeUI:
     async def draw_block(self):
         block_hash: str = self.route.split("block/")[1]
         async with self.store.lock:
-            block: Optional[FullBlock] = await self.store.get_block(bytes32(bytes.fromhex(block_hash)))
+            block: Optional[FullBlock] = await self.store.get_block(
+                bytes32(bytes.fromhex(block_hash))
+            )
         if block is not None:
             self.block_msg.text = f"Block {str(block.header_hash)}"
             if self.block_label.text != str(block):

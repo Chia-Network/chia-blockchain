@@ -17,6 +17,10 @@ pip install -r requirements.txt
 cd lib/chiavdf/fast_vdf
 # Install libgmp, libboost, and libflint, and then run the following
 sh install.sh
+
+# Install mongoDB from https://docs.mongodb.com/manual/administration/install-community/
+# Then, ensure that the mongod service is running.
+mongod --dbpath ./db/
 ```
 
 ### Generate keys
