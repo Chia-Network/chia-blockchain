@@ -43,7 +43,7 @@ class Timelord:
         self.discriminant_queue: List[Tuple[bytes32, uint64]] = []
         self.is_shutdown = False
 
-    async def shutdown(self):
+    async def _shutdown(self):
         async with self.lock:
             for stop_discriminant, (stop_writer, _, _) in self.active_discriminants.items():
                 stop_writer.write(b'10')
@@ -53,7 +53,7 @@ class Timelord:
             self.active_discriminants_start_time.clear()
         self.is_shutdown = True
 
-    async def stop_worst_process(self, worst_weight_active):
+    async def _stop_worst_process(self, worst_weight_active):
         # This is already inside a lock, no need to lock again.
         log.info(f"Stopping one process at weight {worst_weight_active}")
         stop_writer: Optional[StreamWriter] = None
@@ -85,7 +85,7 @@ class Timelord:
         del self.active_discriminants_start_time[stop_discriminant]
         self.done_discriminants.append(stop_discriminant)
 
-    async def update_avg_ips(self, challenge_hash, iterations_needed, ip):
+    async def _update_avg_ips(self, challenge_hash, iterations_needed, ip):
         async with self.lock:
             if challenge_hash in self.active_discriminants:
                 time_taken = time.time() - self.active_discriminants_start_time[challenge_hash]
@@ -104,7 +104,7 @@ class Timelord:
                 log.info(f"Finished PoT chall:{challenge_hash[:10].hex()}.. {iterations_needed}"
                          f" iters. But challenge not active anymore")
 
-    async def update_proofs_count(self, challenge_weight):
+    async def _update_proofs_count(self, challenge_weight):
         async with self.lock:
             if (challenge_weight not in self.proof_count):
                 self.proof_count[challenge_weight] = 1
@@ -124,7 +124,7 @@ class Timelord:
                         del self.active_discriminants_start_time[active_disc]
                         self.done_discriminants.append(active_disc)
 
-    async def do_process_communication(self, challenge_hash, challenge_weight, ip, port):
+    async def _do_process_communication(self, challenge_hash, challenge_weight, ip, port):
         disc: int = create_discriminant(challenge_hash, constants["DISCRIMINANT_SIZE_BITS"])
 
         log.info("Attempting SSH connection")
@@ -220,16 +220,16 @@ class Timelord:
                                             self.config['n_wesolowski'], [uint8(b) for b in proof_bytes])
                 response = timelord_protocol.ProofOfTimeFinished(proof_of_time)
 
-                await self.update_avg_ips(challenge_hash, iterations_needed, ip)
+                await self._update_avg_ips(challenge_hash, iterations_needed, ip)
 
                 async with self.lock:
                     self.proofs_to_write.append(OutboundMessage(NodeType.FULL_NODE,
                                                                 Message("proof_of_time_finished", response),
                                                                 Delivery.BROADCAST))
 
-                await self.update_proofs_count(challenge_weight)
+                await self._update_proofs_count(challenge_weight)
 
-    async def manage_discriminant_queue(self):
+    async def _manage_discriminant_queue(self):
         while not self.is_shutdown:
             async with self.lock:
                 if (len(self.discriminant_queue) > 0):
@@ -243,12 +243,12 @@ class Timelord:
                             ip, port = self.free_servers[0]
                             self.free_servers = self.free_servers[1:]
                             self.discriminant_queue.remove((disc, max_weight))
-                            asyncio.create_task(self.do_process_communication(disc, max_weight, ip, port))
+                            asyncio.create_task(self._do_process_communication(disc, max_weight, ip, port))
                         else:
                             if (len(self.active_discriminants) == self.server_count):
                                 worst_weight_active = min([h for (_, h, _) in self.active_discriminants.values()])
                                 if (max_weight > worst_weight_active):
-                                    await self.stop_worst_process(worst_weight_active)
+                                    await self._stop_worst_process(worst_weight_active)
                 if (len(self.proofs_to_write) > 0):
                     for msg in self.proofs_to_write:
                         yield msg
