@@ -28,7 +28,7 @@ from src.types.sized_bytes import bytes32
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint32
 from src.server.server import ChiaServer
-from src.server.connection import PeerConnections, NodeType
+from src.server.connection import Connection, NodeType
 
 log = logging.getLogger(__name__)
 
@@ -87,7 +87,7 @@ class FullNodeUI:
         self.store: FullNodeStore = store
         self.blockchain: Blockchain = blockchain
         self.node_server: ChiaServer = server
-        self.connections: PeerConnections = server.global_connections
+        self.connections: List[Connection] = server.global_connections
         self.logs: List[logging.LogRecord] = []
         self.app: Optional[Application] = None
         self.closed: bool = False
@@ -230,7 +230,8 @@ class FullNodeUI:
 
     async def draw_home(self):
         con_strs = []
-        for con in self.connections.get_connections():
+        print("Num connections:", len(self.connections))
+        for con in self.connections:
             con_str = f"{NodeType(con.connection_type).name} {con.get_peername()} {con.node_id.hex()[:10]}..."
             con_strs.append(con_str)
             labels = [row.children[0].content.text() for row in self.con_rows]
@@ -238,7 +239,10 @@ class FullNodeUI:
                 con_label = Label(text=con_str)
 
                 def disconnect():
+                    print("Called disconnect on", con)
                     con.close()
+                    if con in self.connections:
+                        self.connections.remove(con)
                     self.layout.focus(self.quit_button)
 
                 disconnect_button = Button("Disconnect", handler=disconnect)

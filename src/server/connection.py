@@ -1,7 +1,7 @@
 from asyncio import StreamReader, StreamWriter
 import logging
 import time
-from typing import List, Any, Optional
+from typing import Any, Optional
 from src.util import cbor
 from src.server.outbound_message import Message, NodeType
 
@@ -61,35 +61,3 @@ class Connection:
 
     def __str__(self) -> str:
         return f"Connection({self.get_peername()})"
-
-
-class PeerConnections:
-    def __init__(self, all_connections: List[Connection] = []):
-        self._all_connections = all_connections
-
-    def add(self, connection: Connection) -> bool:
-        for c in self._all_connections:
-            if c.node_id == connection.node_id:
-                return False
-        self._all_connections.append(connection)
-        return True
-
-    def have_connection(self, connection: Connection) -> bool:
-        for c in self._all_connections:
-            if c.node_id == connection.node_id:
-                return True
-        return False
-
-    def close(self, connection: Connection):
-        if connection in self._all_connections:
-            connection.close()
-            self._all_connections.remove(connection)
-            return
-
-    def close_all_connections(self):
-        for connection in self._all_connections:
-            connection.close()
-        self._all_connections = []
-
-    def get_connections(self):
-        return self._all_connections

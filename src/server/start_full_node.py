@@ -69,7 +69,7 @@ async def main():
     log.info("Waiting to connect to some peers...")
     await asyncio.sleep(3)
 
-    log.info(f"Connected to {len(server.global_connections.get_connections())} peers.")
+    log.info(f"Connected to {len(server.global_connections)} peers.")
     if not server_closed:
         try:
             async for msg in full_node._sync():
