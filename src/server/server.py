@@ -11,6 +11,7 @@ from src.protocols.shared_protocol import Handshake, HandshakeAck, protocol_vers
 from src.util import partial_func
 from src.util.errors import InvalidHandshake, IncompatibleProtocolVersion, InvalidAck, InvalidProtocolMessage
 from src.util.network import create_node_id
+from src.util.ints import uint16
 
 exited = False
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
@@ -226,7 +227,7 @@ class ChiaServer:
         and nothing is yielded.
         """
         # Send handshake message
-        outbound_handshake = Message("handshake", Handshake(protocol_version, self._node_id, self._port, self._local_type))
+        outbound_handshake = Message("handshake", Handshake(protocol_version, self._node_id, uint16(self._port), self._local_type))
 
         try:
             await connection.send(outbound_handshake)
@@ -239,7 +240,7 @@ class ChiaServer:
 
             # Makes sure that we only start one connection with each peer
             connection.node_id = inbound_handshake.node_id
-            connection.peer_server_port = inbound_handshake.server_port
+            connection.peer_server_port = int(inbound_handshake.server_port)
             connection.connection_type = inbound_handshake.node_type
             if self.global_connections.have_connection(connection):
                 log.warning(f"Duplicate connection to {connection}")
