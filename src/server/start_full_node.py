@@ -66,6 +66,16 @@ async def main():
                                                   None))
     await asyncio.gather(*peer_tasks)
 
+    if connect_to_farmer and not server_closed:
+        peer_info = PeerInfo(full_node.config['farmer_peer']['host'],
+                             full_node.config['farmer_peer']['port'])
+        _ = await server.start_client(peer_info, None)
+
+    if connect_to_timelord and not server_closed:
+        peer_info = PeerInfo(full_node.config['timelord_peer']['host'],
+                             full_node.config['timelord_peer']['port'])
+        _ = await server.start_client(peer_info, None)
+
     log.info("Waiting to connect to some peers...")
     await asyncio.sleep(3)
 
@@ -79,24 +89,6 @@ async def main():
         except BaseException as e:
             log.error(f"Error syncing {type(e)}: {e}")
             signal_received()
-
-    if connect_to_farmer and not server_closed:
-        peer_info = PeerInfo(full_node.config['farmer_peer']['host'],
-                             full_node.config['farmer_peer']['port'])
-        _ = await server.start_client(peer_info, None)
-        async for msg in full_node._send_heads_to_farmers():
-            if server_closed:
-                break
-            server.push_message(msg)
-
-    if connect_to_timelord and not server_closed:
-        peer_info = PeerInfo(full_node.config['timelord_peer']['host'],
-                             full_node.config['timelord_peer']['port'])
-        _ = await server.start_client(peer_info, None)
-        async for msg in full_node._send_challenges_to_timelords():
-            if server_closed:
-                break
-            server.push_message(msg)
 
     # Awaits for server and all connections to close
     await server.await_closed()
