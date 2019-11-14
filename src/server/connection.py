@@ -28,7 +28,7 @@ class Connection:
         self.local_port = server_port
         self.peer_host = self.writer.get_extra_info("peername")[0]
         self.peer_port = self.writer.get_extra_info("peername")[1]
-        self.peer_server_port = None
+        self.peer_server_port: Optional[int] = None
         self.node_id = None
 
         # Connection metrics

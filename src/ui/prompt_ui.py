@@ -26,7 +26,7 @@ from src.types.header_block import HeaderBlock
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.types.peer_info import PeerInfo
-from src.util.ints import uint32
+from src.util.ints import uint16
 from src.server.server import ChiaServer
 from src.server.connection import PeerConnections, NodeType
 
@@ -209,7 +209,7 @@ class FullNodeUI:
         except ValueError:  # Not yet in layout
             self.error_msg.text = "Enter a valid IP and port in the following format: 10.5.4.3:8000"
             return
-        target_node: PeerInfo = PeerInfo(ip, uint32(int(port)))
+        target_node: PeerInfo = PeerInfo(ip, uint16(int(port)))
         log.error(f"Want to connect to {ip}, {port}")
         if not (await self.node_server.start_client(target_node, None)):
             self.error_msg.text = f"Failed to connect to {ip}:{port}"
