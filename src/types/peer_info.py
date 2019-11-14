@@ -1,5 +1,5 @@
 from src.util.streamable import streamable, Streamable
-from src.util.ints import uint32
+from src.util.ints import uint16
 from dataclasses import dataclass
 
 
@@ -7,4 +7,4 @@ from dataclasses import dataclass
 @streamable
 class PeerInfo(Streamable):
     host: str
-    port: uint32
+    port: uint16
