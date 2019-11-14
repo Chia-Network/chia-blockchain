@@ -226,7 +226,7 @@ class ChiaServer:
         and nothing is yielded.
         """
         # Send handshake message
-        outbound_handshake = Message("handshake", Handshake(protocol_version, self._node_id, self._local_type))
+        outbound_handshake = Message("handshake", Handshake(protocol_version, self._node_id, self._port, self._local_type))
 
         try:
             await connection.send(outbound_handshake)
@@ -239,6 +239,7 @@ class ChiaServer:
 
             # Makes sure that we only start one connection with each peer
             connection.node_id = inbound_handshake.node_id
+            connection.peer_server_port = inbound_handshake.server_port
             connection.connection_type = inbound_handshake.node_type
             if self.global_connections.have_connection(connection):
                 log.warning(f"Duplicate connection to {connection}")
