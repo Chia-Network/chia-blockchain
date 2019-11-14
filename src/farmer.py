@@ -2,7 +2,7 @@ import logging
 import os
 from yaml import safe_load
 from hashlib import sha256
-from typing import List, Dict, Set, Tuple, Any
+from typing import List, Dict, Set, Any
 from blspy import PrivateKey, Util, PrependSignature
 from definitions import ROOT_DIR
 from src.util.api_decorators import api_request
@@ -40,7 +40,6 @@ class Farmer:
         self.challenges: Dict[uint32, List[farmer_protocol.ProofOfSpaceFinalized]] = {}
         self.challenge_to_height: Dict[bytes32, uint32] = {}
         self.challenge_to_best_iters: Dict[bytes32, uint64] = {}
-        self.current_heads: List[Tuple[bytes32, uint32]] = []
         self.seen_challenges: Set[bytes32] = set()
         self.unfinished_challenges: Dict[uint32, List[bytes32]] = {}
         self.current_height: uint32 = uint32(0)
@@ -246,7 +245,6 @@ class Farmer:
         self.harvester_responses_proof_hash_to_qual = {}
         self.challenges = {}
         self.challenge_to_height = {}
-        self.current_heads = []
         self.seen_challenges = set()
         self.unfinished_challenges = {}
         self.current_height = uint32(0)
