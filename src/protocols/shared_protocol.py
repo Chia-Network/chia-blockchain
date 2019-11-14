@@ -1,4 +1,5 @@
 from src.util.cbor_message import cbor_message
+from src.util.ints import uint16
 from src.types.sized_bytes import bytes32
 from src.server.connection import NodeType
 from dataclasses import dataclass
@@ -13,6 +14,7 @@ Handshake when establishing a connection between two servers.
 class Handshake:
     version: str
     node_id: bytes32
+    server_port: uint16
     node_type: NodeType
 
 
