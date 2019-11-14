@@ -5,13 +5,15 @@ from typing import Tuple, AsyncGenerator, Callable, Optional, List, Any, Dict
 from aiter.server import start_server_aiter
 from aiter import push_aiter, map_aiter, join_aiters, iter_to_aiter, aiter_forker
 from src.types.peer_info import PeerInfo
-from src.server.connection import Connection
+from src.server.connection import Connection, PeerConnections
 from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
 from src.protocols.shared_protocol import Handshake, HandshakeAck, protocol_version
 from src.util import partial_func
 from src.util.errors import InvalidHandshake, IncompatibleProtocolVersion, InvalidAck, InvalidProtocolMessage
 from src.util.network import create_node_id
 
+exited = False
+# Each message is prepended with LENGTH_BYTES bytes specifying the length
 TOTAL_RETRY_SECONDS: int = 10
 RETRY_INTERVAL: int = 2
 
@@ -20,7 +22,7 @@ log = logging.getLogger(__name__)
 
 class ChiaServer:
     # Keeps track of all connections to and from this node.
-    global_connections: List[Connection] = []
+    global_connections: PeerConnections = PeerConnections([])
 
     # Optional listening server. You can also use this class without starting one.
     _server: Optional[asyncio.AbstractServer] = None
@@ -131,9 +133,7 @@ class ChiaServer:
         """
         Starts closing all the clients and servers, by stopping the server and stopping the aiters.
         """
-        for connection in self.global_connections:
-            connection.close()
-        self.global_connections = []
+        self.global_connections.close_all_connections()
         self._server.close()
         if not self._outbound_aiter.is_stopped():
             self._outbound_aiter.stop()
@@ -240,12 +240,11 @@ class ChiaServer:
             # Makes sure that we only start one connection with each peer
             connection.node_id = inbound_handshake.node_id
             connection.connection_type = inbound_handshake.node_type
-            for c in self.global_connections:
-                if c.node_id == connection.node_id:
-                    log.warning(f"Duplicate connection to {connection}")
-                    return
+            if self.global_connections.have_connection(connection):
+                log.warning(f"Duplicate connection to {connection}")
+                return
 
-            self.global_connections.append(connection)
+            self.global_connections.add(connection)
 
             # Send Ack message
             await connection.send(Message("handshake_ack", HandshakeAck()))
@@ -287,9 +286,7 @@ class ChiaServer:
             log.warning(f"Connection error by peer {connection.get_peername()}, closing connection.")
         finally:
             # Removes the connection from the global list, so we don't try to send things to it
-            connection.close()
-            if connection in self.global_connections:
-                self.global_connections.remove(connection)
+            self.global_connections.close(connection)
 
     async def handle_message(self, pair: Tuple[Connection, Message], api: Any) -> AsyncGenerator[
             Tuple[Connection, OutboundMessage], None]:
@@ -316,9 +313,7 @@ class ChiaServer:
                 await result
         except Exception as e:
             log.error(f"Error {type(e)} {e}, closing connection {connection}")
-            connection.close()
-            if connection in self.global_connections:
-                self.global_connections.remove(connection)
+            self.global_connections.close(connection)
 
     async def expand_outbound_messages(self, pair: Tuple[Connection, OutboundMessage]) -> AsyncGenerator[
             Tuple[Connection, Message], None]:
@@ -334,7 +329,7 @@ class ChiaServer:
         elif outbound_message.delivery_method == Delivery.RANDOM:
             # Select a random peer.
             to_yield_single: Tuple[Connection, Message]
-            typed_peers: List[Connection] = [peer for peer in self.global_connections
+            typed_peers: List[Connection] = [peer for peer in self.global_connections.get_connections()
                                              if peer.connection_type == outbound_message.peer_type]
             if len(typed_peers) == 0:
                 return
@@ -342,7 +337,7 @@ class ChiaServer:
         elif (outbound_message.delivery_method == Delivery.BROADCAST or
               outbound_message.delivery_method == Delivery.BROADCAST_TO_OTHERS):
             # Broadcast to all peers.
-            for peer in self.global_connections:
+            for peer in self.global_connections.get_connections():
                 if peer.connection_type == outbound_message.peer_type:
                     if peer == connection:
                         if outbound_message.delivery_method == Delivery.BROADCAST:
