@@ -46,7 +46,8 @@ class FullNode:
         self.store = store
         self.blockchain = blockchain
 
-    async def _send_heads_to_farmers(self) -> AsyncGenerator[OutboundMessage, None]:
+    async def _send_tips_to_farmers(self, delivery: Delivery = Delivery.BROADCAST) -> \
+            AsyncGenerator[OutboundMessage, None]:
         """
         Sends all of the current heads to all farmer peers. Also sends the latest
         estimated proof of time rate, so farmer can calulate which proofs are good.
@@ -66,11 +67,12 @@ class FullNode:
                                                                       quality, difficulty))
             proof_of_time_rate: uint64 = await self.store.get_proof_of_time_estimate_ips()
         for request in requests:
-            yield OutboundMessage(NodeType.FARMER, Message("proof_of_space_finalized", request), Delivery.BROADCAST)
+            yield OutboundMessage(NodeType.FARMER, Message("proof_of_space_finalized", request), delivery)
         rate_update = farmer_protocol.ProofOfTimeRate(proof_of_time_rate)
-        yield OutboundMessage(NodeType.FARMER, Message("proof_of_time_rate", rate_update), Delivery.BROADCAST)
+        yield OutboundMessage(NodeType.FARMER, Message("proof_of_time_rate", rate_update), delivery)
 
-    async def _send_challenges_to_timelords(self) -> AsyncGenerator[OutboundMessage, None]:
+    async def _send_challenges_to_timelords(self, delivery: Delivery = Delivery.BROADCAST) -> \
+            AsyncGenerator[OutboundMessage, None]:
         """
         Sends all of the current heads to all timelord peers.
         """
@@ -82,7 +84,7 @@ class FullNode:
                 requests.append(timelord_protocol.ChallengeStart(challenge_hash, head.challenge.total_weight))
 
         for request in requests:
-            yield OutboundMessage(NodeType.TIMELORD, Message("challenge_start", request), Delivery.BROADCAST)
+            yield OutboundMessage(NodeType.TIMELORD, Message("challenge_start", request), delivery)
 
     async def _on_connect(self) -> AsyncGenerator[OutboundMessage, None]:
         """
@@ -100,6 +102,12 @@ class FullNode:
         for block in blocks:
             request = peer_protocol.Block(block)
             yield OutboundMessage(NodeType.FULL_NODE, Message("block", request), Delivery.RESPOND)
+
+        # Update farmers and timelord with most recent information
+        async for msg in self._send_challenges_to_timelords(Delivery.RESPOND):
+            yield msg
+        async for msg in self._send_tips_to_farmers(Delivery.RESPOND):
+            yield msg
 
     async def _sync(self):
         """
@@ -168,7 +176,7 @@ class FullNode:
             # TODO: ban peers that provided the invalid heads or proofs
             raise errors.InvalidWeight(f"Weight of {tip_block.header_block.header.get_hash()} not valid.")
 
-        log.error(f"Validated weight of headers.")
+        log.error(f"Validated weight of headers. Downloaded {len(headers)} headers, tip height {tip_height}")
         assert tip_height + 1 == len(headers)
 
         async with (await self.store.get_lock()):
@@ -205,7 +213,7 @@ class FullNode:
                     block = await self.store.get_potential_heads_full_block(headers[height].header.get_hash())
                 else:
                     block = await self.store.get_potential_block(uint32(height))
-                assert block
+                assert block is not None
 
                 start = time.time()
                 result = await self.blockchain.receive_block(block)
@@ -219,6 +227,12 @@ class FullNode:
             log.info(f"Finished sync up to height {tip_height}")
             await self.store.set_sync_mode(False)
             await self.store.clear_sync_information()
+
+        # Update farmers and timelord with most recent information
+        async for msg in self._send_challenges_to_timelords():
+            yield msg
+        async for msg in self._send_tips_to_farmers():
+            yield msg
 
     @api_request
     async def request_header_blocks(self, request: peer_protocol.RequestHeaderBlocks) \
