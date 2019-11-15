@@ -115,12 +115,16 @@ class FullNode:
         async for msg in self._send_tips_to_farmers(Delivery.RESPOND):
             yield msg
 
-    def _need_more_peers(self):
-        conns = self.server.global_connections
-        return len(conns.get_full_node_connections()) < \
-               self.config['target_peer_count']
+    def _num_needed_peers(self):
+        diff = self.config['target_peer_count'] - \
+               len(self.server.global_connections.get_full_node_connections())
+        return diff if diff >= 0 else 0
 
     def _start_bg_tasks(self):
+        """
+        Start a background task connecting periodically to the introducer and
+        requesting the peer list.
+        """
         introducer = self.config['introducer_peer']
         introducer_peerinfo = PeerInfo(introducer['host'], introducer['port'])
         async def introducer_client():
@@ -130,13 +134,18 @@ class FullNode:
                                       Delivery.RESPOND)
 
             while True:
-                if self._need_more_peers():
+                if self._num_needed_peers():
                     if not await self.server.start_client(introducer_peerinfo,
                                                           on_connect):
                         continue
                 await asyncio.sleep(self.config['introducer_connect_interval'])
 
         self._bg_tasks.add(asyncio.create_task(introducer_client()))
+
+    def _shutdown(self):
+        for task in self._bg_tasks:
+            task.cancel()
+        self._bg_tasks = set()
 
     async def _sync(self):
         """
@@ -691,9 +700,13 @@ class FullNode:
         yield OutboundMessage(NodeType.INTRODUCER, Message('', None),
                               Delivery.CLOSE)
 
-        tasks = []
         unconnected = conns.get_unconnected_peers()
-        log.info(f"Trying to connect to peers: {unconnected}")
-        for peer in unconnected:
+        to_connect = unconnected[:self._num_needed_peers()]
+        if not len(to_connect):
+            return
+
+        log.info(f"Trying to connect to peers: {to_connect}")
+        tasks = []
+        for peer in to_connect:
             tasks.append(asyncio.create_task(self.server.start_client(peer)))
         await asyncio.gather(*tasks)
