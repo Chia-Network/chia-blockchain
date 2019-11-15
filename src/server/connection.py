@@ -129,6 +129,10 @@ class PeerConnections:
 
 
 class Peers:
+    """
+    Has the list of known full node peers that are already connected or may be
+    connected to.
+    """
     def __init__(self):
         self._peers: List[PeerInfo] = []
 
@@ -147,19 +151,10 @@ class Peers:
         except ValueError:
             return False
 
-    def randomize(self, limit: int):
-        """
-        Randomize list of peers up to the limit using Fisher-Yates shuffle.
-        """
-        last_idx = len(self._peers) - 1
-        for i in range(limit):
-            j = random.randint(i, last_idx)
-            self._peers[i], self._peers[j] = self._peers[j], self._peers[i]
-
     def get_peers(self, max_peers: int = 0, randomize: bool = False) \
             -> List[PeerInfo]:
         if not max_peers or max_peers > len(self._peers):
             max_peers = len(self._peers)
         if randomize:
-            self.randomize(max_peers)
+            random.shuffle(self._peers)
         return self._peers[:max_peers]
