@@ -26,6 +26,7 @@ jobs:
         eval "$(ssh-agent -s)"
         ssh-add - <<< "${CHIA_MACHINE_SSH_KEY}"
         git submodule update --init --recursive
+        brew update && brew install gmp 
         python3 -m venv .venv
         . .venv/bin/activate
         pip install wheel # For building blspy
