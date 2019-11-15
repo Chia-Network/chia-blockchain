@@ -15,12 +15,14 @@ python -m src.server.start_timelord &
 P2=$!
 python -m src.server.start_farmer &
 P3=$!
-python -m src.server.start_full_node "127.0.0.1" 8002 -f &
+python -m src.server.start_introducer &
 P4=$!
-python -m src.server.start_full_node "127.0.0.1" 8444 -t -u 8222 &
+python -m src.server.start_full_node "127.0.0.1" 8002 -f &
 P5=$!
-python -m src.server.start_full_node "127.0.0.1" 8005 &
+python -m src.server.start_full_node "127.0.0.1" 8444 -t -u 8222 &
 P6=$!
+python -m src.server.start_full_node "127.0.0.1" 8005 &
+P7=$!
 
 _term() {
   echo "Caught SIGTERM signal, killing all servers."
@@ -30,10 +32,11 @@ _term() {
   kill -TERM "$P4" 2>/dev/null
   kill -TERM "$P5" 2>/dev/null
   kill -TERM "$P6" 2>/dev/null
+  kill -TERM "$P7" 2>/dev/null
   _kill_servers
 }
 
 trap _term SIGTERM
 trap _term SIGINT
 trap _term INT
-wait $P1 $P2 $P3 $P4 $P5 $P6
+wait $P1 $P2 $P3 $P4 $P5 $P6 $P7
