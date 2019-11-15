@@ -9,14 +9,12 @@ on:
 
 jobs:
   build:
-
-    runs-on: 
-      - ubuntu-latest
-      - macOS-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       max-parallel: 4
       matrix:
         python-version: [3.7, 3.8]
+        os: [ubuntu-latest, macOS-latest]
 
     steps:
     - uses: actions/checkout@v1
