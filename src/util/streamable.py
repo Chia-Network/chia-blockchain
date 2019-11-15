@@ -81,6 +81,9 @@ class Streamable:
             return f_type.parse(f)
         if hasattr(f_type, "from_bytes") and size_hints[f_type.__name__]:
             return f_type.from_bytes(f.read(size_hints[f_type.__name__]))
+        if f_type is str:
+            str_size: uint32 = uint32(int.from_bytes(f.read(4), "big"))
+            return bytes.decode(f.read(str_size))
         else:
             raise RuntimeError(f"Type {f_type} does not have parse")
 
@@ -111,6 +114,9 @@ class Streamable:
             item.stream(f)
         elif hasattr(f_type, "__bytes__"):
             f.write(bytes(item))
+        elif f_type is str:
+            f.write(uint32(len(item)).to_bytes(4, "big"))
+            f.write(item.encode())
         else:
             raise NotImplementedError(f"can't stream {item}, {f_type}")
 
