@@ -38,6 +38,7 @@ async def main():
     def master_close_cb():
         # Called by the UI, when node is closed, or when a signal is sent
         log.info("Closing all connections, and server...")
+        full_node._shutdown()
         server.close_all()
         global server_closed
         server_closed = True

@@ -30,9 +30,9 @@ def main():
     )
     parser.add_argument("-f", "--farmer", type=str2bool, nargs='?', const=True, default=True,
                         help="Regenerate farmer key")
-    parser.add_argument("-p", "--harvester", type=str2bool, nargs='?', const=True, default=True,
+    parser.add_argument("-a", "--harvester", type=str2bool, nargs='?', const=True, default=True,
                         help="Regenerate plot key seed")
-    parser.add_argument("-l", "--pool", type=str2bool, nargs='?', const=True, default=True,
+    parser.add_argument("-p", "--pool", type=str2bool, nargs='?', const=True, default=True,
                         help="Regenerate pool keys")
     args = parser.parse_args()
 
