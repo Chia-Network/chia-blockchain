@@ -86,6 +86,7 @@ class ChiaServer:
         """
         if self._server is not None:
             if self._host == target_node.host and self._port == target_node.port:
+                self.global_connections.peers.remove(target_node)
                 return False
         total_time: int = 0
         succeeded: bool = False
@@ -103,6 +104,8 @@ class ChiaServer:
                 continue
 
         if not succeeded:
+            if self.global_connections.peers.remove(target_node):
+                log.info(f"Removed {target_node} from peer list")
             return False
         if on_connect is not None:
             self._on_connect_callbacks[target_node] = on_connect
@@ -288,7 +291,7 @@ class ChiaServer:
             log.warning(f"Connection error by peer {connection.get_peername()}, closing connection.")
         finally:
             # Removes the connection from the global list, so we don't try to send things to it
-            self.global_connections.close(connection)
+            self.global_connections.close(connection, True)
 
     async def handle_message(self, pair: Tuple[Connection, Message], api: Any) -> AsyncGenerator[
             Tuple[Connection, OutboundMessage], None]:
@@ -346,3 +349,5 @@ class ChiaServer:
                             yield (peer, outbound_message.message)
                     else:
                         yield (peer, outbound_message.message)
+        elif outbound_message.delivery_method == Delivery.CLOSE:
+            self.global_connections.close(connection, True)
