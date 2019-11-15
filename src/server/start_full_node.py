@@ -31,6 +31,7 @@ async def main():
     # Starts the full node server (which full nodes can connect to)
     host, port = parse_host_port(full_node)
     server = ChiaServer(port, full_node, NodeType.FULL_NODE)
+    full_node._set_server(server)
     _ = await server.start_server(host, full_node._on_connect)
     wait_for_ui, ui_close_cb = None, None
 
@@ -59,12 +60,7 @@ async def main():
     connect_to_farmer = ("-f" in sys.argv)
     connect_to_timelord = ("-t" in sys.argv)
 
-    peer_tasks = []
-    for peer in full_node.config['initial_peers']:
-        if not (host == peer['host'] and port == peer['port']):
-            peer_tasks.append(server.start_client(PeerInfo(peer['host'], peer['port']),
-                                                  None))
-    await asyncio.gather(*peer_tasks)
+    full_node._start_bg_tasks()
 
     if connect_to_farmer and not server_closed:
         peer_info = PeerInfo(full_node.config['farmer_peer']['host'],
