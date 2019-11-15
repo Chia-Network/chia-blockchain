@@ -8,6 +8,7 @@ class NodeType(IntEnum):
     HARVESTER = 2
     FARMER = 3
     TIMELORD = 4
+    INTRODUCER = 5
 
 
 class Delivery(IntEnum):
@@ -19,6 +20,8 @@ class Delivery(IntEnum):
     BROADCAST_TO_OTHERS = 3
     # A message is sent to a random peer
     RANDOM = 4
+    # Pseudo-message to close the current connection
+    CLOSE = 5
 
 
 @dataclass

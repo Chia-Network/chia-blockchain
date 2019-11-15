@@ -54,6 +54,10 @@ full_node:
   short_sync_download_count: 6
   # This SSH key is for the ui SSH server
   ssh_filename: "src/config/ssh_host_key"
+  # How often to connect to introducer if we need to learn more peers
+  introducer_connect_interval: 60
+  # Continue trying to connect to more peers until this number of connections
+  target_peer_count: 10
 
   farmer_peer:
       host: "127.0.0.1"
@@ -61,12 +65,13 @@ full_node:
   timelord_peer:
       host: "127.0.0.1"
       port: 8003
-  initial_peers:
-    - host: "127.0.0.1"
-      port: 8002
-    - host: "127.0.0.1"
-      port: 8444
-    - host: "127.0.0.1"
-      port: 8005
+  introducer_peer:
+      host: "127.0.0.1"
+      port: 8100
     # - host: "216.39.16.173"  # Chia beast
     #   port: 8004
+
+introducer:
+  host: "127.0.0.1"
+  port: 8100
+  max_peers_to_send: 20

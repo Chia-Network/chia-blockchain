@@ -1,8 +1,11 @@
 from asyncio import StreamReader, StreamWriter
 import logging
 import time
-from typing import List, Any, Optional
+import random
+from typing import List, Iterable, Any, Optional
 from src.util import cbor
+from src.util.ints import uint16
+from src.types.peer_info import PeerInfo
 from src.server.outbound_message import Message, NodeType
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
@@ -42,6 +45,12 @@ class Connection:
     def get_socket(self):
         return self.writer.get_extra_info("socket")
 
+    def get_peer_info(self) -> Optional[PeerInfo]:
+        if not self.peer_server_port or \
+                self.connection_type != NodeType.FULL_NODE:
+            return None
+        return PeerInfo(self.peer_host, uint16(self.peer_server_port))
+
     async def send(self, message: Message):
         encoded: bytes = cbor.dumps({"f": message.function, "d": message.data})
         assert(len(encoded) < (2**(LENGTH_BYTES*8)))
@@ -67,12 +76,17 @@ class Connection:
 class PeerConnections:
     def __init__(self, all_connections: List[Connection] = []):
         self._all_connections = all_connections
+        # Only full node peers are added to `peers`
+        self.peers = Peers()
+        for c in all_connections:
+            self.peers.add(c.get_peer_info())
 
     def add(self, connection: Connection) -> bool:
         for c in self._all_connections:
             if c.node_id == connection.node_id:
                 return False
         self._all_connections.append(connection)
+        self.peers.add(connection.get_peer_info())
         return True
 
     def have_connection(self, connection: Connection) -> bool:
@@ -81,16 +95,71 @@ class PeerConnections:
                 return True
         return False
 
-    def close(self, connection: Connection):
+    def close(self, connection: Connection, keep_peer: bool = False):
         if connection in self._all_connections:
+            info = connection.get_peer_info()
             connection.close()
             self._all_connections.remove(connection)
-            return
+            if not keep_peer:
+                self.peers.remove(info)
 
     def close_all_connections(self):
         for connection in self._all_connections:
             connection.close()
         self._all_connections = []
+        self.peers = Peers()
 
     def get_connections(self):
         return self._all_connections
+
+    def get_full_node_connections(self):
+        return list(filter(Connection.get_peer_info, self._all_connections))
+
+    def get_full_node_peerinfos(self):
+        return list(filter(None, map(Connection.get_peer_info,
+                                     self._all_connections)))
+
+    def get_unconnected_peers(self, max_peers=0):
+        connected = self.get_full_node_peerinfos()
+        peers = self.peers.get_peers()
+        unconnected = list(filter(lambda peer: peer not in connected, peers))
+        if not max_peers:
+            max_peers = len(unconnected)
+        return unconnected[:max_peers]
+
+
+class Peers:
+    def __init__(self):
+        self._peers: List[PeerInfo] = []
+
+    def add(self, peer: Optional[PeerInfo]) -> bool:
+        if peer is None or not peer.port or peer in self._peers:
+            return False
+        self._peers.append(peer)
+        return True
+
+    def remove(self, peer: Optional[PeerInfo]) -> bool:
+        if peer is None or not peer.port:
+            return False
+        try:
+            self._peers.remove(peer)
+            return True
+        except ValueError:
+            return False
+
+    def randomize(self, limit: int):
+        """
+        Randomize list of peers up to the limit using Fisher-Yates shuffle.
+        """
+        last_idx = len(self._peers) - 1
+        for i in range(limit):
+            j = random.randint(i, last_idx)
+            self._peers[i], self._peers[j] = self._peers[j], self._peers[i]
+
+    def get_peers(self, max_peers: int = 0, randomize: bool = False) \
+            -> List[PeerInfo]:
+        if not max_peers or max_peers > len(self._peers):
+            max_peers = len(self._peers)
+        if randomize:
+            self.randomize(max_peers)
+        return self._peers[:max_peers]

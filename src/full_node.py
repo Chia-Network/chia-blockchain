@@ -9,7 +9,7 @@ from hashlib import sha256
 from chiapos import Verifier
 from blspy import Signature, PrivateKey
 from asyncio import Event
-from typing import List, Optional, AsyncGenerator, Tuple
+from typing import List, Optional, AsyncGenerator, Tuple, Set
 from definitions import ROOT_DIR
 from src.util.api_decorators import api_request
 from src.util.ints import uint64, uint32
@@ -24,6 +24,7 @@ from src.types.challenge import Challenge
 from src.types.header import HeaderData, Header
 from src.types.full_block import FullBlock
 from src.types.fees_target import FeesTarget
+from src.types.peer_info import PeerInfo
 from src.consensus.weight_verifier import verify_weight
 from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.constants import constants
@@ -31,6 +32,7 @@ from src.blockchain import Blockchain, ReceiveBlockResult
 from src.server.outbound_message import OutboundMessage, Delivery, NodeType, Message
 from src.util.errors import BlockNotInBlockchain, PeersDontHaveBlock, InvalidUnfinishedBlock
 from src.store.full_node_store import FullNodeStore
+from src.server.server import ChiaServer
 
 
 log = logging.getLogger(__name__)
@@ -45,6 +47,10 @@ class FullNode:
         self.config = yaml.safe_load(open(config_filename, "r"))["full_node"]
         self.store = store
         self.blockchain = blockchain
+        self._bg_tasks: Set[asyncio.Task] = set()
+
+    def _set_server(self, server: ChiaServer):
+        self.server = server
 
     async def _send_tips_to_farmers(self, delivery: Delivery = Delivery.BROADCAST) -> \
             AsyncGenerator[OutboundMessage, None]:
@@ -108,6 +114,29 @@ class FullNode:
             yield msg
         async for msg in self._send_tips_to_farmers(Delivery.RESPOND):
             yield msg
+
+    def _need_more_peers(self):
+        conns = self.server.global_connections
+        return len(conns.get_full_node_connections()) < \
+               self.config['target_peer_count']
+
+    def _start_bg_tasks(self):
+        introducer = self.config['introducer_peer']
+        introducer_peerinfo = PeerInfo(introducer['host'], introducer['port'])
+        async def introducer_client():
+            async def on_connect():
+                msg = Message("request_peers", peer_protocol.RequestPeers())
+                yield OutboundMessage(NodeType.INTRODUCER, msg,
+                                      Delivery.RESPOND)
+
+            while True:
+                if self._need_more_peers():
+                    if not await self.server.start_client(introducer_peerinfo,
+                                                          on_connect):
+                        continue
+                await asyncio.sleep(self.config['introducer_connect_interval'])
+
+        self._bg_tasks.add(asyncio.create_task(introducer_client()))
 
     async def _sync(self):
         """
@@ -649,3 +678,22 @@ class FullNode:
         else:
             # Should never reach here, all the cases are covered
             assert False
+
+    @api_request
+    async def peers(self, request: peer_protocol.Peers) -> \
+            AsyncGenerator[OutboundMessage, None]:
+        conns = self.server.global_connections
+        log.info(f"Received peer list: {request.peer_list}")
+        for peer in request.peer_list:
+            conns.peers.add(peer)
+
+        # Pseudo-message to close the connection
+        yield OutboundMessage(NodeType.INTRODUCER, Message('', None),
+                              Delivery.CLOSE)
+
+        tasks = []
+        unconnected = conns.get_unconnected_peers()
+        log.info(f"Trying to connect to peers: {unconnected}")
+        for peer in unconnected:
+            tasks.append(asyncio.create_task(self.server.start_client(peer)))
+        await asyncio.gather(*tasks)
