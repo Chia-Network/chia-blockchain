@@ -7,7 +7,7 @@ from blspy import PrivateKey
 
 from src.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import constants
-from src.db.database import FullNodeStore
+from src.database import FullNodeStore
 from src.types.body import Body
 from src.types.coinbase import CoinbaseInfo
 from src.types.full_block import FullBlock

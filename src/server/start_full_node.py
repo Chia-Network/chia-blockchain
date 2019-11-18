@@ -4,7 +4,7 @@ import signal
 import sys
 
 from src.blockchain import Blockchain
-from src.db.database import FullNodeStore
+from src.database import FullNodeStore
 from src.full_node import FullNode
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer

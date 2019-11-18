@@ -11,7 +11,7 @@ from src.consensus.pot_iterations import (
     calculate_ips_from_iterations,
     calculate_iterations_quality,
 )
-from src.db.database import FullNodeStore
+from src.database import FullNodeStore
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
@@ -51,12 +51,12 @@ class Blockchain:
 
     async def initialize(self):
         async for block in self.store.get_blocks():
-            if not self.heads or block.height > self.heads[0].height:
-                self.heads = [block]
+            if not self.tips or block.height > self.tips[0].height:
+                self.tips = [block]
             # TODO: are cases where the blockchain "fans out" handled appropriately?
             self.height_to_hash[block.height] = block.header_hash
 
-        if not self.heads:
+        if not self.tips:
             self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
 
             result = await self.receive_block(self.genesis)
@@ -64,7 +64,7 @@ class Blockchain:
                 raise InvalidGenesisBlock()
             assert self.lca_block
         else:
-            self.lca_block = self.heads[0]
+            self.lca_block = self.tips[0]
 
     def get_current_tips(self) -> List[HeaderBlock]:
         """

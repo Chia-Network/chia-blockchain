@@ -12,7 +12,6 @@ from src.types.header import HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
-from src.types.trunk_block import TrunkBlock
 from src.util.ints import uint32, uint64
 from src.util.streamable import Streamable
 
