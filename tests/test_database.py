@@ -50,9 +50,9 @@ class TestDatabase:
         assert genesis == await db.get_potential_head(genesis.header_hash)
 
         # add/get potential trunk
-        trunk = genesis.trunk_block
-        await db.add_potential_trunk(trunk)
-        assert await db.get_potential_trunk(genesis.height) == trunk
+        header = genesis.header_block
+        await db.add_potential_header(header)
+        assert await db.get_potential_header(genesis.height) == header
 
         # Add potential block
         await db.add_potential_block(genesis)
@@ -62,8 +62,8 @@ class TestDatabase:
         assert await db.get_candidate_block(0) is None
         partial = (
             genesis.body,
-            genesis.trunk_block.header.data,
-            genesis.trunk_block.proof_of_space,
+            genesis.header_block.header.data,
+            genesis.header_block.proof_of_space,
         )
         await db.add_candidate_block(genesis.header_hash, *partial)
         assert await db.get_candidate_block(genesis.header_hash) == partial
