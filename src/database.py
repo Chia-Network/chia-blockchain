@@ -45,7 +45,6 @@ class FullNodeStore(Database):
         self.full_blocks = self.db.get_collection("full_blocks")
         self.potential_heads = self.db.get_collection("potential_heads")
         self.potential_headers = self.db.get_collection("potential_headers")
-        self.potential_trunks = self.db.get_collection("potential_trunks")
         self.potential_blocks = self.db.get_collection("potential_blocks")
         self.candidate_blocks = self.db.get_collection("candidate_blocks")
         self.unfinished_blocks = self.db.get_collection("unfinished_blocks")
