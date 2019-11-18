@@ -17,7 +17,7 @@ from src.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.weight_verifier import verify_weight
-from src.db.database import FullNodeStore
+from src.database import FullNodeStore
 from src.protocols import farmer_protocol, peer_protocol, timelord_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer

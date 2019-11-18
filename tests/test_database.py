@@ -7,12 +7,10 @@ from motor import motor_asyncio
 
 from src.consensus.constants import constants
 from src.database import FullNodeStore
-from src.types.block_body import BlockBody
-from src.types.block_header import BlockHeaderData
+from src.types.body import Body
 from src.types.full_block import FullBlock
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
-from src.types.trunk_block import TrunkBlock
 from src.util.ints import uint32, uint64
 from src.util.streamable import Streamable
 

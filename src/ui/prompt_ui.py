@@ -11,7 +11,7 @@ from prompt_toolkit.layout.layout import Layout
 from prompt_toolkit.styles import Style
 from prompt_toolkit.widgets import Button, Frame, Label, SearchToolbar, TextArea
 from src.blockchain import Blockchain
-from src.db.database import FullNodeStore
+from src.database import FullNodeStore
 from src.server.connection import NodeType, PeerConnections
 from src.server.server import ChiaServer
 from src.types.full_block import FullBlock
