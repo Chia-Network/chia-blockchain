@@ -3,25 +3,31 @@ from typing import Any, List, Type, Union, get_type_hints
 
 
 def is_type_List(f_type: Type) -> bool:
-    return (hasattr(f_type, "__origin__") and f_type.__origin__ == list) or f_type == list
+    return (
+        hasattr(f_type, "__origin__") and f_type.__origin__ == list
+    ) or f_type == list
 
 
 def is_type_SpecificOptional(f_type) -> bool:
     """
     Returns true for types such as Optional[T], but not Optional, or T.
     """
-    return (hasattr(f_type, "__origin__") and f_type.__origin__ == Union
-            and f_type.__args__[1]() is None)
+    return (
+        hasattr(f_type, "__origin__")
+        and f_type.__origin__ == Union
+        and f_type.__args__[1]() is None
+    )
 
 
 def strictdataclass(cls: Any):
-    class _Local():
+    class _Local:
         """
         Dataclass where all fields must be type annotated, and type checking is performed
         at initialization, even recursively through Lists. Non-annotated fields are ignored.
         Also, for any fields which have a type with .from_bytes(bytes) or constructor(bytes),
         bytes can be passed in and the type can be constructed.
         """
+
         def parse_item(self, item: Any, f_name: str, f_type: Type) -> Any:
             if is_type_List(f_type):
                 collected_list: List = []
@@ -53,7 +59,9 @@ def strictdataclass(cls: Any):
             for (f_name, f_type) in fields.items():
                 if f_name not in data:
                     raise ValueError(f"Field {f_name} not present")
-                object.__setattr__(self, f_name, self.parse_item(data[f_name], f_name, f_type))
+                object.__setattr__(
+                    self, f_name, self.parse_item(data[f_name], f_name, f_type)
+                )
 
     class NoTypeChecking:
         __no_type_check__ = True

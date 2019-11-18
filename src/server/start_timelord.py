@@ -8,10 +8,11 @@ from src.timelord import Timelord
 from src.types.peer_info import PeerInfo
 from src.util.network import parse_host_port
 
-logging.basicConfig(format='Timelord %(name)-25s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s',
-                    level=logging.INFO,
-                    datefmt='%H:%M:%S'
-                    )
+logging.basicConfig(
+    format="Timelord %(name)-25s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
+    level=logging.INFO,
+    datefmt="%H:%M:%S",
+)
 
 
 async def main():
@@ -23,11 +24,14 @@ async def main():
     def signal_received():
         server.close_all()
         asyncio.create_task(timelord._shutdown())
+
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
 
-    full_node_peer = PeerInfo(timelord.config['full_node_peer']['host'],
-                              timelord.config['full_node_peer']['port'])
+    full_node_peer = PeerInfo(
+        timelord.config["full_node_peer"]["host"],
+        timelord.config["full_node_peer"]["port"],
+    )
 
     await server.start_client(full_node_peer, None)
 
@@ -35,5 +39,6 @@ async def main():
         server.push_message(msg)
 
     await server.await_closed()
+
 
 asyncio.run(main())

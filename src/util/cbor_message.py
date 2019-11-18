@@ -9,4 +9,4 @@ def cbor_message(cls: Any) -> Type:
     they are the right type.
     """
     cls1 = strictdataclass(cls=cls)
-    return type(cls.__name__, (cls1,), {'__cbor_message__': True})
+    return type(cls.__name__, (cls1,), {"__cbor_message__": True})

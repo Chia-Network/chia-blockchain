@@ -23,7 +23,7 @@ class FullBlock(Streamable):
 
     @property
     def weight(self) -> uint64:
-        if (self.header_block.challenge):
+        if self.header_block.challenge:
             return self.header_block.challenge.total_weight
         else:
             return uint64(0)

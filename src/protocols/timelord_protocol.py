@@ -15,6 +15,8 @@ If don't have the unfinished block, ignore
 Validate PoT
 Call self.Block
 """
+
+
 @dataclass(frozen=True)
 @cbor_message
 class ProofOfTimeFinished:

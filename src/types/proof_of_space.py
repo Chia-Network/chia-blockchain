@@ -25,8 +25,9 @@ class ProofOfSpace(Streamable):
     def verify_and_get_quality(self) -> Optional[bytes32]:
         v: Verifier = Verifier()
         plot_seed: bytes32 = self.get_plot_seed()
-        quality_str = v.validate_proof(plot_seed, self.size, self.challenge_hash,
-                                       bytes(self.proof))
+        quality_str = v.validate_proof(
+            plot_seed, self.size, self.challenge_hash, bytes(self.proof)
+        )
         if not quality_str:
             return None
         return self.quality_str_to_quality(self.challenge_hash, quality_str)

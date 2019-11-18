@@ -161,11 +161,7 @@ class FullNodeStore(Database):
         return self.potential_blocks_received[height]
 
     async def add_candidate_block(
-        self,
-        pos_hash: bytes32,
-        body: Body,
-        header: HeaderData,
-        pos: ProofOfSpace,
+        self, pos_hash: bytes32, body: Body, header: HeaderData, pos: ProofOfSpace,
     ):
         await self.candidate_blocks.find_one_and_update(
             {"_id": pos_hash},

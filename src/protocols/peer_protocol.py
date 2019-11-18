@@ -22,6 +22,7 @@ class TransactionId:
     """
     Receive a transaction id from a peer.
     """
+
     transaction_id: bytes32
 
 
@@ -31,6 +32,7 @@ class RequestTransaction:
     """
     Request a transaction from a peer.
     """
+
     transaction_id: bytes32
 
 
@@ -40,6 +42,7 @@ class NewTransaction:
     """
     Receive a transaction from a peer.
     """
+
     transaction: Transaction
 
 
@@ -49,6 +52,7 @@ class NewProofOfTime:
     """
     Receive a new proof of time from a peer.
     """
+
     proof: ProofOfTime
 
 
@@ -58,6 +62,7 @@ class UnfinishedBlock:
     """
     Receive an unfinished block from a peer.
     """
+
     # Block that does not have ProofOfTime and Challenge
     block: FullBlock
 
@@ -68,6 +73,7 @@ class RequestBlock:
     """
     Requests a block from a peer.
     """
+
     header_hash: bytes32
 
 
@@ -77,6 +83,7 @@ class Block:
     """
     Receive a block from a peer.
     """
+
     block: FullBlock
 
 
@@ -94,6 +101,7 @@ class Peers:
     """
     Update list of peers
     """
+
     peer_list: List[PeerInfo]
 
 
@@ -103,6 +111,7 @@ class RequestHeaderBlocks:
     """
     Request headers of blocks that are ancestors of the specified tip.
     """
+
     tip_header_hash: bytes32
     heights: List[uint64]
 
@@ -113,6 +122,7 @@ class HeaderBlocks:
     """
     Sends header blocks that are ancestors of the specified tip, at the specified heights.
     """
+
     tip_header_hash: bytes32
     header_blocks: List[HeaderBlock]
 
@@ -123,6 +133,7 @@ class RequestSyncBlocks:
     """
     Request download of blocks, in the blockchain that has 'tip_header_hash' as the tip
     """
+
     tip_header_hash: bytes32
     heights: List[uint64]
 
@@ -133,5 +144,6 @@ class SyncBlocks:
     """
     Send blocks to peer.
     """
+
     tip_header_hash: bytes32
     blocks: List[FullBlock]
