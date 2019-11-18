@@ -40,7 +40,7 @@ blocks (like Bitcoin's miners), and earn block rewards. First, you must generate
 can take a long time depending on the size of the plots. Then, run the farmer + full node with
 the following script. A full node is also started on port 8002, which you can ssh into to view the node UI.
 ```bash
-python -m src.scrips.create_plots -k 20 -n 10
+python -m src.scripts.create_plots -k 20 -n 10
 sh ./src/scripts/simulate_farming.sh
 ```
 
