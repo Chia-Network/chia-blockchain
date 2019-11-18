@@ -20,12 +20,14 @@ class ProofOfTime(Streamable):
     witness: List[uint8]
 
     def is_valid(self, discriminant_size_bits):
-        disc: int = create_discriminant(self.challenge_hash,
-                                        discriminant_size_bits)
+        disc: int = create_discriminant(self.challenge_hash, discriminant_size_bits)
         x = ClassGroup.from_ab_discriminant(2, 1, disc)
-        y = ClassGroup.from_ab_discriminant(self.output.a,
-                                            self.output.b, disc)
-        return check_proof_of_time_nwesolowski(disc, x, y.serialize() + bytes(self.witness),
-                                               self.number_of_iterations,
-                                               discriminant_size_bits,
-                                               self.witness_type)
+        y = ClassGroup.from_ab_discriminant(self.output.a, self.output.b, disc)
+        return check_proof_of_time_nwesolowski(
+            disc,
+            x,
+            y.serialize() + bytes(self.witness),
+            self.number_of_iterations,
+            discriminant_size_bits,
+            self.witness_type,
+        )

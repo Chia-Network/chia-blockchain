@@ -10,6 +10,8 @@ protocol_version = "0.0.2"
 """
 Handshake when establishing a connection between two servers.
 """
+
+
 @dataclass(frozen=True)
 @cbor_message
 class Handshake:

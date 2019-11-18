@@ -7,10 +7,11 @@ from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.util.network import parse_host_port
 
-logging.basicConfig(format='Introducer %(name)-24s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s',
-                    level=logging.INFO,
-                    datefmt='%H:%M:%S'
-                    )
+logging.basicConfig(
+    format="Introducer %(name)-24s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
+    level=logging.INFO,
+    datefmt="%H:%M:%S",
+)
 
 
 async def main():
@@ -22,9 +23,11 @@ async def main():
 
     def signal_received():
         server.close_all()
+
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
 
     await server.await_closed()
+
 
 asyncio.run(main())

@@ -53,8 +53,14 @@ class TestGenesisBlock:
         genesis_block = bc1.get_current_tips()[0]
         assert genesis_block.height == 0
         assert genesis_block.challenge
-        assert (await bc1.get_header_blocks_by_height([uint64(0)], genesis_block.header_hash))[0] == genesis_block
-        assert (await bc1.get_next_difficulty(genesis_block.header_hash)) == genesis_block.challenge.total_weight
+        assert (
+            await bc1.get_header_blocks_by_height(
+                [uint64(0)], genesis_block.header_hash
+            )
+        )[0] == genesis_block
+        assert (
+            await bc1.get_next_difficulty(genesis_block.header_hash)
+        ) == genesis_block.challenge.total_weight
         assert await bc1.get_next_ips(genesis_block.header_hash) > 0
 
 
@@ -78,74 +84,99 @@ class TestBlockValidation:
     @pytest.mark.asyncio
     async def test_prev_pointer(self, initial_blockchain):
         blocks, b = initial_blockchain
-        block_bad = FullBlock(HeaderBlock(
+        block_bad = FullBlock(
+            HeaderBlock(
                 blocks[9].header_block.proof_of_space,
                 blocks[9].header_block.proof_of_time,
                 blocks[9].header_block.challenge,
-                Header(HeaderData(
-                        bytes([1]*32),
+                Header(
+                    HeaderData(
+                        bytes([1] * 32),
                         blocks[9].header_block.header.data.timestamp,
                         blocks[9].header_block.header.data.filter_hash,
                         blocks[9].header_block.header.data.proof_of_space_hash,
                         blocks[9].header_block.header.data.body_hash,
-                        blocks[9].header_block.header.data.extension_data
-                ), blocks[9].header_block.header.harvester_signature)
-                ), blocks[9].body)
-        assert (await b.receive_block(block_bad)) == ReceiveBlockResult.DISCONNECTED_BLOCK
-
+                        blocks[9].header_block.header.data.extension_data,
+                    ),
+                    blocks[9].header_block.header.harvester_signature,
+                ),
+            ),
+            blocks[9].body,
+        )
+        assert (
+            await b.receive_block(block_bad)
+        ) == ReceiveBlockResult.DISCONNECTED_BLOCK
 
     @pytest.mark.asyncio
     async def test_timestamp(self, initial_blockchain):
         blocks, b = initial_blockchain
         # Time too far in the past
-        block_bad = FullBlock(HeaderBlock(
+        block_bad = FullBlock(
+            HeaderBlock(
                 blocks[9].header_block.proof_of_space,
                 blocks[9].header_block.proof_of_time,
                 blocks[9].header_block.challenge,
-                Header(HeaderData(
+                Header(
+                    HeaderData(
                         blocks[9].header_block.header.data.prev_header_hash,
                         blocks[9].header_block.header.data.timestamp - 1000,
                         blocks[9].header_block.header.data.filter_hash,
                         blocks[9].header_block.header.data.proof_of_space_hash,
                         blocks[9].header_block.header.data.body_hash,
-                        blocks[9].header_block.header.data.extension_data
-                ), blocks[9].header_block.header.harvester_signature)
-                ), blocks[9].body)
+                        blocks[9].header_block.header.data.extension_data,
+                    ),
+                    blocks[9].header_block.header.harvester_signature,
+                ),
+            ),
+            blocks[9].body,
+        )
         assert (await b.receive_block(block_bad)) == ReceiveBlockResult.INVALID_BLOCK
 
         # Time too far in the future
-        block_bad = FullBlock(HeaderBlock(
+        block_bad = FullBlock(
+            HeaderBlock(
                 blocks[9].header_block.proof_of_space,
                 blocks[9].header_block.proof_of_time,
                 blocks[9].header_block.challenge,
-                Header(HeaderData(
+                Header(
+                    HeaderData(
                         blocks[9].header_block.header.data.prev_header_hash,
                         uint64(int(time.time() + 3600 * 3)),
                         blocks[9].header_block.header.data.filter_hash,
                         blocks[9].header_block.header.data.proof_of_space_hash,
                         blocks[9].header_block.header.data.body_hash,
-                        blocks[9].header_block.header.data.extension_data
-                ), blocks[9].header_block.header.harvester_signature)
-                ), blocks[9].body)
+                        blocks[9].header_block.header.data.extension_data,
+                    ),
+                    blocks[9].header_block.header.harvester_signature,
+                ),
+            ),
+            blocks[9].body,
+        )
 
         assert (await b.receive_block(block_bad)) == ReceiveBlockResult.INVALID_BLOCK
 
     @pytest.mark.asyncio
     async def test_body_hash(self, initial_blockchain):
         blocks, b = initial_blockchain
-        block_bad = FullBlock(HeaderBlock(
+        block_bad = FullBlock(
+            HeaderBlock(
                 blocks[9].header_block.proof_of_space,
                 blocks[9].header_block.proof_of_time,
                 blocks[9].header_block.challenge,
-                Header(HeaderData(
+                Header(
+                    HeaderData(
                         blocks[9].header_block.header.data.prev_header_hash,
                         blocks[9].header_block.header.data.timestamp,
                         blocks[9].header_block.header.data.filter_hash,
                         blocks[9].header_block.header.data.proof_of_space_hash,
-                        bytes([1]*32),
-                        blocks[9].header_block.header.data.extension_data
-                ), blocks[9].header_block.header.harvester_signature)
-                ), blocks[9].body)
+                        bytes([1] * 32),
+                        blocks[9].header_block.header.data.extension_data,
+                    ),
+                    blocks[9].header_block.header.harvester_signature,
+                ),
+            ),
+            blocks[9].body,
+        )
 
         assert (await b.receive_block(block_bad)) == ReceiveBlockResult.INVALID_BLOCK
 
@@ -153,14 +184,18 @@ class TestBlockValidation:
     async def test_harvester_signature(self, initial_blockchain):
         blocks, b = initial_blockchain
         # Time too far in the past
-        block_bad = FullBlock(HeaderBlock(
+        block_bad = FullBlock(
+            HeaderBlock(
                 blocks[9].header_block.proof_of_space,
                 blocks[9].header_block.proof_of_time,
                 blocks[9].header_block.challenge,
                 Header(
-                        blocks[9].header_block.header.data,
-                        PrivateKey.from_seed(b'0').sign_prepend(b"random junk"))
-                ), blocks[9].body)
+                    blocks[9].header_block.header.data,
+                    PrivateKey.from_seed(b"0").sign_prepend(b"random junk"),
+                ),
+            ),
+            blocks[9].body,
+        )
         assert (await b.receive_block(block_bad)) == ReceiveBlockResult.INVALID_BLOCK
 
     @pytest.mark.asyncio
@@ -170,18 +205,21 @@ class TestBlockValidation:
         bad_pos = blocks[9].header_block.proof_of_space.proof
         bad_pos[0] = (bad_pos[0] + 1) % 256
         # Proof of space invalid
-        block_bad = FullBlock(HeaderBlock(
+        block_bad = FullBlock(
+            HeaderBlock(
                 ProofOfSpace(
                     blocks[9].header_block.proof_of_space.challenge_hash,
                     blocks[9].header_block.proof_of_space.pool_pubkey,
                     blocks[9].header_block.proof_of_space.plot_pubkey,
                     blocks[9].header_block.proof_of_space.size,
-                    bad_pos
+                    bad_pos,
                 ),
                 blocks[9].header_block.proof_of_time,
                 blocks[9].header_block.challenge,
-                blocks[9].header_block.header
-        ), blocks[9].body)
+                blocks[9].header_block.header,
+            ),
+            blocks[9].body,
+        )
         assert (await b.receive_block(block_bad)) == ReceiveBlockResult.INVALID_BLOCK
 
     @pytest.mark.asyncio
@@ -189,7 +227,9 @@ class TestBlockValidation:
         blocks, b = initial_blockchain
 
         # Coinbase height invalid
-        block_bad = FullBlock(blocks[9].header_block, Body(
+        block_bad = FullBlock(
+            blocks[9].header_block,
+            Body(
                 CoinbaseInfo(
                     uint32(3),
                     blocks[9].body.coinbase.amount,
@@ -199,8 +239,9 @@ class TestBlockValidation:
                 blocks[9].body.fees_target_info,
                 blocks[9].body.aggregated_signature,
                 blocks[9].body.solutions_generator,
-                blocks[9].body.cost
-        ))
+                blocks[9].body.cost,
+            ),
+        )
         assert (await b.receive_block(block_bad)) == ReceiveBlockResult.INVALID_BLOCK
 
     @pytest.mark.asyncio
@@ -226,14 +267,24 @@ class TestBlockValidation:
         assert diff_27 > diff_26
         assert (diff_27 / diff_26) <= test_constants["DIFFICULTY_FACTOR"]
 
-        assert (await b.get_next_ips(blocks[1].header_hash)) == constants["VDF_IPS_STARTING"]
-        assert (await b.get_next_ips(blocks[24].header_hash)) == (await b.get_next_ips(blocks[23].header_hash))
-        assert (await b.get_next_ips(blocks[25].header_hash)) == (await b.get_next_ips(blocks[24].header_hash))
-        assert (await b.get_next_ips(blocks[26].header_hash)) > (await b.get_next_ips(blocks[25].header_hash))
-        assert (await b.get_next_ips(blocks[27].header_hash)) == (await b.get_next_ips(blocks[26].header_hash))
+        assert (await b.get_next_ips(blocks[1].header_hash)) == constants[
+            "VDF_IPS_STARTING"
+        ]
+        assert (await b.get_next_ips(blocks[24].header_hash)) == (
+            await b.get_next_ips(blocks[23].header_hash)
+        )
+        assert (await b.get_next_ips(blocks[25].header_hash)) == (
+            await b.get_next_ips(blocks[24].header_hash)
+        )
+        assert (await b.get_next_ips(blocks[26].header_hash)) > (
+            await b.get_next_ips(blocks[25].header_hash)
+        )
+        assert (await b.get_next_ips(blocks[27].header_hash)) == (
+            await b.get_next_ips(blocks[26].header_hash)
+        )
 
 
-class TestReorgs():
+class TestReorgs:
     @pytest.mark.asyncio
     async def test_basic_reorg(self):
         blocks = bt.get_consecutive_blocks(test_constants, 100, [], 9)

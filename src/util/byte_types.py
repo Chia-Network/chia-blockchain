@@ -40,7 +40,14 @@ def make_sized_bytes(size):
     def __repr__(self):
         return "<%s: %s>" % (self.__class__.__name__, str(self))
 
-    namespace = dict(__new__=__new__, parse=parse, stream=stream, from_bytes=from_bytes,
-                     __bytes__=__bytes__, __str__=__str__, __repr__=__repr__)
+    namespace = dict(
+        __new__=__new__,
+        parse=parse,
+        stream=stream,
+        from_bytes=from_bytes,
+        __bytes__=__bytes__,
+        __str__=__str__,
+        __repr__=__repr__,
+    )
 
     return type(name, (bytes,), namespace)

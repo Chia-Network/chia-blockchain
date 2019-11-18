@@ -14,12 +14,12 @@ key_config_filename = os.path.join(ROOT_DIR, "src", "config", "keys.yaml")
 def str2bool(v: str) -> bool:
     if isinstance(v, bool):
         return v
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+    if v.lower() in ("yes", "true", "t", "y", "1"):
         return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+    elif v.lower() in ("no", "false", "f", "n", "0"):
         return False
     else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
+        raise argparse.ArgumentTypeError("Boolean value expected.")
 
 
 def main():
@@ -27,21 +27,42 @@ def main():
     Allows replacing keys of farmer, harvester, and pool, all default to True.
     """
 
-    parser = argparse.ArgumentParser(
-        description="Chia key generator script."
+    parser = argparse.ArgumentParser(description="Chia key generator script.")
+    parser.add_argument(
+        "-f",
+        "--farmer",
+        type=str2bool,
+        nargs="?",
+        const=True,
+        default=True,
+        help="Regenerate farmer key",
     )
-    parser.add_argument("-f", "--farmer", type=str2bool, nargs='?', const=True, default=True,
-                        help="Regenerate farmer key")
-    parser.add_argument("-a", "--harvester", type=str2bool, nargs='?', const=True, default=True,
-                        help="Regenerate plot key seed")
-    parser.add_argument("-p", "--pool", type=str2bool, nargs='?', const=True, default=True,
-                        help="Regenerate pool keys")
+    parser.add_argument(
+        "-a",
+        "--harvester",
+        type=str2bool,
+        nargs="?",
+        const=True,
+        default=True,
+        help="Regenerate plot key seed",
+    )
+    parser.add_argument(
+        "-p",
+        "--pool",
+        type=str2bool,
+        nargs="?",
+        const=True,
+        default=True,
+        help="Regenerate pool keys",
+    )
     args = parser.parse_args()
 
     if os.path.isfile(key_config_filename):
         # If the file exists, warn the user
-        yn = input(f"The keys file {key_config_filename} already exists. Are you sure"
-                   f" you want to override the keys? Plots might become invalid. (y/n): ")
+        yn = input(
+            f"The keys file {key_config_filename} already exists. Are you sure"
+            f" you want to override the keys? Plots might become invalid. (y/n): "
+        )
         if not (yn.lower() == "y" or yn.lower() == "yes"):
             quit()
     else:
