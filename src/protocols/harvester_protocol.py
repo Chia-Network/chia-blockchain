@@ -1,10 +1,13 @@
-from blspy import PublicKey, PrependSignature
-from src.util.cbor_message import cbor_message
-from src.util.streamable import List
-from src.types.sized_bytes import bytes32
-from src.types.proof_of_space import ProofOfSpace
-from src.util.ints import uint8
 from dataclasses import dataclass
+
+from blspy import PrependSignature, PublicKey
+
+from src.types.proof_of_space import ProofOfSpace
+from src.types.sized_bytes import bytes32
+from src.util.cbor_message import cbor_message
+from src.util.ints import uint8
+from src.util.streamable import List
+
 
 """
 Protocol between harvester and farmer.

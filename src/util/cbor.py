@@ -1,5 +1,7 @@
 from typing import Any, Dict, get_type_hints
+
 import cbor2
+
 
 """
 Encode CBOR objects (python objects with @cbor_message decorator), as dictionaries.

@@ -2,12 +2,15 @@ import asyncio
 import logging
 import signal
 from typing import List
+
 from blspy import PrivateKey
+
 from src.farmer import Farmer
-from src.types.peer_info import PeerInfo
-from src.server.server import ChiaServer
 from src.protocols.harvester_protocol import HarvesterHandshake
-from src.server.outbound_message import OutboundMessage, Message, Delivery, NodeType
+from src.server.outbound_message import (Delivery, Message, NodeType,
+                                         OutboundMessage)
+from src.server.server import ChiaServer
+from src.types.peer_info import PeerInfo
 from src.util.network import parse_host_port
 
 logging.basicConfig(format='Farmer %(name)-25s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s',

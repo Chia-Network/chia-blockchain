@@ -1,8 +1,9 @@
+from dataclasses import dataclass
+
+from src.server.connection import NodeType
+from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
 from src.util.ints import uint16
-from src.types.sized_bytes import bytes32
-from src.server.connection import NodeType
-from dataclasses import dataclass
 
 protocol_version = "0.0.2"
 

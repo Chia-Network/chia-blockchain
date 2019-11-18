@@ -1,10 +1,12 @@
 import argparse
 import os
-from definitions import ROOT_DIR
-from yaml import safe_load, safe_dump
-from secrets import token_bytes
-from blspy import PrivateKey
 from hashlib import sha256
+from secrets import token_bytes
+
+from blspy import PrivateKey
+from yaml import safe_dump, safe_load
+
+from definitions import ROOT_DIR
 
 key_config_filename = os.path.join(ROOT_DIR, "src", "config", "keys.yaml")
 

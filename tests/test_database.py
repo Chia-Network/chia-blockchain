@@ -1,5 +1,4 @@
 import asyncio
-from typing import Any, Dict
 
 import pytest
 from bson.binary import Binary

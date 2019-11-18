@@ -1,15 +1,20 @@
 # flake8: noqa
 from __future__ import annotations
-import io
+
 import dataclasses
+import io
 import pprint
-from typing import Type, BinaryIO, get_type_hints, Any, List
 from hashlib import sha256
-from blspy import (PrivateKey, PublicKey, InsecureSignature, Signature, PrependSignature,
-                   ExtendedPrivateKey, ExtendedPublicKey, ChainCode)
-from src.util.type_checking import strictdataclass, is_type_List, is_type_SpecificOptional
+from typing import Any, BinaryIO, List, Type, get_type_hints
+
+from blspy import (ChainCode, ExtendedPrivateKey, ExtendedPublicKey,
+                   InsecureSignature, PrependSignature, PrivateKey, PublicKey,
+                   Signature)
+
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32
+from src.util.type_checking import (is_type_List, is_type_SpecificOptional,
+                                    strictdataclass)
 
 pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
 
@@ -150,4 +155,3 @@ class Streamable:
             if isinstance(value, dict):
                 self.recurse_str(value)
         return d
-

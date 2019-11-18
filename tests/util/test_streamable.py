@@ -1,8 +1,9 @@
 import unittest
 from dataclasses import dataclass
 from typing import List, Optional
-from src.util.streamable import streamable, Streamable
+
 from src.util.ints import uint32
+from src.util.streamable import Streamable, streamable
 
 
 class TestStreamable(unittest.TestCase):

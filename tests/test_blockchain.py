@@ -7,18 +7,14 @@ from blspy import PrivateKey
 
 from src.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import constants
-
-from src.types.coinbase import CoinbaseInfo
-from src.types.body import Body
-from src.types.proof_of_space import ProofOfSpace
-from src.types.header import Header
-from src.types.header_block import HeaderBlock
-from src.types.full_block import FullBlock
-from src.types.header import HeaderData
-from src.blockchain import Blockchain, ReceiveBlockResult
 from src.db.database import FullNodeStore
-from src.util.ints import uint64, uint32
-
+from src.types.body import Body
+from src.types.coinbase import CoinbaseInfo
+from src.types.full_block import FullBlock
+from src.types.header import Header, HeaderData
+from src.types.header_block import HeaderBlock
+from src.types.proof_of_space import ProofOfSpace
+from src.util.ints import uint32, uint64
 from tests.block_tools import BlockTools
 
 bt = BlockTools()

@@ -1,11 +1,15 @@
-import yaml
 import os
-from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
-from src.protocols.peer_protocol import Peers, RequestPeers
-from src.server.server import ChiaServer
 from typing import AsyncGenerator
+
+import yaml
+
 from definitions import ROOT_DIR
+from src.protocols.peer_protocol import Peers, RequestPeers
+from src.server.outbound_message import (Delivery, Message, NodeType,
+                                         OutboundMessage)
+from src.server.server import ChiaServer
 from src.util.api_decorators import api_request
+
 
 class Introducer:
     def __init__(self):

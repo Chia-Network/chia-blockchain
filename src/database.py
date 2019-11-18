@@ -1,13 +1,15 @@
 import asyncio
 from abc import ABC
-from motor import motor_asyncio
-from src.types.header import HeaderData
-from src.types.header_block import HeaderBlock
-from src.types.body import Body
 from typing import AsyncGenerator, Dict, List, Optional, Tuple
+
 from bson.binary import Binary
 from bson.codec_options import CodecOptions, TypeRegistry
+from motor import motor_asyncio
+
+from src.types.body import Body
 from src.types.full_block import FullBlock
+from src.types.header import HeaderData
+from src.types.header_block import HeaderBlock
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.types.trunk_block import TrunkBlock
@@ -43,6 +45,7 @@ class FullNodeStore(Database):
         # Stored on database
         self.full_blocks = self.db.get_collection("full_blocks")
         self.potential_heads = self.db.get_collection("potential_heads")
+        self.potential_headers = self.db.get_collection("potential_headers")
         self.potential_trunks = self.db.get_collection("potential_trunks")
         self.potential_blocks = self.db.get_collection("potential_blocks")
         self.candidate_blocks = self.db.get_collection("candidate_blocks")

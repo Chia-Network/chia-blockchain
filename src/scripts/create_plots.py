@@ -1,13 +1,14 @@
-import os
 import argparse
-from definitions import ROOT_DIR
-from blspy import PrivateKey, PublicKey
-from yaml import safe_load, safe_dump
-from chiapos import DiskPlotter
+import os
 from copy import deepcopy
-from src.types.sized_bytes import bytes32
-from src.types.proof_of_space import ProofOfSpace
 
+from blspy import PrivateKey, PublicKey
+from yaml import safe_dump, safe_load
+
+from chiapos import DiskPlotter
+from definitions import ROOT_DIR
+from src.types.proof_of_space import ProofOfSpace
+from src.types.sized_bytes import bytes32
 
 plot_root = os.path.join(ROOT_DIR, "plots")
 plot_config_filename = os.path.join(ROOT_DIR, "src", "config", "plots.yaml")

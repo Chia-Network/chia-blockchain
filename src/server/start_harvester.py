@@ -1,11 +1,12 @@
 import asyncio
 import logging
 import signal
-from src.server.server import ChiaServer
-from src.server.outbound_message import NodeType
-from src.util.network import parse_host_port
-from src.types.peer_info import PeerInfo
+
 from src.harvester import Harvester
+from src.server.outbound_message import NodeType
+from src.server.server import ChiaServer
+from src.types.peer_info import PeerInfo
+from src.util.network import parse_host_port
 
 logging.basicConfig(format='Harvester %(name)-24s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s',
                     level=logging.INFO,

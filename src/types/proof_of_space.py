@@ -1,11 +1,13 @@
-from typing import List, Optional
-from hashlib import sha256
-from chiapos import Verifier
-from blspy import PublicKey
-from src.util.streamable import streamable, Streamable
-from src.util.ints import uint8
-from src.types.sized_bytes import bytes32
 from dataclasses import dataclass
+from hashlib import sha256
+from typing import List, Optional
+
+from blspy import PublicKey
+
+from chiapos import Verifier
+from src.types.sized_bytes import bytes32
+from src.util.ints import uint8
+from src.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

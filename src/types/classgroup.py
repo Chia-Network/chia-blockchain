@@ -1,6 +1,7 @@
-from src.util.streamable import streamable, Streamable
-from src.util.ints import int1024
 from dataclasses import dataclass
+
+from src.util.ints import int1024
+from src.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

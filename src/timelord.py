@@ -1,24 +1,26 @@
-import logging
 import asyncio
 import io
+import logging
 import os
 import time
-from yaml import safe_load
 from asyncio import Lock, StreamReader, StreamWriter
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
+
+from yaml import safe_load
+
 from definitions import ROOT_DIR
+from lib.chiavdf.inkfish.classgroup import ClassGroup
 from lib.chiavdf.inkfish.create_discriminant import create_discriminant
 from lib.chiavdf.inkfish.proof_of_time import check_proof_of_time_nwesolowski
-from lib.chiavdf.inkfish.classgroup import ClassGroup
-from src.util.api_decorators import api_request
-from src.protocols import timelord_protocol
-from src.types.proof_of_time import ProofOfTime
-from src.types.classgroup import ClassgroupElement
-from src.types.sized_bytes import bytes32
-from src.util.ints import uint8, uint64
 from src.consensus.constants import constants
-from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
-
+from src.protocols import timelord_protocol
+from src.server.outbound_message import (Delivery, Message, NodeType,
+                                         OutboundMessage)
+from src.types.classgroup import ClassgroupElement
+from src.types.proof_of_time import ProofOfTime
+from src.types.sized_bytes import bytes32
+from src.util.api_decorators import api_request
+from src.util.ints import uint8, uint64
 
 log = logging.getLogger(__name__)
 

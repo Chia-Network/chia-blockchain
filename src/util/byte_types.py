@@ -1,5 +1,5 @@
-from typing import Any, BinaryIO
 import io
+from typing import Any, BinaryIO
 
 
 def make_sized_bytes(size):

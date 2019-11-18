@@ -1,4 +1,5 @@
 from typing import Any, Type
+
 from src.util.type_checking import strictdataclass
 
 

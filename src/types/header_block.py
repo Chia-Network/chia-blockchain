@@ -1,10 +1,11 @@
-from typing import Optional
 from dataclasses import dataclass
-from src.util.streamable import streamable, Streamable
-from src.types.header import Header
+from typing import Optional
+
 from src.types.challenge import Challenge
+from src.types.header import Header
 from src.types.proof_of_space import ProofOfSpace
 from src.types.proof_of_time import ProofOfTime
+from src.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

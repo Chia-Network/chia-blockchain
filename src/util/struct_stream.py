@@ -1,7 +1,6 @@
 
-import struct
 import io
-
+import struct
 from typing import Any, BinaryIO
 
 

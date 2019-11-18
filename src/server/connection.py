@@ -1,12 +1,13 @@
-from asyncio import StreamReader, StreamWriter
 import logging
-import time
 import random
-from typing import List, Iterable, Any, Optional
+import time
+from asyncio import StreamReader, StreamWriter
+from typing import Any, List, Optional
+
+from src.server.outbound_message import Message, NodeType
+from src.types.peer_info import PeerInfo
 from src.util import cbor
 from src.util.ints import uint16
-from src.types.peer_info import PeerInfo
-from src.server.outbound_message import Message, NodeType
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 LENGTH_BYTES: int = 4

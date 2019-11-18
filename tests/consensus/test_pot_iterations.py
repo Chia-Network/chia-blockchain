@@ -1,8 +1,11 @@
-from math import log
 from decimal import Decimal
 from hashlib import sha256
+from math import log
+
+from src.consensus.pot_iterations import (_expected_plot_size,
+                                          _quality_to_decimal,
+                                          calculate_iterations_quality)
 from src.util.ints import uint8, uint64
-from src.consensus.pot_iterations import _quality_to_decimal, _expected_plot_size, calculate_iterations_quality
 
 
 class TestPotIterations():

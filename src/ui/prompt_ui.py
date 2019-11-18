@@ -5,26 +5,21 @@ from typing import Callable, List, Optional
 import asyncssh
 
 from prompt_toolkit import Application
-from prompt_toolkit.styles import Style
-from prompt_toolkit.layout.containers import VSplit, HSplit, Window
-from prompt_toolkit.layout.layout import Layout
 from prompt_toolkit.key_binding import KeyBindings
-from prompt_toolkit.widgets import (
-    Frame,
-    Label,
-    TextArea,
-    Button,
-    SearchToolbar
-)
-from src.db.database import FullNodeStore
+from prompt_toolkit.layout.containers import HSplit, VSplit, Window
+from prompt_toolkit.layout.layout import Layout
+from prompt_toolkit.styles import Style
+from prompt_toolkit.widgets import (Button, Frame, Label, SearchToolbar,
+                                    TextArea)
 from src.blockchain import Blockchain
-from src.types.header_block import HeaderBlock
-from src.types.full_block import FullBlock
-from src.types.sized_bytes import bytes32
-from src.types.peer_info import PeerInfo
-from src.util.ints import uint16
+from src.db.database import FullNodeStore
+from src.server.connection import NodeType, PeerConnections
 from src.server.server import ChiaServer
-from src.server.connection import PeerConnections, NodeType
+from src.types.full_block import FullBlock
+from src.types.header_block import HeaderBlock
+from src.types.peer_info import PeerInfo
+from src.types.sized_bytes import bytes32
+from src.util.ints import uint16
 
 log = logging.getLogger(__name__)
 

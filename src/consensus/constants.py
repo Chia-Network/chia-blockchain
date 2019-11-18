@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Any, Dict
 
 constants: Dict[str, Any] = {
     "NUMBER_OF_HEADS": 3,  # The number of tips each full node keeps track of and propagates
