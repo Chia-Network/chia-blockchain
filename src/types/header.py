@@ -1,8 +1,10 @@
-from blspy import PrependSignature
-from src.util.streamable import streamable, Streamable
-from src.util.ints import uint64
-from src.types.sized_bytes import bytes32
 from dataclasses import dataclass
+
+from blspy import PrependSignature
+
+from src.types.sized_bytes import bytes32
+from src.util.ints import uint64
+from src.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

@@ -1,21 +1,20 @@
-from src.db.database import FullNodeStore
-from src.consensus.block_rewards import calculate_block_reward
 import logging
-from enum import Enum
 import time
-import blspy
-from typing import List, Dict, Optional, Tuple
-from src.util.errors import BlockNotInBlockchain, InvalidGenesisBlock
-from src.types.sized_bytes import bytes32
-from src.util.ints import uint64, uint32
-from src.types.header_block import HeaderBlock
-from src.types.full_block import FullBlock
-from src.consensus.pot_iterations import (
-    calculate_iterations_quality,
-    calculate_ips_from_iterations
-)
-from src.consensus.constants import constants as consensus_constants
+from enum import Enum
+from typing import Dict, List, Optional, Tuple
 
+import blspy
+
+from src.consensus.block_rewards import calculate_block_reward
+from src.consensus.constants import constants as consensus_constants
+from src.consensus.pot_iterations import (calculate_ips_from_iterations,
+                                          calculate_iterations_quality)
+from src.db.database import FullNodeStore
+from src.types.full_block import FullBlock
+from src.types.header_block import HeaderBlock
+from src.types.sized_bytes import bytes32
+from src.util.errors import BlockNotInBlockchain, InvalidGenesisBlock
+from src.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 

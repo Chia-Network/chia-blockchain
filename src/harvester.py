@@ -1,18 +1,20 @@
 import logging
 import os
 import os.path
-from definitions import ROOT_DIR
+from typing import Dict, Optional, Tuple
+
+from blspy import PrependSignature, PrivateKey, PublicKey, Util
 from yaml import safe_load
-from typing import Dict, Tuple, Optional
-from blspy import PrivateKey, PublicKey, PrependSignature, Util
+
 from chiapos import DiskProver
+from definitions import ROOT_DIR
+from src.protocols import harvester_protocol
+from src.server.outbound_message import (Delivery, Message, NodeType,
+                                         OutboundMessage)
+from src.types.proof_of_space import ProofOfSpace
+from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
 from src.util.ints import uint8
-from src.protocols import harvester_protocol
-from src.types.sized_bytes import bytes32
-from src.types.proof_of_space import ProofOfSpace
-from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
-
 
 log = logging.getLogger(__name__)
 

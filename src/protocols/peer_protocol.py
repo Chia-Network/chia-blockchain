@@ -1,13 +1,15 @@
-from src.util.ints import uint64
+from dataclasses import dataclass
 from typing import List
-from src.util.cbor_message import cbor_message
+
+from src.types.full_block import FullBlock
+from src.types.header_block import HeaderBlock
+from src.types.peer_info import PeerInfo
+from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.types.transaction import Transaction
-from src.types.proof_of_time import ProofOfTime
-from src.types.header_block import HeaderBlock
-from src.types.full_block import FullBlock
-from src.types.peer_info import PeerInfo
-from dataclasses import dataclass
+from src.util.cbor_message import cbor_message
+from src.util.ints import uint64
+
 
 """
 Protocol between full nodes.
@@ -84,7 +86,6 @@ class RequestPeers:
     """
     Return full list of peers
     """
-    pass
 
 
 @dataclass(frozen=True)

@@ -1,30 +1,31 @@
-import time
 import os
 import sys
+import time
 from hashlib import sha256
+from typing import Any, Dict, List
+
+from blspy import PrependSignature, PrivateKey, PublicKey
+
 from chiapos import DiskPlotter, DiskProver
-from typing import List, Dict, Any
-from blspy import PublicKey, PrivateKey, PrependSignature
-from src.types.sized_bytes import bytes32
-from src.types.full_block import FullBlock
-from src.types.header_block import HeaderBlock
-from src.types.body import Body
-from src.types.challenge import Challenge
-from src.types.header import Header, HeaderData
-from src.types.proof_of_space import ProofOfSpace
-from src.types.proof_of_time import ProofOfTime
-from src.types.classgroup import ClassgroupElement
-from src.consensus import pot_iterations, block_rewards
-from src.util.ints import uint64, uint32, uint8
-from src.util.errors import NoProofsOfSpaceFound
-from src.types.coinbase import CoinbaseInfo
-from src.types.fees_target import FeesTarget
-from lib.chiavdf.inkfish.create_discriminant import create_discriminant
 from lib.chiavdf.inkfish.classgroup import ClassGroup
+from lib.chiavdf.inkfish.create_discriminant import create_discriminant
 from lib.chiavdf.inkfish.proof_of_time import create_proof_of_time_nwesolowski
+from src.consensus import block_rewards, pot_iterations
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_ips_from_iterations
-
+from src.types.body import Body
+from src.types.challenge import Challenge
+from src.types.classgroup import ClassgroupElement
+from src.types.coinbase import CoinbaseInfo
+from src.types.fees_target import FeesTarget
+from src.types.full_block import FullBlock
+from src.types.header import Header, HeaderData
+from src.types.header_block import HeaderBlock
+from src.types.proof_of_space import ProofOfSpace
+from src.types.proof_of_time import ProofOfTime
+from src.types.sized_bytes import bytes32
+from src.util.errors import NoProofsOfSpaceFound
+from src.util.ints import uint8, uint32, uint64
 
 # Can't go much lower than 19, since plots start having no solutions
 k: uint8 = uint8(19)

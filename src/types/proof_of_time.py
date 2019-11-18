@@ -1,12 +1,13 @@
-from typing import List
 from dataclasses import dataclass
-from src.types.sized_bytes import bytes32
-from src.util.streamable import streamable, Streamable
-from src.types.classgroup import ClassgroupElement
-from src.util.ints import uint8, uint64
-from lib.chiavdf.inkfish.proof_of_time import check_proof_of_time_nwesolowski
-from lib.chiavdf.inkfish.create_discriminant import create_discriminant
+from typing import List
+
 from lib.chiavdf.inkfish.classgroup import ClassGroup
+from lib.chiavdf.inkfish.create_discriminant import create_discriminant
+from lib.chiavdf.inkfish.proof_of_time import check_proof_of_time_nwesolowski
+from src.types.classgroup import ClassgroupElement
+from src.types.sized_bytes import bytes32
+from src.util.ints import uint8, uint64
+from src.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

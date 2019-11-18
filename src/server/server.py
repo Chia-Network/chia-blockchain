@@ -1,17 +1,22 @@
-import logging
 import asyncio
+import logging
 import random
-from typing import Tuple, AsyncGenerator, Callable, Optional, List, Any, Dict
+from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Tuple
+
+from aiter import (aiter_forker, iter_to_aiter, join_aiters, map_aiter,
+                   push_aiter)
 from aiter.server import start_server_aiter
-from aiter import push_aiter, map_aiter, join_aiters, iter_to_aiter, aiter_forker
-from src.types.peer_info import PeerInfo
+from src.protocols.shared_protocol import (Handshake, HandshakeAck,
+                                           protocol_version)
 from src.server.connection import Connection, PeerConnections
-from src.server.outbound_message import OutboundMessage, Delivery, Message, NodeType
-from src.protocols.shared_protocol import Handshake, HandshakeAck, protocol_version
+from src.server.outbound_message import (Delivery, Message, NodeType,
+                                         OutboundMessage)
+from src.types.peer_info import PeerInfo
 from src.util import partial_func
-from src.util.errors import InvalidHandshake, IncompatibleProtocolVersion, InvalidAck, InvalidProtocolMessage
-from src.util.network import create_node_id
+from src.util.errors import (IncompatibleProtocolVersion, InvalidAck,
+                             InvalidHandshake, InvalidProtocolMessage)
 from src.util.ints import uint16
+from src.util.network import create_node_id
 
 exited = False
 # Each message is prepended with LENGTH_BYTES bytes specifying the length

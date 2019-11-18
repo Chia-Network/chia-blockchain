@@ -1,6 +1,7 @@
-import sys
 import secrets
+import sys
 from typing import Tuple
+
 from src.types.sized_bytes import bytes32
 
 

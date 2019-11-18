@@ -1,10 +1,13 @@
-from blspy import PrependSignature
-from src.util.cbor_message import cbor_message
-from src.types.sized_bytes import bytes32
-from src.util.ints import uint64, uint32
-from src.types.proof_of_space import ProofOfSpace
-from src.types.coinbase import CoinbaseInfo
 from dataclasses import dataclass
+
+from blspy import PrependSignature
+
+from src.types.coinbase import CoinbaseInfo
+from src.types.proof_of_space import ProofOfSpace
+from src.types.sized_bytes import bytes32
+from src.util.cbor_message import cbor_message
+from src.util.ints import uint32, uint64
+
 
 """
 Protocol between farmer and full node.

@@ -1,7 +1,8 @@
-from src.util.ints import uint64, uint8
-from src.types.sized_bytes import bytes32
+from decimal import ROUND_UP, Decimal, getcontext
+
 from src.types.proof_of_space import ProofOfSpace
-from decimal import getcontext, Decimal, ROUND_UP
+from src.types.sized_bytes import bytes32
+from src.util.ints import uint8, uint64
 
 # Sets a high precision so we can convert a 256 bit has to a decimal, and
 # divide by a large number, while not losing any bits of precision.

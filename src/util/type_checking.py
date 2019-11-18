@@ -1,5 +1,5 @@
-from typing import Any, Type, get_type_hints, List, Union
 import dataclasses
+from typing import Any, List, Type, Union, get_type_hints
 
 
 def is_type_List(f_type: Type) -> bool:

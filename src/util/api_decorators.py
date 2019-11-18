@@ -1,6 +1,6 @@
 import functools
-from inspect import signature
 import logging
+from inspect import signature
 
 log = logging.getLogger(__name__)
 
