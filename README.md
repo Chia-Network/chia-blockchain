@@ -7,6 +7,7 @@ Python 3.7 is used for this project. Make sure your python version is >=3.7 by t
 # for Debian-based distros
 sudo apt-get install build-essential cmake python3-dev python3-venv --no-install-recommends
 
+git clone https://github.com/Chia-Network/chia-blockchain.git
 git submodule update --init --recursive
 python3 -m venv .venv
 . .venv/bin/activate
@@ -30,7 +31,7 @@ To run a full node on port 8002, and connect to the testnet, run the following c
 This wil also start an ssh server in port 8222 for the UI, which you can connect to
 to see the state of the node.
 ```bash
-python -m src.server.start_full_node "127.0.0.1" 8002 -u 8222
+python -m src.server.start_full_node "127.0.0.1" 8002 -u 8222 &
 ssh -p 8222 localhost
 ```
 
