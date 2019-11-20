@@ -8,7 +8,7 @@ from yaml import safe_dump, safe_load
 
 from definitions import ROOT_DIR
 
-key_config_filename = os.path.join(ROOT_DIR, "src", "config", "keys.yaml")
+key_config_filename = os.path.join(ROOT_DIR, "config", "keys.yaml")
 
 
 def str2bool(v: str) -> bool:

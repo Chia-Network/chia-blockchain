@@ -356,7 +356,7 @@ class ChiaServer:
                 # Read one message at a time, forever
                 yield (connection, message)
         except asyncio.IncompleteReadError:
-            log.warning(
+            log.info(
                 f"Received EOF from {connection.get_peername()}, closing connection."
             )
         except ConnectionError:

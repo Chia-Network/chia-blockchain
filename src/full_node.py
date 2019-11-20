@@ -29,6 +29,7 @@ from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
 from src.types.sized_bytes import bytes32
+from src.types.proof_of_space import ProofOfSpace
 from src.util import errors
 from src.util.api_decorators import api_request
 from src.util.errors import (
@@ -46,7 +47,7 @@ class FullNode:
     blockchain: Blockchain
 
     def __init__(self, store: FullNodeStore, blockchain: Blockchain):
-        config_filename = os.path.join(ROOT_DIR, "src", "config", "config.yaml")
+        config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
         self.config = yaml.safe_load(open(config_filename, "r"))["full_node"]
         self.store = store
         self.blockchain = blockchain
@@ -94,22 +95,38 @@ class FullNode:
         self, delivery: Delivery = Delivery.BROADCAST
     ) -> AsyncGenerator[OutboundMessage, None]:
         """
-        Sends all of the current heads to all timelord peers.
+        Sends all of the current heads (as well as Pos infos) to all timelord peers.
         """
-        requests: List[timelord_protocol.ChallengeStart] = []
+        challenge_requests: List[timelord_protocol.ChallengeStart] = []
+        pos_info_requests: List[timelord_protocol.ProofOfSpaceInfo] = []
         async with self.store.lock:
-            for head in self.blockchain.get_current_tips():
-                assert head.challenge
-                challenge_hash = head.challenge.get_hash()
-                requests.append(
+            tips: List[HeaderBlock] = self.blockchain.get_current_tips()
+            for tip in tips:
+                assert tip.challenge
+                challenge_hash = tip.challenge.get_hash()
+                challenge_requests.append(
                     timelord_protocol.ChallengeStart(
-                        challenge_hash, head.challenge.total_weight
+                        challenge_hash, tip.challenge.total_weight
                     )
                 )
 
-        for request in requests:
+            tip_hashes = [tip.header_hash for tip in tips]
+            tip_infos = [
+                tup[0]
+                for tup in list((await self.store.get_unfinished_blocks()).items())
+                if tup[1].prev_header_hash in tip_hashes
+            ]
+            for chall, iters in tip_infos:
+                pos_info_requests.append(
+                    timelord_protocol.ProofOfSpaceInfo(chall, iters)
+                )
+        for challenge_msg in challenge_requests:
             yield OutboundMessage(
-                NodeType.TIMELORD, Message("challenge_start", request), delivery
+                NodeType.TIMELORD, Message("challenge_start", challenge_msg), delivery
+            )
+        for pos_info_msg in pos_info_requests:
+            yield OutboundMessage(
+                NodeType.TIMELORD, Message("proof_of_space_info", pos_info_msg), delivery
             )
 
     async def _on_connect(self) -> AsyncGenerator[OutboundMessage, None]:
@@ -187,15 +204,19 @@ class FullNode:
         highest_weight: uint64 = uint64(0)
         tip_block: FullBlock
         tip_height = 0
+        caught_up = False
 
         # Based on responses from peers about the current heads, see which head is the heaviest
         # (similar to longest chain rule).
 
         async with self.store.lock:
-            potential_heads = (await self.store.get_potential_heads()).items()
-            log.info(f"Have collected {len(potential_heads)} potential heads")
-            for header_hash, _ in potential_heads:
-                block = await self.store.get_potential_heads_full_block(header_hash)
+            potential_tips: List[
+                Tuple[bytes32, FullBlock]
+            ] = await self.store.get_potential_tips_tuples()
+            log.info(f"Have collected {len(potential_tips)} potential tips")
+            for header_hash, block in potential_tips:
+                if block.header_block.challenge is None:
+                    raise ValueError(f"Invalid tip block {block.header_hash} received")
                 if block.header_block.challenge.total_weight > highest_weight:
                     highest_weight = block.header_block.challenge.total_weight
                     tip_block = block
@@ -204,15 +225,18 @@ class FullNode:
                 [t.weight for t in self.blockchain.get_current_tips()]
             ):
                 log.info("Not performing sync, already caught up.")
-                await self.store.set_sync_mode(False)
-                await self.store.clear_sync_info()
-                return
+                caught_up = True
+        if caught_up:
+            async for msg in self._finish_sync():
+                yield msg
+            return
         assert tip_block
+        log.info(f"Tip block {tip_block.header_hash} tip height {tip_block.height}")
 
         # Now, we download all of the headers in order to verify the weight
         # TODO: use queue here, request a few at a time
         # TODO: send multiple API calls out at once
-        timeout = 20
+        timeout = 30
         sleep_interval = 3
         total_time_slept = 0
         headers: List[HeaderBlock] = []
@@ -270,7 +294,7 @@ class FullNode:
             # Only download from fork point (what we don't have)
             async with self.store.lock:
                 have_block = (
-                    await self.store.get_potential_heads_full_block(
+                    await self.store.get_potential_tip(
                         headers[height].header.get_hash()
                     )
                     is not None
@@ -311,7 +335,7 @@ class FullNode:
             async with self.store.lock:
                 # TODO: ban peers that provide bad blocks
                 if have_block:
-                    block = await self.store.get_potential_head(
+                    block = await self.store.get_potential_tip(
                         headers[height].header.get_hash()
                     )
 
@@ -336,11 +360,26 @@ class FullNode:
                 await self.store.set_proof_of_time_estimate_ips(
                     await self.blockchain.get_next_ips(block.header_hash)
                 )
+        log.info(f"Finished sync up to height {tip_height}")
 
+        async for msg in self._finish_sync():
+            yield msg
+
+    async def _finish_sync(self):
+        """
+        Finalize sync by setting sync mode to False, clearing all sync information, and adding any final
+        blocks that we have finalized recently.
+        """
         async with self.store.lock:
-            log.info(f"Finished sync up to height {tip_height}")
+            potential_fut_blocks = (
+                await self.store.get_potential_future_blocks()
+            ).copy()
             await self.store.set_sync_mode(False)
             await self.store.clear_sync_info()
+
+        for block in potential_fut_blocks:
+            async for msg in self.block(peer_protocol.Block(block)):
+                yield msg
 
         # Update farmers and timelord with most recent information
         async for msg in self._send_challenges_to_timelords():
@@ -556,17 +595,16 @@ class FullNode:
         we call the unfinished_block routine.
         """
         async with self.store.lock:
-            if (
-                await self.store.get_candidate_block(header_signature.pos_hash)
-            ) is None:
+            candidate: Optional[
+                Tuple[Body, HeaderData, ProofOfSpace]
+            ] = await self.store.get_candidate_block(header_signature.pos_hash)
+            if candidate is None:
                 log.warning(
                     f"PoS hash {header_signature.pos_hash} not found in database"
                 )
                 return
             # Verifies that we have the correct header and body self.stored
-            block_body, block_header_data, pos = await self.store.get_candidate_block(
-                header_signature.pos_hash
-            )
+            block_body, block_header_data, pos = candidate
 
             assert block_header_data.get_hash() == header_signature.header_hash
 
@@ -578,6 +616,7 @@ class FullNode:
 
         # Propagate to ourselves (which validates and does further propagations)
         request = peer_protocol.UnfinishedBlock(unfinished_block_obj)
+        log.error("Will call unf")
         async for m in self.unfinished_block(request):
             # Yield all new messages (propagation to peers)
             yield m
@@ -635,8 +674,15 @@ class FullNode:
             new_header_block, unfinished_block_obj.body
         )
 
-        async for msg in self.block(peer_protocol.Block(new_full_block)):
-            yield msg
+        async with self.store.lock:
+            sync_mode = await self.store.get_sync_mode()
+
+        if sync_mode:
+            async with self.store.lock:
+                await self.store.add_potential_future_block(new_full_block)
+        else:
+            async for msg in self.block(peer_protocol.Block(new_full_block)):
+                yield msg
 
     # PEER PROTOCOL
     @api_request
@@ -680,6 +726,7 @@ class FullNode:
         We can validate it and if it's a good block, propagate it to other peers and
         timelords.
         """
+        log.error("CALED")
         async with self.store.lock:
             if not self.blockchain.is_child_of_head(unfinished_block.block):
                 return
@@ -712,7 +759,7 @@ class FullNode:
 
             if await self.store.get_unfinished_block(
                 (challenge_hash, iterations_needed)
-            ):
+            ) is not None:
                 return
 
         expected_time: uint64 = uint64(
@@ -725,15 +772,13 @@ class FullNode:
             await asyncio.sleep(3)
 
         async with self.store.lock:
-            leader: Tuple[
-                uint32, uint64
-            ] = await self.store.get_unfinished_block_leader()
+            leader: Tuple[uint32, uint64] = self.store.get_unfinished_block_leader()
             if leader is None or unfinished_block.block.height > leader[0]:
                 log.info(
                     f"This is the first block at height {unfinished_block.block.height}, so propagate."
                 )
                 # If this is the first block we see at this height, propagate
-                await self.store.set_unfinished_block_leader(
+                self.store.set_unfinished_block_leader(
                     (unfinished_block.block.height, expected_time)
                 )
             elif unfinished_block.block.height == leader[0]:
@@ -748,9 +793,7 @@ class FullNode:
                         f"New best unfinished block at height {unfinished_block.block.height}"
                     )
                     # If this will be the first block to finalize, update our leader
-                    await self.store.set_unfinished_block_leader(
-                        (leader[0], expected_time)
-                    )
+                    self.store.set_unfinished_block_leader((leader[0], expected_time))
             else:
                 # If we have seen an unfinished block at a greater or equal height, don't propagate
                 log.info(f"Unfinished block at old height, so don't propagate")
@@ -787,8 +830,8 @@ class FullNode:
 
         async with self.store.lock:
             if await self.store.get_sync_mode():
-                # Add the block to our potential heads list
-                await self.store.add_potential_head(header_hash, block.block)
+                # Add the block to our potential tips list
+                await self.store.add_potential_tip(block.block)
                 return
             # Record our minimum height, and whether we have a full set of heads
             least_height: uint32 = min(
@@ -820,7 +863,7 @@ class FullNode:
             ):
                 async with self.store.lock:
                     await self.store.clear_sync_info()
-                    await self.store.add_potential_head(header_hash, block.block)
+                    await self.store.add_potential_tip(block.block)
                 log.info(
                     f"We are too far behind this block. Our height is {tip_height} and block is at "
                     f"{block.block.height}"
@@ -836,9 +879,9 @@ class FullNode:
                 except BaseException as e:
                     log.warning(f"Error {type(e)}{e} with syncing")
                 finally:
-                    async with (await self.store.get_lock()):
+                    async with self.store.lock:
                         await self.store.set_sync_mode(False)
-                        await self.store.clear_sync_information()
+                        await self.store.clear_sync_info()
                         return
 
             elif block.block.height > tip_height + 1:

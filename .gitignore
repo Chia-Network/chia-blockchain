@@ -8,6 +8,10 @@ __pycache__/
 **/*.o
 **/*.DS_Store
 
+# Database
+db/
+nohup.out
+
 # VDF executables
 lib/chiavdf/fast_vdf/compile_asm
 lib/chiavdf/fast_vdf/vdf
@@ -17,8 +21,8 @@ lib/chiavdf/fast_vdf/vdf_server
 lib/chiavdf/fast_vdf/flint
 
 # Keys and plot files
-src/config/keys.yaml
-src/config/plots.yaml
+config/keys.yaml
+config/plots.yaml
 
 
 # PyInstaller

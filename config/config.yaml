@@ -53,7 +53,7 @@ full_node:
   # When we are > 1 but < sync_blocks_behind_threshold, download these many blocks
   short_sync_download_count: 6
   # This SSH key is for the ui SSH server
-  ssh_filename: "src/config/ssh_host_key"
+  ssh_filename: "config/ssh_host_key"
   # How often to connect to introducer if we need to learn more peers
   introducer_connect_interval: 60
   # Continue trying to connect to more peers until this number of connections

@@ -1,25 +1,16 @@
 import asyncio
 
 import pytest
-from bson.binary import Binary
-from bson.codec_options import CodecOptions, TypeRegistry
-from motor import motor_asyncio
-
+from src.util.ints import uint32, uint64
 from src.consensus.constants import constants
 from src.database import FullNodeStore
-from src.types.body import Body
 from src.types.full_block import FullBlock
-from src.types.proof_of_space import ProofOfSpace
-from src.types.sized_bytes import bytes32
-from src.util.ints import uint32, uint64
-from src.util.streamable import Streamable
 
 
 @pytest.fixture(scope="module")
 def event_loop():
     loop = asyncio.get_event_loop()
     yield loop
-    loop.close()
 
 
 class TestDatabase:
@@ -40,14 +31,10 @@ class TestDatabase:
 
         # clear sync info
         await db.clear_sync_info()
-        assert await db.get_potential_heads_number() == 0
 
-        # add/get potential head, get potential heads num
-        await db.add_potential_head(genesis.header_hash)
-        assert await db.get_potential_heads_number() == 1
-        await db.add_potential_head(genesis.header_hash, genesis)
-        assert await db.get_potential_heads_number() == 1
-        assert genesis == await db.get_potential_head(genesis.header_hash)
+        # add/get potential tip, get potential tips num
+        await db.add_potential_tip(genesis)
+        assert genesis == await db.get_potential_tip(genesis.header_hash)
 
         # add/get potential trunk
         header = genesis.header_block
@@ -56,7 +43,7 @@ class TestDatabase:
 
         # Add potential block
         await db.add_potential_block(genesis)
-        assert genesis == await db.get_potential_block(0)
+        assert genesis == await db.get_potential_block(uint32(0))
 
         # Add/get candidate block
         assert await db.get_candidate_block(0) is None
@@ -69,12 +56,13 @@ class TestDatabase:
         assert await db.get_candidate_block(genesis.header_hash) == partial
 
         # Add/get unfinished block
-        key = (genesis.header_hash, 1000)
+        key = (genesis.header_hash, uint64(1000))
         assert await db.get_unfinished_block(key) is None
         await db.add_unfinished_block(key, genesis)
         assert await db.get_unfinished_block(key) == genesis
+        assert len(await db.get_unfinished_blocks()) == 1
 
         # Set/get unf block leader
-        assert db.get_unfinished_block_leader() is None
+        assert db.get_unfinished_block_leader() == (0, 9999999999)
         db.set_unfinished_block_leader(key)
         assert db.get_unfinished_block_leader() == key
