@@ -8,6 +8,7 @@ Python 3.7 is used for this project. Make sure your python version is >=3.7 by t
 sudo apt-get install build-essential cmake python3-dev python3-venv --no-install-recommends
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
+cd chia-blockchain
 git submodule update --init --recursive
 python3 -m venv .venv
 . .venv/bin/activate
