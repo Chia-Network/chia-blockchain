@@ -18,10 +18,6 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Download plots
-      uses: actions/download-artifact@v1
-      with:
-        name: plots
     - name: Install dependencies
       env:
         CHIA_MACHINE_SSH_KEY: ${{ secrets.CHIA_MACHINE_SSH_KEY }}
@@ -45,9 +41,4 @@ jobs:
     - name: Test with pytest
       run: |
         ./.venv/bin/py.test tests -s -v
-    - name: Archive test plots
-      uses: actions/upload-artifact@v1
-      with:
-        name: plots
-        path: ./plots
 
