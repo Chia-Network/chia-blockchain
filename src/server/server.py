@@ -230,7 +230,8 @@ class ChiaServer:
         and nothing is yielded.
         """
         # Send handshake message
-        outbound_handshake = Message("handshake", Handshake(protocol_version, self._node_id, uint16(self._port), self._local_type))
+        outbound_handshake = Message("handshake", Handshake(protocol_version, self._node_id, uint16(self._port),
+                                                            self._local_type))
 
         try:
             await connection.send(outbound_handshake)
@@ -286,7 +287,7 @@ class ChiaServer:
                 # Read one message at a time, forever
                 yield (connection, message)
         except asyncio.IncompleteReadError:
-            log.warning(f"Received EOF from {connection.get_peername()}, closing connection.")
+            log.info(f"Received EOF from {connection.get_peername()}, closing connection.")
         except ConnectionError:
             log.warning(f"Connection error by peer {connection.get_peername()}, closing connection.")
         finally:

@@ -80,17 +80,25 @@ class FullNode:
     async def _send_challenges_to_timelords(self, delivery: Delivery = Delivery.BROADCAST) -> \
             AsyncGenerator[OutboundMessage, None]:
         """
-        Sends all of the current heads to all timelord peers.
+        Sends all of the current heads (as well as Pos infos) to all timelord peers.
         """
-        requests: List[timelord_protocol.ChallengeStart] = []
+        challenge_requests: List[timelord_protocol.ChallengeStart] = []
+        pos_info_requests: List[timelord_protocol.ProofOfSpaceInfo] = []
         async with (await self.store.get_lock()):
             for head in self.blockchain.get_current_tips():
                 assert head.challenge
                 challenge_hash = head.challenge.get_hash()
-                requests.append(timelord_protocol.ChallengeStart(challenge_hash, head.challenge.total_weight))
+                challenge_requests.append(timelord_protocol.ChallengeStart(challenge_hash, head.challenge.total_weight))
 
-        for request in requests:
+            leader_height, leader_timestamp = await self.store.get_unfinished_block_leader()
+            leader_infos = [tup[0] for tup in list((await self.store.get_unfinished_blocks()).items())
+                            if tup[1].height == leader_height]
+            for chall, iters in leader_infos:
+                pos_info_requests.append(timelord_protocol.ProofOfSpaceInfo(chall, iters))
+        for request in challenge_requests:
             yield OutboundMessage(NodeType.TIMELORD, Message("challenge_start", request), delivery)
+        if request in pos_info_requests:
+            yield OutboundMessage(NodeType.TIMELORD, Message("proof_of_space_info", request), delivery)
 
     async def _on_connect(self) -> AsyncGenerator[OutboundMessage, None]:
         """
@@ -127,6 +135,7 @@ class FullNode:
         """
         introducer = self.config['introducer_peer']
         introducer_peerinfo = PeerInfo(introducer['host'], introducer['port'])
+
         async def introducer_client():
             async def on_connect():
                 msg = Message("request_peers", peer_protocol.RequestPeers())
@@ -163,6 +172,7 @@ class FullNode:
         highest_weight: uint64 = uint64(0)
         tip_block: FullBlock
         tip_height = 0
+        caught_up = False
 
         # Based on responses from peers about the current heads, see which head is the heaviest
         # (similar to longest chain rule).
@@ -177,15 +187,18 @@ class FullNode:
                     tip_height = block.header_block.challenge.height
             if highest_weight <= max([t.weight for t in self.blockchain.get_current_tips()]):
                 log.info("Not performing sync, already caught up.")
-                await self.store.set_sync_mode(False)
-                await self.store.clear_sync_information()
-                return
+                caught_up = True
+        if caught_up:
+            async for msg in self._finish_sync():
+                yield msg
+            return
         assert tip_block
+        log.info(f"Tip block {tip_block.header_hash} tip height {tip_block.height}")
 
         # Now, we download all of the headers in order to verify the weight
         # TODO: use queue here, request a few at a time
         # TODO: send multiple API calls out at once
-        timeout = 20
+        timeout = 30
         sleep_interval = 3
         total_time_slept = 0
         headers: List[HeaderBlock] = []
@@ -260,11 +273,24 @@ class FullNode:
                 log.info(f"Took {time.time() - start} seconds to validate and add block {block.height}.")
                 assert max([h.height for h in self.blockchain.get_current_tips()]) >= height
                 await self.store.set_proof_of_time_estimate_ips(await self.blockchain.get_next_ips(block.header_hash))
+        log.info(f"Finished sync up to height {tip_height}")
 
+        async for msg in self._finish_sync():
+            yield msg
+
+    async def _finish_sync(self):
+        """
+        Finalize sync by setting sync mode to False, clearing all sync information, and adding any final
+        blocks that we have finalized recently.
+        """
         async with (await self.store.get_lock()):
-            log.info(f"Finished sync up to height {tip_height}")
+            potential_fut_blocks = (await self.store.get_potential_future_blocks()).copy()
             await self.store.set_sync_mode(False)
             await self.store.clear_sync_information()
+
+        for block in potential_fut_blocks:
+            async for msg in self.block(peer_protocol.Block(block)):
+                yield msg
 
         # Update farmers and timelord with most recent information
         async for msg in self._send_challenges_to_timelords():
@@ -483,8 +509,15 @@ class FullNode:
                                        unfinished_block_obj.header_block.header)
         new_full_block: FullBlock = FullBlock(new_header_block, unfinished_block_obj.body)
 
-        async for msg in self.block(peer_protocol.Block(new_full_block)):
-            yield msg
+        async with (await self.store.get_lock()):
+            sync_mode = await self.store.get_sync_mode()
+
+        if sync_mode:
+            async with (await self.store.get_lock()):
+                await self.store.add_potential_future_block(new_full_block)
+        else:
+            async for msg in self.block(peer_protocol.Block(new_full_block)):
+                yield msg
 
     # PEER PROTOCOL
     @api_request

@@ -1,4 +1,4 @@
-from typing import Tuple, Optional, Dict, Counter
+from typing import Tuple, Optional, Dict, Counter, List
 import collections
 from asyncio import Lock, Event
 from src.types.proof_of_space import ProofOfSpace
@@ -28,6 +28,8 @@ class FullNodeStore:
         self.potential_blocks: Dict[uint32, FullBlock] = {}
         # Event, which gets set whenever we receive the block at each height. Waited for by sync().
         self.potential_blocks_received: Dict[uint32, Event] = {}
+
+        self.potential_future_blocks: List[FullBlock] = []
 
         # These are the blocks that we created, but don't have the PoS from farmer yet,
         # keyed from the proof of space hash
@@ -62,6 +64,7 @@ class FullNodeStore:
         self.potential_headers.clear()
         self.potential_blocks.clear()
         self.potential_blocks_received.clear()
+        self.potential_future_blocks.clear()
 
     async def add_potential_head(self, header_hash: bytes32):
         self.potential_heads[header_hash] += 1
@@ -92,6 +95,12 @@ class FullNodeStore:
 
     async def get_potential_blocks_received(self, height: uint32) -> Event:
         return self.potential_blocks_received[height]
+
+    async def add_potential_future_block(self, block: FullBlock):
+        self.potential_future_blocks.append(block)
+
+    async def get_potential_future_blocks(self):
+        return self.potential_future_blocks
 
     async def add_candidate_block(self, pos_hash: bytes32, block: Tuple[Body, HeaderData, ProofOfSpace]):
         self.candidate_blocks[pos_hash] = block
