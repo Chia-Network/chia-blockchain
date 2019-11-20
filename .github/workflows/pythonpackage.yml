@@ -1,0 +1,44 @@
+name: Python package
+
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      max-parallel: 4
+      matrix:
+        python-version: [3.7]
+        os: [ubuntu-latest, macOS-latest]
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      env:
+        CHIA_MACHINE_SSH_KEY: ${{ secrets.CHIA_MACHINE_SSH_KEY }}
+        GIT_SSH_COMMAND: "ssh -o StrictHostKeyChecking=no"
+      run: |
+        eval "$(ssh-agent -s)"
+        ssh-add - <<< "${CHIA_MACHINE_SSH_KEY}"
+        git submodule update --init --recursive
+        brew update && brew install gmp 
+        python3 -m venv .venv
+        . .venv/bin/activate
+        pip install wheel # For building blspy
+        pip install -e .
+        pip install -r requirements.txt
+    - name: Lint with flake8
+      run: |
+        ./.venv/bin/flake8 src
+    - name: Lint with mypy
+      run: |
+        ./.venv/bin/mypy src tests
+    - name: Test with pytest
+      run: |
+        ./.venv/bin/py.test tests -s -v
+
