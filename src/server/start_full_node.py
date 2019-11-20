@@ -76,6 +76,10 @@ async def main():
 
     full_node._start_bg_tasks()
 
+    log.info("Waiting to connect to some peers...")
+    await asyncio.sleep(3)
+    log.info(f"Connected to {len(server.global_connections.get_connections())} peers.")
+
     if connect_to_farmer and not server_closed:
         peer_info = PeerInfo(
             full_node.config["farmer_peer"]["host"],
@@ -90,10 +94,6 @@ async def main():
         )
         _ = await server.start_client(peer_info, None)
 
-    log.info("Waiting to connect to some peers...")
-    await asyncio.sleep(3)
-
-    log.info(f"Connected to {len(server.global_connections.get_connections())} peers.")
     if not server_closed:
         try:
             async for msg in full_node._sync():

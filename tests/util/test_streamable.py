@@ -29,9 +29,9 @@ class TestStreamable(unittest.TestCase):
         class TestClass2(Streamable):
             a: uint32
             b: uint32
-            c: str
+            c: bytes
 
-        a = TestClass2(uint32(1), uint32(2), "3")
+        a = TestClass2(uint32(1), uint32(2), b"3")
         try:
             bytes(a)
             assert False

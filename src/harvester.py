@@ -20,17 +20,17 @@ log = logging.getLogger(__name__)
 
 class Harvester:
     def __init__(self):
-        config_filename = os.path.join(ROOT_DIR, "src", "config", "config.yaml")
-        plot_config_filename = os.path.join(ROOT_DIR, "src", "config", "plots.yaml")
-        key_config_filename = os.path.join(ROOT_DIR, "src", "config", "keys.yaml")
+        config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
+        plot_config_filename = os.path.join(ROOT_DIR, "config", "plots.yaml")
+        key_config_filename = os.path.join(ROOT_DIR, "config", "keys.yaml")
 
         if not os.path.isfile(key_config_filename):
             raise RuntimeError(
-                "Keys not generated. Run ./src/scripts/regenerate_keys.py."
+                "Keys not generated. Run ./scripts/regenerate_keys.py."
             )
         if not os.path.isfile(plot_config_filename):
             raise RuntimeError(
-                "Plots not generated. Run ./src/scripts/create_plots.py."
+                "Plots not generated. Run ./scripts/create_plots.py."
             )
 
         self.config = safe_load(open(config_filename, "r"))["harvester"]

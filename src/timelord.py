@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 
 class Timelord:
     def __init__(self):
-        config_filename = os.path.join(ROOT_DIR, "src", "config", "config.yaml")
+        config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
         self.config = safe_load(open(config_filename, "r"))["timelord"]
         self.free_servers: List[Tuple[str, str]] = list(
             zip(self.config["vdf_server_ips"], self.config["vdf_server_ports"])

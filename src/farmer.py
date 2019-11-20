@@ -28,11 +28,11 @@ HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 
 class Farmer:
     def __init__(self):
-        config_filename = os.path.join(ROOT_DIR, "src", "config", "config.yaml")
-        key_config_filename = os.path.join(ROOT_DIR, "src", "config", "keys.yaml")
+        config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
+        key_config_filename = os.path.join(ROOT_DIR, "config", "keys.yaml")
         if not os.path.isfile(key_config_filename):
             raise RuntimeError(
-                "Keys not generated. Run ./src/scripts/regenerate_keys.py."
+                "Keys not generated. Run ./scripts/regenerate_keys.py."
             )
         self.config = safe_load(open(config_filename, "r"))["farmer"]
         self.key_config = safe_load(open(key_config_filename, "r"))
@@ -76,7 +76,7 @@ class Farmer:
             self.proof_of_time_estimate_ips,
             constants["MIN_BLOCK_TIME"],
         )
-        if height < 300:  # As the difficulty adjusts, don't fetch all qualities
+        if height < 500:  # As the difficulty adjusts, don't fetch all qualities
             if challenge_response.challenge_hash not in self.challenge_to_best_iters:
                 self.challenge_to_best_iters[
                     challenge_response.challenge_hash

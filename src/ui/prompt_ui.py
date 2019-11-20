@@ -5,6 +5,12 @@ from typing import Callable, List, Optional
 import asyncssh
 
 from prompt_toolkit import Application
+from prompt_toolkit.layout.dimension import D
+from prompt_toolkit.key_binding.bindings.focus import (
+    focus_next,
+    focus_previous,
+)
+from prompt_toolkit.contrib.ssh import PromptToolkitSSHServer
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout.containers import HSplit, VSplit, Window
 from prompt_toolkit.layout.layout import Layout
@@ -54,7 +60,7 @@ def start_ssh_server(
             await ui.await_closed()
             uis = uis[1:]
 
-    async def interact() -> None:
+    async def interact():
         nonlocal uis, permenantly_closed
         if permenantly_closed:
             return
@@ -104,7 +110,7 @@ class FullNodeUI:
         self.parent_close_cb = parent_close_cb
         self.kb = self.setup_keybindings()
         self.draw_initial()
-        self.style = Style([("error", "#ff0044"),])
+        self.style = Style([("error", "#ff0044")])
         self.app = Application(
             style=self.style,
             layout=self.layout,
@@ -221,7 +227,7 @@ class FullNodeUI:
         return inner
 
     async def search_block(self, text: str):
-        async with (await self.store.get_lock()):
+        async with self.store.lock:
             try:
                 block = await self.store.get_block(bytes.fromhex(text))
             except ValueError:
@@ -296,7 +302,7 @@ class FullNodeUI:
         async with self.store.lock:
             if await self.store.get_sync_mode():
                 max_height = -1
-                for _, block in await self.store.get_potential_heads_tuples():
+                for _, block in await self.store.get_potential_tips_tuples():
                     if block.height > max_height:
                         max_height = block.height
 

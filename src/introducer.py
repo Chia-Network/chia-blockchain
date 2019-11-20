@@ -12,7 +12,7 @@ from src.util.api_decorators import api_request
 
 class Introducer:
     def __init__(self):
-        config_filename = os.path.join(ROOT_DIR, "src", "config", "config.yaml")
+        config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
         self.config = yaml.safe_load(open(config_filename, "r"))["introducer"]
 
     def set_server(self, server: ChiaServer):
