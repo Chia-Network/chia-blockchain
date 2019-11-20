@@ -21,7 +21,7 @@ sh install.sh
 
 # Install mongoDB from https://docs.mongodb.com/manual/administration/install-community/
 # Then, ensure that the mongod service is running.
-mongod --dbpath ./db/
+nohup mongod --dbpath ./db/ &
 ```
 
 ### Generate keys

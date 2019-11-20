@@ -616,7 +616,6 @@ class FullNode:
 
         # Propagate to ourselves (which validates and does further propagations)
         request = peer_protocol.UnfinishedBlock(unfinished_block_obj)
-        log.error("Will call unf")
         async for m in self.unfinished_block(request):
             # Yield all new messages (propagation to peers)
             yield m
@@ -726,7 +725,6 @@ class FullNode:
         We can validate it and if it's a good block, propagate it to other peers and
         timelords.
         """
-        log.error("CALED")
         async with self.store.lock:
             if not self.blockchain.is_child_of_head(unfinished_block.block):
                 return
