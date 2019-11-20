@@ -66,7 +66,7 @@ def strictdataclass(cls: Any):
     class NoTypeChecking:
         __no_type_check__ = True
 
-    cls1 = dataclasses.dataclass(_cls=cls, init=False, frozen=True)  # type: ignore
+    cls1 = dataclasses.dataclass(cls, init=False, frozen=True)  # type: ignore
     if dataclasses.fields(cls1) == ():
         return type(cls.__name__, (cls1, _Local, NoTypeChecking), {})
     return type(cls.__name__, (cls1, _Local), {})
