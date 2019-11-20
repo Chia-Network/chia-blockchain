@@ -7,6 +7,9 @@ Python 3.7 is used for this project. Make sure your python version is >=3.7 by t
 # for Debian-based distros
 sudo apt-get install build-essential cmake python3-dev python3-venv --no-install-recommends
 
+# for MacOS
+brew install cmake
+
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 git submodule update --init --recursive
