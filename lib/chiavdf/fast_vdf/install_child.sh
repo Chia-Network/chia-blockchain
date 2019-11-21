@@ -13,12 +13,15 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
     sudo apt-get install libgmp3-dev -y
     sudo apt-get install libflint-dev -y
     sudo apt install libboost-all-dev
+    opt_flags="-O3"
     link_flags="-no-pie -lgmpxx -lgmp -lflint -lpthread -lboost_system"
     compile_flags="-std=c++1z -D VDF_MODE=0 -D ENABLE_ALL_INSTRUCTIONS=$enable_all_instructions -no-pie -march=native"
 elif [[ "$OSTYPE" == "darwin"* ]]; then
+    opt_flags=""  # Catalina clang issues
     link_flags="-no-pie -lgmpxx -lgmp -lflint"
     compile_flags="-std=c++1z -D CHIAOSX=1 -D VDF_MODE=0 -D ENABLE_ALL_INSTRUCTIONS=$enable_all_instructions -no-pie -march=native"
 else
+    opt_flags="-O3"
     link_flags="-no-pie -lgmpxx -lgmp -lflint"
     compile_flags="-std=c++1z -D VDF_MODE=0 -D ENABLE_ALL_INSTRUCTIONS=$enable_all_instructions -no-pie -march=native"
 fi
@@ -28,5 +31,5 @@ g++ -o compile_asm.o -c compile_asm.cpp $compile_flags -O0
 g++ -o compile_asm compile_asm.o $link_flags
 ./compile_asm
 as -o asm_compiled.o asm_compiled.s
-g++ -o vdf_server.o -c vdf_server.cpp $compile_flags -O3
+g++ -o vdf_server.o -c vdf_server.cpp $compile_flags $opt_flags
 g++ -o vdf_server vdf_server.o asm_compiled.o $link_flags
