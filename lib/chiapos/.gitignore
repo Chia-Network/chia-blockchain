@@ -21,3 +21,5 @@ Makefile
 **/*.cppimporthash
 build
 .pytest_cache
+**/*.egg-info
+
