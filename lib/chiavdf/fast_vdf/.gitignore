@@ -1,0 +1,11 @@
+# Generated assembly file
+/asm_compiled.s
+
+# Binary files
+/compile_asm
+/vdf
+/server
+/vdf_server
+
+# Flint dependency
+/flint

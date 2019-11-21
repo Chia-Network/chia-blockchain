@@ -4,6 +4,6 @@ pip install wheel # For building blspy
 pip install -e .
 pip install -r requirements.txt
 
-#cd lib/chiavdf/fast_vdf
-# Install libgmp, libboost, and libflint, and then run the following
-# sh install.sh
+cd lib/chiavdf/fast_vdf
+Install libgmp, libboost, and libflint, and then run the following
+sh install.sh
