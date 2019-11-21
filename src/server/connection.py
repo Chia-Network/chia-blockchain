@@ -2,7 +2,7 @@ from asyncio import StreamReader, StreamWriter
 import logging
 import time
 import random
-from typing import List, Iterable, Any, Optional
+from typing import List, Any, Optional
 from src.util import cbor
 from src.util.ints import uint16
 from src.types.peer_info import PeerInfo

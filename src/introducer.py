@@ -7,6 +7,7 @@ from typing import AsyncGenerator
 from definitions import ROOT_DIR
 from src.util.api_decorators import api_request
 
+
 class Introducer:
     def __init__(self):
         config_filename = os.path.join(ROOT_DIR, "src", "config", "config.yaml")
