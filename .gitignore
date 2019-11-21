@@ -8,14 +8,6 @@ __pycache__/
 **/*.o
 **/*.DS_Store
 
-# VDF executables
-lib/chiavdf/fast_vdf/compile_asm
-lib/chiavdf/fast_vdf/vdf
-lib/chiavdf/fast_vdf/server
-lib/chiavdf/fast_vdf/vdf_server
-# Flint dependency
-lib/chiavdf/fast_vdf/flint
-
 # Keys and plot files
 src/config/keys.yaml
 src/config/plots.yaml
