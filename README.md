@@ -15,7 +15,7 @@ git clone https://github.com/Chia-Network/chia-blockchain.git && cd chia-blockch
 sh install.sh
 
 # Run mongo database
-nohup mongod --dbpath ./db/ &
+mongod --fork --dbpath ./db/ --logpath mongod.log
 ```
 
 ### Generate keys
