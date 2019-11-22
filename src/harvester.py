@@ -25,13 +25,9 @@ class Harvester:
         key_config_filename = os.path.join(ROOT_DIR, "config", "keys.yaml")
 
         if not os.path.isfile(key_config_filename):
-            raise RuntimeError(
-                "Keys not generated. Run ./scripts/regenerate_keys.py."
-            )
+            raise RuntimeError("Keys not generated. Run ./scripts/regenerate_keys.py.")
         if not os.path.isfile(plot_config_filename):
-            raise RuntimeError(
-                "Plots not generated. Run ./scripts/create_plots.py."
-            )
+            raise RuntimeError("Plots not generated. Run ./scripts/create_plots.py.")
 
         self.config = safe_load(open(config_filename, "r"))["harvester"]
         self.key_config = safe_load(open(key_config_filename, "r"))

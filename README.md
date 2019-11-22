@@ -13,10 +13,6 @@ brew install cmake mongodb-community@4.2
 
 git clone https://github.com/Chia-Network/chia-blockchain.git && cd chia-blockchain
 sh install.sh
-
-# Install mongoDB from https://docs.mongodb.com/manual/administration/install-community/
-# Then, ensure that the mongod service is running.
-nohup mongod --dbpath ./db/ &
 ```
 
 ### Generate keys
