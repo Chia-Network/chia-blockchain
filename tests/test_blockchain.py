@@ -38,7 +38,6 @@ test_constants["GENESIS_BLOCK"] = bytes(
 def event_loop():
     loop = asyncio.get_event_loop()
     yield loop
-    # loop.close()
 
 
 class TestGenesisBlock:

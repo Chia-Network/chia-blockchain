@@ -1,9 +1,6 @@
 . .venv/bin/activate
 . scripts/common.sh
 
-# Starts the DB
-_run_bg_cmd mongod --dbpath ./db/
-
 # Starts a timelord, and a full node
 
 _run_bg_cmd python -m src.server.start_timelord

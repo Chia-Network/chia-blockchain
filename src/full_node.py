@@ -324,7 +324,7 @@ class FullNode:
                                     uint32(height)
                                 )
                             ).wait(),
-                            timeout=2,
+                            timeout=5,
                         )
                         found = True
                         break
@@ -865,14 +865,15 @@ class FullNode:
                 > tip_height + self.config["sync_blocks_behind_threshold"]
             ):
                 async with self.store.lock:
+                    if await self.store.get_sync_mode():
+                        return
                     await self.store.clear_sync_info()
                     await self.store.add_potential_tip(block.block)
+                    await self.store.set_sync_mode(True)
                 log.info(
                     f"We are too far behind this block. Our height is {tip_height} and block is at "
                     f"{block.block.height}"
                 )
-                # Perform a sync if we have to
-                await self.store.set_sync_mode(True)
                 try:
                     # Performs sync, and catch exceptions so we don't close the connection
                     async for msg in self._sync():

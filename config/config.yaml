@@ -67,6 +67,7 @@ full_node:
       port: 8446
   introducer_peer:
       host: 127.0.0.1
+      # host: 104.238.63.118
       port: 8445
 
 introducer:
