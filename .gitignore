@@ -17,7 +17,7 @@ config/keys.yaml
 config/plots.yaml
 
 # Bundled code
-*.tar.gz
+chia-blockchain.tar.gz.tar.gz
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
