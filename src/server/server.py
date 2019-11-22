@@ -1,8 +1,8 @@
 import asyncio
 import logging
 import random
+import time
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Tuple
-
 from aiter import aiter_forker, iter_to_aiter, join_aiters, map_aiter, push_aiter
 from aiter.server import start_server_aiter
 from src.protocols.shared_protocol import Handshake, HandshakeAck, protocol_version
@@ -110,23 +110,22 @@ class ChiaServer:
             if self._host == target_node.host and self._port == target_node.port:
                 self.global_connections.peers.remove(target_node)
                 return False
-        total_time: int = 0
+        start_time = time.time()
         succeeded: bool = False
-        for _ in range(0, TOTAL_RETRY_SECONDS, RETRY_INTERVAL):
+        while time.time() - start_time < TOTAL_RETRY_SECONDS and not succeeded:
             if self._pipeline_task.done():
                 return False
             try:
-                reader, writer = await asyncio.open_connection(
+                open_con_task = asyncio.create_task(asyncio.open_connection(
                     target_node.host, int(target_node.port)
-                )
+                ))
+                await asyncio.wait_for(open_con_task, timeout=3)
+                reader, writer = open_con_task.result()
                 succeeded = True
-                break
             except (ConnectionRefusedError, TimeoutError, OSError) as e:
+                open_con_task.cancel()
                 log.warning(f"{e}. Retrying.")
                 await asyncio.sleep(RETRY_INTERVAL)
-                total_time += RETRY_INTERVAL
-                continue
-
         if not succeeded:
             if self.global_connections.peers.remove(target_node):
                 log.info(f"Removed {target_node} from peer list")

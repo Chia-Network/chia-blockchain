@@ -13,6 +13,9 @@ brew install cmake mongodb-community@4.2
 
 git clone https://github.com/Chia-Network/chia-blockchain.git && cd chia-blockchain
 sh install.sh
+
+# Run mongo database
+nohup mongod --dbpath ./db/ &
 ```
 
 ### Generate keys
@@ -60,7 +63,9 @@ sh ./scripts/simulate_network.sh
 ### Run tests and linting
 The first time the tests are run, BlockTools will create and persist many plots. These are used for creating
 proofs of space during testing. The next time tests are run, this won't be necessary.
+Make sure to run mongo before running the tests.
 ```bash
+mongod --dbpath ./db/ &
 black src tests
 flake8 src
 mypy src tests

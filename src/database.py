@@ -44,10 +44,6 @@ class FullNodeStore(Database):
         # Stored on database
         # All full blocks which have been added to the blockchain. Header_hash -> block
         self.full_blocks = self.db.get_collection("full_blocks")
-        # Potential new tips that we have received from others.
-        self.potential_tips = self.db.get_collection("potential_tips")
-        # Header blocks received from other peers during sync
-        self.potential_headers = self.db.get_collection("potential_headers")
         # Blocks received from other peers during sync
         self.potential_blocks = self.db.get_collection("potential_blocks")
         # Blocks which we have created, but don't have proof of space yet
@@ -58,6 +54,10 @@ class FullNodeStore(Database):
         self.sync_mode = self.db.get_collection("sync_mode")
 
         # Stored in memory
+        # Potential new tips that we have received from others.
+        self.potential_tips = {}
+        # Header blocks received from other peers during sync
+        self.potential_headers = {}
         # Our best unfinished block
         self.unfinished_blocks_leader: Tuple[uint32, uint64] = (
             uint32(0),
@@ -75,8 +75,6 @@ class FullNodeStore(Database):
 
     async def _clear_database(self):
         await self.full_blocks.drop()
-        await self.potential_tips.drop()
-        await self.potential_headers.drop()
         await self.potential_blocks.drop()
         await self.candidate_blocks.drop()
         await self.unfinished_blocks.drop()
@@ -115,43 +113,26 @@ class FullNodeStore(Database):
             await self.set_sync_mode(sync_mode)
 
     async def clear_sync_info(self):
-        await self.potential_tips.drop()
-        await self.potential_headers.drop()
+        self.potential_tips.clear()
+        self.potential_headers.clear()
         await self.potential_blocks.drop()
         self.potential_blocks_received.clear()
         self.potential_future_blocks.clear()
 
     async def get_potential_tips_tuples(self) -> List[Tuple[bytes32, FullBlock]]:
-        ans = []
-        async for query in self.potential_tips.find({}):
-            if query and "block" in query:
-                block = FullBlock.from_bytes(query["block"])
-            else:
-                block = None
-            ans.append((bytes32(query["_id"]), block))
-        return ans
+        return list(self.potential_tips.items())
 
     async def add_potential_tip(self, block: FullBlock) -> None:
-        action = {"$set": {"block": block}}
-        await self.potential_tips.find_one_and_update(
-            {"_id": block.header_hash}, action, upsert=True
-        )
+        self.potential_tips[block.header_hash] = block
 
     async def get_potential_tip(self, header_hash: bytes32) -> Optional[FullBlock]:
-        query = await self.potential_tips.find_one({"_id": header_hash})
-        block = query.get("block", None) if query else None
-        return FullBlock.from_bytes(block) if block else None
+        return self.potential_tips.get(header_hash, None)
 
     async def add_potential_header(self, block: HeaderBlock) -> None:
-        await self.potential_headers.find_one_and_update(
-            {"_id": block.height},
-            {"$set": {"_id": block.height, "header": block}},
-            upsert=True,
-        )
+        self.potential_headers[block.height] = block
 
     async def get_potential_header(self, height: uint32) -> Optional[HeaderBlock]:
-        query = await self.potential_headers.find_one({"_id": height})
-        return HeaderBlock.from_bytes(query["header"]) if query else None
+        return self.potential_headers.get(height, None)
 
     async def add_potential_block(self, block: FullBlock) -> None:
         await self.potential_blocks.find_one_and_update(

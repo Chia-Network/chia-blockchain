@@ -1,9 +1,6 @@
 . .venv/bin/activate
 . scripts/common.sh
 
-# Starts the DB
-_run_bg_cmd mongod --dbpath ./db/
-
 # Starts a harvester, farmer, timelord, introducer, and 3 full nodes.
 
 _run_bg_cmd python -m src.server.start_harvester

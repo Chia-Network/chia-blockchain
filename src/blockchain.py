@@ -50,21 +50,33 @@ class Blockchain:
         self.height_to_hash: Dict[uint32, bytes32] = {}
 
     async def initialize(self):
+        seen_blocks = {}
         async for block in self.store.get_blocks():
             if not self.tips or block.weight > self.tips[0].weight:
                 self.tips = [block]
-            # TODO: are cases where the blockchain "fans out" handled appropriately?
-            self.height_to_hash[block.height] = block.header_hash
+            seen_blocks[block.header_hash] = block
 
-        if not self.tips:
+        if len(self.tips) > 0:
+            curr = self.tips[0]
+            reverse_blocks = [curr]
+            while curr.height > 0:
+                curr = seen_blocks[curr.prev_header_hash]
+                reverse_blocks.append(curr)
+
+            for block in reversed(reverse_blocks):
+                log.info(f"Restoting block height {block.height} : {block.header_hash}")
+                self.height_to_hash[block.height] = block.header_hash
+
+            self.lca_block = self.tips[0]
+
+        else:
             self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
+            print(f"GENESIS : {self.genesis.header_hash}")
 
             result = await self.receive_block(self.genesis)
             if result != ReceiveBlockResult.ADDED_TO_HEAD:
                 raise InvalidGenesisBlock()
             assert self.lca_block
-        else:
-            self.lca_block = self.tips[0]
 
     def get_current_tips(self) -> List[HeaderBlock]:
         """

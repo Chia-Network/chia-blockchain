@@ -16,6 +16,8 @@ nohup.out
 config/keys.yaml
 config/plots.yaml
 
+# Bundled code
+*.tar.gz
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
