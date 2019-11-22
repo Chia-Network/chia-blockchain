@@ -349,7 +349,7 @@ class Timelord:
         async with self.lock:
             if challenge_start.challenge_hash in self.seen_discriminants:
                 log.info(
-                    f"Already seen this challenge hash {challenge_start.challenge_hash}. Ignoring."
+                    f"Have already seen this challenge hash {challenge_start.challenge_hash}. Ignoring."
                 )
                 return
             if challenge_start.weight <= self.best_weight_three_proofs:

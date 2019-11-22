@@ -64,7 +64,7 @@ def main():
         filename: str = f"plot-{i}-{args.size}-{plot_seed}.dat"
         full_path: str = os.path.join(plot_root, filename)
         if os.path.isfile(full_path):
-            print(f"Already have plot {filename}")
+            print(f"Plot {filename} already exists")
         else:
             # Creates the plot. This will take a long time for larger plots.
             plotter: DiskPlotter = DiskPlotter()
