@@ -114,7 +114,7 @@ public:
     }
 
     void reduce(form& inf) {
-#if 1
+#if 0
         // Old reduce from Sundersoft form
         inf.reduce();
 #else
@@ -433,7 +433,7 @@ struct Proof {
     std::vector<unsigned char> proof;
 };
 
-#define PULMARK 0
+#define PULMARK 1
 
 form GenerateProof(form &y, form &x_init, integer &D, uint64_t done_iterations, uint64_t num_iterations, uint64_t k, uint64_t l, WesolowskiCallback& weso, bool& stop_signal) {
     auto t1 = std::chrono::high_resolution_clock::now();

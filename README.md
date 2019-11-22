@@ -5,22 +5,13 @@ Python 3.7 is used for this project. Make sure your python version is >=3.7 by t
 
 ```bash
 # for Debian-based distros
-sudo apt-get install build-essential cmake python3-dev python3-venv --no-install-recommends
+sudo apt-get install build-essential cmake python3-dev python3-venv --no-install-recommends mongodb-org=4.2.1
 
 # for MacOS
-brew install cmake
+brew tap mongodb/brew
+brew install cmake mongodb-community@4.2
 
-git clone https://github.com/Chia-Network/chia-blockchain.git
-cd chia-blockchain
-git submodule update --init --recursive
-python3 -m venv .venv
-. .venv/bin/activate
-pip install wheel # For building blspy
-pip install -e .
-pip install -r requirements.txt
-
-cd lib/chiavdf/fast_vdf
-# Install libgmp, libboost, and libflint, and then run the following
+git clone https://github.com/Chia-Network/chia-blockchain.git && cd chia-blockchain
 sh install.sh
 
 # Install mongoDB from https://docs.mongodb.com/manual/administration/install-community/

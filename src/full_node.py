@@ -170,11 +170,14 @@ class FullNode:
 
         async def introducer_client():
             async def on_connect():
+                log.error("ON CONNECt")
                 msg = Message("request_peers", peer_protocol.RequestPeers())
                 yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
 
             while True:
+                log.error("LOOPING")
                 if self._num_needed_peers():
+                    log.error("CLINETING")
                     if not await self.server.start_client(
                         introducer_peerinfo, on_connect
                     ):

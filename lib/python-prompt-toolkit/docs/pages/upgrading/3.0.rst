@@ -1,0 +1,118 @@
+.. _upgrading_3_0:
+
+Upgrading to prompt_toolkit 3.0
+===============================
+
+There are two major changes in 3.0 to be aware of:
+
+- First, prompt_toolkit uses the asyncio event loop natively, rather then using
+  its own implementations of event loops. This means that all coroutines are
+  now asyncio coroutines, and all Futures are asyncio futures. Asynchronous
+  generators became real asynchronous generators as well.
+
+- Prompt_toolkit uses type annotations (almost) everywhere. This should not
+  break any code, but its very helpful in many ways.
+
+There are some minor breaking changes:
+
+- The dialogs API had to change (see below).
+
+
+Detecting the prompt_toolkit version
+------------------------------------
+
+Detecting whether version 3 is being used can be done as follows:
+
+.. code:: python
+
+    from prompt_toolkit import __version__ as ptk_version
+
+    PTK3 = ptk_version.startswith('3.')
+
+
+Fixing calls to `get_event_loop`
+--------------------------------
+
+Every usage of ``get_event_loop`` has to be fixed. An easy way to do this is by
+changing the imports like this:
+
+.. code:: python
+
+    if PTK3:
+        from asyncio import get_event_loop
+    else:
+        from prompt_toolkit.eventloop import get_event_loop
+
+Notice that for prompt_toolkit 2.0, ``get_event_loop`` returns a prompt_toolkit
+``EventLoop`` object. This is not an asyncio eventloop, but the API is
+similar.
+
+There are some changes to the eventloop API:
+
++-----------------------------------+--------------------------------------+
+| version 2.0                       | version 3.0 (asyncio)                |
++===================================+======================================+
+| loop.run_in_executor(callback)    | loop.run_in_executor(None, callback) |
++-----------------------------------+--------------------------------------+
+| loop.call_from_executor(callback) | loop.call_soon_threadsafe(callback)  |
++-----------------------------------+--------------------------------------+
+
+
+Running on top of asyncio
+-------------------------
+
+For 2.0, you had tell prompt_toolkit to run on top of the asyncio event loop.
+Now it's the default. So, you can simply remove the following two lines:
+
+.. code::
+
+    from prompt_toolkit.eventloop.defaults import use_asyncio_event_loop
+    use_asyncio_event_loop()
+
+There is a few little breaking changes though. The following:
+
+.. code::
+
+    # For 2.0
+    result = await PromptSession().prompt('Say something: ', async_=True)
+
+has to be changed into:
+
+.. code::
+
+    # For 3.0
+    result = await PromptSession().prompt_async('Say something: ')
+
+Further, it's impossible to call the `prompt()` function within an asyncio
+application (within a coroutine), because it will try to run the event loop
+again. In that case, always use `prompt_async()`.
+
+
+Changes to the dialog functions
+-------------------------------
+
+The original way of using dialog boxes looked like this:
+
+.. code:: python
+
+    from prompt_toolkit.shortcuts import input_dialog
+
+    result = input_dialog(title='...', text='...')
+
+Now, the dialog functions return a prompt_toolkit Application object. You have
+to call either its ``run`` or ``run_async`` method to display the dialog. The
+``async_`` parameter has been removed everywhere.
+
+.. code:: python
+
+    if PTK3:
+        result = input_dialog(title='...', text='...').run()
+    else:
+        result = input_dialog(title='...', text='...')
+
+    # Or
+
+    if PTK3:
+        result = await input_dialog(title='...', text='...').run_async()
+    else:
+        result = await input_dialog(title='...', text='...', async_=True)
