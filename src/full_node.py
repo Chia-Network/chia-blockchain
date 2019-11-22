@@ -126,7 +126,9 @@ class FullNode:
             )
         for pos_info_msg in pos_info_requests:
             yield OutboundMessage(
-                NodeType.TIMELORD, Message("proof_of_space_info", pos_info_msg), delivery
+                NodeType.TIMELORD,
+                Message("proof_of_space_info", pos_info_msg),
+                delivery,
             )
 
     async def _on_connect(self) -> AsyncGenerator[OutboundMessage, None]:
@@ -170,14 +172,11 @@ class FullNode:
 
         async def introducer_client():
             async def on_connect():
-                log.error("ON CONNECt")
                 msg = Message("request_peers", peer_protocol.RequestPeers())
                 yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
 
             while True:
-                log.error("LOOPING")
                 if self._num_needed_peers():
-                    log.error("CLINETING")
                     if not await self.server.start_client(
                         introducer_peerinfo, on_connect
                     ):
@@ -758,9 +757,12 @@ class FullNode:
                 constants["MIN_BLOCK_TIME"],
             )
 
-            if await self.store.get_unfinished_block(
-                (challenge_hash, iterations_needed)
-            ) is not None:
+            if (
+                await self.store.get_unfinished_block(
+                    (challenge_hash, iterations_needed)
+                )
+                is not None
+            ):
                 return
 
         expected_time: uint64 = uint64(

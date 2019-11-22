@@ -13,6 +13,8 @@ _run_bg_cmd() {
   BG_PIDS="$BG_PIDS $!"
 }
 
+_run_bg_cmd mongod --dbpath ./db/
+
 _term() {
   echo "Caught TERM or INT signal, killing all servers."
   for PID in $BG_PIDS; do

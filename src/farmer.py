@@ -31,9 +31,7 @@ class Farmer:
         config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
         key_config_filename = os.path.join(ROOT_DIR, "config", "keys.yaml")
         if not os.path.isfile(key_config_filename):
-            raise RuntimeError(
-                "Keys not generated. Run ./scripts/regenerate_keys.py."
-            )
+            raise RuntimeError("Keys not generated. Run ./scripts/regenerate_keys.py.")
         self.config = safe_load(open(config_filename, "r"))["farmer"]
         self.key_config = safe_load(open(key_config_filename, "r"))
         self.harvester_responses_header_hash: Dict[bytes32, bytes32] = {}
