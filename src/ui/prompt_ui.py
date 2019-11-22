@@ -239,13 +239,13 @@ class FullNodeUI:
                 self.error_msg.text = "Block not found"
 
     async def add_connection(self, text: str):
-        try:
-            ip, port = text.split(":")
-        except ValueError:  # Not yet in layout
+        if ":" not in text:
             self.error_msg.text = (
                 "Enter a valid IP and port in the following format: 10.5.4.3:8000"
             )
             return
+        else:
+            ip, port = ":".join(text.split(":")[:-1]), text.split(":")[-1]
         target_node: PeerInfo = PeerInfo(ip, uint16(int(port)))
         log.error(f"Want to connect to {ip}, {port}")
         if not (await self.node_server.start_client(target_node, None)):
