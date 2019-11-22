@@ -12,14 +12,6 @@ __pycache__/
 db/
 nohup.out
 
-# VDF executables
-lib/chiavdf/fast_vdf/compile_asm
-lib/chiavdf/fast_vdf/vdf
-lib/chiavdf/fast_vdf/server
-lib/chiavdf/fast_vdf/vdf_server
-# Flint dependency
-lib/chiavdf/fast_vdf/flint
-
 # Keys and plot files
 config/keys.yaml
 config/plots.yaml

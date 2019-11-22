@@ -66,10 +66,8 @@ full_node:
       host: "127.0.0.1"
       port: 8003
   introducer_peer:
-      host: "127.0.0.1"
+      host: "216.39.16.173"
       port: 8445
-    # - host: "216.39.16.173"  # Chia beast
-    #   port: 8004
 
 introducer:
   host: "127.0.0.1"

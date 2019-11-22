@@ -1,0 +1,1576 @@
+CHANGELOG
+=========
+
+3.x.x
+-----------------
+
+New features:
+- (almost) 100% type annotated.
+- Native asyncio instead of custom event loops.
+
+Breaking changes:
+- Python 2 support has been dropped. Minimal Python version is now 3.6,
+  although 3.7 is preferred (because of ContextVars).
+- Native asyncio, so some async code becomes slightly different.
+- The active `Application` became a contextvar. Which means that it should be
+  propagated correctly to the code that requires it. However, random other
+  threads or coroutines won't be able to know what the current application is.
+- The dialog shortcuts API changed. All dialog functions now return an
+  `Application`. You still have to call either `run()` or `run_async` on the
+  `Application` object.
+- The way inputhooks work is changed.
+- `patch_stdout` now requires an `Application` as input.
+
+
+2.0.9: 2019-02-19
+-----------------
+
+Bug fixes:
+- Fixed `Application.run_system_command` on Windows.
+- Fixed bug in ANSI text formatting: correctly handle 256/true color sequences.
+- Fixed bug in WordCompleter. Provide completions when there's a space before
+  the cursor.
+
+
+2.0.8: 2019-01-27
+-----------------
+
+Bug fixes:
+- Fixes the issue where changes made to the buffer in the accept handler were
+  not reflected in the history.
+- Fix in the application invalidate handler. This prevents a significat slow
+  down in some applications after some time (especially if there is a refresh
+  interval).
+- Make `print_container` utility work if the input is not a pty.
+
+New features:
+- Underline non breaking spaces instead of rendering as '&'.
+- Added mouse support for radio list.
+- Support completion styles for `READLINE_LIKE` display method.
+- Accept formatted text in the display text of completions.
+- Added a `FuzzyCompleter` and `FuzzyWordCompleter`.
+- Improved error handling in Application (avoid displaying a meaningless
+  AssertionError in many cases).
+
+
+2.0.7: 2018-10-30
+-----------------
+
+Bug fixes:
+- Fixed assertion in PromptSession: the style_transformation check was wrong.
+- Removed 'default' attribute in PromptSession. Only ask for it in the
+  `prompt()` method. This fixes the issue that passing `default` once, will
+  store it for all consequent calls in the `PromptSession`.
+- Ensure that `__pt_formatted_text__` always returns a `FormattedText`
+  instance. This fixes an issue with `print_formatted_text`.
+
+New features:
+- Improved handling of situations where stdin or stdout are not a terminal.
+  (Print warning instead of failing with an assertion.)
+- Added `print_container` utility.
+- Sound bell when attempting to edit read-only buffer.
+- Handle page-down and page-up keys in RadioList.
+- Accept any `collections.abc.Sequence` for HSplit/VSplit children (instead of
+  lists only).
+- Improved Vi key bindings: return to navigation mode when Insert is pressed.
+
+
+2.0.6: 2018-10-12
+-----------------
+
+Bug fixes:
+- Don't use the predefined ANSI colors for colors that are defined as RGB.
+  (Terminals can assign different color schemes for ansi colors, and we don't
+  want use any of those for colors that are defined like #aabbcc for instance.)
+- Fix in handling of CPRs when patch_stdout is used.
+
+Backwards incompatible changes:
+- Change to the `Buffer` class. Reset the buffer unless the `accept_handler`
+  returns `True` (which means: "keep_text"). This doesn't affect applications
+  that use `PromptSession`.
+
+New features:
+- Added `AdjustBrightnessStyleTransformation`. This is a simple style
+  transformation that improves the rendering on terminals with light or dark
+  background.
+- Improved performance (string width caching and line height calculation).
+- Improved `TextArea`:
+  * Exposed `focus_on_click`.
+  * Added attributes: `auto_suggest`, `complete_while_typing`, `history`,
+    `get_line_prefix`, `input_processors`.
+  * Made attributes writable: `lexer`, `completer`, `complete_while_typing`,
+    `accept_handler`, `read_only`, `wrap_lines`.
+
+2.0.5: 2018-09-30
+-----------------
+
+Bug fixes:
+- Fix in `DynamicContainer`. Return correct result for `get_children`. This
+  fixes a bug related to focusing.
+- Properly compute length of `start`, `end` and `sym_b` characters of
+  progress bar.
+- CPR (cursor position request) fix.
+
+Backwards incompatible changes:
+- Stop restoring `PromptSession` attributes when exiting prompt.
+
+New features:
+- Added `get_line_prefix` attribute to window. This opens many
+  possibilities:
+  * Line wrapping (soft and hard) can insert whitespace in front
+    of the line, or insert some symbols in front. Like the Vim "breakindent"
+    option.
+  * Single line prompts also support line continuations now.
+  * Line continuations can have a variable width.
+- For VI mode: implemented temporary normal mode (control-O in insert mode).
+- Added style transformations API. Useful for swapping between light and
+  dark color schemes. Added `swap_light_and_dark_colors` parameter to
+  `prompt()` function.
+- Added `format()` method to ANSI formatted text.
+- Set cursor position for Button widgets.
+- Added `pre_run` argument to `PromptSession.prompt()` method.
+
+
+2.0.4: 2018-07-22
+-----------------
+
+Bug fixes:
+- Fix render height for rendering full screen applications in Windows.
+- Fix in `TextArea`. Set `accept_handler` to `None` if not given.
+- Go to the beginning of the next line when enter is pressed in Vi navigation
+  mode, and the buffer doesn't have an accept handler.
+- Fix the `default` argument of the `prompt` function when called multiple
+  times.
+- Display decomposed multiwidth characters correctly.
+- Accept `history` in `prompt()` function again.
+
+Backwards incompatible changes:
+- Renamed `PipeInput` to `PosixPipeInput`. Added `Win32PipeInput` and
+  `create_input_pipe`.
+- Pass `buffer` argument to the `accept_handler` of `TextArea`.
+
+New features:
+- Added `accept_default` argument to `prompt()`.
+- Make it easier to change the body/title of a Frame/Dialog.
+- Added `DynamicContainer`.
+- Added `merge_completers` for merging multiple completers together.
+- Add vt100 data to key presses in Windows.
+- Handle left/right key bindings in Vi block insert mode.
+
+
+2.0.3: 2018-06-08
+-----------------
+
+Bug fixes:
+- Fix in 'x' and 'X' Vi key bindings. Correctly handle line endings and args.
+- Fixed off by one error in Vi line selection.
+- Fixed bugs in Vi block selection. Correctly handle lines that the selection
+  doesn't cross.
+- Python 2 bugfix. Handle str/unicode correctly.
+- Handle option+left/right in iTerm.
+
+
+2.0.2: 2018-06-03
+-----------------
+
+Bug fixes:
+- Python 3.7 support: correctly handle StopIteration in asynchronous generator.
+- Fixed off-by-one bug in Vi visual block mode.
+- Bugfix in TabsProcessor: handle situations when the cursor is at the end of
+  the line.
+
+
+2.0.1: 2018-06-02
+-----------------
+
+Version 2.0 includes a big refactoring of the internal architecture. This
+includes the merge of the CommandLineInterface and the Application object, a
+rewrite of how user controls are focused, a rewrite of how event loops work
+and the removal of the buffers dictionary. This introduces many backwards
+incompatible changes, but the result is a very nice and powerful architecture.
+
+Most architectural changes effect full screen applications. For applications
+that use `prompt_toolkit.shortcuts` for simple prompts, there are fewer
+incompatibilities.
+
+Changes:
+
+- No automatic translation from \r into \n during the input processing. These
+  are two different keys that can be handled independently. This is a big
+  backward-incompatibility, because the `Enter` key is `ControlM`, not
+  `ControlJ`. So, now that we stopped translating \r into \n, it could be that
+  custom key bindings for `Enter` don't work anymore. Make sure to bind
+  `Keys.Enter` instead of `Keys.ControlJ` for handling the `Enter` key.
+
+- The `CommandLineInterface` and the `Application` classes are merged. First,
+  `CommandLineInterface` contained all the I/O objects (like the input, output
+  and event loop), while the `Application` contained everything else. There was
+  no practical reason to keep this separation. (`CommandLineInterface` was
+  mostly a proxy to `Application`.)
+
+  A consequence is that almost all code which used to receive a
+  `CommandLineInterface`, will now use an `Application`. Usually, where we
+  had an attribute `cli`, we'll now have an attribute `app`.
+
+  Secondly, the `Application` object is no longer passed around. The `get_app`
+  function can be used at any time to acquire the active application.
+
+  (For backwards-compatibility, we have aliases to the old names, whenever
+  possible.)
+
+- prompt_toolkit no longer depends on Pygments, but it can still use Pygments
+  for its color schemes and lexers. In many places we used Pygments "Tokens",
+  this has been replaced by the concept of class names, somewhat similar to
+  HTML and CSS.
+
+  * `PygmentsStyle` and `PygmentsLexer` adaptors are available for
+     plugging in Pygments styles and lexers.
+
+  * Wherever we had a list of `(Token, text)` tuples, we now have lists of
+    `(style_string, text)` tuples. The style string can contain both inline
+    styling as well as refer to a class from the style sheet. `PygmentsTokens`
+    is an adaptor that converts a list of Pygments tokens into a list of
+    `(style_string, text)` tuples.
+
+- Changes in the `Style` classes.
+
+  * `style.from_dict` does not exist anymore. Instantiate the ``Style`` class
+    directory to create a new style. ``Style.from_dict`` can be used to create
+    a style from a dictionary, where the dictionary keys are a space separated
+    list of class names, and the values, style strings (like before).
+
+  * `print_tokens` was renamed to `print_formatted_text`.
+
+  * In many places in the layout, we accept a parameter named `style`. All the
+    styles from the layout hierarchy are combined to decide what style to be
+    used.
+
+  * The ANSI color names were confusing and inconsistent with common naming
+    conventions. This has been fixed, but aliases for the original names were
+    kept.
+
+- The way focusing works is different. Before it was always a `Buffer` that
+  was focused, and because of that, any visible `BufferControl` that contained
+  this `Buffer` would be focused. Now, any user control can be focused. All
+  of this is handled in the `Application.layout` object.
+
+- The `buffers` dictionary (`CommandLineInterface.buffers`) does not exist
+  anymore. Further, `buffers` was a `BufferMapping` that keeps track of which
+  buffer has the focus. This significantly reduces the freedom for creating
+  complex applications. We wanted to move toward a layout that can be defined
+  as a (hierarchical) collection of user widgets. A user widget does not need
+  to have a `Buffer` underneath and any widget should be focusable.
+
+  * `layout.Layout` was introduced to contain the root layout widget and keep
+    track of the focus.
+
+- The key bindings were refactored. It became much more flexible to combine
+  sets of key bindings.
+
+  * `Registry` has been renamed to `KeyBindings`.
+  * The `add_binding` function has been renamed to simply `add`.
+  * Every `load_*` function returns one `KeyBindings` objects, instead of
+    populating an existing one, like before.
+  * `ConditionalKeyBindings` was added. This can be used to enable/disable
+    all the key bindings from a given `Registry`.
+  * A function named `merge_key_bindings` was added. This takes a list of
+    `KeyBindings` and merges them into one.
+  * `key_binding.defaults.load_key_bindings` was added to load all the key
+    bindings.
+  * `KeyBindingManager` has been removed completely.
+  * `input_processor` was renamed to `key_processor`.
+
+  Further:
+
+  * The `Key` class does not exist anymore. Every key is a string and it's
+    considered fine to use string literals in the key bindings. This is more
+    readable, but we still have run-time validation. The `Keys` enum still
+    exist (for backwards-compatibility, but also to have an overview of which
+    keys are supported.)
+  * 'enter' and 'tab' are key aliases for 'c-m' and 'c-i'.
+
+- User controls can define key bindings, which are active when the user control
+  is focused.
+
+  * `UIControl` got a `get_key_bindings` (abstract) method.
+
+- Changes in the layout engine:
+
+  * `LayoutDimension` was renamed to `Dimension`.
+  * `VSplit` and `HSplit` now take a `padding` argument.
+  * `VSplit` and `HSplit` now take an `align` argument.
+    (TOP/CENTER/BOTTOM/JUSTIFY) or (LEFT/CENTER/RIGHT/JUSTIFY).
+  * `Float` now takes `allow_cover_cursor` and `attach_to_window` arguments.
+  * `Window` got an `WindowAlign` argument. This can be used for the alignment
+    of the content. `TokenListControl` (renamed to `FormattedTextControl`) does
+    not have an alignment argument anymore.
+  * All container objects, like `Window`, got a `style` argument. The style for
+    parent containers propagate to child containers, but can be overriden.
+    This is in particular useful for setting a background color.
+  * `FillControl` does not exist anymore. Use the `style` and `char` arguments
+    of the `Window` class instead.
+  * `DummyControl` was added.
+  * The continuation function of `PromptMargin` now takes `line_number` and
+    `is_soft_wrap` as input.
+
+- Changes to `BufferControl`:
+
+  * The `InputProcessor` class has been refactored. The `apply_transformation`
+    method should now takes a `TransformationInput` object as input.
+
+  * The text `(reverse-i-search)` is now displayed through a processor. (See
+    the `shortcuts` module for an example of its usage.)
+
+- `widgets` and `dialogs` modules:
+
+  * A small collection of widgets was added. These are more complex collections
+    of user controls that are ready to embed in a layout. A `shortcuts.dialogs`
+    module was added as a high level API for displaying input, confirmation and
+    message dialogs.
+
+  * Every class that exposes a ``__pt_container__`` method (which is supposed
+    to return a ``Container`` instance) is considered a widget. The
+    ``to_container`` shortcut will call this method in situations where a
+    ``Container`` object is expected. This avoids inheritance from other
+    ``Container`` types, but also having to unpack the container object from
+    the widget, in case we would have used composition.
+
+  * Warning: The API of the widgets module is not considered stable yet, and
+    can change is the future, if needed.
+
+- Changes to `Buffer`:
+
+  * A `Buffer` no longer takes an `accept_action`.  Both `AcceptAction` and
+    `AbortAction` have been removed. Instead it takes an `accept_handler`.
+
+- Changes regarding auto completion:
+
+  * The left and right arrows now work in the multi-column auto completion
+    menu.
+  * By default, autocompletion is synchronous. The completer needs to be
+    wrapped in `ThreadedCompleter` in order to get asynchronous autocompletion.
+  * When the completer runs in a background thread, completions will be
+    displayed as soon as they are generated. This means that we don't have to
+    wait for all the completions to be generated, before displaying the first
+    one. The completion menus are updated as soon as new completions arrive.
+
+- Changes regarding input validation:
+
+  * Added the `Validator.from_callable` class method for easy creation of
+    new validators.
+
+- Changes regarding the `History` classes:
+
+  * The `History` base class has a different interface. This was needed for
+    asynchronous loading of the history. `ThreadedHistory` was added for this.
+
+- Changes related to `shortcuts.prompt`:
+
+  * There is now a class `PromptSession` which also has a method `prompt`. Both
+    the class and the method take about the same arguments. This can be used to
+    create a session. Every `prompt` call of the same instance will reuse all
+    the arguments given to the class itself.
+
+    The input history is always shared during the entire session.
+
+    Of course, it's still possible to call the global `prompt` function. This
+    will create a new `PromptSession` every time when it's called.
+
+  * The `prompt` function now takes a `key_bindings` argument instead of
+    `key_bindings_registry`. This should only contain the additional bindings.
+    (The default bindings are always included.)
+
+- Changes to the event loops:
+
+  * The event loop API is now closer to how asyncio works. A prompt_toolkit
+    `Application` now has a `Future` object. Calling the `.run_async()` method
+    creates and returns that `Future`. An event loop has a `run_until_complete`
+    method that takes a future and runs the event loop until the Future is set.
+
+    The idea is to be able to transition easily to asyncio when Python 2
+    support can be dropped in the future.
+
+  * `Application` still has a method `run()` that underneath still runs the
+    event loop until the `Future` is set and returns that result.
+
+  * The asyncio adaptors (like the asyncio event loop integration) now require
+    Python 3.5. (We use the async/await syntax internally.)
+
+  * The `Input` and `Output` classes have some changes. (Not really important.)
+
+  * `Application.run_sub_applications` has been removed. The alternative is to
+    call `run_coroutine_in_terminal` which returns a `Future`.
+
+- Changes to the `filters` module:
+
+  * The `Application` is no longer passed around, so both `CLIFilter` and
+    `SimpleFilter` were merged into `Filter`. `to_cli_filter` and
+    `to_simple_filter` became `to_filter`.
+
+  * All filters have been turned into functions. For instance, `IsDone`
+    became `is_done` and `HasCompletions` became `has_completions`.
+
+    This was done because almost all classes were called without any arguments
+    in the `__init__` causing additional braces everywhere. This means that
+    `HasCompletions()` has to be replaced by `has_completions` (without
+    parenthesis).
+
+    The few filters that took arguments as input, became functions, but still
+    have to be called with the given arguments.
+
+    For new filters, it is recommended to use the `@Condition` decorator,
+    rather then inheriting from `Filter`.
+
+- Other renames:
+
+  * `IncrementalSearchDirection` was renamed to `SearchDirection`.
+  * The `use_alternate_screen` parameter has been renamed to `full_screen`.
+  * `Buffer.initial_document` was renamed to `Buffer.document`.
+  * `TokenListControl` has been renamed to `FormattedTextControl`.
+  * `Application.set_return_value` has been renamed to `Application.set_result`.
+
+- Other new features:
+
+  * `DummyAutoSuggest` and `DynamicAutoSuggest` were added.
+  * `DummyClipboard` and `DynamicClipboard` were added.
+  * `DummyCompleter` and `DynamicCompleter` were added.
+  * `DummyHistory` and `DynamicHistory` was added.
+
+  * `to_container` and `to_window` utilities were added.
+
+
+1.0.9: 2016-11-07
+-----------------
+
+Fixes:
+- Fixed a bug in the `cooked_mode` context manager. This caused a bug in
+  ptpython where executing `input()` would display ^M instead of accepting the
+  input.
+- Handle race condition in eventloop/posix.py
+- Updated ANSI color names for vt100. (High and low intensity colors were
+  swapped.)
+
+New features:
+- Added yank-nth-arg and yank-last-arg readline commands + Emacs bindings.
+- Allow searching in Vi selection mode.
+- Made text objects of the Vi 'n' and 'N' search bindings. This adds for
+  instance the following bindings: cn, cN, dn, dN, yn, yN
+
+1.0.8: 2016-10-16
+-----------------
+
+Fixes:
+- In 'shortcuts': complete_while_typing was a SimpleFilter, not a CLIFilter.
+- Always reset color attributes after rendering.
+- Handle bug in Windows when '$TERM' is not defined.
+- Ignore errors when calling tcgetattr/tcsetattr.
+  (This handles the "Inappropriate ioctl for device" crash in some scenarios.)
+- Fix for Windows. Correctly recognize all Chinese and Lithuanian characters.
+
+New features:
+- Added shift+left/up/down/right keys.
+- Small performance optimization in the renderer.
+- Small optimization in the posix event loop. Don't call time.time() if we
+  don't have an inputhook. (Less syscalls.)
+- Turned the _max_postpone_until argument of call_from_executor into a float.
+  (As returned by `time.time`.) This will do less system calls. It's
+  backwards-incompatible, but this is still a private API, used only by pymux.)
+- Added Shift-I/A commands in Vi block selection mode for inserting text at the
+  beginning of each line of the block.
+- Refactoring of the 'selectors' module for the posix event loop. (Reuse the
+  same selector object in one loop, don't recreate it for each select.)
+
+
+1.0.7: 2016-08-21
+-----------------
+
+Fixes:
+- Bugfix in completion. When calculating the common completion to be inserted,
+  the new completions were calculated wrong.
+- On Windows, avoid extra vertical scrolling if the cursor is already on screen.
+
+New features:
+- Support negative arguments for next/previous word ending/beginning.
+
+
+1.0.6: 2016-08-15
+-----------------
+
+Fixes:
+- Go to the start of the line in Vi navigation mode, when 'j' or 'k' have been
+  pressed to navigate to a new history entry.
+- Don't crash when pasting text that contains \r\n characters. (This could
+  happen in iTerm2.)
+- Python 2.6 compatibility fix.
+- Allow pressing <esc> before each -ve argument.
+- Better support for conversion from #ffffff values to ANSI colors in
+  Vt100_Output.
+    * Prefer colors with some saturation, instead of gray colors, if the given
+      color was not gray.
+    * Prefer a different foreground and background color if they were
+      originally not the same. (This avoids concealing text.)
+
+New features:
+- Improved ANSI color support.
+    * If the $PROMPT_TOOLKIT_ANSI_COLORS_ONLY environment variable has been
+      set, use the 16 ANSI colors only.
+    * Take an `ansi_colors_only` parameter in `Vt100_Output` and
+      `shortcuts.create_output`.
+
+
+1.0.5: 2016-08-04
+-----------------
+
+Fixes:
+- Critical fix for running on Windows. The gevent work-around in the inputhook
+  caused 'An operation was attempted on something that is not a socket'.
+
+
+1.0.4: 2016-08-03
+-----------------
+
+Fixes:
+- Key binding fixes:
+      * Improved handling of repeat arguments in Emacs mode. Pressing sequences
+        like 'esc---123' do now work (like GNU Readline):
+              - repetition of the minus sign is ignored.
+              - No esc prefix is required for each digit.
+      * Fix in ControlX-ControlX binding.
+      * Fix in bracketed paste.
+      * Pressing Control-U at the start of the line now deletes the newline.
+      * Pressing Control-K at the end of the line, deletes the newline after
+        the cursor.
+      * Support negative argument for Control-K
+      * Fixed cash when left/right were pressed with a negative argument. (In
+        Emacs mode.)
+      * Fix in ControlUp/ControlDown key bindings.
+      * Distinguish backspace from Control-H. They are not the same.
+      * Delete in front of the cursor when a negative argument has been given
+        to backspace.
+      * Handle arrow keys correctly in emacs-term.
+- Performance optimizations:
+      * Performance optimization in Registry.
+      * Several performance optimization in filters.
+      * Import asyncio inline (only if required).
+- Use the best possible selector in the event loop. This fixes bugs in
+  situations where we have too many open file descriptors.
+- Fix UI freeze when gevent monkey patch has been applied.
+- Fix segmentation fault in Alpine Linux. (Regarding the use of ioctl.)
+- Use the correct colors on Windows. (When the foreground/background colors
+  have been modified.)
+- Display a better error message when running in Idle.
+- Additional flags for vt100 inputs: disable flow control.
+- Also patch stderr in CommandLineInterface.patch_stdout_context.
+
+New features:
+- Allow users to enter Vi digraphs in reverse order.
+- Improved autocompletion behaviour. See IPython issue #9658.
+- Added a 'clear' function in the shortcuts module.
+
+For future compatibility:
+- `Keys.Enter` has been added. This is the key that should be bound for
+  handling the enter key.
+
+  Right now, prompt_toolkit translates \r into \n during the handling of the
+  input; this is not correct and makes it impossible to distinguish between
+  ControlJ and ControlM. Some applications bind ControlJ for custom handling of
+  the enter key, because this equals \n. However, in a future version we will
+  stop replacing \r by \n and at that point, the enter key will be ControlM.
+  So better is to use `Keys.Enter`, which becomes an alias for whatever the
+  enter key translates into.
+
+
+1.0.3: 2016-06-20
+-----------------
+
+Fixes:
+- Bugfix for Python2 in readline-like completion.
+- Bugfix in readline-like completion visualisation.
+
+New features:
+- Added `erase_when_done` parameter to the `Application` class.  (This was
+  required for the bug fixes.)
+- Added (experimental) `CommandLineInterface.run_application_generator` method.
+  (Also required for the bug fix.)
+
+1.0.2: 2016-06-16
+-----------------
+
+Fixes:
+- Don't select the first completion when `complete_while_typing` is False.
+  (Restore the old behaviour.)
+
+
+1.0.1: 2016-06-15
+-----------------
+
+Fixes:
+- Bugfix in GrammarValidator and SentenceValidator.
+- Don't leave the alternate screen on resize events.
+- Use errors=surrogateescape, in order to handle mouse events in some
+  terminals.
+- Ignore key presses in _InterfaceEventLoopCallbacks.feed_key when the CLI is in the done state.
+- Bugfix in get_common_complete_suffix. Don't return any suffix when there are
+  completions that change whatever is before the cursor.
+- Bugfix for Win32/Python2: use unicode literals: This crashed arrow navigation
+  on Windows.
+- Bugfix in InputProcessor: handling of more complex key bindings.
+- Fix: don't apply completions, if there is only one completion which doesn't
+  have any effect.
+- Fix: correctly handle prompts starting with a newline in
+  prompt_toolkit.shortcuts.
+- Fix: thread safety in autocomplete code.
+- Improve styling for matching brackets. (Allow individual styling for the
+  bracket under the cursor and the other.)
+- Fix in ShowLeadingWhiteSpaceProcessor/ShowTrailingWhiteSpaceProcessor: take
+  output encoding into account. (The signature had to change a little for
+  this.)
+- Bug fix in key bindings: only activate Emacs system/open-in-editor bindings
+  if editing_mode is emacs.
+- Added write_binary parameter to Vt100_Output. This fixes a bug in some cases
+  where we expect it to write non-encoded strings.
+- Fix key bindings for Vi mode registers.
+
+New features (**):
+- Added shortcuts.confirm/create_confirm_application function.
+- Emulate bracketed paste on Windows. (When the input stream contains multiple
+  key presses among which a newline and at least one other character, consider
+  this a paste event, and handle as bracketed paste on Unix.
+- Added key handler for displaying completions, just like readline does.
+- Implemented Vi guu,gUU,g~~ key bindings.
+- Implemented Vi 'gJ' key binding.
+- Implemented Vi ab,ib,aB,iB text objects.
+- Support for ZeroWidthEscape tokens in prompt and token lists. Used to support
+  final shell integration.
+- Fix: Make document.text/cursor_position/selection read-only. (Changing these
+  would break the caching causing bigger issues.)
+- Using pytest for unit tests.
+- Allow key bindings to have Keys.Any at any possible position. (Not just the
+  end.) This made it significantly easier to write the named register Vi
+  bindings, resulting in an approved start-up time.)
+- Better feedback when entering multi-key key bindings in insert mode. (E.g.
+  when 'jj' would be mapped to escape.)
+- Small improvement in key processor: allow key bindings to generate new key
+  presses.
+- Handle ControlUp and ControlDown by default: move to the previous/next record
+  in the history.
+- Accept 'char'/'get_char' parameters in FillControl.
+- Added refresh_interval method to prompt() function.
+
+Performance improvements:
+- Improve the performance of test_callable_args: this should significantly
+  increase the start-up time.
+- Start-up time for creating the Vi bindings has been improved significantly.
+
+(**) Some small backwards-compatible features were allowed for this minor
+     release. After evaluating the impact/risk/work involved we concluded that
+     we could ship these in a minor release.
+
+
+1.0.0: 2016-05-05
+-----------------
+
+Fixes:
+- Adjust minimum completion menu width to match UIControl and Window class.
+- Bugfix regarding weakref in InputProcessor.
+- Fix for pypy3: bug in WeakValueDictionary.
+- Correctly handle '0' key binding in Vi mode.
+- Also load Vi bindings by default in Application if no registry has been given.
+- Only go into selection mode if the current buffer is not empty.
+- Close PipeInput after usage.
+- Only use 16 colors in (Emacs) eterm-color.
+- Bugfix in "xP Vi key binding.
+- Bugfix in Vi { and } key binding.
+- Fix: use correct token for Scrollbar in MultiColumnCompletionMenuControl.
+- Handle negative values in translate_row_col_to_index.
+- Handle decomposed unicode characters.
+- Fixed Window.always_hide_cursor. (Parameter was ignored.)
+- Fix in zz Vi key binding. (When render info is not available.)
+- Fix in Document.get_cursor_up_position. (When an argument is given.)
+
+New features:
+- Separated `load_mouse_bindings`.
+- Refactoring/simplification of the key bindings: better use of filters and
+  CLI.editing_mode.
+- Added DummyOutput class and a few unit tests that test the whole CLI.
+- Use the bisect module in Document._line_start_indexes instead of a custom
+  binary search. This should improve the performance.
+- Stay in the same column when doing multiple up/down movements.
+- Visual improvements:
+  * Implemented cursorcolumn, cursorline and colorcolumn.
+  * Only reserve menu space when `complete_while_typing=True` or when there are
+    completions to be displayed.
+  * Support for chaining tokens for combined styles. SelectedText will now
+    reverse the colors from the highlighting by default. Style
+    `Token.SelectedText` to set a fixed foreground/background.
+    Also for SearchMatch, we now use combined tokens.
+  * Support for dark gray on Windows.
+  * Default token for SystemToolbar and SearchToolbar.
+  * Display selection also on empty lines.
+- Emacs key bindings improved:
+  * Recognize + handle ControlDelete key.
+  * Implemented meta-* and control-backslash key bindings.
+- Vi key bindings improved:
+  * Handle inclusive and linewise motions properly.
+  * Fix g_ motion off by one character, and don't work when cursor is in
+    the trailing whitespace part of line.
+  * Make a(/a)/i(/i)/... motions. Find enclosing brackets instead of the next
+    bracket.
+  * Update N% motion according to vim behaviors.
+  * Fix | motion off by one character.
+  * ge/gE motions go to end of previous word, not start.
+  * Added Vi 'gm' key binding.
+  * Implemented 'gq' key binding in Vi mode. (Reshape text.)
+  * Vi operator/text object separation for key bindings.
+  * Added 'ap' (auto-paragraph) text object.
+  * Implemented Vi digraphs. ControlK will now insert a digraph.
+  * Implemented vi tilde_operator.
+  * Support named registers.
+  * Vi < and > key bindings became operators.
+  * Text objects and motions are now separate bindings.
+  * Improved copy/paste in Vi mode.
+
+Backwards-incompatible changes:
+- Don't reset the current buffer anymore by default in
+  CommandLineInterface.run(). Passing `reset_current_buffer=True` is now
+  required.
+- Renamed MouseEventTypes to MouseEventType for consistency. The old name is
+  still valid, but deprecated.
+- Refactoring of Callbacks. All events should now receive one argument, which
+  is the sender. (Further, Callback was renamed to Event.) This is mostly used
+  internally.
+- Moved on_invalidate callback from CommandLineInterface to Application
+- Renamed `PipeInput.send` to `PipeInput.send_text`. (Old deprecated name is
+  still kept as a valid alias.)
+- Renamed SimpleLexer.default_token to SimpleLexer.token. (+
+  backwards-compatibility.)
+- Refactoring of the filters: `ViStateFilter` has been deprecated. (Should not
+  be used anymore.) Use the filters, as defined in prompt_toolkit.filters.
+- `editing_mode` is now a property of `CommandLineInterface`. This is replacing
+  the `vi_mode` parameter in `KeyBindingManager`.
+- The default accept_action for the default Buffer in Application now becomes
+  IGNORE. This is a much more sensible default. Pass RETURN_DOCUMENT to get
+  the previous behaviour,
+- Always expect an EventLoop instance in CommandLineInterface. Creating it in
+  __init__ caused a memory leak.
+
+
+0.60: 2016-03-14
+----------------
+
+Fixes:
+- Fix in Document.paste. (The screen was not updated after an undo of a paste.)
+- Don't use deprecated inspect.getargspec on Python 3.
+- Fixed reading input on Windows when input was piped in stdin.
+- Use correct file descriptors for input/output in run_system_command.
+- Always correctly split prompt in shortcuts.prompt. (Even when multiline=False)
+- Correctly align right prompt to the top when the left prompt consists of
+  multiple lines.
+- Correctly use Token.Transparent as default token for a TokenListControl.
+- Fix in syntax synchronisation. (Better handle the case when no
+  synchronisation point was found.)
+- Send SIGTSTP to the whole process group.
+- Correctly raise on_buffer_changed on all text changes.
+- Fix in regular_languages.GrammarLexer. (Fixes bug in ptipython syntax
+  highlighting.)
+
+New features:
+- Add support for additional readers to the Win32 event loop.
+- Added on_render event.
+- Carry the weight in layout dimensions to allow stretching.
+
+
+0.59: 2016-02-27
+----------------
+
+Fixes:
+- Set correct default color on Windows. (Gray instead of high intensity gray.)
+- Reverse colors on Windows when foreground/background color have not been
+  specified.
+- Correct handling of mouse events for FillControl.
+- Take margin into account when calculating Window height. (Fixes bug in
+  multiline prompt.)
+- Handle division by zero in UIContent.get_height_for_text.
+
+
+0.58: 2016-02-23
+----------------
+
+Fixes:
+- Correctly return result for mouse handler in TokenListControl.
+- Bugfix in meta-backspace key binding. (Delete all whitespace before the
+  cursor, when there is only whitespace.)
+- Bugfix in Vi gu, gU, g? and g~ key bindings (in selection mode).
+- Correctly restore default console attributes on Windows.
+- Disable bracketed paste support in ConEmu. (This was broken.)
+- When an unknown exception is raised in `CommandLineInterface.run()`, don't
+  forget to redraw the CLI.
+
+New features:
+- Many performance improvements and better caching. (Especially in the
+  `Document` class.)
+- Support for continuation tokens in `shortcuts.prompt` and
+  `shortcuts.create_prompt_layout`.
+- Added `shortcuts.print_tokens` function for printing colored output.
+- Sound bell when nothing was deleted.
+- Added escape sequences for F1-F5 keys on the Linux console.
+- Improved support for the Linux console. (Switch back to 16 colors.)
+- Added F13-F24 input codes for xterm.
+- Created prompt_toolkit.token. A custom Token implementation, that is
+  compatible with Pygments.token. (This way, Pygments becomes an optional
+  dependency. For many use cases, nothing except the Token class from Pygments
+  was used, so it was a bit overkill to install Pygments for only that.)
+- Refactoring of prompt_toolkit.styles.
+- `Float` objects got a `hide_when_covering_content` option.
+- Implementation of RPROMPT, like ZSH: Added `get_rprompt_tokens` to
+  `create_prompt_layout`.
+- Some improvements to the default style.
+- Also handle Ctrl-R and Ctrl-S in Vi mode when searching.
+- Added TabsProcessor: a tool to visualise tabs instead of displaying ^I.
+- Give a better error message when trying to run in git-bash.
+- Support for ANSI color names in style dictionaries.
+
+- Big refactoring of the `Window` and `UIControl` classes. This should result
+  in huge performance improvements on big inputs. (While first, a document
+  could have 1,000 lines; now it can have about 100,000 lines on the same system.)
+
+  The Window and UIControl have been rewritten very much. Rather than each time
+  rendering the whole user control, we now only have to render the visible part.
+
+  Because of this, many pieces had to be rewritten:
+  - UIControls work differently. They return a `UIContent` instance that
+    consist of a collection of lines.
+  - All processors have been rewritten. (Their API changed as well, because
+    they process one line at a time.)
+  - Lexers work differently. `Lexer.lex_document` should now return a function
+    that returns the tokens for one line. PygmentsLexer has been optimized that
+    it becomes 'lazy', and it has optional syntax synchronisation. That means,
+    that the lexer doesn't have to start the lexing at the beginning of the
+    document. (Which would be slow for big documents.)
+
+Backwards-incompatible changes:
+- As mentioned above, the refactoring of `Window` and `UIControl` caused many
+  "internal" APIs to change. All custom `UIControl`, `Processor` and `Lexer`
+  classes have to be rewritten. However, for most applications this should not
+  be an issue. Especially, the `shortcuts.prompt` function is
+  backwards-compatible.
+- `wrap_lines` became a property of `Window` instead of `BufferControl`.
+
+
+0.57: 2016-01-04
+----------------
+
+Fixes:
+- Made `max_render_postpone_time` configurable. The current default was bad.
+  (We should probably always draw the UI once every cycle of the event loop.)
+
+
+0.56: 2016-01-03
+----------------
+
+Fixes:
+- Fix in bracketed paste. It was not correctly enabled for each prompt.
+
+
+0.55: 2016-01-03
+----------------
+
+New features:
+- Implemented bracketed paste mode. (This allows much faster pasting, as well
+  as pasting without going into paste mode. This makes sure that indentation in
+  ptpython for instance is kept correctly.)
+- Added support for italic output and blink. (For terminals that support it.)
+- Added get_horizontal_scroll, get_vertical_scroll and always_hide_cursor
+  parameters to Window.
+- Refactoring of the posix event loop. Better scheduling of all tasks/FDs to
+  avoid starvation. (Everything should feel more responsive in high CPU
+  situations.)
+- Added get_default_char function to TokenListControl.
+- AppendAutoSuggestion now accepts a token parameter.
+- Support for ansi color names in styles.
+- Accept get_width/get_height parameters in Float.
+- Added Output.write_raw and accept 'raw' parameter in
+  CommandLineInterface.stdout_proxy.
+- Better caching of tokens in TokenListControl.
+- Add mouse support to TokenListControl.
+- Display "Window too small" when the window becomes too small.
+- Added 'bell' function to Output.
+- Accept weights in HSplit/VSplit.
+- Added Registry.remove_binding method to dynamically remove key bindings.
+- Added focus_on_click parameter to BufferControl.
+- Introduced BufferMapping class as a wrapper around the buffers dictionary.
+  This one also contains the focus stack.
+- Improved 'v' and 'V' key bindings. Allow switching between line and character
+  selection modes.
+- Added layout.highlighters. A new, much faster way to do selection and search
+  highlighting.
+- Make search_state dynamic for key bindings.
+- Added 'sentence' option to WordCompleter.
+- Cache Document.lines for better performance.
+- Implementation of BLOCK selections. (Cut, copy, paste.)
+- Accept a 'reserve_space_for_menu' parameter in the shortcuts. (This is an
+  integer.)
+- Support for 24bit true color on vt100 terminals.
+- Added CommandLineInterface.on_invalidate event.
+- Added __version__ to __init__.py.
+
+Fixes:
+- Always show cursor in the 'done' state.
+- Allow HSplit to have zero children.
+- Bugfix for handling of backslash on Windows with some non-us keyboards.
+  (Ptpython issue #28.)
+- Never render characters outside the visible screen region.
+- Fix in WordCompleter. When case insensitive and input contained uppercase.
+- Highlight search match when the cursor is at any position on the match. (not
+  just the beginning.)
+
+Backwards-incompatible changes:
+(Most changes will probably not have an impact on external applications.)
+- Change in the `Style` API. This allows caching of Attrs in renderer and
+  faster rendering.  (Style now has a get_attrs_for_token instead of a
+  get_token_to_attributes_dict method.)
+- Removed DefaultStyle. Created PygmentsStyle.from_defaults class method instead.
+- Removed AbortAction.IGNORE. This was ambiguous.
+- Accept 'cli' parameter in 'walk' and 'find_window_for_buffer_name'.
+- The focus stack is now stored in BufferMapping.
+- ViStateFilter and KeyBindingManager now accept a get_vi_state callable
+  instead of vi_state itself. (This way a key bindings registry becomes
+  stateless.)
+- HighlightSearchProcessor and HighlightSelectionProcessor became deprecated.
+  (Use highlighters instead.)
+
+
+0.54: 2015-10-29
+----------------
+
+New features:
+- Allow CommandLineInterface to run in any thread.
+- Hide cursor while rendering.
+- Added add_reader/remove_reader methods to EventLoop.
+- Support for 'reverse' style.
+- Redraw more lazy, by using invalidate.
+- Added show_cursor property to Screen.
+- Center or right align text in TokenListControl also when it spans multiple
+  lines.
+
+Fixes:
+- Bugfix in PathCompleter. (Expanduser issue.)
+- Fix in signal handler.
+- Use utf-8 encoding in Vt100_Output by default.
+- Use correct default token in BufferControl.
+- Fix in ControlL key binding. Use @handle to allow deactivation.
+
+Backwards-incompatible changes:
+- Renamed create_default_layout to create_prompt_layout
+- Renamed create_default_application to create_prompt_application
+- Renamed Layout to Container.
+- Renamed CommandLineInterfaces.request_redraw to invalidate.
+- Changed the actual value of SEARCH_BUFFER, DEFAULT_BUFFER, SYSTEM_BUFFER and
+  DUMMY_BUFFER.
+- Changed order of keyword arguments of the BufferControl class. "buffer_name"
+  now comes first.
+- Removed old pt(i)python code.
+
+0.53: 2015-10-06
+----------------
+
+New features:
+- Handling of the insert key in Vi mode.
+- Added 'zt' and 'zb' Vi key bindings.
+- Added delete key binding for deleting selected text.
+- Select word below cursor on double mouse click.
+- Added `wrap_lines` option to TokenListControl.
+- Added `KeyBindingManager.for_prompt`.
+
+Fixes:
+- Fix in rendering output.
+- Reset renderer correctly in run_in_terminal.
+- Only reset buffer when using `AbortAction.RETRY`.
+- Fix in handling of exit (Ctrl-D) key presses.
+- Fix in `CompleteEvent`. Correctly set `completion_requested`.
+
+Backwards-incompatible changes:
+- Renamed `ValidationError.index` to `ValidationError.cursor_position`.
+- Renamed `shortcuts.get_input` to `shortcuts.prompt`.
+- Return empty string instead of None in
+  `Document.current_char`/`char_before_cursor`.
+
+
+0.52: 2015-09-24
+----------------
+
+Fixes:
+- Fix in auto suggestion: hide suggestion when accepting input.
+
+
+0.51: 2015-09-24
+----------------
+
+New features:
+- Mouse support. (Scrolling and clicking for vt100 terminals. For Windows only
+  clicking.) Both the autocompletion menus and buffer controls respond to
+  scrolling and clicking.
+- Added auto suggestions. (Like the fish shell.)
+- Stdout proxy become thread safe.
+- Linewrapping can now be disabled, instead we get horizontal scrolling.
+- Line numbering can now be relative. Like the vi 'relativenumber' option.
+
+Fixes:
+- Fixed excessive scrolling in Windows.
+- Bugfix in search highlighting.
+- Copy all words during repetition of Ctrl-W presses.
+- The 'libs' folder has been removed.
+- Fix in MultiColumnCompletionsMenu: don't create very big columns.
+
+Backwards-incompatible changes:
+- Disable search by default in KeyBindingManager.
+- Separated abort/exit key bindings. Disabled by default in KeyBindingManager.
+- 'Ignore' became the default on_abort action in `Application`.
+- 'Ignore' became the default accept_action in `Buffer`.
+- The layout processors have been refactored. The API is changed.
+- `SwitchableValidator` has been renamed to `ConditionalValidator`.
+- `WindowRenderInfo` has several incompatible changes.
+- Margins have been refactored completely. Now it's the window that has the
+  margin instead of `BufferControl`. Is is both much more performant and
+  flexible.
+
+
+0.50: 2015-09-06
+----------------
+
+Fix:
+- Leaving of alternate screen on Windows.
+
+
+0.49: 2015-09-06
+----------------
+
+New features:
+- Added MANIFEST.in
+- Better support for multiline prompts in shortcuts.
+- Added Document.set_document method.
+- Added 'default' argument to `shortcuts.create_default_application`.
+- Added `align_center` option for `TokenListControl`.
+- Added optional key bindings for full page navigation. (Moved key bindings
+  from pyvim into prompt-toolkit.)
+- Accepts default_char in BufferControl for filling the background.
+- Added InFocusStack filter.
+
+Fixes:
+- Small fix in TokenListControl: use the right Char for aligning.
+
+Backwards-incompatible changes:
+- Removed deprecated 'tokens' attribute from GrammarLexer.
+
+
+0.48: 2015-09-02
+----------------
+
+New features:
+- run_in_terminal now returns the result of the called function.
+- Made history attribute of Buffer class public.
+- Added support for sub CommandLineInterfaces.
+- Accept optional vi_state parameter in KeyBindingManager.
+
+Fixes:
+- Pop-up menu positioning. The menu was shown too often above instead of below
+  the cursor.
+- Fix in Control-W key binding. When there is only whitespace before the
+  cursor, delete the whitespace.
+- Rendering bug fix in open_in_editor: run editor using cli.run_in_terminal.
+- Fix in renderer. Correctly reserve the vertical space as required by the
+  layout.
+- Small fix in Margin ABC.
+- Added __iter__ to History ABC.
+- Small bugfix in CommandLineInterface: create correct eventloop when no
+  eventloop was given.
+- Never schedule a second repaint operation when a previous was not yet
+  executed.
+
+
+0.47: 2015-08-19
+----------------
+
+New features:
+- Added `prompt_toolkit.layout.utils.iter_token_lines`.
+- Allow `None` values on the focus stack.
+- Buffers can be readonly. Added `IsReadOnly` filter.
+- `eager` behaviour for key bindings. When a key binding is eager it will be
+  executed as soon as it's matched, even when there is another binding that
+  starts with this key sequence.
+- Custom margins for BufferControl.
+
+Fixes:
+- Don't trigger autocompletion on paste.
+- Added `pre_run` parameter to CommandLineInterface.
+- Correct invalidation of BeforeInput and AfterInput.
+- Correctly handle transparency. (For floats.)
+- Small change in the algorithm to determine Window dimensions: keep in the
+  bounds of the Window dimensions.
+
+Backwards-incompatible changes:
+- There a now a `Lexer` abstract base class. Every lexer should be an instance
+  of that class, and Pygments lexers should be wrapped in a `PygmentsLexer`
+  class. `prompt_toolkit.shortcuts` still accepts Pygments lexers directly for
+  backwards-compatibility.
+- BufferControl no longer has a `show_line_numbers` argument. Pass a
+  `NumberedMargin` instance instead.
+- The `History` class became an abstract base class and only defines an
+  interface. The default history class is now called `InMemoryHistory`.
+
+
+0.46: 2015-08-08
+----------------
+
+New features:
+- By default, in shortcuts, only show search highlighting when the search is
+  the current input buffer.
+- Accept 'count' for all search operations. (For repetition.)
+- `shortcuts.create_default_layout` accepts a `multiline` parameter.
+- Show meta display text for completions also in multi-column mode.
+
+Fixes:
+- Correct invalidation of DefaultPrompt when search direction changes.
+- Correctly include/exclude current cursor position in search.
+- More consistency in styles.
+- Fix in ConditionalProcessor.has_focus.
+- Python 2.6 compatibility fix.
+- Show cursor at the correct position during reverse-i-search.
+- Fixed stdout encoding bug for vt100 output.
+
+Backwards-incompatible changes:
+- Use of `ConditionalContainer` everywhere. The `Window` class no longer
+  accepts a `filter` argument to decide about the visibility. Instead
+  wrapping inside a `ConditionalContainer` class is required.
+
+
+0.45: 2015-07-30
+----------------
+
+Fixes:
+- Bug fix on OS X: correctly detect platform as not Windows.
+
+
+0.44: 2015-07-30
+----------------
+
+Fixes:
+- Fixed bug in eventloops: handle timeout correctly, even when there is an eventhook.
+- Bug fix in open-in-editor: set correct cursor position.
+
+New features:
+- CompletionsMenu got a scroll_offset.
+- Use 256 colors and ANSI sequences when ConEmu ANSI support has been detected.
+- Added PyperclipClipboard for synchronisation with the system clipboard.
+  and clipboard parameter in shortcut functions.
+- Filter for enabling/disabling handling of Vi 'v' binding.
+
+
+0.43: 2015-07-15
+----------------
+
+Fixes:
+- Windows bug fix. STD_INPUT_HANDLE should be c_ulong instead of HANDLE.
+  (This caused crashes on some systems.)
+
+New features:
+- Added eventloop and patch_stdout parameters to get_input.
+- Inputhook support added.
+- Added ShowLeadingWhiteSpaceProcessor and ShowTrailingWhiteSpaceProcessor
+  processors.
+- Accept Filter as multiline parameter in 'shortcuts'.
+- MultiColumnCompletionsMenu + display_completions_in_columns parameter
+  in shortcuts.
+
+Backwards incompatible changes:
+- Layout.width was renamed to preferred_width and now receives a
+  max_available_width parameter.
+
+
+0.42: 2015-06-25
+----------------
+
+Fixes:
+- Support for Windows cmder and conemu consoles.
+- Correct handling of unicode input and output on Windows.
+
+New features:
+- Support terminal titles.
+- Handle Control-Enter as Meta-Enter on Windows.
+- Control-Z key binding for Windows.
+- Implemented alternate screen buffer on Windows.
+- Clipboard became an ABC and InMemoryClipboard default implementation.
+
+
+0.41: 2015-06-20
+----------------
+
+Fixes:
+- Emacs Control-T key binding.
+- Color fix for Windows consoles.
+
+New features:
+- Allow both booleans and Filters in many places.
+- `password` can be a Filter now.
+
+
+0.40: 2015-06-15
+----------------
+
+Fixes:
+- Fix in output_screen_diff: reset correctly.
+- Ignore flush errors in vt100_output.
+- Implemented <num>gg Vi key binding.
+- Bug fix in the renderer when the style changes.
+
+New features:
+- TokenListControl can now display the cursor somewhere.
+- Added SwitchableValidator class.
+- print_tokens function added.
+- get_style argument for Application added.
+- KeyBindingManager got an enable_all argument.
+
+Backwards incompatible changes:
+- history_search is now a SimpleFilter instance.
+
+
+0.39: 2015-06-04
+----------------
+
+Fixes:
+- Fixed layout.py example.
+- Fixed eventloop for Python 64bit on Windows.
+- Fix in history.
+- Fix in key bindings.
+
+
+0.38: 2015-05-31
+----------------
+
+New features:
+- Improved performance significantly for processing key bindings.
+  (Pasting text will be a lot faster.)
+- Added 'M' Vi key binding.
+- Added 'z-' and 'z+' and 'z-[Enter]' Vi keybindings.
+- Correctly handle input and output encodings on Windows.
+
+Bug fixes:
+- Fix bug when completion cursor position is outside range of current text.
+- Don't crash Control-D is pressed while waiting for ENTER press (in run_system_command.)
+- On Ctrl-Z, don't suspend on Windows, where we don't have SIGTSTP.
+- Ignore result when open_in_editor received a nonzero return code.
+- Bug fix in displaying of menu meta information. Don't show 'None'.
+
+Backwards incompatible changes:
+- Refactoring of the I/O layer.  Separation of the CommandLineInterface
+  and Application class.
+- Renamed enable_system_prompt to enable_system_bindings.
+
+0.37: 2015-05-11
+----------------
+
+New features:
+- Handling of trailing input in contrib.regular_languages.
+
+Bug fixes:
+- Default message in shortcuts.get_input.
+- Windows compatibility for contrib.telnet.
+- OS X bugfix in contrib.telnet.
+
+0.36: 2015-05-09
+----------------
+
+New features:
+- Added get_prompt_tokens parameter to create_default_layout.
+- Show prompt in bold by default.
+
+Bug fixes:
+- Correct cache invalidation of DefaultPrompt.
+- Using text_type assertions in contrib.telnet.
+- Removed contrib.shortcuts completely. (The .pyc files still
+  appeared incorrectly in the wheel.)
+
+0.35: 2015-05-07
+----------------
+
+New features:
+- WORD parameter for WordCompleter.
+- DefaultPrompt.from_message constructor.
+- Added reactive.py for simple integer data binding.
+- Implemented scroll_offset and scroll_beyond_bottom for Window.
+- Some performance improvements.
+
+Bug fixes:
+- Handling of relative path in PathCompleter.
+- unicode_literals for all examples.
+- Visibility of bottom toolbar in create_default_layout shortcut.
+- Correctly handle 'J' vi key binding.
+- Fix in indent/unindent.
+- Better Vi bindings in visual mode.
+
+Backwards incompatible changes:
+- Moved prompt_toolkit.contrib.shortcuts to prompt_toolkit.shortcuts.
+- Refactoring of contrib.telnet.
+
+0.34: 2015-04-26
+----------------
+
+Bug fixes:
+- Correct display of multi width characters in completion menu.
+
+Backwards incompatible changes:
+- Renamed Buffer.add_to_history to Buffer.append_to_history.
+
+0.33: 2015-04-25
+----------------
+
+Bug fixes:
+- Crash fixed in SystemCompleter when some directories didn't exist.
+- Made text/cursor_position in Document more atomic.
+- Fixed Char.__ne__, improves performance.
+- Better performance of the filter module.
+- Refactoring of the filter module.
+- Bugfix in BufferControl, caching was not done correctly.
+- fixed 'zz' Vi key binding.
+
+New features:
+- Do tilde expansion for system commands.
+- Added ignore_case option for CommandLineInterface.
+
+Backwards incompatible changes:
+- complete_while_typing parameter has been moved from CommandLineInterface to
+  Buffer.
+
+
+0.32: 2015-04-22
+----------------
+
+New features:
+- Implemented repeat arg for '{' and '}' vi key binding.
+- Added autocorrection example.
+- first experimental telnet interface added.
+- Added contrib.validators.SentenceValidator.
+- Added Layout.walk generator to traverse the layout.
+- Improved 'L' and 'H' Vi key bindings.
+- Implemented Vi 'zz' key binding.
+- ValidationToolbar got a show_position parameter.
+- When only width or height are given for a float, the control is centered in
+  the parent.
+- Added beforeKeyPress and afterKeyPress events.
+- Added HighlightMatchingBracketProcessor.
+- SearchToolbar got a vi_mode option to show '?' and '/' instead of 'I-search'.
+- Implemented vi '*' binding.
+- Added onBufferChanged event to CommandLineInterface.
+- Many performance improvements: some caching and not rendering after every
+  single key stroke.
+- Added ConditionalProcessor.
+- Floating menus are now shown above the cursor, when below is not enough
+  space, but above is enough space.
+- Improved vi 'G' key binding.
+- WindowRenderInfo got a full_height_visible, top_visible, and a few other
+  attributes.
+- PathCompleter got an expanduser option to do tilde expansion.
+
+Fixed:
+- Always insert indentation when pressing enter.
+- vertical_scroll should be an int instead of a float.
+- Some bug fixes in renderer.Output.
+- Pressing backspace in an empty search in Vi mode now goes back to navigation
+  mode.
+- Bug fix in TokenListControl (Correctly calculate height for multiline
+  content.)
+- Only apply HighlightMatchingBracketProcessor when editing buffer.
+- Ensure that floating layouts never go out of bounds.
+- Home/End now go to the start and end of the line.
+- Fixed vi 'c' key binding.
+- Redraw the whole output when the style changes.
+- Don't trigger onTextInsert when working_index doesn't change.
+- Searching now wraps around the start/end of buffer/history.
+- Don't go to the start of the line when moving forward in history.
+
+Changes:
+- Don't show directory/file/link in the meta information of PathCompleter anymore.
+- Complete refactoring of the event loops.
+- Refactoring of the Renderer and CommandLineInterface class.
+- CommandLineInterface now accepts an optional Output argument.
+- CommandLineInterface now accepts a use_alternate_screen parameter.
+- Moved highlighting code for search/selection from BufferControl to processors.
+- Completers are now always run asynchronously.
+- Complete refactoring of the search. (Most responsibility move out of Buffer
+  class. CommandLineInterface now got a search_state attribute.)
+
+Backwards incompatible changes:
+- get_input does now have a history attribute instead of history_filename.
+- EOFError and KeyboardInterrupt is raised for abort and exit instead of custom
+  exceptions.
+- CommandLineInterface does no longer have a property 'is_reading_input'.
+- filters.AlwaysOn/AlwaysOff have been renamed to Always/Never.
+- AcceptAction has been moved from CommandLineInterface to Buffer. Now every
+  buffer can define its own accept action.
+- CommandLineInterface now expects an Eventloop instance in __init__.
+
+
+0.31: 2015-01-30
+----------------
+
+Fixed:
+- Bug in float positioning
+- Show completion menu only for the default_buffer in get_input.
+
+New features:
+- PathCompleter got a get_paths parameter.
+- PathCompleter sorts alphabetically.
+- Added contrib.completers.SystemCompleter
+- Completion got a get_display_meta parameter.
+
+
+0.30: 2015-01-26
+----------------
+
+Fixed:
+- Backward compatibility with django_extensions.
+- Usage of alternate screen in the renderer.
+
+New features:
+- Vi '#' key binding.
+- contrib.shortcuts.get_input got a get_bottom_toolbar_tokens argument.
+- Separate key bindings for "open in editor." KeyBindingManager got a
+  enable_open_in_editor argument.
+
+0.28: 2015-01-25
+----------------
+
+Fixed:
+- syntax error in 0.27
+
+0.27: 2015-01-25
+----------------
+
+Backwards-incompatible changes:
+- Complete refactoring of the layout system. (HSplit, VSplit, FloatContainer)
+  as well as a list of controls (TokenListControl, BufferControl) in order to
+  design much more complex layouts.
+- ptpython code has been moved to a separate repository.
+
+New features:
+- prompt_toolkit.contrib.shortcuts.get_input has been extended.
+
+Fixed:
+- Behaviour of Control+left/right/up/down.
+- Backspace in incremental search.
+- Hide completion menu correctly when the cursor position changes.
+
+0.26: 2015-01-08
+----------------
+
+Backwards-incompatible changes:
+- Refactoring of the key input system. (The registry which contains the key
+  bindings, the focus stack, key binding manager.) Overall much better API.
+- Renamed `Line` to `Buffer`.
+
+New features:
+- Added filters as a way of disabling/enabling parts of the runtime according
+  to certain conditions.
+- Global clipboard, shared between all buffers.
+- Added (experimental) "merge history" feature to ptpython.
+- Added 'C-x r k' and 'C-x r y' emacs key bindings for cut and paste.
+- Added g_, ge and gE vi key bindings.
+- Added support for handling control + arrows keys.
+
+Fixed:
+- Correctly handle f1-f4 in rxvt-unicode.
+
+0.25: 2014-12-11
+----------------
+
+Fixed:
+- Package did not install on Python 2.6/2.7.
+
+0.24: 2014-12-10
+----------------
+
+Backwards-incompatible changes:
+- Completer.get_completions now gets a complete_event argument.
+
+New features:
+- For ptpython: filename completion inside Python strings.
+- prompt_toolkit.contrib.regular_languages added.
+- prompt_toolkit.contrib.pdb added. (Experimental PDB front-end.)
+- Support for multiline toolbars.
+- asyncio support added. (Integration with asyncio event loop.)
+- WORD parameter added to Document.word_before_cursor.
+
+Fixed:
+- Small fixes in Win32 terminal output.
+- Bug fix in parsing of CPR response.
+
+0.23: 2014-11-28
+----------------
+
+New features:
+- contrib.completers added.
+
+Fixed:
+- Improved j/k key bindings in Vi mode.
+- Don't leak internal variables into ptipython shell.
+- Initialize IPython extensions.
+- Use IPython's prompt.
+- Workarounds for Jedi crashes.
+
+0.22: 2014-11-09
+----------------
+
+Fixed:
+- Fixed missing import which caused Ctrl-Z to crash.
+- Show error message for ptipython when IPython is not installed.
+
+0.21: 2014-10-25
+----------------
+New features:
+- Using entry_points in setup.py
+- Experimental Win32 support added.
+
+Fixed:
+- Behaviour of 'r' and 'R' key bindings in Vi mode.
+- Detect multiline correctly for ptpython when there are triple quoted strings.
+- Some other small improvements.
+
+
+0.20: 2014-10-04
+----------------
+Fixed:
+- Workarounds for Jedi bugs.
+- Better handling of window resize events.
+- Fixed counter in ptipython prompt.
+- Use IPythonInputSplitter.transform_cell for IPython syntax validation.
+- Only insert newlines for open brackets if the cursor is at the end of the input string.
+
+New features:
+- More Vi key bindings: 'B', 'W', 'E', 'aW', 'aw' and 'iW'
+- ControlZ now suspends the process
+
+
+0.19: 2014-09-30
+----------------
+Fixed:
+- Handle Jedi crashes.
+- Autocompletion in `ptipython`
+- Input validation in `ptipython`
+- Execution of system commands (in `ptpython`) in Python 3
+- Add current directory to sys.path for `ptpython`.
+- Minimal jedi and six version in setup.py
+
+New features
+- Python 2.6 support
+- C-C> and C-C< indent and unindent emacs key bindings.
+- `ptpython` can now also run python scripts, so aliasing of `ptpython` as
+  `python` will work better.
+
+0.18: 2014-09-29
+----------------
+- First official (beta) release.
+
+
+Jan 25, 2014
+------------
+first commit
