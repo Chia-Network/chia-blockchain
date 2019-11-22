@@ -9,7 +9,6 @@ __pycache__/
 **/*.DS_Store
 
 # Database
-db/
 nohup.out
 
 # Keys and plot files

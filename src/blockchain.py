@@ -64,7 +64,6 @@ class Blockchain:
                 reverse_blocks.append(curr)
 
             for block in reversed(reverse_blocks):
-                log.info(f"Restoting block height {block.height} : {block.header_hash}")
                 self.height_to_hash[block.height] = block.header_hash
 
             self.lca_block = self.tips[0]
