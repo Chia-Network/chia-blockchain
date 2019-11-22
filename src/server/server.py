@@ -107,7 +107,7 @@ class ChiaServer:
         An on connect method can also be specified, and this will be saved into the instance variables.
         """
         if self._server is not None:
-            if self._host == target_node.host and self._port == target_node.port:
+            if (self._host == target_node.host or target_node.host == "127.0.0.0.1") and self._port == target_node.port:
                 self.global_connections.peers.remove(target_node)
                 return False
         start_time = time.time()
@@ -122,9 +122,9 @@ class ChiaServer:
                 await asyncio.wait_for(open_con_task, timeout=3)
                 reader, writer = open_con_task.result()
                 succeeded = True
-            except (ConnectionRefusedError, TimeoutError, OSError) as e:
+            except (ConnectionRefusedError, TimeoutError, OSError, asyncio.TimeoutError) as e:
+                log.warning(f"Could not connct to {target_node}. {type(e)}{e}. Retrying.")
                 open_con_task.cancel()
-                log.warning(f"{e}. Retrying.")
                 await asyncio.sleep(RETRY_INTERVAL)
         if not succeeded:
             if self.global_connections.peers.remove(target_node):

@@ -6,7 +6,7 @@ import time
 from asyncio import Event
 from hashlib import sha256
 from secrets import token_bytes
-from typing import AsyncGenerator, List, Optional, Set, Tuple
+from typing import AsyncGenerator, List, Optional, Tuple
 
 import yaml
 from blspy import PrivateKey, Signature
@@ -51,7 +51,7 @@ class FullNode:
         self.config = yaml.safe_load(open(config_filename, "r"))["full_node"]
         self.store = store
         self.blockchain = blockchain
-        self._bg_tasks: Set[asyncio.Task] = set()
+        self._shut_down = False  # Set to true to close all infinite loops
 
     def _set_server(self, server: ChiaServer):
         self.server = server
@@ -175,7 +175,7 @@ class FullNode:
                 msg = Message("request_peers", peer_protocol.RequestPeers())
                 yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
 
-            while True:
+            while not self._shut_down:
                 if self._num_needed_peers():
                     if not await self.server.start_client(
                         introducer_peerinfo, on_connect
@@ -183,12 +183,10 @@ class FullNode:
                         continue
                 await asyncio.sleep(self.config["introducer_connect_interval"])
 
-        self._bg_tasks.add(asyncio.create_task(introducer_client()))
+        asyncio.create_task(introducer_client())
 
     def _shutdown(self):
-        for task in self._bg_tasks:
-            task.cancel()
-        self._bg_tasks = set()
+        self._shut_down = True
 
     async def _sync(self):
         """
@@ -243,6 +241,8 @@ class FullNode:
         total_time_slept = 0
         headers: List[HeaderBlock] = []
         while total_time_slept < timeout:
+            if self._shut_down:
+                return
             for start_height in range(
                 0, tip_height + 1, self.config["max_headers_to_send"]
             ):
@@ -312,6 +312,9 @@ class FullNode:
                     )
                 found = False
                 for _ in range(30):
+                    if self._shut_down:
+                        return
+                    log.info(f"Requesting blocks {request_sync.heights}")
                     yield OutboundMessage(
                         NodeType.FULL_NODE,
                         Message("request_sync_blocks", request_sync),
@@ -489,7 +492,7 @@ class FullNode:
         """
         We have received the blocks that we needed for syncing. Add them to processing queue.
         """
-        # TODO: use an actual queue?
+        log.info(f"Received sync blocks {[b.height for b in request.blocks]}")
         async with self.store.lock:
             if not await self.store.get_sync_mode():
                 log.warning("Receiving sync blocks when we are not in sync mode.")
