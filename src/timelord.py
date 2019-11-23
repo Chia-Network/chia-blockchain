@@ -37,6 +37,7 @@ class Timelord:
         self.best_weight_three_proofs: int = -1
         self.active_discriminants_start_time: Dict = {}
         self.pending_iters: Dict = {}
+        self.submitted_iters: Dict = {}
         self.done_discriminants: List[bytes32] = []
         self.proofs_to_write: List[OutboundMessage] = []
         self.seen_discriminants: List[bytes32] = []
@@ -132,7 +133,7 @@ class Timelord:
                     new_avg_ips = int((prev_avg_ips * trials + ips) / (trials + 1))
                     self.avg_ips[ip] = (new_avg_ips, trials + 1)
                     log.info(f"New estimate: {new_avg_ips}")
-                    self.pending_iters[challenge_hash].remove(iterations_needed)
+                    #self.pending_iters[challenge_hash].remove(iterations_needed)
             else:
                 log.info(
                     f"Finished PoT chall:{challenge_hash[:10].hex()}.. {iterations_needed}"
@@ -200,15 +201,20 @@ class Timelord:
             self.active_discriminants[challenge_hash] = (writer, challenge_weight, ip)
             self.active_discriminants_start_time[challenge_hash] = time.time()
 
-        async with self.lock:
-            if challenge_hash in self.pending_iters:
-                log.info(f"Writing pending iters {challenge_hash}")
-                for iter in sorted(self.pending_iters[challenge_hash]):
-                    writer.write((str(len(str(iter))) + str(iter)).encode())
-                    await writer.drain()
-
         # Listen to the server until "STOP" is received.
         while True:
+            async with self.lock:
+                if (challenge_hash in self.active_discriminants) and (challenge_hash in self.pending_iters):
+                    if challenge_hash not in self.submitted_iters:
+                        self.submitted_iters[challenge_hash] = []
+                    log.info(f"Pending: {self.pending_iters[challenge_hash]} Submitted: {self.submitted_iters[challenge_hash]} Hash: {challenge_hash}")
+                    for iter in sorted(self.pending_iters[challenge_hash]):
+                        if iter in self.submitted_iters[challenge_hash]:
+                            continue
+                        self.submitted_iters[challenge_hash].append(iter)
+                        writer.write((str(len(str(iter))) + str(iter)).encode())
+                        await writer.drain()
+
             try:
                 data = await reader.readexactly(4)
             except (asyncio.IncompleteReadError, ConnectionResetError) as e:
