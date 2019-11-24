@@ -26,7 +26,7 @@ jobs:
         eval "$(ssh-agent -s)"
         ssh-add - <<< "${CHIA_MACHINE_SSH_KEY}"
         git submodule update --init --recursive
-        sudo apt-get install --no-install-recommends mongodb-org=4.2.1 || echo ""
+        sudo apt-get install --no-install-recommends mongodb|| echo ""
         brew tap mongodb/brew || echo ""
         brew update && brew install gmp mongodb-community@4.2 || echo ""
         python3 -m venv .venv
