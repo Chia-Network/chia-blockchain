@@ -70,7 +70,6 @@ class Blockchain:
 
         else:
             self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
-            print(f"GENESIS : {self.genesis.header_hash}")
 
             result = await self.receive_block(self.genesis)
             if result != ReceiveBlockResult.ADDED_TO_HEAD:
@@ -103,19 +102,27 @@ class Blockchain:
             return None
 
     async def get_header_blocks_by_height(
-        self, heights: List[uint64], tip_header_hash: bytes32
+        self, heights: List[uint32], tip_header_hash: bytes32
     ) -> List[HeaderBlock]:
         """
         Returns a list of header blocks, one for each height requested.
+        # TODO: optimize, check correctness for large reorgs
         """
-        # TODO: optimize, don't look at all blocks
+        if len(heights) == 0:
+            return []
+
         sorted_heights = sorted(
             [(height, index) for index, height in enumerate(heights)], reverse=True
         )
 
-        curr_full_block: Optional[FullBlock] = await self.store.get_block(
-            tip_header_hash
-        )
+        if sorted_heights[0][0] + 100 < self.lca_block.height:
+            curr_full_block: Optional[FullBlock] = await self.store.get_block(
+                self.height_to_hash[sorted_heights[0][0]]
+            )
+        else:
+            curr_full_block = await self.store.get_block(
+                tip_header_hash
+            )
 
         if not curr_full_block:
             raise BlockNotInBlockchain(

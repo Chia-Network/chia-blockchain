@@ -8,7 +8,7 @@ from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.types.transaction import Transaction
 from src.util.cbor_message import cbor_message
-from src.util.ints import uint64
+from src.util.ints import uint32
 
 
 """
@@ -113,7 +113,7 @@ class RequestHeaderBlocks:
     """
 
     tip_header_hash: bytes32
-    heights: List[uint64]
+    heights: List[uint32]
 
 
 @dataclass(frozen=True)
@@ -135,7 +135,7 @@ class RequestSyncBlocks:
     """
 
     tip_header_hash: bytes32
-    heights: List[uint64]
+    heights: List[uint32]
 
 
 @dataclass(frozen=True)

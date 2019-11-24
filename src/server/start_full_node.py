@@ -94,16 +94,6 @@ async def main():
         )
         _ = await server.start_client(peer_info, None)
 
-    if not server_closed:
-        try:
-            async for msg in full_node._sync():
-                if server_closed:
-                    break
-                server.push_message(msg)
-        except BaseException as e:
-            log.error(f"Error syncing {type(e)}: {e}")
-            signal_received()
-
     # Awaits for server and all connections to close
     await server.await_closed()
 

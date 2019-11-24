@@ -53,7 +53,7 @@ class TestGenesisBlock:
         assert genesis_block.challenge
         assert (
             await bc1.get_header_blocks_by_height(
-                [uint64(0)], genesis_block.header_hash
+                [uint32(0)], genesis_block.header_hash
             )
         )[0] == genesis_block
         assert (
