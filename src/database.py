@@ -1,7 +1,6 @@
 import asyncio
 from abc import ABC
 from typing import AsyncGenerator, Dict, List, Optional, Tuple
-
 from bson.binary import Binary
 from bson.codec_options import CodecOptions, TypeRegistry
 from motor import motor_asyncio
@@ -50,19 +49,22 @@ class FullNodeStore(Database):
         self.candidate_blocks = self.db.get_collection("candidate_blocks")
         # Blocks which are not finalized yet (no proof of time)
         self.unfinished_blocks = self.db.get_collection("unfinished_blocks")
-        # Whether or not we are syncing
-        self.sync_mode = self.db.get_collection("sync_mode")
 
         # Stored in memory
+        # Whether or not we are syncing
+        self.sync_mode = False
         # Potential new tips that we have received from others.
-        self.potential_tips = {}
+        self.potential_tips: Dict[bytes32, FullBlock] = {}
+
         # Header blocks received from other peers during sync
-        self.potential_headers = {}
+        self.potential_headers: Dict[uint32, HeaderBlock] = {}
         # Our best unfinished block
         self.unfinished_blocks_leader: Tuple[uint32, uint64] = (
             uint32(0),
             uint64(9999999999),
         )
+        # Event to signal when headers are received at each height
+        self.potential_headers_received: Dict[uint32, asyncio.Event] = {}
         # Event to signal when blocks are received at each height
         self.potential_blocks_received: Dict[uint32, asyncio.Event] = {}
         # Blocks that we have finalized during sync, queue them up for adding after sync is done
@@ -99,18 +101,10 @@ class FullNodeStore(Database):
             yield FullBlock.from_bytes(query["block"])
 
     async def set_sync_mode(self, sync_mode: bool) -> None:
-        await self.sync_mode.update_one(
-            {"_id": 0}, {"$set": {"_id": 0, "value": sync_mode}}, upsert=True
-        )
+        self.sync_mode = True
 
     async def get_sync_mode(self) -> bool:
-        query = await self.sync_mode.find_one({"_id": 0})
-        return query.get("value", True) if query else True
-
-    async def _set_default_sync_mode(self, sync_mode):
-        query = await self.sync_mode.find_one({"_id": 0})
-        if query is None:
-            await self.set_sync_mode(sync_mode)
+        return self.sync_mode
 
     async def clear_sync_info(self):
         self.potential_tips.clear()
@@ -144,6 +138,12 @@ class FullNodeStore(Database):
     async def get_potential_block(self, height: uint32) -> Optional[FullBlock]:
         query = await self.potential_blocks.find_one({"_id": height})
         return FullBlock.from_bytes(query["block"]) if query else None
+
+    async def set_potential_headers_received(self, height: uint32, event: asyncio.Event):
+        self.potential_headers_received[height] = event
+
+    async def get_potential_headers_received(self, height: uint32) -> asyncio.Event:
+        return self.potential_headers_received[height]
 
     async def set_potential_blocks_received(self, height: uint32, event: asyncio.Event):
         self.potential_blocks_received[height] = event
