@@ -133,7 +133,7 @@ class Timelord:
                     new_avg_ips = int((prev_avg_ips * trials + ips) / (trials + 1))
                     self.avg_ips[ip] = (new_avg_ips, trials + 1)
                     log.info(f"New estimate: {new_avg_ips}")
-                    #self.pending_iters[challenge_hash].remove(iterations_needed)
+                    # self.pending_iters[challenge_hash].remove(iterations_needed)
             else:
                 log.info(
                     f"Finished PoT chall:{challenge_hash[:10].hex()}.. {iterations_needed}"
@@ -204,10 +204,15 @@ class Timelord:
         # Listen to the server until "STOP" is received.
         while True:
             async with self.lock:
-                if (challenge_hash in self.active_discriminants) and (challenge_hash in self.pending_iters):
+                if (challenge_hash in self.active_discriminants) and (
+                    challenge_hash in self.pending_iters
+                ):
                     if challenge_hash not in self.submitted_iters:
                         self.submitted_iters[challenge_hash] = []
-                    log.info(f"Pending: {self.pending_iters[challenge_hash]} Submitted: {self.submitted_iters[challenge_hash]} Hash: {challenge_hash}")
+                    log.info(
+                        f"Pending: {self.pending_iters[challenge_hash]} "
+                        f"Submitted: {self.submitted_iters[challenge_hash]} Hash: {challenge_hash}"
+                    )
                     for iter in sorted(self.pending_iters[challenge_hash]):
                         if iter in self.submitted_iters[challenge_hash]:
                             continue

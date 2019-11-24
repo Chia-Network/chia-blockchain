@@ -80,7 +80,6 @@ class FullNodeStore(Database):
         await self.potential_blocks.drop()
         await self.candidate_blocks.drop()
         await self.unfinished_blocks.drop()
-        await self.sync_mode.drop()
 
     async def save_block(self, block: FullBlock) -> None:
         header_hash = block.header_hash
@@ -101,7 +100,7 @@ class FullNodeStore(Database):
             yield FullBlock.from_bytes(query["block"])
 
     async def set_sync_mode(self, sync_mode: bool) -> None:
-        self.sync_mode = True
+        self.sync_mode = sync_mode
 
     async def get_sync_mode(self) -> bool:
         return self.sync_mode
@@ -139,7 +138,9 @@ class FullNodeStore(Database):
         query = await self.potential_blocks.find_one({"_id": height})
         return FullBlock.from_bytes(query["block"]) if query else None
 
-    async def set_potential_headers_received(self, height: uint32, event: asyncio.Event):
+    async def set_potential_headers_received(
+        self, height: uint32, event: asyncio.Event
+    ):
         self.potential_headers_received[height] = event
 
     async def get_potential_headers_received(self, height: uint32) -> asyncio.Event:
