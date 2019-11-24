@@ -120,9 +120,7 @@ class Blockchain:
                 self.height_to_hash[sorted_heights[0][0]]
             )
         else:
-            curr_full_block = await self.store.get_block(
-                tip_header_hash
-            )
+            curr_full_block = await self.store.get_block(tip_header_hash)
 
         if not curr_full_block:
             raise BlockNotInBlockchain(

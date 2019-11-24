@@ -11,6 +11,8 @@ jobs:
       matrix:
         python-version: [3.7]
         os: [ubuntu-latest, macOS-latest]
+        mongodb-version: ["4.2"]
+
 
     steps:
     - uses: actions/checkout@v1
@@ -26,12 +28,16 @@ jobs:
         eval "$(ssh-agent -s)"
         ssh-add - <<< "${CHIA_MACHINE_SSH_KEY}"
         git submodule update --init --recursive
-        brew update && brew install gmp 
+        brew update && brew install gmp
         python3 -m venv .venv
         . .venv/bin/activate
         pip install wheel # For building blspy
         pip install -e .
         pip install -r requirements.txt
+    - name: Launch MongoDB
+      uses: wbari/start-mongoDB@v0.2
+      with:
+        mongoDBVersion: ${{ matrix.mongodb-version }}
     - name: Lint with flake8
       run: |
         ./.venv/bin/flake8 src

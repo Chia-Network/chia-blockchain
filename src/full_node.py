@@ -82,7 +82,9 @@ class FullNode:
                         challenge_hash, height, quality, difficulty
                     )
                 )
-            proof_of_time_rate: uint64 = await self.blockchain.get_next_ips(tips[0].header_hash)
+            proof_of_time_rate: uint64 = await self.blockchain.get_next_ips(
+                tips[0].header_hash
+            )
         rate_update = farmer_protocol.ProofOfTimeRate(proof_of_time_rate)
         yield OutboundMessage(
             NodeType.FARMER, Message("proof_of_time_rate", rate_update), delivery
@@ -236,14 +238,12 @@ class FullNode:
 
         async with self.store.lock:
             for height in range(0, tip_block.height + 1):
-                await self.store.set_potential_headers_received(
-                    uint32(height), Event()
-                )
+                await self.store.set_potential_headers_received(uint32(height), Event())
 
         # Now, we download all of the headers in order to verify the weight
         timeout = 60
         sleep_interval = 10
-        total_headers_coming = 5 * self.config['max_headers_to_send']
+        total_headers_coming = 5 * self.config["max_headers_to_send"]
         headers: List[HeaderBlock] = []
 
         for start_height in range(0, tip_height + 1, total_headers_coming):
@@ -252,20 +252,34 @@ class FullNode:
             while continue_requesting:
                 if total_time_slept > timeout:
                     raise TimeoutError("Took too long to fetch headers")
-                for height_offset in range(0, total_headers_coming,
-                                           self.config['max_headers_to_send']):
+                for height_offset in range(
+                    0, total_headers_coming, self.config["max_headers_to_send"]
+                ):
                     new_start_height = start_height + height_offset
-                    end_height = min(new_start_height + self.config['max_headers_to_send'], tip_height + 1)
-                    request = peer_protocol.RequestHeaderBlocks(tip_block.header_block.header.get_hash(),
-                                                                [uint32(h) for h in
-                                                                 range(new_start_height, end_height)])
-                    yield OutboundMessage(NodeType.FULL_NODE, Message("request_header_blocks", request),
-                                          Delivery.RANDOM)
+                    end_height = min(
+                        new_start_height + self.config["max_headers_to_send"],
+                        tip_height + 1,
+                    )
+                    request = peer_protocol.RequestHeaderBlocks(
+                        tip_block.header_block.header.get_hash(),
+                        [uint32(h) for h in range(new_start_height, end_height)],
+                    )
+                    yield OutboundMessage(
+                        NodeType.FULL_NODE,
+                        Message("request_header_blocks", request),
+                        Delivery.RANDOM,
+                    )
                 end_height = min(tip_height + 1, start_height + total_headers_coming)
-                awaitables = [(await self.store.get_potential_headers_received(uint32(height))).wait()
-                              for height in range(start_height, end_height)]
+                awaitables = [
+                    (
+                        await self.store.get_potential_headers_received(uint32(height))
+                    ).wait()
+                    for height in range(start_height, end_height)
+                ]
                 try:
-                    await asyncio.wait_for(asyncio.gather(*awaitables), timeout=sleep_interval)
+                    await asyncio.wait_for(
+                        asyncio.gather(*awaitables), timeout=sleep_interval
+                    )
                     continue_requesting = False
                 except concurrent.futures.TimeoutError:
                     total_time_slept += sleep_interval
@@ -433,7 +447,9 @@ class FullNode:
         async with self.store.lock:
             for header_block in request.header_blocks:
                 await self.store.add_potential_header(header_block)
-                (await self.store.get_potential_headers_received(header_block.height)).set()
+                (
+                    await self.store.get_potential_headers_received(header_block.height)
+                ).set()
 
         for _ in []:  # Yields nothing
             yield _
@@ -476,9 +492,7 @@ class FullNode:
                 return
         else:
             # We don't have the blocks that the client is looking for
-            log.info(
-                f"Peer requested tip {request.tip_header_hash} that we don't have"
-            )
+            log.info(f"Peer requested tip {request.tip_header_hash} that we don't have")
             return
         response = Message(
             "sync_blocks", peer_protocol.SyncBlocks(request.tip_header_hash, blocks)
