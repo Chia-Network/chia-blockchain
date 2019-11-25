@@ -131,7 +131,7 @@ class ChiaServer:
                 asyncio.TimeoutError,
             ) as e:
                 log.warning(
-                    f"Could not connct to {target_node}. {type(e)}{e}. Retrying."
+                    f"Could not connect to {target_node}. {type(e)}{e}. Retrying."
                 )
                 open_con_task.cancel()
                 await asyncio.sleep(RETRY_INTERVAL)
