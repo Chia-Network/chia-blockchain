@@ -39,6 +39,11 @@ timelord:
     - 127.0.0.1
   vdf_server_ports:
     - 8889
+  servers_ips_estimate:
+    ip:
+      - 127.0.0.1
+    ips:
+      - 100000
   full_node_peer:
       host: 127.0.0.1
       port: 8444
