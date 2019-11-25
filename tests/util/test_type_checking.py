@@ -1,8 +1,13 @@
 import unittest
 from dataclasses import dataclass
-from src.util.type_checking import is_type_List, is_type_SpecificOptional, strictdataclass
+from typing import Dict, List, Optional, Tuple
+
 from src.util.ints import uint8
-from typing import List, Dict, Tuple, Optional
+from src.util.type_checking import (
+    is_type_List,
+    is_type_SpecificOptional,
+    strictdataclass,
+)
 
 
 class TestIsTypeList(unittest.TestCase):
@@ -98,5 +103,5 @@ class TestStrictClass(unittest.TestCase):
         A()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

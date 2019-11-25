@@ -1,15 +1,30 @@
 # flake8: noqa
 from __future__ import annotations
-import io
+
 import dataclasses
+import io
 import pprint
-from typing import Type, BinaryIO, get_type_hints, Any, List
 from hashlib import sha256
-from blspy import (PrivateKey, PublicKey, InsecureSignature, Signature, PrependSignature,
-                   ExtendedPrivateKey, ExtendedPublicKey, ChainCode)
-from src.util.type_checking import strictdataclass, is_type_List, is_type_SpecificOptional
+from typing import Any, BinaryIO, List, Type, get_type_hints
+
+from blspy import (
+    ChainCode,
+    ExtendedPrivateKey,
+    ExtendedPublicKey,
+    InsecureSignature,
+    PrependSignature,
+    PrivateKey,
+    PublicKey,
+    Signature,
+)
+
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32
+from src.util.type_checking import (
+    is_type_List,
+    is_type_SpecificOptional,
+    strictdataclass,
+)
 
 pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
 
@@ -22,10 +37,18 @@ size_hints = {
     "PrependSignature": PrependSignature.SIGNATURE_SIZE,
     "ExtendedPublicKey": ExtendedPublicKey.EXTENDED_PUBLIC_KEY_SIZE,
     "ExtendedPrivateKey": ExtendedPrivateKey.EXTENDED_PRIVATE_KEY_SIZE,
-    "ChainCode": ChainCode.CHAIN_CODE_KEY_SIZE
+    "ChainCode": ChainCode.CHAIN_CODE_KEY_SIZE,
 }
-unhashable_types = [PrivateKey, PublicKey, Signature, PrependSignature, InsecureSignature,
-                    ExtendedPublicKey, ExtendedPrivateKey, ChainCode]
+unhashable_types = [
+    PrivateKey,
+    PublicKey,
+    Signature,
+    PrependSignature,
+    InsecureSignature,
+    ExtendedPublicKey,
+    ExtendedPrivateKey,
+    ChainCode,
+]
 
 
 def streamable(cls: Any):
@@ -83,7 +106,7 @@ class Streamable:
             return f_type.from_bytes(f.read(size_hints[f_type.__name__]))
         if f_type is str:
             str_size: uint32 = uint32(int.from_bytes(f.read(4), "big"))
-            return bytes.decode(f.read(str_size), 'utf-8')
+            return bytes.decode(f.read(str_size), "utf-8")
         else:
             raise RuntimeError(f"Type {f_type} does not have parse")
 
@@ -116,7 +139,7 @@ class Streamable:
             f.write(bytes(item))
         elif f_type is str:
             f.write(uint32(len(item)).to_bytes(4, "big"))
-            f.write(item.encode('utf-8'))
+            f.write(item.encode("utf-8"))
         else:
             raise NotImplementedError(f"can't stream {item}, {f_type}")
 
@@ -150,4 +173,3 @@ class Streamable:
             if isinstance(value, dict):
                 self.recurse_str(value)
         return d
-

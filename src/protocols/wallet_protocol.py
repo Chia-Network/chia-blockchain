@@ -1,13 +1,15 @@
+from dataclasses import dataclass
 from typing import List
-from src.util.cbor_message import cbor_message
-from src.util.ints import uint32
-from src.types.sized_bytes import bytes32
+
 from src.types.body import Body
 from src.types.challenge import Challenge
 from src.types.proof_of_space import ProofOfSpace
 from src.types.proof_of_time import ProofOfTime
+from src.types.sized_bytes import bytes32
 from src.types.transaction import Transaction
-from dataclasses import dataclass
+from src.util.cbor_message import cbor_message
+from src.util.ints import uint32
+
 
 """
 Protocol between wallet (SPV node) and full node.
