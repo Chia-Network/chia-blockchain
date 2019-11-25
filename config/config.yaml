@@ -1,3 +1,5 @@
+network_id: testnet  # testnet/mainnet
+
 harvester:
   # The harvester server (if run) will run on this host and port
   host: 127.0.0.1
