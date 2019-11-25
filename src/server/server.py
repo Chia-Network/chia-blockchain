@@ -362,6 +362,7 @@ class ChiaServer:
             InvalidHandshake,
             asyncio.IncompleteReadError,
             ConnectionResetError,
+            Exception,
         ) as e:
             log.warning(f"{e}, handshake not completed. Connection not created.")
             connection.close()
