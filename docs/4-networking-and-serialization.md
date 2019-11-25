@@ -35,6 +35,8 @@ Most objects in the Chia protocol are stored and trasmitted using the streamable
 
 ## Handshake
 
+
+
 ## Ping Pong
 
 ## Introducer

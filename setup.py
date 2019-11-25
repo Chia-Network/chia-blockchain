@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 from setuptools import setup
 
-dependencies = ["blspy", "cbor2", "pyyaml", "asyncssh", "motor"]
+dependencies = ["blspy", "cbor2", "pyyaml", "asyncssh", "motor", "miniupnpc"]
 dev_dependencies = [
     "pytest",
     "flake8",
