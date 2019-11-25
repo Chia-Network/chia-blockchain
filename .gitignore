@@ -10,7 +10,7 @@ __pycache__/
 
 # Database
 nohup.out
-mongod.log
+mongod.log*
 
 # Keys and plot files
 config/keys.yaml
@@ -48,4 +48,8 @@ pip-delete-this-directory.txt
 # mypy
 .mypy_cache/
 
+# Editors
 .vscode
+
+# Packaging
+chia-blockchain.tar.gz
