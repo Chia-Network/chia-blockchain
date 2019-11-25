@@ -2,9 +2,12 @@ import asyncio
 import logging
 import random
 import time
+import os
+from yaml import safe_load
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Tuple
 from aiter import aiter_forker, iter_to_aiter, join_aiters, map_aiter, push_aiter
 from aiter.server import start_server_aiter
+from definitions import ROOT_DIR
 from src.protocols.shared_protocol import Handshake, HandshakeAck, protocol_version
 from src.server.connection import Connection, PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
@@ -25,6 +28,9 @@ TOTAL_RETRY_SECONDS: int = 10
 RETRY_INTERVAL: int = 2
 
 log = logging.getLogger(__name__)
+
+config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
+config = safe_load(open(config_filename, "r"))
 
 
 class ChiaServer:
@@ -290,7 +296,11 @@ class ChiaServer:
         outbound_handshake = Message(
             "handshake",
             Handshake(
-                protocol_version, self._node_id, uint16(self._port), self._local_type
+                config["network_id"],
+                protocol_version,
+                self._node_id,
+                uint16(self._port),
+                self._local_type,
             ),
         )
 
@@ -308,7 +318,9 @@ class ChiaServer:
                 raise InvalidHandshake("Invalid handshake")
 
             if inbound_handshake.node_id == self._node_id:
-                raise InvalidHandshake(f"Should not connect to ourselves, aborting handshake.")
+                raise InvalidHandshake(
+                    f"Should not connect to ourselves, aborting handshake."
+                )
 
             # Makes sure that we only start one connection with each peer
             connection.node_id = inbound_handshake.node_id
