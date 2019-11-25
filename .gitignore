@@ -10,6 +10,7 @@ __pycache__/
 
 # Database
 nohup.out
+mongod.log
 
 # Keys and plot files
 config/keys.yaml
