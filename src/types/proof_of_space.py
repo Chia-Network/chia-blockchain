@@ -1,11 +1,13 @@
-from typing import List, Optional
-from hashlib import sha256
-from chiapos import Verifier
-from blspy import PublicKey
-from src.util.streamable import streamable, Streamable
-from src.util.ints import uint8
-from src.types.sized_bytes import bytes32
 from dataclasses import dataclass
+from hashlib import sha256
+from typing import List, Optional
+
+from blspy import PublicKey
+
+from chiapos import Verifier
+from src.types.sized_bytes import bytes32
+from src.util.ints import uint8
+from src.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)
@@ -23,8 +25,9 @@ class ProofOfSpace(Streamable):
     def verify_and_get_quality(self) -> Optional[bytes32]:
         v: Verifier = Verifier()
         plot_seed: bytes32 = self.get_plot_seed()
-        quality_str = v.validate_proof(plot_seed, self.size, self.challenge_hash,
-                                       bytes(self.proof))
+        quality_str = v.validate_proof(
+            plot_seed, self.size, self.challenge_hash, bytes(self.proof)
+        )
         if not quality_str:
             return None
         return self.quality_str_to_quality(self.challenge_hash, quality_str)

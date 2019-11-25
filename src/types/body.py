@@ -1,11 +1,13 @@
+from dataclasses import dataclass
 from typing import Optional
+
 from blspy import PrependSignature, Signature
-from src.util.streamable import streamable, Streamable
+
 from src.types.coinbase import CoinbaseInfo
 from src.types.fees_target import FeesTarget
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
-from dataclasses import dataclass
+from src.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

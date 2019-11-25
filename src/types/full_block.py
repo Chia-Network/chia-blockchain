@@ -1,9 +1,10 @@
-from src.util.ints import uint32, uint64
-from src.types.sized_bytes import bytes32
-from src.util.streamable import streamable, Streamable
+from dataclasses import dataclass
+
 from src.types.body import Body
 from src.types.header_block import HeaderBlock
-from dataclasses import dataclass
+from src.types.sized_bytes import bytes32
+from src.util.ints import uint32, uint64
+from src.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)
@@ -22,7 +23,7 @@ class FullBlock(Streamable):
 
     @property
     def weight(self) -> uint64:
-        if (self.header_block.challenge):
+        if self.header_block.challenge:
             return self.header_block.challenge.total_weight
         else:
             return uint64(0)

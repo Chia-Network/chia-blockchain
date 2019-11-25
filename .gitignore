@@ -8,10 +8,15 @@ __pycache__/
 **/*.o
 **/*.DS_Store
 
-# Keys and plot files
-src/config/keys.yaml
-src/config/plots.yaml
+# Database
+nohup.out
 
+# Keys and plot files
+config/keys.yaml
+config/plots.yaml
+
+# Bundled code
+chia-blockchain.tar.gz.tar.gz
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

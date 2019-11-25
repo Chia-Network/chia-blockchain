@@ -1,6 +1,6 @@
 import functools
-from inspect import signature
 import logging
+from inspect import signature
 
 log = logging.getLogger(__name__)
 
@@ -12,6 +12,7 @@ def api_request(f):
     def new_challenge(challenge):
         # handle request
     """
+
     @functools.wraps(f)
     def f_substitute(*args, **kwargs):
         sig = signature(f)
@@ -27,4 +28,5 @@ def api_request(f):
                 inter[param_name] = param_class(**inter[param_name])
 
         return f(**inter)
+
     return f_substitute

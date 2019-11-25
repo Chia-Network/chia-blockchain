@@ -1,12 +1,13 @@
-from asyncio import StreamReader, StreamWriter
 import logging
-import time
 import random
-from typing import List, Any, Optional
+import time
+from asyncio import StreamReader, StreamWriter
+from typing import Any, List, Optional
+
+from src.server.outbound_message import Message, NodeType
+from src.types.peer_info import PeerInfo
 from src.util import cbor
 from src.util.ints import uint16
-from src.types.peer_info import PeerInfo
-from src.server.outbound_message import Message, NodeType
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 LENGTH_BYTES: int = 4
@@ -19,8 +20,15 @@ class Connection:
     port are the host and port of the peer that we are connected to. Node_id and connection_type are
     set after the handshake is performed in this connection.
     """
-    def __init__(self, local_type: NodeType, connection_type: Optional[NodeType], sr: StreamReader,
-                 sw: StreamWriter, server_port: int):
+
+    def __init__(
+        self,
+        local_type: NodeType,
+        connection_type: Optional[NodeType],
+        sr: StreamReader,
+        sw: StreamWriter,
+        server_port: int,
+    ):
         self.local_type = local_type
         self.connection_type = connection_type
         self.reader = sr
@@ -46,24 +54,23 @@ class Connection:
         return self.writer.get_extra_info("socket")
 
     def get_peer_info(self) -> Optional[PeerInfo]:
-        if not self.peer_server_port or \
-                self.connection_type != NodeType.FULL_NODE:
+        if not self.peer_server_port or self.connection_type != NodeType.FULL_NODE:
             return None
         return PeerInfo(self.peer_host, uint16(self.peer_server_port))
 
     async def send(self, message: Message):
         encoded: bytes = cbor.dumps({"f": message.function, "d": message.data})
-        assert(len(encoded) < (2**(LENGTH_BYTES*8)))
+        assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
         self.writer.write(len(encoded).to_bytes(LENGTH_BYTES, "big") + encoded)
         await self.writer.drain()
-        self.bytes_written += (LENGTH_BYTES + len(encoded))
+        self.bytes_written += LENGTH_BYTES + len(encoded)
 
     async def read_one_message(self) -> Message:
         size = await self.reader.readexactly(LENGTH_BYTES)
         full_message_length = int.from_bytes(size, "big")
         full_message: bytes = await self.reader.readexactly(full_message_length)
         full_message_loaded: Any = cbor.loads(full_message)
-        self.bytes_read += (LENGTH_BYTES + full_message_length)
+        self.bytes_read += LENGTH_BYTES + full_message_length
         return Message(full_message_loaded["f"], full_message_loaded["d"])
 
     def close(self):
@@ -116,8 +123,7 @@ class PeerConnections:
         return list(filter(Connection.get_peer_info, self._all_connections))
 
     def get_full_node_peerinfos(self):
-        return list(filter(None, map(Connection.get_peer_info,
-                                     self._all_connections)))
+        return list(filter(None, map(Connection.get_peer_info, self._all_connections)))
 
     def get_unconnected_peers(self, max_peers=0):
         connected = self.get_full_node_peerinfos()
@@ -133,6 +139,7 @@ class Peers:
     Has the list of known full node peers that are already connected or may be
     connected to.
     """
+
     def __init__(self):
         self._peers: List[PeerInfo] = []
 
@@ -151,8 +158,7 @@ class Peers:
         except ValueError:
             return False
 
-    def get_peers(self, max_peers: int = 0, randomize: bool = False) \
-            -> List[PeerInfo]:
+    def get_peers(self, max_peers: int = 0, randomize: bool = False) -> List[PeerInfo]:
         if not max_peers or max_peers > len(self._peers):
             max_peers = len(self._peers)
         if randomize:
