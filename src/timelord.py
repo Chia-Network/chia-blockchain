@@ -182,6 +182,8 @@ class Timelord:
         for _ in range(10):
             try:
                 reader, writer = await asyncio.open_connection(ip, port)
+                socket = writer.get_extra_info("socket")
+                socket.settimeout(None)
                 break
             except Exception as e:
                 e_to_str = str(e)
