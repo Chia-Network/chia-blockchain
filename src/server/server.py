@@ -108,7 +108,7 @@ class ChiaServer:
         """
         if self._server is not None:
             if (
-                self._host == target_node.host or target_node.host == "127.0.0.0.1"
+                self._host == target_node.host or target_node.host == "127.0.0.1"
             ) and self._port == target_node.port:
                 self.global_connections.peers.remove(target_node)
                 return False
@@ -307,10 +307,14 @@ class ChiaServer:
             ):
                 raise InvalidHandshake("Invalid handshake")
 
+            if inbound_handshake.node_id == self._node_id:
+                raise InvalidHandshake(f"Should not connect to ourselves, aborting handshake.")
+
             # Makes sure that we only start one connection with each peer
             connection.node_id = inbound_handshake.node_id
             connection.peer_server_port = int(inbound_handshake.server_port)
             connection.connection_type = inbound_handshake.node_type
+
             if self.global_connections.have_connection(connection):
                 log.warning(f"Duplicate connection to {connection}")
                 return
