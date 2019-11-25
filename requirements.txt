@@ -18,6 +18,7 @@ isort==4.3.21
 Mako==1.1.0
 MarkupSafe==1.1.1
 mccabe==0.6.1
+miniupnpc==2.0.2
 more-itertools==7.2.0
 motor==2.0.0
 mypy==0.740
