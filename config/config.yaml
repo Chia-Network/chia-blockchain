@@ -47,6 +47,7 @@ full_node:
   # The full node server (if run) will run on this host and port
   host: 127.0.0.1
   port: 8444
+  enable_upnp: False
   # Don't send any more than these number of headers and blocks, in one message
   max_headers_to_send: 100
   max_blocks_to_send: 10
@@ -68,11 +69,11 @@ full_node:
       host: 127.0.0.1
       port: 8446
   introducer_peer:
-      host: 127.0.0.1
+      # host: 127.0.0.1
       # host: 216.39.16.173
       # host: 2001:470:82f3:20:d250:99ff:fed1:5797
-      # host: 2600:1f18:63ed:e200:f7c5:9e28:9b5e:130
-      port: 8445
+      host: 2600:1f18:63ed:e200:f7c5:9e28:9b5e:130
+      port: 8444
 
 introducer:
   host: 127.0.0.1

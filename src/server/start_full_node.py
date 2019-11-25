@@ -36,14 +36,15 @@ async def main():
     # Starts the full node server (which full nodes can connect to)
     host, port = parse_host_port(full_node)
 
-    try:
-        upnp = miniupnpc.UPnP()
-        upnp.discoverdelay = 10
-        upnp.discover()
-        upnp.selectigd()
-        upnp.addportmapping(port, "TCP", upnp.lanaddr, port, "chia", "")
-    except Exception as e:
-        log.warning(f"UPnP failed: {e}")
+    if full_node.config["enable_upnp"]:
+        try:
+            upnp = miniupnpc.UPnP()
+            upnp.discoverdelay = 10
+            upnp.discover()
+            upnp.selectigd()
+            upnp.addportmapping(port, "TCP", upnp.lanaddr, port, "chia", "")
+        except Exception as e:
+            log.warning(f"UPnP failed: {e}")
 
     server = ChiaServer(port, full_node, NodeType.FULL_NODE)
     full_node._set_server(server)
