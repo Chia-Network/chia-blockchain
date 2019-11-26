@@ -7,8 +7,10 @@ import miniupnpc
 from src.blockchain import Blockchain
 from src.database import FullNodeStore
 from src.full_node import FullNode
+from src.util.ints import uint16
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
+from src.server.local_api_server import FullNodeLocalApi
 from src.types.peer_info import PeerInfo
 from src.util.network import parse_host_port
 
@@ -35,6 +37,7 @@ async def main():
     full_node = FullNode(store, blockchain)
     # Starts the full node server (which full nodes can connect to)
     host, port = parse_host_port(full_node)
+
 
     if full_node.config["enable_upnp"]:
         try:
@@ -63,6 +66,9 @@ async def main():
         if ui_close_cb:
             ui_close_cb()
         master_close_cb()
+
+    local_api_server = FullNodeLocalApi(blockchain, store, server, master_close_cb, uint16(8080))
+    await local_api_server.start()
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
@@ -108,6 +114,7 @@ async def main():
 
     # Awaits for server and all connections to close
     await server.await_closed()
+    await local_api_server.close()
 
     # Awaits for all ui instances to close
     if wait_for_ui is not None:
