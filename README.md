@@ -9,9 +9,10 @@ sudo apt-get install build-essential cmake python3-dev python3-venv --no-install
 
 # for MacOS
 brew tap mongodb/brew
-brew install cmake mongodb-community@4.2
+brew install cmake boost gmp mpir mpfr mongodb-community@4.2
 
 git clone https://github.com/Chia-Network/chia-blockchain.git && cd chia-blockchain
+or download chia-blockchain-master.zip from https://github.com/Chia-Network/chia-blockchain/, unzip, and cd chia-blockchain-master/
 sh install.sh
 
 # Run mongo database
