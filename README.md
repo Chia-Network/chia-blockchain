@@ -1,23 +1,36 @@
 # chia-blockchain
 Python 3.7 is used for this project. Make sure your python version is >=3.7 by typing python3.
 
-### Install
+### Install on Debian/Ubuntu
 
 ```bash
-# for Debian-based distros
-sudo apt-get install build-essential cmake python3-dev python3-venv --no-install-recommends mongodb-org=4.2.1
-
-# for MacOS
-brew tap mongodb/brew
-brew install cmake boost gmp mpir mpfr mongodb-community@4.2
-
-git clone https://github.com/Chia-Network/chia-blockchain.git && cd chia-blockchain
-#or 
-download chia-blockchain-master.zip from https://github.com/Chia-Network/chia-blockchain/, unzip, and cd chia-blockchain-master/
+sudo apt-get install build-essential cmake libgmp libboost libflint python3-dev python3-venv --no-install-recommends mongodb-org=4.2.1
 sh install.sh
 
 # Run mongo database
 mongod --fork --dbpath ./db/ --logpath mongod.log
+
+# Start virtual environemnt
+python3 -m venv .venv
+. .venv/bin/activate
+```
+# Install on MacOS
+Make sure [brew](https://brew.sh/) is available before starting the setup.
+```brew tap mongodb/brew
+brew install cmake boost gmp mpir mpfr mongodb-community@4.2
+
+git clone https://github.com/Chia-Network/chia-blockchain.git && cd chia-blockchain
+
+git clone https://github.com/wbhart/flint2
+
+sh install.sh
+
+# Run mongo database
+mongod --fork --dbpath ./db/ --logpath mongod.log
+
+# Start virtual environemnt
+python3 -m venv .venv
+. .venv/bin/activate
 ```
 
 ### Generate keys
