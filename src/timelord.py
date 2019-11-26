@@ -31,7 +31,9 @@ class Timelord:
         self.free_servers: List[Tuple[str, str]] = list(
             zip(self.config["vdf_server_ips"], self.config["vdf_server_ports"])
         )
-        self.ips_estimate = {k: v for k, v in list(zip(self.config["servers_ips_estimate"]["ip"], self.config["servers_ips_estimate"]["ips"]))}
+        self.ips_estimate = {k: v for k, v in list(
+            zip(self.config["servers_ips_estimate"]["ip"], self.config["servers_ips_estimate"]["ips"]))
+        }
         self.lock: Lock = Lock()
         self.server_count: int = len(self.free_servers)
         self.active_discriminants: Dict[bytes32, Tuple[StreamWriter, uint64, str]] = {}
@@ -241,11 +243,11 @@ class Timelord:
 
             if data.decode() == "STOP":
                 log.info("Stopped server")
-                # Server is now available.
                 async with self.lock:
                     writer.write(b"ACK")
                     await writer.drain()
                     await proc.wait()
+                    # Server is now available.
                     self.free_servers.append((ip, port))
                     len_server = len(self.free_servers)
                     log.info(f"Process ended... Server length {len_server}")
