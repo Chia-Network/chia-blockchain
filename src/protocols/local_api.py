@@ -29,10 +29,16 @@ class GetConnectionsRequest:
 
 @dataclass(frozen=True)
 @cbor_message
-class GetConnectionsResponse:
+class Connection:
     peer_info: PeerInfo
     node_type: NodeType
     node_id: bytes32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class GetConnectionsResponse:
+    connections: List[Connection]
 
 
 @dataclass(frozen=True)
