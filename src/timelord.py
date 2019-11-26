@@ -241,11 +241,11 @@ class Timelord:
 
             if data.decode() == "STOP":
                 log.info("Stopped server")
-                writer.write(b"ACK")
-                await writer.drain()
-                await proc.wait()
                 # Server is now available.
                 async with self.lock:
+                    writer.write(b"ACK")
+                    await writer.drain()
+                    await proc.wait()
                     self.free_servers.append((ip, port))
                     len_server = len(self.free_servers)
                     log.info(f"Process ended... Server length {len_server}")
