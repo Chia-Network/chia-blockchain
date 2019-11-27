@@ -497,20 +497,24 @@ class Blockchain:
 
         # 3. Check filter hash is correct TODO
 
-        # 4. Check body hash
+        # 4. Check the proof of space hash is valid
+        if block.header_block.proof_of_space.get_hash() != block.header_block.header.data.proof_of_space_hash:
+            return False
+
+        # 5. Check body hash
         if block.body.get_hash() != block.header_block.header.data.body_hash:
             return False
 
-        # 5. Check extension data, if any is added
+        # 6. Check extension data, if any is added
 
-        # 6. Compute challenge of parent
+        # 7. Compute challenge of parent
         challenge_hash: bytes32
         if not genesis:
             assert prev_block
             assert prev_block.header_block.challenge
             challenge_hash = prev_block.header_block.challenge.get_hash()
 
-            # 7. Check challenge hash of prev is the same as in pos
+            # 8. Check challenge hash of prev is the same as in pos
             if challenge_hash != block.header_block.proof_of_space.challenge_hash:
                 return False
         else:
@@ -520,19 +524,19 @@ class Blockchain:
             if challenge_hash != block.header_block.proof_of_space.challenge_hash:
                 return False
 
-        # 8. Check harvester signature of header data is valid based on harvester key
+        # 9. Check harvester signature of header data is valid based on harvester key
         if not block.header_block.header.harvester_signature.verify(
             [blspy.Util.hash256(block.header_block.header.data.get_hash())],
             [block.header_block.proof_of_space.plot_pubkey],
         ):
             return False
 
-        # 9. Check proof of space based on challenge
+        # 10. Check proof of space based on challenge
         pos_quality = block.header_block.proof_of_space.verify_and_get_quality()
         if not pos_quality:
             return False
 
-        # 10. Check coinbase height = parent coinbase height + 1
+        # 11. Check coinbase height = parent coinbase height + 1
         if not genesis:
             assert prev_block
             if block.body.coinbase.height != prev_block.body.coinbase.height + 1:
@@ -541,27 +545,27 @@ class Blockchain:
             if block.body.coinbase.height != 0:
                 return False
 
-        # 11. Check coinbase amount
+        # 12. Check coinbase amount
         if (
             calculate_block_reward(block.body.coinbase.height)
             != block.body.coinbase.amount
         ):
             return False
 
-        # 12. Check coinbase signature with pool pk
+        # 13. Check coinbase signature with pool pk
         if not block.body.coinbase_signature.verify(
             [blspy.Util.hash256(bytes(block.body.coinbase))],
             [block.header_block.proof_of_space.pool_pubkey],
         ):
             return False
 
-        # TODO: 13a. check transactions
-        # TODO: 13b. Aggregate transaction results into signature
+        # TODO: 14a. check transactions
+        # TODO: 14b. Aggregate transaction results into signature
         if block.body.aggregated_signature:
-            # TODO: 14. check that aggregate signature is valid, based on pubkeys, and messages
+            # TODO: 15. check that aggregate signature is valid, based on pubkeys, and messages
             pass
-        # TODO: 15. check fees
-        # TODO: 16. check cost
+        # TODO: 16. check fees
+        # TODO: 17. check cost
         return True
 
     async def validate_block(self, block: FullBlock, genesis: bool = False) -> bool:

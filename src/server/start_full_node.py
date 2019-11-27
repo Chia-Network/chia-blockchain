@@ -32,17 +32,18 @@ async def main():
     store = FullNodeStore(f"fndb_{db_id}")
 
     blockchain = Blockchain(store)
+    log.info("Initializing blockchain from disk")
     await blockchain.initialize()
 
     full_node = FullNode(store, blockchain)
     # Starts the full node server (which full nodes can connect to)
     host, port = parse_host_port(full_node)
 
-
     if full_node.config["enable_upnp"]:
+        log.info(f"Attempting to enable UPnP (open up port {port})")
         try:
             upnp = miniupnpc.UPnP()
-            upnp.discoverdelay = 10
+            upnp.discoverdelay = 5
             upnp.discover()
             upnp.selectigd()
             upnp.addportmapping(port, "TCP", upnp.lanaddr, port, "chia", "")
@@ -67,8 +68,8 @@ async def main():
             ui_close_cb()
         master_close_cb()
 
-    local_api_server = FullNodeLocalApi(blockchain, store, server, master_close_cb, uint16(8080))
-    await local_api_server.start()
+    # local_api_server = FullNodeLocalApi(blockchain, store, server, master_close_cb, uint16(8080))
+    # await local_api_server.start()
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
@@ -114,7 +115,7 @@ async def main():
 
     # Awaits for server and all connections to close
     await server.await_closed()
-    await local_api_server.close()
+    # await local_api_server.close()
 
     # Awaits for all ui instances to close
     if wait_for_ui is not None:

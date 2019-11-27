@@ -7,6 +7,7 @@ from src.util.ints import uint16
 from src.protocols import local_api
 from src.types.peer_info import PeerInfo
 import json
+import dataclasses
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):

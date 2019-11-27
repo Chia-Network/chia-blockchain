@@ -67,3 +67,39 @@ one farmer did not double sign a block, such a deep reorg cannot happen.
 * **height**: height of the block the block.
 * **total_weight**: cumulative difficulty of all blocks from genesis, including this one.
 * **total_iters** cumulative VDF iterations from genesis, including this one.
+
+
+## Block Validation
+An unfinished block is considered valid if it passes the following checks:
+
+1. If not genesis, the previous block must exist
+2. If not genesis, the timestamp must be >= the average timestamp of last 11 blocks, and less than 2 hours in the future
+3. The compact block filter must be correct, according to the body (BIP158)
+4. The hash of the proof of space must match header_data.proof_of_space_hash
+5. The hash of the body must match header_data.body_hash
+6. Extension data must be valid, if any is present
+7. If not genesis, the hash of the challenge on top of the last block, must be the same as proof_of_space.challenge_hash
+8. If genesis, the challenge hash in the proof of time must be the same as in the proof of space
+9. The harvester signature must sign the header_hash, with the key in the proof of space
+10. The proof of space must be valid on the challenge
+11. The coinbase height must be the previous block's coinbase height + 1
+12. The coinbase amount must be correct according to reward schedule
+13. The coinbase signature must be valid, according the the pool public key
+14. All transactions must be valid
+15. Aggregate signature retrieved from transactions must be valid
+16. Fees must be valid
+17. Cost must be valid
+
+A block is considered valid, if it passes the unfinished block checks, and the following additional checks:
+
+1. The proof of space hash must match the proof of space hash in challenge
+2. The number of iterations (based on quality, pos, difficulty, ips) must be the same as in the PoT
+3. the PoT must be valid, on a discriminant of size 1024, and the challenge_hash
+4. The coinbase height must equal the height in the challenge
+5. If not genesis, the challenge_hash in the proof of time must match the challenge on the previous block
+6. If not genesis, the height of the challenge on the previous block must be one less than on this block
+7. If genesis, the challenge height must be 0
+8. If not genesis, the total weight must be the parent weight + difficulty
+9. If genesis, the total weight must be starting difficulty
+10. If not genesis, the total iters must be parent iters + number_iters
+11. If genesis, the total iters must be number iters
