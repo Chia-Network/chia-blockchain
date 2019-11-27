@@ -332,7 +332,7 @@ class FullNodeUI:
                 self.latest_blocks_labels[i].text = (
                     f"{b.height}:{b.header_hash}"
                     f" {'LCA' if b.header_hash == lca_block.header_hash else ''}"
-                    f" {'HEAD' if b.header_hash in [h.header_hash for h in heads] else ''}"
+                    f" {'TIP' if b.header_hash in [h.header_hash for h in heads] else ''}"
                 )
                 self.latest_blocks_labels[i].handler = self.change_route_handler(
                     f"block/{b.header_hash}"
@@ -340,7 +340,7 @@ class FullNodeUI:
                 new_labels.append(self.latest_blocks_labels[i])
 
         self.lca_label.text = f"Current least common ancestor {lca_block.header_hash} height {lca_block.height}"
-        self.current_heads_label.text = "Heights of heads: " + str(
+        self.current_heads_label.text = "Heights of tips: " + str(
             [h.height for h in heads]
         )
         self.difficulty_label.text = f"Current difficuty: {difficulty}"

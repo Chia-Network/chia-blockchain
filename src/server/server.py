@@ -120,6 +120,7 @@ class ChiaServer:
                 return False
         start_time = time.time()
         succeeded: bool = False
+        last_error = None
         while time.time() - start_time < TOTAL_RETRY_SECONDS and not succeeded:
             if self._pipeline_task.done():
                 return False
@@ -136,14 +137,14 @@ class ChiaServer:
                 OSError,
                 asyncio.TimeoutError,
             ) as e:
-                log.warning(
-                    f"Could not connct to {target_node}. {type(e)}{e}. Retrying."
-                )
+                last_error = e
                 open_con_task.cancel()
                 await asyncio.sleep(RETRY_INTERVAL)
         if not succeeded:
-            if self.global_connections.peers.remove(target_node):
-                log.info(f"Removed {target_node} from peer list")
+            log.warning(
+                f"Could not connect to {target_node}. {type(last_error)}{last_error}. Aborting and removing peer."
+            )
+            self.global_connections.peers.remove(target_node)
             return False
         if on_connect is not None:
             self._on_connect_callbacks[target_node] = on_connect

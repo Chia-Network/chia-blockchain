@@ -92,5 +92,30 @@ the challenge for block i. Therefore the timelord can start iterating on their V
 i-1 is finalized by another timelord. More information is given in the [greenpaper](https://github.com/Chia-Network/proof-of-space).
 
 
-...
+### Difficulty formula
+TODO
+
+### IPS formula
+TODO
+
+## Propagation rules
+
+Peers transmit blocks and unfinished blocks between each other. Unfinished blocks are usually created very quickly by farmers after a block has been created at the previous height, since proofs of space are fast to create.
+
+### Blocks
+When a full node receives a new block, it is propagated if it is valid and if it is one of our 3 tips.
+The tips are the three connected valid blocks with the highest weight, where ties are broken by the order of receipt.
+
+For example, if we see 2 blocks at height 1000 and then 2 blocks at height 2000, A, B, C, and D, then the three
+tips are blocks C, A, B.
+Therefore, there is a limit to how many valid blocks will get propagated at each height, and therefore how many disk lookups farmers must perform.
+This is an important network parameter that is talked about extensively in the greenpaper, since a low tip number will increase the advantage of large farmers.
+
+### Unfinished Blocks
+When a full node receives an unfinished block, is is propagated if:
+1. It is a child of one of the tips
+2. Is the current unfinished block leader, or not expected to be finished much slower than the leader
+
+The unfinished block leader is the unfinished block of greatest height which is expected to finish first,
+according to the number of iterations required, and the current network IPS.
 
