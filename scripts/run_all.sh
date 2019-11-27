@@ -1,7 +1,7 @@
 . .venv/bin/activate
 . scripts/common.sh
 
-# Starts a harvester, farmer, timelord, introducer and full node
+# Starts a harvester, farmer, timelord, and full node
 
 _run_bg_cmd python -m src.server.start_harvester
 _run_bg_cmd python -m src.server.start_timelord

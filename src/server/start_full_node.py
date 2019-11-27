@@ -70,9 +70,6 @@ async def main():
             ui_close_cb()
         master_close_cb()
 
-    # local_api_server = FullNodeLocalApi(blockchain, store, server, master_close_cb, uint16(8080))
-    # await local_api_server.start()
-
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
 
@@ -117,7 +114,6 @@ async def main():
 
     # Awaits for server and all connections to close
     await server.await_closed()
-    # await local_api_server.close()
 
     # Awaits for all ui instances to close
     if wait_for_ui is not None:

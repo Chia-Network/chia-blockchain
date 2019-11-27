@@ -49,7 +49,7 @@ full_node:
   port: 8444
   enable_upnp: False
   # Don't send any more than these number of headers and blocks, in one message
-  max_headers_to_send: 50
+  max_headers_to_send: 25
   max_blocks_to_send: 5
   num_sync_batches: 10
 
@@ -71,9 +71,9 @@ full_node:
       port: 8446
   introducer_peer:
       # host: 2600:1f18:63ed:e200:f7c5:9e28:9b5e:130  # Chia AWS introducer IPv6
-      # host: 18.232.223.201  # Chia AWS introducer IPv4
-      host: 127.0.0.1
-      port: 8445
+      # host: 127.0.0.1
+      host: 18.232.223.201  # Chia AWS introducer IPv4
+      port: 8444
 
 introducer:
   host: 127.0.0.1
