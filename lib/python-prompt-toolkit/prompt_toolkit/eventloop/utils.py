@@ -65,9 +65,9 @@ def call_soon_threadsafe(
     def schedule() -> None:
         # When there are no other tasks scheduled in the event loop. Run it
         # now.
-        if not loop2._ready:  # type: ignore
-            func()
-            return
+        #if not loop2._ready:  # type: ignore
+        #    func()
+        #    return
 
         # If the timeout expired, run this now.
         if time.time() > max_postpone_until:
