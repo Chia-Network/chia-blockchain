@@ -1,4 +1,5 @@
 import asyncio
+import uvloop
 import io
 import logging
 import os
@@ -26,6 +27,7 @@ log = logging.getLogger(__name__)
 
 class Timelord:
     def __init__(self):
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
         self.config = safe_load(open(config_filename, "r"))["timelord"]
         self.free_servers: List[Tuple[str, str]] = list(
@@ -199,7 +201,7 @@ class Timelord:
             try:
                 reader, writer = await asyncio.open_connection(ip, port)
                 socket = writer.get_extra_info("socket")
-                socket.settimeout(None)
+                #socket.settimeout(None)
                 break
             except Exception as e:
                 e_to_str = str(e)

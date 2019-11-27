@@ -34,7 +34,7 @@ class Connection:
         self.reader = sr
         self.writer = sw
         socket = self.writer.get_extra_info("socket")
-        socket.settimeout(None)
+        #socket.settimeout(None)
         self.local_host = socket.getsockname()[0]
         self.local_port = server_port
         self.peer_host = self.writer.get_extra_info("peername")[0]

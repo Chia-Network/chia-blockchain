@@ -1,4 +1,5 @@
 import asyncio
+import uvloop
 import concurrent
 import logging
 import os
@@ -46,6 +47,7 @@ class FullNode:
     blockchain: Blockchain
 
     def __init__(self, store: FullNodeStore, blockchain: Blockchain):
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
         self.config = yaml.safe_load(open(config_filename, "r"))["full_node"]
         self.store = store

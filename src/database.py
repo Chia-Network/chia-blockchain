@@ -1,4 +1,5 @@
 import asyncio
+import uvloop
 import logging
 from abc import ABC
 from typing import AsyncGenerator, Dict, List, Optional, Tuple
@@ -22,6 +23,7 @@ log = logging.getLogger(__name__)
 class Database(ABC):
     # All databases must subclass this so that there's one client
     # Ensure mongod service is running
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     loop = asyncio.get_event_loop()
     client = motor_asyncio.AsyncIOMotorClient(
         "mongodb://localhost:27017/", io_loop=loop
