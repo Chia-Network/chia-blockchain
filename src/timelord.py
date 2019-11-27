@@ -1,5 +1,4 @@
 import asyncio
-import uvloop
 import io
 import logging
 import os
@@ -27,7 +26,6 @@ log = logging.getLogger(__name__)
 
 class Timelord:
     def __init__(self):
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
         self.config = safe_load(open(config_filename, "r"))["timelord"]
         self.free_servers: List[Tuple[str, str]] = list(
