@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from abc import ABC
 from typing import AsyncGenerator, Dict, List, Optional, Tuple
 from bson.binary import Binary
@@ -15,6 +16,9 @@ from src.util.ints import uint32, uint64
 from src.util.streamable import Streamable
 
 
+log = logging.getLogger(__name__)
+
+
 class Database(ABC):
     # All databases must subclass this so that there's one client
     # Ensure mongod service is running
@@ -24,6 +28,7 @@ class Database(ABC):
     )
 
     def __init__(self, db_name):
+        log.info("Connecting to mongodb database")
         self.db = Database.client.get_database(
             db_name,
             codec_options=CodecOptions(
@@ -34,6 +39,7 @@ class Database(ABC):
                 )
             ),
         )
+        log.info("Connected to mongodb database")
 
 
 class FullNodeStore(Database):
@@ -49,6 +55,8 @@ class FullNodeStore(Database):
         self.candidate_blocks = self.db.get_collection("candidate_blocks")
         # Blocks which are not finalized yet (no proof of time)
         self.unfinished_blocks = self.db.get_collection("unfinished_blocks")
+        # Blocks which we have received but our blockchain dose not reach
+        self.disconnected_blocks = self.db.get_collection("unfinished_blocks")
 
         # Stored in memory
         # Whether or not we are syncing
@@ -80,6 +88,7 @@ class FullNodeStore(Database):
         await self.potential_blocks.drop()
         await self.candidate_blocks.drop()
         await self.unfinished_blocks.drop()
+        await self.disconnected_blocks.drop()
 
     async def save_block(self, block: FullBlock) -> None:
         header_hash = block.header_hash
@@ -98,6 +107,20 @@ class FullNodeStore(Database):
     async def get_blocks(self) -> AsyncGenerator[FullBlock, None]:
         async for query in self.full_blocks.find({}):
             yield FullBlock.from_bytes(query["block"])
+
+    async def save_disconnected_block(self, block: FullBlock) -> None:
+        prev_header_hash = block.prev_header_hash
+        await self.disconnected_blocks.find_one_and_update(
+            {"_id": prev_header_hash},
+            {"$set": {"_id": prev_header_hash, "block": block}},
+            upsert=True,
+        )
+
+    async def get_disconnected_block(self, prev_header_hash: bytes32) -> Optional[FullBlock]:
+        query = await self.disconnected_blocks.find_one({"_id": prev_header_hash})
+        if query is not None:
+            return FullBlock.from_bytes(query["block"])
+        return None
 
     async def set_sync_mode(self, sync_mode: bool) -> None:
         self.sync_mode = sync_mode

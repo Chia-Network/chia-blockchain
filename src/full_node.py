@@ -175,14 +175,11 @@ class FullNode:
 
         async def introducer_client():
             async def on_connect():
-                log.info("on connect")
                 msg = Message("request_peers", peer_protocol.RequestPeers())
                 yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
 
             while not self._shut_down:
-                log.info("looping")
                 if self._num_needed_peers():
-                    log.info("Conncting")
                     if not await self.server.start_client(
                         introducer_peerinfo, on_connect
                     ):
@@ -200,8 +197,9 @@ class FullNode:
             - Check which are the heaviest tips
             - Request headers for the heaviest
             - Verify the weight of the tip, using the headers
-            - Blacklist peers that provide invalid stuff
-            - Sync blockchain up to heads (request blocks in batches, and add to queue)
+            - Find the fork point to see where to start downloading blocks
+            - Blacklist peers that provide invalid blocks
+            - Sync blockchain up to heads (request blocks in batches)
         """
         log.info("Starting to perform sync with peers.")
         log.info("Waiting to receive tips from peers.")
@@ -210,7 +208,6 @@ class FullNode:
         highest_weight: uint64 = uint64(0)
         tip_block: FullBlock
         tip_height = 0
-        caught_up = False
 
         # Based on responses from peers about the current heads, see which head is the heaviest
         # (similar to longest chain rule).
@@ -231,11 +228,8 @@ class FullNode:
                 [t.weight for t in self.blockchain.get_current_tips()]
             ):
                 log.info("Not performing sync, already caught up.")
-                caught_up = True
-        if caught_up:
-            async for msg in self._finish_sync():
-                yield msg
-            return
+                return
+
         assert tip_block
         log.info(f"Tip block {tip_block.header_hash} tip height {tip_block.height}")
 
@@ -244,7 +238,7 @@ class FullNode:
                 await self.store.set_potential_headers_received(uint32(height), Event())
 
         # Now, we download all of the headers in order to verify the weight
-        timeout = 60
+        timeout = 200
         sleep_interval = 10
         total_headers_coming = 5 * self.config["max_headers_to_send"]
         headers: List[HeaderBlock] = []
@@ -329,7 +323,7 @@ class FullNode:
                         uint32(height), Event()
                     )
                 found = False
-                for _ in range(30):
+                for _ in range(60):
                     if self._shut_down:
                         return
                     log.info(f"Requesting blocks {request_sync.heights}")
@@ -345,7 +339,7 @@ class FullNode:
                                     uint32(height)
                                 )
                             ).wait(),
-                            timeout=10,
+                            timeout=5,
                         )
                         found = True
                         break
@@ -356,7 +350,6 @@ class FullNode:
                         f"Did not receive desired block at height {height}"
                     )
             async with self.store.lock:
-                # TODO: ban peers that provide bad blocks
                 if have_block:
                     block = await self.store.get_potential_tip(
                         headers[height].header.get_hash()
@@ -384,9 +377,6 @@ class FullNode:
                     await self.blockchain.get_next_ips(block.header_hash)
                 )
         log.info(f"Finished sync up to height {tip_height}")
-
-        async for msg in self._finish_sync():
-            yield msg
 
     async def _finish_sync(self):
         """
@@ -747,43 +737,42 @@ class FullNode:
         We can validate it and if it's a good block, propagate it to other peers and
         timelords.
         """
-        async with self.store.lock:
-            if not self.blockchain.is_child_of_head(unfinished_block.block):
-                return
+        if not self.blockchain.is_child_of_head(unfinished_block.block):
+            return
 
-            if not await self.blockchain.validate_unfinished_block(
-                unfinished_block.block
-            ):
-                raise InvalidUnfinishedBlock()
+        if not await self.blockchain.validate_unfinished_block(
+            unfinished_block.block
+        ):
+            raise InvalidUnfinishedBlock()
 
-            prev_block: Optional[HeaderBlock] = await self.blockchain.get_header_block(
-                unfinished_block.block.prev_header_hash
+        prev_block: Optional[HeaderBlock] = await self.blockchain.get_header_block(
+            unfinished_block.block.prev_header_hash
+        )
+        assert prev_block
+        assert prev_block.challenge
+
+        challenge_hash: bytes32 = prev_block.challenge.get_hash()
+        difficulty: uint64 = await self.blockchain.get_next_difficulty(
+            unfinished_block.block.header_block.prev_header_hash
+        )
+        vdf_ips: uint64 = await self.blockchain.get_next_ips(
+            unfinished_block.block.header_block.prev_header_hash
+        )
+
+        iterations_needed: uint64 = calculate_iterations(
+            unfinished_block.block.header_block.proof_of_space,
+            difficulty,
+            vdf_ips,
+            constants["MIN_BLOCK_TIME"],
+        )
+
+        if (
+            await self.store.get_unfinished_block(
+                (challenge_hash, iterations_needed)
             )
-            assert prev_block
-            assert prev_block.challenge
-
-            challenge_hash: bytes32 = prev_block.challenge.get_hash()
-            difficulty: uint64 = await self.blockchain.get_next_difficulty(
-                unfinished_block.block.header_block.prev_header_hash
-            )
-            vdf_ips: uint64 = await self.blockchain.get_next_ips(
-                unfinished_block.block.header_block.prev_header_hash
-            )
-
-            iterations_needed: uint64 = calculate_iterations(
-                unfinished_block.block.header_block.proof_of_space,
-                difficulty,
-                vdf_ips,
-                constants["MIN_BLOCK_TIME"],
-            )
-
-            if (
-                await self.store.get_unfinished_block(
-                    (challenge_hash, iterations_needed)
-                )
-                is not None
-            ):
-                return
+            is not None
+        ):
+            return
 
         expected_time: uint64 = uint64(
             int(iterations_needed / (await self.store.get_proof_of_time_estimate_ips()))
@@ -902,24 +891,22 @@ class FullNode:
                 except BaseException as e:
                     log.warning(f"Error {type(e)}{e} with syncing")
                 finally:
-                    async with self.store.lock:
-                        await self.store.set_sync_mode(False)
-                        await self.store.clear_sync_info()
-                        return
+                    async for msg in self._finish_sync():
+                        yield msg
 
             elif block.block.height > tip_height + 1:
                 log.info(
                     f"We are a few blocks behind, our height is {tip_height} and block is at "
-                    f"{block.block.height} so we will request these blocks."
+                    f"{block.block.height} so we will request the previous block."
                 )
-                while True:
-                    # TODO: download a few blocks and add them to chain
-                    # prev_block_hash = block.block.header_block.header.data.prev_header_hash
-                    break
+                msg = Message("request_block", peer_protocol.RequestBlock(block.block.prev_header_hash))
+                async with self.store.lock:
+                    await self.store.save_disconnected_block(block.block)
+                yield OutboundMessage(NodeType.FULL_NODE, msg, Delivery.RANDOM)
             return
         elif added == ReceiveBlockResult.ADDED_TO_HEAD:
             # Only propagate blocks which extend the blockchain (becomes one of the heads)
-            # A deep reorg happens can be deteceted when we add a block to the heads, that has a worse
+            # A deep reorg happens can be detected when we add a block to the heads, that has a worse
             # height than the worst one (assuming we had a full set of heads).
             deep_reorg: bool = (block.block.height < least_height) and full_heads
             ips_changed: bool = False
@@ -990,6 +977,13 @@ class FullNode:
                 Message("proof_of_space_finalized", farmer_request),
                 Delivery.BROADCAST,
             )
+
+            # Recursively process the next block if we have it
+            async with self.store.lock:
+                next_block: Optional[FullBlock] = await self.store.get_disconnected_block(block.block.header_hash)
+            if next_block is not None:
+                async for msg in self.block(peer_protocol.Block(next_block)):
+                    yield msg
         elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
             assert block.block.header_block.proof_of_time
             assert block.block.header_block.challenge
@@ -999,6 +993,20 @@ class FullNode:
         else:
             # Should never reach here, all the cases are covered
             assert False
+
+        async with self.store.lock:
+            pass
+            # TODO: Remove all unfinished old blocks
+            # TODO: Remove all candidate old blocks
+            # TODO: Remove all disconnected old blocks
+
+    @api_request
+    async def requst_block(
+        self, request_block: peer_protocol.RequestBlock
+    ) -> AsyncGenerator[OutboundMessage, None]:
+        block: Optional[FullBlock] = await self.store.get_block(request_block.header_hash)
+        if block is not None:
+            yield OutboundMessage(NodeType.FULL_NODE, Message("block", peer_protocol.Block(block)), Delivery.RESPOND)
 
     @api_request
     async def peers(
