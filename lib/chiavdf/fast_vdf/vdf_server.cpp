@@ -57,9 +57,10 @@ void session(tcp::socket sock) {
         integer D(disc);
         PrintInfo("Discriminant = " + to_string(D.impl));
 
-        const int kInitSpace = 10000000;
-        forms = (form*) malloc(kInitSpace * sizeof(form));
-        memset(forms,0x00,kInitSpace * sizeof(form));
+        forms = (form*) malloc((kMaxItersAllowed / 10) * sizeof(form));
+        memset(forms,0x00,(kMaxItersAllowed / 10) * sizeof(form));
+
+        PrintInfo("Malloc'd succesfully");
 
         // Init VDF the discriminant...
 
@@ -135,6 +136,7 @@ void session(tcp::socket sock) {
                 int max_iter = 0;
                 int max_iter_thread_id;
                 int min_iter = std::numeric_limits<int> :: max();
+                bool unique = true;
                 for (auto active_iter: seen_iterations) {
                     if (active_iter.first > max_iter) {
                         max_iter = active_iter.first;
@@ -143,6 +145,14 @@ void session(tcp::socket sock) {
                     if (active_iter.first < min_iter) {
                         min_iter = active_iter.first;
                     }
+                    if (active_iter.first == iters) {
+                        unique = false;
+                        break;
+                    }
+                }
+                if (!unique) {
+                    PrintInfo("Duplicate iteration " + to_string(iters) + "... Ignoring.");
+                    continue;
                 }
                 if (threads.size() < 3 || iters < min_iter) {
                     seen_iterations.insert({iters, threads.size()});
