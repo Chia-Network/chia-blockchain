@@ -52,14 +52,14 @@ can take a long time depending on the size of the plots. Then, run the farmer + 
 the following script. A full node is also started on port 8002, which you can ssh into to view the node UI.
 ```bash
 python -m scripts.create_plots -k 20 -n 10
-sh ./scripts/simulate_farming.sh
+sh ./scripts/run_farming.sh
 ```
 
 ### Run a timelord + full node
 Timelords execute sequential verifiable delay functions (proofs of time), that get added to
 blocks to make them valid. This requires fast CPUs and a lot of memory.
 ```bash
-sh ./scripts/simulate_farming.sh
+sh ./scripts/run_farming.sh
 ```
 
 ### Tips
@@ -69,7 +69,7 @@ Configuration of peers can be changed in config/config.yaml.
 You can also run the simulation, which runs all servers and multiple full nodes, at once.
 
 ```bash
-sh ./scripts/simulate_network.sh
+sh ./scripts/run_all_simulation.sh
 ```
 
 ### Run tests and linting
