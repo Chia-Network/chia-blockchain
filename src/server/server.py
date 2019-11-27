@@ -388,6 +388,10 @@ class ChiaServer:
             log.warning(
                 f"Connection error by peer {connection.get_peername()}, closing connection."
             )
+        except (TimeoutError, asyncio.TimeoutError) as e:
+            log.warning(
+                f"Timeout error {e} in connection with peer {connection.get_peername()}, closing connection."
+            )
         finally:
             # Removes the connection from the global list, so we don't try to send things to it
             self.global_connections.close(connection, True)
