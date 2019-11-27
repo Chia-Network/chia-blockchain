@@ -35,7 +35,6 @@ from src.util.api_decorators import api_request
 from src.util.errors import (
     BlockNotInBlockchain,
     InvalidUnfinishedBlock,
-    PeersDontHaveBlock,
 )
 from src.util.ints import uint32, uint64
 
@@ -233,11 +232,11 @@ class FullNode:
         assert tip_block
         log.info(f"Tip block {tip_block.header_hash} tip height {tip_block.height}")
 
-        async with self.store.lock:
-            for height in range(0, tip_block.height + 1):
-                await self.store.set_potential_headers_received(uint32(height), Event())
+        for height in range(0, tip_block.height + 1):
+            self.store.set_potential_headers_received(uint32(height), Event())
+            self.store.set_potential_blocks_received(uint32(height), Event())
 
-        # Now, we download all of the headers in order to verify the weight
+        # Now, we download all of the headers in order to verify the weight, in batches
         timeout = 200
         sleep_interval = 10
         total_headers_coming = 5 * self.config["max_headers_to_send"]
@@ -247,6 +246,8 @@ class FullNode:
             total_time_slept = 0
             continue_requesting = True
             while continue_requesting:
+                if self._shut_down:
+                    return
                 if total_time_slept > timeout:
                     raise TimeoutError("Took too long to fetch headers")
                 for height_offset in range(
@@ -268,9 +269,7 @@ class FullNode:
                     )
                 end_height = min(tip_height + 1, start_height + total_headers_coming)
                 awaitables = [
-                    (
-                        await self.store.get_potential_headers_received(uint32(height))
-                    ).wait()
+                    (self.store.get_potential_headers_received(uint32(height))).wait()
                     for height in range(start_height, end_height)
                 ]
                 try:
@@ -284,13 +283,12 @@ class FullNode:
 
         async with self.store.lock:
             for h in range(0, tip_height + 1):
-                header = await self.store.get_potential_header(uint32(h))
+                header = self.store.get_potential_header(uint32(h))
                 assert header is not None
                 headers.append(header)
 
         log.error(f"Downloaded headers up to tip height: {tip_height}")
         if not verify_weight(tip_block.header_block, headers):
-            # TODO: ban peers that provided the invalid heads or proofs
             raise errors.InvalidWeight(
                 f"Weight of {tip_block.header_block.header.get_hash()} not valid."
             )
@@ -300,82 +298,118 @@ class FullNode:
         )
         assert tip_height + 1 == len(headers)
 
+        # Finding the fork point allows us to only download blocks from the fork point
         async with self.store.lock:
             fork_point: HeaderBlock = self.blockchain.find_fork_point(headers)
 
-        # TODO: optimize, send many requests at once, and for more blocks
-        for height in range(fork_point.height + 1, tip_height + 1):
-            # Only download from fork point (what we don't have)
-            async with self.store.lock:
-                have_block = (
-                    await self.store.get_potential_tip(
-                        headers[height].header.get_hash()
-                    )
-                    is not None
-                )
+        # Download blocks in batches, and verify them as they come in. We download a few batches ahead,
+        # in case there are delays.
+        last_request_time: float = 0
+        highest_height_requested: uint32 = uint32(0)
+        request_made: bool = False
+        for height_checkpoint in range(
+            fork_point.height + 1, tip_height + 1, self.config["max_blocks_to_send"]
+        ):
+            end_height = min(
+                height_checkpoint + self.config["max_blocks_to_send"], tip_height + 1
+            )
 
-            if not have_block:
-                request_sync = peer_protocol.RequestSyncBlocks(
-                    tip_block.header_block.header.header_hash, [uint32(height)]
-                )
-                async with self.store.lock:
-                    await self.store.set_potential_blocks_received(
-                        uint32(height), Event()
+            total_time_slept = 0
+            while True:
+                if self._shut_down:
+                    return
+                if total_time_slept > timeout:
+                    raise TimeoutError("Took too long to fetch blocks")
+
+                # Request batches that we don't have yet
+                for batch in range(0, self.config["num_sync_batches"]):
+                    batch_start = (
+                        height_checkpoint + batch * self.config["max_blocks_to_send"]
                     )
-                found = False
-                for _ in range(60):
-                    if self._shut_down:
-                        return
-                    log.info(f"Requesting blocks {request_sync.heights}")
-                    yield OutboundMessage(
-                        NodeType.FULL_NODE,
-                        Message("request_sync_blocks", request_sync),
-                        Delivery.RANDOM,
+                    batch_end = min(
+                        batch_start + self.config["max_blocks_to_send"], tip_height + 1
                     )
-                    try:
-                        await asyncio.wait_for(
-                            (
-                                await self.store.get_potential_blocks_received(
-                                    uint32(height)
-                                )
-                            ).wait(),
-                            timeout=5,
-                        )
-                        found = True
+
+                    if batch_start > tip_height:
+                        # We have asked for all blocks
                         break
-                    except concurrent.futures.TimeoutError:
-                        log.info("Did not receive desired block")
-                if not found:
-                    raise PeersDontHaveBlock(
-                        f"Did not receive desired block at height {height}"
-                    )
-            async with self.store.lock:
-                if have_block:
-                    block = await self.store.get_potential_tip(
-                        headers[height].header.get_hash()
-                    )
 
-                else:
-                    block = await self.store.get_potential_block(uint32(height))
+                    blocks_missing = any(
+                        [
+                            not (
+                                self.store.get_potential_blocks_received(uint32(h))
+                            ).is_set()
+                            for h in range(batch_start, batch_end)
+                        ]
+                    )
+                    if (
+                        time.time() - last_request_time > sleep_interval
+                        and blocks_missing
+                    ) or (batch_end - 1) > highest_height_requested:
+                        # If we are missing blocks in this batch, and we haven't made a request in a while,
+                        # Make a request for this batch. Also, if we have never requested this batch, make
+                        # the request
+                        log.info(
+                            f"Requesting sync blocks {[i for i in range(batch_start, batch_end)]}"
+                        )
+                        highest_height_requested = batch_end - 1
+                        request_made = True
+                        request_sync = peer_protocol.RequestSyncBlocks(
+                            tip_block.header_block.header.header_hash,
+                            [
+                                uint32(height)
+                                for height in range(batch_start, batch_end)
+                            ],
+                        )
+                        yield OutboundMessage(
+                            NodeType.FULL_NODE,
+                            Message("request_sync_blocks", request_sync),
+                            Delivery.RANDOM,
+                        )
+                if request_made:
+                    # Reset the timer for requests, so we don't overload other peers with requests
+                    last_request_time = time.time()
+                    request_made = False
+
+                # Wait for the first batch (the next "max_blocks_to_send" blocks to arrive)
+                awaitables = [
+                    (self.store.get_potential_blocks_received(uint32(height))).wait()
+                    for height in range(height_checkpoint, end_height)
+                ]
+                try:
+                    await asyncio.wait_for(
+                        asyncio.gather(*awaitables), timeout=sleep_interval
+                    )
+                    break
+                except concurrent.futures.TimeoutError:
+                    total_time_slept += sleep_interval
+                    log.info("Did not receive desired blocks")
+                    pass
+
+            # Verifies this batch, which we are guaranteed to have (since we broke from the above loop)
+            for height in range(height_checkpoint, end_height):
+                block = await self.store.get_potential_block(uint32(height))
                 assert block is not None
-
                 start = time.time()
-                result = await self.blockchain.receive_block(block)
-                if (
-                    result == ReceiveBlockResult.INVALID_BLOCK
-                    or result == ReceiveBlockResult.DISCONNECTED_BLOCK
-                ):
-                    raise RuntimeError(f"Invalid block {block.header_hash}")
-                log.info(
-                    f"Took {time.time() - start} seconds to validate and add block {block.height}."
-                )
-                assert (
-                    max([h.height for h in self.blockchain.get_current_tips()])
-                    >= height
-                )
-                await self.store.set_proof_of_time_estimate_ips(
-                    await self.blockchain.get_next_ips(block.header_hash)
-                )
+                async with self.store.lock:
+                    # The block gets permanantly added to the blockchain
+                    result = await self.blockchain.receive_block(block)
+                    if (
+                        result == ReceiveBlockResult.INVALID_BLOCK
+                        or result == ReceiveBlockResult.DISCONNECTED_BLOCK
+                    ):
+                        raise RuntimeError(f"Invalid block {block.header_hash}")
+                    log.info(
+                        f"Took {time.time() - start} seconds to validate and add block {block.height}."
+                    )
+                    assert (
+                        max([h.height for h in self.blockchain.get_current_tips()])
+                        >= height
+                    )
+                    await self.store.set_proof_of_time_estimate_ips(
+                        await self.blockchain.get_next_ips(block.header_hash)
+                    )
+        assert max([h.height for h in self.blockchain.get_current_tips()]) == tip_height
         log.info(f"Finished sync up to height {tip_height}")
 
     async def _finish_sync(self):
@@ -407,6 +441,7 @@ class FullNode:
         """
         A peer requests a list of header blocks, by height. Used for syncing or light clients.
         """
+        start = time.time()
         if len(request.heights) > self.config["max_headers_to_send"]:
             raise errors.TooManyheadersRequested(
                 f"The max number of headers is {self.config['max_headers_to_send']},\
@@ -417,6 +452,7 @@ class FullNode:
             headers: List[HeaderBlock] = self.blockchain.get_header_blocks_by_height(
                 request.heights, request.tip_header_hash
             )
+            log.info(f"Got header blocks by height {time.time() - start}")
         except KeyError:
             return
         except BlockNotInBlockchain as e:
@@ -437,10 +473,8 @@ class FullNode:
         """
         async with self.store.lock:
             for header_block in request.header_blocks:
-                await self.store.add_potential_header(header_block)
-                (
-                    await self.store.get_potential_headers_received(header_block.height)
-                ).set()
+                self.store.add_potential_header(header_block)
+                (self.store.get_potential_headers_received(header_block.height)).set()
 
         for _ in []:  # Yields nothing
             yield _
@@ -505,7 +539,7 @@ class FullNode:
 
             for block in request.blocks:
                 await self.store.add_potential_block(block)
-                (await self.store.get_potential_blocks_received(block.height)).set()
+                (self.store.get_potential_blocks_received(block.height)).set()
 
         for _ in []:  # Yields nothing
             yield _

@@ -47,7 +47,10 @@ class Blockchain:
         self.store = store
         self.tips: List[FullBlock] = []
         self.lca_block: FullBlock
+
+        # Defines the path from genesis to the tip
         self.height_to_hash: Dict[uint32, bytes32] = {}
+        # All headers (but not orphans) from genesis to the tip are guaranteed to be in header_blocks
         self.header_blocks: Dict[bytes32, HeaderBlock] = {}
 
     async def initialize(self):
@@ -116,12 +119,6 @@ class Blockchain:
             [(height, index) for index, height in enumerate(heights)], reverse=True
         )
 
-        # curr_block: Optional[HeaderBlock]
-        # if sorted_heights[0][0] + 100 < self.lca_block.height:
-        #     curr_block = self.header_blocks.get(
-        #         self.height_to_hash[sorted_heights[0][0]], None
-        #     )
-        # else:
         curr_block: Optional[HeaderBlock] = self.header_blocks[tip_header_hash]
 
         if curr_block is None:
@@ -687,6 +684,7 @@ class Blockchain:
             fetched: Optional[FullBlock]
             if not curr_old or curr_old.height < curr_new.height:
                 self.height_to_hash[uint32(curr_new.height)] = curr_new.header_hash
+                self.header_blocks[curr_new.header_hash] = curr_new
                 if curr_new.height == 0:
                     return
                 fetched = await self.store.get_block(curr_new.prev_header_hash)
@@ -701,6 +699,7 @@ class Blockchain:
                 if curr_new.header_hash == curr_old.header_hash:
                     return
                 self.height_to_hash[uint32(curr_new.height)] = curr_new.header_hash
+                self.header_blocks[curr_new.header_hash] = curr_new
                 fetched_new: Optional[FullBlock] = await self.store.get_block(
                     curr_new.prev_header_hash
                 )
