@@ -146,10 +146,10 @@ class FullNodeStore(Database):
     async def get_potential_tip(self, header_hash: bytes32) -> Optional[FullBlock]:
         return self.potential_tips.get(header_hash, None)
 
-    async def add_potential_header(self, block: HeaderBlock) -> None:
+    def add_potential_header(self, block: HeaderBlock) -> None:
         self.potential_headers[block.height] = block
 
-    async def get_potential_header(self, height: uint32) -> Optional[HeaderBlock]:
+    def get_potential_header(self, height: uint32) -> Optional[HeaderBlock]:
         return self.potential_headers.get(height, None)
 
     async def add_potential_block(self, block: FullBlock) -> None:
@@ -163,18 +163,16 @@ class FullNodeStore(Database):
         query = await self.potential_blocks.find_one({"_id": height})
         return FullBlock.from_bytes(query["block"]) if query else None
 
-    async def set_potential_headers_received(
-        self, height: uint32, event: asyncio.Event
-    ):
+    def set_potential_headers_received(self, height: uint32, event: asyncio.Event):
         self.potential_headers_received[height] = event
 
-    async def get_potential_headers_received(self, height: uint32) -> asyncio.Event:
+    def get_potential_headers_received(self, height: uint32) -> asyncio.Event:
         return self.potential_headers_received[height]
 
-    async def set_potential_blocks_received(self, height: uint32, event: asyncio.Event):
+    def set_potential_blocks_received(self, height: uint32, event: asyncio.Event):
         self.potential_blocks_received[height] = event
 
-    async def get_potential_blocks_received(self, height: uint32) -> asyncio.Event:
+    def get_potential_blocks_received(self, height: uint32) -> asyncio.Event:
         return self.potential_blocks_received[height]
 
     async def add_potential_future_block(self, block: FullBlock):

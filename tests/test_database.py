@@ -38,8 +38,8 @@ class TestDatabase:
 
         # add/get potential trunk
         header = genesis.header_block
-        await db.add_potential_header(header)
-        assert await db.get_potential_header(genesis.height) == header
+        db.add_potential_header(header)
+        assert db.get_potential_header(genesis.height) == header
 
         # Add potential block
         await db.add_potential_block(genesis)
