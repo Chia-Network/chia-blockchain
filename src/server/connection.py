@@ -61,9 +61,14 @@ class Connection:
     async def send(self, message: Message):
         encoded: bytes = cbor.dumps({"f": message.function, "d": message.data})
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
-        self.writer.write(len(encoded).to_bytes(LENGTH_BYTES, "big") + encoded)
-        await self.writer.drain()
-        self.bytes_written += LENGTH_BYTES + len(encoded)
+        try:
+            self.writer.write(len(encoded).to_bytes(LENGTH_BYTES, "big") + encoded)
+            await self.writer.drain()
+            self.bytes_written += LENGTH_BYTES + len(encoded)
+        except RuntimeError as e:
+            log.error(
+                        f"Cannot write, runtime error. Error {e}."
+                    )
 
     async def read_one_message(self) -> Message:
         size = await self.reader.readexactly(LENGTH_BYTES)
