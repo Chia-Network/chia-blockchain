@@ -7,10 +7,12 @@ import miniupnpc
 from src.blockchain import Blockchain
 from src.database import FullNodeStore
 from src.full_node import FullNode
-from src.util.ints import uint16
+
+# from src.util.ints import uint16
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
-from src.server.local_api_server import FullNodeLocalApi
+
+# from src.server.local_api_server import FullNodeLocalApi
 from src.types.peer_info import PeerInfo
 from src.util.network import parse_host_port
 

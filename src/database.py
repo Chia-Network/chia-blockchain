@@ -116,7 +116,9 @@ class FullNodeStore(Database):
             upsert=True,
         )
 
-    async def get_disconnected_block(self, prev_header_hash: bytes32) -> Optional[FullBlock]:
+    async def get_disconnected_block(
+        self, prev_header_hash: bytes32
+    ) -> Optional[FullBlock]:
         query = await self.disconnected_blocks.find_one({"_id": prev_header_hash})
         if query is not None:
             return FullBlock.from_bytes(query["block"])

@@ -23,8 +23,14 @@ class EnhancedJSONEncoder(json.JSONEncoder):
 
 
 class FullNodeLocalApi:
-    def __init__(self, blockchain: Blockchain, store: FullNodeStore, server: ChiaServer,
-                 close_cb: Callable, port: uint16):
+    def __init__(
+        self,
+        blockchain: Blockchain,
+        store: FullNodeStore,
+        server: ChiaServer,
+        close_cb: Callable,
+        port: uint16,
+    ):
         self.blockchain = blockchain
         self.store = store
         self.server = server
@@ -33,15 +39,17 @@ class FullNodeLocalApi:
 
     async def start(self):
         app = web.Application()
-        app.add_routes([
-            web.get('/', self.root),
-            web.post('/stop_node', self.stop_node),
-            web.get('/get_connections', self.get_connections),
-            web.post('/add_connections', self.add_connection),
-            ])
+        app.add_routes(
+            [
+                web.get("/", self.root),
+                web.post("/stop_node", self.stop_node),
+                web.get("/get_connections", self.get_connections),
+                web.post("/add_connections", self.add_connection),
+            ]
+        )
         self.runner = web.AppRunner(app)
         await self.runner.setup()
-        site = web.TCPSite(self.runner, 'localhost', int(self.port))
+        site = web.TCPSite(self.runner, "localhost", int(self.port))
         await site.start()
 
     async def close(self):
@@ -61,8 +69,11 @@ class FullNodeLocalApi:
                 peer_info = PeerInfo(connection.peer_host, connection.peer_port)
                 assert connection.connection_type is not None
                 assert connection.node_id is not None
-                responses.append(local_api.Connection(peer_info, connection.connection_type,
-                                                      connection.node_id))
+                responses.append(
+                    local_api.Connection(
+                        peer_info, connection.connection_type, connection.node_id
+                    )
+                )
 
         response = local_api.GetConnectionsResponse(responses)
         return web.Response(text=str(json.dumps(response, cls=EnhancedJSONEncoder)))
