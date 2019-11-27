@@ -78,7 +78,7 @@ class FullNodeStore(Database):
         # Blocks that we have finalized during sync, queue them up for adding after sync is done
         self.potential_future_blocks: List[FullBlock] = []
         # Current estimate of the speed of the network timelords
-        self.proof_of_time_estimate_ips: uint64 = uint64(3000)
+        self.proof_of_time_estimate_ips: uint64 = uint64(10000)
 
         # Lock
         self.lock = asyncio.Lock()  # external

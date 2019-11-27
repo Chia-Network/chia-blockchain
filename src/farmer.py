@@ -45,7 +45,7 @@ class Farmer:
         self.unfinished_challenges: Dict[uint32, List[bytes32]] = {}
         self.current_height: uint32 = uint32(0)
         self.coinbase_rewards: Dict[uint32, Any] = {}
-        self.proof_of_time_estimate_ips: uint64 = uint64(3000)
+        self.proof_of_time_estimate_ips: uint64 = uint64(10000)
 
     @api_request
     async def challenge_response(
@@ -74,7 +74,7 @@ class Farmer:
             self.proof_of_time_estimate_ips,
             constants["MIN_BLOCK_TIME"],
         )
-        if height < 500:  # As the difficulty adjusts, don't fetch all qualities
+        if height < 700:  # As the difficulty adjusts, don't fetch all qualities
             if challenge_response.challenge_hash not in self.challenge_to_best_iters:
                 self.challenge_to_best_iters[
                     challenge_response.challenge_hash
