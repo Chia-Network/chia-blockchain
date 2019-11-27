@@ -48,6 +48,7 @@ class Blockchain:
         self.tips: List[FullBlock] = []
         self.lca_block: FullBlock
         self.height_to_hash: Dict[uint32, bytes32] = {}
+        self.header_blocks: Dict[bytes32, HeaderBlock] = {}
 
     async def initialize(self):
         seen_blocks = {}
@@ -65,6 +66,7 @@ class Blockchain:
 
             for block in reversed(reverse_blocks):
                 self.height_to_hash[block.height] = block.header_hash
+                self.header_blocks[block.header_hash] = block.header_block
 
             self.lca_block = self.tips[0]
 
@@ -101,12 +103,11 @@ class Blockchain:
         else:
             return None
 
-    async def get_header_blocks_by_height(
+    def get_header_blocks_by_height(
         self, heights: List[uint32], tip_header_hash: bytes32
     ) -> List[HeaderBlock]:
         """
         Returns a list of header blocks, one for each height requested.
-        # TODO: optimize, check correctness for large reorgs
         """
         if len(heights) == 0:
             return []
@@ -115,28 +116,26 @@ class Blockchain:
             [(height, index) for index, height in enumerate(heights)], reverse=True
         )
 
-        if sorted_heights[0][0] + 100 < self.lca_block.height:
-            curr_full_block: Optional[FullBlock] = await self.store.get_block(
-                self.height_to_hash[sorted_heights[0][0]]
-            )
-        else:
-            curr_full_block = await self.store.get_block(tip_header_hash)
+        # curr_block: Optional[HeaderBlock]
+        # if sorted_heights[0][0] + 100 < self.lca_block.height:
+        #     curr_block = self.header_blocks.get(
+        #         self.height_to_hash[sorted_heights[0][0]], None
+        #     )
+        # else:
+        curr_block: Optional[HeaderBlock] = self.header_blocks[tip_header_hash]
 
-        if not curr_full_block:
+        if curr_block is None:
             raise BlockNotInBlockchain(
                 f"Header hash {tip_header_hash} not present in chain."
             )
-        curr_block = curr_full_block.header_block
         headers: List[Tuple[int, HeaderBlock]] = []
         for height, index in sorted_heights:
             if height > curr_block.height:
                 raise ValueError("Height is not valid for tip {tip_header_hash}")
             while height < curr_block.height:
-                fetched: Optional[FullBlock] = await self.store.get_block(
-                    curr_block.header.data.prev_header_hash
-                )
-                assert fetched is not None
-                curr_block = fetched.header_block
+                curr_block = self.header_blocks.get(curr_block.prev_header_hash, None)
+                if curr_block is None:
+                    raise ValueError(f"Do not have header {height}")
             headers.append((index, curr_block))
         return [b for index, b in sorted(headers)]
 
@@ -449,6 +448,9 @@ class Blockchain:
 
         # Block is valid and connected, so it can be added to the blockchain.
         await self.store.save_block(block)
+        # Cache header in memory
+        self.header_blocks[block.header_hash] = block.header_block
+
         if await self._reconsider_heads(block, genesis):
             return ReceiveBlockResult.ADDED_TO_HEAD
         else:
@@ -498,7 +500,10 @@ class Blockchain:
         # 3. Check filter hash is correct TODO
 
         # 4. Check the proof of space hash is valid
-        if block.header_block.proof_of_space.get_hash() != block.header_block.header.data.proof_of_space_hash:
+        if (
+            block.header_block.proof_of_space.get_hash()
+            != block.header_block.header.data.proof_of_space_hash
+        ):
             return False
 
         # 5. Check body hash

@@ -414,9 +414,7 @@ class FullNode:
             )
 
         try:
-            headers: List[
-                HeaderBlock
-            ] = await self.blockchain.get_header_blocks_by_height(
+            headers: List[HeaderBlock] = self.blockchain.get_header_blocks_by_height(
                 request.heights, request.tip_header_hash
             )
         except KeyError:
@@ -468,7 +466,7 @@ class FullNode:
             try:
                 header_blocks: List[
                     HeaderBlock
-                ] = await self.blockchain.get_header_blocks_by_height(
+                ] = self.blockchain.get_header_blocks_by_height(
                     request.heights, request.tip_header_hash
                 )
                 for header_block in header_blocks:
@@ -740,9 +738,7 @@ class FullNode:
         if not self.blockchain.is_child_of_head(unfinished_block.block):
             return
 
-        if not await self.blockchain.validate_unfinished_block(
-            unfinished_block.block
-        ):
+        if not await self.blockchain.validate_unfinished_block(unfinished_block.block):
             raise InvalidUnfinishedBlock()
 
         prev_block: Optional[HeaderBlock] = await self.blockchain.get_header_block(
@@ -767,9 +763,7 @@ class FullNode:
         )
 
         if (
-            await self.store.get_unfinished_block(
-                (challenge_hash, iterations_needed)
-            )
+            await self.store.get_unfinished_block((challenge_hash, iterations_needed))
             is not None
         ):
             return
@@ -899,7 +893,10 @@ class FullNode:
                     f"We are a few blocks behind, our height is {tip_height} and block is at "
                     f"{block.block.height} so we will request the previous block."
                 )
-                msg = Message("request_block", peer_protocol.RequestBlock(block.block.prev_header_hash))
+                msg = Message(
+                    "request_block",
+                    peer_protocol.RequestBlock(block.block.prev_header_hash),
+                )
                 async with self.store.lock:
                     await self.store.save_disconnected_block(block.block)
                 yield OutboundMessage(NodeType.FULL_NODE, msg, Delivery.RANDOM)
@@ -980,7 +977,9 @@ class FullNode:
 
             # Recursively process the next block if we have it
             async with self.store.lock:
-                next_block: Optional[FullBlock] = await self.store.get_disconnected_block(block.block.header_hash)
+                next_block: Optional[
+                    FullBlock
+                ] = await self.store.get_disconnected_block(block.block.header_hash)
             if next_block is not None:
                 async for msg in self.block(peer_protocol.Block(next_block)):
                     yield msg
@@ -1004,9 +1003,15 @@ class FullNode:
     async def requst_block(
         self, request_block: peer_protocol.RequestBlock
     ) -> AsyncGenerator[OutboundMessage, None]:
-        block: Optional[FullBlock] = await self.store.get_block(request_block.header_hash)
+        block: Optional[FullBlock] = await self.store.get_block(
+            request_block.header_hash
+        )
         if block is not None:
-            yield OutboundMessage(NodeType.FULL_NODE, Message("block", peer_protocol.Block(block)), Delivery.RESPOND)
+            yield OutboundMessage(
+                NodeType.FULL_NODE,
+                Message("block", peer_protocol.Block(block)),
+                Delivery.RESPOND,
+            )
 
     @api_request
     async def peers(

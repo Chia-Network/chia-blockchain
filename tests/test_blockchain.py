@@ -14,7 +14,7 @@ from src.types.full_block import FullBlock
 from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.proof_of_space import ProofOfSpace
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32, uint64, uint8
 from tests.block_tools import BlockTools
 
 bt = BlockTools()
@@ -52,9 +52,7 @@ class TestGenesisBlock:
         assert genesis_block.height == 0
         assert genesis_block.challenge
         assert (
-            await bc1.get_header_blocks_by_height(
-                [uint32(0)], genesis_block.header_hash
-            )
+            bc1.get_header_blocks_by_height([uint32(0)], genesis_block.header_hash)
         )[0] == genesis_block
         assert (
             await bc1.get_next_difficulty(genesis_block.header_hash)
@@ -200,8 +198,8 @@ class TestBlockValidation:
     async def test_invalid_pos(self, initial_blockchain):
         blocks, b = initial_blockchain
 
-        bad_pos = blocks[9].header_block.proof_of_space.proof
-        bad_pos[0] = (bad_pos[0] + 1) % 256
+        bad_pos = [i for i in blocks[9].header_block.proof_of_space.proof]
+        bad_pos[0] = uint8((bad_pos[0] + 1) % 256)
         # Proof of space invalid
         block_bad = FullBlock(
             HeaderBlock(
