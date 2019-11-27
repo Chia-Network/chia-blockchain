@@ -239,47 +239,85 @@ class FullNode:
         # Now, we download all of the headers in order to verify the weight, in batches
         timeout = 200
         sleep_interval = 10
-        total_headers_coming = 5 * self.config["max_headers_to_send"]
         headers: List[HeaderBlock] = []
 
-        for start_height in range(0, tip_height + 1, total_headers_coming):
+        # Download headers in batches. We download a few batches ahead in case there are delays or peers
+        # that don't have the headers that we need.
+        last_request_time: float = 0
+        highest_height_requested: uint32 = uint32(0)
+        request_made: bool = False
+        for height_checkpoint in range(
+            0, tip_height + 1, self.config["max_headers_to_send"]
+        ):
+            end_height = min(
+                height_checkpoint + self.config["max_headers_to_send"], tip_height + 1
+            )
+
             total_time_slept = 0
-            continue_requesting = True
-            while continue_requesting:
+            while True:
                 if self._shut_down:
                     return
                 if total_time_slept > timeout:
-                    raise TimeoutError("Took too long to fetch headers")
-                for height_offset in range(
-                    0, total_headers_coming, self.config["max_headers_to_send"]
-                ):
-                    new_start_height = start_height + height_offset
-                    end_height = min(
-                        new_start_height + self.config["max_headers_to_send"],
-                        tip_height + 1,
+                    raise TimeoutError("Took too long to fetch blocks")
+
+                # Request batches that we don't have yet
+                for batch in range(0, self.config["num_sync_batches"]):
+                    batch_start = (
+                        height_checkpoint + batch * self.config["max_headers_to_send"]
                     )
-                    request = peer_protocol.RequestHeaderBlocks(
-                        tip_block.header_block.header.get_hash(),
-                        [uint32(h) for h in range(new_start_height, end_height)],
+                    batch_end = min(
+                        batch_start + self.config["max_headers_to_send"], tip_height + 1
                     )
-                    yield OutboundMessage(
-                        NodeType.FULL_NODE,
-                        Message("request_header_blocks", request),
-                        Delivery.RANDOM,
+
+                    if batch_start > tip_height:
+                        # We have asked for all blocks
+                        break
+
+                    blocks_missing = any(
+                        [
+                            not (
+                                self.store.get_potential_headers_received(uint32(h))
+                            ).is_set()
+                            for h in range(batch_start, batch_end)
+                        ]
                     )
-                end_height = min(tip_height + 1, start_height + total_headers_coming)
+                    if (
+                        time.time() - last_request_time > sleep_interval
+                        and blocks_missing
+                    ) or (batch_end - 1) > highest_height_requested:
+                        # If we are missing header blocks in this batch, and we haven't made a request in a while,
+                        # Make a request for this batch. Also, if we have never requested this batch, make
+                        # the request
+                        highest_height_requested = batch_end - 1
+                        request_made = True
+                        request = peer_protocol.RequestHeaderBlocks(
+                            tip_block.header_block.header.get_hash(),
+                            [uint32(h) for h in range(batch_start, batch_end)],
+                        )
+                        yield OutboundMessage(
+                            NodeType.FULL_NODE,
+                            Message("request_header_blocks", request),
+                            Delivery.RANDOM,
+                        )
+                if request_made:
+                    # Reset the timer for requests, so we don't overload other peers with requests
+                    last_request_time = time.time()
+                    request_made = False
+
+                # Wait for the first batch (the next "max_blocks_to_send" blocks to arrive)
                 awaitables = [
                     (self.store.get_potential_headers_received(uint32(height))).wait()
-                    for height in range(start_height, end_height)
+                    for height in range(height_checkpoint, end_height)
                 ]
                 try:
                     await asyncio.wait_for(
                         asyncio.gather(*awaitables), timeout=sleep_interval
                     )
-                    continue_requesting = False
+                    break
                 except concurrent.futures.TimeoutError:
                     total_time_slept += sleep_interval
-                    log.info("Did not receive desired headers")
+                    log.info("Did not receive desired header blocks")
+                    pass
 
         async with self.store.lock:
             for h in range(0, tip_height + 1):
@@ -304,9 +342,9 @@ class FullNode:
 
         # Download blocks in batches, and verify them as they come in. We download a few batches ahead,
         # in case there are delays.
-        last_request_time: float = 0
-        highest_height_requested: uint32 = uint32(0)
-        request_made: bool = False
+        last_request_time = 0
+        highest_height_requested = uint32(0)
+        request_made = False
         for height_checkpoint in range(
             fork_point.height + 1, tip_height + 1, self.config["max_blocks_to_send"]
         ):
@@ -388,6 +426,8 @@ class FullNode:
 
             # Verifies this batch, which we are guaranteed to have (since we broke from the above loop)
             for height in range(height_checkpoint, end_height):
+                if self._shut_down:
+                    return
                 block = await self.store.get_potential_block(uint32(height))
                 assert block is not None
                 start = time.time()
@@ -425,6 +465,8 @@ class FullNode:
             await self.store.clear_sync_info()
 
         for block in potential_fut_blocks:
+            if self._shut_down:
+                return
             async for msg in self.block(peer_protocol.Block(block)):
                 yield msg
 
@@ -932,6 +974,17 @@ class FullNode:
                     peer_protocol.RequestBlock(block.block.prev_header_hash),
                 )
                 async with self.store.lock:
+                    # If we have already requested the prev block, don't do so again
+                    if (
+                        await self.store.get_disconnected_block(
+                            block.block.prev_header_hash
+                        )
+                        is not None
+                    ):
+                        log.info(
+                            f"Have already requested block {block.block.prev_header_hash}"
+                        )
+                        return
                     await self.store.save_disconnected_block(block.block)
                 yield OutboundMessage(NodeType.FULL_NODE, msg, Delivery.RANDOM)
             return
@@ -1034,7 +1087,7 @@ class FullNode:
             # TODO: Remove all disconnected old blocks
 
     @api_request
-    async def requst_block(
+    async def request_block(
         self, request_block: peer_protocol.RequestBlock
     ) -> AsyncGenerator[OutboundMessage, None]:
         block: Optional[FullBlock] = await self.store.get_block(
