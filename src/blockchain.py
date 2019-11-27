@@ -47,7 +47,11 @@ class Blockchain:
         self.store = store
         self.tips: List[FullBlock] = []
         self.lca_block: FullBlock
+
+        # Defines the path from genesis to the tip
         self.height_to_hash: Dict[uint32, bytes32] = {}
+        # All headers (but not orphans) from genesis to the tip are guaranteed to be in header_blocks
+        self.header_blocks: Dict[bytes32, HeaderBlock] = {}
 
     async def initialize(self):
         seen_blocks = {}
@@ -65,6 +69,7 @@ class Blockchain:
 
             for block in reversed(reverse_blocks):
                 self.height_to_hash[block.height] = block.header_hash
+                self.header_blocks[block.header_hash] = block.header_block
 
             self.lca_block = self.tips[0]
 
@@ -101,12 +106,11 @@ class Blockchain:
         else:
             return None
 
-    async def get_header_blocks_by_height(
+    def get_header_blocks_by_height(
         self, heights: List[uint32], tip_header_hash: bytes32
     ) -> List[HeaderBlock]:
         """
         Returns a list of header blocks, one for each height requested.
-        # TODO: optimize, check correctness for large reorgs
         """
         if len(heights) == 0:
             return []
@@ -115,28 +119,20 @@ class Blockchain:
             [(height, index) for index, height in enumerate(heights)], reverse=True
         )
 
-        if sorted_heights[0][0] + 100 < self.lca_block.height:
-            curr_full_block: Optional[FullBlock] = await self.store.get_block(
-                self.height_to_hash[sorted_heights[0][0]]
-            )
-        else:
-            curr_full_block = await self.store.get_block(tip_header_hash)
+        curr_block: Optional[HeaderBlock] = self.header_blocks[tip_header_hash]
 
-        if not curr_full_block:
+        if curr_block is None:
             raise BlockNotInBlockchain(
                 f"Header hash {tip_header_hash} not present in chain."
             )
-        curr_block = curr_full_block.header_block
         headers: List[Tuple[int, HeaderBlock]] = []
         for height, index in sorted_heights:
             if height > curr_block.height:
                 raise ValueError("Height is not valid for tip {tip_header_hash}")
             while height < curr_block.height:
-                fetched: Optional[FullBlock] = await self.store.get_block(
-                    curr_block.header.data.prev_header_hash
-                )
-                assert fetched is not None
-                curr_block = fetched.header_block
+                curr_block = self.header_blocks.get(curr_block.prev_header_hash, None)
+                if curr_block is None:
+                    raise ValueError(f"Do not have header {height}")
             headers.append((index, curr_block))
         return [b for index, b in sorted(headers)]
 
@@ -449,6 +445,9 @@ class Blockchain:
 
         # Block is valid and connected, so it can be added to the blockchain.
         await self.store.save_block(block)
+        # Cache header in memory
+        self.header_blocks[block.header_hash] = block.header_block
+
         if await self._reconsider_heads(block, genesis):
             return ReceiveBlockResult.ADDED_TO_HEAD
         else:
@@ -497,20 +496,27 @@ class Blockchain:
 
         # 3. Check filter hash is correct TODO
 
-        # 4. Check body hash
+        # 4. Check the proof of space hash is valid
+        if (
+            block.header_block.proof_of_space.get_hash()
+            != block.header_block.header.data.proof_of_space_hash
+        ):
+            return False
+
+        # 5. Check body hash
         if block.body.get_hash() != block.header_block.header.data.body_hash:
             return False
 
-        # 5. Check extension data, if any is added
+        # 6. Check extension data, if any is added
 
-        # 6. Compute challenge of parent
+        # 7. Compute challenge of parent
         challenge_hash: bytes32
         if not genesis:
             assert prev_block
             assert prev_block.header_block.challenge
             challenge_hash = prev_block.header_block.challenge.get_hash()
 
-            # 7. Check challenge hash of prev is the same as in pos
+            # 8. Check challenge hash of prev is the same as in pos
             if challenge_hash != block.header_block.proof_of_space.challenge_hash:
                 return False
         else:
@@ -520,19 +526,19 @@ class Blockchain:
             if challenge_hash != block.header_block.proof_of_space.challenge_hash:
                 return False
 
-        # 8. Check harvester signature of header data is valid based on harvester key
+        # 9. Check harvester signature of header data is valid based on harvester key
         if not block.header_block.header.harvester_signature.verify(
             [blspy.Util.hash256(block.header_block.header.data.get_hash())],
             [block.header_block.proof_of_space.plot_pubkey],
         ):
             return False
 
-        # 9. Check proof of space based on challenge
+        # 10. Check proof of space based on challenge
         pos_quality = block.header_block.proof_of_space.verify_and_get_quality()
         if not pos_quality:
             return False
 
-        # 10. Check coinbase height = parent coinbase height + 1
+        # 11. Check coinbase height = parent coinbase height + 1
         if not genesis:
             assert prev_block
             if block.body.coinbase.height != prev_block.body.coinbase.height + 1:
@@ -541,27 +547,27 @@ class Blockchain:
             if block.body.coinbase.height != 0:
                 return False
 
-        # 11. Check coinbase amount
+        # 12. Check coinbase amount
         if (
             calculate_block_reward(block.body.coinbase.height)
             != block.body.coinbase.amount
         ):
             return False
 
-        # 12. Check coinbase signature with pool pk
+        # 13. Check coinbase signature with pool pk
         if not block.body.coinbase_signature.verify(
             [blspy.Util.hash256(bytes(block.body.coinbase))],
             [block.header_block.proof_of_space.pool_pubkey],
         ):
             return False
 
-        # TODO: 13a. check transactions
-        # TODO: 13b. Aggregate transaction results into signature
+        # TODO: 14a. check transactions
+        # TODO: 14b. Aggregate transaction results into signature
         if block.body.aggregated_signature:
-            # TODO: 14. check that aggregate signature is valid, based on pubkeys, and messages
+            # TODO: 15. check that aggregate signature is valid, based on pubkeys, and messages
             pass
-        # TODO: 15. check fees
-        # TODO: 16. check cost
+        # TODO: 16. check fees
+        # TODO: 17. check cost
         return True
 
     async def validate_block(self, block: FullBlock, genesis: bool = False) -> bool:
@@ -678,6 +684,7 @@ class Blockchain:
             fetched: Optional[FullBlock]
             if not curr_old or curr_old.height < curr_new.height:
                 self.height_to_hash[uint32(curr_new.height)] = curr_new.header_hash
+                self.header_blocks[curr_new.header_hash] = curr_new
                 if curr_new.height == 0:
                     return
                 fetched = await self.store.get_block(curr_new.prev_header_hash)
@@ -692,6 +699,7 @@ class Blockchain:
                 if curr_new.header_hash == curr_old.header_hash:
                     return
                 self.height_to_hash[uint32(curr_new.height)] = curr_new.header_hash
+                self.header_blocks[curr_new.header_hash] = curr_new
                 fetched_new: Optional[FullBlock] = await self.store.get_block(
                     curr_new.prev_header_hash
                 )

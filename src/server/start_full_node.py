@@ -7,8 +7,12 @@ import miniupnpc
 from src.blockchain import Blockchain
 from src.database import FullNodeStore
 from src.full_node import FullNode
+
+# from src.util.ints import uint16
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
+
+# from src.server.local_api_server import FullNodeLocalApi
 from src.types.peer_info import PeerInfo
 from src.util.network import parse_host_port
 
@@ -30,6 +34,7 @@ async def main():
     store = FullNodeStore(f"fndb_{db_id}")
 
     blockchain = Blockchain(store)
+    log.info("Initializing blockchain from disk")
     await blockchain.initialize()
 
     full_node = FullNode(store, blockchain)
@@ -37,9 +42,10 @@ async def main():
     host, port = parse_host_port(full_node)
 
     if full_node.config["enable_upnp"]:
+        log.info(f"Attempting to enable UPnP (open up port {port})")
         try:
             upnp = miniupnpc.UPnP()
-            upnp.discoverdelay = 10
+            upnp.discoverdelay = 5
             upnp.discover()
             upnp.selectigd()
             upnp.addportmapping(port, "TCP", upnp.lanaddr, port, "chia", "")

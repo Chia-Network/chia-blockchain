@@ -81,9 +81,7 @@ proofs of space during testing. The next time tests are run, this won't be neces
 Make sure to run mongo before running the tests.
 ```bash
 mongod --dbpath ./db/ &
-black src tests
-flake8 src
-mypy src tests
+black src tests && flake8 src && mypy src tests
 py.test tests -s -v
 ```
 
