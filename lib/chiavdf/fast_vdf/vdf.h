@@ -47,6 +47,7 @@ bool warn_on_corruption_in_production=false;
 
 using boost::asio::ip::tcp;
 
+const int kMaxItersAllowed = 3e8;
 
 struct akashnil_form {
     // y = ax^2 + bxy + y^2
@@ -220,8 +221,8 @@ void repeated_square(form f, const integer& D, const integer& L, WesolowskiCallb
     while (!stopped) {
         uint64 c_checkpoint_interval=checkpoint_interval;
 
-        if (weso.iterations >= 95000000) {
-            std::cout << "Stopping weso at 95000000 iterations!\n";
+        if (weso.iterations >= kMaxItersAllowed - 500000) {
+            std::cout << "Maximum possible number of iterations reached!\n";
             return ;
         }
 
@@ -614,7 +615,6 @@ Proof CreateProofOfTimeNWesolowski(integer& D, form x, int64_t num_iterations,
 
     k = 10;
     w = 2;
-    l = (num_iterations >= 10000000) ? 10 : 1;
     iterations1 = num_iterations * w / (w + 1);
 
     // NOTE(Florin): This is still suboptimal,
@@ -626,6 +626,8 @@ Proof CreateProofOfTimeNWesolowski(integer& D, form x, int64_t num_iterations,
     iterations1 = iterations1 - iterations1 % 100;
     iterations2 = num_iterations - iterations1;
 
+    l = (iterations1 >= 10000000) ? 10 : 1;
+    
     while (!stop_signal && weso.iterations < done_iterations + iterations1) {
         std::this_thread::sleep_for (std::chrono::seconds(3));
     }

@@ -31,6 +31,9 @@ class Timelord:
         self.free_servers: List[Tuple[str, str]] = list(
             zip(self.config["vdf_server_ips"], self.config["vdf_server_ports"])
         )
+        self.ips_estimate = {k: v for k, v in list(
+            zip(self.config["servers_ips_estimate"]["ip"], self.config["servers_ips_estimate"]["ips"]))
+        }
         self.lock: Lock = Lock()
         self.server_count: int = len(self.free_servers)
         self.active_discriminants: Dict[bytes32, Tuple[StreamWriter, uint64, str]] = {}
@@ -93,11 +96,21 @@ class Timelord:
                 k: time.time() - self.active_discriminants_start_time[k]
                 for k, _ in low_weights.items()
             }
+
+            server_ip = [v[2] for _, v in low_weights.items()]
+            # ips maps an IP to the expected iterations per second of it.
+            ips = {}
+            for ip in server_ip:
+                if ip in self.avg_ips:
+                    current_ips, _ = self.avg_ips[ip]
+                    ips[ip] = current_ips
+                else:
+                    ips[ip] = self.ips_estimate[ip]
+
             expected_finish = {
                 k: max(
                     0,
-                    (best_iter[k] - time_taken[k] * self.avg_ips[v[2]][0])
-                    / self.avg_ips[v[2]][0],
+                    (best_iter[k] - time_taken[k] * ips[v[2]]) / ips[v[2]]
                 )
                 for k, v in low_weights.items()
             }
