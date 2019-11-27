@@ -399,4 +399,4 @@ class BlockTools:
 # This might take a while, using the python VDF implementation.
 # Run by doing python -m tests.block_tools
 # bt = BlockTools()
-# print(bytes(bt.create_genesis_block({}, bytes([1]*32), b'0')))
+# print(bytes(bt.create_genesis_block({}, bytes([1] * 32), b"0")))

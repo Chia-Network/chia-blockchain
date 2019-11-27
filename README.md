@@ -10,13 +10,12 @@ sh install.sh
 # Run mongo database
 mongod --fork --dbpath ./db/ --logpath mongod.log
 
-# Start virtual environemnt
-python3 -m venv .venv
 . .venv/bin/activate
 ```
-# Install on MacOS
+### Install on MacOS
 Make sure [brew](https://brew.sh/) is available before starting the setup.
-```brew tap mongodb/brew
+```bash
+brew tap mongodb/brew
 brew install cmake boost gmp mpir mpfr mongodb-community@4.2
 
 git clone https://github.com/Chia-Network/chia-blockchain.git && cd chia-blockchain
@@ -28,8 +27,6 @@ sh install.sh
 # Run mongo database
 mongod --fork --dbpath ./db/ --logpath mongod.log
 
-# Start virtual environemnt
-python3 -m venv .venv
 . .venv/bin/activate
 ```
 

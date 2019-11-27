@@ -31,8 +31,14 @@ class Timelord:
         self.free_servers: List[Tuple[str, str]] = list(
             zip(self.config["vdf_server_ips"], self.config["vdf_server_ports"])
         )
-        self.ips_estimate = {k: v for k, v in list(
-            zip(self.config["servers_ips_estimate"]["ip"], self.config["servers_ips_estimate"]["ips"]))
+        self.ips_estimate = {
+            k: v
+            for k, v in list(
+                zip(
+                    self.config["servers_ips_estimate"]["ip"],
+                    self.config["servers_ips_estimate"]["ips"],
+                )
+            )
         }
         self.lock: Lock = Lock()
         self.server_count: int = len(self.free_servers)
@@ -108,10 +114,7 @@ class Timelord:
                     ips[ip] = self.ips_estimate[ip]
 
             expected_finish = {
-                k: max(
-                    0,
-                    (best_iter[k] - time_taken[k] * ips[v[2]]) / ips[v[2]]
-                )
+                k: max(0, (best_iter[k] - time_taken[k] * ips[v[2]]) / ips[v[2]])
                 for k, v in low_weights.items()
             }
             worst_finish = max([v for v in expected_finish.values()])
