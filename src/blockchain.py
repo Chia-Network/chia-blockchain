@@ -444,7 +444,7 @@ class Blockchain:
             return ReceiveBlockResult.INVALID_BLOCK
 
         # Block is valid and connected, so it can be added to the blockchain.
-        await self.store.save_block(block)
+        await self.store.add_block(block)
         # Cache header in memory
         self.header_blocks[block.header_hash] = block.header_block
 

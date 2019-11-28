@@ -1,5 +1,4 @@
 import asyncio
-import uvloop
 import concurrent
 import logging
 import os
@@ -47,7 +46,6 @@ class FullNode:
     blockchain: Blockchain
 
     def __init__(self, store: FullNodeStore, blockchain: Blockchain):
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
         self.config = yaml.safe_load(open(config_filename, "r"))["full_node"]
         self.store = store
@@ -987,7 +985,7 @@ class FullNode:
                             f"Have already requested block {block.block.prev_header_hash}"
                         )
                         return
-                    await self.store.save_disconnected_block(block.block)
+                    await self.store.add_disconnected_block(block.block)
                 yield OutboundMessage(NodeType.FULL_NODE, msg, Delivery.RANDOM)
             return
         elif added == ReceiveBlockResult.ADDED_TO_HEAD:
@@ -1083,10 +1081,12 @@ class FullNode:
             assert False
 
         async with self.store.lock:
-            pass
-            # TODO: Remove all unfinished old blocks
-            # TODO: Remove all candidate old blocks
-            # TODO: Remove all disconnected old blocks
+            # Removes all temporary data for old blocks
+            lowest_tip = min(tip.height for tip in self.blockchain.get_current_tips())
+            clear_height = uint32(max(0, lowest_tip - 30))
+            await self.store.clear_candidate_blocks_below(clear_height)
+            await self.store.clear_unfinished_blocks_below(clear_height)
+            await self.store.clear_disconnected_blocks_below(clear_height)
 
     @api_request
     async def request_block(

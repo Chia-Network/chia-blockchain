@@ -3,16 +3,13 @@ import logging
 import signal
 import sys
 import miniupnpc
+import uvloop
 
 from src.blockchain import Blockchain
 from src.database import FullNodeStore
 from src.full_node import FullNode
-
-# from src.util.ints import uint16
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
-
-# from src.server.local_api_server import FullNodeLocalApi
 from src.types.peer_info import PeerInfo
 from src.util.network import parse_host_port
 
@@ -121,5 +118,5 @@ async def main():
     await asyncio.get_running_loop().shutdown_asyncgens()
 
 
-# asyncio.run(main())
-FullNodeStore.loop.run_until_complete(main())
+uvloop.install()
+asyncio.run(main())

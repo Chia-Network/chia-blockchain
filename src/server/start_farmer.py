@@ -2,6 +2,7 @@ import asyncio
 import logging
 import signal
 from typing import List
+import uvloop
 
 from blspy import PrivateKey
 
@@ -55,4 +56,5 @@ async def main():
     await server.await_closed()
 
 
+uvloop.install()
 asyncio.run(main())
