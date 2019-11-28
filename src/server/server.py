@@ -3,6 +3,7 @@ import logging
 import random
 import time
 import os
+import concurrent
 from yaml import safe_load
 from typing import Any, AsyncGenerator, List, Optional, Tuple
 from aiter import aiter_forker, iter_to_aiter, join_aiters, map_aiter, push_aiter
@@ -379,9 +380,9 @@ class ChiaServer:
             log.warning(
                 f"Connection error by peer {connection.get_peername()}, closing connection."
             )
-        except (TimeoutError, asyncio.TimeoutError) as e:
+        except (concurrent.futures._base.CancelledError, OSError, TimeoutError, asyncio.TimeoutError) as e:
             log.warning(
-                f"Timeout error {e} in connection with peer {connection.get_peername()}, closing connection."
+                f"Timeout/OSError {e} in connection with peer {connection.get_peername()}, closing connection."
             )
         finally:
             # Removes the connection from the global list, so we don't try to send things to it

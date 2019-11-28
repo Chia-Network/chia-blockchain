@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import collections
 from typing import Callable, List, Optional
 
 import asyncssh
@@ -164,6 +165,7 @@ class FullNodeUI:
         self.ips_label = TextArea(focusable=False, height=1)
         self.total_iters_label = TextArea(focusable=False, height=2)
         self.con_rows = []
+        self.displayed_cons = []
         self.connections_msg = Label(text=f"Connections")
         self.connection_rows_vsplit = Window()
         self.add_connection_msg = Label(text=f"Add a connection ip:port")
@@ -227,16 +229,15 @@ class FullNodeUI:
         return inner
 
     async def search_block(self, text: str):
-        async with self.store.lock:
-            try:
-                block = await self.store.get_block(bytes.fromhex(text))
-            except ValueError:
-                self.error_msg.text = "Enter a valid hex block hash"
-                return
-            if block is not None:
-                self.change_route_handler(f"block/{text}")()
-            else:
-                self.error_msg.text = "Block not found"
+        try:
+            block = await self.store.get_block(bytes.fromhex(text))
+        except ValueError:
+            self.error_msg.text = "Enter a valid hex block hash"
+            return
+        if block is not None:
+            self.change_route_handler(f"block/{text}")()
+        else:
+            self.error_msg.text = "Block not found"
 
     async def add_connection(self, text: str):
         if ":" not in text:
@@ -259,35 +260,27 @@ class FullNodeUI:
             if max_block not in added_blocks:
                 added_blocks.append(max_block)
             heads.remove(max_block)
-            async with self.store.lock:
-                prev: Optional[FullBlock] = await self.store.get_block(
-                    max_block.prev_header_hash
-                )
-                if prev is not None:
-                    heads.append(prev.header_block)
+            prev: Optional[HeaderBlock] = self.blockchain.header_blocks.get(max_block.prev_header_hash, None)
+            if prev is not None:
+                heads.append(prev)
         return added_blocks
 
     async def draw_home(self):
-        con_strs = []
-        for con in self.connections.get_connections():
-            con_str = f"{NodeType(con.connection_type).name} {con.get_peername()} {con.node_id.hex()[:10]}..."
-            con_strs.append(con_str)
-            labels = [row.children[0].content.text() for row in self.con_rows]
-            if con_str not in labels:
+        connections = [c for c in self.connections.get_connections()]
+        if collections.Counter(connections) != collections.Counter(self.displayed_cons):
+            new_con_rows = []
+            for con in connections:
+                con_str = f"{NodeType(con.connection_type).name} {con.get_peername()} {con.node_id.hex()[:10]}..."
                 con_label = Label(text=con_str)
 
                 def disconnect():
-                    con.close()
+                    self.connections.close(con)
                     self.layout.focus(self.quit_button)
 
                 disconnect_button = Button("Disconnect", handler=disconnect)
                 row = VSplit([con_label, disconnect_button])
-                self.con_rows.append(row)
-
-        new_con_rows = [
-            row for row in self.con_rows if row.children[0].content.text() in con_strs
-        ]
-        if new_con_rows != self.con_rows:
+                new_con_rows.append(row)
+            self.displayed_cons = connections
             self.con_rows = new_con_rows
             if len(self.con_rows) > 0:
                 self.layout.focus(self.con_rows[0])
@@ -299,31 +292,30 @@ class FullNodeUI:
         else:
             new_con_rows = Window(width=D(), height=0)
 
-        async with self.store.lock:
-            if await self.store.get_sync_mode():
-                max_height = -1
-                for _, block in await self.store.get_potential_tips_tuples():
-                    if block.height > max_height:
-                        max_height = block.height
+        if await self.store.get_sync_mode():
+            max_height = -1
+            for _, block in await self.store.get_potential_tips_tuples():
+                if block.height > max_height:
+                    max_height = block.height
 
-                if max_height >= 0:
-                    self.syncing.text = f"Syncing up to {max_height}"
-                else:
-                    self.syncing.text = f"Syncing"
+            if max_height >= 0:
+                self.syncing.text = f"Syncing up to {max_height}"
             else:
-                self.syncing.text = "Not syncing"
-            heads: List[HeaderBlock] = self.blockchain.get_current_tips()
-            lca_block: FullBlock = self.blockchain.lca_block
-            if lca_block.height > 0:
-                difficulty = await self.blockchain.get_next_difficulty(
-                    lca_block.prev_header_hash
-                )
-                ips = await self.blockchain.get_next_ips(lca_block.prev_header_hash)
-            else:
-                difficulty = await self.blockchain.get_next_difficulty(
-                    lca_block.header_hash
-                )
-                ips = await self.blockchain.get_next_ips(lca_block.header_hash)
+                self.syncing.text = f"Syncing"
+        else:
+            self.syncing.text = "Not syncing"
+        heads: List[HeaderBlock] = self.blockchain.get_current_tips()
+        lca_block: FullBlock = self.blockchain.lca_block
+        if lca_block.height > 0:
+            difficulty = await self.blockchain.get_next_difficulty(
+                lca_block.prev_header_hash
+            )
+            ips = await self.blockchain.get_next_ips(lca_block.prev_header_hash)
+        else:
+            difficulty = await self.blockchain.get_next_difficulty(
+                lca_block.header_hash
+            )
+            ips = await self.blockchain.get_next_ips(lca_block.header_hash)
         total_iters = lca_block.header_block.challenge.total_iters
         latest_blocks: List[HeaderBlock] = await self.get_latest_blocks(heads)
         if len(latest_blocks) > 0:
@@ -414,7 +406,7 @@ class FullNodeUI:
 
                 if self.app and not self.app.invalidated:
                     self.app.invalidate()
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.25)
         except Exception as e:
             log.warn(f"Exception in UI {type(e)}: {e}")
             raise e
