@@ -1,7 +1,6 @@
 python3 -m venv .venv
 . .venv/bin/activate
 pip install wheel # For building blspy
-pip install uvloop # For faster asyncio
 pip install -e .
 pip install -r requirements.txt
 

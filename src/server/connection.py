@@ -34,7 +34,6 @@ class Connection:
         self.reader = sr
         self.writer = sw
         socket = self.writer.get_extra_info("socket")
-        #socket.settimeout(None)
         self.local_host = socket.getsockname()[0]
         self.local_port = server_port
         self.peer_host = self.writer.get_extra_info("peername")[0]
@@ -61,14 +60,9 @@ class Connection:
     async def send(self, message: Message):
         encoded: bytes = cbor.dumps({"f": message.function, "d": message.data})
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
-        try:
-            self.writer.write(len(encoded).to_bytes(LENGTH_BYTES, "big") + encoded)
-            await self.writer.drain()
-            self.bytes_written += LENGTH_BYTES + len(encoded)
-        except RuntimeError as e:
-            log.error(
-                        f"Cannot write, runtime error. Error {e}."
-                    )
+        self.writer.write(len(encoded).to_bytes(LENGTH_BYTES, "big") + encoded)
+        await self.writer.drain()
+        self.bytes_written += LENGTH_BYTES + len(encoded)
 
     async def read_one_message(self) -> Message:
         size = await self.reader.readexactly(LENGTH_BYTES)

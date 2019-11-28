@@ -1,5 +1,4 @@
 import asyncio
-import uvloop
 import logging
 from abc import ABC
 from typing import AsyncGenerator, Dict, List, Optional, Tuple
@@ -21,17 +20,13 @@ log = logging.getLogger(__name__)
 
 
 class Database(ABC):
-    # All databases must subclass this so that there's one client
-    # Ensure mongod service is running
-    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    loop = asyncio.get_event_loop()
-    client = motor_asyncio.AsyncIOMotorClient(
-        "mongodb://localhost:27017/", io_loop=loop
-    )
-
     def __init__(self, db_name):
+        loop = asyncio.get_event_loop()
+        client = motor_asyncio.AsyncIOMotorClient(
+            "mongodb://localhost:27017/", io_loop=loop
+        )
         log.info("Connecting to mongodb database")
-        self.db = Database.client.get_database(
+        self.db = client.get_database(
             db_name,
             codec_options=CodecOptions(
                 type_registry=TypeRegistry(
@@ -51,28 +46,16 @@ class FullNodeStore(Database):
         # Stored on database
         # All full blocks which have been added to the blockchain. Header_hash -> block
         self.full_blocks = self.db.get_collection("full_blocks")
-        # Blocks received from other peers during sync
+        # Blocks received from other peers during sync, cleared after sync
         self.potential_blocks = self.db.get_collection("potential_blocks")
-        # Blocks which we have created, but don't have proof of space yet
-        self.candidate_blocks = self.db.get_collection("candidate_blocks")
-        # Blocks which are not finalized yet (no proof of time)
-        self.unfinished_blocks = self.db.get_collection("unfinished_blocks")
-        # Blocks which we have received but our blockchain dose not reach
-        self.disconnected_blocks = self.db.get_collection("unfinished_blocks")
 
         # Stored in memory
         # Whether or not we are syncing
         self.sync_mode = False
         # Potential new tips that we have received from others.
         self.potential_tips: Dict[bytes32, FullBlock] = {}
-
         # Header blocks received from other peers during sync
         self.potential_headers: Dict[uint32, HeaderBlock] = {}
-        # Our best unfinished block
-        self.unfinished_blocks_leader: Tuple[uint32, uint64] = (
-            uint32(0),
-            uint64(9999999999),
-        )
         # Event to signal when headers are received at each height
         self.potential_headers_received: Dict[uint32, asyncio.Event] = {}
         # Event to signal when blocks are received at each height
@@ -81,6 +64,19 @@ class FullNodeStore(Database):
         self.potential_future_blocks: List[FullBlock] = []
         # Current estimate of the speed of the network timelords
         self.proof_of_time_estimate_ips: uint64 = uint64(10000)
+        # Our best unfinished block
+        self.unfinished_blocks_leader: Tuple[uint32, uint64] = (
+            uint32(0),
+            uint64((1 << 64) - 1),
+        )
+        # Blocks which we have created, but don't have proof of space yet, old ones are cleared
+        self.candidate_blocks: Dict[
+            bytes32, Tuple[Body, HeaderData, ProofOfSpace, uint32]
+        ] = {}
+        # Blocks which are not finalized yet (no proof of time), old ones are cleared
+        self.unfinished_blocks: Dict[Tuple[bytes32, uint64], FullBlock] = {}
+        # Blocks which we have received but our blockchain dose not reach, old ones are cleared
+        self.disconnected_blocks: Dict[bytes32, FullBlock] = {}
 
         # Lock
         self.lock = asyncio.Lock()  # external
@@ -88,11 +84,8 @@ class FullNodeStore(Database):
     async def _clear_database(self):
         await self.full_blocks.drop()
         await self.potential_blocks.drop()
-        await self.candidate_blocks.drop()
-        await self.unfinished_blocks.drop()
-        await self.disconnected_blocks.drop()
 
-    async def save_block(self, block: FullBlock) -> None:
+    async def add_block(self, block: FullBlock) -> None:
         header_hash = block.header_hash
         await self.full_blocks.find_one_and_update(
             {"_id": header_hash},
@@ -110,21 +103,18 @@ class FullNodeStore(Database):
         async for query in self.full_blocks.find({}):
             yield FullBlock.from_bytes(query["block"])
 
-    async def save_disconnected_block(self, block: FullBlock) -> None:
-        prev_header_hash = block.prev_header_hash
-        await self.disconnected_blocks.find_one_and_update(
-            {"_id": prev_header_hash},
-            {"$set": {"_id": prev_header_hash, "block": block}},
-            upsert=True,
-        )
+    async def add_disconnected_block(self, block: FullBlock) -> None:
+        self.disconnected_blocks[block.prev_header_hash] = block
 
     async def get_disconnected_block(
         self, prev_header_hash: bytes32
     ) -> Optional[FullBlock]:
-        query = await self.disconnected_blocks.find_one({"_id": prev_header_hash})
-        if query is not None:
-            return FullBlock.from_bytes(query["block"])
-        return None
+        return self.disconnected_blocks.get(prev_header_hash, None)
+
+    async def clear_disconnected_blocks_below(self, height: uint32) -> None:
+        for key in list(self.disconnected_blocks.keys()):
+            if self.disconnected_blocks[key].height < height:
+                del self.disconnected_blocks[key]
 
     async def set_sync_mode(self, sync_mode: bool) -> None:
         self.sync_mode = sync_mode
@@ -186,46 +176,38 @@ class FullNodeStore(Database):
     async def add_candidate_block(
         self, pos_hash: bytes32, body: Body, header: HeaderData, pos: ProofOfSpace,
     ):
-        await self.candidate_blocks.find_one_and_update(
-            {"_id": pos_hash},
-            {"$set": {"_id": pos_hash, "body": body, "header": header, "pos": pos}},
-            upsert=True,
-        )
+        self.candidate_blocks[pos_hash] = (body, header, pos, body.coinbase.height)
 
     async def get_candidate_block(
         self, pos_hash: bytes32
     ) -> Optional[Tuple[Body, HeaderData, ProofOfSpace]]:
-        query = await self.candidate_blocks.find_one({"_id": pos_hash})
-        if not query:
+        res = self.candidate_blocks.get(pos_hash, None)
+        if res is None:
             return None
-        return (
-            Body.from_bytes(query["body"]),
-            HeaderData.from_bytes(query["header"]),
-            ProofOfSpace.from_bytes(query["pos"]),
-        )
+        return (res[0], res[1], res[2])
+
+    async def clear_candidate_blocks_below(self, height: uint32) -> None:
+        for key in list(self.candidate_blocks.keys()):
+            if self.candidate_blocks[key][3] < height:
+                del self.candidate_blocks[key]
 
     async def add_unfinished_block(
         self, key: Tuple[bytes32, uint64], block: FullBlock
     ) -> None:
-        code = ((int.from_bytes(key[0], "big") << 64) + key[1]).to_bytes(40, "big")
-        await self.unfinished_blocks.find_one_and_update(
-            {"_id": code}, {"$set": {"_id": code, "block": block}}, upsert=True
-        )
+        self.unfinished_blocks[key] = block
 
     async def get_unfinished_block(
         self, key: Tuple[bytes32, uint64]
     ) -> Optional[FullBlock]:
-        code = ((int.from_bytes(key[0], "big") << 64) + key[1]).to_bytes(40, "big")
-        query = await self.unfinished_blocks.find_one({"_id": code})
-        return FullBlock.from_bytes(query["block"]) if query else None
+        return self.unfinished_blocks.get(key, None)
 
     async def get_unfinished_blocks(self) -> Dict[Tuple[bytes32, uint64], FullBlock]:
-        d = {}
-        async for document in self.unfinished_blocks.find({}):
-            challenge_hash = document["_id"][:32]
-            iters = uint64(int.from_bytes(document["_id"][32:], byteorder="big"))
-            d[(challenge_hash, iters)] = FullBlock.from_bytes(document["block"])
-        return d
+        return self.unfinished_blocks.copy()
+
+    async def clear_unfinished_blocks_below(self, height: uint32) -> None:
+        for key in list(self.unfinished_blocks.keys()):
+            if self.unfinished_blocks[key].height < height:
+                del self.unfinished_blocks[key]
 
     def set_unfinished_block_leader(self, key: Tuple[bytes32, uint64]) -> None:
         self.unfinished_blocks_leader = key
