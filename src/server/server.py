@@ -243,6 +243,7 @@ class ChiaServer:
                     log.error(
                         f"Cannot write to {connection}, already closed. Error {e}."
                     )
+                    self.global_connections.close(connection, True)
 
         # We will return a task for this, so user of start_chia_server or start_chia_client can wait until
         # the server is closed.
