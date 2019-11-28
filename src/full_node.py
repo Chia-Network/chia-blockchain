@@ -288,7 +288,9 @@ class FullNode:
                         # If we are missing header blocks in this batch, and we haven't made a request in a while,
                         # Make a request for this batch. Also, if we have never requested this batch, make
                         # the request
-                        highest_height_requested = batch_end - 1
+                        if batch_end - 1 > highest_height_requested:
+                            highest_height_requested = batch_end - 1
+
                         request_made = True
                         request = peer_protocol.RequestHeaderBlocks(
                             tip_block.header_block.header.get_hash(),
@@ -390,7 +392,8 @@ class FullNode:
                         log.info(
                             f"Requesting sync blocks {[i for i in range(batch_start, batch_end)]}"
                         )
-                        highest_height_requested = batch_end - 1
+                        if batch_end - 1 > highest_height_requested:
+                            highest_height_requested = batch_end - 1
                         request_made = True
                         request_sync = peer_protocol.RequestSyncBlocks(
                             tip_block.header_block.header.header_hash,
@@ -934,7 +937,7 @@ class FullNode:
         elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
             log.warning(f"Disconnected block {header_hash}")
             async with self.store.lock:
-                tip_height = max(
+                tip_height = min(
                     [head.height for head in self.blockchain.get_current_tips()]
                 )
 
@@ -964,10 +967,9 @@ class FullNode:
                     async for msg in self._finish_sync():
                         yield msg
 
-            elif block.block.height > tip_height + 1:
+            elif block.block.height >= tip_height - 3:
                 log.info(
-                    f"We are a few blocks behind, our height is {tip_height} and block is at "
-                    f"{block.block.height} so we will request the previous block."
+                    f"We have received a disconnected block at height {block.block.height}, current tip is {tip_height}"
                 )
                 msg = Message(
                     "request_block",
@@ -985,7 +987,7 @@ class FullNode:
                             f"Have already requested block {block.block.prev_header_hash}"
                         )
                         return
-                    await self.store.save_disconnected_block(block.block)
+                    await self.store.add_disconnected_block(block.block)
                 yield OutboundMessage(NodeType.FULL_NODE, msg, Delivery.RANDOM)
             return
         elif added == ReceiveBlockResult.ADDED_TO_HEAD:
@@ -1081,10 +1083,12 @@ class FullNode:
             assert False
 
         async with self.store.lock:
-            pass
-            # TODO: Remove all unfinished old blocks
-            # TODO: Remove all candidate old blocks
-            # TODO: Remove all disconnected old blocks
+            # Removes all temporary data for old blocks
+            lowest_tip = min(tip.height for tip in self.blockchain.get_current_tips())
+            clear_height = uint32(max(0, lowest_tip - 30))
+            await self.store.clear_candidate_blocks_below(clear_height)
+            await self.store.clear_unfinished_blocks_below(clear_height)
+            await self.store.clear_disconnected_blocks_below(clear_height)
 
     @api_request
     async def request_block(

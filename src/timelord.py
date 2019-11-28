@@ -198,8 +198,8 @@ class Timelord:
         for _ in range(10):
             try:
                 reader, writer = await asyncio.open_connection(ip, port)
-                socket = writer.get_extra_info("socket")
-                socket.settimeout(None)
+                # socket = writer.get_extra_info("socket")
+                # socket.settimeout(None)
                 break
             except Exception as e:
                 e_to_str = str(e)
@@ -404,19 +404,15 @@ class Timelord:
                 writer, _, _ = self.active_discriminants[
                     proof_of_space_info.challenge_hash
                 ]
-                writer.write(
-                    (
-                        (
-                            str(len(str(proof_of_space_info.iterations_needed)))
-                            + str(proof_of_space_info.iterations_needed)
-                        ).encode()
-                    )
-                )
-                await writer.drain()
             elif proof_of_space_info.challenge_hash in self.done_discriminants:
                 return
             if proof_of_space_info.challenge_hash not in self.pending_iters:
                 self.pending_iters[proof_of_space_info.challenge_hash] = []
-            self.pending_iters[proof_of_space_info.challenge_hash].append(
+
+            if (
                 proof_of_space_info.iterations_needed
-            )
+                not in self.pending_iters[proof_of_space_info.challenge_hash]
+            ):
+                self.pending_iters[proof_of_space_info.challenge_hash].append(
+                    proof_of_space_info.iterations_needed
+                )

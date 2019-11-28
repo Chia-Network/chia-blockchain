@@ -14,3 +14,6 @@ if [  -f flint2/configure ]; then
 fi
 
 cd lib/chiavdf/fast_vdf && sh install.sh
+echo "\nChia blockchain install.sh complete."
+echo "For assistance join us on Keybase in the #testnet chat channel"
+echo "https://keybase.io/team/chia_network.public"

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import signal
+import uvloop
 
 from src.introducer import Introducer
 from src.server.outbound_message import NodeType
@@ -30,4 +31,5 @@ async def main():
     await server.await_closed()
 
 
+uvloop.install()
 asyncio.run(main())
