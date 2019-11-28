@@ -41,7 +41,7 @@ To run a full node on port 8002, and connect to the testnet, run the following c
 This wil also start an ssh server in port 8222 for the UI, which you can connect to
 to see the state of the node.
 ```bash
-python -m src.server.start_full_node "127.0.0.1" 8002 -id 1 -u 8222 &
+python -m src.server.start_full_node "127.0.0.1" 8444 -id 1 -u 8222 &
 ssh -p 8222 localhost
 ```
 
@@ -59,14 +59,16 @@ sh ./scripts/run_farming.sh
 Timelords execute sequential verifiable delay functions (proofs of time), that get added to
 blocks to make them valid. This requires fast CPUs and a lot of memory.
 ```bash
-sh ./scripts/run_farming.sh
+sh ./scripts/run_timelord.sh
 ```
 
 ### Tips
 When running the servers on Mac OS, allow the application to accept incoming connections.
-Try running one of the full nodes a few minutes after the other ones, to test initial sync.
-Configuration of peers can be changed in config/config.yaml.
-You can also run the simulation, which runs all servers and multiple full nodes, at once.
+
+UPnP is enabled by default, to open the port for incoming connections. If this causes issues, you can disable it in the configuration. Some routers may require port forwarding, or enabling UPnP in the router configuration.
+
+You can also run the simulation, which runs all servers and multiple full nodes, locally, at once.
+If you want to run the simulation, change the introducer ip in ./config/config.yaml so that the full node points to the local introducer (192.0.0.1:8445).
 
 ```bash
 sh ./scripts/run_all_simulation.sh
