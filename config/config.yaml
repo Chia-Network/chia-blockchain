@@ -22,9 +22,9 @@ farmer:
     host: 127.0.0.1
     port: 8448
   # To send a share to a pool, a block must be faster than this, in seconds
-  pool_share_threshold: 1500
+  pool_share_threshold: 2500
   # To send to the full node, a block must be faster than this, in seconds
-  propagate_threshold: 1000
+  propagate_threshold: 2000
 
 timelord:
   # The timelord server (if run) will run on this host and port

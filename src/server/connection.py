@@ -108,8 +108,8 @@ class PeerConnections:
     def close(self, connection: Connection, keep_peer: bool = False):
         if connection in self._all_connections:
             info = connection.get_peer_info()
-            connection.close()
             self._all_connections.remove(connection)
+            connection.close()
             if not keep_peer:
                 self.peers.remove(info)
 
