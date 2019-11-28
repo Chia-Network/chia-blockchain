@@ -320,8 +320,7 @@ class ChiaServer:
             connection.connection_type = inbound_handshake.node_type
 
             if self.global_connections.have_connection(connection):
-                log.warning(f"Duplicate connection to {connection}")
-                return
+                raise InvalidHandshake(f"Duplicate connection to {connection}")
 
             self.global_connections.add(connection)
 
