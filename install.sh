@@ -14,3 +14,4 @@ if [  -f flint2/configure ]; then
 fi
 
 cd lib/chiavdf/fast_vdf && sh install.sh
+echo "Chia blockchain install.sh complete."
