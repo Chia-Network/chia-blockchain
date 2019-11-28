@@ -22,9 +22,9 @@ farmer:
     host: 127.0.0.1
     port: 8448
   # To send a share to a pool, a block must be faster than this, in seconds
-  pool_share_threshold: 1500
+  pool_share_threshold: 2500
   # To send to the full node, a block must be faster than this, in seconds
-  propagate_threshold: 1000
+  propagate_threshold: 2000
 
 timelord:
   # The timelord server (if run) will run on this host and port
@@ -59,12 +59,12 @@ full_node:
   num_sync_batches: 10
 
   # If node is more than these blocks behind, will do a sync
-  sync_blocks_behind_threshold: 10
+  sync_blocks_behind_threshold: 20
 
   # This SSH key is for the ui SSH server
   ssh_filename: config/ssh_host_key
   # How often to connect to introducer if we need to learn more peers
-  introducer_connect_interval: 60
+  introducer_connect_interval: 120
   # Continue trying to connect to more peers until this number of connections
   target_peer_count: 10
 

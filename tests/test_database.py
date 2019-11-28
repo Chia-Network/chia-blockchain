@@ -1,10 +1,28 @@
 import asyncio
 
 import pytest
+from typing import Any, Dict
+from tests.block_tools import BlockTools
 from src.util.ints import uint32, uint64
 from src.consensus.constants import constants
 from src.database import FullNodeStore
 from src.types.full_block import FullBlock
+
+bt = BlockTools()
+
+test_constants: Dict[str, Any] = {
+    "DIFFICULTY_STARTING": 5,
+    "DISCRIMINANT_SIZE_BITS": 16,
+    "BLOCK_TIME_TARGET": 10,
+    "MIN_BLOCK_TIME": 2,
+    "DIFFICULTY_FACTOR": 3,
+    "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
+    "DIFFICULTY_WARP_FACTOR": 4,  # DELAY divides EPOCH in order to warp efficiently.
+    "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
+}
+test_constants["GENESIS_BLOCK"] = bytes(
+    bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
+)
 
 
 @pytest.fixture(scope="module")
@@ -16,13 +34,16 @@ def event_loop():
 class TestDatabase:
     @pytest.mark.asyncio
     async def test_basic_database(self):
+        blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
+
         db = FullNodeStore("fndb_test")
         await db._clear_database()
         genesis = FullBlock.from_bytes(constants["GENESIS_BLOCK"])
 
         # Save/get block
-        await db.save_block(genesis)
-        assert genesis == await db.get_block(genesis.header_hash)
+        for block in blocks:
+            await db.add_block(block)
+            assert block == await db.get_block(block.header_hash)
 
         # Save/get sync
         for sync_mode in (False, True):
@@ -33,8 +54,8 @@ class TestDatabase:
         await db.clear_sync_info()
 
         # add/get potential tip, get potential tips num
-        await db.add_potential_tip(genesis)
-        assert genesis == await db.get_potential_tip(genesis.header_hash)
+        await db.add_potential_tip(blocks[6])
+        assert blocks[6] == await db.get_potential_tip(blocks[6].header_hash)
 
         # add/get potential trunk
         header = genesis.header_block
@@ -48,21 +69,37 @@ class TestDatabase:
         # Add/get candidate block
         assert await db.get_candidate_block(0) is None
         partial = (
-            genesis.body,
-            genesis.header_block.header.data,
-            genesis.header_block.proof_of_space,
+            blocks[5].body,
+            blocks[5].header_block.header.data,
+            blocks[5].header_block.proof_of_space,
         )
-        await db.add_candidate_block(genesis.header_hash, *partial)
-        assert await db.get_candidate_block(genesis.header_hash) == partial
+        await db.add_candidate_block(blocks[5].header_hash, *partial)
+        assert await db.get_candidate_block(blocks[5].header_hash) == partial
+        await db.clear_candidate_blocks_below(uint32(8))
+        assert await db.get_candidate_block(blocks[5].header_hash) is None
 
         # Add/get unfinished block
-        key = (genesis.header_hash, uint64(1000))
-        assert await db.get_unfinished_block(key) is None
-        await db.add_unfinished_block(key, genesis)
-        assert await db.get_unfinished_block(key) == genesis
-        assert len(await db.get_unfinished_blocks()) == 1
+        i = 1
+        for block in blocks:
+            key = (block.header_hash, uint64(1000))
+            assert await db.get_unfinished_block(key) is None
+            await db.add_unfinished_block(key, block)
+            assert await db.get_unfinished_block(key) == block
+            assert len(await db.get_unfinished_blocks()) == i
+            i += 1
+        await db.clear_unfinished_blocks_below(uint32(5))
+        assert len(await db.get_unfinished_blocks()) == 5
 
         # Set/get unf block leader
-        assert db.get_unfinished_block_leader() == (0, 9999999999)
+        assert db.get_unfinished_block_leader() == (0, (1 << 64) - 1)
         db.set_unfinished_block_leader(key)
         assert db.get_unfinished_block_leader() == key
+
+        assert await db.get_disconnected_block(blocks[0].prev_header_hash) is None
+        # Disconnected blocks
+        for block in blocks:
+            await db.add_disconnected_block(block)
+            await db.get_disconnected_block(block.prev_header_hash) == block
+
+        await db.clear_disconnected_blocks_below(uint32(5))
+        assert await db.get_disconnected_block(blocks[4].prev_header_hash) is None

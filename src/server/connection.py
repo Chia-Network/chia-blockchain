@@ -37,7 +37,6 @@ class Connection:
         self.reader = sr
         self.writer = sw
         socket = self.writer.get_extra_info("socket")
-        socket.settimeout(None)
         self.local_host = socket.getsockname()[0]
         self.local_port = server_port
         self.peer_host = self.writer.get_extra_info("peername")[0]
@@ -109,8 +108,8 @@ class PeerConnections:
     def close(self, connection: Connection, keep_peer: bool = False):
         if connection in self._all_connections:
             info = connection.get_peer_info()
-            connection.close()
             self._all_connections.remove(connection)
+            connection.close()
             if not keep_peer:
                 self.peers.remove(info)
 
