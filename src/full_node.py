@@ -288,7 +288,9 @@ class FullNode:
                         # If we are missing header blocks in this batch, and we haven't made a request in a while,
                         # Make a request for this batch. Also, if we have never requested this batch, make
                         # the request
-                        highest_height_requested = batch_end - 1
+                        if batch_end - 1 > highest_height_requested:
+                            highest_height_requested = batch_end - 1
+
                         request_made = True
                         request = peer_protocol.RequestHeaderBlocks(
                             tip_block.header_block.header.get_hash(),
@@ -390,7 +392,8 @@ class FullNode:
                         log.info(
                             f"Requesting sync blocks {[i for i in range(batch_start, batch_end)]}"
                         )
-                        highest_height_requested = batch_end - 1
+                        if batch_end - 1 > highest_height_requested:
+                            highest_height_requested = batch_end - 1
                         request_made = True
                         request_sync = peer_protocol.RequestSyncBlocks(
                             tip_block.header_block.header.header_hash,
