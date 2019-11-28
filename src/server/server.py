@@ -65,11 +65,7 @@ class ChiaServer:
         )
         self._node_id = create_node_id()
 
-    async def start_server(
-        self,
-        host: str,
-        on_connect: OnConnectFunc = None,
-    ) -> bool:
+    async def start_server(self, host: str, on_connect: OnConnectFunc = None,) -> bool:
         """
         Launches a listening server on host and port specified, to connect to NodeType nodes. On each
         connection, the on_connect asynchronous generator will be called, and responses will be sent.
@@ -99,9 +95,7 @@ class ChiaServer:
         return True
 
     async def start_client(
-        self,
-        target_node: PeerInfo,
-        on_connect: OnConnectFunc = None,
+        self, target_node: PeerInfo, on_connect: OnConnectFunc = None,
     ) -> bool:
         """
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
@@ -141,13 +135,16 @@ class ChiaServer:
             )
             self.global_connections.peers.remove(target_node)
             return False
-        asyncio.create_task(self._add_to_srwt_aiter(iter_to_aiter([(reader, writer, on_connect)])))
+        asyncio.create_task(
+            self._add_to_srwt_aiter(iter_to_aiter([(reader, writer, on_connect)]))
+        )
         return True
 
     async def _add_to_srwt_aiter(
         self,
-        aiter: AsyncGenerator[Tuple[asyncio.StreamReader, asyncio.StreamWriter,
-                                    OnConnectFunc], None],
+        aiter: AsyncGenerator[
+            Tuple[asyncio.StreamReader, asyncio.StreamWriter, OnConnectFunc], None
+        ],
     ):
         """
         Adds all swrt from aiter into the instance variable srwt_aiter, adding them to the pipeline.
@@ -254,7 +251,7 @@ class ChiaServer:
     async def stream_reader_writer_to_connection(
         self,
         swrt: Tuple[asyncio.StreamReader, asyncio.StreamWriter, OnConnectFunc],
-        server_port: int
+        server_port: int,
     ) -> Connection:
         """
         Maps a tuple of (StreamReader, StreamWriter, on_connect) to a Connection object,
