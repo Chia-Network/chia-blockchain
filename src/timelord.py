@@ -404,19 +404,12 @@ class Timelord:
                 writer, _, _ = self.active_discriminants[
                     proof_of_space_info.challenge_hash
                 ]
-                writer.write(
-                    (
-                        (
-                            str(len(str(proof_of_space_info.iterations_needed)))
-                            + str(proof_of_space_info.iterations_needed)
-                        ).encode()
-                    )
-                )
-                await writer.drain()
             elif proof_of_space_info.challenge_hash in self.done_discriminants:
                 return
             if proof_of_space_info.challenge_hash not in self.pending_iters:
                 self.pending_iters[proof_of_space_info.challenge_hash] = []
-            self.pending_iters[proof_of_space_info.challenge_hash].append(
-                proof_of_space_info.iterations_needed
+
+            if proof_of_space_info.iterations_needed not in self.pending_iters[proof_of_space_info.challenge_hash]:
+                self.pending_iters[proof_of_space_info.challenge_hash].append(
+                    proof_of_space_info.iterations_needed
             )
