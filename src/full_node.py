@@ -937,7 +937,7 @@ class FullNode:
         elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
             log.warning(f"Disconnected block {header_hash}")
             async with self.store.lock:
-                tip_height = max(
+                tip_height = min(
                     [head.height for head in self.blockchain.get_current_tips()]
                 )
 
@@ -967,10 +967,9 @@ class FullNode:
                     async for msg in self._finish_sync():
                         yield msg
 
-            elif block.block.height > tip_height + 1:
+            elif block.block.height >= tip_height - 3:
                 log.info(
-                    f"We are a few blocks behind, our height is {tip_height} and block is at "
-                    f"{block.block.height} so we will request the previous block."
+                    f"We have received a disconnected block at height {block.block.height}, current tip is {tip_height}"
                 )
                 msg = Message(
                     "request_block",

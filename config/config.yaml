@@ -59,7 +59,7 @@ full_node:
   num_sync_batches: 10
 
   # If node is more than these blocks behind, will do a sync
-  sync_blocks_behind_threshold: 10
+  sync_blocks_behind_threshold: 20
 
   # This SSH key is for the ui SSH server
   ssh_filename: config/ssh_host_key
