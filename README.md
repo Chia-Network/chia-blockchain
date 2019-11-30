@@ -4,7 +4,8 @@ Python 3.7 is used for this project. Make sure your python version is >=3.7 by t
 ### Install on Debian/Ubuntu
 
 ```bash
-sudo apt-get install build-essential cmake libgmp libboost libflint python3-dev python3-venv --no-install-recommends mongodb-org=4.2.1
+sudo apt-get update
+sudo apt-get install build-essential cmake python3-dev python3-venv --no-install-recommends mongodb-org=4.2.1
 sh install.sh
 
 # Run mongo database
