@@ -6,7 +6,7 @@ from src.types.coinbase import CoinbaseInfo
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
-from src.util.ints import uint32, uint64
+from src.util.ints import uint64, uint32
 
 
 """
@@ -19,6 +19,7 @@ Protocol between farmer and full node.
 class ProofOfSpaceFinalized:
     challenge_hash: bytes32
     height: uint32
+    weight: uint64
     quality: bytes32
     difficulty: uint64
 
@@ -26,14 +27,8 @@ class ProofOfSpaceFinalized:
 @dataclass(frozen=True)
 @cbor_message
 class ProofOfSpaceArrived:
-    height: uint32
+    weight: uint64
     quality: bytes32
-
-
-@dataclass(frozen=True)
-@cbor_message
-class DeepReorgNotification:
-    pass
 
 
 @dataclass(frozen=True)

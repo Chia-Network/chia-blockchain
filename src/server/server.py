@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import random
-import time
 import os
 import concurrent
 from yaml import safe_load
@@ -22,11 +21,6 @@ from src.util.errors import (
 )
 from src.util.ints import uint16
 from src.util.network import create_node_id
-
-exited = False
-# Each message is prepended with LENGTH_BYTES bytes specifying the length
-TOTAL_RETRY_SECONDS: int = 10
-RETRY_INTERVAL: int = 2
 
 log = logging.getLogger(__name__)
 
@@ -108,31 +102,20 @@ class ChiaServer:
             ) and self._port == target_node.port:
                 self.global_connections.peers.remove(target_node)
                 return False
-        start_time = time.time()
-        succeeded: bool = False
-        last_error = None
-        while time.time() - start_time < TOTAL_RETRY_SECONDS and not succeeded:
-            if self._pipeline_task.done():
-                return False
-            try:
-                open_con_task = asyncio.create_task(
-                    asyncio.open_connection(target_node.host, int(target_node.port))
-                )
-                await asyncio.wait_for(open_con_task, timeout=3)
-                reader, writer = open_con_task.result()
-                succeeded = True
-            except (
-                ConnectionRefusedError,
-                TimeoutError,
-                OSError,
-                asyncio.TimeoutError,
-            ) as e:
-                last_error = e
-                open_con_task.cancel()
-                await asyncio.sleep(RETRY_INTERVAL)
-        if not succeeded:
+        if self._pipeline_task.done():
+            return False
+        try:
+            reader, writer = await asyncio.open_connection(
+                target_node.host, int(target_node.port)
+            )
+        except (
+            ConnectionRefusedError,
+            TimeoutError,
+            OSError,
+            asyncio.TimeoutError,
+        ) as e:
             log.warning(
-                f"Could not connect to {target_node}. {type(last_error)}{last_error}. Aborting and removing peer."
+                f"Could not connect to {target_node}. {type(e)}{str(e)}. Aborting and removing peer."
             )
             self.global_connections.peers.remove(target_node)
             return False

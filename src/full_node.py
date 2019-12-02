@@ -78,7 +78,7 @@ class FullNode:
                     difficulty = tip.weight
                 requests.append(
                     farmer_protocol.ProofOfSpaceFinalized(
-                        challenge_hash, height, quality, difficulty
+                        challenge_hash, height, tip.weight, quality, difficulty
                     )
                 )
             proof_of_time_rate: uint64 = await self.blockchain.get_next_ips(
@@ -178,10 +178,12 @@ class FullNode:
                 yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
 
             while not self._shut_down:
+                # The first time connecting to introducer, keep trying to connect
                 if self._num_needed_peers():
                     if not await self.server.start_client(
                         introducer_peerinfo, on_connect
                     ):
+                        await asyncio.sleep(5)
                         continue
                 await asyncio.sleep(self.config["introducer_connect_interval"])
 
@@ -983,13 +985,6 @@ class FullNode:
                 # Add the block to our potential tips list
                 await self.store.add_potential_tip(block.block)
                 return
-            # Record our minimum height, and whether we have a full set of heads
-            least_height: uint32 = min(
-                [h.height for h in self.blockchain.get_current_tips()]
-            )
-            full_heads: bool = len(self.blockchain.get_current_tips()) == constants[
-                "NUMBER_OF_HEADS"
-            ]
 
             # Tries to add the block to the blockchain
             added: ReceiveBlockResult = await self.blockchain.receive_block(block.block)
@@ -1047,9 +1042,6 @@ class FullNode:
             return
         elif added == ReceiveBlockResult.ADDED_TO_HEAD:
             # Only propagate blocks which extend the blockchain (becomes one of the heads)
-            # A deep reorg happens can be detected when we add a block to the heads, that has a worse
-            # height than the worst one (assuming we had a full set of heads).
-            deep_reorg: bool = (block.block.height < least_height) and full_heads
             ips_changed: bool = False
             async with self.store.lock:
                 log.info(
@@ -1074,13 +1066,6 @@ class FullNode:
                     Message("proof_of_time_rate", rate_update),
                     Delivery.BROADCAST,
                 )
-            if deep_reorg:
-                reorg_msg = farmer_protocol.DeepReorgNotification()
-                yield OutboundMessage(
-                    NodeType.FARMER,
-                    Message("deep_reorg", reorg_msg),
-                    Delivery.BROADCAST,
-                )
 
             assert block.block.header_block.proof_of_time
             assert block.block.header_block.challenge
@@ -1090,7 +1075,8 @@ class FullNode:
 
             farmer_request = farmer_protocol.ProofOfSpaceFinalized(
                 block.block.header_block.challenge.get_hash(),
-                block.block.header_block.challenge.height,
+                block.block.height,
+                block.block.weight,
                 pos_quality,
                 difficulty,
             )
@@ -1171,7 +1157,9 @@ class FullNode:
         # Pseudo-message to close the connection
         yield OutboundMessage(NodeType.INTRODUCER, Message("", None), Delivery.CLOSE)
 
-        unconnected = conns.get_unconnected_peers(recent_threshold=self.config["recent_peer_threshold"])
+        unconnected = conns.get_unconnected_peers(
+            recent_threshold=self.config["recent_peer_threshold"]
+        )
         to_connect = unconnected[: self._num_needed_peers()]
         if not len(to_connect):
             return

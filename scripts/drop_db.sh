@@ -1,1 +1,5 @@
 mongo fndb_1 --eval "db.dropDatabase()"
+mongo fndb_2 --eval "db.dropDatabase()"
+mongo fndb_3 --eval "db.dropDatabase()"
+mongo fndb_4 --eval "db.dropDatabase()"
+mongo fndb_5 --eval "db.dropDatabase()"

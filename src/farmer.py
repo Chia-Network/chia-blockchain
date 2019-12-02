@@ -40,12 +40,13 @@ class Farmer:
         self.harvester_responses_challenge: Dict[bytes32, bytes32] = {}
         self.harvester_responses_proofs: Dict[bytes32, ProofOfSpace] = {}
         self.harvester_responses_proof_hash_to_qual: Dict[bytes32, bytes32] = {}
-        self.challenges: Dict[uint32, List[farmer_protocol.ProofOfSpaceFinalized]] = {}
+        self.challenges: Dict[uint64, List[farmer_protocol.ProofOfSpaceFinalized]] = {}
+        self.challenge_to_weight: Dict[bytes32, uint64] = {}
         self.challenge_to_height: Dict[bytes32, uint32] = {}
         self.challenge_to_best_iters: Dict[bytes32, uint64] = {}
         self.seen_challenges: Set[bytes32] = set()
-        self.unfinished_challenges: Dict[uint32, List[bytes32]] = {}
-        self.current_height: uint32 = uint32(0)
+        self.unfinished_challenges: Dict[uint64, List[bytes32]] = {}
+        self.current_weight: uint64 = uint64(0)
         self.coinbase_rewards: Dict[uint32, Any] = {}
         self.proof_of_time_estimate_ips: uint64 = uint64(10000)
 
@@ -61,9 +62,10 @@ class Farmer:
         if challenge_response.quality in self.harvester_responses_challenge:
             log.warning(f"Have already seen quality {challenge_response.quality}")
             return
+        weight: uint64 = self.challenge_to_weight[challenge_response.challenge_hash]
         height: uint32 = self.challenge_to_height[challenge_response.challenge_hash]
         difficulty: uint64 = uint64(0)
-        for posf in self.challenges[height]:
+        for posf in self.challenges[weight]:
             if posf.challenge_hash == challenge_response.challenge_hash:
                 difficulty = posf.difficulty
         if difficulty == 0:
@@ -76,7 +78,7 @@ class Farmer:
             self.proof_of_time_estimate_ips,
             constants["MIN_BLOCK_TIME"],
         )
-        if height < 700:  # As the difficulty adjusts, don't fetch all qualities
+        if height < 1000:  # As the difficulty adjusts, don't fetch all qualities
             if challenge_response.challenge_hash not in self.challenge_to_best_iters:
                 self.challenge_to_best_iters[
                     challenge_response.challenge_hash
@@ -124,10 +126,11 @@ class Farmer:
         assert response.proof.pool_pubkey in [sk.get_public_key() for sk in pool_sks]
 
         challenge_hash: bytes32 = self.harvester_responses_challenge[response.quality]
+        challenge_weight: uint64 = self.challenge_to_weight[challenge_hash]
         challenge_height: uint32 = self.challenge_to_height[challenge_hash]
         new_proof_height: uint32 = uint32(challenge_height + 1)
         difficulty: uint64 = uint64(0)
-        for posf in self.challenges[challenge_height]:
+        for posf in self.challenges[challenge_weight]:
             if posf.challenge_hash == challenge_hash:
                 difficulty = posf.difficulty
         if difficulty == 0:
@@ -256,22 +259,22 @@ class Farmer:
     ):
         """
         Full node notifies farmer that a proof of space has been completed. It gets added to the
-        challenges list at that height, and height is updated if necessary
+        challenges list at that weight, and weight is updated if necessary
         """
         get_proofs: bool = False
         if (
-            proof_of_space_finalized.height >= self.current_height
+            proof_of_space_finalized.weight >= self.current_weight
             and proof_of_space_finalized.challenge_hash not in self.seen_challenges
         ):
-            # Only get proofs for new challenges, at a current or new height
+            # Only get proofs for new challenges, at a current or new weight
             get_proofs = True
-            if proof_of_space_finalized.height > self.current_height:
-                self.current_height = proof_of_space_finalized.height
+            if proof_of_space_finalized.weight > self.current_weight:
+                self.current_weight = proof_of_space_finalized.weight
 
             # TODO: ask the pool for this information
             coinbase: CoinbaseInfo = CoinbaseInfo(
-                uint32(self.current_height + 1),
-                calculate_block_reward(self.current_height),
+                uint32(proof_of_space_finalized.height + 1),
+                calculate_block_reward(proof_of_space_finalized.height),
                 bytes.fromhex(self.key_config["pool_target"]),
             )
 
@@ -282,21 +285,24 @@ class Farmer:
             coinbase_signature: PrependSignature = pool_sks[0].sign_prepend(
                 bytes(coinbase)
             )
-            self.coinbase_rewards[uint32(self.current_height + 1)] = (
+            self.coinbase_rewards[uint32(proof_of_space_finalized.height + 1)] = (
                 coinbase,
                 coinbase_signature,
             )
 
-            log.info(f"\tCurrent height set to {self.current_height}")
+            log.info(f"\tCurrent weight set to {self.current_weight}")
         self.seen_challenges.add(proof_of_space_finalized.challenge_hash)
-        if proof_of_space_finalized.height not in self.challenges:
-            self.challenges[proof_of_space_finalized.height] = [
+        if proof_of_space_finalized.weight not in self.challenges:
+            self.challenges[proof_of_space_finalized.weight] = [
                 proof_of_space_finalized
             ]
         else:
-            self.challenges[proof_of_space_finalized.height].append(
+            self.challenges[proof_of_space_finalized.weight].append(
                 proof_of_space_finalized
             )
+        self.challenge_to_weight[
+            proof_of_space_finalized.challenge_hash
+        ] = proof_of_space_finalized.weight
         self.challenge_to_height[
             proof_of_space_finalized.challenge_hash
         ] = proof_of_space_finalized.height
@@ -319,31 +325,12 @@ class Farmer:
         Full node notifies the farmer that a new proof of space was created. The farmer can use this
         information to decide whether to propagate a proof.
         """
-        if proof_of_space_arrived.height not in self.unfinished_challenges:
-            self.unfinished_challenges[proof_of_space_arrived.height] = []
+        if proof_of_space_arrived.weight not in self.unfinished_challenges:
+            self.unfinished_challenges[proof_of_space_arrived.weight] = []
         else:
-            self.unfinished_challenges[proof_of_space_arrived.height].append(
+            self.unfinished_challenges[proof_of_space_arrived.weight].append(
                 proof_of_space_arrived.quality
             )
-
-    @api_request
-    async def deep_reorg_notification(
-        self, deep_reorg_notification: farmer_protocol.DeepReorgNotification
-    ):
-        """
-        Resets everything. This will be triggered when a long reorg happens, which means blocks of lower
-        height (but greater weight) might come.
-        """
-        self.harvester_responses_header_hash = {}
-        self.harvester_responses_challenge = {}
-        self.harvester_responses_proofs = {}
-        self.harvester_responses_proof_hash_to_qual = {}
-        self.challenges = {}
-        self.challenge_to_height = {}
-        self.seen_challenges = set()
-        self.unfinished_challenges = {}
-        self.current_height = uint32(0)
-        self.coinbase_rewards = {}
 
     @api_request
     async def proof_of_time_rate(
