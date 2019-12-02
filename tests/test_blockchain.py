@@ -368,3 +368,18 @@ class TestReorgs:
         for block in reorg:
             await b.receive_block(block)
         assert b.lca_block == blocks[0]
+
+    @pytest.mark.asyncio
+    async def test_get_header_hashes(self):
+        blocks = bt.get_consecutive_blocks(test_constants, 5, [], 9, b"0")
+        store = FullNodeStore("fndb_test")
+        await store._clear_database()
+        b: Blockchain = Blockchain(store, test_constants)
+        await b.initialize()
+        for block in blocks:
+            await b.receive_block(block)
+        header_hashes = b.get_header_hashes(blocks[-1].header_hash)
+        assert len(header_hashes) == 6
+        print(header_hashes)
+        print([block.header_hash for block in blocks])
+        assert header_hashes == [block.header_hash for block in blocks]

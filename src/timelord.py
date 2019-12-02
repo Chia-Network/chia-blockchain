@@ -400,9 +400,13 @@ class Timelord:
         many iterations to run for.
         """
         async with self.lock:
-            log.info(f"proof_of_space_info {proof_of_space_info.challenge_hash} {proof_of_space_info.iterations_needed}")
+            log.info(
+                f"proof_of_space_info {proof_of_space_info.challenge_hash} {proof_of_space_info.iterations_needed}"
+            )
             if proof_of_space_info.challenge_hash in self.done_discriminants:
-                log.info(f"proof_of_space_info {proof_of_space_info.challenge_hash} already done, returning")
+                log.info(
+                    f"proof_of_space_info {proof_of_space_info.challenge_hash} already done, returning"
+                )
                 return
 
             if proof_of_space_info.challenge_hash not in self.pending_iters:
@@ -412,7 +416,11 @@ class Timelord:
                 proof_of_space_info.iterations_needed
                 not in self.pending_iters[proof_of_space_info.challenge_hash]
             ):
-                log.info(f"proof_of_space_info {proof_of_space_info.challenge_hash} adding {proof_of_space_info.iterations_needed} to {self.pending_iters[proof_of_space_info.challenge_hash]}")
+                log.info(
+                    f"proof_of_space_info {proof_of_space_info.challenge_hash} adding "
+                    f"{proof_of_space_info.iterations_needed} to "
+                    f"{self.pending_iters[proof_of_space_info.challenge_hash]}"
+                )
                 self.pending_iters[proof_of_space_info.challenge_hash].append(
                     proof_of_space_info.iterations_needed
                 )

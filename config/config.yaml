@@ -84,3 +84,4 @@ introducer:
   host: 127.0.0.1
   port: 8445
   max_peers_to_send: 20
+  recent_peer_threshold: 6000

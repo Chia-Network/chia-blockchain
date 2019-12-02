@@ -1,5 +1,5 @@
 # chia-blockchain
-Python 3.7 is used for this project. Make sure your python version is >=3.7 by typing python3.
+Python 3.7 is used for this project. Make sure your default python version is >=3.7 by typing python3.
 
 ### Install on Debian/Ubuntu
 
@@ -49,8 +49,8 @@ ssh -p 8222 localhost
 ### Run a farmer + full node
 Farmers are entities in the network who use their hard drive space to try to create
 blocks (like Bitcoin's miners), and earn block rewards. First, you must generate some hard drive plots, which
-can take a long time depending on the size of the plots. Then, run the farmer + full node with
-the following script. A full node is also started on port 8002, which you can ssh into to view the node UI.
+can take a long time depending on the size of the plots (the k variable). Then, run the farmer + full node with
+the following script. A full node is also started, which you can ssh into to view the node UI (previous ssh command).
 ```bash
 python -m scripts.create_plots -k 20 -n 10
 sh ./scripts/run_farming.sh

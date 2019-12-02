@@ -23,6 +23,8 @@ class Introducer:
         self, request: RequestPeers
     ) -> AsyncGenerator[OutboundMessage, None]:
         max_peers = self.config["max_peers_to_send"]
-        peers = self.server.global_connections.peers.get_peers(max_peers, True)
+        peers = self.server.global_connections.peers.get_peers(
+            max_peers, True, self.config["recent_peer_threshold"]
+        )
         msg = Message("peers", Peers(peers))
         yield OutboundMessage(NodeType.FULL_NODE, msg, Delivery.RESPOND)

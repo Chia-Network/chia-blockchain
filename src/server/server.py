@@ -319,10 +319,8 @@ class ChiaServer:
             connection.peer_server_port = int(inbound_handshake.server_port)
             connection.connection_type = inbound_handshake.node_type
 
-            if self.global_connections.have_connection(connection):
+            if not self.global_connections.add(connection):
                 raise InvalidHandshake(f"Duplicate connection to {connection}")
-
-            self.global_connections.add(connection)
 
             # Send Ack message
             await connection.send(Message("handshake_ack", HandshakeAck()))
@@ -379,7 +377,12 @@ class ChiaServer:
             log.warning(
                 f"Connection error by peer {connection.get_peername()}, closing connection."
             )
-        except (concurrent.futures._base.CancelledError, OSError, TimeoutError, asyncio.TimeoutError) as e:
+        except (
+            concurrent.futures._base.CancelledError,
+            OSError,
+            TimeoutError,
+            asyncio.TimeoutError,
+        ) as e:
             log.warning(
                 f"Timeout/OSError {e} in connection with peer {connection.get_peername()}, closing connection."
             )

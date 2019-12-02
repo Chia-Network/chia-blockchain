@@ -107,6 +107,26 @@ class Peers:
 
 @dataclass(frozen=True)
 @cbor_message
+class RequestAllHeaderHashes:
+    """
+    Request all header hashes of blocks up to the tip header hash.
+    """
+
+    tip_header_hash: bytes32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class AllHeaderHashes:
+    """
+    Responds with all header hashes of blocks up to and including the tip header hash.
+    """
+
+    header_hashes: List[bytes32]
+
+
+@dataclass(frozen=True)
+@cbor_message
 class RequestHeaderBlocks:
     """
     Request headers of blocks that are ancestors of the specified tip.
