@@ -2,12 +2,13 @@ import logging
 import random
 import time
 from asyncio import StreamReader, StreamWriter
-from typing import Any, AsyncGenerator, Callable, List, Optional
+from typing import Any, AsyncGenerator, Callable, List, Optional, Dict
 
 from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.types.peer_info import PeerInfo
 from src.util import cbor
-from src.util.ints import uint16
+from src.types.sized_bytes import bytes32
+from src.util.ints import uint16, uint64
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 LENGTH_BYTES: int = 4
@@ -99,12 +100,6 @@ class PeerConnections:
         self.peers.add(connection.get_peer_info())
         return True
 
-    def have_connection(self, connection: Connection) -> bool:
-        for c in self._all_connections:
-            if c.node_id == connection.node_id:
-                return True
-        return False
-
     def close(self, connection: Connection, keep_peer: bool = False):
         if connection in self._all_connections:
             info = connection.get_peer_info()
@@ -128,9 +123,9 @@ class PeerConnections:
     def get_full_node_peerinfos(self):
         return list(filter(None, map(Connection.get_peer_info, self._all_connections)))
 
-    def get_unconnected_peers(self, max_peers=0):
+    def get_unconnected_peers(self, max_peers=0, recent_threshold=9999999):
         connected = self.get_full_node_peerinfos()
-        peers = self.peers.get_peers()
+        peers = self.peers.get_peers(recent_threshold=recent_threshold)
         unconnected = list(filter(lambda peer: peer not in connected, peers))
         if not max_peers:
             max_peers = len(unconnected)
@@ -140,16 +135,19 @@ class PeerConnections:
 class Peers:
     """
     Has the list of known full node peers that are already connected or may be
-    connected to.
+    connected to, and the time that they were last added.
     """
 
     def __init__(self):
         self._peers: List[PeerInfo] = []
+        self.time_added: Dict[bytes32, uint64] = {}
 
     def add(self, peer: Optional[PeerInfo]) -> bool:
-        if peer is None or not peer.port or peer in self._peers:
+        if peer is None or not peer.port:
             return False
-        self._peers.append(peer)
+        if peer not in self._peers:
+            self._peers.append(peer)
+        self.time_added[peer.get_hash()] = uint64(int(time.time()))
         return True
 
     def remove(self, peer: Optional[PeerInfo]) -> bool:
@@ -161,9 +159,16 @@ class Peers:
         except ValueError:
             return False
 
-    def get_peers(self, max_peers: int = 0, randomize: bool = False) -> List[PeerInfo]:
-        if not max_peers or max_peers > len(self._peers):
-            max_peers = len(self._peers)
+    def get_peers(
+        self, max_peers: int = 0, randomize: bool = False, recent_threshold=9999999
+    ) -> List[PeerInfo]:
+        target_peers = [
+            peer
+            for peer in self._peers
+            if time.time() - self.time_added[peer.get_hash()] < recent_threshold
+        ]
+        if not max_peers or max_peers > len(target_peers):
+            max_peers = len(target_peers)
         if randomize:
-            random.shuffle(self._peers)
-        return self._peers[:max_peers]
+            random.shuffle(target_peers)
+        return target_peers[:max_peers]

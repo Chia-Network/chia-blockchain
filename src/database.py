@@ -54,8 +54,12 @@ class FullNodeStore(Database):
         self.sync_mode = False
         # Potential new tips that we have received from others.
         self.potential_tips: Dict[bytes32, FullBlock] = {}
+        # List of all header hashes up to the tip, download up front
+        self.potential_hashes: List[bytes32] = []
         # Header blocks received from other peers during sync
         self.potential_headers: Dict[uint32, HeaderBlock] = {}
+        # Event to signal when header hashes are received
+        self.potential_hashes_received: asyncio.Event = None
         # Event to signal when headers are received at each height
         self.potential_headers_received: Dict[uint32, asyncio.Event] = {}
         # Event to signal when blocks are received at each height
@@ -104,12 +108,18 @@ class FullNodeStore(Database):
             yield FullBlock.from_bytes(query["block"])
 
     async def add_disconnected_block(self, block: FullBlock) -> None:
-        self.disconnected_blocks[block.prev_header_hash] = block
+        self.disconnected_blocks[block.header_hash] = block
 
-    async def get_disconnected_block(
+    async def get_disconnected_block_by_prev(
         self, prev_header_hash: bytes32
     ) -> Optional[FullBlock]:
-        return self.disconnected_blocks.get(prev_header_hash, None)
+        for _, block in self.disconnected_blocks.items():
+            if block.prev_header_hash == prev_header_hash:
+                return block
+        return None
+
+    async def get_disconnected_block(self, header_hash: bytes32) -> Optional[FullBlock]:
+        return self.disconnected_blocks.get(header_hash, None)
 
     async def clear_disconnected_blocks_below(self, height: uint32) -> None:
         for key in list(self.disconnected_blocks.keys()):
@@ -144,6 +154,12 @@ class FullNodeStore(Database):
     def get_potential_header(self, height: uint32) -> Optional[HeaderBlock]:
         return self.potential_headers.get(height, None)
 
+    def set_potential_hashes(self, potential_hashes: List[bytes32]) -> None:
+        self.potential_hashes = potential_hashes
+
+    def get_potential_hashes(self) -> List[bytes32]:
+        return self.potential_hashes
+
     async def add_potential_block(self, block: FullBlock) -> None:
         await self.potential_blocks.find_one_and_update(
             {"_id": block.height},
@@ -154,6 +170,12 @@ class FullNodeStore(Database):
     async def get_potential_block(self, height: uint32) -> Optional[FullBlock]:
         query = await self.potential_blocks.find_one({"_id": height})
         return FullBlock.from_bytes(query["block"]) if query else None
+
+    def set_potential_hashes_received(self, event: asyncio.Event):
+        self.potential_hashes_received = event
+
+    def get_potential_hashes_received(self) -> asyncio.Event:
+        return self.potential_hashes_received
 
     def set_potential_headers_received(self, height: uint32, event: asyncio.Event):
         self.potential_headers_received[height] = event

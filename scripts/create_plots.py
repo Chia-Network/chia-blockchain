@@ -32,7 +32,7 @@ def main():
     # We need the keys file, to access pool keys (if the exist), and the sk_seed.
     args = parser.parse_args()
     if not os.path.isfile(key_config_filename):
-        raise RuntimeError("Keys not generated. Run ./scripts/regenerate_keys.py.")
+        raise RuntimeError("Keys not generated. Run python3.7 ./scripts/regenerate_keys.py.")
 
     # The seed is what will be used to generate a private key for each plot
     key_config = safe_load(open(key_config_filename, "r"))

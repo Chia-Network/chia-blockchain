@@ -235,10 +235,44 @@ class FullNode:
         for height in range(0, tip_block.height + 1):
             self.store.set_potential_headers_received(uint32(height), Event())
             self.store.set_potential_blocks_received(uint32(height), Event())
+            self.store.set_potential_hashes_received(Event())
 
-        # Now, we download all of the headers in order to verify the weight, in batches
         timeout = 200
         sleep_interval = 10
+        total_time_slept = 0
+
+        while True:
+            if total_time_slept > timeout:
+                raise TimeoutError("Took too long to fetch header hashes.")
+            if self._shut_down:
+                return
+            # Download all the header hashes and find the fork point
+            request = peer_protocol.RequestAllHeaderHashes(tip_block.header_hash)
+            yield OutboundMessage(
+                NodeType.FULL_NODE,
+                Message("request_all_header_hashes", request),
+                Delivery.RANDOM,
+            )
+            try:
+                await asyncio.wait_for(
+                    self.store.get_potential_hashes_received().wait(),
+                    timeout=sleep_interval,
+                )
+                break
+            except concurrent.futures.TimeoutError:
+                total_time_slept += sleep_interval
+                log.warning("Did not receive desired header hashes")
+
+        # Finding the fork point allows us to only download headers and blocks from the fork point
+        async with self.store.lock:
+            header_hashes = self.store.get_potential_hashes()
+            fork_point_height: HeaderBlock = self.blockchain.find_fork_point(
+                header_hashes
+            )
+            fork_point_hash: bytes32 = header_hashes[fork_point_height]
+        log.info(f"Fork point: {fork_point_hash} at height {fork_point_height}")
+
+        # Now, we download all of the headers in order to verify the weight, in batches
         headers: List[HeaderBlock] = []
 
         # Download headers in batches. We download a few batches ahead in case there are delays or peers
@@ -247,7 +281,7 @@ class FullNode:
         highest_height_requested: uint32 = uint32(0)
         request_made: bool = False
         for height_checkpoint in range(
-            0, tip_height + 1, self.config["max_headers_to_send"]
+            fork_point_height + 1, tip_height + 1, self.config["max_headers_to_send"]
         ):
             end_height = min(
                 height_checkpoint + self.config["max_headers_to_send"], tip_height + 1
@@ -296,6 +330,7 @@ class FullNode:
                             tip_block.header_block.header.get_hash(),
                             [uint32(h) for h in range(batch_start, batch_end)],
                         )
+                        log.info(f"Requesting header blocks {batch_start, batch_end}.")
                         yield OutboundMessage(
                             NodeType.FULL_NODE,
                             Message("request_header_blocks", request),
@@ -311,24 +346,30 @@ class FullNode:
                     (self.store.get_potential_headers_received(uint32(height))).wait()
                     for height in range(height_checkpoint, end_height)
                 ]
+                future = asyncio.gather(*awaitables, return_exceptions=True)
                 try:
-                    await asyncio.wait_for(
-                        asyncio.gather(*awaitables), timeout=sleep_interval
-                    )
+                    await asyncio.wait_for(future, timeout=sleep_interval)
                     break
                 except concurrent.futures.TimeoutError:
+                    try:
+                        await future
+                    except asyncio.CancelledError:
+                        pass
                     total_time_slept += sleep_interval
-                    log.info("Did not receive desired header blocks")
-                    pass
+                    log.info(f"Did not receive desired header blocks")
 
         async with self.store.lock:
-            for h in range(0, tip_height + 1):
+            for h in range(fork_point_height + 1, tip_height + 1):
                 header = self.store.get_potential_header(uint32(h))
                 assert header is not None
                 headers.append(header)
 
         log.error(f"Downloaded headers up to tip height: {tip_height}")
-        if not verify_weight(tip_block.header_block, headers):
+        if not verify_weight(
+            tip_block.header_block,
+            headers,
+            self.blockchain.header_blocks[fork_point_hash],
+        ):
             raise errors.InvalidWeight(
                 f"Weight of {tip_block.header_block.header.get_hash()} not valid."
             )
@@ -336,11 +377,7 @@ class FullNode:
         log.error(
             f"Validated weight of headers. Downloaded {len(headers)} headers, tip height {tip_height}"
         )
-        assert tip_height + 1 == len(headers)
-
-        # Finding the fork point allows us to only download blocks from the fork point
-        async with self.store.lock:
-            fork_point: HeaderBlock = self.blockchain.find_fork_point(headers)
+        assert tip_height == fork_point_height + len(headers)
 
         # Download blocks in batches, and verify them as they come in. We download a few batches ahead,
         # in case there are delays.
@@ -348,7 +385,7 @@ class FullNode:
         highest_height_requested = uint32(0)
         request_made = False
         for height_checkpoint in range(
-            fork_point.height + 1, tip_height + 1, self.config["max_blocks_to_send"]
+            fork_point_height + 1, tip_height + 1, self.config["max_blocks_to_send"]
         ):
             end_height = min(
                 height_checkpoint + self.config["max_blocks_to_send"], tip_height + 1
@@ -417,15 +454,17 @@ class FullNode:
                     (self.store.get_potential_blocks_received(uint32(height))).wait()
                     for height in range(height_checkpoint, end_height)
                 ]
+                future = asyncio.gather(*awaitables, return_exceptions=True)
                 try:
-                    await asyncio.wait_for(
-                        asyncio.gather(*awaitables), timeout=sleep_interval
-                    )
+                    await asyncio.wait_for(future, timeout=sleep_interval)
                     break
                 except concurrent.futures.TimeoutError:
+                    try:
+                        await future
+                    except asyncio.CancelledError:
+                        pass
                     total_time_slept += sleep_interval
                     log.info("Did not receive desired blocks")
-                    pass
 
             # Verifies this batch, which we are guaranteed to have (since we broke from the above loop)
             for height in range(height_checkpoint, end_height):
@@ -480,6 +519,30 @@ class FullNode:
             yield msg
 
     @api_request
+    async def request_all_header_hashes(
+        self, request: peer_protocol.RequestAllHeaderHashes
+    ) -> AsyncGenerator[OutboundMessage, None]:
+        try:
+            header_hashes = self.blockchain.get_header_hashes(request.tip_header_hash)
+            message = Message(
+                "all_header_hashes", peer_protocol.AllHeaderHashes(header_hashes)
+            )
+            yield OutboundMessage(NodeType.FULL_NODE, message, Delivery.RESPOND)
+        except ValueError:
+            log.info("Do not have requested header hashes.")
+
+    @api_request
+    async def all_header_hashes(
+        self, all_header_hashes: peer_protocol.AllHeaderHashes
+    ) -> AsyncGenerator[OutboundMessage, None]:
+        assert len(all_header_hashes.header_hashes) > 0
+        async with self.store.lock:
+            self.store.set_potential_hashes(all_header_hashes.header_hashes)
+            self.store.get_potential_hashes_received().set()
+        for _ in []:  # Yields nothing
+            yield _
+
+    @api_request
     async def request_header_blocks(
         self, request: peer_protocol.RequestHeaderBlocks
     ) -> AsyncGenerator[OutboundMessage, None]:
@@ -516,6 +579,9 @@ class FullNode:
         """
         Receive header blocks from a peer.
         """
+        log.info(
+            f"Received header blocks {request.header_blocks[0].height, request.header_blocks[-1].height}."
+        )
         async with self.store.lock:
             for header_block in request.header_blocks:
                 self.store.add_potential_header(header_block)
@@ -976,19 +1042,8 @@ class FullNode:
                     peer_protocol.RequestBlock(block.block.prev_header_hash),
                 )
                 async with self.store.lock:
-                    # If we have already requested the prev block, don't do so again
-                    if (
-                        await self.store.get_disconnected_block(
-                            block.block.prev_header_hash
-                        )
-                        is not None
-                    ):
-                        log.info(
-                            f"Have already requested block {block.block.prev_header_hash}"
-                        )
-                        return
                     await self.store.add_disconnected_block(block.block)
-                yield OutboundMessage(NodeType.FULL_NODE, msg, Delivery.RANDOM)
+                yield OutboundMessage(NodeType.FULL_NODE, msg, Delivery.RESPOND)
             return
         elif added == ReceiveBlockResult.ADDED_TO_HEAD:
             # Only propagate blocks which extend the blockchain (becomes one of the heads)
@@ -1078,7 +1133,7 @@ class FullNode:
         async with self.store.lock:
             next_block: Optional[
                 FullBlock
-            ] = await self.store.get_disconnected_block(block.block.header_hash)
+            ] = await self.store.get_disconnected_block_by_prev(block.block.header_hash)
         if next_block is not None:
             async for msg in self.block(peer_protocol.Block(next_block)):
                 yield msg
@@ -1110,14 +1165,13 @@ class FullNode:
         self, request: peer_protocol.Peers
     ) -> AsyncGenerator[OutboundMessage, None]:
         conns = self.server.global_connections
-        log.info(f"Received peer list: {request.peer_list}")
         for peer in request.peer_list:
             conns.peers.add(peer)
 
         # Pseudo-message to close the connection
         yield OutboundMessage(NodeType.INTRODUCER, Message("", None), Delivery.CLOSE)
 
-        unconnected = conns.get_unconnected_peers()
+        unconnected = conns.get_unconnected_peers(recent_threshold=self.config["recent_peer_threshold"])
         to_connect = unconnected[: self._num_needed_peers()]
         if not len(to_connect):
             return
