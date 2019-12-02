@@ -8,7 +8,9 @@ pip install -r requirements.txt
 # Check for git clone of flint2 on MacOS and install if found
 if [  -f flint2/configure ]; then
     cd flint2/
-    ./configure
+    if [  ! -f Makefile ]; then
+       ./configure
+    fi
     make -j4
     make install
     cd ../
