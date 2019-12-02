@@ -11,7 +11,7 @@ from definitions import ROOT_DIR
 from src.protocols.shared_protocol import Handshake, HandshakeAck, protocol_version
 from src.server.connection import Connection, OnConnectFunc, PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
-from src.types.peer_info import PeerInfo
+from src.types.peer_info import AnyPeerInfo
 from src.util import partial_func
 from src.util.errors import (
     IncompatibleProtocolVersion,
@@ -20,7 +20,7 @@ from src.util.errors import (
     InvalidProtocolMessage,
 )
 from src.util.ints import uint16
-from src.util.network import create_node_id
+from src.util.network import create_node_id, parse_any_peer_info
 
 log = logging.getLogger(__name__)
 
@@ -90,24 +90,20 @@ class ChiaServer:
         return True
 
     async def start_client(
-        self, target_node: PeerInfo, on_connect: OnConnectFunc = None,
+        self, target_node: AnyPeerInfo, on_connect: OnConnectFunc = None,
     ) -> bool:
         """
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
         An on connect method can also be specified, and this will be saved into the instance variables.
         """
-        if self._server is not None:
-            if (
-                self._host == target_node.host or target_node.host == "127.0.0.1"
-            ) and self._port == target_node.port:
-                self.global_connections.peers.remove(target_node)
-                return False
+        host, port = parse_any_peer_info(target_node)
+        if self._is_same_node(host, port):
+            self.global_connections.peers.remove(target_node)
+            return False
         if self._pipeline_task.done():
             return False
         try:
-            reader, writer = await asyncio.open_connection(
-                target_node.host, int(target_node.port)
-            )
+            reader, writer = await asyncio.open_connection(host, port)
         except (
             ConnectionRefusedError,
             TimeoutError,
@@ -123,6 +119,13 @@ class ChiaServer:
             self._add_to_srwt_aiter(iter_to_aiter([(reader, writer, on_connect)]))
         )
         return True
+
+    def _is_same_node(self, host, port) -> bool:
+        if self._server is None:
+            return False
+        if port != self._port:
+            return False
+        return host in (self._host, "localhost", "127.0.0.1", "::1")
 
     async def _add_to_srwt_aiter(
         self,

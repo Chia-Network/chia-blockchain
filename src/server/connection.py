@@ -5,10 +5,11 @@ from asyncio import StreamReader, StreamWriter
 from typing import Any, AsyncGenerator, Callable, List, Optional, Dict
 
 from src.server.outbound_message import Message, NodeType, OutboundMessage
-from src.types.peer_info import PeerInfo
+from src.types.peer_info import AnyPeerInfo, BinPeerInfo
 from src.util import cbor
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint16, uint64
+from src.util.ip_str import ip_from_str
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 LENGTH_BYTES: int = 4
@@ -40,7 +41,7 @@ class Connection:
         socket = self.writer.get_extra_info("socket")
         self.local_host = socket.getsockname()[0]
         self.local_port = server_port
-        self.peer_host = self.writer.get_extra_info("peername")[0]
+        self.peer_host = ip_from_str(self.writer.get_extra_info("peername")[0])
         self.peer_port = self.writer.get_extra_info("peername")[1]
         self.peer_server_port: Optional[int] = None
         self.node_id = None
@@ -57,10 +58,10 @@ class Connection:
     def get_socket(self):
         return self.writer.get_extra_info("socket")
 
-    def get_peer_info(self) -> Optional[PeerInfo]:
+    def get_peer_info(self) -> Optional[BinPeerInfo]:
         if not self.peer_server_port or self.connection_type != NodeType.FULL_NODE:
             return None
-        return PeerInfo(self.peer_host, uint16(self.peer_server_port))
+        return BinPeerInfo(self.peer_host, uint16(self.peer_server_port))
 
     async def send(self, message: Message):
         encoded: bytes = cbor.dumps({"f": message.function, "d": message.data})
@@ -139,10 +140,10 @@ class Peers:
     """
 
     def __init__(self):
-        self._peers: List[PeerInfo] = []
+        self._peers: List[BinPeerInfo] = []
         self.time_added: Dict[bytes32, uint64] = {}
 
-    def add(self, peer: Optional[PeerInfo]) -> bool:
+    def add(self, peer: Optional[BinPeerInfo]) -> bool:
         if peer is None or not peer.port:
             return False
         if peer not in self._peers:
@@ -150,8 +151,8 @@ class Peers:
         self.time_added[peer.get_hash()] = uint64(int(time.time()))
         return True
 
-    def remove(self, peer: Optional[PeerInfo]) -> bool:
-        if peer is None or not peer.port:
+    def remove(self, peer: Optional[AnyPeerInfo]) -> bool:
+        if peer is None or not isinstance(peer, BinPeerInfo) or not peer.port:
             return False
         try:
             self._peers.remove(peer)
@@ -161,7 +162,7 @@ class Peers:
 
     def get_peers(
         self, max_peers: int = 0, randomize: bool = False, recent_threshold=9999999
-    ) -> List[PeerInfo]:
+    ) -> List[BinPeerInfo]:
         target_peers = [
             peer
             for peer in self._peers
