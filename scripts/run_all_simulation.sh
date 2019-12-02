@@ -2,6 +2,7 @@
 . scripts/common.sh
 
 # Starts a harvester, farmer, timelord, introducer, and 3 full nodes.
+# Make sure to point the full node in config/config.yaml to the local introducer: 127.0.0.1:8444.
 
 _run_bg_cmd python -m src.server.start_harvester
 _run_bg_cmd python -m src.server.start_timelord
