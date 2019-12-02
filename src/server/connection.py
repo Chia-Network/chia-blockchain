@@ -123,9 +123,9 @@ class PeerConnections:
     def get_full_node_peerinfos(self):
         return list(filter(None, map(Connection.get_peer_info, self._all_connections)))
 
-    def get_unconnected_peers(self, max_peers=0):
+    def get_unconnected_peers(self, max_peers=0, recent_threshold=9999999):
         connected = self.get_full_node_peerinfos()
-        peers = self.peers.get_peers()
+        peers = self.peers.get_peers(recent_threshold=recent_threshold)
         unconnected = list(filter(lambda peer: peer not in connected, peers))
         if not max_peers:
             max_peers = len(unconnected)

@@ -1171,7 +1171,7 @@ class FullNode:
         # Pseudo-message to close the connection
         yield OutboundMessage(NodeType.INTRODUCER, Message("", None), Delivery.CLOSE)
 
-        unconnected = conns.get_unconnected_peers()
+        unconnected = conns.get_unconnected_peers(recent_threshold=self.config["recent_peer_threshold"])
         to_connect = unconnected[: self._num_needed_peers()]
         if not len(to_connect):
             return
