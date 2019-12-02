@@ -76,4 +76,5 @@ Farmers periodically send partials, which contain a proof of space and a signatu
 
 ## Wallets
 
-TODO: (matt)
+Wallets can communicate with full nodes through the wallet protocol.
+This is similar to Bitcoin's SPV protocol, and allows verification of transactions and block wight, without the bandwidth and CPU requirements of full nodes.

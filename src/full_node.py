@@ -1064,14 +1064,6 @@ class FullNode:
                 Delivery.BROADCAST,
             )
 
-            # Recursively process the next block if we have it
-            async with self.store.lock:
-                next_block: Optional[
-                    FullBlock
-                ] = await self.store.get_disconnected_block(block.block.header_hash)
-            if next_block is not None:
-                async for msg in self.block(peer_protocol.Block(next_block)):
-                    yield msg
         elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
             assert block.block.header_block.proof_of_time
             assert block.block.header_block.challenge
@@ -1081,6 +1073,15 @@ class FullNode:
         else:
             # Should never reach here, all the cases are covered
             assert False
+            # Recursively process the next block if we have it
+
+        async with self.store.lock:
+            next_block: Optional[
+                FullBlock
+            ] = await self.store.get_disconnected_block(block.block.header_hash)
+        if next_block is not None:
+            async for msg in self.block(peer_protocol.Block(next_block)):
+                yield msg
 
         async with self.store.lock:
             # Removes all temporary data for old blocks
