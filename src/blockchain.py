@@ -106,6 +106,17 @@ class Blockchain:
         else:
             return None
 
+    def get_header_hashes(self, tip_header_hash: bytes32) -> List[bytes32]:
+        if tip_header_hash not in self.header_blocks:
+            raise ValueError("Invalid tip requested")
+
+        curr = self.header_blocks[tip_header_hash]
+        ret_hashes = [tip_header_hash]
+        while curr.height != 0:
+            curr = self.header_blocks[curr.prev_header_hash]
+            ret_hashes.append(curr.header_hash)
+        return list(reversed(ret_hashes))
+
     def get_header_blocks_by_height(
         self, heights: List[uint32], tip_header_hash: bytes32
     ) -> List[HeaderBlock]:
@@ -136,46 +147,35 @@ class Blockchain:
             headers.append((index, curr_block))
         return [b for index, b in sorted(headers)]
 
-    def find_fork_point(self, alternate_chain: List[HeaderBlock]) -> HeaderBlock:
+    def find_fork_point(self, alternate_chain: List[bytes32]) -> uint32:
         """
         Takes in an alternate blockchain (headers), and compares it to self. Returns the last header
         where both blockchains are equal.
         """
         lca: HeaderBlock = self.lca_block.header_block
 
-        if lca.height >= alternate_chain[-1].height:
+        if lca.height >= len(alternate_chain) - 1:
             raise ValueError("Alternate chain is shorter")
-        low = 0
+        low: uint32 = uint32(0)
         high = lca.height
         while low + 1 < high:
             mid = (low + high) // 2
-            if (
-                self.height_to_hash[uint32(mid)]
-                != alternate_chain[mid].header.get_hash()
-            ):
+            if self.height_to_hash[uint32(mid)] != alternate_chain[mid]:
                 high = mid
             else:
                 low = mid
         if low == high and low == 0:
-            assert (
-                self.height_to_hash[uint32(0)] == alternate_chain[0].header.get_hash()
-            )
-            return alternate_chain[0]
+            assert self.height_to_hash[uint32(0)] == alternate_chain[0]
+            return uint32(0)
         assert low + 1 == high
-        if self.height_to_hash[uint32(low)] == alternate_chain[low].header.get_hash():
-            if (
-                self.height_to_hash[uint32(high)]
-                == alternate_chain[high].header.get_hash()
-            ):
-                return alternate_chain[high]
+        if self.height_to_hash[uint32(low)] == alternate_chain[low]:
+            if self.height_to_hash[uint32(high)] == alternate_chain[high]:
+                return high
             else:
-                return alternate_chain[low]
+                return low
         elif low > 0:
-            assert (
-                self.height_to_hash[uint32(low - 1)]
-                == alternate_chain[low - 1].header.get_hash()
-            )
-            return alternate_chain[low - 1]
+            assert self.height_to_hash[uint32(low - 1)] == alternate_chain[low - 1]
+            return uint32(low - 1)
         else:
             raise ValueError("Invalid genesis block")
 

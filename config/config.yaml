@@ -67,6 +67,9 @@ full_node:
   introducer_connect_interval: 120
   # Continue trying to connect to more peers until this number of connections
   target_peer_count: 10
+  # Only connect to peers who we have heard about in the last recent_peer_threshold seconds
+  recent_peer_threshold: 6000
+
 
   farmer_peer:
       host: 127.0.0.1
@@ -84,3 +87,6 @@ introducer:
   host: 127.0.0.1
   port: 8445
   max_peers_to_send: 20
+  # The introducer will only return peers who it has seen in the last
+  # recent_peer_threshold seconds
+  recent_peer_threshold: 6000

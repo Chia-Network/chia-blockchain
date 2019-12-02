@@ -260,7 +260,9 @@ class FullNodeUI:
             if max_block not in added_blocks:
                 added_blocks.append(max_block)
             heads.remove(max_block)
-            prev: Optional[HeaderBlock] = self.blockchain.header_blocks.get(max_block.prev_header_hash, None)
+            prev: Optional[HeaderBlock] = self.blockchain.header_blocks.get(
+                max_block.prev_header_hash, None
+            )
             if prev is not None:
                 heads.append(prev)
         return added_blocks
