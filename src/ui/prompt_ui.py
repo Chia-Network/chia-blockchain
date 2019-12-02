@@ -1,7 +1,10 @@
 import asyncio
 import logging
 import collections
-from typing import Callable, List, Optional
+import os
+from typing import Callable, List, Optional, Tuple
+from yaml import safe_load
+from blspy import PrivateKey, PublicKey
 
 import asyncssh
 
@@ -21,11 +24,13 @@ from src.blockchain import Blockchain
 from src.database import FullNodeStore
 from src.server.connection import NodeType, PeerConnections
 from src.server.server import ChiaServer
+from src.consensus.block_rewards import calculate_block_reward
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint16
+from src.util.ints import uint16, uint64
+from definitions import ROOT_DIR
 
 log = logging.getLogger(__name__)
 
@@ -105,13 +110,26 @@ class FullNodeUI:
         self.app: Optional[Application] = None
         self.closed: bool = False
         self.num_blocks: int = 10
+        self.num_top_block_pools: int = 5
+        self.top_winners: List[Tuple[uint64, bytes32]] = []
+        self.our_winners: List[Tuple[uint64, bytes32]] = []
         self.prev_route: str = "home/"
         self.route: str = "home/"
         self.focused: bool = False
         self.parent_close_cb = parent_close_cb
         self.kb = self.setup_keybindings()
-        self.draw_initial()
         self.style = Style([("error", "#ff0044")])
+        self.pool_pks: List[PublicKey] = []
+        key_config_filename = os.path.join(ROOT_DIR, "config", "keys.yaml")
+        if os.path.isfile(key_config_filename):
+            config = safe_load(open(key_config_filename, "r"))
+
+            self.pool_pks = [
+                PrivateKey.from_bytes(bytes.fromhex(ce)).get_public_key()
+                for ce in config["pool_sks"]
+            ]
+
+        self.draw_initial()
         self.app = Application(
             style=self.style,
             layout=self.layout,
@@ -119,8 +137,12 @@ class FullNodeUI:
             key_bindings=self.kb,
             mouse_support=True,
         )
+
         self.closed = False
-        self.update_task = asyncio.get_running_loop().create_task(self.update())
+        self.update_ui_task = asyncio.get_running_loop().create_task(self.update_ui())
+        self.update_data_task = asyncio.get_running_loop().create_task(
+            self.update_data()
+        )
 
     def close(self):
         # Closes this instance of the UI
@@ -166,6 +188,7 @@ class FullNodeUI:
         self.total_iters_label = TextArea(focusable=False, height=2)
         self.con_rows = []
         self.displayed_cons = []
+        self.latest_blocks: List[HeaderBlock] = []
         self.connections_msg = Label(text=f"Connections")
         self.connection_rows_vsplit = Window()
         self.add_connection_msg = Label(text=f"Add a connection ip:port")
@@ -195,6 +218,15 @@ class FullNodeUI:
             search_field=search_field,
         )
         self.search_block_field.accept_handler = self.async_to_sync(self.search_block)
+
+        self.top_block_pools_msg = Label(text=f"Top block pools")
+        self.top_block_pools_labels = [
+            Label(text="Top block pool") for _ in range(self.num_top_block_pools)
+        ]
+        self.our_pools_msg = Label(text=f"Our pool winnings")
+        self.our_pools_labels = [
+            Label(text="Our winnings") for _ in range(len(self.pool_pks))
+        ]
 
         self.close_ui_button = Button("Close UI", handler=self.close)
         self.quit_button = Button("Stop node and close UI", handler=self.stop)
@@ -307,6 +339,7 @@ class FullNodeUI:
         else:
             self.syncing.text = "Not syncing"
         heads: List[HeaderBlock] = self.blockchain.get_current_tips()
+
         lca_block: FullBlock = self.blockchain.lca_block
         if lca_block.height > 0:
             difficulty = await self.blockchain.get_next_difficulty(
@@ -319,19 +352,38 @@ class FullNodeUI:
             )
             ips = await self.blockchain.get_next_ips(lca_block.header_hash)
         total_iters = lca_block.header_block.challenge.total_iters
-        latest_blocks: List[HeaderBlock] = await self.get_latest_blocks(heads)
-        if len(latest_blocks) > 0:
-            new_labels = []
-            for i, b in enumerate(latest_blocks):
-                self.latest_blocks_labels[i].text = (
-                    f"{b.height}:{b.header_hash}"
-                    f" {'LCA' if b.header_hash == lca_block.header_hash else ''}"
-                    f" {'TIP' if b.header_hash in [h.header_hash for h in heads] else ''}"
-                )
-                self.latest_blocks_labels[i].handler = self.change_route_handler(
-                    f"block/{b.header_hash}"
-                )
-                new_labels.append(self.latest_blocks_labels[i])
+
+        new_block_labels = []
+        for i, b in enumerate(self.latest_blocks):
+            self.latest_blocks_labels[i].text = (
+                f"{b.height}:{b.header_hash}"
+                f" {'LCA' if b.header_hash == lca_block.header_hash else ''}"
+                f" {'TIP' if b.header_hash in [h.header_hash for h in heads] else ''}"
+            )
+            self.latest_blocks_labels[i].handler = self.change_route_handler(
+                f"block/{b.header_hash}"
+            )
+            new_block_labels.append(self.latest_blocks_labels[i])
+
+        top_block_pools_labels = self.top_block_pools_labels
+        if len(self.top_winners) > 0:
+            new_top_block_pools_labels = []
+            for i, (winnings, pk) in enumerate(self.top_winners):
+                self.top_block_pools_labels[
+                    i
+                ].text = f"Public key {pk.hex()}: {winnings} chias {int(winnings/(1000000000))} Gchias."
+                new_top_block_pools_labels.append(self.top_block_pools_labels[i])
+            top_block_pools_labels = new_top_block_pools_labels
+
+        our_pools_labels = self.our_pools_labels
+        if len(self.our_winners) > 0:
+            new_our_pools_labels = []
+            for i, (winnings, pk) in enumerate(self.our_winners):
+                self.our_pools_labels[
+                    i
+                ].text = f"Public key {pk.hex()}: {winnings} chias {int(winnings/(1000000000))} Gchias."
+                new_our_pools_labels.append(self.our_pools_labels[i])
+            our_pools_labels = new_our_pools_labels
 
         self.lca_label.text = f"Current least common ancestor {lca_block.header_hash} height {lca_block.height}"
         self.current_heads_label.text = "Heights of tips: " + str(
@@ -340,6 +392,7 @@ class FullNodeUI:
         self.difficulty_label.text = f"Current difficuty: {difficulty}"
         self.ips_label.text = f"Current VDF iterations per second: {ips}"
         self.total_iters_label.text = f"Total iterations since genesis: {total_iters}"
+
         try:
             if not self.focused:
                 self.layout.focus(self.close_ui_button)
@@ -363,10 +416,16 @@ class FullNodeUI:
                 self.add_connection_field,
                 Window(height=1, char="-", style="class:line"),
                 self.latest_blocks_msg,
-                *new_labels,
+                *new_block_labels,
                 Window(height=1, char="-", style="class:line"),
                 self.search_block_msg,
                 self.search_block_field,
+                Window(height=1, char="-", style="class:line"),
+                self.top_block_pools_msg,
+                *top_block_pools_labels,
+                Window(height=1, char="-", style="class:line"),
+                self.our_pools_msg,
+                *our_pools_labels,
                 Window(height=1, char="-", style="class:line"),
                 self.close_ui_button,
                 self.quit_button,
@@ -398,7 +457,7 @@ class FullNodeUI:
             [self.block_msg, self.block_label, self.back_button], width=D(), height=D()
         )
 
-    async def update(self):
+    async def update_ui(self):
         try:
             while not self.closed:
                 if self.route.startswith("home/"):
@@ -410,8 +469,47 @@ class FullNodeUI:
                     self.app.invalidate()
                 await asyncio.sleep(0.25)
         except Exception as e:
-            log.warn(f"Exception in UI {type(e)}: {e}")
+            log.warn(f"Exception in UI update_ui {type(e)}: {e}")
+            raise e
+
+    async def update_data(self):
+        try:
+            while not self.closed:
+                heads: List[HeaderBlock] = self.blockchain.get_current_tips()
+                self.latest_blocks = await self.get_latest_blocks(heads)
+
+                header_block = heads[0]
+                coin_balances = {
+                    bytes(
+                        header_block.proof_of_space.pool_pubkey
+                    ): calculate_block_reward(header_block.height)
+                }
+                while header_block.height != 0:
+                    header_block = self.blockchain.header_blocks[
+                        header_block.prev_header_hash
+                    ]
+                    pool_pk = bytes(header_block.proof_of_space.pool_pubkey)
+                    if pool_pk not in coin_balances:
+                        coin_balances[pool_pk] = 0
+                    coin_balances[pool_pk] += calculate_block_reward(
+                        header_block.height
+                    )
+                self.top_winners = sorted(
+                    [(rewards, key) for key, rewards in coin_balances.items()],
+                    reverse=True,
+                )[: self.num_top_block_pools]
+
+                self.our_winners = [
+                    (coin_balances[bytes(pk)], bytes(pk))
+                    if bytes(pk) in coin_balances
+                    else (0, bytes(pk))
+                    for pk in self.pool_pks
+                ]
+                await asyncio.sleep(5)
+        except Exception as e:
+            log.warn(f"Exception in UI update_data {type(e)}: {e}")
             raise e
 
     async def await_closed(self):
-        await self.update_task
+        await self.update_ui_task
+        await self.update_data_task
