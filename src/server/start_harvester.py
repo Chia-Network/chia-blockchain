@@ -7,7 +7,7 @@ from src.harvester import Harvester
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.types.peer_info import PeerInfo
-from src.util.network import parse_host_port
+from src.util.network import parse_port
 
 logging.basicConfig(
     format="Harvester %(name)-24s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
@@ -18,9 +18,9 @@ logging.basicConfig(
 
 async def main():
     harvester = Harvester()
-    host, port = parse_host_port(harvester)
+    port = parse_port(harvester)
     server = ChiaServer(port, harvester, NodeType.HARVESTER)
-    _ = await server.start_server(host, None)
+    _ = await server.start_server(None)
 
     def signal_received():
         server.close_all()

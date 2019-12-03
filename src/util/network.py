@@ -1,14 +1,13 @@
 import secrets
 import sys
-from typing import Tuple
 
 from src.types.sized_bytes import bytes32
+from src.util.ints import uint16
 
 
-def parse_host_port(api) -> Tuple[str, int]:
-    host: str = sys.argv[1] if len(sys.argv) >= 3 else api.config["host"]
-    port: int = int(sys.argv[2]) if len(sys.argv) >= 3 else api.config["port"]
-    return (host, port)
+def parse_port(api) -> uint16:
+    port: uint16 = uint16(int(sys.argv[1]) if len(sys.argv) >= 2 else api.config["port"])
+    return port
 
 
 def create_node_id() -> bytes32:

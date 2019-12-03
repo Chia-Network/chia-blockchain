@@ -2,7 +2,6 @@ network_id: testnet  # testnet/mainnet
 
 harvester:
   # The harvester server (if run) will run on this host and port
-  host: 127.0.0.1
   port: 8448
   farmer_peer:
     host: 127.0.0.1
@@ -12,7 +11,6 @@ harvester:
 
 farmer:
   # The farmer server (if run) will run on this host and port
-  host: 127.0.0.1
   port: 8447
   # The farmer will attempt to connect to this full node and harvester
   full_node_peer:
@@ -28,7 +26,6 @@ farmer:
 
 timelord:
   # The timelord server (if run) will run on this host and port
-  host: 127.0.0.1
   port: 8446
   # How much recursion to use for the wesolowski VDF proof. This increases the size
   # of the proofs.
@@ -50,7 +47,6 @@ timelord:
 
 full_node:
   # The full node server (if run) will run on this host and port
-  host: 127.0.0.1
   port: 8444
   enable_upnp: True
   # Don't send any more than these number of headers and blocks, in one message
@@ -82,8 +78,7 @@ full_node:
       port: 8444
 
 introducer:
-  host: 127.0.0.1
-  port: 8444
+  port: 8445
   max_peers_to_send: 20
   # The introducer will only return peers who it has seen in the last
   # recent_peer_threshold seconds

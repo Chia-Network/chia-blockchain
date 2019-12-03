@@ -6,7 +6,7 @@ from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.timelord import Timelord
 from src.types.peer_info import PeerInfo
-from src.util.network import parse_host_port
+from src.util.network import parse_port
 
 logging.basicConfig(
     format="Timelord %(name)-25s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
@@ -17,9 +17,9 @@ logging.basicConfig(
 
 async def main():
     timelord = Timelord()
-    host, port = parse_host_port(timelord)
+    port = parse_port(timelord)
     server = ChiaServer(port, timelord, NodeType.TIMELORD)
-    _ = await server.start_server(host, None)
+    _ = await server.start_server(None)
 
     def signal_received():
         server.close_all()

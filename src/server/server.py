@@ -3,6 +3,7 @@ import logging
 import random
 import os
 import concurrent
+import socket
 from yaml import safe_load
 from typing import Any, AsyncGenerator, List, Optional, Tuple
 from aiter import aiter_forker, iter_to_aiter, join_aiters, map_aiter, push_aiter
@@ -60,7 +61,7 @@ class ChiaServer:
         )
         self._node_id = create_node_id()
 
-    async def start_server(self, host: str, on_connect: OnConnectFunc = None,) -> bool:
+    async def start_server(self, on_connect: OnConnectFunc = None,) -> bool:
         """
         Launches a listening server on host and port specified, to connect to NodeType nodes. On each
         connection, the on_connect asynchronous generator will be called, and responses will be sent.
@@ -68,10 +69,11 @@ class ChiaServer:
         """
         if self._server is not None or self._pipeline_task.done():
             return False
-        self._host = host
 
+        sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        sock.bind(('::', self._port))
         self._server, aiter = await start_server_aiter(
-            self._port, host=None, reuse_address=True
+            None, host=None, reuse_address=True, sock=sock
         )
         if on_connect is not None:
             self._on_inbound_connect = on_connect
@@ -98,7 +100,7 @@ class ChiaServer:
         """
         if self._server is not None:
             if (
-                self._host == target_node.host or target_node.host == "127.0.0.1"
+                target_node.host == "127.0.0.1"
             ) and self._port == target_node.port:
                 self.global_connections.peers.remove(target_node)
                 return False

@@ -11,7 +11,7 @@ from src.protocols.harvester_protocol import HarvesterHandshake
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
 from src.types.peer_info import PeerInfo
-from src.util.network import parse_host_port
+from src.util.network import parse_port
 
 logging.basicConfig(
     format="Farmer %(name)-25s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
@@ -35,7 +35,7 @@ async def main():
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
 
-    host, port = parse_host_port(farmer)
+    port = parse_port(farmer)
     server = ChiaServer(port, farmer, NodeType.FARMER)
 
     async def on_connect():
@@ -49,7 +49,7 @@ async def main():
             NodeType.HARVESTER, Message("harvester_handshake", msg), Delivery.BROADCAST
         )
 
-    _ = await server.start_server(host, on_connect)
+    _ = await server.start_server(on_connect)
     _ = await server.start_client(harvester_peer, None)
     _ = await server.start_client(full_node_peer, None)
 

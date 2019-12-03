@@ -11,7 +11,7 @@ from src.full_node import FullNode
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.types.peer_info import PeerInfo
-from src.util.network import parse_host_port
+from src.util.network import parse_port
 
 logging.basicConfig(
     format="FullNode %(name)-23s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
@@ -36,7 +36,7 @@ async def main():
 
     full_node = FullNode(store, blockchain)
     # Starts the full node server (which full nodes can connect to)
-    host, port = parse_host_port(full_node)
+    port = parse_port(full_node)
 
     if full_node.config["enable_upnp"]:
         log.info(f"Attempting to enable UPnP (open up port {port})")
@@ -51,7 +51,7 @@ async def main():
 
     server = ChiaServer(port, full_node, NodeType.FULL_NODE)
     full_node._set_server(server)
-    _ = await server.start_server(host, full_node._on_connect)
+    _ = await server.start_server(full_node._on_connect)
     wait_for_ui, ui_close_cb = None, None
 
     def master_close_cb():

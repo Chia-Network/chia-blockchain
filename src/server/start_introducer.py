@@ -6,7 +6,7 @@ import uvloop
 from src.introducer import Introducer
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
-from src.util.network import parse_host_port
+from src.util.network import parse_port
 
 logging.basicConfig(
     format="Introducer %(name)-24s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
@@ -17,10 +17,10 @@ logging.basicConfig(
 
 async def main():
     introducer = Introducer()
-    host, port = parse_host_port(introducer)
+    port = parse_port(introducer)
     server = ChiaServer(port, introducer, NodeType.INTRODUCER)
     introducer.set_server(server)
-    _ = await server.start_server(host, None)
+    _ = await server.start_server(None)
 
     def signal_received():
         server.close_all()
