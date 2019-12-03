@@ -1,9 +1,9 @@
 # Part 1: Consensus Algorithm Summary
 
-The Chia blockchain and consensus algorithm aims to provide a more environmentally,
-decentralized, and secure alternative to proof of work and proof of stake, while
+The Chia blockchain and consensus algorithm aims to provide a more environmentally friendly,
+decentralized, and secure alternative to proof of work or proof of stake, while
 maintaing some of the key properties that make Nakamoto consensus desireable. The full
-description of the algorithm can be seen in the [Chia Network greenpaper](https://www.chia.net/assets/ChiaGreenPaper.pdf).
+description of the algorithm can be reviewed in the [Chia Network greenpaper](https://www.chia.net/assets/ChiaGreenPaper.pdf).
 
 The main idea is that mining nodes called **Farmers** (as opposed to Bitcoin's miners), use
 their disk space to compete on finding blocks. Whereas in Bitcoin, owning 5% of the hashpower, or
@@ -23,14 +23,14 @@ see if they have any very good proofs of space (analogous to someone checking th
 see if they've won), and propagate these proofs if they've found a lucky number. Farmers also propagate a block
 with these proofs, and sign it with a private key that is associated with their plot.
 
-In order to prevent grinding attacks, these proofs of space must be put through a proof of time as well.
-Each block has one proof of space and one proof of time.
-**Proofs of time**, or verifiable delay function proofs, are cryptographic proofs that a sequential
+In order to prevent grinding attacks and long range attacks amongst others, these proofs of space must be put through a 
+proof of time as well. Each block has one proof of space and one proof of time.
+**Proofs of time**, or verifiable delay function proofs ("VDFs"), are cryptographic proofs that a sequential
 computation was performed on a given input, for a given number of iterations. These proofs of
-time create time between blocks, and make generating an alternative blockchain very take time. The nodes
-that create proofs of time are called **Timelords**, and they don't get any rewards for doing this. The
+time create time between blocks, and make generating an alternative blockchain take a very long time. The nodes
+that create proofs of time are called **Timelords**, and they don't get any direct rewards for doing this. The
 idea is that they help the network operate, and as long as there is one honest timelord that is close
-enough to the fastest timelord, then the grinding resistance is preserved.
+enough to the fastest timelord, then grinding resistance is preserved.
 
 A block which does not yet have a proof of time on it, is called an **unfinished block**.
 
@@ -55,7 +55,7 @@ This allows farmers some time to fetch all their qualities and proofs from disk.
 
 * **difficulty**  is a number that is also changed every epoch, starting at block i+512 where i%2048 is 0.
 The difficulty parameter allows us to increase or decrease the number of iterations, in order to get closer
-to the target block time of 2.5 minutes. If blocks came much faster or much slower than expected in the
+to the target block time of 5 minutes. If blocks came much faster or much slower than expected in the
 previous epoch, the difficulty is adjusted based on the formula in the greenpaper. Source code is in src/blockchain.py.
 The difficulty is increased regardless of which component improved, the space or the time. If a large farmer
 came into the network, blocks will come faster and thus increase the difficulty. Same thing if a faster
@@ -75,7 +75,7 @@ a proof of space is "good" (requires low iterations), without fetching the whole
 lookup takes around 50ms on a slow HDD, while a proof of space lookup takes around 500ms. Note that this
 is like finding a good hash in Bitcoin, but does not require elecricity, and can be done instantly.
 
-* **k** is an integer between 30 and 59 which determines the size of a plot.
+* **k** is an integer between 30 and 59 which determines the size of a plot. For testnet **k** may be a lower value.
 
 * **expected_plot_size** is a function from k to the number of bytes on disk to store a plot of that size.
 Increasing k by one roughly doubles the size of the plot.
@@ -83,7 +83,7 @@ Increasing k by one roughly doubles the size of the plot.
 
 Whenever a farmer sees a new block in the network, she retrieves the quality and computes the iterations,
 which when divided by ips, yields the expected time to finalize that block. If this number is close enough
-to the expected block time (2.5 minutes), the entire proof of space is fetched from disk, the unfinished
+to the expected block time (5 minutes), the entire proof of space is fetched from disk, the unfinished
 block is created, and then it is propagated through the network.
 
 
