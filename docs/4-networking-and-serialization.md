@@ -9,7 +9,7 @@ Every message in the Chia protocol starts with 4 bytes, which is the encoded len
 
 ```json
 {
-    f: string,
+    f: "function_name",
     d: cbor_encoded_message
 }
 ```
@@ -74,9 +74,13 @@ After the handshake is completed, both peers can send Chia protocol messages, an
 Ping pong messages are periodic messages to be sent to peers, to ensure the other peer is still online.
 A ping message contains a nonce, which is returned in the pong message.
 
+If a node does not head from a peer node for a certain time (greater than the ping interval), then the node will disconnect and remove the peer from the active peer list.
+
 ## Introducer
 
 For a new peer to join the decentralized network, they must choose s subset of all online nodes to connect to.
 
 To facilitate this process, a number of introducer nodes will be run by Chia and other users, which will crawl the network and support one protocol message: GetPeers.
-The introducer will then return a random subset of peers, that the calling node will attempt to connect to.
+The introducer will then return a random subset of known recent peers that the calling node will attempt to connect to.
+
+The plan is to switch to DNS and a more decentralized approach of asking different peers for their peers.

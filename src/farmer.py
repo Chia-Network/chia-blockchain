@@ -245,7 +245,7 @@ class Farmer:
         ]
         self.harvester_responses_header_hash[quality] = header_hash
 
-        # TODO: only send to the harvester who made the proof of space, not all plotters
+        # TODO: only send to the harvester who made the proof of space, not all harvesters
         request = harvester_protocol.RequestHeaderSignature(quality, header_hash)
         yield OutboundMessage(
             NodeType.HARVESTER,
