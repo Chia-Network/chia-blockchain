@@ -181,6 +181,7 @@ class ChiaServer:
         forker = aiter_forker(handshaked_connections_aiter)
         handshake_finished_1 = forker.fork(is_active=True)
         handshake_finished_2 = forker.fork(is_active=True)
+        handshake_finished_3 = forker.fork(is_active=True)
 
         # Reads messages one at a time from the TCP connection
         messages_aiter = join_aiters(
@@ -199,8 +200,11 @@ class ChiaServer:
         # Uses a forked aiter, and calls the on_connect function to send some initial messages
         # as soon as the connection is established
         on_connect_outbound_aiter = join_aiters(
-            map_aiter(self.connection_to_outbound, handshake_finished_2, 100)
+            map_aiter(self.connection_to_outbound, handshake_finished_3, 100)
         )
+
+        # ping_aiter = join_aiters(map_aiter(self.connection_to_message, handshake_finished_2, 100))
+
         # Also uses the instance variable _outbound_aiter, which clients can use to send messages
         # at any time, not just on_connect.
         outbound_aiter_mapped = map_aiter(lambda x: (None, x), self._outbound_aiter)
@@ -247,17 +251,6 @@ class ChiaServer:
 
         log.info(f"Connection with {con.get_peername()} established")
         return con
-
-    async def connection_to_outbound(
-        self, connection: Connection
-    ) -> AsyncGenerator[Tuple[Connection, OutboundMessage], None]:
-        """
-        Async generator which calls the on_connect async generator method, and yields any outbound messages.
-        """
-        for func in connection.on_connect, self._on_inbound_connect:
-            if func:
-                async for outbound_message in func():
-                    yield connection, outbound_message
 
     async def perform_handshake(
         self, connection: Connection
@@ -326,6 +319,7 @@ class ChiaServer:
                     f" established"
                 )
             )
+            connection.handshake_finished = True
             # Only yield a connection if the handshake is succesful and the connection is not a duplicate.
             yield connection
         except (
@@ -339,6 +333,31 @@ class ChiaServer:
             log.warning(f"{e}, handshake not completed. Connection not created.")
             connection.close()
 
+    async def connection_to_outbound(
+        self, connection: Connection
+    ) -> AsyncGenerator[Tuple[Connection, OutboundMessage], None]:
+        """
+        Async generator which calls the on_connect async generator method, and yields any outbound messages.
+        """
+        for _ in []:  # Yields nothing
+            yield _
+        # for func in connection.on_connect, self._on_inbound_connect:
+        #     if func:
+        #         async for outbound_message in func():
+        #             yield connection, outbound_message
+
+    async def connection_to_pings(
+        self, connection: Connection
+    ) -> AsyncGenerator[Tuple[Connection, OutboundMessage], None]:
+        log.info("Calling")
+
+        # while not connection.writer.is_closing():
+        #     log.info("PING?")
+        #     await asyncio.sleep(10)
+
+        for _ in []:  # Yields nothing
+            yield _
+
     async def connection_to_message(
         self, connection: Connection
     ) -> AsyncGenerator[Tuple[Connection, Message], None]:
@@ -347,8 +366,10 @@ class ChiaServer:
         along with a streamwriter to send back responses. On EOF received, the connection
         is removed from the global list.
         """
+        log.info("Connection to message")
         try:
             while not connection.reader.at_eof():
+                log.info("Reading message")
                 message = await connection.read_one_message()
                 # Read one message at a time, forever
                 yield (connection, message)
