@@ -56,7 +56,7 @@ one farmer did not double sign a block, such a deep reorg cannot happen.
 ### [Proof of Space](/src/types/proof_of_space.py)
 * **challenge_hash**: the hash of the challenge.
 * **pool_pubkey**: public key of the pool, this key's signature is required to spend the coinbase transaction. The pool public key in included in the plot seed, and thus must be chosen before the plotting process. Farmers can solo-farm and use their own key as the pool key.
-* **plot_pubkey**: public key of the plotter. This key signs the header, and thus allows the owner of the plot to choose their own blocks, as opposed to pools doing this.
+* **plot_pubkey**: public key of the harvester. This key signs the header, and thus allows the owner of the plot to choose their own blocks, as opposed to pools doing this.
 * **size**: sometimes referred to as k, this is the plot size parameter.
 * **proof**: proof of space of size k*64 bits.
 
@@ -103,3 +103,16 @@ A block is considered valid, if it passes the unfinished block checks, and the f
 9. If genesis, the total weight must be starting difficulty
 10. If not genesis, the total iters must be parent iters + number_iters
 11. If genesis, the total iters must be number iters
+
+## Hashes
+Unless specified otherwise, all hashes in the Chia protocol use SHA256.
+
+## Signatures
+All signatures in the Chia system are BLS (Boneh–Lynn–Shacham) signatures.
+
+Where applicable, prepend signatures are used, where the public key is prepended to the hash of the message, in order to prevent rogue key attacks.
+
+Aggregate signatures are also supported at the protocol layer (using non interactive aggregation).
+Signatures are all combined into a single signature for each block.
+
+The current specification for BLS signatures used is [this one](https://github.com/Chia-Network/bls-signatures/blob/master/SPEC.md), but there is a plan to switch to the [IETF/blockchain standard](https://tools.ietf.org/html/draft-irtf-cfrg-bls-signature-00) when it is stable and implemented.

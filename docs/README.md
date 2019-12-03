@@ -14,4 +14,3 @@ and proof of time), written in C++.
 4. Networking and Serialization
 5. Protocols
 6. Codebase and Testing
-7. Glossary

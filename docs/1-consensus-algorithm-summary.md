@@ -34,6 +34,8 @@ enough to the fastest timelord, then the grinding resistance is preserved.
 
 A block which does not yet have a proof of time on it, is called an **unfinished block**.
 
+In summary, blocks are created by farmers/timelord with only a proof of space, and the best ones are sent to timelords which can add proofs of time to them, where the time required is a random number that depends on the block time, difficulty, proof of space quality, etc.
+
 ## Difficulty and Iterations
 
 In Chia, there is also a difficulty parameter which is a constant factor that can increase or decrease
@@ -82,7 +84,7 @@ Increasing k by one roughly doubles the size of the plot.
 Whenever a farmer sees a new block in the network, she retrieves the quality and computes the iterations,
 which when divided by ips, yields the expected time to finalize that block. If this number is close enough
 to the expected block time (2.5 minutes), the entire proof of space is fetched from disk, the unfinished
-block is creaed, and then it is propagated through the network.
+block is created, and then it is propagated through the network.
 
 
 As farmers in the network receive new blocks, and find their qualities and proofs of space, they
