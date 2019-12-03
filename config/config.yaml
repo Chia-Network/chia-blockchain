@@ -78,14 +78,12 @@ full_node:
       host: 127.0.0.1
       port: 8446
   introducer_peer:
-      # host: 2600:1f18:63ed:e200:f7c5:9e28:9b5e:130  # Chia AWS introducer IPv6
-      # host: 127.0.0.1
-      host: 18.232.223.201  # Chia AWS introducer IPv4
+      host: introducer.chia.net  # Chia AWS introducer IPv4/IPv6
       port: 8444
 
 introducer:
   host: 127.0.0.1
-  port: 8445
+  port: 8444
   max_peers_to_send: 20
   # The introducer will only return peers who it has seen in the last
   # recent_peer_threshold seconds
