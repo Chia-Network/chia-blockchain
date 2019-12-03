@@ -268,7 +268,7 @@ class FullNode:
         # Finding the fork point allows us to only download headers and blocks from the fork point
         async with self.store.lock:
             header_hashes = self.store.get_potential_hashes()
-            fork_point_height: HeaderBlock = self.blockchain.find_fork_point(
+            fork_point_height: uint32 = self.blockchain.find_fork_point(
                 header_hashes
             )
             fork_point_hash: bytes32 = header_hashes[fork_point_height]
@@ -328,14 +328,14 @@ class FullNode:
                             highest_height_requested = batch_end - 1
 
                         request_made = True
-                        request = peer_protocol.RequestHeaderBlocks(
+                        request_hb = peer_protocol.RequestHeaderBlocks(
                             tip_block.header_block.header.get_hash(),
                             [uint32(h) for h in range(batch_start, batch_end)],
                         )
                         log.info(f"Requesting header blocks {batch_start, batch_end}.")
                         yield OutboundMessage(
                             NodeType.FULL_NODE,
-                            Message("request_header_blocks", request),
+                            Message("request_header_blocks", request_hb),
                             Delivery.RANDOM,
                         )
                 if request_made:
