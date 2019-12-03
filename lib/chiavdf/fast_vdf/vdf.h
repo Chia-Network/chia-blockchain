@@ -49,7 +49,7 @@ using boost::asio::ip::tcp;
 
 const int kMaxItersAllowed = 8e8;
 // Don't modify this constant!
-const int kSwitchIters = 85000000;
+const int kSwitchIters = 91000000;
 
 struct akashnil_form {
     // y = ax^2 + bxy + y^2
