@@ -35,7 +35,7 @@ from definitions import ROOT_DIR
 log = logging.getLogger(__name__)
 
 
-def start_ssh_server(
+async def start_ssh_server(
     store: FullNodeStore,
     blockchain: Blockchain,
     server: ChiaServer,
@@ -50,14 +50,18 @@ def start_ssh_server(
     """
     uis = []  # type: ignore
     permenantly_closed = False
+    ssh_server = None
 
     def ui_close_cb():
-        log.info("Closing all connected UIs")
         nonlocal uis, permenantly_closed
-        for ui in uis:
-            ui.close()
-        close_cb()
-        permenantly_closed = True
+        if not permenantly_closed:
+            log.info("Closing all connected UIs")
+            for ui in uis:
+                ui.close()
+            if ssh_server is not None:
+                ssh_server.close()
+            close_cb()
+            permenantly_closed = True
 
     async def await_all_closed():
         nonlocal uis
@@ -65,6 +69,7 @@ def start_ssh_server(
             ui = uis[0]
             await ui.await_closed()
             uis = uis[1:]
+        await ssh_server.wait_closed()
 
     async def interact():
         nonlocal uis, permenantly_closed
@@ -73,16 +78,20 @@ def start_ssh_server(
         ui = FullNodeUI(store, blockchain, server, port, ui_close_cb)
         assert ui.app
         uis.append(ui)
-        await ui.app.run_async()
+        try:
+            await ui.app.run_async()
+        except ConnectionError:
+            log.info("Connection error in ssh UI, exiting.")
+            ui.close()
 
-    asyncio.get_running_loop().create_task(
-        asyncssh.create_server(
-            lambda: PromptToolkitSSHServer(interact),
-            "",
-            ssh_port,
-            server_host_keys=[ssh_key_filename],
-        )
+    ssh_server = await asyncssh.create_server(
+        lambda: PromptToolkitSSHServer(interact),
+        "",
+        ssh_port,
+        server_host_keys=[ssh_key_filename],
+        reuse_address=True,
     )
+
     return await_all_closed, ui_close_cb
 
 

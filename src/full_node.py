@@ -268,9 +268,7 @@ class FullNode:
         # Finding the fork point allows us to only download headers and blocks from the fork point
         async with self.store.lock:
             header_hashes = self.store.get_potential_hashes()
-            fork_point_height: uint32 = self.blockchain.find_fork_point(
-                header_hashes
-            )
+            fork_point_height: uint32 = self.blockchain.find_fork_point(header_hashes)
             fork_point_hash: bytes32 = header_hashes[fork_point_height]
         log.info(f"Fork point: {fork_point_hash} at height {fork_point_height}")
 
