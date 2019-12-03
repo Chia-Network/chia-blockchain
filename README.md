@@ -69,7 +69,9 @@ When running the servers on Mac OS, allow the application to accept incoming con
 UPnP is enabled by default, to open the port for incoming connections. If this causes issues, you can disable it in the configuration. Some routers may require port forwarding, or enabling UPnP in the router configuration.
 
 You can also run the simulation, which runs all servers and multiple full nodes, locally, at once.
-If you want to run the simulation, change the introducer ip in ./config/config.yaml so that the full node points to the local introducer (192.0.0.1:8445).
+If you want to run the simulation, change the introducer ip in ./config/config.yaml so that the full node points to the local introducer (127.0.0.1:8445).
+Note the the simulation is local only.
+The introducer will only know the local ips of the full nodes, so it cannot broadcast the correct ips to external peers.
 
 ```bash
 sh ./scripts/run_all_simulation.sh
