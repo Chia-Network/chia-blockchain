@@ -55,12 +55,13 @@ async def main():
     wait_for_ui, ui_close_cb = None, None
 
     def master_close_cb():
-        # Called by the UI, when node is closed, or when a signal is sent
-        log.info("Closing all connections, and server...")
-        full_node._shutdown()
-        server.close_all()
         global server_closed
-        server_closed = True
+        if not server_closed:
+            # Called by the UI, when node is closed, or when a signal is sent
+            log.info("Closing all connections, and server...")
+            full_node._shutdown()
+            server.close_all()
+            server_closed = True
 
     def signal_received():
         if ui_close_cb:
@@ -76,7 +77,7 @@ async def main():
         ui_ssh_port = int(sys.argv[index + 1])
         from src.ui.prompt_ui import start_ssh_server
 
-        wait_for_ui, ui_close_cb = start_ssh_server(
+        wait_for_ui, ui_close_cb = await start_ssh_server(
             store,
             blockchain,
             server,
