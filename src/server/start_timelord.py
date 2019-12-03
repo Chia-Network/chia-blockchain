@@ -33,6 +33,7 @@ async def main():
         timelord.config["full_node_peer"]["port"],
     )
 
+    await asyncio.sleep(1)  # Prevents TCP simultaneous connect with full node
     await server.start_client(full_node_peer, None)
 
     async for msg in timelord._manage_discriminant_queue():
