@@ -47,7 +47,9 @@ bool warn_on_corruption_in_production=false;
 
 using boost::asio::ip::tcp;
 
-const int kMaxItersAllowed = 3e8;
+const int kMaxItersAllowed = 8e8;
+// Don't modify this constant!
+const int kSwitchIters = 91000000;
 
 struct akashnil_form {
     // y = ax^2 + bxy + y^2
@@ -224,6 +226,15 @@ void repeated_square(form f, const integer& D, const integer& L, WesolowskiCallb
         if (weso.iterations >= kMaxItersAllowed - 500000) {
             std::cout << "Maximum possible number of iterations reached!\n";
             return ;
+        }
+
+        if (weso.iterations >= kSwitchIters && weso.kl == 10) {
+            uint64 round_up = (100 - num_iterations % 100) % 100;
+            if (round_up > 0) {
+                repeated_square_original(*weso.vdfo, f, D, L, num_iterations, round_up, &weso);
+            }
+            num_iterations += round_up;
+            weso.IncreaseConstants(num_iterations);
         }
 
         #ifdef VDF_TEST

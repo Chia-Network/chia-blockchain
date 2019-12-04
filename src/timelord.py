@@ -61,7 +61,7 @@ class Timelord:
                 stop_discriminant,
                 (stop_writer, _, _),
             ) in self.active_discriminants.items():
-                stop_writer.write(b"10")
+                stop_writer.write(b"010")
                 await stop_writer.drain()
                 self.done_discriminants.append(stop_discriminant)
             self.active_discriminants.clear()
@@ -125,7 +125,7 @@ class Timelord:
                 if expected_finish[k] == worst_finish
             )
         assert stop_writer is not None
-        stop_writer.write(b"10")
+        stop_writer.write(b"010")
         await stop_writer.drain()
         del self.active_discriminants[stop_discriminant]
         del self.active_discriminants_start_time[stop_discriminant]
@@ -174,7 +174,7 @@ class Timelord:
                     if current_weight <= challenge_weight:
                         log.info(f"Active weight cleanup: {current_weight}")
                         log.info(f"Cleanup weight: {challenge_weight}")
-                        current_writer.write(b"10")
+                        current_writer.write(b"010")
                         await current_writer.drain()
                         del self.active_discriminants[active_disc]
                         del self.active_discriminants_start_time[active_disc]
@@ -235,7 +235,11 @@ class Timelord:
                         if iter in self.submitted_iters[challenge_hash]:
                             continue
                         self.submitted_iters[challenge_hash].append(iter)
-                        writer.write((str(len(str(iter))) + str(iter)).encode())
+                        if (len(str(iter)) < 10):
+                            iter_size = "0" + str(len(str(iter)))
+                        else:
+                            iter_size = str(len(str(iter)))
+                        writer.write((iter_size + str(iter)).encode())
                         await writer.drain()
 
             try:
@@ -265,7 +269,7 @@ class Timelord:
                         and challenge_hash in self.active_discriminants
                     ):
                         log.info("Got poll, stopping the challenge!")
-                        writer.write(b"10")
+                        writer.write(b"010")
                         await writer.drain()
                         del self.active_discriminants[challenge_hash]
                         del self.active_discriminants_start_time[challenge_hash]
