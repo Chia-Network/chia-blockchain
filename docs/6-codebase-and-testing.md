@@ -7,7 +7,7 @@ full node, timelord, farmer, harvester, or introducer.
 The `ChiaServer` class can be used to start a listening server, or to connect to other clients.
 Once running, each connection goes through an asynchronous pipeline in `server.py`, where connections are mapped to messages, which are handled by the correct function, and mapped to outbound messages.
 
-This mapping through multiple async generators is handled through the aiter library, which is a utility for python asynchronous generators.
+This mapping through multiple async generators is handled through the [aiter library](https://github.com/richardkiss/aiter), which is a utility for python asynchronous generators.
 
 When a protocol message arrives, it's function string is read, and the appropriate python function gets called.
 The api_request parses the function data into a python object (from CBOR/streamable format).
@@ -59,7 +59,7 @@ If the node is only a few blocks behind, a series of `RequestBlock` messages wil
 
 ## State and persistance
 
-The reference implementation uses a mongodb database for persistance.
+The reference implementation currently uses a mongodb database for persistance and this may change.
 The database is only used by the full node, and it's only used to store full blocks that have been validated, and blocks that are downloaded during sync.
 The sync blocks collection is cleared after sync is done.
 
