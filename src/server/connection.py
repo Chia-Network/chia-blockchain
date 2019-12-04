@@ -47,9 +47,11 @@ class Connection:
         self.on_connect = on_connect
 
         # Connection metrics
+        self.handshake_finished = False
         self.creation_type = time.time()
         self.bytes_read = 0
         self.bytes_written = 0
+        self.last_message_time: float = 0
 
     def get_peername(self):
         return self.writer.get_extra_info("peername")
@@ -61,6 +63,9 @@ class Connection:
         if not self.peer_server_port or self.connection_type != NodeType.FULL_NODE:
             return None
         return PeerInfo(self.peer_host, uint16(self.peer_server_port))
+
+    def get_last_message_time(self) -> float:
+        return self.last_message_time
 
     async def send(self, message: Message):
         encoded: bytes = cbor.dumps({"f": message.function, "d": message.data})
@@ -75,6 +80,7 @@ class Connection:
         full_message: bytes = await self.reader.readexactly(full_message_length)
         full_message_loaded: Any = cbor.loads(full_message)
         self.bytes_read += LENGTH_BYTES + full_message_length
+        self.last_message_time = time.time()
         return Message(full_message_loaded["f"], full_message_loaded["d"])
 
     def close(self):

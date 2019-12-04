@@ -31,10 +31,10 @@ class HandshakeAck:
 @dataclass(frozen=True)
 @cbor_message
 class Ping:
-    pass
+    nonce: bytes32
 
 
 @dataclass(frozen=True)
 @cbor_message
 class Pong:
-    pass
+    nonce: bytes32
