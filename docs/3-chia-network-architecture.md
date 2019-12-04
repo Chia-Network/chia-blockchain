@@ -54,12 +54,12 @@ This private key is what actually signs the block, allowing farmers/harvesters (
 
 ## Timelords
 
-Timelords support the network by creating sequential proofs of time (using Verifiable Delay Functions) on top on unfinished blocks.
+Timelords support the network by creating sequential proofs of time (using Verifiable Delay Functions) on top of unfinished blocks.
 Since this computation is sequential, very little energy is consumed, as opposed to proof of work systems where computation is parallelizable.
 Timelords are also connected to full nodes.
 Although timelords earn no rewards, there only needs to be one honest timelord online for the blockchain to move forward.
 
-Someone who has a faster timelord can also earn more rewards from their space, since their blocks will finish slightly faster that those of other farmers.
+Someone who has a faster timelord can also earn more rewards from their space, since their blocks will finish slightly faster than those of other farmers.
 
 Furthermore, an attacker with a much faster timelord can potentially 51% attack the network with less than 51% of the space, which is why open designs of VDF hardware are very important for the security of the blockchain.
 
@@ -77,4 +77,4 @@ Farmers periodically send partials, which contain a proof of space and a signatu
 ## Wallets
 
 Wallets can communicate with full nodes through the wallet protocol.
-This is similar to Bitcoin's SPV protocol, and allows verification of transactions and block wight, without the bandwidth and CPU requirements of full nodes.
+This is similar to Bitcoin's SPV protocol, and allows verification of transactions and block weight, without the bandwidth and CPU requirements of full nodes.
