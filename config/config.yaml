@@ -69,7 +69,7 @@ full_node:
   # This SSH key is for the ui SSH server
   ssh_filename: config/ssh_host_key
   # How often to connect to introducer if we need to learn more peers
-  introducer_connect_interval: 120
+  introducer_connect_interval: 500
   # Continue trying to connect to more peers until this number of connections
   target_peer_count: 10
   # Only connect to peers who we have heard about in the last recent_peer_threshold seconds

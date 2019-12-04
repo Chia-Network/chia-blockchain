@@ -924,7 +924,7 @@ class FullNode:
         if expected_time > constants["PROPAGATION_DELAY_THRESHOLD"]:
             log.info(f"Block is slow, expected {expected_time} seconds, waiting")
             # If this block is slow, sleep to allow faster blocks to come out first
-            await asyncio.sleep(3)
+            await asyncio.sleep(5)
 
         async with self.store.lock:
             leader: Tuple[uint32, uint64] = self.store.get_unfinished_block_leader()

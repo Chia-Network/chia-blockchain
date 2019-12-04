@@ -23,7 +23,7 @@ class Database(ABC):
     def __init__(self, db_name):
         loop = asyncio.get_event_loop()
         client = motor_asyncio.AsyncIOMotorClient(
-            "mongodb://localhost:27017/", io_loop=loop
+            "mongodb://127.0.0.1:27017/", io_loop=loop
         )
         log.info("Connecting to mongodb database")
         self.db = client.get_database(
