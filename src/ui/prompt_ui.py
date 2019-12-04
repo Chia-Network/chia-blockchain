@@ -316,11 +316,14 @@ class FullNodeUI:
                 con_str = f"{NodeType(con.connection_type).name} {con.get_peername()} {con.node_id.hex()[:10]}..."
                 con_label = Label(text=con_str)
 
-                def disconnect():
-                    self.connections.close(con)
-                    self.layout.focus(self.quit_button)
+                def disconnect(c):
+                    def inner():
+                        self.connections.close(c)
+                        self.layout.focus(self.quit_button)
 
-                disconnect_button = Button("Disconnect", handler=disconnect)
+                    return inner
+
+                disconnect_button = Button("Disconnect", handler=disconnect(con))
                 row = VSplit([con_label, disconnect_button])
                 new_con_rows.append(row)
             self.displayed_cons = connections

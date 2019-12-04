@@ -68,6 +68,8 @@ When running the servers on Mac OS, allow the application to accept incoming con
 
 UPnP is enabled by default, to open the port for incoming connections. If this causes issues, you can disable it in the configuration. Some routers may require port forwarding, or enabling UPnP in the router configuration.
 
+Due to the nature of proof of space lookups by the harvester you should limit the number of plots on a physical drive to 50 or less.
+
 You can also run the simulation, which runs all servers and multiple full nodes, locally, at once.
 If you want to run the simulation, change the introducer ip in ./config/config.yaml so that the full node points to the local introducer (127.0.0.1:8445).
 Note the the simulation is local only.
