@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import collections
+import concurrent
 import os
 from typing import Callable, List, Optional, Tuple
 from yaml import safe_load
@@ -518,6 +519,8 @@ class FullNodeUI:
                     for pk in self.pool_pks
                 ]
                 await asyncio.sleep(5)
+        except concurrent.futures._base.CancelledError as e:
+            log.warn(f"Cancelled error in UI: {type(e)}: {e}")
         except Exception as e:
             log.warn(f"Exception in UI update_data {type(e)}: {e}")
             raise e
