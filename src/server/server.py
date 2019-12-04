@@ -291,6 +291,17 @@ class ChiaServer:
         log.info(f"Connection with {con.get_peername()} established")
         return con
 
+    async def connection_to_outbound(
+        self, connection: Connection
+    ) -> AsyncGenerator[Tuple[Connection, OutboundMessage], None]:
+        """
+        Async generator which calls the on_connect async generator method, and yields any outbound messages.
+        """
+        for func in connection.on_connect, self._on_inbound_connect:
+            if func:
+                async for outbound_message in func():
+                    yield connection, outbound_message
+
     async def perform_handshake(
         self, connection: Connection
     ) -> AsyncGenerator[Connection, None]:
@@ -372,17 +383,6 @@ class ChiaServer:
             log.warning(f"{e}, handshake not completed. Connection not created.")
             connection.close()
 
-    async def connection_to_outbound(
-        self, connection: Connection
-    ) -> AsyncGenerator[Tuple[Connection, OutboundMessage], None]:
-        """
-        Async generator which calls the on_connect async generator method, and yields any outbound messages.
-        """
-        for func in connection.on_connect, self._on_inbound_connect:
-            if func:
-                async for outbound_message in func():
-                    yield connection, outbound_message
-
     async def connection_to_message(
         self, connection: Connection
     ) -> AsyncGenerator[Tuple[Connection, Message], None]:
@@ -391,7 +391,6 @@ class ChiaServer:
         along with a streamwriter to send back responses. On EOF received, the connection
         is removed from the global list.
         """
-        log.info("Connection to message")
         try:
             while not connection.reader.at_eof():
                 message = await connection.read_one_message()
