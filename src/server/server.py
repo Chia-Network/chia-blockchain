@@ -268,7 +268,7 @@ class ChiaServer:
                 log.info(f"-> {message.function} to peer {connection.get_peername()}")
                 try:
                     await connection.send(message)
-                except (ConnectionResetError, BrokenPipeError, RuntimeError) as e:
+                except (ConnectionResetError, BrokenPipeError, RuntimeError, TimeoutError) as e:
                     log.error(
                         f"Cannot write to {connection}, already closed. Error {e}."
                     )
