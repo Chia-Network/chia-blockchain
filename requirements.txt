@@ -1,4 +1,5 @@
 aiohttp==3.6.2
+aiter==0.13.20191203
 appdirs==1.4.3
 async-timeout==3.0.1
 asyncssh==2.0.0
@@ -50,6 +51,5 @@ uvloop==0.14.0
 wcwidth==0.1.7
 yarl==1.3.0
 zipp==0.6.0
--e lib/aiter
 -e lib/chiapos
 -e lib/python-prompt-toolkit
