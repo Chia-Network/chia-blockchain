@@ -11,7 +11,7 @@ This mapping through multiple async generators is handled through the [aiter lib
 
 When a protocol message arrives, it's function string is read, and the appropriate python function gets called.
 The api_request parses the function data into a python object (from CBOR/streamable format).
-All api functions are asynchronous generator, which means they can yield any numbner of responses in an asynchronous manner.
+All api functions are asynchronous generators, which means they can yield any number of responses in an asynchronous manner.
 
 For example, a block message may trigger a block message to other peers, as well as messages to a timelord or farmer.
 
