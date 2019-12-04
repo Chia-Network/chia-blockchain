@@ -57,8 +57,9 @@ void session(tcp::socket sock) {
         integer D(disc);
         PrintInfo("Discriminant = " + to_string(D.impl));
 
-        forms = (form*) malloc((kMaxItersAllowed / 10) * sizeof(form));
-        memset(forms,0x00,(kMaxItersAllowed / 10) * sizeof(form));
+        int space_needed = kSwitchIters / 10 + (kMaxItersAllowed - kSwitchIters) / 100;
+        forms = (form*) malloc(space_needed * sizeof(form));
+        memset(forms,0x00,space_needed * sizeof(form));
 
         PrintInfo("Malloc'd succesfully");
 
@@ -114,8 +115,8 @@ void session(tcp::socket sock) {
 
         while (!stopped) {
             memset(data, 0, sizeof(data));
-            boost::asio::read(sock, boost::asio::buffer(data, 1), error);
-            int size = data[0] - '0';
+            boost::asio::read(sock, boost::asio::buffer(data, 2), error);
+            int size = (data[0] - '0') * 10 + (data[1] - '0');
             memset(data, 0, sizeof(data));
             boost::asio::read(sock, boost::asio::buffer(data, size), error);
             int iters = atoi(data);
