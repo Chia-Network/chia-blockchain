@@ -344,7 +344,6 @@ class ChiaServer:
             connection.node_id = inbound_handshake.node_id
             connection.peer_server_port = int(inbound_handshake.server_port)
             connection.connection_type = inbound_handshake.node_type
-
             if not self.global_connections.add(connection):
                 raise InvalidHandshake(f"Duplicate connection to {connection}")
 
@@ -381,7 +380,10 @@ class ChiaServer:
             Exception,
         ) as e:
             log.warning(f"{e}, handshake not completed. Connection not created.")
-            connection.close()
+            for established_connection in self.global_connections.get_connections():
+                if connection.node_id == established_connection.node_id and not connection.handshake_finished:
+                    # Makes sure not to remove a duplicate connection
+                    self.global_connections.close(connection)
 
     async def connection_to_message(
         self, connection: Connection
