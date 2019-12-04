@@ -194,7 +194,10 @@ class ChiaServer:
                         if (
                             time.time() - connection.get_last_message_time()
                             > config["timeout_duration"]
+                            and connection.connection_type == NodeType.FULL_NODE
+                            and self._local_type == NodeType.FULL_NODE
                         ):
+                            # Only closes down full_node <-> full_node connections, which can be recovered
                             to_close.append(connection)
                 for connection in to_close:
                     log.info(f"Removing connection {connection} due to timeout.")
@@ -381,7 +384,10 @@ class ChiaServer:
         ) as e:
             log.warning(f"{e}, handshake not completed. Connection not created.")
             for established_connection in self.global_connections.get_connections():
-                if connection.node_id == established_connection.node_id and not connection.handshake_finished:
+                if (
+                    connection.node_id == established_connection.node_id
+                    and not connection.handshake_finished
+                ):
                     # Makes sure not to remove a duplicate connection
                     self.global_connections.close(connection)
 
