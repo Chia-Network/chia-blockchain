@@ -152,7 +152,6 @@ class ChiaServer:
         Await until the pipeline is done, after which the server and all clients are closed.
         """
         await self._pipeline_task
-        await self._ping_task
 
     def push_message(self, message: OutboundMessage):
         """
