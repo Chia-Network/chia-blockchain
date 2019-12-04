@@ -27,7 +27,7 @@ The harvester can start using plots which have this pool associated with them.
 class NewChallenge:
     challenge_hash: bytes32
 ```
-Message to notify the harvester of a new challenge.
+This message notifies the harvester of a new challenge.
 The harvester looks up the challenge in each of the plots, and computes the quality.
 This requires around 7 disk seeks for each quality.
 Each plot is expected to have one proof of space on average, so for 50 plots, a harvester would have around 50 qualities.
@@ -175,7 +175,7 @@ class ProofOfTimeFinished:
     proof: ProofOfTime
 ```
 A message from a timelord to a full node with a proof of time.
-This is send as soon as the proof of finished, and may contain one of several types of proofs (fast, small, etc).
+This is sent as soon as the proof of finished, and may contain one of several types of proofs (fast, small, etc).
 
 The full node either creates a `FullBlock` and propagates it, or sends the proof to peers that have the rest of the block already.
 
@@ -338,4 +338,4 @@ Request a transaction from another peer, usually after receiving a new transacti
 class NewTransaction:
     transaction: Transaction
 ```
-Broadcast a new transction to a peer.
+Broadcast a new transaction to a peer.
