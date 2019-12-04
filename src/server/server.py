@@ -178,19 +178,6 @@ class ChiaServer:
                 to_close: List[Connection] = []
                 for connection in self.global_connections.get_connections():
                     if connection.handshake_finished:
-                        msg = Message("ping", Ping(bytes32(token_bytes(32))))
-                        self.push_message(
-                            OutboundMessage(NodeType.FARMER, msg, Delivery.BROADCAST)
-                        )
-                        self.push_message(
-                            OutboundMessage(NodeType.TIMELORD, msg, Delivery.BROADCAST)
-                        )
-                        self.push_message(
-                            OutboundMessage(NodeType.FULL_NODE, msg, Delivery.BROADCAST)
-                        )
-                        self.push_message(
-                            OutboundMessage(NodeType.HARVESTER, msg, Delivery.BROADCAST)
-                        )
                         if (
                             time.time() - connection.get_last_message_time()
                             > config["timeout_duration"]
@@ -202,6 +189,19 @@ class ChiaServer:
                 for connection in to_close:
                     log.info(f"Removing connection {connection} due to timeout.")
                     self.global_connections.close(connection)
+                msg = Message("ping", Ping(bytes32(token_bytes(32))))
+                self.push_message(
+                    OutboundMessage(NodeType.FARMER, msg, Delivery.BROADCAST)
+                )
+                self.push_message(
+                    OutboundMessage(NodeType.TIMELORD, msg, Delivery.BROADCAST)
+                )
+                self.push_message(
+                    OutboundMessage(NodeType.FULL_NODE, msg, Delivery.BROADCAST)
+                )
+                self.push_message(
+                    OutboundMessage(NodeType.HARVESTER, msg, Delivery.BROADCAST)
+                )
                 await asyncio.sleep(config["ping_interval"])
 
         return asyncio.create_task(ping())
