@@ -481,6 +481,8 @@ class FullNodeUI:
                 if self.app and not self.app.invalidated:
                     self.app.invalidate()
                 await asyncio.sleep(0.25)
+        except concurrent.futures._base.CancelledError as e:
+            log.warn(f"Cancelled error in UI: {type(e)}: {e}")
         except Exception as e:
             log.warn(f"Exception in UI update_ui {type(e)}: {e}")
             raise e
