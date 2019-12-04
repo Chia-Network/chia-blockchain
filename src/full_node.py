@@ -18,7 +18,11 @@ from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.weight_verifier import verify_weight
 from src.database import FullNodeStore
-from src.protocols import farmer_protocol, peer_protocol, timelord_protocol, shared_protocol
+from src.protocols import (
+    farmer_protocol,
+    peer_protocol,
+    timelord_protocol,
+)
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
 from src.types.body import Body
@@ -187,13 +191,6 @@ class FullNode:
                         continue
                 await asyncio.sleep(self.config["introducer_connect_interval"])
 
-        async def ping():
-            while not self._shut_down:
-                msg = Message("ping", shared_protocol.Ping())
-                self.server.push_message(OutboundMessage(NodeType.FULL_NODE, msg, Delivery.BROADCAST))
-                await asyncio.sleep(10)
-
-        asyncio.create_task(introducer_client())
         asyncio.create_task(introducer_client())
 
     def _shutdown(self):

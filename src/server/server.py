@@ -3,12 +3,20 @@ import logging
 import random
 import os
 import concurrent
+import time
+from secrets import token_bytes
 from yaml import safe_load
 from typing import Any, AsyncGenerator, List, Optional, Tuple
 from aiter import aiter_forker, iter_to_aiter, join_aiters, map_aiter, push_aiter
 from aiter.server import start_server_aiter
 from definitions import ROOT_DIR
-from src.protocols.shared_protocol import Handshake, HandshakeAck, protocol_version
+from src.protocols.shared_protocol import (
+    Handshake,
+    HandshakeAck,
+    Ping,
+    Pong,
+    protocol_version,
+)
 from src.server.connection import Connection, OnConnectFunc, PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.peer_info import PeerInfo
@@ -21,6 +29,7 @@ from src.util.errors import (
 )
 from src.util.ints import uint16
 from src.util.network import create_node_id
+from src.types.sized_bytes import bytes32
 
 log = logging.getLogger(__name__)
 
@@ -58,6 +67,7 @@ class ChiaServer:
         self._pipeline_task = self.initialize_pipeline(
             self._srwt_aiter, self._api, self._port
         )
+        self._ping_task = self._initialize_ping_task()
         self._node_id = create_node_id()
 
     async def start_server(self, host: str, on_connect: OnConnectFunc = None,) -> bool:
@@ -142,6 +152,7 @@ class ChiaServer:
         Await until the pipeline is done, after which the server and all clients are closed.
         """
         await self._pipeline_task
+        await self._ping_task
 
     def push_message(self, message: OutboundMessage):
         """
@@ -160,6 +171,37 @@ class ChiaServer:
             self._outbound_aiter.stop()
         if not self._srwt_aiter.is_stopped():
             self._srwt_aiter.stop()
+
+    def _initialize_ping_task(self):
+        async def ping():
+            while not self._pipeline_task.done():
+                to_close: List[Connection] = []
+                for connection in self.global_connections.get_connections():
+                    if connection.handshake_finished:
+                        msg = Message("ping", Ping(bytes32(token_bytes(32))))
+                        self.push_message(
+                            OutboundMessage(NodeType.FARMER, msg, Delivery.BROADCAST)
+                        )
+                        self.push_message(
+                            OutboundMessage(NodeType.TIMELORD, msg, Delivery.BROADCAST)
+                        )
+                        self.push_message(
+                            OutboundMessage(NodeType.FULL_NODE, msg, Delivery.BROADCAST)
+                        )
+                        self.push_message(
+                            OutboundMessage(NodeType.HARVESTER, msg, Delivery.BROADCAST)
+                        )
+                        if (
+                            time.time() - connection.get_last_message_time()
+                            > config["timeout_duration"]
+                        ):
+                            to_close.append(connection)
+                for connection in to_close:
+                    log.info(f"Removing connection {connection} due to timeout.")
+                    self.global_connections.close(connection)
+                await asyncio.sleep(config["ping_interval"])
+
+        return asyncio.create_task(ping())
 
     def initialize_pipeline(self, aiter, api: Any, server_port: int) -> asyncio.Task:
         """
@@ -181,7 +223,6 @@ class ChiaServer:
         forker = aiter_forker(handshaked_connections_aiter)
         handshake_finished_1 = forker.fork(is_active=True)
         handshake_finished_2 = forker.fork(is_active=True)
-        handshake_finished_3 = forker.fork(is_active=True)
 
         # Reads messages one at a time from the TCP connection
         messages_aiter = join_aiters(
@@ -200,10 +241,8 @@ class ChiaServer:
         # Uses a forked aiter, and calls the on_connect function to send some initial messages
         # as soon as the connection is established
         on_connect_outbound_aiter = join_aiters(
-            map_aiter(self.connection_to_outbound, handshake_finished_3, 100)
+            map_aiter(self.connection_to_outbound, handshake_finished_2, 100)
         )
-
-        # ping_aiter = join_aiters(map_aiter(self.connection_to_message, handshake_finished_2, 100))
 
         # Also uses the instance variable _outbound_aiter, which clients can use to send messages
         # at any time, not just on_connect.
@@ -339,24 +378,10 @@ class ChiaServer:
         """
         Async generator which calls the on_connect async generator method, and yields any outbound messages.
         """
-        for _ in []:  # Yields nothing
-            yield _
-        # for func in connection.on_connect, self._on_inbound_connect:
-        #     if func:
-        #         async for outbound_message in func():
-        #             yield connection, outbound_message
-
-    async def connection_to_pings(
-        self, connection: Connection
-    ) -> AsyncGenerator[Tuple[Connection, OutboundMessage], None]:
-        log.info("Calling")
-
-        # while not connection.writer.is_closing():
-        #     log.info("PING?")
-        #     await asyncio.sleep(10)
-
-        for _ in []:  # Yields nothing
-            yield _
+        for func in connection.on_connect, self._on_inbound_connect:
+            if func:
+                async for outbound_message in func():
+                    yield connection, outbound_message
 
     async def connection_to_message(
         self, connection: Connection
@@ -369,7 +394,6 @@ class ChiaServer:
         log.info("Connection to message")
         try:
             while not connection.reader.at_eof():
-                log.info("Reading message")
                 message = await connection.read_one_message()
                 # Read one message at a time, forever
                 yield (connection, message)
@@ -407,11 +431,25 @@ class ChiaServer:
                 # This prevents remote calling of private methods that start with "_"
                 raise InvalidProtocolMessage(full_message.function)
 
+            log.info(
+                f"<- {full_message.function} from peer {connection.get_peername()}"
+            )
+            if full_message.function == "ping":
+                ping_msg = Ping(full_message.data["nonce"])
+                assert connection.connection_type
+                yield connection, OutboundMessage(
+                    connection.connection_type,
+                    Message("pong", Pong(ping_msg.nonce)),
+                    Delivery.RESPOND,
+                )
+                return
+            elif full_message.function == "pong":
+                return
+
             f = getattr(api, full_message.function)
             if f is None:
                 raise InvalidProtocolMessage(full_message.function)
 
-            log.info(f"<- {f.__name__} from peer {connection.get_peername()}")
             result = f(full_message.data)
             if isinstance(result, AsyncGenerator):
                 async for outbound_message in result:

@@ -235,7 +235,7 @@ class Timelord:
                         if iter in self.submitted_iters[challenge_hash]:
                             continue
                         self.submitted_iters[challenge_hash].append(iter)
-                        if (len(str(iter)) < 10):
+                        if len(str(iter)) < 10:
                             iter_size = "0" + str(len(str(iter)))
                         else:
                             iter_size = str(len(str(iter)))

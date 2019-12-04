@@ -64,6 +64,9 @@ class Connection:
             return None
         return PeerInfo(self.peer_host, uint16(self.peer_server_port))
 
+    def get_last_message_time(self) -> float:
+        return self.last_message_time
+
     async def send(self, message: Message):
         encoded: bytes = cbor.dumps({"f": message.function, "d": message.data})
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
