@@ -5,8 +5,11 @@ Python 3.7 is used for this project. Make sure your default python version is >=
 
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential cmake python3-dev python3-venv --no-install-recommends mongodb-org=4.2.1
+sudo apt-get install build-essential cmake python3-dev python3-venv --no-install-recommends
 sh install.sh
+
+# Install MongoDB Community Edition
+# Instructions - https://docs.mongodb.com/manual/administration/install-on-linux/
 
 # Run mongo database
 mongod --fork --dbpath ./db/ --logpath mongod.log
