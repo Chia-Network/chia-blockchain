@@ -8,8 +8,8 @@ sudo apt-get update
 sudo apt-get install build-essential cmake python3-dev python3-venv --no-install-recommends
 sh install.sh
 
-#Install MongoDB Community Edition
-Instructions - https://docs.mongodb.com/manual/administration/install-on-linux/
+# Install MongoDB Community Edition
+# Instructions - https://docs.mongodb.com/manual/administration/install-on-linux/
 
 # Run mongo database
 mongod --fork --dbpath ./db/ --logpath mongod.log
