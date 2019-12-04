@@ -383,7 +383,7 @@ class FullNodeUI:
             for i, (winnings, pk) in enumerate(self.top_winners):
                 self.top_block_pools_labels[
                     i
-                ].text = f"Public key {pk.hex()}: {winnings} chias {int(winnings/(1000000000))} Gchias."
+                ].text = f"Public key {pk.hex()}: {winnings/1000000000000} chias."
                 new_top_block_pools_labels.append(self.top_block_pools_labels[i])
             top_block_pools_labels = new_top_block_pools_labels
 
@@ -393,7 +393,7 @@ class FullNodeUI:
             for i, (winnings, pk) in enumerate(self.our_winners):
                 self.our_pools_labels[
                     i
-                ].text = f"Public key {pk.hex()}: {winnings} chias {int(winnings/(1000000000))} Gchias."
+                ].text = f"Public key {pk.hex()}: {winnings/(1000000000000)} chias."
                 new_our_pools_labels.append(self.our_pools_labels[i])
             our_pools_labels = new_our_pools_labels
 
