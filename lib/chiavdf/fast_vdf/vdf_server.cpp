@@ -111,7 +111,7 @@ void session(tcp::socket sock) {
 
         // Tell client that I'm ready to get the challenges.
         boost::asio::write(sock, boost::asio::buffer("OK", 2));
-        char data[10];
+        char data[20];
 
         while (!stopped) {
             memset(data, 0, sizeof(data));
