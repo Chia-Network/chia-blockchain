@@ -1,4 +1,9 @@
 network_id: testnet  # testnet/mainnet
+# Send a ping to all peers after ping_interval seconds
+ping_interval: 120
+# Close the connection if no data is received for timeout_duration seconds.
+# Must be greater than ping_interval
+timeout_duration: 600
 
 harvester:
   # The harvester server (if run) will run on this host and port
@@ -69,7 +74,6 @@ full_node:
   target_peer_count: 10
   # Only connect to peers who we have heard about in the last recent_peer_threshold seconds
   recent_peer_threshold: 6000
-
 
   farmer_peer:
       host: 127.0.0.1
