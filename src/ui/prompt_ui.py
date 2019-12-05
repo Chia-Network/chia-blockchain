@@ -84,6 +84,7 @@ async def start_ssh_server(
         except ConnectionError:
             log.info("Connection error in ssh UI, exiting.")
             ui.close()
+            # raise
 
     ssh_server = await asyncssh.create_server(
         lambda: PromptToolkitSSHServer(interact),
@@ -480,7 +481,7 @@ class FullNodeUI:
 
                 if self.app and not self.app.invalidated:
                     self.app.invalidate()
-                await asyncio.sleep(0.25)
+                await asyncio.sleep(1)
         except concurrent.futures._base.CancelledError as e:
             log.warn(f"Cancelled error in UI: {type(e)}: {e}")
         except Exception as e:

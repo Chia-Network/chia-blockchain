@@ -3,7 +3,6 @@ import logging
 import random
 import os
 import concurrent
-import time
 from secrets import token_bytes
 from yaml import safe_load
 from typing import Any, AsyncGenerator, List, Optional, Tuple
@@ -174,20 +173,6 @@ class ChiaServer:
     def _initialize_ping_task(self):
         async def ping():
             while not self._pipeline_task.done():
-                to_close: List[Connection] = []
-                for connection in self.global_connections.get_connections():
-                    if connection.handshake_finished:
-                        if (
-                            time.time() - connection.get_last_message_time()
-                            > config["timeout_duration"]
-                            and connection.connection_type == NodeType.FULL_NODE
-                            and self._local_type == NodeType.FULL_NODE
-                        ):
-                            # Only closes down full_node <-> full_node connections, which can be recovered
-                            to_close.append(connection)
-                for connection in to_close:
-                    log.info(f"Removing connection {connection} due to timeout.")
-                    self.global_connections.close(connection)
                 msg = Message("ping", Ping(bytes32(token_bytes(32))))
                 self.push_message(
                     OutboundMessage(NodeType.FARMER, msg, Delivery.BROADCAST)
@@ -202,7 +187,6 @@ class ChiaServer:
                     OutboundMessage(NodeType.HARVESTER, msg, Delivery.BROADCAST)
                 )
                 await asyncio.sleep(config["ping_interval"])
-
         return asyncio.create_task(ping())
 
     def initialize_pipeline(self, aiter, api: Any, server_port: int) -> asyncio.Task:
