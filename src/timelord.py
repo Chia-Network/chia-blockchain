@@ -180,6 +180,31 @@ class Timelord:
                         del self.active_discriminants_start_time[active_disc]
                         self.done_discriminants.append(active_disc)
 
+    async def send_iterations(self, challenge_hash, writer):
+        alive_discriminant = True
+        while (alive_discriminant):
+            async with self.lock:
+                if (challenge_hash in self.active_discriminants) and (
+                    challenge_hash in self.pending_iters
+                ):
+                    if challenge_hash not in self.submitted_iters:
+                        self.submitted_iters[challenge_hash] = []
+                    for iter in sorted(self.pending_iters[challenge_hash]):
+                        if iter in self.submitted_iters[challenge_hash]:
+                            continue
+                        self.submitted_iters[challenge_hash].append(iter)
+                        if len(str(iter)) < 10:
+                            iter_size = "0" + str(len(str(iter)))
+                        else:
+                            iter_size = str(len(str(iter)))
+                        writer.write((iter_size + str(iter)).encode())
+                        await writer.drain()
+                        log.info(f"New iteration submitted: {iter}")
+            await asyncio.sleep(3)
+            async with self.lock:
+                if (challenge_hash in self.done_discriminants):
+                    alive_discriminant = False
+
     async def _do_process_communication(
         self, challenge_hash, challenge_weight, ip, port
     ):
@@ -219,29 +244,10 @@ class Timelord:
             self.active_discriminants[challenge_hash] = (writer, challenge_weight, ip)
             self.active_discriminants_start_time[challenge_hash] = time.time()
 
+        asyncio.create_task(self.send_iterations(challenge_hash, writer))
+
         # Listen to the server until "STOP" is received.
         while True:
-            async with self.lock:
-                if (challenge_hash in self.active_discriminants) and (
-                    challenge_hash in self.pending_iters
-                ):
-                    if challenge_hash not in self.submitted_iters:
-                        self.submitted_iters[challenge_hash] = []
-                    log.info(
-                        f"Pending: {self.pending_iters[challenge_hash]} "
-                        f"Submitted: {self.submitted_iters[challenge_hash]} Hash: {challenge_hash}"
-                    )
-                    for iter in sorted(self.pending_iters[challenge_hash]):
-                        if iter in self.submitted_iters[challenge_hash]:
-                            continue
-                        self.submitted_iters[challenge_hash].append(iter)
-                        if len(str(iter)) < 10:
-                            iter_size = "0" + str(len(str(iter)))
-                        else:
-                            iter_size = str(len(str(iter)))
-                        writer.write((iter_size + str(iter)).encode())
-                        await writer.drain()
-
             try:
                 data = await reader.readexactly(4)
             except (asyncio.IncompleteReadError, ConnectionResetError) as e:
@@ -259,21 +265,6 @@ class Timelord:
                     len_server = len(self.free_servers)
                     log.info(f"Process ended... Server length {len_server}")
                 break
-            elif data.decode() == "POLL":
-                async with self.lock:
-                    # If I have a newer discriminant... Free up the VDF server
-                    if (
-                        len(self.discriminant_queue) > 0
-                        and challenge_weight
-                        < max([h for _, h in self.discriminant_queue])
-                        and challenge_hash in self.active_discriminants
-                    ):
-                        log.info("Got poll, stopping the challenge!")
-                        writer.write(b"010")
-                        await writer.drain()
-                        del self.active_discriminants[challenge_hash]
-                        del self.active_discriminants_start_time[challenge_hash]
-                        self.done_discriminants.append(challenge_hash)
             else:
                 try:
                     # This must be a proof, read the continuation.
