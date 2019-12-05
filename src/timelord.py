@@ -149,7 +149,7 @@ class Timelord:
                     new_avg_ips = int((prev_avg_ips * trials + ips) / (trials + 1))
                     self.avg_ips[ip] = (new_avg_ips, trials + 1)
                     log.info(f"New estimate: {new_avg_ips}")
-                    # self.pending_iters[challenge_hash].remove(iterations_needed)
+                self.pending_iters[challenge_hash].remove(iterations_needed)
             else:
                 log.info(
                     f"Finished PoT chall:{challenge_hash[:10].hex()}.. {iterations_needed}"
@@ -180,7 +180,7 @@ class Timelord:
                         del self.active_discriminants_start_time[active_disc]
                         self.done_discriminants.append(active_disc)
 
-    async def send_iterations(self, challenge_hash, writer):
+    async def _send_iterations(self, challenge_hash, writer):
         alive_discriminant = True
         while (alive_discriminant):
             async with self.lock:
@@ -244,7 +244,7 @@ class Timelord:
             self.active_discriminants[challenge_hash] = (writer, challenge_weight, ip)
             self.active_discriminants_start_time[challenge_hash] = time.time()
 
-        asyncio.create_task(self.send_iterations(challenge_hash, writer))
+        asyncio.create_task(self._send_iterations(challenge_hash, writer))
 
         # Listen to the server until "STOP" is received.
         while True:
@@ -332,9 +332,25 @@ class Timelord:
                         )
                         self.discriminant_queue.clear()
                     else:
-                        disc = next(
+                        max_weight_disc = [
                             d for d, h in self.discriminant_queue if h == max_weight
-                        )
+                        ]
+                        with_iters = [
+                            d for d in max_weight_disc 
+                            if d in self.pending_iters
+                            and len(self.pending_iters[d]) != 0
+                        ]
+                        if (len(with_iters) == 0):
+                            disc = max_weight_disc[0]
+                        else:
+                            min_iter = min([
+                                min(self.pending_iters[d])
+                                for d in with_iters
+                            ])
+                            disc = next(
+                                d for d in with_iters
+                                if min(self.pending_iters[d]) == min_iter
+                            )
                         if len(self.free_servers) != 0:
                             ip, port = self.free_servers[0]
                             self.free_servers = self.free_servers[1:]
@@ -406,10 +422,14 @@ class Timelord:
 
             if proof_of_space_info.challenge_hash not in self.pending_iters:
                 self.pending_iters[proof_of_space_info.challenge_hash] = []
+            if proof_of_space_info.challenge_hash not in self.submitted_iters:
+                self.submitted_iters[proof_of_space_info.challenge_hash] = []
 
             if (
                 proof_of_space_info.iterations_needed
                 not in self.pending_iters[proof_of_space_info.challenge_hash]
+                and proof_of_space_info.iterations_needed
+                not in self.submitted_iters[proof_of_space_info.challenge_hash]
             ):
                 log.info(
                     f"proof_of_space_info {proof_of_space_info.challenge_hash} adding "
