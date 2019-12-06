@@ -14,6 +14,7 @@ import asyncio
 import logging
 log = logging.getLogger(__name__)
 
+
 class Introducer:
     def __init__(self):
         config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
@@ -31,9 +32,9 @@ class Introducer:
         rawpeers = self.server.global_connections.peers.get_peers(
             max_peers*2, True, self.config["recent_peer_threshold"]
         )
-        
+
         peers = []
-        
+
         for peer in rawpeers:
             if peer.get_hash() not in self.vetted:
                 try:
@@ -55,11 +56,11 @@ class Introducer:
 
                 log.info(f"Have vetted {peer} successfully!")
                 self.vetted[peer.get_hash()] = True
-                
+
             if self.vetted[peer.get_hash()]:
                 peers.append(peer)
-            
-            if len(peers)>=max_peers:
+
+            if len(peers) >= max_peers:
                 break
 
         log.info(f"Sending vetted {peers}")
