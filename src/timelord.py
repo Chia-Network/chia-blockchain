@@ -336,7 +336,7 @@ class Timelord:
                             d for d, h in self.discriminant_queue if h == max_weight
                         ]
                         with_iters = [
-                            d for d in max_weight_disc 
+                            d for d in max_weight_disc
                             if d in self.pending_iters
                             and len(self.pending_iters[d]) != 0
                         ]
