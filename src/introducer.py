@@ -1,5 +1,5 @@
 import os
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Dict, bytes32
 
 import yaml
 
