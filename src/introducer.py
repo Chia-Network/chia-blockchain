@@ -1,5 +1,6 @@
 import os
-from typing import AsyncGenerator, Dict, bytes32
+from typing import AsyncGenerator, Dict
+from src.types.sized_bytes import bytes32
 
 import yaml
 
