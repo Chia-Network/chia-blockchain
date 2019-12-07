@@ -3,6 +3,7 @@
 using boost::asio::ip::tcp;
 
 const int max_length = 2048;
+const int kMaxProcessesAllowed = 3;
 std::mutex socket_mutex;
 
 void PrintInfo(std::string input) {
@@ -23,22 +24,6 @@ void CreateAndWriteProof(integer D, form x, int64_t num_iterations, WesolowskiCa
     PrintInfo("Generated proof = " + str_result);;
     boost::asio::write(sock, boost::asio::buffer(str_result.c_str(), str_result.size()));
 }
-
-
-void PollTimelord(tcp::socket& sock, bool& got_iters) {
-    // Wait for 15s, if no iters come, poll each 5 seconds the timelord.
-    int seconds = 0;
-    while (!got_iters) {
-        std::this_thread::sleep_for (std::chrono::seconds(1));
-        seconds++;
-        if (seconds >= 15 && (seconds - 15) % 5 == 0) {
-            socket_mutex.lock();
-            boost::asio::write(sock, boost::asio::buffer("POLL", 4));
-            socket_mutex.unlock();
-        }
-    }
-}
-
 
 void session(tcp::socket sock) {
     try {
@@ -107,7 +92,6 @@ void session(tcp::socket sock) {
         bool stopped = false;
         bool got_iters = false;
         std::thread vdf_worker(repeated_square, f, D, L, std::ref(weso), std::ref(stopped));
-        std::thread poll_thread(PollTimelord, std::ref(sock), std::ref(got_iters));
 
         // Tell client that I'm ready to get the challenges.
         boost::asio::write(sock, boost::asio::buffer("OK", 2));
@@ -125,7 +109,6 @@ void session(tcp::socket sock) {
             if (iters == 0) {
                 PrintInfo("Got stop signal!");
                 stopped = true;
-                poll_thread.join();
                 for (int i = 0; i < threads.size(); i++)
                     stop_vector[i] = true;
                 for (int t = 0; t < threads.size(); t++) {
@@ -135,7 +118,7 @@ void session(tcp::socket sock) {
                 free(forms);
             } else {
                 int max_iter = 0;
-                int max_iter_thread_id;
+                int max_iter_thread_id = -1;
                 int min_iter = std::numeric_limits<int> :: max();
                 bool unique = true;
                 for (auto active_iter: seen_iterations) {
@@ -155,13 +138,13 @@ void session(tcp::socket sock) {
                     PrintInfo("Duplicate iteration " + to_string(iters) + "... Ignoring.");
                     continue;
                 }
-                if (threads.size() < 3 || iters < min_iter) {
+                if (threads.size() < kMaxProcessesAllowed || iters < min_iter) {
                     seen_iterations.insert({iters, threads.size()});
                     PrintInfo("Running proving for iter: " + to_string(iters));
                     stop_vector[threads.size()] = false;
                     threads.push_back(std::thread(CreateAndWriteProof, D, f, iters, std::ref(weso), 
                                       std::ref(stop_vector[threads.size()]), std::ref(sock)));
-                    if (threads.size() > 3) {
+                    if (threads.size() > kMaxProcessesAllowed) {
                         PrintInfo("Stopping proving for iter: " + to_string(max_iter));
                         stop_vector[max_iter_thread_id] = true;
                         seen_iterations.erase({max_iter, max_iter_thread_id});
