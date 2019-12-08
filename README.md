@@ -22,6 +22,7 @@ mongod --fork --dbpath ./db/ --logpath mongod.log
 Make sure [brew](https://brew.sh/) is available before starting the setup.
 ```bash
 brew tap mongodb/brew
+brew upgrade python
 brew install cmake boost gmp mpir mpfr mongodb-community@4.2
 
 git clone https://github.com/Chia-Network/chia-blockchain.git && cd chia-blockchain
