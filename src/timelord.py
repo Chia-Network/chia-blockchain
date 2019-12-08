@@ -202,7 +202,7 @@ class Timelord:
                         log.info(f"New iteration submitted: {iter}")
             await asyncio.sleep(3)
             async with self.lock:
-                if (challenge_hash in self.done_discriminants):
+                if challenge_hash in self.done_discriminants:
                     alive_discriminant = False
 
     async def _do_process_communication(
@@ -340,7 +340,7 @@ class Timelord:
                             if d in self.pending_iters
                             and len(self.pending_iters[d]) != 0
                         ]
-                        if (len(with_iters) == 0):
+                        if len(with_iters) == 0:
                             disc = max_weight_disc[0]
                         else:
                             min_iter = min([
@@ -374,6 +374,20 @@ class Timelord:
                                 )
                                 if max_weight > worst_weight_active:
                                     await self._stop_worst_process(worst_weight_active)
+                                elif max_weight == worst_weight_active:
+                                    if (
+                                        disc in self.pending_iters
+                                        and len(self.pending_iters[disc]) != 0
+                                    ):
+                                        if any((
+                                            k not in self.pending_iters
+                                            or len(self.pending_iters[k]) == 0)
+                                            for k, v in self.active_discriminants.items()
+                                            if v[1] == worst_weight_active
+                                        ):
+                                            log.info("Stopped process without iters for one with iters.")
+                                            await self._stop_worst_process(worst_weight_active)
+
                 if len(self.proofs_to_write) > 0:
                     for msg in self.proofs_to_write:
                         yield msg
