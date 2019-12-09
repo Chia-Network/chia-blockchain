@@ -13,6 +13,7 @@ from src.util.api_decorators import api_request
 import asyncio
 
 import logging
+
 log = logging.getLogger(__name__)
 
 
@@ -31,7 +32,7 @@ class Introducer:
     ) -> AsyncGenerator[OutboundMessage, None]:
         max_peers = self.config["max_peers_to_send"]
         rawpeers = self.server.global_connections.peers.get_peers(
-            max_peers*2, True, self.config["recent_peer_threshold"]
+            max_peers * 2, True, self.config["recent_peer_threshold"]
         )
 
         peers = []
@@ -39,9 +40,7 @@ class Introducer:
         for peer in rawpeers:
             if peer.get_hash() not in self.vetted:
                 try:
-                    r, w = await asyncio.open_connection(
-                        peer.host, int(peer.port)
-                    )
+                    r, w = await asyncio.open_connection(peer.host, int(peer.port))
                     w.close()
                 except (
                     ConnectionRefusedError,
@@ -49,9 +48,7 @@ class Introducer:
                     OSError,
                     asyncio.TimeoutError,
                 ) as e:
-                    log.warning(
-                        f"Could not vet {peer}. {type(e)}{str(e)}"
-                    )
+                    log.warning(f"Could not vet {peer}. {type(e)}{str(e)}")
                     self.vetted[peer.get_hash()] = False
                     continue
 
