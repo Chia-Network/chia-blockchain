@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import collections
-import concurrent
 import os
 from typing import Callable, List, Optional, Tuple
 from yaml import safe_load
@@ -84,7 +83,7 @@ async def start_ssh_server(
         except ConnectionError:
             log.info("Connection error in ssh UI, exiting.")
             ui.close()
-            # raise
+            raise
 
     ssh_server = await asyncssh.create_server(
         lambda: PromptToolkitSSHServer(interact),
@@ -481,9 +480,7 @@ class FullNodeUI:
 
                 if self.app and not self.app.invalidated:
                     self.app.invalidate()
-                await asyncio.sleep(1)
-        except concurrent.futures._base.CancelledError as e:
-            log.warn(f"Cancelled error in UI: {type(e)}: {e}")
+                await asyncio.sleep(1.5)
         except Exception as e:
             log.warn(f"Exception in UI update_ui {type(e)}: {e}")
             raise e
@@ -521,9 +518,7 @@ class FullNodeUI:
                     else (0, bytes(pk))
                     for pk in self.pool_pks
                 ]
-                await asyncio.sleep(5)
-        except concurrent.futures._base.CancelledError as e:
-            log.warn(f"Cancelled error in UI: {type(e)}: {e}")
+                await asyncio.sleep(7.5)
         except Exception as e:
             log.warn(f"Exception in UI update_data {type(e)}: {e}")
             raise e
