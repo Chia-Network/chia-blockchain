@@ -78,7 +78,7 @@ class TestNodeLoad:
             OutboundMessage(NodeType.FULL_NODE, block_msg, Delivery.BROADCAST)
         )
 
-        while time.time() - start_unf < 100:
+        while time.time() - start_unf < 300:
             if max([h.height for h in b.get_current_tips()]) == 9:
                 print(
                     f"Time taken to process {num_unfinished_blocks} is {time.time() - start_unf}"

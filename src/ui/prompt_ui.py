@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import collections
-import concurrent
 import os
 from typing import Callable, List, Optional, Tuple
 from yaml import safe_load
@@ -354,18 +353,18 @@ class FullNodeUI:
             self.syncing.text = "Not syncing"
         heads: List[HeaderBlock] = self.blockchain.get_current_tips()
 
-        lca_block: FullBlock = self.blockchain.lca_block
+        lca_block: HeaderBlock = self.blockchain.lca_block
         if lca_block.height > 0:
-            difficulty = await self.blockchain.get_next_difficulty(
+            difficulty = self.blockchain.get_next_difficulty(
                 lca_block.prev_header_hash
             )
-            ips = await self.blockchain.get_next_ips(lca_block.prev_header_hash)
+            ips = self.blockchain.get_next_ips(lca_block.prev_header_hash)
         else:
-            difficulty = await self.blockchain.get_next_difficulty(
+            difficulty = self.blockchain.get_next_difficulty(
                 lca_block.header_hash
             )
-            ips = await self.blockchain.get_next_ips(lca_block.header_hash)
-        total_iters = lca_block.header_block.challenge.total_iters
+            ips = self.blockchain.get_next_ips(lca_block.header_hash)
+        total_iters = lca_block.challenge.total_iters
 
         new_block_labels = []
         for i, b in enumerate(self.latest_blocks):
