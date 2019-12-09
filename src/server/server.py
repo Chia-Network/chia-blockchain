@@ -354,7 +354,6 @@ class ChiaServer:
                     f" established"
                 )
             )
-            connection.handshake_finished = True
             # Only yield a connection if the handshake is succesful and the connection is not a duplicate.
             yield connection
         except (
@@ -366,13 +365,10 @@ class ChiaServer:
             Exception,
         ) as e:
             log.warning(f"{e}, handshake not completed. Connection not created.")
-            for established_connection in self.global_connections.get_connections():
-                if (
-                    connection.node_id == established_connection.node_id
-                    and not connection.handshake_finished
-                ):
-                    # Makes sure not to remove a duplicate connection
-                    self.global_connections.close(connection)
+            # Make sure to close the connection even if it's not in global connections
+            connection.close()
+            # Remove the conenction from global connections
+            self.global_connections.close(connection)
 
     async def connection_to_message(
         self, connection: Connection
