@@ -38,13 +38,12 @@ class ReceiveBlockResult(Enum):
 
 
 class Blockchain:
-    def __init__(self, store: FullNodeStore, override_constants: Dict = {}):
+    def __init__(self, override_constants: Dict = {}):
         # Allow passing in custom overrides for any consesus parameters
         self.constants: Dict = consensus_constants
         for key, value in override_constants.items():
             self.constants[key] = value
 
-        self.store = store
         self.tips: List[HeaderBlock] = []
         self.lca_block: HeaderBlock
 
@@ -53,33 +52,39 @@ class Blockchain:
         # All headers (but not orphans) from genesis to the tip are guaranteed to be in header_blocks
         self.header_blocks: Dict[bytes32, HeaderBlock] = {}
 
-    async def initialize(self):
-        seen_blocks: Dict[str, HeaderBlock] = {}
-        async for block in self.store.get_blocks():
-            if not self.tips or block.weight > self.tips[0].weight:
-                self.tips = [block.header_block]
-            seen_blocks[block.header_hash] = block.header_block
+    async def initialize(self, header_blocks: Dict[str, HeaderBlock]):
+        self.header_blocks = header_blocks
+        for _, header_block in self.header_blocks.items():
+            self.height_to_hash[header_block.height] = header_block.header_hash
 
-        if len(self.tips) > 0:
-            curr: HeaderBlock = self.tips[0]
+    async def initialize_from_genesis(self, genesis_block: FullBlock):
+        self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
+
+        result = await self.receive_block(self.genesis)
+        if result != ReceiveBlockResult.ADDED_TO_HEAD:
+            raise InvalidGenesisBlock()
+        assert self.lca_block is not None
+
+    @staticmethod
+    async def load_header_blocks_from_store(store: FullNodeStore) -> Dict[str, HeaderBlock]:
+        seen_blocks: Dict[str, HeaderBlock] = {}
+        tips: List[HeaderBlock] = []
+        async for full_block in store.get_blocks():
+            if not tips or full_block.weight > tips[0].weight:
+                tips = [full_block.header_block]
+            seen_blocks[full_block.header_hash] = full_block.header_block
+
+        header_blocks = {}
+        if len(tips) > 0:
+            curr: HeaderBlock = tips[0]
             reverse_blocks: List[HeaderBlock] = [curr]
             while curr.height > 0:
                 curr = seen_blocks[curr.prev_header_hash]
                 reverse_blocks.append(curr)
 
             for block in reversed(reverse_blocks):
-                self.height_to_hash[block.height] = block.header_hash
-                self.header_blocks[block.header_hash] = block
-
-            self.lca_block = self.tips[0]
-
-        else:
-            self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
-
-            result = await self.receive_block(self.genesis)
-            if result != ReceiveBlockResult.ADDED_TO_HEAD:
-                raise InvalidGenesisBlock()
-            assert self.lca_block is not None
+                header_blocks[block.header_hash] = block
+        return header_blocks
 
     def get_current_tips(self) -> List[HeaderBlock]:
         """
