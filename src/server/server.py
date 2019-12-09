@@ -354,6 +354,7 @@ class ChiaServer:
                     f" established"
                 )
             )
+            connection.handshake_finished = True
             # Only yield a connection if the handshake is succesful and the connection is not a duplicate.
             yield connection
         except (
@@ -365,10 +366,13 @@ class ChiaServer:
             Exception,
         ) as e:
             log.warning(f"{e}, handshake not completed. Connection not created.")
-            # Make sure to close the connection even if it's not in global connections
-            connection.close()
-            # Remove the conenction from global connections
-            self.global_connections.close(connection)
+            for established_connection in self.global_connections.get_connections():
+                if (
+                    connection.node_id == established_connection.node_id
+                    and not connection.handshake_finished
+                ):
+                    # Makes sure not to remove a duplicate connection
+                    self.global_connections.close(connection)
 
     async def connection_to_message(
         self, connection: Connection
@@ -473,14 +477,6 @@ class ChiaServer:
             outbound_message.delivery_method == Delivery.BROADCAST
             or outbound_message.delivery_method == Delivery.BROADCAST_TO_OTHERS
         ):
-            # log.info(f"Connections: {self.global_connections.get_connections()[0].}")
-            print("h")
-            print(len(self.global_connections.get_connections()))
-            if len(self.global_connections.get_connections()) > 1:
-                c = self.global_connections.get_connections()[0]
-                print(c.local_host, c.local_port, c.peer_host, c.peer_port, c.peer_server_port)
-                c2 = self.global_connections.get_connections()[1]
-                print(c2.local_host, c2.local_port, c2.peer_host, c2.peer_port, c2.peer_server_port)
             # Broadcast to all peers.
             for peer in self.global_connections.get_connections():
                 if peer.connection_type == outbound_message.peer_type:

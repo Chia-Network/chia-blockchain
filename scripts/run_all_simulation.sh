@@ -12,24 +12,8 @@ _run_bg_cmd python -m src.server.start_harvester
 _run_bg_cmd python -m src.server.start_timelord
 _run_bg_cmd python -m src.server.start_farmer
 _run_bg_cmd python -m src.server.start_introducer
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8444 -id 4 -f -t -u 8222
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8002 -id 5 -u 8223
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8005 -id 6
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8010 -id 7
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8011 -id 8
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8012 -id 9
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8013 -id 10
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8014 -id 11
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8015 -id 12
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8016 -id 13
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8017 -id 14
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8018 -id 15
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8019 -id 16
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8020 -id 17
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8021 -id 18
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8022 -id 19
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8023 -id 20
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8024 -id 21
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8025 -id 22
+_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8444 -id 1 -f -t -u 8222
+_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8002 -id 2 -u 8223
+_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8005 -id 3 -u 8224
 
 wait
