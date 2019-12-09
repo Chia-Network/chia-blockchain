@@ -481,7 +481,7 @@ class FullNodeUI:
 
                 if self.app and not self.app.invalidated:
                     self.app.invalidate()
-                await asyncio.sleep(1)
+                await asyncio.sleep(1.5)
         except Exception as e:
             log.warn(f"Exception in UI update_ui {type(e)}: {e}")
             raise e
@@ -519,7 +519,7 @@ class FullNodeUI:
                     else (0, bytes(pk))
                     for pk in self.pool_pks
                 ]
-                await asyncio.sleep(5)
+                await asyncio.sleep(7.5)
         except Exception as e:
             log.warn(f"Exception in UI update_data {type(e)}: {e}")
             raise e
