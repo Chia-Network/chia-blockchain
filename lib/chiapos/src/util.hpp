@@ -15,6 +15,7 @@
 #ifndef SRC_CPP_UTIL_HPP_
 #define SRC_CPP_UTIL_HPP_
 
+#include <random>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -204,6 +205,15 @@ class Util {
             sum += (uint128_t)(bytes[curr_byte] >> (8 - (num_bits - taken_bits)));
         }
         return sum;
+    }
+
+    static void GetRandomBytes(uint8_t* buf, uint32_t num_bytes) {
+        std::random_device rd;
+        std::mt19937 mt(rd());
+        std::uniform_real_distribution<double> dist(0, 256);
+        for (uint32_t i = 0; i < num_bytes; i++) {
+            buf[i] = static_cast<uint32_t>(floor(dist(mt))) % 256;  // Mod in case we generate the random number 256:
+        }
     }
 
     static uint64_t find_islands(std::vector<std::pair<uint64_t, uint64_t> > edges) {
