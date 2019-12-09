@@ -47,7 +47,6 @@ class Connection:
         self.on_connect = on_connect
 
         # Connection metrics
-        self.handshake_finished = False
         self.creation_type = time.time()
         self.bytes_read = 0
         self.bytes_written = 0
