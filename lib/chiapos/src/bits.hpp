@@ -71,11 +71,11 @@ struct ParkVector {
         count_ = 0;
     }
 
-    uint128_t& operator[] (const uint16_t index) {
+    uint128_t& operator[] (const uint32_t index) {
         return v_[index];
     }
 
-    uint128_t operator[] (const uint16_t index) const {
+    uint128_t operator[] (const uint32_t index) const {
         return v_[index];
     }
 
@@ -85,18 +85,18 @@ struct ParkVector {
 
     ParkVector& operator = (const ParkVector& other) {
         count_ = other.count_;
-        for (uint16_t i = 0; i < other.count_; i++)
+        for (uint32_t i = 0; i < other.count_; i++)
             v_[i] = other.v_[i];
         return (*this);
     }
 
-    uint16_t size() const {
+    uint32_t size() const {
         return count_;
     }
 
  private:
     uint128_t v_[1024];
-    uint16_t count_;
+    uint32_t count_;
 };
 
 /*
@@ -163,7 +163,7 @@ template <class T> class BitsGeneric {
             AppendValue(0, extra_space);
         // Copy the Bits object element by element, and append it to the current Bits object.
         if (other.values_.size() > 0) {
-            for (uint8_t i = 0; i < other.values_.size() - 1; i++)
+            for (uint32_t i = 0; i < other.values_.size() - 1; i++)
                 AppendValue(other.values_[i], 128);
             AppendValue(other.values_[other.values_.size() - 1], other.last_size_);
         }
@@ -212,12 +212,12 @@ template <class T> class BitsGeneric {
         }
         BitsGeneric<T> result;
         if (values_.size() > 0) {
-            for (uint8_t i = 0; i < values_.size() - 1; i++)
+            for (uint32_t i = 0; i < values_.size() - 1; i++)
                 result.AppendValue(values_[i], 128);
             result.AppendValue(values_[values_.size() - 1], last_size_);
         }
         if (b.values_.size() > 0) {
-            for (uint8_t i = 0; i < b.values_.size() - 1; i++)
+            for (uint32_t i = 0; i < b.values_.size() - 1; i++)
                 result.AppendValue(b.values_[i], 128);
             result.AppendValue(b.values_[b.values_.size() - 1], b.last_size_);
         }
@@ -228,7 +228,7 @@ template <class T> class BitsGeneric {
     template <class T2>
     BitsGeneric<T>& operator += (const BitsGeneric<T2>& b) {
         if (b.values_.size() > 0) {
-             for (uint8_t i = 0; i < b.values_.size() - 1; i++)
+             for (uint32_t i = 0; i < b.values_.size() - 1; i++)
                 this->AppendValue(b.values_[i], 128);
             this->AppendValue(b.values_[b.values_.size() - 1], b.last_size_);
         }
@@ -253,7 +253,7 @@ template <class T> class BitsGeneric {
                         values_[i]++;
                         // Buckets that were full of 1 bits turn all to 0 bits.
                         // (i.e. 10011111 + 1 = 10100000)
-                        for (uint16_t j = i + 1; j < values_.size(); j++)
+                        for (uint32_t j = i + 1; j < values_.size(); j++)
                             values_[j] = 0;
                         break;
                     }
@@ -288,7 +288,7 @@ template <class T> class BitsGeneric {
                                       (uint128_t)std::numeric_limits<uint64_t> :: max();
                     // All buckets that were previously 0, now become full of 1s.
                     // (i.e. 1010000 - 1 = 1001111)
-                    for (uint16_t j = i + 1; j < values_.size() - 1; j++)
+                    for (uint32_t j = i + 1; j < values_.size() - 1; j++)
                         values_[j] =  limit;
                     values_[values_.size() - 1] = (last_size_ == 128) ? limit :
                                                    ((static_cast<uint128_t>(1) << last_size_) - 1);
@@ -311,7 +311,7 @@ template <class T> class BitsGeneric {
         assert(GetSize() == other.GetSize());
         BitsGeneric<T> res;
         // Xoring individual bits is the same as xor-ing chunks of bits.
-        for (uint16_t i = 0; i < values_.size(); i++)
+        for (uint32_t i = 0; i < values_.size(); i++)
             res.values_.push_back(values_[i] ^ other.values_[i]);
         res.last_size_ = last_size_;
         return res;
@@ -409,7 +409,7 @@ template <class T> class BitsGeneric {
         }
         // Extract the full buckets, byte by byte.
         if (values_.size() >= 2) {
-            for (int16_t i = values_.size() - 2; i >= 0; i--) {
+            for (int32_t i = values_.size() - 2; i >= 0; i--) {
                 uint128_t val = values_[i];
                 for (uint8_t j = 0; j < 16; j++) {
                     buffer[cnt++] = (val & 0xff);
@@ -431,7 +431,7 @@ template <class T> class BitsGeneric {
 
     std::string ToString() const {
         std::string str = "";
-        for (uint16_t i = 0; i < values_.size(); i++) {
+        for (uint32_t i = 0; i < values_.size(); i++) {
             uint128_t val = values_[i];
             uint32_t size = (i == values_.size() - 1) ? last_size_ : 128;
             std::string str_bucket = "";
@@ -460,7 +460,7 @@ template <class T> class BitsGeneric {
     uint32_t GetSize() const {
         if (values_.size() == 0) return 0;
         // Full buckets contain each 128 bits, last one contains only 'last_size_' bits.
-        return (values_.size() - 1) * 128 + last_size_;
+        return ((uint32_t)values_.size() - 1) * 128 + last_size_;
     }
 
     void AppendValue(uint128_t value, uint8_t length) {
@@ -529,7 +529,7 @@ bool operator==(const BitsGeneric<T>& lhs, const BitsGeneric<T>& rhs) {
     if (lhs.GetSize() != rhs.GetSize()) {
         return false;
     }
-    for (uint16_t i = 0; i < lhs.values_.size(); i++) {
+    for (uint32_t i = 0; i < lhs.values_.size(); i++) {
         if (lhs.values_[i] != rhs.values_[i]) {
             return false;
         }
@@ -541,7 +541,7 @@ template <class T>
 bool operator<(const BitsGeneric<T>& lhs, const BitsGeneric<T>& rhs) {
     if (lhs.GetSize() != rhs.GetSize())
         throw std::string("Different sizes!");
-    for (uint16_t i = 0; i < lhs.values_.size(); i++) {
+    for (uint32_t i = 0; i < lhs.values_.size(); i++) {
         if (lhs.values_[i] < rhs.values_[i])
             return true;
         if (lhs.values_[i] > rhs.values_[i])
@@ -554,7 +554,7 @@ template <class T>
 bool operator>(const BitsGeneric<T>& lhs, const BitsGeneric<T>& rhs) {
     if (lhs.GetSize() != rhs.GetSize())
         throw std::string("Different sizes!");
-    for (uint16_t i = 0; i < lhs.values_.size(); i++) {
+    for (uint32_t i = 0; i < lhs.values_.size(); i++) {
         if (lhs.values_[i] > rhs.values_[i])
             return true;
         if (lhs.values_[i] < rhs.values_[i])
