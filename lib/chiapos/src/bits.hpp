@@ -25,7 +25,9 @@
 
 
 #define kBufSize 5
-#define kMaxSizeBits 65535
+
+// 128 * 2^16. 2^16 values, each value can store 128 bits.
+#define kMaxSizeBits 8388608
 
 // A stack vector of length 5, having the functions of std::vector needed for Bits.
 struct SmallVector {
@@ -63,7 +65,7 @@ struct SmallVector {
 
 
 // A stack vector of length 1024, having the functions of std::vector needed for Bits.
-
+// The max number of Bits that can be stored is 1024 * 128
 struct ParkVector {
     ParkVector() {
         count_ = 0;
@@ -121,7 +123,7 @@ template <class T> class BitsGeneric {
 
     // Converts from unit128_t to Bits. If the number of bits of value is smaller than size, adds 0 bits at the beginning.
     // i.e. Bits(5, 10) = 0000000101
-    BitsGeneric<T>(uint128_t value, uint16_t size) {
+    BitsGeneric<T>(uint128_t value, uint32_t size) {
         // TODO(mariano) remove
         if (size < 128 && value > ((uint128_t)1 << size)) {
             std::cout << "TOO BIG FOR BITS" << std::endl;
@@ -130,7 +132,7 @@ template <class T> class BitsGeneric {
         this->last_size_ = 0;
         if (size > 128) {
             // Get number of extra 0s added at the beginning.
-            uint16_t zeros = size - Util::GetSizeBits(value);
+            uint32_t zeros = size - Util::GetSizeBits(value);
             // Add a full group of 0s (length 128)
             while (zeros > 128) {
                 AppendValue(0, 128);
@@ -147,12 +149,12 @@ template <class T> class BitsGeneric {
 
     // Copy the content of another Bits object. If the size of the other Bits object is smaller
     // than 'size', adds 0 bits at the beginning.
-    BitsGeneric<T>(const BitsGeneric<T>& other, uint16_t size) {
-        uint16_t total_size = other.GetSize();
+    BitsGeneric<T>(const BitsGeneric<T>& other, uint32_t size) {
+        uint32_t total_size = other.GetSize();
         this->last_size_ = 0;
         assert(size >= total_size);
         // Add the extra 0 bits at the beginning.
-        uint16_t extra_space = size - total_size;
+        uint32_t extra_space = size - total_size;
         while (extra_space >= 128) {
             AppendValue(0, 128);
             extra_space -= 128;
@@ -168,7 +170,7 @@ template <class T> class BitsGeneric {
     }
 
     // Converts bytes to bits.
-    BitsGeneric<T>(const uint8_t* big_endian_bytes, uint32_t num_bytes, uint16_t size_bits)  {
+    BitsGeneric<T>(const uint8_t* big_endian_bytes, uint32_t num_bytes, uint32_t size_bits)  {
         this->last_size_ = 0;
         uint32_t extra_space = size_bits - num_bytes * 8;
         // Add the extra 0 bits at the beginning.
@@ -361,7 +363,7 @@ template <class T> class BitsGeneric {
     }
 
     // Same as 'Slice', but result fits into an uint64_t. Used for memory optimization.
-    uint64_t SliceBitsToInt(int16_t start_index, int16_t end_index) const {
+    uint64_t SliceBitsToInt(int32_t start_index, int32_t end_index) const {
         /*if (end_index > GetSize()) {
             end_index = GetSize();
         }
@@ -396,7 +398,7 @@ template <class T> class BitsGeneric {
         // Append 0s to complete the last byte.
         uint8_t shift = Util::ByteAlign(last_size_) - last_size_;
         uint128_t val = values_[values_.size() - 1] << (shift);
-        uint16_t cnt = 0;
+        uint32_t cnt = 0;
         // Extract byte-by-byte from the last bucket.
         uint8_t iterations = last_size_ / 8;
         if (last_size_ % 8)
@@ -419,7 +421,7 @@ template <class T> class BitsGeneric {
         if(cnt<=1)return;  // No need to reverse anything
 
         // Since we extracted from end to beginning, bytes are in reversed order. Reverse everything.
-        uint16_t left = 0, right = cnt - 1;
+        uint32_t left = 0, right = cnt - 1;
         while (left < right) {
             std::swap(buffer[left], buffer[right]);
             left++;
@@ -431,7 +433,7 @@ template <class T> class BitsGeneric {
         std::string str = "";
         for (uint16_t i = 0; i < values_.size(); i++) {
             uint128_t val = values_[i];
-            uint16_t size = (i == values_.size() - 1) ? last_size_ : 128;
+            uint32_t size = (i == values_.size() - 1) ? last_size_ : 128;
             std::string str_bucket = "";
             for (int i = 0; i < size; i++) {
                 if (val % 2)
@@ -455,7 +457,7 @@ template <class T> class BitsGeneric {
         return values_[0];
     }
 
-    uint16_t GetSize() const {
+    uint32_t GetSize() const {
         if (values_.size() == 0) return 0;
         // Full buckets contain each 128 bits, last one contains only 'last_size_' bits.
         return (values_.size() - 1) * 128 + last_size_;

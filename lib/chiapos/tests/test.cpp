@@ -141,6 +141,33 @@ TEST_CASE("Bits") {
         m.ToBytes(buf);
         REQUIRE(buf[0] == (5 << 5));
     }
+    SECTION("Park Bits") {
+        uint32_t num_bytes = 16000;
+        uint8_t* buf = new uint8_t[num_bytes];
+        uint8_t* buf_2 = new uint8_t[num_bytes];
+        Util::GetRandomBytes(buf, num_bytes);
+        ParkBits my_bits = ParkBits(buf, num_bytes, num_bytes*8);
+        my_bits.ToBytes(buf_2);
+        for (uint32_t i = 0; i < num_bytes; i++) {
+            REQUIRE(buf[i] == buf_2[i]);
+        }
+        delete[] buf;
+        delete[] buf_2;
+    }
+
+    SECTION("Large Bits") {
+        uint32_t num_bytes = 200000;
+        uint8_t* buf = new uint8_t[num_bytes];
+        uint8_t* buf_2 = new uint8_t[num_bytes];
+        Util::GetRandomBytes(buf, num_bytes);
+        LargeBits my_bits = LargeBits(buf, num_bytes, num_bytes*8);
+        my_bits.ToBytes(buf_2);
+        for (uint32_t i = 0; i < num_bytes; i++) {
+            REQUIRE(buf[i] == buf_2[i]);
+        }
+        delete[] buf;
+        delete[] buf_2;
+    }
 }
 
 class FakeDisk : public Disk {
