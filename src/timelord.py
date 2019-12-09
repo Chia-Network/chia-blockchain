@@ -182,7 +182,7 @@ class Timelord:
 
     async def _send_iterations(self, challenge_hash, writer):
         alive_discriminant = True
-        while (alive_discriminant):
+        while alive_discriminant:
             async with self.lock:
                 if (challenge_hash in self.active_discriminants) and (
                     challenge_hash in self.pending_iters
@@ -336,19 +336,20 @@ class Timelord:
                             d for d, h in self.discriminant_queue if h == max_weight
                         ]
                         with_iters = [
-                            d for d in max_weight_disc
+                            d
+                            for d in max_weight_disc
                             if d in self.pending_iters
                             and len(self.pending_iters[d]) != 0
                         ]
                         if len(with_iters) == 0:
                             disc = max_weight_disc[0]
                         else:
-                            min_iter = min([
-                                min(self.pending_iters[d])
-                                for d in with_iters
-                            ])
+                            min_iter = min(
+                                [min(self.pending_iters[d]) for d in with_iters]
+                            )
                             disc = next(
-                                d for d in with_iters
+                                d
+                                for d in with_iters
                                 if min(self.pending_iters[d]) == min_iter
                             )
                         if len(self.free_servers) != 0:
@@ -379,14 +380,20 @@ class Timelord:
                                         disc in self.pending_iters
                                         and len(self.pending_iters[disc]) != 0
                                     ):
-                                        if any((
-                                            k not in self.pending_iters
-                                            or len(self.pending_iters[k]) == 0)
+                                        if any(
+                                            (
+                                                k not in self.pending_iters
+                                                or len(self.pending_iters[k]) == 0
+                                            )
                                             for k, v in self.active_discriminants.items()
                                             if v[1] == worst_weight_active
                                         ):
-                                            log.info("Stopped process without iters for one with iters.")
-                                            await self._stop_worst_process(worst_weight_active)
+                                            log.info(
+                                                "Stopped process without iters for one with iters."
+                                            )
+                                            await self._stop_worst_process(
+                                                worst_weight_active
+                                            )
 
                 if len(self.proofs_to_write) > 0:
                     for msg in self.proofs_to_write:
