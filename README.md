@@ -6,6 +6,10 @@ Python 3.7 is used for this project. Make sure your default python version is >=
 ```bash
 sudo apt-get update
 sudo apt-get install build-essential cmake python3-dev python3-venv --no-install-recommends
+
+# Update boost version to 1.71.0 or greater if needed, check version: dpkg -s libboost-dev | grep 'Version'
+# Install from www.boost.org
+
 sh install.sh
 
 # Install MongoDB Community Edition
