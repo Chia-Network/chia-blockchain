@@ -355,14 +355,10 @@ class FullNodeUI:
 
         lca_block: HeaderBlock = self.blockchain.lca_block
         if lca_block.height > 0:
-            difficulty = self.blockchain.get_next_difficulty(
-                lca_block.prev_header_hash
-            )
+            difficulty = self.blockchain.get_next_difficulty(lca_block.prev_header_hash)
             ips = self.blockchain.get_next_ips(lca_block.prev_header_hash)
         else:
-            difficulty = self.blockchain.get_next_difficulty(
-                lca_block.header_hash
-            )
+            difficulty = self.blockchain.get_next_difficulty(lca_block.header_hash)
             ips = self.blockchain.get_next_ips(lca_block.header_hash)
         total_iters = lca_block.challenge.total_iters
 

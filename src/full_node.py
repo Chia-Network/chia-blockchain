@@ -498,6 +498,8 @@ class FullNode:
                     log.info(
                         f"Took {time.time() - start} seconds to validate and add block {block.height}."
                     )
+                    # Always immediately add the block to the database, after updating blockchain state
+                    await self.store.add_block(block)
                     assert (
                         max([h.height for h in self.blockchain.get_current_tips()])
                         >= height
@@ -629,9 +631,7 @@ class FullNode:
                     request.heights, request.tip_header_hash
                 )
                 for header_block in header_blocks:
-                    fetched = await self.store.get_block(
-                        header_block.header.get_hash()
-                    )
+                    fetched = await self.store.get_block(header_block.header.get_hash())
                     assert fetched
                     blocks.append(fetched)
             except KeyError:
@@ -812,7 +812,9 @@ class FullNode:
                     f"Received a proof of time that we cannot use to complete a block {dict_key}"
                 )
                 return
-            prev_full_block = await self.store.get_block(unfinished_block_obj.prev_header_hash)
+            prev_full_block = await self.store.get_block(
+                unfinished_block_obj.prev_header_hash
+            )
             assert prev_full_block
             prev_block: HeaderBlock = prev_full_block.header_block
             difficulty: uint64 = self.blockchain.get_next_difficulty(
@@ -899,7 +901,9 @@ class FullNode:
         if not await self.blockchain.validate_unfinished_block(unfinished_block.block):
             raise InvalidUnfinishedBlock()
 
-        prev_full_block: Optional[FullBlock] = await self.store.get_block(unfinished_block.block.prev_header_hash)
+        prev_full_block: Optional[FullBlock] = await self.store.get_block(
+            unfinished_block.block.prev_header_hash
+        )
         assert prev_full_block
 
         prev_block: HeaderBlock = prev_full_block.header_block
@@ -998,6 +1002,10 @@ class FullNode:
 
             # Tries to add the block to the blockchain
             added: ReceiveBlockResult = await self.blockchain.receive_block(block.block)
+
+            # Always immediately add the block to the database, after updating blockchain state
+            if added == ReceiveBlockResult.ADDED_AS_ORPHAN or added == ReceiveBlockResult.ADDED_TO_HEAD:
+                await self.store.add_block(block.block)
         if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return
         elif added == ReceiveBlockResult.INVALID_BLOCK:
@@ -1061,9 +1069,7 @@ class FullNode:
                 difficulty = self.blockchain.get_next_difficulty(
                     block.block.prev_header_hash
                 )
-                next_vdf_ips = self.blockchain.get_next_ips(
-                    block.block.header_hash
-                )
+                next_vdf_ips = self.blockchain.get_next_ips(block.block.header_hash)
                 log.info(f"Difficulty {difficulty} IPS {next_vdf_ips}")
                 if next_vdf_ips != await self.store.get_proof_of_time_estimate_ips():
                     await self.store.set_proof_of_time_estimate_ips(next_vdf_ips)
@@ -1126,6 +1132,7 @@ class FullNode:
             assert False
             # Recursively process the next block if we have it
 
+        # This code path is reached if added == ADDED_AS_ORPHAN or ADDED_TO_HEAD
         async with self.store.lock:
             next_block: Optional[
                 FullBlock

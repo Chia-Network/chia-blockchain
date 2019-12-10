@@ -7,7 +7,6 @@ from blspy import PrivateKey
 
 from src.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import constants
-from src.database import FullNodeStore
 from src.types.body import Body
 from src.types.coinbase import CoinbaseInfo
 from src.types.full_block import FullBlock
@@ -43,10 +42,8 @@ def event_loop():
 class TestGenesisBlock:
     @pytest.mark.asyncio
     async def test_basic_blockchain(self):
-        store = FullNodeStore("fndb_test")
-        await store._clear_database()
-        bc1: Blockchain = Blockchain(store)
-        await bc1.initialize()
+        bc1: Blockchain = Blockchain()
+        await bc1.initialize({})
         assert len(bc1.get_current_tips()) == 1
         genesis_block = bc1.get_current_tips()[0]
         assert genesis_block.height == 0
@@ -66,11 +63,9 @@ class TestBlockValidation:
         """
         Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
         """
-        store = FullNodeStore("fndb_test")
-        await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
-        b: Blockchain = Blockchain(store, test_constants)
-        await b.initialize()
+        b: Blockchain = Blockchain(test_constants)
+        await b.initialize({})
         for i in range(1, 9):
             assert (
                 await b.receive_block(blocks[i])
@@ -246,10 +241,8 @@ class TestBlockValidation:
         # Make it 5x faster than target time
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 2)
 
-        store = FullNodeStore("fndb_test")
-        await store._clear_database()
-        b: Blockchain = Blockchain(store, test_constants)
-        await b.initialize()
+        b: Blockchain = Blockchain(test_constants)
+        await b.initialize({})
         for i in range(1, num_blocks):
             assert (
                 await b.receive_block(blocks[i])
@@ -263,9 +256,7 @@ class TestBlockValidation:
         assert diff_27 > diff_26
         assert (diff_27 / diff_26) <= test_constants["DIFFICULTY_FACTOR"]
 
-        assert (b.get_next_ips(blocks[1].header_hash)) == constants[
-            "VDF_IPS_STARTING"
-        ]
+        assert (b.get_next_ips(blocks[1].header_hash)) == constants["VDF_IPS_STARTING"]
         assert (b.get_next_ips(blocks[24].header_hash)) == (
             b.get_next_ips(blocks[23].header_hash)
         )
@@ -284,10 +275,8 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_basic_reorg(self):
         blocks = bt.get_consecutive_blocks(test_constants, 100, [], 9)
-        store = FullNodeStore("fndb_test")
-        await store._clear_database()
-        b: Blockchain = Blockchain(store, test_constants)
-        await b.initialize()
+        b: Blockchain = Blockchain(test_constants)
+        await b.initialize({})
 
         for block in blocks:
             await b.receive_block(block)
@@ -309,10 +298,8 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self):
         blocks = bt.get_consecutive_blocks(test_constants, 20, [], 9, b"0")
-        store = FullNodeStore("fndb_test")
-        await store._clear_database()
-        b: Blockchain = Blockchain(store, test_constants)
-        await b.initialize()
+        b: Blockchain = Blockchain(test_constants)
+        await b.initialize({})
         for block in blocks:
             await b.receive_block(block)
         assert b.get_current_tips()[0].height == 20
@@ -348,10 +335,8 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_lca(self):
         blocks = bt.get_consecutive_blocks(test_constants, 5, [], 9, b"0")
-        store = FullNodeStore("fndb_test")
-        await store._clear_database()
-        b: Blockchain = Blockchain(store, test_constants)
-        await b.initialize()
+        b: Blockchain = Blockchain(test_constants)
+        await b.initialize({})
         for block in blocks:
             await b.receive_block(block)
 
@@ -372,10 +357,8 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_get_header_hashes(self):
         blocks = bt.get_consecutive_blocks(test_constants, 5, [], 9, b"0")
-        store = FullNodeStore("fndb_test")
-        await store._clear_database()
-        b: Blockchain = Blockchain(store, test_constants)
-        await b.initialize()
+        b: Blockchain = Blockchain(test_constants)
+        await b.initialize({})
         for block in blocks:
             await b.receive_block(block)
         header_hashes = b.get_header_hashes(blocks[-1].header_hash)

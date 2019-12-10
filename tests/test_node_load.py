@@ -42,8 +42,8 @@ class TestNodeLoad:
         store = FullNodeStore("fndb_test")
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
-        b: Blockchain = Blockchain(store, test_constants)
-        await b.initialize()
+        b: Blockchain = Blockchain(test_constants)
+        await b.initialize({})
         for i in range(1, 9):
             assert (
                 await b.receive_block(blocks[i])
