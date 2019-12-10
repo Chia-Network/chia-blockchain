@@ -2,6 +2,7 @@ import asyncio
 from typing import Any, Dict
 import pytest
 import time
+import logging
 from src.blockchain import Blockchain, ReceiveBlockResult
 from src.database import FullNodeStore
 from src.full_node import FullNode
@@ -12,6 +13,7 @@ from src.types.peer_info import PeerInfo
 from src.protocols import peer_protocol
 from src.server.outbound_message import OutboundMessage, Message, Delivery
 from src.util.ints import uint16
+
 
 bt = BlockTools()
 
@@ -30,6 +32,9 @@ test_constants["GENESIS_BLOCK"] = bytes(
 )
 
 
+logging.getLogger("src.server.server").setLevel(logging.WARNING)
+
+
 @pytest.fixture(scope="module")
 def event_loop():
     loop = asyncio.get_event_loop()
@@ -43,11 +48,13 @@ class TestNodeLoad:
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
         b: Blockchain = Blockchain(test_constants)
+        await store.add_block(blocks[0])
         await b.initialize({})
         for i in range(1, 9):
             assert (
                 await b.receive_block(blocks[i])
             ) == ReceiveBlockResult.ADDED_TO_HEAD
+            await store.add_block(blocks[i])
 
         full_node_1 = FullNode(store, b)
         server_1 = ChiaServer(21234, full_node_1, NodeType.FULL_NODE)
@@ -60,13 +67,11 @@ class TestNodeLoad:
 
         await server_2.start_client(PeerInfo("127.0.0.1", uint16(21234)), None)
 
-        print("Starting sleep")
         await asyncio.sleep(2)  # Allow connections to get made
 
         num_unfinished_blocks = 1000
         start_unf = time.time()
         for i in range(num_unfinished_blocks):
-            print("Pushing")
             msg = Message("unfinished_block", peer_protocol.UnfinishedBlock(blocks[9]))
             server_1.push_message(
                 OutboundMessage(NodeType.FULL_NODE, msg, Delivery.BROADCAST)

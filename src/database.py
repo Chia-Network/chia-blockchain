@@ -79,7 +79,11 @@ class FullNodeStore(Database):
         ] = {}
         # Blocks which are not finalized yet (no proof of time), old ones are cleared
         self.unfinished_blocks: Dict[Tuple[bytes32, uint64], FullBlock] = {}
-        # Blocks which we have received but our blockchain dose not reach, old ones are cleared
+        # Header hashes of unfinished blocks that we have seen recently
+        self.seen_unfinished_blocks: set = set()
+        # Header hashes of blocks that we have seen recently
+        self.seen_blocks: set = set()
+        # Blocks which we have received but our blockchain does not reach, old ones are cleared
         self.disconnected_blocks: Dict[bytes32, FullBlock] = {}
 
         # Lock
@@ -222,6 +226,24 @@ class FullNodeStore(Database):
         self, key: Tuple[bytes32, uint64]
     ) -> Optional[FullBlock]:
         return self.unfinished_blocks.get(key, None)
+
+    def seen_unfinished_block(self, header_hash: bytes32) -> bool:
+        if header_hash in self.seen_unfinished_blocks:
+            return True
+        self.seen_unfinished_blocks.add(header_hash)
+        return False
+
+    def clear_seen_unfinished_blocks(self) -> None:
+        self.seen_unfinished_blocks.clear()
+
+    def seen_block(self, header_hash: bytes32) -> bool:
+        if header_hash in self.seen_blocks:
+            return True
+        self.seen_blocks.add(header_hash)
+        return False
+
+    def clear_seen_blocks(self) -> None:
+        self.seen_blocks.clear()
 
     async def get_unfinished_blocks(self) -> Dict[Tuple[bytes32, uint64], FullBlock]:
         return self.unfinished_blocks.copy()

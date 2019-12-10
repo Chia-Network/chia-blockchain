@@ -895,6 +895,10 @@ class FullNode:
         We can validate it and if it's a good block, propagate it to other peers and
         timelords.
         """
+        # Adds the unfinished block to seen, and check if it's seen before
+        if self.store.seen_unfinished_block(unfinished_block.block.header_hash):
+            return
+
         if not self.blockchain.is_child_of_head(unfinished_block.block):
             return
 
@@ -994,6 +998,10 @@ class FullNode:
         """
         header_hash = block.block.header_block.header.get_hash()
 
+        # Adds the block to seen, and check if it's seen before
+        if self.store.seen_block(header_hash):
+            return
+
         async with self.store.lock:
             if await self.store.get_sync_mode():
                 # Add the block to our potential tips list
@@ -1082,6 +1090,8 @@ class FullNode:
                     Message("proof_of_time_rate", rate_update),
                     Delivery.BROADCAST,
                 )
+                self.store.clear_seen_unfinished_blocks()
+                self.store.clear_seen_blocks()
 
             assert block.block.header_block.proof_of_time
             assert block.block.header_block.challenge
