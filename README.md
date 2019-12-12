@@ -1,11 +1,17 @@
 # chia-blockchain
-Python 3.7 is used for this project. Make sure your default python version is >=3.7 by typing python3.
+Python 3.7 is used for this project. Make sure your default python version is >=3.7 by typing python3. 
+
+You will need to enable [UPnP](https://www.homenethowto.com/ports-and-nat/upnp-automatic-port-forward/) on your router or add a NAT (for IPv4 but not IPv6) and firewall rule to allow TCP port 8444 access to your peer. These methods tend to be router make/model specific.
 
 ### Install on Debian/Ubuntu
 
 ```bash
 sudo apt-get update
 sudo apt-get install build-essential cmake python3-dev python3-venv --no-install-recommends
+
+# Update boost version to 1.71.0 or greater if needed, check version: dpkg -s libboost-dev | grep 'Version'
+# Install from www.boost.org
+
 sh install.sh
 
 # Install MongoDB Community Edition
@@ -20,6 +26,7 @@ mongod --fork --dbpath ./db/ --logpath mongod.log
 Make sure [brew](https://brew.sh/) is available before starting the setup.
 ```bash
 brew tap mongodb/brew
+brew upgrade python
 brew install cmake boost gmp mpir mpfr mongodb-community@4.2
 
 git clone https://github.com/Chia-Network/chia-blockchain.git && cd chia-blockchain

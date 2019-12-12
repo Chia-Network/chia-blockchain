@@ -14,7 +14,6 @@ dev_dependencies = [
 
 setup(
     name="chiablockchain",
-    version="0.1.2",
     author="Mariano Sorgente",
     author_email="mariano@chia.net",
     description="Chia proof of space plotting, proving, and verifying (wraps C++)",
@@ -22,6 +21,8 @@ setup(
     python_requires=">=3.7, <4",
     keywords="chia blockchain node",
     install_requires=dependencies + dev_dependencies,
+    setup_requires=["setuptools_scm"],
+    use_scm_version=True,
     long_description=open("README.md").read(),
     zip_safe=False,
 )

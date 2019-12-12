@@ -2,7 +2,7 @@
 
 The Chia blockchain and consensus algorithm aims to provide a more environmentally friendly,
 decentralized, and secure alternative to proof of work or proof of stake, while
-maintaing some of the key properties that make Nakamoto consensus desireable. The full
+maintaing some of the key properties that make Nakamoto consensus desirable. The full
 description of the algorithm can be reviewed in the [Chia Network greenpaper](https://www.chia.net/assets/ChiaGreenPaper.pdf).
 
 The main idea is that mining nodes called **Farmers** (as opposed to Bitcoin's miners), use

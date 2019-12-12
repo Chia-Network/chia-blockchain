@@ -149,7 +149,7 @@ class Timelord:
                     new_avg_ips = int((prev_avg_ips * trials + ips) / (trials + 1))
                     self.avg_ips[ip] = (new_avg_ips, trials + 1)
                     log.info(f"New estimate: {new_avg_ips}")
-                    # self.pending_iters[challenge_hash].remove(iterations_needed)
+                self.pending_iters[challenge_hash].remove(iterations_needed)
             else:
                 log.info(
                     f"Finished PoT chall:{challenge_hash[:10].hex()}.. {iterations_needed}"
@@ -179,6 +179,31 @@ class Timelord:
                         del self.active_discriminants[active_disc]
                         del self.active_discriminants_start_time[active_disc]
                         self.done_discriminants.append(active_disc)
+
+    async def _send_iterations(self, challenge_hash, writer):
+        alive_discriminant = True
+        while alive_discriminant:
+            async with self.lock:
+                if (challenge_hash in self.active_discriminants) and (
+                    challenge_hash in self.pending_iters
+                ):
+                    if challenge_hash not in self.submitted_iters:
+                        self.submitted_iters[challenge_hash] = []
+                    for iter in sorted(self.pending_iters[challenge_hash]):
+                        if iter in self.submitted_iters[challenge_hash]:
+                            continue
+                        self.submitted_iters[challenge_hash].append(iter)
+                        if len(str(iter)) < 10:
+                            iter_size = "0" + str(len(str(iter)))
+                        else:
+                            iter_size = str(len(str(iter)))
+                        writer.write((iter_size + str(iter)).encode())
+                        await writer.drain()
+                        log.info(f"New iteration submitted: {iter}")
+            await asyncio.sleep(3)
+            async with self.lock:
+                if challenge_hash in self.done_discriminants:
+                    alive_discriminant = False
 
     async def _do_process_communication(
         self, challenge_hash, challenge_weight, ip, port
@@ -219,29 +244,10 @@ class Timelord:
             self.active_discriminants[challenge_hash] = (writer, challenge_weight, ip)
             self.active_discriminants_start_time[challenge_hash] = time.time()
 
+        asyncio.create_task(self._send_iterations(challenge_hash, writer))
+
         # Listen to the server until "STOP" is received.
         while True:
-            async with self.lock:
-                if (challenge_hash in self.active_discriminants) and (
-                    challenge_hash in self.pending_iters
-                ):
-                    if challenge_hash not in self.submitted_iters:
-                        self.submitted_iters[challenge_hash] = []
-                    log.info(
-                        f"Pending: {self.pending_iters[challenge_hash]} "
-                        f"Submitted: {self.submitted_iters[challenge_hash]} Hash: {challenge_hash}"
-                    )
-                    for iter in sorted(self.pending_iters[challenge_hash]):
-                        if iter in self.submitted_iters[challenge_hash]:
-                            continue
-                        self.submitted_iters[challenge_hash].append(iter)
-                        if len(str(iter)) < 10:
-                            iter_size = "0" + str(len(str(iter)))
-                        else:
-                            iter_size = str(len(str(iter)))
-                        writer.write((iter_size + str(iter)).encode())
-                        await writer.drain()
-
             try:
                 data = await reader.readexactly(4)
             except (asyncio.IncompleteReadError, ConnectionResetError) as e:
@@ -259,21 +265,6 @@ class Timelord:
                     len_server = len(self.free_servers)
                     log.info(f"Process ended... Server length {len_server}")
                 break
-            elif data.decode() == "POLL":
-                async with self.lock:
-                    # If I have a newer discriminant... Free up the VDF server
-                    if (
-                        len(self.discriminant_queue) > 0
-                        and challenge_weight
-                        < max([h for _, h in self.discriminant_queue])
-                        and challenge_hash in self.active_discriminants
-                    ):
-                        log.info("Got poll, stopping the challenge!")
-                        writer.write(b"010")
-                        await writer.drain()
-                        del self.active_discriminants[challenge_hash]
-                        del self.active_discriminants_start_time[challenge_hash]
-                        self.done_discriminants.append(challenge_hash)
             else:
                 try:
                     # This must be a proof, read the continuation.
@@ -341,9 +332,26 @@ class Timelord:
                         )
                         self.discriminant_queue.clear()
                     else:
-                        disc = next(
+                        max_weight_disc = [
                             d for d, h in self.discriminant_queue if h == max_weight
-                        )
+                        ]
+                        with_iters = [
+                            d
+                            for d in max_weight_disc
+                            if d in self.pending_iters
+                            and len(self.pending_iters[d]) != 0
+                        ]
+                        if len(with_iters) == 0:
+                            disc = max_weight_disc[0]
+                        else:
+                            min_iter = min(
+                                [min(self.pending_iters[d]) for d in with_iters]
+                            )
+                            disc = next(
+                                d
+                                for d in with_iters
+                                if min(self.pending_iters[d]) == min_iter
+                            )
                         if len(self.free_servers) != 0:
                             ip, port = self.free_servers[0]
                             self.free_servers = self.free_servers[1:]
@@ -367,6 +375,26 @@ class Timelord:
                                 )
                                 if max_weight > worst_weight_active:
                                     await self._stop_worst_process(worst_weight_active)
+                                elif max_weight == worst_weight_active:
+                                    if (
+                                        disc in self.pending_iters
+                                        and len(self.pending_iters[disc]) != 0
+                                    ):
+                                        if any(
+                                            (
+                                                k not in self.pending_iters
+                                                or len(self.pending_iters[k]) == 0
+                                            )
+                                            for k, v in self.active_discriminants.items()
+                                            if v[1] == worst_weight_active
+                                        ):
+                                            log.info(
+                                                "Stopped process without iters for one with iters."
+                                            )
+                                            await self._stop_worst_process(
+                                                worst_weight_active
+                                            )
+
                 if len(self.proofs_to_write) > 0:
                     for msg in self.proofs_to_write:
                         yield msg
@@ -415,10 +443,14 @@ class Timelord:
 
             if proof_of_space_info.challenge_hash not in self.pending_iters:
                 self.pending_iters[proof_of_space_info.challenge_hash] = []
+            if proof_of_space_info.challenge_hash not in self.submitted_iters:
+                self.submitted_iters[proof_of_space_info.challenge_hash] = []
 
             if (
                 proof_of_space_info.iterations_needed
                 not in self.pending_iters[proof_of_space_info.challenge_hash]
+                and proof_of_space_info.iterations_needed
+                not in self.submitted_iters[proof_of_space_info.challenge_hash]
             ):
                 log.info(
                     f"proof_of_space_info {proof_of_space_info.challenge_hash} adding "

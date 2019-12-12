@@ -3,7 +3,6 @@ import logging
 import random
 import os
 import concurrent
-import time
 from secrets import token_bytes
 from yaml import safe_load
 from typing import Any, AsyncGenerator, List, Optional, Tuple
@@ -39,7 +38,7 @@ config = safe_load(open(config_filename, "r"))
 
 class ChiaServer:
     # Keeps track of all connections to and from this node.
-    global_connections: PeerConnections = PeerConnections([])
+    global_connections: PeerConnections
 
     # Optional listening server. You can also use this class without starting one.
     _server: Optional[asyncio.AbstractServer] = None
@@ -59,6 +58,7 @@ class ChiaServer:
     _on_inbound_connect: OnConnectFunc = None
 
     def __init__(self, port: int, api: Any, local_type: NodeType):
+        self.global_connections = PeerConnections([])
         self._port = port  # TCP port to identify our node
         self._api = api  # API module that will be called from the requests
         self._local_type = local_type  # NodeType (farmer, full node, timelord, pool, harvester, wallet)
@@ -165,7 +165,8 @@ class ChiaServer:
         Starts closing all the clients and servers, by stopping the server and stopping the aiters.
         """
         self.global_connections.close_all_connections()
-        self._server.close()
+        if self._server is not None:
+            self._server.close()
         if not self._outbound_aiter.is_stopped():
             self._outbound_aiter.stop()
         if not self._srwt_aiter.is_stopped():
@@ -174,20 +175,6 @@ class ChiaServer:
     def _initialize_ping_task(self):
         async def ping():
             while not self._pipeline_task.done():
-                to_close: List[Connection] = []
-                for connection in self.global_connections.get_connections():
-                    if connection.handshake_finished:
-                        if (
-                            time.time() - connection.get_last_message_time()
-                            > config["timeout_duration"]
-                            and connection.connection_type == NodeType.FULL_NODE
-                            and self._local_type == NodeType.FULL_NODE
-                        ):
-                            # Only closes down full_node <-> full_node connections, which can be recovered
-                            to_close.append(connection)
-                for connection in to_close:
-                    log.info(f"Removing connection {connection} due to timeout.")
-                    self.global_connections.close(connection)
                 msg = Message("ping", Ping(bytes32(token_bytes(32))))
                 self.push_message(
                     OutboundMessage(NodeType.FARMER, msg, Delivery.BROADCAST)
@@ -268,7 +255,12 @@ class ChiaServer:
                 log.info(f"-> {message.function} to peer {connection.get_peername()}")
                 try:
                     await connection.send(message)
-                except (ConnectionResetError, BrokenPipeError, RuntimeError, TimeoutError) as e:
+                except (
+                    ConnectionResetError,
+                    BrokenPipeError,
+                    RuntimeError,
+                    TimeoutError,
+                ) as e:
                     log.error(
                         f"Cannot write to {connection}, already closed. Error {e}."
                     )
@@ -370,7 +362,6 @@ class ChiaServer:
                     f" established"
                 )
             )
-            connection.handshake_finished = True
             # Only yield a connection if the handshake is succesful and the connection is not a duplicate.
             yield connection
         except (
@@ -382,13 +373,10 @@ class ChiaServer:
             Exception,
         ) as e:
             log.warning(f"{e}, handshake not completed. Connection not created.")
-            for established_connection in self.global_connections.get_connections():
-                if (
-                    connection.node_id == established_connection.node_id
-                    and not connection.handshake_finished
-                ):
-                    # Makes sure not to remove a duplicate connection
-                    self.global_connections.close(connection)
+            # Make sure to close the connection even if it's not in global connections
+            connection.close()
+            # Remove the conenction from global connections
+            self.global_connections.close(connection)
 
     async def connection_to_message(
         self, connection: Connection
