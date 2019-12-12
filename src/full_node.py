@@ -1012,7 +1012,10 @@ class FullNode:
             added: ReceiveBlockResult = await self.blockchain.receive_block(block.block)
 
             # Always immediately add the block to the database, after updating blockchain state
-            if added == ReceiveBlockResult.ADDED_AS_ORPHAN or added == ReceiveBlockResult.ADDED_TO_HEAD:
+            if (
+                added == ReceiveBlockResult.ADDED_AS_ORPHAN
+                or added == ReceiveBlockResult.ADDED_TO_HEAD
+            ):
                 await self.store.add_block(block.block)
         if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return

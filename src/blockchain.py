@@ -67,6 +67,7 @@ class Blockchain:
                 self.header_blocks[self.height_to_hash[uint32(0)]]
                 == self.genesis.header_block
             )
+        if len(header_blocks) > 1:
             assert (
                 self.header_blocks[self.height_to_hash[uint32(1)]].prev_header_hash
                 == self.genesis.header_hash
