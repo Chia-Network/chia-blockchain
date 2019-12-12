@@ -2,7 +2,6 @@ import asyncio
 from typing import Any, Dict
 import pytest
 import time
-import logging
 from src.blockchain import Blockchain, ReceiveBlockResult
 from src.database import FullNodeStore
 from src.full_node import FullNode
@@ -19,7 +18,7 @@ bt = BlockTools()
 
 test_constants: Dict[str, Any] = {
     "DIFFICULTY_STARTING": 5,
-    "DISCRIMINANT_SIZE_BITS": 16,
+    "DISCRIMINANT_SIZE_BITS": 32,
     "BLOCK_TIME_TARGET": 10,
     "MIN_BLOCK_TIME": 2,
     "DIFFICULTY_FACTOR": 3,
@@ -30,9 +29,6 @@ test_constants: Dict[str, Any] = {
 test_constants["GENESIS_BLOCK"] = bytes(
     bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
 )
-
-
-logging.getLogger("src.server.server").setLevel(logging.WARNING)
 
 
 @pytest.fixture(scope="module")
@@ -87,6 +83,54 @@ class TestNodeLoad:
             if max([h.height for h in b.get_current_tips()]) == 9:
                 print(
                     f"Time taken to process {num_unfinished_blocks} is {time.time() - start_unf}"
+                )
+                server_1.close_all()
+                server_2.close_all()
+                await server_1.await_closed()
+                await server_2.await_closed()
+                return
+            await asyncio.sleep(0.1)
+
+        server_1.close_all()
+        server_2.close_all()
+        await server_1.await_closed()
+        await server_2.await_closed()
+        raise Exception("Took too long to process blocks")
+
+    @pytest.mark.asyncio
+    async def test2(self):
+        num_blocks = 100
+        store = FullNodeStore("fndb_test")
+        await store._clear_database()
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
+        b: Blockchain = Blockchain(test_constants)
+        await store.add_block(blocks[0])
+        await b.initialize({})
+
+        full_node_1 = FullNode(store, b)
+        server_1 = ChiaServer(21236, full_node_1, NodeType.FULL_NODE)
+        _ = await server_1.start_server("127.0.0.1", None)
+        full_node_1._set_server(server_1)
+
+        full_node_2 = FullNode(store, b)
+        server_2 = ChiaServer(21237, full_node_2, NodeType.FULL_NODE)
+        full_node_2._set_server(server_2)
+
+        await server_2.start_client(PeerInfo("127.0.0.1", uint16(21236)), None)
+
+        await asyncio.sleep(2)  # Allow connections to get made
+
+        start_unf = time.time()
+        for i in range(1, num_blocks):
+            msg = Message("block", peer_protocol.Block(blocks[i]))
+            server_1.push_message(
+                OutboundMessage(NodeType.FULL_NODE, msg, Delivery.BROADCAST)
+            )
+
+        while time.time() - start_unf < 300:
+            if max([h.height for h in b.get_current_tips()]) == num_blocks - 1:
+                print(
+                    f"Time taken to process {num_blocks} is {time.time() - start_unf}"
                 )
                 server_1.close_all()
                 server_2.close_all()
