@@ -1,3 +1,7 @@
+**Note** due to the use of `setuptools-scm`, you must clone the repo.
+**Downloading the zip file provided by github will not work** as the `.git` metadata used to calculate the
+version number is not present in the zip file.
+
 # chia-blockchain
 Python 3.7 is used for this project. Make sure your default python version is >=3.7 by typing python3. 
 
