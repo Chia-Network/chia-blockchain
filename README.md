@@ -3,7 +3,9 @@ Python 3.7 is used for this project. Make sure your default python version is >=
 
 You will need to enable [UPnP](https://www.homenethowto.com/ports-and-nat/upnp-automatic-port-forward/) on your router or add a NAT (for IPv4 but not IPv6) and firewall rule to allow TCP port 8444 access to your peer. These methods tend to be router make/model specific.
 
-### Install on Debian/Ubuntu
+### Install on Linux
+
+#### Debian/Ubuntu
 
 ```bash
 sudo apt-get update
@@ -22,6 +24,51 @@ mongod --fork --dbpath ./db/ --logpath mongod.log
 
 . .venv/bin/activate
 ```
+#### CentOS 7
+
+```bash
+sudo yum update
+sudo yum install centos-release-scl-rh epel-release
+sudo yum install devtoolset-8-toolchain
+scl enable devtoolset-8 bash
+
+sudo yum install wget git libsodium libsodium-devel cmake3 gmp gmp-devel
+sudo yum install mpfr-devel openssl openssl-devel bzip2-devel libffi-devel
+
+# CMake - add a symlink for cmake3 - required by blspy
+sudo ln -s /usr/bin/cmake3 /usr/local/bin/cmake
+
+# Install Boost 1.72.0
+wget https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.gz
+tar -zxvf boost_1_72_0.tar.gz
+cd boost_1_72_0
+./bootstrap.sh --prefix=/usr/local
+sudo ./b2 install --prefix=/usr/local --with=all; cd ..
+
+# Install Python 3.7.5 (current rpm's are 3.6.x)
+wget https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tgz
+tar -zxvf Python-3.7.5.tgz; cd Python-3.7.5
+./configure --enable-optimizations; sudo make install; cd ..
+
+# Install Flint2
+git clone https://github.com/wbhart/flint2
+cd flint2; ./configure; sudo make install; cd ..
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+
+git clone https://github.com/Chia-Network/chia-blockchain.git
+cd chia-blockchain
+
+sh install.sh
+
+# Install MongoDB Community Edition
+# Instructions - https://docs.mongodb.com/manual/administration/install-on-linux/
+
+# Run mongo database
+mongod --fork --dbpath ./db/ --logpath mongod.log
+
+. .venv/bin/activate
+```
+
 ### Install on MacOS
 Make sure [brew](https://brew.sh/) is available before starting the setup.
 ```bash
@@ -39,6 +86,39 @@ sh install.sh
 mongod --fork --dbpath ./db/ --logpath mongod.log
 
 . .venv/bin/activate
+```
+
+### Install on Windows (WSL + Ubuntu)
+Install WSL + Ubuntu 18.04 LTS, then upgrade to Ubuntu 19.10 (Eoan Ermine).
+Change install.sh -- each line that starts with `pip install` becomes `python -m pip install ...`.
+
+```bash
+sudo apt-get -y update
+sudo apt-get install -y build-essential cmake python3-dev python3-venv mongodb software-properties-common --no-install-recommends
+sudo sh install.sh
+```
+
+##### Alternate method for Ubuntu 18.04:
+In `./install.sh`:
+Change `python3` to `python3.7`
+Each line that starts with `pip ...` becomes `python -m pip ...`
+
+In `./lib/chiavdf/fast_vdf/install_child.sh`, remove the line `sudo apt install libboost-all-dev`
+
+```bash
+sudo apt-get -y update && sudo apt-get install -y build-essential cmake python3-dev python3-venv mongodb software-properties-common --no-install-recommends
+
+# Install python3.7 with ppa
+sudo add-apt-repository -y ppa:deadsnakes/ppa
+sudo apt-get -y update
+sudo apt-get install -y python3.7 python3.7-venv python3.7-dev
+
+# Install boost 1.70 with ppa
+sudo add-apt-repository -y ppa:mhier/libboost-latest
+sudo apt-get update
+sudo apt-get install libboost1.70 libboost1.70-dev
+
+sudo sh install.sh
 ```
 
 ### Generate keys
