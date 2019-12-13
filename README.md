@@ -35,7 +35,7 @@ scl enable devtoolset-8 bash
 sudo yum install wget git libsodium libsodium-devel cmake3 gmp gmp-devel
 sudo yum install mpfr-devel openssl openssl-devel bzip2-devel libffi-devel
 
-# CMake - add a symlink for cmake3
+# CMake - add a symlink for cmake3 - required by blspy
 sudo ln -s /usr/bin/cmake3 /usr/local/bin/cmake
 
 # Install Boost 1.72.0
