@@ -41,6 +41,39 @@ mongod --fork --dbpath ./db/ --logpath mongod.log
 . .venv/bin/activate
 ```
 
+### Install on Windows (WSL + Ubuntu)
+Install WSL + Ubuntu 18.04 LTS, then upgrade to Ubuntu 19.10 (Eoan Ermine).
+Change install.sh -- each line that starts with `pip install` becomes `python -m pip install ...`.
+
+```bash
+sudo apt-get -y update
+sudo apt-get install -y build-essential cmake python3-dev python3-venv mongodb software-properties-common --no-install-recommends
+sudo sh install.sh
+```
+
+##### Alternate method for Ubuntu 18.04:
+In `./install.sh`:
+Change `python3` to `python3.7`
+Each line that starts with `pip ...` becomes `python -m pip ...`
+
+In `./lib/chiavdf/fast_vdf/install_child.sh`, remove the line `sudo apt install libboost-all-dev`
+
+```bash
+sudo apt-get -y update && sudo apt-get install -y build-essential cmake python3-dev python3-venv mongodb software-properties-common --no-install-recommends
+
+# Install python3.7 with ppa
+sudo add-apt-repository -y ppa:deadsnakes/ppa
+sudo apt-get -y update
+sudo apt-get install -y python3.7 python3.7-venv python3.7-dev
+
+# Install boost 1.70 with ppa
+sudo add-apt-repository -y ppa:mhier/libboost-latest
+sudo apt-get update
+sudo apt-get install libboost1.70 libboost1.70-dev
+
+sudo sh install.sh
+```
+
 ### Generate keys
 First, create some keys by running the following script:
 ```bash
