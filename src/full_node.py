@@ -76,7 +76,7 @@ class FullNode:
                 height = tip.challenge.height
                 quality = tip.proof_of_space.verify_and_get_quality()
                 if tip.height > 0:
-                    difficulty: uint64 = await self.blockchain.get_next_difficulty(
+                    difficulty: uint64 = self.blockchain.get_next_difficulty(
                         tip.prev_header_hash
                     )
                 else:
@@ -86,7 +86,7 @@ class FullNode:
                         challenge_hash, height, tip.weight, quality, difficulty
                     )
                 )
-            proof_of_time_rate: uint64 = await self.blockchain.get_next_ips(
+            proof_of_time_rate: uint64 = self.blockchain.get_next_ips(
                 tips[0].header_hash
             )
         rate_update = farmer_protocol.ProofOfTimeRate(proof_of_time_rate)
@@ -148,7 +148,7 @@ class FullNode:
         async with self.store.lock:
             heads: List[HeaderBlock] = self.blockchain.get_current_tips()
             for h in heads:
-                block = await self.blockchain.get_block(h.header.get_hash())
+                block = await self.store.get_block(h.header.get_hash())
                 assert block
                 blocks.append(block)
         for block in blocks:
@@ -498,12 +498,14 @@ class FullNode:
                     log.info(
                         f"Took {time.time() - start} seconds to validate and add block {block.height}."
                     )
+                    # Always immediately add the block to the database, after updating blockchain state
+                    await self.store.add_block(block)
                     assert (
                         max([h.height for h in self.blockchain.get_current_tips()])
                         >= height
                     )
                     await self.store.set_proof_of_time_estimate_ips(
-                        await self.blockchain.get_next_ips(block.header_hash)
+                        self.blockchain.get_next_ips(block.header_hash)
                     )
         assert max([h.height for h in self.blockchain.get_current_tips()]) == tip_height
         log.info(f"Finished sync up to height {tip_height}")
@@ -612,7 +614,7 @@ class FullNode:
         Responsd to a peers request for syncing blocks.
         """
         blocks: List[FullBlock] = []
-        tip_block: Optional[FullBlock] = await self.blockchain.get_block(
+        tip_block: Optional[FullBlock] = await self.store.get_block(
             request.tip_header_hash
         )
         if tip_block is not None:
@@ -629,9 +631,7 @@ class FullNode:
                     request.heights, request.tip_header_hash
                 )
                 for header_block in header_blocks:
-                    fetched = await self.blockchain.get_block(
-                        header_block.header.get_hash()
-                    )
+                    fetched = await self.store.get_block(header_block.header.get_hash())
                     assert fetched
                     blocks.append(fetched)
             except KeyError:
@@ -812,13 +812,14 @@ class FullNode:
                     f"Received a proof of time that we cannot use to complete a block {dict_key}"
                 )
                 return
-            prev_block: Optional[HeaderBlock] = await self.blockchain.get_header_block(
+            prev_full_block = await self.store.get_block(
                 unfinished_block_obj.prev_header_hash
             )
-            difficulty: uint64 = await self.blockchain.get_next_difficulty(
+            assert prev_full_block
+            prev_block: HeaderBlock = prev_full_block.header_block
+            difficulty: uint64 = self.blockchain.get_next_difficulty(
                 unfinished_block_obj.prev_header_hash
             )
-            assert prev_block
             assert prev_block.challenge
 
         challenge: Challenge = Challenge(
@@ -894,23 +895,30 @@ class FullNode:
         We can validate it and if it's a good block, propagate it to other peers and
         timelords.
         """
+        # Adds the unfinished block to seen, and check if it's seen before
+        if self.store.seen_unfinished_block(unfinished_block.block.header_hash):
+            return
+
         if not self.blockchain.is_child_of_head(unfinished_block.block):
             return
 
         if not await self.blockchain.validate_unfinished_block(unfinished_block.block):
             raise InvalidUnfinishedBlock()
 
-        prev_block: Optional[HeaderBlock] = await self.blockchain.get_header_block(
+        prev_full_block: Optional[FullBlock] = await self.store.get_block(
             unfinished_block.block.prev_header_hash
         )
-        assert prev_block
+        assert prev_full_block
+
+        prev_block: HeaderBlock = prev_full_block.header_block
+
         assert prev_block.challenge
 
         challenge_hash: bytes32 = prev_block.challenge.get_hash()
-        difficulty: uint64 = await self.blockchain.get_next_difficulty(
+        difficulty: uint64 = self.blockchain.get_next_difficulty(
             unfinished_block.block.header_block.prev_header_hash
         )
-        vdf_ips: uint64 = await self.blockchain.get_next_ips(
+        vdf_ips: uint64 = self.blockchain.get_next_ips(
             unfinished_block.block.header_block.prev_header_hash
         )
 
@@ -990,6 +998,10 @@ class FullNode:
         """
         header_hash = block.block.header_block.header.get_hash()
 
+        # Adds the block to seen, and check if it's seen before
+        if self.store.seen_block(header_hash):
+            return
+
         async with self.store.lock:
             if await self.store.get_sync_mode():
                 # Add the block to our potential tips list
@@ -998,6 +1010,13 @@ class FullNode:
 
             # Tries to add the block to the blockchain
             added: ReceiveBlockResult = await self.blockchain.receive_block(block.block)
+
+            # Always immediately add the block to the database, after updating blockchain state
+            if (
+                added == ReceiveBlockResult.ADDED_AS_ORPHAN
+                or added == ReceiveBlockResult.ADDED_TO_HEAD
+            ):
+                await self.store.add_block(block.block)
         if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return
         elif added == ReceiveBlockResult.INVALID_BLOCK:
@@ -1058,12 +1077,10 @@ class FullNode:
                     f"Updated heads, new heights: {[b.height for b in self.blockchain.get_current_tips()]}"
                 )
 
-                difficulty = await self.blockchain.get_next_difficulty(
+                difficulty = self.blockchain.get_next_difficulty(
                     block.block.prev_header_hash
                 )
-                next_vdf_ips = await self.blockchain.get_next_ips(
-                    block.block.header_hash
-                )
+                next_vdf_ips = self.blockchain.get_next_ips(block.block.header_hash)
                 log.info(f"Difficulty {difficulty} IPS {next_vdf_ips}")
                 if next_vdf_ips != await self.store.get_proof_of_time_estimate_ips():
                     await self.store.set_proof_of_time_estimate_ips(next_vdf_ips)
@@ -1076,6 +1093,8 @@ class FullNode:
                     Message("proof_of_time_rate", rate_update),
                     Delivery.BROADCAST,
                 )
+                self.store.clear_seen_unfinished_blocks()
+                self.store.clear_seen_blocks()
 
             assert block.block.header_block.proof_of_time
             assert block.block.header_block.challenge
@@ -1126,6 +1145,7 @@ class FullNode:
             assert False
             # Recursively process the next block if we have it
 
+        # This code path is reached if added == ADDED_AS_ORPHAN or ADDED_TO_HEAD
         async with self.store.lock:
             next_block: Optional[
                 FullBlock
