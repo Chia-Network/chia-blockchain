@@ -11,7 +11,7 @@ You will need to enable [UPnP](https://www.homenethowto.com/ports-and-nat/upnp-a
 sudo apt-get update
 sudo apt-get install build-essential cmake python3-dev python3-venv --no-install-recommends
 
-# Update boost version to 1.71.0 or greater if needed, check version: dpkg -s libboost-dev | grep 'Version'
+# Update boost version to 1.67.0 or greater if needed, check version: dpkg -s libboost-dev | grep 'Version'
 # Install from www.boost.org
 
 sh install.sh
