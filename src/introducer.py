@@ -9,6 +9,7 @@ from src.protocols.peer_protocol import Peers, RequestPeers
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
 from src.util.api_decorators import api_request
+from src.util.network import parse_any_peer_info
 
 import asyncio
 
@@ -40,7 +41,8 @@ class Introducer:
         for peer in rawpeers:
             if peer.get_hash() not in self.vetted:
                 try:
-                    r, w = await asyncio.open_connection(peer.host, int(peer.port))
+                    host, port = parse_any_peer_info(peer)
+                    r, w = await asyncio.open_connection(host, port)
                     w.close()
                 except (
                     ConnectionRefusedError,
