@@ -3,7 +3,7 @@ from typing import List
 
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
-from src.types.peer_info import BinPeerInfo
+from src.types.peer_info import PeerInfo
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.types.transaction import Transaction
@@ -69,7 +69,7 @@ class RequestPeers:
 @dataclass(frozen=True)
 @cbor_message
 class Peers:
-    peer_list: List[BinPeerInfo]
+    peer_list: List[PeerInfo]
 
 
 @dataclass(frozen=True)

@@ -2,9 +2,7 @@ import secrets
 import sys
 from typing import Tuple
 
-from src.types.peer_info import AnyPeerInfo, BinPeerInfo
 from src.types.sized_bytes import bytes32
-from src.util.ip_str import ip_to_str
 
 
 def parse_host_port(api) -> Tuple[str, int]:
@@ -16,10 +14,3 @@ def parse_host_port(api) -> Tuple[str, int]:
 def create_node_id() -> bytes32:
     """Generates a transient random node_id."""
     return bytes32(secrets.token_bytes(32))
-
-
-def parse_any_peer_info(peer: AnyPeerInfo) -> Tuple[str, int]:
-    if isinstance(peer, BinPeerInfo):
-        return ip_to_str(peer.host), int(peer.port)
-    else:
-        return peer.host, int(peer.port)
