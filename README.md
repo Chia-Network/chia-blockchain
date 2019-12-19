@@ -121,7 +121,6 @@ sudo sh install.sh
 ### Install timelord on Linux
 Note: this step is needed only if you intend to run a timelord or a local
 simulation.
-#### Debian/Ubuntu
 ```bash
 sh install_timelord.sh
 ```

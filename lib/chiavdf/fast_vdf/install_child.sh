@@ -10,9 +10,6 @@ fi
 echo "enable_all_instructions: $enable_all_instructions"
 
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-    sudo apt-get install libgmp3-dev -y
-    sudo apt-get install libflint-dev -y
-    sudo apt install libboost-all-dev
     opt_flags="-O3"
     link_flags="-no-pie -lgmpxx -lgmp -lflint -lpthread -lboost_system"
     compile_flags="-std=c++1z -D VDF_MODE=0 -D ENABLE_ALL_INSTRUCTIONS=$enable_all_instructions -no-pie -march=native"
