@@ -18,7 +18,30 @@ sh install.sh
 # Install MongoDB Community Edition
 # Instructions - https://docs.mongodb.com/manual/administration/install-on-linux/
 
-# Run mongo database
+# Run mongo database if not started at boot
+mongod --fork --dbpath ./db/ --logpath mongod.log
+
+. .venv/bin/activate
+```
+#### Amazon Linux 2
+
+```bash
+sudo yum update
+sudo yum install gcc-c++ cmake3 wget git openssl openssl-devel
+sudo yum install python3 python3-devel libffi-devel
+
+# CMake - add a symlink for cmake3 - required by blspy
+sudo ln -s /usr/bin/cmake3 /usr/local/bin/cmake
+
+git clone https://github.com/Chia-Network/chia-blockchain.git
+cd chia-blockchain
+
+sh install.sh
+
+# Install MongoDB Community Edition
+# Instructions - https://docs.mongodb.com/manual/administration/install-on-linux/
+
+# Run mongo database if not started at boot
 mongod --fork --dbpath ./db/ --logpath mongod.log
 
 . .venv/bin/activate
@@ -49,7 +72,7 @@ sh install.sh
 # Install MongoDB Community Edition
 # Instructions - https://docs.mongodb.com/manual/administration/install-on-linux/
 
-# Run mongo database
+# Run mongo database if not started at boot
 mongod --fork --dbpath ./db/ --logpath mongod.log
 
 . .venv/bin/activate
@@ -66,7 +89,7 @@ git clone https://github.com/Chia-Network/chia-blockchain.git && cd chia-blockch
 
 sh install.sh
 
-# Run mongo database
+# Run mongo database if not started at boot
 mongod --fork --dbpath ./db/ --logpath mongod.log
 
 . .venv/bin/activate
@@ -90,7 +113,8 @@ Each line that starts with `pip ...` becomes `python -m pip ...`
 In `./lib/chiavdf/fast_vdf/install_child.sh`, remove the line `sudo apt install libboost-all-dev`
 
 ```bash
-sudo apt-get -y update && sudo apt-get install -y build-essential cmake python3-dev python3-venv mongodb software-properties-common --no-install-recommends
+sudo apt-get -y update
+sudo apt-get install -y build-essential cmake python3-dev python3-venv mongodb software-properties-common --no-install-recommends
 
 # Install python3.7 with ppa
 sudo add-apt-repository -y ppa:deadsnakes/ppa
@@ -106,8 +130,8 @@ sudo sh install.sh
 ```
 
 ### Install timelord
-Note: this step is needed only if you intend to run a timelord or a local
-simulation. These assume you've already successfully installed harvester, farmer, plotting, and full node.
+Note: this step is needed only if you intend to run a timelord or a local simulation.
+These assume you've already successfully installed harvester, farmer, plotting, and full node.
 #### Ubuntu/Debian
 ```bash
 cd chia-blockchain
@@ -183,15 +207,21 @@ When running the servers on Mac OS, allow the application to accept incoming con
 
 Ubuntu 19.xx and CentOS 7.7 or newer are the easiest linux install environments currently.
 
-UPnP is enabled by default, to open the port for incoming connections. If this causes issues, you can disable it in the configuration. Some routers may require port forwarding, or enabling UPnP in the router configuration.
+UPnP is enabled by default, to open the port for incoming connections. If this causes issues,
+you can disable it in the configuration. Some routers may require port forwarding, or enabling
+UPnP in the router configuration.
 
-Due to the nature of proof of space lookups by the harvester you should limit the number of plots on a physical drive to 50 or less. This limit should significantly increase before beta.
+Due to the nature of proof of space lookups by the harvester you should limit the number of plots
+on a physical drive to 50 or less. This limit should significantly increase before beta.
 
 You can also run the simulation, which runs all servers and multiple full nodes, locally, at once.
-If you want to run the simulation, change the introducer ip in ./config/config.yaml so that the full node points to the local introducer (127.0.0.1:8445).
+If you want to run the simulation, change the introducer ip in ./config/config.yaml so that the 
+full node points to the local introducer (127.0.0.1:8445).
+
 Note the the simulation is local only and requires installation of timelords and VDFs.
 
-The introducer will only know the local ips of the full nodes, so it cannot broadcast the correct ips to external peers.
+The introducer will only know the local ips of the full nodes, so it cannot broadcast the correct
+ips to external peers.
 
 ```bash
 sh ./scripts/run_all_simulation.sh
