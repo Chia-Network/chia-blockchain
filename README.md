@@ -3,6 +3,8 @@ Python 3.7 is used for this project. Make sure your default python version is >=
 
 You will need to enable [UPnP](https://www.homenethowto.com/ports-and-nat/upnp-automatic-port-forward/) on your router or add a NAT (for IPv4 but not IPv6) and firewall rule to allow TCP port 8444 access to your peer. These methods tend to be router make/model specific.
 
+For aplhpa testnet most should only install harvesters, farmers, plotter and full nodes. Building timelords and VDFs is for sophisticated users in most environments. Chia Network and additional volunteers are running sufficient time lords for testnet consensus.
+
 ### Install on Linux
 
 #### Debian/Ubuntu
@@ -26,31 +28,18 @@ mongod --fork --dbpath ./db/ --logpath mongod.log
 ```bash
 sudo yum update
 sudo yum install centos-release-scl-rh epel-release
-sudo yum install devtoolset-8-toolchain
-scl enable devtoolset-8 bash
-
-sudo yum install wget git libsodium libsodium-devel cmake3 gmp gmp-devel
-sudo yum install mpfr-devel openssl openssl-devel bzip2-devel libffi-devel
+sudo yum install devtoolset-8-toolchain cmake3 libffi-devel
+sudo yum install wget git openssl openssl-devel
 
 # CMake - add a symlink for cmake3 - required by blspy
 sudo ln -s /usr/bin/cmake3 /usr/local/bin/cmake
 
-# Install Boost 1.72.0
-wget https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.gz
-tar -zxvf boost_1_72_0.tar.gz
-cd boost_1_72_0
-./bootstrap.sh --prefix=/usr/local
-sudo ./b2 install --prefix=/usr/local --with=all; cd ..
+scl enable devtoolset-8 bash
 
 # Install Python 3.7.5 (current rpm's are 3.6.x)
 wget https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tgz
 tar -zxvf Python-3.7.5.tgz; cd Python-3.7.5
 ./configure --enable-optimizations; sudo make install; cd ..
-
-# Install Flint2
-git clone https://github.com/wbhart/flint2
-cd flint2; ./configure; sudo make install; cd ..
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
@@ -71,11 +60,9 @@ Make sure [brew](https://brew.sh/) is available before starting the setup.
 ```bash
 brew tap mongodb/brew
 brew upgrade python
-brew install cmake boost gmp mpir mpfr mongodb-community@4.2
+brew install cmake mongodb-community@4.2
 
 git clone https://github.com/Chia-Network/chia-blockchain.git && cd chia-blockchain
-
-git clone https://github.com/wbhart/flint2
 
 sh install.sh
 
@@ -118,10 +105,43 @@ sudo apt-get install libboost1.70 libboost1.70-dev
 sudo sh install.sh
 ```
 
-### Install timelord on Linux
+### Install timelord
 Note: this step is needed only if you intend to run a timelord or a local
-simulation.
+simulation. These assume you've already successfully installed harvester, farmer, plotting, and full node.
+#### Ubuntu/Debian
 ```bash
+cd chia-blockchain
+
+sh install_timelord.sh
+```
+#### CentOS 7
+```bash
+sudo yum install libsodium libsodium-devel gmp gmp-devel mpfr-devel
+
+# Install Boost 1.72.0
+wget https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.gz
+tar -zxvf boost_1_72_0.tar.gz
+cd boost_1_72_0
+./bootstrap.sh --prefix=/usr/local
+sudo ./b2 install --prefix=/usr/local --with=all; cd ..
+
+# Install Flint2
+git clone https://github.com/wbhart/flint2
+cd flint2; ./configure; sudo make install; cd ..
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+
+cd chia-blockchain
+
+sh install_timelord.sh
+```
+#### MacOS
+```bash
+brew install boost gmp mpir mpfr
+
+cd chia-blockchain
+
+git clone https://github.com/wbhart/flint2
+
 sh install_timelord.sh
 ```
 
