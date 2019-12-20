@@ -5,9 +5,9 @@ You will need to enable [UPnP](https://www.homenethowto.com/ports-and-nat/upnp-a
 
 For alpha testnet most should only install harvesters, farmers, plotter and full nodes. Building timelords and VDFs is for sophisticated users in most environments. Chia Network and additional volunteers are running sufficient time lords for testnet consensus.
 
-### Install harvester, farmer, plotter, and full node
+## Install harvester, farmer, plotter, and full node
 
-#### Debian/Ubuntu
+### Debian/Ubuntu
 
 ```bash
 sudo apt-get update
@@ -23,7 +23,7 @@ mongod --fork --dbpath ./db/ --logpath mongod.log
 
 . .venv/bin/activate
 ```
-#### Amazon Linux 2
+### Amazon Linux 2
 
 ```bash
 sudo yum update
@@ -46,7 +46,7 @@ mongod --fork --dbpath ./db/ --logpath mongod.log
 
 . .venv/bin/activate
 ```
-#### CentOS 7
+### CentOS 7
 
 ```bash
 sudo yum update
@@ -78,7 +78,7 @@ mongod --fork --dbpath ./db/ --logpath mongod.log
 . .venv/bin/activate
 ```
 
-#### MacOS
+### MacOS
 Make sure [brew](https://brew.sh/) is available before starting the setup.
 ```bash
 brew tap mongodb/brew
@@ -95,7 +95,7 @@ mongod --fork --dbpath ./db/ --logpath mongod.log
 . .venv/bin/activate
 ```
 
-#### Windows (WSL + Ubuntu)
+### Windows (WSL + Ubuntu)
 Install WSL + Ubuntu 18.04 LTS, then upgrade to Ubuntu 19.10 (Eoan Ermine).
 Change install.sh -- each line that starts with `pip install` becomes `python -m pip install ...`.
 
@@ -105,7 +105,7 @@ sudo apt-get install -y build-essential cmake python3-dev python3-venv mongodb s
 sudo sh install.sh
 ```
 
-##### Alternate method for Ubuntu 18.04:
+#### Alternate method for Ubuntu 18.04:
 In `./install.sh`:
 Change `python3` to `python3.7`
 Each line that starts with `pip ...` becomes `python -m pip ...`
@@ -173,13 +173,13 @@ git clone https://github.com/wbhart/flint2
 sh install_timelord.sh
 ```
 
-### Generate keys
+## Generate keys
 First, create some keys by running the following script:
 ```bash
 python -m scripts.regenerate_keys
 ```
 
-### Run a full node
+## Run a full node
 To run a full node on port 8002, and connect to the testnet, run the following command.
 This wil also start an ssh server in port 8222 for the UI, which you can connect to
 to see the state of the node.
@@ -188,7 +188,7 @@ python -m src.server.start_full_node "127.0.0.1" 8444 -id 1 -u 8222 &
 ssh -p 8222 localhost
 ```
 
-### Run a farmer + full node
+## Run a farmer + full node
 Farmers are entities in the network who use their hard drive space to try to create
 blocks (like Bitcoin's miners), and earn block rewards. First, you must generate some hard drive plots, which
 can take a long time depending on the size of the plots (the k variable). Then, run the farmer + full node with
@@ -198,7 +198,7 @@ python -m scripts.create_plots -k 20 -n 10
 sh ./scripts/run_farming.sh
 ```
 
-### Run a timelord + full node
+## Run a timelord + full node
 Timelords execute sequential verifiable delay functions (proofs of time), that get added to
 blocks to make them valid. This requires fast CPUs and a lot of memory as well as completing
 both install steps above.
@@ -206,7 +206,7 @@ both install steps above.
 sh ./scripts/run_timelord.sh
 ```
 
-### Tips
+## Tips
 When running the servers on Mac OS, allow the application to accept incoming connections.
 
 Ubuntu 19.xx, Amazon Linux 2, and CentOS 7.7 or newer are the easiest linux install environments currently.
