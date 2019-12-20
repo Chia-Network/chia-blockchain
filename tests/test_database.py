@@ -1,14 +1,15 @@
 import asyncio
-
-import pytest
 from secrets import token_bytes
 from typing import Any, Dict
-from tests.block_tools import BlockTools
-from src.util.ints import uint32, uint64
+
+import pytest
+
 from src.consensus.constants import constants
 from src.database import FullNodeStore
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
+from src.util.ints import uint32, uint64
+from tests.block_tools import BlockTools
 
 bt = BlockTools()
 

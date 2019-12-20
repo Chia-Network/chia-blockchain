@@ -2,6 +2,7 @@ import asyncio
 import logging
 from abc import ABC
 from typing import AsyncGenerator, Dict, List, Optional, Tuple
+
 from bson.binary import Binary
 from bson.codec_options import CodecOptions, TypeRegistry
 from motor import motor_asyncio
@@ -14,7 +15,6 @@ from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
 from src.util.streamable import Streamable
-
 
 log = logging.getLogger(__name__)
 

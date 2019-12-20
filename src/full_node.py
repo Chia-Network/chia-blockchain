@@ -18,11 +18,7 @@ from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.weight_verifier import verify_weight
 from src.database import FullNodeStore
-from src.protocols import (
-    farmer_protocol,
-    peer_protocol,
-    timelord_protocol,
-)
+from src.protocols import farmer_protocol, peer_protocol, timelord_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
 from src.types.body import Body
@@ -32,14 +28,11 @@ from src.types.full_block import FullBlock
 from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
-from src.types.sized_bytes import bytes32
 from src.types.proof_of_space import ProofOfSpace
+from src.types.sized_bytes import bytes32
 from src.util import errors
 from src.util.api_decorators import api_request
-from src.util.errors import (
-    BlockNotInBlockchain,
-    InvalidUnfinishedBlock,
-)
+from src.util.errors import BlockNotInBlockchain, InvalidUnfinishedBlock
 from src.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
@@ -56,6 +49,7 @@ class FullNode:
         self.store = store
         self.blockchain = blockchain
         self._shut_down = False  # Set to true to close all infinite loops
+        self.server: Optional[ChiaServer] = None
 
     def _set_server(self, server: ChiaServer):
         self.server = server
@@ -1178,6 +1172,8 @@ class FullNode:
 
     @api_request
     async def peers(self, request: peer_protocol.Peers) -> OutboundMessageGenerator:
+        if self.server is None:
+            return
         conns = self.server.global_connections
         for peer in request.peer_list:
             conns.peers.add(peer)

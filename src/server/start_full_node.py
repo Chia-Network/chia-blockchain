@@ -2,20 +2,22 @@ import asyncio
 import logging
 import signal
 import sys
-import miniupnpc
-import uvloop
 from typing import Dict, List
 
+import miniupnpc
+import uvloop
+
 from src.blockchain import Blockchain
+from src.consensus.constants import constants
 from src.database import FullNodeStore
 from src.full_node import FullNode
+from src.rpc.rpc_server import start_server
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
-from src.consensus.constants import constants
-from src.types.peer_info import PeerInfo
-from src.types.header_block import HeaderBlock
-from src.util.network import parse_host_port
 from src.types.full_block import FullBlock
+from src.types.header_block import HeaderBlock
+from src.types.peer_info import PeerInfo
+from src.util.network import parse_host_port
 
 logging.basicConfig(
     format="FullNode %(name)-23s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
@@ -83,7 +85,7 @@ async def main():
     server = ChiaServer(port, full_node, NodeType.FULL_NODE)
     full_node._set_server(server)
     _ = await server.start_server(host, full_node._on_connect)
-    wait_for_ui, ui_close_cb = None, None
+    wait_for_ui, ui_close_cb, rpc_cleanup = None, None, None
 
     def master_close_cb():
         global server_closed
@@ -98,6 +100,12 @@ async def main():
         if ui_close_cb:
             ui_close_cb()
         master_close_cb()
+
+    if "-r" in sys.argv:
+        # Starts the RPC server if -r is provided
+        index = sys.argv.index("-r")
+        rpc_port = int(sys.argv[index + 1])
+        rpc_cleanup = await start_server(full_node, master_close_cb, rpc_port)
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
@@ -143,6 +151,10 @@ async def main():
 
     # Awaits for server and all connections to close
     await server.await_closed()
+
+    # Waits for the rpc server to close
+    if rpc_cleanup is not None:
+        await rpc_cleanup()
 
     # Awaits for all ui instances to close
     if wait_for_ui is not None:

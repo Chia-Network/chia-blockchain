@@ -1,13 +1,15 @@
 import asyncio
-import logging
-import random
-import os
 import concurrent
+import logging
+import os
+import random
 from secrets import token_bytes
-from yaml import safe_load
 from typing import Any, AsyncGenerator, List, Optional, Tuple
+
 from aiter import aiter_forker, iter_to_aiter, join_aiters, map_aiter, push_aiter
 from aiter.server import start_server_aiter
+from yaml import safe_load
+
 from definitions import ROOT_DIR
 from src.protocols.shared_protocol import (
     Handshake,
@@ -19,6 +21,7 @@ from src.protocols.shared_protocol import (
 from src.server.connection import Connection, OnConnectFunc, PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.peer_info import PeerInfo
+from src.types.sized_bytes import bytes32
 from src.util import partial_func
 from src.util.errors import (
     IncompatibleProtocolVersion,
@@ -28,7 +31,6 @@ from src.util.errors import (
 )
 from src.util.ints import uint16
 from src.util.network import create_node_id
-from src.types.sized_bytes import bytes32
 
 log = logging.getLogger(__name__)
 

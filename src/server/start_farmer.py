@@ -2,8 +2,8 @@ import asyncio
 import logging
 import signal
 from typing import List
-import uvloop
 
+import uvloop
 from blspy import PrivateKey
 
 from src.farmer import Farmer

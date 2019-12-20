@@ -1,18 +1,19 @@
 import asyncio
-from typing import Any, Dict
-import pytest
 import time
+from typing import Any, Dict
+
+import pytest
+
 from src.blockchain import Blockchain, ReceiveBlockResult
 from src.database import FullNodeStore
 from src.full_node import FullNode
-from tests.block_tools import BlockTools
+from src.protocols import peer_protocol
 from src.server.connection import NodeType
+from src.server.outbound_message import Delivery, Message, OutboundMessage
 from src.server.server import ChiaServer
 from src.types.peer_info import PeerInfo
-from src.protocols import peer_protocol
-from src.server.outbound_message import OutboundMessage, Message, Delivery
 from src.util.ints import uint16
-
+from tests.block_tools import BlockTools
 
 bt = BlockTools()
 
