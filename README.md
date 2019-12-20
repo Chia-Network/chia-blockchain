@@ -172,7 +172,8 @@ sh ./scripts/run_farming.sh
 
 ### Run a timelord + full node
 Timelords execute sequential verifiable delay functions (proofs of time), that get added to
-blocks to make them valid. This requires fast CPUs and a lot of memory.
+blocks to make them valid. This requires fast CPUs and a lot of memory as well as completing
+both install steps above.
 ```bash
 sh ./scripts/run_timelord.sh
 ```
@@ -180,13 +181,16 @@ sh ./scripts/run_timelord.sh
 ### Tips
 When running the servers on Mac OS, allow the application to accept incoming connections.
 
+Ubuntu 19.xx and CentOS 7.7 or newer are the easiest linux install environments currently.
+
 UPnP is enabled by default, to open the port for incoming connections. If this causes issues, you can disable it in the configuration. Some routers may require port forwarding, or enabling UPnP in the router configuration.
 
-Due to the nature of proof of space lookups by the harvester you should limit the number of plots on a physical drive to 50 or less.
+Due to the nature of proof of space lookups by the harvester you should limit the number of plots on a physical drive to 50 or less. This limit should significantly increase before beta.
 
 You can also run the simulation, which runs all servers and multiple full nodes, locally, at once.
 If you want to run the simulation, change the introducer ip in ./config/config.yaml so that the full node points to the local introducer (127.0.0.1:8445).
-Note the the simulation is local only.
+Note the the simulation is local only and requires installation of timelords and VDFs.
+
 The introducer will only know the local ips of the full nodes, so it cannot broadcast the correct ips to external peers.
 
 ```bash
