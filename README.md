@@ -140,11 +140,10 @@ sh install_timelord.sh
 ```
 #### Amazon Linux 2 and CentOS 7
 ```bash
-#For Amazon Linux 2
+#Only for Amazon Linux 2
 sudo amazon-linux-extras install epel
 
-sudo yum intall gmp-devel mpfr-devel
-#sudo yum install libsodium libsodium-devel gmp gmp-devel mpfr-devel
+sudo yum install gmp-devel mpfr-devel
 
 # Install Boost 1.72.0
 wget https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.gz
