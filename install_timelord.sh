@@ -19,7 +19,7 @@ if [ -f flint2/configure ]; then
     cd ../
 fi
 
-cd lib/chiavdf/fast_vdf && sh install.sh
+make -C lib/chiavdf/fast_vdf
 
 echo ""
 echo "Chia blockchain install_timelord.sh complete."
