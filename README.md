@@ -78,7 +78,7 @@ mongod --fork --dbpath ./db/ --logpath mongod.log
 . .venv/bin/activate
 ```
 
-### MacOS
+#### MacOS
 Make sure [brew](https://brew.sh/) is available before starting the setup.
 ```bash
 brew tap mongodb/brew
@@ -95,7 +95,7 @@ mongod --fork --dbpath ./db/ --logpath mongod.log
 . .venv/bin/activate
 ```
 
-### Windows (WSL + Ubuntu)
+#### Windows (WSL + Ubuntu)
 Install WSL + Ubuntu 18.04 LTS, then upgrade to Ubuntu 19.10 (Eoan Ermine).
 Change install.sh -- each line that starts with `pip install` becomes `python -m pip install ...`.
 
