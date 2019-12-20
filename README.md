@@ -27,16 +27,14 @@ mongod --fork --dbpath ./db/ --logpath mongod.log
 
 ```bash
 sudo yum update
-sudo yum install centos-release-scl-rh #epel-release
-sudo yum install devtoolset-8-toolchain
-scl enable devtoolset-8 bash
-
+sudo yum install centos-release-scl-rh epel-release
+sudo yum install devtoolset-8-toolchain cmake3 libffi-devel
 sudo yum install wget git openssl openssl-devel
-sudo yum install llvm-toolset-7-cmake
 
 # CMake - add a symlink for cmake3 - required by blspy
-# sudo ln -s /opt/rh/llvm-toolset-7/root/usr/bin/cmake /usr/local/bin/cmake
-sudo yum install llvm-toolset-7-cmake
+sudo ln -s /usr/bin/cmake3 /usr/local/bin/cmake
+
+scl enable devtoolset-8 bash
 
 # Install Python 3.7.5 (current rpm's are 3.6.x)
 wget https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tgz
