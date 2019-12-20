@@ -5,7 +5,7 @@ You will need to enable [UPnP](https://www.homenethowto.com/ports-and-nat/upnp-a
 
 For alpha testnet most should only install harvesters, farmers, plotter and full nodes. Building timelords and VDFs is for sophisticated users in most environments. Chia Network and additional volunteers are running sufficient time lords for testnet consensus.
 
-### Install on Linux
+### Install harvester, farmer, plotter, and full node
 
 #### Debian/Ubuntu
 
@@ -78,7 +78,7 @@ mongod --fork --dbpath ./db/ --logpath mongod.log
 . .venv/bin/activate
 ```
 
-### Install on MacOS
+### MacOS
 Make sure [brew](https://brew.sh/) is available before starting the setup.
 ```bash
 brew tap mongodb/brew
@@ -95,7 +95,7 @@ mongod --fork --dbpath ./db/ --logpath mongod.log
 . .venv/bin/activate
 ```
 
-### Install on Windows (WSL + Ubuntu)
+### Windows (WSL + Ubuntu)
 Install WSL + Ubuntu 18.04 LTS, then upgrade to Ubuntu 19.10 (Eoan Ermine).
 Change install.sh -- each line that starts with `pip install` becomes `python -m pip install ...`.
 
@@ -134,6 +134,27 @@ Note: this step is needed only if you intend to run a timelord or a local simula
 These assume you've already successfully installed harvester, farmer, plotting, and full node.
 #### Ubuntu/Debian
 ```bash
+cd chia-blockchain
+
+sh install_timelord.sh
+```
+#### Amazon Linux 2
+```bash
+sudo amazon-linux-extras install epel
+sudo yum intall gmp-devel mpfr-devel
+
+# Install Boost 1.72.0
+wget https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.gz
+tar -zxvf boost_1_72_0.tar.gz
+cd boost_1_72_0
+./bootstrap.sh --prefix=/usr/local
+sudo ./b2 install --prefix=/usr/local --with=all; cd ..
+
+# Install Flint2
+git clone https://github.com/wbhart/flint2
+cd flint2; ./configure; sudo make install; cd ..
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+
 cd chia-blockchain
 
 sh install_timelord.sh
