@@ -140,7 +140,7 @@ sh install_timelord.sh
 ```
 #### Amazon Linux 2 and CentOS 7
 ```bash
-#Only for Amazon Linux 2
+#For Amazon Linux 2
 sudo amazon-linux-extras install epel
 
 sudo yum intall gmp-devel mpfr-devel
@@ -210,7 +210,7 @@ sh ./scripts/run_timelord.sh
 ### Tips
 When running the servers on Mac OS, allow the application to accept incoming connections.
 
-Ubuntu 19.xx and CentOS 7.7 or newer are the easiest linux install environments currently.
+Ubuntu 19.xx, Amazon Linux 2, and CentOS 7.7 or newer are the easiest linux install environments currently.
 
 UPnP is enabled by default, to open the port for incoming connections. If this causes issues,
 you can disable it in the configuration. Some routers may require port forwarding, or enabling
