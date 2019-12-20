@@ -3,7 +3,7 @@ Python 3.7 is used for this project. Make sure your default python version is >=
 
 You will need to enable [UPnP](https://www.homenethowto.com/ports-and-nat/upnp-automatic-port-forward/) on your router or add a NAT (for IPv4 but not IPv6) and firewall rule to allow TCP port 8444 access to your peer. These methods tend to be router make/model specific.
 
-During the alpha period, most people should install harvesters, farmers, plotter and full nodes. Building timelords and VDFs is for sophisticated users in most environments current. Chia Network and a couple additional volunteers are running sufficient time lords for testnet consensus.
+During the alpha period, most people should install harvesters, farmers, plotter and full nodes. Building timelords and VDFs is for sophisticated users in most environments. Chia Network and additional volunteers are running sufficient time lords for testnet consensus.
 
 ### Install on Linux
 
