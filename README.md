@@ -11,7 +11,10 @@ For alpha testnet most should only install harvesters, farmers, plotter and full
 
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential cmake python3-dev python3-venv --no-install-recommends
+sudo apt-get install build-essential cmake python3-dev python3-venv ibssl-dev libffi-dev --no-install-recommends
+
+git clone https://github.com/Chia-Network/chia-blockchain.git
+cd chia-blockchain
 
 sh install.sh
 
@@ -129,16 +132,16 @@ sudo apt-get install libboost1.70 libboost1.70-dev
 sudo sh install.sh
 ```
 
-### Install timelord
+## Install timelord
 Note: this step is needed only if you intend to run a timelord or a local simulation.
 These assume you've already successfully installed harvester, farmer, plotting, and full node.
-#### Ubuntu/Debian
+### Ubuntu/Debian
 ```bash
 cd chia-blockchain
 
 sh install_timelord.sh
 ```
-#### Amazon Linux 2 and CentOS 7
+### Amazon Linux 2 and CentOS 7
 ```bash
 #Only for Amazon Linux 2
 sudo amazon-linux-extras install epel
@@ -162,7 +165,7 @@ cd chia-blockchain
 sh install_timelord.sh
 ```
 
-#### MacOS
+### MacOS
 ```bash
 brew install boost gmp mpir mpfr
 
