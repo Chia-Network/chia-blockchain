@@ -60,20 +60,6 @@ std::map<uint8_t, uint8_t> kVectorLens = {
     {8, 0}
 };
 
-// Precomputed shifts that specify which entries match with which other entries
-// in adjacent buckets.
-uint16_t matching_shifts_c[2][kC];
-
-// Performs the precomputation of shifts.
-void precompute_shifts() {
-    for (uint8_t parity = 0; parity < 2; parity++) {
-        for (uint16_t r = 0; r < kExtraBitsPow; r++) {
-            uint16_t v = (uint16_t)pow((2 * r + parity), 2) % kC;
-            matching_shifts_c[parity][r] = v;
-        }
-    }
-}
-
 // Class to evaluate F1
 class F1Calculator {
  public:
@@ -87,9 +73,6 @@ class F1Calculator {
 
         // Loads the key into the global AES context
         aes_load_key(this->aes_key_, 32);
-
-        // Precomputes the shifts, this is only done once
-        precompute_shifts();
     }
 
     inline ~F1Calculator() {
@@ -243,15 +226,22 @@ class FxCalculator {
         // for these f functions (as opposed to f1, which uses a 32 byte key). Note that, however,
         // block sizes are still 128 bits (32 bytes).
         aes_load_key(this->aes_key_, 16);
-
-        // One time precomputation of the shifts
-        precompute_shifts();
-
-        // Preallocates vector to be used for matching
-        for (uint16_t i = 0; i < kC; i++) {
+        for (uint16_t i = 0; i < kBC; i++) {
             std::vector<uint16_t> new_vec;
-            this->R_positions.push_back(new_vec);
-            this->R_bids.push_back(new_vec);
+            this->L_targets[0].push_back(new_vec);
+            this->L_targets[1].push_back(new_vec);
+            this->rmap.push_back(new_vec);
+        }
+
+        //create offset tables
+        for(uint8_t parity = 0; parity < 2; parity++) {
+            for (uint16_t i = 0; i < kBC; i++) {
+                uint16_t indJ = i / kC;
+                for(uint16_t m = 0; m < kExtraBitsPow; m++) {
+                    uint16_t yr = ((indJ + m) % kB) * kC + (((uint16_t)pow (2*m + parity, 2) + i) % kC);
+                    L_targets[parity][i].push_back(yr);
+                }
+            }
         }
     }
 
@@ -352,43 +342,32 @@ class FxCalculator {
     inline std::vector<std::pair<uint16_t, uint16_t>> FindMatches(const std::vector<PlotEntry>& bucket_L,
                                                                   const std::vector<PlotEntry>& bucket_R) {
         std::vector<std::pair<uint16_t, uint16_t>> matches;
-        for (uint16_t i = 0; i < kC; i++) {
-            this->R_bids[i].clear();
-            this->R_positions[i].clear();
-        }
         uint16_t parity = (bucket_L[0].y / kBC) % 2;
 
+        for (uint16_t i = 0; i < rmap_clean.size(); i++) {
+            uint16_t yl = rmap_clean[i];
+            this->rmap[yl].clear();
+        }
+        rmap_clean.clear();
+
+        uint64_t remove = (bucket_R[0].y / kBC) * kBC;
         for (uint16_t pos_R = 0; pos_R < bucket_R.size(); pos_R++) {
-            R_bids[bucket_R[pos_R].y % kC].push_back((bucket_R[pos_R].y % kBC) / kC);
-            R_positions[bucket_R[pos_R].y % kC].push_back(pos_R);
+            uint16_t r_y = bucket_R[pos_R].y - remove;
+            rmap[r_y].push_back(pos_R);
+            rmap_clean.push_back(r_y);
         }
 
+        uint64_t remove_y = remove - kBC;
         for (uint16_t pos_L = 0; pos_L < bucket_L.size(); pos_L++) {
-            uint16_t yl_bid = (bucket_L[pos_L].y % kBC) / kC;
-            uint16_t yl_cid = bucket_L[pos_L].y % kC;
-            for (uint8_t m = 0; m < kExtraBitsPow; m++) {
-                uint16_t target_bid = (yl_bid + m);
-                uint16_t target_cid = yl_cid + matching_shifts_c[parity][m];
-
-                // This is faster than %
-                if (target_bid >= kB) {
-                    target_bid -= kB;
-                }
-                if (target_cid >= kC) {
-                    target_cid -= kC;
-                }
-
-                for (uint32_t i = 0; i < R_bids[target_cid].size(); i++) {
-                    uint16_t R_bid = R_bids[target_cid][i];
-                    if (target_bid == R_bid) {
-                        uint64_t yl_bucket = bucket_L[pos_L].y / kBC;
-                        if (yl_bucket + 1 == bucket_R[R_positions[target_cid][i]].y / kBC) {
-                            matches.push_back(std::make_pair(pos_L, R_positions[target_cid][i]));
-                        }
-                    }
+            uint16_t r = bucket_L[pos_L].y - remove_y;
+            for (uint8_t i = 0; i < L_targets[parity][r].size(); i++) {
+                uint16_t r_target = L_targets[parity][r][i];
+                for(uint8_t j = 0; j < rmap[r_target].size(); j++) {
+                    matches.push_back(std::make_pair(pos_L, rmap[r_target][j]));
                 }
             }
         }
+
         return matches;
     }
 
@@ -402,8 +381,9 @@ class FxCalculator {
     uint8_t block_3[kBlockSizeBits/8];
     uint8_t block_4[kBlockSizeBits/8];
     uint8_t ciphertext[kBlockSizeBits/8];
-    std::vector<std::vector<uint16_t> > R_positions;
-    std::vector<std::vector<uint16_t> > R_bids;
+    std::vector<std::vector<uint16_t>> L_targets[2];
+    std::vector<std::vector<uint16_t>> rmap;
+    std::vector<uint16_t> rmap_clean;
 };
 
 #endif  // SRC_CPP_CALCULATE_BUCKET_HPP_
