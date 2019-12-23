@@ -23,6 +23,7 @@
 #include <map>
 #include <algorithm>
 #include <utility>
+#include <array>
 
 #include "util.hpp"
 #include "bits.hpp"
@@ -59,6 +60,22 @@ std::map<uint8_t, uint8_t> kVectorLens = {
     {7, 2},
     {8, 0}
 };
+
+
+constexpr auto load_tables()
+{
+    std::array<std::array<std::array<uint16_t, 32>, 60*509>, 2> L_targets{};
+    for (uint8_t parity = 0; parity < 2; parity++) {
+        for (uint16_t i = 0; i < kBC; i++) {
+            uint16_t indJ = i / kC;
+            for (uint16_t m = 0; m < kExtraBitsPow; m++) {
+                uint16_t yr = ((indJ + m) % kB) * kC + (((2*m + parity) *  (2*m + parity) + i) % kC);
+                L_targets[parity][i][m] = yr;
+            }
+        }
+    }
+    return L_targets;
+}
 
 // Class to evaluate F1
 class F1Calculator {
@@ -228,21 +245,9 @@ class FxCalculator {
         aes_load_key(this->aes_key_, 16);
         for (uint16_t i = 0; i < kBC; i++) {
             std::vector<uint16_t> new_vec;
-            this->L_targets[0].push_back(new_vec);
-            this->L_targets[1].push_back(new_vec);
             this->rmap.push_back(new_vec);
         }
 
-        //create offset tables
-        for (uint8_t parity = 0; parity < 2; parity++) {
-            for (uint16_t i = 0; i < kBC; i++) {
-                uint16_t indJ = i / kC;
-                for (uint16_t m = 0; m < kExtraBitsPow; m++) {
-                    uint16_t yr = ((indJ + m) % kB) * kC + (((uint16_t)pow (2*m + parity, 2) + i) % kC);
-                    L_targets[parity][i].push_back(yr);
-                }
-            }
-        }
     }
 
     inline ~FxCalculator() {
@@ -381,7 +386,7 @@ class FxCalculator {
     uint8_t block_3[kBlockSizeBits/8];
     uint8_t block_4[kBlockSizeBits/8];
     uint8_t ciphertext[kBlockSizeBits/8];
-    std::vector<std::vector<uint16_t>> L_targets[2];
+    std::array<std::array<std::array<uint16_t, kExtraBitsPow>, kBC>, 2> L_targets = load_tables();
     std::vector<std::vector<uint16_t>> rmap;
     std::vector<uint16_t> rmap_clean;
 };
