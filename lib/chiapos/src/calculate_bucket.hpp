@@ -234,10 +234,10 @@ class FxCalculator {
         }
 
         //create offset tables
-        for(uint8_t parity = 0; parity < 2; parity++) {
+        for (uint8_t parity = 0; parity < 2; parity++) {
             for (uint16_t i = 0; i < kBC; i++) {
                 uint16_t indJ = i / kC;
-                for(uint16_t m = 0; m < kExtraBitsPow; m++) {
+                for (uint16_t m = 0; m < kExtraBitsPow; m++) {
                     uint16_t yr = ((indJ + m) % kB) * kC + (((uint16_t)pow (2*m + parity, 2) + i) % kC);
                     L_targets[parity][i].push_back(yr);
                 }
@@ -362,7 +362,7 @@ class FxCalculator {
             uint16_t r = bucket_L[pos_L].y - remove_y;
             for (uint8_t i = 0; i < L_targets[parity][r].size(); i++) {
                 uint16_t r_target = L_targets[parity][r][i];
-                for(uint8_t j = 0; j < rmap[r_target].size(); j++) {
+                for (uint8_t j = 0; j < rmap[r_target].size(); j++) {
                     matches.push_back(std::make_pair(pos_L, rmap[r_target][j]));
                 }
             }
