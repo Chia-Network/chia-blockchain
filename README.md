@@ -81,24 +81,6 @@ mongod --fork --dbpath ./db/ --logpath mongod.log
 . .venv/bin/activate
 ```
 
-### MacOS
-Make sure [brew](https://brew.sh/) is available before starting the setup.
-```bash
-brew tap mongodb/brew
-brew upgrade python
-brew install cmake mongodb-community@4.2
-
-git clone https://github.com/Chia-Network/chia-blockchain.git
-cd chia-blockchain
-
-sh install.sh
-
-# Run mongo database if not started at boot
-mongod --fork --dbpath ./db/ --logpath mongod.log
-
-. .venv/bin/activate
-```
-
 ### Windows (WSL + Ubuntu)
 #### Install WSL + Ubuntu 18.04 LTS, upgrade to Ubuntu 19.x 
 
@@ -142,6 +124,25 @@ cd chia-blockchain
 
 sudo sh install.sh
 ```
+
+### MacOS
+Make sure [brew](https://brew.sh/) is available before starting the setup.
+```bash
+brew tap mongodb/brew
+brew upgrade python
+brew install cmake mongodb-community@4.2
+
+git clone https://github.com/Chia-Network/chia-blockchain.git
+cd chia-blockchain
+
+sh install.sh
+
+# Run mongo database if not started at boot
+mongod --fork --dbpath ./db/ --logpath mongod.log
+
+. .venv/bin/activate
+```
+
 
 ## Install timelord
 Note: this step is needed only if you intend to run a timelord or a local simulation.
