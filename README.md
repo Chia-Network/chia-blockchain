@@ -103,9 +103,14 @@ git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sudo sh install.sh
+
+# Run mongo database if not running system-wide
+mongod --fork --dbpath ./db/ --logpath mongod.log
+
+. .venv/bin/activate
 ```
 
-#### Alternate method for Ubuntu 18.04
+#### Alternate method for Ubuntu 18.04 LTS
 In `./install.sh`:
 Change `python3` to `python3.7`
 Each line that starts with `pip ...` becomes `python -m pip ...`
@@ -123,6 +128,11 @@ git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sudo sh install.sh
+
+# Run mongo database if not running system-wide
+mongod --fork --dbpath ./db/ --logpath mongod.log
+
+. .venv/bin/activate
 ```
 
 ### MacOS
