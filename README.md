@@ -21,7 +21,7 @@ sh install.sh
 # Install MongoDB Community Edition
 # Instructions - https://docs.mongodb.com/manual/administration/install-on-linux/
 
-# Run mongo database if not started at boot
+# Run mongo database if not running system-wide
 mongod --fork --dbpath ./db/ --logpath mongod.log
 
 . .venv/bin/activate
@@ -44,7 +44,7 @@ sh install.sh
 # Install MongoDB Community Edition
 # Instructions - https://docs.mongodb.com/manual/administration/install-on-linux/
 
-# Run mongo database if not started at boot
+# Run mongo database if not running system-wide
 mongod --fork --dbpath ./db/ --logpath mongod.log
 
 . .venv/bin/activate
@@ -75,7 +75,7 @@ sh install.sh
 # Install MongoDB Community Edition
 # Instructions - https://docs.mongodb.com/manual/administration/install-on-linux/
 
-# Run mongo database if not started at boot
+# Run mongo database if not running system-wide
 mongod --fork --dbpath ./db/ --logpath mongod.log
 
 . .venv/bin/activate
@@ -137,7 +137,7 @@ cd chia-blockchain
 
 sh install.sh
 
-# Run mongo database if not started at boot
+# Run mongo database if not running system-wide
 mongod --fork --dbpath ./db/ --logpath mongod.log
 
 . .venv/bin/activate
