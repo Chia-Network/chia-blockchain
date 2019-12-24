@@ -88,7 +88,8 @@ brew tap mongodb/brew
 brew upgrade python
 brew install cmake mongodb-community@4.2
 
-git clone https://github.com/Chia-Network/chia-blockchain.git && cd chia-blockchain
+git clone https://github.com/Chia-Network/chia-blockchain.git
+cd chia-blockchain
 
 sh install.sh
 
@@ -99,21 +100,33 @@ mongod --fork --dbpath ./db/ --logpath mongod.log
 ```
 
 ### Windows (WSL + Ubuntu)
-Install WSL + Ubuntu 18.04 LTS, then upgrade to Ubuntu 19.10 (Eoan Ermine).
-Change install.sh -- each line that starts with `pip install` becomes `python -m pip install ...`.
+#### Install WSL + Ubuntu 18.04 LTS, upgrade to Ubuntu 19.x 
 
+This will require multiple reboots. From an Administrator PowerShell
+`Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux` 
+and then 
+`Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform`. 
+Once that is complete, install Ubuntu 18.04 LTS from the Windows Store.
 ```bash
+# Upgrade to 19.x
+sudo nano /etc/update-manager/release-upgrades
+# Change "Prompt=lts" to "Prompt=normal" save and exit
+
 sudo apt-get -y update
+sudo do-release-upgrade
+
 sudo apt-get install -y build-essential cmake python3-dev python3-venv mongodb software-properties-common --no-install-recommends
+
+git clone https://github.com/Chia-Network/chia-blockchain.git
+cd chia-blockchain
+
 sudo sh install.sh
 ```
 
-#### Alternate method for Ubuntu 18.04:
+#### Alternate method for Ubuntu 18.04
 In `./install.sh`:
 Change `python3` to `python3.7`
 Each line that starts with `pip ...` becomes `python -m pip ...`
-
-In `./lib/chiavdf/fast_vdf/install_child.sh`, remove the line `sudo apt install libboost-all-dev`
 
 ```bash
 sudo apt-get -y update
@@ -124,17 +137,15 @@ sudo add-apt-repository -y ppa:deadsnakes/ppa
 sudo apt-get -y update
 sudo apt-get install -y python3.7 python3.7-venv python3.7-dev
 
-# Install boost 1.70 with ppa
-sudo add-apt-repository -y ppa:mhier/libboost-latest
-sudo apt-get update
-sudo apt-get install libboost1.70 libboost1.70-dev
+git clone https://github.com/Chia-Network/chia-blockchain.git
+cd chia-blockchain
 
 sudo sh install.sh
 ```
 
 ## Install timelord
 Note: this step is needed only if you intend to run a timelord or a local simulation.
-These assume you've already successfully installed harvester, farmer, plotting, and full node.
+These assume you've already successfully installed harvester, farmer, plotting, and full node above.
 ### Ubuntu/Debian
 ```bash
 cd chia-blockchain
@@ -163,6 +174,21 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 cd chia-blockchain
 
 sh install_timelord.sh
+```
+
+### Windows (WSL + Ubuntu)
+#### Install WSL + Ubuntu upgraded to 19.x
+```bash
+cd chia-blockchain
+
+sh install_timelord.sh
+```
+#### Alternate method for Ubuntu 18.04
+```bash
+# Install boost 1.70 with ppa
+sudo add-apt-repository -y ppa:mhier/libboost-latest
+sudo apt-get update
+sudo apt-get install libboost1.70 libboost1.70-dev
 ```
 
 ### MacOS
