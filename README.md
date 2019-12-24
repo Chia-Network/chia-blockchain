@@ -95,6 +95,7 @@ sudo nano /etc/update-manager/release-upgrades
 # Change "Prompt=lts" to "Prompt=normal" save and exit
 
 sudo apt-get -y update
+sudo apt-get -y upgrade
 sudo do-release-upgrade
 
 sudo apt-get install -y build-essential cmake python3-dev python3-venv mongodb software-properties-common --no-install-recommends
