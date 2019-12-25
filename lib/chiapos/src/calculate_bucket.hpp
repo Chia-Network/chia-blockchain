@@ -77,6 +77,8 @@ constexpr auto load_tables()
     return L_targets;
 }
 
+std::array<std::array<std::array<uint16_t, kExtraBitsPow>, kBC>, 2> L_targets = load_tables();
+
 // Class to evaluate F1
 class F1Calculator {
  public:
@@ -357,14 +359,14 @@ class FxCalculator {
 
         uint64_t remove = (bucket_R[0].y / kBC) * kBC;
         for (uint16_t pos_R = 0; pos_R < bucket_R.size(); pos_R++) {
-            uint16_t r_y = bucket_R[pos_R].y - remove;
+            uint64_t r_y = bucket_R[pos_R].y - remove;
             rmap[r_y].push_back(pos_R);
             rmap_clean.push_back(r_y);
         }
 
         uint64_t remove_y = remove - kBC;
         for (uint16_t pos_L = 0; pos_L < bucket_L.size(); pos_L++) {
-            uint16_t r = bucket_L[pos_L].y - remove_y;
+            uint64_t r = bucket_L[pos_L].y - remove_y;
             for (uint8_t i = 0; i < L_targets[parity][r].size(); i++) {
                 uint16_t r_target = L_targets[parity][r][i];
                 for (uint8_t j = 0; j < rmap[r_target].size(); j++) {
@@ -386,7 +388,6 @@ class FxCalculator {
     uint8_t block_3[kBlockSizeBits/8];
     uint8_t block_4[kBlockSizeBits/8];
     uint8_t ciphertext[kBlockSizeBits/8];
-    std::array<std::array<std::array<uint16_t, kExtraBitsPow>, kBC>, 2> L_targets = load_tables();
     std::vector<std::vector<uint16_t>> rmap;
     std::vector<uint16_t> rmap_clean;
 };
