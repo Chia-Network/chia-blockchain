@@ -62,9 +62,9 @@ std::map<uint8_t, uint8_t> kVectorLens = {
 };
 
 
-constexpr auto load_tables()
+auto load_tables()
 {
-    std::array<std::array<std::array<uint16_t, 32>, 60*509>, 2> L_targets{};
+    std::array<std::array<std::array<uint16_t, kExtraBitsPow>, kBC>, 2> L_targets{};
     for (uint8_t parity = 0; parity < 2; parity++) {
         for (uint16_t i = 0; i < kBC; i++) {
             uint16_t indJ = i / kC;
