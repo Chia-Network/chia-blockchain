@@ -63,6 +63,7 @@ class Blockchain:
             self.header_blocks = header_blocks
             for _, header_block in self.header_blocks.items():
                 self.height_to_hash[header_block.height] = header_block.header_hash
+                await self._reconsider_heads(header_block, False)
             assert (
                 self.header_blocks[self.height_to_hash[uint32(0)]]
                 == self.genesis.header_block
@@ -411,7 +412,7 @@ class Blockchain:
         # Cache header in memory
         self.header_blocks[block.header_hash] = block.header_block
 
-        if await self._reconsider_heads(block, genesis):
+        if await self._reconsider_heads(block.header_block, genesis):
             return ReceiveBlockResult.ADDED_TO_HEAD
         else:
             return ReceiveBlockResult.ADDED_AS_ORPHAN
@@ -672,13 +673,13 @@ class Blockchain:
             self._reconsider_heights(self.lca_block, cur[0])
         self.lca_block = cur[0]
 
-    async def _reconsider_heads(self, block: FullBlock, genesis: bool) -> bool:
+    async def _reconsider_heads(self, block: HeaderBlock, genesis: bool) -> bool:
         """
         When a new block is added, this is called, to check if the new block is heavier
         than one of the heads.
         """
         if len(self.tips) == 0 or block.weight > min([b.weight for b in self.tips]):
-            self.tips.append(block.header_block)
+            self.tips.append(block)
             while len(self.tips) > self.constants["NUMBER_OF_HEADS"]:
                 self.tips.sort(key=lambda b: b.weight, reverse=True)
                 self.tips.pop()
