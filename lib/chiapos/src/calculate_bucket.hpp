@@ -61,10 +61,10 @@ std::map<uint8_t, uint8_t> kVectorLens = {
     {8, 0}
 };
 
-
-auto load_tables()
+uint32_t L_targets[2][kBC][kExtraBitsPow];
+bool initialized = false;
+void load_tables()
 {
-    std::array<std::array<std::array<uint16_t, kExtraBitsPow>, kBC>, 2> L_targets{};
     for (uint8_t parity = 0; parity < 2; parity++) {
         for (uint16_t i = 0; i < kBC; i++) {
             uint16_t indJ = i / kC;
@@ -74,10 +74,8 @@ auto load_tables()
             }
         }
     }
-    return L_targets;
 }
 
-std::array<std::array<std::array<uint16_t, kExtraBitsPow>, kBC>, 2> L_targets = load_tables();
 
 // Class to evaluate F1
 class F1Calculator {
@@ -249,7 +247,10 @@ class FxCalculator {
             std::vector<uint16_t> new_vec;
             this->rmap.push_back(new_vec);
         }
-
+        if(!initialized) {
+            initialized = true;
+            load_tables();
+        }
     }
 
     inline ~FxCalculator() {
@@ -367,7 +368,7 @@ class FxCalculator {
         uint64_t remove_y = remove - kBC;
         for (uint16_t pos_L = 0; pos_L < bucket_L.size(); pos_L++) {
             uint64_t r = bucket_L[pos_L].y - remove_y;
-            for (uint8_t i = 0; i < L_targets[parity][r].size(); i++) {
+            for (uint8_t i = 0; i < kExtraBitsPow; i++) {
                 uint16_t r_target = L_targets[parity][r][i];
                 for (uint8_t j = 0; j < rmap[r_target].size(); j++) {
                     matches.push_back(std::make_pair(pos_L, rmap[r_target][j]));
