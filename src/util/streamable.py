@@ -4,8 +4,10 @@ from __future__ import annotations
 import dataclasses
 import io
 import pprint
+import json
 from hashlib import sha256
-from typing import Any, BinaryIO, List, Type, get_type_hints
+from typing import Any, BinaryIO, List, Type, get_type_hints, Union
+from src.util.byte_types import hexstr_to_bytes
 
 from blspy import (
     ChainCode,
@@ -50,6 +52,27 @@ unhashable_types = [
     ChainCode,
 ]
 
+def dataclass_from_dict(klass, d):
+    if is_type_SpecificOptional(klass):
+        # Optionals
+        if not d:
+            return None
+        return dataclass_from_dict(klass.__args__[0], d)
+    if dataclasses.is_dataclass(klass):
+        # Dataclasses
+        fieldtypes = {f.name: f.type for f in dataclasses.fields(klass)}
+        return klass(**{f: dataclass_from_dict(fieldtypes[f], d[f]) for f in d})
+    elif is_type_List(klass):
+        # Lists
+        return d
+    elif issubclass(klass, bytes):
+        # Bytes like objects
+        return klass(hexstr_to_bytes(d))
+    elif klass in unhashable_types:
+        return klass.from_bytes(hexstr_to_bytes(d))
+    else:
+        # Primitive
+        return klass(d)
 
 def streamable(cls: Any):
     """
@@ -166,10 +189,17 @@ class Streamable:
     def __repr__(self: Any) -> str:
         return pp.pformat(self.recurse_str(dataclasses.asdict(self)))
 
+    def to_json(self) -> str:
+        return json.dumps(self.recurse_str(dataclasses.asdict(self)))
+
+    @classmethod
+    def from_json(cls: Any, json_str: str) -> Any:
+        return dataclass_from_dict(cls, json.loads(json_str))
+
     def recurse_str(self, d):
         for key, value in d.items():
-            if type(value) in unhashable_types:
-                d[key] = str(value)
+            if type(value) in unhashable_types or issubclass(type(value), bytes):
+                d[key] = f"0x{bytes(value).hex()}"
             if isinstance(value, dict):
                 self.recurse_str(value)
         return d

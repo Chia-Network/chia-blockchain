@@ -158,6 +158,7 @@ class FullNode:
             yield msg
 
     def _num_needed_peers(self) -> int:
+        assert self.server is not None
         diff = self.config["target_peer_count"] - len(
             self.server.global_connections.get_full_node_connections()
         )
