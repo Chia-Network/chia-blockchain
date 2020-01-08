@@ -52,6 +52,7 @@ unhashable_types = [
     ChainCode,
 ]
 
+
 def dataclass_from_dict(klass, d):
     if is_type_SpecificOptional(klass):
         # Optionals
@@ -73,6 +74,7 @@ def dataclass_from_dict(klass, d):
     else:
         # Primitive
         return klass(d)
+
 
 def streamable(cls: Any):
     """

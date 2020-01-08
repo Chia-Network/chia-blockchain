@@ -61,6 +61,7 @@ def main():
         plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(
             pool_pk, sk.get_public_key()
         )
+        # plot_seed = bytes32(bytes.fromhex("9a3994315aa0bdbdaa9669d065219ea6a96a6d252dc97e0681822bf8d3c232af"))
         filename: str = f"plot-{i}-{args.size}-{plot_seed}.dat"
         full_path: str = os.path.join(plot_root, filename)
         if os.path.isfile(full_path):

@@ -85,7 +85,7 @@ async def main():
     server = ChiaServer(port, full_node, NodeType.FULL_NODE)
     full_node._set_server(server)
     _ = await server.start_server(host, full_node._on_connect)
-    wait_for_ui, ui_close_cb, rpc_cleanup = None, None, None
+    rpc_cleanup = None
 
     def master_close_cb():
         global server_closed
@@ -96,35 +96,14 @@ async def main():
             server.close_all()
             server_closed = True
 
-    def signal_received():
-        if ui_close_cb:
-            ui_close_cb()
-        master_close_cb()
-
     if "-r" in sys.argv:
         # Starts the RPC server if -r is provided
         index = sys.argv.index("-r")
         rpc_port = int(sys.argv[index + 1])
         rpc_cleanup = await start_server(full_node, master_close_cb, rpc_port)
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
-
-    if "-u" in sys.argv:
-        # Starts the UI if -u is provided
-        index = sys.argv.index("-u")
-        ui_ssh_port = int(sys.argv[index + 1])
-        from src.ui.prompt_ui import start_ssh_server
-
-        wait_for_ui, ui_close_cb = await start_ssh_server(
-            store,
-            blockchain,
-            server,
-            port,
-            ui_ssh_port,
-            full_node.config["ssh_filename"],
-            master_close_cb,
-        )
+    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
+    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
 
     connect_to_farmer = "-f" in sys.argv
     connect_to_timelord = "-t" in sys.argv
@@ -156,9 +135,6 @@ async def main():
     if rpc_cleanup is not None:
         await rpc_cleanup()
 
-    # Awaits for all ui instances to close
-    if wait_for_ui is not None:
-        await wait_for_ui()
     await asyncio.get_running_loop().shutdown_asyncgens()
 
 

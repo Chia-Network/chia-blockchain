@@ -23,11 +23,8 @@ async def main():
     introducer.set_server(server)
     _ = await server.start_server(host, None)
 
-    def signal_received():
-        server.close_all()
-
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
+    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
+    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
 
     await server.await_closed()
 

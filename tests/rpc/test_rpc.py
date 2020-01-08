@@ -11,9 +11,6 @@ from src.server.server import ChiaServer
 from tests.block_tools import BlockTools
 from src.rpc.rpc_server import start_server
 from src.rpc.rpc_client import RpcClient
-from src.types.peer_info import PeerInfo
-from src.util.ints import uint16
-from aiohttp.client_exceptions import ClientResponseError
 
 
 bt = BlockTools()
@@ -63,25 +60,28 @@ class TestRpc:
         _ = await server_1.start_server("127.0.0.1", None)
         full_node_1._set_server(server_1)
 
-        rpc_cleanup = await start_server(full_node_1, None, test_rpc_port)
+        def stop_node_cb():
+            full_node_1._shutdown()
+            server_1.close_all()
+
+        rpc_cleanup = await start_server(full_node_1, stop_node_cb, test_rpc_port)
 
         client = await RpcClient.create(test_rpc_port)
         state = await client.get_blockchain_state()
-        assert state["lca"]["header_hash"] is not None
+        assert state["lca"].header_hash is not None
         assert not state["sync_mode"]
         assert len(state["tips"]) > 0
+        assert state["difficulty"] > 0
+        assert state["ips"] > 0
 
-        block = await client.get_block(state["lca"]["header_hash"])
+        block = await client.get_block(state["lca"].header_hash)
         assert block == blocks[6]
-        try:
-            await client.get_block(bytes([1]*32))
-            assert False
-        except ClientResponseError:
-            pass
+        assert (await client.get_block(bytes([1] * 32))) is None
 
-        header = await client.get_header(state["lca"]["header_hash"])
-        assert header == blocks[6].header_block.header
+        small_header_block = await client.get_header(state["lca"].header_hash)
+        assert small_header_block.header == blocks[6].header_block.header
 
+        assert len(await client.get_pool_balances()) > 0
         assert len(await client.get_connections()) == 0
 
         full_node_2 = FullNode(store, b)
@@ -94,18 +94,21 @@ class TestRpc:
         cons = await client.get_connections()
         assert len(cons) == 0
 
+        # Open a connection through the RPC
         await client.open_connection(host="127.0.0.1", port=test_node_2_port)
         cons = await client.get_connections()
         assert len(cons) == 1
 
+        # Close a connection through the RPC
         await client.close_connection(cons[0]["node_id"])
         cons = await client.get_connections()
         assert len(cons) == 0
 
+        # Checks that the RPC manages to stop the node
+        await client.stop_node()
+
         await client.close()
-        server_1.close_all()
         server_2.close_all()
         await server_1.await_closed()
         await server_2.await_closed()
         await rpc_cleanup()
-

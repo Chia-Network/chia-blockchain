@@ -28,15 +28,11 @@ async def main():
     full_node_peer = PeerInfo(
         farmer.config["full_node_peer"]["host"], farmer.config["full_node_peer"]["port"]
     )
-
-    def signal_received():
-        server.close_all()
-
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
-
     host, port = parse_host_port(farmer)
     server = ChiaServer(port, farmer, NodeType.FARMER)
+
+    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
+    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
 
     async def on_connect():
         # Sends a handshake to the harvester

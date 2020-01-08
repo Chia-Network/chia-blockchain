@@ -31,3 +31,26 @@ class HeaderBlock(Streamable):
     @property
     def header_hash(self):
         return self.header.header_hash
+
+
+@dataclass(frozen=True)
+@streamable
+class SmallHeaderBlock(Streamable):
+    header: Header
+    challenge: Challenge
+
+    @property
+    def prev_header_hash(self):
+        return self.header.data.prev_header_hash
+
+    @property
+    def height(self):
+        return self.challenge.height
+
+    @property
+    def weight(self):
+        return self.challenge.total_weight
+
+    @property
+    def header_hash(self):
+        return self.header.header_hash
