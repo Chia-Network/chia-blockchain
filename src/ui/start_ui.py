@@ -9,12 +9,14 @@ import uvloop
 
 from src.ui.prompt_ui import start_ssh_server
 from definitions import ROOT_DIR
+from setproctitle import setproctitle
 
 logging.basicConfig(
     format="UI %(name)-29s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
     level=logging.WARNING,
     datefmt="%H:%M:%S",
 )
+setproctitle("chia_full_node_ui")
 
 
 async def main():

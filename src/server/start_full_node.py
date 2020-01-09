@@ -18,12 +18,14 @@ from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
 from src.util.network import parse_host_port
+from setproctitle import setproctitle
 
 logging.basicConfig(
     format="FullNode %(name)-23s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
     level=logging.INFO,
     datefmt="%H:%M:%S",
 )
+setproctitle("chia_full_node")
 
 log = logging.getLogger(__name__)
 server_closed = False

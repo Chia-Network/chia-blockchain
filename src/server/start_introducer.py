@@ -8,12 +8,14 @@ from src.introducer import Introducer
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.util.network import parse_host_port
+from setproctitle import setproctitle
 
 logging.basicConfig(
     format="Introducer %(name)-24s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
     level=logging.INFO,
     datefmt="%H:%M:%S",
 )
+setproctitle("chia_introducer")
 
 
 async def main():

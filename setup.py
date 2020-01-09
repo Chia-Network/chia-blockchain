@@ -12,6 +12,7 @@ dependencies = [
     "aiosqlite",        # asyncio wrapper for sqlite, to store blocks
     "aiohttp",          # HTTP server for full node rpc
     "setuptools-scm",   # Used for versioning
+    "setproctitle"      # Used to change the name of the process for ps, etc.
 ]
 dev_dependencies = [
     "pytest",

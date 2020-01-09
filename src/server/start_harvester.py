@@ -9,12 +9,14 @@ from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.types.peer_info import PeerInfo
 from src.util.network import parse_host_port
+from setproctitle import setproctitle
 
 logging.basicConfig(
     format="Harvester %(name)-24s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
     level=logging.INFO,
     datefmt="%H:%M:%S",
 )
+setproctitle("chia_harvester")
 
 
 async def main():
