@@ -1,11 +1,13 @@
 # chia-blockchain
-Python 3.7 is used for this project. Make sure your default python version is >=3.7 by typing python3.
+Please check out the [wiki](https://github.com/Chia-Network/chia-blockchain/wiki) for information on this project.
+
+Python 3.7 is required. Make sure your default python version is >=3.7 by typing python3.
 
 You will need to enable [UPnP](https://www.homenethowto.com/ports-and-nat/upnp-automatic-port-forward/) on your router or add a NAT (for IPv4 but not IPv6) and firewall rule to allow TCP port 8444 access to your peer. These methods tend to be router make/model specific.
 
 For alpha testnet most should only install harvesters, farmers, plotter and full nodes. Building timelords and VDFs is for sophisticated users in most environments. Chia Network and additional volunteers are running sufficient time lords for testnet consensus.
 
-## Install harvester, farmer, plotter, and full node
+## Step 1: Install harvester, farmer, plotter, and full node
 
 ### Debian/Ubuntu
 
@@ -155,7 +157,7 @@ mongod --fork --dbpath ./db/ --logpath mongod.log
 ```
 
 
-## Install timelord
+## Step 2: Install timelord (optional)
 Note: this step is needed only if you intend to run a timelord or a local simulation.
 These assume you've already successfully installed harvester, farmer, plotting, and full node above.
 ### Ubuntu/Debian
@@ -214,22 +216,23 @@ git clone https://github.com/wbhart/flint2
 sh install_timelord.sh
 ```
 
-## Generate keys
+## Step 3: Generate keys
 First, create some keys by running the following script:
 ```bash
 python -m scripts.regenerate_keys
 ```
 
-## Run a full node
+## Step 4a: Run a full node
 To run a full node on port 8002, and connect to the testnet, run the following command.
 This wil also start an ssh server in port 8222 for the UI, which you can connect to
 to see the state of the node.
 ```bash
-python -m src.server.start_full_node "127.0.0.1" 8444 -id 1 -u 8222 &
+python -m src.server.start_full_node "127.0.0.1" 8444 -id 1 -u 8555 &
 ssh -p 8222 localhost
 ```
 
-## Run a farmer + full node
+## Step 4b: Run a farmer + full node
+Instead of running only a full node (as in 4a), you can also run a farmer.
 Farmers are entities in the network who use their hard drive space to try to create
 blocks (like Bitcoin's miners), and earn block rewards. First, you must generate some hard drive plots, which
 can take a long time depending on the size of the plots (the k variable). Then, run the farmer + full node with
@@ -239,7 +242,7 @@ python -m scripts.create_plots -k 20 -n 10
 sh ./scripts/run_farming.sh
 ```
 
-## Run a timelord + full node
+## Step 4c: Run a timelord + full node
 Timelords execute sequential verifiable delay functions (proofs of time), that get added to
 blocks to make them valid. This requires fast CPUs and a lot of memory as well as completing
 both install steps above.
