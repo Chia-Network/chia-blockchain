@@ -4,14 +4,18 @@ import signal
 import sys
 import miniupnpc
 import uvloop
+from typing import Dict, List
 
 from src.blockchain import Blockchain
 from src.database import FullNodeStore
 from src.full_node import FullNode
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
+from src.consensus.constants import constants
 from src.types.peer_info import PeerInfo
+from src.types.header_block import HeaderBlock
 from src.util.network import parse_host_port
+from src.types.full_block import FullBlock
 
 logging.basicConfig(
     format="FullNode %(name)-23s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
@@ -23,6 +27,29 @@ log = logging.getLogger(__name__)
 server_closed = False
 
 
+async def load_header_blocks_from_store(
+    store: FullNodeStore,
+) -> Dict[str, HeaderBlock]:
+    seen_blocks: Dict[str, HeaderBlock] = {}
+    tips: List[HeaderBlock] = []
+    async for full_block in store.get_blocks():
+        if not tips or full_block.weight > tips[0].weight:
+            tips = [full_block.header_block]
+        seen_blocks[full_block.header_hash] = full_block.header_block
+
+    header_blocks = {}
+    if len(tips) > 0:
+        curr: HeaderBlock = tips[0]
+        reverse_blocks: List[HeaderBlock] = [curr]
+        while curr.height > 0:
+            curr = seen_blocks[curr.prev_header_hash]
+            reverse_blocks.append(curr)
+
+        for block in reversed(reverse_blocks):
+            header_blocks[block.header_hash] = block
+    return header_blocks
+
+
 async def main():
     # Create the store (DB) and full node instance
     db_id = 0
@@ -30,9 +57,13 @@ async def main():
         db_id = int(sys.argv[sys.argv.index("-id") + 1])
     store = FullNodeStore(f"fndb_{db_id}")
 
-    blockchain = Blockchain(store)
+    genesis: FullBlock = FullBlock.from_bytes(constants["GENESIS_BLOCK"])
+    await store.add_block(genesis)
+
     log.info("Initializing blockchain from disk")
-    await blockchain.initialize()
+    header_blocks: Dict[str, HeaderBlock] = await load_header_blocks_from_store(store)
+    blockchain = Blockchain()
+    await blockchain.initialize(header_blocks)
 
     full_node = FullNode(store, blockchain)
     # Starts the full node server (which full nodes can connect to)

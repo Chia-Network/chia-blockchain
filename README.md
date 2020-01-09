@@ -1,5 +1,5 @@
 # chia-blockchain
-Python 3.7 is used for this project. Make sure your default python version is >=3.7 by typing python3. 
+Python 3.7 is used for this project. Make sure your default python version is >=3.7 by typing python3.
 
 You will need to enable [UPnP](https://www.homenethowto.com/ports-and-nat/upnp-automatic-port-forward/) on your router or add a NAT (for IPv4 but not IPv6) and firewall rule to allow TCP port 8444 access to your peer. These methods tend to be router make/model specific.
 
@@ -82,12 +82,12 @@ mongod --fork --dbpath ./db/ --logpath mongod.log
 ```
 
 ### Windows (WSL + Ubuntu)
-#### Install WSL + Ubuntu 18.04 LTS, upgrade to Ubuntu 19.x 
+#### Install WSL + Ubuntu 18.04 LTS, upgrade to Ubuntu 19.x
 
 This will require multiple reboots. From an Administrator PowerShell
-`Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux` 
-and then 
-`Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform`. 
+`Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux`
+and then
+`Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform`.
 Once that is complete, install Ubuntu 18.04 LTS from the Windows Store.
 ```bash
 # Upgrade to 19.x
@@ -260,7 +260,7 @@ Due to the nature of proof of space lookups by the harvester you should limit th
 on a physical drive to 50 or less. This limit should significantly increase before beta.
 
 You can also run the simulation, which runs all servers and multiple full nodes, locally, at once.
-If you want to run the simulation, change the introducer ip in ./config/config.yaml so that the 
+If you want to run the simulation, change the introducer ip in ./config/config.yaml so that the
 full node points to the local introducer (127.0.0.1:8445).
 
 Note the the simulation is local only and requires installation of timelords and VDFs.
