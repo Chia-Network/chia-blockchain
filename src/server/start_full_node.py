@@ -11,7 +11,7 @@ from src.blockchain import Blockchain
 from src.consensus.constants import constants
 from src.database import FullNodeStore
 from src.full_node import FullNode
-from src.rpc.rpc_server import start_server
+from src.rpc.rpc_server import start_rpc_server
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.types.full_block import FullBlock
@@ -100,7 +100,7 @@ async def main():
         # Starts the RPC server if -r is provided
         index = sys.argv.index("-r")
         rpc_port = int(sys.argv[index + 1])
-        rpc_cleanup = await start_server(full_node, master_close_cb, rpc_port)
+        rpc_cleanup = await start_rpc_server(full_node, master_close_cb, rpc_port)
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)

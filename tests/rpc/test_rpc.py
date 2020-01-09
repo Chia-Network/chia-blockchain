@@ -9,7 +9,7 @@ from src.full_node import FullNode
 from src.server.connection import NodeType
 from src.server.server import ChiaServer
 from tests.block_tools import BlockTools
-from src.rpc.rpc_server import start_server
+from src.rpc.rpc_server import start_rpc_server
 from src.rpc.rpc_client import RpcClient
 
 
@@ -64,7 +64,7 @@ class TestRpc:
             full_node_1._shutdown()
             server_1.close_all()
 
-        rpc_cleanup = await start_server(full_node_1, stop_node_cb, test_rpc_port)
+        rpc_cleanup = await start_rpc_server(full_node_1, stop_node_cb, test_rpc_port)
 
         client = await RpcClient.create(test_rpc_port)
         state = await client.get_blockchain_state()
@@ -107,7 +107,8 @@ class TestRpc:
         # Checks that the RPC manages to stop the node
         await client.stop_node()
 
-        await client.close()
+        client.close()
+        await client.await_closed()
         server_2.close_all()
         await server_1.await_closed()
         await server_2.await_closed()

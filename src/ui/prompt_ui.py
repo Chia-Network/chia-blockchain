@@ -315,11 +315,14 @@ class FullNodeUI:
                 def disconnect(c):
                     async def inner():
                         print(f"Closing {c}")
-                        await self.rpc_client.close_connection(c['node_id'])
+                        await self.rpc_client.close_connection(c["node_id"])
                         self.layout.focus(self.quit_button)
+
                     return inner
 
-                disconnect_button = Button("Disconnect", handler=self.async_to_sync(disconnect(con)))
+                disconnect_button = Button(
+                    "Disconnect", handler=self.async_to_sync(disconnect(con))
+                )
                 row = VSplit([con_label, disconnect_button])
                 new_con_rows.append(row)
             self.displayed_cons = set([con["node_id"] for con in connections])

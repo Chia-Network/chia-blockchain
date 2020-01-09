@@ -10,6 +10,11 @@ from src.util.ints import uint16
 
 
 class RpcClient:
+    """
+    Client to Chia RPC, connects to a local full node. Uses HTTP/JSON, and converts back from
+    JSON into native python objects before returning. All api calls use POST requests.
+    """
+
     url: str
     session: aiohttp.ClientSession
     closing_task: Optional[asyncio.Task]

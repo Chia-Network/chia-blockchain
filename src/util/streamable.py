@@ -54,25 +54,30 @@ unhashable_types = [
 
 
 def dataclass_from_dict(klass, d):
+    """
+    Converts a dictionary based on a dataclass, into an instance of that dataclass.
+    Recursively goes through lists, optionals, and dictionaries.
+    """
     if is_type_SpecificOptional(klass):
-        # Optionals
+        # Type is optional, data is either None, or Any
         if not d:
             return None
         return dataclass_from_dict(klass.__args__[0], d)
     if dataclasses.is_dataclass(klass):
-        # Dataclasses
+        # Type is a dataclass, data is a dictionary
         fieldtypes = {f.name: f.type for f in dataclasses.fields(klass)}
         return klass(**{f: dataclass_from_dict(fieldtypes[f], d[f]) for f in d})
     elif is_type_List(klass):
-        # Lists
-        return d
+        # Type is a list, data is a list
+        return [dataclass_from_dict(klass.__args__[0], item) for item in d]
     elif issubclass(klass, bytes):
-        # Bytes like objects
+        # Type is bytes, data is a hex string
         return klass(hexstr_to_bytes(d))
     elif klass in unhashable_types:
+        # Type is unhashable (bls type), so cast from hex string
         return klass.from_bytes(hexstr_to_bytes(d))
     else:
-        # Primitive
+        # Type is a primitive, cast with correct class
         return klass(d)
 
 

@@ -25,10 +25,16 @@ async def main():
     rpc_port = int(sys.argv[rpc_index + 1])
 
     port = int(sys.argv[1])
-    await_all_closed, ui_close_cb = await start_ssh_server(port, config["ssh_filename"], rpc_port)
+    await_all_closed, ui_close_cb = await start_ssh_server(
+        port, config["ssh_filename"], rpc_port
+    )
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, lambda: ui_close_cb(False))
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, lambda: ui_close_cb(False))
+    asyncio.get_running_loop().add_signal_handler(
+        signal.SIGINT, lambda: ui_close_cb(False)
+    )
+    asyncio.get_running_loop().add_signal_handler(
+        signal.SIGTERM, lambda: ui_close_cb(False)
+    )
 
     await await_all_closed()
 

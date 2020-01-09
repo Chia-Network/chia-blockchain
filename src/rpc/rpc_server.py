@@ -37,6 +37,10 @@ def obj_to_response(o: Any) -> web.Response:
 
 
 class RpcApiHandler:
+    """
+    Implementation of full node RPC API.
+    """
+
     def __init__(self, full_node: FullNode, stop_cb: Callable):
         self.full_node = full_node
         self.stop_cb: Callable = stop_cb
@@ -212,7 +216,7 @@ class RpcApiHandler:
         return obj_to_response(max_tip)
 
 
-async def start_server(full_node: FullNode, stop_node_cb: Callable, rpc_port: int):
+async def start_rpc_server(full_node: FullNode, stop_node_cb: Callable, rpc_port: int):
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.
