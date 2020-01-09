@@ -111,7 +111,7 @@ class RpcApiHandler:
                 "local_host": con.local_host,
                 "local_port": con.local_port,
                 "peer_host": con.peer_host,
-                "peer_port:": con.peer_port,
+                "peer_port": con.peer_port,
                 "peer_server_port": con.peer_server_port,
                 "node_id": con.node_id,
                 "creation_time": con.creation_time,
@@ -196,11 +196,12 @@ class RpcApiHandler:
         Returns the heaviest block ever seen, whether it's been added to the blockchain or not
         """
         tips: List[HeaderBlock] = self.full_node.blockchain.get_current_tips()
-        i = tips.index(max([tip.weight for tip in tips]))
+        tip_weights = [tip.weight for tip in tips]
+        i = tip_weights.index(max(tip_weights))
         assert tips[i].challenge is not None
         challenge: Challenge = tips[i].challenge  # type: ignore
         max_tip: SmallHeaderBlock = SmallHeaderBlock(tips[i].header, challenge)
-        if self.full_node.store.get_sync_mode():
+        if await self.full_node.store.get_sync_mode():
             potential_tips = await self.full_node.store.get_potential_tips_tuples()
             for _, pot_block in potential_tips:
                 if pot_block.weight > max_tip.weight:
@@ -231,7 +232,7 @@ async def start_server(full_node: FullNode, stop_node_cb: Callable, rpc_port: in
             web.post("/get_heaviest_block_seen", handler.get_heaviest_block_seen),
         ]
     )
-    runner = web.AppRunner(app)
+    runner = web.AppRunner(app, access_log=None)
     await runner.setup()
     site = web.TCPSite(runner, "localhost", rpc_port)
     await site.start()

@@ -5,7 +5,7 @@ _kill_servers() {
   fi
 }
 
-# _kill_servers
+_kill_servers
 
 BG_PIDS=""
 _run_bg_cmd() {
@@ -19,7 +19,7 @@ _term() {
   for PID in $BG_PIDS; do
     kill -TERM "$PID"
   done
-  # _kill_servers
+  _kill_servers
 }
 
 trap _term TERM

@@ -75,6 +75,10 @@ class RpcClient:
             new_response[hexstr_to_bytes(pk)] = bal
         return new_response
 
+    async def get_heaviest_block_seen(self) -> SmallHeaderBlock:
+        response = await self.fetch("get_heaviest_block_seen", {})
+        return SmallHeaderBlock.from_json(response)
+
     def close(self):
         self.closing_task = asyncio.create_task(self.session.close())
 

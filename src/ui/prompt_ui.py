@@ -1,5 +1,4 @@
 import asyncio
-import collections
 import logging
 import os
 from typing import Callable, List, Optional, Tuple, Dict
@@ -37,28 +36,34 @@ async def start_ssh_server(ssh_port: int, ssh_key_filename: str, rpc_port: int):
     uis = []  # type: ignore
     permenantly_closed = False
     ssh_server = None
+    node_stop_task: Optional[asyncio.Task] = None
 
     rpc_client: RpcClient = await RpcClient.create(rpc_port)
 
-    def ui_close_cb():
-        nonlocal uis, permenantly_closed
+    def ui_close_cb(stop_node: bool):
+        nonlocal uis, permenantly_closed, node_stop_task
         if not permenantly_closed:
+            if stop_node:
+                node_stop_task = asyncio.create_task(rpc_client.stop_node())
             log.info("Closing all connected UIs")
             for ui in uis:
                 ui.close()
             if ssh_server is not None:
                 ssh_server.close()
-            rpc_client.close()
             permenantly_closed = True
 
     async def await_all_closed():
-        nonlocal uis
+        nonlocal uis, node_stop_task
+        await ssh_server.wait_closed()
+        if node_stop_task is not None:
+            await node_stop_task
+        rpc_client.close()
+        await rpc_client.await_closed()
+
         while len(uis) > 0:
             ui = uis[0]
             await ui.await_closed()
             uis = uis[1:]
-        await ssh_server.wait_closed()
-        await rpc_client.await_closed()
 
     async def interact():
         nonlocal uis, permenantly_closed
@@ -99,7 +104,7 @@ class FullNodeUI:
         self.block = None
         self.closed: bool = False
         self.num_blocks: int = 10
-        self.num_top_block_pools: int = 5
+        self.num_top_block_pools: int = 10
         self.top_winners: List[Tuple[uint64, bytes32]] = []
         self.our_winners: List[Tuple[uint64, bytes32]] = []
         self.prev_route: str = "home/"
@@ -145,7 +150,7 @@ class FullNodeUI:
         # Closes this instance of the UI, and call parent close, which closes
         # all other instances, and shuts down the full node.
         self.close()
-        self.parent_close_cb()
+        self.parent_close_cb(True)
 
     def setup_keybindings(self) -> KeyBindings:
         kb = KeyBindings()
@@ -175,7 +180,7 @@ class FullNodeUI:
         self.ips_label = TextArea(focusable=False, height=1)
         self.total_iters_label = TextArea(focusable=False, height=2)
         self.con_rows = []
-        self.displayed_cons = []
+        self.displayed_cons = set()
         self.latest_blocks: List[HeaderBlock] = []
         self.connections_msg = Label(text=f"Connections")
         self.connection_rows_vsplit = Window()
@@ -243,8 +248,11 @@ class FullNodeUI:
         return change_route
 
     def async_to_sync(self, coroutine):
-        def inner(buff):
-            asyncio.get_running_loop().create_task(coroutine(buff.text))
+        def inner(buff=None):
+            if buff is None:
+                asyncio.get_running_loop().create_task(coroutine())
+            else:
+                asyncio.get_running_loop().create_task(coroutine(buff.text))
 
         return inner
 
@@ -293,9 +301,11 @@ class FullNodeUI:
 
     async def draw_home(self):
         connections: List[Dict] = [c for c in self.connections]
-        if collections.Counter(connections) != collections.Counter(self.displayed_cons):
+        if set([con["node_id"] for con in connections]) != self.displayed_cons:
+            print("Re displayting connections")
             new_con_rows = []
             for con in connections:
+                print("CON:", con)
                 con_str = (
                     f"{NodeType(con['type']).name} {con['peer_host']} {con['peer_port']}/{con['peer_server_port']}"
                     f" {con['node_id'].hex()[:10]}..."
@@ -304,6 +314,7 @@ class FullNodeUI:
 
                 def disconnect(c):
                     async def inner():
+                        print(f"Closing {c}")
                         await self.rpc_client.close_connection(c['node_id'])
                         self.layout.focus(self.quit_button)
                     return inner
@@ -311,7 +322,7 @@ class FullNodeUI:
                 disconnect_button = Button("Disconnect", handler=self.async_to_sync(disconnect(con)))
                 row = VSplit([con_label, disconnect_button])
                 new_con_rows.append(row)
-            self.displayed_cons = connections
+            self.displayed_cons = set([con["node_id"] for con in connections])
             self.con_rows = new_con_rows
             if len(self.con_rows) > 0:
                 self.layout.focus(self.con_rows[0])
@@ -452,7 +463,7 @@ class FullNodeUI:
 
                     if self.app and not self.app.invalidated:
                         self.app.invalidate()
-                await asyncio.sleep(1.5)
+                await asyncio.sleep(0.5)
         except Exception as e:
             log.warn(f"Exception in UI update_ui {type(e)}: {e}")
             raise e

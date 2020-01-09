@@ -12,7 +12,7 @@ from definitions import ROOT_DIR
 
 logging.basicConfig(
     format="UI %(name)-29s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
-    level=logging.INFO,
+    level=logging.WARNING,
     datefmt="%H:%M:%S",
 )
 
@@ -27,8 +27,8 @@ async def main():
     port = int(sys.argv[1])
     await_all_closed, ui_close_cb = await start_ssh_server(port, config["ssh_filename"], rpc_port)
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, ui_close_cb)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, ui_close_cb)
+    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, lambda: ui_close_cb(False))
+    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, lambda: ui_close_cb(False))
 
     await await_all_closed()
 
