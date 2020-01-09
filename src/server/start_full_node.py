@@ -9,7 +9,7 @@ import uvloop
 
 from src.blockchain import Blockchain
 from src.consensus.constants import constants
-from src.database import FullNodeStore
+from src.store import FullNodeStore
 from src.full_node import FullNode
 from src.rpc.rpc_server import start_rpc_server
 from src.server.outbound_message import NodeType
@@ -57,7 +57,7 @@ async def main():
     db_id = 0
     if "-id" in sys.argv:
         db_id = int(sys.argv[sys.argv.index("-id") + 1])
-    store = FullNodeStore(f"fndb_{db_id}")
+    store = await FullNodeStore.create(f"fndb_{db_id}.db")
 
     genesis: FullBlock = FullBlock.from_bytes(constants["GENESIS_BLOCK"])
     await store.add_block(genesis)
@@ -134,6 +134,8 @@ async def main():
     # Waits for the rpc server to close
     if rpc_cleanup is not None:
         await rpc_cleanup()
+
+    await store.close()
 
     await asyncio.get_running_loop().shutdown_asyncgens()
 

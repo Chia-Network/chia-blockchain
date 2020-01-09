@@ -4,7 +4,7 @@ from typing import Any, Dict
 import pytest
 
 from src.blockchain import Blockchain, ReceiveBlockResult
-from src.database import FullNodeStore
+from src.store import FullNodeStore
 from src.full_node import FullNode
 from src.server.connection import NodeType
 from src.server.server import ChiaServer
@@ -43,7 +43,7 @@ class TestRpc:
         test_node_2_port = 21235
         test_rpc_port = 21236
 
-        store = FullNodeStore("fndb_test")
+        store = await FullNodeStore.create("fndb_test")
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
         b: Blockchain = Blockchain(test_constants)
@@ -107,6 +107,7 @@ class TestRpc:
         # Checks that the RPC manages to stop the node
         await client.stop_node()
 
+        await store.close()
         client.close()
         await client.await_closed()
         server_2.close_all()

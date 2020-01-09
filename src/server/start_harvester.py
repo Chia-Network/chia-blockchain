@@ -32,6 +32,8 @@ async def main():
 
     _ = await server.start_client(peer_info, None)
     await server.await_closed()
+    harvester._shutdown()
+    await harvester._await_shutdown()
 
 
 uvloop.install()

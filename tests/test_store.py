@@ -5,7 +5,7 @@ from typing import Any, Dict
 import pytest
 
 from src.consensus.constants import constants
-from src.database import FullNodeStore
+from src.store import FullNodeStore
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
@@ -34,12 +34,12 @@ def event_loop():
     yield loop
 
 
-class TestDatabase:
+class TestStore:
     @pytest.mark.asyncio
-    async def test_basic_database(self):
+    async def test_basic_store(self):
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
-        db = FullNodeStore("fndb_test")
+        db = await FullNodeStore.create("fndb_test")
         await db._clear_database()
         genesis = FullBlock.from_bytes(constants["GENESIS_BLOCK"])
 
@@ -117,3 +117,4 @@ class TestDatabase:
         assert db.seen_block(h_hash_1)
         db.clear_seen_blocks()
         assert not db.seen_block(h_hash_1)
+        await db.close()

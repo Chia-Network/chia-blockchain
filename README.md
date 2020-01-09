@@ -20,12 +20,6 @@ cd chia-blockchain
 
 sh install.sh
 
-# Install MongoDB Community Edition
-# Instructions - https://docs.mongodb.com/manual/administration/install-on-linux/
-
-# Run mongo database if not running system-wide
-mongod --fork --dbpath ./db/ --logpath mongod.log
-
 . .venv/bin/activate
 ```
 ### Amazon Linux 2
@@ -42,12 +36,6 @@ git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sh install.sh
-
-# Install MongoDB Community Edition
-# Instructions - https://docs.mongodb.com/manual/administration/install-on-linux/
-
-# Run mongo database if not running system-wide
-mongod --fork --dbpath ./db/ --logpath mongod.log
 
 . .venv/bin/activate
 ```
@@ -73,13 +61,6 @@ git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sh install.sh
-
-# Install MongoDB Community Edition
-# Instructions - https://docs.mongodb.com/manual/administration/install-on-linux/
-
-# Run mongo database if not running system-wide
-mongod --fork --dbpath ./db/ --logpath mongod.log
-
 . .venv/bin/activate
 ```
 
@@ -100,16 +81,12 @@ sudo apt-get -y update
 sudo apt-get -y upgrade
 sudo do-release-upgrade
 
-sudo apt-get install -y build-essential cmake python3-dev python3-venv mongodb software-properties-common --no-install-recommends
+sudo apt-get install -y build-essential cmake python3-dev python3-venv software-properties-common --no-install-recommends
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sudo sh install.sh
-
-# Run mongo database if not running system-wide
-mongod --fork --dbpath ./db/ --logpath mongod.log
-
 . .venv/bin/activate
 ```
 
@@ -120,7 +97,7 @@ Each line that starts with `pip ...` becomes `python -m pip ...`
 
 ```bash
 sudo apt-get -y update
-sudo apt-get install -y build-essential cmake python3-dev python3-venv mongodb software-properties-common --no-install-recommends
+sudo apt-get install -y build-essential cmake python3-dev python3-venv software-properties-common --no-install-recommends
 
 # Install python3.7 with ppa
 sudo add-apt-repository -y ppa:deadsnakes/ppa
@@ -131,28 +108,19 @@ git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sudo sh install.sh
-
-# Run mongo database if not running system-wide
-mongod --fork --dbpath ./db/ --logpath mongod.log
-
 . .venv/bin/activate
 ```
 
 ### MacOS
 Make sure [brew](https://brew.sh/) is available before starting the setup.
 ```bash
-brew tap mongodb/brew
 brew upgrade python
-brew install cmake mongodb-community@4.2
+brew install cmake
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sh install.sh
-
-# Run mongo database if not running system-wide
-mongod --fork --dbpath ./db/ --logpath mongod.log
-
 . .venv/bin/activate
 ```
 
@@ -274,23 +242,3 @@ ips to external peers.
 ```bash
 sh ./scripts/run_all_simulation.sh
 ```
-
-### Run tests and linting
-The first time the tests are run, BlockTools will create and persist many plots. These are used for creating
-proofs of space during testing. The next time tests are run, this won't be necessary.
-Make sure to run mongo before running the tests.
-```bash
-mongod --dbpath ./db/ &
-black src tests && flake8 src && mypy src tests
-py.test tests -s -v
-```
-
-
-### Configure VS code
-1. Install Python extension
-2. Set the environment to ./.venv/bin/python
-3. Install mypy plugin
-4. Preferences > Settings > Python > Linting > flake8 enabled
-5. Preferences > Settings > Python > Linting > mypy enabled
-7. Preferences > Settings > Formatting > Python > Provider > black
-6. Preferences > Settings > mypy > Targets: set to ./src and ./tests

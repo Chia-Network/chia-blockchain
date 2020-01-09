@@ -17,7 +17,7 @@ from src.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.weight_verifier import verify_weight
-from src.database import FullNodeStore
+from src.store import FullNodeStore
 from src.protocols import farmer_protocol, peer_protocol, timelord_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
@@ -263,9 +263,10 @@ class FullNode:
                 Delivery.RANDOM,
             )
             try:
+                phr = self.store.get_potential_hashes_received()
+                assert phr is not None
                 await asyncio.wait_for(
-                    self.store.get_potential_hashes_received().wait(),
-                    timeout=sleep_interval,
+                    phr.wait(), timeout=sleep_interval,
                 )
                 break
             except concurrent.futures.TimeoutError:
@@ -549,7 +550,9 @@ class FullNode:
         assert len(all_header_hashes.header_hashes) > 0
         async with self.store.lock:
             self.store.set_potential_hashes(all_header_hashes.header_hashes)
-            self.store.get_potential_hashes_received().set()
+            phr = self.store.get_potential_hashes_received()
+            assert phr is not None
+            phr.set()
         for _ in []:  # Yields nothing
             yield _
 

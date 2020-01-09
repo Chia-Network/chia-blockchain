@@ -5,7 +5,7 @@ from typing import Any, Dict
 import pytest
 
 from src.blockchain import Blockchain, ReceiveBlockResult
-from src.database import FullNodeStore
+from src.store import FullNodeStore
 from src.full_node import FullNode
 from src.protocols import peer_protocol
 from src.server.connection import NodeType
@@ -41,7 +41,7 @@ def event_loop():
 class TestNodeLoad:
     @pytest.mark.asyncio
     async def test1(self):
-        store = FullNodeStore("fndb_test")
+        store = await FullNodeStore.create("fndb_test")
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
         b: Blockchain = Blockchain(test_constants)
@@ -85,6 +85,7 @@ class TestNodeLoad:
                 print(
                     f"Time taken to process {num_unfinished_blocks} is {time.time() - start_unf}"
                 )
+                await store.close()
                 server_1.close_all()
                 server_2.close_all()
                 await server_1.await_closed()
@@ -92,6 +93,7 @@ class TestNodeLoad:
                 return
             await asyncio.sleep(0.1)
 
+        await store.close()
         server_1.close_all()
         server_2.close_all()
         await server_1.await_closed()
@@ -101,7 +103,7 @@ class TestNodeLoad:
     @pytest.mark.asyncio
     async def test2(self):
         num_blocks = 100
-        store = FullNodeStore("fndb_test")
+        store = await FullNodeStore.create("fndb_test")
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
         b: Blockchain = Blockchain(test_constants)
@@ -133,6 +135,7 @@ class TestNodeLoad:
                 print(
                     f"Time taken to process {num_blocks} is {time.time() - start_unf}"
                 )
+                await store.close()
                 server_1.close_all()
                 server_2.close_all()
                 await server_1.await_closed()
@@ -140,6 +143,7 @@ class TestNodeLoad:
                 return
             await asyncio.sleep(0.1)
 
+        await store.close()
         server_1.close_all()
         server_2.close_all()
         await server_1.await_closed()

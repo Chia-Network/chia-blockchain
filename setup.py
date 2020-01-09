@@ -1,7 +1,18 @@
 #!/usr/bin/python3
 from setuptools import setup
 
-dependencies = ["blspy", "cbor2", "pyyaml", "asyncssh", "motor", "miniupnpc", "uvloop"]
+dependencies = [
+    "aiter",            # Used for async generator tools
+    "blspy",            # Signature library
+    "cbor2",            # Used for network wire format
+    "pyyaml",           # Used for config file format
+    "asyncssh",         # Used for SSH server for UI
+    "miniupnpc",        # Allows users to open ports on their router
+    "uvloop",           # Faster replacement to asyncio
+    "aiosqlite",        # asyncio wrapper for sqlite, to store blocks
+    "aiohttp",          # HTTP server for full node rpc
+    "setuptools-scm",   # Used for versioning
+]
 dev_dependencies = [
     "pytest",
     "flake8",
