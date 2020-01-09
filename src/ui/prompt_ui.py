@@ -490,7 +490,7 @@ class FullNodeUI:
 
                     self.latest_blocks = await self.get_latest_blocks(self.tips)
 
-                    if counter % 10 == 0:
+                    if counter % 20 == 0:
                         # Only request balances periodically, since it's an expensive operation
                         coin_balances: Dict[
                             bytes, uint64
@@ -509,10 +509,13 @@ class FullNodeUI:
 
                     self.data_initialized = True
                     counter += 1
-                    await asyncio.sleep(2)
-                except aiohttp.client_exceptions.ClientConnectorError as e:
+                    await asyncio.sleep(3)
+                except (
+                    aiohttp.client_exceptions.ClientConnectorError,
+                    aiohttp.client_exceptions.ServerDisconnectError,
+                ) as e:
                     log.warn(f"Could not connect to full node. Is it running? {e}")
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(3)
         except Exception as e:
             log.warn(f"Exception in UI update_data {type(e)}: {e}")
             raise e
