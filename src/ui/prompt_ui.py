@@ -302,10 +302,8 @@ class FullNodeUI:
     async def draw_home(self):
         connections: List[Dict] = [c for c in self.connections]
         if set([con["node_id"] for con in connections]) != self.displayed_cons:
-            print("Re displayting connections")
             new_con_rows = []
             for con in connections:
-                print("CON:", con)
                 con_str = (
                     f"{NodeType(con['type']).name} {con['peer_host']} {con['peer_port']}/{con['peer_server_port']}"
                     f" {con['node_id'].hex()[:10]}..."
@@ -314,7 +312,6 @@ class FullNodeUI:
 
                 def disconnect(c):
                     async def inner():
-                        print(f"Closing {c}")
                         await self.rpc_client.close_connection(c["node_id"])
                         self.layout.focus(self.quit_button)
 
@@ -490,6 +487,7 @@ class FullNodeUI:
 
                     self.latest_blocks = await self.get_latest_blocks(self.tips)
 
+                    self.data_initialized = True
                     if counter % 20 == 0:
                         # Only request balances periodically, since it's an expensive operation
                         coin_balances: Dict[
@@ -507,15 +505,14 @@ class FullNodeUI:
                             for pk in self.pool_pks
                         ]
 
-                    self.data_initialized = True
                     counter += 1
-                    await asyncio.sleep(3)
+                    await asyncio.sleep(5)
                 except (
                     aiohttp.client_exceptions.ClientConnectorError,
-                    aiohttp.client_exceptions.ServerDisconnectError,
+                    aiohttp.client_exceptions.ServerConnectionError,
                 ) as e:
                     log.warn(f"Could not connect to full node. Is it running? {e}")
-                    await asyncio.sleep(3)
+                    await asyncio.sleep(5)
         except Exception as e:
             log.warn(f"Exception in UI update_data {type(e)}: {e}")
             raise e
