@@ -88,8 +88,8 @@ class FullNodeStore:
 
     async def add_block(self, block: FullBlock) -> None:
         await self.db.execute(
-            "INSERT INTO blocks VALUES(?, ?, ?) ON CONFLICT(header_hash) DO UPDATE SET block=?",
-            (block.height, block.header_hash.hex(), bytes(block), bytes(block)),
+            "INSERT OR REPLACE INTO blocks VALUES(?, ?, ?)",
+            (block.height, block.header_hash.hex(), bytes(block)),
         )
         await self.db.commit()
 
@@ -109,8 +109,8 @@ class FullNodeStore:
 
     async def add_potential_block(self, block: FullBlock) -> None:
         await self.db.execute(
-            "INSERT INTO potential_blocks VALUES(?, ?) ON CONFLICT(height) DO UPDATE SET block=?",
-            (block.height, bytes(block), bytes(block)),
+            "INSERT OR REPLACE INTO potential_blocks VALUES(?, ?)",
+            (block.height, bytes(block)),
         )
         await self.db.commit()
 
