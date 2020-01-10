@@ -479,6 +479,16 @@ class FullNode:
                     log.info("Did not receive desired blocks")
 
             # Verifies this batch, which we are guaranteed to have (since we broke from the above loop)
+            blocks = []
+            for height in range(height_checkpoint, end_height):
+                b: Optional[FullBlock] = await self.store.get_potential_block(
+                    uint32(height)
+                )
+                assert b is not None
+                blocks.append(b)
+
+            prevalidate_results = await self.blockchain.pre_validate_blocks(blocks)
+            index = 0
             for height in range(height_checkpoint, end_height):
                 if self._shut_down:
                     return
@@ -489,7 +499,9 @@ class FullNode:
                 start = time.time()
                 async with self.store.lock:
                     # The block gets permanantly added to the blockchain
-                    result = await self.blockchain.receive_block(block)
+                    validated, pos = prevalidate_results[index]
+                    index += 1
+                    result = await self.blockchain.receive_block(block, validated, pos)
                     if (
                         result == ReceiveBlockResult.INVALID_BLOCK
                         or result == ReceiveBlockResult.DISCONNECTED_BLOCK
