@@ -15,6 +15,7 @@ from src.types.peer_info import PeerInfo
 from src.util.ints import uint16
 from tests.block_tools import BlockTools
 
+
 bt = BlockTools()
 
 test_constants: Dict[str, Any] = {

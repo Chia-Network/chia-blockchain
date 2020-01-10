@@ -3,7 +3,6 @@ from secrets import token_bytes
 from typing import Any, Dict
 
 import pytest
-
 from src.consensus.constants import constants
 from src.store import FullNodeStore
 from src.types.full_block import FullBlock
