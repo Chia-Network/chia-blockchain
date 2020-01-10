@@ -187,12 +187,23 @@ class Blockchain:
         else:
             raise ValueError("Invalid genesis block")
 
-    def get_next_difficulty(self, header_hash: bytes32) -> uint64:
+    def get_next_difficulty(self, header_hash: bytes32, imagined_header_blocks: Dict[bytes32, HeaderBlock] = {}) -> uint64:
         """
         Returns the difficulty of the next block that extends onto header_hash.
         Used to calculate the number of iterations.
+
+        Passing in imagined_headers pretends that those header blocks were added
+        to the blockchain for the purpose of computing the next difficulty.
         """
-        block: HeaderBlock = self.header_blocks[header_hash]
+        
+        def get_header_block_from_hash(header_hash):
+            block: HeaderBlock = self.header_blocks.get(header_hash, None)
+            if block is None:
+                block = imagined_header_blocks.get(header_hash, None)
+            return block
+
+        block: HeaderBlock = get_header_block_from_hash(header_hash)
+        assert block is not None
 
         next_height: uint32 = uint32(block.height + 1)
         if next_height < self.constants["DIFFICULTY_EPOCH"]:
@@ -207,11 +218,13 @@ class Blockchain:
             != self.constants["DIFFICULTY_DELAY"]
         ):
             # Not at a point where difficulty would change
-            prev_block: HeaderBlock = self.header_blocks[block.prev_header_hash]
+            prev_block: HeaderBlock = get_header_block_from_hash(block.prev_header_hash)
+
             assert block.challenge is not None
-            assert prev_block is not None and prev_block.challenge is not None
             if prev_block is None:
                 raise Exception("Previous block is invalid.")
+            assert prev_block.challenge is not None
+
             return uint64(
                 block.challenge.total_weight - prev_block.challenge.total_weight
             )
@@ -250,7 +263,7 @@ class Blockchain:
                     block2 = curr
                 elif curr.height == height3:
                     block3 = curr
-                curr = self.header_blocks.get(curr.prev_header_hash, None)
+                curr = get_header_block_from_hash(curr.prev_header_hash)
                 assert curr is not None
         # Once we are before the fork point (and before the LCA), we can use the height_to_hash map
         if not block1 and height1 >= 0:
@@ -263,10 +276,10 @@ class Blockchain:
         assert block2 is not None and block3 is not None
 
         # Current difficulty parameter (diff of block h = i - 1)
-        Tc = self.get_next_difficulty(block.prev_header_hash)
+        Tc = self.get_next_difficulty(block.prev_header_hash, imagined_header_blocks)
 
         # Previous difficulty parameter (diff of block h = i - 2048 - 1)
-        Tp = self.get_next_difficulty(block2.prev_header_hash)
+        Tp = self.get_next_difficulty(block2.prev_header_hash, imagined_header_blocks)
         if block1:
             timestamp1 = block1.header.data.timestamp  # i - 512 - 1
         else:
