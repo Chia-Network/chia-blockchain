@@ -542,64 +542,6 @@ class Blockchain:
         # TODO: 17. check cost
         return True
 
-    async def pre_validate_blocks(self, blocks: List[FullBlock]) -> List[Tuple[bool, Optional[bytes32]]]:
-        data: List[bytes] = []
-        for block in blocks:
-            data.append(bytes(block))
-
-        results = self.pool.map(self.pre_validate_block_multi, data)
-
-        for i, (val, pos) in enumerate(results):
-            if pos is not None:
-                pos = bytes32(pos)
-            results[i] = val, pos
-
-        return results
-
-    @staticmethod
-    def pre_validate_block_multi(data) -> Tuple[bool, Optional[bytes]]:
-        """
-            Validates all parts of FullBlock that don't need to be serially checked
-        """
-        block = FullBlock.from_bytes(data)
-
-        if not block.header_block.challenge or not block.header_block.proof_of_time:
-            return False, None
-        if (
-            block.header_block.proof_of_space.get_hash()
-            != block.header_block.challenge.proof_of_space_hash
-        ):
-            return False, None
-            # 4. Check PoT
-        if not block.header_block.proof_of_time.is_valid(
-                consensus_constants["DISCRIMINANT_SIZE_BITS"]
-        ):
-            return False, None
-
-        if block.body.coinbase.height != block.header_block.challenge.height:
-            return False, None
-
-        if (
-                calculate_block_reward(block.body.coinbase.height)
-                != block.body.coinbase.amount
-        ):
-            return False, None
-
-        # 9. Check harvester signature of header data is valid based on harvester key
-        if not block.header_block.header.harvester_signature.verify(
-            [blspy.Util.hash256(block.header_block.header.data.get_hash())],
-            [block.header_block.proof_of_space.plot_pubkey],
-        ):
-            return False, None
-
-        # 10. Check proof of space based on challenge
-        pos_quality = block.header_block.proof_of_space.verify_and_get_quality()
-
-        if not pos_quality:
-            return False, None
-
-        return True, bytes(pos_quality)
-
     async def validate_block(self, block: FullBlock,
                              genesis: bool = False,
                              pre_validated: bool = False, pos_quality: bytes32 = None) -> bool:
@@ -709,6 +651,64 @@ class Blockchain:
                 return False
 
         return True
+
+    async def pre_validate_blocks(self, blocks: List[FullBlock]) -> List[Tuple[bool, Optional[bytes32]]]:
+        data: List[bytes] = []
+        for block in blocks:
+            data.append(bytes(block))
+
+        results = self.pool.map(self.pre_validate_block_multi, data)
+
+        for i, (val, pos) in enumerate(results):
+            if pos is not None:
+                pos = bytes32(pos)
+            results[i] = val, pos
+
+        return results
+
+    @staticmethod
+    def pre_validate_block_multi(data) -> Tuple[bool, Optional[bytes]]:
+        """
+            Validates all parts of FullBlock that don't need to be serially checked
+        """
+        block = FullBlock.from_bytes(data)
+
+        if not block.header_block.challenge or not block.header_block.proof_of_time:
+            return False, None
+        if (
+            block.header_block.proof_of_space.get_hash()
+            != block.header_block.challenge.proof_of_space_hash
+        ):
+            return False, None
+            # 4. Check PoT
+        if not block.header_block.proof_of_time.is_valid(
+                consensus_constants["DISCRIMINANT_SIZE_BITS"]
+        ):
+            return False, None
+
+        if block.body.coinbase.height != block.header_block.challenge.height:
+            return False, None
+
+        if (
+                calculate_block_reward(block.body.coinbase.height)
+                != block.body.coinbase.amount
+        ):
+            return False, None
+
+        # 9. Check harvester signature of header data is valid based on harvester key
+        if not block.header_block.header.harvester_signature.verify(
+            [blspy.Util.hash256(block.header_block.header.data.get_hash())],
+            [block.header_block.proof_of_space.plot_pubkey],
+        ):
+            return False, None
+
+        # 10. Check proof of space based on challenge
+        pos_quality = block.header_block.proof_of_space.verify_and_get_quality()
+
+        if not pos_quality:
+            return False, None
+
+        return True, bytes(pos_quality)
 
     def _reconsider_heights(self, old_lca: Optional[HeaderBlock], new_lca: HeaderBlock):
         """
