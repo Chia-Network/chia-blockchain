@@ -424,18 +424,51 @@ class Blockchain:
             return ReceiveBlockResult.ADDED_AS_ORPHAN
 
     async def validate_unfinished_block(
-        self, block: FullBlock, genesis: bool = False, pre_verified: bool = True, pos_quality: bytes32 = None
+        self, block: FullBlock, genesis: bool = False, pre_validated: bool = True, pos_quality: bytes32 = None
     ) -> bool:
         """
         Block validation algorithm. Returns true if the candidate block is fully valid
         (except for proof of time). The same as validate_block, but without proof of time
         and challenge validation.
         """
-        # 1. Check previous pointer(s) / flyclient
+        if not pre_validated:
+            # 1. Check the proof of space hash is valid
+            if (
+                    block.header_block.proof_of_space.get_hash()
+                    != block.header_block.header.data.proof_of_space_hash
+            ):
+                return False
+
+            # 2. Check body hash
+            if block.body.get_hash() != block.header_block.header.data.body_hash:
+                return False
+
+            # 3. Check coinbase amount
+            if (
+                calculate_block_reward(block.body.coinbase.height)
+                != block.body.coinbase.amount
+            ):
+                return False
+
+            # 4. Check coinbase signature with pool pk
+            if not block.body.coinbase_signature.verify(
+                    [blspy.Util.hash256(bytes(block.body.coinbase))],
+                    [block.header_block.proof_of_space.pool_pubkey],
+            ):
+                return False
+
+            # 5. Check harvester signature of header data is valid based on harvester key
+            if not block.header_block.header.harvester_signature.verify(
+                    [blspy.Util.hash256(block.header_block.header.data.get_hash())],
+                    [block.header_block.proof_of_space.plot_pubkey],
+            ):
+                return False
+
+        # 6. Check previous pointer(s) / flyclient
         if not genesis and block.prev_header_hash not in self.header_blocks:
             return False
 
-        # 2. Check Now+2hrs > timestamp > avg timestamp of last 11 blocks
+        # 7. Check Now+2hrs > timestamp > avg timestamp of last 11 blocks
         prev_block: Optional[HeaderBlock] = None
         if not genesis:
             # TODO: do something about first 11 blocks
@@ -464,24 +497,11 @@ class Blockchain:
             ):
                 return False
 
-        # 3. Check filter hash is correct TODO
+        # 8. Check filter hash is correct TODO
 
-        # 4. Check the proof of space hash is valid
-        if not pre_verified:
-            if (
-                block.header_block.proof_of_space.get_hash()
-                != block.header_block.header.data.proof_of_space_hash
-            ):
-                return False
+        # 9. Check extension data, if any is added
 
-        # 5. Check body hash
-        if not pre_verified:
-            if block.body.get_hash() != block.header_block.header.data.body_hash:
-                return False
-
-        # 6. Check extension data, if any is added
-
-        # 7. Compute challenge of parent
+        # 10. Compute challenge of parent
         challenge_hash: bytes32
         if not genesis:
             assert prev_block
@@ -498,43 +518,19 @@ class Blockchain:
             if challenge_hash != block.header_block.proof_of_space.challenge_hash:
                 return False
 
-        # 9. Check harvester signature of header data is valid based on harvester key
-        if not pre_verified:
-            if not block.header_block.header.harvester_signature.verify(
-                [blspy.Util.hash256(block.header_block.header.data.get_hash())],
-                [block.header_block.proof_of_space.plot_pubkey],
-            ):
-                return False
-
-        # 10. Check proof of space based on challenge
+        # 11. Check proof of space based on challenge
         if pos_quality is None:
             pos_quality = block.header_block.proof_of_space.verify_and_get_quality()
             if not pos_quality:
                 return False
 
-        # 11. Check coinbase height = prev height + 1
+        # 12. Check coinbase height = prev height + 1
         if not genesis:
             assert prev_block
             if block.body.coinbase.height != prev_block.height + 1:
                 return False
         else:
             if block.body.coinbase.height != 0:
-                return False
-
-        # 12. Check coinbase amount
-        if not pre_verified:
-            if (
-                calculate_block_reward(block.body.coinbase.height)
-                != block.body.coinbase.amount
-            ):
-                return False
-
-        # 13. Check coinbase signature with pool pk
-        if not pre_verified:
-            if not block.body.coinbase_signature.verify(
-                [blspy.Util.hash256(bytes(block.body.coinbase))],
-                [block.header_block.proof_of_space.pool_pubkey],
-            ):
                 return False
 
         # TODO: 14a. check transactions
