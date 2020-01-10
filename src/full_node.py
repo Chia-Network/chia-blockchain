@@ -1019,9 +1019,10 @@ class FullNode:
                 # Add the block to our potential tips list
                 await self.store.add_potential_tip(block.block)
                 return
-
+            prevalidate_block = await self.blockchain.pre_validate_blocks([block.block])
+            val, pos = prevalidate_block[0]
             # Tries to add the block to the blockchain
-            added: ReceiveBlockResult = await self.blockchain.receive_block(block.block)
+            added: ReceiveBlockResult = await self.blockchain.receive_block(block.block, val, pos)
 
             # Always immediately add the block to the database, after updating blockchain state
             if (
