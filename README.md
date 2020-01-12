@@ -13,8 +13,8 @@ For alpha testnet most should only install harvesters, farmers, plotter and full
 
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential git cmake --no-install-recommends
-sudo apt-get install python3-dev python3-venv libssl-dev libffi-dev --no-install-recommends
+sudo apt-get install build-essential git cmake libssl-dev libffi-dev --no-install-recommends
+sudo apt-get install python3-dev python3-venv --no-install-recommends
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
