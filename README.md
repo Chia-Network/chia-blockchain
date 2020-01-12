@@ -1,5 +1,5 @@
 # chia-blockchain
-Python 3.7 is used for this project. Make sure your default python version is >=3.7 by typing python3. 
+Python 3.7 is used for this project. Make sure your default python version is >=3.7 by typing `python3`. 
 
 You will need to enable [UPnP](https://www.homenethowto.com/ports-and-nat/upnp-automatic-port-forward/) on your router or add a NAT (for IPv4 but not IPv6) and firewall rule to allow TCP port 8444 access to your peer. These methods tend to be router make/model specific.
 
@@ -13,7 +13,8 @@ For alpha testnet most should only install harvesters, farmers, plotter and full
 
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential cmake python3-dev python3-venv libssl-dev libffi-dev --no-install-recommends
+sudo apt-get install build-essential git cmake --no-install-recommends
+sudo apt-get install python3-dev python3-venv libssl-dev libffi-dev --no-install-recommends
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
