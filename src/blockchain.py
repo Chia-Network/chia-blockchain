@@ -470,14 +470,14 @@ class Blockchain:
 
             # 3. Check coinbase amount
             if (
-                calculate_block_reward(block.body.coinbase.height)
+                calculate_block_reward(block.height)
                 != block.body.coinbase.amount
             ):
                 return False
 
             # 4. Check coinbase signature with pool pk
             if not block.body.coinbase_signature.verify(
-                [blspy.Util.hash256(bytes(block.body.coinbase))],
+                [block.body.coinbase.name()],
                 [block.header_block.proof_of_space.pool_pubkey],
             ):
                 return False
