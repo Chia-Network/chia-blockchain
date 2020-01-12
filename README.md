@@ -224,7 +224,7 @@ python -m scripts.regenerate_keys
 ```
 
 ## Run a full node
-To run a full node on port 8002, and connect to the testnet, run the following command.
+To run a full node on port 8444, and connect to the testnet, run the following command.
 This wil also start an ssh server on port 8222 for the UI, which you can connect to
 to see the state of the node.
 ```bash
@@ -235,15 +235,16 @@ ssh -p 8222 localhost
 ## Run a farmer + full node
 Farmers are entities in the network who use their hard drive space to try to create
 blocks (like Bitcoin's miners), and earn block rewards. First, you must generate some hard drive plots, which
-can take a long time depending on the size of the plots (the k variable). Then, run the farmer + full node with
-the following script. A full node is also started, which you can ssh into to view the node UI (previous ssh command).
+can take a long time depending on the [size of the plots](https://github.com/Chia-Network/chia-blockchain/wiki/k-sizes)
+(the k variable). Then, run the farmer + full node with the following script. A full node is also started, 
+which you can ssh into to view the node UI (previous ssh command).
 ```bash
 python -m scripts.create_plots -k 20 -n 10
 sh ./scripts/run_farming.sh
 ```
 
 ## Run a timelord + full node
-Timelords execute sequential verifiable delay functions (proofs of time), that get added to
+Timelords execute sequential verifiable delay functions (proofs of time or VDFs), that get added to
 blocks to make them valid. This requires fast CPUs and a lot of memory as well as completing
 both install steps above.
 ```bash
@@ -255,12 +256,12 @@ When running the servers on Mac OS, allow the application to accept incoming con
 
 Ubuntu 19.xx, Amazon Linux 2, and CentOS 7.7 or newer are the easiest linux install environments currently.
 
-UPnP is enabled by default, to open the port for incoming connections. If this causes issues,
+UPnP is enabled by default, to open port 8444 for incoming connections. If this causes issues,
 you can disable it in the configuration. Some routers may require port forwarding, or enabling
 UPnP in the router configuration.
 
-Due to the nature of proof of space lookups by the harvester you should limit the number of plots
-on a physical drive to 50 or less. This limit should significantly increase before beta.
+Due to the nature of proof of space lookups by the harvester in the current alpha you should limit 
+the number of plots on a physical drive to 50 or less. This limit should significantly increase before beta.
 
 You can also run the simulation, which runs all servers and multiple full nodes, locally, at once.
 If you want to run the simulation, change the introducer ip in ./config/config.yaml so that the
