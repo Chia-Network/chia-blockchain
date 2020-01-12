@@ -79,9 +79,13 @@ class Verifier {
                 vector<PlotEntry> bucket_R = {r_plot_entry};
 
                 // If there is no match, fails.
-                if (f.FindMatches(bucket_L, bucket_R).size() != 1) {
+                uint64_t cdiff = r_plot_entry.y / kBC - l_plot_entry.y / kBC;
+                if (cdiff != 1) {
+                    return LargeBits();
+                } else if (f.FindMatches(bucket_L, bucket_R).size() != 1) {
                     return LargeBits();
                 }
+
                 std::pair<Bits, Bits> results = f.CalculateBucket(ys[i], ys[i+1],
                                                                   metadata[i], metadata[i+1]);
                 new_ys.push_back(std::get<0>(results));
