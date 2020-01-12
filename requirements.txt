@@ -49,4 +49,5 @@ zipp==2.0.0
 -e lib/chiapos
 -e lib/py-setproctitle
 -e lib/chiavdf/fast_vdf
-
+-e git+git@github.com:Chia-Network/clvm.git@5befca8c6d0b2232f21b1a3a5ff27ac8caddc9b6#egg=clvm
+-e git+git@github.com:Chia-Network/clvm_tools.git@854a8edae203d4b3dff4301a68272f1272b6e707#egg=clvm_tools
