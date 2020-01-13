@@ -192,6 +192,8 @@ class Harvester:
         The farmer requests a signature on the header hash, for one of the proofs that we found.
         A signature is created on the header hash using the plot private key.
         """
+        if request.quality not in self.challenge_hashes:
+            return
 
         _, filename, _ = self.challenge_hashes[request.quality]
 

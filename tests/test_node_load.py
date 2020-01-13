@@ -42,7 +42,7 @@ def event_loop():
 class TestNodeLoad:
     @pytest.mark.asyncio
     async def test1(self):
-        store = await FullNodeStore.create("fndb_test")
+        store = await FullNodeStore.create("fndb_test_load_1")
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
         b: Blockchain = Blockchain(test_constants)
@@ -104,7 +104,7 @@ class TestNodeLoad:
     @pytest.mark.asyncio
     async def test2(self):
         num_blocks = 100
-        store = await FullNodeStore.create("fndb_test")
+        store = await FullNodeStore.create("fndb_test_load_2")
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
         b: Blockchain = Blockchain(test_constants)
