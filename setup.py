@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 from setuptools import setup
 
-dependencies = ["blspy", "cbor2", "pyyaml", "asyncssh", "motor", "miniupnpc", "uvloop"]
+dependencies = ["aiter", "blspy", "cbor2", "pyyaml", "asyncssh", "motor", "miniupnpc", "uvloop", "setuptools_scm", "prompt-toolkit"]
 dev_dependencies = [
     "pytest",
     "flake8",
@@ -9,7 +9,7 @@ dev_dependencies = [
     "isort",
     "autoflake",
     "black",
-    "pytest-asyncio",
+    "pytest-asyncio"
 ]
 
 setup(
