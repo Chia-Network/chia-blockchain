@@ -5,8 +5,6 @@ import sys
 import yaml
 import os
 
-import uvloop
-
 from src.ui.prompt_ui import start_ssh_server
 from definitions import ROOT_DIR
 from setproctitle import setproctitle
@@ -41,5 +39,4 @@ async def main():
     await await_all_closed()
 
 
-uvloop.install()
 asyncio.run(main())

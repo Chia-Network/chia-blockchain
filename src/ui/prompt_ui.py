@@ -43,13 +43,13 @@ async def start_ssh_server(ssh_port: int, ssh_key_filename: str, rpc_port: int):
     def ui_close_cb(stop_node: bool):
         nonlocal uis, permenantly_closed, node_stop_task
         if not permenantly_closed:
-            if stop_node:
-                node_stop_task = asyncio.create_task(rpc_client.stop_node())
             log.info("Closing all connected UIs")
             for ui in uis:
                 ui.close()
             if ssh_server is not None:
                 ssh_server.close()
+            if stop_node:
+                node_stop_task = asyncio.create_task(rpc_client.stop_node())
             permenantly_closed = True
 
     async def await_all_closed():
@@ -73,8 +73,8 @@ async def start_ssh_server(ssh_port: int, ssh_key_filename: str, rpc_port: int):
         assert ui.app
         uis.append(ui)
         try:
-            await ui.app.run_async()
-        except ConnectionError:
+            await ui.app.run_async(set_exception_handler=False)
+        except Exception:
             log.info("Connection error in ssh UI, exiting.")
             ui.close()
             raise
