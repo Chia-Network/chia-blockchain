@@ -19,12 +19,14 @@ from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.weight_verifier import verify_weight
 from src.store import FullNodeStore
 from src.protocols import farmer_protocol, peer_protocol, timelord_protocol
+from src.farming.farming_tools import best_solution_program
+from src.mempool import Mempool
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
 from src.types.body import Body
 from src.types.challenge import Challenge
-from src.types.fees_target import FeesTarget
 from src.types.full_block import FullBlock
+from src.types.hashable import SpendBundle, Coin, BLSSignature
 from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
@@ -43,11 +45,12 @@ class FullNode:
     store: FullNodeStore
     blockchain: Blockchain
 
-    def __init__(self, store: FullNodeStore, blockchain: Blockchain):
+    def __init__(self, store: FullNodeStore, blockchain: Blockchain, mempool: Mempool):
         config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
         self.config = yaml.safe_load(open(config_filename, "r"))["full_node"]
         self.store = store
         self.blockchain = blockchain
+        self.mempool = mempool
         self._shut_down = False  # Set to true to close all infinite loops
         self.server: Optional[ChiaServer] = None
 
@@ -719,12 +722,17 @@ class FullNode:
                 )
                 return
 
-            # TODO: use mempool to grab best transactions, for the selected head
+            # Grab best transactions from Mempool for given head target
+            spend_bundle: SpendBundle = self.mempool.get_spendbundle_for_tip(target_head)
+            solution_program = best_solution_program(spend_bundle)
             transactions_generator: bytes32 = sha256(b"").digest()
-            # TODO: calculate the fees of these transactions
-            fees: FeesTarget = FeesTarget(request.fees_target_puzzle_hash, uint64(0))
-            aggregate_sig: Signature = PrivateKey.from_seed(b"12345").sign(b"anything")
-            # TODO: calculate aggregate signature based on transactions
+
+            # Create fees coin
+            fees_coin = Coin(target_head.challenge.height, request.fees_target_puzzle_hash, spend_bundle.fees())
+
+            # SpendBundle has all signatures already aggregated
+            aggregate_sig: BLSSignature = spend_bundle.aggregated_signature
+
             # TODO: calculate cost of all transactions
             cost = uint64(0)
 
@@ -732,7 +740,8 @@ class FullNode:
             body: Body = Body(
                 request.coinbase,
                 request.coinbase_signature,
-                fees,
+                fees_coin,
+                solution_program,
                 aggregate_sig,
                 transactions_generator,
                 cost,

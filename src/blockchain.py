@@ -552,7 +552,7 @@ class Blockchain:
         # 12. Check coinbase height = prev height + 1
         if not genesis:
             assert prev_block
-            if block.body.coinbase.height != prev_block.height + 1:
+            if block.height != prev_block.height + 1:
                 return False
         else:
             if block.body.coinbase.height != 0:
@@ -746,7 +746,7 @@ class Blockchain:
             return False, None
 
         if (
-            calculate_block_reward(block.body.coinbase.height)
+            calculate_block_reward(block.height)
             != block.body.coinbase.amount
         ):
             return False, None

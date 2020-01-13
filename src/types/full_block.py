@@ -19,7 +19,7 @@ class FullBlock(Streamable):
 
     @property
     def height(self) -> uint32:
-        return self.body.coinbase.height
+        return self.header_block.height
 
     @property
     def weight(self) -> uint64:

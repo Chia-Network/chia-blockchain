@@ -10,6 +10,7 @@ from definitions import ROOT_DIR
 from src.consensus.block_rewards import calculate_block_reward
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_iterations_quality
+from src.pool import create_coinbase_coin_and_signature
 from src.protocols import farmer_protocol, harvester_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.coinbase import CoinbaseInfo
@@ -272,21 +273,20 @@ class Farmer:
                 self.current_weight = proof_of_space_finalized.weight
 
             # TODO: ask the pool for this information
-            coinbase: CoinbaseInfo = CoinbaseInfo(
-                uint32(proof_of_space_finalized.height + 1),
-                calculate_block_reward(proof_of_space_finalized.height),
-                bytes.fromhex(self.key_config["pool_target"]),
-            )
 
             pool_sks: List[PrivateKey] = [
                 PrivateKey.from_bytes(bytes.fromhex(ce))
                 for ce in self.key_config["pool_sks"]
             ]
-            coinbase_signature: PrependSignature = pool_sks[0].sign_prepend(
-                bytes(coinbase)
-            )
+
+            coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
+                proof_of_space_finalized.height + 1,
+                bytes.fromhex(self.key_config["pool_target"]),
+                calculate_block_reward(proof_of_space_finalized.height),
+                pool_sks[0])
+
             self.coinbase_rewards[uint32(proof_of_space_finalized.height + 1)] = (
-                coinbase,
+                coinbase_coin,
                 coinbase_signature,
             )
 
