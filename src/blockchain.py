@@ -3,7 +3,8 @@ import multiprocessing
 import time
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
-
+import asyncio
+import concurrent
 import blspy
 
 from src.consensus.block_rewards import calculate_block_reward
@@ -53,7 +54,10 @@ class Blockchain:
         # All headers (but not orphans) from genesis to the tip are guaranteed to be in header_blocks
         self.header_blocks: Dict[bytes32, HeaderBlock] = {}
         cpu_count = multiprocessing.cpu_count()
-        self.pool = multiprocessing.Pool(max(cpu_count - 1, 1))
+        # Pool of workers to validate blocks concurrently
+        self.pool = concurrent.futures.ProcessPoolExecutor(
+            max_workers=max(cpu_count - 1, 1)
+        )
 
     async def initialize(self, header_blocks: Dict[str, HeaderBlock]):
         self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
@@ -667,11 +671,14 @@ class Blockchain:
     async def pre_validate_blocks(
         self, blocks: List[FullBlock]
     ) -> List[Tuple[bool, Optional[bytes32]]]:
-        data: List[bytes] = []
+        futures = []
         for block in blocks:
-            data.append(bytes(block))
-
-        results = self.pool.map(self.pre_validate_block_multi, data)
+            futures.append(
+                asyncio.get_running_loop().run_in_executor(
+                    self.pool, self.pre_validate_block_multi, bytes(block)
+                )
+            )
+        results = await asyncio.gather(*futures)
 
         for i, (val, pos) in enumerate(results):
             if pos is not None:

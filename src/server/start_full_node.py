@@ -138,7 +138,7 @@ async def main():
         await rpc_cleanup()
 
     await store.close()
-
+    blockchain.pool.shutdown()
     await asyncio.get_running_loop().shutdown_asyncgens()
 
 
