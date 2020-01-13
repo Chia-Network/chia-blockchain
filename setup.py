@@ -22,7 +22,7 @@ dev_dependencies = [
     "isort",
     "autoflake",
     "black",
-    "pytest-asyncio",
+    "pytest-asyncio"
 ]
 
 setup(
