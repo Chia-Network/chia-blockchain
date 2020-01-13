@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 import time
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
@@ -11,6 +12,7 @@ from src.consensus.pot_iterations import (
     calculate_ips_from_iterations,
     calculate_iterations_quality,
 )
+
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
@@ -50,6 +52,8 @@ class Blockchain:
         self.height_to_hash: Dict[uint32, bytes32] = {}
         # All headers (but not orphans) from genesis to the tip are guaranteed to be in header_blocks
         self.header_blocks: Dict[bytes32, HeaderBlock] = {}
+        cpu_count = multiprocessing.cpu_count()
+        self.pool = multiprocessing.Pool(max(cpu_count - 1, 1))
 
     async def initialize(self, header_blocks: Dict[str, HeaderBlock]):
         self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
@@ -393,7 +397,9 @@ class Blockchain:
                 [uint64(1), new_ips, uint64(prev_ips // self.constants["IPS_FACTOR"])]
             )
 
-    async def receive_block(self, block: FullBlock) -> ReceiveBlockResult:
+    async def receive_block(self, block: FullBlock,
+                            pre_validated: bool = False,
+                            pos_quality: bytes32 = None) -> ReceiveBlockResult:
         """
         Adds a new block into the blockchain, if it's valid and connected to the current
         blockchain, regardless of whether it is the child of a head, or another block.
@@ -406,7 +412,7 @@ class Blockchain:
         if block.prev_header_hash not in self.header_blocks and not genesis:
             return ReceiveBlockResult.DISCONNECTED_BLOCK
 
-        if not await self.validate_block(block, genesis):
+        if not await self.validate_block(block, genesis, pre_validated, pos_quality):
             return ReceiveBlockResult.INVALID_BLOCK
 
         # Cache header in memory
@@ -418,18 +424,51 @@ class Blockchain:
             return ReceiveBlockResult.ADDED_AS_ORPHAN
 
     async def validate_unfinished_block(
-        self, block: FullBlock, genesis: bool = False
+        self, block: FullBlock, genesis: bool = False, pre_validated: bool = True, pos_quality: bytes32 = None
     ) -> bool:
         """
         Block validation algorithm. Returns true if the candidate block is fully valid
         (except for proof of time). The same as validate_block, but without proof of time
         and challenge validation.
         """
-        # 1. Check previous pointer(s) / flyclient
+        if not pre_validated:
+            # 1. Check the proof of space hash is valid
+            if (
+                    block.header_block.proof_of_space.get_hash()
+                    != block.header_block.header.data.proof_of_space_hash
+            ):
+                return False
+
+            # 2. Check body hash
+            if block.body.get_hash() != block.header_block.header.data.body_hash:
+                return False
+
+            # 3. Check coinbase amount
+            if (
+                calculate_block_reward(block.body.coinbase.height)
+                != block.body.coinbase.amount
+            ):
+                return False
+
+            # 4. Check coinbase signature with pool pk
+            if not block.body.coinbase_signature.verify(
+                    [blspy.Util.hash256(bytes(block.body.coinbase))],
+                    [block.header_block.proof_of_space.pool_pubkey],
+            ):
+                return False
+
+            # 5. Check harvester signature of header data is valid based on harvester key
+            if not block.header_block.header.harvester_signature.verify(
+                    [blspy.Util.hash256(block.header_block.header.data.get_hash())],
+                    [block.header_block.proof_of_space.plot_pubkey],
+            ):
+                return False
+
+        # 6. Check previous pointer(s) / flyclient
         if not genesis and block.prev_header_hash not in self.header_blocks:
             return False
 
-        # 2. Check Now+2hrs > timestamp > avg timestamp of last 11 blocks
+        # 7. Check Now+2hrs > timestamp > avg timestamp of last 11 blocks
         prev_block: Optional[HeaderBlock] = None
         if not genesis:
             # TODO: do something about first 11 blocks
@@ -458,22 +497,11 @@ class Blockchain:
             ):
                 return False
 
-        # 3. Check filter hash is correct TODO
+        # 8. Check filter hash is correct TODO
 
-        # 4. Check the proof of space hash is valid
-        if (
-            block.header_block.proof_of_space.get_hash()
-            != block.header_block.header.data.proof_of_space_hash
-        ):
-            return False
+        # 9. Check extension data, if any is added
 
-        # 5. Check body hash
-        if block.body.get_hash() != block.header_block.header.data.body_hash:
-            return False
-
-        # 6. Check extension data, if any is added
-
-        # 7. Compute challenge of parent
+        # 10. Compute challenge of parent
         challenge_hash: bytes32
         if not genesis:
             assert prev_block
@@ -490,19 +518,13 @@ class Blockchain:
             if challenge_hash != block.header_block.proof_of_space.challenge_hash:
                 return False
 
-        # 9. Check harvester signature of header data is valid based on harvester key
-        if not block.header_block.header.harvester_signature.verify(
-            [blspy.Util.hash256(block.header_block.header.data.get_hash())],
-            [block.header_block.proof_of_space.plot_pubkey],
-        ):
-            return False
+        # 11. Check proof of space based on challenge
+        if pos_quality is None:
+            pos_quality = block.header_block.proof_of_space.verify_and_get_quality()
+            if not pos_quality:
+                return False
 
-        # 10. Check proof of space based on challenge
-        pos_quality = block.header_block.proof_of_space.verify_and_get_quality()
-        if not pos_quality:
-            return False
-
-        # 11. Check coinbase height = prev height + 1
+        # 12. Check coinbase height = prev height + 1
         if not genesis:
             assert prev_block
             if block.body.coinbase.height != prev_block.height + 1:
@@ -510,20 +532,6 @@ class Blockchain:
         else:
             if block.body.coinbase.height != 0:
                 return False
-
-        # 12. Check coinbase amount
-        if (
-            calculate_block_reward(block.body.coinbase.height)
-            != block.body.coinbase.amount
-        ):
-            return False
-
-        # 13. Check coinbase signature with pool pk
-        if not block.body.coinbase_signature.verify(
-            [blspy.Util.hash256(bytes(block.body.coinbase))],
-            [block.header_block.proof_of_space.pool_pubkey],
-        ):
-            return False
 
         # TODO: 14a. check transactions
         # TODO: 14b. Aggregate transaction results into signature
@@ -534,13 +542,15 @@ class Blockchain:
         # TODO: 17. check cost
         return True
 
-    async def validate_block(self, block: FullBlock, genesis: bool = False) -> bool:
+    async def validate_block(self, block: FullBlock,
+                             genesis: bool = False,
+                             pre_validated: bool = False, pos_quality: bytes32 = None) -> bool:
         """
         Block validation algorithm. Returns true iff the candidate block is fully valid,
         and extends something in the blockchain.
         """
         # 1. Validate unfinished block (check the rest of the conditions)
-        if not (await self.validate_unfinished_block(block, genesis)):
+        if not (await self.validate_unfinished_block(block, genesis, pre_validated, pos_quality)):
             return False
 
         difficulty: uint64
@@ -553,16 +563,18 @@ class Blockchain:
             ips = uint64(self.constants["VDF_IPS_STARTING"])
 
         # 2. Check proof of space hash
-        if not block.header_block.challenge or not block.header_block.proof_of_time:
-            return False
-        if (
-            block.header_block.proof_of_space.get_hash()
-            != block.header_block.challenge.proof_of_space_hash
-        ):
-            return False
+        if not pre_validated:
+            if not block.header_block.challenge or not block.header_block.proof_of_time:
+                return False
+            if (
+                block.header_block.proof_of_space.get_hash()
+                != block.header_block.challenge.proof_of_space_hash
+            ):
+                return False
 
         # 3. Check number of iterations on PoT is correct, based on prev block and PoS
-        pos_quality: bytes32 = block.header_block.proof_of_space.verify_and_get_quality()
+        if pos_quality is None:
+            pos_quality = block.header_block.proof_of_space.verify_and_get_quality()
 
         if pos_quality is None:
             return False
@@ -575,13 +587,20 @@ class Blockchain:
             self.constants["MIN_BLOCK_TIME"],
         )
 
+        if block.header_block.proof_of_time is None:
+            return False
+
         if number_of_iters != block.header_block.proof_of_time.number_of_iterations:
             return False
 
         # 4. Check PoT
-        if not block.header_block.proof_of_time.is_valid(
-            self.constants["DISCRIMINANT_SIZE_BITS"]
-        ):
+        if not pre_validated:
+            if not block.header_block.proof_of_time.is_valid(
+                self.constants["DISCRIMINANT_SIZE_BITS"]
+            ):
+                return False
+
+        if block.header_block.challenge is None:
             return False
 
         if block.body.coinbase.height != block.header_block.challenge.height:
@@ -632,6 +651,64 @@ class Blockchain:
                 return False
 
         return True
+
+    async def pre_validate_blocks(self, blocks: List[FullBlock]) -> List[Tuple[bool, Optional[bytes32]]]:
+        data: List[bytes] = []
+        for block in blocks:
+            data.append(bytes(block))
+
+        results = self.pool.map(self.pre_validate_block_multi, data)
+
+        for i, (val, pos) in enumerate(results):
+            if pos is not None:
+                pos = bytes32(pos)
+            results[i] = val, pos
+
+        return results
+
+    @staticmethod
+    def pre_validate_block_multi(data) -> Tuple[bool, Optional[bytes]]:
+        """
+            Validates all parts of FullBlock that don't need to be serially checked
+        """
+        block = FullBlock.from_bytes(data)
+
+        if not block.header_block.challenge or not block.header_block.proof_of_time:
+            return False, None
+        if (
+            block.header_block.proof_of_space.get_hash()
+            != block.header_block.challenge.proof_of_space_hash
+        ):
+            return False, None
+            # 4. Check PoT
+        if not block.header_block.proof_of_time.is_valid(
+                consensus_constants["DISCRIMINANT_SIZE_BITS"]
+        ):
+            return False, None
+
+        if block.body.coinbase.height != block.header_block.challenge.height:
+            return False, None
+
+        if (
+                calculate_block_reward(block.body.coinbase.height)
+                != block.body.coinbase.amount
+        ):
+            return False, None
+
+        # 9. Check harvester signature of header data is valid based on harvester key
+        if not block.header_block.header.harvester_signature.verify(
+            [blspy.Util.hash256(block.header_block.header.data.get_hash())],
+            [block.header_block.proof_of_space.plot_pubkey],
+        ):
+            return False, None
+
+        # 10. Check proof of space based on challenge
+        pos_quality = block.header_block.proof_of_space.verify_and_get_quality()
+
+        if not pos_quality:
+            return False, None
+
+        return True, bytes(pos_quality)
 
     def _reconsider_heights(self, old_lca: Optional[HeaderBlock], new_lca: HeaderBlock):
         """
