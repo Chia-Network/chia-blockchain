@@ -1,17 +1,19 @@
 import asyncio
-from typing import Any, Dict
-import pytest
 import time
+from typing import Any, Dict
+
+import pytest
+
 from src.blockchain import Blockchain, ReceiveBlockResult
-from src.database import FullNodeStore
+from src.store import FullNodeStore
 from src.full_node import FullNode
-from tests.block_tools import BlockTools
+from src.protocols import peer_protocol
 from src.server.connection import NodeType
+from src.server.outbound_message import Delivery, Message, OutboundMessage
 from src.server.server import ChiaServer
 from src.types.peer_info import PeerInfo
-from src.protocols import peer_protocol
-from src.server.outbound_message import OutboundMessage, Message, Delivery
 from src.util.ints import uint16
+from tests.block_tools import BlockTools
 
 
 bt = BlockTools()
@@ -40,7 +42,7 @@ def event_loop():
 class TestNodeLoad:
     @pytest.mark.asyncio
     async def test1(self):
-        store = FullNodeStore("fndb_test")
+        store = await FullNodeStore.create("fndb_test")
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
         b: Blockchain = Blockchain(test_constants)
@@ -84,23 +86,29 @@ class TestNodeLoad:
                 print(
                     f"Time taken to process {num_unfinished_blocks} is {time.time() - start_unf}"
                 )
+                full_node_1._shutdown()
+                full_node_2._shutdown()
                 server_1.close_all()
                 server_2.close_all()
                 await server_1.await_closed()
                 await server_2.await_closed()
+                await store.close()
                 return
             await asyncio.sleep(0.1)
 
+        full_node_1._shutdown()
+        full_node_2._shutdown()
         server_1.close_all()
         server_2.close_all()
         await server_1.await_closed()
         await server_2.await_closed()
+        await store.close()
         raise Exception("Took too long to process blocks")
 
     @pytest.mark.asyncio
     async def test2(self):
         num_blocks = 100
-        store = FullNodeStore("fndb_test")
+        store = await FullNodeStore.create("fndb_test")
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
         b: Blockchain = Blockchain(test_constants)
@@ -132,15 +140,21 @@ class TestNodeLoad:
                 print(
                     f"Time taken to process {num_blocks} is {time.time() - start_unf}"
                 )
+                full_node_1._shutdown()
+                full_node_2._shutdown()
                 server_1.close_all()
                 server_2.close_all()
                 await server_1.await_closed()
                 await server_2.await_closed()
+                await store.close()
                 return
             await asyncio.sleep(0.1)
 
+        full_node_1._shutdown()
+        full_node_2._shutdown()
         server_1.close_all()
         server_2.close_all()
         await server_1.await_closed()
         await server_2.await_closed()
+        await store.close()
         raise Exception("Took too long to process blocks")

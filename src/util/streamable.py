@@ -4,8 +4,10 @@ from __future__ import annotations
 import dataclasses
 import io
 import pprint
+import json
 from hashlib import sha256
-from typing import Any, BinaryIO, List, Type, get_type_hints
+from typing import Any, BinaryIO, List, Type, get_type_hints, Union
+from src.util.byte_types import hexstr_to_bytes
 
 from blspy import (
     ChainCode,
@@ -49,6 +51,34 @@ unhashable_types = [
     ExtendedPrivateKey,
     ChainCode,
 ]
+
+
+def dataclass_from_dict(klass, d):
+    """
+    Converts a dictionary based on a dataclass, into an instance of that dataclass.
+    Recursively goes through lists, optionals, and dictionaries.
+    """
+    if is_type_SpecificOptional(klass):
+        # Type is optional, data is either None, or Any
+        if not d:
+            return None
+        return dataclass_from_dict(klass.__args__[0], d)
+    if dataclasses.is_dataclass(klass):
+        # Type is a dataclass, data is a dictionary
+        fieldtypes = {f.name: f.type for f in dataclasses.fields(klass)}
+        return klass(**{f: dataclass_from_dict(fieldtypes[f], d[f]) for f in d})
+    elif is_type_List(klass):
+        # Type is a list, data is a list
+        return [dataclass_from_dict(klass.__args__[0], item) for item in d]
+    elif issubclass(klass, bytes):
+        # Type is bytes, data is a hex string
+        return klass(hexstr_to_bytes(d))
+    elif klass in unhashable_types:
+        # Type is unhashable (bls type), so cast from hex string
+        return klass.from_bytes(hexstr_to_bytes(d))
+    else:
+        # Type is a primitive, cast with correct class
+        return klass(d)
 
 
 def streamable(cls: Any):
@@ -166,10 +196,17 @@ class Streamable:
     def __repr__(self: Any) -> str:
         return pp.pformat(self.recurse_str(dataclasses.asdict(self)))
 
+    def to_json(self) -> str:
+        return json.dumps(self.recurse_str(dataclasses.asdict(self)))
+
+    @classmethod
+    def from_json(cls: Any, json_str: str) -> Any:
+        return dataclass_from_dict(cls, json.loads(json_str))
+
     def recurse_str(self, d):
         for key, value in d.items():
-            if type(value) in unhashable_types:
-                d[key] = str(value)
+            if type(value) in unhashable_types or issubclass(type(value), bytes):
+                d[key] = f"0x{bytes(value).hex()}"
             if isinstance(value, dict):
                 self.recurse_str(value)
         return d

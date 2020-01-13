@@ -13,7 +13,7 @@ from src.types.full_block import FullBlock
 from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.proof_of_space import ProofOfSpace
-from src.util.ints import uint32, uint64, uint8
+from src.util.ints import uint8, uint32, uint64
 from tests.block_tools import BlockTools
 
 bt = BlockTools()

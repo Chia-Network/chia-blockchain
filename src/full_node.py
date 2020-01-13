@@ -17,12 +17,8 @@ from src.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.weight_verifier import verify_weight
-from src.database import FullNodeStore
-from src.protocols import (
-    farmer_protocol,
-    peer_protocol,
-    timelord_protocol,
-)
+from src.store import FullNodeStore
+from src.protocols import farmer_protocol, peer_protocol, timelord_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
 from src.types.body import Body
@@ -32,14 +28,11 @@ from src.types.full_block import FullBlock
 from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
-from src.types.sized_bytes import bytes32
 from src.types.proof_of_space import ProofOfSpace
+from src.types.sized_bytes import bytes32
 from src.util import errors
 from src.util.api_decorators import api_request
-from src.util.errors import (
-    BlockNotInBlockchain,
-    InvalidUnfinishedBlock,
-)
+from src.util.errors import BlockNotInBlockchain, InvalidUnfinishedBlock
 from src.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
@@ -56,6 +49,7 @@ class FullNode:
         self.store = store
         self.blockchain = blockchain
         self._shut_down = False  # Set to true to close all infinite loops
+        self.server: Optional[ChiaServer] = None
 
     def _set_server(self, server: ChiaServer):
         self.server = server
@@ -164,6 +158,7 @@ class FullNode:
             yield msg
 
     def _num_needed_peers(self) -> int:
+        assert self.server is not None
         diff = self.config["target_peer_count"] - len(
             self.server.global_connections.get_full_node_connections()
         )
@@ -268,9 +263,10 @@ class FullNode:
                 Delivery.RANDOM,
             )
             try:
+                phr = self.store.get_potential_hashes_received()
+                assert phr is not None
                 await asyncio.wait_for(
-                    self.store.get_potential_hashes_received().wait(),
-                    timeout=sleep_interval,
+                    phr.wait(), timeout=sleep_interval,
                 )
                 break
             except concurrent.futures.TimeoutError:
@@ -566,7 +562,9 @@ class FullNode:
         assert len(all_header_hashes.header_hashes) > 0
         async with self.store.lock:
             self.store.set_potential_hashes(all_header_hashes.header_hashes)
-            self.store.get_potential_hashes_received().set()
+            phr = self.store.get_potential_hashes_received()
+            assert phr is not None
+            phr.set()
         for _ in []:  # Yields nothing
             yield _
 
@@ -1022,7 +1020,9 @@ class FullNode:
             prevalidate_block = await self.blockchain.pre_validate_blocks([block.block])
             val, pos = prevalidate_block[0]
             # Tries to add the block to the blockchain
-            added: ReceiveBlockResult = await self.blockchain.receive_block(block.block, val, pos)
+            added: ReceiveBlockResult = await self.blockchain.receive_block(
+                block.block, val, pos
+            )
 
             # Always immediately add the block to the database, after updating blockchain state
             if (
@@ -1191,6 +1191,8 @@ class FullNode:
 
     @api_request
     async def peers(self, request: peer_protocol.Peers) -> OutboundMessageGenerator:
+        if self.server is None:
+            return
         conns = self.server.global_connections
         for peer in request.peer_list:
             conns.peers.add(peer)

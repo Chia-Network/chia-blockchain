@@ -397,9 +397,9 @@ class Blockchain:
                 [uint64(1), new_ips, uint64(prev_ips // self.constants["IPS_FACTOR"])]
             )
 
-    async def receive_block(self, block: FullBlock,
-                            pre_validated: bool = False,
-                            pos_quality: bytes32 = None) -> ReceiveBlockResult:
+    async def receive_block(
+        self, block: FullBlock, pre_validated: bool = False, pos_quality: bytes32 = None
+    ) -> ReceiveBlockResult:
         """
         Adds a new block into the blockchain, if it's valid and connected to the current
         blockchain, regardless of whether it is the child of a head, or another block.
@@ -424,7 +424,11 @@ class Blockchain:
             return ReceiveBlockResult.ADDED_AS_ORPHAN
 
     async def validate_unfinished_block(
-        self, block: FullBlock, genesis: bool = False, pre_validated: bool = True, pos_quality: bytes32 = None
+        self,
+        block: FullBlock,
+        genesis: bool = False,
+        pre_validated: bool = True,
+        pos_quality: bytes32 = None,
     ) -> bool:
         """
         Block validation algorithm. Returns true if the candidate block is fully valid
@@ -434,8 +438,8 @@ class Blockchain:
         if not pre_validated:
             # 1. Check the proof of space hash is valid
             if (
-                    block.header_block.proof_of_space.get_hash()
-                    != block.header_block.header.data.proof_of_space_hash
+                block.header_block.proof_of_space.get_hash()
+                != block.header_block.header.data.proof_of_space_hash
             ):
                 return False
 
@@ -452,15 +456,15 @@ class Blockchain:
 
             # 4. Check coinbase signature with pool pk
             if not block.body.coinbase_signature.verify(
-                    [blspy.Util.hash256(bytes(block.body.coinbase))],
-                    [block.header_block.proof_of_space.pool_pubkey],
+                [blspy.Util.hash256(bytes(block.body.coinbase))],
+                [block.header_block.proof_of_space.pool_pubkey],
             ):
                 return False
 
             # 5. Check harvester signature of header data is valid based on harvester key
             if not block.header_block.header.harvester_signature.verify(
-                    [blspy.Util.hash256(block.header_block.header.data.get_hash())],
-                    [block.header_block.proof_of_space.plot_pubkey],
+                [blspy.Util.hash256(block.header_block.header.data.get_hash())],
+                [block.header_block.proof_of_space.plot_pubkey],
             ):
                 return False
 
@@ -542,15 +546,23 @@ class Blockchain:
         # TODO: 17. check cost
         return True
 
-    async def validate_block(self, block: FullBlock,
-                             genesis: bool = False,
-                             pre_validated: bool = False, pos_quality: bytes32 = None) -> bool:
+    async def validate_block(
+        self,
+        block: FullBlock,
+        genesis: bool = False,
+        pre_validated: bool = False,
+        pos_quality: bytes32 = None,
+    ) -> bool:
         """
         Block validation algorithm. Returns true iff the candidate block is fully valid,
         and extends something in the blockchain.
         """
         # 1. Validate unfinished block (check the rest of the conditions)
-        if not (await self.validate_unfinished_block(block, genesis, pre_validated, pos_quality)):
+        if not (
+            await self.validate_unfinished_block(
+                block, genesis, pre_validated, pos_quality
+            )
+        ):
             return False
 
         difficulty: uint64
@@ -652,7 +664,9 @@ class Blockchain:
 
         return True
 
-    async def pre_validate_blocks(self, blocks: List[FullBlock]) -> List[Tuple[bool, Optional[bytes32]]]:
+    async def pre_validate_blocks(
+        self, blocks: List[FullBlock]
+    ) -> List[Tuple[bool, Optional[bytes32]]]:
         data: List[bytes] = []
         for block in blocks:
             data.append(bytes(block))
@@ -682,7 +696,7 @@ class Blockchain:
             return False, None
             # 4. Check PoT
         if not block.header_block.proof_of_time.is_valid(
-                consensus_constants["DISCRIMINANT_SIZE_BITS"]
+            consensus_constants["DISCRIMINANT_SIZE_BITS"]
         ):
             return False, None
 
@@ -690,8 +704,8 @@ class Blockchain:
             return False, None
 
         if (
-                calculate_block_reward(block.body.coinbase.height)
-                != block.body.coinbase.amount
+            calculate_block_reward(block.body.coinbase.height)
+            != block.body.coinbase.amount
         ):
             return False, None
 
