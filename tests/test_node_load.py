@@ -42,7 +42,7 @@ def event_loop():
 class TestNodeLoad:
     @pytest.mark.asyncio
     async def test1(self):
-        store = await FullNodeStore.create("fndb_test_load_1")
+        store = await FullNodeStore.create("fndb_test")
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
         b: Blockchain = Blockchain(test_constants)
@@ -86,25 +86,29 @@ class TestNodeLoad:
                 print(
                     f"Time taken to process {num_unfinished_blocks} is {time.time() - start_unf}"
                 )
-                await store.close()
+                full_node_1._shutdown()
+                full_node_2._shutdown()
                 server_1.close_all()
                 server_2.close_all()
                 await server_1.await_closed()
                 await server_2.await_closed()
+                await store.close()
                 return
             await asyncio.sleep(0.1)
 
-        await store.close()
+        full_node_1._shutdown()
+        full_node_2._shutdown()
         server_1.close_all()
         server_2.close_all()
         await server_1.await_closed()
         await server_2.await_closed()
+        await store.close()
         raise Exception("Took too long to process blocks")
 
     @pytest.mark.asyncio
     async def test2(self):
         num_blocks = 100
-        store = await FullNodeStore.create("fndb_test_load_2")
+        store = await FullNodeStore.create("fndb_test")
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
         b: Blockchain = Blockchain(test_constants)
@@ -136,17 +140,21 @@ class TestNodeLoad:
                 print(
                     f"Time taken to process {num_blocks} is {time.time() - start_unf}"
                 )
-                await store.close()
+                full_node_1._shutdown()
+                full_node_2._shutdown()
                 server_1.close_all()
                 server_2.close_all()
                 await server_1.await_closed()
                 await server_2.await_closed()
+                await store.close()
                 return
             await asyncio.sleep(0.1)
 
-        await store.close()
+        full_node_1._shutdown()
+        full_node_2._shutdown()
         server_1.close_all()
         server_2.close_all()
         await server_1.await_closed()
         await server_2.await_closed()
+        await store.close()
         raise Exception("Took too long to process blocks")

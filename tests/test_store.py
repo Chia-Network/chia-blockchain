@@ -38,8 +38,9 @@ class TestStore:
     async def test_basic_store(self):
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
-        db = await FullNodeStore.create("fndb_test_store")
+        db = await FullNodeStore.create("fndb_test")
         await db._clear_database()
+
         genesis = FullBlock.from_bytes(constants["GENESIS_BLOCK"])
 
         # Save/get block
