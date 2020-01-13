@@ -195,7 +195,7 @@ To run a full node on port 8002, and connect to the testnet, run the following c
 This wil also start an ssh server in port 8222 for the UI, which you can connect to
 to see the state of the node.
 ```bash
-python -m src.server.start_full_node "127.0.0.1" 8444 -id 1 -u 8555 &
+python -m src.server.start_full_node "127.0.0.1" 8444 -id 1 -r 8555 &
 ssh -p 8222 localhost
 ```
 
