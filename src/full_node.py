@@ -372,7 +372,7 @@ class FullNode:
                 assert header is not None
                 headers.append(header)
 
-        log.error(f"Downloaded headers up to tip height: {tip_height}")
+        log.info(f"Downloaded headers up to tip height: {tip_height}")
         if not verify_weight(
             tip_block.header_block,
             headers,
@@ -382,7 +382,7 @@ class FullNode:
                 f"Weight of {tip_block.header_block.header.get_hash()} not valid."
             )
 
-        log.error(
+        log.info(
             f"Validated weight of headers. Downloaded {len(headers)} headers, tip height {tip_height}"
         )
         assert tip_height == fork_point_height + len(headers)
@@ -1063,9 +1063,9 @@ class FullNode:
                     async for ret_msg in self._sync():
                         yield ret_msg
                 except asyncio.CancelledError:
-                    log.warning("Syncing failed, CancelledError")
+                    log.error("Syncing failed, CancelledError")
                 except BaseException as e:
-                    log.warning(f"Error {type(e)}{e} with syncing")
+                    log.error(f"Error {type(e)}{e} with syncing")
                 finally:
                     async for ret_msg in self._finish_sync():
                         yield ret_msg

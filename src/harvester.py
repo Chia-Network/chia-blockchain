@@ -112,7 +112,7 @@ class Harvester:
                     new_challenge.challenge_hash
                 )
             except RuntimeError:
-                log.warning("Error using prover object. Reinitializing prover object.")
+                log.error("Error using prover object. Reinitializing prover object.")
                 self.provers[filename] = DiskProver(filename)
                 quality_strings = prover.get_qualities_for_challenge(
                     new_challenge.challenge_hash

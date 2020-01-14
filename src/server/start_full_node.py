@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import logging.config
 import signal
 import sys
 from typing import Dict, List
@@ -18,16 +19,13 @@ from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
 from src.util.network import parse_host_port
+from src.util.logging import initialize_logging
 from setproctitle import setproctitle
 
-logging.basicConfig(
-    format="FullNode %(name)-23s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
-    level=logging.INFO,
-    datefmt="%H:%M:%S",
-)
 setproctitle("chia_full_node")
-
+initialize_logging("FullNode %(name)-23s")
 log = logging.getLogger(__name__)
+
 server_closed = False
 
 
@@ -80,6 +78,7 @@ async def main():
             upnp.discover()
             upnp.selectigd()
             upnp.addportmapping(port, "TCP", upnp.lanaddr, port, "chia", "")
+            log.info(f"Port {port} opened with UPnP.")
         except Exception as e:
             log.warning(f"UPnP failed: {e}")
 
@@ -138,6 +137,7 @@ async def main():
 
     await store.close()
     await asyncio.get_running_loop().shutdown_asyncgens()
+    log.info("Node fully closed.")
 
 
 uvloop.install()

@@ -405,7 +405,7 @@ class ChiaServer:
             TimeoutError,
             asyncio.TimeoutError,
         ) as e:
-            log.warning(
+            log.error(
                 f"Timeout/OSError {e} in connection with peer {connection.get_peername()}, closing connection."
             )
         finally:
