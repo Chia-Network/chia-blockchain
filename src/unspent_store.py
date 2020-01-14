@@ -45,6 +45,7 @@ class UnspentStore:
         # Lock
         self.lock = asyncio.Lock()  # external
         self.lce_unspent_coins = dict()
+        self.head_diffs: Dict[Hash, Dict] = dict()
         return self
 
     async def close(self):
@@ -60,7 +61,9 @@ class UnspentStore:
         print("Not implemented")
 
     # TODO
-    async def new_head(self, head: FullBlock , old: Hash):
+    async def new_head(self, head: FullBlock, old: Hash):
+        if self.head_diffs[old] is not None:
+            del self.head_diffs[old]
         print("new head")
 
     async def add_unspent(self, unspent: Unspent) -> None:
