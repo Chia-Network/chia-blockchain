@@ -16,7 +16,7 @@ class Body(Streamable):
     coinbase: Coin
     coinbase_signature: BLSSignature
     fees_coin: Coin
-    transactions: Program
+    transactions: Optional[Program]
     aggregated_signature: Optional[BLSSignature]
     solutions_generator: bytes32  # TODO: use actual transactions
     cost: uint64

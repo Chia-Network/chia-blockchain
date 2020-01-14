@@ -32,6 +32,7 @@ from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
+from src.unspent_store import UnspentStore
 from src.util import errors
 from src.util.api_decorators import api_request
 from src.util.errors import BlockNotInBlockchain, InvalidUnfinishedBlock
@@ -45,7 +46,7 @@ class FullNode:
     store: FullNodeStore
     blockchain: Blockchain
 
-    def __init__(self, store: FullNodeStore, blockchain: Blockchain, mempool: Mempool):
+    def __init__(self, store: FullNodeStore, blockchain: Blockchain, mempool: Mempool, unspent_store: UnspentStore):
         config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
         self.config = yaml.safe_load(open(config_filename, "r"))["full_node"]
         self.store = store
@@ -53,6 +54,7 @@ class FullNode:
         self.mempool = mempool
         self._shut_down = False  # Set to true to close all infinite loops
         self.server: Optional[ChiaServer] = None
+        self.unspent_store = unspent_store
 
     def _set_server(self, server: ChiaServer):
         self.server = server

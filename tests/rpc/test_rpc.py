@@ -4,10 +4,12 @@ from typing import Any, Dict
 import pytest
 
 from src.blockchain import Blockchain, ReceiveBlockResult
+from src.mempool import Mempool
 from src.store import FullNodeStore
 from src.full_node import FullNode
 from src.server.connection import NodeType
 from src.server.server import ChiaServer
+from src.unspent_store import UnspentStore
 from tests.block_tools import BlockTools
 from src.rpc.rpc_server import start_rpc_server
 from src.rpc.rpc_client import RpcClient
@@ -54,7 +56,9 @@ class TestRpc:
             ) == ReceiveBlockResult.ADDED_TO_HEAD
             await store.add_block(blocks[i])
 
-        full_node_1 = FullNode(store, b)
+        unspent_store = UnspentStore.create("fndb_test")
+        mempool = Mempool()
+        full_node_1 = FullNode(store, b, mempool, unspent_store)
         server_1 = ChiaServer(test_node_1_port, full_node_1, NodeType.FULL_NODE)
         _ = await server_1.start_server("127.0.0.1", None)
         full_node_1._set_server(server_1)
@@ -83,7 +87,7 @@ class TestRpc:
         assert len(await client.get_pool_balances()) > 0
         assert len(await client.get_connections()) == 0
 
-        full_node_2 = FullNode(store, b)
+        full_node_2 = FullNode(store, b, mempool, unspent_store)
         server_2 = ChiaServer(test_node_2_port, full_node_2, NodeType.FULL_NODE)
         full_node_2._set_server(server_2)
 

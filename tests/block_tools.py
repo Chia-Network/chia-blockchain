@@ -13,12 +13,13 @@ from lib.chiavdf.inkfish.proof_of_time import create_proof_of_time_nwesolowski
 from src.consensus import block_rewards, pot_iterations
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_ips_from_iterations
+from src.pool import create_coinbase_coin_and_signature
 from src.types.body import Body
 from src.types.challenge import Challenge
 from src.types.classgroup import ClassgroupElement
-from src.types.coinbase import CoinbaseInfo
 from src.types.fees_target import FeesTarget
 from src.types.full_block import FullBlock
+from src.types.hashable import Coin
 from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.proof_of_space import ProofOfSpace
@@ -353,18 +354,20 @@ class BlockTools:
             n_wesolowski,
             [uint8(b) for b in proof_bytes],
         )
-
-        coinbase: CoinbaseInfo = CoinbaseInfo(
-            height,
-            block_rewards.calculate_block_reward(uint32(height)),
-            coinbase_target,
-        )
-        coinbase_sig: PrependSignature = pool_sk.sign_prepend(bytes(coinbase))
         fees_target: FeesTarget = FeesTarget(fee_target, uint64(0))
         solutions_generator: bytes32 = sha256(seed).digest()
         cost = uint64(0)
+
+        coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
+            0,
+            fees_target.puzzle_hash,
+            block_rewards.calculate_block_reward(0),
+            pool_sk)
+
+        fees_coin = Coin(fees_target.puzzle_hash, fees_target.puzzle_hash, 0)
+
         body: Body = Body(
-            coinbase, coinbase_sig, fees_target, None, solutions_generator, cost
+            coinbase_coin, coinbase_signature, fees_coin, None, None, solutions_generator, cost
         )
 
         header_data: HeaderData = HeaderData(

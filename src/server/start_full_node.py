@@ -23,6 +23,7 @@ from src.server.server import ChiaServer
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
+from src.unspent_store import UnspentStore
 from src.util.network import parse_host_port
 from src.util.logging import initialize_logging
 from setproctitle import setproctitle
@@ -62,7 +63,9 @@ async def main():
     db_id = 0
     if "-id" in sys.argv:
         db_id = int(sys.argv[sys.argv.index("-id") + 1])
-    store = await FullNodeStore.create(f"blockchain_{db_id}.db")
+
+    db_name = f"blockchain_{db_id}.db"
+    store = await FullNodeStore.create(db_name)
 
     genesis: FullBlock = FullBlock.from_bytes(constants["GENESIS_BLOCK"])
     await store.add_block(genesis)
@@ -70,10 +73,12 @@ async def main():
     log.info("Initializing blockchain from disk")
     header_blocks: Dict[str, HeaderBlock] = await load_header_blocks_from_store(store)
     blockchain = await Blockchain.create(header_blocks)
+
+    unspent_store = UnspentStore.create(db_name)
     mempool = Mempool()
     # await mempool.initialize() TODO uncomment once it's implemented
 
-    full_node = FullNode(store, blockchain, mempool)
+    full_node = FullNode(store, blockchain, mempool, unspent_store)
     # Starts the full node server (which full nodes can connect to)
     host, port = parse_host_port(full_node)
 

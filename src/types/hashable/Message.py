@@ -2,7 +2,7 @@ import blspy
 
 from ...atoms import hash_pointer
 
-from .sized_bytes import bytes32
+from src.types.sized_bytes import bytes32
 from src.util.streamable import Streamable, streamable
 
 

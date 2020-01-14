@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import List
 
 import blspy
@@ -13,12 +14,13 @@ ZERO96 = bytes96([0] * 96)
 class BLSPublicKey(bytes48):
     pass
 
-
+@dataclass(frozen=True)
 @streamable
 class BLSSignature(Streamable):
     """
     This wraps the blspy.BLSPublicKey and resolves a couple edge cases around aggregation and validation.
     """
+    @dataclass(frozen=True)
     @streamable
     class AGGSIGPair(Streamable):
         public_key: BLSPublicKey

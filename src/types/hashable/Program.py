@@ -2,13 +2,13 @@ from clvm import to_sexp_f
 from clvm.serialize import sexp_from_stream, sexp_to_stream
 from clvm.subclass_sexp import BaseSExp
 
+from src.types.sized_bytes import bytes32
 from .Hash import std_hash
 
 from ...atoms import bin_methods, hash_pointer
 
 
 SExp = to_sexp_f(1).__class__
-
 
 class Program(SExp, bin_methods):
     """
@@ -32,4 +32,4 @@ class Program(SExp, bin_methods):
         return bytes(self).hex()
 
 
-ProgramHash = hash_pointer(Program, std_hash)
+ProgramHash: bytes32 = hash_pointer(Program, std_hash)

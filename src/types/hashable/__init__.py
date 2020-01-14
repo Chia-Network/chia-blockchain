@@ -1,4 +1,3 @@
-from .sized_bytes import bytes32, bytes48, bytes96  # noqa
 from .BLSSignature import BLSSignature, BLSPublicKey  # noqa
 from .Body import Body  # noqa
 from .Coin import Coin, CoinName  # noqa

@@ -1,5 +1,5 @@
 from ...atoms import hash_pointer
-from ..hashable import bytes32
+from src.types.sized_bytes import bytes32
 from src.util.streamable import Streamable, streamable
 from src.util.ints import uint64
 from .Body import Body
