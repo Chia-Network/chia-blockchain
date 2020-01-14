@@ -476,10 +476,13 @@ class Blockchain:
                 return False
 
             # 4. Check coinbase signature with pool pk
-            if not block.body.coinbase_signature.verify(
-                [block.body.coinbase.name()],
-                [block.header_block.proof_of_space.pool_pubkey],
-            ):
+            pair = block.body.coinbase_signature.AGGSIGPair\
+                (
+                block.header_block.proof_of_space.pool_pubkey,
+                block.body.coinbase.name()
+                )
+
+            if not block.body.coinbase_signature.validate([pair]):
                 return False
 
             # 5. Check harvester signature of header data is valid based on harvester key
@@ -555,7 +558,7 @@ class Blockchain:
             if block.height != prev_block.height + 1:
                 return False
         else:
-            if block.body.coinbase.height != 0:
+            if block.height != 0:
                 return False
 
         # TODO: 14a. check transactions
@@ -636,7 +639,7 @@ class Blockchain:
         if block.header_block.challenge is None:
             return False
 
-        if block.body.coinbase.height != block.header_block.challenge.height:
+        if block.height != block.header_block.challenge.height:
             return False
 
         if not genesis:
