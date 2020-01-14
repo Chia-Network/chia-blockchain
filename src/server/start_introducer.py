@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import signal
 
 import uvloop
@@ -8,13 +7,10 @@ from src.introducer import Introducer
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.util.network import parse_host_port
+from src.util.logging import initialize_logging
 from setproctitle import setproctitle
 
-logging.basicConfig(
-    format="Introducer %(name)-24s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
-    level=logging.INFO,
-    datefmt="%H:%M:%S",
-)
+initialize_logging("Introducer %(name)-21s")
 setproctitle("chia_introducer")
 
 

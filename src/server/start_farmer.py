@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import signal
 from typing import List
 
@@ -12,13 +11,10 @@ from src.server.outbound_message import Delivery, Message, NodeType, OutboundMes
 from src.server.server import ChiaServer
 from src.types.peer_info import PeerInfo
 from src.util.network import parse_host_port
+from src.util.logging import initialize_logging
 from setproctitle import setproctitle
 
-logging.basicConfig(
-    format="Farmer %(name)-25s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
-    level=logging.INFO,
-    datefmt="%H:%M:%S",
-)
+initialize_logging("Farmer %(name)-25s")
 setproctitle("chia_farmer")
 
 

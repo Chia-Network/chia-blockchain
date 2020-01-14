@@ -465,7 +465,7 @@ class FullNodeUI:
                         self.app.invalidate()
                 await asyncio.sleep(0.5)
         except Exception as e:
-            log.warn(f"Exception in UI update_ui {type(e)}: {e}")
+            log.error(f"Exception in UI update_ui {type(e)}: {e}")
             raise e
 
     async def update_data(self):
@@ -511,10 +511,10 @@ class FullNodeUI:
                     aiohttp.client_exceptions.ClientConnectorError,
                     aiohttp.client_exceptions.ServerConnectionError,
                 ) as e:
-                    log.warn(f"Could not connect to full node. Is it running? {e}")
+                    log.warning(f"Could not connect to full node. Is it running? {e}")
                     await asyncio.sleep(5)
         except Exception as e:
-            log.warn(f"Exception in UI update_data {type(e)}: {e}")
+            log.error(f"Exception in UI update_data {type(e)}: {e}")
             raise e
 
     async def await_closed(self):

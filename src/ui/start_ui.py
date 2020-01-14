@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import signal
 import sys
 import yaml
@@ -7,13 +6,10 @@ import os
 
 from src.ui.prompt_ui import start_ssh_server
 from definitions import ROOT_DIR
+from src.util.logging import initialize_logging
 from setproctitle import setproctitle
 
-logging.basicConfig(
-    format="UI %(name)-29s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
-    level=logging.WARNING,
-    datefmt="%H:%M:%S",
-)
+initialize_logging("UI %(name)-29s")
 setproctitle("chia_full_node_ui")
 
 
