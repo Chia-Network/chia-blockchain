@@ -11,7 +11,7 @@ __pycache__/
 # Database
 nohup.out
 mongod.log*
-fndb_test
+fndb_test*
 *.db
 
 # Logs

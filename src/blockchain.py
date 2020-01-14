@@ -40,26 +40,39 @@ class ReceiveBlockResult(Enum):
 
 
 class Blockchain:
-    def __init__(self, override_constants: Dict = {}):
-        # Allow passing in custom overrides for any consesus parameters
-        self.constants: Dict = consensus_constants
+    # Allow passing in custom overrides for any consesus parameters
+    constants: Dict
+    # Tips of the blockchain
+    tips: List[HeaderBlock]
+    # Least common ancestor of tips
+    lca_block: HeaderBlock
+    # Defines the path from genesis to the tip
+    height_to_hash: Dict[uint32, bytes32]
+    # All headers (but not orphans) from genesis to the tip are guaranteed to be in header_blocks
+    header_blocks: Dict[bytes32, HeaderBlock]
+    # Process pool to verify blocks
+    pool: concurrent.futures.ProcessPoolExecutor
+    # Genesis block
+    genesis: FullBlock
+
+    @staticmethod
+    async def create(
+        header_blocks: Dict[str, HeaderBlock], override_constants: Dict = {}
+    ):
+        """
+        Initializes a blockchain with the given header blocks, assuming they have all been
+        validated. If no header_blocks are given, only the genesis block is added.
+        Uses the genesis block given in override_constants, or as a fallback,
+        in the consensus constants config.
+        """
+        self = Blockchain()
+        self.constants = consensus_constants
         for key, value in override_constants.items():
             self.constants[key] = value
+        self.tips = []
+        self.height_to_hash = {}
+        self.header_blocks = {}
 
-        self.tips: List[HeaderBlock] = []
-        self.lca_block: HeaderBlock
-
-        # Defines the path from genesis to the tip
-        self.height_to_hash: Dict[uint32, bytes32] = {}
-        # All headers (but not orphans) from genesis to the tip are guaranteed to be in header_blocks
-        self.header_blocks: Dict[bytes32, HeaderBlock] = {}
-        cpu_count = multiprocessing.cpu_count()
-        # Pool of workers to validate blocks concurrently
-        self.pool = concurrent.futures.ProcessPoolExecutor(
-            max_workers=max(cpu_count - 1, 1)
-        )
-
-    async def initialize(self, header_blocks: Dict[str, HeaderBlock]):
         self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
 
         result = await self.receive_block(self.genesis)
@@ -81,6 +94,7 @@ class Blockchain:
                 self.header_blocks[self.height_to_hash[uint32(1)]].prev_header_hash
                 == self.genesis.header_hash
             )
+        return self
 
     def get_current_tips(self) -> List[HeaderBlock]:
         """
@@ -672,10 +686,15 @@ class Blockchain:
         self, blocks: List[FullBlock]
     ) -> List[Tuple[bool, Optional[bytes32]]]:
         futures = []
+
+        cpu_count = multiprocessing.cpu_count()
+        # Pool of workers to validate blocks concurrently
+        pool = concurrent.futures.ProcessPoolExecutor(max_workers=max(cpu_count - 1, 1))
+
         for block in blocks:
             futures.append(
                 asyncio.get_running_loop().run_in_executor(
-                    self.pool, self.pre_validate_block_multi, bytes(block)
+                    pool, self.pre_validate_block_multi, bytes(block)
                 )
             )
         results = await asyncio.gather(*futures)
@@ -684,7 +703,7 @@ class Blockchain:
             if pos is not None:
                 pos = bytes32(pos)
             results[i] = val, pos
-
+        pool.shutdown()
         return results
 
     @staticmethod

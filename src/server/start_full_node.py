@@ -66,8 +66,7 @@ async def main():
 
     log.info("Initializing blockchain from disk")
     header_blocks: Dict[str, HeaderBlock] = await load_header_blocks_from_store(store)
-    blockchain = Blockchain()
-    await blockchain.initialize(header_blocks)
+    blockchain = await Blockchain.create(header_blocks)
 
     full_node = FullNode(store, blockchain)
     # Starts the full node server (which full nodes can connect to)
@@ -138,7 +137,6 @@ async def main():
         await rpc_cleanup()
 
     await store.close()
-    blockchain.pool.shutdown()
     await asyncio.get_running_loop().shutdown_asyncgens()
 
 

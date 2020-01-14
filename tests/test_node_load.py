@@ -45,9 +45,8 @@ class TestNodeLoad:
         store = await FullNodeStore.create("fndb_test")
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
-        b: Blockchain = Blockchain(test_constants)
+        b: Blockchain = await Blockchain.create({}, test_constants)
         await store.add_block(blocks[0])
-        await b.initialize({})
         for i in range(1, 9):
             assert (
                 await b.receive_block(blocks[i])
@@ -111,9 +110,8 @@ class TestNodeLoad:
         store = await FullNodeStore.create("fndb_test")
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
-        b: Blockchain = Blockchain(test_constants)
+        b: Blockchain = await Blockchain.create({}, test_constants)
         await store.add_block(blocks[0])
-        await b.initialize({})
 
         full_node_1 = FullNode(store, b)
         server_1 = ChiaServer(21236, full_node_1, NodeType.FULL_NODE)

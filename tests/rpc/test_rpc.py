@@ -46,9 +46,8 @@ class TestRpc:
         store = await FullNodeStore.create("fndb_test")
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
-        b: Blockchain = Blockchain(test_constants)
+        b: Blockchain = await Blockchain.create({}, test_constants)
         await store.add_block(blocks[0])
-        await b.initialize({})
         for i in range(1, 9):
             assert (
                 await b.receive_block(blocks[i])
@@ -107,10 +106,10 @@ class TestRpc:
         # Checks that the RPC manages to stop the node
         await client.stop_node()
 
-        await store.close()
         client.close()
         await client.await_closed()
         server_2.close_all()
         await server_1.await_closed()
         await server_2.await_closed()
         await rpc_cleanup()
+        await store.close()

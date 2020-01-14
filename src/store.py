@@ -18,38 +18,35 @@ class FullNodeStore:
     db_name: str
     db: aiosqlite.Connection
     # Whether or not we are syncing
-    sync_mode: bool = False
+    sync_mode: bool
     # Potential new tips that we have received from others.
-    potential_tips: Dict[bytes32, FullBlock] = {}
+    potential_tips: Dict[bytes32, FullBlock]
     # List of all header hashes up to the tip, download up front
-    potential_hashes: List[bytes32] = []
+    potential_hashes: List[bytes32]
     # Header blocks received from other peers during sync
-    potential_headers: Dict[uint32, HeaderBlock] = {}
+    potential_headers: Dict[uint32, HeaderBlock]
     # Event to signal when header hashes are received
-    potential_hashes_received: Optional[asyncio.Event] = None
+    potential_hashes_received: Optional[asyncio.Event]
     # Event to signal when headers are received at each height
-    potential_headers_received: Dict[uint32, asyncio.Event] = {}
+    potential_headers_received: Dict[uint32, asyncio.Event]
     # Event to signal when blocks are received at each height
-    potential_blocks_received: Dict[uint32, asyncio.Event] = {}
+    potential_blocks_received: Dict[uint32, asyncio.Event]
     # Blocks that we have finalized during sync, queue them up for adding after sync is done
-    potential_future_blocks: List[FullBlock] = []
+    potential_future_blocks: List[FullBlock]
     # Current estimate of the speed of the network timelords
-    proof_of_time_estimate_ips: uint64 = uint64(10000)
+    proof_of_time_estimate_ips: uint64
     # Our best unfinished block
-    unfinished_blocks_leader: Tuple[uint32, uint64] = (
-        uint32(0),
-        uint64((1 << 64) - 1),
-    )
+    unfinished_blocks_leader: Tuple[uint32, uint64]
     # Blocks which we have created, but don't have proof of space yet, old ones are cleared
-    candidate_blocks: Dict[bytes32, Tuple[Body, HeaderData, ProofOfSpace, uint32]] = {}
+    candidate_blocks: Dict[bytes32, Tuple[Body, HeaderData, ProofOfSpace, uint32]]
     # Blocks which are not finalized yet (no proof of time), old ones are cleared
-    unfinished_blocks: Dict[Tuple[bytes32, uint64], FullBlock] = {}
+    unfinished_blocks: Dict[Tuple[bytes32, uint64], FullBlock]
     # Header hashes of unfinished blocks that we have seen recently
-    seen_unfinished_blocks: set = set()
+    seen_unfinished_blocks: set
     # Header hashes of blocks that we have seen recently
-    seen_blocks: set = set()
+    seen_blocks: set
     # Blocks which we have received but our blockchain does not reach, old ones are cleared
-    disconnected_blocks: Dict[bytes32, FullBlock] = {}
+    disconnected_blocks: Dict[bytes32, FullBlock]
     # Lock
     lock: asyncio.Lock
 
@@ -74,7 +71,25 @@ class FullNodeStore:
             "CREATE INDEX IF NOT EXISTS block_height on blocks(height)"
         )
         await self.db.commit()
-        # Lock
+
+        self.sync_mode = False
+        self.potential_tips = {}
+        self.potential_hashes = []
+        self.potential_headers = {}
+        self.potential_hashes_received = None
+        self.potential_headers_received = {}
+        self.potential_blocks_received = {}
+        self.potential_future_blocks = []
+        self.proof_of_time_estimate_ips = uint64(10000)
+        self.unfinished_blocks_leader = (
+            uint32(0),
+            uint64((1 << 64) - 1),
+        )
+        self.candidate_blocks = {}
+        self.unfinished_blocks = {}
+        self.seen_unfinished_blocks = set()
+        self.seen_blocks = set()
+        self.disconnected_blocks = {}
         self.lock = asyncio.Lock()  # external
         return self
 
