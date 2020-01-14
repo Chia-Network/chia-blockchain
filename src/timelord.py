@@ -53,7 +53,7 @@ class Timelord:
         self.proof_count: Dict = {}
         self.avg_ips: Dict = {}
         self.discriminant_queue: List[Tuple[bytes32, uint64]] = []
-        self.is_shutdown = False
+        self._is_shutdown = False
 
     async def _shutdown(self):
         async with self.lock:
@@ -66,7 +66,7 @@ class Timelord:
                 self.done_discriminants.append(stop_discriminant)
             self.active_discriminants.clear()
             self.active_discriminants_start_time.clear()
-        self.is_shutdown = True
+        self._is_shutdown = True
 
     async def _stop_worst_process(self, worst_weight_active):
         # This is already inside a lock, no need to lock again.
@@ -322,7 +322,7 @@ class Timelord:
                 await self._update_proofs_count(challenge_weight)
 
     async def _manage_discriminant_queue(self):
-        while not self.is_shutdown:
+        while not self._is_shutdown:
             async with self.lock:
                 if len(self.discriminant_queue) > 0:
                     max_weight = max([h for _, h in self.discriminant_queue])

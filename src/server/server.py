@@ -1,13 +1,15 @@
 import asyncio
-import logging
-import random
-import os
 import concurrent
+import logging
+import os
+import random
 from secrets import token_bytes
-from yaml import safe_load
 from typing import Any, AsyncGenerator, List, Optional, Tuple
+
 from aiter import aiter_forker, iter_to_aiter, join_aiters, map_aiter, push_aiter
 from aiter.server import start_server_aiter
+from yaml import safe_load
+
 from definitions import ROOT_DIR
 from src.protocols.shared_protocol import (
     Handshake,
@@ -19,6 +21,7 @@ from src.protocols.shared_protocol import (
 from src.server.connection import Connection, OnConnectFunc, PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.peer_info import PeerInfo
+from src.types.sized_bytes import bytes32
 from src.util import partial_func
 from src.util.errors import (
     IncompatibleProtocolVersion,
@@ -28,7 +31,6 @@ from src.util.errors import (
 )
 from src.util.ints import uint16
 from src.util.network import create_node_id
-from src.types.sized_bytes import bytes32
 
 log = logging.getLogger(__name__)
 
@@ -41,8 +43,8 @@ class ChiaServer:
     global_connections: PeerConnections
 
     # Optional listening server. You can also use this class without starting one.
-    _server: Optional[asyncio.AbstractServer] = None
-    _host: Optional[str] = None
+    _server: Optional[asyncio.AbstractServer]
+    _host: Optional[str]
 
     # (StreamReader, StreamWriter, NodeType) aiter, gets things from server and clients and
     # sends them through the pipeline
@@ -55,10 +57,13 @@ class ChiaServer:
     _outbound_aiter: push_aiter
 
     # Called for inbound connections after successful handshake
-    _on_inbound_connect: OnConnectFunc = None
+    _on_inbound_connect: OnConnectFunc
 
     def __init__(self, port: int, api: Any, local_type: NodeType):
         self.global_connections = PeerConnections([])
+        self._server = None
+        self._host = None
+        self._on_inbound_connect = None
         self._port = port  # TCP port to identify our node
         self._api = api  # API module that will be called from the requests
         self._local_type = local_type  # NodeType (farmer, full node, timelord, pool, harvester, wallet)
@@ -255,12 +260,7 @@ class ChiaServer:
                 log.info(f"-> {message.function} to peer {connection.get_peername()}")
                 try:
                     await connection.send(message)
-                except (
-                    ConnectionResetError,
-                    BrokenPipeError,
-                    RuntimeError,
-                    TimeoutError,
-                ) as e:
+                except (RuntimeError, TimeoutError, OSError,) as e:
                     log.error(
                         f"Cannot write to {connection}, already closed. Error {e}."
                     )
@@ -369,7 +369,7 @@ class ChiaServer:
             InvalidAck,
             InvalidHandshake,
             asyncio.IncompleteReadError,
-            ConnectionResetError,
+            OSError,
             Exception,
         ) as e:
             log.warning(f"{e}, handshake not completed. Connection not created.")
@@ -405,7 +405,7 @@ class ChiaServer:
             TimeoutError,
             asyncio.TimeoutError,
         ) as e:
-            log.warning(
+            log.error(
                 f"Timeout/OSError {e} in connection with peer {connection.get_peername()}, closing connection."
             )
         finally:
