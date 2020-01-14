@@ -398,7 +398,7 @@ class FullNodeUI:
         self.current_heads_label.text = "Heights of tips: " + str(
             [h.height for h in heads]
         )
-        self.difficulty_label.text = f"Current difficuty: {difficulty}"
+        self.difficulty_label.text = f"Current difficulty: {difficulty}"
         self.ips_label.text = f"Current VDF iterations per second: {ips}"
         self.total_iters_label.text = f"Total iterations since genesis: {total_iters}"
 
