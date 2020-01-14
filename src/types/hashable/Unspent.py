@@ -11,3 +11,4 @@ class Unspent(Streamable):
     coin: Coin
     confirmed_block_index: uint32
     spent_block_index: uint32
+    spent: bool
