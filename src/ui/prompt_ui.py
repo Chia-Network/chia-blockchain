@@ -1,49 +1,34 @@
 import asyncio
 import logging
-import collections
 import os
-from typing import Callable, List, Optional, Tuple
-from yaml import safe_load
-from blspy import PrivateKey, PublicKey
+from typing import Callable, List, Optional, Tuple, Dict
+import aiohttp
 
 import asyncssh
+from blspy import PrivateKey, PublicKey
+from yaml import safe_load
 
+from definitions import ROOT_DIR
 from prompt_toolkit import Application
-from prompt_toolkit.layout.dimension import D
-from prompt_toolkit.key_binding.bindings.focus import (
-    focus_next,
-    focus_previous,
-)
 from prompt_toolkit.contrib.ssh import PromptToolkitSSHServer
 from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.key_binding.bindings.focus import focus_next, focus_previous
 from prompt_toolkit.layout.containers import HSplit, VSplit, Window
+from prompt_toolkit.layout.dimension import D
 from prompt_toolkit.layout.layout import Layout
 from prompt_toolkit.styles import Style
 from prompt_toolkit.widgets import Button, Frame, Label, SearchToolbar, TextArea
-from src.blockchain import Blockchain
-from src.database import FullNodeStore
-from src.server.connection import NodeType, PeerConnections
-from src.server.server import ChiaServer
-from src.consensus.block_rewards import calculate_block_reward
+from src.server.connection import NodeType
 from src.types.full_block import FullBlock
-from src.types.header_block import HeaderBlock
-from src.types.peer_info import PeerInfo
+from src.types.header_block import SmallHeaderBlock, HeaderBlock
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint16, uint64
-from definitions import ROOT_DIR
+from src.util.ints import uint64
+from src.rpc.rpc_client import RpcClient
 
 log = logging.getLogger(__name__)
 
 
-async def start_ssh_server(
-    store: FullNodeStore,
-    blockchain: Blockchain,
-    server: ChiaServer,
-    port: int,
-    ssh_port: int,
-    ssh_key_filename: str,
-    close_cb: Callable,
-):
+async def start_ssh_server(ssh_port: int, ssh_key_filename: str, rpc_port: int):
     """
     Starts an SSH Server that creates FullNodeUI instances whenever someone connects to the port.
     returns a coroutine that can be awaited, which returns when all ui instances have been closed.
@@ -51,36 +36,45 @@ async def start_ssh_server(
     uis = []  # type: ignore
     permenantly_closed = False
     ssh_server = None
+    node_stop_task: Optional[asyncio.Task] = None
 
-    def ui_close_cb():
-        nonlocal uis, permenantly_closed
+    rpc_client: RpcClient = await RpcClient.create(rpc_port)
+
+    def ui_close_cb(stop_node: bool):
+        nonlocal uis, permenantly_closed, node_stop_task
         if not permenantly_closed:
             log.info("Closing all connected UIs")
             for ui in uis:
                 ui.close()
             if ssh_server is not None:
                 ssh_server.close()
-            close_cb()
+            if stop_node:
+                node_stop_task = asyncio.create_task(rpc_client.stop_node())
             permenantly_closed = True
 
     async def await_all_closed():
-        nonlocal uis
+        nonlocal uis, node_stop_task
+        await ssh_server.wait_closed()
+        if node_stop_task is not None:
+            await node_stop_task
+        rpc_client.close()
+        await rpc_client.await_closed()
+
         while len(uis) > 0:
             ui = uis[0]
             await ui.await_closed()
             uis = uis[1:]
-        await ssh_server.wait_closed()
 
     async def interact():
         nonlocal uis, permenantly_closed
         if permenantly_closed:
             return
-        ui = FullNodeUI(store, blockchain, server, port, ui_close_cb)
+        ui = FullNodeUI(ui_close_cb, rpc_client)
         assert ui.app
         uis.append(ui)
         try:
-            await ui.app.run_async()
-        except ConnectionError:
+            await ui.app.run_async(set_exception_handler=False)
+        except Exception:
             log.info("Connection error in ssh UI, exiting.")
             ui.close()
             raise
@@ -99,28 +93,18 @@ async def start_ssh_server(
 class FullNodeUI:
     """
     Full node UI instance. Displays node state, blocks, and connections. Calls parent_close_cb
-    when the full node is closed. Uses store, blockchain, and connections, to display relevant
+    when the full node is closed. Uses the RPC client to fetch data from a full node and to display relevant
     information. The UI is updated periodically.
     """
 
-    def __init__(
-        self,
-        store: FullNodeStore,
-        blockchain: Blockchain,
-        server: ChiaServer,
-        port: int,
-        parent_close_cb: Callable,
-    ):
-        self.port: int = port
-        self.store: FullNodeStore = store
-        self.blockchain: Blockchain = blockchain
-        self.node_server: ChiaServer = server
-        self.connections: PeerConnections = server.global_connections
-        self.logs: List[logging.LogRecord] = []
+    def __init__(self, parent_close_cb: Callable, rpc_client: RpcClient):
+        self.rpc_client = rpc_client
         self.app: Optional[Application] = None
+        self.data_initialized = False
+        self.block = None
         self.closed: bool = False
         self.num_blocks: int = 10
-        self.num_top_block_pools: int = 5
+        self.num_top_block_pools: int = 10
         self.top_winners: List[Tuple[uint64, bytes32]] = []
         self.our_winners: List[Tuple[uint64, bytes32]] = []
         self.prev_route: str = "home/"
@@ -166,7 +150,7 @@ class FullNodeUI:
         # Closes this instance of the UI, and call parent close, which closes
         # all other instances, and shuts down the full node.
         self.close()
-        self.parent_close_cb()
+        self.parent_close_cb(True)
 
     def setup_keybindings(self) -> KeyBindings:
         kb = KeyBindings()
@@ -189,7 +173,6 @@ class FullNodeUI:
 
         # home/
         self.loading_msg = Label(text=f"Initializing UI....")
-        self.server_msg = Label(text=f"Server running on port {self.port}.")
         self.syncing = TextArea(focusable=False, height=1)
         self.current_heads_label = TextArea(focusable=False, height=1)
         self.lca_label = TextArea(focusable=False, height=1)
@@ -197,7 +180,7 @@ class FullNodeUI:
         self.ips_label = TextArea(focusable=False, height=1)
         self.total_iters_label = TextArea(focusable=False, height=2)
         self.con_rows = []
-        self.displayed_cons = []
+        self.displayed_cons = set()
         self.latest_blocks: List[HeaderBlock] = []
         self.connections_msg = Label(text=f"Connections")
         self.connection_rows_vsplit = Window()
@@ -251,7 +234,7 @@ class FullNodeUI:
         self.challenge_msg = Label(text=f"Block Header")
         self.challenge = TextArea(focusable=False)
 
-        body = HSplit([self.loading_msg, self.server_msg], height=D(), width=D())
+        body = HSplit([self.loading_msg], height=D(), width=D())
         self.content = Frame(title="Chia Full Node", body=body)
         self.layout = Layout(VSplit([self.content], height=D(), width=D()))
 
@@ -265,14 +248,17 @@ class FullNodeUI:
         return change_route
 
     def async_to_sync(self, coroutine):
-        def inner(buff):
-            asyncio.get_running_loop().create_task(coroutine(buff.text))
+        def inner(buff=None):
+            if buff is None:
+                asyncio.get_running_loop().create_task(coroutine())
+            else:
+                asyncio.get_running_loop().create_task(coroutine(buff.text))
 
         return inner
 
     async def search_block(self, text: str):
         try:
-            block = await self.store.get_block(bytes.fromhex(text))
+            block = await self.rpc_client.get_block(bytes.fromhex(text))
         except ValueError:
             self.error_msg.text = "Enter a valid hex block hash"
             return
@@ -289,45 +275,54 @@ class FullNodeUI:
             return
         else:
             ip, port = ":".join(text.split(":")[:-1]), text.split(":")[-1]
-        target_node: PeerInfo = PeerInfo(ip, uint16(int(port)))
         log.error(f"Want to connect to {ip}, {port}")
-        if not (await self.node_server.start_client(target_node, None)):
+        try:
+            await self.rpc_client.open_connection(ip, int(port))
+        except BaseException:
+            # TODO: catch right exception
             self.error_msg.text = f"Failed to connect to {ip}:{port}"
 
-    async def get_latest_blocks(self, heads: List[HeaderBlock]) -> List[HeaderBlock]:
-        added_blocks: List[HeaderBlock] = []
+    async def get_latest_blocks(
+        self, heads: List[SmallHeaderBlock]
+    ) -> List[SmallHeaderBlock]:
+        added_blocks: List[SmallHeaderBlock] = []
         while len(added_blocks) < self.num_blocks and len(heads) > 0:
             heads = sorted(heads, key=lambda b: b.height, reverse=True)
             max_block = heads[0]
             if max_block not in added_blocks:
                 added_blocks.append(max_block)
             heads.remove(max_block)
-            prev: Optional[HeaderBlock] = self.blockchain.header_blocks.get(
-                max_block.prev_header_hash, None
+            prev: Optional[SmallHeaderBlock] = await self.rpc_client.get_header(
+                max_block.prev_header_hash
             )
             if prev is not None:
                 heads.append(prev)
         return added_blocks
 
     async def draw_home(self):
-        connections = [c for c in self.connections.get_connections()]
-        if collections.Counter(connections) != collections.Counter(self.displayed_cons):
+        connections: List[Dict] = [c for c in self.connections]
+        if set([con["node_id"] for con in connections]) != self.displayed_cons:
             new_con_rows = []
             for con in connections:
-                con_str = f"{NodeType(con.connection_type).name} {con.get_peername()} {con.node_id.hex()[:10]}..."
+                con_str = (
+                    f"{NodeType(con['type']).name} {con['peer_host']} {con['peer_port']}/{con['peer_server_port']}"
+                    f" {con['node_id'].hex()[:10]}..."
+                )
                 con_label = Label(text=con_str)
 
                 def disconnect(c):
-                    def inner():
-                        self.connections.close(c)
+                    async def inner():
+                        await self.rpc_client.close_connection(c["node_id"])
                         self.layout.focus(self.quit_button)
 
                     return inner
 
-                disconnect_button = Button("Disconnect", handler=disconnect(con))
+                disconnect_button = Button(
+                    "Disconnect", handler=self.async_to_sync(disconnect(con))
+                )
                 row = VSplit([con_label, disconnect_button])
                 new_con_rows.append(row)
-            self.displayed_cons = connections
+            self.displayed_cons = set([con["node_id"] for con in connections])
             self.con_rows = new_con_rows
             if len(self.con_rows) > 0:
                 self.layout.focus(self.con_rows[0])
@@ -339,35 +334,22 @@ class FullNodeUI:
         else:
             new_con_rows = Window(width=D(), height=0)
 
-        if await self.store.get_sync_mode():
-            max_height = -1
-            for _, block in await self.store.get_potential_tips_tuples():
-                if block.height > max_height:
-                    max_height = block.height
-
-            if max_height >= 0:
-                self.syncing.text = f"Syncing up to {max_height}"
+        if self.sync_mode:
+            if self.max_height >= 0:
+                self.syncing.text = f"Syncing up to {self.max_height}"
             else:
                 self.syncing.text = f"Syncing"
         else:
             self.syncing.text = "Not syncing"
-        heads: List[HeaderBlock] = self.blockchain.get_current_tips()
 
-        lca_block: HeaderBlock = self.blockchain.lca_block
-        if lca_block.height > 0:
-            difficulty = self.blockchain.get_next_difficulty(lca_block.prev_header_hash)
-            ips = self.blockchain.get_next_ips(lca_block.prev_header_hash)
-        else:
-            difficulty = self.blockchain.get_next_difficulty(lca_block.header_hash)
-            ips = self.blockchain.get_next_ips(lca_block.header_hash)
-        total_iters = lca_block.challenge.total_iters
+        total_iters = self.lca_block.challenge.total_iters
 
         new_block_labels = []
         for i, b in enumerate(self.latest_blocks):
             self.latest_blocks_labels[i].text = (
                 f"{b.height}:{b.header_hash}"
-                f" {'LCA' if b.header_hash == lca_block.header_hash else ''}"
-                f" {'TIP' if b.header_hash in [h.header_hash for h in heads] else ''}"
+                f" {'LCA' if b.header_hash == self.lca_block.header_hash else ''}"
+                f" {'TIP' if b.header_hash in [h.header_hash for h in self.tips] else ''}"
             )
             self.latest_blocks_labels[i].handler = self.change_route_handler(
                 f"block/{b.header_hash}"
@@ -394,12 +376,16 @@ class FullNodeUI:
                 new_our_pools_labels.append(self.our_pools_labels[i])
             our_pools_labels = new_our_pools_labels
 
-        self.lca_label.text = f"Current least common ancestor {lca_block.header_hash} height {lca_block.height}"
-        self.current_heads_label.text = "Heights of tips: " + str(
-            [h.height for h in heads]
+        self.lca_label.text = (
+            f"Current least common ancestor {self.lca_block.header_hash}"
+            f" height {self.lca_block.height}"
         )
-        self.difficulty_label.text = f"Current difficuty: {difficulty}"
-        self.ips_label.text = f"Current VDF iterations per second: {ips}"
+        self.current_heads_label.text = "Heights of tips: " + str(
+            [h.height for h in self.tips]
+        )
+        self.difficulty_label.text = f"Current difficulty: {self.difficulty}"
+
+        self.ips_label.text = f"Current VDF iterations per second: {self.ips}"
         self.total_iters_label.text = f"Total iterations since genesis: {total_iters}"
 
         try:
@@ -410,7 +396,6 @@ class FullNodeUI:
             pass
         return HSplit(
             [
-                self.server_msg,
                 self.syncing,
                 self.lca_label,
                 self.current_heads_label,
@@ -446,14 +431,16 @@ class FullNodeUI:
 
     async def draw_block(self):
         block_hash: str = self.route.split("block/")[1]
-        async with self.store.lock:
-            block: Optional[FullBlock] = await self.store.get_block(
+        if self.block is None or self.block.header_hash != bytes32(
+            bytes.fromhex(block_hash)
+        ):
+            self.block: Optional[FullBlock] = await self.rpc_client.get_block(
                 bytes32(bytes.fromhex(block_hash))
             )
-        if block is not None:
-            self.block_msg.text = f"Block {str(block.header_hash)}"
-            if self.block_label.text != str(block):
-                self.block_label.text = str(block)
+        if self.block is not None:
+            self.block_msg.text = f"Block {str(self.block.header_hash)}"
+            if self.block_label.text != str(self.block):
+                self.block_label.text = str(self.block)
         else:
             self.block_label.text = f"Block hash {block_hash} not found"
         try:
@@ -469,54 +456,66 @@ class FullNodeUI:
     async def update_ui(self):
         try:
             while not self.closed:
-                if self.route.startswith("home/"):
-                    self.content.body = await self.draw_home()
-                elif self.route.startswith("block/"):
-                    self.content.body = await self.draw_block()
+                if self.data_initialized:
+                    if self.route.startswith("home/"):
+                        self.content.body = await self.draw_home()
+                    elif self.route.startswith("block/"):
+                        self.content.body = await self.draw_block()
 
-                if self.app and not self.app.invalidated:
-                    self.app.invalidate()
-                await asyncio.sleep(1.5)
+                    if self.app and not self.app.invalidated:
+                        self.app.invalidate()
+                await asyncio.sleep(0.5)
         except Exception as e:
-            log.warn(f"Exception in UI update_ui {type(e)}: {e}")
+            log.error(f"Exception in UI update_ui {type(e)}: {e}")
             raise e
 
     async def update_data(self):
+        self.data_initialized = False
+        counter = 0
         try:
             while not self.closed:
-                heads: List[HeaderBlock] = self.blockchain.get_current_tips()
-                self.latest_blocks = await self.get_latest_blocks(heads)
+                try:
+                    blockchain_state = await self.rpc_client.get_blockchain_state()
+                    self.lca_block = blockchain_state["lca"]
+                    self.tips = blockchain_state["tips"]
+                    self.difficulty = blockchain_state["difficulty"]
+                    self.ips = blockchain_state["ips"]
+                    self.sync_mode = blockchain_state["sync_mode"]
+                    self.connections = await self.rpc_client.get_connections()
+                    if self.sync_mode:
+                        max_block = await self.rpc_client.get_heaviest_block_seen()
+                        self.max_height = max_block.height
 
-                header_block = heads[0]
-                coin_balances = {
-                    bytes(
-                        header_block.proof_of_space.pool_pubkey
-                    ): calculate_block_reward(header_block.height)
-                }
-                while header_block.height != 0:
-                    header_block = self.blockchain.header_blocks[
-                        header_block.prev_header_hash
-                    ]
-                    pool_pk = bytes(header_block.proof_of_space.pool_pubkey)
-                    if pool_pk not in coin_balances:
-                        coin_balances[pool_pk] = 0
-                    coin_balances[pool_pk] += calculate_block_reward(
-                        header_block.height
-                    )
-                self.top_winners = sorted(
-                    [(rewards, key) for key, rewards in coin_balances.items()],
-                    reverse=True,
-                )[: self.num_top_block_pools]
+                    self.latest_blocks = await self.get_latest_blocks(self.tips)
 
-                self.our_winners = [
-                    (coin_balances[bytes(pk)], bytes(pk))
-                    if bytes(pk) in coin_balances
-                    else (0, bytes(pk))
-                    for pk in self.pool_pks
-                ]
-                await asyncio.sleep(7.5)
+                    self.data_initialized = True
+                    if counter % 20 == 0:
+                        # Only request balances periodically, since it's an expensive operation
+                        coin_balances: Dict[
+                            bytes, uint64
+                        ] = await self.rpc_client.get_pool_balances()
+                        self.top_winners = sorted(
+                            [(rewards, key) for key, rewards in coin_balances.items()],
+                            reverse=True,
+                        )[: self.num_top_block_pools]
+
+                        self.our_winners = [
+                            (coin_balances[bytes(pk)], bytes(pk))
+                            if bytes(pk) in coin_balances
+                            else (0, bytes(pk))
+                            for pk in self.pool_pks
+                        ]
+
+                    counter += 1
+                    await asyncio.sleep(5)
+                except (
+                    aiohttp.client_exceptions.ClientConnectorError,
+                    aiohttp.client_exceptions.ServerConnectionError,
+                ) as e:
+                    log.warning(f"Could not connect to full node. Is it running? {e}")
+                    await asyncio.sleep(5)
         except Exception as e:
-            log.warn(f"Exception in UI update_data {type(e)}: {e}")
+            log.error(f"Exception in UI update_data {type(e)}: {e}")
             raise e
 
     async def await_closed(self):

@@ -11,6 +11,12 @@ __pycache__/
 # Database
 nohup.out
 mongod.log*
+fndb_test*
+*.db
+
+# Logs
+*.log
+*.out
 
 # Keys and plot files
 config/keys.yaml
@@ -53,3 +59,6 @@ pip-delete-this-directory.txt
 
 # Packaging
 chia-blockchain.tar.gz
+
+# Dependencies
+flint2
