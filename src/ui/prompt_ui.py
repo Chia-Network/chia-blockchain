@@ -275,7 +275,7 @@ class FullNodeUI:
             return
         else:
             ip, port = ":".join(text.split(":")[:-1]), text.split(":")[-1]
-        log.error(f"Want to connect to {ip}, {port}")
+        log.info(f"Want to connect to {ip}, {port}")
         try:
             await self.rpc_client.open_connection(ip, int(port))
         except BaseException:

@@ -43,8 +43,6 @@ class FullNodeStore:
     unfinished_blocks: Dict[Tuple[bytes32, uint64], FullBlock]
     # Header hashes of unfinished blocks that we have seen recently
     seen_unfinished_blocks: set
-    # Header hashes of blocks that we have seen recently
-    seen_blocks: set
     # Blocks which we have received but our blockchain does not reach, old ones are cleared
     disconnected_blocks: Dict[bytes32, FullBlock]
     # Lock
@@ -88,7 +86,6 @@ class FullNodeStore:
         self.candidate_blocks = {}
         self.unfinished_blocks = {}
         self.seen_unfinished_blocks = set()
-        self.seen_blocks = set()
         self.disconnected_blocks = {}
         self.lock = asyncio.Lock()  # external
         return self
@@ -252,15 +249,6 @@ class FullNodeStore:
 
     def clear_seen_unfinished_blocks(self) -> None:
         self.seen_unfinished_blocks.clear()
-
-    def seen_block(self, header_hash: bytes32) -> bool:
-        if header_hash in self.seen_blocks:
-            return True
-        self.seen_blocks.add(header_hash)
-        return False
-
-    def clear_seen_blocks(self) -> None:
-        self.seen_blocks.clear()
 
     async def get_unfinished_blocks(self) -> Dict[Tuple[bytes32, uint64], FullBlock]:
         return self.unfinished_blocks.copy()
