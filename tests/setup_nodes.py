@@ -32,8 +32,8 @@ async def setup_two_nodes():
     """
 
     # SETUP
-    store_1 = await FullNodeStore.create("fndb_test")
-    store_2 = await FullNodeStore.create("fndb_test_2")
+    store_1 = await FullNodeStore.create("blockchain_test")
+    store_2 = await FullNodeStore.create("blockchain_test_2")
     await store_1._clear_database()
     await store_2._clear_database()
     b_1: Blockchain = await Blockchain.create({}, test_constants)

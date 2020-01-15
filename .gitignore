@@ -12,6 +12,7 @@ __pycache__/
 nohup.out
 mongod.log*
 fndb_test*
+blockchain_test*
 *.db
 
 # Logs
