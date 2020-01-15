@@ -1,11 +1,15 @@
-from typing import List
+from typing import Dict, List
 
 from src.types.header_block import HeaderBlock
 from src.blockchain import Blockchain
+from src.types.sized_bytes import bytes32
 
 
 def verify_weight(
-    blockchain: Blockchain, tip: HeaderBlock, proof_blocks: List[HeaderBlock], fork_point: HeaderBlock
+    blockchain: Blockchain,
+    tip: HeaderBlock,
+    proof_blocks: List[HeaderBlock],
+    fork_point: HeaderBlock,
 ) -> bool:
     """
     Verifies whether the weight of the tip is valid or not. Naively, looks at every block
@@ -18,12 +22,12 @@ def verify_weight(
 
     for expected_height, block in enumerate(proof_blocks, fork_point.height + 1):
         if (
-            block.height != expected_height or
-            block.weight - cur_weight != next_difficulty or
-            block.proof_of_space.verify_and_get_quality() is None
+            block.height != expected_height
+            or block.weight - cur_weight != next_difficulty
+            or block.proof_of_space.verify_and_get_quality() is None
         ):
             return False
-        
+
         beanstalk[block.header_hash] = block
         next_difficulty = blockchain.get_next_difficulty(block.header_hash, beanstalk)
         cur_weight = block.weight

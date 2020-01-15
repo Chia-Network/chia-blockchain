@@ -187,7 +187,11 @@ class Blockchain:
         else:
             raise ValueError("Invalid genesis block")
 
-    def get_next_difficulty(self, header_hash: bytes32, imagined_header_blocks: Dict[bytes32, HeaderBlock] = {}) -> uint64:
+    def get_next_difficulty(
+        self,
+        header_hash: bytes32,
+        imagined_header_blocks: Optional[Dict[bytes32, HeaderBlock]] = None,
+    ) -> uint64:
         """
         Returns the difficulty of the next block that extends onto header_hash.
         Used to calculate the number of iterations.
@@ -195,10 +199,10 @@ class Blockchain:
         Passing in imagined_headers pretends that those header blocks were added
         to the blockchain for the purpose of computing the next difficulty.
         """
-        
+
         def get_header_block_from_hash(header_hash):
             block: HeaderBlock = self.header_blocks.get(header_hash, None)
-            if block is None:
+            if block is None and imagined_header_blocks:
                 block = imagined_header_blocks.get(header_hash, None)
             return block
 
