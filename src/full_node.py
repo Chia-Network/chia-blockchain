@@ -9,8 +9,6 @@ from secrets import token_bytes
 from typing import AsyncGenerator, List, Optional, Tuple
 
 import yaml
-from blspy import PrivateKey, Signature
-
 from chiapos import Verifier
 from definitions import ROOT_DIR
 from src.blockchain import Blockchain, ReceiveBlockResult
@@ -522,7 +520,7 @@ class FullNode:
                     if self.blockchain.lca_block.header_hash == block.header_hash:
                         async with self.unspent_store.lock:
                             await self.unspent_store.new_lca(block)
-                    elif result == ReceiveBlockResult.ADDED_TO_HEAD :
+                    elif result == ReceiveBlockResult.ADDED_TO_HEAD:
                         async with self.unspent_store.lock:
                             await self.unspent_store.new_head(block, header_block)
 
@@ -1050,7 +1048,7 @@ class FullNode:
             prevalidate_block = await self.blockchain.pre_validate_blocks([block.block])
             val, pos = prevalidate_block[0]
             # Tries to add the block to the blockchain
-            added: ReceiveBlockResult = await self.blockchain.receive_block(
+            added, replaced = await self.blockchain.receive_block(
                 block.block, val, pos
             )
 

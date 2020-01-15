@@ -7,8 +7,8 @@ from .Hash import std_hash
 
 from ...atoms import bin_methods, hash_pointer
 
-
 SExp = to_sexp_f(1).__class__
+
 
 class Program(SExp, bin_methods):
     """

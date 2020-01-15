@@ -2,6 +2,7 @@ from src.types.hashable import Coin, Hash
 from src.util.streamable import Streamable, streamable
 from src.util.ints import uint32
 
+
 @streamable
 class Unspent(Streamable):
     """

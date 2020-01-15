@@ -1,8 +1,5 @@
 from dataclasses import dataclass
-
 from blspy import PrependSignature
-
-from src.types.coinbase import CoinbaseInfo
 from src.types.hashable import Coin, BLSSignature
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32

@@ -1,8 +1,5 @@
 from dataclasses import dataclass
 from typing import Optional
-
-from blspy import PrependSignature, Signature
-
 from src.types.hashable import Program, BLSSignature
 from src.types.hashable.Coin import Coin
 from src.types.sized_bytes import bytes32

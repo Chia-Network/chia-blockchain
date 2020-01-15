@@ -3,7 +3,7 @@ import os
 from hashlib import sha256
 from typing import Any, Dict, List, Set
 
-from blspy import PrependSignature, PrivateKey, Util
+from blspy import PrivateKey, Util
 from yaml import safe_load
 
 from definitions import ROOT_DIR
@@ -13,7 +13,6 @@ from src.consensus.pot_iterations import calculate_iterations_quality
 from src.pool import create_coinbase_coin_and_signature
 from src.protocols import farmer_protocol, harvester_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
-from src.types.coinbase import CoinbaseInfo
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request

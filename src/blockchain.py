@@ -477,8 +477,7 @@ class Blockchain:
                 return False
 
             # 4. Check coinbase signature with pool pk
-            pair = block.body.coinbase_signature.AGGSIGPair\
-                (
+            pair = block.body.coinbase_signature.AGGSIGPair(
                 block.header_block.proof_of_space.pool_pubkey,
                 block.body.coinbase.name()
                 )

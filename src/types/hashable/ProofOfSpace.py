@@ -2,6 +2,7 @@ from .BLSSignature import BLSPublicKey
 from .Signature import PublicKey
 from src.util.streamable import Streamable, streamable
 
+
 @streamable
 class ProofOfSpace(Streamable):
     """

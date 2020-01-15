@@ -14,12 +14,14 @@ ZERO96 = bytes96([0] * 96)
 class BLSPublicKey(bytes48):
     pass
 
+
 @dataclass(frozen=True)
 @streamable
 class BLSSignature(Streamable):
     """
     This wraps the blspy.BLSPublicKey and resolves a couple edge cases around aggregation and validation.
     """
+
     @dataclass(frozen=True)
     @streamable
     class AGGSIGPair(Streamable):
@@ -48,5 +50,5 @@ class BLSSignature(Streamable):
             # when the signature is invalid, this method chokes
             signature = blspy.PrependSignature.from_bytes(self.sig)
             return signature.verify(message_hashes, public_keys)
-        except Exception as ex:
+        except Exception:
             return False

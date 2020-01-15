@@ -3,6 +3,12 @@ from src.consensus.constants import constants as consensus_constants
 from src.types.full_block import FullBlock
 from src.types.hashable import SpendBundle, Hash
 from src.types.header_block import HeaderBlock
+from src.util.ints import uint32
+
+
+class Pool:
+    header_block: HeaderBlock
+    spends: Dict[uint32:SpendBundle]
 
 
 class Mempool:
@@ -16,13 +22,13 @@ class Mempool:
         self.potential_transactions: Dict[Hash: SpendBundle] = dict()
 
         # Mempool for each tip
-        self.mempools: Dict[Hash: Dict] = dict()
+        self.mempools: Dict[HeaderBlock: Dict] = dict()
 
     # Aggregate all SpendBundles for THE tip and return only one
     # TODO
     async def get_spendbundle_for_tip(self, header_block: HeaderBlock) -> Optional[SpendBundle]:
         mempool = self.mempools[header_block.header_hash]
-        all: [SpendBundle] = self.mempool.values()
+        all: [SpendBundle] = mempool
         agg: SpendBundle = SpendBundle.aggregate(all)
         return agg
 
@@ -41,4 +47,3 @@ class Mempool:
     async def remove_tip(self, tip: HeaderBlock):
         if tip.header_hash in self.mempools:
             del self.mempools[tip.header_hash]
-

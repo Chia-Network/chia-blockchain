@@ -1,18 +1,7 @@
 import blspy
 
 from src.util.ints import uint64
-from src.types.hashable import BLSPublicKey, BLSSignature, Coin, ProgramHash
-
-# TODO figure out if this is useful
-# HIERARCHICAL_PRIVATE_KEY = blspy.ExtendedPrivateKey.from_seed(b"foo")
-# POOL_PRIVATE_KEYS = [HIERARCHICAL_PRIVATE_KEY.private_child(_).get_private_key() for _ in range(100)]
-# POOL_PUBLIC_KEYS = [BLSPublicKey.from_bytes(_.get_public_key().serialize()) for _ in POOL_PRIVATE_KEYS]
-# POOL_LOOKUP = dict(zip(POOL_PUBLIC_KEYS, POOL_PRIVATE_KEYS))
-
-
-def get_pool_public_key(index=0) -> BLSPublicKey:
-    # TODO: make this configurable
-    return POOL_PUBLIC_KEYS[index]
+from src.types.hashable import BLSSignature, Coin, ProgramHash
 
 
 def signature_for_coinbase(coin: Coin, pool_private_key: blspy.PrivateKey):

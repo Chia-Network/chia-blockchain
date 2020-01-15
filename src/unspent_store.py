@@ -1,11 +1,8 @@
 import asyncio
 from typing import Dict, Optional, List, Tuple
-
 import aiosqlite
-
-from src.consensus.constants import constants as consensus_constants
 from src.types.full_block import FullBlock
-from src.types.hashable import Hash, Unspent, Coin, CoinName
+from src.types.hashable import Hash, Unspent, Coin
 from src.types.header_block import HeaderBlock
 from src.util.chain_utils import name_puzzle_conditions_list
 from src.util.consensus import created_outputs_for_conditions_dict
@@ -14,13 +11,15 @@ from src.util.ints import uint32
 
 def additions_for_npc(npc_list) -> List[Coin]:
     additions: List[Coin] = []
+
     for coin_name, puzzle_hash, conditions_dict in npc_list:
         for coin in created_outputs_for_conditions_dict(conditions_dict, coin_name):
             additions.append(coin)
+
     return additions
 
 
- def removals_and_additions(block: FullBlock, index: uint32) -> Tuple[List[Hash], List[Coin]]:
+def removals_and_additions(block: FullBlock, index: uint32) -> Tuple[List[Hash], List[Coin]]:
     removals: List[Hash] = []
     additions: List[Coin] = []
 
@@ -53,7 +52,7 @@ class UnspentStore:
     lock: asyncio.Lock
     # TODO set the size limit of ram cache
     lce_unspent_coins: Dict
-    self.head_diffs: Dict[HeaderBlock, DiffStore]
+    head_diffs: Dict[HeaderBlock, DiffStore]
 
     @classmethod
     async def create(cls, db_name: str):
@@ -126,7 +125,8 @@ class UnspentStore:
                 del self.head_diffs[old]
                 await self.add_diffs(removals, additions, head)
 
-    async def add_diffs(self, removals: List[Hash], additions: List[Coin], head: FullBlock, diff_store: DiffStore = None):
+    async def add_diffs(self, removals: List[Hash], additions: List[Coin],
+                        head: FullBlock, diff_store: DiffStore = None):
         if diff_store is None:
             diff_store: DiffStore = DiffStore(head.header_block, dict())
 
