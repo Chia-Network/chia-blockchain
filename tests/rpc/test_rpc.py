@@ -43,7 +43,7 @@ class TestRpc:
         test_node_2_port = 21235
         test_rpc_port = 21236
 
-        store = await FullNodeStore.create("fndb_test")
+        store = await FullNodeStore.create("blockchain_test")
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
         b: Blockchain = await Blockchain.create({}, test_constants)
