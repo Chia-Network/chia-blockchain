@@ -399,6 +399,11 @@ class FullNode:
         last_request_time = 0
         highest_height_requested = uint32(0)
         request_made = False
+
+        # TODO Ask Mariano if it makes sense to remove old chain from store after fork
+        async with self.unspent_store.lock:
+            self.unspent_store.rollback_to_block(fork_point_height)
+
         for height_checkpoint in range(
             fork_point_height + 1, tip_height + 1, self.config["max_blocks_to_send"]
         ):
@@ -504,7 +509,7 @@ class FullNode:
                     # The block gets permanantly added to the blockchain
                     validated, pos = prevalidate_results[index]
                     index += 1
-                    result = await self.blockchain.receive_block(block, validated, pos)
+                    result, header_block = await self.blockchain.receive_block(block, validated, pos)
                     if (
                         result == ReceiveBlockResult.INVALID_BLOCK
                         or result == ReceiveBlockResult.DISCONNECTED_BLOCK
@@ -513,6 +518,14 @@ class FullNode:
                     log.info(
                         f"Took {time.time() - start} seconds to validate and add block {block.height}."
                     )
+
+                    if self.blockchain.lca_block.header_hash == block.header_hash:
+                        async with self.unspent_store.lock:
+                            await self.unspent_store.new_lca(block)
+                    elif result == ReceiveBlockResult.ADDED_TO_HEAD :
+                        async with self.unspent_store.lock:
+                            await self.unspent_store.new_head(block, header_block)
+
                     # Always immediately add the block to the database, after updating blockchain state
                     await self.store.add_block(block)
                     assert (
