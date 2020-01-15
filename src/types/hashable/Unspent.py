@@ -1,4 +1,4 @@
-from src.types.hashable import Coin
+from src.types.hashable import Coin, Hash
 from src.util.streamable import Streamable, streamable
 from src.util.ints import uint32
 
@@ -12,3 +12,7 @@ class Unspent(Streamable):
     confirmed_block_index: uint32
     spent_block_index: uint32
     spent: bool
+
+    @property
+    def name(self) -> Hash:
+        return self.coin.name()
