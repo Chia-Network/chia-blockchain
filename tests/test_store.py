@@ -38,8 +38,8 @@ class TestStore:
     async def test_basic_store(self):
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
-        db = await FullNodeStore.create("fndb_test")
-        db_2 = await FullNodeStore.create("fndb_test_2")
+        db = await FullNodeStore.create("blockchain_test")
+        db_2 = await FullNodeStore.create("blockchain_test_2")
         try:
             await db._clear_database()
 
@@ -125,7 +125,7 @@ class TestStore:
             raise
 
         # Different database should have different data
-        db_3 = await FullNodeStore.create("fndb_test_3")
+        db_3 = await FullNodeStore.create("blockchain_test_3")
         assert db_3.get_unfinished_block_leader() == (0, (1 << 64) - 1)
 
         await db.close()
