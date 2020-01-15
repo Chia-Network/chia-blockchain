@@ -1009,7 +1009,7 @@ class FullNode:
         header_hash = block.block.header_block.header.get_hash()
 
         # Adds the block to seen, and check if it's seen before
-        if self.store.seen_block(header_hash):
+        if self.blockchain.cointains_block(header_hash):
             return
 
         async with self.store.lock:
@@ -1107,7 +1107,6 @@ class FullNode:
                     Delivery.BROADCAST,
                 )
                 self.store.clear_seen_unfinished_blocks()
-                self.store.clear_seen_blocks()
 
             assert block.block.header_block.proof_of_time
             assert block.block.header_block.challenge

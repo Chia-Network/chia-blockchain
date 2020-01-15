@@ -39,6 +39,9 @@ def obj_to_response(o: Any) -> web.Response:
 class RpcApiHandler:
     """
     Implementation of full node RPC API.
+    Note that this is not the same as the peer protocol, or wallet protocol (which run Chia's
+    protocol on top of TCP), it's a separate protocol on top of HTTP thats provides easy access
+    to the full node.
     """
 
     def __init__(self, full_node: FullNode, stop_cb: Callable):

@@ -111,6 +111,9 @@ class Blockchain:
                 return True
         return False
 
+    def cointains_block(self, header_hash: bytes32):
+        return header_hash in self.header_blocks
+
     def get_header_hashes(self, tip_header_hash: bytes32) -> List[bytes32]:
         if tip_header_hash not in self.header_blocks:
             raise ValueError("Invalid tip requested")

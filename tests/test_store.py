@@ -119,10 +119,6 @@ class TestStore:
             db.clear_seen_unfinished_blocks()
             assert not db.seen_unfinished_block(h_hash_1)
 
-            assert not db.seen_block(h_hash_1)
-            assert db.seen_block(h_hash_1)
-            db.clear_seen_blocks()
-            assert not db.seen_block(h_hash_1)
         except Exception:
             await db.close()
             await db_2.close()
