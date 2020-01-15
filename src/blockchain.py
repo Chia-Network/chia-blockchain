@@ -420,7 +420,7 @@ class Blockchain:
 
     async def receive_block(
         self, block: FullBlock, pre_validated: bool = False, pos_quality: bytes32 = None
-    ) -> ReceiveBlockResult:
+    ) -> Tuple[ReceiveBlockResult, Optional[HeaderBlock]]:
         """
         Adds a new block into the blockchain, if it's valid and connected to the current
         blockchain, regardless of whether it is the child of a head, or another block.
@@ -428,21 +428,22 @@ class Blockchain:
         genesis: bool = block.height == 0 and not self.tips
 
         if block.header_hash in self.header_blocks:
-            return ReceiveBlockResult.ALREADY_HAVE_BLOCK
+            return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None
 
         if block.prev_header_hash not in self.header_blocks and not genesis:
-            return ReceiveBlockResult.DISCONNECTED_BLOCK
+            return ReceiveBlockResult.DISCONNECTED_BLOCK, None
 
         if not await self.validate_block(block, genesis, pre_validated, pos_quality):
-            return ReceiveBlockResult.INVALID_BLOCK
+            return ReceiveBlockResult.INVALID_BLOCK, None
 
         # Cache header in memory
         self.header_blocks[block.header_hash] = block.header_block
 
-        if await self._reconsider_heads(block.header_block, genesis):
-            return ReceiveBlockResult.ADDED_TO_HEAD
+        res, header = await self._reconsider_heads(block.header_block, genesis)
+        if res:
+            return ReceiveBlockResult.ADDED_TO_HEAD, header
         else:
-            return ReceiveBlockResult.ADDED_AS_ORPHAN
+            return ReceiveBlockResult.ADDED_AS_ORPHAN, None
 
     async def validate_unfinished_block(
         self,
@@ -809,7 +810,7 @@ class Blockchain:
             self._reconsider_heights(self.lca_block, cur[0])
         self.lca_block = cur[0]
 
-    async def _reconsider_heads(self, block: HeaderBlock, genesis: bool) -> bool:
+    async def _reconsider_heads(self, block: HeaderBlock, genesis: bool) -> Tuple[bool, Optional[HeaderBlock]]:
         """
         When a new block is added, this is called, to check if the new block is heavier
         than one of the heads.
@@ -818,7 +819,8 @@ class Blockchain:
             self.tips.append(block)
             while len(self.tips) > self.constants["NUMBER_OF_HEADS"]:
                 self.tips.sort(key=lambda b: b.weight, reverse=True)
-                self.tips.pop()
+                # This will loop only once
+                removed: HeaderBlock = self.tips.pop()
             await self._reconsider_lca(genesis)
-            return True
-        return False
+            return True, removed
+        return False, None
