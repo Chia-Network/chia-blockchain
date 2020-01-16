@@ -19,10 +19,10 @@ class Mempool:
             self.constants[key] = value
 
         # Transactions that were unable to enter mempool
-        self.potential_transactions: Dict[Hash: SpendBundle] = dict()
+        self.potential_transactions = dict()
 
         # Mempool for each tip
-        self.mempools: Dict[HeaderBlock: Dict] = dict()
+        self.mempools = dict()
 
     # Aggregate all SpendBundles for THE tip and return only one
     # TODO

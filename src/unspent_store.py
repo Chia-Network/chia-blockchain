@@ -113,17 +113,17 @@ class UnspentStore:
         # New Head nothing is being replaced
         if old is None:
             await self.add_diffs(removals, additions, head)
+        else:
+            if self.head_diffs[old] is not None:
+                # Old head is being extended, add diffs
+                if head.prev_header_hash == old.header_hash:
+                    old_diff = self.head_diffs.pop(old)
+                    await self.add_diffs(removals, additions, head, old_diff)
 
-        if self.head_diffs[old] is not None:
-            # Old head is being extended, add diffs
-            if head.prev_header_hash == old.header_hash:
-                old_diff = self.head_diffs.pop(old)
-                await self.add_diffs(removals, additions, head, old_diff)
-
-            # Old head is being replaced
-            else:
-                del self.head_diffs[old]
-                await self.add_diffs(removals, additions, head)
+                # Old head is being replaced
+                else:
+                    del self.head_diffs[old]
+                    await self.add_diffs(removals, additions, head)
 
     async def add_diffs(self, removals: List[Hash], additions: List[Coin],
                         head: FullBlock, diff_store: DiffStore = None):
