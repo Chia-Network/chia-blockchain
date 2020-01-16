@@ -10,6 +10,7 @@ from src.consensus.constants import constants
 from src.types.body import Body
 from src.types.coinbase import CoinbaseInfo
 from src.types.full_block import FullBlock
+from src.types.hashable import Coin
 from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.proof_of_space import ProofOfSpace
@@ -65,9 +66,8 @@ class TestBlockValidation:
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
         b: Blockchain = await Blockchain.create({}, test_constants)
         for i in range(1, 9):
-            assert (
-                await b.receive_block(blocks[i])
-            ) == ReceiveBlockResult.ADDED_TO_HEAD
+            result, removed = await b.receive_block(blocks[i])
+            assert (result == ReceiveBlockResult.ADDED_TO_HEAD)
         return (blocks, b)
 
     @pytest.mark.asyncio
@@ -92,8 +92,9 @@ class TestBlockValidation:
             ),
             blocks[9].body,
         )
+        result, removed = await b.receive_block(block_bad)
         assert (
-            await b.receive_block(block_bad)
+            result
         ) == ReceiveBlockResult.DISCONNECTED_BLOCK
 
     @pytest.mark.asyncio
@@ -119,7 +120,8 @@ class TestBlockValidation:
             ),
             blocks[9].body,
         )
-        assert (await b.receive_block(block_bad)) == ReceiveBlockResult.INVALID_BLOCK
+        result, removed = await b.receive_block(block_bad)
+        assert (result) == ReceiveBlockResult.INVALID_BLOCK
 
         # Time too far in the future
         block_bad = FullBlock(
@@ -141,8 +143,8 @@ class TestBlockValidation:
             ),
             blocks[9].body,
         )
-
-        assert (await b.receive_block(block_bad)) == ReceiveBlockResult.INVALID_BLOCK
+        result, removed = await b.receive_block(block_bad)
+        assert (result) == ReceiveBlockResult.INVALID_BLOCK
 
     @pytest.mark.asyncio
     async def test_body_hash(self, initial_blockchain):
@@ -166,8 +168,8 @@ class TestBlockValidation:
             ),
             blocks[9].body,
         )
-
-        assert (await b.receive_block(block_bad)) == ReceiveBlockResult.INVALID_BLOCK
+        result, removed = await b.receive_block(block_bad)
+        assert (result == ReceiveBlockResult.INVALID_BLOCK)
 
     @pytest.mark.asyncio
     async def test_harvester_signature(self, initial_blockchain):
@@ -185,7 +187,8 @@ class TestBlockValidation:
             ),
             blocks[9].body,
         )
-        assert (await b.receive_block(block_bad)) == ReceiveBlockResult.INVALID_BLOCK
+        result, removed = await b.receive_block(block_bad)
+        assert (result == ReceiveBlockResult.INVALID_BLOCK)
 
     @pytest.mark.asyncio
     async def test_invalid_pos(self, initial_blockchain):
@@ -209,7 +212,8 @@ class TestBlockValidation:
             ),
             blocks[9].body,
         )
-        assert (await b.receive_block(block_bad)) == ReceiveBlockResult.INVALID_BLOCK
+        result, removed = await b.receive_block(block_bad)
+        assert (result == ReceiveBlockResult.INVALID_BLOCK)
 
     @pytest.mark.asyncio
     async def test_invalid_coinbase_height(self, initial_blockchain):
@@ -219,19 +223,21 @@ class TestBlockValidation:
         block_bad = FullBlock(
             blocks[9].header_block,
             Body(
-                CoinbaseInfo(
-                    uint32(3),
-                    blocks[9].body.coinbase.amount,
+                Coin(
+                    blocks[7].body.coinbase.parent_coin_info,
                     blocks[9].body.coinbase.puzzle_hash,
+                    9999999999,
                 ),
                 blocks[9].body.coinbase_signature,
-                blocks[9].body.fees_target_info,
+                blocks[9].body.fees_coin,
+                None,
                 blocks[9].body.aggregated_signature,
                 blocks[9].body.solutions_generator,
                 blocks[9].body.cost,
             ),
         )
-        assert (await b.receive_block(block_bad)) == ReceiveBlockResult.INVALID_BLOCK
+        result , removed = await b.receive_block(block_bad)
+        assert (result == ReceiveBlockResult.INVALID_BLOCK)
 
     @pytest.mark.asyncio
     async def test_difficulty_change(self):
@@ -241,9 +247,8 @@ class TestBlockValidation:
 
         b: Blockchain = await Blockchain.create({}, test_constants)
         for i in range(1, num_blocks):
-            assert (
-                await b.receive_block(blocks[i])
-            ) == ReceiveBlockResult.ADDED_TO_HEAD
+            result, removed = await b.receive_block(blocks[i])
+            assert (result == ReceiveBlockResult.ADDED_TO_HEAD)
 
         diff_25 = b.get_next_difficulty(blocks[24].header_hash)
         diff_26 = b.get_next_difficulty(blocks[25].header_hash)
@@ -282,7 +287,7 @@ class TestReorgs:
             test_constants, 30, blocks[:90], 9, b"1"
         )
         for reorg_block in blocks_reorg_chain:
-            result = await b.receive_block(reorg_block)
+            result, removed = await b.receive_block(reorg_block)
             if reorg_block.height < 90:
                 assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
             elif reorg_block.height < 99:
@@ -304,7 +309,7 @@ class TestReorgs:
             test_constants, 21, [blocks[0]], 9, b"1"
         )
         for reorg_block in blocks_reorg_chain:
-            result = await b.receive_block(reorg_block)
+            result, removed = await b.receive_block(reorg_block)
             if reorg_block.height == 0:
                 assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
             elif reorg_block.height < 19:
@@ -317,15 +322,13 @@ class TestReorgs:
         blocks_reorg_chain_2 = bt.get_consecutive_blocks(
             test_constants, 3, blocks, 9, b"3"
         )
-        await b.receive_block(
-            blocks_reorg_chain_2[20]
-        ) == ReceiveBlockResult.ADDED_AS_ORPHAN
-        assert (
-            await b.receive_block(blocks_reorg_chain_2[21])
-        ) == ReceiveBlockResult.ADDED_TO_HEAD
-        assert (
-            await b.receive_block(blocks_reorg_chain_2[22])
-        ) == ReceiveBlockResult.ADDED_TO_HEAD
+
+        result, removed = await b.receive_block(blocks_reorg_chain_2[20])
+        #assert (result == ReceiveBlockResult.ADDED_AS_ORPHAN) TODO this is broken in 1.2 and 1.3
+        result, removed = await b.receive_block(blocks_reorg_chain_2[21])
+        assert (result == ReceiveBlockResult.ADDED_TO_HEAD)
+        result, removed = await b.receive_block(blocks_reorg_chain_2[22])
+        assert (result == ReceiveBlockResult.ADDED_TO_HEAD)
 
     @pytest.mark.asyncio
     async def test_lca(self):

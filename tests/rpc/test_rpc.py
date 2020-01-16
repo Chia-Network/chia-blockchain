@@ -51,8 +51,9 @@ class TestRpc:
         b: Blockchain = await Blockchain.create({}, test_constants)
         await store.add_block(blocks[0])
         for i in range(1, 9):
+            result, removed = await b.receive_block(blocks[i])
             assert (
-                await b.receive_block(blocks[i])
+                result
             ) == ReceiveBlockResult.ADDED_TO_HEAD
             await store.add_block(blocks[i])
 

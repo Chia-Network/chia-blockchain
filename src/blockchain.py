@@ -75,7 +75,7 @@ class Blockchain:
 
         self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
 
-        result = await self.receive_block(self.genesis)
+        result, removed = await self.receive_block(self.genesis)
         if result != ReceiveBlockResult.ADDED_TO_HEAD:
             raise InvalidGenesisBlock()
 
@@ -745,7 +745,7 @@ class Blockchain:
         ):
             return False, None
 
-        if block.body.coinbase.height != block.header_block.challenge.height:
+        if block.body.height != block.header_block.challenge.height:
             return False, None
 
         if (
@@ -814,12 +814,13 @@ class Blockchain:
         When a new block is added, this is called, to check if the new block is heavier
         than one of the heads.
         """
+        removed: HeaderBlock = None
         if len(self.tips) == 0 or block.weight > min([b.weight for b in self.tips]):
             self.tips.append(block)
             while len(self.tips) > self.constants["NUMBER_OF_HEADS"]:
                 self.tips.sort(key=lambda b: b.weight, reverse=True)
                 # This will loop only once
-                removed: HeaderBlock = self.tips.pop()
+                removed = self.tips.pop()
             await self._reconsider_lca(genesis)
             return True, removed
         return False, None

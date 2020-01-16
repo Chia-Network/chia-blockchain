@@ -400,7 +400,7 @@ class FullNode:
 
         # TODO Ask Mariano if it makes sense to remove old chain from store after fork
         async with self.unspent_store.lock:
-            self.unspent_store.rollback_to_block(fork_point_height)
+            await self.unspent_store.rollback_to_block(fork_point_height)
 
         for height_checkpoint in range(
             fork_point_height + 1, tip_height + 1, self.config["max_blocks_to_send"]

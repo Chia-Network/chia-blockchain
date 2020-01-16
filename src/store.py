@@ -219,7 +219,8 @@ class FullNodeStore:
     async def add_candidate_block(
         self, pos_hash: bytes32, body: Body, header: HeaderData, pos: ProofOfSpace,
     ):
-        self.candidate_blocks[pos_hash] = (body, header, pos, body.coinbase.height)
+        # TODO height in this tuple should be set to real height not 0
+        self.candidate_blocks[pos_hash] = (body, header, pos, 0)
 
     async def get_candidate_block(
         self, pos_hash: bytes32

@@ -8,7 +8,7 @@ from src.util.ints import uint32
 
 class Pool:
     header_block: HeaderBlock
-    spends: Dict[uint32:SpendBundle]
+    spends: Dict
 
 
 class Mempool:
@@ -44,6 +44,6 @@ class Mempool:
         await self.remove_tip(remove_tip)
 
     # TODO
-    async def remove_tip(self, tip: HeaderBlock):
-        if tip.header_hash in self.mempools:
-            del self.mempools[tip.header_hash]
+    async def remove_tip(self, removed_tip: HeaderBlock):
+        if removed_tip in self.mempools:
+            del self.mempools[removed_tip]
