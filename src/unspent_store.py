@@ -19,7 +19,7 @@ def additions_for_npc(npc_list) -> List[Coin]:
     return additions
 
 
-def removals_and_additions(block: FullBlock, index: uint32) -> Tuple[List[Hash], List[Coin]]:
+def removals_and_additions(block: FullBlock) -> Tuple[List[Hash], List[Coin]]:
     removals: List[Hash] = []
     additions: List[Coin] = []
 
@@ -61,7 +61,7 @@ class UnspentStore:
 
         # All full blocks which have been added to the blockchain. Header_hash -> block
         self.unspent_db = await aiosqlite.connect(self.db_name)
-        await self.db.execute(
+        await self.unspent_db.execute(
             (f"CREATE TABLE IF NOT EXISTS unspent("
              f"confirmed_index bigint,"
              f" spent_index bigint,"
@@ -94,8 +94,8 @@ class UnspentStore:
         await self.unspent_db.close()
 
     async def _clear_database(self):
-        await self.db.execute("DELETE FROM unspent")
-        await self.db.commit()
+        await self.unspent_db.execute("DELETE FROM unspent")
+        await self.unspent_db.commit()
 
     async def new_lca(self, block: FullBlock):
         removals, additions = removals_and_additions(block)
@@ -104,7 +104,7 @@ class UnspentStore:
             await self.set_spent(coin_name, block.height)
 
         for coin in additions:
-            unspent: Unspent = Unspent(coin, block.height, 0, False)
+            unspent: Unspent = Unspent(coin, block.height, 0, 0)
             await self.add_unspent(unspent)
 
     # Received new tip, just update diffs
@@ -134,12 +134,12 @@ class UnspentStore:
             removed: Unspent = diff_store.diffs[coin_name]
             if removed is None:
                 removed = await self.get_unspent(coin_name)
-            removed.spent = True
-            removed.spent_block_index = head.height
-            diff_store.diffs[removed.name()] = removed
+            spent = Unspent(removed.coin, removed.confirmed_block_index,
+                            head.height, 1)
+            diff_store.diffs[spent.name()] = spent
 
         for coin in additions:
-            added: Unspent = Unspent(coin, head.height, 0, False)
+            added: Unspent = Unspent(coin, head.height, 0, 0)
             diff_store.diffs[added.name()] = added
 
         diff_store.header = head.header_block
@@ -147,30 +147,30 @@ class UnspentStore:
 
     # Store unspent in DB and ram cache
     async def add_unspent(self, unspent: Unspent) -> None:
-        await self.db.execute(
-            "INSERT OR REPLACE INTO blocks VALUES(?, ?, ?)",
+        await self.unspent_db.execute(
+            "INSERT OR REPLACE INTO unspent VALUES(?, ?, ?, ?, ?)",
             (unspent.confirmed_block_index,
              unspent.spent_block_index,
              unspent.coin.name().hex(),
              int(unspent.spent),
              bytes(unspent)),
         )
-        await self.db.commit()
+        await self.unspent_db.commit()
         self.lce_unspent_coins[unspent.coin.name().hex()] = unspent
 
     # Update unspent to be spent
     async def set_spent(self, coin_name: Hash, index: uint32):
-        spent: Unspent = await self.get_unspent(coin_name)
-        spent.spent = True
-        spent.spent_block_index = index
+        current: Unspent = await self.get_unspent(coin_name)
+        spent: Unspent = Unspent(current.coin, current.confirmed_block_index,
+                                 index, 1)
         await self.add_unspent(spent)
 
     # Hit ram cache first, db if it's not in memory
     async def get_unspent(self, coin_name: Hash) -> Optional[Unspent]:
         if self.lce_unspent_coins[coin_name.hex()]:
             return self.lce_unspent_coins[coin_name.hex()]
-        cursor = await self.db.execute(
-            "SELECT * from blocks WHERE coin_name=?", (coin_name.hex(),)
+        cursor = await self.unspent_db.execute(
+            "SELECT * from unspent WHERE coin_name=?", (coin_name.hex(),)
         )
         row = await cursor.fetchone()
         if row is not None:
@@ -180,12 +180,11 @@ class UnspentStore:
     # TODO figure out if we want to really delete when doing rollback
     async def rollback_to_block(self, block_index):
         # Update memory cache
-        breakpoint()
         for k, v in self.lce_unspent_coins.items():
             if v.spent_block_index > block_index:
                 v.spent_block_index = 0
             if v.confirmed_block_index > block_index:
                 del self.lce_unspent_coins[k]
         # Delete from storage
-        await self.db.execute("DELETE FROM unspent WHERE confirmed_index>?", (block_index,))
-        await self.db.execute("UPDATE unspent SET spent_index = 0, spent = 0 WHERE spent_index>?", (block_index,))
+        await self.unspent_db.execute("DELETE FROM unspent WHERE confirmed_index>?", (block_index,))
+        await self.unspent_db.execute("UPDATE unspent SET spent_index = 0, spent = 0 WHERE spent_index>?", (block_index,))
