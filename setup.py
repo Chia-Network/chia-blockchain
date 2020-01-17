@@ -34,7 +34,7 @@ setup(
     python_requires=">=3.7, <4",
     keywords="chia blockchain node",
     install_requires=dependencies + dev_dependencies,
-    setup_requires=["setuptools_scm", "wheel"],
+    setup_requires=["setuptools_scm"],
     use_scm_version={"fallback_version": "unknown-no-.git-directory"},
     long_description=open("README.md").read(),
     zip_safe=False,
