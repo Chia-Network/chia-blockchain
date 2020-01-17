@@ -12,7 +12,6 @@ dependencies = [
     "aiosqlite",        # asyncio wrapper for sqlite, to store blocks
     "aiohttp",          # HTTP server for full node rpc
     "setuptools-scm",   # Used for versioning
-    "setproctitle",     # Used to change the name of the process for ps, etc.
     "prompt-toolkit",   # Used to create a terminal based UI for full node
     "colorlog"          # Adds color to logs
 ]
