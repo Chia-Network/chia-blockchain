@@ -31,7 +31,9 @@ typedef char argv_t;
 #endif
 
 /* defined in Modules/main.c but not publically declared */
-void Py_GetArgcArgv(int *argc, argv_t ***argv);
+void Py_GetArgcArgv(int *argc, argv_t ***argv) {
+
+}
 
 /* Mangle the module name into the name of the module init function */
 #ifdef IS_PY3K
