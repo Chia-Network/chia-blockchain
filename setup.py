@@ -12,7 +12,6 @@ dependencies = [
     "aiosqlite",        # asyncio wrapper for sqlite, to store blocks
     "aiohttp",          # HTTP server for full node rpc
     "setuptools-scm",   # Used for versioning
-    "setproctitle",     # Used to change the name of the process for ps, etc.
     "prompt-toolkit",   # Used to create a terminal based UI for full node
     "colorlog"          # Adds color to logs
 ]
@@ -35,7 +34,7 @@ setup(
     python_requires=">=3.7, <4",
     keywords="chia blockchain node",
     install_requires=dependencies + dev_dependencies,
-    setup_requires=["setuptools_scm"],
+    setup_requires=["setuptools_scm", "wheel"],
     use_scm_version={"fallback_version": "unknown-no-.git-directory"},
     long_description=open("README.md").read(),
     zip_safe=False,
