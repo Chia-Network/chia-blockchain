@@ -50,9 +50,7 @@ def created_outputs_for_conditions_dict(conditions_dict, input_coin_name):
 def aggsig_in_conditions_dict(conditions_dict):
     agg_sig_conditions = []
     for _ in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
-        assert len(_) == 2
-        opcode, pubkey = _
-        agg_sig_conditions.append(opcode, pubkey)
+        agg_sig_conditions.append(_)
     return agg_sig_conditions
 
 
