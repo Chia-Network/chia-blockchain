@@ -1,0 +1,59 @@
+; build a pay-to delegated puzzle or hidden puzzle
+; coins can be unliked by signing a delegated puzzle and its solution
+; OR by revealing the hidden puzzle and the underlying original key
+
+; glossary of parameter names:
+
+;  hidden_puzzle_info: a reveal of the original public key and hidden puzzle
+
+
+(mod
+    (synthetic_public_key original_public_key delegated_puzzle solution)
+
+
+    ; "assert" is a macro that wraps repeated instances of "if"
+    ; usage: (assert A0 A1 ... An R)
+    ; all of A0, A1, ... An must evaluate to non-null, or an exception is raised
+    ; return the value of R (if we get that far)
+
+    (defmacro assert items
+        (if (r items)
+            (list if (f items) (c assert (r items)) (q (x)))
+            (f items)
+        )
+    )
+
+    ; "is_hidden_puzzle_correct" returns true iff the hidden puzzle is correctly encoded
+
+    (defmacro is_hidden_puzzle_correct (synthetic_public_key original_public_key delegated_puzzle)
+        (qq
+            (=
+                (unquote synthetic_public_key)
+                (point_add
+                    (unquote original_public_key)
+                    (pubkey_for_exp (sha256 (unquote original_public_key) (sha256tree (unquote delegated_puzzle))))
+                )
+            )
+        )
+    )
+
+    ; "possibly_prepend_aggsig" is the main entry point
+
+    (defmacro possibly_prepend_aggsig (synthetic_public_key original_public_key delegated_puzzle conditions)
+        (qq
+            (if (unquote original_public_key)
+                (assert
+                    (is_hidden_puzzle_correct (unquote synthetic_public_key) (unquote original_public_key) (unquote delegated_puzzle))
+                    (unquote conditions)
+                )
+                (c (list 50 (unquote synthetic_public_key) (sha256tree (unquote delegated_puzzle))) (unquote conditions))
+            )
+        )
+    )
+
+    ; main entry point
+
+    (possibly_prepend_aggsig
+        synthetic_public_key original_public_key delegated_puzzle
+        ((c delegated_puzzle solution)))
+)

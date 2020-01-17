@@ -1029,6 +1029,55 @@ class FullNode:
             Delivery.BROADCAST_TO_OTHERS,
         )
 
+    # Receives a full transaction
+    # If we added it to mempool send tx id to others
+    # TODO if it's not added ?
+    @api_request
+    async def transaction(self, tx: peer_protocol.Transaction) -> OutboundMessageGenerator:
+        added = await self.mempool.add_spendbundle(tx.sb)
+        if added:
+            maybeTX = peer_protocol.TransactionId(tx.sb.name())
+            yield OutboundMessage(
+                NodeType.FULL_NODE,
+                Message("maybe_transaction", maybeTX),
+                Delivery.BROADCAST_TO_OTHERS,
+            )
+        else:
+            log.warning(f"Wasn't able to add transaction with id {tx.sb.name()}")
+            return
+
+    # Receives a transaction_id,
+    # Ignore if we've seen it already
+    # Request full transaction if we haven't seen it previously
+    @api_request
+    async def maybe_transaction(self, tx_id: peer_protocol.TransactionId) -> OutboundMessageGenerator:
+        if self.mempool.seen(tx_id.transaction_id):
+            log.info(f"tx_id({tx_id.transaction_id}) already seen")
+            return
+        else:
+            requestTX = peer_protocol.RequestTransaction(tx_id.transaction_id)
+            yield OutboundMessage(
+                NodeType.FULL_NODE,
+                Message("request_transaction", requestTX),
+                Delivery.RESPOND,
+            )
+
+    # Peer has request a full transaction from us
+    @api_request
+    async def request_transaction(self, tx_id: peer_protocol.RequestTransaction) -> OutboundMessageGenerator:
+        spend_bundle = self.mempool.get_spendbundle(tx_id.transaction_id)
+        if spend_bundle is None:
+            return
+
+        transaction = peer_protocol.Transaction(spend_bundle)
+        yield OutboundMessage(
+            NodeType.FULL_NODE,
+            Message("transaction", transaction),
+            Delivery.RESPOND,
+        )
+
+        log.info(f"sending transaction (tx_id: {spend_bundle.name()}) to peer")
+
     @api_request
     async def block(self, block: peer_protocol.Block) -> OutboundMessageGenerator:
         """
