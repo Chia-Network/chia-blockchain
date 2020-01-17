@@ -20,7 +20,7 @@
 HIDDEN void
 spt_debug(const char *fmt, ...)
 {
-    static int enabled = 1;
+    static int enabled = -1;
     va_list ap;
 
     /* check if debug is enabled */
