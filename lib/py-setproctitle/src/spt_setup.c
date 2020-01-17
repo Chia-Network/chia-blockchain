@@ -344,6 +344,15 @@ exit:
     return rv;
 }
 
+static int getargcargv(int* argc, char*** argv) {
+#ifdef __APPLE__
+  *argv = *_NSGetArgv();
+  *argc = *_NSGetArgc();
+  return 0;
+#endif
+  return -1;
+}
+
 /* Find the original arg buffer, return 0 if found, else -1.
  *
  * If found, set argc to the number of arguments, argv to an array
@@ -370,7 +379,6 @@ get_argc_argv(int *argc_o, char ***argv_o)
 
 #ifndef IS_PYPY
     spt_debug("reading argc/argv from Python main");
-    Py_GetArgcArgv(&argc, &argv_py);
 #endif
 
     if (argc > 0) {
@@ -398,7 +406,10 @@ get_argc_argv(int *argc_o, char ***argv_o)
          * situation of Py3 */
         if (0 > get_args_from_proc(&argc, &arg0)) {
             spt_debug("failed to get args from proc fs");
-            goto exit;
+            if (0 > getargcargv(&argc, &argv)) {
+                spt_debug("failed to get args from new getargv");
+                goto exit;
+            }
         }
     }
 
@@ -447,7 +458,7 @@ spt_setup(void)
 #ifndef WIN32
     int argc = 0;
     char **argv = NULL;
-    char *init_title;
+    char *init_title = "chia";
 
     if (0 > get_argc_argv(&argc, &argv)) {
         spt_debug("get_argc_argv failed");
