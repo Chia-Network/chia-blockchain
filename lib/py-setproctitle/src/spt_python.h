@@ -14,9 +14,7 @@
 #include <Python.h>
 
 /* Things change a lot here... */
-#if PY_MAJOR_VERSION >= 3
 #define IS_PY3K
-#endif
 
 /* Detect pypy */
 #ifdef PYPY_VERSION
