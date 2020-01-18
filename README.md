@@ -116,7 +116,7 @@ sudo sh install.sh
 Make sure [brew](https://brew.sh/) is available before starting the setup.
 ```bash
 brew upgrade python
-brew install cmake
+brew install cmake boost gmp mpir mpfr
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
