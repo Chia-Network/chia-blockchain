@@ -113,8 +113,7 @@ sudo sh install.sh
 ```
 
 ### MacOS
-Make sure [brew](https://brew.sh/) is available before starting the setup. Python 3.7.5 or higher
-is required on MacOS. Type `python3` to see which version is installed.
+Make sure [brew](https://brew.sh/) is available before starting the setup.
 ```bash
 brew upgrade python
 brew install cmake
