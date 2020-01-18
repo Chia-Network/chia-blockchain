@@ -16,8 +16,6 @@ Generally things to the left are in progess or done. Some things go through "Com
 Usually the things closer to the top of each column are the ones that will be worked on soonest.
 If you are interested in cryptography, math, or just like hacking in python, there are many interesting problems to work on.
 Contact any of the team members on keybase: https://keybase.io/team/chia_network.public, which we use as the main communication method and you can comment on any Trello card.
-All source code and documentation contributions must be in the public domain, or made and submitted pursuant to the Apache License 2.0. Contributions may also incorporate third-party code that is in the public domain, or licensed under the
-Apache License 2.0 or the MIT License.
 
 ### Run tests and linting
 The first time the tests are run, BlockTools will create and persist many plots. These are used for creating
@@ -45,4 +43,4 @@ For example, after the 1.2 release, the 1.3 branch is used for development, etc.
 The master branch is updated with the latest releases only.
 
 ### Copyright
-By contributing to this repository, you agree to license your work under the Apache License version 2.0, or the MIT License, or release your work to the public domain. Any work contributed where you are not the original author must contain its license header with the original author(s) and be in the public domain, or licensed under the Apache License 2.0 or the MIT License.
+By contributing to this repository, you agree to license your work under the Apache License Version 2.0, or the MIT License, or release your work to the public domain. Any work contributed where you are not the original author must contain its license header with the original author(s) and be in the public domain, or licensed under the Apache License Version 2.0 or the MIT License.
