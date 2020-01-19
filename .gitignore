@@ -60,6 +60,3 @@ pip-delete-this-directory.txt
 
 # Packaging
 chia-blockchain.tar.gz
-
-# Dependencies
-flint2

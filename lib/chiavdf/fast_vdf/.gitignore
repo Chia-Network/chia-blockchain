@@ -6,6 +6,6 @@
 /vdf
 /server
 /vdf_server
-
-# Flint dependency
-/flint
+/verifier
+/verifier_test
+/build/*

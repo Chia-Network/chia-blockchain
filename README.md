@@ -13,7 +13,7 @@ For alpha testnet most should only install harvesters, farmers, plotter and full
 
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential git cmake libssl-dev libffi-dev --no-install-recommends
+sudo apt-get install build-essential git cmake libssl-dev libffi-dev libgmp3-dev --no-install-recommends
 sudo apt-get install python3-dev python3-venv --no-install-recommends
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
@@ -27,7 +27,7 @@ sh install.sh
 
 ```bash
 sudo yum update
-sudo yum install gcc-c++ cmake3 wget git openssl openssl-devel
+sudo yum install gcc-c++ cmake3 wget git openssl openssl-devel gmp-devel
 sudo yum install python3 python3-devel libffi-devel
 
 # CMake - add a symlink for cmake3 - required by blspy
@@ -46,7 +46,7 @@ sh install.sh
 sudo yum update
 sudo yum install centos-release-scl-rh epel-release
 sudo yum install devtoolset-8-toolchain cmake3 libffi-devel
-sudo yum install wget git openssl openssl-devel
+sudo yum install wget git openssl openssl-devel gmp-devel
 
 # CMake - add a symlink for cmake3 - required by blspy
 sudo ln -s /usr/bin/cmake3 /usr/local/bin/cmake
@@ -82,7 +82,7 @@ sudo apt-get -y update
 sudo apt-get -y upgrade
 sudo do-release-upgrade
 
-sudo apt-get install -y build-essential cmake python3-dev python3-venv software-properties-common --no-install-recommends
+sudo apt-get install -y build-essential cmake python3-dev python3-venv software-properties-common libgmp3-dev --no-install-recommends
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
@@ -98,7 +98,7 @@ Each line that starts with `pip ...` becomes `python -m pip ...`
 
 ```bash
 sudo apt-get -y update
-sudo apt-get install -y build-essential cmake python3-dev python3-venv software-properties-common --no-install-recommends
+sudo apt-get install -y build-essential cmake python3-dev python3-venv software-properties-common libgmp3-dev --no-install-recommends
 
 # Install python3.7 with ppa
 sudo add-apt-repository -y ppa:deadsnakes/ppa
@@ -116,7 +116,7 @@ sudo sh install.sh
 Make sure [brew](https://brew.sh/) is available before starting the setup.
 ```bash
 brew upgrade python
-brew install cmake boost gmp mpir mpfr
+brew install cmake gmp
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
@@ -149,11 +149,6 @@ cd boost_1_72_0
 ./bootstrap.sh --prefix=/usr/local
 sudo ./b2 install --prefix=/usr/local --with=all; cd ..
 
-# Install Flint2
-git clone https://github.com/wbhart/flint2
-cd flint2; ./configure; sudo make install; cd ..
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
-
 cd chia-blockchain
 
 sh install_timelord.sh
@@ -176,11 +171,9 @@ sudo apt-get install libboost1.70 libboost1.70-dev
 
 ### MacOS
 ```bash
-brew install boost gmp mpir mpfr
+brew install boost
 
 cd chia-blockchain
-
-git clone https://github.com/wbhart/flint2
 
 sh install_timelord.sh
 ```

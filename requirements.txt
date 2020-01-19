@@ -54,3 +54,4 @@ yarl==1.4.2
 zipp==1.0.0
 -e lib/chiapos
 -e lib/py-setproctitle
+-e lib/chiavdf/fast_vdf
