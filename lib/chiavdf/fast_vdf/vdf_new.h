@@ -109,8 +109,10 @@ struct form {
         res.b=t_b;
         res.c=(t_b*t_b - d);
 
-        assert(t_a>integer(0));
-        assert(res.c % (t_a<<2) == integer(0));
+        if (t_a <= integer(0))
+            throw std::runtime_error("Invalid form. Positive a");
+        if (res.c % (t_a<<2) != integer(0))
+            throw std::runtime_error("Invalid form. Can't find c.");
 
         res.c/=(t_a<<2);
 

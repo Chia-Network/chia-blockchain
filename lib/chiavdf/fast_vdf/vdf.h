@@ -1,5 +1,7 @@
 #include "include.h"
 
+#include <x86intrin.h>
+
 #include "parameters.h"
 
 #include "bit_manipulation.h"
@@ -38,8 +40,7 @@
 
 #include <chrono>
 
-#include "ClassGroup.h"
-#include "Reducer.h"
+#include "proof_common.h"
 
 #include <boost/asio.hpp>
 
@@ -323,93 +324,9 @@ void repeated_square(form f, const integer& D, const integer& L, WesolowskiCallb
     #endif
 }
 
-std::vector<unsigned char> ConvertIntegerToBytes(integer x, uint64_t num_bytes) {
-    std::vector<unsigned char> bytes;
-    bool negative = false;
-    if (x < 0) {
-        x = abs(x);
-        x = x - integer(1);
-        negative = true;
-    }
-    for (int iter = 0; iter < num_bytes; iter++) {
-        auto byte = (x % integer(256)).to_vector();
-        if (negative)
-            byte[0] ^= 255;
-        bytes.push_back(byte[0]);
-        x = x / integer(256);
-    }
-    std::reverse(bytes.begin(), bytes.end());
-    return bytes;
-}
-
-integer HashPrime(std::vector<unsigned char> s) {
-    std::string prime = "prime";
-    uint32_t j = 0;
-    while (true) {
-        std::vector<unsigned char> input(prime.begin(), prime.end());
-        std::vector<unsigned char> j_to_bytes = ConvertIntegerToBytes(integer(j), 8);
-        input.insert(input.end(), j_to_bytes.begin(), j_to_bytes.end());
-        input.insert(input.end(), s.begin(), s.end());
-        std::vector<unsigned char> hash(picosha2::k_digest_size);
-        picosha2::hash256(input.begin(), input.end(), hash.begin(), hash.end());
-
-        integer prime_integer;
-        for (int i = 0; i < 16; i++) {
-            prime_integer *= integer(256);
-            prime_integer += integer(hash[i]);
-        }
-        if (prime_integer.prime()) {
-            return prime_integer;
-        }
-        j++;
-    }
-}
-
-std::vector<unsigned char> SerializeForm(WesolowskiCallback &weso, form &y, int int_size) {
-    //weso.reduce(y);
-    y.reduce();
-    std::vector<unsigned char> res = ConvertIntegerToBytes(y.a, int_size);
-    std::vector<unsigned char> b_res = ConvertIntegerToBytes(y.b, int_size);
-    res.insert(res.end(), b_res.begin(), b_res.end());
-    return res;
-}
-
-integer GetB(WesolowskiCallback &weso, integer& D, form &x, form& y) {
-    int int_size = (D.num_bits() + 16) >> 4;
-    std::vector<unsigned char> serialization = SerializeForm(weso, x, int_size);
-    std::vector<unsigned char> serialization_y = SerializeForm(weso, y, int_size);
-    serialization.insert(serialization.end(), serialization_y.begin(), serialization_y.end());
-    return HashPrime(serialization);
-}
-
-integer FastPow(uint64_t a, uint64_t b, integer& c) {
-    if (b == 0)
-        return integer(1);
-
-    integer res = FastPow(a, b / 2, c);
-    res = res * res;
-    res = res % c;
-    if (b % 2) {
-        res = res * integer(a);
-        res = res % c;
-    }
-    return res;
-}
-
-form FastPowForm(form &x, const integer& D, uint64_t num_iterations) {
-    if (num_iterations == 0)
-        return form::identity(D);
-
-    form res = FastPowForm(x, D, num_iterations / 2);
-    res = res * res;
-    if (num_iterations % 2)
-	res = res * x;
-    return res;
-}
-
 uint64_t GetBlock(uint64_t i, uint64_t k, uint64_t T, integer& B) {
-    integer res(1 << k);
-    res *= FastPow(2, T - k * (i + 1), B);
+    integer res = FastPow(2, T - k * (i + 1), B);
+    mpz_mul_2exp(res.impl, res.impl, k);
     res = res / B;
     auto res_vector = res.to_vector();
     return res_vector[0];
@@ -445,20 +362,12 @@ struct Proof {
     std::vector<unsigned char> proof;
 };
 
-#define PULMARK 1
-
 form GenerateProof(form &y, form &x_init, integer &D, uint64_t done_iterations, uint64_t num_iterations, uint64_t k, uint64_t l, WesolowskiCallback& weso, bool& stop_signal) {
     auto t1 = std::chrono::high_resolution_clock::now();
 
-#if PULMARK
-    ClassGroupContext *t;
-    Reducer *reducer;
+    PulmarkReducer reducer;
 
-    t=new ClassGroupContext(4096);
-    reducer=new Reducer(*t);
-#endif
-
-    integer B = GetB(weso, D, x_init, y);
+    integer B = GetB(D, x_init, y);
     integer L=root(-D, 4);
 
     uint64_t k1 = k / 2;
@@ -467,7 +376,7 @@ form GenerateProof(form &y, form &x_init, integer &D, uint64_t done_iterations, 
     form x = form::identity(D);
 
     for (int64_t j = l - 1; j >= 0; j--) {
-        x=FastPowForm(x, D, (1 << k));
+        x = FastPowFormNucomp(x, D, integer(1 << k), L, reducer);
 
         std::vector<form> ys((1 << k));
         for (uint64_t i = 0; i < (1 << k); i++)
@@ -479,20 +388,6 @@ form GenerateProof(form &y, form &x_init, integer &D, uint64_t done_iterations, 
                 uint64_t b = GetBlock(i*l + j, k, num_iterations, B);
                 tmp = weso.GetForm(done_iterations + i * k * l);
                 nucomp_form(ys[b], ys[b], *tmp, D, L);
-#if PULMARK
-                // Pulmark reduce based on Akashnil reduce
-                mpz_set(t->a, ys[b].a.impl);
-                mpz_set(t->b, ys[b].b.impl);
-                mpz_set(t->c, ys[b].c.impl);
-
-                reducer->run();
-
-                mpz_set(ys[b].a.impl, t->a);
-                mpz_set(ys[b].b.impl, t->b);
-                mpz_set(ys[b].c.impl, t->c);
-#else
-                ys[b].reduce();
-#endif
             }
         }
 
@@ -503,69 +398,25 @@ form GenerateProof(form &y, form &x_init, integer &D, uint64_t done_iterations, 
             form z = form::identity(D);
             for (uint64_t b0 = 0; b0 < (1 << k0) && !stop_signal; b0++) {
                 nucomp_form(z, z, ys[b1 * (1 << k0) + b0], D, L);
-#if PULMARK
-                // Pulmark reduce based on Akashnil reduce
-                mpz_set(t->a, z.a.impl);
-                mpz_set(t->b, z.b.impl);
-                mpz_set(t->c, z.c.impl);
-
-                reducer->run();
-
-                mpz_set(z.a.impl, t->a);
-                mpz_set(z.b.impl, t->b);
-                mpz_set(z.c.impl, t->c);
-#else
-                z.reduce();
-#endif
             }
-            z = FastPowForm(z, D, b1 * (1 << k0));
-            x = x * z;
+            z = FastPowFormNucomp(z, D, integer(b1 * (1 << k0)), L, reducer);
+            nucomp_form(x, x, z, D, L);
         }
 
         for (uint64_t b0 = 0; b0 < (1 << k0) && !stop_signal; b0++) {
             form z = form::identity(D);
             for (uint64_t b1 = 0; b1 < (1 << k1) && !stop_signal; b1++) {
                 nucomp_form(z, z, ys[b1 * (1 << k0) + b0], D, L);
-#if PULMARK
-                // Pulmark reduce based on Akashnil reduce
-                mpz_set(t->a, z.a.impl);
-                mpz_set(t->b, z.b.impl);
-                mpz_set(t->c, z.c.impl);
-
-                reducer->run();
-
-                mpz_set(z.a.impl, t->a);
-                mpz_set(z.b.impl, t->b);
-                mpz_set(z.c.impl, t->c);
-#else
-                z.reduce();
-#endif
             }
-            z = FastPowForm(z, D, b0);
-            x = x * z;
+            z = FastPowFormNucomp(z, D, integer(b0), L, reducer);
+            nucomp_form(x, x, z, D, L);
         }
 
         if (stop_signal)
             return form();
     }
 
-#if PULMARK
-    // Pulmark reduce based on Akashnil reduce
-    mpz_set(t->a, x.a.impl);
-    mpz_set(t->b, x.b.impl);
-    mpz_set(t->c, x.c.impl);
-
-    reducer->run();
-
-    mpz_set(x.a.impl, t->a);
-    mpz_set(x.b.impl, t->b);
-    mpz_set(x.c.impl, t->c);
-
-    delete(reducer);
-    delete(t);
-#else
-    x.reduce();
-#endif
+    reducer.reduce(x);
 
     auto t2 = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
@@ -588,7 +439,7 @@ Proof CreateProofOfTimeWesolowski(integer& D, form x, int64_t num_iterations, ui
     l = (num_iterations >= 10000000) ? 10 : 1;
 
     while (!stop_signal && weso.iterations < done_iterations + num_iterations) {
-        std::this_thread::sleep_for (std::chrono::seconds(3));
+        std::this_thread::sleep_for (std::chrono::milliseconds(200));
     }
 
     if (stop_signal)
@@ -610,10 +461,10 @@ Proof CreateProofOfTimeWesolowski(integer& D, form x, int64_t num_iterations, ui
 
     int int_size = (D.num_bits() + 16) >> 4;
 
-    std::vector<unsigned char> y_bytes = SerializeForm(weso, y, 129);
-    std::vector<unsigned char> proof_bytes = SerializeForm(weso, proof, int_size);
-    Proof final_proof=Proof(y_bytes, proof_bytes);
+    std::vector<unsigned char> y_bytes = SerializeForm(y, 129);
 
+    std::vector<unsigned char> proof_bytes = SerializeForm(proof, int_size);
+    Proof final_proof=Proof(y_bytes, proof_bytes);
     return final_proof;
 }
 
@@ -640,7 +491,7 @@ Proof CreateProofOfTimeNWesolowski(integer& D, form x, int64_t num_iterations,
     l = (iterations1 >= 10000000) ? 10 : 1;
     
     while (!stop_signal && weso.iterations < done_iterations + iterations1) {
-        std::this_thread::sleep_for (std::chrono::seconds(3));
+        std::this_thread::sleep_for (std::chrono::milliseconds(200));
     }
 
     if (stop_signal)
@@ -672,10 +523,10 @@ Proof CreateProofOfTimeNWesolowski(integer& D, form x, int64_t num_iterations,
     std::vector<unsigned char> tmp = ConvertIntegerToBytes(integer(iterations1), 8);
     proof_bytes.insert(proof_bytes.end(), tmp.begin(), tmp.end());
     tmp.clear();
-    tmp = SerializeForm(weso, y1, int_size);
+    tmp = SerializeForm(y1, int_size);
     proof_bytes.insert(proof_bytes.end(), tmp.begin(), tmp.end());
     tmp.clear();
-    tmp = SerializeForm(weso, proof, int_size);
+    tmp = SerializeForm(proof, int_size);
     proof_bytes.insert(proof_bytes.end(), tmp.begin(), tmp.end());
     final_proof.proof = proof_bytes;
     return final_proof;
