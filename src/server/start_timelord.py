@@ -1,6 +1,11 @@
 import asyncio
 import signal
 
+try:
+    import uvloop
+except ImportError:
+    uvloop = None
+
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.timelord import Timelord
@@ -40,4 +45,6 @@ async def main():
     await server.await_closed()
 
 
+if uvloop is not None:
+    uvloop.install()
 asyncio.run(main())
