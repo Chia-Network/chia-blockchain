@@ -21,7 +21,7 @@ jobs:
       run: |
         eval "$(ssh-agent -s)"
         ssh-add - <<< "${CHIA_MACHINE_SSH_KEY}"
-        apt-get install python3-venv || echo ""
+        sudo apt-get install python3-venv || echo ""
         git submodule update --init --recursive
         brew update && brew install gmp || echo ""
         python3 -m venv .venv
