@@ -75,7 +75,7 @@ async def main():
     blockchain = await Blockchain.create(header_blocks)
 
     unspent_store = UnspentStore.create(db_name)
-    mempool = Mempool()
+    mempool = Mempool(unspent_store)
     # await mempool.initialize() TODO uncomment once it's implemented
 
     full_node = FullNode(store, blockchain, mempool, unspent_store)

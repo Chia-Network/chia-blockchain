@@ -17,7 +17,8 @@ def test_1():
 
     puzzle_hash_solution = p2_delegated_puzzle.solution_for_conditions(puzzle_program_0, conditions)
 
-    output_conditions = conditions_for_solution(puzzle_hash_solution, trace_eval)
+    error, output_conditions = conditions_for_solution(puzzle_hash_solution, trace_eval)
+    assert error is None
     from pprint import pprint
     output_conditions_dict = conditions_by_opcode(output_conditions)
     pprint(output_conditions_dict)

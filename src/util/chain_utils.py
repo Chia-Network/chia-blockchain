@@ -1,6 +1,8 @@
+from typing import List
+
 import clvm
 
-from src.types.hashable import ProgramHash, Program, CoinName
+from src.types.hashable import ProgramHash, Program, CoinName, Coin
 from src.util.ConsensusError import ConsensusError, Err
 from src.util.consensus import conditions_dict_for_solution, created_outputs_for_conditions_dict
 
@@ -39,17 +41,21 @@ def name_puzzle_conditions_list(body_program):
     return npc_list
 
 
-def additions_for_solution(coin_name, solution):
+def additions_for_solution(coin_name, solution) -> List[Coin]:
     return created_outputs_for_conditions_dict(
         conditions_dict_for_solution(solution), coin_name)
 
 
-def additions_for_body(body):
-    yield body.coinbase_coin
-    yield body.fees_coin
+def additions_for_body(body) -> List[Coin]:
+    result: List[Coin] = []
+    result.append(body.coinbase_coin)
+    result.append(body.fees_coin)
+
     for (coin_name, solution, conditions_dict) in name_puzzle_conditions_list(body.solution_program):
         for _ in created_outputs_for_conditions_dict(conditions_dict, coin_name):
-            yield _
+            result.append(_)
+
+    return result
 
 
 def removals_for_body(body):

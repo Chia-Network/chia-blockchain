@@ -1,8 +1,8 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Dict
 
 from src.atoms import hash_pointer
-from src.types.hashable import std_hash
+from src.types.hashable import std_hash, Coin
 from src.types.sized_bytes import bytes32
 from src.util.chain_utils import additions_for_solution, name_puzzle_conditions_list
 from src.util.consensus import aggsig_in_conditions_dict
@@ -34,16 +34,22 @@ class SpendBundle(Streamable):
         aggregated_signature = BLSSignature.aggregate(sigs)
         return cls(coin_solutions, aggregated_signature)
 
-    def additions(self):
-        items = []
+    def additions(self) -> List[Coin]:
+        items: List[Coin] = []
         for coin_solution in self.coin_solutions:
-            items += additions_for_solution(coin_solution.coin.name(), coin_solution.solution)
-        return tuple(items)
+            items.append(additions_for_solution(coin_solution.coin.name(), coin_solution.solution))
+        return items
 
-    def removals(self):
-        return tuple(_.coin for _ in self.coin_solutions)
+    def removals(self) -> List[Coin]:
+        return [_.coin for _ in self.coin_solutions]
 
-    def fees(self) -> int:
+    def removals_dict(self) -> Dict[bytes32, Coin]:
+        result: Dict[bytes32, Coin] = dict()
+        for _ in self.coin_solutions:
+            result[_.coin.name()] = _.coin
+        return result
+
+    def fees(self) -> uint32:
         amount_in = sum(_.amount for _ in self.removals())
         amount_out = sum(_.amount for _ in self.additions())
         return amount_in - amount_out

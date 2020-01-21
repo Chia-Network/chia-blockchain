@@ -2,7 +2,7 @@ import asyncio
 from typing import Dict, Optional, List, Tuple
 import aiosqlite
 from src.types.full_block import FullBlock
-from src.types.hashable import Hash, Unspent, Coin
+from src.types.hashable import Hash, Unspent, Coin, CoinName
 from src.types.header_block import HeaderBlock
 from src.util.chain_utils import name_puzzle_conditions_list
 from src.util.consensus import created_outputs_for_conditions_dict
@@ -41,7 +41,7 @@ def removals_and_additions(block: FullBlock) -> Tuple[List[Hash], List[Coin]]:
 
 class DiffStore:
     header: HeaderBlock
-    diffs: Dict[Hash, Unspent]
+    diffs: Dict[CoinName, Unspent]
 
 
 class UnspentStore:
@@ -52,7 +52,7 @@ class UnspentStore:
     lock: asyncio.Lock
     # TODO set the size limit of ram cache
     lce_unspent_coins: Dict
-    head_diffs: Dict[HeaderBlock, DiffStore]
+    head_diffs: Dict[Hash, DiffStore]
 
     @classmethod
     async def create(cls, db_name: str):
@@ -114,15 +114,15 @@ class UnspentStore:
         if old is None:
             await self.add_diffs(removals, additions, head)
         else:
-            if self.head_diffs[old] is not None:
+            if self.head_diffs[old.header_hash] is not None:
                 # Old head is being extended, add diffs
                 if head.prev_header_hash == old.header_hash:
-                    old_diff = self.head_diffs.pop(old)
+                    old_diff = self.head_diffs.pop(old.header_hash)
                     await self.add_diffs(removals, additions, head, old_diff)
 
                 # Old head is being replaced
                 else:
-                    del self.head_diffs[old]
+                    del self.head_diffs[old.header_hash]
                     await self.add_diffs(removals, additions, head)
 
     async def add_diffs(self, removals: List[Hash], additions: List[Coin],
@@ -158,15 +158,17 @@ class UnspentStore:
         await self.unspent_db.commit()
         self.lce_unspent_coins[unspent.coin.name().hex()] = unspent
 
-    # Update unspent to be spent
+    # Update unspent to be spent in DB
     async def set_spent(self, coin_name: Hash, index: uint32):
         current: Unspent = await self.get_unspent(coin_name)
         spent: Unspent = Unspent(current.coin, current.confirmed_block_index,
                                  index, 1)
         await self.add_unspent(spent)
 
-    # Hit ram cache first, db if it's not in memory
-    async def get_unspent(self, coin_name: Hash) -> Optional[Unspent]:
+    # Checks DB and DiffStores for unspent with coin_name and returns it
+    async def get_unspent(self, coin_name: CoinName, header: HeaderBlock = None) -> Optional[Unspent]:
+        if header is not None:
+            diffStore = self.head_diffs[header]
         if self.lce_unspent_coins[coin_name.hex()]:
             return self.lce_unspent_coins[coin_name.hex()]
         cursor = await self.unspent_db.execute(
