@@ -689,12 +689,12 @@ class Blockchain:
         self, blocks: List[FullBlock]
     ) -> List[Tuple[bool, Optional[bytes32]]]:
 
-        results=[]
+        results = []
         for block in blocks:
             val, pos = self.pre_validate_block_multi(bytes(block))
             if pos is not None:
                 pos = bytes32(pos)
-            results.append( (val, pos) )
+            results.append((val, pos))
 
         return results
 
