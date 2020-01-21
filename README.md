@@ -237,11 +237,13 @@ Note the the simulation is local only and requires installation of timelords and
 The introducer will only know the local ips of the full nodes, so it cannot broadcast the correct
 ips to external peers.
 
+```bash
+sh ./scripts/run_all_simulation.sh
+```
+
 For increased networking performance, install uvloop:
 ```bash
 pip install -e ".[uvloop]"
 ```
 
-```bash
-sh ./scripts/run_all_simulation.sh
-```
+
