@@ -211,13 +211,13 @@ void nucomp_form(form &a, form &b, form &c, integer &D, integer &L) {
 
 void qfb_nudupl(qfb_t r, qfb_t f, mpz_t D, mpz_t L)
 {
-    mpz_t a1, c1, cb, k, s, t, u2, v1, v2;
+    mpz_t a1, c1, cb, k, s, t, u2, v2;
 
     mpz_init(a1); mpz_init(c1);
     mpz_init(cb);
     mpz_init(k);
     mpz_init(s);
-    mpz_init(t); mpz_init(u2); mpz_init(v1); mpz_init(v2);
+    mpz_init(t); mpz_init(u2); mpz_init(v2);
 
     /* nucomp calculation */
 
