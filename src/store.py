@@ -183,6 +183,9 @@ class FullNodeStore:
     def get_potential_header(self, height: uint32) -> Optional[HeaderBlock]:
         return self.potential_headers.get(height, None)
 
+    def clear_potential_headers(self) -> None:
+        self.potential_headers.clear()
+
     def set_potential_hashes(self, potential_hashes: List[bytes32]) -> None:
         self.potential_hashes = potential_hashes
 

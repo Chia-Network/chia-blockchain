@@ -386,6 +386,8 @@ class FullNode:
             f"Validated weight of headers. Downloaded {len(headers)} headers, tip height {tip_height}"
         )
         assert tip_height == fork_point_height + len(headers)
+        self.store.clear_potential_headers()
+        headers.clear()
 
         # Download blocks in batches, and verify them as they come in. We download a few batches ahead,
         # in case there are delays.

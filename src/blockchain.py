@@ -706,7 +706,7 @@ class Blockchain:
             if pos is not None:
                 pos = bytes32(pos)
             results[i] = val, pos
-        pool.shutdown()
+        pool.shutdown(wait=True)
         return results
 
     @staticmethod
