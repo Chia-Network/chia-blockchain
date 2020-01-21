@@ -13,7 +13,7 @@ For alpha testnet most should only install harvesters, farmers, plotter and full
 
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential git cmake libssl-dev libffi-dev libgmp3-dev --no-install-recommends
+sudo apt-get install build-essential git cmake libgmp3-dev --no-install-recommends
 sudo apt-get install python3-dev python3-venv --no-install-recommends
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
@@ -27,8 +27,8 @@ sh install.sh
 
 ```bash
 sudo yum update
-sudo yum install gcc-c++ cmake3 wget git openssl openssl-devel gmp-devel
-sudo yum install python3 python3-devel libffi-devel
+sudo yum install gcc-c++ cmake3 wget git openssl openssl-devel 
+sudo yum install python3 python3-devel libffi-devel gmp-devel
 
 # CMake - add a symlink for cmake3 - required by blspy
 sudo ln -s /usr/bin/cmake3 /usr/local/bin/cmake
@@ -46,7 +46,8 @@ sh install.sh
 sudo yum update
 sudo yum install centos-release-scl-rh epel-release
 sudo yum install devtoolset-8-toolchain cmake3 libffi-devel
-sudo yum install wget git openssl openssl-devel gmp-devel
+sudo yum install gmp-devel libsqlite3x-devel
+sudo yum install wget git openssl openssl-devel
 
 # CMake - add a symlink for cmake3 - required by blspy
 sudo ln -s /usr/bin/cmake3 /usr/local/bin/cmake
@@ -140,7 +141,7 @@ sh install_timelord.sh
 #Only for Amazon Linux 2
 sudo amazon-linux-extras install epel
 
-sudo yum install gmp-devel mpfr-devel
+sudo yum install mpfr-devel
 
 # Install Boost 1.72.0
 wget https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.gz
