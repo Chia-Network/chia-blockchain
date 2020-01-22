@@ -31,6 +31,7 @@ def event_loop():
 
 
 class TestUnspent:
+
     @pytest.mark.asyncio
     async def test_basic_unspent_store(self):
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
@@ -47,3 +48,70 @@ class TestUnspent:
             unspent_fee = await db.get_unspent(block.body.fees_coin.name())
             assert block.body.coinbase == unspent.coin
             assert block.body.fees_coin == unspent_fee.coin
+
+        await db.close()
+
+    @pytest.mark.asyncio
+    async def test_set_spent(self):
+        blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
+
+        db = await UnspentStore.create("fndb_test")
+        await db._clear_database()
+
+        genesis = FullBlock.from_bytes(constants["GENESIS_BLOCK"])
+
+        # Save/get block
+        for block in blocks:
+            await db.new_lca(block)
+            unspent = await db.get_unspent(block.body.coinbase.name())
+            unspent_fee = await db.get_unspent(block.body.fees_coin.name())
+            assert block.body.coinbase == unspent.coin
+            assert block.body.fees_coin == unspent_fee.coin
+
+            await db.set_spent(unspent.coin.name(), block.height)
+            await db.set_spent(unspent_fee.coin.name(), block.height)
+            unspent = await db.get_unspent(block.body.coinbase.name())
+            unspent_fee = await db.get_unspent(block.body.fees_coin.name())
+            assert unspent.spent == 1
+            assert unspent_fee.spent == 1
+
+        await db.close()
+
+    @pytest.mark.asyncio
+    async def test_rollback(self):
+        blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
+
+        db = await UnspentStore.create("fndb_test")
+        await db._clear_database()
+
+        genesis = FullBlock.from_bytes(constants["GENESIS_BLOCK"])
+
+        # Save/get block
+        for block in blocks:
+            await db.new_lca(block)
+            unspent = await db.get_unspent(block.body.coinbase.name())
+            unspent_fee = await db.get_unspent(block.body.fees_coin.name())
+            assert block.body.coinbase == unspent.coin
+            assert block.body.fees_coin == unspent_fee.coin
+
+            await db.set_spent(unspent.coin.name(), block.height)
+            await db.set_spent(unspent_fee.coin.name(), block.height)
+            unspent = await db.get_unspent(block.body.coinbase.name())
+            unspent_fee = await db.get_unspent(block.body.fees_coin.name())
+            assert unspent.spent == 1
+            assert unspent_fee.spent == 1
+
+        reorg_index = 4
+        await db.rollback_to_block(reorg_index)
+
+        for c, block in enumerate(blocks):
+            unspent = await db.get_unspent(block.body.coinbase.name())
+            unspent_fee = await db.get_unspent(block.body.fees_coin.name())
+            if c <= reorg_index:
+                assert unspent.spent == 1
+                assert unspent_fee.spent == 1
+            else:
+                assert unspent is None
+                assert unspent_fee is None
+
+        await db.close()

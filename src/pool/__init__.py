@@ -1,7 +1,7 @@
 import blspy
 
 from src.util.ints import uint64
-from src.types.hashable import BLSSignature, Coin, ProgramHash
+from src.types.hashable import BLSSignature, Coin, ProgramHash, Hash
 
 
 def signature_for_coinbase(coin: Coin, pool_private_key: blspy.PrivateKey):
@@ -16,7 +16,7 @@ def sign_coinbase_coin(coin: Coin, private_key: blspy.PrivateKey):
 
 
 def create_coinbase_coin(block_index: int, puzzle_hash: ProgramHash, reward: uint64):
-    block_index_as_hash = block_index.to_bytes(32, "big")
+    block_index_as_hash = Hash(block_index.to_bytes(32, "big"))
     return Coin(block_index_as_hash, puzzle_hash, reward)
 
 

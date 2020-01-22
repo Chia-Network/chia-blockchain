@@ -4,6 +4,7 @@ import time
 from hashlib import sha256
 from typing import Any, Dict, List
 
+import blspy
 from blspy import PrependSignature, PrivateKey, PublicKey
 
 from chiapos import DiskPlotter, DiskProver
@@ -359,12 +360,13 @@ class BlockTools:
         cost = uint64(0)
 
         coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
-            0,
+            height,
             fees_target.puzzle_hash,
-            block_rewards.calculate_block_reward(0),
+            block_rewards.calculate_block_reward(height),
             pool_sk)
 
-        fees_coin = Coin(fees_target.puzzle_hash, fees_target.puzzle_hash, 0)
+        fee_hash = blspy.Util.hash256(coinbase_coin.name())
+        fees_coin = Coin(fee_hash, fees_target.puzzle_hash, 0)
 
         body: Body = Body(
             coinbase_coin, coinbase_signature, fees_coin, None, None, solutions_generator, cost

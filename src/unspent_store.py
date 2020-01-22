@@ -169,7 +169,7 @@ class UnspentStore:
     async def get_unspent(self, coin_name: CoinName, header: HeaderBlock = None) -> Optional[Unspent]:
         if header is not None:
             diffStore = self.head_diffs[header]
-        if self.lce_unspent_coins[coin_name.hex()]:
+        if coin_name.hex() in self.lce_unspent_coins:
             return self.lce_unspent_coins[coin_name.hex()]
         cursor = await self.unspent_db.execute(
             "SELECT * from unspent WHERE coin_name=?", (coin_name.hex(),)
@@ -182,9 +182,12 @@ class UnspentStore:
     # TODO figure out if we want to really delete when doing rollback
     async def rollback_to_block(self, block_index):
         # Update memory cache
-        for k, v in self.lce_unspent_coins.items():
+        for k in list(self.lce_unspent_coins.keys()):
+            v = self.lce_unspent_coins[k]
             if v.spent_block_index > block_index:
-                v.spent_block_index = 0
+                new_unspent = Unspent(v.coin, v.confirmed_block_index,
+                                      v.spent_block_index, 0)
+                self.lce_unspent_coins[v.coin.name().hex()] = new_unspent
             if v.confirmed_block_index > block_index:
                 del self.lce_unspent_coins[k]
         # Delete from storage
