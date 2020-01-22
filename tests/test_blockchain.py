@@ -7,6 +7,7 @@ from blspy import PrivateKey
 
 from src.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import constants
+from src.mempool import Mempool
 from src.types.body import Body
 from src.types.coinbase import CoinbaseInfo
 from src.types.full_block import FullBlock
@@ -14,6 +15,7 @@ from src.types.hashable import Coin
 from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.proof_of_space import ProofOfSpace
+from src.unspent_store import UnspentStore
 from src.util.ints import uint8, uint32, uint64
 from tests.block_tools import BlockTools
 
@@ -43,7 +45,8 @@ def event_loop():
 class TestGenesisBlock:
     @pytest.mark.asyncio
     async def test_basic_blockchain(self):
-        bc1 = await Blockchain.create({})
+        unspent_store = await UnspentStore.create("blockchain_test")
+        bc1 = await Blockchain.create({}, unspent_store)
         assert len(bc1.get_current_tips()) == 1
         genesis_block = bc1.get_current_tips()[0]
         assert genesis_block.height == 0
@@ -64,7 +67,8 @@ class TestBlockValidation:
         Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
         """
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
-        b: Blockchain = await Blockchain.create({}, test_constants)
+        unspent_store = await UnspentStore.create("blockchain_test")
+        b: Blockchain = await Blockchain.create({}, unspent_store, test_constants)
         for i in range(1, 9):
             result, removed = await b.receive_block(blocks[i])
             assert (result == ReceiveBlockResult.ADDED_TO_HEAD)
@@ -245,7 +249,8 @@ class TestBlockValidation:
         # Make it 5x faster than target time
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 2)
 
-        b: Blockchain = await Blockchain.create({}, test_constants)
+        unspent_store = await UnspentStore.create("blockchain_test")
+        b: Blockchain = await Blockchain.create({}, unspent_store, test_constants)
         for i in range(1, num_blocks):
             result, removed = await b.receive_block(blocks[i])
             assert (result == ReceiveBlockResult.ADDED_TO_HEAD)
@@ -277,7 +282,8 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_basic_reorg(self):
         blocks = bt.get_consecutive_blocks(test_constants, 100, [], 9)
-        b: Blockchain = await Blockchain.create({}, test_constants)
+        unspent_store = await UnspentStore.create("blockchain_test")
+        b: Blockchain = await Blockchain.create({}, unspent_store, test_constants)
 
         for block in blocks:
             await b.receive_block(block)
@@ -299,7 +305,8 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self):
         blocks = bt.get_consecutive_blocks(test_constants, 20, [], 9, b"0")
-        b: Blockchain = await Blockchain.create({}, test_constants)
+        unspent_store = await UnspentStore.create("blockchain_test")
+        b: Blockchain = await Blockchain.create({}, unspent_store, test_constants)
         for block in blocks:
             await b.receive_block(block)
         assert b.get_current_tips()[0].height == 20
@@ -333,7 +340,8 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_lca(self):
         blocks = bt.get_consecutive_blocks(test_constants, 5, [], 9, b"0")
-        b: Blockchain = await Blockchain.create({}, test_constants)
+        unspent_store = await UnspentStore.create("blockchain_test")
+        b: Blockchain = await Blockchain.create({}, unspent_store, test_constants)
         for block in blocks:
             await b.receive_block(block)
 
@@ -354,7 +362,8 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_get_header_hashes(self):
         blocks = bt.get_consecutive_blocks(test_constants, 5, [], 9, b"0")
-        b: Blockchain = await Blockchain.create({}, test_constants)
+        unspent_store = await UnspentStore.create("blockchain_test")
+        b: Blockchain = await Blockchain.create({}, unspent_store, test_constants)
         for block in blocks:
             await b.receive_block(block)
         header_hashes = b.get_header_hashes(blocks[-1].header_hash)

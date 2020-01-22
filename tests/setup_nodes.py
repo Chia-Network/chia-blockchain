@@ -1,11 +1,13 @@
 from typing import Any, Dict
 
 from src.blockchain import Blockchain
+from src.mempool import Mempool
 from src.store import FullNodeStore
 from src.full_node import FullNode
 from src.server.connection import NodeType
 from src.server.server import ChiaServer
 from src.types.full_block import FullBlock
+from src.unspent_store import UnspentStore
 from tests.block_tools import BlockTools
 
 
@@ -36,17 +38,21 @@ async def setup_two_nodes():
     store_2 = await FullNodeStore.create("blockchain_test_2")
     await store_1._clear_database()
     await store_2._clear_database()
-    b_1: Blockchain = await Blockchain.create({}, test_constants)
-    b_2: Blockchain = await Blockchain.create({}, test_constants)
+    unspent_store1 = await UnspentStore.create("blockchain_test")
+    mempool1 = Mempool()
+    unspent_store2 = await UnspentStore.create("blockchain_test")
+    mempool2 = Mempool()
+    b_1: Blockchain = await Blockchain.create({}, unspent_store1, test_constants)
+    b_2: Blockchain = await Blockchain.create({}, unspent_store2, test_constants)
     await store_1.add_block(FullBlock.from_bytes(test_constants["GENESIS_BLOCK"]))
     await store_2.add_block(FullBlock.from_bytes(test_constants["GENESIS_BLOCK"]))
 
-    full_node_1 = FullNode(store_1, b_1)
+    full_node_1 = FullNode(store_1, b_1, mempool1, unspent_store1)
     server_1 = ChiaServer(21234, full_node_1, NodeType.FULL_NODE)
     _ = await server_1.start_server("127.0.0.1", full_node_1._on_connect)
     full_node_1._set_server(server_1)
 
-    full_node_2 = FullNode(store_2, b_2)
+    full_node_2 = FullNode(store_2, b_2, mempool2, unspent_store2)
     server_2 = ChiaServer(21235, full_node_2, NodeType.FULL_NODE)
     full_node_2._set_server(server_2)
 

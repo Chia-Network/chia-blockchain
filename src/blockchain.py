@@ -17,6 +17,7 @@ from src.consensus.pot_iterations import (
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
+from src.unspent_store import UnspentStore
 from src.util.errors import BlockNotInBlockchain, InvalidGenesisBlock
 from src.util.ints import uint32, uint64
 
@@ -54,10 +55,12 @@ class Blockchain:
     pool: concurrent.futures.ProcessPoolExecutor
     # Genesis block
     genesis: FullBlock
+    # Unspent Store
+    unspent_store: UnspentStore
 
     @staticmethod
     async def create(
-        header_blocks: Dict[str, HeaderBlock], override_constants: Dict = {}
+        header_blocks: Dict[str, HeaderBlock], unspent_store: UnspentStore, override_constants: Dict = {}
     ):
         """
         Initializes a blockchain with the given header blocks, assuming they have all been
@@ -72,6 +75,8 @@ class Blockchain:
         self.tips = []
         self.height_to_hash = {}
         self.header_blocks = {}
+
+        self.unspent_store = unspent_store
 
         self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
 
@@ -799,6 +804,7 @@ class Blockchain:
         there is one block per height before the LCA (and use the height_to_hash dict).
         """
         cur: List[HeaderBlock] = self.tips[:]
+        lca_tmp = self.lca_block
         while any(b.header_hash != cur[0].header_hash for b in cur):
             heights = [b.height for b in cur]
             i = heights.index(max(heights))
@@ -808,13 +814,20 @@ class Blockchain:
         else:
             self._reconsider_heights(self.lca_block, cur[0])
         self.lca_block = cur[0]
+        if lca_tmp.header_hash != self.lca_block.header_hash:
+            if lca_tmp.height < self.lca_block.height:
+                print("Reorg me!!")
+                # Reorg unspent db to self.lca_block.height
+            if self.lca_block.height > lca_tmp.height:
+                print("Add heads to unspent")
+                # Add block between old and new lca to unspentStore
 
     async def _reconsider_heads(self, block: HeaderBlock, genesis: bool) -> Tuple[bool, Optional[HeaderBlock]]:
         """
         When a new block is added, this is called, to check if the new block is heavier
         than one of the heads.
         """
-        removed: HeaderBlock = None
+        removed: Optional[HeaderBlock] = None
         if len(self.tips) == 0 or block.weight > min([b.weight for b in self.tips]):
             self.tips.append(block)
             while len(self.tips) > self.constants["NUMBER_OF_HEADS"]:

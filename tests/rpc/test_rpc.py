@@ -48,7 +48,10 @@ class TestRpc:
         store = await FullNodeStore.create("blockchain_test")
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
-        b: Blockchain = await Blockchain.create({}, test_constants)
+        unspent_store = await UnspentStore.create("blockchain_test")
+        mempool = Mempool()
+
+        b: Blockchain = await Blockchain.create({}, unspent_store, test_constants)
         await store.add_block(blocks[0])
         for i in range(1, 9):
             result, removed = await b.receive_block(blocks[i])
@@ -57,8 +60,7 @@ class TestRpc:
             ) == ReceiveBlockResult.ADDED_TO_HEAD
             await store.add_block(blocks[i])
 
-        unspent_store = UnspentStore.create("fndb_test")
-        mempool = Mempool()
+
         full_node_1 = FullNode(store, b, mempool, unspent_store)
         server_1 = ChiaServer(test_node_1_port, full_node_1, NodeType.FULL_NODE)
         _ = await server_1.start_server("127.0.0.1", None)
