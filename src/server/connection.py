@@ -2,12 +2,12 @@ import logging
 import random
 import time
 from asyncio import StreamReader, StreamWriter
-from typing import Any, AsyncGenerator, Callable, List, Optional, Dict
+from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
 
 from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.types.peer_info import PeerInfo
-from src.util import cbor
 from src.types.sized_bytes import bytes32
+from src.util import cbor
 from src.util.ints import uint16, uint64
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
@@ -47,7 +47,7 @@ class Connection:
         self.on_connect = on_connect
 
         # Connection metrics
-        self.creation_type = time.time()
+        self.creation_time = time.time()
         self.bytes_read = 0
         self.bytes_written = 0
         self.last_message_time: float = 0
@@ -86,6 +86,8 @@ class Connection:
         self.writer.close()
 
     def __str__(self) -> str:
+        if self.peer_server_port is not None:
+            return f"Connection({self.get_peername()}, server_port {self.peer_server_port})"
         return f"Connection({self.get_peername()})"
 
 

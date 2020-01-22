@@ -11,6 +11,13 @@ __pycache__/
 # Database
 nohup.out
 mongod.log*
+fndb_test*
+blockchain_test*
+*.db
+
+# Logs
+*.log
+*.out
 
 # Keys and plot files
 config/keys.yaml

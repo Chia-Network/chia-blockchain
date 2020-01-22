@@ -8,7 +8,7 @@ ALL_INSTR := 0
 endif
 
 LDFLAGS += -no-pie
-LDLIBS += -lgmpxx -lgmp -lflint -lboost_system -pthread
+LDLIBS += -lgmpxx -lgmp -lboost_system -pthread
 CXXFLAGS += -std=c++1z -D VDF_MODE=0 -D ENABLE_ALL_INSTRUCTIONS=$(ALL_INSTR) \
 	-no-pie -pthread -march=native
 ifeq ($(UNAME),Darwin)

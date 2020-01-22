@@ -9,15 +9,14 @@ jobs:
     strategy:
       max-parallel: 4
       matrix:
-        python-version: [3.7]
         os: [ubuntu-latest, macOS-latest]
 
     steps:
     - uses: actions/checkout@v1
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+    - name: Setup Python environment
+      uses: actions/setup-python@v1.1.1
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: 3.7 # optional, default is 3.x
     - name: Install dependencies
       env:
         CHIA_MACHINE_SSH_KEY: ${{ secrets.CHIA_MACHINE_SSH_KEY }}
@@ -26,17 +25,11 @@ jobs:
         eval "$(ssh-agent -s)"
         ssh-add - <<< "${CHIA_MACHINE_SSH_KEY}"
         git submodule update --init --recursive
-        sudo apt-get install --no-install-recommends mongodb|| echo ""
-        brew tap mongodb/brew || echo ""
-        brew update && brew install gmp mongodb-community@4.2 || echo ""
+        brew update && brew install gmp || echo ""
         python3 -m venv .venv
         . .venv/bin/activate
-        pip install wheel # For building blspy
         pip install -e .
         pip install -r requirements.txt
-    - name: Start mongodb
-      run: |
-        mongod --dbpath ./db/ &
     - name: Lint with flake8
       run: |
         ./.venv/bin/flake8 src

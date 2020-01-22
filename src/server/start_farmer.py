@@ -1,9 +1,8 @@
 import asyncio
-import logging
 import signal
 from typing import List
-import uvloop
 
+import uvloop
 from blspy import PrivateKey
 
 from src.farmer import Farmer
@@ -12,12 +11,11 @@ from src.server.outbound_message import Delivery, Message, NodeType, OutboundMes
 from src.server.server import ChiaServer
 from src.types.peer_info import PeerInfo
 from src.util.network import parse_host_port
+from src.util.logging import initialize_logging
+from setproctitle import setproctitle
 
-logging.basicConfig(
-    format="Farmer %(name)-25s: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
-    level=logging.INFO,
-    datefmt="%H:%M:%S",
-)
+initialize_logging("Farmer %(name)-25s")
+setproctitle("chia_farmer")
 
 
 async def main():
@@ -28,15 +26,11 @@ async def main():
     full_node_peer = PeerInfo(
         farmer.config["full_node_peer"]["host"], farmer.config["full_node_peer"]["port"]
     )
-
-    def signal_received():
-        server.close_all()
-
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
-
     host, port = parse_host_port(farmer)
     server = ChiaServer(port, farmer, NodeType.FARMER)
+
+    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
+    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
 
     async def on_connect():
         # Sends a handshake to the harvester

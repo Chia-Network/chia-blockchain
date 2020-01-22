@@ -32,13 +32,8 @@
 #include <cfenv>
 #include <ctime>
 #include <thread>
-
-#include <x86intrin.h>
-
 #include "generic.h"
-
 #include <gmpxx.h>
-#include <flint/fmpz.h>
 
 using namespace std;
 using namespace generic;

@@ -1,6 +1,7 @@
 import logging
 import os
 import os.path
+import asyncio
 from typing import Dict, Optional, Tuple
 
 from blspy import PrependSignature, PrivateKey, PublicKey, Util
@@ -42,6 +43,26 @@ class Harvester:
 
         # From quality to (challenge_hash, filename, index)
         self.challenge_hashes: Dict[bytes32, Tuple[bytes32, str, uint8]] = {}
+        self._plot_notification_task = asyncio.create_task(self._plot_notification())
+        self._is_shutdown = False
+
+    async def _plot_notification(self):
+        """
+        Log the plot filenames to console periodically
+        """
+        counter = 1
+        while not self._is_shutdown:
+            if counter % 600 == 0:
+                for filename, prover in self.provers.items():
+                    log.info(f"Farming plot {filename} of size {prover.get_size()}")
+            await asyncio.sleep(1)
+            counter += 1
+
+    def _shutdown(self):
+        self._is_shutdown = True
+
+    async def _await_shutdown(self):
+        await self._plot_notification_task
 
     @api_request
     async def harvester_handshake(
@@ -63,6 +84,9 @@ class Harvester:
             if pool_pubkey in harvester_handshake.pool_pubkeys:
                 if os.path.isfile(filename):
                     self.provers[partial_filename] = DiskProver(filename)
+                    log.info(
+                        f"Farming plot {filename} of size {self.provers[partial_filename].get_size()}"
+                    )
                 else:
                     log.warn(f"Plot at {filename} does not exist.")
 
@@ -88,7 +112,7 @@ class Harvester:
                     new_challenge.challenge_hash
                 )
             except RuntimeError:
-                log.warning("Error using prover object. Reinitializing prover object.")
+                log.error("Error using prover object. Reinitializing prover object.")
                 self.provers[filename] = DiskProver(filename)
                 quality_strings = prover.get_qualities_for_challenge(
                     new_challenge.challenge_hash
@@ -168,6 +192,8 @@ class Harvester:
         The farmer requests a signature on the header hash, for one of the proofs that we found.
         A signature is created on the header hash using the plot private key.
         """
+        if request.quality not in self.challenge_hashes:
+            return
 
         _, filename, _ = self.challenge_hashes[request.quality]
 

@@ -1,6 +1,7 @@
+import asyncio
+import logging
 import os
 from typing import AsyncGenerator, Dict
-from src.types.sized_bytes import bytes32
 
 import yaml
 
@@ -8,11 +9,8 @@ from definitions import ROOT_DIR
 from src.protocols.peer_protocol import Peers, RequestPeers
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
+from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
-
-import asyncio
-
-import logging
 
 log = logging.getLogger(__name__)
 

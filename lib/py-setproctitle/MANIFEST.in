@@ -1,0 +1,9 @@
+include HISTORY.rst
+include README.rst
+include COPYRIGHT
+include MANIFEST.in
+include Makefile
+include src/*.c
+include src/*.h
+include tests/*.py
+include tests/*.c

@@ -17,12 +17,8 @@ from src.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.weight_verifier import verify_weight
-from src.database import FullNodeStore
-from src.protocols import (
-    farmer_protocol,
-    peer_protocol,
-    timelord_protocol,
-)
+from src.store import FullNodeStore
+from src.protocols import farmer_protocol, peer_protocol, timelord_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
 from src.types.body import Body
@@ -32,14 +28,11 @@ from src.types.full_block import FullBlock
 from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
-from src.types.sized_bytes import bytes32
 from src.types.proof_of_space import ProofOfSpace
+from src.types.sized_bytes import bytes32
 from src.util import errors
 from src.util.api_decorators import api_request
-from src.util.errors import (
-    BlockNotInBlockchain,
-    InvalidUnfinishedBlock,
-)
+from src.util.errors import BlockNotInBlockchain, InvalidUnfinishedBlock
 from src.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
@@ -56,6 +49,7 @@ class FullNode:
         self.store = store
         self.blockchain = blockchain
         self._shut_down = False  # Set to true to close all infinite loops
+        self.server: Optional[ChiaServer] = None
 
     def _set_server(self, server: ChiaServer):
         self.server = server
@@ -164,6 +158,7 @@ class FullNode:
             yield msg
 
     def _num_needed_peers(self) -> int:
+        assert self.server is not None
         diff = self.config["target_peer_count"] - len(
             self.server.global_connections.get_full_node_connections()
         )
@@ -268,9 +263,10 @@ class FullNode:
                 Delivery.RANDOM,
             )
             try:
+                phr = self.store.get_potential_hashes_received()
+                assert phr is not None
                 await asyncio.wait_for(
-                    self.store.get_potential_hashes_received().wait(),
-                    timeout=sleep_interval,
+                    phr.wait(), timeout=sleep_interval,
                 )
                 break
             except concurrent.futures.TimeoutError:
@@ -376,7 +372,7 @@ class FullNode:
                 assert header is not None
                 headers.append(header)
 
-        log.error(f"Downloaded headers up to tip height: {tip_height}")
+        log.info(f"Downloaded headers up to tip height: {tip_height}")
         if not verify_weight(
             tip_block.header_block,
             headers,
@@ -386,10 +382,12 @@ class FullNode:
                 f"Weight of {tip_block.header_block.header.get_hash()} not valid."
             )
 
-        log.error(
+        log.info(
             f"Validated weight of headers. Downloaded {len(headers)} headers, tip height {tip_height}"
         )
         assert tip_height == fork_point_height + len(headers)
+        self.store.clear_potential_headers()
+        headers.clear()
 
         # Download blocks in batches, and verify them as they come in. We download a few batches ahead,
         # in case there are delays.
@@ -479,6 +477,16 @@ class FullNode:
                     log.info("Did not receive desired blocks")
 
             # Verifies this batch, which we are guaranteed to have (since we broke from the above loop)
+            blocks = []
+            for height in range(height_checkpoint, end_height):
+                b: Optional[FullBlock] = await self.store.get_potential_block(
+                    uint32(height)
+                )
+                assert b is not None
+                blocks.append(b)
+
+            prevalidate_results = await self.blockchain.pre_validate_blocks(blocks)
+            index = 0
             for height in range(height_checkpoint, end_height):
                 if self._shut_down:
                     return
@@ -489,7 +497,9 @@ class FullNode:
                 start = time.time()
                 async with self.store.lock:
                     # The block gets permanantly added to the blockchain
-                    result = await self.blockchain.receive_block(block)
+                    validated, pos = prevalidate_results[index]
+                    index += 1
+                    result = await self.blockchain.receive_block(block, validated, pos)
                     if (
                         result == ReceiveBlockResult.INVALID_BLOCK
                         or result == ReceiveBlockResult.DISCONNECTED_BLOCK
@@ -554,7 +564,9 @@ class FullNode:
         assert len(all_header_hashes.header_hashes) > 0
         async with self.store.lock:
             self.store.set_potential_hashes(all_header_hashes.header_hashes)
-            self.store.get_potential_hashes_received().set()
+            phr = self.store.get_potential_hashes_received()
+            assert phr is not None
+            phr.set()
         for _ in []:  # Yields nothing
             yield _
 
@@ -999,7 +1011,7 @@ class FullNode:
         header_hash = block.block.header_block.header.get_hash()
 
         # Adds the block to seen, and check if it's seen before
-        if self.store.seen_block(header_hash):
+        if self.blockchain.cointains_block(header_hash):
             return
 
         async with self.store.lock:
@@ -1007,9 +1019,12 @@ class FullNode:
                 # Add the block to our potential tips list
                 await self.store.add_potential_tip(block.block)
                 return
-
+            prevalidate_block = await self.blockchain.pre_validate_blocks([block.block])
+            val, pos = prevalidate_block[0]
             # Tries to add the block to the blockchain
-            added: ReceiveBlockResult = await self.blockchain.receive_block(block.block)
+            added: ReceiveBlockResult = await self.blockchain.receive_block(
+                block.block, val, pos
+            )
 
             # Always immediately add the block to the database, after updating blockchain state
             if (
@@ -1050,9 +1065,9 @@ class FullNode:
                     async for ret_msg in self._sync():
                         yield ret_msg
                 except asyncio.CancelledError:
-                    log.warning("Syncing failed, CancelledError")
+                    log.error("Syncing failed, CancelledError")
                 except BaseException as e:
-                    log.warning(f"Error {type(e)}{e} with syncing")
+                    log.error(f"Error {type(e)}{e} with syncing")
                 finally:
                     async for ret_msg in self._finish_sync():
                         yield ret_msg
@@ -1094,7 +1109,6 @@ class FullNode:
                     Delivery.BROADCAST,
                 )
                 self.store.clear_seen_unfinished_blocks()
-                self.store.clear_seen_blocks()
 
             assert block.block.header_block.proof_of_time
             assert block.block.header_block.challenge
@@ -1178,6 +1192,8 @@ class FullNode:
 
     @api_request
     async def peers(self, request: peer_protocol.Peers) -> OutboundMessageGenerator:
+        if self.server is None:
+            return
         conns = self.server.global_connections
         for peer in request.peer_list:
             conns.peers.add(peer)

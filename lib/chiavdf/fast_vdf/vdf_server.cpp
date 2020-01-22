@@ -43,10 +43,9 @@ void session(tcp::socket sock) {
         PrintInfo("Discriminant = " + to_string(D.impl));
 
         int space_needed = kSwitchIters / 10 + (kMaxItersAllowed - kSwitchIters) / 100;
-        forms = (form*) malloc(space_needed * sizeof(form));
-        memset(forms,0x00,space_needed * sizeof(form));
+        forms = (form*) calloc(space_needed, sizeof(form));
 
-        PrintInfo("Malloc'd succesfully");
+        PrintInfo("Calloc'd " + to_string(space_needed * sizeof(form)) + " bytes");
 
         // Init VDF the discriminant...
 
