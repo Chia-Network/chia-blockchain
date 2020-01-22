@@ -27,7 +27,7 @@ sh install.sh
 
 ```bash
 sudo yum update
-sudo yum install gcc-c++ cmake3 wget git openssl openssl-devel 
+sudo yum install gcc-c++ cmake3 wget git openssl openssl-devel
 sudo yum install python3 python3-devel libffi-devel gmp-devel
 
 # CMake - add a symlink for cmake3 - required by blspy
@@ -191,7 +191,7 @@ To run a full node on port 8444, and connect to the testnet, run the following c
 This will also start an ssh server in port 8222 for the UI, which you can connect to
 to see the state of the node.
 ```bash
-python -m src.server.start_full_node "127.0.0.1" 8444 -id 1 -r 8555 &
+./scripts/run_full_node.sh
 ssh -p 8222 localhost
 ```
 
@@ -200,7 +200,7 @@ Instead of running only a full node (as in 4a), you can also run a farmer.
 Farmers are entities in the network who use their hard drive space to try to create
 blocks (like Bitcoin's miners), and earn block rewards. First, you must generate some hard drive plots, which
 can take a long time depending on the [size of the plots](https://github.com/Chia-Network/chia-blockchain/wiki/k-sizes)
-(the k variable). Then, run the farmer + full node with the following script. A full node is also started, 
+(the k variable). Then, run the farmer + full node with the following script. A full node is also started,
 which you can ssh into to view the node UI (previous ssh command).
 ```bash
 python -m scripts.create_plots -k 20 -n 10
@@ -225,7 +225,7 @@ UPnP is enabled by default, to open port 8444 for incoming connections. If this 
 you can disable it in the configuration. Some routers may require port forwarding, or enabling
 UPnP in the router configuration.
 
-Due to the nature of proof of space lookups by the harvester in the current alpha you should limit 
+Due to the nature of proof of space lookups by the harvester in the current alpha you should limit
 the number of plots on a physical drive to 50 or less. This limit should significantly increase before beta.
 
 You can also run the simulation, which runs all servers and multiple full nodes, locally, at once.
