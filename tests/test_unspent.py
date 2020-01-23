@@ -102,7 +102,7 @@ class TestUnspent:
             assert unspent_fee.spent == 1
 
         reorg_index = 4
-        await db.rollback_to_block(reorg_index)
+        await db.rollback_lca_to_block(reorg_index)
 
         for c, block in enumerate(blocks):
             unspent = await db.get_unspent(block.body.coinbase.name())
