@@ -49,9 +49,9 @@ class TestRpc:
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
         unspent_store = await UnspentStore.create("blockchain_test")
-        mempool = Mempool()
+        mempool = Mempool(unspent_store)
 
-        b: Blockchain = await Blockchain.create({}, unspent_store, test_constants)
+        b: Blockchain = await Blockchain.create({}, unspent_store, store, test_constants)
         await store.add_block(blocks[0])
         for i in range(1, 9):
             result, removed = await b.receive_block(blocks[i])

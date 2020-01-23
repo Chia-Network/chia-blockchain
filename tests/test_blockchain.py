@@ -8,6 +8,7 @@ from blspy import PrivateKey
 from src.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import constants
 from src.mempool import Mempool
+from src.store import FullNodeStore
 from src.types.body import Body
 from src.types.coinbase import CoinbaseInfo
 from src.types.full_block import FullBlock
@@ -46,7 +47,9 @@ class TestGenesisBlock:
     @pytest.mark.asyncio
     async def test_basic_blockchain(self):
         unspent_store = await UnspentStore.create("blockchain_test")
-        bc1 = await Blockchain.create({}, unspent_store)
+        store = await FullNodeStore.create("blockchain_test")
+        await store._clear_database()
+        bc1 = await Blockchain.create({}, unspent_store, store)
         assert len(bc1.get_current_tips()) == 1
         genesis_block = bc1.get_current_tips()[0]
         assert genesis_block.height == 0
@@ -67,8 +70,10 @@ class TestBlockValidation:
         Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
         """
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
+        store = await FullNodeStore.create("blockchain_test")
+        await store._clear_database()
         unspent_store = await UnspentStore.create("blockchain_test")
-        b: Blockchain = await Blockchain.create({}, unspent_store, test_constants)
+        b: Blockchain = await Blockchain.create({}, unspent_store, store, test_constants)
         for i in range(1, 9):
             result, removed = await b.receive_block(blocks[i])
             assert (result == ReceiveBlockResult.ADDED_TO_HEAD)
@@ -250,7 +255,9 @@ class TestBlockValidation:
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 2)
 
         unspent_store = await UnspentStore.create("blockchain_test")
-        b: Blockchain = await Blockchain.create({}, unspent_store, test_constants)
+        store = await FullNodeStore.create("blockchain_test")
+        await store._clear_database()
+        b: Blockchain = await Blockchain.create({}, unspent_store, store, test_constants)
         for i in range(1, num_blocks):
             result, removed = await b.receive_block(blocks[i])
             assert (result == ReceiveBlockResult.ADDED_TO_HEAD)
@@ -283,7 +290,9 @@ class TestReorgs:
     async def test_basic_reorg(self):
         blocks = bt.get_consecutive_blocks(test_constants, 100, [], 9)
         unspent_store = await UnspentStore.create("blockchain_test")
-        b: Blockchain = await Blockchain.create({}, unspent_store, test_constants)
+        store = await FullNodeStore.create("blockchain_test")
+        await store._clear_database()
+        b: Blockchain = await Blockchain.create({}, unspent_store, store, test_constants)
 
         for block in blocks:
             await b.receive_block(block)
@@ -306,7 +315,9 @@ class TestReorgs:
     async def test_reorg_from_genesis(self):
         blocks = bt.get_consecutive_blocks(test_constants, 20, [], 9, b"0")
         unspent_store = await UnspentStore.create("blockchain_test")
-        b: Blockchain = await Blockchain.create({}, unspent_store, test_constants)
+        store = await FullNodeStore.create("blockchain_test")
+        await store._clear_database()
+        b: Blockchain = await Blockchain.create({}, unspent_store, store, test_constants)
         for block in blocks:
             await b.receive_block(block)
         assert b.get_current_tips()[0].height == 20
@@ -341,7 +352,9 @@ class TestReorgs:
     async def test_lca(self):
         blocks = bt.get_consecutive_blocks(test_constants, 5, [], 9, b"0")
         unspent_store = await UnspentStore.create("blockchain_test")
-        b: Blockchain = await Blockchain.create({}, unspent_store, test_constants)
+        store = await FullNodeStore.create("blockchain_test")
+        await store._clear_database()
+        b: Blockchain = await Blockchain.create({}, unspent_store, store, test_constants)
         for block in blocks:
             await b.receive_block(block)
 
@@ -363,7 +376,9 @@ class TestReorgs:
     async def test_get_header_hashes(self):
         blocks = bt.get_consecutive_blocks(test_constants, 5, [], 9, b"0")
         unspent_store = await UnspentStore.create("blockchain_test")
-        b: Blockchain = await Blockchain.create({}, unspent_store, test_constants)
+        store = await FullNodeStore.create("blockchain_test")
+        await store._clear_database()
+        b: Blockchain = await Blockchain.create({}, unspent_store, store, test_constants)
         for block in blocks:
             await b.receive_block(block)
         header_hashes = b.get_header_hashes(blocks[-1].header_hash)
