@@ -22,10 +22,7 @@ def additions_for_npc(npc_list) -> List[Coin]:
 
 def removals_and_additions(block: FullBlock) -> Tuple[List[Hash], List[Coin]]:
     removals: List[Hash] = []
-    additions: List[Coin] = []
-
-    additions.append(block.body.coinbase)
-    additions.append(block.body.fees_coin)
+    additions: List[Coin] = [block.body.coinbase, block.body.fees_coin]
 
     if block.body.transactions is not None:
         # ensure block program generates solutions
