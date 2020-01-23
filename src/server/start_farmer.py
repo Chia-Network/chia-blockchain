@@ -2,7 +2,11 @@ import asyncio
 import signal
 from typing import List
 
-import uvloop
+try:
+    import uvloop
+except ImportError:
+    uvloop = None
+
 from blspy import PrivateKey
 
 from src.farmer import Farmer
@@ -51,5 +55,6 @@ async def main():
     await server.await_closed()
 
 
-uvloop.install()
+if uvloop is not None:
+    uvloop.install()
 asyncio.run(main())

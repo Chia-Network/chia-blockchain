@@ -1,7 +1,10 @@
 import asyncio
 import signal
 
-import uvloop
+try:
+    import uvloop
+except ImportError:
+    uvloop = None
 
 from src.harvester import Harvester
 from src.server.outbound_message import NodeType
@@ -34,5 +37,6 @@ async def main():
     await harvester._await_shutdown()
 
 
-uvloop.install()
+if uvloop is not None:
+    uvloop.install()
 asyncio.run(main())
