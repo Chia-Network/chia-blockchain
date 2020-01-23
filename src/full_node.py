@@ -626,9 +626,10 @@ class FullNode:
         Responsd to a peers request for syncing blocks.
         """
         blocks: List[FullBlock] = []
-        tip_block: Optional[FullBlock] = await self.store.get_block(
-            request.tip_header_hash
-        )
+        async with self.store.lock:
+            tip_block: Optional[FullBlock] = await self.store.get_block(
+                request.tip_header_hash
+            )
         if tip_block is not None:
             if len(request.heights) > self.config["max_blocks_to_send"]:
                 raise errors.TooManyheadersRequested(
@@ -642,10 +643,11 @@ class FullNode:
                 ] = self.blockchain.get_header_blocks_by_height(
                     request.heights, request.tip_header_hash
                 )
-                for header_block in header_blocks:
-                    fetched = await self.store.get_block(header_block.header.get_hash())
-                    assert fetched
-                    blocks.append(fetched)
+                async with self.store.lock:
+                    for header_block in header_blocks:
+                        fetched = await self.store.get_block(header_block.header.get_hash())
+                        assert fetched
+                        blocks.append(fetched)
             except KeyError:
                 log.info("Do not have required blocks")
                 return
