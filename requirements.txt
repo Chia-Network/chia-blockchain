@@ -1,4 +1,4 @@
-aiohttp==3.6.2
+aiohttp==4.0.0a1
 aiosqlite==0.11.0
 aiter==0.13.20191203
 appdirs==1.4.3
