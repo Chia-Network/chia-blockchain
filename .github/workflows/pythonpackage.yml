@@ -9,6 +9,7 @@ jobs:
     strategy:
       max-parallel: 4
       matrix:
+        python-version: [3.7, 3.8]
         os: [ubuntu-latest, macOS-latest]
 
     steps:
@@ -16,7 +17,7 @@ jobs:
     - name: Setup Python environment
       uses: actions/setup-python@v1.1.1
       with:
-        python-version: 3.7 # optional, default is 3.x
+        python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       env:
         CHIA_MACHINE_SSH_KEY: ${{ secrets.CHIA_MACHINE_SSH_KEY }}

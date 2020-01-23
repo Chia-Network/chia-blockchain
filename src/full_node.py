@@ -645,7 +645,9 @@ class FullNode:
                 )
                 async with self.store.lock:
                     for header_block in header_blocks:
-                        fetched = await self.store.get_block(header_block.header.get_hash())
+                        fetched = await self.store.get_block(
+                            header_block.header.get_hash()
+                        )
                         assert fetched
                         blocks.append(fetched)
             except KeyError:
