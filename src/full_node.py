@@ -506,15 +506,14 @@ class FullNode:
                     result, header_block = await self.blockchain.receive_block(block, validated, pos)
                     if (
                         result == ReceiveBlockResult.INVALID_BLOCK
-                        or result == ReceiveBlockResult.DISCONNECTED_BLOCK
+                        or
+                        result == ReceiveBlockResult.DISCONNECTED_BLOCK
                     ):
                         raise RuntimeError(f"Invalid block {block.header_hash}")
                     log.info(
                         f"Took {time.time() - start} seconds to validate and add block {block.height}."
                     )
 
-                    # Always immediately add the block to the database, after updating blockchain state
-                    await self.store.add_block(block)
                     assert (
                         max([h.height for h in self.blockchain.get_current_tips()])
                         >= height
@@ -1090,12 +1089,6 @@ class FullNode:
                 block.block, val, pos
             )
 
-            # Always immediately add the block to the database, after updating blockchain state
-            if (
-                added == ReceiveBlockResult.ADDED_AS_ORPHAN
-                or added == ReceiveBlockResult.ADDED_TO_HEAD
-            ):
-                await self.store.add_block(block.block)
         if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return
         elif added == ReceiveBlockResult.INVALID_BLOCK:

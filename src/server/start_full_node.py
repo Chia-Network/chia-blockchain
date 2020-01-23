@@ -72,8 +72,8 @@ async def main():
 
     log.info("Initializing blockchain from disk")
     header_blocks: Dict[str, HeaderBlock] = await load_header_blocks_from_store(store)
-    unspent_store = UnspentStore.create(db_name)
-    blockchain = await Blockchain.create(header_blocks, unspent_store)
+    unspent_store = await UnspentStore.create(db_name)
+    blockchain = await Blockchain.create(header_blocks, unspent_store, store)
 
     mempool = Mempool(unspent_store)
     # await mempool.initialize() TODO uncomment once it's implemented

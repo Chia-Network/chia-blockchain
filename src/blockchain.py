@@ -13,6 +13,7 @@ from src.consensus.pot_iterations import (
     calculate_ips_from_iterations,
     calculate_iterations_quality,
 )
+from src.store import FullNodeStore
 
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
@@ -57,10 +58,12 @@ class Blockchain:
     genesis: FullBlock
     # Unspent Store
     unspent_store: UnspentStore
+    # Store
+    store: FullNodeStore
 
     @staticmethod
     async def create(
-        header_blocks: Dict[str, HeaderBlock], unspent_store: UnspentStore, override_constants: Dict = {}
+        header_blocks: Dict[str, HeaderBlock], unspent_store: UnspentStore, store: FullNodeStore, override_constants: Dict = {}
     ):
         """
         Initializes a blockchain with the given header blocks, assuming they have all been
@@ -77,6 +80,7 @@ class Blockchain:
         self.header_blocks = {}
 
         self.unspent_store = unspent_store
+        self.store = store
 
         self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
 
@@ -443,6 +447,8 @@ class Blockchain:
 
         # Cache header in memory
         self.header_blocks[block.header_hash] = block.header_block
+        # Always immediately add the block to the database, after updating blockchain state
+        await self.store.add_block(block)
 
         res, header = await self._reconsider_heads(block.header_block, genesis)
         if res:
@@ -814,14 +820,118 @@ class Blockchain:
         else:
             self._reconsider_heights(self.lca_block, cur[0])
         self.lca_block = cur[0]
-        if lca_tmp.header_hash != self.lca_block.header_hash:
-            if lca_tmp.height < self.lca_block.height:
-                print("Reorg me!!")
-                # Reorg unspent db to self.lca_block.height
-            if self.lca_block.height > lca_tmp.height:
-                print("Add heads to unspent")
-                # Add block between old and new lca to unspentStore
 
+        # If LCA changed update the unspent store
+        if lca_tmp.header_hash != self.lca_block.header_hash:
+            if  self.lca_block.height < lca_tmp.height:
+                if self.is_descendant(lca_tmp, self.lca_block):
+                    # new LCA is lower height than the new LCA (linear REORG)
+                    await self.unspent_store.rollback_lca_to_block(self.lca_block.height)
+                    # Nuke DiffStore
+                    self.unspent_store.nuke_diffs()
+                    # Create DiffStore
+                    await self.create_diffs_for_tips(self.lca_block)
+                else:
+                    # New LCA is lower height but not the a parent of old LCA (Reorg)
+                    fork_h = self.find_fork_for_lca(lca_tmp)
+                    # Rollback to fork
+                    await self.unspent_store.rollback_lca_to_block(fork_h)
+                    # Nuke DiffStore
+                    self.unspent_store.nuke_diffs()
+                    # Add blocks between fork point and new lca
+                    fork_hash = self.height_to_hash[fork_h]
+                    fork_head = self.header_blocks[fork_hash]
+                    await self._from_fork_to_lca(fork_head, self.lca_block)
+                    # Create DiffStore
+                    await self.create_diffs_for_tips(self.lca_block)
+            if self.lca_block.height >= lca_tmp.height:
+                if self.lca_block.prev_header_hash == lca_tmp.header_hash:
+                    # New LCA is a child of the old one, just add it
+                    full: FullBlock = await self.store.get_block(self.lca_block.header_hash)
+                    await self.unspent_store.new_lca(full)
+                    # Nuke DiffStore
+                    self.unspent_store.nuke_diffs()
+                    # Create DiffStore
+                    await self.create_diffs_for_tips(self.lca_block)
+                else:
+                    if self.is_descendant(self.lca_block, lca_tmp):
+                        # Add blocks between old and new lca block
+                        await self._from_fork_to_lca(lca_tmp, self.lca_block)
+                        # Nuke DiffStore
+                        self.unspent_store.nuke_diffs()
+                        # Create DiffStore
+                        await self.create_diffs_for_tips(self.lca_block)
+                    else:
+                        # Find Fork
+                        fork_h = self.find_fork_for_lca(lca_tmp)
+                        # Rollback to fork_point
+                        await self.unspent_store.rollback_lca_to_block(fork_h)
+                        # Add blocks from fork_point to new_lca
+                        fork_hash = self.height_to_hash[fork_h]
+                        fork_head = self.header_blocks[fork_hash]
+                        await self._from_fork_to_lca(fork_head, self.lca_block)
+                        #  Nuke DiffStore
+                        self.unspent_store.nuke_diffs()
+                        # Create DiffStore
+                        await self.create_diffs_for_tips(self.lca_block)
+
+    # TODO This is bad, find a better way
+    def find_fork_for_lca(self, old_lca: HeaderBlock) -> int:
+        """ Tries to find place where old_lca chain diverged from main chain"""
+        tmp_old = old_lca
+        while tmp_old.header_hash != self.genesis.header_hash:
+            chain_hash_at_h = self.height_to_hash[tmp_old.height]
+            if chain_hash_at_h == tmp_old.header_hash:
+                return tmp_old.height
+            tmp_old = self.header_blocks[tmp_old.prev_header_hash]
+
+        return 0
+
+    def is_descendant(self, child: HeaderBlock, maybe_parent: HeaderBlock) -> bool:
+        """Goes backward from potential child until it reaches potential parent or genesis"""
+        current = child
+
+        while current.header_hash != self.genesis.header_hash:
+            if current.header_hash == maybe_parent.header_hash:
+                return True
+            current = self.header_blocks[current.prev_header_hash]
+
+        return False
+
+    async def create_diffs_for_tips(self, target: HeaderBlock):
+        """ Adds to unspent store from tips down to target"""
+        for tip in self.tips:
+            await self._from_tip_to_lca_unspent(tip, target)
+
+    async def _from_tip_to_lca_unspent(self, head: HeaderBlock, target: HeaderBlock):
+        """ Adds diffs to unspent store, from tip to lca target"""
+        blocks: List[FullBlock] = []
+        tip_hash: bytes32 = head.header_hash
+        while True:
+            if tip_hash == target.header_hash:
+                break
+            full = await self.store.get_block(tip_hash)
+            if full is  None:
+                return
+            blocks.append(full)
+            tip_hash = full.header_block.prev_header_hash
+        blocks.reverse()
+        await self.unspent_store.new_heads(blocks)
+
+    async def _from_fork_to_lca(self, fork_point: HeaderBlock, lca: HeaderBlock):
+        blocks: List[FullBlock] = []
+        tip_hash: bytes32 == lca.header_hash
+        while True:
+            if tip_hash == fork_point.header_hash:
+                break
+            full = await self.store.get_block(tip_hash)
+            blocks.append(full)
+            tip_hash = full.header_block.prev_header_hash
+        blocks.reverse()
+
+        await self.unspent_store.add_lcas(blocks)
+
+    # TODO Make diffs update in case lca is not changed
     async def _reconsider_heads(self, block: HeaderBlock, genesis: bool) -> Tuple[bool, Optional[HeaderBlock]]:
         """
         When a new block is added, this is called, to check if the new block is heavier

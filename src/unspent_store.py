@@ -1,4 +1,5 @@
 import asyncio
+from dataclasses import dataclass
 from typing import Dict, Optional, List, Tuple
 import aiosqlite
 from src.types.full_block import FullBlock
@@ -43,6 +44,13 @@ class DiffStore:
     header: HeaderBlock
     diffs: Dict[CoinName, Unspent]
 
+    @staticmethod
+    async def create(head: HeaderBlock, diffs: Dict[CoinName, Unspent]):
+        self = DiffStore()
+        self.header = head
+        self.diffs = diffs
+        return self
+
 
 class UnspentStore:
     db_name: str
@@ -51,7 +59,7 @@ class UnspentStore:
     sync_mode: bool = False
     lock: asyncio.Lock
     # TODO set the size limit of ram cache
-    lce_unspent_coins: Dict
+    lca_unspent_coins: Dict[str, Unspent]
     head_diffs: Dict[Hash, DiffStore]
 
     @classmethod
@@ -86,7 +94,7 @@ class UnspentStore:
         await self.unspent_db.commit()
         # Lock
         self.lock = asyncio.Lock()  # external
-        self.lce_unspent_coins = dict()
+        self.lca_unspent_coins = dict()
         self.head_diffs = dict()
         return self
 
@@ -96,6 +104,10 @@ class UnspentStore:
     async def _clear_database(self):
         await self.unspent_db.execute("DELETE FROM unspent")
         await self.unspent_db.commit()
+
+    async def add_lcas(self, blocks: [FullBlock]):
+        for block in blocks:
+            await self.new_lca(block)
 
     async def new_lca(self, block: FullBlock):
         removals, additions = removals_and_additions(block)
@@ -107,43 +119,34 @@ class UnspentStore:
             unspent: Unspent = Unspent(coin, block.height, 0, 0)
             await self.add_unspent(unspent)
 
-    # Received new tip, just update diffs
-    async def new_head(self, head: FullBlock, old: Optional[HeaderBlock]):
-        removals, additions = removals_and_additions(head)
-        # New Head nothing is being replaced
-        if old is None:
-            await self.add_diffs(removals, additions, head)
-        else:
-            if self.head_diffs[old.header_hash] is not None:
-                # Old head is being extended, add diffs
-                if head.prev_header_hash == old.header_hash:
-                    old_diff = self.head_diffs.pop(old.header_hash)
-                    await self.add_diffs(removals, additions, head, old_diff)
+    def nuke_diffs(self):
+        self.head_diffs = dict()
 
-                # Old head is being replaced
-                else:
-                    del self.head_diffs[old.header_hash]
-                    await self.add_diffs(removals, additions, head)
+    # Received new tip, just update diffs
+    async def new_heads(self, blocks: [FullBlock]):
+        last: FullBlock = blocks[-1]
+        diff_store: DiffStore = await DiffStore.create(last.header_block, dict())
+
+        for block in blocks:
+            removals, additions = removals_and_additions(block)
+            await self.add_diffs(removals, additions, block, diff_store)
+
+        self.head_diffs[last.header_hash] = diff_store
 
     async def add_diffs(self, removals: List[Hash], additions: List[Coin],
-                        head: FullBlock, diff_store: DiffStore = None):
-        if diff_store is None:
-            diff_store: DiffStore = DiffStore(head.header_block, dict())
+                        block: FullBlock, diff_store: DiffStore):
 
         for coin_name in removals:
             removed: Unspent = diff_store.diffs[coin_name]
             if removed is None:
                 removed = await self.get_unspent(coin_name)
             spent = Unspent(removed.coin, removed.confirmed_block_index,
-                            head.height, 1)
+                            block.height, 1)
             diff_store.diffs[spent.name()] = spent
 
         for coin in additions:
-            added: Unspent = Unspent(coin, head.height, 0, 0)
+            added: Unspent = Unspent(coin, block.height, 0, 0)
             diff_store.diffs[added.name()] = added
-
-        diff_store.header = head.header_block
-        self.head_diffs[head.header_block] = diff_store
 
     # Store unspent in DB and ram cache
     async def add_unspent(self, unspent: Unspent) -> None:
@@ -156,7 +159,7 @@ class UnspentStore:
              bytes(unspent)),
         )
         await self.unspent_db.commit()
-        self.lce_unspent_coins[unspent.coin.name().hex()] = unspent
+        self.lca_unspent_coins[unspent.coin.name().hex()] = unspent
 
     # Update unspent to be spent in DB
     async def set_spent(self, coin_name: Hash, index: uint32):
@@ -168,9 +171,11 @@ class UnspentStore:
     # Checks DB and DiffStores for unspent with coin_name and returns it
     async def get_unspent(self, coin_name: CoinName, header: HeaderBlock = None) -> Optional[Unspent]:
         if header is not None:
-            diffStore = self.head_diffs[header]
-        if coin_name.hex() in self.lce_unspent_coins:
-            return self.lce_unspent_coins[coin_name.hex()]
+            diff_store = self.head_diffs[header]
+            if coin_name in diff_store.diffs:
+                return diff_store[coin_name.hex()]
+        if coin_name.hex() in self.lca_unspent_coins:
+            return self.lca_unspent_coins[coin_name.hex()]
         cursor = await self.unspent_db.execute(
             "SELECT * from unspent WHERE coin_name=?", (coin_name.hex(),)
         )
@@ -180,16 +185,16 @@ class UnspentStore:
         return None
 
     # TODO figure out if we want to really delete when doing rollback
-    async def rollback_to_block(self, block_index):
+    async def rollback_lca_to_block(self, block_index):
         # Update memory cache
-        for k in list(self.lce_unspent_coins.keys()):
-            v = self.lce_unspent_coins[k]
+        for k in list(self.lca_unspent_coins.keys()):
+            v = self.lca_unspent_coins[k]
             if v.spent_block_index > block_index:
                 new_unspent = Unspent(v.coin, v.confirmed_block_index,
                                       v.spent_block_index, 0)
-                self.lce_unspent_coins[v.coin.name().hex()] = new_unspent
+                self.lca_unspent_coins[v.coin.name().hex()] = new_unspent
             if v.confirmed_block_index > block_index:
-                del self.lce_unspent_coins[k]
+                del self.lca_unspent_coins[k]
         # Delete from storage
         await self.unspent_db.execute("DELETE FROM unspent WHERE confirmed_index>?", (block_index,))
         await self.unspent_db.execute("UPDATE unspent SET spent_index = 0, spent = 0 WHERE spent_index>?", (block_index,))
