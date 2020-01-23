@@ -16,7 +16,7 @@ from src.unspent_store import UnspentStore
 from src.util.Conditions import ConditionOpcode, ConditionVarPair
 from src.util.ConsensusError import Err
 from src.util.consensus import conditions_dict_for_solution, hash_key_pairs_for_conditions_dict
-from src.util.ints import uint32
+from src.util.ints import uint32, uint64
 
 
 @dataclass(frozen=True)
@@ -26,6 +26,16 @@ class Pool:
     additions: Dict[CoinName: SpendBundle]
     removals: Dict[CoinName: SpendBundle]
     conflicting: Dict[BundleHash: BundleHash]
+
+
+@dataclass(frozen=True)
+class MempoolItem:
+    spend_bundle: SpendBundle
+    fee_per_cost: uint64
+    fee: uint64
+
+    def __lt__(self, other):
+        return self.fee_per_cost < other.fee_per_cost
 
 
 @dataclass(frozen=True)
