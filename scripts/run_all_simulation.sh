@@ -10,6 +10,7 @@ echo "Note that this simulation will not work if connected to external nodes."
 
 _run_bg_cmd python -m src.server.start_harvester
 _run_bg_cmd python -m src.server.start_timelord
+_run_bg_cmd python -m src.timelord_launcher
 _run_bg_cmd python -m src.server.start_farmer
 _run_bg_cmd python -m src.server.start_introducer
 _run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8444 -id 1 -f -t -r 8555

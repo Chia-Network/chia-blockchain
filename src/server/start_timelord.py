@@ -1,4 +1,5 @@
 import asyncio
+import os
 import signal
 
 try:
@@ -13,6 +14,8 @@ from src.types.peer_info import PeerInfo
 from src.util.network import parse_host_port
 from src.util.logging import initialize_logging
 from setproctitle import setproctitle
+from yaml import safe_load
+from definitions import ROOT_DIR
 
 initialize_logging("Timelord %(name)-23s")
 setproctitle("chia_timelord")
@@ -23,6 +26,16 @@ async def main():
     host, port = parse_host_port(timelord)
     server = ChiaServer(port, timelord, NodeType.TIMELORD)
     _ = await server.start_server(host, None)
+
+    config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
+    config = safe_load(open(config_filename, "r"))["timelord"]
+    
+    coro = asyncio.start_server(
+        timelord._handle_client,
+        config["vdf_server"]["host"],
+        config["vdf_server"]["port"],
+        loop=asyncio.get_running_loop()
+    )
 
     def signal_received():
         server.close_all()
@@ -39,11 +52,13 @@ async def main():
     await asyncio.sleep(1)  # Prevents TCP simultaneous connect with full node
     await server.start_client(full_node_peer, None)
 
+    vdf_server = asyncio.ensure_future(coro)
+
     async for msg in timelord._manage_discriminant_queue():
         server.push_message(msg)
 
     await server.await_closed()
-
+    vdf_server.cancel()
 
 if uvloop is not None:
     uvloop.install()
