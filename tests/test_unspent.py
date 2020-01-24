@@ -2,7 +2,10 @@ import asyncio
 from typing import Any, Dict
 
 import pytest
+
+from src.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import constants
+from src.store import FullNodeStore
 from src.types.full_block import FullBlock
 from src.unspent_store import UnspentStore
 from tests.block_tools import BlockTools
@@ -115,3 +118,44 @@ class TestUnspent:
                 assert unspent_fee is None
 
         await db.close()
+
+    @pytest.mark.asyncio
+    async def test_basic_reorg(self):
+        blocks = bt.get_consecutive_blocks(test_constants, 100, [], 9)
+        unspent_store = await UnspentStore.create("blockchain_test")
+        store = await FullNodeStore.create("blockchain_test")
+        await store._clear_database()
+        b: Blockchain = await Blockchain.create({}, unspent_store, store, test_constants)
+
+        for block in blocks:
+            await b.receive_block(block)
+        assert b.get_current_tips()[0].height == 100
+
+        for c, block in enumerate(blocks):
+            unspent = await unspent_store.get_unspent(block.body.coinbase.name(), block.header_block)
+            unspent_fee = await unspent_store.get_unspent(block.body.fees_coin.name(), block.header_block)
+            assert unspent.spent == 0
+            assert unspent_fee.spent == 0
+            assert unspent.confirmed_block_index == block.height
+            assert unspent.spent_block_index == 0
+            assert unspent.name == block.body.coinbase.name()
+            assert unspent_fee.name == block.body.fees_coin.name()
+
+        blocks_reorg_chain = bt.get_consecutive_blocks(
+            test_constants, 30, blocks[:90], 9, b"1"
+        )
+
+        for reorg_block in blocks_reorg_chain:
+            result, removed = await b.receive_block(reorg_block)
+            if reorg_block.height < 90:
+                assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
+            elif reorg_block.height < 99:
+                assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
+            elif reorg_block.height >= 100:
+                assert result == ReceiveBlockResult.ADDED_TO_HEAD
+                unspent = await unspent_store.get_unspent(reorg_block.body.coinbase.name(), reorg_block.header_block)
+                assert unspent.name == reorg_block.body.coinbase.name()
+                assert unspent.confirmed_block_index == reorg_block.height
+                assert unspent.spent == 0
+                assert unspent.spent_block_index == 0
+        assert b.get_current_tips()[0].height == 119
