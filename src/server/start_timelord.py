@@ -29,7 +29,7 @@ async def main():
 
     config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
     config = safe_load(open(config_filename, "r"))["timelord"]
-    
+
     coro = asyncio.start_server(
         timelord._handle_client,
         config["vdf_server"]["host"],

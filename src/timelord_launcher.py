@@ -18,6 +18,7 @@ initialize_logging("Launcher %(name)-23s")
 
 log = logging.getLogger(__name__)
 
+
 async def kill_processes():
     global stopped
     global active_processes
@@ -26,17 +27,17 @@ async def kill_processes():
         for process in active_processes:
             process.kill()
 
+
 async def spawn_process(host, port, counter):
     global stopped
     global active_processes
-    global log
     while not stopped:
         try:
             proc = await asyncio.create_subprocess_shell(
                 f"./lib/chiavdf/fast_vdf/vdf_client {host} {port} {counter}"
             )
         except Exception as e:
-            log.warning(f"Exception while spawning process {counter}.")
+            log.warning(f"Exception while spawning process {counter}: {(e)}")
             continue
         log.info(f"Launched vdf client number {counter}.")
         async with lock:
@@ -48,17 +49,15 @@ async def spawn_process(host, port, counter):
                 active_processes.remove(proc)
         await asyncio.sleep(1)
 
-async def main():
-    stopped = False
-    active_processes = []
 
+async def main():
     host = config["host"]
     port = config["port"]
     process_count = config["process_count"]
 
     for i in range(process_count):
         asyncio.create_task(spawn_process(host, port, i))
-    
+
     def signal_received():
         asyncio.create_task(kill_processes())
 

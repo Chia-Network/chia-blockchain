@@ -51,10 +51,10 @@ class Timelord:
         self.discriminant_queue: List[Tuple[bytes32, uint64]] = []
         self.max_connection_time = self.config["max_connection_time"]
         self.potential_free_clients: List = []
-        self.free_clients: List = []
+        self.free_clients: List[Tuple[str, StreamReader, StreamWriter]] = []
         self._is_shutdown = False
 
-    async def _handle_client(self, reader, writer):
+    async def _handle_client(self, reader: StreamReader, writer: StreamWriter):
         async with self.lock:
             client_ip = writer.get_extra_info('peername')[0]
             log.info(f"New timelord connection from client: {client_ip}.")
@@ -233,10 +233,10 @@ class Timelord:
             async with self.lock:
                 if challenge_hash not in self.done_discriminants:
                     self.done_discriminants.append(challenge_hash)
-            return 
+            return
 
         if ok.decode() != "OK":
-            return 
+            return
 
         log.info("Got handshake with VDF client.")
 
@@ -276,6 +276,7 @@ class Timelord:
                         bytes.fromhex(data.decode() + proof.decode())
                     )
                 except (asyncio.IncompleteReadError, ConnectionResetError, Exception) as e:
+                    log.warning(f"{type(e)} {e}")
                     async with self.lock:
                         if challenge_hash in self.active_discriminants:
                             del self.active_discriminants[challenge_hash]
@@ -378,7 +379,7 @@ class Timelord:
                                 if time.time() < end_time + self.max_connection_time
                             ]
                             if (
-                                len(self.potential_free_clients) == 0 
+                                len(self.potential_free_clients) == 0
                                 and len(self.active_discriminants) > 0
                             ):
                                 worst_weight_active = min(
