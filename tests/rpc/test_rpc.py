@@ -89,23 +89,32 @@ class TestRpc:
 
         _ = await server_2.start_server("127.0.0.1", None)
         await asyncio.sleep(2)  # Allow server to start
+        try:
+            cons = await client.get_connections()
+            assert len(cons) == 0
 
-        cons = await client.get_connections()
-        assert len(cons) == 0
+            # Open a connection through the RPC
+            await client.open_connection(host="127.0.0.1", port=test_node_2_port)
+            cons = await client.get_connections()
+            assert len(cons) == 1
 
-        # Open a connection through the RPC
-        await client.open_connection(host="127.0.0.1", port=test_node_2_port)
-        cons = await client.get_connections()
-        assert len(cons) == 1
+            # Close a connection through the RPC
+            await client.close_connection(cons[0]["node_id"])
+            cons = await client.get_connections()
+            assert len(cons) == 0
+        except AssertionError:
+            # Checks that the RPC manages to stop the node
+            await client.stop_node()
+            client.close()
+            await client.await_closed()
+            server_2.close_all()
+            await server_1.await_closed()
+            await server_2.await_closed()
+            await rpc_cleanup()
+            await store.close()
+            raise
 
-        # Close a connection through the RPC
-        await client.close_connection(cons[0]["node_id"])
-        cons = await client.get_connections()
-        assert len(cons) == 0
-
-        # Checks that the RPC manages to stop the node
         await client.stop_node()
-
         client.close()
         await client.await_closed()
         server_2.close_all()
