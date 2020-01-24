@@ -134,16 +134,16 @@ class UnspentStore:
                         block: FullBlock, diff_store: DiffStore):
 
         for coin_name in removals:
-            removed: Unspent = diff_store.diffs[coin_name]
+            removed: Unspent = diff_store.diffs[coin_name.hex()]
             if removed is None:
                 removed = await self.get_unspent(coin_name)
             spent = Unspent(removed.coin, removed.confirmed_block_index,
                             block.height, 1)
-            diff_store.diffs[spent.name()] = spent
+            diff_store.diffs[spent.name.hex()] = spent
 
         for coin in additions:
             added: Unspent = Unspent(coin, block.height, 0, 0)
-            diff_store.diffs[added.name()] = added
+            diff_store.diffs[added.name.hex()] = added
 
     # Store unspent in DB and ram cache
     async def add_unspent(self, unspent: Unspent) -> None:
@@ -167,10 +167,10 @@ class UnspentStore:
 
     # Checks DB and DiffStores for unspent with coin_name and returns it
     async def get_unspent(self, coin_name: CoinName, header: HeaderBlock = None) -> Optional[Unspent]:
-        if header is not None:
-            diff_store = self.head_diffs[header]
-            if coin_name in diff_store.diffs:
-                return diff_store[coin_name.hex()]
+        if header is not None and header.header_hash in self.head_diffs:
+            diff_store = self.head_diffs[header.header_hash]
+            if coin_name.hex() in diff_store.diffs:
+                return diff_store.diffs[coin_name.hex()]
         if coin_name.hex() in self.lca_unspent_coins:
             return self.lca_unspent_coins[coin_name.hex()]
         cursor = await self.unspent_db.execute(
@@ -195,3 +195,4 @@ class UnspentStore:
         # Delete from storage
         await self.unspent_db.execute("DELETE FROM unspent WHERE confirmed_index>?", (block_index,))
         await self.unspent_db.execute("UPDATE unspent SET spent_index = 0, spent = 0 WHERE spent_index>?", (block_index,))
+        await self.unspent_db.commit()
