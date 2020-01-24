@@ -451,6 +451,7 @@ class Blockchain:
         await self.store.add_block(block)
 
         res, header = await self._reconsider_heads(block.header_block, genesis)
+
         if res:
             return ReceiveBlockResult.ADDED_TO_HEAD, header
         else:
@@ -810,7 +811,10 @@ class Blockchain:
         there is one block per height before the LCA (and use the height_to_hash dict).
         """
         cur: List[HeaderBlock] = self.tips[:]
-        lca_tmp = self.lca_block
+        try:
+            lca_tmp = self.lca_block
+        except:
+            lca_tmp = None
         while any(b.header_hash != cur[0].header_hash for b in cur):
             heights = [b.height for b in cur]
             i = heights.index(max(heights))
@@ -821,8 +825,12 @@ class Blockchain:
             self._reconsider_heights(self.lca_block, cur[0])
         self.lca_block = cur[0]
 
+        if lca_tmp is None:
+            full: FullBlock = await self.store.get_block(self.lca_block.header_hash)
+            await self.unspent_store.new_lca(full)
+            await self.create_diffs_for_tips(self.lca_block)
         # If LCA changed update the unspent store
-        if lca_tmp.header_hash != self.lca_block.header_hash:
+        elif lca_tmp.header_hash != self.lca_block.header_hash:
             if  self.lca_block.height < lca_tmp.height:
                 if self.is_descendant(lca_tmp, self.lca_block):
                     # new LCA is lower height than the new LCA (linear REORG)
@@ -874,6 +882,11 @@ class Blockchain:
                         self.unspent_store.nuke_diffs()
                         # Create DiffStore
                         await self.create_diffs_for_tips(self.lca_block)
+        else:
+            #  Nuke DiffStore
+            self.unspent_store.nuke_diffs()
+            # Create DiffStore
+            await self.create_diffs_for_tips(self.lca_block)
 
     # TODO This is bad, find a better way
     def find_fork_for_lca(self, old_lca: HeaderBlock) -> int:
@@ -915,12 +928,14 @@ class Blockchain:
                 return
             blocks.append(full)
             tip_hash = full.header_block.prev_header_hash
+        if len(blocks) == 0:
+            return
         blocks.reverse()
         await self.unspent_store.new_heads(blocks)
 
     async def _from_fork_to_lca(self, fork_point: HeaderBlock, lca: HeaderBlock):
         blocks: List[FullBlock] = []
-        tip_hash: bytes32 == lca.header_hash
+        tip_hash: bytes32 = lca.header_hash
         while True:
             if tip_hash == fork_point.header_hash:
                 break
