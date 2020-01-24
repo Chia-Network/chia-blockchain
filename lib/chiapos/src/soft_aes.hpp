@@ -38,6 +38,15 @@ NOTE:   String length must be evenly divisible by 16byte (str_len % 16 == 0)
 #include <stdint.h>
 #include <string.h> // CBC mode, for memset
 
+//#define DISABLE_AESNI
+
+#ifndef DISABLE_AESNI
+#include <cpuid.h>
+#include "aes.hpp"
+
+bool bHasAES=false;
+#endif // DISABLE_AESNI
+
 /*****************************************************************************/
 /* Defines:                                                                  */
 /*****************************************************************************/
@@ -295,7 +304,18 @@ static void soft_KeyExpansion(uint8_t* RoundKey, const uint8_t* Key, int keyNr, 
  */
 void soft_aes_load_key(uint8_t *enc_key, int keylen) {
     
-    soft_phex((char *)"soft secret",enc_key,keylen);
+#ifndef DISABLE_AESNI
+    uint32_t eax, ebx, ecx, edx;
+
+    eax = ebx = ecx = edx = 0;
+    __get_cpuid(1, &eax, &ebx, &ecx, &edx);
+    bHasAES=(ecx & bit_AES) > 0;
+            
+    if(bHasAES)
+        return aes_load_key(enc_key, keylen);
+#endif // DISABLE_AESNI
+
+    soft_phex((char *)"secret",enc_key,keylen);
     
     switch(keylen){
         case 32:
@@ -322,6 +342,12 @@ static inline void soft_xor128(const uint8_t *in1, const uint8_t *in2, uint8_t *
  * Encrypts a plaintext using AES256.
  */
 static inline void soft_aes256_enc(const uint8_t *in, uint8_t *out) {
+    
+#ifndef DISABLE_AESNI
+    if(bHasAES)
+        return aes256_enc(in, out);
+#endif // DISABLE_AESNI
+    
     memcpy(out,in,16);
     
     state_t *state=(state_t*)out;
@@ -352,7 +378,13 @@ static inline void soft_aes256_enc(const uint8_t *in, uint8_t *out) {
 /*
  * Encrypts an integer using AES128 with 2 rounds.
  */
-static inline void soft_aes128_enc_int(uint8_t *in, uint8_t *out) {
+static inline void soft_aes128_enc(uint8_t *in, uint8_t *out) {
+    
+#ifndef DISABLE_AESNI
+    if(bHasAES)
+        return aes128_enc(in, out);
+#endif // DISABLE_AESNI
+    
     memcpy(out,in,16);
     
     state_t *state=(state_t*)out;
@@ -378,17 +410,23 @@ static inline void soft_aes128_enc_int(uint8_t *in, uint8_t *out) {
  * Uses AES cache mode to map a 2 block ciphertext into 128 bit result.
  */
 static inline void soft_aes128_2b(uint8_t *block1, uint8_t *block2, uint8_t *res) {
+    
+#ifndef DISABLE_AESNI
+    if(bHasAES)
+        return aes128_2b(block1, block2, res);
+#endif // DISABLE_AESNI
+   
     uint8_t m1[16];
     uint8_t m2[16];
     uint8_t m3[16];
     uint8_t intermediate[16];
-    
+
     memcpy(m1,block1,16);
     memcpy(m2,block2,16);
     
-    soft_aes128_enc_int(m1,m3);
+    soft_aes128_enc(m1,m3);
     soft_xor128(m3, m2, intermediate);
-    soft_aes128_enc_int(intermediate,m3);
+    soft_aes128_enc(intermediate,m3);
     
     memcpy(res,m3,16);
 }
@@ -397,22 +435,28 @@ static inline void soft_aes128_2b(uint8_t *block1, uint8_t *block2, uint8_t *res
  * Uses AES cache mode to map a 3 block ciphertext into 128 bit result.
  */
 static inline void soft_aes128_3b(uint8_t *block1, uint8_t* block2, uint8_t *block3, uint8_t* res) {
+    
+#ifndef DISABLE_AESNI
+    if(bHasAES)
+        return aes128_3b(block1, block2, block3, res);
+#endif // DISABLE_AESNI
+ 
     uint8_t m1[16];
     uint8_t m2[16];
     uint8_t m3[16];
-    
+
     memcpy(m1,block1,16);
     memcpy(m2,block2,16);
 
-    soft_aes128_enc_int(m1,m1); // E(La)
-    soft_aes128_enc_int(m1,m2); // E(Ra)
+    soft_aes128_enc(m1,m1); // E(La)
+    soft_aes128_enc(m1,m2); // E(Ra)
     
     soft_xor128(m1, m2, m1);
     memcpy(m2,block3,16);
     
-    soft_aes128_enc_int(m2,m2);
+    soft_aes128_enc(m2,m2);
     soft_xor128(m1, m2, m1);
-    soft_aes128_enc_int(m1,m3);
+    soft_aes128_enc(m1,m3);
     memcpy(res,m3,16);
 }
 
@@ -420,25 +464,31 @@ static inline void soft_aes128_3b(uint8_t *block1, uint8_t* block2, uint8_t *blo
  * Uses AES cache mode to map a 4 block ciphertext into 128 bit result.
  */
 static inline void soft_aes128_4b(uint8_t *block1, uint8_t* block2, uint8_t *block3, uint8_t* block4, uint8_t* res) {
+   
+#ifndef DISABLE_AESNI
+    if(bHasAES)
+        return aes128_4b(block1, block2, block3, block4, res);
+#endif // DISABLE_AESNI
+
     uint8_t m1[16];
     uint8_t m2[16];
     uint8_t m3[16];
     uint8_t m4[16];
-    
+
     memcpy(m1,block1,16);
     memcpy(m2,block2,16);
     memcpy(m3,block3,16);
     memcpy(m4,block4,16);
 
-    soft_aes128_enc_int(m1,m1); // E(La)
+    soft_aes128_enc(m1,m1); // E(La)
     soft_xor128(m1, m3, m1);
-    soft_aes128_enc_int(m1,m1); // E(E(La) ^ Lb)
-    soft_aes128_enc_int(m2,m2); // E(Ra)
+    soft_aes128_enc(m1,m1); // E(E(La) ^ Lb)
+    soft_aes128_enc(m2,m2); // E(Ra)
     
     soft_xor128(m1, m2, m1); // xor e(Ra)
     soft_xor128(m1, m4, m1); // xor Rb
     
-    soft_aes128_enc_int(m1,m3); // E(La)
+    soft_aes128_enc(m1,m3); // E(La)
     memcpy(res,m3,16);
 }
 

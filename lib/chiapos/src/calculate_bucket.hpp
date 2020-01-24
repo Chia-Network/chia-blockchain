@@ -27,7 +27,7 @@
 
 #include "util.hpp"
 #include "bits.hpp"
-#include "aes.hpp"
+#include "soft_aes.hpp"
 #include "pos_constants.hpp"
 
 
@@ -89,7 +89,7 @@ class F1Calculator {
         memcpy(this->aes_key_ + 1, aes_key, 31);
 
         // Loads the key into the global AES context
-        aes_load_key(this->aes_key_, 32);
+        soft_aes_load_key(this->aes_key_, 32);
     }
 
     inline ~F1Calculator() {
@@ -102,7 +102,7 @@ class F1Calculator {
     // Reloads the AES key. If another F1 or Fx object is created, this must be called
     // since the AES context is global.
     inline void ReloadKey() {
-        aes_load_key(this->aes_key_, 32);
+        soft_aes_load_key(this->aes_key_, 32);
     }
 
     // Performs one evaluation of the F function on input L of k bits.
@@ -129,14 +129,14 @@ class F1Calculator {
         // This counter is what will be encrypted. This is similar to AES counter mode, but not XORing
         // any data at the end.
         counter.ToBytes(counter_bytes);
-        aes256_enc(counter_bytes, ciphertext_bytes);
+        soft_aes256_enc(counter_bytes, ciphertext_bytes);
         Bits ciphertext0(ciphertext_bytes, kBlockSizeBits/8, kBlockSizeBits);
 
         if (spans_two_blocks) {
             // Performs another encryption if necessary
             ++counter;
             counter.ToBytes(counter_bytes);
-            aes256_enc(counter_bytes, ciphertext_bytes);
+            soft_aes256_enc(counter_bytes, ciphertext_bytes);
             Bits ciphertext1(ciphertext_bytes, kBlockSizeBits/8, kBlockSizeBits);
             output_bits = ciphertext0.Slice(bits_before_L) + ciphertext1.Slice(0, num_output_bits - bits_of_L);
         } else {
@@ -180,7 +180,7 @@ class F1Calculator {
         while (counter <= counter_end) {
             Bits counter_bits(counter, kBlockSizeBits);
             counter_bits.ToBytes(counter_bytes);
-            aes256_enc(counter_bytes, ciphertext_bytes);
+            soft_aes256_enc(counter_bytes, ciphertext_bytes);
             Bits ciphertext(ciphertext_bytes, kBlockSizeBits/8, kBlockSizeBits);
             blocks.push_back(std::move(ciphertext));
             ++counter;
@@ -242,7 +242,7 @@ class FxCalculator {
         // Loads the AES key into the global AES context. It is 16 bytes since AES128 is used
         // for these f functions (as opposed to f1, which uses a 32 byte key). Note that, however,
         // block sizes are still 128 bits (32 bytes).
-        aes_load_key(this->aes_key_, 16);
+        soft_aes_load_key(this->aes_key_, 16);
         for (uint16_t i = 0; i < kBC; i++) {
             std::vector<uint16_t> new_vec;
             this->rmap.push_back(new_vec);
@@ -261,7 +261,7 @@ class FxCalculator {
     FxCalculator(const FxCalculator&) = delete;
 
     inline void ReloadKey() {
-        aes_load_key(this->aes_key_, 16);
+        soft_aes_load_key(this->aes_key_, 16);
     }
 
     // Performs one evaluation of the f function, whose input is divided into 3 pieces of at
@@ -276,23 +276,23 @@ class FxCalculator {
 
         if (length_ * 2 <= kBlockSizeBits) {
             (La + Ra).ToBytes(block_1);
-            aes128_enc(this->block_1, this->ciphertext);
+            soft_aes128_enc(this->block_1, this->ciphertext);
         } else if (length_ * 2 <= 2 * kBlockSizeBits) {
             La.ToBytes(this->block_1);
             Ra.ToBytes(this->block_2);
-            aes128_2b(this->block_1, this->block_2, this->ciphertext);
+            soft_aes128_2b(this->block_1, this->block_2, this->ciphertext);
         } else if (length_ * 2 <= 3 * kBlockSizeBits) {
             La.ToBytes(this->block_1);
             Ra.ToBytes(this->block_2);
             (Lb + Rb).ToBytes(this->block_3);
-            aes128_3b(this->block_1, this->block_2, this->block_3, this->ciphertext);
+            soft_aes128_3b(this->block_1, this->block_2, this->block_3, this->ciphertext);
         } else {
             assert(length_ * 2 <= 4 * kBlockSizeBits);
             La.ToBytes(this->block_1);
             Lb.ToBytes(this->block_2);
             Ra.ToBytes(this->block_3);
             Rb.ToBytes(this->block_4);
-            aes128_4b(this->block_1, this->block_2, this->block_3, this->block_4, this->ciphertext);
+            soft_aes128_4b(this->block_1, this->block_2, this->block_3, this->block_4, this->ciphertext);
         }
 
         return Bits(ciphertext, kBlockSizeBits/8, kBlockSizeBits).Slice(0, k_ + kExtraBits);
