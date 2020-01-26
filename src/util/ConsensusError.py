@@ -35,3 +35,4 @@ class Err(Enum):
     SEXP_ERROR = 16
     INVALID_FEE_LOW_FEE = 17
     MEMPOOL_CONFLICT = 18
+    MINTING_COIN = 19
