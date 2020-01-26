@@ -6,7 +6,7 @@ from src.types.hashable import std_hash, Coin
 from src.types.sized_bytes import bytes32
 from src.util.chain_utils import additions_for_solution, name_puzzle_conditions_list
 from src.util.consensus import aggsig_in_conditions_dict
-from src.util.ints import uint32
+from src.util.ints import uint32, uint64
 from src.util.streamable import Streamable, streamable
 from .BLSSignature import BLSSignature
 from .CoinSolution import CoinSolution
@@ -49,13 +49,13 @@ class SpendBundle(Streamable):
             result[_.coin.name()] = _.coin
         return result
 
-    def fees(self) -> uint32:
+    def fees(self) -> int:
         amount_in = sum(_.amount for _ in self.removals())
         amount_out = sum(_.amount for _ in self.additions())
         return amount_in - amount_out
 
-    def get_signature_count(self) -> uint32:
-        count: uint32 = 0
+    def get_signature_count(self) -> uint64:
+        count: uint64 = uint64(0)
         for cs in self.coin_solutions:
             npc_list = name_puzzle_conditions_list(cs.solution)
             for _, _, condition in npc_list:
