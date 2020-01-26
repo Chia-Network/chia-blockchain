@@ -1,22 +1,19 @@
 import collections
 from dataclasses import dataclass
-from enum import Enum
 from typing import Dict, Optional, Tuple, List
 
-import clvm
-from numpy.core import double
-
 from src.consensus.constants import constants as consensus_constants
-from src.farming.farming_tools import best_solution_program
 from src.types.full_block import FullBlock
-from src.types.hashable import SpendBundle, CoinName, ProgramHash, Program, Coin, Unspent, Hash
+from src.types.hashable import SpendBundle, CoinName, Coin, Unspent
 from src.types.hashable.SpendBundle import BundleHash
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.unspent_store import UnspentStore
 from src.util.Conditions import ConditionOpcode, ConditionVarPair
 from src.util.ConsensusError import Err
-from src.util.consensus import conditions_dict_for_solution, hash_key_pairs_for_conditions_dict
+from src.util.check_conditions import assert_coin_consumed, assert_my_coin_id, assert_block_index_exceeds, \
+    assert_block_age_exceeds, get_name_puzzle_conditions
+from src.util.consensus import hash_key_pairs_for_conditions_dict
 from src.util.ints import uint64
 from sortedcontainers import SortedDict
 
@@ -30,7 +27,7 @@ mempool_size = tx_per_sec * sec_per_block * block_buffer_count
 @dataclass(frozen=True)
 class MempoolItem:
     spend_bundle: SpendBundle
-    fee_per_cost: double
+    fee_per_cost: float
     fee: uint64
     cost: uint64
 
@@ -46,7 +43,7 @@ class MempoolItem:
 class Pool:
     header_block: HeaderBlock
     spends: Dict[BundleHash, MempoolItem]
-    sorted_spends: SortedDict[double, Dict[BundleHash, MempoolItem]]
+    sorted_spends: SortedDict[float, Dict[BundleHash, MempoolItem]]
     additions: Dict[CoinName, MempoolItem]
     removals: Dict[CoinName, MempoolItem]
     min_fee: uint64
@@ -61,7 +58,7 @@ class Pool:
         self.min_fee = 0
         return self
 
-    def get_min_fee_per_cost(self) -> double:
+    def get_min_fee_per_cost(self) -> float:
         if self.at_full_capacity():
             fee_per_cost, val = self.sorted_spends.peekitem(index=0)
             return fee_per_cost
@@ -110,42 +107,6 @@ class NPC:
 MAX_COIN_AMOUNT = int(1 << 48)
 
 
-async def get_name_puzzle_conditions(spend_bundle: SpendBundle) -> Tuple[Optional[Err], Optional[List[NPC]]]:
-    """
-    Return a list of tuples of (coin_name, solved_puzzle_hash, conditions_dict)
-    """
-    program = best_solution_program(spend_bundle)
-    try:
-        sexp = clvm.eval_f(clvm.eval_f, program, [])
-    except clvm.EvalError:
-        breakpoint()
-        return Err.INVALID_COIN_SOLUTION, None
-
-    npc_list = []
-    for name_solution in sexp.as_iter():
-        _ = name_solution.as_python()
-        if len(_) != 2:
-            return Err.INVALID_COIN_SOLUTION, None
-        if not isinstance(_[0], bytes) or len(_[0]) != 32:
-            return Err.INVALID_COIN_SOLUTION, None
-        coin_name = CoinName(_[0])
-        if not isinstance(_[1], list) or len(_[1]) != 2:
-            return Err.INVALID_COIN_SOLUTION, None
-        puzzle_solution_program = name_solution.rest().first()
-        puzzle_program = puzzle_solution_program.first()
-        puzzle_hash = ProgramHash(Program(puzzle_program))
-        try:
-            error, conditions_dict = conditions_dict_for_solution(puzzle_solution_program)
-            if error:
-                return error, None
-        except clvm.EvalError:
-            return Err.INVALID_COIN_SOLUTION, None
-        npc: NPC = NPC(coin_name, puzzle_hash, conditions_dict)
-        npc_list.append(npc)
-
-    return None, npc_list
-
-
 # TODO keep some mempool spendbundle history for the purpose of restoring in case of reorg
 class Mempool:
     def __init__(self, unspent_store: UnspentStore, override_constants: Dict = {}):
@@ -181,7 +142,7 @@ class Mempool:
         # TODO Remove when real cost function is implemented
         if cost == 0:
             return False, Err.UNKNOWN
-        fees_per_cost: double = fees / cost
+        fees_per_cost: float = fees / cost
 
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
         fail_reason, npc_list = get_name_puzzle_conditions(new_spend)
@@ -340,44 +301,6 @@ class Mempool:
         del self.mempools[removed_tip]
         print("remove tip")
 
-    def assert_coin_consumed(self, condition: ConditionVarPair, spend_bundle: SpendBundle, mempool: Pool) -> Optional[
-        Err]:
-        """
-        Checks coin consumed conditions
-        Returns None if conditions are met, if not returns the reason why it failed
-        """
-        # TODO figure out if this opcode takes single coin_id or a list of coin_ids
-        bundle_removals = spend_bundle.removals_dict()
-        coin_name = condition.var1
-        if coin_name not in mempool.removals and \
-                coin_name not in bundle_removals:
-            return Err.ASSERT_COIN_CONSUMED_FAILED
-
-    def assert_my_coin_id(self, condition: ConditionVarPair, unspent: Unspent) -> Optional[Err]:
-        if unspent.coin.name() != condition.var1:
-            return Err.ASSERT_MY_COIN_ID_FAILED
-        return None
-
-    def assert_block_index_exceeds(self, condition: ConditionVarPair, unspent: Unspent, mempool: Pool) -> Optional[Err]:
-        try:
-            expected_block_index = clvm.casts.int_from_bytes(condition.var1)
-        except ValueError:
-            return Err.INVALID_CONDITION
-        # + 1 because min block it can be included is +1 from current
-        if mempool.header_block.height + 1 <= expected_block_index:
-            return Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED
-        return None
-
-    def assert_block_age_exceeds(self, condition: ConditionVarPair, unspent: Unspent, mempool: Pool) -> Optional[Err]:
-        try:
-            expected_block_age = clvm.casts.int_from_bytes(condition.var1)
-            expected_block_index = expected_block_age + unspent.confirmed_block_index
-        except ValueError:
-            return Err.INVALID_CONDITION
-        if mempool.header_block.height + 1 <= expected_block_index:
-            return Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED
-        return None
-
     def check_conditions_dict(self, unspent: Unspent, spend_bundle: SpendBundle,
                               conditions_dict: Dict[ConditionOpcode, ConditionVarPair], mempool: Pool) -> Optional[Err]:
         """
@@ -386,13 +309,13 @@ class Mempool:
         for condition_id, cvp in conditions_dict.items():
             error = None
             if condition_id is ConditionOpcode.ASSERT_COIN_CONSUMED:
-                error = self.assert_coin_consumed(cvp, spend_bundle, mempool)
+                error = assert_coin_consumed(cvp, spend_bundle, mempool)
             elif condition_id is ConditionOpcode.ASSERT_MY_COIN_ID:
-                error = self.assert_my_coin_id(cvp, unspent)
+                error = assert_my_coin_id(cvp, unspent)
             elif condition_id is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
-                error = self.assert_block_index_exceeds(cvp, unspent, mempool)
+                error = assert_block_index_exceeds(cvp, unspent, mempool)
             elif condition_id is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
-                error = self.assert_block_age_exceeds(cvp, unspent, mempool)
+                error = assert_block_age_exceeds(cvp, unspent, mempool)
             # TODO add stuff from Will's pull req
 
             if error:
