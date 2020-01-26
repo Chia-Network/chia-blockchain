@@ -46,6 +46,7 @@ typing-extensions==3.7.4.1
 wcwidth==0.1.8
 yarl==1.4.2
 zipp==2.0.0
+sortedcontainers==2.1.0
 -e lib/chiapos
 -e lib/py-setproctitle
 -e lib/chiavdf/fast_vdf
