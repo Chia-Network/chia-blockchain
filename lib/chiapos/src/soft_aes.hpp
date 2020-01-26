@@ -449,7 +449,7 @@ static inline void soft_aes128_3b(uint8_t *block1, uint8_t* block2, uint8_t *blo
     memcpy(m2,block2,16);
 
     soft_aes128_enc(m1,m1); // E(La)
-    soft_aes128_enc(m1,m2); // E(Ra)
+    soft_aes128_enc(m2,m2); // E(Ra)
     
     soft_xor128(m1, m2, m1);
     memcpy(m2,block3,16);
