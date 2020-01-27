@@ -21,6 +21,7 @@ sec_per_block = 5 * 60
 block_buffer_count = 10
 # 60000
 mempool_size = tx_per_sec * sec_per_block * block_buffer_count
+POTENTIAL_CACHE_SIZE = 300
 
 
 @dataclass(frozen=True)
@@ -107,9 +108,6 @@ class NPC:
 MAX_COIN_AMOUNT = int(1 << 48)
 
 
-# TODO keep some mempool spendbundle history for the purpose of restoring in case of reorg
-
-
 class Mempool:
     def __init__(self, unspent_store: UnspentStore, override_constants: Dict = None):
         # Allow passing in custom overrides
@@ -117,8 +115,9 @@ class Mempool:
         for key, value in override_constants.items():
             self.constants[key] = value
 
-        # Transactions that were unable to enter mempool
-        self.potential_transactions = {}
+        # Transactions that were unable to enter mempool, used for retry. (they were invalid)
+        self.potential_txs: Dict[bytes32, SpendBundle] = {}
+
         self.allSpend: Dict[bytes32: SpendBundle] = {}
         self.allSeen: Dict[bytes32: bytes32] = {}
         # Mempool for each tip
@@ -190,6 +189,7 @@ class Mempool:
                     errors.append(Err.INVALID_FEE_NO_FEE)
                     continue
                 if fees_per_cost < pool.get_min_fee_rate():
+                    # Add to potential tx set, maybe fee get's lower in future
                     errors.append(Err.INVALID_FEE_LOW_FEE)
                     continue
 
@@ -207,6 +207,7 @@ class Mempool:
                 for item in conflicting_pool_items.values():
                     if item.fee_per_cost >= fees_per_cost:
                         tmp_error = Err.MEMPOOL_CONFLICT
+                        await self.add_to_potential_tx_set(new_spend)
                         break
             elif fail_reason:
                 errors.append(fail_reason)
@@ -229,6 +230,10 @@ class Mempool:
                 unspent: Unspent = unspents[npc.coin_name]
                 error = check_conditions_dict(unspent, new_spend, npc.condition_dict, pool)
                 if error:
+                    if (error is Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED
+                            or
+                            error is Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED):
+                        await self.add_to_potential_tx_set(new_spend)
                     break
                 hash_key_pairs.extend(hash_key_pairs_for_conditions_dict(npc.condition_dict))
             if error:
@@ -291,6 +296,13 @@ class Mempool:
         # 5. If coins can be spent return list of unspents as we see them in local storage
         return None, unspents, None
 
+    async def add_to_potential_tx_set(self, spend: SpendBundle):
+        self.potential_txs[spend.name] = spend
+
+        while len(self.potential_txs) > POTENTIAL_CACHE_SIZE:
+            first_in = self.potential_txs.keys()[0]
+            del self.potential_txs[first_in]
+
     async def seen(self, bundle_hash: bytes32) -> bool:
         """ Return true if we saw this spendbundle before """
         if self.allSeen[bundle_hash] is None:
@@ -313,26 +325,26 @@ class Mempool:
                 continue
             if tip.prev_header_hash in self.mempools:
                 # Update old mempool
-                new_p: Pool = self.mempools[tip.prev_header_hash]
-                await self.update_pool(new_p, tip)
-                new_pools[tip.header_hash] = new_p
+                new_pool: Pool = self.mempools[tip.prev_header_hash]
+                await self.update_pool(new_pool, tip)
             else:
                 # Create mempool for new head
                 if len(self.old_mempools) > 0:
-                    new_p: Pool = await Pool.create(tip.header_block)
+                    new_pool: Pool = await Pool.create(tip.header_block)
 
                     # If old spends height is bigger than the new tip height, try adding spends to the pool
                     for height in self.old_mempools.keys():
                         if height > tip.height:
                             old_spend_dict: Dict[bytes32, MempoolItem] = self.old_mempools[height]
-                            await self.add_old_spends_to_pool(new_p, old_spend_dict)
+                            await self.add_old_spends_to_pool(new_pool, old_spend_dict)
 
-                    await self.initialize_pool_from_current_pools(new_p)
-                    new_pools[tip.header_hash] = new_p
+                    await self.initialize_pool_from_current_pools(new_pool)
                 else:
-                    new_p: Pool = await Pool.create(tip.header_block)
-                    await self.initialize_pool_from_current_pools(new_p)
-                    new_pools[tip.header_hash] = new_p
+                    new_pool: Pool = await Pool.create(tip.header_block)
+                    await self.initialize_pool_from_current_pools(new_pool)
+
+            await self.add_potential_spends_to_pool(new_pool)
+            new_pools[new_pool.header_block.header_hash] = new_pool
 
         self.mempools = new_pools
 
@@ -393,3 +405,6 @@ class Mempool:
         for old in old_spends.values():
             await self.add_spendbundle(old.spend_bundle, pool)
 
+    async def add_potential_spends_to_pool(self, pool: Pool):
+        for tx in self.potential_txs.values():
+            await self.add_spendbundle(tx, pool)
