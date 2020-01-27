@@ -190,24 +190,48 @@ class Blockchain:
     def get_next_difficulty(
         self,
         header_hash: bytes32,
-        imagined_header_blocks: Optional[Dict[bytes32, HeaderBlock]] = None,
+        height: Optional[uint32] = None,
+        beanstalk: Optional[List[HeaderBlock]] = None,
     ) -> uint64:
         """
         Returns the difficulty of the next block that extends onto header_hash.
         Used to calculate the number of iterations.
 
-        Passing in imagined_headers pretends that those header blocks were added
-        to the blockchain for the purpose of computing the next difficulty.
+        Including a beanstalk pretends that the given chain of header blocks
+        (in increasing order of height) overwrites the current blockchain for
+        the purpose of computing the next difficulty.  You must include the
+        height of the queried block to include a beanstalk.
         """
 
-        def get_header_block_from_hash(header_hash):
-            block: HeaderBlock = self.header_blocks.get(header_hash, None)
-            if block is None and imagined_header_blocks:
-                block = imagined_header_blocks.get(header_hash, None)
-            return block
+        def get_header_block_from_height_or_hash(
+            expected_height: Optional[uint32] = None,
+            header_hash: Optional[bytes32] = None,
+            beanstalk_only: bool = False,
+        ) -> Optional[HeaderBlock]:
 
-        block: HeaderBlock = get_header_block_from_hash(header_hash)
-        assert block is not None
+            # Query by height first
+            if expected_height is not None:
+                if beanstalk:  # beanstalk blocks take priority
+                    h0 = beanstalk[0].height
+                    if h0 <= expected_height < h0 + len(beanstalk):
+                        return beanstalk[expected_height - h0]
+
+                # Beanstalk will not satisfy this query - collect hash
+                if header_hash is None and not beanstalk_only:
+                    header_hash = self.height_to_hash.get(expected_height, None)
+
+            # Query by header_hash
+            if header_hash is None:
+                return None
+
+            return self.header_blocks.get(header_hash, None)
+
+        block: Optional[HeaderBlock] = get_header_block_from_height_or_hash(
+            height, header_hash
+        )
+        assert (
+            block is not None
+        ), f"Given height={height} and header_hash={header_hash} must be in this blockchain."
 
         next_height: uint32 = uint32(block.height + 1)
         if next_height < self.constants["DIFFICULTY_EPOCH"]:
@@ -222,7 +246,9 @@ class Blockchain:
             != self.constants["DIFFICULTY_DELAY"]
         ):
             # Not at a point where difficulty would change
-            prev_block: HeaderBlock = get_header_block_from_hash(block.prev_header_hash)
+            prev_block: Optional[HeaderBlock] = get_header_block_from_height_or_hash(
+                uint32(block.height - 1), block.prev_header_hash
+            )
 
             assert block.challenge is not None
             if prev_block is None:
@@ -251,39 +277,48 @@ class Blockchain:
         # h1 to h2 timestamps are mined on previous difficulty, while  and h2 to h3 timestamps are mined on the
         # current difficulty
 
-        block1, block2, block3 = None, None, None
-        if block not in self.get_current_tips() or height3 not in self.height_to_hash:
+        # If block exists on beanstalk (but not height_to_hash), fetch it now
+        block1 = (
+            get_header_block_from_height_or_hash(height1, beanstalk_only=True)
+            if height1 >= 0
+            else None
+        )
+        block2 = get_header_block_from_height_or_hash(height2, beanstalk_only=True)
+        block3 = get_header_block_from_height_or_hash(height3, beanstalk_only=True)
+
+        cur: Optional[HeaderBlock] = block
+        assert cur is not None
+
+        while (
+            not ((block1 or height1 < 0) and block2 and block3)
+            or self.height_to_hash.get(cur.height, None) != cur.header_hash
+        ):
             # This means we are either on a fork, or on one of the chains, but after the LCA,
             # so we manually backtrack.
-            curr: Optional[HeaderBlock] = block
-            assert curr is not None
-            while (
-                curr.height not in self.height_to_hash
-                or self.height_to_hash[curr.height] != curr.header_hash
-            ):
-                if curr.height == height1:
-                    block1 = curr
-                elif curr.height == height2:
-                    block2 = curr
-                elif curr.height == height3:
-                    block3 = curr
-                curr = get_header_block_from_hash(curr.prev_header_hash)
-                assert curr is not None
-        # Once we are before the fork point (and before the LCA), we can use the height_to_hash map
-        if not block1 and height1 >= 0:
-            # height1 could be -1, for the first difficulty calculation
-            block1 = self.header_blocks[self.height_to_hash[height1]]
-        if not block2:
-            block2 = self.header_blocks[self.height_to_hash[height2]]
-        if not block3:
-            block3 = self.header_blocks[self.height_to_hash[height3]]
+            if cur.height == height1:
+                block1 = cur
+            elif cur.height == height2:
+                block2 = cur
+            elif cur.height == height3:
+                block3 = cur
+
+            cur = get_header_block_from_height_or_hash(
+                uint32(cur.height - 1), cur.prev_header_hash
+            )
+
+            assert cur is not None
+
         assert block2 is not None and block3 is not None
 
         # Current difficulty parameter (diff of block h = i - 1)
-        Tc = self.get_next_difficulty(block.prev_header_hash, imagined_header_blocks)
+        Tc = self.get_next_difficulty(
+            block.prev_header_hash, uint32(block.height - 1), beanstalk
+        )
 
         # Previous difficulty parameter (diff of block h = i - 2048 - 1)
-        Tp = self.get_next_difficulty(block2.prev_header_hash, imagined_header_blocks)
+        Tp = self.get_next_difficulty(
+            block2.prev_header_hash, uint32(block2.height - 1), beanstalk
+        )
         if block1:
             timestamp1 = block1.header.data.timestamp  # i - 512 - 1
         else:
@@ -334,24 +369,65 @@ class Blockchain:
                 ]
             )
 
-    def get_next_ips(self, header_hash) -> uint64:
+    def get_next_ips(
+        self,
+        header_hash: bytes32,
+        height: Optional[uint32] = None,
+        beanstalk: Optional[List[HeaderBlock]] = None,
+    ) -> uint64:
         """
-        Returns the VDF speed in iterations per seconds, to be used for the next block. This depends on
-        the number of iterations of the last epoch, and changes at the same block as the difficulty.
+        Returns the VDF speed in iterations per seconds, to be used for the next
+        block. This depends on the number of iterations of the last epoch, and
+        changes at the same block as the difficulty.
+
+        Including a beanstalk pretends that the given chain of header blocks
+        (in increasing order of height) overwrites the current blockchain for
+        the purpose of computing the next ips.  You must include the
+        height of the queried block to include a beanstalk.
         """
-        block: HeaderBlock = self.header_blocks[header_hash]
-        assert block.challenge is not None
+
+        def get_header_block_from_height_or_hash(
+            expected_height: Optional[uint32] = None,
+            header_hash: Optional[bytes32] = None,
+            beanstalk_only: bool = False,
+        ) -> Optional[HeaderBlock]:
+
+            # Query by height first
+            if expected_height is not None:
+                if beanstalk:  # beanstalk blocks take priority
+                    h0 = beanstalk[0].height
+                    if h0 <= expected_height < h0 + len(beanstalk):
+                        return beanstalk[expected_height - h0]
+
+                # Beanstalk will not satisfy this query - collect hash
+                if header_hash is None and not beanstalk_only:
+                    header_hash = self.height_to_hash.get(expected_height, None)
+
+            # Query by header_hash
+            if header_hash is None:
+                return None
+
+            return self.header_blocks.get(header_hash, None)
+
+        block: Optional[HeaderBlock] = get_header_block_from_height_or_hash(
+            height, header_hash
+        )
+        assert block and block.challenge is not None
 
         next_height: uint32 = uint32(block.height + 1)
         if next_height < self.constants["DIFFICULTY_EPOCH"]:
             # First epoch has a hardcoded vdf speed
             return self.constants["VDF_IPS_STARTING"]
 
-        prev_block: HeaderBlock = self.header_blocks[block.prev_header_hash]
-        assert prev_block.challenge is not None
+        prev_block: Optional[HeaderBlock] = get_header_block_from_height_or_hash(
+            uint32(block.height - 1), block.prev_header_hash
+        )
+        assert prev_block and prev_block.challenge is not None
 
         proof_of_space = block.proof_of_space
-        difficulty = self.get_next_difficulty(prev_block.header_hash)
+        difficulty = self.get_next_difficulty(
+            prev_block.header_hash, uint32(block.height - 1), beanstalk
+        )
         iterations = uint64(
             block.challenge.total_iters - prev_block.challenge.total_iters
         )
@@ -382,31 +458,34 @@ class Blockchain:
         # Height2 is the last block in the previous epoch
         height2 = uint32(next_height - self.constants["DIFFICULTY_DELAY"] - 1)
 
-        block1: Optional[HeaderBlock] = None
-        block2: Optional[HeaderBlock] = None
-        if block not in self.get_current_tips() or height2 not in self.height_to_hash:
+        block1: Optional[HeaderBlock] = get_header_block_from_height_or_hash(
+            height1, beanstalk_only=True
+        ) if height1 >= 0 else None
+        block2: Optional[HeaderBlock] = get_header_block_from_height_or_hash(
+            height2, beanstalk_only=True
+        )
+
+        cur: Optional[HeaderBlock] = block
+        assert cur is not None
+
+        while (
+            not ((block1 or height1 < 0) and block2)
+            or self.height_to_hash.get(cur.height, None) != cur.header_hash
+        ):
             # This means we are either on a fork, or on one of the chains, but after the LCA,
-            # so we manually backtrack.
-            curr: Optional[HeaderBlock] = block
-            assert curr is not None
-            while (
-                curr.height not in self.height_to_hash
-                or self.height_to_hash[curr.height] != curr.header_hash
-            ):
-                if curr.height == height1:
-                    block1 = curr
-                elif curr.height == height2:
-                    block2 = curr
-                curr = self.header_blocks.get(curr.prev_header_hash, None)
-                assert curr is not None
-        # Once we are before the fork point (and before the LCA), we can use the height_to_hash map
-        if block1 is None and height1 >= 0:
-            # height1 could be -1, for the first difficulty calculation
-            block1 = self.header_blocks.get(self.height_to_hash[height1], None)
-        if block2 is None:
-            block2 = self.header_blocks.get(self.height_to_hash[height2], None)
-        assert block2 is not None
-        assert block2.challenge is not None
+            # so we manually backtrack
+            if cur.height == height1:
+                block1 = cur
+            elif cur.height == height2:
+                block2 = cur
+
+            cur = get_header_block_from_height_or_hash(
+                uint32(cur.height - 1), cur.prev_header_hash
+            )
+
+            assert cur is not None
+
+        assert block2 is not None and block2.challenge is not None
 
         if block1 is not None:
             assert block1.challenge is not None
