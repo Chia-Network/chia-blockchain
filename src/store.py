@@ -3,6 +3,7 @@ import logging
 import aiosqlite
 from typing import Dict, List, Optional, Tuple
 
+from blspy import PublicKey
 from src.types.body import Body
 from src.types.full_block import FullBlock
 from src.types.header import HeaderData
@@ -54,7 +55,9 @@ class FullNodeStore:
         self.db_name = db_name
 
         # All full blocks which have been added to the blockchain. Header_hash -> block
+        log.warn("CREATING CON")
         self.db = await aiosqlite.connect(self.db_name)
+        log.warn("CREATED CON")
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS blocks(height bigint, header_hash text PRIMARY KEY, block blob)"
         )
@@ -67,7 +70,7 @@ class FullNodeStore:
         # Headers
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS small_header_blocks(height bigint, header_hash "
-            "text PRIMARY KEY, small_header_block blob)"
+            "text PRIMARY KEY, pool_pk text, small_header_block blob)"
         )
 
         # Height index so we can look up in order of height for sync purposes
@@ -110,18 +113,28 @@ class FullNodeStore:
         await self.db.commit()
 
     async def add_block(self, block: FullBlock) -> None:
+        log.warning("1")
         await self.db.execute(
             "INSERT OR REPLACE INTO blocks VALUES(?, ?, ?)",
             (block.height, block.header_hash.hex(), bytes(block)),
         )
+        log.warning("2")
         assert block.header_block.challenge is not None
+        log.warning("3")
         small_header_block: SmallHeaderBlock = SmallHeaderBlock(
             block.header_block.header, block.header_block.challenge
         )
-        await self.db.execute(
-            ("INSERT OR REPLACE INTO small_header_blocks VALUES(?, ?, ?)"),
-            (block.height, block.header_hash.hex(), bytes(small_header_block),),
+        log.warning("Starting to add shb")
+        res = await self.db.execute(
+            ("INSERT OR REPLACE INTO small_header_blocks VALUES(?, ?, ?, ?)"),
+            (
+                block.height,
+                block.header_hash.hex(),
+                bytes(block.header_block.proof_of_space.pool_pubkey).hex(),
+                bytes(small_header_block),
+            ),
         )
+        log.warning(f"ADDED {res}")
         await self.db.commit()
 
     async def get_block(self, header_hash: bytes32) -> Optional[FullBlock]:
@@ -150,7 +163,19 @@ class FullNodeStore:
     async def get_small_header_blocks(self) -> List[SmallHeaderBlock]:
         cursor = await self.db.execute("SELECT * from small_header_blocks")
         rows = await cursor.fetchall()
-        return [SmallHeaderBlock.from_bytes(row[2]) for row in rows]
+        return [SmallHeaderBlock.from_bytes(row[3]) for row in rows]
+
+    async def get_pool_pks_hack(self) -> List[Tuple[uint32, PublicKey]]:
+        # TODO: this API call is a hack to allow us to see block winners. Replace with coin/UTXU set.
+        cursor = await self.db.execute("SELECT * from small_header_blocks")
+        rows = await cursor.fetchall()
+        return [
+            (
+                SmallHeaderBlock.from_bytes(row[3]).height,
+                PublicKey.from_bytes(bytes.fromhex(row[2])),
+            )
+            for row in rows
+        ]
 
     async def add_potential_block(self, block: FullBlock) -> None:
         await self.db.execute(

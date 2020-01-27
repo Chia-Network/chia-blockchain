@@ -206,6 +206,7 @@ class FullNode:
         log.info("Starting to perform sync with peers.")
         log.info("Waiting to receive tips from peers.")
         # TODO: better way to tell that we have finished receiving tips
+        log.error("STARTING SYNC")
         await asyncio.sleep(5)
         highest_weight: uint64 = uint64(0)
         tip_block: FullBlock
@@ -492,22 +493,33 @@ class FullNode:
                 block: Optional[FullBlock] = await self.store.get_potential_block(
                     uint32(height)
                 )
+                log.warning(f"starting {height}")
                 assert block is not None
                 prev_block: Optional[FullBlock] = await self.store.get_potential_block(
                     uint32(height - 1)
                 )
-                if prev_block is None:
-                    prev_block = await self.store.get_block(block.prev_header_hash)
-                assert prev_block is not None
-                start = time.time()
+                try:
+                    if prev_block is None:
+                        print("IF")
+                        prev_block = await self.store.get_block(block.prev_header_hash)
+                        print(f"prev {prev_block.header_hash}")
+                    else:
+                        print("ELSE")
+                    assert prev_block is not None
+                    print("Assert passed")
+                    start = time.time()
+                except Exception as e:
+                    print(f"Excepted {e} {type(e)}")
+                log.warning(f"Locking {height}")
                 async with self.store.lock:
                     # The block gets permanantly added to the blockchain
                     validated, pos = prevalidate_results[index]
                     index += 1
-
+                    log.warning(f"Receivinng block {height}")
                     result = await self.blockchain.receive_block(
                         block, prev_block.header_block, validated, pos
                     )
+                    log.warning(f"Received {height}")
                     if (
                         result == ReceiveBlockResult.INVALID_BLOCK
                         or result == ReceiveBlockResult.DISCONNECTED_BLOCK
@@ -516,15 +528,23 @@ class FullNode:
                     log.info(
                         f"Took {time.time() - start} seconds to validate and add block {block.height}."
                     )
-                    # Always immediately add the block to the database, after updating blockchain state
-                    await self.store.add_block(block)
+                    log.warning(f"ADding{height}")
+                    try:
+                        # Always immediately add the block to the database, after updating blockchain state
+                        await self.store.add_block(block)
+                    except Exception as e:
+                        print(f"Excepted 2 {e} {type(e)}")
+                    log.warning(f"ADdded{height}")
                     assert (
                         max([h.height for h in self.blockchain.get_current_tips()])
                         >= height
                     )
+                    log.warning(f"Setting pot")
                     await self.store.set_proof_of_time_estimate_ips(
                         self.blockchain.get_next_ips(block.header_block)
                     )
+                    log.warning(f"Exiting lock")
+                log.warning(f"Exited lock")
         assert max([h.height for h in self.blockchain.get_current_tips()]) == tip_height
         log.info(f"Finished sync up to height {tip_height}")
 
@@ -1032,11 +1052,17 @@ class FullNode:
         if self.blockchain.cointains_block(header_hash):
             return
 
+        log.error("Locking block")
         async with self.store.lock:
+            log.error("getting sync mode")
             if await self.store.get_sync_mode():
+                log.error("IN SYNC MODE")
                 # Add the block to our potential tips list
                 await self.store.add_potential_tip(block.block)
+                log.error("ADDED TIP, returning")
                 return
+            else:
+                log.error("NOT IN SYNC MODE")
             prevalidate_block = await self.blockchain.pre_validate_blocks([block.block])
             val, pos = prevalidate_block[0]
 

@@ -1,5 +1,6 @@
 import asyncio
 from typing import Any, Dict
+import os
 
 import pytest
 
@@ -42,8 +43,11 @@ class TestRpc:
         test_node_1_port = 21234
         test_node_2_port = 21235
         test_rpc_port = 21236
+        db_filename = "blockchain_test"
 
-        store = await FullNodeStore.create("blockchain_test")
+        if os.path.isfile(db_filename):
+            os.remove(db_filename)
+        store = await FullNodeStore.create(db_filename)
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
         b: Blockchain = await Blockchain.create({}, test_constants)
@@ -81,6 +85,7 @@ class TestRpc:
             small_header_block = await client.get_header(state["lca"].header_hash)
             assert small_header_block.header == blocks[6].header_block.header
 
+            assert len(await client.get_pool_balances()) > 0
             assert len(await client.get_connections()) == 0
 
             full_node_2 = FullNode(store, b)

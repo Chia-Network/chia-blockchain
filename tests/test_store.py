@@ -1,6 +1,7 @@
 import asyncio
 from secrets import token_bytes
 from typing import Any, Dict
+import os
 
 import pytest
 from src.consensus.constants import constants
@@ -37,9 +38,19 @@ class TestStore:
     @pytest.mark.asyncio
     async def test_basic_store(self):
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
+        db_filename = "blockchain_test"
+        db_filename_2 = "blockchain_test_2"
+        db_filename_3 = "blockchain_test_3"
 
-        db = await FullNodeStore.create("blockchain_test")
-        db_2 = await FullNodeStore.create("blockchain_test_2")
+        if os.path.isfile(db_filename):
+            os.remove(db_filename)
+        if os.path.isfile(db_filename_2):
+            os.remove(db_filename_2)
+        if os.path.isfile(db_filename_3):
+            os.remove(db_filename_3)
+
+        db = await FullNodeStore.create(db_filename)
+        db_2 = await FullNodeStore.create(db_filename_2)
         try:
             await db._clear_database()
 
@@ -135,7 +146,7 @@ class TestStore:
             raise
 
         # Different database should have different data
-        db_3 = await FullNodeStore.create("blockchain_test_3")
+        db_3 = await FullNodeStore.create(db_filename_3)
         assert db_3.get_unfinished_block_leader() == (0, (1 << 64) - 1)
 
         await db.close()

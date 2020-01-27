@@ -134,14 +134,18 @@ async def main():
         )
         _ = await server.start_client(peer_info, None)
 
+    log.info(" 0 Closing ser")
     # Awaits for server and all connections to close
     await server.await_closed()
+    log.info(" 1 Closing ser")
 
     # Waits for the rpc server to close
     if rpc_cleanup is not None:
         await rpc_cleanup()
+    log.info(" 2 Closing ser")
 
     await store.close()
+    log.info(" 3 Closing ser")
     await asyncio.get_running_loop().shutdown_asyncgens()
     log.info("Node fully closed.")
 
