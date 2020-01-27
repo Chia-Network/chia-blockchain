@@ -130,14 +130,27 @@ class Mempool:
         self.mempool_size = tx_per_sec * sec_per_block * block_buffer_count
         self.potential_cache_size = 300
 
-    # TODO implement creating block from mempool
-    # TODO Aggregate all SpendBundles for the tip and return only one
-    # TODO 6000 cost units
+    # TODO This is hack, it should use proper cost, const. Minimize work, double check/verify solution.
     async def create_bundle_for_tip(self, header_block: HeaderBlock) -> Optional[SpendBundle]:
         """
         Returns aggregated spendbundle that can be used for creating new block
         """
-        return None
+        if header_block.header_hash in self.mempools:
+            pool: Pool = self.mempools[header_block.header_hash]
+            cost_sum = 0
+            spend_bundles: List[SpendBundle] = []
+            for dic in pool.sorted_spends.values():
+                for item in dic.values:
+                    if item.cost + cost_sum <= 6000:
+                        spend_bundles.append(item.spend_bundle)
+                        cost_sum += item.cost
+                    else:
+                        break
+
+            block_bundle = SpendBundle.aggregate(spend_bundles)
+            return block_bundle
+        else:
+            return None
 
     async def add_spendbundle(self, new_spend: SpendBundle, to_pool: Pool = None) -> Tuple[bool, Optional[Err]]:
         self.allSeen[new_spend.name()] = new_spend.name()
