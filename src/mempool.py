@@ -46,6 +46,7 @@ class Pool:
     @staticmethod
     async def create(head: HeaderBlock, size: uint32):
         self = Pool()
+        self.header_block = head
         self.spends = {}
         self.additions = {}
         self.removals = {}
@@ -415,7 +416,7 @@ class Mempool:
                 if item.name in tried_already:
                     continue
                 tried_already[item.name] = item.name
-                res, err = await self.add_spendbundle(item.spend_bundle, pool)
+                await self.add_spendbundle(item.spend_bundle, pool)
 
     async def add_old_spends_to_pool(self, pool: Pool, old_spends: Dict[bytes32, MempoolItem]):
         for old in old_spends.values():
