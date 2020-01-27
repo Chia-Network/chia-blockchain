@@ -10,33 +10,6 @@ from src.util.consensus import created_outputs_for_conditions_dict
 from src.util.ints import uint32
 
 
-def additions_for_npc(npc_list) -> List[Coin]:
-    additions: List[Coin] = []
-
-    for coin_name, puzzle_hash, conditions_dict in npc_list:
-        for coin in created_outputs_for_conditions_dict(conditions_dict, coin_name):
-            additions.append(coin)
-
-    return additions
-
-
-def removals_and_additions(block: FullBlock) -> Tuple[List[Hash], List[Coin]]:
-    removals: List[Hash] = []
-    additions: List[Coin] = [block.body.coinbase, block.body.fees_coin]
-
-    if block.body.transactions is not None:
-        # ensure block program generates solutions
-        # This should never throw here, block must be valid if it comes to here
-        npc_list = name_puzzle_conditions_list(block.body.transactions)
-        # build removals list
-        for coin_name, ph, con in npc_list:
-            removals.append(coin_name)
-
-        additions.extend(additions_for_npc(npc_list))
-
-    return removals, additions
-
-
 class DiffStore:
     header: HeaderBlock
     diffs: Dict[CoinName, Unspent]
@@ -107,7 +80,7 @@ class UnspentStore:
             await self.new_lca(block)
 
     async def new_lca(self, block: FullBlock):
-        removals, additions = removals_and_additions(block)
+        removals, additions = block.removals_and_additions()
 
         for coin_name in removals:
             await self.set_spent(coin_name, block.height)
@@ -124,8 +97,9 @@ class UnspentStore:
         last: FullBlock = blocks[-1]
         diff_store: DiffStore = await DiffStore.create(last.header_block, dict())
 
+        block: FullBlock
         for block in blocks:
-            removals, additions = removals_and_additions(block)
+            removals, additions = block.removals_and_additions()
             await self.add_diffs(removals, additions, block, diff_store)
 
         self.head_diffs[last.header_hash] = diff_store

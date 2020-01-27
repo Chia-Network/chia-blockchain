@@ -1,11 +1,11 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Tuple
 
 import clvm
 
 from src.farming.farming_tools import best_solution_program
 from src.mempool import Pool, NPC
-from src.types.hashable import SpendBundle, CoinName, ProgramHash, Program
-from src.util.Conditions import ConditionVarPair
+from src.types.hashable import SpendBundle, CoinName, ProgramHash, Program, Unspent
+from src.util.Conditions import ConditionVarPair, ConditionOpcode
 from src.util.ConsensusError import Err
 from src.util.consensus import conditions_dict_for_solution
 
@@ -16,11 +16,9 @@ def assert_coin_consumed(condition: ConditionVarPair, spend_bundle: SpendBundle,
     Checks coin consumed conditions
     Returns None if conditions are met, if not returns the reason why it failed
     """
-    # TODO figure out if this opcode takes single coin_id or a list of coin_ids
     bundle_removals = spend_bundle.removals_dict()
     coin_name = condition.var1
-    if coin_name not in mempool.removals and \
-            coin_name not in bundle_removals:
+    if coin_name not in bundle_removals:
         return Err.ASSERT_COIN_CONSUMED_FAILED
 
 
@@ -96,3 +94,26 @@ async def get_name_puzzle_conditions(spend_bundle: SpendBundle) -> Tuple[Optiona
         npc_list.append(npc)
 
     return None, npc_list
+
+
+def check_conditions_dict(unspent: Unspent, spend_bundle: SpendBundle,
+                          conditions_dict: Dict[ConditionOpcode, ConditionVarPair], mempool: Pool) -> Optional[Err]:
+    """
+    Check all conditions against current state.
+    """
+    for condition_id, cvp in conditions_dict.items():
+        error = None
+        if condition_id is ConditionOpcode.ASSERT_COIN_CONSUMED:
+            error = assert_coin_consumed(cvp, spend_bundle, mempool)
+        elif condition_id is ConditionOpcode.ASSERT_MY_COIN_ID:
+            error = assert_my_coin_id(cvp, unspent)
+        elif condition_id is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
+            error = assert_block_index_exceeds(cvp, unspent, mempool)
+        elif condition_id is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
+            error = assert_block_age_exceeds(cvp, unspent, mempool)
+        # TODO add stuff from Will's pull req
+
+        if error:
+            return error
+
+    return None

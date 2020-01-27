@@ -11,10 +11,9 @@ from src.types.sized_bytes import bytes32
 from src.unspent_store import UnspentStore
 from src.util.Conditions import ConditionOpcode, ConditionVarPair
 from src.util.ConsensusError import Err
-from src.util.check_conditions import assert_coin_consumed, assert_my_coin_id, assert_block_index_exceeds, \
-    assert_block_age_exceeds, get_name_puzzle_conditions
+from src.util.check_conditions import get_name_puzzle_conditions, check_conditions_dict
 from src.util.consensus import hash_key_pairs_for_conditions_dict
-from src.util.ints import uint64
+from src.util.ints import uint64, uint32
 from sortedcontainers import SortedDict
 
 tx_per_sec = 20
@@ -56,9 +55,10 @@ class Pool:
         self.additions = {}
         self.removals = {}
         self.min_fee = 0
+        self.sorted_spends = SortedDict()
         return self
 
-    def get_min_fee_per_cost(self) -> float:
+    def get_min_fee_rate(self) -> float:
         if self.at_full_capacity():
             fee_per_cost, val = self.sorted_spends.peekitem(index=0)
             return fee_per_cost
@@ -108,19 +108,24 @@ MAX_COIN_AMOUNT = int(1 << 48)
 
 
 # TODO keep some mempool spendbundle history for the purpose of restoring in case of reorg
+
+
 class Mempool:
-    def __init__(self, unspent_store: UnspentStore, override_constants: Dict = {}):
+    def __init__(self, unspent_store: UnspentStore, override_constants: Dict = None):
         # Allow passing in custom overrides
         self.constants: Dict = consensus_constants
         for key, value in override_constants.items():
             self.constants[key] = value
 
         # Transactions that were unable to enter mempool
-        self.potential_transactions = dict()
-        self.allSpend: Dict[bytes32: SpendBundle] = []
-        self.allSeen: Dict[bytes32: bytes32] = []
+        self.potential_transactions = {}
+        self.allSpend: Dict[bytes32: SpendBundle] = {}
+        self.allSeen: Dict[bytes32: bytes32] = {}
         # Mempool for each tip
-        self.mempools: Tuple[Optional[Pool], Optional[Pool], Optional[Pool]] = None, None, None
+        self.mempools: Dict[bytes32, Pool] = {}
+
+        # old_mempools will contain transactions that were removed in the last 10 blocks
+        self.old_mempools: SortedDict[uint32, Dict[bytes32, MempoolItem]] = SortedDict()
         self.unspent_store = unspent_store
 
     # TODO implement creating block from mempool
@@ -132,7 +137,7 @@ class Mempool:
         """
         return None
 
-    async def add_spendbundle(self, new_spend: SpendBundle) -> Tuple[bool, Optional[Err]]:
+    async def add_spendbundle(self, new_spend: SpendBundle, to_pool: Pool = None) -> Tuple[bool, Optional[Err]]:
         self.allSeen[new_spend.name()] = new_spend.name()
 
         # Calculate the cost and fees
@@ -167,17 +172,24 @@ class Mempool:
         # Spend might be valid for on pool but not for others
         added_count = 0
         errors: List[Err] = []
-        for pool in self.mempools:
+        targets: List[Pool]
+
+        if to_pool:
+            targets = [to_pool]
+        else:
+            targets = list(self.mempools.values())
+
+        for pool in targets:
             # Check if more is created than spent
             if fees < 0:
                 errors.append(Err.MINTING_COIN)
                 continue
             # If pool is at capacity check the fee, if not then accept even without the fee
-            if pool.full_capacity():
+            if pool.at_full_capacity():
                 if fees == 0:
                     errors.append(Err.INVALID_FEE_NO_FEE)
                     continue
-                if fees_per_cost < pool.get_min_fee():
+                if fees_per_cost < pool.get_min_fee_rate():
                     errors.append(Err.INVALID_FEE_LOW_FEE)
                     continue
 
@@ -215,7 +227,7 @@ class Mempool:
             error: Optional[Err] = None
             for npc in npc_list:
                 unspent: Unspent = unspents[npc.coin_name]
-                error = self.check_conditions_dict(unspent, new_spend, npc.condition_dict, pool)
+                error = check_conditions_dict(unspent, new_spend, npc.condition_dict, pool)
                 if error:
                     break
                 hash_key_pairs.extend(hash_key_pairs_for_conditions_dict(npc.condition_dict))
@@ -235,6 +247,7 @@ class Mempool:
 
             new_item = MempoolItem(new_spend, fees_per_cost, uint64(fees), cost)
             pool.add_to_pool(new_item, additions, removals_dic)
+            self.allSpend[new_spend.name] = new_spend
             added_count += 1
 
         return added_count > 0, None
@@ -287,38 +300,78 @@ class Mempool:
 
     async def get_spendbundle(self, bundle_hash: bytes32) -> Optional[SpendBundle]:
         """ Returns a full SpendBundle for a given bundle_hash """
-        return self.allSpend[bundle_hash]
-
-    # TODO create new mempool for this tip
-    # TODO Logic for extending and replacing existing ones
-    async def add_tip(self, add_tip: FullBlock, remove_tip: Optional[HeaderBlock]):
-        if remove_tip:
-            await self.remove_tip(remove_tip)
-
-    # TODO Remove mempool
-    async def remove_tip(self, removed_tip: HeaderBlock):
-        """ Removes mempool for given tip """
-        del self.mempools[removed_tip]
-        print("remove tip")
-
-    def check_conditions_dict(self, unspent: Unspent, spend_bundle: SpendBundle,
-                              conditions_dict: Dict[ConditionOpcode, ConditionVarPair], mempool: Pool) -> Optional[Err]:
-        """
-        Check all conditions against current state.
-        """
-        for condition_id, cvp in conditions_dict.items():
-            error = None
-            if condition_id is ConditionOpcode.ASSERT_COIN_CONSUMED:
-                error = assert_coin_consumed(cvp, spend_bundle, mempool)
-            elif condition_id is ConditionOpcode.ASSERT_MY_COIN_ID:
-                error = assert_my_coin_id(cvp, unspent)
-            elif condition_id is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
-                error = assert_block_index_exceeds(cvp, unspent, mempool)
-            elif condition_id is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
-                error = assert_block_age_exceeds(cvp, unspent, mempool)
-            # TODO add stuff from Will's pull req
-
-            if error:
-                return error
-
+        if bundle_hash in self.allSpend:
+            return self.allSpend[bundle_hash]
         return None
+
+    async def new_tips(self, new_tips: List[FullBlock]):
+        new_pools: Dict[bytes32, Pool] = {}
+        for tip in new_tips:
+            if tip.header_hash in self.mempools:
+                # Nothing to change, we already have mempool for this head
+                new_pools[tip.header_hash] = self.mempools[tip.header_hash]
+                continue
+            if tip.prev_header_hash in self.mempools:
+                # Update old mempool
+                new_p: Pool = self.mempools[tip.prev_header_hash]
+                await self.update_pool(new_p, tip)
+                new_pools[tip.header_hash] = new_p
+            else:
+                # Create mempool for new head
+                # TODO Handle reoorgs, keep track of old mempools
+                new_p: Pool = await Pool.create(tip.header_block)
+                await self.initialize_pool_from_old_pools(new_p)
+                new_pools[tip.header_hash] = new_p
+
+        self.mempools = new_pools
+
+    async def update_pool(self, pool: Pool, new_tip: FullBlock):
+        removals, additions = new_tip.removals_and_additions()
+        pool.header_block = new_tip.header_block
+        items: Dict[bytes32, MempoolItem] = {}
+
+        # Remove transactions that were included in new block, and save them in old_mempool cache
+        for rem in removals:
+            if rem in pool.removals:
+                rem_item = pool.removals[rem]
+                items[rem_item.name] = rem_item
+
+        for add_coin in additions:
+            if add_coin.name() in pool.additions:
+                rem_item = pool.additions[add_coin.name()]
+                items[rem_item.name] = rem_item
+
+        for item in items:
+            pool.remove_spend(item)
+
+    async def add_to_old_mempool_cache(self, items: List[MempoolItem], header: HeaderBlock):
+        dic_for_height: Dict[bytes32, MempoolItem]
+
+        # Store them in proper dictionary for the height they were farmed at
+        if header.height in self.old_mempools:
+            dic_for_height = self.old_mempools[header.height]
+        else:
+            dic_for_height = {}
+            self.old_mempools[header.height] = dic_for_height
+
+        for item in items:
+            if item.name in dic_for_height:
+                continue
+            dic_for_height[item.name] = item
+
+        # Keep only last 10 heights in cache
+        while len(dic_for_height) > 10:
+            keys = dic_for_height.keys()
+            lowest_h = keys[0]
+            dic_for_height.pop(lowest_h)
+
+    async def initialize_pool_from_old_pools(self, pool: Pool):
+        old_pool: Pool
+        tried_already: Dict[bytes32, bytes32] = {}
+        for old_pool in self.mempools:
+            for item in old_pool.spends.values():
+                # Don't try to add same mempool item twice
+                if item.name in tried_already:
+                    continue
+                tried_already[item.name] = item.name
+                res, err = await self.add_spendbundle(item.spend_bundle, pool)
