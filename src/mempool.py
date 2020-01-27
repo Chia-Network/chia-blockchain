@@ -318,10 +318,21 @@ class Mempool:
                 new_pools[tip.header_hash] = new_p
             else:
                 # Create mempool for new head
-                # TODO Handle reoorgs, keep track of old mempools
-                new_p: Pool = await Pool.create(tip.header_block)
-                await self.initialize_pool_from_old_pools(new_p)
-                new_pools[tip.header_hash] = new_p
+                if len(self.old_mempools) > 0:
+                    new_p: Pool = await Pool.create(tip.header_block)
+
+                    # If old spends height is bigger than the new tip height, try adding spends to the pool
+                    for height in self.old_mempools.keys():
+                        if height > tip.height:
+                            old_spend_dict: Dict[bytes32, MempoolItem] = self.old_mempools[height]
+                            await self.add_old_spends_to_pool(new_p, old_spend_dict)
+
+                    await self.initialize_pool_from_current_pools(new_p)
+                    new_pools[tip.header_hash] = new_p
+                else:
+                    new_p: Pool = await Pool.create(tip.header_block)
+                    await self.initialize_pool_from_current_pools(new_p)
+                    new_pools[tip.header_hash] = new_p
 
         self.mempools = new_pools
 
@@ -341,8 +352,10 @@ class Mempool:
                 rem_item = pool.additions[add_coin.name()]
                 items[rem_item.name] = rem_item
 
-        for item in items:
+        for item in items.values():
             pool.remove_spend(item)
+
+        await self.add_to_old_mempool_cache(list(items.values()), new_tip.header_block)
 
     async def add_to_old_mempool_cache(self, items: List[MempoolItem], header: HeaderBlock):
         dic_for_height: Dict[bytes32, MempoolItem]
@@ -365,13 +378,18 @@ class Mempool:
             lowest_h = keys[0]
             dic_for_height.pop(lowest_h)
 
-    async def initialize_pool_from_old_pools(self, pool: Pool):
-        old_pool: Pool
+    async def initialize_pool_from_current_pools(self, pool: Pool):
         tried_already: Dict[bytes32, bytes32] = {}
-        for old_pool in self.mempools:
-            for item in old_pool.spends.values():
+        current_pool: Pool
+        for current_pool in self.mempools:
+            for item in current_pool.spends.values():
                 # Don't try to add same mempool item twice
                 if item.name in tried_already:
                     continue
                 tried_already[item.name] = item.name
                 res, err = await self.add_spendbundle(item.spend_bundle, pool)
+
+    async def add_old_spends_to_pool(self, pool: Pool, old_spends: Dict[bytes32, MempoolItem]):
+        for old in old_spends.values():
+            await self.add_spendbundle(old.spend_bundle, pool)
+
