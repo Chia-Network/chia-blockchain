@@ -251,7 +251,7 @@ class Timelord:
             try:
                 data = await reader.readexactly(4)
             except (asyncio.IncompleteReadError, ConnectionResetError) as e:
-                log.warn(f"{type(e)} {e}")
+                log.warning(f"{type(e)} {e}")
                 break
 
             if data.decode() == "STOP":

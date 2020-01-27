@@ -55,9 +55,7 @@ class FullNodeStore:
         self.db_name = db_name
 
         # All full blocks which have been added to the blockchain. Header_hash -> block
-        log.warn("CREATING CON")
         self.db = await aiosqlite.connect(self.db_name)
-        log.warn("CREATED CON")
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS blocks(height bigint, header_hash text PRIMARY KEY, block blob)"
         )
@@ -113,19 +111,15 @@ class FullNodeStore:
         await self.db.commit()
 
     async def add_block(self, block: FullBlock) -> None:
-        log.warning("1")
         await self.db.execute(
             "INSERT OR REPLACE INTO blocks VALUES(?, ?, ?)",
             (block.height, block.header_hash.hex(), bytes(block)),
         )
-        log.warning("2")
         assert block.header_block.challenge is not None
-        log.warning("3")
         small_header_block: SmallHeaderBlock = SmallHeaderBlock(
             block.header_block.header, block.header_block.challenge
         )
-        log.warning("Starting to add shb")
-        res = await self.db.execute(
+        await self.db.execute(
             ("INSERT OR REPLACE INTO small_header_blocks VALUES(?, ?, ?, ?)"),
             (
                 block.height,
@@ -134,7 +128,6 @@ class FullNodeStore:
                 bytes(small_header_block),
             ),
         )
-        log.warning(f"ADDED {res}")
         await self.db.commit()
 
     async def get_block(self, header_hash: bytes32) -> Optional[FullBlock]:

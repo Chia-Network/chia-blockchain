@@ -88,7 +88,7 @@ class Harvester:
                         f"Farming plot {filename} of size {self.provers[partial_filename].get_size()}"
                     )
                 else:
-                    log.warn(f"Plot at {filename} does not exist.")
+                    log.warning(f"Plot at {filename} does not exist.")
 
             else:
                 log.warning(

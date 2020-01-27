@@ -60,7 +60,6 @@ class RpcApiHandler:
         difficulty: uint64 = self.full_node.blockchain.get_next_difficulty(
             lca.header_hash
         )
-        print("LCA HH", lca.header_hash)
         lca_hb = (
             await self.full_node.store.get_header_blocks_by_hash([lca.header_hash])
         )[0]
