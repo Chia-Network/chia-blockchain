@@ -16,13 +16,6 @@ from src.util.consensus import hash_key_pairs_for_conditions_dict
 from src.util.ints import uint64, uint32
 from sortedcontainers import SortedDict
 
-tx_per_sec = 20
-sec_per_block = 5 * 60
-block_buffer_count = 10
-# 60000
-mempool_size = tx_per_sec * sec_per_block * block_buffer_count
-POTENTIAL_CACHE_SIZE = 300
-
 
 @dataclass(frozen=True)
 class MempoolItem:
@@ -47,16 +40,18 @@ class Pool:
     additions: Dict[CoinName, MempoolItem]
     removals: Dict[CoinName, MempoolItem]
     min_fee: uint64
+    size: uint32
 
     # if new min fee is added
     @staticmethod
-    async def create(head: HeaderBlock):
+    async def create(head: HeaderBlock, size: uint32):
         self = Pool()
         self.spends = {}
         self.additions = {}
         self.removals = {}
         self.min_fee = 0
         self.sorted_spends = SortedDict()
+        self.size = size
         return self
 
     def get_min_fee_rate(self) -> float:
@@ -95,7 +90,7 @@ class Pool:
             self.removals[key] = item
 
     def at_full_capacity(self) -> bool:
-        return len(self.spends.keys()) >= mempool_size
+        return len(self.spends.keys()) >= self.size
 
 
 @dataclass(frozen=True)
@@ -126,6 +121,14 @@ class Mempool:
         # old_mempools will contain transactions that were removed in the last 10 blocks
         self.old_mempools: SortedDict[uint32, Dict[bytes32, MempoolItem]] = SortedDict()
         self.unspent_store = unspent_store
+
+        tx_per_sec = consensus_constants["TX_PER_SEC"]
+        sec_per_block = consensus_constants["BLOCK_TIME_TARGET"]
+        block_buffer_count = consensus_constants["MEMPOOL_BLOCK_BUFFER"]
+
+        # MEMPOOL_SIZE = 60000
+        self.mempool_size = tx_per_sec * sec_per_block * block_buffer_count
+        self.potential_cache_size = 300
 
     # TODO implement creating block from mempool
     # TODO Aggregate all SpendBundles for the tip and return only one
@@ -299,7 +302,7 @@ class Mempool:
     async def add_to_potential_tx_set(self, spend: SpendBundle):
         self.potential_txs[spend.name] = spend
 
-        while len(self.potential_txs) > POTENTIAL_CACHE_SIZE:
+        while len(self.potential_txs) > self.potential_cache_size:
             first_in = self.potential_txs.keys()[0]
             del self.potential_txs[first_in]
 
@@ -330,7 +333,7 @@ class Mempool:
             else:
                 # Create mempool for new head
                 if len(self.old_mempools) > 0:
-                    new_pool: Pool = await Pool.create(tip.header_block)
+                    new_pool: Pool = await Pool.create(tip.header_block, self.mempool_size)
 
                     # If old spends height is bigger than the new tip height, try adding spends to the pool
                     for height in self.old_mempools.keys():
@@ -340,7 +343,7 @@ class Mempool:
 
                     await self.initialize_pool_from_current_pools(new_pool)
                 else:
-                    new_pool: Pool = await Pool.create(tip.header_block)
+                    new_pool: Pool = await Pool.create(tip.header_block, self.mempool_size)
                     await self.initialize_pool_from_current_pools(new_pool)
 
             await self.add_potential_spends_to_pool(new_pool)
