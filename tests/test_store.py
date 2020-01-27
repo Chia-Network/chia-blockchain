@@ -50,6 +50,16 @@ class TestStore:
                 await db.add_block(block)
                 assert block == await db.get_block(block.header_hash)
 
+            # Get small header blocks
+            assert len(await db.get_small_header_blocks()) == len(blocks)
+
+            # Get header_blocks
+            header_blocks = await db.get_header_blocks_by_hash(
+                [blocks[0].header_hash, blocks[4].header_hash]
+            )
+            assert header_blocks[0] == blocks[0].header_block
+            assert header_blocks[1] == blocks[4].header_block
+
             # Save/get sync
             for sync_mode in (False, True):
                 await db.set_sync_mode(sync_mode)

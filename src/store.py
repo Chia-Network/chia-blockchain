@@ -1,12 +1,12 @@
 import asyncio
 import logging
 import aiosqlite
-from typing import AsyncGenerator, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from src.types.body import Body
 from src.types.full_block import FullBlock
 from src.types.header import HeaderData
-from src.types.header_block import HeaderBlock
+from src.types.header_block import HeaderBlock, SmallHeaderBlock
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
@@ -64,10 +64,20 @@ class FullNodeStore:
             "CREATE TABLE IF NOT EXISTS potential_blocks(height bigint PRIMARY KEY, block blob)"
         )
 
+        # Headers
+        await self.db.execute(
+            "CREATE TABLE IF NOT EXISTS small_header_blocks(height bigint, header_hash "
+            "text PRIMARY KEY, small_header_block blob)"
+        )
+
         # Height index so we can look up in order of height for sync purposes
         await self.db.execute(
             "CREATE INDEX IF NOT EXISTS block_height on blocks(height)"
         )
+        await self.db.execute(
+            "CREATE INDEX IF NOT EXISTS small_header__block_height on small_header_blocks(height)"
+        )
+
         await self.db.commit()
 
         self.sync_mode = False
@@ -96,12 +106,21 @@ class FullNodeStore:
     async def _clear_database(self):
         await self.db.execute("DELETE FROM blocks")
         await self.db.execute("DELETE FROM potential_blocks")
+        await self.db.execute("DELETE FROM small_header_blocks")
         await self.db.commit()
 
     async def add_block(self, block: FullBlock) -> None:
         await self.db.execute(
             "INSERT OR REPLACE INTO blocks VALUES(?, ?, ?)",
             (block.height, block.header_hash.hex(), bytes(block)),
+        )
+        assert block.header_block.challenge is not None
+        small_header_block: SmallHeaderBlock = SmallHeaderBlock(
+            block.header_block.header, block.header_block.challenge
+        )
+        await self.db.execute(
+            ("INSERT OR REPLACE INTO small_header_blocks VALUES(?, ?, ?)"),
+            (block.height, block.header_hash.hex(), bytes(small_header_block),),
         )
         await self.db.commit()
 
@@ -114,10 +133,24 @@ class FullNodeStore:
             return FullBlock.from_bytes(row[2])
         return None
 
-    async def get_blocks(self) -> AsyncGenerator[FullBlock, None]:
-        async with self.db.execute("SELECT * FROM blocks") as cursor:
-            async for row in cursor:
-                yield FullBlock.from_bytes(row[2])
+    async def get_header_blocks_by_hash(
+        self, header_hashes: List[bytes32]
+    ) -> List[HeaderBlock]:
+        if len(header_hashes) == 0:
+            return []
+        header_hashes_db = tuple(h.hex() for h in header_hashes)
+        formatted_str = f'SELECT * from blocks WHERE header_hash in ({"?," * (len(header_hashes_db) - 1)}?)'
+        cursor = await self.db.execute(formatted_str, header_hashes_db)
+        rows = await cursor.fetchall()
+        header_blocks: List[HeaderBlock] = []
+        for row in rows:
+            header_blocks.append(FullBlock.from_bytes(row[2]).header_block)
+        return sorted(header_blocks, key=lambda hb: hb.height)
+
+    async def get_small_header_blocks(self) -> List[SmallHeaderBlock]:
+        cursor = await self.db.execute("SELECT * from small_header_blocks")
+        rows = await cursor.fetchall()
+        return [SmallHeaderBlock.from_bytes(row[2]) for row in rows]
 
     async def add_potential_block(self, block: FullBlock) -> None:
         await self.db.execute(

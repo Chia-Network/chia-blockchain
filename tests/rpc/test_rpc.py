@@ -50,7 +50,7 @@ class TestRpc:
         await store.add_block(blocks[0])
         for i in range(1, 9):
             assert (
-                await b.receive_block(blocks[i])
+                await b.receive_block(blocks[i], blocks[i - 1].header_block)
             ) == ReceiveBlockResult.ADDED_TO_HEAD
             await store.add_block(blocks[i])
 
@@ -65,31 +65,30 @@ class TestRpc:
 
         rpc_cleanup = await start_rpc_server(full_node_1, stop_node_cb, test_rpc_port)
 
-        client = await RpcClient.create(test_rpc_port)
-        state = await client.get_blockchain_state()
-        assert state["lca"].header_hash is not None
-        assert not state["sync_mode"]
-        assert len(state["tips"]) > 0
-        assert state["difficulty"] > 0
-        assert state["ips"] > 0
-
-        block = await client.get_block(state["lca"].header_hash)
-        assert block == blocks[6]
-        assert (await client.get_block(bytes([1] * 32))) is None
-
-        small_header_block = await client.get_header(state["lca"].header_hash)
-        assert small_header_block.header == blocks[6].header_block.header
-
-        assert len(await client.get_pool_balances()) > 0
-        assert len(await client.get_connections()) == 0
-
-        full_node_2 = FullNode(store, b)
-        server_2 = ChiaServer(test_node_2_port, full_node_2, NodeType.FULL_NODE)
-        full_node_2._set_server(server_2)
-
-        _ = await server_2.start_server("127.0.0.1", None)
-        await asyncio.sleep(2)  # Allow server to start
         try:
+            client = await RpcClient.create(test_rpc_port)
+            state = await client.get_blockchain_state()
+            assert state["lca"].header_hash is not None
+            assert not state["sync_mode"]
+            assert len(state["tips"]) > 0
+            assert state["difficulty"] > 0
+            assert state["ips"] > 0
+
+            block = await client.get_block(state["lca"].header_hash)
+            assert block == blocks[6]
+            assert (await client.get_block(bytes([1] * 32))) is None
+
+            small_header_block = await client.get_header(state["lca"].header_hash)
+            assert small_header_block.header == blocks[6].header_block.header
+
+            assert len(await client.get_connections()) == 0
+
+            full_node_2 = FullNode(store, b)
+            server_2 = ChiaServer(test_node_2_port, full_node_2, NodeType.FULL_NODE)
+            full_node_2._set_server(server_2)
+
+            _ = await server_2.start_server("127.0.0.1", None)
+            await asyncio.sleep(2)  # Allow server to start
             cons = await client.get_connections()
             assert len(cons) == 0
 
