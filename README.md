@@ -66,7 +66,7 @@ sh install.sh
 
 . .venv/bin/activate
 ```
-### RHEL 8.0
+### RHEL 8.1
 
 ```bash
 sudo yum update
@@ -174,7 +174,7 @@ cd chia-blockchain
 
 sh install_timelord.sh
 ```
-### RHEL 8.0
+### RHEL 8.1
 ```bash
 sudo yum install mpfr-devel boost boost-devel
 
