@@ -149,7 +149,7 @@ sh install.sh
 
 ## Step 2: Install timelord (optional)
 Note: this step is needed only if you intend to run a timelord or a local simulation.
-These assume you've already successfully installed harvester, farmer, plotting, and full node above. boost 1.67 or newer is required on all platforms.
+These assume you've already successfully installed harvester, farmer, plotting, and full node above. boost 1.66 or newer is required on all platforms.
 ### Ubuntu/Debian
 ```bash
 cd chia-blockchain
