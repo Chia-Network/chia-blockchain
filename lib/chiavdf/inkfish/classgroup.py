@@ -70,7 +70,6 @@ class ClassGroup(tuple):
                          for x in [r[0], r[1]]])
 
     def __eq__(self, other):
-        print("other", other)
         return tuple(self.reduced()) == tuple(ClassGroup((other[0], other[1], other[2])).reduced())
 
     def __ne__(self, other):

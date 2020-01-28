@@ -191,10 +191,10 @@ class FullNodeStore:
             return FullBlock.from_bytes(row[1])
         return None
 
-    async def add_disconnected_block(self, block: FullBlock) -> None:
+    def add_disconnected_block(self, block: FullBlock) -> None:
         self.disconnected_blocks[block.header_hash] = block
 
-    async def get_disconnected_block_by_prev(
+    def get_disconnected_block_by_prev(
         self, prev_header_hash: bytes32
     ) -> Optional[FullBlock]:
         for _, block in self.disconnected_blocks.items():
@@ -202,18 +202,18 @@ class FullNodeStore:
                 return block
         return None
 
-    async def get_disconnected_block(self, header_hash: bytes32) -> Optional[FullBlock]:
+    def get_disconnected_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         return self.disconnected_blocks.get(header_hash, None)
 
-    async def clear_disconnected_blocks_below(self, height: uint32) -> None:
+    def clear_disconnected_blocks_below(self, height: uint32) -> None:
         for key in list(self.disconnected_blocks.keys()):
             if self.disconnected_blocks[key].height < height:
                 del self.disconnected_blocks[key]
 
-    async def set_sync_mode(self, sync_mode: bool) -> None:
+    def set_sync_mode(self, sync_mode: bool) -> None:
         self.sync_mode = sync_mode
 
-    async def get_sync_mode(self) -> bool:
+    def get_sync_mode(self) -> bool:
         return self.sync_mode
 
     async def clear_sync_info(self):
@@ -224,13 +224,13 @@ class FullNodeStore:
         self.potential_blocks_received.clear()
         self.potential_future_blocks.clear()
 
-    async def get_potential_tips_tuples(self) -> List[Tuple[bytes32, FullBlock]]:
+    def get_potential_tips_tuples(self) -> List[Tuple[bytes32, FullBlock]]:
         return list(self.potential_tips.items())
 
-    async def add_potential_tip(self, block: FullBlock) -> None:
+    def add_potential_tip(self, block: FullBlock) -> None:
         self.potential_tips[block.header_hash] = block
 
-    async def get_potential_tip(self, header_hash: bytes32) -> Optional[FullBlock]:
+    def get_potential_tip(self, header_hash: bytes32) -> Optional[FullBlock]:
         return self.potential_tips.get(header_hash, None)
 
     def add_potential_header(self, block: HeaderBlock) -> None:
@@ -266,18 +266,18 @@ class FullNodeStore:
     def get_potential_blocks_received(self, height: uint32) -> asyncio.Event:
         return self.potential_blocks_received[height]
 
-    async def add_potential_future_block(self, block: FullBlock):
+    def add_potential_future_block(self, block: FullBlock):
         self.potential_future_blocks.append(block)
 
-    async def get_potential_future_blocks(self):
+    def get_potential_future_blocks(self):
         return self.potential_future_blocks
 
-    async def add_candidate_block(
+    def add_candidate_block(
         self, pos_hash: bytes32, body: Body, header: HeaderData, pos: ProofOfSpace,
     ):
         self.candidate_blocks[pos_hash] = (body, header, pos, body.coinbase.height)
 
-    async def get_candidate_block(
+    def get_candidate_block(
         self, pos_hash: bytes32
     ) -> Optional[Tuple[Body, HeaderData, ProofOfSpace]]:
         res = self.candidate_blocks.get(pos_hash, None)
@@ -285,19 +285,17 @@ class FullNodeStore:
             return None
         return (res[0], res[1], res[2])
 
-    async def clear_candidate_blocks_below(self, height: uint32) -> None:
+    def clear_candidate_blocks_below(self, height: uint32) -> None:
         for key in list(self.candidate_blocks.keys()):
             if self.candidate_blocks[key][3] < height:
                 del self.candidate_blocks[key]
 
-    async def add_unfinished_block(
+    def add_unfinished_block(
         self, key: Tuple[bytes32, uint64], block: FullBlock
     ) -> None:
         self.unfinished_blocks[key] = block
 
-    async def get_unfinished_block(
-        self, key: Tuple[bytes32, uint64]
-    ) -> Optional[FullBlock]:
+    def get_unfinished_block(self, key: Tuple[bytes32, uint64]) -> Optional[FullBlock]:
         return self.unfinished_blocks.get(key, None)
 
     def seen_unfinished_block(self, header_hash: bytes32) -> bool:
@@ -309,10 +307,10 @@ class FullNodeStore:
     def clear_seen_unfinished_blocks(self) -> None:
         self.seen_unfinished_blocks.clear()
 
-    async def get_unfinished_blocks(self) -> Dict[Tuple[bytes32, uint64], FullBlock]:
+    def get_unfinished_blocks(self) -> Dict[Tuple[bytes32, uint64], FullBlock]:
         return self.unfinished_blocks.copy()
 
-    async def clear_unfinished_blocks_below(self, height: uint32) -> None:
+    def clear_unfinished_blocks_below(self, height: uint32) -> None:
         for key in list(self.unfinished_blocks.keys()):
             if self.unfinished_blocks[key].height < height:
                 del self.unfinished_blocks[key]
@@ -323,8 +321,8 @@ class FullNodeStore:
     def get_unfinished_block_leader(self) -> Tuple[bytes32, uint64]:
         return self.unfinished_blocks_leader
 
-    async def set_proof_of_time_estimate_ips(self, estimate: uint64):
+    def set_proof_of_time_estimate_ips(self, estimate: uint64):
         self.proof_of_time_estimate_ips = estimate
 
-    async def get_proof_of_time_estimate_ips(self) -> uint64:
+    def get_proof_of_time_estimate_ips(self) -> uint64:
         return self.proof_of_time_estimate_ips

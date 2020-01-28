@@ -56,7 +56,7 @@ class RpcApiHandler:
         tips: List[SmallHeaderBlock] = self.full_node.blockchain.get_current_tips()
         lca: SmallHeaderBlock = self.full_node.blockchain.lca_block
         assert lca.challenge is not None
-        sync_mode: bool = await self.full_node.store.get_sync_mode()
+        sync_mode: bool = self.full_node.store.get_sync_mode()
         difficulty: uint64 = self.full_node.blockchain.get_next_difficulty(
             lca.header_hash
         )
@@ -176,10 +176,9 @@ class RpcApiHandler:
         TODO: remove after transactions and coins are added.
         """
 
-        async with self.full_node.store.lock:
-            ppks: List[
-                Tuple[uint32, PublicKey]
-            ] = await self.full_node.store.get_pool_pks_hack()
+        ppks: List[
+            Tuple[uint32, PublicKey]
+        ] = await self.full_node.store.get_pool_pks_hack()
 
         coin_balances: Dict[str, uint64] = {}
         for height, pk in ppks:
@@ -201,8 +200,8 @@ class RpcApiHandler:
         assert tips[i].challenge is not None
         challenge: Challenge = tips[i].challenge  # type: ignore
         max_tip: SmallHeaderBlock = SmallHeaderBlock(tips[i].header, challenge)
-        if await self.full_node.store.get_sync_mode():
-            potential_tips = await self.full_node.store.get_potential_tips_tuples()
+        if self.full_node.store.get_sync_mode():
+            potential_tips = self.full_node.store.get_potential_tips_tuples()
             for _, pot_block in potential_tips:
                 if pot_block.weight > max_tip.weight:
                     assert pot_block.header_block.challenge is not None
