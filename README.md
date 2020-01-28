@@ -40,7 +40,7 @@ sh install.sh
 
 . .venv/bin/activate
 ```
-### CentOS 7
+### CentOS 7.7
 
 ```bash
 sudo yum update
@@ -156,7 +156,7 @@ cd chia-blockchain
 
 sh install_timelord.sh
 ```
-### Amazon Linux 2 and CentOS 7
+### Amazon Linux 2 and CentOS 7.7
 ```bash
 #Only for Amazon Linux 2
 sudo amazon-linux-extras install epel
