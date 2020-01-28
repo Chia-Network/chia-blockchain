@@ -175,7 +175,7 @@ cd chia-blockchain
 sh install_timelord.sh
 ```
 ### RHEL 8.0
-```
+```bash
 sudo yum install mpfr-devel boost boost-devel
 
 cd chia-blockchain
