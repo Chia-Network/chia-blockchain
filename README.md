@@ -63,9 +63,28 @@ git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sh install.sh
+
 . .venv/bin/activate
 ```
+### RHEL 8.0
 
+```bash
+sudo yum update
+sudo yum install gcc-c++ cmake3 git openssl openssl-devel
+sudo yum install wget make libffi-devel gmp-devel
+
+# Install Python 3.7.5 (current rpm's are 3.6.x)
+wget https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tgz
+tar -zxvf Python-3.7.5.tgz; cd Python-3.7.5
+./configure --enable-optimizations; sudo make install; cd ..
+
+git clone https://github.com/Chia-Network/chia-blockchain.git
+cd chia-blockchain
+
+sh install.sh
+
+. .venv/bin/activate
+```
 ### Windows (WSL + Ubuntu)
 #### Install WSL + Ubuntu 18.04 LTS, upgrade to Ubuntu 19.x
 
@@ -89,6 +108,7 @@ git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sudo sh install.sh
+
 . .venv/bin/activate
 ```
 
