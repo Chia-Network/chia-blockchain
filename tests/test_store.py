@@ -2,6 +2,8 @@ import asyncio
 from secrets import token_bytes
 from typing import Any, Dict
 import os
+import sqlite3
+import random
 
 import pytest
 from src.consensus.constants import constants
@@ -37,6 +39,7 @@ def event_loop():
 class TestStore:
     @pytest.mark.asyncio
     async def test_basic_store(self):
+        assert sqlite3.threadsafety == 1
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
         db_filename = "blockchain_test"
         db_filename_2 = "blockchain_test_2"
@@ -152,3 +155,27 @@ class TestStore:
         await db.close()
         await db_2.close()
         await db_3.close()
+
+    @pytest.mark.asyncio
+    async def test_deadlock(self):
+        blocks = bt.get_consecutive_blocks(test_constants, 10, [], 9, b"0")
+        db_filename = "blockchain_test"
+
+        if os.path.isfile(db_filename):
+            os.remove(db_filename)
+
+        db = await FullNodeStore.create(db_filename)
+        tasks = []
+
+        for i in range(10000):
+            rand_i = random.randint(0, 10)
+            if random.random() < 0.5:
+                tasks.append(asyncio.create_task(db.add_block(blocks[rand_i])))
+            if random.random() < 0.5:
+                tasks.append(asyncio.create_task(db.add_potential_block(blocks[rand_i])))
+            if random.random() < 0.5:
+                tasks.append(asyncio.create_task(db.get_block(blocks[rand_i].header_hash)))
+            if random.random() < 0.5:
+                tasks.append(asyncio.create_task(db.get_potential_block(blocks[rand_i].header_hash)))
+        await asyncio.gather(*tasks)
+        await db.close()

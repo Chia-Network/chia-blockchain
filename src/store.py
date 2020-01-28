@@ -111,15 +111,16 @@ class FullNodeStore:
         await self.db.commit()
 
     async def add_block(self, block: FullBlock) -> None:
-        await self.db.execute(
+        cursor_1 = await self.db.execute(
             "INSERT OR REPLACE INTO blocks VALUES(?, ?, ?)",
             (block.height, block.header_hash.hex(), bytes(block)),
         )
+        await cursor_1.close()
         assert block.header_block.challenge is not None
         small_header_block: SmallHeaderBlock = SmallHeaderBlock(
             block.header_block.header, block.header_block.challenge
         )
-        await self.db.execute(
+        cursor_2 = await self.db.execute(
             ("INSERT OR REPLACE INTO small_header_blocks VALUES(?, ?, ?, ?)"),
             (
                 block.height,
@@ -128,13 +129,14 @@ class FullNodeStore:
                 bytes(small_header_block),
             ),
         )
-        await self.db.commit()
+        await cursor_2.close()
 
     async def get_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         cursor = await self.db.execute(
             "SELECT * from blocks WHERE header_hash=?", (header_hash.hex(),)
         )
         row = await cursor.fetchone()
+        await cursor.close()
         if row is not None:
             return FullBlock.from_bytes(row[2])
         return None
@@ -148,6 +150,7 @@ class FullNodeStore:
         formatted_str = f'SELECT * from blocks WHERE header_hash in ({"?," * (len(header_hashes_db) - 1)}?)'
         cursor = await self.db.execute(formatted_str, header_hashes_db)
         rows = await cursor.fetchall()
+        await cursor.close()
         header_blocks: List[HeaderBlock] = []
         for row in rows:
             header_blocks.append(FullBlock.from_bytes(row[2]).header_block)
@@ -156,6 +159,7 @@ class FullNodeStore:
     async def get_small_header_blocks(self) -> List[SmallHeaderBlock]:
         cursor = await self.db.execute("SELECT * from small_header_blocks")
         rows = await cursor.fetchall()
+        await cursor.close()
         return [SmallHeaderBlock.from_bytes(row[3]) for row in rows]
 
     async def get_pool_pks_hack(self) -> List[Tuple[uint32, PublicKey]]:
@@ -171,17 +175,18 @@ class FullNodeStore:
         ]
 
     async def add_potential_block(self, block: FullBlock) -> None:
-        await self.db.execute(
+        cursor = await self.db.execute(
             "INSERT OR REPLACE INTO potential_blocks VALUES(?, ?)",
             (block.height, bytes(block)),
         )
-        await self.db.commit()
+        await cursor.close()
 
     async def get_potential_block(self, height: uint32) -> Optional[FullBlock]:
         cursor = await self.db.execute(
             "SELECT * from potential_blocks WHERE height=?", (height,)
         )
         row = await cursor.fetchone()
+        await cursor.close()
         if row is not None:
             return FullBlock.from_bytes(row[1])
         return None
@@ -214,8 +219,8 @@ class FullNodeStore:
     async def clear_sync_info(self):
         self.potential_tips.clear()
         self.potential_headers.clear()
-        await self.db.execute("DELETE FROM potential_blocks")
-        await self.db.commit()
+        cursor = await self.db.execute("DELETE FROM potential_blocks")
+        await cursor.close()
         self.potential_blocks_received.clear()
         self.potential_future_blocks.clear()
 
