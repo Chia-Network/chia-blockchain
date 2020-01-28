@@ -259,6 +259,7 @@ class BlockTools:
             uint64(test_constants["DIFFICULTY_STARTING"]),
             uint64(test_constants["VDF_IPS_STARTING"]),
             seed,
+            True,
         )
 
     def create_next_block(
@@ -304,6 +305,7 @@ class BlockTools:
         difficulty: uint64,
         ips: uint64,
         seed: bytes,
+        genesis: bool = False
     ) -> FullBlock:
         """
         Creates a block with the specified details. Uses the stored plots to create a proof of space,
@@ -359,14 +361,22 @@ class BlockTools:
         solutions_generator: bytes32 = sha256(seed).digest()
         cost = uint64(0)
 
+        block_reward = block_rewards.calculate_block_reward(height)
+        if genesis:
+            coinbase_reward = block_reward
+            fee_reward = 0
+        else:
+            coinbase_reward = (block_reward / 8) * 7
+            fee_reward = block_reward / 8
+
         coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
             height,
             fees_target.puzzle_hash,
-            block_rewards.calculate_block_reward(height),
+            coinbase_reward,
             pool_sk)
 
         fee_hash = blspy.Util.hash256(coinbase_coin.name())
-        fees_coin = Coin(fee_hash, fees_target.puzzle_hash, 0)
+        fees_coin = Coin(fee_hash, fees_target.puzzle_hash, fee_reward)
 
         body: Body = Body(
             coinbase_coin, coinbase_signature, fees_coin, None, None, solutions_generator, cost
