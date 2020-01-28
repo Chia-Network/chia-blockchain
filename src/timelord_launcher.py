@@ -56,13 +56,16 @@ async def main():
     port = config["port"]
     process_count = config["process_count"]
 
-    for i in range(process_count):
-        asyncio.create_task(spawn_process(host, port, i))
-
     def signal_received():
         asyncio.create_task(kill_processes())
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
+
+    awaitables = [
+        spawn_process(host, port, i)
+        for i in range(process_count)
+    ]
+    await asyncio.gather(*awaitables)
 
 asyncio.run(main())
