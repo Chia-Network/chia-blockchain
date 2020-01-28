@@ -3,8 +3,9 @@ from typing import Optional, List, Dict, Tuple
 import clvm
 
 from src.farming.farming_tools import best_solution_program
-from src.mempool import Pool, NPC
 from src.types.hashable import SpendBundle, CoinName, ProgramHash, Program, Unspent
+from src.types.name_puzzle_condition import NPC
+from src.types.pool import Pool
 from src.util.Conditions import ConditionVarPair, ConditionOpcode
 from src.util.ConsensusError import Err
 from src.util.consensus import conditions_dict_for_solution

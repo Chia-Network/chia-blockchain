@@ -4,9 +4,10 @@ from typing import List, Dict
 from src.atoms import hash_pointer
 from src.types.hashable import std_hash, Coin
 from src.types.sized_bytes import bytes32
-from src.util.chain_utils import additions_for_solution, name_puzzle_conditions_list
+from src.util.chain_utils import additions_for_solution
 from src.util.consensus import aggsig_in_conditions_dict
 from src.util.ints import uint32, uint64
+from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.streamable import Streamable, streamable
 from .BLSSignature import BLSSignature
 from .CoinSolution import CoinSolution
@@ -57,9 +58,9 @@ class SpendBundle(Streamable):
     def get_signature_count(self) -> uint64:
         count: uint64 = uint64(0)
         for cs in self.coin_solutions:
-            npc_list = name_puzzle_conditions_list(cs.solution)
-            for _, _, condition in npc_list:
-                agg_sigs = aggsig_in_conditions_dict(condition)
+            npc_list = get_name_puzzle_conditions(cs.solution)
+            for npc in npc_list:
+                agg_sigs = aggsig_in_conditions_dict(npc.condition_dict)
                 count += agg_sigs.count()
 
         return count

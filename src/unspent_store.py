@@ -1,12 +1,9 @@
 import asyncio
-from dataclasses import dataclass
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, List
 import aiosqlite
 from src.types.full_block import FullBlock
 from src.types.hashable import Hash, Unspent, Coin, CoinName
 from src.types.header_block import HeaderBlock
-from src.util.chain_utils import name_puzzle_conditions_list
-from src.util.consensus import created_outputs_for_conditions_dict
 from src.util.ints import uint32
 
 

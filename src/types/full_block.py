@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Tuple, List, Optional
 
-from src.mempool import NPC
+from src.types.name_puzzle_condition import NPC
 from src.types.body import Body
 from src.types.hashable import Coin
 from src.types.header_block import HeaderBlock
