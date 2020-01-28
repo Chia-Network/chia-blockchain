@@ -18,7 +18,7 @@ from src.mempool import MAX_COIN_AMOUNT
 from src.store import FullNodeStore
 
 from src.types.full_block import FullBlock, additions_for_npc
-from src.types.hashable import Program, Coin, Unspent
+from src.types.hashable import Coin, Unspent
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.unspent_store import UnspentStore
@@ -90,7 +90,6 @@ class Blockchain:
         self.store = store
 
         self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
-
         result, removed = await self.receive_block(self.genesis)
         if result != ReceiveBlockResult.ADDED_TO_HEAD:
             raise InvalidGenesisBlock()
@@ -488,14 +487,7 @@ class Blockchain:
             if block.body.get_hash() != block.header_block.header.data.body_hash:
                 return False
 
-            # 3. Check coinbase amount
-            if (
-                calculate_block_reward(block.height)
-                != block.body.coinbase.amount
-            ):
-                return False
-
-            # 4. Check coinbase signature with pool pk
+            # 3. Check coinbase signature with pool pk
             pair = block.body.coinbase_signature.AGGSIGPair(
                 block.header_block.proof_of_space.pool_pubkey,
                 block.body.coinbase.name()
@@ -504,18 +496,18 @@ class Blockchain:
             if not block.body.coinbase_signature.validate([pair]):
                 return False
 
-            # 5. Check harvester signature of header data is valid based on harvester key
+            # 4. Check harvester signature of header data is valid based on harvester key
             if not block.header_block.header.harvester_signature.verify(
                 [blspy.Util.hash256(block.header_block.header.data.get_hash())],
                 [block.header_block.proof_of_space.plot_pubkey],
             ):
                 return False
 
-        # 6. Check previous pointer(s) / flyclient
+        # 5. Check previous pointer(s) / flyclient
         if not genesis and block.prev_header_hash not in self.header_blocks:
             return False
 
-        # 7. Check Now+2hrs > timestamp > avg timestamp of last 11 blocks
+        # 6. Check Now+2hrs > timestamp > avg timestamp of last 11 blocks
         prev_block: Optional[HeaderBlock] = None
         if not genesis:
             # TODO: do something about first 11 blocks
@@ -544,11 +536,11 @@ class Blockchain:
             ):
                 return False
 
-        # 8. Check filter hash is correct TODO
+        # 7. Check filter hash is correct TODO
 
-        # 9. Check extension data, if any is added
+        # 8. Check extension data, if any is added
 
-        # 10. Compute challenge of parent
+        # 9. Compute challenge of parent
         challenge_hash: bytes32
         if not genesis:
             assert prev_block
@@ -565,13 +557,13 @@ class Blockchain:
             if challenge_hash != block.header_block.proof_of_space.challenge_hash:
                 return False
 
-        # 11. Check proof of space based on challenge
+        # 10. Check proof of space based on challenge
         if pos_quality is None:
             pos_quality = block.header_block.proof_of_space.verify_and_get_quality()
             if not pos_quality:
                 return False
 
-        # 12. Check coinbase height = prev height + 1
+        # 11. Check coinbase height = prev height + 1
         if not genesis:
             assert prev_block
             if block.height != prev_block.height + 1:
@@ -685,6 +677,24 @@ class Blockchain:
                 != prev_block.challenge.total_iters + number_of_iters
             ):
                 return False
+
+            coinbase_reward = calculate_block_reward(block.height)
+            if (coinbase_reward / 8) * 7 != block.body.coinbase.amount:
+                return False
+            fee_base = coinbase_reward / 8
+            # 9. If there is no agg signature, there should be no transactions either
+            # target reward_fee = 1/8 coinbase reward + tx fees
+            if not block.body.aggregated_signature:
+                if block.body.transactions:
+                    return False
+                else:
+                    if fee_base != block.body.fees_coin.amount:
+                        return False
+            else:
+                # Validate transactions, and verify that fee_base + TX fees = fee_coin.amount
+                err = await self.validate_transactions(block, fee_base)
+                if err:
+                    return False
         else:
             # 6b. Check challenge height = parent height + 1
             if block.header_block.challenge.height != 0:
@@ -697,15 +707,6 @@ class Blockchain:
             # 8b. Check challenge total_iters = parent total_iters + number_iters
             if block.header_block.challenge.total_iters != number_of_iters:
                 return False
-
-        # 9. Check if aggregated_signature exists
-        if not block.body.aggregated_signature:
-            return False
-
-        # Validate transactions
-        err = await self.validate_transactions(block)
-        if err:
-            return False
 
         return True
 
@@ -767,12 +768,6 @@ class Blockchain:
             return False, None
 
         if block.body.height != block.header_block.challenge.height:
-            return False, None
-
-        if (
-            calculate_block_reward(block.height)
-            != block.body.coinbase.amount
-        ):
             return False, None
 
         # 9. Check harvester signature of header data is valid based on harvester key
@@ -972,7 +967,7 @@ class Blockchain:
             return True, removed
         return False, None
 
-    async def validate_transactions(self, block: FullBlock) ->  Optional[Err]:
+    async def validate_transactions(self, block: FullBlock, fee_base: uint64) ->  Optional[Err]:
 
         # Get List of names removed, puzzles hashes for removed coins and conditions crated
         error, npc_list = get_name_puzzle_conditions(block.body.transactions)
@@ -1045,7 +1040,7 @@ class Blockchain:
         fees = removed - added
 
         # Check coinbase reward
-        if fees != block.body.fees_coin.amount:
+        if fees + fee_base != block.body.fees_coin.amount:
             return Err.BAD_COINBASE_REWARD
 
         # Verify that removed coin puzzle_hashes match with calculated puzzle_hashes
