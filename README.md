@@ -174,7 +174,14 @@ cd chia-blockchain
 
 sh install_timelord.sh
 ```
+### RHEL 8.0
+```
+sudo yum install mpfr-devel boost boost-devel
 
+cd chia-blockchain
+
+sh install_timelord.sh
+```
 ### Windows (WSL + Ubuntu)
 #### Install WSL + Ubuntu upgraded to 19.x
 ```bash
