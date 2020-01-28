@@ -3,6 +3,7 @@ from typing import List, Tuple, Optional, Dict
 import clvm
 
 from src.types.hashable import BLSSignature, Coin
+from src.types.sized_bytes import bytes32
 from src.util.ConsensusError import Err
 
 from .Conditions import conditions_by_opcode, parse_sexp_to_conditions, ConditionOpcode, ConditionVarPair
@@ -42,7 +43,8 @@ def validate_spend_bundle_signature(spend_bundle) -> bool:
     return spend_bundle.aggregated_signature.validate(hash_key_pairs)
 
 
-def created_outputs_for_conditions_dict(conditions_dict, input_coin_name) -> List[Coin]:
+def created_outputs_for_conditions_dict(conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
+                                        input_coin_name: bytes32) -> List[Coin]:
     output_coins = []
     for _ in conditions_dict.get(ConditionOpcode.CREATE_COIN, []):
         # TODO: check condition very carefully

@@ -1,3 +1,4 @@
+import collections
 import logging
 import multiprocessing
 import time
@@ -13,12 +14,18 @@ from src.consensus.pot_iterations import (
     calculate_ips_from_iterations,
     calculate_iterations_quality,
 )
+from src.mempool import MAX_COIN_AMOUNT
 from src.store import FullNodeStore
 
-from src.types.full_block import FullBlock
+from src.types.full_block import FullBlock, additions_for_npc
+from src.types.hashable import Program, Coin, Unspent
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.unspent_store import UnspentStore
+from src.util.ConsensusError import Err
+from src.util.blockchain_check_conditions import blockchain_check_conditions_dict
+from src.util.consensus import hash_key_pairs_for_conditions_dict
+from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.errors import BlockNotInBlockchain, InvalidGenesisBlock
 from src.util.ints import uint32, uint64
 
@@ -573,13 +580,6 @@ class Blockchain:
             if block.height != 0:
                 return False
 
-        # TODO: 14a. check transactions
-        # TODO: 14b. Aggregate transaction results into signature
-        if block.body.aggregated_signature:
-            # TODO: 15. check that aggregate signature is valid, based on pubkeys, and messages
-            pass
-        # TODO: 16. check fees
-        # TODO: 17. check cost
         return True
 
     async def validate_block(
@@ -697,6 +697,15 @@ class Blockchain:
             # 8b. Check challenge total_iters = parent total_iters + number_iters
             if block.header_block.challenge.total_iters != number_of_iters:
                 return False
+
+        # 9. Check if aggregated_signature exists
+        if not block.body.aggregated_signature:
+            return False
+
+        # Validate transactions
+        err = await self.validate_transactions(block)
+        if err:
+            return False
 
         return True
 
@@ -962,3 +971,99 @@ class Blockchain:
             await self._reconsider_lca(genesis)
             return True, removed
         return False, None
+
+    async def validate_transactions(self, block: FullBlock) ->  Optional[Err]:
+
+        # Get List of names removed, puzzles hashes for removed coins and conditions crated
+        error, npc_list = get_name_puzzle_conditions(block.body.transactions)
+
+
+        if error:
+            return error
+
+        prev_header: HeaderBlock
+        if block.prev_header_hash in self.header_blocks:
+            prev_header = self.header_blocks[block.prev_header_hash]
+        else:
+            return Err.EXTENDS_UNKNOWN_BLOCK
+
+        removals: List[bytes32] = []
+        removals_puzzle_dic: Dict[bytes32, bytes32] = {}
+        for npc in npc_list:
+            removals.append(npc.coin_name)
+            removals_puzzle_dic[npc.coin_name] = npc.puzzle_hash
+
+        additions: List[Coin] = additions_for_npc(npc_list)
+        additions_dic: Dict[bytes32, Coin] = {}
+        # Check additions for max coin amount
+        for coin in additions:
+            additions_dic[coin.name()] = coin
+            if coin.amount >= MAX_COIN_AMOUNT:
+                return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
+
+        # Watch out for duplicate outputs
+        addition_counter = collections.Counter(_.name() for _ in additions)
+        for k, v in addition_counter.items():
+            if v > 1:
+                return Err.DUPLICATE_OUTPUT
+
+        # Check for duplicate spends inside block
+        removal_counter = collections.Counter(removals)
+        for k, v in removal_counter.items():
+            if v > 1:
+                return Err.DOUBLE_SPEND
+
+        # Check if removals exist and were not previously spend. (unspent_db + diff_store + this_block)
+        removal_unspents: Dict[bytes32, Unspent] = []
+        for rem in removals:
+            if rem in additions_dic:
+                # Ephemeral coin
+                rem_coin: Coin = additions_dic[rem]
+                new_unspent: Unspent = Unspent(rem_coin, block.height, 0, 0)
+                removal_unspents[new_unspent.name] = new_unspent
+            else:
+               unspent = await self.unspent_store.get_unspent(rem, prev_header)
+               if unspent:
+                   if unspent.spent == 1:
+                       return Err.DOUBLE_SPEND
+                   removal_unspents[unspent.name] = unspent
+               else:
+                   return Err.UNKNOWN_UNSPENT
+
+        # Check fees
+        removed = 0
+        for unspent in removal_unspents:
+            removed += unspent.coin.amount
+
+        added = 0
+        for coin in additions:
+            added += coin.amount
+
+        if removed < added:
+            return Err.MINTING_COIN
+
+        fees = removed - added
+
+        # Check coinbase reward
+        if fees != block.body.fees_coin.amount:
+            return Err.BAD_COINBASE_REWARD
+
+        # Verify that removed coin puzzle_hashes match with calculated puzzle_hashes
+        for unspent in removal_unspents:
+            if unspent.coin.puzzle_hash != removals_puzzle_dic[unspent.name]:
+                return Err.WRONG_PUZZLE_HASH
+
+        # Verify conditions, create hash_key list for aggsig check
+        hash_key_pairs = []
+        for npc in npc_list:
+            unspent: Unspent = removal_unspents[npc.coin_name]
+            error = blockchain_check_conditions_dict(unspent, removal_unspents, npc.condition_dict, block.header_block)
+            if error:
+                return error
+            hash_key_pairs.extend(hash_key_pairs_for_conditions_dict(npc.condition_dict))
+
+        # Verify aggregated signature
+        if not block.body.aggregated_signature.validate(hash_key_pairs):
+            return Err.BAD_AGGREGATE_SIGNATURE
+
+        return None

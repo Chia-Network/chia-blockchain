@@ -11,7 +11,7 @@ from src.types.sized_bytes import bytes32
 from src.unspent_store import UnspentStore
 from src.util.Conditions import ConditionOpcode, ConditionVarPair
 from src.util.ConsensusError import Err
-from src.util.check_conditions import get_name_puzzle_conditions, check_conditions_dict
+from src.util.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_conditions_dict
 from src.util.consensus import hash_key_pairs_for_conditions_dict
 from src.util.ints import uint64, uint32
 from sortedcontainers import SortedDict
@@ -235,7 +235,7 @@ class Mempool:
                 continue
 
             # Check that the revealed removal puzzles actually match the puzzle hash
-            for unspent in unspents:
+            for unspent in unspents.values():
                 coin = removals_dic[unspent.coin.name()]
                 if unspent.coin.puzzle_hash != coin.puzzle_hash:
                     return False, Err.WRONG_PUZZLE_HASH
@@ -245,7 +245,7 @@ class Mempool:
             error: Optional[Err] = None
             for npc in npc_list:
                 unspent: Unspent = unspents[npc.coin_name]
-                error = check_conditions_dict(unspent, new_spend, npc.condition_dict, pool)
+                error = mempool_check_conditions_dict(unspent, new_spend, npc.condition_dict, pool)
                 if error:
                     if (error is Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED
                             or

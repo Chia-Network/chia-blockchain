@@ -1,14 +1,26 @@
 from dataclasses import dataclass
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 
+from src.mempool import NPC
 from src.types.body import Body
 from src.types.hashable import Coin
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
-from src.util.chain_utils import name_puzzle_conditions_list
+from src.util.ConsensusError import Err
+from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.consensus import created_outputs_for_conditions_dict
 from src.util.ints import uint32, uint64
 from src.util.streamable import Streamable, streamable
+
+
+def additions_for_npc(npc_list: List[NPC]) -> List[Coin]:
+    additions: List[Coin] = []
+
+    for npc in npc_list:
+        for coin in created_outputs_for_conditions_dict(npc.condition_dict, npc.coin_name):
+            additions.append(coin)
+
+    return additions
 
 
 @dataclass(frozen=True)
@@ -36,28 +48,41 @@ class FullBlock(Streamable):
     def header_hash(self) -> bytes32:
         return self.header_block.header.header_hash
 
-    def additions_for_npc(self, npc_list) -> List[Coin]:
-        additions: List[Coin] = []
-
-        for coin_name, puzzle_hash, conditions_dict in npc_list:
-            for coin in created_outputs_for_conditions_dict(conditions_dict, coin_name):
-                additions.append(coin)
-
-        return additions
-
     def removals_and_additions(self) -> Tuple[List[bytes32], List[Coin]]:
+        """
+        This call assumes that this block has been validated already,
+        get_name_puzzle_conditions should not return error here
+        """
         removals: List[bytes32] = []
         additions: List[Coin] = [self.body.coinbase, self.body.fees_coin]
 
         if self.body.transactions is not None:
             # ensure block program generates solutions
             # This should never throw here, block must be valid if it comes to here
-            npc_list = name_puzzle_conditions_list(self.body.transactions)
+            err, npc_list = get_name_puzzle_conditions(self.body.transactions)
+            # build removals list
+            for npc in npc_list:
+                removals.append(npc.coin_name)
+
+            additions.extend(additions_for_npc(npc_list))
+
+        return removals, additions
+
+    def validate_removals_and_additions(self) -> Tuple[Optional[Err], Optional[List[bytes32]], Optional[List[Coin]]]:
+        removals: List[bytes32] = []
+        additions: List[Coin] = [self.body.coinbase, self.body.fees_coin]
+
+        if self.body.transactions is not None:
+            # ensure block program generates solutions
+            # This should never throw here, block must be valid if it comes to here
+            err, npc_list = get_name_puzzle_conditions(self.body.transactions)
+            if err:
+                return err, None, None
             # build removals list
             for coin_name, ph, con in npc_list:
                 removals.append(coin_name)
 
-            additions.extend(self.additions_for_npc(npc_list))
+            additions.extend(additions_for_npc(npc_list))
 
-        return removals, additions
+        return None, removals, additions
 
