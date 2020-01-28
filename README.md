@@ -71,7 +71,7 @@ sh install.sh
 ```bash
 sudo yum update
 sudo yum install gcc-c++ cmake3 git openssl openssl-devel
-sudo yum install wget make libffi-devel gmp-devel
+sudo yum install wget make libffi-devel gmp-devel sqlite-devel
 
 # Install Python 3.7.5 (current rpm's are 3.6.x)
 wget https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tgz
