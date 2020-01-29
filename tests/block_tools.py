@@ -18,7 +18,6 @@ from src.pool import create_coinbase_coin_and_signature
 from src.types.body import Body
 from src.types.challenge import Challenge
 from src.types.classgroup import ClassgroupElement
-from src.types.fees_target import FeesTarget
 from src.types.full_block import FullBlock
 from src.types.hashable import Coin
 from src.types.header import Header, HeaderData
@@ -87,6 +86,7 @@ class BlockTools:
         block_list: List[FullBlock] = [],
         seconds_per_block=constants["BLOCK_TIME_TARGET"],
         seed: bytes = b"",
+        reward_puzzlehash: bytes32 = None,
     ) -> List[FullBlock]:
         test_constants: Dict[str, Any] = constants.copy()
         for key, value in input_constants.items():
@@ -234,6 +234,7 @@ class BlockTools:
                     curr_difficulty,
                     curr_ips,
                     seed,
+                    reward_puzzlehash,
                 )
             )
         return block_list
@@ -270,6 +271,7 @@ class BlockTools:
         difficulty: uint64,
         ips: uint64,
         seed: bytes = b"",
+        reward_puzzlehash: bytes32 = None
     ) -> FullBlock:
         """
         Creates the next block with the specified details.
@@ -291,6 +293,8 @@ class BlockTools:
             uint64(difficulty),
             ips,
             seed,
+            False,
+            reward_puzzlehash,
         )
 
     def _create_block(
@@ -305,7 +309,8 @@ class BlockTools:
         difficulty: uint64,
         ips: uint64,
         seed: bytes,
-        genesis: bool = False
+        genesis: bool = False,
+        reward_puzzlehash: bytes32 = None,
     ) -> FullBlock:
         """
         Creates a block with the specified details. Uses the stored plots to create a proof of space,
@@ -357,7 +362,10 @@ class BlockTools:
             n_wesolowski,
             [uint8(b) for b in proof_bytes],
         )
-        fees_target: FeesTarget = FeesTarget(fee_target, uint64(0))
+
+        if not reward_puzzlehash:
+            reward_puzzlehash = fee_target
+
         solutions_generator: bytes32 = sha256(seed).digest()
         cost = uint64(0)
 
@@ -371,12 +379,12 @@ class BlockTools:
 
         coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
             height,
-            fees_target.puzzle_hash,
+            reward_puzzlehash,
             coinbase_reward,
             pool_sk)
 
         fee_hash = blspy.Util.hash256(coinbase_coin.name())
-        fees_coin = Coin(fee_hash, fees_target.puzzle_hash, fee_reward)
+        fees_coin = Coin(fee_hash, reward_puzzlehash, fee_reward)
 
         body: Body = Body(
             coinbase_coin, coinbase_signature, fees_coin, None, None, solutions_generator, cost
