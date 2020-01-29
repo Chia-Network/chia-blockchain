@@ -32,8 +32,6 @@ from src.util.errors import (
 from src.util.ints import uint16
 from src.util.network import create_node_id
 
-log = logging.getLogger(__name__)
-
 config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
 config = safe_load(open(config_filename, "r"))
 
@@ -59,7 +57,7 @@ class ChiaServer:
     # Called for inbound connections after successful handshake
     _on_inbound_connect: OnConnectFunc
 
-    def __init__(self, port: int, api: Any, local_type: NodeType):
+    def __init__(self, port: int, api: Any, local_type: NodeType, name: str = None):
         self.global_connections = PeerConnections([])
         self._server = None
         self._host = None
@@ -74,6 +72,10 @@ class ChiaServer:
         )
         self._ping_task = self._initialize_ping_task()
         self._node_id = create_node_id()
+        if name:
+            self.log = logging.getLogger(name)
+        else:
+            self.log = logging.getLogger(__name__)
 
     async def start_server(self, host: str, on_connect: OnConnectFunc = None,) -> bool:
         """
@@ -101,7 +103,7 @@ class ChiaServer:
         # Push all aiters that come from the server, into the pipeline
         asyncio.create_task(self._add_to_srwt_aiter(srwt_aiter))
 
-        log.info(f"Server started on port {self._port}")
+        self.log.info(f"Server started on port {self._port}")
         return True
 
     async def start_client(
@@ -129,7 +131,7 @@ class ChiaServer:
             OSError,
             asyncio.TimeoutError,
         ) as e:
-            log.warning(
+            self.log.warning(
                 f"Could not connect to {target_node}. {type(e)}{str(e)}. Aborting and removing peer."
             )
             self.global_connections.peers.remove(target_node)
@@ -257,11 +259,11 @@ class ChiaServer:
         # length encoding and CBOR serialization
         async def serve_forever():
             async for connection, message in expanded_messages_aiter:
-                log.info(f"-> {message.function} to peer {connection.get_peername()}")
+                self.log.info(f"-> {message.function} to peer {connection.get_peername()}")
                 try:
                     await connection.send(message)
                 except (RuntimeError, TimeoutError, OSError,) as e:
-                    log.error(
+                    self.log.error(
                         f"Cannot write to {connection}, already closed. Error {e}."
                     )
                     self.global_connections.close(connection, True)
@@ -282,7 +284,7 @@ class ChiaServer:
         sr, sw, on_connect = swrt
         con = Connection(self._local_type, None, sr, sw, server_port, on_connect)
 
-        log.info(f"Connection with {con.get_peername()} established")
+        self.log.info(f"Connection with {con.get_peername()} established")
         return con
 
     async def connection_to_outbound(
@@ -355,7 +357,7 @@ class ChiaServer:
                         {connection} version {inbound_handshake.version}"
                 )
 
-            log.info(
+            self.log.info(
                 (
                     f"Handshake with {NodeType(connection.connection_type).name} {connection.get_peername()} "
                     f"{connection.node_id}"
@@ -372,7 +374,7 @@ class ChiaServer:
             OSError,
             Exception,
         ) as e:
-            log.warning(f"{e}, handshake not completed. Connection not created.")
+            self.log.warning(f"{e}, handshake not completed. Connection not created.")
             # Make sure to close the connection even if it's not in global connections
             connection.close()
             # Remove the conenction from global connections
@@ -392,11 +394,11 @@ class ChiaServer:
                 # Read one message at a time, forever
                 yield (connection, message)
         except asyncio.IncompleteReadError:
-            log.info(
+            self.log.info(
                 f"Received EOF from {connection.get_peername()}, closing connection."
             )
         except ConnectionError:
-            log.warning(
+            self.log.warning(
                 f"Connection error by peer {connection.get_peername()}, closing connection."
             )
         except (
@@ -405,7 +407,7 @@ class ChiaServer:
             TimeoutError,
             asyncio.TimeoutError,
         ) as e:
-            log.error(
+            self.log.error(
                 f"Timeout/OSError {e} in connection with peer {connection.get_peername()}, closing connection."
             )
         finally:
@@ -425,7 +427,7 @@ class ChiaServer:
                 # This prevents remote calling of private methods that start with "_"
                 raise InvalidProtocolMessage(full_message.function)
 
-            log.info(
+            self.log.info(
                 f"<- {full_message.function} from peer {connection.get_peername()}"
             )
             if full_message.function == "ping":
@@ -451,7 +453,7 @@ class ChiaServer:
             else:
                 await result
         except Exception as e:
-            log.error(f"Error {type(e)} {e}, closing connection {connection}")
+            self.log.error(f"Error {type(e)} {e}, closing connection {connection}")
             self.global_connections.close(connection)
 
     async def expand_outbound_messages(
