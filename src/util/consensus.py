@@ -58,7 +58,7 @@ def created_outputs_for_conditions_dict(conditions_dict: Dict[ConditionOpcode, L
     return output_coins
 
 
-def aggsig_in_conditions_dict(conditions_dict):
+def aggsig_in_conditions_dict(conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]]) -> List[ConditionVarPair]:
     agg_sig_conditions = []
     for _ in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
         agg_sig_conditions.append(_)

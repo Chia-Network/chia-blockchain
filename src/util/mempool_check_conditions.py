@@ -65,9 +65,9 @@ async def get_name_puzzle_conditions(block_program: Program) -> Tuple[Optional[E
     Returns an error if it's unable to evaluate, otherwise
     returns a list of NPC (coin_name, solved_puzzle_hash, conditions_dict)
     """
-    program = best_solution_program(block_program)
+
     try:
-        sexp = clvm.eval_f(clvm.eval_f, program, [])
+        sexp = clvm.eval_f(clvm.eval_f, block_program, [])
     except clvm.EvalError:
         breakpoint()
         return Err.INVALID_COIN_SOLUTION, None

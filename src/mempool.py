@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, List
 
 from src.consensus.constants import constants as consensus_constants
+from src.farming.farming_tools import best_solution_program
 from src.types.full_block import FullBlock
 from src.types.hashable import SpendBundle, CoinName, Coin, Unspent
 from src.types.hashable.SpendBundle import BundleHash
@@ -75,7 +76,7 @@ class Mempool:
         self.allSeen[new_spend.name()] = new_spend.name()
 
         # Calculate the cost and fees
-        cost = new_spend.get_signature_count()
+        cost = await new_spend.get_signature_count()
         fees = new_spend.fees()
         # TODO Cost is hack, currently it just counts number of signatures (count can be 0)
         # TODO Remove when real cost function is implemented
@@ -83,8 +84,9 @@ class Mempool:
             return False, Err.UNKNOWN
         fees_per_cost: float = fees / cost
 
+        program = best_solution_program(new_spend)
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-        fail_reason, npc_list = get_name_puzzle_conditions(new_spend)
+        fail_reason, npc_list = await get_name_puzzle_conditions(program)
         if fail_reason:
             return False, fail_reason
 

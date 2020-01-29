@@ -4,10 +4,8 @@ from typing import List, Dict
 from src.atoms import hash_pointer
 from src.types.hashable import std_hash, Coin
 from src.types.sized_bytes import bytes32
-from src.util.chain_utils import additions_for_solution
-from src.util.consensus import aggsig_in_conditions_dict
-from src.util.ints import uint32, uint64
-from src.util.mempool_check_conditions import get_name_puzzle_conditions
+from src.util.chain_utils import additions_for_solution, aggsigs_for_solution
+from src.util.ints import uint64
 from src.util.streamable import Streamable, streamable
 from .BLSSignature import BLSSignature
 from .CoinSolution import CoinSolution
@@ -38,7 +36,7 @@ class SpendBundle(Streamable):
     def additions(self) -> List[Coin]:
         items: List[Coin] = []
         for coin_solution in self.coin_solutions:
-            items.append(additions_for_solution(coin_solution.coin.name(), coin_solution.solution))
+            items.extend(additions_for_solution(coin_solution.coin.name(), coin_solution.solution))
         return items
 
     def removals(self) -> List[Coin]:
@@ -55,13 +53,11 @@ class SpendBundle(Streamable):
         amount_out = sum(_.amount for _ in self.additions())
         return amount_in - amount_out
 
-    def get_signature_count(self) -> uint64:
+    async def get_signature_count(self) -> uint64:
         count: uint64 = uint64(0)
         for cs in self.coin_solutions:
-            npc_list = get_name_puzzle_conditions(cs.solution)
-            for npc in npc_list:
-                agg_sigs = aggsig_in_conditions_dict(npc.condition_dict)
-                count += agg_sigs.count()
+            cvp = aggsigs_for_solution(cs.solution)
+            count += len(cvp)
 
         return count
 
