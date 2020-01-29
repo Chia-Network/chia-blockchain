@@ -20,6 +20,7 @@ from src.store import FullNodeStore
 from src.types.full_block import FullBlock, additions_for_npc
 from src.types.hashable import Coin, Unspent
 from src.types.header_block import HeaderBlock
+from src.types.name_puzzle_condition import NPC
 from src.types.sized_bytes import bytes32
 from src.unspent_store import UnspentStore
 from src.util.ConsensusError import Err
@@ -767,7 +768,7 @@ class Blockchain:
         ):
             return False, None
 
-        if block.body.height != block.header_block.challenge.height:
+        if block.height != block.header_block.challenge.height:
             return False, None
 
         # 9. Check harvester signature of header data is valid based on harvester key
@@ -1050,6 +1051,7 @@ class Blockchain:
 
         # Verify conditions, create hash_key list for aggsig check
         hash_key_pairs = []
+        npc: NPC
         for npc in npc_list:
             unspent: Unspent = removal_unspents[npc.coin_name]
             error = blockchain_check_conditions_dict(unspent, removal_unspents, npc.condition_dict, block.header_block)

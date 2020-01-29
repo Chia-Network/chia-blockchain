@@ -23,7 +23,7 @@ MAX_COIN_AMOUNT = int(1 << 48)
 
 
 class Mempool:
-    def __init__(self, unspent_store: UnspentStore, override_constants: Dict = None):
+    def __init__(self, unspent_store: UnspentStore, override_constants: Dict = {}):
         # Allow passing in custom overrides
         self.constants: Dict = consensus_constants
         for key, value in override_constants.items():
