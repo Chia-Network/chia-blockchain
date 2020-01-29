@@ -48,12 +48,12 @@ async def setup_two_nodes():
     await store_2.add_block(FullBlock.from_bytes(test_constants["GENESIS_BLOCK"]))
 
     full_node_1 = FullNode(store_1, b_1, mempool_1, unspent_store_1, "full_node_1")
-    server_1 = ChiaServer(21234, full_node_1, NodeType.FULL_NODE)
+    server_1 = ChiaServer(21234, full_node_1, NodeType.FULL_NODE, "server_for_node_1")
     _ = await server_1.start_server("127.0.0.1", full_node_1._on_connect)
     full_node_1._set_server(server_1)
 
     full_node_2 = FullNode(store_2, b_2, mempool_2, unspent_store_2, "full_node_2")
-    server_2 = ChiaServer(21235, full_node_2, NodeType.FULL_NODE)
+    server_2 = ChiaServer(21235, full_node_2, NodeType.FULL_NODE, "server_for_node_2")
     full_node_2._set_server(server_2)
 
     yield (full_node_1, full_node_2, server_1, server_2)
