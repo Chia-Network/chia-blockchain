@@ -451,14 +451,11 @@ class Blockchain:
 
         if not await self.validate_block(block, genesis, pre_validated, pos_quality):
             return ReceiveBlockResult.INVALID_BLOCK, None
-
         # Cache header in memory
         self.header_blocks[block.header_hash] = block.header_block
         # Always immediately add the block to the database, after updating blockchain state
         await self.store.add_block(block)
-
         res, header = await self._reconsider_heads(block.header_block, genesis)
-
         if res:
             return ReceiveBlockResult.ADDED_TO_HEAD, header
         else:
@@ -898,11 +895,16 @@ class Blockchain:
         """ Tries to find place where old_lca chain diverged from main chain"""
         tmp_old = old_lca
         while tmp_old.header_hash != self.genesis.header_hash:
-            chain_hash_at_h = self.height_to_hash[tmp_old.height]
+            if tmp_old.height in self.height_to_hash:
+                chain_hash_at_h = self.height_to_hash[tmp_old.height]
+            else:
+                return 0
             if chain_hash_at_h == tmp_old.header_hash:
                 return tmp_old.height
-            tmp_old = self.header_blocks[tmp_old.prev_header_hash]
-
+            if tmp_old.prev_header_hash in self.header_blocks:
+                tmp_old = self.header_blocks[tmp_old.prev_header_hash]
+            else:
+                return 0
         return 0
 
     def is_descendant(self, child: HeaderBlock, maybe_parent: HeaderBlock) -> bool:
