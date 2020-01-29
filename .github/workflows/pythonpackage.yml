@@ -29,13 +29,13 @@ jobs:
         cmake ../
         cmake --build . -- -j 6
         ./RunTests
-        cd ../
+        cd ../../../
     - name: Test vdf
       run: |
         cd lib/chiavdf/fast_vdf
         pip install .
         python python_bindings/test_verifier.py
-        cd ../../
+        cd ../../../
     - name: Lint source with flake8
       run: |
         ./.venv/bin/flake8 src
