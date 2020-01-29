@@ -23,6 +23,9 @@ jobs:
         brew update && brew install gmp boost || echo ""
         sh install.sh
         sh install_timelord.sh
+        sudo add-apt-repository -y ppa:mhier/libboost-latest || echo ""
+        sudo apt-get update || echo ""
+        sudo apt-get install libboost1.70 libboost1.70-dev || echo ""
         . .venv/bin/activate
     - name: Test proof of space
       run: |
@@ -37,7 +40,6 @@ jobs:
         cd lib/chiavdf/
         pip install .
         python python_bindings/test_verifier.py
-        pip uninstall chiavdf
     - name: Lint source with flake8
       run: |
         ./.venv/bin/flake8 src
