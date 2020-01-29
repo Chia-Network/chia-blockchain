@@ -25,7 +25,7 @@ jobs:
     - name: Test proof of space
       run: |
         cd lib/chiapos
-        mkdir build && cd build
+        mkdir -p build && cd build
         cmake ../
         cmake --build . -- -j 6
         ./RunTests
