@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 import clvm
 
@@ -58,19 +58,20 @@ def blockchain_assert_block_age_exceeds(condition: ConditionVarPair, unspent: Un
 
 
 def blockchain_check_conditions_dict(unspent: Unspent, removed: Dict[bytes32, Unspent],
-                                  conditions_dict: Dict[ConditionOpcode, ConditionVarPair], header: HeaderBlock) -> Optional[Err]:
+                                  conditions_list: List[ConditionVarPair], header: HeaderBlock) -> Optional[Err]:
     """
     Check all conditions against current state.
     """
-    for condition_id, cvp in conditions_dict.items():
+    cvp: ConditionVarPair
+    for cvp in conditions_list:
         error = None
-        if condition_id is ConditionOpcode.ASSERT_COIN_CONSUMED:
+        if cvp.opcode is ConditionOpcode.ASSERT_COIN_CONSUMED:
             error = blockchain_assert_coin_consumed(cvp, removed)
-        elif condition_id is ConditionOpcode.ASSERT_MY_COIN_ID:
+        elif cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
             error = blockchain_assert_my_coin_id(cvp, unspent)
-        elif condition_id is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
+        elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
             error = blockchain_assert_block_index_exceeds(cvp, header)
-        elif condition_id is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
+        elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
             error = blockchain_assert_block_age_exceeds(cvp, unspent, header)
         # TODO add stuff from Will's pull req
 
