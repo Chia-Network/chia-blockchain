@@ -633,9 +633,10 @@ class FullNode:
         Responsd to a peers request for syncing blocks.
         """
         blocks: List[FullBlock] = []
-        tip_block: Optional[FullBlock] = await self.store.get_block(
-            request.tip_header_hash
-        )
+        async with self.store.lock:
+            tip_block: Optional[FullBlock] = await self.store.get_block(
+                request.tip_header_hash
+            )
         if tip_block is not None:
             if len(request.heights) > self.config["max_blocks_to_send"]:
                 raise errors.TooManyheadersRequested(
