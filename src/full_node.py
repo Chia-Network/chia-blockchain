@@ -36,7 +36,6 @@ from src.util.api_decorators import api_request
 from src.util.errors import BlockNotInBlockchain, InvalidUnfinishedBlock
 from src.util.ints import uint32, uint64
 
-log = logging.getLogger(__name__)
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
 
@@ -44,7 +43,7 @@ class FullNode:
     store: FullNodeStore
     blockchain: Blockchain
 
-    def __init__(self, store: FullNodeStore, blockchain: Blockchain, mempool: Mempool, unspent_store: UnspentStore):
+    def __init__(self, store: FullNodeStore, blockchain: Blockchain, mempool: Mempool, unspent_store: UnspentStore, name: str = None):
         config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
         self.config = yaml.safe_load(open(config_filename, "r"))["full_node"]
         self.store = store
@@ -53,6 +52,10 @@ class FullNode:
         self._shut_down = False  # Set to true to close all infinite loops
         self.server: Optional[ChiaServer] = None
         self.unspent_store = unspent_store
+        if name:
+            self.log = logging.getLogger(name)
+        else:
+            self.log = logging.getLogger(__name__)
 
     def _set_server(self, server: ChiaServer):
         self.server = server
@@ -205,8 +208,8 @@ class FullNode:
             - Blacklist peers that provide invalid blocks
             - Sync blockchain up to heads (request blocks in batches)
         """
-        log.info("Starting to perform sync with peers.")
-        log.info("Waiting to receive tips from peers.")
+        self.self.log.info("Starting to perform sync with peers.")
+        self.self.log.info("Waiting to receive tips from peers.")
         # TODO: better way to tell that we have finished receiving tips
         await asyncio.sleep(5)
         highest_weight: uint64 = uint64(0)
@@ -220,7 +223,7 @@ class FullNode:
             potential_tips: List[
                 Tuple[bytes32, FullBlock]
             ] = await self.store.get_potential_tips_tuples()
-            log.info(f"Have collected {len(potential_tips)} potential tips")
+            self.self.log.info(f"Have collected {len(potential_tips)} potential tips")
             for header_hash, potential_tip_block in potential_tips:
                 if potential_tip_block.header_block.challenge is None:
                     raise ValueError(
@@ -238,11 +241,11 @@ class FullNode:
             if highest_weight <= max(
                 [t.weight for t in self.blockchain.get_current_tips()]
             ):
-                log.info("Not performing sync, already caught up.")
+                self.log.info("Not performing sync, already caught up.")
                 return
 
         assert tip_block
-        log.info(f"Tip block {tip_block.header_hash} tip height {tip_block.height}")
+        self.log.info(f"Tip block {tip_block.header_hash} tip height {tip_block.height}")
 
         for height in range(0, tip_block.height + 1):
             self.store.set_potential_headers_received(uint32(height), Event())
@@ -274,14 +277,14 @@ class FullNode:
                 break
             except concurrent.futures.TimeoutError:
                 total_time_slept += sleep_interval
-                log.warning("Did not receive desired header hashes")
+                self.log.warning("Did not receive desired header hashes")
 
         # Finding the fork point allows us to only download headers and blocks from the fork point
         async with self.store.lock:
             header_hashes = self.store.get_potential_hashes()
             fork_point_height: uint32 = self.blockchain.find_fork_point(header_hashes)
             fork_point_hash: bytes32 = header_hashes[fork_point_height]
-        log.info(f"Fork point: {fork_point_hash} at height {fork_point_height}")
+        self.log.info(f"Fork point: {fork_point_hash} at height {fork_point_height}")
 
         # Now, we download all of the headers in order to verify the weight, in batches
         headers: List[HeaderBlock] = []
@@ -341,7 +344,7 @@ class FullNode:
                             tip_block.header_block.header.get_hash(),
                             [uint32(h) for h in range(batch_start, batch_end)],
                         )
-                        log.info(f"Requesting header blocks {batch_start, batch_end}.")
+                        self.log.info(f"Requesting header blocks {batch_start, batch_end}.")
                         yield OutboundMessage(
                             NodeType.FULL_NODE,
                             Message("request_header_blocks", request_hb),
@@ -367,7 +370,7 @@ class FullNode:
                     except asyncio.CancelledError:
                         pass
                     total_time_slept += sleep_interval
-                    log.info(f"Did not receive desired header blocks")
+                    self.log.info(f"Did not receive desired header blocks")
 
         async with self.store.lock:
             for h in range(fork_point_height + 1, tip_height + 1):
@@ -375,7 +378,7 @@ class FullNode:
                 assert header is not None
                 headers.append(header)
 
-        log.info(f"Downloaded headers up to tip height: {tip_height}")
+        self.log.info(f"Downloaded headers up to tip height: {tip_height}")
         if not verify_weight(
             tip_block.header_block,
             headers,
@@ -385,7 +388,7 @@ class FullNode:
                 f"Weight of {tip_block.header_block.header.get_hash()} not valid."
             )
 
-        log.info(
+        self.log.info(
             f"Validated weight of headers. Downloaded {len(headers)} headers, tip height {tip_height}"
         )
         assert tip_height == fork_point_height + len(headers)
@@ -440,7 +443,7 @@ class FullNode:
                         # If we are missing blocks in this batch, and we haven't made a request in a while,
                         # Make a request for this batch. Also, if we have never requested this batch, make
                         # the request
-                        log.info(
+                        self.log.info(
                             f"Requesting sync blocks {[i for i in range(batch_start, batch_end)]}"
                         )
                         if batch_end - 1 > highest_height_requested:
@@ -478,7 +481,7 @@ class FullNode:
                     except asyncio.CancelledError:
                         pass
                     total_time_slept += sleep_interval
-                    log.info("Did not receive desired blocks")
+                    self.log.info("Did not receive desired blocks")
 
             # Verifies this batch, which we are guaranteed to have (since we broke from the above loop)
             blocks = []
@@ -510,7 +513,7 @@ class FullNode:
                         result == ReceiveBlockResult.DISCONNECTED_BLOCK
                     ):
                         raise RuntimeError(f"Invalid block {block.header_hash}")
-                    log.info(
+                    self.log.info(
                         f"Took {time.time() - start} seconds to validate and add block {block.height}."
                     )
 
@@ -522,7 +525,7 @@ class FullNode:
                         self.blockchain.get_next_ips(block.header_hash)
                     )
         assert max([h.height for h in self.blockchain.get_current_tips()]) == tip_height
-        log.info(f"Finished sync up to height {tip_height}")
+        self.log.info(f"Finished sync up to height {tip_height}")
 
     async def _finish_sync(self) -> OutboundMessageGenerator:
         """
@@ -559,7 +562,7 @@ class FullNode:
             )
             yield OutboundMessage(NodeType.FULL_NODE, message, Delivery.RESPOND)
         except ValueError:
-            log.info("Do not have requested header hashes.")
+            self.log.info("Do not have requested header hashes.")
 
     @api_request
     async def all_header_hashes(
@@ -592,11 +595,11 @@ class FullNode:
             headers: List[HeaderBlock] = self.blockchain.get_header_blocks_by_height(
                 request.heights, request.tip_header_hash
             )
-            log.info(f"Got header blocks by height {time.time() - start}")
+            self.log.info(f"Got header blocks by height {time.time() - start}")
         except KeyError:
             return
         except BlockNotInBlockchain as e:
-            log.info(f"{e}")
+            self.log.info(f"{e}")
             return
 
         response = peer_protocol.HeaderBlocks(request.tip_header_hash, headers)
@@ -611,7 +614,7 @@ class FullNode:
         """
         Receive header blocks from a peer.
         """
-        log.info(
+        self.log.info(
             f"Received header blocks {request.header_blocks[0].height, request.header_blocks[-1].height}."
         )
         async with self.store.lock:
@@ -655,14 +658,14 @@ class FullNode:
                         assert fetched
                         blocks.append(fetched)
             except KeyError:
-                log.info("Do not have required blocks")
+                self.log.info("Do not have required blocks")
                 return
             except BlockNotInBlockchain as e:
-                log.info(f"{e}")
+                self.log.info(f"{e}")
                 return
         else:
             # We don't have the blocks that the client is looking for
-            log.info(f"Peer requested tip {request.tip_header_hash} that we don't have")
+            self.log.info(f"Peer requested tip {request.tip_header_hash} that we don't have")
             return
         response = Message(
             "sync_blocks", peer_protocol.SyncBlocks(request.tip_header_hash, blocks)
@@ -676,10 +679,10 @@ class FullNode:
         """
         We have received the blocks that we needed for syncing. Add them to processing queue.
         """
-        log.info(f"Received sync blocks {[b.height for b in request.blocks]}")
+        self.log.info(f"Received sync blocks {[b.height for b in request.blocks]}")
         async with self.store.lock:
             if not await self.store.get_sync_mode():
-                log.warning("Receiving sync blocks when we are not in sync mode.")
+                self.log.warning("Receiving sync blocks when we are not in sync mode.")
                 return
 
             for block in request.blocks:
@@ -718,7 +721,7 @@ class FullNode:
                     target_head = head
             if target_head is None:
                 # TODO: should we still allow the farmer to farm?
-                log.warning(
+                self.log.warning(
                     f"Challenge hash: {request.challenge_hash} not in one of three heads"
                 )
                 return
@@ -794,7 +797,7 @@ class FullNode:
                 Tuple[Body, HeaderData, ProofOfSpace]
             ] = await self.store.get_candidate_block(header_signature.pos_hash)
             if candidate is None:
-                log.warning(
+                self.log.warning(
                     f"PoS hash {header_signature.pos_hash} not found in database"
                 )
                 return
@@ -834,7 +837,7 @@ class FullNode:
                 FullBlock
             ] = await self.store.get_unfinished_block(dict_key)
             if not unfinished_block_obj:
-                log.warning(
+                self.log.warning(
                     f"Received a proof of time that we cannot use to complete a block {dict_key}"
                 )
                 return
@@ -966,14 +969,14 @@ class FullNode:
         )
 
         if expected_time > constants["PROPAGATION_DELAY_THRESHOLD"]:
-            log.info(f"Block is slow, expected {expected_time} seconds, waiting")
+            self.log.info(f"Block is slow, expected {expected_time} seconds, waiting")
             # If this block is slow, sleep to allow faster blocks to come out first
             await asyncio.sleep(5)
 
         async with self.store.lock:
             leader: Tuple[uint32, uint64] = self.store.get_unfinished_block_leader()
             if leader is None or unfinished_block.block.height > leader[0]:
-                log.info(
+                self.log.info(
                     f"This is the first unfinished block at height {unfinished_block.block.height}, so propagate."
                 )
                 # If this is the first block we see at this height, propagate
@@ -983,19 +986,19 @@ class FullNode:
             elif unfinished_block.block.height == leader[0]:
                 if expected_time > leader[1] + constants["PROPAGATION_THRESHOLD"]:
                     # If VDF is expected to finish X seconds later than the best, don't propagate
-                    log.info(
+                    self.log.info(
                         f"VDF will finish too late {expected_time} seconds, so don't propagate"
                     )
                     return
                 elif expected_time < leader[1]:
-                    log.info(
+                    self.log.info(
                         f"New best unfinished block at height {unfinished_block.block.height}"
                     )
                     # If this will be the first block to finalize, update our leader
                     self.store.set_unfinished_block_leader((leader[0], expected_time))
             else:
                 # If we have seen an unfinished block at a greater or equal height, don't propagate
-                log.info(f"Unfinished block at old height, so don't propagate")
+                self.log.info(f"Unfinished block at old height, so don't propagate")
                 return
 
             await self.store.add_unfinished_block(
@@ -1031,7 +1034,7 @@ class FullNode:
                 Delivery.BROADCAST_TO_OTHERS,
             )
         else:
-            log.warning(f"Wasn't able to add transaction with id {tx.sb.name()}")
+            self.log.warning(f"Wasn't able to add transaction with id {tx.sb.name()}")
             return
 
     # Receives a transaction_id,
@@ -1040,7 +1043,7 @@ class FullNode:
     @api_request
     async def maybe_transaction(self, tx_id: peer_protocol.TransactionId) -> OutboundMessageGenerator:
         if self.mempool.seen(tx_id.transaction_id):
-            log.info(f"tx_id({tx_id.transaction_id}) already seen")
+            self.log.info(f"tx_id({tx_id.transaction_id}) already seen")
             return
         else:
             requestTX = peer_protocol.RequestTransaction(tx_id.transaction_id)
@@ -1064,7 +1067,7 @@ class FullNode:
             Delivery.RESPOND,
         )
 
-        log.info(f"sending transaction (tx_id: {spend_bundle.name()}) to peer")
+        self.log.info(f"sending transaction (tx_id: {spend_bundle.name()}) to peer")
 
     @api_request
     async def block(self, block: peer_protocol.Block) -> OutboundMessageGenerator:
@@ -1092,12 +1095,12 @@ class FullNode:
         if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return
         elif added == ReceiveBlockResult.INVALID_BLOCK:
-            log.warning(
+            self.log.warning(
                 f"Block {header_hash} at height {block.block.height} is invalid."
             )
             return
         elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
-            log.warning(f"Disconnected block {header_hash}")
+            self.log.warning(f"Disconnected block {header_hash}")
             async with self.store.lock:
                 tip_height = min(
                     [head.height for head in self.blockchain.get_current_tips()]
@@ -1113,7 +1116,7 @@ class FullNode:
                     await self.store.clear_sync_info()
                     await self.store.add_potential_tip(block.block)
                     await self.store.set_sync_mode(True)
-                log.info(
+                self.log.info(
                     f"We are too far behind this block. Our height is {tip_height} and block is at "
                     f"{block.block.height}"
                 )
@@ -1122,15 +1125,15 @@ class FullNode:
                     async for ret_msg in self._sync():
                         yield ret_msg
                 except asyncio.CancelledError:
-                    log.error("Syncing failed, CancelledError")
+                    self.log.error("Syncing failed, CancelledError")
                 except BaseException as e:
-                    log.error(f"Error {type(e)}{e} with syncing")
+                    self.log.error(f"Error {type(e)}{e} with syncing")
                 finally:
                     async for ret_msg in self._finish_sync():
                         yield ret_msg
 
             elif block.block.height >= tip_height - 3:
-                log.info(
+                self.log.info(
                     f"We have received a disconnected block at height {block.block.height}, current tip is {tip_height}"
                 )
                 msg = Message(
@@ -1145,7 +1148,7 @@ class FullNode:
             # Only propagate blocks which extend the blockchain (becomes one of the heads)
             ips_changed: bool = False
             async with self.store.lock:
-                log.info(
+                self.log.info(
                     f"Updated heads, new heights: {[b.height for b in self.blockchain.get_current_tips()]}"
                 )
 
@@ -1153,13 +1156,13 @@ class FullNode:
                     block.block.prev_header_hash
                 )
                 next_vdf_ips = self.blockchain.get_next_ips(block.block.header_hash)
-                log.info(f"Difficulty {difficulty} IPS {next_vdf_ips}")
+                self.log.info(f"Difficulty {difficulty} IPS {next_vdf_ips}")
                 if next_vdf_ips != await self.store.get_proof_of_time_estimate_ips():
                     await self.store.set_proof_of_time_estimate_ips(next_vdf_ips)
                     ips_changed = True
             if ips_changed:
                 rate_update = farmer_protocol.ProofOfTimeRate(next_vdf_ips)
-                log.info(f"Sending proof of time rate {next_vdf_ips}")
+                self.log.info(f"Sending proof of time rate {next_vdf_ips}")
                 yield OutboundMessage(
                     NodeType.FARMER,
                     Message("proof_of_time_rate", rate_update),
@@ -1208,7 +1211,7 @@ class FullNode:
         elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
             assert block.block.header_block.proof_of_time
             assert block.block.header_block.challenge
-            log.info(
+            self.log.info(
                 f"Received orphan block of height {block.block.header_block.challenge.height}"
             )
         else:
@@ -1265,7 +1268,7 @@ class FullNode:
         if not len(to_connect):
             return
 
-        log.info(f"Trying to connect to peers: {to_connect}")
+        self.log.info(f"Trying to connect to peers: {to_connect}")
         tasks = []
         for peer in to_connect:
             tasks.append(asyncio.create_task(self.server.start_client(peer)))
