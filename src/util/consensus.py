@@ -65,8 +65,11 @@ def aggsig_in_conditions_dict(conditions_dict):
     return agg_sig_conditions
 
 
-def hash_key_pairs_for_conditions_dict(conditions_dict: Dict[ConditionOpcode, ConditionVarPair]) -> List[bytes]:
-    pairs: bytes = []
+
+
+def hash_key_pairs_for_conditions_dict(conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]]) \
+        -> List[BLSSignature.AGGSIGPair]:
+    pairs: [BLSSignature.AGGSIGPair] = []
     for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
         # TODO: check types
         # assert len(_) == 3
