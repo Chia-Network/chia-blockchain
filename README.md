@@ -246,4 +246,9 @@ For increased networking performance, install uvloop:
 pip install -e ".[uvloop]"
 ```
 
+You can also use the [HTTP RPC](https://github.com/Chia-Network/chia-blockchain/wiki/Networking-and-Serialization#rpc) api to access information and control the full node:
 
+
+```bash
+curl -X POST  http://localhost:8555/get_blockchain_state
+```
