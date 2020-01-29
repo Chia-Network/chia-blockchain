@@ -680,12 +680,17 @@ class FullNode:
         We have received the blocks that we needed for syncing. Add them to processing queue.
         """
         log.info(f"Received sync blocks {[b.height for b in request.blocks]}")
+
         if not self.store.get_sync_mode():
             log.warning("Receiving sync blocks when we are not in sync mode.")
             return
 
         for block in request.blocks:
             await self.store.add_potential_block(block)
+            if (
+                not self.store.get_sync_mode()
+            ):  # We might have left sync mode after the previous await
+                return
             (self.store.get_potential_blocks_received(block.height)).set()
 
         for _ in []:  # Yields nothing

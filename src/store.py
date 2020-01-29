@@ -130,6 +130,7 @@ class FullNodeStore:
             ),
         )
         await cursor_2.close()
+        await self.db.commit()
 
     async def get_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         cursor = await self.db.execute(
@@ -180,6 +181,7 @@ class FullNodeStore:
             (block.height, bytes(block)),
         )
         await cursor.close()
+        await self.db.commit()
 
     async def get_potential_block(self, height: uint32) -> Optional[FullBlock]:
         cursor = await self.db.execute(

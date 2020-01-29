@@ -1,3 +1,4 @@
+import os
 from typing import Any, Dict
 
 from src.blockchain import Blockchain
@@ -61,3 +62,5 @@ async def setup_two_nodes():
     await server_2.await_closed()
     await store_1.close()
     await store_2.close()
+    os.remove("blockchain_test")
+    os.remove("blockchain_test_2")

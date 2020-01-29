@@ -146,6 +146,9 @@ class TestStore:
         except Exception:
             await db.close()
             await db_2.close()
+            os.remove(db_filename)
+            os.remove(db_filename_2)
+            os.remove(db_filename_3)
             raise
 
         # Different database should have different data
@@ -155,6 +158,9 @@ class TestStore:
         await db.close()
         await db_2.close()
         await db_3.close()
+        os.remove(db_filename)
+        os.remove(db_filename_2)
+        os.remove(db_filename_3)
 
     @pytest.mark.asyncio
     async def test_deadlock(self):
@@ -187,3 +193,4 @@ class TestStore:
                 )
         await asyncio.gather(*tasks)
         await db.close()
+        os.remove(db_filename)
