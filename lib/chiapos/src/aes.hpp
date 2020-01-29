@@ -202,17 +202,6 @@ static void MixColumns(state_t* state)
   }
 }
 
-// prints string as hex
-void phex(char *pre, uint8_t* str, int len)
-{
-    printf("%s %d ",pre,len);
-    
-    unsigned char i;
-    for (i = 0; i < len; ++i)
-        printf("%.2x", str[i]);
-    printf("\n");
-}
-
 uint8_t RoundKey128[176]; // AES_KEYLEN 16   Key length in bytes
 uint8_t RoundKey256[240]; // AES_KEYLEN 32   Key length in bytes
 
@@ -320,16 +309,12 @@ void aes_load_key(uint8_t *enc_key, int keylen) {
         return ni_aes_load_key(enc_key, keylen);
 #endif // DISABLE_AESNI
 
-    phex((char *)"secret",enc_key,keylen);
-    
     switch(keylen){
         case 32:
             KeyExpansion(RoundKey256, enc_key, KEYNR256, KEYNK256);
-            phex((char *)"soft 256",RoundKey256,sizeof(RoundKey256));
             break;
         case 16:
             KeyExpansion(RoundKey128, enc_key, KEYNR128, KEYNK128);
-            phex((char *)"soft 128",RoundKey128,sizeof(RoundKey128));
             break;
     }
 }
