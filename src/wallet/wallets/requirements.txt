@@ -1,0 +1,10 @@
+-e git+https://git@github.com/Chia-Network/clvm.git@116667ab79cb38a42a7737eef6bed9e1b5dde5da#egg=clvm
+-e git+https://git@github.com/Chia-Network/clvm_tools.git@aca0c1577991a9349df53817249d0088656c7608#egg=clvm_tools
+-e git+https://git@github.com/Chia-Network/ledger_sim.git@472f2f64d2631c8705ca791f21a2e4d00f08f8b8#egg=ledger_sim
+aiter==0.1.2
+blspy==0.1.8
+cbor==1.0.0
+qrcode==6.1
+pyzbar==0.1.8
+Pillow==6.2.1
+setuptools-scm==3.3.3

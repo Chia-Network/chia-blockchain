@@ -1,0 +1,10 @@
+src
+__pycache__
+/env
+activate
+.idea
+wallets.egg-info
+.venv
+.DS_Store
+.eggs
+*.hex
