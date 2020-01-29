@@ -32,9 +32,10 @@ jobs:
         cd ../
     - name: Test vdf
       run: |
-        cd lib/chiavdf/
+        cd lib/chiavdf/fast_vdf
         pip install .
         python python_bindings/test_verifier.py
+        cd ../../
     - name: Lint source with flake8
       run: |
         ./.venv/bin/flake8 src
