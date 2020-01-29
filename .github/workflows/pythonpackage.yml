@@ -30,6 +30,7 @@ jobs:
         cmake --build . -- -j 6
         ./RunTests
         cd ../
+    - name: Test vdf
       run: |
         cd lib/chiavdf/
         pip install .
