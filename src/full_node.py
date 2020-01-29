@@ -208,8 +208,8 @@ class FullNode:
             - Blacklist peers that provide invalid blocks
             - Sync blockchain up to heads (request blocks in batches)
         """
-        self.self.log.info("Starting to perform sync with peers.")
-        self.self.log.info("Waiting to receive tips from peers.")
+        self.log.info("Starting to perform sync with peers.")
+        self.log.info("Waiting to receive tips from peers.")
         # TODO: better way to tell that we have finished receiving tips
         await asyncio.sleep(5)
         highest_weight: uint64 = uint64(0)
@@ -223,7 +223,7 @@ class FullNode:
             potential_tips: List[
                 Tuple[bytes32, FullBlock]
             ] = await self.store.get_potential_tips_tuples()
-            self.self.log.info(f"Have collected {len(potential_tips)} potential tips")
+            self.log.info(f"Have collected {len(potential_tips)} potential tips")
             for header_hash, potential_tip_block in potential_tips:
                 if potential_tip_block.header_block.challenge is None:
                     raise ValueError(
