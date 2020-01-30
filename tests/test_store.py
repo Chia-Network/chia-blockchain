@@ -69,10 +69,10 @@ class TestStore:
 
             # Get header_blocks
             header_blocks = await db.get_header_blocks_by_hash(
-                [blocks[0].header_hash, blocks[4].header_hash]
+                [blocks[4].header_hash, blocks[0].header_hash]
             )
-            assert header_blocks[0] == blocks[0].header_block
-            assert header_blocks[1] == blocks[4].header_block
+            assert header_blocks[0] == blocks[4].header_block
+            assert header_blocks[1] == blocks[0].header_block
 
             # Save/get sync
             for sync_mode in (False, True):
@@ -148,7 +148,6 @@ class TestStore:
             await db_2.close()
             os.remove(db_filename)
             os.remove(db_filename_2)
-            os.remove(db_filename_3)
             raise
 
         # Different database should have different data

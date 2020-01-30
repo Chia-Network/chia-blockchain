@@ -14,6 +14,7 @@ from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.proof_of_space import ProofOfSpace
 from src.util.ints import uint8, uint32, uint64
+from src.util.errors import BlockNotInBlockchain
 from tests.block_tools import BlockTools
 
 bt = BlockTools()
@@ -69,6 +70,32 @@ class TestBlockValidation:
                 await b.receive_block(blocks[i], blocks[i - 1].header_block)
             ) == ReceiveBlockResult.ADDED_TO_HEAD
         return (blocks, b)
+
+    @pytest.mark.asyncio
+    async def test_get_header_hashes(self, initial_blockchain):
+        blocks, b = initial_blockchain
+        header_hashes_1 = b.get_header_hashes_by_height(
+            [0, 8, 3], blocks[8].header_hash
+        )
+        assert header_hashes_1 == [
+            blocks[0].header_hash,
+            blocks[8].header_hash,
+            blocks[3].header_hash,
+        ]
+
+        try:
+            b.get_header_hashes_by_height([0, 8, 3], blocks[6].header_hash)
+            thrown = False
+        except ValueError:
+            thrown = True
+        assert thrown
+
+        try:
+            b.get_header_hashes_by_height([0, 8, 3], blocks[9].header_hash)
+            thrown_2 = False
+        except BlockNotInBlockchain:
+            thrown_2 = True
+        assert thrown_2
 
     @pytest.mark.asyncio
     async def test_prev_pointer(self, initial_blockchain):
@@ -309,6 +336,7 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self):
         blocks = bt.get_consecutive_blocks(test_constants, 20, [], 9, b"0")
+        print(len(blocks))
         b: Blockchain = await Blockchain.create({}, test_constants)
         for i in range(1, len(blocks)):
             await b.receive_block(blocks[i], blocks[i - 1].header_block)
@@ -333,11 +361,14 @@ class TestReorgs:
 
         # Reorg back to original branch
         blocks_reorg_chain_2 = bt.get_consecutive_blocks(
-            test_constants, 3, blocks, 9, b"3"
+            test_constants, 3, blocks[:-1], 9, b"3"
         )
-        await b.receive_block(
-            blocks_reorg_chain_2[20], blocks_reorg_chain_2[19].header_block
-        ) == ReceiveBlockResult.ADDED_AS_ORPHAN
+        assert (
+            await b.receive_block(
+                blocks_reorg_chain_2[20], blocks_reorg_chain_2[19].header_block
+            )
+            == ReceiveBlockResult.ADDED_AS_ORPHAN
+        )
         assert (
             await b.receive_block(
                 blocks_reorg_chain_2[21], blocks_reorg_chain_2[20].header_block

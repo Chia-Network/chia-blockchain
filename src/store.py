@@ -155,7 +155,22 @@ class FullNodeStore:
         header_blocks: List[HeaderBlock] = []
         for row in rows:
             header_blocks.append(FullBlock.from_bytes(row[2]).header_block)
-        return sorted(header_blocks, key=lambda hb: hb.height)
+
+        # Sorts the passed in header hashes by hash, with original index
+        header_hashes_sorted = sorted(
+            enumerate(header_hashes), key=lambda pair: pair[1]
+        )
+
+        # Sorts the fetched header blocks by hash
+        header_blocks_sorted = sorted(header_blocks, key=lambda hb: hb.header_hash)
+
+        # Combine both and sort by the original indeces
+        combined = sorted(
+            zip(header_hashes_sorted, header_blocks_sorted), key=lambda pair: pair[0][0]
+        )
+
+        # Return only the header blocks in the original order
+        return [pair[1] for pair in combined]
 
     async def get_small_header_blocks(self) -> List[SmallHeaderBlock]:
         cursor = await self.db.execute("SELECT * from small_header_blocks")

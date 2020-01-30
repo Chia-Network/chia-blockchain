@@ -138,7 +138,7 @@ class Blockchain:
             [(height, index) for index, height in enumerate(heights)], reverse=True
         )
 
-        curr_block: Optional[SmallHeaderBlock] = self.headers[tip_header_hash]
+        curr_block: Optional[SmallHeaderBlock] = self.headers.get(tip_header_hash, None)
 
         if curr_block is None:
             raise BlockNotInBlockchain(
@@ -153,7 +153,9 @@ class Blockchain:
                 if curr_block is None:
                     raise ValueError(f"Do not have header {height}")
             headers.append((index, curr_block))
-        return [b.header_hash for index, b in sorted(headers)]
+
+        # Return sorted by index (original order)
+        return [b.header_hash for _, b in sorted(headers, key=lambda pair: pair[0])]
 
     def find_fork_point(self, alternate_chain: List[bytes32]) -> uint32:
         """
