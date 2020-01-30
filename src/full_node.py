@@ -1091,6 +1091,8 @@ class FullNode:
             added, replaced = await self.blockchain.receive_block(
                 block.block, val, pos
             )
+            if added == ReceiveBlockResult.ADDED_TO_HEAD:
+                await self.mempool.new_tips(await self.blockchain.get_full_tips())
 
         if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return
