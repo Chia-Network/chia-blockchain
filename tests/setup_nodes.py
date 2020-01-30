@@ -43,7 +43,7 @@ async def setup_two_nodes():
     await store_1.add_block(FullBlock.from_bytes(test_constants["GENESIS_BLOCK"]))
     await store_2.add_block(FullBlock.from_bytes(test_constants["GENESIS_BLOCK"]))
 
-    config = load_config("config.yaml")
+    config = load_config("config.yaml", "full_node")
     full_node_1 = FullNode(store_1, b_1, config)
     server_1 = ChiaServer(21234, full_node_1, NodeType.FULL_NODE)
     _ = await server_1.start_server("127.0.0.1", full_node_1._on_connect)
