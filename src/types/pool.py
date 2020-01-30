@@ -48,7 +48,7 @@ class Pool:
         del self.spends[item.name]
         del self.sorted_spends[item.fee_per_cost][item.name]
         dic = self.sorted_spends[item.fee_per_cost]
-        if len(dic.values) == 0:
+        if len(dic.values()) == 0:
             del self.sorted_spends[item.fee_per_cost]
 
     def add_to_pool(self, item: MempoolItem, additions: List[Coin], removals_dic: Dict[bytes32, Coin]):
@@ -59,7 +59,13 @@ class Pool:
             self.remove_spend(to_remove)
 
         self.spends[item.name] = item
-        self.sorted_spends[item.fee_per_cost] = item
+
+        # sorted_spends is Dict[float, Dict[bytes32, MempoolItem]]
+        if item.fee_per_cost in self.sorted_spends:
+            self.sorted_spends[item.fee_per_cost][item.name] = item
+        else:
+            self.sorted_spends[item.fee_per_cost] = {}
+            self.sorted_spends[item.fee_per_cost][item.name] = item
 
         for add in additions:
             self.additions[add.name()] = item

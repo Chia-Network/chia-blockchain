@@ -30,7 +30,6 @@ class Mempool:
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self.potential_txs: Dict[bytes32, SpendBundle] = {}
 
-        self.allSpend: Dict[bytes32: SpendBundle] = {}
         self.allSeen: Dict[bytes32: bytes32] = {}
         # Mempool for each tip
         self.mempools: Dict[bytes32, Pool] = {}
@@ -187,7 +186,6 @@ class Mempool:
             new_item = MempoolItem(new_spend, fees_per_cost, uint64(fees), cost)
             pool.add_to_pool(new_item, additions, removals_dic)
 
-            self.allSpend[new_spend.name()] = new_spend
             added_count += 1
 
         return added_count > 0, None
@@ -246,9 +244,10 @@ class Mempool:
             return True
 
     async def get_spendbundle(self, bundle_hash: bytes32) -> Optional[SpendBundle]:
-        """ Returns a full SpendBundle for a given bundle_hash """
-        if bundle_hash in self.allSpend:
-            return self.allSpend[bundle_hash]
+        """ Returns a full SpendBundle if it's inside one the mempools"""
+        for pool in self.mempools.values():
+            if bundle_hash in pool.spends:
+                return pool.spends[bundle_hash].spend_bundle
         return None
 
     async def new_tips(self, new_tips: List[FullBlock]):
