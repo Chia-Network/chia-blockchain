@@ -145,7 +145,7 @@ class Wallet:
             else:
                 solution = self.make_solution(consumed=[coin.name()])
             spends.append((puzzle, CoinSolution(coin, solution)))
-        self.temp_balance -= amount
+        self.temp_balance -= (amount + fee)
         return spends
 
     def sign_transaction(self, spends: (Program, [CoinSolution])):
