@@ -2,8 +2,9 @@ from src.types.hashable import std_hash
 from src.util.Conditions import conditions_by_opcode
 from src.util.consensus import conditions_for_solution, created_outputs_for_conditions_dict, aggsig_in_conditions_dict
 from src.wallet.puzzles import p2_delegated_puzzle
+from src.wallet.puzzles.puzzle_utils import make_create_coin_condition
 from tests.helpers import trace_eval
-from tests.keys import puzzle_program_for_index, make_create_coin_condition
+from tests.keys import puzzle_program_for_index
 
 
 def test_1():
