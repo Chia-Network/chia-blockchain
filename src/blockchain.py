@@ -923,6 +923,13 @@ class Blockchain:
         for tip in self.tips:
             await self._from_tip_to_lca_unspent(tip, target)
 
+    async def get_full_tips(self) -> List[FullBlock]:
+        result: List[FullBlock] = []
+        for tip in self.tips:
+            block = await self.store.get_block(tip.header_hash)
+            result.append(block)
+        return result
+
     async def _from_tip_to_lca_unspent(self, head: HeaderBlock, target: HeaderBlock):
         """ Adds diffs to unspent store, from tip to lca target"""
         blocks: List[FullBlock] = []
