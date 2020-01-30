@@ -1,23 +1,21 @@
 import asyncio
 import logging
 import os
-from typing import Callable, List, Optional, Tuple, Dict
+from typing import Callable, List, Optional, Tuple
 import aiohttp
 
 from blspy import PrivateKey, PublicKey
 from yaml import safe_load
 
 from definitions import ROOT_DIR
-from src.server.connection import NodeType
 from src.types.full_block import FullBlock
-from src.types.header_block import SmallHeaderBlock, HeaderBlock
+from src.types.header_block import SmallHeaderBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
 from src.rpc.rpc_client import RpcClient
 
 import html
 import datetime as dt
-import calendar
 import shutil
 import math
 from src.consensus.constants import constants as consensus_constants
@@ -31,7 +29,7 @@ async def start_ssh_server(webfilename: str, rpc_port: int):
     """
     permenantly_closed = False
     node_stop_task: Optional[asyncio.Task] = None
-    
+
     rpc_client: RpcClient = await RpcClient.create(rpc_port)
 
     def ui_close_cb(stop_node: bool):
@@ -50,7 +48,7 @@ async def start_ssh_server(webfilename: str, rpc_port: int):
             await node_stop_task
         rpc_client.close()
         await rpc_client.await_closed()
-                
+
     return await_all_closed, ui_close_cb
 
 
@@ -63,7 +61,6 @@ class FullNodeUI:
 
     def __init__(self, parent_close_cb: Callable, rpc_client: RpcClient, webfilename: str):
         self.rpc_client = rpc_client
-        self.app: Optional[Application] = None
         self.data_initialized = False
         self.block = None
         self.closed: bool = False
@@ -73,7 +70,7 @@ class FullNodeUI:
         self.prev_route: str = "home/"
         self.route: str = "home/"
         self.focused: bool = False
-        
+
         self.pool_pks: List[PublicKey] = []
         key_config_filename = os.path.join(ROOT_DIR, "config", "keys.yaml")
         if os.path.isfile(key_config_filename):
@@ -83,18 +80,18 @@ class FullNodeUI:
                 PrivateKey.from_bytes(bytes.fromhex(ce)).get_public_key()
                 for ce in config["pool_sks"]
             ]
-        
+
         self.num_blocks: int = 10
         self.introducer_ts = 0
         self.topfarmers = {}
         self.topfarmerindex = 0
-        
+
         self.closed = False
-        
+
         self.update_data_task = asyncio.get_running_loop().create_task(
             self.update_data()
         )
-        
+
         self.constants = consensus_constants
         self.webfilename = webfilename
 
@@ -118,10 +115,8 @@ class FullNodeUI:
     async def dump_status(self):
         log.info(f"dump_status *****************")
 
-        difficulty=0
-        ips=0
-        total_iters=0
-        lcatimestamp=0
+        total_iters = 0
+        lcatimestamp = 0
 
         try:
             os.remove('index.html')
@@ -130,63 +125,66 @@ class FullNodeUI:
 
         st = open('index.html', 'w')
 
-        print( f"<html><head><link rel=\"stylesheet\" href=\"styles.css\"><title>Chia Blockchain Status</title></head><body><main>", file=st)
+        print("<html><head><link rel=\"stylesheet\" href=\"styles.css\">", file=st)
+        print("<title>Chia Blockchain Status</title></head><body><main>", file=st)
 
         if self.sync_mode:
             if self.max_height >= 0:
-                print( f"<p>Chia Testnet Blockchain: Syncing up to {str(self.max_height)}</p>", file = st)
+                print(f"<p>Chia Testnet Blockchain: Syncing up to {str(self.max_height)}</p>", file=st)
             else:
-                print( f"<p>Chia Testnet Blockchain: Syncing</p>", file=st)
+                print(f"<p>Chia Testnet Blockchain: Syncing</p>", file=st)
         else:
-            print( "<p>Chia Testnet Blockchain: Currently synced</p>", file=st)
+            print("<p>Chia Testnet Blockchain: Currently synced</p>", file=st)
 
         total_iters = self.lca_block.challenge.total_iters
 
-        new_block_labels = []
-        print( f"<ul style=\"list-style-type:none;\">", file=st)
+        print(f"<ul style=\"list-style-type:none;\">", file=st)
         for i, b in enumerate(self.latest_blocks):
-             print (
+            print(
                  f"<li><a href=\"#{str(b.header_hash)}\">{b.height}: {b.header_hash}"
                  f" {'LCA' if b.header_hash == self.lca_block.header_hash else ''}"
                  f" {'TIP' if b.header_hash in [h.header_hash for h in self.tips] else ''}</a>", file=st)
-             block: Optional[FullBlock] = await self.rpc_client.get_block(b.header_hash)
+            block: Optional[FullBlock] = await self.rpc_client.get_block(b.header_hash)
 
-             print( f"<ul style=\"list-style-type:none;\" class=\"expando\" id=\"{str(b.header_hash)}\">", file=st)
-             print( f"<li><pre>{html.escape(str(block))}</pre></li>", file=st)
-             print( f"</ul></li>", file=st)
-        print( f"</ul>", file=st)
+            print(f"<ul style=\"list-style-type:none;\" class=\"expando\" id=\"{str(b.header_hash)}\">", file=st)
+            print(f"<li><pre>{html.escape(str(block))}</pre></li>", file=st)
+            print(f"</ul></li>", file=st)
+        print("</ul>", file=st)
 
         for b in reversed(self.latest_blocks):
-             block: Optional[FullBlock] = await self.rpc_client.get_block(b.header_hash)
-             if((block.header_block.challenge.height<=self.lca_block.height) and (self.topfarmerindex<block.header_block.challenge.height)):
-                 self.topfarmerindex=block.header_block.challenge.height;
-                 farmer=block.body.fees_target_info.puzzle_hash.hex()
-                 self.topfarmers[farmer] = self.topfarmers.get(farmer, 0) + 1
-                 log.info(f"farmer {farmer} {self.topfarmers[farmer]}")
+            block: Optional[FullBlock] = await self.rpc_client.get_block(b.header_hash)
+            if((block.header_block.challenge.height <= self.lca_block.height) and
+                    (self.topfarmerindex < block.header_block.challenge.height)):
+                self.topfarmerindex = block.header_block.challenge.height
+                farmer = block.body.fees_target_info.puzzle_hash.hex()
+                self.topfarmers[farmer] = self.topfarmers.get(farmer, 0) + 1
+                log.info(f"farmer {farmer} {self.topfarmers[farmer]}")
 
         block = await self.rpc_client.get_block(self.lca_block.header_hash)
-        lcatimestamp=block.header_block.header.data.timestamp;
-        print( f"<p>Current LCA timestamp (UTC): {dt.datetime.utcfromtimestamp(lcatimestamp)}</p>", file=st)
-        print( f"<p>Current difficulty: {self.difficulty}</p>", file=st)
+        lcatimestamp = block.header_block.header.data.timestamp
+        print(f"<p>Current LCA timestamp (UTC): {dt.datetime.utcfromtimestamp(lcatimestamp)}</p>", file=st)
+        print(f"<p>Current difficulty: {self.difficulty}</p>", file=st)
 
-        ipsupdate=math.ceil((self.lca_block.height-self.constants["DIFFICULTY_DELAY"])/self.constants["DIFFICULTY_EPOCH"])*self.constants["DIFFICULTY_EPOCH"]+self.constants["DIFFICULTY_DELAY"]
-        print( f"<p>Current VDF iterations per second: {self.ips} (update at {ipsupdate})</p>", file=st)
+        epochs = math.ceil(
+            (self.lca_block.height-self.constants["DIFFICULTY_DELAY"]) / self.constants["DIFFICULTY_EPOCH"]
+        )
+        ipsupdate = epochs * self.constants["DIFFICULTY_EPOCH"] + self.constants["DIFFICULTY_DELAY"]
+        print(f"<p>Current VDF iterations per second: {self.ips} (update at {ipsupdate})</p>", file=st)
 
-        print( f"<p>Total iterations since genesis: {total_iters}</p>", file=st)
+        print(f"<p>Total iterations since genesis: {total_iters}</p>", file=st)
 
         sorted_x = sorted(self.topfarmers.items(), key=lambda kv: kv[1], reverse=True)
-        print( f"<p>Top Farmers</p><ul style=\"list-style-type:none;\">", file=st)
+        print("<p>Top Farmers</p><ul style=\"list-style-type:none;\">", file=st)
         for field, value in sorted_x:
-            print( f'<li>{field} : {value}</li>', file=st)
-        print( f'</ul></main></body></html>', file=st)
+            print('<li>{field} : {value}</li>', file=st)
+        print('</ul></main></body></html>', file=st)
 
         st.close()
         shutil.copy('index.html', self.webfilename)
 
     async def update_data(self):
         self.data_initialized = False
-        counter = 0
-        
+
         try:
             while not self.closed:
                 try:
@@ -203,9 +201,9 @@ class FullNodeUI:
                     self.latest_blocks = await self.get_latest_blocks(self.tips)
 
                     self.data_initialized = True
-                    
+
                     await self.dump_status()
-                    
+
                     await asyncio.sleep(5*60)
                 except (
                     aiohttp.client_exceptions.ClientConnectorError,
