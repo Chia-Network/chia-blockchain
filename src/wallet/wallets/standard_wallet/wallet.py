@@ -119,14 +119,14 @@ class Wallet:
             ret.append(make_assert_my_coin_id_condition(me['id']))
         return clvm.to_sexp_f([puzzle_for_conditions(ret), []])
 
-    def generate_unsigned_transaction(self, amount, newpuzzlehash):
+    def generate_unsigned_transaction(self, amount, newpuzzlehash, fee: int = 0):
         if self.temp_balance < amount:
             return None  # TODO: Should we throw a proper error here, or just return None?
-        utxos = self.select_coins(amount)
+        utxos = self.select_coins(amount + fee)
         spends = []
         output_created = False
         spend_value = sum([coin.amount for coin in utxos])
-        change = spend_value - amount
+        change = spend_value - amount - fee
         for coin in utxos:
             puzzle_hash = coin.puzzle_hash
 
@@ -167,8 +167,8 @@ class Wallet:
         spend_bundle = SpendBundle(solution_list, aggsig)
         return spend_bundle
 
-    def generate_signed_transaction(self, amount, newpuzzlehash) -> Optional[SpendBundle]:
-        transaction = self.generate_unsigned_transaction(amount, newpuzzlehash)
+    def generate_signed_transaction(self, amount, newpuzzlehash, fee: int = 0) -> Optional[SpendBundle]:
+        transaction = self.generate_unsigned_transaction(amount, newpuzzlehash, fee)
         if transaction is None:
             return None  # TODO: Should we throw a proper error here, or just return None?
         return self.sign_transaction(transaction)
