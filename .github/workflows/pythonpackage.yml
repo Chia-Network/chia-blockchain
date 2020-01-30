@@ -32,6 +32,7 @@ jobs:
         cd ../../../
     - name: Test vdf
       run: |
+        . .venv/bin/activate
         cd lib/chiavdf/fast_vdf
         python python_bindings/test_verifier.py
         cd ../../../
