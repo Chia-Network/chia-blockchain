@@ -229,8 +229,6 @@ Due to the nature of proof of space lookups by the harvester in the current alph
 the number of plots on a physical drive to 50 or less. This limit should significantly increase before beta.
 
 You can also run the simulation, which runs all servers and multiple full nodes, locally, at once.
-If you want to run the simulation, change the introducer ip in ./config/config.yaml so that the
-full node points to the local introducer (127.0.0.1:8445).
 
 Note the the simulation is local only and requires installation of timelords and VDFs.
 

@@ -54,6 +54,14 @@ full_node:
   # The full node server (if run) will run on this host and port
   host: 127.0.0.1
   port: 8444
+
+  # Run multiple nodes with different databases by changing the database_id
+  database_id: 1
+
+  # If True, starts an RPC server at the following port
+  start_rpc_server: True
+  rpc_port: 8555
+
   enable_upnp: True
   # Don't send any more than these number of headers and blocks, in one message
   max_headers_to_send: 25
@@ -63,14 +71,15 @@ full_node:
   # If node is more than these blocks behind, will do a sync
   sync_blocks_behind_threshold: 20
 
-  # This SSH key is for the ui SSH server
-  ssh_filename: config/ssh_host_key
   # How often to connect to introducer if we need to learn more peers
   introducer_connect_interval: 500
   # Continue trying to connect to more peers until this number of connections
   target_peer_count: 10
   # Only connect to peers who we have heard about in the last recent_peer_threshold seconds
   recent_peer_threshold: 6000
+
+  connect_to_farmer: False
+  connect_to_timelord: False
 
   farmer_peer:
       host: 127.0.0.1
@@ -79,11 +88,19 @@ full_node:
       host: 127.0.0.1
       port: 8446
   introducer_peer:
-      # To run the simulation, set host to 127.0.0.1 and port to 8445
-      # host: 127.0.0.1
-      # port: 8445
       host: introducer.chia.net  # Chia AWS introducer IPv4/IPv6
       port: 8444
+
+ui:
+   # The ui node server (if run) will run on this host and port
+  host: 127.0.0.1
+  port: 8222
+
+  # Which port to use to communicate with the full node
+  rpc_port: 8555
+
+  # This SSH key is for the ui SSH server
+  ssh_filename: config/ssh_host_key
 
 introducer:
   host: 127.0.0.1

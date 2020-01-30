@@ -1,5 +1,6 @@
 import asyncio
 import signal
+import logging
 
 try:
     import uvloop
@@ -9,25 +10,27 @@ except ImportError:
 from src.introducer import Introducer
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
-from src.util.network import parse_host_port
 from src.util.logging import initialize_logging
+from src.util.config import load_config_cli
 from setproctitle import setproctitle
 
 initialize_logging("Introducer %(name)-21s")
+log = logging.getLogger(__name__)
 setproctitle("chia_introducer")
 
 
 async def main():
-    introducer = Introducer()
-    host, port = parse_host_port(introducer)
-    server = ChiaServer(port, introducer, NodeType.INTRODUCER)
+    config = load_config_cli("config.yaml", "introducer")
+    introducer = Introducer(config)
+    server = ChiaServer(config["port"], introducer, NodeType.INTRODUCER)
     introducer.set_server(server)
-    _ = await server.start_server(host, None)
+    _ = await server.start_server(config["host"], None)
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
 
     await server.await_closed()
+    log.info("Introducer fully closed.")
 
 
 if uvloop is not None:

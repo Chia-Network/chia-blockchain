@@ -8,6 +8,7 @@ from src.server.connection import NodeType
 from src.server.server import ChiaServer
 from src.types.full_block import FullBlock
 from tests.block_tools import BlockTools
+from src.util.config import load_config
 
 
 bt = BlockTools()
@@ -42,12 +43,13 @@ async def setup_two_nodes():
     await store_1.add_block(FullBlock.from_bytes(test_constants["GENESIS_BLOCK"]))
     await store_2.add_block(FullBlock.from_bytes(test_constants["GENESIS_BLOCK"]))
 
-    full_node_1 = FullNode(store_1, b_1)
+    config = load_config("config.yaml")
+    full_node_1 = FullNode(store_1, b_1, config)
     server_1 = ChiaServer(21234, full_node_1, NodeType.FULL_NODE)
     _ = await server_1.start_server("127.0.0.1", full_node_1._on_connect)
     full_node_1._set_server(server_1)
 
-    full_node_2 = FullNode(store_2, b_2)
+    full_node_2 = FullNode(store_2, b_2, config)
     server_2 = ChiaServer(21235, full_node_2, NodeType.FULL_NODE)
     full_node_2._set_server(server_2)
 

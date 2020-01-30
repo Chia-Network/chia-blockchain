@@ -2,8 +2,7 @@ import asyncio
 import logging
 import logging.config
 import signal
-import sys
-from typing import Dict, List
+from typing import List, Dict
 
 import miniupnpc
 
@@ -22,8 +21,8 @@ from src.server.server import ChiaServer
 from src.types.full_block import FullBlock
 from src.types.header_block import SmallHeaderBlock
 from src.types.peer_info import PeerInfo
-from src.util.network import parse_host_port
 from src.util.logging import initialize_logging
+from src.util.config import load_config_cli
 from setproctitle import setproctitle
 
 setproctitle("chia_full_node")
@@ -57,11 +56,10 @@ async def load_header_blocks_from_store(
 
 
 async def main():
+    config = load_config_cli("config.yaml", "full_node")
+
     # Create the store (DB) and full node instance
-    db_id = 0
-    if "-id" in sys.argv:
-        db_id = int(sys.argv[sys.argv.index("-id") + 1])
-    store = await FullNodeStore.create(f"blockchain_{db_id}.db")
+    store = await FullNodeStore.create(f"blockchain_{config['database_id']}.db")
 
     genesis: FullBlock = FullBlock.from_bytes(constants["GENESIS_BLOCK"])
     await store.add_block(genesis)
@@ -72,25 +70,26 @@ async def main():
     ] = await load_header_blocks_from_store(store)
     blockchain = await Blockchain.create(small_header_blocks)
 
-    full_node = FullNode(store, blockchain)
-    # Starts the full node server (which full nodes can connect to)
-    host, port = parse_host_port(full_node)
+    full_node = FullNode(store, blockchain, config)
 
-    if full_node.config["enable_upnp"]:
-        log.info(f"Attempting to enable UPnP (open up port {port})")
+    if config["enable_upnp"]:
+        log.info(f"Attempting to enable UPnP (open up port {config['port']})")
         try:
             upnp = miniupnpc.UPnP()
             upnp.discoverdelay = 5
             upnp.discover()
             upnp.selectigd()
-            upnp.addportmapping(port, "TCP", upnp.lanaddr, port, "chia", "")
-            log.info(f"Port {port} opened with UPnP.")
+            upnp.addportmapping(
+                config["port"], "TCP", upnp.lanaddr, config["port"], "chia", ""
+            )
+            log.info(f"Port {config['port']} opened with UPnP.")
         except Exception as e:
             log.warning(f"UPnP failed: {e}")
 
-    server = ChiaServer(port, full_node, NodeType.FULL_NODE)
+    # Starts the full node server (which full nodes can connect to)
+    server = ChiaServer(config["port"], full_node, NodeType.FULL_NODE)
     full_node._set_server(server)
-    _ = await server.start_server(host, full_node._on_connect)
+    _ = await server.start_server(config["host"], full_node._on_connect)
     rpc_cleanup = None
 
     def master_close_cb():
@@ -102,17 +101,14 @@ async def main():
             server.close_all()
             server_closed = True
 
-    if "-r" in sys.argv:
+    if config["start_rpc_server"]:
         # Starts the RPC server if -r is provided
-        index = sys.argv.index("-r")
-        rpc_port = int(sys.argv[index + 1])
-        rpc_cleanup = await start_rpc_server(full_node, master_close_cb, rpc_port)
+        rpc_cleanup = await start_rpc_server(
+            full_node, master_close_cb, config["rpc_port"]
+        )
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
-
-    connect_to_farmer = "-f" in sys.argv
-    connect_to_timelord = "-t" in sys.argv
 
     full_node._start_bg_tasks()
 
@@ -120,14 +116,14 @@ async def main():
     await asyncio.sleep(3)
     log.info(f"Connected to {len(server.global_connections.get_connections())} peers.")
 
-    if connect_to_farmer and not server_closed:
+    if config["connect_to_farmer"] and not server_closed:
         peer_info = PeerInfo(
             full_node.config["farmer_peer"]["host"],
             full_node.config["farmer_peer"]["port"],
         )
         _ = await server.start_client(peer_info, None)
 
-    if connect_to_timelord and not server_closed:
+    if config["connect_to_timelord"] and not server_closed:
         peer_info = PeerInfo(
             full_node.config["timelord_peer"]["host"],
             full_node.config["timelord_peer"]["port"],

@@ -5,7 +5,6 @@ import asyncio
 from typing import Dict, Optional, Tuple
 
 from blspy import PrependSignature, PrivateKey, PublicKey, Util
-from yaml import safe_load
 
 from chiapos import DiskProver
 from definitions import ROOT_DIR
@@ -20,23 +19,10 @@ log = logging.getLogger(__name__)
 
 
 class Harvester:
-    def __init__(self):
-        config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
-        plot_config_filename = os.path.join(ROOT_DIR, "config", "plots.yaml")
-        key_config_filename = os.path.join(ROOT_DIR, "config", "keys.yaml")
-
-        if not os.path.isfile(key_config_filename):
-            raise RuntimeError(
-                "Keys not generated. Run python3.7 ./scripts/regenerate_keys.py."
-            )
-        if not os.path.isfile(plot_config_filename):
-            raise RuntimeError(
-                "Plots not generated. Run python3.7 ./scripts/create_plots.py."
-            )
-
-        self.config = safe_load(open(config_filename, "r"))["harvester"]
-        self.key_config = safe_load(open(key_config_filename, "r"))
-        self.plot_config = safe_load(open(plot_config_filename, "r"))
+    def __init__(self, config: Dict, key_config: Dict, plot_config: Dict):
+        self.config: Dict = config
+        self.key_config: Dict = key_config
+        self.plot_config: Dict = plot_config
 
         # From filename to prover
         self.provers: Dict[str, DiskProver] = {}
@@ -44,7 +30,7 @@ class Harvester:
         # From quality to (challenge_hash, filename, index)
         self.challenge_hashes: Dict[bytes32, Tuple[bytes32, str, uint8]] = {}
         self._plot_notification_task = asyncio.create_task(self._plot_notification())
-        self._is_shutdown = False
+        self._is_shutdown: bool = False
 
     async def _plot_notification(self):
         """

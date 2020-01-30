@@ -1,18 +1,15 @@
 import asyncio
 import concurrent
 import logging
-import os
 import time
 from asyncio import Event
 from hashlib import sha256
 from secrets import token_bytes
-from typing import AsyncGenerator, List, Optional, Tuple
+from typing import AsyncGenerator, List, Optional, Tuple, Dict
 
-import yaml
 from blspy import PrivateKey, Signature
 
 from chiapos import Verifier
-from definitions import ROOT_DIR
 from src.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_iterations
@@ -40,16 +37,13 @@ OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
 
 class FullNode:
-    store: FullNodeStore
-    blockchain: Blockchain
-
-    def __init__(self, store: FullNodeStore, blockchain: Blockchain):
-        config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
-        self.config = yaml.safe_load(open(config_filename, "r"))["full_node"]
-        self.store = store
-        self.blockchain = blockchain
-        self._shut_down = False  # Set to true to close all infinite loops
+    def __init__(self, store: FullNodeStore, blockchain: Blockchain, config: Dict):
+        self.store: FullNodeStore = store
+        self.blockchain: Blockchain = blockchain
+        self.config: Dict = config
+        self._shut_down: bool = False  # Set to true to close all infinite loops
         self.server: Optional[ChiaServer] = None
+        log.warning(f"{self.config}")
 
     def _set_server(self, server: ChiaServer):
         self.server = server
