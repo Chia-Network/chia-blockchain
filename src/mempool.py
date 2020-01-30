@@ -271,6 +271,7 @@ class Mempool:
                     for height in self.old_mempools.keys():
                         if height > tip.height:
                             old_spend_dict: Dict[bytes32, MempoolItem] = self.old_mempools[height]
+                            breakpoint()
                             await self.add_old_spends_to_pool(new_pool, old_spend_dict)
 
                     await self.initialize_pool_from_current_pools(new_pool)
@@ -328,7 +329,7 @@ class Mempool:
     async def initialize_pool_from_current_pools(self, pool: Pool):
         tried_already: Dict[bytes32, bytes32] = {}
         current_pool: Pool
-        for current_pool in self.mempools:
+        for current_pool in self.mempools.values():
             for item in current_pool.spends.values():
                 # Don't try to add same mempool item twice
                 if item.name in tried_already:

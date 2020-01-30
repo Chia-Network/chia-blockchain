@@ -58,24 +58,24 @@ def blockchain_assert_block_age_exceeds(condition: ConditionVarPair, unspent: Un
 
 
 def blockchain_check_conditions_dict(unspent: Unspent, removed: Dict[bytes32, Unspent],
-                                  conditions_list: List[ConditionVarPair], header: HeaderBlock) -> Optional[Err]:
+                                  conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]], header: HeaderBlock) -> Optional[Err]:
     """
     Check all conditions against current state.
     """
-    cvp: ConditionVarPair
-    for cvp in conditions_list:
-        error = None
-        if cvp.opcode is ConditionOpcode.ASSERT_COIN_CONSUMED:
-            error = blockchain_assert_coin_consumed(cvp, removed)
-        elif cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
-            error = blockchain_assert_my_coin_id(cvp, unspent)
-        elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
-            error = blockchain_assert_block_index_exceeds(cvp, header)
-        elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
-            error = blockchain_assert_block_age_exceeds(cvp, unspent, header)
-        # TODO add stuff from Will's pull req
-
-        if error:
-            return error
+    for con_list in conditions_dict.values():
+        cvp: ConditionVarPair
+        for cvp in con_list:
+            error = None
+            if cvp.opcode is ConditionOpcode.ASSERT_COIN_CONSUMED:
+                error = blockchain_assert_coin_consumed(cvp, removed)
+            elif cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
+                error = blockchain_assert_my_coin_id(cvp, unspent)
+            elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
+                error = blockchain_assert_block_index_exceeds(cvp, header)
+            elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
+                error = blockchain_assert_block_age_exceeds(cvp, unspent, header)
+            # TODO add stuff from Will's pull req
+            if error:
+                return error
 
     return None

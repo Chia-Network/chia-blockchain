@@ -98,23 +98,25 @@ async def get_name_puzzle_conditions(block_program: Program) -> Tuple[Optional[E
 
 
 def mempool_check_conditions_dict(unspent: Unspent, spend_bundle: SpendBundle,
-                                  conditions_dict: Dict[ConditionOpcode, ConditionVarPair], mempool: Pool) -> Optional[Err]:
+                                  conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]], mempool: Pool) -> Optional[Err]:
     """
     Check all conditions against current state.
     """
-    for condition_id, cvp in conditions_dict.items():
-        error = None
-        if condition_id is ConditionOpcode.ASSERT_COIN_CONSUMED:
-            error = mempool_assert_coin_consumed(cvp, spend_bundle, mempool)
-        elif condition_id is ConditionOpcode.ASSERT_MY_COIN_ID:
-            error = mempool_assert_my_coin_id(cvp, unspent)
-        elif condition_id is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
-            error = mempool_assert_block_index_exceeds(cvp, unspent, mempool)
-        elif condition_id is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
-            error = mempool_assert_block_age_exceeds(cvp, unspent, mempool)
-        # TODO add stuff from Will's pull req
+    for con_list in conditions_dict.values():
+        cvp: ConditionVarPair
+        for cvp in con_list:
+            error = None
+            if cvp.opcode is ConditionOpcode.ASSERT_COIN_CONSUMED:
+                error = mempool_assert_coin_consumed(cvp, spend_bundle, mempool)
+            elif cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
+                error = mempool_assert_my_coin_id(cvp, unspent)
+            elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
+                error = mempool_assert_block_index_exceeds(cvp, unspent, mempool)
+            elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
+                error = mempool_assert_block_age_exceeds(cvp, unspent, mempool)
+            # TODO add stuff from Will's pull req
 
-        if error:
-            return error
+            if error:
+                return error
 
     return None
