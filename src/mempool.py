@@ -1,18 +1,15 @@
 import collections
-from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, List
 
 from src.consensus.constants import constants as consensus_constants
 from src.farming.farming_tools import best_solution_program
 from src.types.full_block import FullBlock
 from src.types.hashable import SpendBundle, CoinName, Coin, Unspent
-from src.types.hashable.SpendBundle import BundleHash
 from src.types.header_block import HeaderBlock
 from src.types.mempool_item import MempoolItem
 from src.types.pool import Pool
 from src.types.sized_bytes import bytes32
 from src.unspent_store import UnspentStore
-from src.util.Conditions import ConditionOpcode, ConditionVarPair
 from src.util.ConsensusError import Err
 from src.util.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_conditions_dict
 from src.util.consensus import hash_key_pairs_for_conditions_dict
@@ -189,7 +186,8 @@ class Mempool:
 
             new_item = MempoolItem(new_spend, fees_per_cost, uint64(fees), cost)
             pool.add_to_pool(new_item, additions, removals_dic)
-            self.allSpend[new_spend.name] = new_spend
+
+            self.allSpend[new_spend.name()] = new_spend
             added_count += 1
 
         return added_count > 0, None
@@ -205,7 +203,7 @@ class Mempool:
         conflicts: List[Coin] = []
         for removal in removals:
             # 0. Checks for double spend inside same spend_bundle
-            if not removals_counter[removal.name()]:
+            if not removal.name() in removals_counter:
                 removals_counter[removal.name()] = 1
             else:
                 return Err.DOUBLE_SPEND, {}, None
@@ -234,7 +232,7 @@ class Mempool:
         return None, unspents, None
 
     async def add_to_potential_tx_set(self, spend: SpendBundle):
-        self.potential_txs[spend.name] = spend
+        self.potential_txs[spend.name()] = spend
 
         while len(self.potential_txs) > self.potential_cache_size:
             first_in = self.potential_txs.keys()[0]
