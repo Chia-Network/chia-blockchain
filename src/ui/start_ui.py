@@ -6,12 +6,11 @@ from src.util.logging import initialize_logging
 from src.util.config import load_config_cli
 from setproctitle import setproctitle
 
-initialize_logging("UI %(name)-29s")
-setproctitle("chia_full_node_ui")
-
 
 async def main():
     config = load_config_cli("config.yaml", "ui")
+    initialize_logging("UI %(name)-29s", config["logging"])
+    setproctitle("chia_full_node_ui")
 
     await_all_closed, ui_close_cb = await start_ssh_server(
         config["port"], config["ssh_filename"], config["rpc_port"]

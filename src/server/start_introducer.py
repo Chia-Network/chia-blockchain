@@ -14,13 +14,14 @@ from src.util.logging import initialize_logging
 from src.util.config import load_config_cli
 from setproctitle import setproctitle
 
-initialize_logging("Introducer %(name)-21s")
-log = logging.getLogger(__name__)
-setproctitle("chia_introducer")
-
 
 async def main():
     config = load_config_cli("config.yaml", "introducer")
+
+    initialize_logging("Introducer %(name)-21s", config["logging"])
+    log = logging.getLogger(__name__)
+    setproctitle("chia_introducer")
+
     introducer = Introducer(config)
     server = ChiaServer(config["port"], introducer, NodeType.INTRODUCER)
     introducer.set_server(server)

@@ -15,13 +15,14 @@ from src.util.logging import initialize_logging
 from src.util.config import load_config_cli
 from setproctitle import setproctitle
 
-initialize_logging("Timelord %(name)-23s")
-log = logging.getLogger(__name__)
-setproctitle("chia_timelord")
-
 
 async def main():
     config = load_config_cli("config.yaml", "timelord")
+
+    initialize_logging("Timelord %(name)-23s", config["logging"])
+    log = logging.getLogger(__name__)
+    setproctitle("chia_timelord")
+
     timelord = Timelord(config)
     server = ChiaServer(config["port"], timelord, NodeType.TIMELORD)
     _ = await server.start_server(config["host"], None)

@@ -15,10 +15,6 @@ from src.util.logging import initialize_logging
 from src.util.config import load_config, load_config_cli
 from setproctitle import setproctitle
 
-initialize_logging("Harvester %(name)-22s")
-log = logging.getLogger(__name__)
-setproctitle("chia_harvester")
-
 
 async def main():
     config = load_config_cli("config.yaml", "harvester")
@@ -34,6 +30,11 @@ async def main():
         raise RuntimeError(
             "Plots not generated. Run python3.7 ./scripts/create_plots.py."
         )
+
+    initialize_logging("Harvester %(name)-22s", config["logging"])
+    log = logging.getLogger(__name__)
+    setproctitle("chia_harvester")
+
     harvester = Harvester(config, key_config, plot_config)
     server = ChiaServer(config["port"], harvester, NodeType.HARVESTER)
     _ = await server.start_server(config["port"], None)

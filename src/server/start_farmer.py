@@ -19,10 +19,6 @@ from src.util.logging import initialize_logging
 from src.util.config import load_config, load_config_cli
 from setproctitle import setproctitle
 
-initialize_logging("Farmer %(name)-25s")
-log = logging.getLogger(__name__)
-setproctitle("chia_farmer")
-
 
 async def main():
     config = load_config_cli("config.yaml", "farmer")
@@ -32,6 +28,9 @@ async def main():
         raise RuntimeError(
             "Keys not generated. Run python3 ./scripts/regenerate_keys.py."
         )
+    initialize_logging("Farmer %(name)-25s", config["logging"])
+    log = logging.getLogger(__name__)
+    setproctitle("chia_farmer")
 
     farmer = Farmer(config, key_config)
 

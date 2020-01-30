@@ -2,6 +2,11 @@ network_id: testnet  # testnet/mainnet
 # Send a ping to all peers after ping_interval seconds
 ping_interval: 120
 
+# Controls logging of all servers (harvester, farmer, etc..). Each one can be overriden.
+logging: &logging
+  log_stdout: True  # If True, outputs to stdout instead of a file
+  log_filename: "chia.log"
+
 harvester:
   # The harvester server (if run) will run on this host and port
   host: 127.0.0.1
@@ -11,6 +16,7 @@ harvester:
     port: 8447
   # Location of all the plots, default ./plots
   # plot_root: "/mnt/pos"
+  logging: *logging
 
 farmer:
   # The farmer server (if run) will run on this host and port
@@ -26,7 +32,9 @@ farmer:
   # To send a share to a pool, a block must be faster than this, in seconds
   pool_share_threshold: 12000
   # To send to the full node, a block must be faster than this, in seconds
+
   propagate_threshold: 10000
+  logging: *logging
 
 timelord:
   # The timelord server (if run) will run on this host and port
@@ -49,6 +57,7 @@ timelord:
   full_node_peer:
       host: 127.0.0.1
       port: 8444
+  logging: *logging
 
 full_node:
   # The full node server (if run) will run on this host and port
@@ -90,6 +99,7 @@ full_node:
   introducer_peer:
       host: introducer.chia.net  # Chia AWS introducer IPv4/IPv6
       port: 8444
+  logging: *logging
 
 ui:
    # The ui node server (if run) will run on this host and port
@@ -101,6 +111,7 @@ ui:
 
   # This SSH key is for the ui SSH server
   ssh_filename: config/ssh_host_key
+  logging: *logging
 
 introducer:
   host: 127.0.0.1
@@ -109,3 +120,4 @@ introducer:
   # The introducer will only return peers who it has seen in the last
   # recent_peer_threshold seconds
   recent_peer_threshold: 6000
+  logging: *logging

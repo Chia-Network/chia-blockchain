@@ -25,12 +25,6 @@ from src.util.logging import initialize_logging
 from src.util.config import load_config_cli
 from setproctitle import setproctitle
 
-setproctitle("chia_full_node")
-initialize_logging("FullNode %(name)-23s")
-log = logging.getLogger(__name__)
-
-server_closed = False
-
 
 async def load_header_blocks_from_store(
     store: FullNodeStore,
@@ -57,6 +51,11 @@ async def load_header_blocks_from_store(
 
 async def main():
     config = load_config_cli("config.yaml", "full_node")
+    setproctitle("chia_full_node")
+    initialize_logging("FullNode %(name)-23s", config["logging"])
+
+    log = logging.getLogger(__name__)
+    server_closed = False
 
     # Create the store (DB) and full node instance
     store = await FullNodeStore.create(f"blockchain_{config['database_id']}.db")
@@ -93,7 +92,7 @@ async def main():
     rpc_cleanup = None
 
     def master_close_cb():
-        global server_closed
+        nonlocal server_closed
         if not server_closed:
             # Called by the UI, when node is closed, or when a signal is sent
             log.info("Closing all connections, and server...")
