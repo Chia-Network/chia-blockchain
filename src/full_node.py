@@ -1025,7 +1025,7 @@ class FullNode:
     # TODO if it's not added ?
     @api_request
     async def transaction(self, tx: peer_protocol.Transaction) -> OutboundMessageGenerator:
-        added = await self.mempool.add_spendbundle(tx.sb)
+        added, error = await self.mempool.add_spendbundle(tx.sb)
         if added:
             maybeTX = peer_protocol.TransactionId(tx.sb.name())
             yield OutboundMessage(
