@@ -364,7 +364,7 @@ void PlotAndTestProofOfSpace(std::string filename, uint32_t iterations, uint8_t 
                              uint32_t expected_success) {
         DiskPlotter plotter = DiskPlotter();
         uint8_t memo[5] = {1, 2, 3, 4, 5};
-        plotter.CreatePlotDisk(filename, k, memo, 5, plot_id, 32);
+        plotter.CreatePlotDisk(".", ".", filename, k, memo, 5, plot_id, 32);
         TestProofOfSpace(filename, iterations, k, plot_id, expected_success);
         REQUIRE(remove(filename.c_str()) == 0);
 }
@@ -388,7 +388,7 @@ TEST_CASE("Invalid plot") {
         uint8_t memo[5] = {1, 2, 3, 4, 5};
         string filename = "invalid-plot.dat";
         uint8_t k = 22;
-        plotter.CreatePlotDisk(filename, k, memo, 5, plot_id_1, 32);
+        plotter.CreatePlotDisk(".", ".", filename, k, memo, 5, plot_id_1, 32);
         DiskProver prover(filename);
         uint8_t* proof_data = new uint8_t[8 * k];
         uint8_t challenge[32];

@@ -60,26 +60,34 @@ class Harvester:
         use any plots which don't have one of the pool keys.
         """
         for partial_filename, plot_config in self.plot_config["plots"].items():
+            potential_filenames = [partial_filename]
             if "plot_root" in self.config:
-                filename = os.path.join(self.config["plot_root"], partial_filename)
+                potential_filenames.append(
+                    os.path.join(self.config["plot_root"], partial_filename)
+                )
             else:
-                filename = os.path.join(ROOT_DIR, "plots", partial_filename)
+                potential_filenames.append(
+                    os.path.join(ROOT_DIR, "plots", partial_filename)
+                )
             pool_pubkey = PublicKey.from_bytes(bytes.fromhex(plot_config["pool_pk"]))
 
             # Only use plots that correct pools associated with them
-            if pool_pubkey in harvester_handshake.pool_pubkeys:
+            if pool_pubkey not in harvester_handshake.pool_pubkeys:
+                log.warning(
+                    f"Plot {partial_filename} has a pool key that is not in the farmer's pool_pk list."
+                )
+
+            found = False
+            for filename in potential_filenames:
                 if os.path.isfile(filename):
                     self.provers[partial_filename] = DiskProver(filename)
                     log.info(
                         f"Farming plot {filename} of size {self.provers[partial_filename].get_size()}"
                     )
-                else:
-                    log.warning(f"Plot at {filename} does not exist.")
-
-            else:
-                log.warning(
-                    f"Plot {filename} has a pool key that is not in the farmer's pool_pk list."
-                )
+                    found = True
+                    break
+            if not found:
+                log.warning(f"Plot at {potential_filenames} does not exist.")
 
     @api_request
     async def new_challenge(self, new_challenge: harvester_protocol.NewChallenge):

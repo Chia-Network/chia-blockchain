@@ -14,7 +14,7 @@ harvester:
   farmer_peer:
     host: 127.0.0.1
     port: 8447
-  # Location of all the plots, default ./plots
+  # Location of all the plots, default ./plots, for relative paths in plots.yaml.
   # plot_root: "/mnt/pos"
   logging: *logging
 
