@@ -31,6 +31,20 @@ add_subdirectory(lib/pybind11)
 
 pybind11_add_module(chiapos ${CMAKE_CURRENT_SOURCE_DIR}/python-bindings/chiapos.cpp)
 
+try_run(CMAKE_AESNI_TEST_RUN_RESULT
+    CMAKE_AESNI_TEST_COMPILE_RESULT
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake_aesni_test
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/cmake_aesni_test.c)
+
+# Did compilation succeed and process return 0 (success)?
+IF("${CMAKE_AESNI_TEST_COMPILE_RESULT}" AND ("${CMAKE_AESNI_TEST_RUN_RESULT}" EQUAL 0))
+    set (CMAKE_CXX_FLAGS "-g -O3 -Wall -msse2 -msse -march=native -std=c++11 -maes")
+ELSE()
+    add_compile_definitions (DISABLE_AESNI)
+    set (CMAKE_CXX_FLAGS "-g -O3 -Wall -march=native -std=c++11")
+ENDIF()
+
+
 set (CMAKE_CXX_FLAGS "-g -O3 -Wall -msse2 -msse -march=native -std=c++11 -maes")
 
 add_executable(ProofOfSpace
