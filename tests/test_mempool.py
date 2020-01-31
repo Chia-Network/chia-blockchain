@@ -142,7 +142,6 @@ class TestMempool:
 
         assert sb1 is None
 
-
     @pytest.mark.asyncio
     async def test_correct_block_index(self, two_nodes):
         num_blocks = 3
@@ -235,3 +234,66 @@ class TestMempool:
 
         assert sb1 is spend_bundle1
 
+    @pytest.mark.asyncio
+    async def test_correct_my_id(self, two_nodes):
+        num_blocks = 4
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        block = blocks[1]
+
+        for b in blocks:
+            async for _ in full_node_1.block(peer_protocol.Block(b)):
+                pass
+
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_MY_COIN_ID, block.body.coinbase.name(), None)
+        dic = {cvp.opcode: [cvp]}
+
+        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase, dic)
+
+        tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
+        async for _ in full_node_1.transaction(tx1):
+            outbound: OutboundMessage = _
+            # Maybe transaction means that it's accepted in mempool
+            assert outbound.message.function == "maybe_transaction"
+
+        sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
+
+        assert sb1 is spend_bundle1
+
+    @pytest.mark.asyncio
+    async def test_invalid_my_id(self, two_nodes):
+        num_blocks = 4
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        block = blocks[1]
+
+        for b in blocks:
+            async for _ in full_node_1.block(peer_protocol.Block(b)):
+                pass
+
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_MY_COIN_ID, blocks[2].body.coinbase.name(), None)
+        dic = {cvp.opcode: [cvp]}
+
+        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase, dic)
+
+        tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
+        async for _ in full_node_1.transaction(tx1):
+            outbound: OutboundMessage = _
+            # Maybe transaction means that it's accepted in mempool
+            assert outbound.message.function != "maybe_transaction"
+
+        sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
+
+        assert sb1 is None
