@@ -44,9 +44,6 @@ ELSE()
     set (CMAKE_CXX_FLAGS "-g -O3 -Wall -march=native -std=c++11")
 ENDIF()
 
-
-set (CMAKE_CXX_FLAGS "-g -O3 -Wall -msse2 -msse -march=native -std=c++11 -maes")
-
 add_executable(ProofOfSpace
     src/cli.cpp
 )
