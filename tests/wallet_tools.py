@@ -94,7 +94,7 @@ class WalletTool:
         return clvm.to_sexp_f([puzzle_for_conditions(ret), []])
 
     def generate_unsigned_transaction(self, amount, newpuzzlehash, coin: Coin,
-                                      condition_dic: Dict[ConditionOpcode, List[ConditionVarPair]]= {}, fee: int = 0):
+                                      condition_dic: Dict[ConditionOpcode, List[ConditionVarPair]], fee: int = 0):
         spends = []
         spend_value = coin.amount
         change = spend_value - amount - fee
@@ -137,8 +137,10 @@ class WalletTool:
         return spend_bundle
 
     def generate_signed_transaction(self, amount, newpuzzlehash, coin: Coin,
-                                    condition_dic: Dict[ConditionOpcode, List[ConditionVarPair]] = {},
+                                    condition_dic: Dict[ConditionOpcode, List[ConditionVarPair]] = None,
                                     fee: int = 0) -> Optional[SpendBundle]:
+        if condition_dic is None:
+            condition_dic = {}
         transaction = self.generate_unsigned_transaction(amount, newpuzzlehash, coin, condition_dic, fee)
         if transaction is None:
             return None
