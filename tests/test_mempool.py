@@ -1,7 +1,12 @@
 import asyncio
 import pytest
+
+from src.farming.farming_tools import best_solution_program
 from src.server.outbound_message import OutboundMessage
 from src.protocols import peer_protocol
+from src.util.Conditions import ConditionVarPair, ConditionOpcode
+from src.util.ints import uint64
+from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from src.wallet.wallets.standard_wallet.wallet import Wallet
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.wallet_tools import WalletTool
@@ -106,4 +111,65 @@ class TestMempool:
 
         assert sb1 is None
         assert sb2 == spend_bundle2
+
+    @pytest.mark.asyncio
+    async def test_invalid_block_index(self, two_nodes):
+        num_blocks = 3
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        block = blocks[1]
+        async for _ in full_node_1.block(peer_protocol.Block(block)):
+            pass
+
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS, uint64(2).to_bytes(4, 'big'), None)
+        dic = {ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS: [cvp]}
+
+        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase, dic)
+
+        tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
+        async for _ in full_node_1.transaction(tx1):
+            outbound: OutboundMessage = _
+            # Maybe transaction means that it's accepted in mempool
+            assert outbound.message.function != "maybe_transaction"
+
+        sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
+
+        assert sb1 is None
+
+
+    @pytest.mark.asyncio
+    async def test_correct_block_index(self, two_nodes):
+        num_blocks = 3
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        block = blocks[1]
+        async for _ in full_node_1.block(peer_protocol.Block(block)):
+            pass
+
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS, uint64(1).to_bytes(4, 'big'), None)
+        dic = {ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS: [cvp]}
+
+        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase, dic)
+
+        tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
+        async for _ in full_node_1.transaction(tx1):
+            outbound: OutboundMessage = _
+            # Maybe transaction means that it's accepted in mempool
+            assert outbound.message.function == "maybe_transaction"
+
+        sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
+
+        assert sb1 is spend_bundle1
 
