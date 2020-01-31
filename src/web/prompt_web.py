@@ -176,7 +176,7 @@ class FullNodeUI:
         sorted_x = sorted(self.topfarmers.items(), key=lambda kv: kv[1], reverse=True)
         print("<p>Top Farmers</p><ul style=\"list-style-type:none;\">", file=st)
         for field, value in sorted_x:
-            print('<li>{field} : {value}</li>', file=st)
+            print(f'<li>{field} : {value}</li>', file=st)
         print('</ul></main></body></html>', file=st)
 
         st.close()
