@@ -32,7 +32,7 @@ class TestMempool:
 
         block = blocks[1]
         async for _ in full_node_1.block(peer_protocol.Block(block)):
-            spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, [block.body.coinbase])
+            spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase)
             tx: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle)
             async for _ in full_node_1.transaction(tx):
                 outbound: OutboundMessage = _
@@ -54,7 +54,7 @@ class TestMempool:
         async for _ in full_node_1.block(peer_protocol.Block(block)):
             pass
 
-        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, [block.body.coinbase])
+        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase)
         tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
@@ -62,7 +62,7 @@ class TestMempool:
             assert outbound.message.function == "maybe_transaction"
 
         other_receiver = WalletTool()
-        spend_bundle2 = wallet_a.generate_signed_transaction(1000, other_receiver.get_new_puzzlehash(), [block.body.coinbase])
+        spend_bundle2 = wallet_a.generate_signed_transaction(1000, other_receiver.get_new_puzzlehash(), block.body.coinbase)
         tx2: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle2)
         async for _ in full_node_1.transaction(tx2):
             pass
@@ -88,14 +88,14 @@ class TestMempool:
         async for _ in full_node_1.block(peer_protocol.Block(block)):
             pass
 
-        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, [block.body.coinbase])
+        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase)
         tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
             assert outbound.message.function == "maybe_transaction"
 
-        spend_bundle2 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, [block.body.coinbase], 1)
+        spend_bundle2 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase, fee=1)
 
         tx2: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle2)
         async for _ in full_node_1.transaction(tx2):

@@ -6,6 +6,10 @@ def make_create_coin_condition(puzzle_hash, amount):
     return [ConditionOpcode.CREATE_COIN, puzzle_hash, amount]
 
 
+def make_assert_aggsig_condition(pubkey):
+    return [ConditionOpcode.AGG_SIG, pubkey]
+
+
 def make_assert_coin_consumed_condition(coin_name):
     return [ConditionOpcode.ASSERT_COIN_CONSUMED, coin_name]
 
