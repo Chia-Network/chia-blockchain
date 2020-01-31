@@ -102,7 +102,7 @@ class WalletTool:
         pubkey, secretkey = self.get_keys(puzzle_hash)
         puzzle = puzzle_for_pk(pubkey.serialize())
         if ConditionOpcode.CREATE_COIN not in condition_dic:
-            condition_dic = {ConditionOpcode.CREATE_COIN: []}
+            condition_dic[ConditionOpcode.CREATE_COIN] = []
 
         output = ConditionVarPair(ConditionOpcode.CREATE_COIN, newpuzzlehash, amount)
         condition_dic[output.opcode].append(output)

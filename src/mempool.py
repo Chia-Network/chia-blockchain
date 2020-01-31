@@ -270,7 +270,6 @@ class Mempool:
                     for height in self.old_mempools.keys():
                         if height > tip.height:
                             old_spend_dict: Dict[bytes32, MempoolItem] = self.old_mempools[height]
-                            breakpoint()
                             await self.add_old_spends_to_pool(new_pool, old_spend_dict)
 
                     await self.initialize_pool_from_current_pools(new_pool)
