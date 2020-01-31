@@ -4,7 +4,7 @@ ping_interval: 120
 
 # Controls logging of all servers (harvester, farmer, etc..). Each one can be overriden.
 logging: &logging
-  log_stdout: True  # If True, outputs to stdout instead of a file
+  log_stdout: False  # If True, outputs to stdout instead of a file
   log_filename: "chia.log"
 
 harvester:
