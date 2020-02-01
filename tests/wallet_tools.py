@@ -7,14 +7,12 @@ from blspy import ExtendedPrivateKey
 from src.types.hashable import ProgramHash, CoinSolution, SpendBundle, Program, BLSSignature, Coin
 from src.util.Conditions import conditions_by_opcode, ConditionVarPair, ConditionOpcode
 from src.util.consensus import hash_key_pairs_for_conditions_dict, conditions_for_solution
-from src.wallet import keychain
 from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.puzzles.p2_conditions import puzzle_for_conditions
-from src.wallet.puzzles.p2_delegated_conditions import solution_for_conditions
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
-from src.wallet.puzzles.puzzle_utils import make_assert_coin_consumed_condition, make_assert_min_time_condition, \
+from src.wallet.puzzles.puzzle_utils import make_assert_coin_consumed_condition, \
     make_assert_my_coin_id_condition, make_create_coin_condition, make_assert_block_index_exceeds_condition, \
-    make_assert_block_age_exceeds_condition, make_assert_aggsig_condition
+    make_assert_block_age_exceeds_condition, make_assert_aggsig_condition, make_assert_time_exceeds_condition
 
 
 class WalletTool:
@@ -82,8 +80,8 @@ class WalletTool:
                     ret.append(make_assert_aggsig_condition(cvp.var1))
                 if cvp.opcode == ConditionOpcode.ASSERT_COIN_CONSUMED:
                     ret.append(make_assert_coin_consumed_condition(cvp.var1))
-                if cvp.opcode == ConditionOpcode.ASSERT_MIN_TIME:
-                    ret.append(make_assert_min_time_condition(cvp.var1))
+                if cvp.opcode == ConditionOpcode.ASSERT_TIME_EXCEEDS:
+                    ret.append(make_assert_time_exceeds_condition(cvp.var1))
                 if cvp.opcode == ConditionOpcode.ASSERT_MY_COIN_ID:
                     ret.append(make_assert_my_coin_id_condition(cvp.var1))
                 if cvp.opcode == ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:

@@ -1,13 +1,12 @@
 import asyncio
+from time import time
+
 import pytest
 
-from src.farming.farming_tools import best_solution_program
 from src.server.outbound_message import OutboundMessage
 from src.protocols import peer_protocol
 from src.util.Conditions import ConditionVarPair, ConditionOpcode
 from src.util.ints import uint64
-from src.util.mempool_check_conditions import get_name_puzzle_conditions
-from src.wallet.wallets.standard_wallet.wallet import Wallet
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.wallet_tools import WalletTool
 
@@ -29,7 +28,7 @@ class TestMempool:
         num_blocks = 3
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-        wallet_receiver = Wallet()
+        wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
@@ -297,3 +296,85 @@ class TestMempool:
         sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is None
+
+    @pytest.mark.asyncio
+    async def test_assert_time_exceeds(self, two_nodes):
+        num_blocks = 4
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        block = blocks[1]
+
+        for b in blocks:
+            async for _ in full_node_1.block(peer_protocol.Block(b)):
+                pass
+
+        time_now = uint64(time() * 1000)
+        time_now_plus_10 = time_now + 10000
+
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_TIME_EXCEEDS, time_now.to_bytes(8, 'big'), None)
+        dic = {cvp.opcode: [cvp]}
+
+        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase, dic)
+
+        tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
+        async for _ in full_node_1.transaction(tx1):
+            outbound: OutboundMessage = _
+            # Maybe transaction means that it's accepted in mempool
+            assert outbound.message.function == "maybe_transaction"
+
+        sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
+
+        assert sb1 is spend_bundle1
+
+
+    @pytest.mark.asyncio
+    async def test_assert_time_exceeds_both_cases(self, two_nodes):
+        num_blocks = 4
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        block = blocks[1]
+
+        for b in blocks:
+            async for _ in full_node_1.block(peer_protocol.Block(b)):
+                pass
+
+        time_now = uint64(time() * 1000)
+        time_now_plus_10 = time_now + 3000
+
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_TIME_EXCEEDS, time_now_plus_10.to_bytes(8, 'big'), None)
+        dic = {cvp.opcode: [cvp]}
+
+        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase, dic)
+
+        tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
+        async for _ in full_node_1.transaction(tx1):
+            outbound: OutboundMessage = _
+            assert outbound.message.function != "maybe_transaction"
+
+        sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
+
+        assert sb1 is None
+        # Sleep so that 3 sec passes
+        await asyncio.sleep(3)
+
+        tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
+        async for _ in full_node_1.transaction(tx1):
+            outbound: OutboundMessage = _
+            # Maybe transaction means that it's accepted in mempool
+            assert outbound.message.function == "maybe_transaction"
+
+        sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
+
+        assert sb1 is spend_bundle1

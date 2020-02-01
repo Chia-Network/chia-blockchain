@@ -9,6 +9,9 @@ from src.types.pool import Pool
 from src.util.Conditions import ConditionVarPair, ConditionOpcode
 from src.util.ConsensusError import Err
 from src.util.consensus import conditions_dict_for_solution
+import time
+
+from src.util.ints import uint64
 
 
 def mempool_assert_coin_consumed(condition: ConditionVarPair, spend_bundle: SpendBundle, mempool: Pool) -> Optional[
@@ -59,6 +62,16 @@ def mempool_assert_block_age_exceeds(condition: ConditionVarPair, unspent: Unspe
         return Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED
     return None
 
+def mempool_assert_time_exceeds(condition: ConditionVarPair):
+    try:
+        expected_mili_time = clvm.casts.uint64_from_bytes(condition.var1)
+    except ValueError:
+        return Err.INVALID_CONDITION
+
+    current_time = uint64(time.time() * 1000)
+    if current_time < expected_mili_time:
+        return Err.ASSERT_TIME_EXCEEDS_FAILED
+    return None
 
 async def get_name_puzzle_conditions(block_program: Program) -> Tuple[Optional[Err], Optional[List[NPC]]]:
     """
@@ -114,7 +127,8 @@ def mempool_check_conditions_dict(unspent: Unspent, spend_bundle: SpendBundle,
                 error = mempool_assert_block_index_exceeds(cvp, unspent, mempool)
             elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
                 error = mempool_assert_block_age_exceeds(cvp, unspent, mempool)
-            # TODO add stuff from Will's pull req
+            elif cvp.opcode is ConditionOpcode.ASSERT_TIME_EXCEEDS:
+                error = mempool_assert_time_exceeds(cvp)
 
             if error:
                 return error
