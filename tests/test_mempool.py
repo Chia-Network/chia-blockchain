@@ -351,9 +351,9 @@ class TestMempool:
                 pass
 
         time_now = uint64(time() * 1000)
-        time_now_plus_10 = time_now + 3000
+        time_now_plus_3 = time_now + 3000
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_TIME_EXCEEDS, time_now_plus_10.to_bytes(8, 'big'), None)
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_TIME_EXCEEDS, time_now_plus_3.to_bytes(8, 'big'), None)
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase, dic)
