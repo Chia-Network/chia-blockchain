@@ -69,7 +69,8 @@ class UnspentStore:
         await self.unspent_db.close()
 
     async def _clear_database(self):
-        await self.unspent_db.execute("DELETE FROM unspent")
+        cursor = await self.unspent_db.execute("DELETE FROM unspent")
+        await cursor.close()
         await self.unspent_db.commit()
 
     async def add_lcas(self, blocks: [FullBlock]):
@@ -118,7 +119,7 @@ class UnspentStore:
 
     # Store unspent in DB and ram cache
     async def add_unspent(self, unspent: Unspent) -> None:
-        await self.unspent_db.execute(
+        cursor = await self.unspent_db.execute(
             "INSERT OR REPLACE INTO unspent VALUES(?, ?, ?, ?, ?)",
             (unspent.confirmed_block_index,
              unspent.spent_block_index,
@@ -126,6 +127,7 @@ class UnspentStore:
              int(unspent.spent),
              bytes(unspent)),
         )
+        await cursor.close()
         await self.unspent_db.commit()
         self.lca_unspent_coins[unspent.coin.name().hex()] = unspent
 
@@ -148,6 +150,7 @@ class UnspentStore:
             "SELECT * from unspent WHERE coin_name=?", (coin_name.hex(),)
         )
         row = await cursor.fetchone()
+        await cursor.close()
         if row is not None:
             return Unspent.from_bytes(row[4])
         return None
@@ -164,6 +167,8 @@ class UnspentStore:
             if v.confirmed_block_index > block_index:
                 del self.lca_unspent_coins[k]
         # Delete from storage
-        await self.unspent_db.execute("DELETE FROM unspent WHERE confirmed_index>?", (block_index,))
-        await self.unspent_db.execute("UPDATE unspent SET spent_index = 0, spent = 0 WHERE spent_index>?", (block_index,))
+        c1 = await self.unspent_db.execute("DELETE FROM unspent WHERE confirmed_index>?", (block_index,))
+        await c1.close()
+        c2 = await self.unspent_db.execute("UPDATE unspent SET spent_index = 0, spent = 0 WHERE spent_index>?", (block_index,))
+        await c2.close()
         await self.unspent_db.commit()
