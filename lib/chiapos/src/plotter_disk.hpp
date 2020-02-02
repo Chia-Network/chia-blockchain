@@ -90,23 +90,23 @@ class DiskPlotter {
 
         std::string plot_filename = filename + ".tmp";
 
-        std::cout << std::endl << "Starting phase 1/4: Forward Propagation..." << std::endl;
+        std::cout << std::endl << "Starting phase 1/4: Forward Propagation... " << Timer::GetNow();
         Timer p1;
         Timer all_phases;
         std::vector<uint64_t> results = WritePlotFile(plot_filename, k, id, memo, memo_len);
         p1.PrintElapsed("Time for phase 1 =");
 
-        std::cout << std::endl << "Starting phase 2/4: Backpropagation..." << std::endl;
+        std::cout << std::endl << "Starting phase 2/4: Backpropagation... " << Timer::GetNow();
         Timer p2;
         Backpropagate(filename, plot_filename, k, id, memo, memo_len, results);
         p2.PrintElapsed("Time for phase 2 =");
 
-        std::cout << std::endl << "Starting phase 3/4: Compression..." << std::endl;
+        std::cout << std::endl << "Starting phase 3/4: Compression... " << Timer::GetNow();
         Timer p3;
         Phase3Results res = CompressTables(k, results, filename, plot_filename, id, memo, memo_len);
         p3.PrintElapsed("Time for phase 3 =");
 
-        std::cout << std::endl << "Starting phase 4/4: Write Checkpoint tables..." << std::endl;
+        std::cout << std::endl << "Starting phase 4/4: Write Checkpoint tables... " << Timer::GetNow();
         Timer p4;
         WriteCTables(k, k + 1, filename, plot_filename, res);
         p4.PrintElapsed("Time for phase 4 =");
