@@ -48,13 +48,14 @@ class FullBlock(Streamable):
     def header_hash(self) -> bytes32:
         return self.header_block.header.header_hash
 
-    def removals_and_additions(self) -> Tuple[List[bytes32], List[Coin]]:
+    def tx_removals_and_additions(self) -> Tuple[List[bytes32], List[Coin]]:
         """
+        Doesn't return coinbase and fee reward.
         This call assumes that this block has been validated already,
         get_name_puzzle_conditions should not return error here
         """
         removals: List[bytes32] = []
-        additions: List[Coin] = [self.body.coinbase, self.body.fees_coin]
+        additions: List[Coin] = []
 
         if self.body.transactions is not None:
             # ensure block program generates solutions
