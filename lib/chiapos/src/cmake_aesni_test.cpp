@@ -1,4 +1,4 @@
-#include <aesni.h>
+#include "aes.hpp"
 
 int main() {
     uint8_t enc_key[32];
@@ -8,8 +8,8 @@ int main() {
     memset(enc_key,0x00,sizeof(enc_key));
     memset(in,0x00,sizeof(in));
 
-    ni_aes_load_key(enc_key, sizeof(enc_key));
-    ni_aes256_enc(in, out);
+    aes_load_key(enc_key, sizeof(enc_key));
+    aes256_enc(in, out);
 
     return 0;
 }
