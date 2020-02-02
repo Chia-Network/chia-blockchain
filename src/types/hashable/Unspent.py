@@ -16,6 +16,7 @@ class Unspent(Streamable):
     confirmed_block_index: uint32
     spent_block_index: uint32
     spent: uint8
+    coinbase: uint8
 
     @property
     def name(self) -> Hash:

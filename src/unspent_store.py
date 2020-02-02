@@ -6,7 +6,6 @@ from src.types.hashable import Hash, Unspent, Coin, CoinName
 from src.types.header_block import HeaderBlock
 from src.util.ints import uint32
 
-
 class DiffStore:
     header: HeaderBlock
     diffs: Dict[CoinName, Unspent]
@@ -38,10 +37,11 @@ class UnspentStore:
         self.unspent_db = await aiosqlite.connect(self.db_name)
         await self.unspent_db.execute(
             (f"CREATE TABLE IF NOT EXISTS unspent("
-             f"confirmed_index bigint,"
+             f"coin_name text PRIMARY KEY,"
+             f" confirmed_index bigint,"
              f" spent_index bigint,"
              f" spent int,"
-             f" coin_name text PRIMARY KEY,"
+             f" coinbase int,"
              f" unspent blob)")
         )
 
@@ -78,14 +78,19 @@ class UnspentStore:
             await self.new_lca(block)
 
     async def new_lca(self, block: FullBlock):
-        removals, additions = block.removals_and_additions()
+        removals, additions = block.tx_removals_and_additions()
 
         for coin_name in removals:
             await self.set_spent(coin_name, block.height)
 
         for coin in additions:
-            unspent: Unspent = Unspent(coin, block.height, 0, 0)
+            unspent: Unspent = Unspent(coin, block.height, 0, 0, 0)
             await self.add_unspent(unspent)
+
+        coinbase: Unspent = Unspent(block.body.coinbase, block.height, 0, 0, 1)
+        fees_coin: Unspent = Unspent(block.body.fees_coin, block.height, 0, 0, 1)
+        await self.add_unspent(coinbase)
+        await self.add_unspent(fees_coin)
 
     def nuke_diffs(self):
         self.head_diffs = dict()
@@ -97,7 +102,7 @@ class UnspentStore:
 
         block: FullBlock
         for block in blocks:
-            removals, additions = block.removals_and_additions()
+            removals, additions = block.tx_removals_and_additions()
             await self.add_diffs(removals, additions, block, diff_store)
 
         self.head_diffs[last.header_hash] = diff_store
@@ -110,21 +115,22 @@ class UnspentStore:
             if removed is None:
                 removed = await self.get_unspent(coin_name)
             spent = Unspent(removed.coin, removed.confirmed_block_index,
-                            block.height, 1)
+                            block.height, 1, removed.coinbase)
             diff_store.diffs[spent.name.hex()] = spent
 
         for coin in additions:
-            added: Unspent = Unspent(coin, block.height, 0, 0)
+            added: Unspent = Unspent(coin, block.height, 0, 0, 1)
             diff_store.diffs[added.name.hex()] = added
 
     # Store unspent in DB and ram cache
     async def add_unspent(self, unspent: Unspent) -> None:
         cursor = await self.unspent_db.execute(
-            "INSERT OR REPLACE INTO unspent VALUES(?, ?, ?, ?, ?)",
-            (unspent.confirmed_block_index,
+            "INSERT OR REPLACE INTO unspent VALUES(?, ?, ?, ?, ?, ?)",
+            (unspent.coin.name().hex(),
+             unspent.confirmed_block_index,
              unspent.spent_block_index,
-             unspent.coin.name().hex(),
              int(unspent.spent),
+             int(unspent.coinbase),
              bytes(unspent)),
         )
         await cursor.close()
@@ -135,7 +141,7 @@ class UnspentStore:
     async def set_spent(self, coin_name: Hash, index: uint32):
         current: Unspent = await self.get_unspent(coin_name)
         spent: Unspent = Unspent(current.coin, current.confirmed_block_index,
-                                 index, 1)
+                                 index, 1, current.coinbase)
         await self.add_unspent(spent)
 
     # Checks DB and DiffStores for unspent with coin_name and returns it
@@ -162,7 +168,7 @@ class UnspentStore:
             v = self.lca_unspent_coins[k]
             if v.spent_block_index > block_index:
                 new_unspent = Unspent(v.coin, v.confirmed_block_index,
-                                      v.spent_block_index, 0)
+                                      v.spent_block_index, 0, v.coinbase)
                 self.lca_unspent_coins[v.coin.name().hex()] = new_unspent
             if v.confirmed_block_index > block_index:
                 del self.lca_unspent_coins[k]
