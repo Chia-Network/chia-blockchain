@@ -99,7 +99,7 @@ class FullNodeUI:
         self, heads: List[SmallHeaderBlock]
     ) -> List[SmallHeaderBlock]:
         added_blocks: List[SmallHeaderBlock] = []
-        while len(added_blocks) < self.num_blocks and len(heads) > 0:
+        while len(heads) > 0:
             heads = sorted(heads, key=lambda b: b.height, reverse=True)
             max_block = heads[0]
             if max_block not in added_blocks:
@@ -110,6 +110,8 @@ class FullNodeUI:
             )
             if prev is not None:
                 heads.append(prev)
+            if len(added_blocks) >= self.num_blocks and max_block.height <= self.topfarmerindex:
+                break
         return added_blocks
 
     async def dump_status(self):
@@ -149,6 +151,8 @@ class FullNodeUI:
             print(f"<ul style=\"list-style-type:none;\" class=\"expando\" id=\"{str(b.header_hash)}\">", file=st)
             print(f"<li><pre>{html.escape(str(block))}</pre></li>", file=st)
             print(f"</ul></li>", file=st)
+            if i >= self.num_blocks:
+                break
         print("</ul>", file=st)
 
         for b in reversed(self.latest_blocks):
@@ -158,7 +162,7 @@ class FullNodeUI:
                 self.topfarmerindex = block.header_block.challenge.height
                 farmer = block.body.fees_target_info.puzzle_hash.hex()
                 self.topfarmers[farmer] = self.topfarmers.get(farmer, 0) + 1
-                log.info(f"farmer {farmer} {self.topfarmers[farmer]}")
+                #log.info(f"farmer {farmer} {self.topfarmers[farmer]}")
 
         block = await self.rpc_client.get_block(self.lca_block.header_hash)
         lcatimestamp = block.header_block.header.data.timestamp
