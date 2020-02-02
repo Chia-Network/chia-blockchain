@@ -71,7 +71,8 @@ class Blockchain:
 
     @staticmethod
     async def create(
-        header_blocks: Dict[str, HeaderBlock], unspent_store: UnspentStore, store: FullNodeStore, override_constants: Dict = {}
+            header_blocks: Dict[str, HeaderBlock], unspent_store: UnspentStore, store: FullNodeStore,
+            override_constants: Dict = {}
     ):
         """
         Initializes a blockchain with the given header blocks, assuming they have all been
@@ -91,6 +92,7 @@ class Blockchain:
         self.store = store
 
         self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
+        self.coinbase_freeze = self.constants["COINBASE_FREEZE_PERIOD"]
         result, removed = await self.receive_block(self.genesis)
         if result != ReceiveBlockResult.ADDED_TO_HEAD:
             raise InvalidGenesisBlock()
@@ -102,13 +104,13 @@ class Blockchain:
                 self.height_to_hash[header_block.height] = header_block.header_hash
                 await self._reconsider_heads(header_block, False)
             assert (
-                self.header_blocks[self.height_to_hash[uint32(0)]]
-                == self.genesis.header_block
+                    self.header_blocks[self.height_to_hash[uint32(0)]]
+                    == self.genesis.header_block
             )
         if len(header_blocks) > 1:
             assert (
-                self.header_blocks[self.height_to_hash[uint32(1)]].prev_header_hash
-                == self.genesis.header_hash
+                    self.header_blocks[self.height_to_hash[uint32(1)]].prev_header_hash
+                    == self.genesis.header_hash
             )
         return self
 
@@ -142,7 +144,7 @@ class Blockchain:
         return list(reversed(ret_hashes))
 
     def get_header_blocks_by_height(
-        self, heights: List[uint32], tip_header_hash: bytes32
+            self, heights: List[uint32], tip_header_hash: bytes32
     ) -> List[HeaderBlock]:
         """
         Returns a list of header blocks, one for each height requested.
@@ -219,8 +221,8 @@ class Blockchain:
         # For example, [0-2047], [2048-4095], etc. The difficulty changes DIFFICULTY_DELAY into the
         # epoch, as opposed to the first block (as in Bitcoin).
         elif (
-            next_height % self.constants["DIFFICULTY_EPOCH"]
-            != self.constants["DIFFICULTY_DELAY"]
+                next_height % self.constants["DIFFICULTY_EPOCH"]
+                != self.constants["DIFFICULTY_DELAY"]
         ):
             # Not at a point where difficulty would change
             prev_block: HeaderBlock = self.header_blocks[block.prev_header_hash]
@@ -257,8 +259,8 @@ class Blockchain:
             curr: Optional[HeaderBlock] = block
             assert curr is not None
             while (
-                curr.height not in self.height_to_hash
-                or self.height_to_hash[curr.height] != curr.header_hash
+                    curr.height not in self.height_to_hash
+                    or self.height_to_hash[curr.height] != curr.header_hash
             ):
                 if curr.height == height1:
                     block1 = curr
@@ -290,7 +292,7 @@ class Blockchain:
             # took constants["BLOCK_TIME_TARGET"] seconds to mine.
             genesis = self.header_blocks[self.height_to_hash[uint32(0)]]
             timestamp1 = (
-                genesis.header.data.timestamp - self.constants["BLOCK_TIME_TARGET"]
+                    genesis.header.data.timestamp - self.constants["BLOCK_TIME_TARGET"]
             )
         timestamp2 = block2.header.data.timestamp  # i - 2048 + 512 - 1
         timestamp3 = block3.header.data.timestamp  # i - 512 - 1
@@ -298,26 +300,26 @@ class Blockchain:
         # Numerator fits in 128 bits, so big int is not necessary
         # We multiply by the denominators here, so we only have one fraction in the end (avoiding floating point)
         term1 = (
-            self.constants["DIFFICULTY_DELAY"]
-            * Tp
-            * (timestamp3 - timestamp2)
-            * self.constants["BLOCK_TIME_TARGET"]
+                self.constants["DIFFICULTY_DELAY"]
+                * Tp
+                * (timestamp3 - timestamp2)
+                * self.constants["BLOCK_TIME_TARGET"]
         )
         term2 = (
-            (self.constants["DIFFICULTY_WARP_FACTOR"] - 1)
-            * (self.constants["DIFFICULTY_EPOCH"] - self.constants["DIFFICULTY_DELAY"])
-            * Tc
-            * (timestamp2 - timestamp1)
-            * self.constants["BLOCK_TIME_TARGET"]
+                (self.constants["DIFFICULTY_WARP_FACTOR"] - 1)
+                * (self.constants["DIFFICULTY_EPOCH"] - self.constants["DIFFICULTY_DELAY"])
+                * Tc
+                * (timestamp2 - timestamp1)
+                * self.constants["BLOCK_TIME_TARGET"]
         )
 
         # Round down after the division
         new_difficulty: uint64 = uint64(
             (term1 + term2)
             // (
-                self.constants["DIFFICULTY_WARP_FACTOR"]
-                * (timestamp3 - timestamp2)
-                * (timestamp2 - timestamp1)
+                    self.constants["DIFFICULTY_WARP_FACTOR"]
+                    * (timestamp3 - timestamp2)
+                    * (timestamp2 - timestamp1)
             )
         )
 
@@ -359,8 +361,8 @@ class Blockchain:
         )
 
         if (
-            next_height % self.constants["DIFFICULTY_EPOCH"]
-            != self.constants["DIFFICULTY_DELAY"]
+                next_height % self.constants["DIFFICULTY_EPOCH"]
+                != self.constants["DIFFICULTY_DELAY"]
         ):
             # Not at a point where ips would change, so return the previous ips
             # TODO: cache this for efficiency
@@ -389,8 +391,8 @@ class Blockchain:
             curr: Optional[HeaderBlock] = block
             assert curr is not None
             while (
-                curr.height not in self.height_to_hash
-                or self.height_to_hash[curr.height] != curr.header_hash
+                    curr.height not in self.height_to_hash
+                    or self.height_to_hash[curr.height] != curr.header_hash
             ):
                 if curr.height == height1:
                     block1 = curr
@@ -416,7 +418,7 @@ class Blockchain:
             # took constants["BLOCK_TIME_TARGET"] seconds to mine.
             genesis: HeaderBlock = self.header_blocks[self.height_to_hash[uint32(0)]]
             timestamp1 = (
-                genesis.header.data.timestamp - self.constants["BLOCK_TIME_TARGET"]
+                    genesis.header.data.timestamp - self.constants["BLOCK_TIME_TARGET"]
             )
             assert genesis.challenge is not None
             iters1 = genesis.challenge.total_iters
@@ -435,7 +437,7 @@ class Blockchain:
             )
 
     async def receive_block(
-        self, block: FullBlock, pre_validated: bool = False, pos_quality: bytes32 = None
+            self, block: FullBlock, pre_validated: bool = False, pos_quality: bytes32 = None
     ) -> Tuple[ReceiveBlockResult, Optional[HeaderBlock]]:
         """
         Adds a new block into the blockchain, if it's valid and connected to the current
@@ -462,11 +464,11 @@ class Blockchain:
             return ReceiveBlockResult.ADDED_AS_ORPHAN, None
 
     async def validate_unfinished_block(
-        self,
-        block: FullBlock,
-        genesis: bool = False,
-        pre_validated: bool = True,
-        pos_quality: bytes32 = None,
+            self,
+            block: FullBlock,
+            genesis: bool = False,
+            pre_validated: bool = True,
+            pos_quality: bytes32 = None,
     ) -> bool:
         """
         Block validation algorithm. Returns true if the candidate block is fully valid
@@ -476,8 +478,8 @@ class Blockchain:
         if not pre_validated:
             # 1. Check the proof of space hash is valid
             if (
-                block.header_block.proof_of_space.get_hash()
-                != block.header_block.header.data.proof_of_space_hash
+                    block.header_block.proof_of_space.get_hash()
+                    != block.header_block.header.data.proof_of_space_hash
             ):
                 return False
 
@@ -489,15 +491,15 @@ class Blockchain:
             pair = block.body.coinbase_signature.AGGSIGPair(
                 block.header_block.proof_of_space.pool_pubkey,
                 block.body.coinbase.name()
-                )
+            )
 
             if not block.body.coinbase_signature.validate([pair]):
                 return False
 
             # 4. Check harvester signature of header data is valid based on harvester key
             if not block.header_block.header.harvester_signature.verify(
-                [blspy.Util.hash256(block.header_block.header.data.get_hash())],
-                [block.header_block.proof_of_space.plot_pubkey],
+                    [blspy.Util.hash256(block.header_block.header.data.get_hash())],
+                    [block.header_block.proof_of_space.plot_pubkey],
             ):
                 return False
 
@@ -521,16 +523,16 @@ class Blockchain:
                     break
                 curr = fetched
             if (
-                len(last_timestamps) != self.constants["NUMBER_OF_TIMESTAMPS"]
-                and curr.height != 0
+                    len(last_timestamps) != self.constants["NUMBER_OF_TIMESTAMPS"]
+                    and curr.height != 0
             ):
                 return False
             prev_time: uint64 = uint64(int(sum(last_timestamps) / len(last_timestamps)))
             if block.header_block.header.data.timestamp < prev_time:
                 return False
             if (
-                block.header_block.header.data.timestamp
-                > time.time() + self.constants["MAX_FUTURE_TIME"]
+                    block.header_block.header.data.timestamp
+                    > time.time() + self.constants["MAX_FUTURE_TIME"]
             ):
                 return False
 
@@ -573,11 +575,11 @@ class Blockchain:
         return True
 
     async def validate_block(
-        self,
-        block: FullBlock,
-        genesis: bool = False,
-        pre_validated: bool = False,
-        pos_quality: bytes32 = None,
+            self,
+            block: FullBlock,
+            genesis: bool = False,
+            pre_validated: bool = False,
+            pos_quality: bytes32 = None,
     ) -> bool:
         """
         Block validation algorithm. Returns true iff the candidate block is fully valid,
@@ -585,9 +587,9 @@ class Blockchain:
         """
         # 1. Validate unfinished block (check the rest of the conditions)
         if not (
-            await self.validate_unfinished_block(
-                block, genesis, pre_validated, pos_quality
-            )
+                await self.validate_unfinished_block(
+                    block, genesis, pre_validated, pos_quality
+                )
         ):
             return False
 
@@ -605,8 +607,8 @@ class Blockchain:
             if not block.header_block.challenge or not block.header_block.proof_of_time:
                 return False
             if (
-                block.header_block.proof_of_space.get_hash()
-                != block.header_block.challenge.proof_of_space_hash
+                    block.header_block.proof_of_space.get_hash()
+                    != block.header_block.challenge.proof_of_space_hash
             ):
                 return False
 
@@ -634,7 +636,7 @@ class Blockchain:
         # 4. Check PoT
         if not pre_validated:
             if not block.header_block.proof_of_time.is_valid(
-                self.constants["DISCRIMINANT_SIZE_BITS"]
+                    self.constants["DISCRIMINANT_SIZE_BITS"]
             ):
                 return False
 
@@ -653,8 +655,8 @@ class Blockchain:
 
             # 5. and check if PoT.challenge_hash matches
             if (
-                block.header_block.proof_of_time.challenge_hash
-                != prev_block.challenge.get_hash()
+                    block.header_block.proof_of_time.challenge_hash
+                    != prev_block.challenge.get_hash()
             ):
                 return False
 
@@ -664,15 +666,15 @@ class Blockchain:
 
             # 7a. Check challenge total_weight = parent total_weight + difficulty
             if (
-                block.header_block.challenge.total_weight
-                != prev_block.challenge.total_weight + difficulty
+                    block.header_block.challenge.total_weight
+                    != prev_block.challenge.total_weight + difficulty
             ):
                 return False
 
             # 8a. Check challenge total_iters = parent total_iters + number_iters
             if (
-                block.header_block.challenge.total_iters
-                != prev_block.challenge.total_iters + number_of_iters
+                    block.header_block.challenge.total_iters
+                    != prev_block.challenge.total_iters + number_of_iters
             ):
                 return False
 
@@ -709,7 +711,7 @@ class Blockchain:
         return True
 
     async def pre_validate_blocks(
-        self, blocks: List[FullBlock]
+            self, blocks: List[FullBlock]
     ) -> List[Tuple[bool, Optional[bytes32]]]:
 
         results = []
@@ -722,7 +724,7 @@ class Blockchain:
         return results
 
     async def pre_validate_blocks_multiprocessing(
-        self, blocks: List[FullBlock]
+            self, blocks: List[FullBlock]
     ) -> List[Tuple[bool, Optional[bytes32]]]:
         futures = []
 
@@ -755,13 +757,13 @@ class Blockchain:
         if not block.header_block.challenge or not block.header_block.proof_of_time:
             return False, None
         if (
-            block.header_block.proof_of_space.get_hash()
-            != block.header_block.challenge.proof_of_space_hash
+                block.header_block.proof_of_space.get_hash()
+                != block.header_block.challenge.proof_of_space_hash
         ):
             return False, None
             # 4. Check PoT
         if not block.header_block.proof_of_time.is_valid(
-            consensus_constants["DISCRIMINANT_SIZE_BITS"]
+                consensus_constants["DISCRIMINANT_SIZE_BITS"]
         ):
             return False, None
 
@@ -770,8 +772,8 @@ class Blockchain:
 
         # 9. Check harvester signature of header data is valid based on harvester key
         if not block.header_block.header.harvester_signature.verify(
-            [blspy.Util.hash256(block.header_block.header.data.get_hash())],
-            [block.header_block.proof_of_space.plot_pubkey],
+                [blspy.Util.hash256(block.header_block.header.data.get_hash())],
+                [block.header_block.proof_of_space.plot_pubkey],
         ):
             return False, None
 
@@ -833,7 +835,7 @@ class Blockchain:
             await self.create_diffs_for_tips(self.lca_block)
         # If LCA changed update the unspent store
         elif lca_tmp.header_hash != self.lca_block.header_hash:
-            if  self.lca_block.height < lca_tmp.height:
+            if self.lca_block.height < lca_tmp.height:
                 if self.is_descendant(lca_tmp, self.lca_block):
                     # new LCA is lower height than the new LCA (linear REORG)
                     await self.unspent_store.rollback_lca_to_block(self.lca_block.height)
@@ -938,7 +940,7 @@ class Blockchain:
             if tip_hash == target.header_hash:
                 break
             full = await self.store.get_block(tip_hash)
-            if full is  None:
+            if full is None:
                 return
             blocks.append(full)
             tip_hash = full.header_block.prev_header_hash
@@ -977,11 +979,10 @@ class Blockchain:
             return True, removed
         return False, None
 
-    async def validate_transactions(self, block: FullBlock, fee_base: uint64) ->  Optional[Err]:
+    async def validate_transactions(self, block: FullBlock, fee_base: uint64) -> Optional[Err]:
 
         # Get List of names removed, puzzles hashes for removed coins and conditions crated
         error, npc_list = get_name_puzzle_conditions(block.body.transactions)
-
 
         if error:
             return error
@@ -1027,13 +1028,16 @@ class Blockchain:
                 new_unspent: Unspent = Unspent(rem_coin, block.height, 0, 0)
                 removal_unspents[new_unspent.name] = new_unspent
             else:
-               unspent = await self.unspent_store.get_unspent(rem, prev_header)
-               if unspent:
-                   if unspent.spent == 1:
-                       return Err.DOUBLE_SPEND
-                   removal_unspents[unspent.name] = unspent
-               else:
-                   return Err.UNKNOWN_UNSPENT
+                unspent = await self.unspent_store.get_unspent(rem, prev_header)
+                if unspent:
+                    if unspent.spent == 1:
+                        return Err.DOUBLE_SPEND
+                    if unspent.coinbase == 1:
+                        if block.height < unspent.confirmed_block_index + 200:
+                            return Err.COINBASE_NOT_YET_SPEDNABLE
+                    removal_unspents[unspent.name] = unspent
+                else:
+                    return Err.UNKNOWN_UNSPENT
 
         # Check fees
         removed = 0
