@@ -162,7 +162,7 @@ class FullNodeUI:
                 self.topfarmerindex = block.header_block.challenge.height
                 farmer = block.body.fees_target_info.puzzle_hash.hex()
                 self.topfarmers[farmer] = self.topfarmers.get(farmer, 0) + 1
-                #log.info(f"farmer {farmer} {self.topfarmers[farmer]}")
+                # log.info(f"farmer {farmer} {self.topfarmers[farmer]}")
 
         block = await self.rpc_client.get_block(self.lca_block.header_hash)
         lcatimestamp = block.header_block.header.data.timestamp
