@@ -1034,7 +1034,7 @@ class FullNode:
                 Delivery.BROADCAST_TO_OTHERS,
             )
         else:
-            self.log.warning(f"Wasn't able to add transaction with id {tx.sb.name()}")
+            self.log.warning(f"Wasn't able to add transaction with id {tx.sb.name()}, error: {error}")
             return
 
     # Receives a transaction_id,

@@ -119,8 +119,13 @@ class UnspentStore:
             diff_store.diffs[spent.name.hex()] = spent
 
         for coin in additions:
-            added: Unspent = Unspent(coin, block.height, 0, 0, 1)
+            added: Unspent = Unspent(coin, block.height, 0, 0, 0)
             diff_store.diffs[added.name.hex()] = added
+
+        coinbase: Unspent = Unspent(block.body.coinbase, block.height, 0, 0, 1)
+        diff_store.diffs[coinbase.name.hex()] = coinbase
+        fees_coin: Unspent = Unspent(block.body.fees_coin, block.height, 0, 0, 1)
+        diff_store.diffs[fees_coin.name.hex()] = fees_coin
 
     # Store unspent in DB and ram cache
     async def add_unspent(self, unspent: Unspent) -> None:
@@ -158,7 +163,7 @@ class UnspentStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            return Unspent.from_bytes(row[4])
+            return Unspent.from_bytes(row[5])
         return None
 
     # TODO figure out if we want to really delete when doing rollback

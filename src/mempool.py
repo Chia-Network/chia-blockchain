@@ -45,6 +45,7 @@ class Mempool:
         # MEMPOOL_SIZE = 60000
         self.mempool_size = tx_per_sec * sec_per_block * block_buffer_count
         self.potential_cache_size = 300
+        self.coinbase_freeze = self.constants["COINBASE_FREEZE_PERIOD"]
 
     # TODO This is hack, it should use proper cost, const. Minimize work, double check/verify solution.
     async def create_bundle_for_tip(self, header_block: HeaderBlock) -> Optional[SpendBundle]:
@@ -188,7 +189,10 @@ class Mempool:
 
             added_count += 1
 
-        return added_count > 0, None
+        if added_count > 0:
+            return True, None
+        else:
+            return False, errors[0]
 
     async def check_removals(self, additions: List[Coin], removals: List[Coin],
                              mempool: Pool) -> Tuple[Optional[Err], Dict[bytes32, Unspent], Optional[List[Coin]]]:
@@ -215,6 +219,7 @@ class Mempool:
             # 2. Checks we have it in the unspent_store
             unspent: Optional[Unspent] = await self.unspent_store.get_unspent(removal.name(), mempool.header_block)
             if unspent is None:
+                print(f"unkown unspent {removal.name()}")
                 return Err.UNKNOWN_UNSPENT, {}, None
             # 3. Checks if it's been spent already
             if unspent.spent == 1:
@@ -222,6 +227,9 @@ class Mempool:
             # 4. Checks if there's a mempool conflict
             if removal.name() in mempool.removals:
                 conflicts.append(removal)
+            if unspent.coinbase == 1:
+                if mempool.header_block.height + 1 < unspent.confirmed_block_index + self.coinbase_freeze:
+                    return  Err.COINBASE_NOT_YET_SPEDNABLE, {}, None
 
             unspents[unspent.coin.name()] = unspent
         if len(conflicts) > 0:

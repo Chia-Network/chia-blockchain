@@ -31,4 +31,6 @@ constants: Dict[str, Any] = {
     "TX_PER_SEC": 20,
     # Size of mempool = 10x the size of block
     "MEMPOOL_BLOCK_BUFFER": 10,
+    # Coinbase rewards are not spendable for 200 blocks
+    "COINBASE_FREEZE_PERIOD": 200,
 }

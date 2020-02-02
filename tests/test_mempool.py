@@ -20,7 +20,12 @@ def event_loop():
 class TestMempool:
     @pytest.fixture(scope="function")
     async def two_nodes(self):
-        async for _ in setup_two_nodes():
+        async for _ in setup_two_nodes({"COINBASE_FREEZE_PERIOD": 0}):
+            yield _
+
+    @pytest.fixture(scope="function")
+    async def two_nodes_standard_freeze(self):
+        async for _ in setup_two_nodes({"COINBASE_FREEZE_PERIOD": 200}):
             yield _
 
     @pytest.mark.asyncio
@@ -35,13 +40,59 @@ class TestMempool:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
+        print(f"block coinbase: {block.body.coinbase.name()}")
         async for _ in full_node_1.block(peer_protocol.Block(block)):
-            spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase)
-            tx: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle)
-            async for _ in full_node_1.transaction(tx):
-                outbound: OutboundMessage = _
+            pass
+
+        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase)
+        tx: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle)
+        async for _ in full_node_1.transaction(tx):
+            outbound: OutboundMessage = _
+            # Maybe transaction means that it's accepted in mempool
+            assert outbound.message.function == "maybe_transaction"
+
+        sb = await full_node_1.mempool.get_spendbundle(spend_bundle.name())
+        assert sb is spend_bundle
+
+    @pytest.mark.asyncio
+    async def test_coinbase_freeze(self, two_nodes_standard_freeze):
+        num_blocks = 3
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        full_node_1, full_node_2, server_1, server_2 = two_nodes_standard_freeze
+
+        block = blocks[1]
+        async for _ in full_node_1.block(peer_protocol.Block(block)):
+            pass
+
+        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase)
+        tx: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle)
+
+        async for _ in full_node_1.transaction(tx):
+            outbound: OutboundMessage = _
                 # Maybe transaction means that it's accepted in mempool
-                assert outbound.message.function == "maybe_transaction"
+            assert outbound.message.function != "maybe_transaction"
+
+        sb = await full_node_1.mempool.get_spendbundle(spend_bundle.name())
+        assert sb is None
+
+        blocks = bt.get_consecutive_blocks(test_constants, 200, [], 10, b"", coinbase_puzzlehash)
+
+        for i in range(1, 201):
+            async for _ in full_node_1.block(peer_protocol.Block(blocks[i])):
+                pass
+
+        async for _ in full_node_1.transaction(tx):
+            outbound: OutboundMessage = _
+                # Maybe transaction means that it's accepted in mempool
+            assert outbound.message.function == "maybe_transaction"
+        print(blocks[1].body.coinbase.name())
+        sb = await full_node_1.mempool.get_spendbundle(spend_bundle.name())
+        assert sb is spend_bundle
 
     @pytest.mark.asyncio
     async def test_double_spend(self, two_nodes):
