@@ -4,7 +4,9 @@ from typing import Dict, Optional, Tuple, List
 from src.consensus.constants import constants as consensus_constants
 from src.farming.farming_tools import best_solution_program
 from src.types.full_block import FullBlock
-from src.types.hashable import SpendBundle, CoinName, Coin, Unspent
+from src.types.hashable.Coin import CoinName, Coin
+from src.types.hashable.SpendBundle import SpendBundle
+from src.types.hashable.Unspent import Unspent
 from src.types.header_block import HeaderBlock
 from src.types.mempool_item import MempoolItem
 from src.types.pool import Pool

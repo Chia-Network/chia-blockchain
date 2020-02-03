@@ -2,7 +2,7 @@ import dataclasses
 
 import blspy
 
-from src.types.hashable import BLSSignature, BLSPublicKey
+from src.types.hashable.BLSSignature import BLSSignature, BLSPublicKey
 from src.types.sized_bytes import bytes32
 
 

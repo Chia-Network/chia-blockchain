@@ -1,34 +1,13 @@
-import enum
-from dataclasses import dataclass
 from typing import Optional, Tuple, List, Dict
 
-import clvm
 from clvm.subclass_sexp import BaseSExp
 
 from clvm_tools import binutils
 
-from src.util.streamable import Streamable, streamable
-from .ConsensusError import ConsensusError, Err
-
-
-class ConditionOpcode(bytes, enum.Enum):
-    AGG_SIG = bytes([50])
-    CREATE_COIN = bytes([51])
-    ASSERT_COIN_CONSUMED = bytes([52])
-    ASSERT_MY_COIN_ID = bytes([53])
-    ASSERT_TIME_EXCEEDS = bytes([54])
-    ASSERT_BLOCK_INDEX_EXCEEDS = bytes([55])
-    ASSERT_BLOCK_AGE_EXCEEDS = bytes([56])
-
-
-@dataclass(frozen=True)
-class ConditionVarPair():
-    """
-    This structure is used in the body for the reward and fees genesis coins.
-    """
-    opcode: ConditionOpcode
-    var1: Optional[bytes]
-    var2: Optional[bytes]
+from src.types.ConditionVarPair import ConditionVarPair
+from src.types.condition_opcodes import ConditionOpcode
+from src.types.hashable import Program
+from .ConsensusError import Err
 
 
 def parse_sexp_to_condition(sexp: BaseSExp) -> Tuple[Optional[Err], Optional[ConditionVarPair]]:
@@ -78,4 +57,4 @@ def parse_sexp_to_conditions_dict(sexp: BaseSExp) -> \
 
 
 def conditions_to_sexp(conditions):
-    return clvm.to_sexp_f([binutils.assemble("#q"), conditions])
+    return Program.to([binutils.assemble("#q"), conditions])

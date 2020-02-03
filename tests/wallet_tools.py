@@ -4,8 +4,14 @@ import clvm
 from os import urandom
 from blspy import ExtendedPrivateKey
 
-from src.types.hashable import ProgramHash, CoinSolution, SpendBundle, Program, BLSSignature, Coin
-from src.util.Conditions import conditions_by_opcode, ConditionVarPair, ConditionOpcode
+from src.types.ConditionVarPair import ConditionVarPair
+from src.types.condition_opcodes import ConditionOpcode
+from src.types.hashable.Program import Program, ProgramHash
+from src.types.hashable.BLSSignature import BLSSignature
+from src.types.hashable.Coin import Coin
+from src.types.hashable.CoinSolution import CoinSolution
+from src.types.hashable.SpendBundle import SpendBundle
+from src.util.Conditions import conditions_by_opcode
 from src.util.consensus import hash_key_pairs_for_conditions_dict, conditions_for_solution
 from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.puzzles.p2_conditions import puzzle_for_conditions
@@ -121,7 +127,7 @@ class WalletTool:
             pubkey, secretkey = self.get_keys(solution.coin.puzzle_hash)
             secretkey = BLSPrivateKey(secretkey)
             code_ = [puzzle, solution.solution]
-            sexp = clvm.to_sexp_f(code_)
+            sexp = Program.to(code_)
             err, con = conditions_for_solution(sexp)
             conditions_dict = conditions_by_opcode(con)
 

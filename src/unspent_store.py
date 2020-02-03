@@ -2,7 +2,9 @@ import asyncio
 from typing import Dict, Optional, List
 import aiosqlite
 from src.types.full_block import FullBlock
-from src.types.hashable import Hash, Unspent, Coin, CoinName
+from src.types.hashable.Coin import Coin, CoinName
+from src.types.hashable.Hash import Hash
+from src.types.hashable.Unspent import Unspent
 from src.types.header_block import HeaderBlock
 from src.util.ints import uint32
 

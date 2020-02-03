@@ -14,15 +14,15 @@ import clvm
 
 from clvm_tools import binutils
 
-from src.types.hashable import Program
-from src.util.Conditions import ConditionOpcode
+from src.types.condition_opcodes import ConditionOpcode
+from src.types.hashable.Program import Program
 
 
 def puzzle_for_pk(public_key):
     aggsig = ConditionOpcode.AGG_SIG[0]
-    TEMPLATE = f"(c (c (q {aggsig}) (c (q 0x%s) (c (sha256 (wrap (a))) (q ())))) (a))"
-    return Program(binutils.assemble(TEMPLATE % public_key.hex()))
+    TEMPLATE = f"(c (c (q {aggsig}) (c (q 0x%s) (c (sha256tree (a)) (q ())))) (a))"
+    return Program.to(binutils.assemble(TEMPLATE % public_key.hex()))
 
 
 def solution_for_conditions(puzzle_reveal, conditions):
-    return Program(clvm.to_sexp_f([puzzle_reveal, conditions]))
+    return Program.to([puzzle_reveal, conditions])

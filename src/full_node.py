@@ -24,7 +24,9 @@ from src.server.server import ChiaServer
 from src.types.body import Body
 from src.types.challenge import Challenge
 from src.types.full_block import FullBlock
-from src.types.hashable import SpendBundle, Coin, BLSSignature
+from src.types.hashable.Coin import Coin
+from src.types.hashable.BLSSignature import BLSSignature
+from src.types.hashable.SpendBundle import SpendBundle
 from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo

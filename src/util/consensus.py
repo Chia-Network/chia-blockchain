@@ -1,24 +1,30 @@
 from typing import List, Tuple, Optional, Dict
 
 import clvm
+from clvm.EvalError import EvalError
+from clvm.casts import int_from_bytes
 
-from src.types.hashable import BLSSignature, Coin
+from src.types.ConditionVarPair import ConditionVarPair
+from src.types.condition_opcodes import ConditionOpcode
+from src.types.hashable.BLSSignature import BLSSignature
+from src.types.hashable.Coin import Coin
+from src.types.hashable.Program import Program
 from src.types.sized_bytes import bytes32
 from src.util.ConsensusError import Err
 
-from .Conditions import conditions_by_opcode, parse_sexp_to_conditions, ConditionOpcode, ConditionVarPair
+from .Conditions import parse_sexp_to_conditions, conditions_by_opcode
 
 
-def conditions_for_solution(solution_program, eval=clvm.eval_f) -> Tuple[Optional[Err], Optional[List[ConditionVarPair]]]:
+def conditions_for_solution(solution_program, run_program=clvm.run_program) -> Tuple[Optional[Err], Optional[List[ConditionVarPair]]]:
     # get the standard script for a puzzle hash and feed in the solution
-    args = clvm.to_sexp_f(solution_program)
+    args = Program.to(solution_program)
     try:
         puzzle_sexp = args.first()
         solution_sexp = args.rest().first()
-        r = eval(eval, puzzle_sexp, solution_sexp)
+        cost, r = run_program(puzzle_sexp, solution_sexp)
         error, result = parse_sexp_to_conditions(r)
         return error, result
-    except clvm.EvalError.EvalError:
+    except EvalError:
         return Err.SEXP_ERROR, None
 
 
@@ -52,7 +58,7 @@ def created_outputs_for_conditions_dict(conditions_dict: Dict[ConditionOpcode, L
         # maybe write a type-checking framework for conditions
         # and don't just fail with asserts
         opcode, puzzle_hash, amount_bin = _.opcode, _.var1, _.var2
-        amount = clvm.casts.int_from_bytes(amount_bin)
+        amount = int_from_bytes(amount_bin)
         coin = Coin(input_coin_name, puzzle_hash, amount)
         output_coins.append(coin)
     return output_coins

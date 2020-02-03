@@ -2,7 +2,8 @@ from dataclasses import dataclass
 from typing import List, Dict
 
 from src.atoms import hash_pointer
-from src.types.hashable import std_hash, Coin
+from src.types.hashable.Coin import Coin
+from src.types.hashable.Hash import std_hash
 from src.types.sized_bytes import bytes32
 from src.util.chain_utils import additions_for_solution, aggsigs_for_solution
 from src.util.ints import uint64

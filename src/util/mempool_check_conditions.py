@@ -1,17 +1,23 @@
 from typing import Optional, List, Dict, Tuple
 
 import clvm
+from clvm import EvalError
+from clvm.casts import int_from_bytes
 
-from src.farming.farming_tools import best_solution_program
-from src.types.hashable import SpendBundle, CoinName, ProgramHash, Program, Unspent
+from src.types.ConditionVarPair import ConditionVarPair
+from src.types.hashable.Coin import CoinName
+from src.types.hashable.Program import Program, ProgramHash
+from src.types.hashable.SpendBundle import SpendBundle
+from src.types.hashable.Unspent import Unspent
 from src.types.name_puzzle_condition import NPC
 from src.types.pool import Pool
-from src.util.Conditions import ConditionVarPair, ConditionOpcode
+from src.util.Conditions import ConditionOpcode
 from src.util.ConsensusError import Err
 from src.util.consensus import conditions_dict_for_solution
 import time
 
 from src.util.ints import uint64
+from src.util.run_program import run_program
 
 
 def mempool_assert_coin_consumed(condition: ConditionVarPair, spend_bundle: SpendBundle, mempool: Pool) -> Optional[
@@ -40,7 +46,7 @@ def mempool_assert_block_index_exceeds(condition: ConditionVarPair, unspent: Uns
     Checks if the next block index exceeds the block index from the condition
     """
     try:
-        expected_block_index = clvm.casts.int_from_bytes(condition.var1)
+        expected_block_index = int_from_bytes(condition.var1)
     except ValueError:
         return Err.INVALID_CONDITION
     # + 1 because min block it can be included is +1 from current
@@ -54,7 +60,7 @@ def mempool_assert_block_age_exceeds(condition: ConditionVarPair, unspent: Unspe
     Checks if the coin age exceeds the age from the condition
     """
     try:
-        expected_block_age = clvm.casts.int_from_bytes(condition.var1)
+        expected_block_age = int_from_bytes(condition.var1)
         expected_block_index = expected_block_age + unspent.confirmed_block_index
     except ValueError:
         return Err.INVALID_CONDITION
@@ -64,7 +70,7 @@ def mempool_assert_block_age_exceeds(condition: ConditionVarPair, unspent: Unspe
 
 def mempool_assert_time_exceeds(condition: ConditionVarPair):
     try:
-        expected_mili_time = clvm.casts.uint64_from_bytes(condition.var1)
+        expected_mili_time = int_from_bytes(condition.var1)
     except ValueError:
         return Err.INVALID_CONDITION
 
@@ -80,8 +86,8 @@ async def get_name_puzzle_conditions(block_program: Program) -> Tuple[Optional[E
     """
 
     try:
-        sexp = clvm.eval_f(clvm.eval_f, block_program, [])
-    except clvm.EvalError:
+        cost, sexp = run_program(block_program, [])
+    except EvalError:
         breakpoint()
         return Err.INVALID_COIN_SOLUTION, None
 

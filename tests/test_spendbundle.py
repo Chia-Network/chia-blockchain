@@ -1,9 +1,8 @@
-from src.types.hashable import std_hash
+from src.types.hashable.Hash import std_hash
 from src.util.Conditions import conditions_by_opcode
 from src.util.consensus import conditions_for_solution, created_outputs_for_conditions_dict, aggsig_in_conditions_dict
 from src.wallet.puzzles import p2_delegated_puzzle
 from src.wallet.puzzles.puzzle_utils import make_create_coin_condition
-from tests.helpers import trace_eval
 from tests.keys import puzzle_program_for_index
 
 
@@ -18,7 +17,7 @@ def test_1():
 
     puzzle_hash_solution = p2_delegated_puzzle.solution_for_conditions(puzzle_program_0, conditions)
 
-    error, output_conditions = conditions_for_solution(puzzle_hash_solution, trace_eval)
+    error, output_conditions = conditions_for_solution(puzzle_hash_solution)
     assert error is None
     from pprint import pprint
     output_conditions_dict = conditions_by_opcode(output_conditions)

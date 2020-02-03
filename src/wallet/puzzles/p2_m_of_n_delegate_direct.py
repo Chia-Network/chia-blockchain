@@ -5,7 +5,7 @@ This puzzle program is like p2_delegated_puzzle except instead of one public key
 it includes N public keys, any M of which needs to sign the delegated puzzle.
 """
 
-from src.types.hashable import Program
+from src.types.hashable.Program import Program
 from clvm_tools import binutils
 
 from .load_clvm import load_clvm
@@ -20,7 +20,7 @@ def puzzle_for_m_of_public_key_list(m, public_key_list):
         for _ in (puzzle_prog_template, m, public_key_list))
     puzzle_src = "((c (q %s) (c (q %s) (c (q %s) (a)))))" % format_tuple
     puzzle_prog = binutils.assemble(puzzle_src)
-    return Program(puzzle_prog)
+    return Program.to(puzzle_prog)
 
 
 def solution_for_delegated_puzzle(m, public_key_list, selectors, puzzle, solution):

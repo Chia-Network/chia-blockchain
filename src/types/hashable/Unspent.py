@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
-from src.types.hashable import Coin, Hash
+from src.types.hashable.Coin import Coin
+from src.types.hashable.Hash import Hash
 from src.util.streamable import Streamable, streamable
 from src.util.ints import uint32, uint8
 

@@ -1,8 +1,7 @@
 from typing import List
 
-
-from src.types.hashable import Coin
-from src.util.Conditions import ConditionVarPair
+from src.types.ConditionVarPair import ConditionVarPair
+from src.types.hashable.Coin import Coin
 from src.util.consensus import conditions_dict_for_solution, created_outputs_for_conditions_dict, \
     aggsig_in_conditions_dict
 

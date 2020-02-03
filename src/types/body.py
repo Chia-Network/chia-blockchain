@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Optional
-from src.types.hashable import Program, BLSSignature
+
+from src.types.hashable.BLSSignature import BLSSignature
+from src.types.hashable.Program import Program
 from src.types.hashable.Coin import Coin
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64

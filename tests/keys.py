@@ -1,10 +1,13 @@
 import blspy
 
-from src.types.hashable import CoinSolution, SpendBundle, ProgramHash
-from src.util.Conditions import ConditionOpcode
+from src.types.hashable.CoinSolution import CoinSolution
+from src.types.hashable.SpendBundle import SpendBundle
+from src.types.hashable.Program import ProgramHash
+
 from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.keychain import Keychain
 from src.wallet.puzzles import p2_delegated_puzzle
+from src.wallet.puzzles.puzzle_utils import make_create_coin_condition
 
 HIERARCHICAL_PRIVATE_KEY = blspy.ExtendedPrivateKey.from_seed(b"foo")
 

@@ -1,8 +1,10 @@
 import blspy
 
 from src.util.ints import uint64
-from src.types.hashable import BLSSignature, Coin, ProgramHash, Hash
-
+from src.types.hashable.Program import ProgramHash
+from src.types.hashable.Coin import Coin
+from src.types.hashable.Hash import Hash
+from src.types.hashable.BLSSignature  import BLSSignature
 
 def signature_for_coinbase(coin: Coin, pool_private_key: blspy.PrivateKey):
     message_hash = blspy.Util.hash256(bytes(coin))

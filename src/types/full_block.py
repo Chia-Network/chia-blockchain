@@ -3,7 +3,7 @@ from typing import Tuple, List, Optional
 
 from src.types.name_puzzle_condition import NPC
 from src.types.body import Body
-from src.types.hashable import Coin
+from src.types.hashable.Coin import Coin
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.util.ConsensusError import Err

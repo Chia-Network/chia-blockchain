@@ -19,7 +19,7 @@ from src.types.body import Body
 from src.types.challenge import Challenge
 from src.types.classgroup import ClassgroupElement
 from src.types.full_block import FullBlock
-from src.types.hashable import Coin
+from src.types.hashable.Coin import Coin
 from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.proof_of_space import ProofOfSpace

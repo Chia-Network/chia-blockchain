@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from typing import Dict, List
 
+from src.types.ConditionVarPair import ConditionVarPair
 from src.types.sized_bytes import bytes32
-from src.util.Conditions import ConditionVarPair, ConditionOpcode
+from src.util.Conditions import ConditionOpcode
 
 
 @dataclass(frozen=True)

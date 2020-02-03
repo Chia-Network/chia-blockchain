@@ -2,7 +2,8 @@ from typing import List, Dict
 
 from sortedcontainers import SortedDict
 
-from src.types.hashable import Coin, CoinName
+from src.types.hashable.Coin import Coin
+from src.types.hashable.Coin import CoinName
 from src.types.header_block import HeaderBlock
 from src.types.mempool_item import MempoolItem
 from src.types.sized_bytes import bytes32

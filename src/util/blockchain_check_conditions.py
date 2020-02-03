@@ -1,11 +1,12 @@
 from typing import Optional, Dict, List
 
-import clvm
+from clvm.casts import int_from_bytes
 
-from src.types.hashable import  Unspent, Coin
+from src.types.ConditionVarPair import ConditionVarPair
+from src.types.hashable.Unspent import  Unspent
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
-from src.util.Conditions import ConditionVarPair, ConditionOpcode
+from src.util.Conditions import ConditionOpcode
 from src.util.ConsensusError import Err
 
 
@@ -34,7 +35,7 @@ def blockchain_assert_block_index_exceeds(condition: ConditionVarPair, header: H
     Checks if the next block index exceeds the block index from the condition
     """
     try:
-        expected_block_index = clvm.casts.int_from_bytes(condition.var1)
+        expected_block_index = int_from_bytes(condition.var1)
     except ValueError:
         return Err.INVALID_CONDITION
     # + 1 because min block it can be included is +1 from current
@@ -48,7 +49,7 @@ def blockchain_assert_block_age_exceeds(condition: ConditionVarPair, unspent: Un
     Checks if the coin age exceeds the age from the condition
     """
     try:
-        expected_block_age = clvm.casts.int_from_bytes(condition.var1)
+        expected_block_age = int_from_bytes(condition.var1)
         expected_block_index = expected_block_age + unspent.confirmed_block_index
     except ValueError:
         return Err.INVALID_CONDITION
