@@ -50,6 +50,13 @@ class Timer {
         this->cpu_time_start_ = clock();
     }
 
+    static char* GetNow()
+    {
+        auto now = std::chrono::system_clock::now();
+        auto tt = std::chrono::system_clock::to_time_t(now);
+        return ctime(&tt); // ctime includes newline
+    }
+
     void PrintElapsed(std::string name) {
         auto end = std::chrono::steady_clock::now();
         auto wall_clock_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -59,7 +66,7 @@ class Timer {
 
         double cpu_ratio = static_cast<int>(10000 * (cpu_time_ms / wall_clock_ms)) / 100.0;
 
-        std::cout << name << " " << (wall_clock_ms / 1000.0)  << " seconds. CPU (" << cpu_ratio << "%)" << std::endl;
+        std::cout << name << " " << (wall_clock_ms / 1000.0)  << " seconds. CPU (" << cpu_ratio << "%) " << Timer::GetNow();
     }
 
  private:
