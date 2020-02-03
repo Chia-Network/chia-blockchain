@@ -2,7 +2,7 @@ import os
 import sys
 import time
 from hashlib import sha256
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import blspy
 from blspy import PrependSignature, PrivateKey, PublicKey
@@ -19,7 +19,9 @@ from src.types.body import Body
 from src.types.challenge import Challenge
 from src.types.classgroup import ClassgroupElement
 from src.types.full_block import FullBlock
+from src.types.hashable.BLSSignature import BLSSignature
 from src.types.hashable.Coin import Coin
+from src.types.hashable.Program import Program
 from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.proof_of_space import ProofOfSpace
@@ -87,7 +89,10 @@ class BlockTools:
         seconds_per_block=constants["BLOCK_TIME_TARGET"],
         seed: bytes = b"",
         reward_puzzlehash: bytes32 = None,
+        transaction_data_at_height: Dict[int, Tuple[Program, BLSSignature]] = None
     ) -> List[FullBlock]:
+        if transaction_data_at_height is None:
+            transaction_data_at_height = {}
         test_constants: Dict[str, Any] = constants.copy()
         for key, value in input_constants.items():
             test_constants[key] = value
@@ -226,6 +231,11 @@ class BlockTools:
                 curr_difficulty = new_difficulty
             time_taken = seconds_per_block
             timestamp += time_taken
+            transactions: Program = None
+            aggsig: BLSSignature = None
+            if next_height in transaction_data_at_height:
+                transactions, aggsig = transaction_data_at_height[next_height]
+
             block_list.append(
                 self.create_next_block(
                     test_constants,
@@ -235,6 +245,8 @@ class BlockTools:
                     curr_ips,
                     seed,
                     reward_puzzlehash,
+                    transactions,
+                    aggsig
                 )
             )
         return block_list
@@ -271,7 +283,9 @@ class BlockTools:
         difficulty: uint64,
         ips: uint64,
         seed: bytes = b"",
-        reward_puzzlehash: bytes32 = None
+        reward_puzzlehash: bytes32 = None,
+        transactions: Program = None,
+        aggsig: BLSSignature = None,
     ) -> FullBlock:
         """
         Creates the next block with the specified details.
@@ -295,6 +309,8 @@ class BlockTools:
             seed,
             False,
             reward_puzzlehash,
+            transactions,
+            aggsig
         )
 
     def _create_block(
@@ -311,6 +327,8 @@ class BlockTools:
         seed: bytes,
         genesis: bool = False,
         reward_puzzlehash: bytes32 = None,
+        transactions: Program = None,
+        aggsig: BLSSignature = None
     ) -> FullBlock:
         """
         Creates a block with the specified details. Uses the stored plots to create a proof of space,

@@ -34,6 +34,9 @@ async def setup_two_nodes(dic = {}):
     """
 
     # SETUP
+    for k in dic.keys():
+        test_constants[k] = dic[k]
+
     store_1 = await FullNodeStore.create("blockchain_test")
     store_2 = await FullNodeStore.create("blockchain_test_2")
     await store_1._clear_database()
