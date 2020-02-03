@@ -889,7 +889,7 @@ class Blockchain:
                         # Create DiffStore
                         await self.create_diffs_for_tips(self.lca_block)
         else:
-            #  Nuke DiffStore
+            # If LCA has not changes just update the difference
             self.unspent_store.nuke_diffs()
             # Create DiffStore
             await self.create_diffs_for_tips(self.lca_block)
@@ -964,7 +964,6 @@ class Blockchain:
 
         await self.unspent_store.add_lcas(blocks)
 
-    # TODO Make diffs update in case lca is not changed
     async def _reconsider_heads(self, block: HeaderBlock, genesis: bool) -> Tuple[bool, Optional[HeaderBlock]]:
         """
         When a new block is added, this is called, to check if the new block is heavier

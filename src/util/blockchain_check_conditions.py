@@ -1,3 +1,4 @@
+import time
 from typing import Optional, Dict, List
 
 from clvm.casts import int_from_bytes
@@ -8,6 +9,7 @@ from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.util.Conditions import ConditionOpcode
 from src.util.ConsensusError import Err
+from src.util.ints import uint64
 
 
 def blockchain_assert_coin_consumed(condition: ConditionVarPair, removed: Dict[bytes32, Unspent]) -> Optional[
@@ -58,6 +60,18 @@ def blockchain_assert_block_age_exceeds(condition: ConditionVarPair, unspent: Un
     return None
 
 
+def blockchain_assert_time_exceeds(condition: ConditionVarPair):
+    try:
+        expected_mili_time = int_from_bytes(condition.var1)
+    except ValueError:
+        return Err.INVALID_CONDITION
+
+    current_time = uint64(time.time() * 1000)
+    if current_time < expected_mili_time:
+        return Err.ASSERT_TIME_EXCEEDS_FAILED
+    return None
+
+
 def blockchain_check_conditions_dict(unspent: Unspent, removed: Dict[bytes32, Unspent],
                                   conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]], header: HeaderBlock) -> Optional[Err]:
     """
@@ -75,7 +89,9 @@ def blockchain_check_conditions_dict(unspent: Unspent, removed: Dict[bytes32, Un
                 error = blockchain_assert_block_index_exceeds(cvp, header)
             elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
                 error = blockchain_assert_block_age_exceeds(cvp, unspent, header)
-            # TODO add stuff from Will's pull req
+            elif cvp.opcode is ConditionOpcode.ASSERT_TIME_EXCEEDS:
+                error = blockchain_assert_time_exceeds(cvp)
+
             if error:
                 return error
 
