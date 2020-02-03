@@ -54,14 +54,6 @@ class SpendBundle(Streamable):
         amount_out = sum(_.amount for _ in self.additions())
         return amount_in - amount_out
 
-    async def get_signature_count(self) -> uint64:
-        count: uint64 = uint64(0)
-        for cs in self.coin_solutions:
-            cvp = aggsigs_for_solution(cs.solution)
-            count += len(cvp)
-
-        return count
-
     def name(self) -> bytes32:
         return BundleHash(self)
 

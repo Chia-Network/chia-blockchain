@@ -32,7 +32,7 @@ class Mempool:
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self.potential_txs: Dict[bytes32, SpendBundle] = {}
 
-        self.allSeen: Dict[bytes32: bytes32] = {}
+        self.allSeen: Dict[bytes32, bytes32] = {}
         # Mempool for each tip
         self.mempools: Dict[bytes32, Pool] = {}
 
@@ -133,7 +133,7 @@ class Mempool:
                                                                          pool)
             # If there is a mempool conflict check if this spendbundle has a higher fee per cost than all others
             tmp_error: Optional[Err] = None
-            conflicting_pool_items: Dict[bytes32: MempoolItem] = {}
+            conflicting_pool_items: Dict[bytes32, MempoolItem] = {}
             if fail_reason is Err.MEMPOOL_CONFLICT:
                 for conflicting in conflicts:
                     sb: MempoolItem = pool.removals[conflicting.name()]

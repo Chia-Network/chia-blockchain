@@ -21,6 +21,7 @@ def blockchain_assert_coin_consumed(condition: ConditionVarPair, removed: Dict[b
     coin_name = condition.var1
     if coin_name not in removed:
         return Err.ASSERT_COIN_CONSUMED_FAILED
+    return None
 
 
 def blockchain_assert_my_coin_id(condition: ConditionVarPair, unspent: Unspent) -> Optional[Err]:
@@ -66,7 +67,7 @@ def blockchain_assert_time_exceeds(condition: ConditionVarPair):
     except ValueError:
         return Err.INVALID_CONDITION
 
-    current_time = uint64(time.time() * 1000)
+    current_time = uint64(int(time.time() * 1000))
     if current_time < expected_mili_time:
         return Err.ASSERT_TIME_EXCEEDS_FAILED
     return None

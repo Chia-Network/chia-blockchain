@@ -40,7 +40,7 @@ def parse_sexp_to_conditions(sexp: BaseSExp) -> Tuple[Optional[Err], Optional[Li
 
 
 def conditions_by_opcode(conditions: List[ConditionVarPair]) -> Dict[ConditionOpcode, List[ConditionVarPair]]:
-    d: Dict[ConditionOpcode: List[ConditionVarPair]] = {}
+    d: Dict[ConditionOpcode, List[ConditionVarPair]] = {}
     for _ in conditions:
         if _.opcode not in d:
             d[_.opcode] = list()

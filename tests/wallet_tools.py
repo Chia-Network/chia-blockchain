@@ -24,7 +24,7 @@ from src.wallet.puzzles.puzzle_utils import make_assert_coin_consumed_condition,
 class WalletTool:
     seed = b'seed'
     next_address = 0
-    pubkey_num_lookup = {}
+    pubkey_num_lookup: Dict[str, int] = {}
 
     def __init__(self):
         self.current_balance = 0

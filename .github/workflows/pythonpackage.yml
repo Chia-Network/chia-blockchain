@@ -33,7 +33,7 @@ jobs:
         pip install -r requirements.txt
     - name: Lint with flake8
       run: |
-        ./.venv/bin/flake8 src
+        ./.venv/bin/flake8 src --exclude src/wallet
     - name: Lint with mypy
       run: |
         ./.venv/bin/mypy src tests
