@@ -75,19 +75,17 @@ class Mempool:
         self.allSeen[new_spend.name()] = new_spend.name()
 
         # Calculate the cost and fees
-        cost = await new_spend.get_signature_count()
+        program = best_solution_program(new_spend)
+        # npc contains names of the coins removed, puzzle_hashes and their spend conditions
+        fail_reason, npc_list, cost = await get_name_puzzle_conditions(program)
+        if fail_reason:
+            return False, fail_reason
+
         fees = new_spend.fees()
-        # TODO Cost is hack, currently it just counts number of signatures (count can be 0)
-        # TODO Remove when real cost function is implemented
+
         if cost == 0:
             return False, Err.UNKNOWN
         fees_per_cost: float = fees / cost
-
-        program = best_solution_program(new_spend)
-        # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-        fail_reason, npc_list = await get_name_puzzle_conditions(program)
-        if fail_reason:
-            return False, fail_reason
 
         # build removal list
         removals_dic: Dict[bytes32, Coin] = new_spend.removals_dict()

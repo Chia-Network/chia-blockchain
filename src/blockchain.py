@@ -982,7 +982,7 @@ class Blockchain:
     async def validate_transactions(self, block: FullBlock, fee_base: uint64) -> Optional[Err]:
 
         # Get List of names removed, puzzles hashes for removed coins and conditions crated
-        error, npc_list = get_name_puzzle_conditions(block.body.transactions)
+        error, npc_list, cost = get_name_puzzle_conditions(block.body.transactions)
 
         if error:
             return error

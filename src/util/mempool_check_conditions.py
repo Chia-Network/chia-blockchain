@@ -79,7 +79,7 @@ def mempool_assert_time_exceeds(condition: ConditionVarPair):
         return Err.ASSERT_TIME_EXCEEDS_FAILED
     return None
 
-async def get_name_puzzle_conditions(block_program: Program) -> Tuple[Optional[Err], Optional[List[NPC]]]:
+async def get_name_puzzle_conditions(block_program: Program) -> Tuple[Optional[Err], Optional[List[NPC]], int]:
     """
     Returns an error if it's unable to evaluate, otherwise
     returns a list of NPC (coin_name, solved_puzzle_hash, conditions_dict)
@@ -89,31 +89,31 @@ async def get_name_puzzle_conditions(block_program: Program) -> Tuple[Optional[E
         cost, sexp = run_program(block_program, [])
     except EvalError:
         breakpoint()
-        return Err.INVALID_COIN_SOLUTION, None
+        return Err.INVALID_COIN_SOLUTION, None, 0
 
     npc_list = []
     for name_solution in sexp.as_iter():
         _ = name_solution.as_python()
         if len(_) != 2:
-            return Err.INVALID_COIN_SOLUTION, None
+            return Err.INVALID_COIN_SOLUTION, None, cost
         if not isinstance(_[0], bytes) or len(_[0]) != 32:
-            return Err.INVALID_COIN_SOLUTION, None
+            return Err.INVALID_COIN_SOLUTION, None, cost
         coin_name = CoinName(_[0])
         if not isinstance(_[1], list) or len(_[1]) != 2:
-            return Err.INVALID_COIN_SOLUTION, None
+            return Err.INVALID_COIN_SOLUTION, None, cost
         puzzle_solution_program = name_solution.rest().first()
         puzzle_program = puzzle_solution_program.first()
         puzzle_hash = ProgramHash(Program(puzzle_program))
         try:
             error, conditions_dict = conditions_dict_for_solution(puzzle_solution_program)
             if error:
-                return error, None
+                return error, None, cost
         except clvm.EvalError:
-            return Err.INVALID_COIN_SOLUTION, None
+            return Err.INVALID_COIN_SOLUTION, None, cost
         npc: NPC = NPC(coin_name, puzzle_hash, conditions_dict)
         npc_list.append(npc)
 
-    return None, npc_list
+    return None, npc_list, cost
 
 
 def mempool_check_conditions_dict(unspent: Unspent, spend_bundle: SpendBundle,

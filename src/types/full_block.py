@@ -60,7 +60,7 @@ class FullBlock(Streamable):
         if self.body.transactions is not None:
             # ensure block program generates solutions
             # This should never throw here, block must be valid if it comes to here
-            err, npc_list = get_name_puzzle_conditions(self.body.transactions)
+            err, npc_list, cost = get_name_puzzle_conditions(self.body.transactions)
             # build removals list
             for npc in npc_list:
                 removals.append(npc.coin_name)
@@ -68,22 +68,4 @@ class FullBlock(Streamable):
             additions.extend(additions_for_npc(npc_list))
 
         return removals, additions
-
-    def validate_removals_and_additions(self) -> Tuple[Optional[Err], Optional[List[bytes32]], Optional[List[Coin]]]:
-        removals: List[bytes32] = []
-        additions: List[Coin] = [self.body.coinbase, self.body.fees_coin]
-
-        if self.body.transactions is not None:
-            # ensure block program generates solutions
-            # This should never throw here, block must be valid if it comes to here
-            err, npc_list = get_name_puzzle_conditions(self.body.transactions)
-            if err:
-                return err, None, None
-            # build removals list
-            for coin_name, ph, con in npc_list:
-                removals.append(coin_name)
-
-            additions.extend(additions_for_npc(npc_list))
-
-        return None, removals, additions
 
