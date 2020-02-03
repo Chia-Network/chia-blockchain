@@ -31,7 +31,7 @@ add_subdirectory(lib/pybind11)
 
 pybind11_add_module(chiapos ${CMAKE_CURRENT_SOURCE_DIR}/python-bindings/chiapos.cpp)
 
-set (CMAKE_CXX_FLAGS "-g -O3 -Wall -msse2 -msse -march=native -std=c++1z -lstdc++fs -maes")
+set (CMAKE_CXX_FLAGS "-g -O3 -Wall -msse2 -msse -march=native -std=c++1z -maes")
 
 add_executable(ProofOfSpace
     src/cli.cpp

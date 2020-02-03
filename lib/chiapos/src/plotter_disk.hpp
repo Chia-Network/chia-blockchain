@@ -25,7 +25,20 @@
 #include <vector>
 #include <string>
 #include <utility>
+
+#if __has_include(<filesystem>)
+
 #include <filesystem>
+namespace filesystem = std::filesystem;
+
+#elif __has_include(<experimental/filesystem>)
+
+#include <experimental/filesystem>
+namespace filesystem = std::experimental::filesystem;
+
+#else
+#error "an implementation of filesystem is required!"
+#endif
 
 
 #include "util.hpp"
@@ -82,18 +95,18 @@ class DiskPlotter {
         std::cout << "Plot size is: " << static_cast<int>(k) << std::endl;
 
         // Cross platform way to concatenate paths, c++17.
-        std::filesystem::path tmp_1_filename = std::filesystem::path(tmp_dirname) / std::filesystem::path(filename + ".tmp");
-        std::filesystem::path tmp_2_filename = std::filesystem::path(tmp_dirname) / std::filesystem::path(filename + ".2.tmp");
-        std::filesystem::path final_filename = std::filesystem::path(final_dirname) / std::filesystem::path(filename);
+        filesystem::path tmp_1_filename = filesystem::path(tmp_dirname) / filesystem::path(filename + ".tmp");
+        filesystem::path tmp_2_filename = filesystem::path(tmp_dirname) / filesystem::path(filename + ".2.tmp");
+        filesystem::path final_filename = filesystem::path(final_dirname) / filesystem::path(filename);
 
         // Check if the paths exist
-        if (!std::filesystem::directory_entry(tmp_dirname).exists()) {
+        if (!filesystem::directory_entry(tmp_dirname).exists()) {
             std::string err_string = "Directory " + tmp_dirname + " does not exist";
             std::cerr << err_string << std::endl;
             throw err_string;
         }
 
-        if (!std::filesystem::directory_entry(final_dirname).exists()) {
+        if (!filesystem::directory_entry(final_dirname).exists()) {
             std::string err_string = "Directory " + final_dirname + " does not exist";
             std::cerr << err_string << std::endl;
             throw err_string;
@@ -136,10 +149,10 @@ class DiskPlotter {
                      static_cast<double>(res.final_table_begin_pointers[11])/(1024*1024*1024) << " GB" << std::endl;
         all_phases.PrintElapsed("Total time =");
 
-        bool removed_1 = std::filesystem::remove(tmp_1_filename);
-        std::filesystem::copy(tmp_2_filename, final_filename, std::filesystem::copy_options::overwrite_existing);
+        bool removed_1 = filesystem::remove(tmp_1_filename);
+        filesystem::copy(tmp_2_filename, final_filename, filesystem::copy_options::overwrite_existing);
 
-        bool removed_2 = std::filesystem::remove(tmp_2_filename);
+        bool removed_2 = filesystem::remove(tmp_2_filename);
 
         std::cout << "Removed " << tmp_1_filename << "? " << removed_1 << std::endl;
         std::cout << "Removed " << tmp_2_filename << "? " << removed_2 << std::endl;
