@@ -26,7 +26,6 @@ class UnspentStore:
     # Whether or not we are syncing
     sync_mode: bool = False
     lock: asyncio.Lock
-    # TODO set the size limit of ram cache
     lca_unspent_coins: Dict[str, Unspent]
     head_diffs: Dict[Hash, DiffStore]
 
@@ -145,6 +144,10 @@ class UnspentStore:
         await cursor.close()
         await self.unspent_db.commit()
         self.lca_unspent_coins[unspent.coin.name().hex()] = unspent
+        if len(self.lca_unspent_coins) > 600000:
+            while len(self.lca_unspent_coins) > 600000:
+                first_in = self.lca_unspent_coins.keys()[0]
+                del self.lca_unspent_coins[first_in]
 
     # Update unspent to be spent in DB
     async def set_spent(self, coin_name: Hash, index: uint32):
