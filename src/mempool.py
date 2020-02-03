@@ -59,7 +59,7 @@ class Mempool:
             cost_sum = 0
             spend_bundles: List[SpendBundle] = []
             for dic in pool.sorted_spends.values():
-                for item in dic.values:
+                for item in dic.values():
                     if item.cost + cost_sum <= 6000:
                         spend_bundles.append(item.spend_bundle)
                         cost_sum += item.cost
