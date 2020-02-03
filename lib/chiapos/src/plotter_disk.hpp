@@ -100,13 +100,13 @@ class DiskPlotter {
         filesystem::path final_filename = filesystem::path(final_dirname) / filesystem::path(filename);
 
         // Check if the paths exist
-        if (!filesystem::directory_entry(tmp_dirname).exists()) {
+        if (!filesystem::exists(tmp_dirname)) {
             std::string err_string = "Directory " + tmp_dirname + " does not exist";
             std::cerr << err_string << std::endl;
             throw err_string;
         }
 
-        if (!filesystem::directory_entry(final_dirname).exists()) {
+        if (!filesystem::exists(final_dirname)) {
             std::string err_string = "Directory " + final_dirname + " does not exist";
             std::cerr << err_string << std::endl;
             throw err_string;
