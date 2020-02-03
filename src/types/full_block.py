@@ -48,7 +48,7 @@ class FullBlock(Streamable):
     def header_hash(self) -> bytes32:
         return self.header_block.header.header_hash
 
-    def tx_removals_and_additions(self) -> Tuple[List[bytes32], List[Coin]]:
+    async def tx_removals_and_additions(self) -> Tuple[List[bytes32], List[Coin]]:
         """
         Doesn't return coinbase and fee reward.
         This call assumes that this block has been validated already,
@@ -60,7 +60,7 @@ class FullBlock(Streamable):
         if self.body.transactions is not None:
             # ensure block program generates solutions
             # This should never throw here, block must be valid if it comes to here
-            err, npc_list, cost = get_name_puzzle_conditions(self.body.transactions)
+            err, npc_list, cost = await get_name_puzzle_conditions(self.body.transactions)
             # build removals list
             for npc in npc_list:
                 removals.append(npc.coin_name)

@@ -18,7 +18,8 @@ from src.mempool import MAX_COIN_AMOUNT
 from src.store import FullNodeStore
 
 from src.types.full_block import FullBlock, additions_for_npc
-from src.types.hashable import Coin, Unspent
+from src.types.hashable.Coin import Coin
+from src.types.hashable.Unspent import Unspent
 from src.types.header_block import HeaderBlock
 from src.types.name_puzzle_condition import NPC
 from src.types.sized_bytes import bytes32
@@ -68,7 +69,8 @@ class Blockchain:
     unspent_store: UnspentStore
     # Store
     store: FullNodeStore
-
+    # Coinbase freeze period
+    coinbase_freeze: int
     @staticmethod
     async def create(
             header_blocks: Dict[str, HeaderBlock], unspent_store: UnspentStore, store: FullNodeStore,
@@ -982,8 +984,10 @@ class Blockchain:
     async def validate_transactions(self, block: FullBlock, fee_base: uint64) -> Optional[Err]:
 
         # Get List of names removed, puzzles hashes for removed coins and conditions crated
-        error, npc_list, cost = get_name_puzzle_conditions(block.body.transactions)
+        error, npc_list, cost = await get_name_puzzle_conditions(block.body.transactions)
 
+        if cost > 6000:
+            return Err.BLOCK_COST_EXCEEDS_MAX
         if error:
             return error
 
@@ -1020,12 +1024,12 @@ class Blockchain:
                 return Err.DOUBLE_SPEND
 
         # Check if removals exist and were not previously spend. (unspent_db + diff_store + this_block)
-        removal_unspents: Dict[bytes32, Unspent] = []
+        removal_unspents: Dict[bytes32, Unspent] = {}
         for rem in removals:
             if rem in additions_dic:
                 # Ephemeral coin
                 rem_coin: Coin = additions_dic[rem]
-                new_unspent: Unspent = Unspent(rem_coin, block.height, 0, 0)
+                new_unspent: Unspent = Unspent(rem_coin, block.height, 0, 0, 0)
                 removal_unspents[new_unspent.name] = new_unspent
             else:
                 unspent = await self.unspent_store.get_unspent(rem, prev_header)
@@ -1033,15 +1037,15 @@ class Blockchain:
                     if unspent.spent == 1:
                         return Err.DOUBLE_SPEND
                     if unspent.coinbase == 1:
-                        if block.height < unspent.confirmed_block_index + 200:
-                            return Err.COINBASE_NOT_YET_SPEDNABLE
+                        if block.height < unspent.confirmed_block_index + self.coinbase_freeze:
+                            return Err.COINBASE_NOT_YET_SPENDABLE
                     removal_unspents[unspent.name] = unspent
                 else:
                     return Err.UNKNOWN_UNSPENT
 
         # Check fees
         removed = 0
-        for unspent in removal_unspents:
+        for unspent in removal_unspents.values():
             removed += unspent.coin.amount
 
         added = 0
@@ -1058,7 +1062,7 @@ class Blockchain:
             return Err.BAD_COINBASE_REWARD
 
         # Verify that removed coin puzzle_hashes match with calculated puzzle_hashes
-        for unspent in removal_unspents:
+        for unspent in removal_unspents.values():
             if unspent.coin.puzzle_hash != removals_puzzle_dic[unspent.name]:
                 return Err.WRONG_PUZZLE_HASH
 

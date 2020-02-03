@@ -229,7 +229,7 @@ class Mempool:
                 conflicts.append(removal)
             if unspent.coinbase == 1:
                 if mempool.header_block.height + 1 < unspent.confirmed_block_index + self.coinbase_freeze:
-                    return  Err.COINBASE_NOT_YET_SPEDNABLE, {}, None
+                    return  Err.COINBASE_NOT_YET_SPENDABLE, {}, None
 
             unspents[unspent.coin.name()] = unspent
         if len(conflicts) > 0:
@@ -291,7 +291,7 @@ class Mempool:
         self.mempools = new_pools
 
     async def update_pool(self, pool: Pool, new_tip: FullBlock):
-        removals, additions = new_tip.tx_removals_and_additions()
+        removals, additions = await new_tip.tx_removals_and_additions()
         additions.append(new_tip.body.coinbase)
         additions.append(new_tip.body.fees_coin)
         pool.header_block = new_tip.header_block

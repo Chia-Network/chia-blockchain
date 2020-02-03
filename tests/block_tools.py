@@ -231,6 +231,7 @@ class BlockTools:
                 curr_difficulty = new_difficulty
             time_taken = seconds_per_block
             timestamp += time_taken
+
             transactions: Program = None
             aggsig: BLSSignature = None
             if next_height in transaction_data_at_height:
@@ -405,7 +406,7 @@ class BlockTools:
         fees_coin = Coin(fee_hash, reward_puzzlehash, fee_reward)
 
         body: Body = Body(
-            coinbase_coin, coinbase_signature, fees_coin, None, None, solutions_generator, cost
+            coinbase_coin, coinbase_signature, fees_coin, transactions, aggsig, solutions_generator, cost
         )
 
         header_data: HeaderData = HeaderData(

@@ -80,7 +80,7 @@ class UnspentStore:
             await self.new_lca(block)
 
     async def new_lca(self, block: FullBlock):
-        removals, additions = block.tx_removals_and_additions()
+        removals, additions = await block.tx_removals_and_additions()
 
         for coin_name in removals:
             await self.set_spent(coin_name, block.height)
@@ -104,7 +104,7 @@ class UnspentStore:
 
         block: FullBlock
         for block in blocks:
-            removals, additions = block.tx_removals_and_additions()
+            removals, additions = await block.tx_removals_and_additions()
             await self.add_diffs(removals, additions, block, diff_store)
 
         self.head_diffs[last.header_hash] = diff_store
@@ -113,7 +113,9 @@ class UnspentStore:
                         block: FullBlock, diff_store: DiffStore):
 
         for coin_name in removals:
-            removed: Unspent = diff_store.diffs[coin_name.hex()]
+            removed: Unspent = None
+            if coin_name.hex() in diff_store.diffs:
+                removed: Unspent = diff_store.diffs[coin_name.hex()]
             if removed is None:
                 removed = await self.get_unspent(coin_name)
             spent = Unspent(removed.coin, removed.confirmed_block_index,
