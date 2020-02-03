@@ -894,31 +894,30 @@ class Blockchain:
             # Create DiffStore
             await self.create_diffs_for_tips(self.lca_block)
 
-    # TODO This is bad, find a better way
+    # TODO Ask Mariano about this
     def find_fork_for_lca(self, old_lca: HeaderBlock) -> int:
-        """ Tries to find place where old_lca chain diverged from main chain"""
-        tmp_old = old_lca
+        """ Tries to find height where new chain (current) diverged from the old chain where old_lca was the LCA"""
+        tmp_old: HeaderBlock = old_lca
         while tmp_old.header_hash != self.genesis.header_hash:
+            if tmp_old.header_hash == self.genesis.header_hash:
+                return 0
             if tmp_old.height in self.height_to_hash:
                 chain_hash_at_h = self.height_to_hash[tmp_old.height]
-            else:
-                return 0
-            if chain_hash_at_h == tmp_old.header_hash:
-                return tmp_old.height
-            if tmp_old.prev_header_hash in self.header_blocks:
-                tmp_old = self.header_blocks[tmp_old.prev_header_hash]
-            else:
-                return 0
+                if chain_hash_at_h == tmp_old.header_hash:
+                    return tmp_old.height
+            tmp_old = self.header_blocks[tmp_old.prev_header_hash]
         return 0
 
     def is_descendant(self, child: HeaderBlock, maybe_parent: HeaderBlock) -> bool:
-        """Goes backward from potential child until it reaches potential parent or genesis"""
+        """ Goes backward from potential child until it reaches potential parent or genesis"""
         current = child
 
         while current.header_hash != self.genesis.header_hash:
             if current.header_hash == maybe_parent.header_hash:
                 return True
             current = self.header_blocks[current.prev_header_hash]
+            if maybe_parent.height < current.height:
+                break
 
         return False
 
@@ -928,6 +927,7 @@ class Blockchain:
             await self._from_tip_to_lca_unspent(tip, target)
 
     async def get_full_tips(self) -> List[FullBlock]:
+        """ Return list of FullBlocks that are tips"""
         result: List[FullBlock] = []
         for tip in self.tips:
             block = await self.store.get_block(tip.header_hash)
@@ -952,6 +952,7 @@ class Blockchain:
         await self.unspent_store.new_heads(blocks)
 
     async def _from_fork_to_lca(self, fork_point: HeaderBlock, lca: HeaderBlock):
+        """ Returns the list of full blocks from fork_point to lca. """
         blocks: List[FullBlock] = []
         tip_hash: bytes32 = lca.header_hash
         while True:

@@ -159,3 +159,5 @@ class TestUnspent:
                 assert unspent.spent == 0
                 assert unspent.spent_block_index == 0
         assert b.get_current_tips()[0].height == 119
+
+        await unspent_store.close()
