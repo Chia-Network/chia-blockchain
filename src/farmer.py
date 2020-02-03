@@ -278,10 +278,11 @@ class Farmer:
                 for ce in self.key_config["pool_sks"]
             ]
 
+            coinbase_reward = uint64(calculate_block_reward(proof_of_space_finalized.height) / 8) * 7
             coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
                 proof_of_space_finalized.height + 1,
                 bytes.fromhex(self.key_config["pool_target"]),
-                calculate_block_reward(proof_of_space_finalized.height),
+                coinbase_reward,
                 pool_sks[0])
 
             self.coinbase_rewards[uint32(proof_of_space_finalized.height + 1)] = (

@@ -12,6 +12,7 @@ import yaml
 from chiapos import Verifier
 from definitions import ROOT_DIR
 from src.blockchain import Blockchain, ReceiveBlockResult
+from src.consensus.block_rewards import calculate_block_reward
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.weight_verifier import verify_weight
@@ -729,12 +730,14 @@ class FullNode:
                 return
 
             # Grab best transactions from Mempool for given head target
-            spend_bundle: SpendBundle = self.mempool.get_spendbundle_for_tip(target_head)
+            spend_bundle: SpendBundle = await self.mempool.create_bundle_for_tip(target_head)
             solution_program = best_solution_program(spend_bundle)
             transactions_generator: bytes32 = sha256(b"").digest()
-
+            full_coinbase_reward = calculate_block_reward(target_head.height)
+            base_fee_reward = full_coinbase_reward / 8
+            full_fee_reward = uint64(base_fee_reward + spend_bundle.fees())
             # Create fees coin
-            fees_coin = Coin(target_head.challenge.height, request.fees_target_puzzle_hash, spend_bundle.fees())
+            fees_coin = Coin(target_head.challenge.height, request.fees_target_puzzle_hash, full_fee_reward)
 
             # SpendBundle has all signatures already aggregated
             aggregate_sig: BLSSignature = spend_bundle.aggregated_signature
