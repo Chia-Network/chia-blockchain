@@ -54,28 +54,34 @@ class BlockTools:
         plot_seeds: List[bytes32] = [
             ProofOfSpace.calculate_plot_seed(pool_pk, plot_pk) for plot_pk in plot_pks
         ]
+        self.plot_dir = os.path.join("tests", "plots")
         self.filenames: List[str] = [
-            os.path.join(
-                "tests",
-                "plots",
-                "genesis-plots-"
-                + str(k)
-                + sha256(int.to_bytes(i, 4, "big")).digest().hex()
-                + ".dat",
-            )
+            "genesis-plots-"
+            + str(k)
+            + sha256(int.to_bytes(i, 4, "big")).digest().hex()
+            + ".dat"
             for i in range(num_plots)
         ]
         done_filenames = set()
         try:
             for pn, filename in enumerate(self.filenames):
-                if not os.path.exists(filename):
+                if not os.path.exists(os.path.join(self.plot_dir, filename)):
                     plotter = DiskPlotter()
-                    plotter.create_plot_disk(filename, k, b"genesis", plot_seeds[pn])
+                    plotter.create_plot_disk(
+                        self.plot_dir,
+                        self.plot_dir,
+                        filename,
+                        k,
+                        b"genesis",
+                        plot_seeds[pn],
+                    )
                     done_filenames.add(filename)
         except KeyboardInterrupt:
             for filename in self.filenames:
-                if filename not in done_filenames and os.path.exists(filename):
-                    os.remove(filename)
+                if filename not in done_filenames and os.path.exists(
+                    os.path.join(self.plot_dir, filename)
+                ):
+                    os.remove(os.path.join(self.plot_dir, filename))
             sys.exit(1)
 
     def get_consecutive_blocks(
@@ -317,7 +323,7 @@ class BlockTools:
             filename = self.filenames[seeded_pn]
             plot_pk = plot_pks[seeded_pn]
             plot_sk = plot_sks[seeded_pn]
-            prover = DiskProver(filename)
+            prover = DiskProver(os.path.join(self.plot_dir, filename))
             qualities = prover.get_qualities_for_challenge(challenge_hash)
             if len(qualities) > 0:
                 break
