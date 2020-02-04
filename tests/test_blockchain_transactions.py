@@ -6,6 +6,8 @@ from src.farming.farming_tools import best_solution_program
 from src.server.outbound_message import OutboundMessage
 from src.protocols import peer_protocol
 from src.types.full_block import FullBlock
+from src.types.hashable.SpendBundle import SpendBundle
+from src.util.ConsensusError import Err
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.wallet_tools import WalletTool
 
@@ -93,4 +95,68 @@ class TestBlockchainTransactions:
         assert farmed_block.body.transactions == program
         assert farmed_block.body.aggregated_signature == aggsig
 
+    @pytest.mark.asyncio
+    async def test_validate_blockchain_with_double_spend(self, two_nodes):
 
+        num_blocks = 10
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        for block in blocks:
+            async for _ in full_node_1.block(peer_protocol.Block(block)):
+                pass
+
+        spent_block = blocks[1]
+
+        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spent_block.body.coinbase)
+        spend_bundle_double = wallet_a.generate_signed_transaction(1001, receiver_puzzlehash, spent_block.body.coinbase)
+
+        block_spendbundle = SpendBundle.aggregate([spend_bundle, spend_bundle_double])
+        program = best_solution_program(block_spendbundle)
+        aggsig = block_spendbundle.aggregated_signature
+
+        dic_h = {11: (program, aggsig)}
+        new_blocks = bt.get_consecutive_blocks(test_constants, 1, blocks, 10, b"", coinbase_puzzlehash, dic_h)
+
+        next_block = new_blocks[11]
+        error = await full_node_1.blockchain.validate_transactions(next_block, next_block.body.fees_coin.amount)
+
+        assert error is Err.DOUBLE_SPEND
+
+    @pytest.mark.asyncio
+    async def test_validate_blockchain_with_double_output(self, two_nodes):
+
+        num_blocks = 10
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        for block in blocks:
+            async for _ in full_node_1.block(peer_protocol.Block(block)):
+                pass
+
+        spent_block = blocks[1]
+
+        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spent_block.body.coinbase)
+        spend_bundle_double = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spent_block.body.coinbase)
+
+        block_spendbundle = SpendBundle.aggregate([spend_bundle, spend_bundle_double])
+        program = best_solution_program(block_spendbundle)
+        aggsig = block_spendbundle.aggregated_signature
+
+        dic_h = {11: (program, aggsig)}
+        new_blocks = bt.get_consecutive_blocks(test_constants, 1, blocks, 10, b"", coinbase_puzzlehash, dic_h)
+
+        next_block = new_blocks[11]
+        error = await full_node_1.blockchain.validate_transactions(next_block, next_block.body.fees_coin.amount)
+
+        assert error is Err.DUPLICATE_OUTPUT
