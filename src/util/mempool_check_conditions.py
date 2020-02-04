@@ -71,6 +71,9 @@ def mempool_assert_block_age_exceeds(condition: ConditionVarPair, unspent: Unspe
 
 
 def mempool_assert_time_exceeds(condition: ConditionVarPair):
+    """
+    Check if the current time in millis exceeds the time specified by condition
+    """
     try:
         expected_mili_time = int_from_bytes(condition.var1)
     except ValueError:

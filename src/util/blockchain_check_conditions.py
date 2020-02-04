@@ -63,6 +63,9 @@ def blockchain_assert_block_age_exceeds(condition: ConditionVarPair, unspent: Un
 
 
 def blockchain_assert_time_exceeds(condition: ConditionVarPair):
+    """
+    Checks if current time in millis exceeds the time specified in condition
+    """
     try:
         expected_mili_time = int_from_bytes(condition.var1)
     except ValueError:
