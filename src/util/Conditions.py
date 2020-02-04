@@ -53,4 +53,3 @@ def conditions_by_opcode(conditions: List[ConditionVarPair]) -> Dict[ConditionOp
             d[_.opcode] = list()
         d[_.opcode].append(_)
     return d
-

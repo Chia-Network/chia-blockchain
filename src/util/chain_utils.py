@@ -12,4 +12,3 @@ def additions_for_solution(coin_name, solution) -> List[Coin]:
     if err or dic is None:
         return []
     return created_outputs_for_conditions_dict(dic, coin_name)
-
