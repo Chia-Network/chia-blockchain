@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from blspy import PrependSignature
-from src.types.hashable import Coin, BLSSignature
+from src.types.hashable.Coin import Coin
+from src.types.hashable.BLSSignature import BLSSignature
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message

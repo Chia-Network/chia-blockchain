@@ -4,6 +4,7 @@ from .Coin import Coin
 from .Program import Program
 from src.util.streamable import Streamable, streamable
 
+
 @dataclass(frozen=True)
 @streamable
 class CoinSolution(Streamable):

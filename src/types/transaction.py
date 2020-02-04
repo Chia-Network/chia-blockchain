@@ -8,4 +8,3 @@ from src.util.streamable import Streamable, streamable
 @streamable
 class Transaction(Streamable):
     sb: SpendBundle
-

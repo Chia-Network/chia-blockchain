@@ -120,7 +120,7 @@ class Mempool:
             # If pool is at capacity check the fee, if not then accept even without the fee
             if pool.at_full_capacity():
                 if fees == 0:
-                    errors.append(Err.INVALID_FEE_NO_FEE)
+                    errors.append(Err.INVALID_FEE_LOW_FEE)
                     continue
                 if fees_per_cost < pool.get_min_fee_rate():
                     # Add to potential tx set, maybe fee get's lower in future
@@ -161,8 +161,8 @@ class Mempool:
             hash_key_pairs = []
             error: Optional[Err] = None
             for npc in npc_list:
-                unspent: Unspent = unspents[npc.coin_name]
-                error = mempool_check_conditions_dict(unspent, new_spend, npc.condition_dict, pool)
+                uns: Unspent = unspents[npc.coin_name]
+                error = mempool_check_conditions_dict(uns, new_spend, npc.condition_dict, pool)
                 if error:
                     if (error is Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED
                             or
@@ -180,11 +180,11 @@ class Mempool:
 
             # Remove all conflicting Coins and SpendBundles
             if fail_reason:
-                item: MempoolItem
-                for item in conflicting_pool_items.values():
-                    pool.remove_spend(item)
+                mitem: MempoolItem
+                for mitem in conflicting_pool_items.values():
+                    pool.remove_spend(mitem)
 
-            new_item = MempoolItem(new_spend, fees_per_cost, uint64(fees), cost)
+            new_item = MempoolItem(new_spend, fees_per_cost, uint64(fees), uint64(cost))
             pool.add_to_pool(new_item, additions, removals_dic)
 
             added_count += 1
@@ -195,7 +195,7 @@ class Mempool:
             return False, errors[0]
 
     async def check_removals(self, additions: List[Coin], removals: List[Coin],
-                             mempool: Pool) -> Tuple[Optional[Err], Dict[bytes32, Unspent], Optional[List[Coin]]]:
+                             mempool: Pool) -> Tuple[Optional[Err], Dict[bytes32, Unspent], List[Coin]]:
         """
         This function checks for double spends, unknown spends and conflicting transactions in mempool.
         Returns Error (if any), dictionary of Unspents, list of coins with conflict errors (if any any).
@@ -208,40 +208,40 @@ class Mempool:
             if not removal.name() in removals_counter:
                 removals_counter[removal.name()] = 1
             else:
-                return Err.DOUBLE_SPEND, {}, None
+                return Err.DOUBLE_SPEND, {}, []
             # 1. Checks if removed coin is created in spend_bundle (For ephemeral coins)
             if removal in additions:
                 # Setting ephemeral coin confirmed index to current + 1
                 if removal.name() in unspents:
-                    return Err.DOUBLE_SPEND, {}, None
-                unspents[removal.name()] = Unspent(removal, mempool.header_block.height + 1, 0, 0)
+                    return Err.DOUBLE_SPEND, {}, []
+                unspents[removal.name()] = Unspent(removal, mempool.header_block.height + 1, 0, 0, 0) # type: ignore # noqa
                 continue
             # 2. Checks we have it in the unspent_store
             unspent: Optional[Unspent] = await self.unspent_store.get_unspent(removal.name(), mempool.header_block)
             if unspent is None:
                 print(f"unkown unspent {removal.name()}")
-                return Err.UNKNOWN_UNSPENT, {}, None
+                return Err.UNKNOWN_UNSPENT, {}, []
             # 3. Checks if it's been spent already
             if unspent.spent == 1:
-                return Err.DOUBLE_SPEND, {}, None
+                return Err.DOUBLE_SPEND, {}, []
             # 4. Checks if there's a mempool conflict
             if removal.name() in mempool.removals:
                 conflicts.append(removal)
             if unspent.coinbase == 1:
                 if mempool.header_block.height + 1 < unspent.confirmed_block_index + self.coinbase_freeze:
-                    return  Err.COINBASE_NOT_YET_SPENDABLE, {}, None
+                    return Err.COINBASE_NOT_YET_SPENDABLE, {}, []
 
             unspents[unspent.coin.name()] = unspent
         if len(conflicts) > 0:
             return Err.MEMPOOL_CONFLICT, unspents, conflicts
         # 5. If coins can be spent return list of unspents as we see them in local storage
-        return None, unspents, None
+        return None, unspents, []
 
     async def add_to_potential_tx_set(self, spend: SpendBundle):
         self.potential_txs[spend.name()] = spend
 
         while len(self.potential_txs) > self.potential_cache_size:
-            first_in = self.potential_txs.keys()[0]
+            first_in = list(self.potential_txs.keys())[0]
             del self.potential_txs[first_in]
 
     async def seen(self, bundle_hash: bytes32) -> bool:
@@ -272,7 +272,7 @@ class Mempool:
             else:
                 # Create mempool for new head
                 if len(self.old_mempools) > 0:
-                    new_pool: Pool = await Pool.create(tip.header_block, self.mempool_size)
+                    new_pool = await Pool.create(tip.header_block, self.mempool_size)
 
                     # If old spends height is bigger than the new tip height, try adding spends to the pool
                     for height in self.old_mempools.keys():
@@ -282,7 +282,7 @@ class Mempool:
 
                     await self.initialize_pool_from_current_pools(new_pool)
                 else:
-                    new_pool: Pool = await Pool.create(tip.header_block, self.mempool_size)
+                    new_pool = await Pool.create(tip.header_block, self.mempool_size)
                     await self.initialize_pool_from_current_pools(new_pool)
 
             await self.add_potential_spends_to_pool(new_pool)
@@ -330,7 +330,7 @@ class Mempool:
 
         # Keep only last 10 heights in cache
         while len(dic_for_height) > 10:
-            keys = dic_for_height.keys()
+            keys = list(dic_for_height.keys())
             lowest_h = keys[0]
             dic_for_height.pop(lowest_h)
 

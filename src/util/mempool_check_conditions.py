@@ -20,8 +20,8 @@ from src.util.ints import uint64
 from src.util.run_program import run_program
 
 
-def mempool_assert_coin_consumed(condition: ConditionVarPair, spend_bundle: SpendBundle, mempool: Pool) -> Optional[
-    Err]:
+def mempool_assert_coin_consumed(condition: ConditionVarPair,
+                                 spend_bundle: SpendBundle, mempool: Pool) -> Optional[Err]:
     """
     Checks coin consumed conditions
     Returns None if conditions are met, if not returns the reason why it failed
@@ -30,6 +30,7 @@ def mempool_assert_coin_consumed(condition: ConditionVarPair, spend_bundle: Spen
     coin_name = condition.var1
     if coin_name not in bundle_removals:
         return Err.ASSERT_COIN_CONSUMED_FAILED
+    return None
 
 
 def mempool_assert_my_coin_id(condition: ConditionVarPair, unspent: Unspent) -> Optional[Err]:
@@ -68,18 +69,20 @@ def mempool_assert_block_age_exceeds(condition: ConditionVarPair, unspent: Unspe
         return Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED
     return None
 
+
 def mempool_assert_time_exceeds(condition: ConditionVarPair):
     try:
         expected_mili_time = int_from_bytes(condition.var1)
     except ValueError:
         return Err.INVALID_CONDITION
 
-    current_time = uint64(time.time() * 1000)
+    current_time = uint64(int(time.time() * 1000))
     if current_time < expected_mili_time:
         return Err.ASSERT_TIME_EXCEEDS_FAILED
     return None
 
-async def get_name_puzzle_conditions(block_program: Program) -> Tuple[Optional[Err], Optional[List[NPC]], int]:
+
+async def get_name_puzzle_conditions(block_program: Program) -> Tuple[Optional[Err], List[NPC], int]:
     """
     Returns an error if it's unable to evaluate, otherwise
     returns a list of NPC (coin_name, solved_puzzle_hash, conditions_dict)
@@ -89,27 +92,29 @@ async def get_name_puzzle_conditions(block_program: Program) -> Tuple[Optional[E
         cost, sexp = run_program(block_program, [])
     except EvalError:
         breakpoint()
-        return Err.INVALID_COIN_SOLUTION, None, 0
+        return Err.INVALID_COIN_SOLUTION, [], 0
 
     npc_list = []
     for name_solution in sexp.as_iter():
         _ = name_solution.as_python()
         if len(_) != 2:
-            return Err.INVALID_COIN_SOLUTION, None, cost
+            return Err.INVALID_COIN_SOLUTION, [], cost
         if not isinstance(_[0], bytes) or len(_[0]) != 32:
-            return Err.INVALID_COIN_SOLUTION, None, cost
+            return Err.INVALID_COIN_SOLUTION, [], cost
         coin_name = CoinName(_[0])
         if not isinstance(_[1], list) or len(_[1]) != 2:
-            return Err.INVALID_COIN_SOLUTION, None, cost
+            return Err.INVALID_COIN_SOLUTION, [], cost
         puzzle_solution_program = name_solution.rest().first()
         puzzle_program = puzzle_solution_program.first()
         puzzle_hash = ProgramHash(Program(puzzle_program))
         try:
             error, conditions_dict = conditions_dict_for_solution(puzzle_solution_program)
             if error:
-                return error, None, cost
+                return error, [], cost
         except clvm.EvalError:
-            return Err.INVALID_COIN_SOLUTION, None, cost
+            return Err.INVALID_COIN_SOLUTION, [], cost
+        if conditions_dict is None:
+            conditions_dict = {}
         npc: NPC = NPC(coin_name, puzzle_hash, conditions_dict)
         npc_list.append(npc)
 
@@ -117,7 +122,8 @@ async def get_name_puzzle_conditions(block_program: Program) -> Tuple[Optional[E
 
 
 def mempool_check_conditions_dict(unspent: Unspent, spend_bundle: SpendBundle,
-                                  conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]], mempool: Pool) -> Optional[Err]:
+                                  conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
+                                  mempool: Pool) -> Optional[Err]:
     """
     Check all conditions against current state.
     """

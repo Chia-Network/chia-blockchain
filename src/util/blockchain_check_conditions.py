@@ -4,7 +4,7 @@ from typing import Optional, Dict, List
 from clvm.casts import int_from_bytes
 
 from src.types.ConditionVarPair import ConditionVarPair
-from src.types.hashable.Unspent import  Unspent
+from src.types.hashable.Unspent import Unspent
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.util.Conditions import ConditionOpcode
@@ -12,8 +12,8 @@ from src.util.ConsensusError import Err
 from src.util.ints import uint64
 
 
-def blockchain_assert_coin_consumed(condition: ConditionVarPair, removed: Dict[bytes32, Unspent]) -> Optional[
-    Err]:
+def blockchain_assert_coin_consumed(condition: ConditionVarPair,
+                                    removed: Dict[bytes32, Unspent]) -> Optional[Err]:
     """
     Checks coin consumed conditions
     Returns None if conditions are met, if not returns the reason why it failed
@@ -47,7 +47,8 @@ def blockchain_assert_block_index_exceeds(condition: ConditionVarPair, header: H
     return None
 
 
-def blockchain_assert_block_age_exceeds(condition: ConditionVarPair, unspent: Unspent, header: HeaderBlock) -> Optional[Err]:
+def blockchain_assert_block_age_exceeds(condition: ConditionVarPair, unspent: Unspent,
+                                        header: HeaderBlock) -> Optional[Err]:
     """
     Checks if the coin age exceeds the age from the condition
     """
@@ -73,8 +74,10 @@ def blockchain_assert_time_exceeds(condition: ConditionVarPair):
     return None
 
 
-def blockchain_check_conditions_dict(unspent: Unspent, removed: Dict[bytes32, Unspent],
-                                  conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]], header: HeaderBlock) -> Optional[Err]:
+def blockchain_check_conditions_dict(unspent: Unspent,
+                                     removed: Dict[bytes32, Unspent],
+                                     conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
+                                     header: HeaderBlock) -> Optional[Err]:
     """
     Check all conditions against current state.
     """

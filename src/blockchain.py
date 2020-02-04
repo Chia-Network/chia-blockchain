@@ -21,7 +21,6 @@ from src.types.full_block import FullBlock, additions_for_npc
 from src.types.hashable.Coin import Coin
 from src.types.hashable.Unspent import Unspent
 from src.types.header_block import HeaderBlock
-from src.types.name_puzzle_condition import NPC
 from src.types.sized_bytes import bytes32
 from src.unspent_store import UnspentStore
 from src.util.ConsensusError import Err
@@ -683,7 +682,7 @@ class Blockchain:
             coinbase_reward = calculate_block_reward(block.height)
             if (coinbase_reward / 8) * 7 != block.body.coinbase.amount:
                 return False
-            fee_base = coinbase_reward / 8
+            fee_base = uint64(int(coinbase_reward / 8))
             # 9. If there is no agg signature, there should be no transactions either
             # target reward_fee = 1/8 coinbase reward + tx fees
             if not block.body.aggregated_signature:
@@ -817,9 +816,10 @@ class Blockchain:
         there is one block per height before the LCA (and use the height_to_hash dict).
         """
         cur: List[HeaderBlock] = self.tips[:]
+        lca_tmp: Optional[HeaderBlock]
         try:
             lca_tmp = self.lca_block
-        except:
+        except AttributeError:
             lca_tmp = None
         while any(b.header_hash != cur[0].header_hash for b in cur):
             heights = [b.height for b in cur]
@@ -832,7 +832,9 @@ class Blockchain:
         self.lca_block = cur[0]
 
         if lca_tmp is None:
-            full: FullBlock = await self.store.get_block(self.lca_block.header_hash)
+            full: Optional[FullBlock] = await self.store.get_block(self.lca_block.header_hash)
+            if full is None:
+                return
             await self.unspent_store.new_lca(full)
             await self.create_diffs_for_tips(self.lca_block)
         # If LCA changed update the unspent store
@@ -861,7 +863,9 @@ class Blockchain:
             if self.lca_block.height >= lca_tmp.height:
                 if self.lca_block.prev_header_hash == lca_tmp.header_hash:
                     # New LCA is a child of the old one, just add it
-                    full: FullBlock = await self.store.get_block(self.lca_block.header_hash)
+                    full = await self.store.get_block(self.lca_block.header_hash)
+                    if full is None:
+                        return
                     await self.unspent_store.new_lca(full)
                     # Nuke DiffStore
                     self.unspent_store.nuke_diffs()
@@ -895,18 +899,18 @@ class Blockchain:
             await self.create_diffs_for_tips(self.lca_block)
 
     # TODO Ask Mariano about this
-    def find_fork_for_lca(self, old_lca: HeaderBlock) -> int:
+    def find_fork_for_lca(self, old_lca: HeaderBlock) -> uint32:
         """ Tries to find height where new chain (current) diverged from the old chain where old_lca was the LCA"""
         tmp_old: HeaderBlock = old_lca
         while tmp_old.header_hash != self.genesis.header_hash:
             if tmp_old.header_hash == self.genesis.header_hash:
-                return 0
+                return uint32(0)
             if tmp_old.height in self.height_to_hash:
                 chain_hash_at_h = self.height_to_hash[tmp_old.height]
                 if chain_hash_at_h == tmp_old.header_hash:
                     return tmp_old.height
             tmp_old = self.header_blocks[tmp_old.prev_header_hash]
-        return 0
+        return uint32(0)
 
     def is_descendant(self, child: HeaderBlock, maybe_parent: HeaderBlock) -> bool:
         """ Goes backward from potential child until it reaches potential parent or genesis"""
@@ -931,6 +935,8 @@ class Blockchain:
         result: List[FullBlock] = []
         for tip in self.tips:
             block = await self.store.get_block(tip.header_hash)
+            if not block:
+                continue
             result.append(block)
         return result
 
@@ -959,6 +965,8 @@ class Blockchain:
             if tip_hash == fork_point.header_hash:
                 break
             full = await self.store.get_block(tip_hash)
+            if not full:
+                return
             blocks.append(full)
             tip_hash = full.header_block.prev_header_hash
         blocks.reverse()
@@ -983,6 +991,8 @@ class Blockchain:
 
     async def validate_transactions(self, block: FullBlock, fee_base: uint64) -> Optional[Err]:
 
+        if not block.body.transactions:
+            return Err.UNKNOWN
         # Get List of names removed, puzzles hashes for removed coins and conditions crated
         error, npc_list, cost = await get_name_puzzle_conditions(block.body.transactions)
 
@@ -1029,7 +1039,7 @@ class Blockchain:
             if rem in additions_dic:
                 # Ephemeral coin
                 rem_coin: Coin = additions_dic[rem]
-                new_unspent: Unspent = Unspent(rem_coin, block.height, 0, 0, 0)
+                new_unspent: Unspent = Unspent(rem_coin, block.height, 0, 0, 0) # type: ignore # noqa
                 removal_unspents[new_unspent.name] = new_unspent
             else:
                 unspent = await self.unspent_store.get_unspent(rem, prev_header)
@@ -1068,15 +1078,16 @@ class Blockchain:
 
         # Verify conditions, create hash_key list for aggsig check
         hash_key_pairs = []
-        npc: NPC
         for npc in npc_list:
-            unspent: Unspent = removal_unspents[npc.coin_name]
+            unspent = removal_unspents[npc.coin_name]
             error = blockchain_check_conditions_dict(unspent, removal_unspents, npc.condition_dict, block.header_block)
             if error:
                 return error
             hash_key_pairs.extend(hash_key_pairs_for_conditions_dict(npc.condition_dict))
 
         # Verify aggregated signature
+        if not block.body.aggregated_signature:
+            return Err.BAD_AGGREGATE_SIGNATURE
         if not block.body.aggregated_signature.validate(hash_key_pairs):
             return Err.BAD_AGGREGATE_SIGNATURE
 

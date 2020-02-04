@@ -2,7 +2,7 @@ import os
 import sys
 import time
 from hashlib import sha256
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Optional
 
 import blspy
 from blspy import PrependSignature, PrivateKey, PublicKey
@@ -232,8 +232,8 @@ class BlockTools:
             time_taken = seconds_per_block
             timestamp += time_taken
 
-            transactions: Program = None
-            aggsig: BLSSignature = None
+            transactions: Optional[Program] = None
+            aggsig: Optional[BLSSignature] = None
             if next_height in transaction_data_at_height:
                 transactions, aggsig = transaction_data_at_height[next_height]
 
@@ -393,8 +393,8 @@ class BlockTools:
             coinbase_reward = block_reward
             fee_reward = 0
         else:
-            coinbase_reward = (block_reward / 8) * 7
-            fee_reward = block_reward / 8
+            coinbase_reward = uint64(int((block_reward / 8) * 7))
+            fee_reward = uint64(int(block_reward / 8))
 
         coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
             height,
@@ -403,7 +403,7 @@ class BlockTools:
             pool_sk)
 
         fee_hash = blspy.Util.hash256(coinbase_coin.name())
-        fees_coin = Coin(fee_hash, reward_puzzlehash, fee_reward)
+        fees_coin = Coin(fee_hash, reward_puzzlehash, uint64(fee_reward))
 
         body: Body = Body(
             coinbase_coin, coinbase_signature, fees_coin, transactions, aggsig, solutions_generator, cost

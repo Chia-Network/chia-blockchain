@@ -217,10 +217,9 @@ class FullNodeStore:
         return self.potential_future_blocks
 
     async def add_candidate_block(
-        self, pos_hash: bytes32, body: Body, header: HeaderData, pos: ProofOfSpace,
+        self, pos_hash: bytes32, body: Body, header: HeaderData, pos: ProofOfSpace, height: int = 0
     ):
-        # TODO height in this tuple should be set to real height not 0
-        self.candidate_blocks[pos_hash] = (body, header, pos, 0)
+        self.candidate_blocks[pos_hash] = (body, header, pos, height) # type: ignore # noqa
 
     async def get_candidate_block(
         self, pos_hash: bytes32

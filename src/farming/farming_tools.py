@@ -1,4 +1,3 @@
-from clvm import to_sexp_f
 from clvm_tools import binutils
 
 from src.types.hashable.Program import Program

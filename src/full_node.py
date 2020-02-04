@@ -27,6 +27,7 @@ from src.types.challenge import Challenge
 from src.types.full_block import FullBlock
 from src.types.hashable.Coin import Coin
 from src.types.hashable.BLSSignature import BLSSignature
+from src.types.hashable.Hash import std_hash
 from src.types.hashable.SpendBundle import SpendBundle
 from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
@@ -46,7 +47,8 @@ class FullNode:
     store: FullNodeStore
     blockchain: Blockchain
 
-    def __init__(self, store: FullNodeStore, blockchain: Blockchain, mempool: Mempool, unspent_store: UnspentStore, name: str = None):
+    def __init__(self, store: FullNodeStore, blockchain: Blockchain, mempool: Mempool,
+                 unspent_store: UnspentStore, name: str = None):
         config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
         self.config = yaml.safe_load(open(config_filename, "r"))["full_node"]
         self.store = store
@@ -730,17 +732,23 @@ class FullNode:
                 return
 
             # Grab best transactions from Mempool for given head target
-            spend_bundle: SpendBundle = await self.mempool.create_bundle_for_tip(target_head)
-            solution_program = best_solution_program(spend_bundle)
+            spend_bundle: Optional[SpendBundle] = await self.mempool.create_bundle_for_tip(target_head)
+            spend_bundle_fees = 0
+            aggregate_sig: Optional[BLSSignature] = None
+            if spend_bundle:
+                solution_program = best_solution_program(spend_bundle)
+                spend_bundle_fees = spend_bundle.fees()
+                aggregate_sig = spend_bundle.aggregated_signature
+
             transactions_generator: bytes32 = sha256(b"").digest()
             full_coinbase_reward = calculate_block_reward(target_head.height)
             base_fee_reward = full_coinbase_reward / 8
-            full_fee_reward = uint64(base_fee_reward + spend_bundle.fees())
+            full_fee_reward = uint64(int(base_fee_reward + spend_bundle_fees))
             # Create fees coin
-            fees_coin = Coin(target_head.challenge.height, request.fees_target_puzzle_hash, full_fee_reward)
+            fee_hash = std_hash(std_hash(target_head.height))
+            fees_coin = Coin(fee_hash, request.fees_target_puzzle_hash, full_fee_reward)
 
             # SpendBundle has all signatures already aggregated
-            aggregate_sig: BLSSignature = spend_bundle.aggregated_signature
 
             # TODO: calculate cost of all transactions
             cost = uint64(0)
@@ -778,7 +786,7 @@ class FullNode:
 
             # self.stores this block so we can submit it to the blockchain after it's signed by harvester
             await self.store.add_candidate_block(
-                proof_of_space_hash, body, block_header_data, request.proof_of_space
+                proof_of_space_hash, body, block_header_data, request.proof_of_space, target_head.height + 1
             )
 
         message = farmer_protocol.HeaderHash(
@@ -1061,7 +1069,7 @@ class FullNode:
     # Peer has request a full transaction from us
     @api_request
     async def request_transaction(self, tx_id: peer_protocol.RequestTransaction) -> OutboundMessageGenerator:
-        spend_bundle = self.mempool.get_spendbundle(tx_id.transaction_id)
+        spend_bundle = await self.mempool.get_spendbundle(tx_id.transaction_id)
         if spend_bundle is None:
             return
 

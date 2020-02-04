@@ -27,7 +27,7 @@ class Pool:
         self.spends = {}
         self.additions = {}
         self.removals = {}
-        self.min_fee = 0
+        self.min_fee = uint64(0)
         self.sorted_spends = SortedDict()
         self.size = size
         return self

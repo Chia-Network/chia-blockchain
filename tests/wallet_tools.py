@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 
 import clvm
 from os import urandom
@@ -121,14 +121,18 @@ class WalletTool:
         spends.append((puzzle, CoinSolution(coin, solution)))
         return spends
 
-    def sign_transaction(self, spends: (Program, [CoinSolution])):
+    def sign_transaction(self, spends: List[Tuple[Program, CoinSolution]]):
         sigs = []
-        for puzzle, solution in spends:
+        solution: Program
+        puzzle: Program
+        for puzzle, solution in spends: # type: ignore # noqa
             pubkey, secretkey = self.get_keys(solution.coin.puzzle_hash)
             secretkey = BLSPrivateKey(secretkey)
             code_ = [puzzle, solution.solution]
             sexp = Program.to(code_)
             err, con = conditions_for_solution(sexp)
+            if not con:
+                return
             conditions_dict = conditions_by_opcode(con)
 
             for _ in hash_key_pairs_for_conditions_dict(conditions_dict):

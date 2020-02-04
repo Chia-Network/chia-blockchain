@@ -7,7 +7,7 @@ from clvm_tools import binutils
 from src.types.ConditionVarPair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.hashable import Program
-from .ConsensusError import Err
+from .ConsensusError import Err, ConsensusError
 
 
 def parse_sexp_to_condition(sexp: BaseSExp) -> Tuple[Optional[Err], Optional[ConditionVarPair]]:
@@ -16,11 +16,10 @@ def parse_sexp_to_condition(sexp: BaseSExp) -> Tuple[Optional[Err], Optional[Con
     items = sexp.as_python()
     if not isinstance(items[0], bytes):
         return Err.INVALID_CONDITION, None
-    opcode = items[0]
     try:
         opcode = ConditionOpcode(items[0])
     except ValueError:
-        pass
+        return Err.INVALID_CONDITION, None
     if len(items) == 3:
         return None, ConditionVarPair(opcode,  items[1], items[2])
     return None, ConditionVarPair(opcode, items[1], None)
@@ -33,8 +32,8 @@ def parse_sexp_to_conditions(sexp: BaseSExp) -> Tuple[Optional[Err], Optional[Li
             error, cvp = parse_sexp_to_condition(_)
             if error:
                 return error, None
-            results.append(cvp)
-    except:
+            results.append(cvp) # type: ignore # noqa
+    except ConsensusError:
         return Err.INVALID_CONDITION, None
     return None, results
 
@@ -51,7 +50,7 @@ def conditions_by_opcode(conditions: List[ConditionVarPair]) -> Dict[ConditionOp
 def parse_sexp_to_conditions_dict(sexp: BaseSExp) -> \
         Tuple[Optional[Err], Optional[Dict[ConditionOpcode, List[ConditionVarPair]]]]:
     error, list = parse_sexp_to_conditions(sexp)
-    if error:
+    if error or list is None:
         return error, None
     return None, conditions_by_opcode(list)
 

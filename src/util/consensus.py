@@ -6,8 +6,9 @@ from clvm.casts import int_from_bytes
 
 from src.types.ConditionVarPair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.hashable.BLSSignature import BLSSignature
+from src.types.hashable.BLSSignature import BLSSignature, BLSPublicKey
 from src.types.hashable.Coin import Coin
+from src.types.hashable.Message import MessageHash
 from src.types.hashable.Program import Program
 from src.types.sized_bytes import bytes32
 from src.util.ConsensusError import Err
@@ -15,7 +16,8 @@ from src.util.ConsensusError import Err
 from .Conditions import parse_sexp_to_conditions, conditions_by_opcode
 
 
-def conditions_for_solution(solution_program, run_program=clvm.run_program) -> Tuple[Optional[Err], Optional[List[ConditionVarPair]]]:
+def conditions_for_solution(solution_program,
+                            run_program=clvm.run_program) -> Tuple[Optional[Err], Optional[List[ConditionVarPair]]]:
     # get the standard script for a puzzle hash and feed in the solution
     args = Program.to(solution_program)
     try:
@@ -28,25 +30,19 @@ def conditions_for_solution(solution_program, run_program=clvm.run_program) -> T
         return Err.SEXP_ERROR, None
 
 
-def conditions_dict_for_solution(solution) -> Tuple[Optional[Err], Optional[Dict[ConditionOpcode, List[ConditionVarPair]]]]:
+def conditions_dict_for_solution(solution) ->\
+        Tuple[Optional[Err], Optional[Dict[ConditionOpcode, List[ConditionVarPair]]]]:
     error, result = conditions_for_solution(solution)
-    if error:
+    if error or result is None:
         return error, None
     return None, conditions_by_opcode(result)
 
 
-def hash_key_pairs_for_solution(solution) -> Tuple[Optional[Err], List[bytes]]:
+def hash_key_pairs_for_solution(solution) -> Tuple[Optional[Err], List[BLSSignature.AGGSIGPair]]:
     error, result = conditions_dict_for_solution(solution)
-    if error:
+    if error or result is None:
         return error, []
     return None, hash_key_pairs_for_conditions_dict(result)
-
-
-def validate_spend_bundle_signature(spend_bundle) -> bool:
-    hash_key_pairs = []
-    for coin_solution in spend_bundle.coin_solutions:
-        hash_key_pairs += hash_key_pairs_for_solution(coin_solution.solution)
-    return spend_bundle.aggregated_signature.validate(hash_key_pairs)
 
 
 def created_outputs_for_conditions_dict(conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
@@ -57,7 +53,7 @@ def created_outputs_for_conditions_dict(conditions_dict: Dict[ConditionOpcode, L
         # (ensure there are the correct number and type of parameters)
         # maybe write a type-checking framework for conditions
         # and don't just fail with asserts
-        opcode, puzzle_hash, amount_bin = _.opcode, _.var1, _.var2
+        _, puzzle_hash, amount_bin = _.opcode, _.var1, _.var2
         amount = int_from_bytes(amount_bin)
         coin = Coin(input_coin_name, puzzle_hash, amount)
         output_coins.append(coin)
@@ -71,13 +67,13 @@ def aggsig_in_conditions_dict(conditions_dict: Dict[ConditionOpcode, List[Condit
     return agg_sig_conditions
 
 
-
-
 def hash_key_pairs_for_conditions_dict(conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]]) \
         -> List[BLSSignature.AGGSIGPair]:
-    pairs: [BLSSignature.AGGSIGPair] = []
+    pairs: List[BLSSignature.AGGSIGPair] = []
     for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
         # TODO: check types
         # assert len(_) == 3
-        pairs.append(BLSSignature.AGGSIGPair(cvp.var1, cvp.var2))
+        blspubkey: BLSPublicKey = BLSPublicKey(cvp.var1)
+        message: MessageHash = MessageHash(cvp.var2)
+        pairs.append(BLSSignature.AGGSIGPair(blspubkey, message))
     return pairs

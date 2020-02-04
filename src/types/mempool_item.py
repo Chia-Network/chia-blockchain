@@ -19,4 +19,3 @@ class MempoolItem:
     @property
     def name(self) -> bytes32:
         return self.spend_bundle.name()
-

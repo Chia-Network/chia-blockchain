@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from src.types.hashable.Coin import Coin
-from src.types.hashable.Hash import Hash
+from src.types.sized_bytes import bytes32
 from src.util.streamable import Streamable, streamable
 from src.util.ints import uint32, uint8
 
@@ -20,5 +20,5 @@ class Unspent(Streamable):
     coinbase: uint8
 
     @property
-    def name(self) -> Hash:
+    def name(self) -> bytes32:
         return self.coin.name()

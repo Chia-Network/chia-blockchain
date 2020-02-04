@@ -12,9 +12,9 @@ class bin_methods:
     @classmethod
     def from_bytes(cls, blob: bytes) -> Any:
         f = io.BytesIO(blob)
-        return cls.parse(f)
+        return cls.parse(f) # type: ignore # noqa
 
     def __bytes__(self) -> hexbytes:
         f = io.BytesIO()
-        self.stream(f)
+        self.stream(f) # type: ignore # noqa
         return hexbytes(f.getvalue())
