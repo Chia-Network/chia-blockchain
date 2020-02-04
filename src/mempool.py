@@ -72,6 +72,10 @@ class Mempool:
             return None
 
     async def add_spendbundle(self, new_spend: SpendBundle, to_pool: Pool = None) -> Tuple[bool, Optional[Err]]:
+        """
+        Tries to add spendbundle to either self.mempools or to_pool if it's specified.
+        Returns true if it's added in any of pools, Returns error if it fails.
+        """
         self.allSeen[new_spend.name()] = new_spend.name()
 
         # Calculate the cost and fees
@@ -238,6 +242,10 @@ class Mempool:
         return None, unspents, []
 
     async def add_to_potential_tx_set(self, spend: SpendBundle):
+        """
+        Adds SpendBundles that have failed to be added to the pool in potential tx set.
+        This is later used to retry to add them.
+        """
         self.potential_txs[spend.name()] = spend
 
         while len(self.potential_txs) > self.potential_cache_size:
@@ -259,6 +267,10 @@ class Mempool:
         return None
 
     async def new_tips(self, new_tips: List[FullBlock]):
+        """
+        Called when new tips are available, we try to recreate a mempool for each of the new tips.
+        For tip that we already have mempool we don't do anything.
+        """
         new_pools: Dict[bytes32, Pool] = {}
         for tip in new_tips:
             if tip.header_hash in self.mempools:
@@ -291,6 +303,10 @@ class Mempool:
         self.mempools = new_pools
 
     async def update_pool(self, pool: Pool, new_tip: FullBlock):
+        """
+        Called when new tip extends the tip we had mempool for.
+        This function removes removals and additions that happened in block from mempool.
+        """
         removals, additions = await new_tip.tx_removals_and_additions()
         additions.append(new_tip.body.coinbase)
         additions.append(new_tip.body.fees_coin)
