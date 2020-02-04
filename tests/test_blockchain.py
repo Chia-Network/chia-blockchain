@@ -60,6 +60,9 @@ class TestGenesisBlock:
         ) == genesis_block.challenge.total_weight
         assert bc1.get_next_ips(genesis_block.header_hash) > 0
 
+        await unspent_store.close()
+        await store.close()
+
 
 class TestBlockValidation:
     @pytest.fixture(scope="module")
@@ -75,7 +78,10 @@ class TestBlockValidation:
         for i in range(1, 9):
             result, removed = await b.receive_block(blocks[i])
             assert (result == ReceiveBlockResult.ADDED_TO_HEAD)
-        return (blocks, b)
+        yield (blocks, b)
+
+        await unspent_store.close()
+        await store.close()
 
     @pytest.mark.asyncio
     async def test_prev_pointer(self, initial_blockchain):
@@ -282,6 +288,9 @@ class TestBlockValidation:
             b.get_next_ips(blocks[26].header_hash)
         )
 
+        await unspent_store.close()
+        await store.close()
+
 
 class TestReorgs:
     @pytest.mark.asyncio
@@ -308,6 +317,9 @@ class TestReorgs:
             elif reorg_block.height >= 100:
                 assert result == ReceiveBlockResult.ADDED_TO_HEAD
         assert b.get_current_tips()[0].height == 119
+
+        await unspent_store.close()
+        await store.close()
 
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self):
@@ -346,6 +358,9 @@ class TestReorgs:
         result, removed = await b.receive_block(blocks_reorg_chain_2[22])
         assert (result == ReceiveBlockResult.ADDED_TO_HEAD)
 
+        await unspent_store.close()
+        await store.close()
+
     @pytest.mark.asyncio
     async def test_lca(self):
         blocks = bt.get_consecutive_blocks(test_constants, 5, [], 9, b"0")
@@ -370,6 +385,9 @@ class TestReorgs:
             await b.receive_block(block)
         assert b.lca_block == blocks[0].header_block
 
+        await unspent_store.close()
+        await store.close()
+
     @pytest.mark.asyncio
     async def test_get_header_hashes(self):
         blocks = bt.get_consecutive_blocks(test_constants, 5, [], 9, b"0")
@@ -384,3 +402,6 @@ class TestReorgs:
         print(header_hashes)
         print([block.header_hash for block in blocks])
         assert header_hashes == [block.header_hash for block in blocks]
+
+        await unspent_store.close()
+        await store.close()
