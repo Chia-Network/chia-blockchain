@@ -22,6 +22,12 @@ class DiffStore:
 
 
 class UnspentStore:
+    """
+    This object handles unspent coins in DB.
+    Coins from genesis to LCA are stored on disk db, coins from lca to head are stored in DiffStore object for each tip.
+    When blockchain notifies UnspentStore of new LCA, LCA is added to the disk db,
+    DiffStores are updated/recreated. (managed by blockchain.py)
+    """
     db_name: str
     unspent_db: aiosqlite.Connection
     # Whether or not we are syncing
