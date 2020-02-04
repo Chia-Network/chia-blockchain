@@ -31,6 +31,8 @@
 
 // A stack vector of length 5, having the functions of std::vector needed for Bits.
 struct SmallVector {
+    typedef uint16_t size_type;
+
     SmallVector() {
         count_ = 0;
     }
@@ -49,24 +51,26 @@ struct SmallVector {
 
     SmallVector& operator = (const SmallVector& other) {
         count_ = other.count_;
-        for (uint16_t i = 0; i < other.count_; i++)
+        for (size_type i = 0; i < other.count_; i++)
             v_[i] = other.v_[i];
         return (*this);
     }
 
-    uint16_t size() const {
+    size_type size() const {
         return count_;
     }
 
  private:
     uint128_t v_[5];
-    uint16_t count_;
+    size_type count_;
 };
 
 
 // A stack vector of length 1024, having the functions of std::vector needed for Bits.
 // The max number of Bits that can be stored is 1024 * 128
 struct ParkVector {
+    typedef uint32_t size_type;
+
     ParkVector() {
         count_ = 0;
     }
@@ -85,18 +89,18 @@ struct ParkVector {
 
     ParkVector& operator = (const ParkVector& other) {
         count_ = other.count_;
-        for (uint32_t i = 0; i < other.count_; i++)
+        for (size_type i = 0; i < other.count_; i++)
             v_[i] = other.v_[i];
         return (*this);
     }
 
-    uint32_t size() const {
+    size_type size() const {
         return count_;
     }
 
  private:
     uint128_t v_[1024];
-    uint32_t count_;
+    size_type count_;
 };
 
 /*
@@ -212,12 +216,12 @@ template <class T> class BitsGeneric {
         }
         BitsGeneric<T> result;
         if (values_.size() > 0) {
-            for (uint32_t i = 0; i < static_cast<uint32_t>(values_.size()) - 1; i++)
+            for (typename T::size_type i = 0; i < values_.size() - 1; i++)
                 result.AppendValue(values_[i], 128);
             result.AppendValue(values_[values_.size() - 1], last_size_);
         }
         if (b.values_.size() > 0) {
-            for (uint32_t i = 0; i < static_cast<uint32_t>(b.values_.size()) - 1; i++)
+            for (typename T::size_type i = 0; i < b.values_.size() - 1; i++)
                 result.AppendValue(b.values_[i], 128);
             result.AppendValue(b.values_[b.values_.size() - 1], b.last_size_);
         }
@@ -228,7 +232,7 @@ template <class T> class BitsGeneric {
     template <class T2>
     BitsGeneric<T>& operator += (const BitsGeneric<T2>& b) {
         if (b.values_.size() > 0) {
-             for (uint32_t i = 0; i < static_cast<uint32_t>(b.values_.size()) - 1; i++)
+             for (typename T2::size_type i = 0; i < b.values_.size() - 1; i++)
                 this->AppendValue(b.values_[i], 128);
             this->AppendValue(b.values_[b.values_.size() - 1], b.last_size_);
         }
@@ -275,6 +279,7 @@ template <class T> class BitsGeneric {
             values_[values_.size() - 1]--;
             return *this;
         }
+        
         if (values_.size() > 1) {
             // Search for the first bucket different than 0.
             for (int16_t i = values_.size() - 2; i >= 0; i--)
@@ -286,7 +291,7 @@ template <class T> class BitsGeneric {
                                       (uint128_t)std::numeric_limits<uint64_t> :: max();
                     // All buckets that were previously 0, now become full of 1s.
                     // (i.e. 1010000 - 1 = 1001111)
-                    for (uint32_t j = i + 1; j < static_cast<uint32_t>(values_.size()) - 1; j++)
+                    for (typename T::size_type j = i + 1; j < values_.size() - 1; j++)
                         values_[j] =  limit;
                     values_[values_.size() - 1] = (last_size_ == 128) ? limit :
                                                    ((static_cast<uint128_t>(1) << last_size_) - 1);
@@ -429,11 +434,11 @@ template <class T> class BitsGeneric {
 
     std::string ToString() const {
         std::string str = "";
-        for (uint32_t i = 0; i < values_.size(); i++) {
+        for (typename T::size_type i = 0; i < values_.size(); i++) {
             uint128_t val = values_[i];
-            uint32_t size = (i == static_cast<uint32_t>(values_.size() - 1)) ? last_size_ : 128;
+            typename T::size_type size = (i == values_.size() - 1) ? last_size_ : 128;
             std::string str_bucket = "";
-            for (uint32_t i = 0; i < size; i++) {
+            for (typename T::size_type i = 0; i < size; i++) {
                 if (val % 2)
                     str_bucket = "1" + str_bucket;
                 else
