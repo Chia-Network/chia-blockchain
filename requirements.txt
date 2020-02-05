@@ -50,5 +50,5 @@ sortedcontainers==2.1.0
 -e lib/chiapos
 -e lib/py-setproctitle
 -e lib/chiavdf/fast_vdf
--e git+git@github.com:Chia-Network/clvm.git@d86aca2388e139f9c84a109f1a1ac2c32a8ee31a#egg=clvm
--e git+git@github.com:Chia-Network/clvm_tools.git@6b24f1d9e9e727f25e6c3e4878dcfa6e9d65652e#egg=clvm_tools
+-e git+https://github.com/Chia-Network/clvm.git@d86aca2388e139f9c84a109f1a1ac2c32a8ee31a#egg=clvm
+-e git+https://github.com/Chia-Network/clvm_tools.git@6b24f1d9e9e727f25e6c3e4878dcfa6e9d65652e#egg=clvm_tools
