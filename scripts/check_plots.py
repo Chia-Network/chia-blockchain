@@ -20,7 +20,9 @@ def main():
     """
 
     parser = argparse.ArgumentParser(description="Chia plot checking script.")
-    parser.add_argument("-n", "--num", help="Number of challenges", type=int, default=1000)
+    parser.add_argument(
+        "-n", "--num", help="Number of challenges", type=int, default=1000
+    )
     args = parser.parse_args()
 
     v = Verifier()
@@ -29,30 +31,41 @@ def main():
         for plot_filename, plot_info in plot_config["plots"].items():
             plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(
                 PublicKey.from_bytes(bytes.fromhex(plot_info["pool_pk"])),
-                PrivateKey.from_bytes(bytes.fromhex(plot_info["sk"])).get_public_key()
+                PrivateKey.from_bytes(bytes.fromhex(plot_info["sk"])).get_public_key(),
             )
-            # Tries relative path
-            full_path: str = os.path.join(plot_root, plot_filename)
-            if not os.path.isfile(full_path):
-                # Tries absolute path
-                full_path: str = plot_filename
+            if not os.path.isfile(plot_filename):
+                # Tries relative path
+                full_path: str = os.path.join(plot_root, plot_filename)
                 if not os.path.isfile(full_path):
-                    print(f"Plot file {full_path} not found.")
-                    continue
-            pr = DiskProver(full_path)
+                    # Tries absolute path
+                    full_path: str = plot_filename
+                    if not os.path.isfile(full_path):
+                        print(f"Plot file {full_path} not found.")
+                        continue
+                pr = DiskProver(full_path)
+            else:
+                pr = DiskProver(plot_filename)
 
             total_proofs = 0
             try:
                 for i in range(args.num):
                     challenge = sha256(i.to_bytes(32, "big")).digest()
-                    for index, quality in enumerate(pr.get_qualities_for_challenge(challenge)):
+                    for index, quality in enumerate(
+                        pr.get_qualities_for_challenge(challenge)
+                    ):
                         proof = pr.get_full_proof(challenge, index)
                         total_proofs += 1
-                        ver_quality = v.validate_proof(plot_seed, pr.get_size(), challenge, proof)
-                        assert(quality == ver_quality)
+                        ver_quality = v.validate_proof(
+                            plot_seed, pr.get_size(), challenge, proof
+                        )
+                        assert quality == ver_quality
             except BaseException as e:
-                print(f"{type(e)}: {e} error in proving/verifying for plot {plot_filename}")
-            print(f"{plot_filename}: Proofs {total_proofs} / {args.num}, {round(total_proofs/float(args.num), 4)}")
+                print(
+                    f"{type(e)}: {e} error in proving/verifying for plot {plot_filename}"
+                )
+            print(
+                f"{plot_filename}: Proofs {total_proofs} / {args.num}, {round(total_proofs/float(args.num), 4)}"
+            )
     else:
         print(f"Not plot file found at {plot_config_filename}")
 

@@ -10,7 +10,6 @@ from definitions import ROOT_DIR
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 
-plot_root = os.path.join(ROOT_DIR, "plots")
 plot_config_filename = os.path.join(ROOT_DIR, "config", "plots.yaml")
 key_config_filename = os.path.join(ROOT_DIR, "config", "keys.yaml")
 
@@ -28,11 +27,27 @@ def main():
     parser.add_argument(
         "-p", "--pool_pub_key", help="Hex public key of pool", type=str, default=""
     )
+    parser.add_argument(
+        "-t",
+        "--tmp_dir",
+        help="Temporary directory for plotting files (relative or absolute)",
+        type=str,
+        default="./plots",
+    )
+    parser.add_argument(
+        "-d",
+        "--final_dir",
+        help="Final directory for plots (relative or absolute)",
+        type=str,
+        default="./plots",
+    )
 
     # We need the keys file, to access pool keys (if the exist), and the sk_seed.
     args = parser.parse_args()
     if not os.path.isfile(key_config_filename):
-        raise RuntimeError("Keys not generated. Run python3.7 ./scripts/regenerate_keys.py.")
+        raise RuntimeError(
+            "Keys not generated. Run python3 ./scripts/regenerate_keys.py."
+        )
 
     # The seed is what will be used to generate a private key for each plot
     key_config = safe_load(open(key_config_filename, "r"))
@@ -62,13 +77,15 @@ def main():
             pool_pk, sk.get_public_key()
         )
         filename: str = f"plot-{i}-{args.size}-{plot_seed}.dat"
-        full_path: str = os.path.join(plot_root, filename)
+        full_path: str = os.path.join(args.final_dir, filename)
         if os.path.isfile(full_path):
             print(f"Plot {filename} already exists")
         else:
             # Creates the plot. This will take a long time for larger plots.
             plotter: DiskPlotter = DiskPlotter()
-            plotter.create_plot_disk(full_path, args.size, bytes([]), plot_seed)
+            plotter.create_plot_disk(
+                args.tmp_dir, args.final_dir, filename, args.size, bytes([]), plot_seed
+            )
 
         # Updates the config if necessary.
         if os.path.isfile(plot_config_filename):
@@ -76,8 +93,8 @@ def main():
         else:
             plot_config = {"plots": {}}
         plot_config_plots_new = deepcopy(plot_config["plots"])
-        if filename not in plot_config_plots_new:
-            plot_config_plots_new[filename] = {
+        if full_path not in plot_config_plots_new:
+            plot_config_plots_new[full_path] = {
                 "sk": bytes(sk).hex(),
                 "pool_pk": bytes(pool_pk).hex(),
             }
