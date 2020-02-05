@@ -287,7 +287,7 @@ class FullNodeStore:
     def get_potential_future_blocks(self):
         return self.potential_future_blocks
 
-    async def add_candidate_block(
+    def add_candidate_block(
         self,
         pos_hash: bytes32,
         body: Body,

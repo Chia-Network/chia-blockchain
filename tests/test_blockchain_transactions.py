@@ -81,7 +81,7 @@ class TestBlockchainTransactions:
             pass
 
         tips = full_node_1.blockchain.get_current_tips()
-        assert next_block.header_block in tips
+        assert next_block.header_block.to_small() in tips
 
         added_coins = next_spendbundle.additions()
 

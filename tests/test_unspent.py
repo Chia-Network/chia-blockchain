@@ -4,9 +4,7 @@ from typing import Any, Dict
 import pytest
 
 from src.blockchain import Blockchain, ReceiveBlockResult
-from src.consensus.constants import constants
 from src.store import FullNodeStore
-from src.types.full_block import FullBlock
 from src.unspent_store import UnspentStore
 from tests.block_tools import BlockTools
 
@@ -41,8 +39,6 @@ class TestUnspent:
         db = await UnspentStore.create("fndb_test")
         await db._clear_database()
 
-        genesis = FullBlock.from_bytes(constants["GENESIS_BLOCK"])
-
         # Save/get block
         for block in blocks:
             await db.new_lca(block)
@@ -59,8 +55,6 @@ class TestUnspent:
 
         db = await UnspentStore.create("fndb_test")
         await db._clear_database()
-
-        genesis = FullBlock.from_bytes(constants["GENESIS_BLOCK"])
 
         # Save/get block
         for block in blocks:
@@ -85,8 +79,6 @@ class TestUnspent:
 
         db = await UnspentStore.create("fndb_test")
         await db._clear_database()
-
-        genesis = FullBlock.from_bytes(constants["GENESIS_BLOCK"])
 
         # Save/get block
         for block in blocks:
@@ -128,8 +120,8 @@ class TestUnspent:
             {}, unspent_store, store, test_constants
         )
 
-        for block in blocks:
-            await b.receive_block(block)
+        for i in range(1, len(blocks)):
+            await b.receive_block(blocks[i], blocks[i - 1].header_block)
         assert b.get_current_tips()[0].height == 100
 
         for c, block in enumerate(blocks):
@@ -150,8 +142,11 @@ class TestUnspent:
             test_constants, 30, blocks[:90], 9, b"1"
         )
 
-        for reorg_block in blocks_reorg_chain:
-            result, removed = await b.receive_block(reorg_block)
+        for i in range(1, len(blocks_reorg_chain)):
+            reorg_block = blocks_reorg_chain[i]
+            result, removed = await b.receive_block(
+                reorg_block, blocks_reorg_chain[i - 1].header_block
+            )
             if reorg_block.height < 90:
                 assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
             elif reorg_block.height < 99:

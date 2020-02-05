@@ -56,7 +56,7 @@ def mempool_assert_block_index_exceeds(
     except ValueError:
         return Err.INVALID_CONDITION
     # + 1 because min block it can be included is +1 from current
-    if mempool.header_block.height + 1 <= expected_block_index:
+    if mempool.header.height + 1 <= expected_block_index:
         return Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED
     return None
 
@@ -72,7 +72,7 @@ def mempool_assert_block_age_exceeds(
         expected_block_index = expected_block_age + unspent.confirmed_block_index
     except ValueError:
         return Err.INVALID_CONDITION
-    if mempool.header_block.height + 1 <= expected_block_index:
+    if mempool.header.height + 1 <= expected_block_index:
         return Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED
     return None
 

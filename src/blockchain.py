@@ -1121,7 +1121,10 @@ class Blockchain:
         for npc in npc_list:
             unspent = removal_unspents[npc.coin_name]
             error = blockchain_check_conditions_dict(
-                unspent, removal_unspents, npc.condition_dict, block.header_block
+                unspent,
+                removal_unspents,
+                npc.condition_dict,
+                block.header_block.to_small(),
             )
             if error:
                 return error

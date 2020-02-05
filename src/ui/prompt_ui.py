@@ -20,7 +20,7 @@ from prompt_toolkit.styles import Style
 from prompt_toolkit.widgets import Button, Frame, Label, SearchToolbar, TextArea
 from src.server.connection import NodeType
 from src.types.full_block import FullBlock
-from src.types.header_block import SmallHeaderBlock, HeaderBlock
+from src.types.header_block import SmallHeaderBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
 from src.rpc.rpc_client import RpcClient
@@ -181,7 +181,7 @@ class FullNodeUI:
         self.total_iters_label = TextArea(focusable=False, height=2)
         self.con_rows = []
         self.displayed_cons = set()
-        self.latest_blocks: List[HeaderBlock] = []
+        self.latest_blocks: List[SmallHeaderBlock] = []
         self.connections_msg = Label(text=f"Connections")
         self.connection_rows_vsplit = Window()
         self.add_connection_msg = Label(text=f"Add a connection ip:port")

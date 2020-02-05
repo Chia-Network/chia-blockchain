@@ -393,22 +393,20 @@ class TestReorgs:
         blocks_reorg_chain_2 = bt.get_consecutive_blocks(
             test_constants, 3, blocks[:-1], 9, b"3"
         )
-        assert (
-            await b.receive_block(
-                blocks_reorg_chain_2[20], blocks_reorg_chain_2[19].header_block
-            )
-            == ReceiveBlockResult.ADDED_AS_ORPHAN
+        result, _ = await b.receive_block(
+            blocks_reorg_chain_2[20], blocks_reorg_chain_2[19].header_block
         )
-        assert (
-            await b.receive_block(
-                blocks_reorg_chain_2[21], blocks_reorg_chain_2[20].header_block
-            )
-        )[0] == ReceiveBlockResult.ADDED_TO_HEAD
-        assert (
-            await b.receive_block(
-                blocks_reorg_chain_2[22], blocks_reorg_chain_2[21].header_block
-            )
-        )[0] == ReceiveBlockResult.ADDED_TO_HEAD
+        assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
+
+        result, _ = await b.receive_block(
+            blocks_reorg_chain_2[21], blocks_reorg_chain_2[20].header_block
+        )
+        assert result == ReceiveBlockResult.ADDED_TO_HEAD
+
+        result, _ = await b.receive_block(
+            blocks_reorg_chain_2[22], blocks_reorg_chain_2[21].header_block
+        )
+        assert result == ReceiveBlockResult.ADDED_TO_HEAD
 
         await unspent_store.close()
         await store.close()

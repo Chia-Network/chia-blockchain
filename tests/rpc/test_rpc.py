@@ -98,7 +98,7 @@ class TestRpc:
             assert len(await client.get_connections()) == 0
 
             unspent_store2 = await UnspentStore.create("blockchain_test2")
-            full_node_2 = FullNode(store, b, mempool, unspent_store2)
+            full_node_2 = FullNode(store, b, config, mempool, unspent_store2)
             server_2 = ChiaServer(test_node_2_port, full_node_2, NodeType.FULL_NODE)
             full_node_2._set_server(server_2)
 

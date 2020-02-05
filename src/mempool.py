@@ -236,7 +236,7 @@ class Mempool:
                 continue
             # 2. Checks we have it in the unspent_store
             unspent: Optional[Unspent] = await self.unspent_store.get_unspent(
-                removal.name(), mempool.header_block.to_small()
+                removal.name(), mempool.header
             )
             if unspent is None:
                 print(f"unkown unspent {removal.name()}")
@@ -249,7 +249,7 @@ class Mempool:
                 conflicts.append(removal)
             if unspent.coinbase == 1:
                 if (
-                    mempool.header_block.height + 1
+                    mempool.header.height + 1
                     < unspent.confirmed_block_index + self.coinbase_freeze
                 ):
                     return Err.COINBASE_NOT_YET_SPENDABLE, {}, []
@@ -303,7 +303,9 @@ class Mempool:
             else:
                 # Create mempool for new head
                 if len(self.old_mempools) > 0:
-                    new_pool = await Pool.create(tip.header_block, self.mempool_size)
+                    new_pool = await Pool.create(
+                        tip.header_block.to_small(), self.mempool_size
+                    )
 
                     # If old spends height is bigger than the new tip height, try adding spends to the pool
                     for height in self.old_mempools.keys():
@@ -315,11 +317,13 @@ class Mempool:
 
                     await self.initialize_pool_from_current_pools(new_pool)
                 else:
-                    new_pool = await Pool.create(tip.header_block, self.mempool_size)
+                    new_pool = await Pool.create(
+                        tip.header_block.to_small(), self.mempool_size
+                    )
                     await self.initialize_pool_from_current_pools(new_pool)
 
             await self.add_potential_spends_to_pool(new_pool)
-            new_pools[new_pool.header_block.header_hash] = new_pool
+            new_pools[new_pool.header.header_hash] = new_pool
 
         self.mempools = new_pools
 
@@ -331,7 +335,7 @@ class Mempool:
         removals, additions = await new_tip.tx_removals_and_additions()
         additions.append(new_tip.body.coinbase)
         additions.append(new_tip.body.fees_coin)
-        pool.header_block = new_tip.header_block
+        pool.header = new_tip.header_block.to_small()
         items: Dict[bytes32, MempoolItem] = {}
 
         # Remove transactions that were included in new block, and save them in old_mempool cache

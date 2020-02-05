@@ -5,7 +5,7 @@ from clvm.casts import int_from_bytes
 
 from src.types.ConditionVarPair import ConditionVarPair
 from src.types.hashable.Unspent import Unspent
-from src.types.header_block import HeaderBlock
+from src.types.header_block import SmallHeaderBlock
 from src.types.sized_bytes import bytes32
 from src.util.Conditions import ConditionOpcode
 from src.util.ConsensusError import Err
@@ -37,7 +37,7 @@ def blockchain_assert_my_coin_id(
 
 
 def blockchain_assert_block_index_exceeds(
-    condition: ConditionVarPair, header: HeaderBlock
+    condition: ConditionVarPair, header: SmallHeaderBlock
 ) -> Optional[Err]:
     """
     Checks if the next block index exceeds the block index from the condition
@@ -53,7 +53,7 @@ def blockchain_assert_block_index_exceeds(
 
 
 def blockchain_assert_block_age_exceeds(
-    condition: ConditionVarPair, unspent: Unspent, header: HeaderBlock
+    condition: ConditionVarPair, unspent: Unspent, header: SmallHeaderBlock
 ) -> Optional[Err]:
     """
     Checks if the coin age exceeds the age from the condition
@@ -87,7 +87,7 @@ def blockchain_check_conditions_dict(
     unspent: Unspent,
     removed: Dict[bytes32, Unspent],
     conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
-    header: HeaderBlock,
+    header: SmallHeaderBlock,
 ) -> Optional[Err]:
     """
     Check all conditions against current state.
