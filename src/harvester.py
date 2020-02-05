@@ -76,6 +76,7 @@ class Harvester:
                 log.warning(
                     f"Plot {partial_filename} has a pool key that is not in the farmer's pool_pk list."
                 )
+                continue
 
             found = False
             for filename in potential_filenames:
@@ -153,7 +154,6 @@ class Harvester:
             except RuntimeError:
                 self.provers[filename] = DiskProver(filename)
                 proof_xs = self.provers[filename].get_full_proof(challenge_hash, index)
-
             pool_pubkey = PublicKey.from_bytes(
                 bytes.fromhex(self.plot_config["plots"][filename]["pool_pk"])
             )

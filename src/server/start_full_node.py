@@ -59,7 +59,7 @@ async def main():
     log = logging.getLogger(__name__)
     server_closed = False
 
-    db_name = f"blockchain_{config['database_id']}.db"
+    db_name = f"blockchain_v2_{config['database_id']}.db"
     # Create the store (DB) and full node instance
     store = await FullNodeStore.create(db_name)
 

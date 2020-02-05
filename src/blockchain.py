@@ -842,6 +842,8 @@ class Blockchain:
         except AttributeError:
             lca_tmp = None
         while any(b.header_hash != cur[0].header_hash for b in cur):
+            log.info(any(b.header_hash != cur[0].header_hash for b in cur))
+            log.info(f"{[b.header_hash for b in cur]}")
             heights = [b.height for b in cur]
             i = heights.index(max(heights))
             cur[i] = self.headers[cur[i].prev_header_hash]

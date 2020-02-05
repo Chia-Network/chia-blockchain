@@ -26,6 +26,7 @@ from src.types.hashable.Coin import Coin
 from src.types.hashable.BLSSignature import BLSSignature
 from src.types.hashable.Hash import std_hash
 from src.types.hashable.SpendBundle import SpendBundle
+from src.types.hashable.Program import Program
 from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock, SmallHeaderBlock
 from src.types.peer_info import PeerInfo
@@ -754,6 +755,8 @@ class FullNode:
         )
         spend_bundle_fees = 0
         aggregate_sig: Optional[BLSSignature] = None
+        solution_program: Optional[Program] = None
+
         if spend_bundle:
             solution_program = best_solution_program(spend_bundle)
             spend_bundle_fees = spend_bundle.fees()
@@ -782,8 +785,6 @@ class FullNode:
             transactions_generator,
             cost,
         )
-        return
-
         # Creates the block header
         prev_header_hash: bytes32 = target_tip.header.get_hash()
         timestamp: uint64 = uint64(int(time.time()))
@@ -839,14 +840,17 @@ class FullNode:
             return
         # Verifies that we have the correct header and body self.stored
         block_body, block_header_data, pos = candidate
+        self.log.warn("Got candidate")
 
         assert block_header_data.get_hash() == header_signature.header_hash
 
         block_header: Header = Header(
             block_header_data, header_signature.header_signature
         )
+        self.log.warn("MAde header candidate")
         header: HeaderBlock = HeaderBlock(pos, None, None, block_header)
         unfinished_block_obj: FullBlock = FullBlock(header, block_body)
+        self.log.warn("MAde block candidate")
 
         # Propagate to ourselves (which validates and does further propagations)
         request = peer_protocol.UnfinishedBlock(unfinished_block_obj)
@@ -955,6 +959,7 @@ class FullNode:
         We can validate it and if it's a good block, propagate it to other peers and
         timelords.
         """
+        self.log.warn(f"Calling unf block {unfinished_block.block}")
         # Adds the unfinished block to seen, and check if it's seen before
         if self.store.seen_unfinished_block(unfinished_block.block.header_hash):
             return
