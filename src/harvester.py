@@ -5,7 +5,6 @@ import asyncio
 from typing import Dict, Optional, Tuple
 
 from blspy import PrependSignature, PrivateKey, PublicKey, Util
-from yaml import safe_load
 
 from chiapos import DiskProver
 from definitions import ROOT_DIR
@@ -20,23 +19,10 @@ log = logging.getLogger(__name__)
 
 
 class Harvester:
-    def __init__(self):
-        config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
-        plot_config_filename = os.path.join(ROOT_DIR, "config", "plots.yaml")
-        key_config_filename = os.path.join(ROOT_DIR, "config", "keys.yaml")
-
-        if not os.path.isfile(key_config_filename):
-            raise RuntimeError(
-                "Keys not generated. Run python3.7 ./scripts/regenerate_keys.py."
-            )
-        if not os.path.isfile(plot_config_filename):
-            raise RuntimeError(
-                "Plots not generated. Run python3.7 ./scripts/create_plots.py."
-            )
-
-        self.config = safe_load(open(config_filename, "r"))["harvester"]
-        self.key_config = safe_load(open(key_config_filename, "r"))
-        self.plot_config = safe_load(open(plot_config_filename, "r"))
+    def __init__(self, config: Dict, key_config: Dict, plot_config: Dict):
+        self.config: Dict = config
+        self.key_config: Dict = key_config
+        self.plot_config: Dict = plot_config
 
         # From filename to prover
         self.provers: Dict[str, DiskProver] = {}
@@ -44,7 +30,7 @@ class Harvester:
         # From quality to (challenge_hash, filename, index)
         self.challenge_hashes: Dict[bytes32, Tuple[bytes32, str, uint8]] = {}
         self._plot_notification_task = asyncio.create_task(self._plot_notification())
-        self._is_shutdown = False
+        self._is_shutdown: bool = False
 
     async def _plot_notification(self):
         """
@@ -74,26 +60,34 @@ class Harvester:
         use any plots which don't have one of the pool keys.
         """
         for partial_filename, plot_config in self.plot_config["plots"].items():
+            potential_filenames = [partial_filename]
             if "plot_root" in self.config:
-                filename = os.path.join(self.config["plot_root"], partial_filename)
+                potential_filenames.append(
+                    os.path.join(self.config["plot_root"], partial_filename)
+                )
             else:
-                filename = os.path.join(ROOT_DIR, "plots", partial_filename)
+                potential_filenames.append(
+                    os.path.join(ROOT_DIR, "plots", partial_filename)
+                )
             pool_pubkey = PublicKey.from_bytes(bytes.fromhex(plot_config["pool_pk"]))
 
             # Only use plots that correct pools associated with them
-            if pool_pubkey in harvester_handshake.pool_pubkeys:
+            if pool_pubkey not in harvester_handshake.pool_pubkeys:
+                log.warning(
+                    f"Plot {partial_filename} has a pool key that is not in the farmer's pool_pk list."
+                )
+
+            found = False
+            for filename in potential_filenames:
                 if os.path.isfile(filename):
                     self.provers[partial_filename] = DiskProver(filename)
                     log.info(
                         f"Farming plot {filename} of size {self.provers[partial_filename].get_size()}"
                     )
-                else:
-                    log.warn(f"Plot at {filename} does not exist.")
-
-            else:
-                log.warning(
-                    f"Plot {filename} has a pool key that is not in the farmer's pool_pk list."
-                )
+                    found = True
+                    break
+            if not found:
+                log.warning(f"Plot at {potential_filenames} does not exist.")
 
     @api_request
     async def new_challenge(self, new_challenge: harvester_protocol.NewChallenge):

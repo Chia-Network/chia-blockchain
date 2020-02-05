@@ -5,7 +5,7 @@
 
 _run_bg_cmd python -m src.server.start_harvester
 _run_bg_cmd python -m src.server.start_farmer
-_run_bg_cmd python -m src.server.start_full_node "127.0.0.1" 8444 -id 1 -f -r 8555
-_run_bg_cmd python -m src.ui.start_ui 8222 -r 8555
+_run_bg_cmd python -m src.server.start_full_node --port=8444 --database_id=1 --connect_to_farmer=True --rpc_port=8555
+_run_bg_cmd python -m src.ui.start_ui --port=8222 --rpc_port=8555
 
 wait

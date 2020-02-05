@@ -31,7 +31,7 @@ add_subdirectory(lib/pybind11)
 
 pybind11_add_module(chiapos ${CMAKE_CURRENT_SOURCE_DIR}/python-bindings/chiapos.cpp)
 
-set (CMAKE_CXX_FLAGS "-g -O3 -Wall -msse2 -msse -march=native -std=c++11 -maes")
+set (CMAKE_CXX_FLAGS "-g -O3 -Wall -msse2 -msse -march=native -std=c++1z -maes")
 
 add_executable(ProofOfSpace
     src/cli.cpp
@@ -45,7 +45,15 @@ add_executable(RunTests
     tests/test-main.cpp
     tests/test.cpp
 )
-target_link_libraries(chiapos PRIVATE fse)
-target_link_libraries(ProofOfSpace fse)
-target_link_libraries(HellmanAttacks fse)
-target_link_libraries(RunTests fse)
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  target_link_libraries(chiapos PRIVATE fse)
+  target_link_libraries(ProofOfSpace fse)
+  target_link_libraries(HellmanAttacks fse)
+  target_link_libraries(RunTests fse)
+else()
+  target_link_libraries(chiapos PRIVATE fse stdc++fs)
+  target_link_libraries(ProofOfSpace fse stdc++fs)
+  target_link_libraries(HellmanAttacks fse stdc++fs)
+  target_link_libraries(RunTests fse stdc++fs)
+endif()
