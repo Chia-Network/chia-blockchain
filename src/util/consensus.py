@@ -16,8 +16,9 @@ from src.util.ConsensusError import Err
 from .Conditions import parse_sexp_to_conditions, conditions_by_opcode
 
 
-def conditions_for_solution(solution_program,
-                            run_program=clvm.run_program) -> Tuple[Optional[Err], Optional[List[ConditionVarPair]]]:
+def conditions_for_solution(
+    solution_program, run_program=clvm.run_program
+) -> Tuple[Optional[Err], Optional[List[ConditionVarPair]]]:
     # get the standard script for a puzzle hash and feed in the solution
     args = Program.to(solution_program)
     try:
@@ -30,23 +31,28 @@ def conditions_for_solution(solution_program,
         return Err.SEXP_ERROR, None
 
 
-def conditions_dict_for_solution(solution) ->\
-        Tuple[Optional[Err], Optional[Dict[ConditionOpcode, List[ConditionVarPair]]]]:
+def conditions_dict_for_solution(
+    solution,
+) -> Tuple[Optional[Err], Optional[Dict[ConditionOpcode, List[ConditionVarPair]]]]:
     error, result = conditions_for_solution(solution)
     if error or result is None:
         return error, None
     return None, conditions_by_opcode(result)
 
 
-def hash_key_pairs_for_solution(solution) -> Tuple[Optional[Err], List[BLSSignature.AGGSIGPair]]:
+def hash_key_pairs_for_solution(
+    solution,
+) -> Tuple[Optional[Err], List[BLSSignature.AGGSIGPair]]:
     error, result = conditions_dict_for_solution(solution)
     if error or result is None:
         return error, []
     return None, hash_key_pairs_for_conditions_dict(result)
 
 
-def created_outputs_for_conditions_dict(conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
-                                        input_coin_name: bytes32) -> List[Coin]:
+def created_outputs_for_conditions_dict(
+    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
+    input_coin_name: bytes32,
+) -> List[Coin]:
     output_coins = []
     for _ in conditions_dict.get(ConditionOpcode.CREATE_COIN, []):
         # TODO: check condition very carefully
@@ -60,15 +66,18 @@ def created_outputs_for_conditions_dict(conditions_dict: Dict[ConditionOpcode, L
     return output_coins
 
 
-def aggsig_in_conditions_dict(conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]]) -> List[ConditionVarPair]:
+def aggsig_in_conditions_dict(
+    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]]
+) -> List[ConditionVarPair]:
     agg_sig_conditions = []
     for _ in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
         agg_sig_conditions.append(_)
     return agg_sig_conditions
 
 
-def hash_key_pairs_for_conditions_dict(conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]]) \
-        -> List[BLSSignature.AGGSIGPair]:
+def hash_key_pairs_for_conditions_dict(
+    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]]
+) -> List[BLSSignature.AGGSIGPair]:
     pairs: List[BLSSignature.AGGSIGPair] = []
     for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
         # TODO: check types

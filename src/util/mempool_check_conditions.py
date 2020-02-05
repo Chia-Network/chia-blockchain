@@ -20,8 +20,9 @@ from src.util.ints import uint64
 from src.util.run_program import run_program
 
 
-def mempool_assert_coin_consumed(condition: ConditionVarPair,
-                                 spend_bundle: SpendBundle, mempool: Pool) -> Optional[Err]:
+def mempool_assert_coin_consumed(
+    condition: ConditionVarPair, spend_bundle: SpendBundle, mempool: Pool
+) -> Optional[Err]:
     """
     Checks coin consumed conditions
     Returns None if conditions are met, if not returns the reason why it failed
@@ -33,7 +34,9 @@ def mempool_assert_coin_consumed(condition: ConditionVarPair,
     return None
 
 
-def mempool_assert_my_coin_id(condition: ConditionVarPair, unspent: Unspent) -> Optional[Err]:
+def mempool_assert_my_coin_id(
+    condition: ConditionVarPair, unspent: Unspent
+) -> Optional[Err]:
     """
     Checks if CoinID matches the id from the condition
     """
@@ -42,7 +45,9 @@ def mempool_assert_my_coin_id(condition: ConditionVarPair, unspent: Unspent) -> 
     return None
 
 
-def mempool_assert_block_index_exceeds(condition: ConditionVarPair, unspent: Unspent, mempool: Pool) -> Optional[Err]:
+def mempool_assert_block_index_exceeds(
+    condition: ConditionVarPair, unspent: Unspent, mempool: Pool
+) -> Optional[Err]:
     """
     Checks if the next block index exceeds the block index from the condition
     """
@@ -56,7 +61,9 @@ def mempool_assert_block_index_exceeds(condition: ConditionVarPair, unspent: Uns
     return None
 
 
-def mempool_assert_block_age_exceeds(condition: ConditionVarPair, unspent: Unspent, mempool: Pool) -> Optional[Err]:
+def mempool_assert_block_age_exceeds(
+    condition: ConditionVarPair, unspent: Unspent, mempool: Pool
+) -> Optional[Err]:
     """
     Checks if the coin age exceeds the age from the condition
     """
@@ -85,7 +92,9 @@ def mempool_assert_time_exceeds(condition: ConditionVarPair):
     return None
 
 
-async def get_name_puzzle_conditions(block_program: Program) -> Tuple[Optional[Err], List[NPC], int]:
+async def get_name_puzzle_conditions(
+    block_program: Program,
+) -> Tuple[Optional[Err], List[NPC], int]:
     """
     Returns an error if it's unable to evaluate, otherwise
     returns a list of NPC (coin_name, solved_puzzle_hash, conditions_dict)
@@ -111,7 +120,9 @@ async def get_name_puzzle_conditions(block_program: Program) -> Tuple[Optional[E
         puzzle_program = puzzle_solution_program.first()
         puzzle_hash = ProgramHash(Program(puzzle_program))
         try:
-            error, conditions_dict = conditions_dict_for_solution(puzzle_solution_program)
+            error, conditions_dict = conditions_dict_for_solution(
+                puzzle_solution_program
+            )
             if error:
                 return error, [], cost
         except clvm.EvalError:
@@ -124,9 +135,12 @@ async def get_name_puzzle_conditions(block_program: Program) -> Tuple[Optional[E
     return None, npc_list, cost
 
 
-def mempool_check_conditions_dict(unspent: Unspent, spend_bundle: SpendBundle,
-                                  conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
-                                  mempool: Pool) -> Optional[Err]:
+def mempool_check_conditions_dict(
+    unspent: Unspent,
+    spend_bundle: SpendBundle,
+    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
+    mempool: Pool,
+) -> Optional[Err]:
     """
     Check all conditions against current state.
     """

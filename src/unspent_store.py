@@ -4,17 +4,17 @@ import aiosqlite
 from src.types.full_block import FullBlock
 from src.types.hashable.Coin import Coin, CoinName
 from src.types.hashable.Unspent import Unspent
-from src.types.header_block import HeaderBlock
+from src.types.header_block import SmallHeaderBlock
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint32
+from src.util.ints import uint32, uint8
 
 
 class DiffStore:
-    header: HeaderBlock
+    header: SmallHeaderBlock
     diffs: Dict[CoinName, Unspent]
 
     @staticmethod
-    async def create(head: HeaderBlock, diffs: Dict[CoinName, Unspent]):
+    async def create(head: SmallHeaderBlock, diffs: Dict[CoinName, Unspent]):
         self = DiffStore()
         self.header = head
         self.diffs = diffs
@@ -28,6 +28,7 @@ class UnspentStore:
     When blockchain notifies UnspentStore of new LCA, LCA is added to the disk db,
     DiffStores are updated/recreated. (managed by blockchain.py)
     """
+
     db_name: str
     unspent_db: aiosqlite.Connection
     # Whether or not we are syncing
@@ -44,13 +45,15 @@ class UnspentStore:
         # All full blocks which have been added to the blockchain. Header_hash -> block
         self.unspent_db = await aiosqlite.connect(self.db_name)
         await self.unspent_db.execute(
-            (f"CREATE TABLE IF NOT EXISTS unspent("
-             f"coin_name text PRIMARY KEY,"
-             f" confirmed_index bigint,"
-             f" spent_index bigint,"
-             f" spent int,"
-             f" coinbase int,"
-             f" unspent blob)")
+            (
+                f"CREATE TABLE IF NOT EXISTS unspent("
+                f"coin_name text PRIMARY KEY,"
+                f" confirmed_index bigint,"
+                f" spent_index bigint,"
+                f" spent int,"
+                f" coinbase int,"
+                f" unspent blob)"
+            )
         )
 
         # Useful for reorg lookups
@@ -92,11 +95,11 @@ class UnspentStore:
             await self.set_spent(coin_name, block.height)
 
         for coin in additions:
-            unspent: Unspent = Unspent(coin, block.height, 0, 0, 0) # type: ignore # noqa
+            unspent: Unspent = Unspent(coin, block.height, 0, 0, 0)  # type: ignore # noqa
             await self.add_unspent(unspent)
 
-        coinbase: Unspent = Unspent(block.body.coinbase, block.height, 0, 0, 1) # type: ignore # noqa
-        fees_coin: Unspent = Unspent(block.body.fees_coin, block.height, 0, 0, 1) # type: ignore # noqa
+        coinbase: Unspent = Unspent(block.body.coinbase, block.height, 0, 0, 1)  # type: ignore # noqa
+        fees_coin: Unspent = Unspent(block.body.fees_coin, block.height, 0, 0, 1)  # type: ignore # noqa
         await self.add_unspent(coinbase)
         await self.add_unspent(fees_coin)
 
@@ -106,7 +109,9 @@ class UnspentStore:
     # Received new tip, just update diffs
     async def new_heads(self, blocks: List[FullBlock]):
         last: FullBlock = blocks[-1]
-        diff_store: DiffStore = await DiffStore.create(last.header_block, dict())
+        diff_store: DiffStore = await DiffStore.create(
+            last.header_block.to_small(), dict()
+        )
 
         block: FullBlock
         for block in blocks:
@@ -115,8 +120,13 @@ class UnspentStore:
 
         self.head_diffs[last.header_hash] = diff_store
 
-    async def add_diffs(self, removals: List[bytes32], additions: List[Coin],
-                        block: FullBlock, diff_store: DiffStore):
+    async def add_diffs(
+        self,
+        removals: List[bytes32],
+        additions: List[Coin],
+        block: FullBlock,
+        diff_store: DiffStore,
+    ):
 
         for coin_name in removals:
             removed: Optional[Unspent] = None
@@ -126,29 +136,36 @@ class UnspentStore:
                 removed = await self.get_unspent(coin_name)
             if removed is None:
                 raise Exception
-            spent = Unspent(removed.coin, removed.confirmed_block_index,
-                            block.height, 1, removed.coinbase) # type: ignore # noqa
+            spent = Unspent(
+                removed.coin,
+                removed.confirmed_block_index,
+                block.height,
+                uint8(1),
+                removed.coinbase,
+            )  # type: ignore # noqa
             diff_store.diffs[spent.name.hex()] = spent
 
         for coin in additions:
-            added: Unspent = Unspent(coin, block.height, 0, 0, 0) # type: ignore # noqa
+            added: Unspent = Unspent(coin, block.height, 0, 0, 0)  # type: ignore # noqa
             diff_store.diffs[added.name.hex()] = added
 
-        coinbase: Unspent = Unspent(block.body.coinbase, block.height, 0, 0, 1) # type: ignore # noqa
+        coinbase: Unspent = Unspent(block.body.coinbase, block.height, 0, 0, 1)  # type: ignore # noqa
         diff_store.diffs[coinbase.name.hex()] = coinbase
-        fees_coin: Unspent = Unspent(block.body.fees_coin, block.height, 0, 0, 1) # type: ignore # noqa
+        fees_coin: Unspent = Unspent(block.body.fees_coin, block.height, 0, 0, 1)  # type: ignore # noqa
         diff_store.diffs[fees_coin.name.hex()] = fees_coin
 
     # Store unspent in DB and ram cache
     async def add_unspent(self, unspent: Unspent) -> None:
         cursor = await self.unspent_db.execute(
             "INSERT OR REPLACE INTO unspent VALUES(?, ?, ?, ?, ?, ?)",
-            (unspent.coin.name().hex(),
-             unspent.confirmed_block_index,
-             unspent.spent_block_index,
-             int(unspent.spent),
-             int(unspent.coinbase),
-             bytes(unspent)),
+            (
+                unspent.coin.name().hex(),
+                unspent.confirmed_block_index,
+                unspent.spent_block_index,
+                int(unspent.spent),
+                int(unspent.coinbase),
+                bytes(unspent),
+            ),
         )
         await cursor.close()
         await self.unspent_db.commit()
@@ -163,12 +180,19 @@ class UnspentStore:
         current: Optional[Unspent] = await self.get_unspent(coin_name)
         if current is None:
             return
-        spent: Unspent = Unspent(current.coin, current.confirmed_block_index,
-                                 index, 1, current.coinbase) # type: ignore # noqa
+        spent: Unspent = Unspent(
+            current.coin,
+            current.confirmed_block_index,
+            index,
+            uint8(1),
+            current.coinbase,
+        )  # type: ignore # noqa
         await self.add_unspent(spent)
 
     # Checks DB and DiffStores for unspent with coin_name and returns it
-    async def get_unspent(self, coin_name: CoinName, header: HeaderBlock = None) -> Optional[Unspent]:
+    async def get_unspent(
+        self, coin_name: CoinName, header: SmallHeaderBlock = None
+    ) -> Optional[Unspent]:
         if header is not None and header.header_hash in self.head_diffs:
             diff_store = self.head_diffs[header.header_hash]
             if coin_name.hex() in diff_store.diffs:
@@ -190,15 +214,24 @@ class UnspentStore:
         for k in list(self.lca_unspent_coins.keys()):
             v = self.lca_unspent_coins[k]
             if v.spent_block_index > block_index:
-                new_unspent = Unspent(v.coin, v.confirmed_block_index,
-                                      v.spent_block_index, 0, v.coinbase)
+                new_unspent = Unspent(
+                    v.coin,
+                    v.confirmed_block_index,
+                    v.spent_block_index,
+                    uint8(0),
+                    v.coinbase,
+                )
                 self.lca_unspent_coins[v.coin.name().hex()] = new_unspent
             if v.confirmed_block_index > block_index:
                 del self.lca_unspent_coins[k]
         # Delete from storage
-        c1 = await self.unspent_db.execute("DELETE FROM unspent WHERE confirmed_index>?", (block_index,))
+        c1 = await self.unspent_db.execute(
+            "DELETE FROM unspent WHERE confirmed_index>?", (block_index,)
+        )
         await c1.close()
-        c2 = await self.unspent_db.execute("UPDATE unspent SET spent_index = 0, spent = 0 WHERE spent_index>?",
-                                           (block_index,))
+        c2 = await self.unspent_db.execute(
+            "UPDATE unspent SET spent_index = 0, spent = 0 WHERE spent_index>?",
+            (block_index,),
+        )
         await c2.close()
         await self.unspent_db.commit()

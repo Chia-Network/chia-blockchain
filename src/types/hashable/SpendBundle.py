@@ -20,12 +20,13 @@ class SpendBundle(Streamable):
     transaction (although because of non-interactive signature aggregation, the boundaries
     between transactions are more flexible than in bitcoin).
     """
+
     coin_solutions: List[CoinSolution]
     aggregated_signature: BLSSignature
 
     @classmethod
     def aggregate(cls, spend_bundles):
-        coin_solutions = []
+        coin_solutions: List[CoinSolution] = []
         sigs = []
         for _ in spend_bundles:
             coin_solutions += _.coin_solutions
@@ -36,7 +37,11 @@ class SpendBundle(Streamable):
     def additions(self) -> List[Coin]:
         items: List[Coin] = []
         for coin_solution in self.coin_solutions:
-            items.extend(additions_for_solution(coin_solution.coin.name(), coin_solution.solution))
+            items.extend(
+                additions_for_solution(
+                    coin_solution.coin.name(), coin_solution.solution
+                )
+            )
         return items
 
     def removals(self) -> List[Coin]:

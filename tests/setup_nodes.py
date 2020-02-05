@@ -1,3 +1,4 @@
+import os
 from typing import Any, Dict
 
 from src.blockchain import Blockchain
@@ -9,6 +10,7 @@ from src.server.server import ChiaServer
 from src.types.full_block import FullBlock
 from src.unspent_store import UnspentStore
 from tests.block_tools import BlockTools
+from src.util.config import load_config
 
 
 bt = BlockTools()
@@ -28,7 +30,7 @@ test_constants["GENESIS_BLOCK"] = bytes(
 )
 
 
-async def setup_two_nodes(dic = {}):
+async def setup_two_nodes(dic={}):
     """
     Setup and teardown of two full nodes, with blockchains and separate DBs.
     """
@@ -47,18 +49,27 @@ async def setup_two_nodes(dic = {}):
     await unspent_store_2._clear_database()
     mempool_1 = Mempool(unspent_store_1, dic)
     mempool_2 = Mempool(unspent_store_2, dic)
-    b_1: Blockchain = await Blockchain.create({}, unspent_store_1, store_1, test_constants)
-    b_2: Blockchain = await Blockchain.create({}, unspent_store_2, store_2, test_constants)
+    b_1: Blockchain = await Blockchain.create(
+        {}, unspent_store_1, store_1, test_constants
+    )
+    b_2: Blockchain = await Blockchain.create(
+        {}, unspent_store_2, store_2, test_constants
+    )
     await store_1.add_block(FullBlock.from_bytes(test_constants["GENESIS_BLOCK"]))
     await store_2.add_block(FullBlock.from_bytes(test_constants["GENESIS_BLOCK"]))
 
-    full_node_1 = FullNode(store_1, b_1, mempool_1, unspent_store_1, "full_node_1")
-    server_1 = ChiaServer(21234, full_node_1, NodeType.FULL_NODE, "server_for_node_1")
+    config = load_config("config.yaml", "full_node")
+    full_node_1 = FullNode(
+        store_1, b_1, config, mempool_1, unspent_store_1, "full_node_1"
+    )
+    server_1 = ChiaServer(21234, full_node_1, NodeType.FULL_NODE)
     _ = await server_1.start_server("127.0.0.1", full_node_1._on_connect)
     full_node_1._set_server(server_1)
 
-    full_node_2 = FullNode(store_2, b_2, mempool_2, unspent_store_2, "full_node_2")
-    server_2 = ChiaServer(21235, full_node_2, NodeType.FULL_NODE, "server_for_node_2")
+    full_node_2 = FullNode(
+        store_2, b_2, config, mempool_2, unspent_store_2, "full_node_2"
+    )
+    server_2 = ChiaServer(21235, full_node_2, NodeType.FULL_NODE)
     full_node_2._set_server(server_2)
 
     yield (full_node_1, full_node_2, server_1, server_2)
@@ -74,3 +85,5 @@ async def setup_two_nodes(dic = {}):
     await store_2.close()
     await unspent_store_1.close()
     await unspent_store_2.close()
+    os.remove("blockchain_test")
+    os.remove("blockchain_test_2")

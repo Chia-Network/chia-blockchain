@@ -57,28 +57,34 @@ class BlockTools:
         plot_seeds: List[bytes32] = [
             ProofOfSpace.calculate_plot_seed(pool_pk, plot_pk) for plot_pk in plot_pks
         ]
+        self.plot_dir = os.path.join("tests", "plots")
         self.filenames: List[str] = [
-            os.path.join(
-                "tests",
-                "plots",
-                "genesis-plots-"
-                + str(k)
-                + sha256(int.to_bytes(i, 4, "big")).digest().hex()
-                + ".dat",
-            )
+            "genesis-plots-"
+            + str(k)
+            + sha256(int.to_bytes(i, 4, "big")).digest().hex()
+            + ".dat"
             for i in range(num_plots)
         ]
         done_filenames = set()
         try:
             for pn, filename in enumerate(self.filenames):
-                if not os.path.exists(filename):
+                if not os.path.exists(os.path.join(self.plot_dir, filename)):
                     plotter = DiskPlotter()
-                    plotter.create_plot_disk(filename, k, b"genesis", plot_seeds[pn])
+                    plotter.create_plot_disk(
+                        self.plot_dir,
+                        self.plot_dir,
+                        filename,
+                        k,
+                        b"genesis",
+                        plot_seeds[pn],
+                    )
                     done_filenames.add(filename)
         except KeyboardInterrupt:
             for filename in self.filenames:
-                if filename not in done_filenames and os.path.exists(filename):
-                    os.remove(filename)
+                if filename not in done_filenames and os.path.exists(
+                    os.path.join(self.plot_dir, filename)
+                ):
+                    os.remove(os.path.join(self.plot_dir, filename))
             sys.exit(1)
 
     def get_consecutive_blocks(
@@ -89,7 +95,7 @@ class BlockTools:
         seconds_per_block=constants["BLOCK_TIME_TARGET"],
         seed: bytes = b"",
         reward_puzzlehash: bytes32 = None,
-        transaction_data_at_height: Dict[int, Tuple[Program, BLSSignature]] = None
+        transaction_data_at_height: Dict[int, Tuple[Program, BLSSignature]] = None,
     ) -> List[FullBlock]:
         if transaction_data_at_height is None:
             transaction_data_at_height = {}
@@ -247,7 +253,7 @@ class BlockTools:
                     seed,
                     reward_puzzlehash,
                     transactions,
-                    aggsig
+                    aggsig,
                 )
             )
         return block_list
@@ -311,7 +317,7 @@ class BlockTools:
             False,
             reward_puzzlehash,
             transactions,
-            aggsig
+            aggsig,
         )
 
     def _create_block(
@@ -329,7 +335,7 @@ class BlockTools:
         genesis: bool = False,
         reward_puzzlehash: bytes32 = None,
         transactions: Program = None,
-        aggsig: BLSSignature = None
+        aggsig: BLSSignature = None,
     ) -> FullBlock:
         """
         Creates a block with the specified details. Uses the stored plots to create a proof of space,
@@ -345,7 +351,7 @@ class BlockTools:
             filename = self.filenames[seeded_pn]
             plot_pk = plot_pks[seeded_pn]
             plot_sk = plot_sks[seeded_pn]
-            prover = DiskProver(filename)
+            prover = DiskProver(os.path.join(self.plot_dir, filename))
             qualities = prover.get_qualities_for_challenge(challenge_hash)
             if len(qualities) > 0:
                 break
@@ -397,16 +403,20 @@ class BlockTools:
             fee_reward = uint64(int(block_reward / 8))
 
         coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
-            height,
-            reward_puzzlehash,
-            coinbase_reward,
-            pool_sk)
+            height, reward_puzzlehash, coinbase_reward, pool_sk
+        )
 
         fee_hash = blspy.Util.hash256(coinbase_coin.name())
         fees_coin = Coin(fee_hash, reward_puzzlehash, uint64(fee_reward))
 
         body: Body = Body(
-            coinbase_coin, coinbase_signature, fees_coin, transactions, aggsig, solutions_generator, cost
+            coinbase_coin,
+            coinbase_signature,
+            fees_coin,
+            transactions,
+            aggsig,
+            solutions_generator,
+            cost,
         )
 
         header_data: HeaderData = HeaderData(

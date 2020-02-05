@@ -10,10 +10,11 @@ from ...atoms import bin_methods, hash_pointer
 SExp = to_sexp_f(1).__class__
 
 
-class Program(SExp, bin_methods): # type: ignore # noqa
+class Program(SExp, bin_methods):  # type: ignore # noqa
     """
     A thin wrapper around s-expression data intended to be invoked with "eval".
     """
+
     code: BaseSExp
 
     def __init__(self, v):

@@ -34,7 +34,6 @@ def event_loop():
 
 
 class TestUnspent:
-
     @pytest.mark.asyncio
     async def test_basic_unspent_store(self):
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
@@ -125,15 +124,21 @@ class TestUnspent:
         unspent_store = await UnspentStore.create("blockchain_test")
         store = await FullNodeStore.create("blockchain_test")
         await store._clear_database()
-        b: Blockchain = await Blockchain.create({}, unspent_store, store, test_constants)
+        b: Blockchain = await Blockchain.create(
+            {}, unspent_store, store, test_constants
+        )
 
         for block in blocks:
             await b.receive_block(block)
         assert b.get_current_tips()[0].height == 100
 
         for c, block in enumerate(blocks):
-            unspent = await unspent_store.get_unspent(block.body.coinbase.name(), block.header_block)
-            unspent_fee = await unspent_store.get_unspent(block.body.fees_coin.name(), block.header_block)
+            unspent = await unspent_store.get_unspent(
+                block.body.coinbase.name(), block.header_block
+            )
+            unspent_fee = await unspent_store.get_unspent(
+                block.body.fees_coin.name(), block.header_block
+            )
             assert unspent.spent == 0
             assert unspent_fee.spent == 0
             assert unspent.confirmed_block_index == block.height
@@ -153,7 +158,9 @@ class TestUnspent:
                 assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
             elif reorg_block.height >= 100:
                 assert result == ReceiveBlockResult.ADDED_TO_HEAD
-                unspent = await unspent_store.get_unspent(reorg_block.body.coinbase.name(), reorg_block.header_block)
+                unspent = await unspent_store.get_unspent(
+                    reorg_block.body.coinbase.name(), reorg_block.header_block
+                )
                 assert unspent.name == reorg_block.body.coinbase.name()
                 assert unspent.confirmed_block_index == reorg_block.height
                 assert unspent.spent == 0

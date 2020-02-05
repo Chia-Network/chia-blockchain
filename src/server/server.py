@@ -259,7 +259,9 @@ class ChiaServer:
         # length encoding and CBOR serialization
         async def serve_forever():
             async for connection, message in expanded_messages_aiter:
-                self.log.info(f"-> {message.function} to peer {connection.get_peername()}")
+                self.log.info(
+                    f"-> {message.function} to peer {connection.get_peername()}"
+                )
                 try:
                     await connection.send(message)
                 except (RuntimeError, TimeoutError, OSError,) as e:

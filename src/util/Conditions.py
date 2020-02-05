@@ -7,7 +7,9 @@ from src.types.condition_opcodes import ConditionOpcode
 from .ConsensusError import Err, ConsensusError
 
 
-def parse_sexp_to_condition(sexp: BaseSExp) -> Tuple[Optional[Err], Optional[ConditionVarPair]]:
+def parse_sexp_to_condition(
+    sexp: BaseSExp,
+) -> Tuple[Optional[Err], Optional[ConditionVarPair]]:
     """
     Takes a ChiaLisp sexp and returns a ConditionVarPair.
     If it fails, returns an Error
@@ -22,11 +24,13 @@ def parse_sexp_to_condition(sexp: BaseSExp) -> Tuple[Optional[Err], Optional[Con
     except ValueError:
         return Err.INVALID_CONDITION, None
     if len(items) == 3:
-        return None, ConditionVarPair(opcode,  items[1], items[2])
+        return None, ConditionVarPair(opcode, items[1], items[2])
     return None, ConditionVarPair(opcode, items[1], None)
 
 
-def parse_sexp_to_conditions(sexp: BaseSExp) -> Tuple[Optional[Err], Optional[List[ConditionVarPair]]]:
+def parse_sexp_to_conditions(
+    sexp: BaseSExp,
+) -> Tuple[Optional[Err], Optional[List[ConditionVarPair]]]:
     """
     Takes a ChiaLisp sexp (list) and returns the list of ConditionVarPairs
     If it fails, returns as Error
@@ -37,13 +41,15 @@ def parse_sexp_to_conditions(sexp: BaseSExp) -> Tuple[Optional[Err], Optional[Li
             error, cvp = parse_sexp_to_condition(_)
             if error:
                 return error, None
-            results.append(cvp) # type: ignore # noqa
+            results.append(cvp)  # type: ignore # noqa
     except ConsensusError:
         return Err.INVALID_CONDITION, None
     return None, results
 
 
-def conditions_by_opcode(conditions: List[ConditionVarPair]) -> Dict[ConditionOpcode, List[ConditionVarPair]]:
+def conditions_by_opcode(
+    conditions: List[ConditionVarPair],
+) -> Dict[ConditionOpcode, List[ConditionVarPair]]:
     """
     Takes a list of ConditionVarPairs(CVP) and return dictionary of CVPs keyed of their opcode
     """

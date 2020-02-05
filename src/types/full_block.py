@@ -16,7 +16,9 @@ def additions_for_npc(npc_list: List[NPC]) -> List[Coin]:
     additions: List[Coin] = []
 
     for npc in npc_list:
-        for coin in created_outputs_for_conditions_dict(npc.condition_dict, npc.coin_name):
+        for coin in created_outputs_for_conditions_dict(
+            npc.condition_dict, npc.coin_name
+        ):
             additions.append(coin)
 
     return additions
@@ -59,7 +61,9 @@ class FullBlock(Streamable):
         if self.body.transactions is not None:
             # ensure block program generates solutions
             # This should never throw here, block must be valid if it comes to here
-            err, npc_list, cost = await get_name_puzzle_conditions(self.body.transactions)
+            err, npc_list, cost = await get_name_puzzle_conditions(
+                self.body.transactions
+            )
             # build removals list
             if npc_list is None:
                 return [], []

@@ -189,7 +189,9 @@ python -m scripts.regenerate_keys
 ## Step 4a: Run a full node
 To run a full node on port 8444, and connect to the testnet, run the following command.
 This will also start an ssh server in port 8222 for the UI, which you can connect to
-to see the state of the node.
+to see the state of the node. If you want to see std::out log output, modify the logging.std_out
+variable in ./config/config.yaml.
+
 ```bash
 ./scripts/run_full_node.sh
 ssh -p 8222 localhost
@@ -201,7 +203,8 @@ Farmers are entities in the network who use their hard drive space to try to cre
 blocks (like Bitcoin's miners), and earn block rewards. First, you must generate some hard drive plots, which
 can take a long time depending on the [size of the plots](https://github.com/Chia-Network/chia-blockchain/wiki/k-sizes)
 (the k variable). Then, run the farmer + full node with the following script. A full node is also started,
-which you can ssh into to view the node UI (previous ssh command).
+which you can ssh into to view the node UI (previous ssh command). You can also change the working directory and
+final directory for plotting, with the "-t" and "-d" arguments to the create_plots script.
 ```bash
 python -m scripts.create_plots -k 20 -n 10
 sh ./scripts/run_farming.sh
@@ -229,8 +232,6 @@ Due to the nature of proof of space lookups by the harvester in the current alph
 the number of plots on a physical drive to 50 or less. This limit should significantly increase before beta.
 
 You can also run the simulation, which runs all servers and multiple full nodes, locally, at once.
-If you want to run the simulation, change the introducer ip in ./config/config.yaml so that the
-full node points to the local introducer (127.0.0.1:8445).
 
 Note the the simulation is local only and requires installation of timelords and VDFs.
 
@@ -246,4 +247,9 @@ For increased networking performance, install uvloop:
 pip install -e ".[uvloop]"
 ```
 
+You can also use the [HTTP RPC](https://github.com/Chia-Network/chia-blockchain/wiki/Networking-and-Serialization#rpc) api to access information and control the full node:
 
+
+```bash
+curl -X POST  http://localhost:8555/get_blockchain_state
+```

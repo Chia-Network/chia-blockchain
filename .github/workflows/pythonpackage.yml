@@ -19,25 +19,30 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
-      env:
-        CHIA_MACHINE_SSH_KEY: ${{ secrets.CHIA_MACHINE_SSH_KEY }}
-        GIT_SSH_COMMAND: "ssh -o StrictHostKeyChecking=no"
       run: |
-        eval "$(ssh-agent -s)"
-        ssh-add - <<< "${CHIA_MACHINE_SSH_KEY}"
-        git submodule update --init --recursive
-        brew update && brew install gmp || echo ""
-        python3 -m venv .venv
+        brew update && brew install gmp boost || echo ""
+        sh install.sh
+    - name: Test proof of space
+      run: |
+        cd lib/chiapos
+        mkdir -p build && cd build
+        cmake ../
+        cmake --build . -- -j 6
+        ./RunTests
+        cd ../../../
+    - name: Test vdf
+      run: |
         . .venv/bin/activate
-        pip install -e .
-        pip install -r requirements.txt
-    - name: Lint with flake8
+        cd lib/chiavdf/fast_vdf
+        python python_bindings/test_verifier.py
+        cd ../../../
+    - name: Lint source with flake8
       run: |
         ./.venv/bin/flake8 src --exclude src/wallet
-    - name: Lint with mypy
+    - name: Lint source with mypy
       run: |
         ./.venv/bin/mypy src tests
-    - name: Test with pytest
+    - name: Test blockchain code with pytest
       run: |
         ./.venv/bin/py.test tests -s -v
 

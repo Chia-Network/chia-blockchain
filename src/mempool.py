@@ -7,13 +7,16 @@ from src.types.full_block import FullBlock
 from src.types.hashable.Coin import CoinName, Coin
 from src.types.hashable.SpendBundle import SpendBundle
 from src.types.hashable.Unspent import Unspent
-from src.types.header_block import HeaderBlock
+from src.types.header_block import SmallHeaderBlock
 from src.types.mempool_item import MempoolItem
 from src.types.pool import Pool
 from src.types.sized_bytes import bytes32
 from src.unspent_store import UnspentStore
 from src.util.ConsensusError import Err
-from src.util.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_conditions_dict
+from src.util.mempool_check_conditions import (
+    get_name_puzzle_conditions,
+    mempool_check_conditions_dict,
+)
 from src.util.consensus import hash_key_pairs_for_conditions_dict
 from src.util.ints import uint64, uint32
 from sortedcontainers import SortedDict
@@ -50,7 +53,9 @@ class Mempool:
         self.coinbase_freeze = self.constants["COINBASE_FREEZE_PERIOD"]
 
     # TODO This is hack, it should use proper cost, const. Minimize work, double check/verify solution.
-    async def create_bundle_for_tip(self, header_block: HeaderBlock) -> Optional[SpendBundle]:
+    async def create_bundle_for_tip(
+        self, header_block: SmallHeaderBlock
+    ) -> Optional[SpendBundle]:
         """
         Returns aggregated spendbundle that can be used for creating new block
         """
@@ -71,7 +76,9 @@ class Mempool:
         else:
             return None
 
-    async def add_spendbundle(self, new_spend: SpendBundle, to_pool: Pool = None) -> Tuple[bool, Optional[Err]]:
+    async def add_spendbundle(
+        self, new_spend: SpendBundle, to_pool: Pool = None
+    ) -> Tuple[bool, Optional[Err]]:
         """
         Tries to add spendbundle to either self.mempools or to_pool if it's specified.
         Returns true if it's added in any of pools, Returns error if it fails.
@@ -133,8 +140,9 @@ class Mempool:
 
             # Check removals against UnspentDB + DiffStore + Mempool + SpendBundle
             # Use this information later when constructing a block
-            fail_reason, unspents, conflicts = await self.check_removals(new_spend.additions(), new_spend.removals(),
-                                                                         pool)
+            fail_reason, unspents, conflicts = await self.check_removals(
+                new_spend.additions(), new_spend.removals(), pool
+            )
             # If there is a mempool conflict check if this spendbundle has a higher fee per cost than all others
             tmp_error: Optional[Err] = None
             conflicting_pool_items: Dict[bytes32, MempoolItem] = {}
@@ -166,14 +174,19 @@ class Mempool:
             error: Optional[Err] = None
             for npc in npc_list:
                 uns: Unspent = unspents[npc.coin_name]
-                error = mempool_check_conditions_dict(uns, new_spend, npc.condition_dict, pool)
+                error = mempool_check_conditions_dict(
+                    uns, new_spend, npc.condition_dict, pool
+                )
                 if error:
-                    if (error is Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED
-                            or
-                            error is Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED):
+                    if (
+                        error is Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED
+                        or error is Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED
+                    ):
                         await self.add_to_potential_tx_set(new_spend)
                     break
-                hash_key_pairs.extend(hash_key_pairs_for_conditions_dict(npc.condition_dict))
+                hash_key_pairs.extend(
+                    hash_key_pairs_for_conditions_dict(npc.condition_dict)
+                )
             if error:
                 errors.append(error)
                 continue
@@ -198,8 +211,9 @@ class Mempool:
         else:
             return False, errors[0]
 
-    async def check_removals(self, additions: List[Coin], removals: List[Coin],
-                             mempool: Pool) -> Tuple[Optional[Err], Dict[bytes32, Unspent], List[Coin]]:
+    async def check_removals(
+        self, additions: List[Coin], removals: List[Coin], mempool: Pool
+    ) -> Tuple[Optional[Err], Dict[bytes32, Unspent], List[Coin]]:
         """
         This function checks for double spends, unknown spends and conflicting transactions in mempool.
         Returns Error (if any), dictionary of Unspents, list of coins with conflict errors (if any any).
@@ -218,10 +232,12 @@ class Mempool:
                 # Setting ephemeral coin confirmed index to current + 1
                 if removal.name() in unspents:
                     return Err.DOUBLE_SPEND, {}, []
-                unspents[removal.name()] = Unspent(removal, mempool.header_block.height + 1, 0, 0, 0) # type: ignore # noqa
+                unspents[removal.name()] = Unspent(removal, mempool.header_block.height + 1, 0, 0, 0)  # type: ignore # noqa
                 continue
             # 2. Checks we have it in the unspent_store
-            unspent: Optional[Unspent] = await self.unspent_store.get_unspent(removal.name(), mempool.header_block)
+            unspent: Optional[Unspent] = await self.unspent_store.get_unspent(
+                removal.name(), mempool.header_block.to_small()
+            )
             if unspent is None:
                 print(f"unkown unspent {removal.name()}")
                 return Err.UNKNOWN_UNSPENT, {}, []
@@ -232,7 +248,10 @@ class Mempool:
             if removal.name() in mempool.removals:
                 conflicts.append(removal)
             if unspent.coinbase == 1:
-                if mempool.header_block.height + 1 < unspent.confirmed_block_index + self.coinbase_freeze:
+                if (
+                    mempool.header_block.height + 1
+                    < unspent.confirmed_block_index + self.coinbase_freeze
+                ):
                     return Err.COINBASE_NOT_YET_SPENDABLE, {}, []
 
             unspents[unspent.coin.name()] = unspent
@@ -289,7 +308,9 @@ class Mempool:
                     # If old spends height is bigger than the new tip height, try adding spends to the pool
                     for height in self.old_mempools.keys():
                         if height > tip.height:
-                            old_spend_dict: Dict[bytes32, MempoolItem] = self.old_mempools[height]
+                            old_spend_dict: Dict[
+                                bytes32, MempoolItem
+                            ] = self.old_mempools[height]
                             await self.add_old_spends_to_pool(new_pool, old_spend_dict)
 
                     await self.initialize_pool_from_current_pools(new_pool)
@@ -327,9 +348,13 @@ class Mempool:
         for item in items.values():
             pool.remove_spend(item)
 
-        await self.add_to_old_mempool_cache(list(items.values()), new_tip.header_block)
+        await self.add_to_old_mempool_cache(
+            list(items.values()), new_tip.header_block.to_small()
+        )
 
-    async def add_to_old_mempool_cache(self, items: List[MempoolItem], header: HeaderBlock):
+    async def add_to_old_mempool_cache(
+        self, items: List[MempoolItem], header: SmallHeaderBlock
+    ):
         dic_for_height: Dict[bytes32, MempoolItem]
 
         # Store them in proper dictionary for the height they were farmed at
@@ -361,7 +386,9 @@ class Mempool:
                 tried_already[item.name] = item.name
                 await self.add_spendbundle(item.spend_bundle, pool)
 
-    async def add_old_spends_to_pool(self, pool: Pool, old_spends: Dict[bytes32, MempoolItem]):
+    async def add_old_spends_to_pool(
+        self, pool: Pool, old_spends: Dict[bytes32, MempoolItem]
+    ):
         for old in old_spends.values():
             await self.add_spendbundle(old.spend_bundle, pool)
 

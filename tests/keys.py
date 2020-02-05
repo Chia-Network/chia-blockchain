@@ -29,6 +29,7 @@ def puzzle_program_for_index(index):
 def puzzle_hash_for_index(index):
     return ProgramHash(puzzle_program_for_index(index))
 
+
 def conditions_for_payment(puzzle_hash_amount_pairs):
     conditions = [
         make_create_coin_condition(ph, amount)

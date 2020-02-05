@@ -13,5 +13,6 @@ class CoinSolution(Streamable):
     with data from different sources, since burned coins are identified by name, so it is built up
     more often that it is streamed.
     """
+
     coin: Coin
     solution: Program

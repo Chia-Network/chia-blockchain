@@ -14,6 +14,7 @@ class Coin(Streamable):
     """
     This structure is used in the body for the reward and fees genesis coins.
     """
+
     parent_coin_info: bytes
     puzzle_hash: ProgramHash
     amount: uint64

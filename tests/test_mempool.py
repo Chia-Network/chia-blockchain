@@ -37,7 +37,9 @@ class TestMempool:
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -45,7 +47,10 @@ class TestMempool:
         async for _ in full_node_1.block(peer_protocol.Block(block)):
             pass
 
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase)
+        spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.body.coinbase
+        )
+        assert spend_bundle is not None
         tx: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle)
         async for _ in full_node_1.transaction(tx):
             outbound: OutboundMessage = _
@@ -63,34 +68,41 @@ class TestMempool:
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
         full_node_1, full_node_2, server_1, server_2 = two_nodes_standard_freeze
 
         block = blocks[1]
         async for _ in full_node_1.block(peer_protocol.Block(block)):
             pass
 
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase)
+        spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.body.coinbase
+        )
+        assert spend_bundle is not None
         tx: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle)
 
         async for _ in full_node_1.transaction(tx):
             outbound: OutboundMessage = _
-                # Maybe transaction means that it's accepted in mempool
+            # Maybe transaction means that it's accepted in mempool
             assert outbound.message.function != "maybe_transaction"
 
         sb = await full_node_1.mempool.get_spendbundle(spend_bundle.name())
         assert sb is None
 
-        blocks = bt.get_consecutive_blocks(test_constants, 200, [], 10, b"", coinbase_puzzlehash)
+        blocks = bt.get_consecutive_blocks(
+            test_constants, 200, [], 10, b"", coinbase_puzzlehash
+        )
 
         for i in range(1, 201):
             async for _ in full_node_1.block(peer_protocol.Block(blocks[i])):
                 pass
 
         async for _ in full_node_1.transaction(tx):
-            outbound: OutboundMessage = _
-                # Maybe transaction means that it's accepted in mempool
-            assert outbound.message.function == "maybe_transaction"
+            outbound_2: OutboundMessage = _
+            # Maybe transaction means that it's accepted in mempool
+            assert outbound_2.message.function == "maybe_transaction"
         print(blocks[1].body.coinbase.name())
         sb = await full_node_1.mempool.get_spendbundle(spend_bundle.name())
         assert sb is spend_bundle
@@ -103,14 +115,20 @@ class TestMempool:
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
         async for _ in full_node_1.block(peer_protocol.Block(block)):
             pass
 
-        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase)
+        spend_bundle1 = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.body.coinbase
+        )
+
+        assert spend_bundle1 is not None
         tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
@@ -118,7 +136,10 @@ class TestMempool:
             assert outbound.message.function == "maybe_transaction"
 
         other_receiver = WalletTool()
-        spend_bundle2 = wallet_a.generate_signed_transaction(1000, other_receiver.get_new_puzzlehash(), block.body.coinbase)
+        spend_bundle2 = wallet_a.generate_signed_transaction(
+            1000, other_receiver.get_new_puzzlehash(), block.body.coinbase
+        )
+        assert spend_bundle2 is not None
         tx2: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle2)
         async for _ in full_node_1.transaction(tx2):
             pass
@@ -137,22 +158,30 @@ class TestMempool:
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
         async for _ in full_node_1.block(peer_protocol.Block(block)):
             pass
 
-        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase)
+        spend_bundle1 = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.body.coinbase
+        )
+        assert spend_bundle1 is not None
         tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
             assert outbound.message.function == "maybe_transaction"
 
-        spend_bundle2 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase, fee=1)
+        spend_bundle2 = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.body.coinbase, fee=1
+        )
 
+        assert spend_bundle2 is not None
         tx2: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle2)
         async for _ in full_node_1.transaction(tx2):
             pass
@@ -171,18 +200,27 @@ class TestMempool:
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
         async for _ in full_node_1.block(peer_protocol.Block(block)):
             pass
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS, uint64(2).to_bytes(4, 'big'), None)
+        cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS,
+            uint64(2).to_bytes(4, "big"),
+            None,
+        )
         dic = {ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS: [cvp]}
 
-        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase, dic)
+        spend_bundle1 = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.body.coinbase, dic
+        )
 
+        assert spend_bundle1 is not None
         tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
@@ -201,18 +239,27 @@ class TestMempool:
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
         async for _ in full_node_1.block(peer_protocol.Block(block)):
             pass
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS, uint64(1).to_bytes(4, 'big'), None)
+        cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS,
+            uint64(1).to_bytes(4, "big"),
+            None,
+        )
         dic = {ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS: [cvp]}
 
-        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase, dic)
+        spend_bundle1 = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.body.coinbase, dic
+        )
 
+        assert spend_bundle1 is not None
         tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
@@ -231,18 +278,25 @@ class TestMempool:
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
         async for _ in full_node_1.block(peer_protocol.Block(block)):
             pass
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS, uint64(5).to_bytes(4, 'big'), None)
+        cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS, uint64(5).to_bytes(4, "big"), None
+        )
         dic = {cvp.opcode: [cvp]}
 
-        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase, dic)
+        spend_bundle1 = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.body.coinbase, dic
+        )
 
+        assert spend_bundle1 is not None
         tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
@@ -261,7 +315,9 @@ class TestMempool:
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -270,11 +326,16 @@ class TestMempool:
             async for _ in full_node_1.block(peer_protocol.Block(b)):
                 pass
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS, uint64(3).to_bytes(4, 'big'), None)
+        cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS, uint64(3).to_bytes(4, "big"), None
+        )
         dic = {cvp.opcode: [cvp]}
 
-        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase, dic)
+        spend_bundle1 = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.body.coinbase, dic
+        )
 
+        assert spend_bundle1 is not None
         tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
@@ -293,7 +354,9 @@ class TestMempool:
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -302,11 +365,16 @@ class TestMempool:
             async for _ in full_node_1.block(peer_protocol.Block(b)):
                 pass
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_MY_COIN_ID, block.body.coinbase.name(), None)
+        cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_MY_COIN_ID, block.body.coinbase.name(), None
+        )
         dic = {cvp.opcode: [cvp]}
 
-        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase, dic)
+        spend_bundle1 = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.body.coinbase, dic
+        )
 
+        assert spend_bundle1 is not None
         tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
@@ -325,7 +393,9 @@ class TestMempool:
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -334,11 +404,16 @@ class TestMempool:
             async for _ in full_node_1.block(peer_protocol.Block(b)):
                 pass
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_MY_COIN_ID, blocks[2].body.coinbase.name(), None)
+        cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_MY_COIN_ID, blocks[2].body.coinbase.name(), None
+        )
         dic = {cvp.opcode: [cvp]}
 
-        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase, dic)
+        spend_bundle1 = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.body.coinbase, dic
+        )
 
+        assert spend_bundle1 is not None
         tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
@@ -357,7 +432,9 @@ class TestMempool:
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -366,14 +443,18 @@ class TestMempool:
             async for _ in full_node_1.block(peer_protocol.Block(b)):
                 pass
 
-        time_now = uint64(time() * 1000)
-        time_now_plus_10 = time_now + 10000
+        time_now = uint64(int(time() * 1000))
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_TIME_EXCEEDS, time_now.to_bytes(8, 'big'), None)
+        cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_TIME_EXCEEDS, time_now.to_bytes(8, "big"), None
+        )
         dic = {cvp.opcode: [cvp]}
 
-        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase, dic)
+        spend_bundle1 = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.body.coinbase, dic
+        )
 
+        assert spend_bundle1 is not None
         tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
@@ -384,7 +465,6 @@ class TestMempool:
 
         assert sb1 is spend_bundle1
 
-
     @pytest.mark.asyncio
     async def test_assert_time_exceeds_both_cases(self, two_nodes):
         num_blocks = 4
@@ -393,7 +473,9 @@ class TestMempool:
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -402,14 +484,21 @@ class TestMempool:
             async for _ in full_node_1.block(peer_protocol.Block(b)):
                 pass
 
-        time_now = uint64(time() * 1000)
+        time_now = uint64(int(time() * 1000))
         time_now_plus_3 = time_now + 3000
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_TIME_EXCEEDS, time_now_plus_3.to_bytes(8, 'big'), None)
+        cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_TIME_EXCEEDS,
+            time_now_plus_3.to_bytes(8, "big"),
+            None,
+        )
         dic = {cvp.opcode: [cvp]}
 
-        spend_bundle1 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, block.body.coinbase, dic)
+        spend_bundle1 = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.body.coinbase, dic
+        )
 
+        assert spend_bundle1 is not None
         tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
@@ -421,11 +510,11 @@ class TestMempool:
         # Sleep so that 3 sec passes
         await asyncio.sleep(3)
 
-        tx1: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
-        async for _ in full_node_1.transaction(tx1):
-            outbound: OutboundMessage = _
+        tx2: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle1)
+        async for _ in full_node_1.transaction(tx2):
+            outbound_2: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
-            assert outbound.message.function == "maybe_transaction"
+            assert outbound_2.message.function == "maybe_transaction"
 
         sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
 
