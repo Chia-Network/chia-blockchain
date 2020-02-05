@@ -1049,13 +1049,14 @@ class FullNode:
             Delivery.BROADCAST_TO_OTHERS,
         )
 
-    # Receives a full transaction
-    # If we added it to mempool send tx id to others
-    # TODO if it's not added ?
     @api_request
     async def transaction(
         self, tx: peer_protocol.Transaction
     ) -> OutboundMessageGenerator:
+        """
+        Receives a full transaction from peer.
+        If tx is added to mempool, send tx_id to others. (maybe_transaction)
+        """
         added, error = await self.mempool.add_spendbundle(tx.sb)
         if added:
             maybeTX = peer_protocol.TransactionId(tx.sb.name())
@@ -1070,13 +1071,14 @@ class FullNode:
             )
             return
 
-    # Receives a transaction_id,
-    # Ignore if we've seen it already
-    # Request full transaction if we haven't seen it previously
     @api_request
     async def maybe_transaction(
         self, tx_id: peer_protocol.TransactionId
     ) -> OutboundMessageGenerator:
+        """
+        Receives a transaction_id, ignore if we've seen it already.
+        Request a full transaction if we haven't seen it previously_id:
+        """
         if self.mempool.seen(tx_id.transaction_id):
             self.log.info(f"tx_id({tx_id.transaction_id}) already seen")
             return
@@ -1088,11 +1090,11 @@ class FullNode:
                 Delivery.RESPOND,
             )
 
-    # Peer has request a full transaction from us
     @api_request
     async def request_transaction(
         self, tx_id: peer_protocol.RequestTransaction
     ) -> OutboundMessageGenerator:
+        """ Peer has request a full transaction from us. """
         spend_bundle = await self.mempool.get_spendbundle(tx_id.transaction_id)
         if spend_bundle is None:
             return
