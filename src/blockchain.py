@@ -974,7 +974,7 @@ class Blockchain:
     async def _from_fork_to_lca(
         self, fork_point: SmallHeaderBlock, lca: SmallHeaderBlock
     ):
-        """ Returns the list of full blocks from fork_point to lca. """
+        """ Selects blocks between fork_point and LCA, and then adds them to unspent_store. """
         blocks: List[FullBlock] = []
         tip_hash: bytes32 = lca.header_hash
         while True:
