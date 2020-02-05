@@ -117,7 +117,6 @@ class FullNodeStore:
         )
         await cursor_1.close()
         assert block.header_block.challenge is not None
-
         cursor_2 = await self.db.execute(
             ("INSERT OR REPLACE INTO small_header_blocks VALUES(?, ?, ?, ?)"),
             (
