@@ -20,7 +20,7 @@ class SmallHeaderBlock(Streamable):
 
     @property
     def height(self):
-        return self.challenge.height
+        return self.header.height
 
     @property
     def weight(self):
@@ -45,7 +45,7 @@ class HeaderBlock(Streamable):
 
     @property
     def height(self):
-        return self.challenge.height
+        return self.header.height
 
     @property
     def weight(self):

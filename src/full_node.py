@@ -82,7 +82,6 @@ class FullNode:
             for tip in tips:
                 assert tip.proof_of_time and tip.challenge
                 challenge_hash = tip.challenge.get_hash()
-                height = tip.challenge.height
                 quality = tip.proof_of_space.verify_and_get_quality()
                 if tip.height > 0:
                     difficulty: uint64 = self.blockchain.get_next_difficulty(
@@ -92,7 +91,7 @@ class FullNode:
                     difficulty = tip.weight
                 requests.append(
                     farmer_protocol.ProofOfSpaceFinalized(
-                        challenge_hash, height, tip.weight, quality, difficulty
+                        challenge_hash, tip.height, tip.weight, quality, difficulty
                     )
                 )
             proof_of_time_rate: uint64 = self.blockchain.get_next_ips(tips[0])
@@ -235,7 +234,7 @@ class FullNode:
             if potential_tip_block.header_block.challenge.total_weight > highest_weight:
                 highest_weight = potential_tip_block.header_block.challenge.total_weight
                 tip_block = potential_tip_block
-                tip_height = potential_tip_block.header_block.challenge.height
+                tip_height = potential_tip_block.height
         if highest_weight <= max(
             [t.weight for t in self.blockchain.get_current_tips()]
         ):
@@ -795,6 +794,7 @@ class FullNode:
         body_hash: Body = body.get_hash()
         extension_data: bytes32 = bytes32([0] * 32)
         block_header_data: HeaderData = HeaderData(
+            uint32(target_tip.height + 1),
             prev_header_hash,
             timestamp,
             filter_hash,
@@ -840,17 +840,14 @@ class FullNode:
             return
         # Verifies that we have the correct header and body self.stored
         block_body, block_header_data, pos = candidate
-        self.log.warn("Got candidate")
 
         assert block_header_data.get_hash() == header_signature.header_hash
 
         block_header: Header = Header(
             block_header_data, header_signature.header_signature
         )
-        self.log.warn("MAde header candidate")
         header: HeaderBlock = HeaderBlock(pos, None, None, block_header)
         unfinished_block_obj: FullBlock = FullBlock(header, block_body)
-        self.log.warn("MAde block candidate")
 
         # Propagate to ourselves (which validates and does further propagations)
         request = peer_protocol.UnfinishedBlock(unfinished_block_obj)
@@ -894,7 +891,6 @@ class FullNode:
             request.proof.challenge_hash,
             unfinished_block_obj.header_block.proof_of_space.get_hash(),
             request.proof.output.get_hash(),
-            uint32(prev_block.challenge.height + 1),
             uint64(prev_block.challenge.total_weight + difficulty),
             uint64(
                 prev_block.challenge.total_iters + request.proof.number_of_iterations
@@ -959,7 +955,6 @@ class FullNode:
         We can validate it and if it's a good block, propagate it to other peers and
         timelords.
         """
-        self.log.warn(f"Calling unf block {unfinished_block.block}")
         # Adds the unfinished block to seen, and check if it's seen before
         if self.store.seen_unfinished_block(unfinished_block.block.header_hash):
             return
@@ -1260,9 +1255,7 @@ class FullNode:
         elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
             assert block.block.header_block.proof_of_time
             assert block.block.header_block.challenge
-            self.log.info(
-                f"Received orphan block of height {block.block.header_block.challenge.height}"
-            )
+            self.log.info(f"Received orphan block of height {block.block.height}")
         else:
             # Should never reach here, all the cases are covered
             assert False

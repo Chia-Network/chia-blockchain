@@ -124,6 +124,7 @@ class TestBlockValidation:
                 blocks[9].header_block.challenge,
                 Header(
                     HeaderData(
+                        blocks[9].header_block.header.data.height,
                         bytes([1] * 32),
                         blocks[9].header_block.header.data.timestamp,
                         blocks[9].header_block.header.data.filter_hash,
@@ -150,6 +151,7 @@ class TestBlockValidation:
                 blocks[9].header_block.challenge,
                 Header(
                     HeaderData(
+                        blocks[9].header_block.header.data.height,
                         blocks[9].header_block.header.data.prev_header_hash,
                         blocks[9].header_block.header.data.timestamp - 1000,
                         blocks[9].header_block.header.data.filter_hash,
@@ -173,6 +175,7 @@ class TestBlockValidation:
                 blocks[9].header_block.challenge,
                 Header(
                     HeaderData(
+                        blocks[9].header_block.header.data.height,
                         blocks[9].header_block.header.data.prev_header_hash,
                         uint64(int(time.time() + 3600 * 3)),
                         blocks[9].header_block.header.data.filter_hash,
@@ -198,6 +201,7 @@ class TestBlockValidation:
                 blocks[9].header_block.challenge,
                 Header(
                     HeaderData(
+                        blocks[9].header_block.header.data.height,
                         blocks[9].header_block.header.data.prev_header_hash,
                         blocks[9].header_block.header.data.timestamp,
                         blocks[9].header_block.header.data.filter_hash,

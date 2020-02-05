@@ -580,7 +580,7 @@ class Blockchain:
             if not pos_quality:
                 return False
 
-        # 11. Check coinbase height = prev height + 1
+        # 11. Check block height = prev height + 1
         if not genesis:
             assert prev_block
             if block.height != prev_block.height + 1:
@@ -662,9 +662,6 @@ class Blockchain:
         if block.header_block.challenge is None:
             return False
 
-        if block.height != block.header_block.challenge.height:
-            return False
-
         if not genesis:
             prev_block: Optional[SmallHeaderBlock] = self.headers.get(
                 block.prev_header_hash, None
@@ -679,18 +676,14 @@ class Blockchain:
             ):
                 return False
 
-            # 6a. Check challenge height = parent height + 1
-            if block.header_block.challenge.height != prev_block.challenge.height + 1:
-                return False
-
-            # 7a. Check challenge total_weight = parent total_weight + difficulty
+            # 6a. Check challenge total_weight = parent total_weight + difficulty
             if (
                 block.header_block.challenge.total_weight
                 != prev_block.challenge.total_weight + difficulty
             ):
                 return False
 
-            # 8a. Check challenge total_iters = parent total_iters + number_iters
+            # 7a. Check challenge total_iters = parent total_iters + number_iters
             if (
                 block.header_block.challenge.total_iters
                 != prev_block.challenge.total_iters + number_of_iters
@@ -701,7 +694,7 @@ class Blockchain:
             if (coinbase_reward / 8) * 7 != block.body.coinbase.amount:
                 return False
             fee_base = uint64(int(coinbase_reward / 8))
-            # 9. If there is no agg signature, there should be no transactions either
+            # 8. If there is no agg signature, there should be no transactions either
             # target reward_fee = 1/8 coinbase reward + tx fees
             if not block.body.aggregated_signature:
                 if block.body.transactions:
@@ -715,15 +708,11 @@ class Blockchain:
                 if err:
                     return False
         else:
-            # 6b. Check challenge height = parent height + 1
-            if block.header_block.challenge.height != 0:
-                return False
-
-            # 7b. Check challenge total_weight = parent total_weight + difficulty
+            # 6b. Check challenge total_weight = parent total_weight + difficulty
             if block.header_block.challenge.total_weight != difficulty:
                 return False
 
-            # 8b. Check challenge total_iters = parent total_iters + number_iters
+            # 7b. Check challenge total_iters = parent total_iters + number_iters
             if block.header_block.challenge.total_iters != number_of_iters:
                 return False
 
@@ -786,9 +775,6 @@ class Blockchain:
         ):
             return False, None
 
-        if block.height != block.header_block.challenge.height:
-            return False, None
-
         # 9. Check harvester signature of header data is valid based on harvester key
         if not block.header_block.header.harvester_signature.verify(
             [blspy.Util.hash256(block.header_block.header.data.get_hash())],
@@ -842,8 +828,6 @@ class Blockchain:
         except AttributeError:
             lca_tmp = None
         while any(b.header_hash != cur[0].header_hash for b in cur):
-            log.info(any(b.header_hash != cur[0].header_hash for b in cur))
-            log.info(f"{[b.header_hash for b in cur]}")
             heights = [b.height for b in cur]
             i = heights.index(max(heights))
             cur[i] = self.headers[cur[i].prev_header_hash]
