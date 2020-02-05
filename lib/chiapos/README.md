@@ -8,8 +8,7 @@ Only runs on 64 bit architectures with AES-NI support. Read the [Proof of Space 
 ### Compile
 
 ```bash
-git submodule update --init --recursive
-mkdir build && cd build
+mkdir -p build && cd build
 cmake ../
 cmake --build . -- -j 6
 ```

@@ -11,7 +11,7 @@ class ClassGroup(tuple):
         assert discriminant < 0
         assert discriminant % 4 == 1
         c = (b * b - discriminant) // (4 * a)
-        p = class_(a, b, c).reduced()
+        p = class_((a, b, c)).reduced()
         assert p.discriminant() == discriminant
         return p
 
@@ -20,12 +20,14 @@ class ClassGroup(tuple):
         int_size = (discriminant.bit_length() + 16) >> 4
         a = int.from_bytes(bytearray[0:int_size], "big", signed=True)
         b = int.from_bytes(bytearray[int_size:], "big", signed=True)
-        return ClassGroup(a, b, (b**2 - discriminant)//(4*a))
+        return ClassGroup((a, b, (b**2 - discriminant)//(4*a)))
 
-    def __new__(self, a, b, c):
-        return tuple.__new__(self, (a, b, c))
+    def __new__(cls, t):
+        a, b, c = t
+        return tuple.__new__(cls, (a, b, c))
 
-    def __init__(self, a, b, c):
+    def __init__(self, t):
+        a, b, c = t
         super(ClassGroup, self).__init__()
         self._discriminant = None
 
@@ -50,7 +52,7 @@ class ClassGroup(tuple):
         while a > c or (a == c and b < 0):
             s = (c + b) // (c + c)
             a, b, c = c, -b + 2 * s * c, c * s * s - b * s + a
-        return self.__class__(a, b, c).normalized()
+        return self.__class__((a, b, c)).normalized()
 
     def normalized(self):
         a, b, c = self
@@ -58,7 +60,7 @@ class ClassGroup(tuple):
             return self
         r = (a - b) // (2 * a)
         b, c = b + 2 * r * a, a * r * r + b * r + c
-        return self.__class__(a, b, c)
+        return self.__class__((a, b, c))
 
     def serialize(self):
         r = self.reduced()
@@ -68,7 +70,7 @@ class ClassGroup(tuple):
                          for x in [r[0], r[1]]])
 
     def __eq__(self, other):
-        return tuple(self.reduced()) == tuple(ClassGroup(*other).reduced())
+        return tuple(self.reduced()) == tuple(ClassGroup((other[0], other[1], other[2])).reduced())
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -85,7 +87,7 @@ class ClassGroup(tuple):
 
     def inverse(self):
         a, b, c = self
-        return self.__class__(a, -b, c)
+        return self.__class__((a, -b, c))
 
     def multiply(self, other):
         """
@@ -130,7 +132,7 @@ class ClassGroup(tuple):
         a3 = s * t - r * u
         b3 = (j * u + m * r) - (k * t + l * s)
         c3 = k * l - j * m
-        return self.__class__(a3, b3, c3).reduced()
+        return self.__class__((a3, b3, c3)).reduced()
 
     def square(self):
         """
@@ -174,7 +176,7 @@ class ClassGroup(tuple):
         a3 = s * t - r * u
         b3 = (j * u + m * r) - (k * t + l * s)
         c3 = k * l - j * m
-        return self.__class__(a3, b3, c3).reduced()
+        return self.__class__((a3, b3, c3)).reduced()
 
 
 """

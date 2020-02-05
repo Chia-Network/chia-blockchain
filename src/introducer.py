@@ -1,11 +1,7 @@
 import asyncio
 import logging
-import os
 from typing import AsyncGenerator, Dict
 
-import yaml
-
-from definitions import ROOT_DIR
 from src.protocols.peer_protocol import Peers, RequestPeers
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
@@ -16,9 +12,8 @@ log = logging.getLogger(__name__)
 
 
 class Introducer:
-    def __init__(self):
-        config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
-        self.config = yaml.safe_load(open(config_filename, "r"))["introducer"]
+    def __init__(self, config: Dict):
+        self.config: Dict = config
         self.vetted: Dict[bytes32, bool] = {}
 
     def set_server(self, server: ChiaServer):

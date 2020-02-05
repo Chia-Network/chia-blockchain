@@ -13,7 +13,7 @@ class TestPythonBindings(unittest.TestCase):
                                   10, 11, 129, 139, 171, 15, 23])
 
         pl = DiskPlotter()
-        pl.create_plot_disk("./myplot.dat", 21, bytes([1, 2, 3, 4, 5]), plot_seed)
+        pl.create_plot_disk(".", ".", "myplot.dat", 21, bytes([1, 2, 3, 4, 5]), plot_seed)
         pr = DiskProver("./myplot.dat")
 
         total_proofs: int = 0
@@ -32,7 +32,7 @@ class TestPythonBindings(unittest.TestCase):
         print(f"total proofs {total_proofs} out of {iterations}\
             {total_proofs / iterations}")
         assert total_proofs == 4647
-        os.remove("./myplot.dat")
+        os.remove("myplot.dat")
 
 
 if __name__ == '__main__':
