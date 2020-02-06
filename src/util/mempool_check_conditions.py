@@ -8,7 +8,7 @@ from src.types.ConditionVarPair import ConditionVarPair
 from src.types.hashable.Coin import CoinName
 from src.types.hashable.Program import Program, ProgramHash
 from src.types.hashable.SpendBundle import SpendBundle
-from src.types.hashable.Unspent import Unspent
+from src.types.hashable.CoinRecord import CoinRecord
 from src.types.name_puzzle_condition import NPC
 from src.types.pool import Pool
 from src.util.Conditions import ConditionOpcode
@@ -35,7 +35,7 @@ def mempool_assert_coin_consumed(
 
 
 def mempool_assert_my_coin_id(
-    condition: ConditionVarPair, unspent: Unspent
+    condition: ConditionVarPair, unspent: CoinRecord
 ) -> Optional[Err]:
     """
     Checks if CoinID matches the id from the condition
@@ -46,7 +46,7 @@ def mempool_assert_my_coin_id(
 
 
 def mempool_assert_block_index_exceeds(
-    condition: ConditionVarPair, unspent: Unspent, mempool: Pool
+    condition: ConditionVarPair, unspent: CoinRecord, mempool: Pool
 ) -> Optional[Err]:
     """
     Checks if the next block index exceeds the block index from the condition
@@ -62,7 +62,7 @@ def mempool_assert_block_index_exceeds(
 
 
 def mempool_assert_block_age_exceeds(
-    condition: ConditionVarPair, unspent: Unspent, mempool: Pool
+    condition: ConditionVarPair, unspent: CoinRecord, mempool: Pool
 ) -> Optional[Err]:
     """
     Checks if the coin age exceeds the age from the condition
@@ -136,7 +136,7 @@ async def get_name_puzzle_conditions(
 
 
 def mempool_check_conditions_dict(
-    unspent: Unspent,
+    unspent: CoinRecord,
     spend_bundle: SpendBundle,
     conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
     mempool: Pool,

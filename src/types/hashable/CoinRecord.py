@@ -8,7 +8,7 @@ from src.util.ints import uint32, uint8
 
 @dataclass(frozen=True)
 @streamable
-class Unspent(Streamable):
+class CoinRecord(Streamable):
     """
     These are values that correspond to a CoinName that are used
     in keeping track of the unspent database.

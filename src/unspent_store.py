@@ -3,7 +3,7 @@ from typing import Dict, Optional, List
 import aiosqlite
 from src.types.full_block import FullBlock
 from src.types.hashable.Coin import Coin, CoinName
-from src.types.hashable.Unspent import Unspent
+from src.types.hashable.CoinRecord import CoinRecord
 from src.types.header_block import SmallHeaderBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint8
@@ -11,10 +11,10 @@ from src.util.ints import uint32, uint8
 
 class DiffStore:
     header: SmallHeaderBlock
-    diffs: Dict[CoinName, Unspent]
+    diffs: Dict[CoinName, CoinRecord]
 
     @staticmethod
-    async def create(head: SmallHeaderBlock, diffs: Dict[CoinName, Unspent]):
+    async def create(head: SmallHeaderBlock, diffs: Dict[CoinName, CoinRecord]):
         self = DiffStore()
         self.header = head
         self.diffs = diffs
@@ -34,7 +34,7 @@ class UnspentStore:
     # Whether or not we are syncing
     sync_mode: bool = False
     lock: asyncio.Lock
-    lca_unspent_coins: Dict[str, Unspent]
+    lca_unspent_coins: Dict[str, CoinRecord]
     head_diffs: Dict[bytes32, DiffStore]
     cache_size: uint32
 
@@ -97,11 +97,11 @@ class UnspentStore:
             await self.set_spent(coin_name, block.height)
 
         for coin in additions:
-            unspent: Unspent = Unspent(coin, block.height, 0, 0, 0)  # type: ignore # noqa
+            unspent: CoinRecord = CoinRecord(coin, block.height, 0, 0, 0)  # type: ignore # noqa
             await self.add_unspent(unspent)
 
-        coinbase: Unspent = Unspent(block.body.coinbase, block.height, 0, 0, 1)  # type: ignore # noqa
-        fees_coin: Unspent = Unspent(block.body.fees_coin, block.height, 0, 0, 1)  # type: ignore # noqa
+        coinbase: CoinRecord = CoinRecord(block.body.coinbase, block.height, 0, 0, 1)  # type: ignore # noqa
+        fees_coin: CoinRecord = CoinRecord(block.body.fees_coin, block.height, 0, 0, 1)  # type: ignore # noqa
         await self.add_unspent(coinbase)
         await self.add_unspent(fees_coin)
 
@@ -131,14 +131,14 @@ class UnspentStore:
     ):
 
         for coin_name in removals:
-            removed: Optional[Unspent] = None
+            removed: Optional[CoinRecord] = None
             if coin_name.hex() in diff_store.diffs:
                 removed = diff_store.diffs[coin_name.hex()]
             if removed is None:
-                removed = await self.get_unspent(coin_name)
+                removed = await self.get_coin_record(coin_name)
             if removed is None:
                 raise Exception
-            spent = Unspent(
+            spent = CoinRecord(
                 removed.coin,
                 removed.confirmed_block_index,
                 block.height,
@@ -148,16 +148,16 @@ class UnspentStore:
             diff_store.diffs[spent.name.hex()] = spent
 
         for coin in additions:
-            added: Unspent = Unspent(coin, block.height, 0, 0, 0)  # type: ignore # noqa
+            added: CoinRecord = CoinRecord(coin, block.height, 0, 0, 0)  # type: ignore # noqa
             diff_store.diffs[added.name.hex()] = added
 
-        coinbase: Unspent = Unspent(block.body.coinbase, block.height, 0, 0, 1)  # type: ignore # noqa
+        coinbase: CoinRecord = CoinRecord(block.body.coinbase, block.height, 0, 0, 1)  # type: ignore # noqa
         diff_store.diffs[coinbase.name.hex()] = coinbase
-        fees_coin: Unspent = Unspent(block.body.fees_coin, block.height, 0, 0, 1)  # type: ignore # noqa
+        fees_coin: CoinRecord = CoinRecord(block.body.fees_coin, block.height, 0, 0, 1)  # type: ignore # noqa
         diff_store.diffs[fees_coin.name.hex()] = fees_coin
 
     # Store unspent in DB and ram cache
-    async def add_unspent(self, unspent: Unspent) -> None:
+    async def add_unspent(self, unspent: CoinRecord) -> None:
         cursor = await self.unspent_db.execute(
             "INSERT OR REPLACE INTO unspent VALUES(?, ?, ?, ?, ?, ?)",
             (
@@ -179,10 +179,10 @@ class UnspentStore:
 
     # Update unspent to be spent in DB
     async def set_spent(self, coin_name: bytes32, index: uint32):
-        current: Optional[Unspent] = await self.get_unspent(coin_name)
+        current: Optional[CoinRecord] = await self.get_coin_record(coin_name)
         if current is None:
             return
-        spent: Unspent = Unspent(
+        spent: CoinRecord = CoinRecord(
             current.coin,
             current.confirmed_block_index,
             index,
@@ -192,9 +192,9 @@ class UnspentStore:
         await self.add_unspent(spent)
 
     # Checks DB and DiffStores for unspent with coin_name and returns it
-    async def get_unspent(
+    async def get_coin_record(
         self, coin_name: CoinName, header: SmallHeaderBlock = None
-    ) -> Optional[Unspent]:
+    ) -> Optional[CoinRecord]:
         if header is not None and header.header_hash in self.head_diffs:
             diff_store = self.head_diffs[header.header_hash]
             if coin_name.hex() in diff_store.diffs:
@@ -207,7 +207,7 @@ class UnspentStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            return Unspent.from_bytes(row[5])
+            return CoinRecord.from_bytes(row[5])
         return None
 
     # TODO figure out if we want to really delete when doing rollback
@@ -216,7 +216,7 @@ class UnspentStore:
         for k in list(self.lca_unspent_coins.keys()):
             v = self.lca_unspent_coins[k]
             if v.spent_block_index > block_index:
-                new_unspent = Unspent(
+                new_unspent = CoinRecord(
                     v.coin,
                     v.confirmed_block_index,
                     v.spent_block_index,
