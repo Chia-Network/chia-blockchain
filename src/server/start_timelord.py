@@ -1,6 +1,7 @@
 import asyncio
 import os
 import signal
+import logging
 
 try:
     import uvloop
@@ -11,24 +12,23 @@ from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.timelord import Timelord
 from src.types.peer_info import PeerInfo
-from src.util.network import parse_host_port
 from src.util.logging import initialize_logging
+from src.util.config import load_config_cli
 from setproctitle import setproctitle
 from yaml import safe_load
 from definitions import ROOT_DIR
 
-initialize_logging("Timelord %(name)-23s")
-setproctitle("chia_timelord")
-
 
 async def main():
-    timelord = Timelord()
-    host, port = parse_host_port(timelord)
-    server = ChiaServer(port, timelord, NodeType.TIMELORD)
-    _ = await server.start_server(host, None)
+    config = load_config_cli("config.yaml", "timelord")
 
-    config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
-    config = safe_load(open(config_filename, "r"))["timelord"]
+    initialize_logging("Timelord %(name)-23s", config["logging"])
+    log = logging.getLogger(__name__)
+    setproctitle("chia_timelord")
+
+    timelord = Timelord(config)
+    server = ChiaServer(config["port"], timelord, NodeType.TIMELORD)
+    _ = await server.start_server(config["host"], None)
 
     coro = asyncio.start_server(
         timelord._handle_client,
@@ -59,6 +59,8 @@ async def main():
 
     await server.await_closed()
     vdf_server.cancel()
+    log.info("Timelord fully closed.")
+
 
 if uvloop is not None:
     uvloop.install()
