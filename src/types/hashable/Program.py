@@ -5,7 +5,7 @@ from clvm.subclass_sexp import BaseSExp
 from src.types.sized_bytes import bytes32
 from .Hash import std_hash
 
-from ...atoms import bin_methods, hash_pointer
+from ...atoms import bin_methods
 
 SExp = to_sexp_f(1).__class__
 
