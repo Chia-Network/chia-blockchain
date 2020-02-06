@@ -292,9 +292,9 @@ class FullNodeStore:
         body: Body,
         header: HeaderData,
         pos: ProofOfSpace,
-        height: int = 0,
+        height: uint32 = uint32(0),
     ):
-        self.candidate_blocks[pos_hash] = (body, header, pos, height)  # type: ignore # noqa
+        self.candidate_blocks[pos_hash] = (body, header, pos, height)
 
     def get_candidate_block(
         self, pos_hash: bytes32
