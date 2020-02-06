@@ -364,7 +364,7 @@ class BlockTools:
 
         proof_xs: bytes = prover.get_full_proof(challenge_hash, 0)
         proof_of_space: ProofOfSpace = ProofOfSpace(
-            challenge_hash, pool_pk, plot_pk, k, [uint8(b) for b in proof_xs]
+            challenge_hash, pool_pk, plot_pk, k, proof_xs
         )
         number_iters: uint64 = pot_iterations.calculate_iterations(
             proof_of_space, difficulty, ips, test_constants["MIN_BLOCK_TIME"]
@@ -385,7 +385,7 @@ class BlockTools:
             number_iters,
             output,
             n_wesolowski,
-            [uint8(b) for b in proof_bytes],
+            proof_bytes,
         )
 
         if not reward_puzzlehash:

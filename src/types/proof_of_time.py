@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import List
 
 from chiavdf import verify
 from lib.chiavdf.inkfish.classgroup import ClassGroup
@@ -18,7 +17,7 @@ class ProofOfTime(Streamable):
     number_of_iterations: uint64
     output: ClassgroupElement
     witness_type: uint8
-    witness: List[uint8]
+    witness: bytes
 
     def is_valid_slow(self, discriminant_size_bits):
         disc: int = create_discriminant(self.challenge_hash, discriminant_size_bits)

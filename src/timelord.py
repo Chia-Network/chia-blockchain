@@ -16,7 +16,7 @@ from src.types.classgroup import ClassgroupElement
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
-from src.util.ints import uint8, uint64
+from src.util.ints import uint64
 
 log = logging.getLogger(__name__)
 
@@ -300,7 +300,7 @@ class Timelord:
                     iterations_needed,
                     output,
                     self.config["n_wesolowski"],
-                    [uint8(b) for b in proof_bytes],
+                    proof_bytes,
                 )
                 response = timelord_protocol.ProofOfTimeFinished(proof_of_time)
 

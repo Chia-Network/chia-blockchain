@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from hashlib import sha256
-from typing import List, Optional
+from typing import Optional
 
 from blspy import PublicKey
 
@@ -17,7 +17,7 @@ class ProofOfSpace(Streamable):
     pool_pubkey: PublicKey
     plot_pubkey: PublicKey
     size: uint8
-    proof: List[uint8]
+    proof: bytes
 
     def get_plot_seed(self) -> bytes32:
         return self.calculate_plot_seed(self.pool_pubkey, self.plot_pubkey)

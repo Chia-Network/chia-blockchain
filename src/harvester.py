@@ -165,7 +165,7 @@ class Harvester:
                 pool_pubkey,
                 plot_pubkey,
                 uint8(self.provers[filename].get_size()),
-                [uint8(b) for b in proof_xs],
+                proof_xs,
             )
 
             response = harvester_protocol.RespondProofOfSpace(

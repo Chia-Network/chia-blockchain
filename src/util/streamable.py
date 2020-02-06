@@ -130,6 +130,9 @@ class Streamable:
                 return cls.parse_one_item(inner_type, f)  # type: ignore
             else:
                 return None
+        if f_type == bytes:
+            list_size = uint32(int.from_bytes(f.read(4), "big"))
+            return f.read(list_size)
         if hasattr(f_type, "parse"):
             return f_type.parse(f)
         if hasattr(f_type, "from_bytes") and size_hints[f_type.__name__]:
@@ -163,6 +166,9 @@ class Streamable:
             else:
                 f.write(bytes([1]))
                 self.stream_one_item(inner_type, item, f)
+        elif f_type == bytes:
+            f.write(uint32(len(item)).to_bytes(4, "big"))
+            f.write(item)
         elif hasattr(f_type, "stream"):
             item.stream(f)
         elif hasattr(f_type, "__bytes__"):

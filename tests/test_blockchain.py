@@ -241,7 +241,7 @@ class TestBlockValidation:
     async def test_invalid_pos(self, initial_blockchain):
         blocks, b = initial_blockchain
 
-        bad_pos = [i for i in blocks[9].header_block.proof_of_space.proof]
+        bad_pos = bytearray([i for i in blocks[9].header_block.proof_of_space.proof])
         bad_pos[0] = uint8((bad_pos[0] + 1) % 256)
         # Proof of space invalid
         block_bad = FullBlock(
@@ -251,7 +251,7 @@ class TestBlockValidation:
                     blocks[9].header_block.proof_of_space.pool_pubkey,
                     blocks[9].header_block.proof_of_space.plot_pubkey,
                     blocks[9].header_block.proof_of_space.size,
-                    bad_pos,
+                    bytes(bad_pos),
                 ),
                 blocks[9].header_block.proof_of_time,
                 blocks[9].header_block.challenge,
