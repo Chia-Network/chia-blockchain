@@ -4,7 +4,7 @@ from typing import Dict, Optional, Tuple, List, Set
 from src.consensus.constants import constants as consensus_constants
 from src.farming.farming_tools import best_solution_program
 from src.types.full_block import FullBlock
-from src.types.hashable.Coin import CoinName, Coin
+from src.types.hashable.Coin import Coin
 from src.types.hashable.SpendBundle import SpendBundle
 from src.types.hashable.CoinRecord import CoinRecord
 from src.types.header_block import SmallHeaderBlock
@@ -215,7 +215,7 @@ class Mempool:
         This function checks for double spends, unknown spends and conflicting transactions in mempool.
         Returns Error (if any), dictionary of Unspents, list of coins with conflict errors (if any any).
         """
-        removals_counter: Dict[CoinName, int] = {}
+        removals_counter: Dict[bytes32, int] = {}
         coin_records: Dict[bytes32, CoinRecord] = {}
         conflicts: List[Coin] = []
         for removal in removals:

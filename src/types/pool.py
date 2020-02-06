@@ -3,7 +3,6 @@ from typing import List, Dict
 from sortedcontainers import SortedDict
 
 from src.types.hashable.Coin import Coin
-from src.types.hashable.Coin import CoinName
 from src.types.header_block import SmallHeaderBlock
 from src.types.mempool_item import MempoolItem
 from src.types.sized_bytes import bytes32
@@ -14,8 +13,8 @@ class Pool:
     header: SmallHeaderBlock
     spends: Dict[bytes32, MempoolItem]
     sorted_spends: SortedDict
-    additions: Dict[CoinName, MempoolItem]
-    removals: Dict[CoinName, MempoolItem]
+    additions: Dict[bytes32, MempoolItem]
+    removals: Dict[bytes32, MempoolItem]
     min_fee: uint64
     size: uint32
 

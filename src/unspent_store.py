@@ -2,7 +2,7 @@ import asyncio
 from typing import Dict, Optional, List
 import aiosqlite
 from src.types.full_block import FullBlock
-from src.types.hashable.Coin import Coin, CoinName
+from src.types.hashable.Coin import Coin
 from src.types.hashable.CoinRecord import CoinRecord
 from src.types.header_block import SmallHeaderBlock
 from src.types.sized_bytes import bytes32
@@ -11,10 +11,10 @@ from src.util.ints import uint32, uint8
 
 class DiffStore:
     header: SmallHeaderBlock
-    diffs: Dict[CoinName, CoinRecord]
+    diffs: Dict[bytes32, CoinRecord]
 
     @staticmethod
-    async def create(head: SmallHeaderBlock, diffs: Dict[CoinName, CoinRecord]):
+    async def create(head: SmallHeaderBlock, diffs: Dict[bytes32, CoinRecord]):
         self = DiffStore()
         self.header = head
         self.diffs = diffs
@@ -193,7 +193,7 @@ class UnspentStore:
 
     # Checks DB and DiffStores for unspent with coin_name and returns it
     async def get_coin_record(
-        self, coin_name: CoinName, header: SmallHeaderBlock = None
+        self, coin_name: bytes32, header: SmallHeaderBlock = None
     ) -> Optional[CoinRecord]:
         if header is not None and header.header_hash in self.head_diffs:
             diff_store = self.head_diffs[header.header_hash]

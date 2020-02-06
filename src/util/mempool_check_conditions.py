@@ -5,12 +5,12 @@ from clvm import EvalError
 from clvm.casts import int_from_bytes
 
 from src.types.ConditionVarPair import ConditionVarPair
-from src.types.hashable.Coin import CoinName
 from src.types.hashable.Program import Program
 from src.types.hashable.SpendBundle import SpendBundle
 from src.types.hashable.CoinRecord import CoinRecord
 from src.types.name_puzzle_condition import NPC
 from src.types.pool import Pool
+from src.types.sized_bytes import bytes32
 from src.util.Conditions import ConditionOpcode
 from src.util.ConsensusError import Err
 from src.util.consensus import conditions_dict_for_solution
@@ -113,7 +113,7 @@ async def get_name_puzzle_conditions(
             return Err.INVALID_COIN_SOLUTION, [], cost
         if not isinstance(_[0], bytes) or len(_[0]) != 32:
             return Err.INVALID_COIN_SOLUTION, [], cost
-        coin_name = CoinName(_[0])
+        coin_name = bytes32(_[0])
         if not isinstance(_[1], list) or len(_[1]) != 2:
             return Err.INVALID_COIN_SOLUTION, [], cost
         puzzle_solution_program = name_solution.rest().first()
