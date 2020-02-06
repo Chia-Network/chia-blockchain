@@ -21,7 +21,7 @@ class Pool:
 
     # if new min fee is added
     @staticmethod
-    async def create(tip: SmallHeaderBlock, size: uint32):
+    def create(tip: SmallHeaderBlock, size: uint32):
         self = Pool()
         self.header = tip
         self.spends = {}

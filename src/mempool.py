@@ -300,7 +300,7 @@ class Mempool:
             else:
                 # Create mempool for new head
                 if len(self.old_mempools) > 0:
-                    new_pool = await Pool.create(
+                    new_pool = Pool.create(
                         tip.header_block.to_small(), self.mempool_size
                     )
 
@@ -314,7 +314,7 @@ class Mempool:
 
                     await self.initialize_pool_from_current_pools(new_pool)
                 else:
-                    new_pool = await Pool.create(
+                    new_pool = Pool.create(
                         tip.header_block.to_small(), self.mempool_size
                     )
                     await self.initialize_pool_from_current_pools(new_pool)
