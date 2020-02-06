@@ -1,5 +1,4 @@
 import asyncio
-import os
 import signal
 import logging
 
@@ -15,8 +14,6 @@ from src.types.peer_info import PeerInfo
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli
 from setproctitle import setproctitle
-from yaml import safe_load
-from definitions import ROOT_DIR
 
 
 async def main():

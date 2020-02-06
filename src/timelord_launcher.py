@@ -1,12 +1,9 @@
-import os
 import signal
 import asyncio
 import logging
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli
-from yaml import safe_load
 from asyncio import Lock
-from definitions import ROOT_DIR
 from typing import List
 
 config = load_config_cli("config.yaml", "timelord_launcher")
