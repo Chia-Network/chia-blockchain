@@ -68,7 +68,7 @@ class Blockchain:
     # Store
     store: FullNodeStore
     # Coinbase freeze period
-    coinbase_freeze: int
+    coinbase_freeze: uint32
 
     @staticmethod
     async def create(
