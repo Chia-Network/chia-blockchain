@@ -8,7 +8,7 @@ import asyncio
 import concurrent
 import blspy
 
-from src.consensus.block_rewards import calculate_block_reward
+from src.consensus.block_rewards import calculate_block_reward, calculate_base_fee
 from src.consensus.constants import constants as consensus_constants
 from src.consensus.pot_iterations import (
     calculate_ips_from_iterations,
@@ -690,9 +690,9 @@ class Blockchain:
                 return False
 
             coinbase_reward = calculate_block_reward(block.height)
-            if (coinbase_reward / 8) * 7 != block.body.coinbase.amount:
+            if coinbase_reward != block.body.coinbase.amount:
                 return False
-            fee_base = uint64(int(coinbase_reward / 8))
+            fee_base = calculate_base_fee(block.height)
             # 8. If there is no agg signature, there should be no transactions either
             # target reward_fee = 1/8 coinbase reward + tx fees
             if not block.body.aggregated_signature:

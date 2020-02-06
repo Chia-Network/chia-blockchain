@@ -9,7 +9,7 @@ from typing import AsyncGenerator, List, Optional, Tuple, Dict
 
 from chiapos import Verifier
 from src.blockchain import Blockchain, ReceiveBlockResult
-from src.consensus.block_rewards import calculate_block_reward
+from src.consensus.block_rewards import calculate_base_fee
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.weight_verifier import verify_weight
@@ -762,8 +762,7 @@ class FullNode:
             aggregate_sig = spend_bundle.aggregated_signature
 
         transactions_generator: bytes32 = sha256(b"").digest()
-        full_coinbase_reward = calculate_block_reward(target_tip.height)
-        base_fee_reward = full_coinbase_reward / 8
+        base_fee_reward = calculate_base_fee(target_tip.height)
         full_fee_reward = uint64(int(base_fee_reward + spend_bundle_fees))
         # Create fees coin
         fee_hash = std_hash(std_hash(target_tip.height))
