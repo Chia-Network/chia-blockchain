@@ -14,7 +14,6 @@ from src.consensus.pot_iterations import (
     calculate_ips_from_iterations,
     calculate_iterations_quality,
 )
-from src.mempool import MAX_COIN_AMOUNT
 from src.store import FullNodeStore
 
 from src.types.full_block import FullBlock, additions_for_npc
@@ -1040,7 +1039,7 @@ class Blockchain:
         # Check additions for max coin amount
         for coin in additions:
             additions_dic[coin.name()] = coin
-            if coin.amount >= MAX_COIN_AMOUNT:
+            if coin.amount >= consensus_constants["MAX_COIN_AMOUNT"]:
                 return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
 
         # Watch out for duplicate outputs

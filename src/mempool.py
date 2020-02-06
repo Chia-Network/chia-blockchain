@@ -22,9 +22,6 @@ from src.util.ints import uint64, uint32
 from sortedcontainers import SortedDict
 
 
-MAX_COIN_AMOUNT = int(1 << 48)
-
-
 class Mempool:
     def __init__(self, unspent_store: UnspentStore, override_constants: Dict = {}):
         # Allow passing in custom overrides
@@ -104,7 +101,7 @@ class Mempool:
 
         # Check additions for max coin amount
         for coin in additions:
-            if coin.amount >= MAX_COIN_AMOUNT:
+            if coin.amount >= consensus_constants["MAX_COIN_AMOUNT"]:
                 return False, Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
 
         #  Watch out for duplicate outputs
