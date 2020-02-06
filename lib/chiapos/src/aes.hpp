@@ -1,5 +1,14 @@
 /*
 
+The code in this file is originally from the Tiny AES project, which is in the
+public domain.
+
+https://github.com/kokke/tiny-AES-c
+
+It has been heavily modified by Chia.
+
+***
+
 This is an implementation of the AES algorithm, specifically ECB, CTR and CBC mode.
 Block size can be chosen in aes.h - available choices are AES128, AES192, AES256.
 
