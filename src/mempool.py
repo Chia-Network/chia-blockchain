@@ -1,5 +1,5 @@
 import collections
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, Tuple, List, Set
 
 from src.consensus.constants import constants as consensus_constants
 from src.farming.farming_tools import best_solution_program
@@ -31,8 +31,8 @@ class Mempool:
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self.potential_txs: Dict[bytes32, SpendBundle] = {}
-
-        self.allSeen: Dict[bytes32, bytes32] = {}
+        # TODO limit the size of seen_bundle_hashes
+        self.seen_bundle_hashes: Set[bytes32] = set()
         # Mempool for each tip
         self.mempools: Dict[bytes32, Pool] = {}
 
@@ -80,7 +80,7 @@ class Mempool:
         Tries to add spendbundle to either self.mempools or to_pool if it's specified.
         Returns true if it's added in any of pools, Returns error if it fails.
         """
-        self.allSeen[new_spend.name()] = new_spend.name()
+        self.seen_bundle_hashes.add(new_spend.name())
 
         # Calculate the cost and fees
         program = best_solution_program(new_spend)
@@ -270,10 +270,10 @@ class Mempool:
 
     async def seen(self, bundle_hash: bytes32) -> bool:
         """ Return true if we saw this spendbundle before """
-        if self.allSeen[bundle_hash] is None:
-            return False
-        else:
+        if bundle_hash in self.seen_bundle_hashes:
             return True
+        else:
+            return False
 
     async def get_spendbundle(self, bundle_hash: bytes32) -> Optional[SpendBundle]:
         """ Returns a full SpendBundle if it's inside one the mempools"""
