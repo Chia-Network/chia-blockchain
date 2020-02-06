@@ -6,7 +6,7 @@ from clvm.casts import int_from_bytes
 
 from src.types.ConditionVarPair import ConditionVarPair
 from src.types.hashable.Coin import CoinName
-from src.types.hashable.Program import Program, ProgramHash
+from src.types.hashable.Program import Program
 from src.types.hashable.SpendBundle import SpendBundle
 from src.types.hashable.CoinRecord import CoinRecord
 from src.types.name_puzzle_condition import NPC
@@ -118,7 +118,7 @@ async def get_name_puzzle_conditions(
             return Err.INVALID_COIN_SOLUTION, [], cost
         puzzle_solution_program = name_solution.rest().first()
         puzzle_program = puzzle_solution_program.first()
-        puzzle_hash = ProgramHash(Program(puzzle_program))
+        puzzle_hash = Program(puzzle_program).program_hash()
         try:
             error, conditions_dict = conditions_dict_for_solution(
                 puzzle_solution_program

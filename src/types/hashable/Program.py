@@ -32,5 +32,5 @@ class Program(SExp, bin_methods):  # type: ignore # noqa
     def __str__(self):
         return bytes(self).hex()
 
-
-ProgramHash: bytes32 = hash_pointer(Program, std_hash)
+    def program_hash(self):
+        return bytes32(std_hash(bytes(self)))

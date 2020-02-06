@@ -9,7 +9,7 @@ import clvm
 
 from clvm_tools import binutils
 
-from src.types.hashable.Program import Program, ProgramHash
+from src.types.hashable.Program import Program
 
 """
 solution: (puzzle_reveal . solution_to_puzzle)
@@ -28,6 +28,6 @@ def puzzle_for_puzzle_hash(underlying_puzzle_hash):
 
 
 def solution_for_puzzle_and_solution(underlying_puzzle, underlying_solution):
-    underlying_puzzle_hash = ProgramHash(underlying_puzzle)
+    underlying_puzzle_hash = underlying_puzzle.program_hash()
     puzzle_program = puzzle_for_puzzle_hash(underlying_puzzle_hash)
     return Program.to([puzzle_program, underlying_solution])
