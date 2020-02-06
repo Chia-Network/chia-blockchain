@@ -9,7 +9,7 @@ from src.types.hashable.BLSSignature import BLSSignature
 def signature_for_coinbase(coin: Coin, pool_private_key: blspy.PrivateKey):
     message_hash = blspy.Util.hash256(bytes(coin))
     return BLSSignature(
-        pool_private_key.sign_prepend_prehashed(message_hash).serialize()
+        bytes(pool_private_key.sign_prepend_prehashed(message_hash))
     )
 
 
