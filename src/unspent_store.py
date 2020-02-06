@@ -224,7 +224,7 @@ class UnspentStore:
                 )
                 self.lca_unspent_coins[coin_record.coin.name().hex()] = new_unspent
             if coin_record.confirmed_block_index > block_index:
-                del self.lca_unspent_coins[coin_record]
+                del self.lca_unspent_coins[coin_name]
         # Delete from storage
         c1 = await self.unspent_db.execute(
             "DELETE FROM unspent WHERE confirmed_index>?", (block_index,)
