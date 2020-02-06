@@ -36,12 +36,14 @@ class UnspentStore:
     lock: asyncio.Lock
     lca_unspent_coins: Dict[str, Unspent]
     head_diffs: Dict[bytes32, DiffStore]
+    cache_size: uint32
 
     @classmethod
-    async def create(cls, db_name: str):
+    async def create(cls, db_name: str, cache_size: uint32 = uint32(600000)):
         self = cls()
         self.db_name = db_name
 
+        self.cache_size = cache_size
         # All full blocks which have been added to the blockchain. Header_hash -> block
         self.unspent_db = await aiosqlite.connect(self.db_name)
         await self.unspent_db.execute(
@@ -170,8 +172,8 @@ class UnspentStore:
         await cursor.close()
         await self.unspent_db.commit()
         self.lca_unspent_coins[unspent.coin.name().hex()] = unspent
-        if len(self.lca_unspent_coins) > 600000:
-            while len(self.lca_unspent_coins) > 600000:
+        if len(self.lca_unspent_coins) > self.cache_size:
+            while len(self.lca_unspent_coins) > self.cache_size:
                 first_in = list(self.lca_unspent_coins.keys())[0]
                 del self.lca_unspent_coins[first_in]
 
