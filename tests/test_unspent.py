@@ -1,5 +1,6 @@
 import asyncio
 from typing import Any, Dict
+from pathlib import Path
 
 import pytest
 
@@ -36,7 +37,7 @@ class TestUnspent:
     async def test_basic_unspent_store(self):
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
-        db = await UnspentStore.create("fndb_test")
+        db = await UnspentStore.create(Path("fndb_test"))
         await db._clear_database()
 
         # Save/get block
@@ -53,7 +54,7 @@ class TestUnspent:
     async def test_set_spent(self):
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
-        db = await UnspentStore.create("fndb_test")
+        db = await UnspentStore.create(Path("fndb_test"))
         await db._clear_database()
 
         # Save/get block
@@ -77,7 +78,7 @@ class TestUnspent:
     async def test_rollback(self):
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
-        db = await UnspentStore.create("fndb_test")
+        db = await UnspentStore.create(Path("fndb_test"))
         await db._clear_database()
 
         # Save/get block
@@ -113,12 +114,10 @@ class TestUnspent:
     @pytest.mark.asyncio
     async def test_basic_reorg(self):
         blocks = bt.get_consecutive_blocks(test_constants, 100, [], 9)
-        unspent_store = await UnspentStore.create("blockchain_test")
-        store = await FullNodeStore.create("blockchain_test")
+        unspent_store = await UnspentStore.create(Path("blockchain_test"))
+        store = await FullNodeStore.create(Path("blockchain_test"))
         await store._clear_database()
-        b: Blockchain = await Blockchain.create(
-            {}, unspent_store, store, test_constants
-        )
+        b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
 
         for i in range(1, len(blocks)):
             await b.receive_block(blocks[i], blocks[i - 1].header_block)

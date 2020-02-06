@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 from typing import Callable, List, Optional, Tuple, Dict
 import aiohttp
 
@@ -114,8 +113,8 @@ class FullNodeUI:
         self.kb = self.setup_keybindings()
         self.style = Style([("error", "#ff0044")])
         self.pool_pks: List[PublicKey] = []
-        key_config_filename = os.path.join(ROOT_DIR, "config", "keys.yaml")
-        if os.path.isfile(key_config_filename):
+        key_config_filename = ROOT_DIR / "config" / "keys.yaml"
+        if key_config_filename.exists():
             config = safe_load(open(key_config_filename, "r"))
 
             self.pool_pks = [

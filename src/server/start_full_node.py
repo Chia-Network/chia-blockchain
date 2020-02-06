@@ -2,7 +2,7 @@ import asyncio
 import logging
 import logging.config
 import signal
-from typing import List, Dict
+from pathlib import Path
 
 import miniupnpc
 
@@ -20,35 +20,11 @@ from src.mempool import Mempool
 from src.server.server import ChiaServer
 from src.server.connection import NodeType
 from src.types.full_block import FullBlock
-from src.types.header_block import SmallHeaderBlock
 from src.types.peer_info import PeerInfo
 from src.unspent_store import UnspentStore
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli
 from setproctitle import setproctitle
-
-
-async def load_header_blocks_from_store(
-    store: FullNodeStore,
-) -> Dict[str, SmallHeaderBlock]:
-    seen_blocks: Dict[str, SmallHeaderBlock] = {}
-    tips: List[SmallHeaderBlock] = []
-    for small_header_block in await store.get_small_header_blocks():
-        if not tips or small_header_block.weight > tips[0].weight:
-            tips = [small_header_block]
-        seen_blocks[small_header_block.header_hash] = small_header_block
-
-    header_blocks = {}
-    if len(tips) > 0:
-        curr: SmallHeaderBlock = tips[0]
-        reverse_blocks: List[SmallHeaderBlock] = [curr]
-        while curr.height > 0:
-            curr = seen_blocks[curr.prev_header_hash]
-            reverse_blocks.append(curr)
-
-        for block in reversed(reverse_blocks):
-            header_blocks[block.header_hash] = block
-    return header_blocks
 
 
 async def main():
@@ -59,20 +35,17 @@ async def main():
     log = logging.getLogger(__name__)
     server_closed = False
 
-    db_name = f"blockchain_v2_{config['database_id']}.db"
+    db_path = Path(config["database_path"])
+
     # Create the store (DB) and full node instance
-    store = await FullNodeStore.create(db_name)
+    store = await FullNodeStore.create(db_path)
 
     genesis: FullBlock = FullBlock.from_bytes(constants["GENESIS_BLOCK"])
     await store.add_block(genesis)
+    unspent_store = await UnspentStore.create(db_path)
 
     log.info("Initializing blockchain from disk")
-    small_header_blocks: Dict[
-        str, SmallHeaderBlock
-    ] = await load_header_blocks_from_store(store)
-
-    unspent_store = await UnspentStore.create(db_name)
-    blockchain = await Blockchain.create(small_header_blocks, unspent_store, store)
+    blockchain = await Blockchain.create(unspent_store, store)
 
     mempool = Mempool(unspent_store)
     # await mempool.initialize() TODO uncomment once it's implemented
@@ -110,7 +83,7 @@ async def main():
             server_closed = True
 
     if config["start_rpc_server"]:
-        # Starts the RPC server if -r is provided
+        # Starts the RPC server
         rpc_cleanup = await start_rpc_server(
             full_node, master_close_cb, config["rpc_port"]
         )

@@ -73,15 +73,13 @@ class Blockchain:
 
     @staticmethod
     async def create(
-        headers_input: Dict[str, SmallHeaderBlock],
         unspent_store: UnspentStore,
         store: FullNodeStore,
         override_constants: Dict = {},
     ):
         """
-        Initializes a blockchain with the given header blocks, assuming they have all been
-        validated. If no header_blocks are given, only the genesis block is added.
-        Uses the genesis block given in override_constants, or as a fallback,
+        Initializes a blockchain with the header blocks from disk, assuming they have all been
+        validated. Uses the genesis block given in override_constants, or as a fallback,
         in the consensus constants config.
         """
         self = Blockchain()
@@ -101,6 +99,10 @@ class Blockchain:
         if result != ReceiveBlockResult.ADDED_TO_HEAD:
             raise InvalidGenesisBlock()
 
+        headers_input: Dict[
+            str, SmallHeaderBlock
+        ] = await self.load_header_blocks_from_store()
+
         assert self.lca_block is not None
         if len(headers_input) > 0:
             self.headers = headers_input
@@ -117,6 +119,30 @@ class Blockchain:
                 == self.genesis.header_hash
             )
         return self
+
+    async def load_header_blocks_from_store(self) -> Dict[str, SmallHeaderBlock]:
+        """
+        Loads headers from disk, into a list of SmallHeaderBlocks, that can be used
+        to initialize the Blockchain class.
+        """
+        seen_blocks: Dict[str, SmallHeaderBlock] = {}
+        tips: List[SmallHeaderBlock] = []
+        for small_header_block in await self.store.get_small_header_blocks():
+            if not tips or small_header_block.weight > tips[0].weight:
+                tips = [small_header_block]
+            seen_blocks[small_header_block.header_hash] = small_header_block
+
+        header_blocks = {}
+        if len(tips) > 0:
+            curr: SmallHeaderBlock = tips[0]
+            reverse_blocks: List[SmallHeaderBlock] = [curr]
+            while curr.height > 0:
+                curr = seen_blocks[curr.prev_header_hash]
+                reverse_blocks.append(curr)
+
+            for block in reversed(reverse_blocks):
+                header_blocks[block.header_hash] = block
+        return header_blocks
 
     def get_current_tips(self) -> List[SmallHeaderBlock]:
         """

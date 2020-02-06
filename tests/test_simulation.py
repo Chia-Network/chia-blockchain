@@ -14,5 +14,3 @@ class TestSimulation:
         db_id_1 = "1001"
         db_id_2 = "1002"
         db_id_3 = "1003"
-
-        

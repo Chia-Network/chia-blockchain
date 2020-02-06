@@ -1,6 +1,6 @@
 import asyncio
 from typing import Any, Dict
-import os
+from pathlib import Path
 
 import pytest
 
@@ -46,19 +46,17 @@ class TestRpc:
         test_node_1_port = 21234
         test_node_2_port = 21235
         test_rpc_port = 21236
-        db_filename = "blockchain_test"
+        db_filename = Path("blockchain_test")
 
-        if os.path.isfile(db_filename):
-            os.remove(db_filename)
+        if db_filename.exists():
+            db_filename.unlink()
         store = await FullNodeStore.create(db_filename)
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
         unspent_store = await UnspentStore.create("blockchain_test")
         mempool = Mempool(unspent_store)
 
-        b: Blockchain = await Blockchain.create(
-            {}, unspent_store, store, test_constants
-        )
+        b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
         await store.add_block(blocks[0])
         for i in range(1, 9):
             assert (await b.receive_block(blocks[i], blocks[i - 1].header_block))[

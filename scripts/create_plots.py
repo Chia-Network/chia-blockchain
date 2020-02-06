@@ -1,6 +1,6 @@
 import argparse
-import os
 from copy import deepcopy
+from pathlib import Path
 
 from blspy import PrivateKey, PublicKey
 from yaml import safe_dump, safe_load
@@ -10,8 +10,8 @@ from definitions import ROOT_DIR
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 
-plot_config_filename = os.path.join(ROOT_DIR, "config", "plots.yaml")
-key_config_filename = os.path.join(ROOT_DIR, "config", "keys.yaml")
+plot_config_filename = ROOT_DIR / "config" / "plots.yaml"
+key_config_filename = ROOT_DIR / "config" / "keys.yaml"
 
 
 def main():
@@ -44,7 +44,7 @@ def main():
 
     # We need the keys file, to access pool keys (if the exist), and the sk_seed.
     args = parser.parse_args()
-    if not os.path.isfile(key_config_filename):
+    if not key_config_filename.exists():
         raise RuntimeError(
             "Keys not generated. Run python3 ./scripts/regenerate_keys.py."
         )
@@ -76,9 +76,9 @@ def main():
         plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(
             pool_pk, sk.get_public_key()
         )
-        filename: str = f"plot-{i}-{args.size}-{plot_seed}.dat"
-        full_path: str = os.path.join(args.final_dir, filename)
-        if os.path.isfile(full_path):
+        filename: Path = Path(f"plot-{i}-{args.size}-{plot_seed}.dat")
+        full_path: Path = args.final_dir / filename
+        if full_path.exists():
             print(f"Plot {filename} already exists")
         else:
             # Creates the plot. This will take a long time for larger plots.
@@ -88,7 +88,7 @@ def main():
             )
 
         # Updates the config if necessary.
-        if os.path.isfile(plot_config_filename):
+        if plot_config_filename.exists():
             plot_config = safe_load(open(plot_config_filename, "r"))
         else:
             plot_config = {"plots": {}}

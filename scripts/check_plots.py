@@ -1,6 +1,6 @@
 import argparse
-import os
 from hashlib import sha256
+from pathlib import Path
 
 from blspy import PrivateKey, PublicKey
 from yaml import safe_load
@@ -10,8 +10,8 @@ from definitions import ROOT_DIR
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 
-plot_root = os.path.join(ROOT_DIR, "plots")
-plot_config_filename = os.path.join(ROOT_DIR, "config", "plots.yaml")
+plot_root = ROOT_DIR / "plots"
+plot_config_filename = ROOT_DIR / "config" / "plots.yaml"
 
 
 def main():
@@ -26,23 +26,23 @@ def main():
     args = parser.parse_args()
 
     v = Verifier()
-    if os.path.isfile(plot_config_filename):
+    if plot_config_filename.exists():
         plot_config = safe_load(open(plot_config_filename, "r"))
         for plot_filename, plot_info in plot_config["plots"].items():
             plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(
                 PublicKey.from_bytes(bytes.fromhex(plot_info["pool_pk"])),
                 PrivateKey.from_bytes(bytes.fromhex(plot_info["sk"])).get_public_key(),
             )
-            if not os.path.isfile(plot_filename):
+            if not Path(plot_filename).exists():
                 # Tries relative path
-                full_path: str = os.path.join(plot_root, plot_filename)
-                if not os.path.isfile(full_path):
+                full_path: Path = plot_root / plot_filename
+                if not full_path.exists():
                     # Tries absolute path
-                    full_path: str = plot_filename
-                    if not os.path.isfile(full_path):
+                    full_path: Path = plot_filename
+                    if not full_path.exists():
                         print(f"Plot file {full_path} not found.")
                         continue
-                pr = DiskProver(full_path)
+                pr = DiskProver(str(full_path))
             else:
                 pr = DiskProver(plot_filename)
 

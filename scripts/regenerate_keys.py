@@ -1,5 +1,4 @@
 import argparse
-import os
 from hashlib import sha256
 from secrets import token_bytes
 
@@ -8,7 +7,7 @@ from yaml import safe_dump, safe_load
 
 from definitions import ROOT_DIR
 
-key_config_filename = os.path.join(ROOT_DIR, "config", "keys.yaml")
+key_config_filename = ROOT_DIR / "config" / "keys.yaml"
 
 
 def str2bool(v: str) -> bool:
@@ -57,7 +56,7 @@ def main():
     )
     args = parser.parse_args()
 
-    if os.path.isfile(key_config_filename):
+    if key_config_filename.exists():
         # If the file exists, warn the user
         yn = input(
             f"The keys file {key_config_filename} already exists. Are you sure"

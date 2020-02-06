@@ -1,5 +1,5 @@
-import os
 from typing import Any, Dict
+from pathlib import Path
 
 from src.blockchain import Blockchain
 from src.mempool import Mempool
@@ -39,22 +39,18 @@ async def setup_two_nodes(dic={}):
     for k in dic.keys():
         test_constants[k] = dic[k]
 
-    store_1 = await FullNodeStore.create("blockchain_test")
-    store_2 = await FullNodeStore.create("blockchain_test_2")
+    store_1 = await FullNodeStore.create(Path("blockchain_test"))
+    store_2 = await FullNodeStore.create(Path("blockchain_test_2"))
     await store_1._clear_database()
     await store_2._clear_database()
-    unspent_store_1 = await UnspentStore.create("blockchain_test")
-    unspent_store_2 = await UnspentStore.create("blockchain_test_2")
+    unspent_store_1 = await UnspentStore.create(Path("blockchain_test"))
+    unspent_store_2 = await UnspentStore.create(Path("blockchain_test_2"))
     await unspent_store_1._clear_database()
     await unspent_store_2._clear_database()
     mempool_1 = Mempool(unspent_store_1, dic)
     mempool_2 = Mempool(unspent_store_2, dic)
-    b_1: Blockchain = await Blockchain.create(
-        {}, unspent_store_1, store_1, test_constants
-    )
-    b_2: Blockchain = await Blockchain.create(
-        {}, unspent_store_2, store_2, test_constants
-    )
+    b_1: Blockchain = await Blockchain.create(unspent_store_1, store_1, test_constants)
+    b_2: Blockchain = await Blockchain.create(unspent_store_2, store_2, test_constants)
     await store_1.add_block(FullBlock.from_bytes(test_constants["GENESIS_BLOCK"]))
     await store_2.add_block(FullBlock.from_bytes(test_constants["GENESIS_BLOCK"]))
 
@@ -85,5 +81,5 @@ async def setup_two_nodes(dic={}):
     await store_2.close()
     await unspent_store_1.close()
     await unspent_store_2.close()
-    os.remove("blockchain_test")
-    os.remove("blockchain_test_2")
+    Path("blockchain_test").unlink()
+    Path("blockchain_test_2").unlink()

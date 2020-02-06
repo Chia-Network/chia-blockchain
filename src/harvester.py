@@ -1,7 +1,6 @@
 import logging
-import os
-import os.path
 import asyncio
+from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 from blspy import PrependSignature, PrivateKey, PublicKey, Util
@@ -25,10 +24,10 @@ class Harvester:
         self.plot_config: Dict = plot_config
 
         # From filename to prover
-        self.provers: Dict[str, DiskProver] = {}
+        self.provers: Dict[Path, DiskProver] = {}
 
         # From quality to (challenge_hash, filename, index)
-        self.challenge_hashes: Dict[bytes32, Tuple[bytes32, str, uint8]] = {}
+        self.challenge_hashes: Dict[bytes32, Tuple[bytes32, Path, uint8]] = {}
         self._plot_notification_task = asyncio.create_task(self._plot_notification())
         self._is_shutdown: bool = False
 
@@ -59,16 +58,13 @@ class Harvester:
         which must be put into the plots, before the plotting process begins. We cannot
         use any plots which don't have one of the pool keys.
         """
-        for partial_filename, plot_config in self.plot_config["plots"].items():
+        for partial_filename_str, plot_config in self.plot_config["plots"].items():
+            partial_filename = Path(partial_filename_str)
             potential_filenames = [partial_filename]
             if "plot_root" in self.config:
-                potential_filenames.append(
-                    os.path.join(self.config["plot_root"], partial_filename)
-                )
+                potential_filenames.append(self.config["plot_root"] / partial_filename)
             else:
-                potential_filenames.append(
-                    os.path.join(ROOT_DIR, "plots", partial_filename)
-                )
+                potential_filenames.append(ROOT_DIR / "plots" / partial_filename)
             pool_pubkey = PublicKey.from_bytes(bytes.fromhex(plot_config["pool_pk"]))
 
             # Only use plots that correct pools associated with them
@@ -80,8 +76,8 @@ class Harvester:
 
             found = False
             for filename in potential_filenames:
-                if os.path.isfile(filename):
-                    self.provers[partial_filename] = DiskProver(filename)
+                if filename.exists():
+                    self.provers[partial_filename] = DiskProver(str(filename))
                     log.info(
                         f"Farming plot {filename} of size {self.provers[partial_filename].get_size()}"
                     )
@@ -108,7 +104,7 @@ class Harvester:
                 )
             except RuntimeError:
                 log.error("Error using prover object. Reinitializing prover object.")
-                self.provers[filename] = DiskProver(filename)
+                self.provers[filename] = DiskProver(str(filename))
                 quality_strings = prover.get_qualities_for_challenge(
                     new_challenge.challenge_hash
                 )
@@ -152,7 +148,7 @@ class Harvester:
             try:
                 proof_xs = self.provers[filename].get_full_proof(challenge_hash, index)
             except RuntimeError:
-                self.provers[filename] = DiskProver(filename)
+                self.provers[filename] = DiskProver(str(filename))
                 proof_xs = self.provers[filename].get_full_proof(challenge_hash, index)
             pool_pubkey = PublicKey.from_bytes(
                 bytes.fromhex(self.plot_config["plots"][filename]["pool_pk"])

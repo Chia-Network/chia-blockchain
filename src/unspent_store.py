@@ -1,5 +1,6 @@
 import asyncio
 from typing import Dict, Optional, List
+from pathlib import Path
 import aiosqlite
 from src.types.full_block import FullBlock
 from src.types.hashable.Coin import Coin, CoinName
@@ -29,7 +30,6 @@ class UnspentStore:
     DiffStores are updated/recreated. (managed by blockchain.py)
     """
 
-    db_name: str
     unspent_db: aiosqlite.Connection
     # Whether or not we are syncing
     sync_mode: bool = False
@@ -38,12 +38,11 @@ class UnspentStore:
     head_diffs: Dict[bytes32, DiffStore]
 
     @classmethod
-    async def create(cls, db_name: str):
+    async def create(cls, db_path: Path):
         self = cls()
-        self.db_name = db_name
 
         # All full blocks which have been added to the blockchain. Header_hash -> block
-        self.unspent_db = await aiosqlite.connect(self.db_name)
+        self.unspent_db = await aiosqlite.connect(db_path)
         await self.unspent_db.execute(
             (
                 f"CREATE TABLE IF NOT EXISTS unspent("

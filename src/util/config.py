@@ -1,5 +1,3 @@
-import os
-
 import yaml
 import argparse
 from typing import Dict, Any, Callable, Optional
@@ -7,7 +5,7 @@ from definitions import ROOT_DIR
 
 
 def load_config(filename: str, sub_config: Optional[str] = None) -> Dict:
-    config_filename = os.path.join(ROOT_DIR, "config", filename)
+    config_filename = ROOT_DIR / "config" / filename
     if sub_config is not None:
         return yaml.safe_load(open(config_filename, "r"))[sub_config]
     else:

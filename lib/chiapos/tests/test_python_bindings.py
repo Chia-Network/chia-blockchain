@@ -1,7 +1,7 @@
 import unittest
 from chiapos import DiskProver, DiskPlotter, Verifier
 from hashlib import sha256
-import os
+from pathlib import Path
 
 
 class TestPythonBindings(unittest.TestCase):
@@ -14,7 +14,7 @@ class TestPythonBindings(unittest.TestCase):
 
         pl = DiskPlotter()
         pl.create_plot_disk(".", ".", "myplot.dat", 21, bytes([1, 2, 3, 4, 5]), plot_seed)
-        pr = DiskProver("./myplot.dat")
+        pr = DiskProver(str(Path("myplot.dat")))
 
         total_proofs: int = 0
         iterations: int = 5000
@@ -32,7 +32,7 @@ class TestPythonBindings(unittest.TestCase):
         print(f"total proofs {total_proofs} out of {iterations}\
             {total_proofs / iterations}")
         assert total_proofs == 4647
-        os.remove("myplot.dat")
+        Path("myplot.dat").unlink()
 
 
 if __name__ == '__main__':

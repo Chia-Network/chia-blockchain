@@ -1,7 +1,7 @@
 import asyncio
 from secrets import token_bytes
+from pathlib import Path
 from typing import Any, Dict
-import os
 import sqlite3
 import random
 
@@ -41,16 +41,16 @@ class TestStore:
     async def test_basic_store(self):
         assert sqlite3.threadsafety == 1
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
-        db_filename = "blockchain_test"
-        db_filename_2 = "blockchain_test_2"
-        db_filename_3 = "blockchain_test_3"
+        db_filename = Path("blockchain_test")
+        db_filename_2 = Path("blockchain_test_2")
+        db_filename_3 = Path("blockchain_test_3")
 
-        if os.path.isfile(db_filename):
-            os.remove(db_filename)
-        if os.path.isfile(db_filename_2):
-            os.remove(db_filename_2)
-        if os.path.isfile(db_filename_3):
-            os.remove(db_filename_3)
+        if db_filename.exists():
+            db_filename.unlink()
+        if db_filename_2.exists():
+            db_filename_2.unlink()
+        if db_filename_3.exists():
+            db_filename_3.unlink()
 
         db = await FullNodeStore.create(db_filename)
         db_2 = await FullNodeStore.create(db_filename_2)
@@ -146,8 +146,8 @@ class TestStore:
         except Exception:
             await db.close()
             await db_2.close()
-            os.remove(db_filename)
-            os.remove(db_filename_2)
+            db_filename.unlink()
+            db_filename_2.unlink()
             raise
 
         # Different database should have different data
@@ -157,17 +157,17 @@ class TestStore:
         await db.close()
         await db_2.close()
         await db_3.close()
-        os.remove(db_filename)
-        os.remove(db_filename_2)
-        os.remove(db_filename_3)
+        db_filename.unlink()
+        db_filename_2.unlink()
+        db_filename_3.unlink()
 
     @pytest.mark.asyncio
     async def test_deadlock(self):
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 9, b"0")
-        db_filename = "blockchain_test"
+        db_filename = Path("blockchain_test")
 
-        if os.path.isfile(db_filename):
-            os.remove(db_filename)
+        if db_filename.exists():
+            db_filename.unlink()
 
         db = await FullNodeStore.create(db_filename)
         tasks = []
@@ -192,4 +192,4 @@ class TestStore:
                 )
         await asyncio.gather(*tasks)
         await db.close()
-        os.remove(db_filename)
+        db_filename.unlink()

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import aiosqlite
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from blspy import PublicKey
@@ -16,7 +17,6 @@ log = logging.getLogger(__name__)
 
 
 class FullNodeStore:
-    db_name: str
     db: aiosqlite.Connection
     # Whether or not we are syncing
     sync_mode: bool
@@ -50,12 +50,11 @@ class FullNodeStore:
     lock: asyncio.Lock
 
     @classmethod
-    async def create(cls, db_name: str):
+    async def create(cls, db_path: Path):
         self = cls()
-        self.db_name = db_name
 
         # All full blocks which have been added to the blockchain. Header_hash -> block
-        self.db = await aiosqlite.connect(self.db_name)
+        self.db = await aiosqlite.connect(db_path)
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS blocks(height bigint, header_hash text PRIMARY KEY, block blob)"
         )

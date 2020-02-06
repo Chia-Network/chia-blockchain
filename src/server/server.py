@@ -1,7 +1,6 @@
 import asyncio
 import concurrent
 import logging
-import os
 import random
 from secrets import token_bytes
 from typing import Any, AsyncGenerator, List, Optional, Tuple
@@ -32,7 +31,7 @@ from src.util.errors import (
 from src.util.ints import uint16
 from src.util.network import create_node_id
 
-config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
+config_filename = ROOT_DIR / "config" / "config.yaml"
 config = safe_load(open(config_filename, "r"))
 
 
