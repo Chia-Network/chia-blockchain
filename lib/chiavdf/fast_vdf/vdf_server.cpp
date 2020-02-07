@@ -185,9 +185,9 @@ void session(tcp::socket sock) {
     }
 }
 
-void server(boost::asio::io_context& io_context, unsigned short port)
+void server(boost::asio::io_service& io_server, unsigned short port)
 {
-  tcp::acceptor a(io_context, tcp::endpoint(tcp::v4(), port));
+  tcp::acceptor a(io_server, tcp::endpoint(tcp::v4(), port));
   std::thread t(session, a.accept());
   t.join();
 }
@@ -202,9 +202,9 @@ int main(int argc, char* argv[])
       return 1;
     }
 
-    boost::asio::io_context io_context;
+    boost::asio::io_service io_service;
 
-    server(io_context, std::atoi(argv[1]));
+    server(io_service, std::atoi(argv[1]));
   }
   catch (std::exception& e)
   {
