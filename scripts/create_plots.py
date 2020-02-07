@@ -84,7 +84,12 @@ def main():
             # Creates the plot. This will take a long time for larger plots.
             plotter: DiskPlotter = DiskPlotter()
             plotter.create_plot_disk(
-                args.tmp_dir, args.final_dir, filename, args.size, bytes([]), plot_seed
+                args.tmp_dir,
+                args.final_dir,
+                str(filename),
+                args.size,
+                bytes([]),
+                plot_seed,
             )
 
         # Updates the config if necessary.
@@ -94,7 +99,7 @@ def main():
             plot_config = {"plots": {}}
         plot_config_plots_new = deepcopy(plot_config["plots"])
         if full_path not in plot_config_plots_new:
-            plot_config_plots_new[full_path] = {
+            plot_config_plots_new[str(full_path)] = {
                 "sk": bytes(sk).hex(),
                 "pool_pk": bytes(pool_pk).hex(),
             }

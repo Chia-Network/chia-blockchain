@@ -190,7 +190,6 @@ class Timelord:
                             iter_size = "0" + str(len(str(iter)))
                         else:
                             iter_size = str(len(str(iter)))
-                        log.error("WRITING ITERS")
                         writer.write((iter_size + str(iter)).encode())
                         await writer.drain()
                         log.info(f"New iteration submitted: {iter}")

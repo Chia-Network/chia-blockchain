@@ -216,7 +216,6 @@ public:
 private:
   void do_accept()
   {
-    // this->socket_ = tcp::socket(*io_service_);
     acceptor_.async_accept(this->socket_,
         [this](boost::system::error_code ec)
         {

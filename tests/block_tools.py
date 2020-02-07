@@ -33,7 +33,7 @@ from src.util.ints import uint8, uint32, uint64
 # Can't go much lower than 19, since plots start having no solutions
 k: uint8 = uint8(19)
 # Uses many plots for testing, in order to guarantee proofs of space at every height
-num_plots = 80
+num_plots = 40
 # Use the empty string as the seed for the private key
 pool_sk: PrivateKey = PrivateKey.from_seed(b"")
 pool_pk: PublicKey = pool_sk.get_public_key()
