@@ -268,12 +268,14 @@ class Timelord:
                     # TODO: change protocol to use bytes and same ProofOfTime format (instead of hex)
                     # Reads 16 bytes of hex, for the 8 byte iterations
                     bytes_read = await reader.readexactly(16)
+                    print("bytes read:", bytes_read)
                     iterations_needed = uint64(
                         int.from_bytes(
                             bytes.fromhex(bytes_read.decode()), "big", signed=True
                         )
                     )
                     bytes_read = await reader.readexactly(16)
+                    print("bytes read2:", bytes_read)
                     # Reads 16 bytes of hex, for the 8 byte y_size
                     y_size = uint64(
                         int.from_bytes(

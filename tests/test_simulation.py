@@ -1,5 +1,6 @@
 import asyncio
 import pytest
+import time
 from tests.setup_nodes import setup_full_system
 
 
@@ -12,12 +13,16 @@ def event_loop():
 class TestSimulation:
     @pytest.fixture(scope="function")
     async def simulation(self):
-        async for _ in setup_full_system({"DIFFICULTY_STARTING": 1}):
+        async for _ in setup_full_system():
             yield _
 
     @pytest.mark.asyncio
     async def test_simulation_1(self, simulation):
         node1, node2 = simulation
-        await asyncio.sleep(60)
-        tip_heights = [t.height for t in node1.blockchain.get_tips()]
+        start = time.time()
+        while time.time() - start < 100:
+            if max([h.height for h in node1.blockchain.get_current_tips()]) > 10:
+                return
+            await asyncio.sleep(1)
+        tip_heights = [t.height for t in node1.blockchain.get_current_tips()]
         assert max(tip_heights) > 5

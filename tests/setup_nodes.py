@@ -43,16 +43,19 @@ test_constants["GENESIS_BLOCK"] = bytes(
 
 async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     # SETUP
+    test_constants_copy = test_constants.copy()
     for k in dic.keys():
-        test_constants[k] = dic[k]
+        test_constants_copy[k] = dic[k]
 
     store_1 = await FullNodeStore.create(Path(db_name))
     await store_1._clear_database()
     unspent_store_1 = await UnspentStore.create(Path(db_name))
     await unspent_store_1._clear_database()
     mempool_1 = Mempool(unspent_store_1, dic)
-    b_1: Blockchain = await Blockchain.create(unspent_store_1, store_1, test_constants)
-    await store_1.add_block(FullBlock.from_bytes(test_constants["GENESIS_BLOCK"]))
+    b_1: Blockchain = await Blockchain.create(
+        unspent_store_1, store_1, test_constants_copy
+    )
+    await store_1.add_block(FullBlock.from_bytes(test_constants_copy["GENESIS_BLOCK"]))
 
     config = load_config("config.yaml", "full_node")
     if introducer_port is not None:
@@ -158,8 +161,8 @@ async def setup_two_nodes(dic={}):
     Setup and teardown of two full nodes, with blockchains and separate DBs.
     """
     node_iters = [
-        setup_full_node("blockchain_test.db", 21234, dic={}),
-        setup_full_node("blockchain_test_2.db", 21235, dic={}),
+        setup_full_node("blockchain_test.db", 21234, dic=dic),
+        setup_full_node("blockchain_test_2.db", 21235, dic=dic),
     ]
 
     fn1, s1 = await node_iters[0].__anext__()

@@ -59,10 +59,10 @@ class WalletTool:
             map(
                 lambda child: hash
                 == puzzle_for_pk(
-                        self.extended_secret_key.public_child(child)
-                        .get_public_key()
-                        .serialize()
-                    ).get_hash(),
+                    self.extended_secret_key.public_child(child)
+                    .get_public_key()
+                    .serialize()
+                ).get_hash(),
                 reversed(range(self.next_address)),
             )
         )

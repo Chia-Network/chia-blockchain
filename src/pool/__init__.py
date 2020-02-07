@@ -13,9 +13,7 @@ def create_puzzlehash_for_pk(pub_key: BLSPublicKey) -> bytes32:
 
 def signature_for_coinbase(coin: Coin, pool_private_key: blspy.PrivateKey):
     message_hash = blspy.Util.hash256(bytes(coin))
-    return BLSSignature(
-        bytes(pool_private_key.sign_prepend_prehashed(message_hash))
-    )
+    return BLSSignature(bytes(pool_private_key.sign_prepend_prehashed(message_hash)))
 
 
 def sign_coinbase_coin(coin: Coin, private_key: blspy.PrivateKey):

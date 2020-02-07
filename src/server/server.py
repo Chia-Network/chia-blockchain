@@ -264,7 +264,7 @@ class ChiaServer:
                 try:
                     await connection.send(message)
                 except (RuntimeError, TimeoutError, OSError,) as e:
-                    self.log.error(
+                    self.log.warning(
                         f"Cannot write to {connection}, already closed. Error {e}."
                     )
                     self.global_connections.close(connection, True)

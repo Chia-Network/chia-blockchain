@@ -16,9 +16,6 @@ void CreateAndWriteProof(integer D, form x, int64_t num_iterations, WesolowskiCa
         PrintInfo("Got stop signal before completing the proof!");
         return ;
     }
-    // Write "WESO" marker
-    boost::asio::write(sock, boost::asio::buffer("WESO", 4));
-
     // Writes the number of iterations
     std::vector<unsigned char> bytes = ConvertIntegerToBytes(integer(num_iterations), 8);
 
@@ -32,9 +29,11 @@ void CreateAndWriteProof(integer D, form x, int64_t num_iterations, WesolowskiCa
     bytes.insert(bytes.end(), proof_size.begin(), proof_size.end());
     bytes.insert(bytes.end(), result.proof.begin(), result.proof.end());
 
-    std::string str_result = BytesToStr(bytes);
+    std::string str_result = "WESO" + BytesToStr(bytes);
     std::lock_guard<std::mutex> lock(socket_mutex);
     PrintInfo("Generated proof = " + str_result);;
+    // Write "WESO" marker
+    // boost::asio::write(sock, boost::asio::buffer("WESO", 4));
     boost::asio::write(sock, boost::asio::buffer(str_result.c_str(), str_result.size()));
 }
 

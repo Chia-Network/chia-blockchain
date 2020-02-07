@@ -22,6 +22,7 @@ jobs:
       run: |
         brew update && brew install gmp boost || echo ""
         sh install.sh
+        sh install_timelord.sh
     - name: Test proof of space
       run: |
         cd lib/chiapos
