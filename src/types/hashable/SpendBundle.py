@@ -1,9 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Dict
 
-from src.atoms import hash_pointer
 from src.types.hashable.Coin import Coin
-from src.types.hashable.Hash import std_hash
 from src.types.sized_bytes import bytes32
 from src.util.chain_utils import additions_for_solution
 from src.util.streamable import Streamable, streamable
@@ -59,7 +57,4 @@ class SpendBundle(Streamable):
         return amount_in - amount_out
 
     def name(self) -> bytes32:
-        return BundleHash(self)
-
-
-BundleHash: bytes32 = hash_pointer(SpendBundle, std_hash)
+        return self.get_hash()

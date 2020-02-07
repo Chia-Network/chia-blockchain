@@ -2,8 +2,6 @@ import io
 
 from typing import Any
 
-from .hexbytes import hexbytes
-
 
 class bin_methods:
     """
@@ -15,7 +13,7 @@ class bin_methods:
         f = io.BytesIO(blob)
         return cls.parse(f)  # type: ignore # noqa
 
-    def __bytes__(self) -> hexbytes:
+    def __bytes__(self) -> bytes:
         f = io.BytesIO()
         self.stream(f)  # type: ignore # noqa
-        return hexbytes(f.getvalue())
+        return f.getvalue()
