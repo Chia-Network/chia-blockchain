@@ -18,7 +18,7 @@ import hashlib
 from clvm_tools import binutils
 
 from src.types.hashable.Program import Program
-from src.util.run_program import run_program
+from clvm import run_program
 
 from .load_clvm import load_clvm
 

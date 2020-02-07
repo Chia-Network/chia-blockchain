@@ -17,7 +17,7 @@ from src.util.consensus import conditions_dict_for_solution
 import time
 
 from src.util.ints import uint64
-from src.util.run_program import run_program
+from clvm import run_program
 
 
 def mempool_assert_coin_consumed(
