@@ -206,24 +206,26 @@ public:
     : acceptor_(io_service, tcp::endpoint(tcp::v4(), port)),
       socket_(io_service)
   {
+    io_service_ = &io_service;
     do_accept();
   }
 
 private:
   void do_accept()
   {
-    acceptor_.async_accept(socket_,
+    this->socket_ = tcp::socket(*io_service_);
+    acceptor_.async_accept(this->socket_,
         [this](boost::system::error_code ec)
         {
           if (!ec)
           {
-            std::make_shared<session>(std::move(socket_))->start();
+            std::make_shared<session>(std::move(this->socket_))->start();
           }
 
           do_accept();
         });
   }
-
+  boost::asio::io_service* io_service_;
   tcp::acceptor acceptor_;
   tcp::socket socket_;
 };

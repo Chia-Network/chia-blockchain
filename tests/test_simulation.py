@@ -22,7 +22,7 @@ class TestSimulation:
         start = time.time()
         while time.time() - start < 100:
             if max([h.height for h in node1.blockchain.get_current_tips()]) > 10:
-                return
+                break
             await asyncio.sleep(1)
         tip_heights = [t.height for t in node1.blockchain.get_current_tips()]
         assert max(tip_heights) > 5
