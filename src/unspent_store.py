@@ -53,6 +53,7 @@ class UnspentStore:
                 f" spent_index bigint,"
                 f" spent int,"
                 f" coinbase int,"
+                f" puzzle_hash text,"
                 f" unspent blob)"
             )
         )
@@ -68,6 +69,10 @@ class UnspentStore:
 
         await self.unspent_db.execute(
             "CREATE INDEX IF NOT EXISTS coin_spent on unspent(spent)"
+        )
+
+        await self.unspent_db.execute(
+            "CREATE INDEX IF NOT EXISTS coin_spent on unspent(puzzle_hash)"
         )
 
         await self.unspent_db.commit()
@@ -156,13 +161,14 @@ class UnspentStore:
     # Store unspent in DB and ram cache
     async def add_unspent(self, unspent: CoinRecord) -> None:
         cursor = await self.unspent_db.execute(
-            "INSERT OR REPLACE INTO unspent VALUES(?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO unspent VALUES(?, ?, ?, ?, ?, ?, ?)",
             (
                 unspent.coin.name().hex(),
                 unspent.confirmed_block_index,
                 unspent.spent_block_index,
                 int(unspent.spent),
                 int(unspent.coinbase),
+                str(unspent.coin.puzzle_hash.hex()),
                 bytes(unspent),
             ),
         )
@@ -188,7 +194,7 @@ class UnspentStore:
         )  # type: ignore # noqa
         await self.add_unspent(spent)
 
-    # Checks DB and DiffStores for unspent with coin_name and returns it
+    # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(
         self, coin_name: bytes32, header: Header = None
     ) -> Optional[CoinRecord]:
@@ -204,8 +210,27 @@ class UnspentStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            return CoinRecord.from_bytes(row[5])
+            return CoinRecord.from_bytes(row[6])
         return None
+
+    # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
+    async def get_coin_records_by_puzzle_hash(
+        self, puzzle_hash: bytes32, header: Header = None
+    ) -> List[CoinRecord]:
+        coins = set()
+        if header is not None and header.header_hash in self.head_diffs:
+            diff_store = self.head_diffs[header.header_hash]
+            for _, record in diff_store.diffs.items():
+                if record.coin.puzzle_hash == puzzle_hash:
+                    coins.add(record)
+        cursor = await self.unspent_db.execute(
+            "SELECT * from unspent WHERE puzzle_hash=?", (puzzle_hash.hex(),)
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        for row in rows:
+            coins.add(CoinRecord.from_bytes(row[6]).coin)
+        return list(coins)
 
     # TODO figure out if we want to really delete when doing rollback
     async def rollback_lca_to_block(self, block_index):

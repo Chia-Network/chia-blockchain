@@ -1,18 +1,15 @@
 import dataclasses
 import json
 
-from typing import Any, Callable, List, Optional, Dict, Tuple
+from typing import Any, Callable, List, Optional
 
 from aiohttp import web
 
-from blspy import PublicKey
 from src.full_node import FullNode
-from src.types.header_block import SmallHeaderBlock
+from src.types.header import Header
 from src.types.full_block import FullBlock
 from src.types.peer_info import PeerInfo
-from src.types.challenge import Challenge
-from src.util.ints import uint16, uint32, uint64
-from src.consensus.block_rewards import calculate_block_reward
+from src.util.ints import uint16, uint64
 from src.util.byte_types import hexstr_to_bytes
 
 
@@ -53,17 +50,16 @@ class RpcApiHandler:
         """
         Returns a summary of the node's view of the blockchain.
         """
-        tips: List[SmallHeaderBlock] = self.full_node.blockchain.get_current_tips()
-        lca: SmallHeaderBlock = self.full_node.blockchain.lca_block
-        assert lca.challenge is not None
+        tips: List[Header] = self.full_node.blockchain.get_current_tips()
+        lca: Header = self.full_node.blockchain.lca_block
         sync_mode: bool = self.full_node.store.get_sync_mode()
         difficulty: uint64 = self.full_node.blockchain.get_next_difficulty(
             lca.header_hash
         )
-        lca_hb = (
-            await self.full_node.store.get_header_blocks_by_hash([lca.header_hash])
-        )[0]
-        ips: uint64 = self.full_node.blockchain.get_next_ips(lca_hb)
+        lca_block = await self.full_node.store.get_block(lca.header_hash)
+        if lca_block is None:
+            raise web.HTTPNotFound()
+        ips: uint64 = self.full_node.blockchain.get_next_ips(lca_block)
         response = {
             "tips": tips,
             "lca": lca,
@@ -89,18 +85,18 @@ class RpcApiHandler:
 
     async def get_header(self, request) -> web.Response:
         """
-        Retrieves a header (as a SmallHeaderBlock).
+        Retrieves a Header.
         """
         request_data = await request.json()
         if "header_hash" not in request_data:
             raise web.HTTPBadRequest()
         header_hash = hexstr_to_bytes(request_data["header_hash"])
-        small_header_block: Optional[
-            SmallHeaderBlock
-        ] = self.full_node.blockchain.headers.get(header_hash, None)
-        if small_header_block is None or small_header_block.challenge is None:
+        header: Optional[Header] = self.full_node.blockchain.headers.get(
+            header_hash, None
+        )
+        if header is None:
             raise web.HTTPNotFound()
-        return obj_to_response(small_header_block)
+        return obj_to_response(header)
 
     async def get_connections(self, request) -> web.Response:
         """
@@ -170,44 +166,39 @@ class RpcApiHandler:
             self.stop_cb()
         return obj_to_response("")
 
-    async def get_pool_balances(self, request) -> web.Response:
-        """
-        Retrieves the coinbase balances earned by all pools.
-        TODO: remove after transactions and coins are added.
-        """
+    # async def get_pool_balances(self, request) -> web.Response:
+    #     """
+    #     Retrieves the coinbase balances earned by all pools.
+    #     TODO: remove after transactions and coins are added.
+    #     """
 
-        ppks: List[
-            Tuple[uint32, PublicKey]
-        ] = await self.full_node.store.get_pool_pks_hack()
+    #     ppks: List[
+    #         Tuple[uint32, PublicKey]
+    #     ] = await self.full_node.store.get_pool_pks_hack()
 
-        coin_balances: Dict[str, uint64] = {}
-        for height, pk in ppks:
-            pool_pk = f"0x{bytes(pk).hex()}"
-            if pool_pk not in coin_balances:
-                coin_balances[pool_pk] = uint64(0)
-            coin_balances[pool_pk] = uint64(
-                coin_balances[pool_pk] + calculate_block_reward(height)
-            )
-        return obj_to_response(coin_balances)
+    #     coin_balances: Dict[str, uint64] = {}
+    #     for height, pk in ppks:
+    #         pool_pk = f"0x{bytes(pk).hex()}"
+    #         if pool_pk not in coin_balances:
+    #             coin_balances[pool_pk] = uint64(0)
+    #         coin_balances[pool_pk] = uint64(
+    #             coin_balances[pool_pk] + calculate_block_reward(height)
+    #         )
+    #     return obj_to_response(coin_balances)
 
     async def get_heaviest_block_seen(self, request) -> web.Response:
         """
         Returns the heaviest block ever seen, whether it's been added to the blockchain or not
         """
-        tips: List[SmallHeaderBlock] = self.full_node.blockchain.get_current_tips()
+        tips: List[Header] = self.full_node.blockchain.get_current_tips()
         tip_weights = [tip.weight for tip in tips]
         i = tip_weights.index(max(tip_weights))
-        assert tips[i].challenge is not None
-        challenge: Challenge = tips[i].challenge  # type: ignore
-        max_tip: SmallHeaderBlock = SmallHeaderBlock(tips[i].header, challenge)
+        max_tip: Header = tips[i]
         if self.full_node.store.get_sync_mode():
             potential_tips = self.full_node.store.get_potential_tips_tuples()
             for _, pot_block in potential_tips:
                 if pot_block.weight > max_tip.weight:
-                    assert pot_block.header_block.challenge is not None
-                    max_tip = SmallHeaderBlock(
-                        pot_block.header_block.header, pot_block.header_block.challenge
-                    )
+                    max_tip = pot_block.header
         return obj_to_response(max_tip)
 
 
@@ -227,7 +218,7 @@ async def start_rpc_server(full_node: FullNode, stop_node_cb: Callable, rpc_port
             web.post("/open_connection", handler.open_connection),
             web.post("/close_connection", handler.close_connection),
             web.post("/stop_node", handler.stop_node),
-            web.post("/get_pool_balances", handler.get_pool_balances),
+            # web.post("/get_pool_balances", handler.get_pool_balances),
             web.post("/get_heaviest_block_seen", handler.get_heaviest_block_seen),
         ]
     )

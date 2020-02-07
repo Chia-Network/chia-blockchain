@@ -227,7 +227,7 @@ class Mempool:
                 # Setting ephemeral coin confirmed index to current + 1
                 if removal.name() in coin_records:
                     return Err.DOUBLE_SPEND, {}, []
-                coin_records[removal.name()] = CoinRecord(removal, mempool.header_block.height + 1, 0, 0, 0)  # type: ignore # noqa
+                coin_records[removal.name()] = CoinRecord(removal, mempool.header.height + 1, 0, 0, 0)  # type: ignore # noqa
                 continue
             # 2. Checks we have it in the unspent_store
             unspent: Optional[CoinRecord] = await self.unspent_store.get_coin_record(

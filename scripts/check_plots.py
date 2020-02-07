@@ -38,7 +38,7 @@ def main():
                 full_path: Path = plot_root / plot_filename
                 if not full_path.exists():
                     # Tries absolute path
-                    full_path: Path = plot_filename
+                    full_path: Path = Path(plot_filename)
                     if not full_path.exists():
                         print(f"Plot file {full_path} not found.")
                         continue

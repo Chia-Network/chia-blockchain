@@ -4,7 +4,7 @@ import asyncio
 from typing import Dict, Optional, List
 from src.util.byte_types import hexstr_to_bytes
 from src.types.full_block import FullBlock
-from src.types.header_block import SmallHeaderBlock
+from src.types.header import Header
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint16
 
@@ -37,8 +37,8 @@ class RpcClient:
 
     async def get_blockchain_state(self) -> Dict:
         response = await self.fetch("get_blockchain_state", {})
-        response["tips"] = [SmallHeaderBlock.from_json(tip) for tip in response["tips"]]
-        response["lca"] = SmallHeaderBlock.from_json(response["lca"])
+        response["tips"] = [Header.from_json(tip) for tip in response["tips"]]
+        response["lca"] = Header.from_json(response["lca"])
         return response
 
     async def get_block(self, header_hash) -> Optional[FullBlock]:
@@ -50,7 +50,7 @@ class RpcClient:
             raise
         return FullBlock.from_json(response)
 
-    async def get_header(self, header_hash) -> Optional[SmallHeaderBlock]:
+    async def get_header(self, header_hash) -> Optional[Header]:
         try:
             response = await self.fetch(
                 "get_header", {"header_hash": header_hash.hex()}
@@ -59,7 +59,7 @@ class RpcClient:
             if e.message == "Not Found":
                 return None
             raise
-        return SmallHeaderBlock.from_json(response)
+        return Header.from_json(response)
 
     async def get_connections(self) -> List[Dict]:
         response = await self.fetch("get_connections", {})
@@ -83,9 +83,9 @@ class RpcClient:
             new_response[hexstr_to_bytes(pk)] = bal
         return new_response
 
-    async def get_heaviest_block_seen(self) -> SmallHeaderBlock:
+    async def get_heaviest_block_seen(self) -> Header:
         response = await self.fetch("get_heaviest_block_seen", {})
-        return SmallHeaderBlock.from_json(response)
+        return Header.from_json(response)
 
     def close(self):
         self.closing_task = asyncio.create_task(self.session.close())

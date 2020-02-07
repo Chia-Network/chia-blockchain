@@ -41,9 +41,9 @@ class TestStore:
     async def test_basic_store(self):
         assert sqlite3.threadsafety == 1
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
-        db_filename = Path("blockchain_test")
-        db_filename_2 = Path("blockchain_test_2")
-        db_filename_3 = Path("blockchain_test_3")
+        db_filename = Path("blockchain_test.db")
+        db_filename_2 = Path("blockchain_test_2.db")
+        db_filename_3 = Path("blockchain_test_3.db")
 
         if db_filename.exists():
             db_filename.unlink()
@@ -64,15 +64,8 @@ class TestStore:
                 await db.add_block(block)
                 assert block == await db.get_block(block.header_hash)
 
-            # Get small header blocks
-            assert len(await db.get_small_header_blocks()) == len(blocks)
-
-            # Get header_blocks
-            header_blocks = await db.get_header_blocks_by_hash(
-                [blocks[4].header_hash, blocks[0].header_hash]
-            )
-            assert header_blocks[0] == blocks[4].header_block
-            assert header_blocks[1] == blocks[0].header_block
+            # Get headers
+            assert len(await db.get_headers()) == len(blocks)
 
             # Save/get sync
             for sync_mode in (False, True):
@@ -86,11 +79,6 @@ class TestStore:
             db.add_potential_tip(blocks[6])
             assert blocks[6] == db.get_potential_tip(blocks[6].header_hash)
 
-            # add/get potential trunk
-            header = genesis.header_block
-            db.add_potential_header(header)
-            assert db.get_potential_header(genesis.height) == header
-
             # Add potential block
             await db.add_potential_block(genesis)
             assert genesis == await db.get_potential_block(uint32(0))
@@ -99,8 +87,8 @@ class TestStore:
             assert db.get_candidate_block(0) is None
             partial = (
                 blocks[5].body,
-                blocks[5].header_block.header.data,
-                blocks[5].header_block.proof_of_space,
+                blocks[5].header.data,
+                blocks[5].proof_of_space,
             )
             db.add_candidate_block(blocks[5].header_hash, *partial)
             assert db.get_candidate_block(blocks[5].header_hash) == partial
@@ -164,7 +152,7 @@ class TestStore:
     @pytest.mark.asyncio
     async def test_deadlock(self):
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 9, b"0")
-        db_filename = Path("blockchain_test")
+        db_filename = Path("blockchain_test.db")
 
         if db_filename.exists():
             db_filename.unlink()

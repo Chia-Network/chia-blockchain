@@ -37,7 +37,7 @@ class TestUnspent:
     async def test_basic_unspent_store(self):
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
-        db = await UnspentStore.create(Path("fndb_test"))
+        db = await UnspentStore.create(Path("fndb_test.db"))
         await db._clear_database()
 
         # Save/get block
@@ -49,12 +49,13 @@ class TestUnspent:
             assert block.body.fees_coin == unspent_fee.coin
 
         await db.close()
+        Path("fndb_test.db").unlink()
 
     @pytest.mark.asyncio
     async def test_set_spent(self):
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
-        db = await UnspentStore.create(Path("fndb_test"))
+        db = await UnspentStore.create(Path("fndb_test.db"))
         await db._clear_database()
 
         # Save/get block
@@ -73,12 +74,13 @@ class TestUnspent:
             assert unspent_fee.spent == 1
 
         await db.close()
+        Path("fndb_test.db").unlink()
 
     @pytest.mark.asyncio
     async def test_rollback(self):
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
-        db = await UnspentStore.create(Path("fndb_test"))
+        db = await UnspentStore.create(Path("fndb_test.db"))
         await db._clear_database()
 
         # Save/get block
@@ -110,56 +112,93 @@ class TestUnspent:
                 assert unspent_fee is None
 
         await db.close()
+        Path("fndb_test.db").unlink()
 
     @pytest.mark.asyncio
     async def test_basic_reorg(self):
         blocks = bt.get_consecutive_blocks(test_constants, 100, [], 9)
-        unspent_store = await UnspentStore.create(Path("blockchain_test"))
-        store = await FullNodeStore.create(Path("blockchain_test"))
+        unspent_store = await UnspentStore.create(Path("blockchain_test.db"))
+        store = await FullNodeStore.create(Path("blockchain_test.db"))
         await store._clear_database()
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
+        try:
 
-        for i in range(1, len(blocks)):
-            await b.receive_block(blocks[i], blocks[i - 1].header_block)
-        assert b.get_current_tips()[0].height == 100
+            for i in range(1, len(blocks)):
+                await b.receive_block(blocks[i])
+            assert b.get_current_tips()[0].height == 100
 
-        for c, block in enumerate(blocks):
-            unspent = await unspent_store.get_coin_record(
-                block.body.coinbase.name(), block.header_block
-            )
-            unspent_fee = await unspent_store.get_coin_record(
-                block.body.fees_coin.name(), block.header_block
-            )
-            assert unspent.spent == 0
-            assert unspent_fee.spent == 0
-            assert unspent.confirmed_block_index == block.height
-            assert unspent.spent_block_index == 0
-            assert unspent.name == block.body.coinbase.name()
-            assert unspent_fee.name == block.body.fees_coin.name()
-
-        blocks_reorg_chain = bt.get_consecutive_blocks(
-            test_constants, 30, blocks[:90], 9, b"1"
-        )
-
-        for i in range(1, len(blocks_reorg_chain)):
-            reorg_block = blocks_reorg_chain[i]
-            result, removed = await b.receive_block(
-                reorg_block, blocks_reorg_chain[i - 1].header_block
-            )
-            if reorg_block.height < 90:
-                assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
-            elif reorg_block.height < 99:
-                assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
-            elif reorg_block.height >= 100:
-                assert result == ReceiveBlockResult.ADDED_TO_HEAD
+            for c, block in enumerate(blocks):
                 unspent = await unspent_store.get_coin_record(
-                    reorg_block.body.coinbase.name(), reorg_block.header_block
+                    block.body.coinbase.name(), block.header
                 )
-                assert unspent.name == reorg_block.body.coinbase.name()
-                assert unspent.confirmed_block_index == reorg_block.height
+                unspent_fee = await unspent_store.get_coin_record(
+                    block.body.fees_coin.name(), block.header
+                )
                 assert unspent.spent == 0
+                assert unspent_fee.spent == 0
+                assert unspent.confirmed_block_index == block.height
                 assert unspent.spent_block_index == 0
-        assert b.get_current_tips()[0].height == 119
+                assert unspent.name == block.body.coinbase.name()
+                assert unspent_fee.name == block.body.fees_coin.name()
+
+            blocks_reorg_chain = bt.get_consecutive_blocks(
+                test_constants, 30, blocks[:90], 9, b"1"
+            )
+
+            for i in range(1, len(blocks_reorg_chain)):
+                reorg_block = blocks_reorg_chain[i]
+                result, removed = await b.receive_block(reorg_block)
+                if reorg_block.height < 90:
+                    assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
+                elif reorg_block.height < 99:
+                    assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
+                elif reorg_block.height >= 100:
+                    assert result == ReceiveBlockResult.ADDED_TO_HEAD
+                    unspent = await unspent_store.get_coin_record(
+                        reorg_block.body.coinbase.name(), reorg_block.header
+                    )
+                    assert unspent.name == reorg_block.body.coinbase.name()
+                    assert unspent.confirmed_block_index == reorg_block.height
+                    assert unspent.spent == 0
+                    assert unspent.spent_block_index == 0
+            assert b.get_current_tips()[0].height == 119
+        except Exception as e:
+            await unspent_store.close()
+            await store.close()
+            Path("blockchain_test.db").unlink()
+            raise e
 
         await unspent_store.close()
         await store.close()
+        Path("blockchain_test.db").unlink()
+
+    @pytest.mark.asyncio
+    async def test_get_puzzle_hash(self):
+        num_blocks = 20
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 9)
+        unspent_store = await UnspentStore.create(Path("blockchain_test.db"))
+        store = await FullNodeStore.create(Path("blockchain_test.db"))
+        await store._clear_database()
+        b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
+        try:
+            for i in range(1, len(blocks)):
+                await b.receive_block(blocks[i])
+            assert b.get_current_tips()[0].height == num_blocks
+            unspent = await unspent_store.get_coin_record(
+                blocks[1].body.coinbase.name(), blocks[-1].header
+            )
+            unspent_puzzle_hash = unspent.coin.puzzle_hash
+
+            coins = await unspent_store.get_coin_records_by_puzzle_hash(
+                unspent_puzzle_hash, blocks[-1].header
+            )
+            assert len(coins) == (num_blocks + 1) * 2
+        except Exception as e:
+            await unspent_store.close()
+            await store.close()
+            Path("blockchain_test.db").unlink()
+            raise e
+
+        await unspent_store.close()
+        await store.close()
+        Path("blockchain_test.db").unlink()

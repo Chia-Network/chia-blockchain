@@ -126,7 +126,8 @@ class Farmer:
             PrivateKey.from_bytes(bytes.fromhex(ce))
             for ce in self.key_config["pool_sks"]
         ]
-        assert response.proof.pool_pubkey in [sk.get_public_key() for sk in pool_sks]
+        if response.proof.pool_pubkey not in [sk.get_public_key() for sk in pool_sks]:
+            raise RuntimeError("Pool pubkey not in list of approved keys")
 
         challenge_hash: bytes32 = self.harvester_responses_challenge[response.quality]
         challenge_weight: uint64 = self.challenge_to_weight[challenge_hash]
@@ -140,7 +141,8 @@ class Farmer:
             raise RuntimeError("Did not find challenge")
 
         computed_quality = response.proof.verify_and_get_quality()
-        assert response.quality == computed_quality
+        if response.quality != computed_quality:
+            raise RuntimeError("Invalid quality for proof of space")
 
         self.harvester_responses_proofs[response.quality] = response.proof
         self.harvester_responses_proof_hash_to_qual[

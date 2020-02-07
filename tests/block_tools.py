@@ -23,7 +23,6 @@ from src.types.hashable.BLSSignature import BLSSignature
 from src.types.hashable.Coin import Coin
 from src.types.hashable.Program import Program
 from src.types.header import Header, HeaderData
-from src.types.header_block import HeaderBlock
 from src.types.proof_of_space import ProofOfSpace
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
@@ -138,16 +137,16 @@ class BlockTools:
                 block_list[-1 - test_constants["DIFFICULTY_EPOCH"]].weight
                 - block_list[-2 - test_constants["DIFFICULTY_EPOCH"]].weight
             )
-            assert block_list[-1].header_block.proof_of_time
+            assert block_list[-1].proof_of_time is not None
             curr_ips = calculate_ips_from_iterations(
-                block_list[-1].header_block.proof_of_space,
+                block_list[-1].proof_of_space,
                 curr_difficulty,
-                block_list[-1].header_block.proof_of_time.number_of_iterations,
+                block_list[-1].proof_of_time.number_of_iterations,
                 test_constants["MIN_BLOCK_TIME"],
             )
 
         starting_height = block_list[-1].height + 1
-        timestamp = block_list[-1].header_block.header.data.timestamp
+        timestamp = block_list[-1].header.data.timestamp
         for next_height in range(starting_height, starting_height + num_blocks):
             if (
                 next_height > test_constants["DIFFICULTY_EPOCH"]
@@ -167,23 +166,20 @@ class BlockTools:
                 height3 = uint64(next_height - (test_constants["DIFFICULTY_DELAY"]) - 1)
                 if height1 >= 0:
                     block1 = block_list[height1]
-                    assert block1.header_block.challenge
-                    iters1 = block1.header_block.challenge.total_iters
-                    timestamp1 = block1.header_block.header.data.timestamp
+                    iters1 = block1.header.data.total_iters
+                    timestamp1 = block1.header.data.timestamp
                 else:
                     block1 = block_list[0]
-                    assert block1.header_block.challenge
                     timestamp1 = (
-                        block1.header_block.header.data.timestamp
+                        block1.header.data.timestamp
                         - test_constants["BLOCK_TIME_TARGET"]
                     )
-                    iters1 = block1.header_block.challenge.total_iters
-                timestamp2 = block_list[height2].header_block.header.data.timestamp
-                timestamp3 = block_list[height3].header_block.header.data.timestamp
+                    iters1 = block1.header.data.total_iters
+                timestamp2 = block_list[height2].header.data.timestamp
+                timestamp3 = block_list[height3].header.data.timestamp
 
                 block3 = block_list[height3]
-                assert block3.header_block.challenge
-                iters3 = block3.header_block.challenge.total_iters
+                iters3 = block3.header.data.total_iters
                 term1 = (
                     test_constants["DIFFICULTY_DELAY"]
                     * prev_difficulty
@@ -252,11 +248,17 @@ class BlockTools:
             if next_height in transaction_data_at_height:
                 transactions, aggsig = transaction_data_at_height[next_height]
 
+            update_difficulty = (
+                next_height % test_constants["DIFFICULTY_EPOCH"]
+                == test_constants["DIFFICULTY_DELAY"]
+            )
+
             block_list.append(
                 self.create_next_block(
                     test_constants,
                     block_list[-1],
                     timestamp,
+                    update_difficulty,
                     curr_difficulty,
                     curr_ips,
                     seed,
@@ -296,6 +298,7 @@ class BlockTools:
         input_constants: Dict,
         prev_block: FullBlock,
         timestamp: uint64,
+        update_difficulty: bool,
         difficulty: uint64,
         ips: uint64,
         seed: bytes = b"",
@@ -309,15 +312,28 @@ class BlockTools:
         test_constants: Dict[str, Any] = constants.copy()
         for key, value in input_constants.items():
             test_constants[key] = value
-
-        assert prev_block.header_block.challenge
+        assert prev_block.proof_of_time is not None
+        if update_difficulty:
+            challenge = Challenge(
+                prev_block.proof_of_space.challenge_hash,
+                prev_block.proof_of_space.get_hash(),
+                prev_block.proof_of_time.output.get_hash(),
+                difficulty,
+            )
+        else:
+            challenge = Challenge(
+                prev_block.proof_of_space.challenge_hash,
+                prev_block.proof_of_space.get_hash(),
+                prev_block.proof_of_time.output.get_hash(),
+                None,
+            )
 
         return self._create_block(
             test_constants,
-            prev_block.header_block.challenge.get_hash(),
+            challenge.get_hash(),
             uint32(prev_block.height + 1),
             prev_block.header_hash,
-            prev_block.header_block.challenge.total_iters,
+            prev_block.header.data.total_iters,
             prev_block.weight,
             timestamp,
             uint64(difficulty),
@@ -396,7 +412,7 @@ class BlockTools:
         if not reward_puzzlehash:
             reward_puzzlehash = fee_target
 
-        solutions_generator: bytes32 = sha256(seed).digest()
+        extension_data: bytes32 = bytes32(bytes([0] * 32))
         cost = uint64(0)
 
         if genesis:
@@ -419,8 +435,8 @@ class BlockTools:
             fees_coin,
             transactions,
             aggsig,
-            solutions_generator,
             cost,
+            extension_data,
         )
 
         header_data: HeaderData = HeaderData(
@@ -430,6 +446,9 @@ class BlockTools:
             bytes([0] * 32),
             proof_of_space.get_hash(),
             body.get_hash(),
+            uint64(prev_weight + difficulty),
+            uint64(prev_iters + number_iters),
+            bytes([0] * 32),
             bytes([0] * 32),
         )
 
@@ -437,16 +456,7 @@ class BlockTools:
 
         header: Header = Header(header_data, header_hash_sig)
 
-        challenge = Challenge(
-            challenge_hash,
-            proof_of_space.get_hash(),
-            proof_of_time.get_hash(),
-            uint64(prev_weight + difficulty),
-            uint64(prev_iters + number_iters),
-        )
-        header_block = HeaderBlock(proof_of_space, proof_of_time, challenge, header)
-
-        full_block: FullBlock = FullBlock(header_block, body)
+        full_block: FullBlock = FullBlock(proof_of_space, proof_of_time, header, body)
 
         return full_block
 

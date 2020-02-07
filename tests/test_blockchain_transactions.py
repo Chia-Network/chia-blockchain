@@ -64,7 +64,7 @@ class TestBlockchainTransactions:
 
         last_block = blocks[10]
         next_spendbundle = await full_node_1.mempool.create_bundle_for_tip(
-            last_block.header_block
+            last_block.header
         )
         assert next_spendbundle is not None
 
@@ -81,7 +81,7 @@ class TestBlockchainTransactions:
             pass
 
         tips = full_node_1.blockchain.get_current_tips()
-        assert next_block.header_block.to_small() in tips
+        assert next_block.header in tips
 
         added_coins = next_spendbundle.additions()
 
@@ -89,7 +89,7 @@ class TestBlockchainTransactions:
         assert len(added_coins) == 2
         for coin in added_coins:
             unspent = await full_node_1.unspent_store.get_coin_record(
-                coin.name(), next_block.header_block
+                coin.name(), next_block.header
             )
             assert unspent is not None
 
@@ -98,7 +98,7 @@ class TestBlockchainTransactions:
 
         farmed_block: Optional[FullBlock] = None
         for tip in full_tips:
-            if tip.header_block == next_block.header_block:
+            if tip.header == next_block.header:
                 in_full_tips = True
                 farmed_block = tip
 

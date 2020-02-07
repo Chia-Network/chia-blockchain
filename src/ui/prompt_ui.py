@@ -19,7 +19,7 @@ from prompt_toolkit.styles import Style
 from prompt_toolkit.widgets import Button, Frame, Label, SearchToolbar, TextArea
 from src.server.connection import NodeType
 from src.types.full_block import FullBlock
-from src.types.header_block import SmallHeaderBlock
+from src.types.header import Header
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
 from src.rpc.rpc_client import RpcClient
@@ -180,7 +180,7 @@ class FullNodeUI:
         self.total_iters_label = TextArea(focusable=False, height=2)
         self.con_rows = []
         self.displayed_cons = set()
-        self.latest_blocks: List[SmallHeaderBlock] = []
+        self.latest_blocks: List[Header] = []
         self.connections_msg = Label(text=f"Connections")
         self.connection_rows_vsplit = Window()
         self.add_connection_msg = Label(text=f"Add a connection ip:port")
@@ -281,17 +281,15 @@ class FullNodeUI:
             # TODO: catch right exception
             self.error_msg.text = f"Failed to connect to {ip}:{port}"
 
-    async def get_latest_blocks(
-        self, heads: List[SmallHeaderBlock]
-    ) -> List[SmallHeaderBlock]:
-        added_blocks: List[SmallHeaderBlock] = []
+    async def get_latest_blocks(self, heads: List[Header]) -> List[Header]:
+        added_blocks: List[Header] = []
         while len(added_blocks) < self.num_blocks and len(heads) > 0:
             heads = sorted(heads, key=lambda b: b.height, reverse=True)
             max_block = heads[0]
             if max_block not in added_blocks:
                 added_blocks.append(max_block)
             heads.remove(max_block)
-            prev: Optional[SmallHeaderBlock] = await self.rpc_client.get_header(
+            prev: Optional[Header] = await self.rpc_client.get_header(
                 max_block.prev_header_hash
             )
             if prev is not None:

@@ -391,23 +391,23 @@ class Blockchain:
                 ]
             )
 
-    def get_next_ips(self, header_block: HeaderBlock) -> uint64:
+    def get_next_ips(self, block: FullBlock) -> uint64:
         """
         Returns the VDF speed in iterations per seconds, to be used for the next block. This depends on
         the number of iterations of the last epoch, and changes at the same block as the difficulty.
         """
-        block: Header = self.headers[header_block.header_hash]
-
         next_height: uint32 = uint32(block.height + 1)
         if next_height < self.constants["DIFFICULTY_EPOCH"]:
             # First epoch has a hardcoded vdf speed
             return self.constants["VDF_IPS_STARTING"]
 
-        prev_block: Header = self.headers[block.prev_header_hash]
+        prev_block_header: Header = self.headers[block.prev_header_hash]
 
-        proof_of_space = header_block.proof_of_space
-        difficulty = self.get_next_difficulty(prev_block.header_hash)
-        iterations = uint64(block.data.total_iters - prev_block.data.total_iters)
+        proof_of_space = block.proof_of_space
+        difficulty = self.get_next_difficulty(prev_block_header.header_hash)
+        iterations = uint64(
+            block.header.data.total_iters - prev_block_header.data.total_iters
+        )
         prev_ips = calculate_ips_from_iterations(
             proof_of_space, difficulty, iterations, self.constants["MIN_BLOCK_TIME"]
         )
@@ -440,7 +440,7 @@ class Blockchain:
         if block not in self.get_current_tips() or height2 not in self.height_to_hash:
             # This means we are either on a fork, or on one of the chains, but after the LCA,
             # so we manually backtrack.
-            curr: Optional[Header] = block
+            curr: Optional[Header] = block.header
             assert curr is not None
             while (
                 curr.height not in self.height_to_hash
@@ -590,7 +590,6 @@ class Blockchain:
             challenge: Optional[Challenge] = self.get_challenge(prev_full_block)
             assert challenge is not None
             challenge_hash = challenge.get_hash()
-
             # 8. Check challenge hash of prev is the same as in pos
             if challenge_hash != block.proof_of_space.challenge_hash:
                 return False
@@ -649,9 +648,7 @@ class Blockchain:
         if not genesis:
             difficulty = self.get_next_difficulty(block.prev_header_hash)
             assert prev_full_block is not None
-            prev_header_block = self.get_header_block(prev_full_block)
-            assert prev_header_block is not None
-            ips = self.get_next_ips(prev_header_block)
+            ips = self.get_next_ips(prev_full_block)
         else:
             difficulty = uint64(self.constants["DIFFICULTY_STARTING"])
             ips = uint64(self.constants["VDF_IPS_STARTING"])
@@ -776,7 +773,7 @@ class Blockchain:
         """
         block = FullBlock.from_bytes(data)
 
-        if not block.header.proof_of_time:
+        if not block.proof_of_time:
             return False, None
 
         # 4. Check PoT

@@ -25,7 +25,7 @@ class HeaderBlock(Streamable):
 
     @property
     def weight(self):
-        return self.challenge.total_weight
+        return self.header.weight
 
     @property
     def header_hash(self):

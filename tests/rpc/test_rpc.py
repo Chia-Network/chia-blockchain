@@ -46,20 +46,20 @@ class TestRpc:
         test_node_1_port = 21234
         test_node_2_port = 21235
         test_rpc_port = 21236
-        db_filename = Path("blockchain_test")
+        db_filename = Path("blockchain_test.db")
 
         if db_filename.exists():
             db_filename.unlink()
         store = await FullNodeStore.create(db_filename)
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
-        unspent_store = await UnspentStore.create("blockchain_test")
+        unspent_store = await UnspentStore.create("blockchain_test.db")
         mempool = Mempool(unspent_store)
 
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
         await store.add_block(blocks[0])
         for i in range(1, 9):
-            assert (await b.receive_block(blocks[i], blocks[i - 1].header_block))[
+            assert (await b.receive_block(blocks[i]))[
                 0
             ] == ReceiveBlockResult.ADDED_TO_HEAD
             await store.add_block(blocks[i])
@@ -89,13 +89,14 @@ class TestRpc:
             assert block == blocks[6]
             assert (await client.get_block(bytes([1] * 32))) is None
 
-            small_header_block = await client.get_header(state["lca"].header_hash)
-            assert small_header_block.header == blocks[6].header_block.header
+            header = await client.get_header(state["lca"].header_hash)
+            assert header == blocks[6].header
 
-            assert len(await client.get_pool_balances()) > 0
+            # TODO implement get pool balances
+            # assert len(await client.get_pool_balances()) > 0
             assert len(await client.get_connections()) == 0
 
-            unspent_store2 = await UnspentStore.create("blockchain_test2")
+            unspent_store2 = await UnspentStore.create("blockchain_test_2.db")
             full_node_2 = FullNode(store, b, config, mempool, unspent_store2)
             server_2 = ChiaServer(test_node_2_port, full_node_2, NodeType.FULL_NODE)
             full_node_2._set_server(server_2)
@@ -112,6 +113,8 @@ class TestRpc:
             await server_2.await_closed()
             await rpc_cleanup()
             await store.close()
+            Path("blockchain_test.db").unlink()
+            Path("blockchain_test_2.db").unlink()
             raise
 
         await client.stop_node()
@@ -124,3 +127,5 @@ class TestRpc:
         await store.close()
         await unspent_store.close()
         await unspent_store2.close()
+        Path("blockchain_test.db").unlink()
+        Path("blockchain_test_2.db").unlink()

@@ -5,7 +5,7 @@ from src.types.header import Header
 
 
 def verify_weight(
-    tip: HeaderBlock, proof_blocks: List[HeaderBlock], fork_point: Header
+    tip: Header, proof_blocks: List[HeaderBlock], fork_point: Header
 ) -> bool:
     """
     Verifies whether the weight of the tip is valid or not. Naively, looks at every block

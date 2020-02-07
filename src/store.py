@@ -132,36 +132,6 @@ class FullNodeStore:
             return FullBlock.from_bytes(row[2])
         return None
 
-    async def get_header_blocks_by_hash(
-        self, header_hashes: List[bytes32]
-    ) -> List[HeaderBlock]:
-        if len(header_hashes) == 0:
-            return []
-        header_hashes_db = tuple(h.hex() for h in header_hashes)
-        formatted_str = f'SELECT * from blocks WHERE header_hash in ({"?," * (len(header_hashes_db) - 1)}?)'
-        cursor = await self.db.execute(formatted_str, header_hashes_db)
-        rows = await cursor.fetchall()
-        await cursor.close()
-        header_blocks: List[HeaderBlock] = []
-        for row in rows:
-            header_blocks.append(FullBlock.from_bytes(row[2]).header_block)
-
-        # Sorts the passed in header hashes by hash, with original index
-        header_hashes_sorted = sorted(
-            enumerate(header_hashes), key=lambda pair: pair[1]
-        )
-
-        # Sorts the fetched header blocks by hash
-        header_blocks_sorted = sorted(header_blocks, key=lambda hb: hb.header_hash)
-
-        # Combine both and sort by the original indeces
-        combined = sorted(
-            zip(header_hashes_sorted, header_blocks_sorted), key=lambda pair: pair[0][0]
-        )
-
-        # Return only the header blocks in the original order
-        return [pair[1] for pair in combined]
-
     async def get_headers(self) -> List[Header]:
         cursor = await self.db.execute("SELECT * from headers")
         rows = await cursor.fetchall()
