@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from typing import List, Tuple
 
 from src.types.body import Body
+from src.types.hashable.SpendBundle import SpendBundle
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
-from src.types.transaction import Transaction
 from src.util.cbor_message import cbor_message
 from src.util.ints import uint32
 
@@ -17,7 +17,7 @@ Protocol between wallet (SPV node) and full node.
 @dataclass(frozen=True)
 @cbor_message
 class SendTransaction:
-    transaction: Transaction
+    transaction: SpendBundle
 
 
 @dataclass(frozen=True)

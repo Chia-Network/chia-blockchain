@@ -53,7 +53,7 @@ class TestBlockchainTransactions:
         )
 
         assert spend_bundle is not None
-        tx: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle)
+        tx: peer_protocol.NewTransaction = peer_protocol.NewTransaction(spend_bundle)
         async for _ in full_node_1.transaction(tx):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool

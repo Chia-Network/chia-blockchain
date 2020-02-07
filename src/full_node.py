@@ -1043,15 +1043,15 @@ class FullNode:
 
     @api_request
     async def transaction(
-        self, tx: peer_protocol.Transaction
+        self, tx: peer_protocol.NewTransaction
     ) -> OutboundMessageGenerator:
         """
         Receives a full transaction from peer.
         If tx is added to mempool, send tx_id to others. (maybe_transaction)
         """
-        added, error = await self.mempool.add_spendbundle(tx.sb)
+        added, error = await self.mempool.add_spendbundle(tx.transaction)
         if added:
-            maybeTX = peer_protocol.TransactionId(tx.sb.name())
+            maybeTX = peer_protocol.TransactionId(tx.transaction.name())
             yield OutboundMessage(
                 NodeType.FULL_NODE,
                 Message("maybe_transaction", maybeTX),
@@ -1059,7 +1059,7 @@ class FullNode:
             )
         else:
             self.log.warning(
-                f"Wasn't able to add transaction with id {tx.sb.name()}, error: {error}"
+                f"Wasn't able to add transaction with id {tx.transaction.name()}, error: {error}"
             )
             return
 
@@ -1091,7 +1091,7 @@ class FullNode:
         if spend_bundle is None:
             return
 
-        transaction = peer_protocol.Transaction(spend_bundle)
+        transaction = peer_protocol.NewTransaction(spend_bundle)
         yield OutboundMessage(
             NodeType.FULL_NODE, Message("transaction", transaction), Delivery.RESPOND,
         )
