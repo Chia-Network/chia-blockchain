@@ -3,7 +3,7 @@ from pathlib import Path
 import asyncio
 
 from src.blockchain import Blockchain
-from src.mempool import Mempool
+from src.mempool_manager import MempoolManager
 from src.store import FullNodeStore
 from src.full_node import FullNode
 from src.server.connection import NodeType
@@ -51,7 +51,8 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     await store_1._clear_database()
     unspent_store_1 = await UnspentStore.create(Path(db_name))
     await unspent_store_1._clear_database()
-    mempool_1 = Mempool(unspent_store_1, dic)
+    mempool_1 = MempoolManager(unspent_store_1, dic)
+
     b_1: Blockchain = await Blockchain.create(
         unspent_store_1, store_1, test_constants_copy
     )

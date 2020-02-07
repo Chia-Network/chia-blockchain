@@ -9,7 +9,7 @@ from src.util.ints import uint32, uint64
 from src.types.header import Header
 
 
-class Pool:
+class Mempool:
     header: Header
     spends: Dict[bytes32, MempoolItem]
     sorted_spends: SortedDict
@@ -21,7 +21,7 @@ class Pool:
     # if new min fee is added
     @staticmethod
     def create(tip: Header, size: uint32):
-        self = Pool()
+        self = Mempool()
         self.header = tip
         self.spends = {}
         self.additions = {}
