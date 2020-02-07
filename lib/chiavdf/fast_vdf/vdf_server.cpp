@@ -1,4 +1,8 @@
 #include <boost/asio.hpp>
+#include <boost/bind.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/enable_shared_from_this.hpp>
+
 #include "vdf.h"
 using boost::asio::ip::tcp;
 
@@ -32,165 +36,197 @@ void CreateAndWriteProof(integer D, form x, int64_t num_iterations, WesolowskiCa
     std::string str_result = "WESO" + BytesToStr(bytes);
     std::lock_guard<std::mutex> lock(socket_mutex);
     PrintInfo("Generated proof = " + str_result);;
-    // Write "WESO" marker
     // boost::asio::write(sock, boost::asio::buffer("WESO", 4));
     boost::asio::write(sock, boost::asio::buffer(str_result.c_str(), str_result.size()));
 }
 
-void session(tcp::socket sock) {
-    try {
-        char disc[350];
-        char disc_size[5];
-        boost::system::error_code error;
 
-        memset(disc,0x00,sizeof(disc)); // For null termination
-        memset(disc_size,0x00,sizeof(disc_size)); // For null termination
+class session
+  : public std::enable_shared_from_this<session>
+{
+public:
+  session(tcp::socket socket)
+    : socket_(std::move(socket))
+  {}
+    void start() {
+        try {
+            char disc[350];
+            char disc_size[5];
+            boost::system::error_code error;
 
-        boost::asio::read(sock, boost::asio::buffer(disc_size, 3), error);
-        int disc_int_size = atoi(disc_size);
+            memset(disc,0x00,sizeof(disc)); // For null termination
+            memset(disc_size,0x00,sizeof(disc_size)); // For null termination
 
-        boost::asio::read(sock, boost::asio::buffer(disc, disc_int_size), error);
+            boost::asio::read(socket_, boost::asio::buffer(disc_size, 3), error);
+            int disc_int_size = atoi(disc_size);
 
-        integer D(disc);
-        PrintInfo("Discriminant = " + to_string(D.impl));
+            boost::asio::read(socket_, boost::asio::buffer(disc, disc_int_size), error);
 
-        int space_needed = kSwitchIters / 10 + (kMaxItersAllowed - kSwitchIters) / 100;
-        forms = (form*) calloc(space_needed, sizeof(form));
+            integer D(disc);
+            PrintInfo("Discriminant = " + to_string(D.impl));
 
-        PrintInfo("Calloc'd " + to_string(space_needed * sizeof(form)) + " bytes");
+            int space_needed = kSwitchIters / 10 + (kMaxItersAllowed - kSwitchIters) / 100;
+            forms = (form*) calloc(space_needed, sizeof(form));
 
-        // Init VDF the discriminant...
+            PrintInfo("Calloc'd " + to_string(space_needed * sizeof(form)) + " bytes");
 
-        if (error == boost::asio::error::eof)
-            return ; // Connection closed cleanly by peer.
-        else if (error)
-            throw boost::system::system_error(error); // Some other error.
+            // Init VDF the discriminant...
 
-        if (getenv( "warn_on_corruption_in_production" )!=nullptr) {
-            warn_on_corruption_in_production=true;
-        }
-        if (is_vdf_test) {
-            PrintInfo( "=== Test mode ===" );
-        }
-        if (warn_on_corruption_in_production) {
-            PrintInfo( "=== Warn on corruption enabled ===" );
-        }
-        assert(is_vdf_test); //assertions should be disabled in VDF_MODE==0
-        init_gmp();
-        allow_integer_constructor=true; //make sure the old gmp allocator isn't used
-        set_rounding_mode();
+            if (error == boost::asio::error::eof)
+                return ; // Connection closed cleanly by peer.
+            else if (error)
+                throw boost::system::system_error(error); // Some other error.
 
-        integer L=root(-D, 4);
-        form f=form::generator(D);
+            if (getenv( "warn_on_corruption_in_production" )!=nullptr) {
+                warn_on_corruption_in_production=true;
+            }
+            if (is_vdf_test) {
+                PrintInfo( "=== Test mode ===" );
+            }
+            if (warn_on_corruption_in_production) {
+                PrintInfo( "=== Warn on corruption enabled ===" );
+            }
+            assert(is_vdf_test); //assertions should be disabled in VDF_MODE==0
+            init_gmp();
+            allow_integer_constructor=true; //make sure the old gmp allocator isn't used
+            set_rounding_mode();
 
-        bool stop_signal = false;
-        // (iteration, thread_id)
-        std::set<std::pair<uint64_t, uint64_t> > seen_iterations;
-        bool stop_vector[100];
+            integer L=root(-D, 4);
+            form f=form::generator(D);
 
-        std::vector<std::thread> threads;
-        WesolowskiCallback weso(1000000);
+            bool stop_signal = false;
+            // (iteration, thread_id)
+            std::set<std::pair<uint64_t, uint64_t> > seen_iterations;
+            bool stop_vector[100];
 
-        //mpz_init(weso.forms[0].a.impl);
-        //mpz_init(weso.forms[0].b.impl);
-        //mpz_init(weso.forms[0].c.impl);
+            std::vector<std::thread> threads;
+            WesolowskiCallback weso(1000000);
 
-        forms[0]=f;
-        weso.D = D;
-        weso.L = L;
-        weso.kl = 10;
+            //mpz_init(weso.forms[0].a.impl);
+            //mpz_init(weso.forms[0].b.impl);
+            //mpz_init(weso.forms[0].c.impl);
 
-        bool stopped = false;
-        bool got_iters = false;
-        std::thread vdf_worker(repeated_square, f, D, L, std::ref(weso), std::ref(stopped));
+            forms[0]=f;
+            weso.D = D;
+            weso.L = L;
+            weso.kl = 10;
 
-        // Tell client that I'm ready to get the challenges.
-        boost::asio::write(sock, boost::asio::buffer("OK", 2));
-        char data[20];
+            bool stopped = false;
+            bool got_iters = false;
+            std::thread vdf_worker(repeated_square, f, D, L, std::ref(weso), std::ref(stopped));
 
-        while (!stopped) {
-            memset(data, 0, sizeof(data));
-            boost::asio::read(sock, boost::asio::buffer(data, 2), error);
-            int size = (data[0] - '0') * 10 + (data[1] - '0');
-            memset(data, 0, sizeof(data));
-            boost::asio::read(sock, boost::asio::buffer(data, size), error);
-            int iters = atoi(data);
-            got_iters = true;
+            // Tell client that I'm ready to get the challenges.
+            boost::asio::write(socket_, boost::asio::buffer("OK", 2));
+            char data[20];
 
-            if (iters == 0) {
-                PrintInfo("Got stop signal!");
-                stopped = true;
-                for (int i = 0; i < threads.size(); i++)
-                    stop_vector[i] = true;
-                for (int t = 0; t < threads.size(); t++) {
-                    threads[t].join();
-                }
-                vdf_worker.join();
-                free(forms);
-            } else {
-                int max_iter = 0;
-                int max_iter_thread_id = -1;
-                int min_iter = std::numeric_limits<int> :: max();
-                bool unique = true;
-                for (auto active_iter: seen_iterations) {
-                    if (active_iter.first > max_iter) {
-                        max_iter = active_iter.first;
-                        max_iter_thread_id = active_iter.second;
+            while (!stopped) {
+                memset(data, 0, sizeof(data));
+                boost::asio::read(socket_, boost::asio::buffer(data, 2), error);
+                int size = (data[0] - '0') * 10 + (data[1] - '0');
+                memset(data, 0, sizeof(data));
+                boost::asio::read(socket_, boost::asio::buffer(data, size), error);
+                int iters = atoi(data);
+                got_iters = true;
+
+                if (iters == 0) {
+                    PrintInfo("Got stop signal!");
+                    stopped = true;
+                    for (int i = 0; i < threads.size(); i++)
+                        stop_vector[i] = true;
+                    for (int t = 0; t < threads.size(); t++) {
+                        threads[t].join();
                     }
-                    if (active_iter.first < min_iter) {
-                        min_iter = active_iter.first;
+                    vdf_worker.join();
+                    free(forms);
+                } else {
+                    int max_iter = 0;
+                    int max_iter_thread_id = -1;
+                    int min_iter = std::numeric_limits<int> :: max();
+                    bool unique = true;
+                    for (auto active_iter: seen_iterations) {
+                        if (active_iter.first > max_iter) {
+                            max_iter = active_iter.first;
+                            max_iter_thread_id = active_iter.second;
+                        }
+                        if (active_iter.first < min_iter) {
+                            min_iter = active_iter.first;
+                        }
+                        if (active_iter.first == iters) {
+                            unique = false;
+                            break;
+                        }
                     }
-                    if (active_iter.first == iters) {
-                        unique = false;
-                        break;
+                    if (!unique) {
+                        PrintInfo("Duplicate iteration " + to_string(iters) + "... Ignoring.");
+                        continue;
                     }
-                }
-                if (!unique) {
-                    PrintInfo("Duplicate iteration " + to_string(iters) + "... Ignoring.");
-                    continue;
-                }
-                if (threads.size() < kMaxProcessesAllowed || iters < min_iter) {
-                    seen_iterations.insert({iters, threads.size()});
-                    PrintInfo("Running proving for iter: " + to_string(iters));
-                    stop_vector[threads.size()] = false;
-                    threads.push_back(std::thread(CreateAndWriteProof, D, f, iters, std::ref(weso),
-                                      std::ref(stop_vector[threads.size()]), std::ref(sock)));
-                    if (threads.size() > kMaxProcessesAllowed) {
-                        PrintInfo("Stopping proving for iter: " + to_string(max_iter));
-                        stop_vector[max_iter_thread_id] = true;
-                        seen_iterations.erase({max_iter, max_iter_thread_id});
+                    if (threads.size() < kMaxProcessesAllowed || iters < min_iter) {
+                        seen_iterations.insert({iters, threads.size()});
+                        PrintInfo("Running proving for iter: " + to_string(iters));
+                        stop_vector[threads.size()] = false;
+                        threads.push_back(std::thread(CreateAndWriteProof, D, f, iters, std::ref(weso),
+                                        std::ref(stop_vector[threads.size()]), std::ref(socket_)));
+                        if (threads.size() > kMaxProcessesAllowed) {
+                            PrintInfo("Stopping proving for iter: " + to_string(max_iter));
+                            stop_vector[max_iter_thread_id] = true;
+                            seen_iterations.erase({max_iter, max_iter_thread_id});
+                        }
                     }
                 }
             }
+        } catch (std::exception& e) {
+            PrintInfo("Exception in thread: " + to_string(e.what()));
         }
-    } catch (std::exception& e) {
-        PrintInfo("Exception in thread: " + to_string(e.what()));
-    }
 
-    try {
-        // Tell client I've stopped everything, wait for ACK and close.
-        boost::system::error_code error;
+        try {
+            // Tell client I've stopped everything, wait for ACK and close.
+            boost::system::error_code error;
 
-        PrintInfo("Stopped everything! Ready for the next challenge.");
+            PrintInfo("Stopped everything! Ready for the next challenge.");
 
-        std::lock_guard<std::mutex> lock(socket_mutex);
-        boost::asio::write(sock, boost::asio::buffer("STOP", 4));
+            std::lock_guard<std::mutex> lock(socket_mutex);
+            boost::asio::write(socket_, boost::asio::buffer("STOP", 4));
 
-        char ack[5];
-        memset(ack,0x00,sizeof(ack));
-        boost::asio::read(sock, boost::asio::buffer(ack, 3), error);
-        assert (strncmp(ack, "ACK", 3) == 0);
-    } catch (std::exception& e) {
-        PrintInfo("Exception in thread: " + to_string(e.what()));
-    }
-}
+            char ack[5];
+            memset(ack,0x00,sizeof(ack));
+            boost::asio::read(socket_, boost::asio::buffer(ack, 3), error);
+            assert (strncmp(ack, "ACK", 3) == 0);
+        } catch (std::exception& e) {
+            PrintInfo("Exception in thread: " + to_string(e.what()));
+        }
+  }
 
-void server(boost::asio::io_service& io_server, unsigned short port)
-{
-  tcp::acceptor a(io_server, tcp::endpoint(tcp::v4(), port));
-  std::thread t(session, a.accept());
-  t.join();
-}
+private:
+  tcp::socket socket_;
+};
+
+class server {
+public:
+  server(boost::asio::io_service& io_service, short port)
+    : acceptor_(io_service, tcp::endpoint(tcp::v4(), port)),
+      socket_(io_service)
+  {
+    do_accept();
+  }
+
+private:
+  void do_accept()
+  {
+    acceptor_.async_accept(socket_,
+        [this](boost::system::error_code ec)
+        {
+          if (!ec)
+          {
+            std::make_shared<session>(std::move(socket_))->start();
+          }
+
+          do_accept();
+        });
+  }
+
+  tcp::acceptor acceptor_;
+  tcp::socket socket_;
+};
 
 int main(int argc, char* argv[])
 {
@@ -198,18 +234,19 @@ int main(int argc, char* argv[])
   {
     if (argc != 2)
     {
-      PrintInfo("Usage: blocking_tcp_echo_server <port>");
+      std::cerr << "Usage: vdf_server <port>\n";
       return 1;
     }
 
     boost::asio::io_service io_service;
 
-    server(io_service, std::atoi(argv[1]));
+    server s(io_service, std::atoi(argv[1]));
+
+    io_service.run();
   }
   catch (std::exception& e)
   {
-    PrintInfo("Exception: " + to_string(e.what()));
+    std::cerr << "Exception: " << e.what() << "\n";
   }
-
   return 0;
 }
