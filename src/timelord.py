@@ -310,7 +310,6 @@ class Timelord:
                 )
                 if not proof_of_time.is_valid(constants["DISCRIMINANT_SIZE_BITS"]):
                     log.error("Invalid proof of time")
-                    raise RuntimeError("Invalid proof of time")
 
                 response = timelord_protocol.ProofOfTimeFinished(proof_of_time)
 

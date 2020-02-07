@@ -5,19 +5,19 @@ import aiosqlite
 from src.types.full_block import FullBlock
 from src.types.hashable.Coin import Coin
 from src.types.hashable.CoinRecord import CoinRecord
-from src.types.header_block import SmallHeaderBlock
 from src.types.sized_bytes import bytes32
+from src.types.header import Header
 from src.util.ints import uint32, uint8
 
 
 class DiffStore:
-    header: SmallHeaderBlock
+    header: Header
     diffs: Dict[bytes32, CoinRecord]
 
     @staticmethod
-    async def create(head: SmallHeaderBlock, diffs: Dict[bytes32, CoinRecord]):
+    async def create(header: Header, diffs: Dict[bytes32, CoinRecord]):
         self = DiffStore()
-        self.header = head
+        self.header = header
         self.diffs = diffs
         return self
 
@@ -110,9 +110,7 @@ class UnspentStore:
     # Received new tip, just update diffs
     async def new_heads(self, blocks: List[FullBlock]):
         last: FullBlock = blocks[-1]
-        diff_store: DiffStore = await DiffStore.create(
-            last.header_block.to_small(), dict()
-        )
+        diff_store: DiffStore = await DiffStore.create(last.header, dict())
 
         block: FullBlock
         for block in blocks:
@@ -192,7 +190,7 @@ class UnspentStore:
 
     # Checks DB and DiffStores for unspent with coin_name and returns it
     async def get_coin_record(
-        self, coin_name: bytes32, header: SmallHeaderBlock = None
+        self, coin_name: bytes32, header: Header = None
     ) -> Optional[CoinRecord]:
         if header is not None and header.header_hash in self.head_diffs:
             diff_store = self.head_diffs[header.header_hash]

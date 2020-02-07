@@ -16,7 +16,10 @@ class HeaderData(Streamable):
     filter_hash: bytes32
     proof_of_space_hash: bytes32
     body_hash: bytes32
-    extension_data: bytes32
+    weight: uint64
+    total_iters: uint64
+    additions_root: bytes32
+    removals_root: bytes32
 
 
 @dataclass(frozen=True)
@@ -32,3 +35,11 @@ class Header(Streamable):
     @property
     def header_hash(self):
         return self.get_hash()
+
+    @property
+    def prev_header_hash(self) -> bytes32:
+        return self.data.prev_header_hash
+
+    @property
+    def weight(self) -> bytes32:
+        return self.data.weight

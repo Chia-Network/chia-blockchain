@@ -19,7 +19,6 @@ class ProofOfSpaceFinalized:
     challenge_hash: bytes32
     height: uint32
     weight: uint64
-    quality: bytes32
     difficulty: uint64
 
 

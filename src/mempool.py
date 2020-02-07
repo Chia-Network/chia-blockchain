@@ -7,7 +7,7 @@ from src.types.full_block import FullBlock
 from src.types.hashable.Coin import Coin
 from src.types.hashable.SpendBundle import SpendBundle
 from src.types.hashable.CoinRecord import CoinRecord
-from src.types.header_block import SmallHeaderBlock
+from src.types.header import Header
 from src.types.mempool_item import MempoolItem
 from src.types.pool import Pool
 from src.types.sized_bytes import bytes32
@@ -50,14 +50,12 @@ class Mempool:
         self.coinbase_freeze = self.constants["COINBASE_FREEZE_PERIOD"]
 
     # TODO This is hack, it should use proper cost, const. Minimize work, double check/verify solution.
-    async def create_bundle_for_tip(
-        self, header_block: SmallHeaderBlock
-    ) -> Optional[SpendBundle]:
+    async def create_bundle_for_tip(self, header: Header) -> Optional[SpendBundle]:
         """
         Returns aggregated spendbundle that can be used for creating new block
         """
-        if header_block.header_hash in self.mempools:
-            pool: Pool = self.mempools[header_block.header_hash]
+        if header.header_hash in self.mempools:
+            pool: Pool = self.mempools[header.header_hash]
             cost_sum = 0
             spend_bundles: List[SpendBundle] = []
             for dic in pool.sorted_spends.values():
@@ -300,9 +298,7 @@ class Mempool:
             else:
                 # Create mempool for new head
                 if len(self.old_mempools) > 0:
-                    new_pool = Pool.create(
-                        tip.header_block.to_small(), self.mempool_size
-                    )
+                    new_pool = Pool.create(tip.header, self.mempool_size)
 
                     # If old spends height is bigger than the new tip height, try adding spends to the pool
                     for height in self.old_mempools.keys():
@@ -314,9 +310,7 @@ class Mempool:
 
                     await self.initialize_pool_from_current_pools(new_pool)
                 else:
-                    new_pool = Pool.create(
-                        tip.header_block.to_small(), self.mempool_size
-                    )
+                    new_pool = Pool.create(tip.header, self.mempool_size)
                     await self.initialize_pool_from_current_pools(new_pool)
 
             await self.add_potential_spends_to_pool(new_pool)
@@ -332,7 +326,7 @@ class Mempool:
         removals, additions = await new_tip.tx_removals_and_additions()
         additions.append(new_tip.body.coinbase)
         additions.append(new_tip.body.fees_coin)
-        pool.header = new_tip.header_block.to_small()
+        pool.header = new_tip.header
         items: Dict[bytes32, MempoolItem] = {}
 
         # Remove transactions that were included in new block, and save them in old_mempool cache
@@ -349,13 +343,9 @@ class Mempool:
         for item in items.values():
             pool.remove_spend(item)
 
-        await self.add_to_old_mempool_cache(
-            list(items.values()), new_tip.header_block.to_small()
-        )
+        await self.add_to_old_mempool_cache(list(items.values()), new_tip.header)
 
-    async def add_to_old_mempool_cache(
-        self, items: List[MempoolItem], header: SmallHeaderBlock
-    ):
+    async def add_to_old_mempool_cache(self, items: List[MempoolItem], header: Header):
         dic_for_height: Dict[bytes32, MempoolItem]
 
         # Store them in proper dictionary for the height they were farmed at

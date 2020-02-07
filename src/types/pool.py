@@ -3,14 +3,14 @@ from typing import List, Dict
 from sortedcontainers import SortedDict
 
 from src.types.hashable.Coin import Coin
-from src.types.header_block import SmallHeaderBlock
 from src.types.mempool_item import MempoolItem
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
+from src.types.header import Header
 
 
 class Pool:
-    header: SmallHeaderBlock
+    header: Header
     spends: Dict[bytes32, MempoolItem]
     sorted_spends: SortedDict
     additions: Dict[bytes32, MempoolItem]
@@ -20,7 +20,7 @@ class Pool:
 
     # if new min fee is added
     @staticmethod
-    def create(tip: SmallHeaderBlock, size: uint32):
+    def create(tip: Header, size: uint32):
         self = Pool()
         self.header = tip
         self.spends = {}

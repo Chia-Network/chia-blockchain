@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 from src.types.challenge import Challenge
 from src.types.header import Header
@@ -10,33 +9,10 @@ from src.util.streamable import Streamable, streamable
 
 @dataclass(frozen=True)
 @streamable
-class SmallHeaderBlock(Streamable):
-    header: Header
-    challenge: Challenge
-
-    @property
-    def prev_header_hash(self):
-        return self.header.data.prev_header_hash
-
-    @property
-    def height(self):
-        return self.header.height
-
-    @property
-    def weight(self):
-        return self.challenge.total_weight
-
-    @property
-    def header_hash(self):
-        return self.header.header_hash
-
-
-@dataclass(frozen=True)
-@streamable
 class HeaderBlock(Streamable):
     proof_of_space: ProofOfSpace
-    proof_of_time: Optional[ProofOfTime]
-    challenge: Optional[Challenge]
+    proof_of_time: ProofOfTime
+    challenge: Challenge
     header: Header
 
     @property
@@ -54,8 +30,3 @@ class HeaderBlock(Streamable):
     @property
     def header_hash(self):
         return self.header.header_hash
-
-    def to_small(self) -> SmallHeaderBlock:
-        assert self.header is not None
-        assert self.challenge is not None
-        return SmallHeaderBlock(self.header, self.challenge)

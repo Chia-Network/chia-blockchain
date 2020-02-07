@@ -1,15 +1,17 @@
 from dataclasses import dataclass
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 
 from src.types.name_puzzle_condition import NPC
 from src.types.body import Body
 from src.types.hashable.Coin import Coin
-from src.types.header_block import HeaderBlock
+from src.types.header import Header
 from src.types.sized_bytes import bytes32
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.consensus import created_outputs_for_conditions_dict
 from src.util.ints import uint32, uint64
 from src.util.streamable import Streamable, streamable
+from src.types.proof_of_space import ProofOfSpace
+from src.types.proof_of_time import ProofOfTime
 
 
 def additions_for_npc(npc_list: List[NPC]) -> List[Coin]:
@@ -27,27 +29,26 @@ def additions_for_npc(npc_list: List[NPC]) -> List[Coin]:
 @dataclass(frozen=True)
 @streamable
 class FullBlock(Streamable):
-    header_block: HeaderBlock
+    proof_of_space: ProofOfSpace
+    proof_of_time: Optional[ProofOfTime]
+    header: Header
     body: Body
 
     @property
     def prev_header_hash(self) -> bytes32:
-        return self.header_block.header.data.prev_header_hash
+        return self.header.data.prev_header_hash
 
     @property
     def height(self) -> uint32:
-        return self.header_block.height
+        return self.header.height
 
     @property
     def weight(self) -> uint64:
-        if self.header_block.challenge:
-            return self.header_block.challenge.total_weight
-        else:
-            return uint64(0)
+        return self.header.data.weight
 
     @property
     def header_hash(self) -> bytes32:
-        return self.header_block.header.header_hash
+        return self.header.header_hash
 
     async def tx_removals_and_additions(self) -> Tuple[List[bytes32], List[Coin]]:
         """

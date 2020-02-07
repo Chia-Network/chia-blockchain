@@ -4,11 +4,10 @@ import aiosqlite
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from blspy import PublicKey
 from src.types.body import Body
 from src.types.full_block import FullBlock
-from src.types.header import HeaderData
-from src.types.header_block import HeaderBlock, SmallHeaderBlock
+from src.types.header import HeaderData, Header
+from src.types.header_block import HeaderBlock
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
@@ -66,8 +65,8 @@ class FullNodeStore:
 
         # Headers
         await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS small_header_blocks(height bigint, header_hash "
-            "text PRIMARY KEY, pool_pk text, small_header_block blob)"
+            "CREATE TABLE IF NOT EXISTS headers(height bigint, header_hash "
+            "text PRIMARY KEY, header blob)"
         )
 
         # Height index so we can look up in order of height for sync purposes
@@ -75,7 +74,7 @@ class FullNodeStore:
             "CREATE INDEX IF NOT EXISTS block_height on blocks(height)"
         )
         await self.db.execute(
-            "CREATE INDEX IF NOT EXISTS small_header__block_height on small_header_blocks(height)"
+            "CREATE INDEX IF NOT EXISTS header_height on headers(height)"
         )
 
         await self.db.commit()
@@ -106,7 +105,7 @@ class FullNodeStore:
     async def _clear_database(self):
         await self.db.execute("DELETE FROM blocks")
         await self.db.execute("DELETE FROM potential_blocks")
-        await self.db.execute("DELETE FROM small_header_blocks")
+        await self.db.execute("DELETE FROM headers")
         await self.db.commit()
 
     async def add_block(self, block: FullBlock) -> None:
@@ -115,15 +114,10 @@ class FullNodeStore:
             (block.height, block.header_hash.hex(), bytes(block)),
         )
         await cursor_1.close()
-        assert block.header_block.challenge is not None
+        # assert block.challenge is not None
         cursor_2 = await self.db.execute(
-            ("INSERT OR REPLACE INTO small_header_blocks VALUES(?, ?, ?, ?)"),
-            (
-                block.height,
-                block.header_hash.hex(),
-                bytes(block.header_block.proof_of_space.pool_pubkey).hex(),
-                bytes(block.header_block.to_small()),
-            ),
+            ("INSERT OR REPLACE INTO headers VALUES(?, ?, ?)"),
+            (block.height, block.header_hash.hex(), bytes(block.header),),
         )
         await cursor_2.close()
         await self.db.commit()
@@ -168,23 +162,11 @@ class FullNodeStore:
         # Return only the header blocks in the original order
         return [pair[1] for pair in combined]
 
-    async def get_small_header_blocks(self) -> List[SmallHeaderBlock]:
-        cursor = await self.db.execute("SELECT * from small_header_blocks")
+    async def get_headers(self) -> List[Header]:
+        cursor = await self.db.execute("SELECT * from headers")
         rows = await cursor.fetchall()
         await cursor.close()
-        return [SmallHeaderBlock.from_bytes(row[3]) for row in rows]
-
-    async def get_pool_pks_hack(self) -> List[Tuple[uint32, PublicKey]]:
-        # TODO: this API call is a hack to allow us to see block winners. Replace with coin/UTXU set.
-        cursor = await self.db.execute("SELECT * from small_header_blocks")
-        rows = await cursor.fetchall()
-        return [
-            (
-                SmallHeaderBlock.from_bytes(row[3]).height,
-                PublicKey.from_bytes(bytes.fromhex(row[2])),
-            )
-            for row in rows
-        ]
+        return [Header.from_bytes(row[2]) for row in rows]
 
     async def add_potential_block(self, block: FullBlock) -> None:
         cursor = await self.db.execute(
