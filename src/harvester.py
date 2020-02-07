@@ -76,6 +76,7 @@ class Harvester:
                 log.warning(
                     f"Plot {partial_filename} has a pool key that is not in the farmer's pool_pk list."
                 )
+                continue
 
             found = False
             for filename in potential_filenames:
