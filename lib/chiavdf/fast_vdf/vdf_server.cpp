@@ -186,11 +186,14 @@ public:
 
             std::lock_guard<std::mutex> lock(socket_mutex);
             boost::asio::write(socket_, boost::asio::buffer("STOP", 4));
+            PrintInfo("Wrote stop.");
 
             char ack[5];
             memset(ack,0x00,sizeof(ack));
             boost::asio::read(socket_, boost::asio::buffer(ack, 3), error);
+            PrintInfo("Read Ack");
             assert (strncmp(ack, "ACK", 3) == 0);
+            PrintInfo("DONE.");
         } catch (std::exception& e) {
             PrintInfo("Exception in thread: " + to_string(e.what()));
         }
@@ -213,7 +216,7 @@ public:
 private:
   void do_accept()
   {
-    this->socket_ = tcp::socket(*io_service_);
+    // this->socket_ = tcp::socket(*io_service_);
     acceptor_.async_accept(this->socket_,
         [this](boost::system::error_code ec)
         {
