@@ -3,9 +3,7 @@ from typing import List
 
 import blspy
 
-from src.types.sized_bytes import bytes48, bytes96
-
-from .Message import MessageHash
+from src.types.sized_bytes import bytes48, bytes96, bytes32
 from src.util.streamable import Streamable, streamable
 
 ZERO96 = bytes96([0] * 96)
@@ -26,7 +24,7 @@ class BLSSignature(Streamable):
     @streamable
     class AGGSIGPair(Streamable):
         public_key: BLSPublicKey
-        message_hash: MessageHash
+        message_hash: bytes32
 
     sig: bytes96
 

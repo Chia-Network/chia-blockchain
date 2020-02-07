@@ -1,9 +1,10 @@
 import argparse
-from hashlib import sha256
 from secrets import token_bytes
 
 from blspy import PrivateKey
 from yaml import safe_dump, safe_load
+from src.pool import create_puzzlehash_for_pk
+from src.types.hashable.BLSSignature import BLSPublicKey
 
 from definitions import ROOT_DIR
 
@@ -76,7 +77,9 @@ def main():
         # Replaces the farmer's private key. The farmer target allows spending
         # of the fees.
         farmer_sk = PrivateKey.from_seed(token_bytes(32))
-        farmer_target = sha256(bytes(farmer_sk.get_public_key())).digest()
+        farmer_target = create_puzzlehash_for_pk(
+            BLSPublicKey(bytes(farmer_sk.get_public_key()))
+        )
         key_config["farmer_sk"] = bytes(farmer_sk).hex()
         key_config["farmer_target"] = farmer_target.hex()
         with open(key_config_filename, "w") as f:
@@ -91,7 +94,9 @@ def main():
         # Replaces the pools keys and targes. Only useful if running a pool, or doing
         # solo farming. The pool target allows spending of the coinbase.
         pool_sks = [PrivateKey.from_seed(token_bytes(32)) for _ in range(2)]
-        pool_target = sha256(bytes(pool_sks[0].get_public_key())).digest()
+        pool_target = create_puzzlehash_for_pk(
+            BLSPublicKey(bytes(pool_sks[0].get_public_key()))
+        )
         key_config["pool_sks"] = [bytes(pool_sk).hex() for pool_sk in pool_sks]
         key_config["pool_target"] = pool_target.hex()
         with open(key_config_filename, "w") as f:

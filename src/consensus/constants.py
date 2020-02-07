@@ -32,4 +32,6 @@ constants: Dict[str, Any] = {
     "MEMPOOL_BLOCK_BUFFER": 10,
     # Coinbase rewards are not spendable for 200 blocks
     "COINBASE_FREEZE_PERIOD": 200,
+    # Max coin amount int(1 << 48)
+    "MAX_COIN_AMOUNT": 281474976710656,
 }

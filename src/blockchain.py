@@ -8,18 +8,17 @@ import asyncio
 import concurrent
 import blspy
 
-from src.consensus.block_rewards import calculate_block_reward
+from src.consensus.block_rewards import calculate_block_reward, calculate_base_fee
 from src.consensus.constants import constants as consensus_constants
 from src.consensus.pot_iterations import (
     calculate_ips_from_iterations,
     calculate_iterations_quality,
 )
-from src.mempool import MAX_COIN_AMOUNT
 from src.store import FullNodeStore
 
 from src.types.full_block import FullBlock, additions_for_npc
 from src.types.hashable.Coin import Coin
-from src.types.hashable.Unspent import Unspent
+from src.types.hashable.CoinRecord import CoinRecord
 from src.types.header_block import HeaderBlock, SmallHeaderBlock
 from src.types.sized_bytes import bytes32
 from src.unspent_store import UnspentStore
@@ -69,7 +68,7 @@ class Blockchain:
     # Store
     store: FullNodeStore
     # Coinbase freeze period
-    coinbase_freeze: int
+    coinbase_freeze: uint32
 
     @staticmethod
     async def create(
@@ -717,9 +716,9 @@ class Blockchain:
                 return False
 
             coinbase_reward = calculate_block_reward(block.height)
-            if (coinbase_reward / 8) * 7 != block.body.coinbase.amount:
+            if coinbase_reward != block.body.coinbase.amount:
                 return False
-            fee_base = uint64(int(coinbase_reward / 8))
+            fee_base = calculate_base_fee(block.height)
             # 8. If there is no agg signature, there should be no transactions either
             # target reward_fee = 1/8 coinbase reward + tx fees
             if not block.body.aggregated_signature:
@@ -1000,7 +999,7 @@ class Blockchain:
     async def _from_fork_to_lca(
         self, fork_point: SmallHeaderBlock, lca: SmallHeaderBlock
     ):
-        """ Returns the list of full blocks from fork_point to lca. """
+        """ Selects blocks between fork_point and LCA, and then adds them to unspent_store. """
         blocks: List[FullBlock] = []
         tip_hash: bytes32 = lca.header_hash
         while True:
@@ -1066,7 +1065,7 @@ class Blockchain:
         # Check additions for max coin amount
         for coin in additions:
             additions_dic[coin.name()] = coin
-            if coin.amount >= MAX_COIN_AMOUNT:
+            if coin.amount >= consensus_constants["MAX_COIN_AMOUNT"]:
                 return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
 
         # Watch out for duplicate outputs
@@ -1082,16 +1081,16 @@ class Blockchain:
                 return Err.DOUBLE_SPEND
 
         # Check if removals exist and were not previously spend. (unspent_db + diff_store + this_block)
-        removal_unspents: Dict[bytes32, Unspent] = {}
+        removal_coin_records: Dict[bytes32, CoinRecord] = {}
         for rem in removals:
             if rem in additions_dic:
                 # Ephemeral coin
                 rem_coin: Coin = additions_dic[rem]
-                new_unspent: Unspent = Unspent(rem_coin, block.height, 0, 0, 0)  # type: ignore # noqa
-                removal_unspents[new_unspent.name] = new_unspent
+                new_unspent: CoinRecord = CoinRecord(rem_coin, block.height, 0, 0, 0)  # type: ignore # noqa
+                removal_coin_records[new_unspent.name] = new_unspent
             else:
                 assert prev_header is not None
-                unspent = await self.unspent_store.get_unspent(rem, prev_header)
+                unspent = await self.unspent_store.get_coin_record(rem, prev_header)
                 if unspent:
                     if unspent.spent == 1:
                         return Err.DOUBLE_SPEND
@@ -1101,13 +1100,13 @@ class Blockchain:
                             < unspent.confirmed_block_index + self.coinbase_freeze
                         ):
                             return Err.COINBASE_NOT_YET_SPENDABLE
-                    removal_unspents[unspent.name] = unspent
+                    removal_coin_records[unspent.name] = unspent
                 else:
                     return Err.UNKNOWN_UNSPENT
 
         # Check fees
         removed = 0
-        for unspent in removal_unspents.values():
+        for unspent in removal_coin_records.values():
             removed += unspent.coin.amount
 
         added = 0
@@ -1124,17 +1123,17 @@ class Blockchain:
             return Err.BAD_COINBASE_REWARD
 
         # Verify that removed coin puzzle_hashes match with calculated puzzle_hashes
-        for unspent in removal_unspents.values():
+        for unspent in removal_coin_records.values():
             if unspent.coin.puzzle_hash != removals_puzzle_dic[unspent.name]:
                 return Err.WRONG_PUZZLE_HASH
 
         # Verify conditions, create hash_key list for aggsig check
         hash_key_pairs = []
         for npc in npc_list:
-            unspent = removal_unspents[npc.coin_name]
+            unspent = removal_coin_records[npc.coin_name]
             error = blockchain_check_conditions_dict(
                 unspent,
-                removal_unspents,
+                removal_coin_records,
                 npc.condition_dict,
                 block.header_block.to_small(),
             )

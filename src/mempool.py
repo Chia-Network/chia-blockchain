@@ -1,12 +1,12 @@
 import collections
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, Tuple, List, Set
 
 from src.consensus.constants import constants as consensus_constants
 from src.farming.farming_tools import best_solution_program
 from src.types.full_block import FullBlock
-from src.types.hashable.Coin import CoinName, Coin
+from src.types.hashable.Coin import Coin
 from src.types.hashable.SpendBundle import SpendBundle
-from src.types.hashable.Unspent import Unspent
+from src.types.hashable.CoinRecord import CoinRecord
 from src.types.header_block import SmallHeaderBlock
 from src.types.mempool_item import MempoolItem
 from src.types.pool import Pool
@@ -22,9 +22,6 @@ from src.util.ints import uint64, uint32
 from sortedcontainers import SortedDict
 
 
-MAX_COIN_AMOUNT = int(1 << 48)
-
-
 class Mempool:
     def __init__(self, unspent_store: UnspentStore, override_constants: Dict = {}):
         # Allow passing in custom overrides
@@ -34,8 +31,8 @@ class Mempool:
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self.potential_txs: Dict[bytes32, SpendBundle] = {}
-
-        self.allSeen: Dict[bytes32, bytes32] = {}
+        # TODO limit the size of seen_bundle_hashes
+        self.seen_bundle_hashes: Set[bytes32] = set()
         # Mempool for each tip
         self.mempools: Dict[bytes32, Pool] = {}
 
@@ -83,7 +80,7 @@ class Mempool:
         Tries to add spendbundle to either self.mempools or to_pool if it's specified.
         Returns true if it's added in any of pools, Returns error if it fails.
         """
-        self.allSeen[new_spend.name()] = new_spend.name()
+        self.seen_bundle_hashes.add(new_spend.name())
 
         # Calculate the cost and fees
         program = best_solution_program(new_spend)
@@ -104,7 +101,7 @@ class Mempool:
 
         # Check additions for max coin amount
         for coin in additions:
-            if coin.amount >= MAX_COIN_AMOUNT:
+            if coin.amount >= consensus_constants["MAX_COIN_AMOUNT"]:
                 return False, Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
 
         #  Watch out for duplicate outputs
@@ -173,9 +170,9 @@ class Mempool:
             hash_key_pairs = []
             error: Optional[Err] = None
             for npc in npc_list:
-                uns: Unspent = unspents[npc.coin_name]
+                coin_record: CoinRecord = unspents[npc.coin_name]
                 error = mempool_check_conditions_dict(
-                    uns, new_spend, npc.condition_dict, pool
+                    coin_record, new_spend, npc.condition_dict, pool
                 )
                 if error:
                     if (
@@ -213,13 +210,13 @@ class Mempool:
 
     async def check_removals(
         self, additions: List[Coin], removals: List[Coin], mempool: Pool
-    ) -> Tuple[Optional[Err], Dict[bytes32, Unspent], List[Coin]]:
+    ) -> Tuple[Optional[Err], Dict[bytes32, CoinRecord], List[Coin]]:
         """
         This function checks for double spends, unknown spends and conflicting transactions in mempool.
         Returns Error (if any), dictionary of Unspents, list of coins with conflict errors (if any any).
         """
-        removals_counter: Dict[CoinName, int] = {}
-        unspents: Dict[bytes32, Unspent] = {}
+        removals_counter: Dict[bytes32, int] = {}
+        coin_records: Dict[bytes32, CoinRecord] = {}
         conflicts: List[Coin] = []
         for removal in removals:
             # 0. Checks for double spend inside same spend_bundle
@@ -230,12 +227,12 @@ class Mempool:
             # 1. Checks if removed coin is created in spend_bundle (For ephemeral coins)
             if removal in additions:
                 # Setting ephemeral coin confirmed index to current + 1
-                if removal.name() in unspents:
+                if removal.name() in coin_records:
                     return Err.DOUBLE_SPEND, {}, []
-                unspents[removal.name()] = Unspent(removal, mempool.header_block.height + 1, 0, 0, 0)  # type: ignore # noqa
+                coin_records[removal.name()] = CoinRecord(removal, mempool.header_block.height + 1, 0, 0, 0)  # type: ignore # noqa
                 continue
             # 2. Checks we have it in the unspent_store
-            unspent: Optional[Unspent] = await self.unspent_store.get_unspent(
+            unspent: Optional[CoinRecord] = await self.unspent_store.get_coin_record(
                 removal.name(), mempool.header
             )
             if unspent is None:
@@ -254,11 +251,11 @@ class Mempool:
                 ):
                     return Err.COINBASE_NOT_YET_SPENDABLE, {}, []
 
-            unspents[unspent.coin.name()] = unspent
+            coin_records[unspent.coin.name()] = unspent
         if len(conflicts) > 0:
-            return Err.MEMPOOL_CONFLICT, unspents, conflicts
+            return Err.MEMPOOL_CONFLICT, coin_records, conflicts
         # 5. If coins can be spent return list of unspents as we see them in local storage
-        return None, unspents, []
+        return None, coin_records, []
 
     async def add_to_potential_tx_set(self, spend: SpendBundle):
         """
@@ -273,10 +270,10 @@ class Mempool:
 
     async def seen(self, bundle_hash: bytes32) -> bool:
         """ Return true if we saw this spendbundle before """
-        if self.allSeen[bundle_hash] is None:
-            return False
-        else:
+        if bundle_hash in self.seen_bundle_hashes:
             return True
+        else:
+            return False
 
     async def get_spendbundle(self, bundle_hash: bytes32) -> Optional[SpendBundle]:
         """ Returns a full SpendBundle if it's inside one the mempools"""
@@ -303,7 +300,7 @@ class Mempool:
             else:
                 # Create mempool for new head
                 if len(self.old_mempools) > 0:
-                    new_pool = await Pool.create(
+                    new_pool = Pool.create(
                         tip.header_block.to_small(), self.mempool_size
                     )
 
@@ -317,7 +314,7 @@ class Mempool:
 
                     await self.initialize_pool_from_current_pools(new_pool)
                 else:
-                    new_pool = await Pool.create(
+                    new_pool = Pool.create(
                         tip.header_block.to_small(), self.mempool_size
                     )
                     await self.initialize_pool_from_current_pools(new_pool)

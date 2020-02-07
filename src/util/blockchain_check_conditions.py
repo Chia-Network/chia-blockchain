@@ -4,7 +4,7 @@ from typing import Optional, Dict, List
 from clvm.casts import int_from_bytes
 
 from src.types.ConditionVarPair import ConditionVarPair
-from src.types.hashable.Unspent import Unspent
+from src.types.hashable.CoinRecord import CoinRecord
 from src.types.header_block import SmallHeaderBlock
 from src.types.sized_bytes import bytes32
 from src.util.Conditions import ConditionOpcode
@@ -13,7 +13,7 @@ from src.util.ints import uint64
 
 
 def blockchain_assert_coin_consumed(
-    condition: ConditionVarPair, removed: Dict[bytes32, Unspent]
+    condition: ConditionVarPair, removed: Dict[bytes32, CoinRecord]
 ) -> Optional[Err]:
     """
     Checks coin consumed conditions
@@ -26,7 +26,7 @@ def blockchain_assert_coin_consumed(
 
 
 def blockchain_assert_my_coin_id(
-    condition: ConditionVarPair, unspent: Unspent
+    condition: ConditionVarPair, unspent: CoinRecord
 ) -> Optional[Err]:
     """
     Checks if CoinID matches the id from the condition
@@ -53,7 +53,7 @@ def blockchain_assert_block_index_exceeds(
 
 
 def blockchain_assert_block_age_exceeds(
-    condition: ConditionVarPair, unspent: Unspent, header: SmallHeaderBlock
+    condition: ConditionVarPair, unspent: CoinRecord, header: SmallHeaderBlock
 ) -> Optional[Err]:
     """
     Checks if the coin age exceeds the age from the condition
@@ -84,8 +84,8 @@ def blockchain_assert_time_exceeds(condition: ConditionVarPair):
 
 
 def blockchain_check_conditions_dict(
-    unspent: Unspent,
-    removed: Dict[bytes32, Unspent],
+    unspent: CoinRecord,
+    removed: Dict[bytes32, CoinRecord],
     conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
     header: SmallHeaderBlock,
 ) -> Optional[Err]:

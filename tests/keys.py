@@ -2,7 +2,6 @@ import blspy
 
 from src.types.hashable.CoinSolution import CoinSolution
 from src.types.hashable.SpendBundle import SpendBundle
-from src.types.hashable.Program import ProgramHash
 
 from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.keychain import Keychain
@@ -27,7 +26,7 @@ def puzzle_program_for_index(index):
 
 
 def puzzle_hash_for_index(index):
-    return ProgramHash(puzzle_program_for_index(index))
+    return puzzle_program_for_index(index).get_hash()
 
 
 def conditions_for_payment(puzzle_hash_amount_pairs):

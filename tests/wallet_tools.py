@@ -6,7 +6,7 @@ from blspy import ExtendedPrivateKey
 
 from src.types.ConditionVarPair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.hashable.Program import Program, ProgramHash
+from src.types.hashable.Program import Program
 from src.types.hashable.BLSSignature import BLSSignature
 from src.types.hashable.Coin import Coin
 from src.types.hashable.CoinSolution import CoinSolution
@@ -58,13 +58,11 @@ class WalletTool:
         return any(
             map(
                 lambda child: hash
-                == ProgramHash(
-                    puzzle_for_pk(
+                == puzzle_for_pk(
                         self.extended_secret_key.public_child(child)
                         .get_public_key()
                         .serialize()
-                    )
-                ),
+                    ).get_hash(),
                 reversed(range(self.next_address)),
             )
         )
@@ -72,7 +70,7 @@ class WalletTool:
     def get_keys(self, hash):
         for child in range(self.next_address):
             pubkey = self.extended_secret_key.public_child(child).get_public_key()
-            if hash == ProgramHash(puzzle_for_pk(pubkey.serialize())):
+            if hash == puzzle_for_pk(pubkey.serialize()).get_hash():
                 return (
                     pubkey,
                     self.extended_secret_key.private_child(child).get_private_key(),
@@ -88,7 +86,7 @@ class WalletTool:
 
     def get_new_puzzlehash(self):
         puzzle = self.get_new_puzzle()
-        puzzlehash = ProgramHash(puzzle)
+        puzzlehash = puzzle.get_hash()
         return puzzlehash
 
     def sign(self, value, pubkey):

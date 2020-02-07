@@ -5,12 +5,12 @@ from clvm import EvalError
 from clvm.casts import int_from_bytes
 
 from src.types.ConditionVarPair import ConditionVarPair
-from src.types.hashable.Coin import CoinName
-from src.types.hashable.Program import Program, ProgramHash
+from src.types.hashable.Program import Program
 from src.types.hashable.SpendBundle import SpendBundle
-from src.types.hashable.Unspent import Unspent
+from src.types.hashable.CoinRecord import CoinRecord
 from src.types.name_puzzle_condition import NPC
 from src.types.pool import Pool
+from src.types.sized_bytes import bytes32
 from src.util.Conditions import ConditionOpcode
 from src.util.ConsensusError import Err
 from src.util.consensus import conditions_dict_for_solution
@@ -35,7 +35,7 @@ def mempool_assert_coin_consumed(
 
 
 def mempool_assert_my_coin_id(
-    condition: ConditionVarPair, unspent: Unspent
+    condition: ConditionVarPair, unspent: CoinRecord
 ) -> Optional[Err]:
     """
     Checks if CoinID matches the id from the condition
@@ -46,7 +46,7 @@ def mempool_assert_my_coin_id(
 
 
 def mempool_assert_block_index_exceeds(
-    condition: ConditionVarPair, unspent: Unspent, mempool: Pool
+    condition: ConditionVarPair, unspent: CoinRecord, mempool: Pool
 ) -> Optional[Err]:
     """
     Checks if the next block index exceeds the block index from the condition
@@ -62,7 +62,7 @@ def mempool_assert_block_index_exceeds(
 
 
 def mempool_assert_block_age_exceeds(
-    condition: ConditionVarPair, unspent: Unspent, mempool: Pool
+    condition: ConditionVarPair, unspent: CoinRecord, mempool: Pool
 ) -> Optional[Err]:
     """
     Checks if the coin age exceeds the age from the condition
@@ -113,12 +113,12 @@ async def get_name_puzzle_conditions(
             return Err.INVALID_COIN_SOLUTION, [], cost
         if not isinstance(_[0], bytes) or len(_[0]) != 32:
             return Err.INVALID_COIN_SOLUTION, [], cost
-        coin_name = CoinName(_[0])
+        coin_name = bytes32(_[0])
         if not isinstance(_[1], list) or len(_[1]) != 2:
             return Err.INVALID_COIN_SOLUTION, [], cost
         puzzle_solution_program = name_solution.rest().first()
         puzzle_program = puzzle_solution_program.first()
-        puzzle_hash = ProgramHash(Program(puzzle_program))
+        puzzle_hash = Program(puzzle_program).get_hash()
         try:
             error, conditions_dict = conditions_dict_for_solution(
                 puzzle_solution_program
@@ -136,7 +136,7 @@ async def get_name_puzzle_conditions(
 
 
 def mempool_check_conditions_dict(
-    unspent: Unspent,
+    unspent: CoinRecord,
     spend_bundle: SpendBundle,
     conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
     mempool: Pool,

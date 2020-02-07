@@ -43,8 +43,8 @@ class TestUnspent:
         # Save/get block
         for block in blocks:
             await db.new_lca(block)
-            unspent = await db.get_unspent(block.body.coinbase.name())
-            unspent_fee = await db.get_unspent(block.body.fees_coin.name())
+            unspent = await db.get_coin_record(block.body.coinbase.name())
+            unspent_fee = await db.get_coin_record(block.body.fees_coin.name())
             assert block.body.coinbase == unspent.coin
             assert block.body.fees_coin == unspent_fee.coin
 
@@ -60,15 +60,15 @@ class TestUnspent:
         # Save/get block
         for block in blocks:
             await db.new_lca(block)
-            unspent = await db.get_unspent(block.body.coinbase.name())
-            unspent_fee = await db.get_unspent(block.body.fees_coin.name())
+            unspent = await db.get_coin_record(block.body.coinbase.name())
+            unspent_fee = await db.get_coin_record(block.body.fees_coin.name())
             assert block.body.coinbase == unspent.coin
             assert block.body.fees_coin == unspent_fee.coin
 
             await db.set_spent(unspent.coin.name(), block.height)
             await db.set_spent(unspent_fee.coin.name(), block.height)
-            unspent = await db.get_unspent(block.body.coinbase.name())
-            unspent_fee = await db.get_unspent(block.body.fees_coin.name())
+            unspent = await db.get_coin_record(block.body.coinbase.name())
+            unspent_fee = await db.get_coin_record(block.body.fees_coin.name())
             assert unspent.spent == 1
             assert unspent_fee.spent == 1
 
@@ -84,15 +84,15 @@ class TestUnspent:
         # Save/get block
         for block in blocks:
             await db.new_lca(block)
-            unspent = await db.get_unspent(block.body.coinbase.name())
-            unspent_fee = await db.get_unspent(block.body.fees_coin.name())
+            unspent = await db.get_coin_record(block.body.coinbase.name())
+            unspent_fee = await db.get_coin_record(block.body.fees_coin.name())
             assert block.body.coinbase == unspent.coin
             assert block.body.fees_coin == unspent_fee.coin
 
             await db.set_spent(unspent.coin.name(), block.height)
             await db.set_spent(unspent_fee.coin.name(), block.height)
-            unspent = await db.get_unspent(block.body.coinbase.name())
-            unspent_fee = await db.get_unspent(block.body.fees_coin.name())
+            unspent = await db.get_coin_record(block.body.coinbase.name())
+            unspent_fee = await db.get_coin_record(block.body.fees_coin.name())
             assert unspent.spent == 1
             assert unspent_fee.spent == 1
 
@@ -100,8 +100,8 @@ class TestUnspent:
         await db.rollback_lca_to_block(reorg_index)
 
         for c, block in enumerate(blocks):
-            unspent = await db.get_unspent(block.body.coinbase.name())
-            unspent_fee = await db.get_unspent(block.body.fees_coin.name())
+            unspent = await db.get_coin_record(block.body.coinbase.name())
+            unspent_fee = await db.get_coin_record(block.body.fees_coin.name())
             if c <= reorg_index:
                 assert unspent.spent == 1
                 assert unspent_fee.spent == 1
@@ -124,10 +124,10 @@ class TestUnspent:
         assert b.get_current_tips()[0].height == 100
 
         for c, block in enumerate(blocks):
-            unspent = await unspent_store.get_unspent(
+            unspent = await unspent_store.get_coin_record(
                 block.body.coinbase.name(), block.header_block
             )
-            unspent_fee = await unspent_store.get_unspent(
+            unspent_fee = await unspent_store.get_coin_record(
                 block.body.fees_coin.name(), block.header_block
             )
             assert unspent.spent == 0
@@ -152,7 +152,7 @@ class TestUnspent:
                 assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
             elif reorg_block.height >= 100:
                 assert result == ReceiveBlockResult.ADDED_TO_HEAD
-                unspent = await unspent_store.get_unspent(
+                unspent = await unspent_store.get_coin_record(
                     reorg_block.body.coinbase.name(), reorg_block.header_block
                 )
                 assert unspent.name == reorg_block.body.coinbase.name()

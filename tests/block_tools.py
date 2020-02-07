@@ -399,13 +399,12 @@ class BlockTools:
         solutions_generator: bytes32 = sha256(seed).digest()
         cost = uint64(0)
 
-        block_reward = block_rewards.calculate_block_reward(height)
         if genesis:
-            coinbase_reward = block_reward
+            coinbase_reward = block_rewards.calculate_block_reward(height)
             fee_reward = 0
         else:
-            coinbase_reward = uint64(int((block_reward / 8) * 7))
-            fee_reward = uint64(int(block_reward / 8))
+            coinbase_reward = block_rewards.calculate_block_reward(height)
+            fee_reward = block_rewards.calculate_base_fee(height)
 
         coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
             height, reward_puzzlehash, coinbase_reward, pool_sk
