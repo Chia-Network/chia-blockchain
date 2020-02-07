@@ -16,9 +16,22 @@ void CreateAndWriteProof(integer D, form x, int64_t num_iterations, WesolowskiCa
         PrintInfo("Got stop signal before completing the proof!");
         return ;
     }
+    // Write "WESO" marker
+    boost::asio::write(sock, boost::asio::buffer("WESO", 4));
+
+    // Writes the number of iterations
     std::vector<unsigned char> bytes = ConvertIntegerToBytes(integer(num_iterations), 8);
+
+    // Writes the y, with prepended size
+    std::vector<unsigned char> y_size = ConvertIntegerToBytes(integer(result.y.size()), 8);
+    bytes.insert(bytes.end(), y_size.begin(), y_size.end());
     bytes.insert(bytes.end(), result.y.begin(), result.y.end());
+
+    // Writes the proof, with prepended size
+    std::vector<unsigned char> proof_size = ConvertIntegerToBytes(integer(result.proof.size()), 8);
+    bytes.insert(bytes.end(), proof_size.begin(), proof_size.end());
     bytes.insert(bytes.end(), result.proof.begin(), result.proof.end());
+
     std::string str_result = BytesToStr(bytes);
     std::lock_guard<std::mutex> lock(socket_mutex);
     PrintInfo("Generated proof = " + str_result);;
@@ -104,7 +117,7 @@ void session(tcp::socket sock) {
             boost::asio::read(sock, boost::asio::buffer(data, size), error);
             int iters = atoi(data);
             got_iters = true;
-        
+
             if (iters == 0) {
                 PrintInfo("Got stop signal!");
                 stopped = true;
@@ -141,7 +154,7 @@ void session(tcp::socket sock) {
                     seen_iterations.insert({iters, threads.size()});
                     PrintInfo("Running proving for iter: " + to_string(iters));
                     stop_vector[threads.size()] = false;
-                    threads.push_back(std::thread(CreateAndWriteProof, D, f, iters, std::ref(weso), 
+                    threads.push_back(std::thread(CreateAndWriteProof, D, f, iters, std::ref(weso),
                                       std::ref(stop_vector[threads.size()]), std::ref(sock)));
                     if (threads.size() > kMaxProcessesAllowed) {
                         PrintInfo("Stopping proving for iter: " + to_string(max_iter));

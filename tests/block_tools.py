@@ -54,6 +54,10 @@ class BlockTools:
     """
 
     def __init__(self):
+        self.plot_config: Dict = {"plots": {}}
+        self.pool_sk = pool_sk
+        self.farmer_sk = farmer_sk
+
         plot_seeds: List[bytes32] = [
             ProofOfSpace.calculate_plot_seed(pool_pk, plot_pk) for plot_pk in plot_pks
         ]
@@ -71,14 +75,18 @@ class BlockTools:
                 if not (self.plot_dir / filename).exists():
                     plotter = DiskPlotter()
                     plotter.create_plot_disk(
-                        self.plot_dir,
-                        self.plot_dir,
+                        str(self.plot_dir),
+                        str(self.plot_dir),
                         filename,
                         k,
                         b"genesis",
                         plot_seeds[pn],
                     )
                     done_filenames.add(filename)
+                self.plot_config["plots"][str(self.plot_dir / filename)] = {
+                    "pool_pk": bytes(pool_pk).hex(),
+                    "sk": bytes(plot_sks[pn]).hex(),
+                }
         except KeyboardInterrupt:
             for filename in self.filenames:
                 if (

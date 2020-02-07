@@ -1,5 +1,4 @@
 import logging
-from hashlib import sha256
 from typing import Any, Dict, List, Set
 
 from blspy import PrivateKey, Util
@@ -40,6 +39,19 @@ class Farmer:
         self.current_weight: uint64 = uint64(0)
         self.coinbase_rewards: Dict[uint32, Any] = {}
         self.proof_of_time_estimate_ips: uint64 = uint64(10000)
+
+    async def _on_connect(self):
+        # Sends a handshake to the harvester
+        pool_sks: List[PrivateKey] = [
+            PrivateKey.from_bytes(bytes.fromhex(ce))
+            for ce in self.key_config["pool_sks"]
+        ]
+        msg = harvester_protocol.HarvesterHandshake(
+            [sk.get_public_key() for sk in pool_sks]
+        )
+        yield OutboundMessage(
+            NodeType.HARVESTER, Message("harvester_handshake", msg), Delivery.BROADCAST
+        )
 
     @api_request
     async def challenge_response(
@@ -146,8 +158,7 @@ class Farmer:
 
         if estimate_secs < self.config["pool_share_threshold"]:
             request1 = harvester_protocol.RequestPartialProof(
-                response.quality,
-                sha256(bytes.fromhex(self.key_config["farmer_target"])).digest(),
+                response.quality, bytes.fromhex(self.key_config["farmer_target"]),
             )
             yield OutboundMessage(
                 NodeType.HARVESTER,
@@ -210,13 +221,11 @@ class Farmer:
         share, to tell the pool where to pay the farmer.
         """
 
-        farmer_target_hash = sha256(
-            bytes.fromhex(self.key_config["farmer_target"])
-        ).digest()
+        farmer_target = bytes.fromhex(self.key_config["farmer_target"])
         plot_pubkey = self.harvester_responses_proofs[response.quality].plot_pubkey
 
         assert response.farmer_target_signature.verify(
-            [Util.hash256(farmer_target_hash)], [plot_pubkey]
+            [Util.hash256(farmer_target)], [plot_pubkey]
         )
         # TODO: Send partial to pool
 

@@ -18,9 +18,8 @@ log = logging.getLogger(__name__)
 
 
 class Harvester:
-    def __init__(self, config: Dict, key_config: Dict, plot_config: Dict):
+    def __init__(self, config: Dict, plot_config: Dict):
         self.config: Dict = config
-        self.key_config: Dict = key_config
         self.plot_config: Dict = plot_config
 
         # From filename to prover
@@ -77,9 +76,9 @@ class Harvester:
             found = False
             for filename in potential_filenames:
                 if filename.exists():
-                    self.provers[partial_filename] = DiskProver(str(filename))
+                    self.provers[partial_filename_str] = DiskProver(str(filename))
                     log.info(
-                        f"Farming plot {filename} of size {self.provers[partial_filename].get_size()}"
+                        f"Farming plot {filename} of size {self.provers[partial_filename_str].get_size()}"
                     )
                     found = True
                     break

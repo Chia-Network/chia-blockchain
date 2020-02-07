@@ -4,7 +4,12 @@ from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
 from src.types.hashable.Program import ProgramHash
 from src.types.hashable.Coin import Coin
-from src.types.hashable.BLSSignature import BLSSignature
+from src.types.hashable.BLSSignature import BLSSignature, BLSPublicKey
+from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
+
+
+def create_puzzlehash_for_pk(pub_key: BLSPublicKey) -> ProgramHash:
+    return ProgramHash(puzzle_for_pk(pub_key))
 
 
 def signature_for_coinbase(coin: Coin, pool_private_key: blspy.PrivateKey):
