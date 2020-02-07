@@ -20,9 +20,8 @@ class TestSimulation:
     async def test_simulation_1(self, simulation):
         node1, node2 = simulation
         start = time.time()
-        while time.time() - start < 100:
+        while time.time() - start < 200:
             if max([h.height for h in node1.blockchain.get_current_tips()]) > 10:
-                break
+                return
             await asyncio.sleep(1)
-        tip_heights = [t.height for t in node1.blockchain.get_current_tips()]
-        assert max(tip_heights) > 5
+        assert False

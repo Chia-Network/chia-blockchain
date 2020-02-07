@@ -223,8 +223,6 @@ private:
           {
             std::make_shared<session>(std::move(this->socket_))->start();
           }
-
-          do_accept();
         });
   }
   boost::asio::io_service* io_service_;

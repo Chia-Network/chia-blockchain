@@ -207,6 +207,7 @@ async def setup_full_system(dic={}):
     yield (node1, node2)
 
     for node_iter in node_iters:
+
         try:
             await node_iter.__anext__()
         except StopAsyncIteration:
