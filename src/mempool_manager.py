@@ -17,7 +17,7 @@ from src.util.mempool_check_conditions import (
     get_name_puzzle_conditions,
     mempool_check_conditions_dict,
 )
-from src.util.consensus import hash_key_pairs_for_conditions_dict
+from src.util.condition_tools import hash_key_pairs_for_conditions_dict
 from src.util.ints import uint64, uint32
 from sortedcontainers import SortedDict
 

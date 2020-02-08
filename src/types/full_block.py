@@ -7,7 +7,7 @@ from src.types.hashable.Coin import Coin
 from src.types.header import Header
 from src.types.sized_bytes import bytes32
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
-from src.util.consensus import created_outputs_for_conditions_dict
+from src.util.condition_tools import created_outputs_for_conditions_dict
 from src.util.ints import uint32, uint64
 from src.util.streamable import Streamable, streamable
 from src.types.proof_of_space import ProofOfSpace

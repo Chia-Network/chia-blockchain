@@ -11,11 +11,7 @@ from src.types.hashable.BLSSignature import BLSSignature
 from src.types.hashable.Coin import Coin
 from src.types.hashable.CoinSolution import CoinSolution
 from src.types.hashable.SpendBundle import SpendBundle
-from src.util.Conditions import conditions_by_opcode
-from src.util.consensus import (
-    hash_key_pairs_for_conditions_dict,
-    conditions_for_solution,
-)
+from src.util.condition_tools import conditions_by_opcode, hash_key_pairs_for_conditions_dict, conditions_for_solution
 from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.puzzles.p2_conditions import puzzle_for_conditions
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk

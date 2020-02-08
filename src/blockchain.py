@@ -25,7 +25,7 @@ from src.types.sized_bytes import bytes32
 from src.unspent_store import UnspentStore
 from src.util.ConsensusError import Err
 from src.util.blockchain_check_conditions import blockchain_check_conditions_dict
-from src.util.consensus import hash_key_pairs_for_conditions_dict
+from src.util.condition_tools import hash_key_pairs_for_conditions_dict
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.errors import BlockNotInBlockchain, InvalidGenesisBlock
 from src.util.ints import uint32, uint64
