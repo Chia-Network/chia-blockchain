@@ -9,7 +9,7 @@ from src.types.hashable.SpendBundle import SpendBundle
 from src.types.hashable.CoinRecord import CoinRecord
 from src.types.header import Header
 from src.types.mempool_item import MempoolItem
-from src.types.mempool import Mempool
+from src.mempool import Mempool
 from src.types.sized_bytes import bytes32
 from src.unspent_store import UnspentStore
 from src.util.ConsensusError import Err
