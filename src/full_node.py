@@ -14,8 +14,8 @@ from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.weight_verifier import verify_weight
 from src.store import FullNodeStore
 from src.protocols import farmer_protocol, peer_protocol, timelord_protocol
-from src.farming.farming_tools import best_solution_program
-from src.mempool import Mempool
+from src.util.bundle_tools import best_solution_program
+from src.mempool_manager import MempoolManager
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
 from src.types.body import Body
@@ -23,7 +23,7 @@ from src.types.challenge import Challenge
 from src.types.full_block import FullBlock
 from src.types.hashable.Coin import Coin
 from src.types.hashable.BLSSignature import BLSSignature
-from src.types.hashable.Hash import std_hash
+from src.util.Hash import std_hash
 from src.types.hashable.SpendBundle import SpendBundle
 from src.types.hashable.Program import Program
 from src.types.header import Header, HeaderData
@@ -46,14 +46,14 @@ class FullNode:
         store: FullNodeStore,
         blockchain: Blockchain,
         config: Dict,
-        mempool: Mempool,
+        mempool_manager: MempoolManager,
         unspent_store: UnspentStore,
         name: str = None,
     ):
         self.config: Dict = config
         self.store: FullNodeStore = store
         self.blockchain: Blockchain = blockchain
-        self.mempool: Mempool = mempool
+        self.mempool_manager: MempoolManager = mempool_manager
         self._shut_down = False  # Set to true to close all infinite loops
         self.server: Optional[ChiaServer] = None
         self.unspent_store: UnspentStore = unspent_store
@@ -759,7 +759,7 @@ class FullNode:
 
         assert target_tip is not None
         # Grab best transactions from Mempool for given tip target
-        spend_bundle: Optional[SpendBundle] = await self.mempool.create_bundle_for_tip(
+        spend_bundle: Optional[SpendBundle] = await self.mempool_manager.create_bundle_for_tip(
             target_tip
         )
         spend_bundle_fees = 0
@@ -1043,15 +1043,15 @@ class FullNode:
 
     @api_request
     async def transaction(
-        self, tx: peer_protocol.Transaction
+        self, tx: peer_protocol.NewTransaction
     ) -> OutboundMessageGenerator:
         """
         Receives a full transaction from peer.
         If tx is added to mempool, send tx_id to others. (maybe_transaction)
         """
-        added, error = await self.mempool.add_spendbundle(tx.sb)
+        added, error = await self.mempool_manager.add_spendbundle(tx.transaction)
         if added:
-            maybeTX = peer_protocol.TransactionId(tx.sb.name())
+            maybeTX = peer_protocol.TransactionId(tx.transaction.name())
             yield OutboundMessage(
                 NodeType.FULL_NODE,
                 Message("maybe_transaction", maybeTX),
@@ -1059,7 +1059,7 @@ class FullNode:
             )
         else:
             self.log.warning(
-                f"Wasn't able to add transaction with id {tx.sb.name()}, error: {error}"
+                f"Wasn't able to add transaction with id {tx.transaction.name()}, error: {error}"
             )
             return
 
@@ -1071,7 +1071,7 @@ class FullNode:
         Receives a transaction_id, ignore if we've seen it already.
         Request a full transaction if we haven't seen it previously_id:
         """
-        if self.mempool.seen(tx_id.transaction_id):
+        if self.mempool_manager.seen(tx_id.transaction_id):
             self.log.info(f"tx_id({tx_id.transaction_id}) already seen")
             return
         else:
@@ -1087,11 +1087,11 @@ class FullNode:
         self, tx_id: peer_protocol.RequestTransaction
     ) -> OutboundMessageGenerator:
         """ Peer has request a full transaction from us. """
-        spend_bundle = await self.mempool.get_spendbundle(tx_id.transaction_id)
+        spend_bundle = await self.mempool_manager.get_spendbundle(tx_id.transaction_id)
         if spend_bundle is None:
             return
 
-        transaction = peer_protocol.Transaction(spend_bundle)
+        transaction = peer_protocol.NewTransaction(spend_bundle)
         yield OutboundMessage(
             NodeType.FULL_NODE, Message("transaction", transaction), Delivery.RESPOND,
         )
@@ -1121,7 +1121,7 @@ class FullNode:
             # Tries to add the block to the blockchain
             added, replaced = await self.blockchain.receive_block(block.block, val, pos)
             if added == ReceiveBlockResult.ADDED_TO_HEAD:
-                await self.mempool.new_tips(await self.blockchain.get_full_tips())
+                await self.mempool_manager.new_tips(await self.blockchain.get_full_tips())
 
         if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return

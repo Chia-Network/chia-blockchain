@@ -2,11 +2,11 @@ from dataclasses import dataclass
 from typing import List
 
 from src.types.full_block import FullBlock
+from src.types.hashable.SpendBundle import SpendBundle
 from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
-from src.types.transaction import Transaction
 from src.util.cbor_message import cbor_message
 from src.util.ints import uint32
 
@@ -31,7 +31,7 @@ class RequestTransaction:
 @dataclass(frozen=True)
 @cbor_message
 class NewTransaction:
-    transaction: Transaction
+    transaction: SpendBundle
 
 
 @dataclass(frozen=True)

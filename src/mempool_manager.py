@@ -2,14 +2,14 @@ import collections
 from typing import Dict, Optional, Tuple, List, Set
 
 from src.consensus.constants import constants as consensus_constants
-from src.farming.farming_tools import best_solution_program
+from src.util.bundle_tools import best_solution_program
 from src.types.full_block import FullBlock
 from src.types.hashable.Coin import Coin
 from src.types.hashable.SpendBundle import SpendBundle
 from src.types.hashable.CoinRecord import CoinRecord
 from src.types.header import Header
 from src.types.mempool_item import MempoolItem
-from src.types.pool import Pool
+from src.types.mempool import Mempool
 from src.types.sized_bytes import bytes32
 from src.unspent_store import UnspentStore
 from src.util.ConsensusError import Err
@@ -22,7 +22,7 @@ from src.util.ints import uint64, uint32
 from sortedcontainers import SortedDict
 
 
-class Mempool:
+class MempoolManager:
     def __init__(self, unspent_store: UnspentStore, override_constants: Dict = {}):
         # Allow passing in custom overrides
         self.constants: Dict = consensus_constants
@@ -34,7 +34,7 @@ class Mempool:
         # TODO limit the size of seen_bundle_hashes
         self.seen_bundle_hashes: Set[bytes32] = set()
         # Mempool for each tip
-        self.mempools: Dict[bytes32, Pool] = {}
+        self.mempools: Dict[bytes32, Mempool] = {}
 
         # old_mempools will contain transactions that were removed in the last 10 blocks
         self.old_mempools: SortedDict[uint32, Dict[bytes32, MempoolItem]] = SortedDict()
@@ -55,10 +55,10 @@ class Mempool:
         Returns aggregated spendbundle that can be used for creating new block
         """
         if header.header_hash in self.mempools:
-            pool: Pool = self.mempools[header.header_hash]
+            mempool: Mempool = self.mempools[header.header_hash]
             cost_sum = 0
             spend_bundles: List[SpendBundle] = []
-            for dic in pool.sorted_spends.values():
+            for dic in mempool.sorted_spends.values():
                 for item in dic.values():
                     if item.cost + cost_sum <= 6000:
                         spend_bundles.append(item.spend_bundle)
@@ -72,7 +72,7 @@ class Mempool:
             return None
 
     async def add_spendbundle(
-        self, new_spend: SpendBundle, to_pool: Pool = None
+        self, new_spend: SpendBundle, to_pool: Mempool = None
     ) -> Tuple[bool, Optional[Err]]:
         """
         Tries to add spendbundle to either self.mempools or to_pool if it's specified.
@@ -111,7 +111,7 @@ class Mempool:
         # Spend might be valid for on pool but not for others
         added_count = 0
         errors: List[Err] = []
-        targets: List[Pool]
+        targets: List[Mempool]
 
         if to_pool:
             targets = [to_pool]
@@ -207,7 +207,7 @@ class Mempool:
             return False, errors[0]
 
     async def check_removals(
-        self, additions: List[Coin], removals: List[Coin], mempool: Pool
+        self, additions: List[Coin], removals: List[Coin], mempool: Mempool
     ) -> Tuple[Optional[Err], Dict[bytes32, CoinRecord], List[Coin]]:
         """
         This function checks for double spends, unknown spends and conflicting transactions in mempool.
@@ -285,7 +285,7 @@ class Mempool:
         Called when new tips are available, we try to recreate a mempool for each of the new tips.
         For tip that we already have mempool we don't do anything.
         """
-        new_pools: Dict[bytes32, Pool] = {}
+        new_pools: Dict[bytes32, Mempool] = {}
         for tip in new_tips:
             if tip.header_hash in self.mempools:
                 # Nothing to change, we already have mempool for this head
@@ -293,12 +293,12 @@ class Mempool:
                 continue
             if tip.prev_header_hash in self.mempools:
                 # Update old mempool
-                new_pool: Pool = self.mempools[tip.prev_header_hash]
+                new_pool: Mempool = self.mempools[tip.prev_header_hash]
                 await self.update_pool(new_pool, tip)
             else:
                 # Create mempool for new head
                 if len(self.old_mempools) > 0:
-                    new_pool = Pool.create(tip.header, self.mempool_size)
+                    new_pool = Mempool.create(tip.header, self.mempool_size)
 
                     # If old spends height is bigger than the new tip height, try adding spends to the pool
                     for height in self.old_mempools.keys():
@@ -310,7 +310,7 @@ class Mempool:
 
                     await self.initialize_pool_from_current_pools(new_pool)
                 else:
-                    new_pool = Pool.create(tip.header, self.mempool_size)
+                    new_pool = Mempool.create(tip.header, self.mempool_size)
                     await self.initialize_pool_from_current_pools(new_pool)
 
             await self.add_potential_spends_to_pool(new_pool)
@@ -318,7 +318,7 @@ class Mempool:
 
         self.mempools = new_pools
 
-    async def update_pool(self, pool: Pool, new_tip: FullBlock):
+    async def update_pool(self, pool: Mempool, new_tip: FullBlock):
         """
         Called when new tip extends the tip we had mempool for.
         This function removes removals and additions that happened in block from mempool.
@@ -366,9 +366,9 @@ class Mempool:
             lowest_h = keys[0]
             dic_for_height.pop(lowest_h)
 
-    async def initialize_pool_from_current_pools(self, pool: Pool):
+    async def initialize_pool_from_current_pools(self, pool: Mempool):
         tried_already: Dict[bytes32, bytes32] = {}
-        current_pool: Pool
+        current_pool: Mempool
         for current_pool in self.mempools.values():
             for item in current_pool.spends.values():
                 # Don't try to add same mempool item twice
@@ -378,11 +378,11 @@ class Mempool:
                 await self.add_spendbundle(item.spend_bundle, pool)
 
     async def add_old_spends_to_pool(
-        self, pool: Pool, old_spends: Dict[bytes32, MempoolItem]
+        self, pool: Mempool, old_spends: Dict[bytes32, MempoolItem]
     ):
         for old in old_spends.values():
             await self.add_spendbundle(old.spend_bundle, pool)
 
-    async def add_potential_spends_to_pool(self, pool: Pool):
+    async def add_potential_spends_to_pool(self, pool: Mempool):
         for tx in self.potential_txs.values():
             await self.add_spendbundle(tx, pool)

@@ -16,7 +16,7 @@ from src.consensus.constants import constants
 from src.store import FullNodeStore
 from src.full_node import FullNode
 from src.rpc.rpc_server import start_rpc_server
-from src.mempool import Mempool
+from src.mempool_manager import MempoolManager
 from src.server.server import ChiaServer
 from src.server.connection import NodeType
 from src.types.full_block import FullBlock
@@ -47,10 +47,10 @@ async def main():
     log.info("Initializing blockchain from disk")
     blockchain = await Blockchain.create(unspent_store, store)
 
-    mempool = Mempool(unspent_store)
+    mempool_manager = MempoolManager(unspent_store)
     # await mempool.initialize() TODO uncomment once it's implemented
 
-    full_node = FullNode(store, blockchain, config, mempool, unspent_store)
+    full_node = FullNode(store, blockchain, config, mempool_manager, unspent_store)
     # Starts the full node server (which full nodes can connect to)
 
     if config["enable_upnp"]:

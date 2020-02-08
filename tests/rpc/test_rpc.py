@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from src.blockchain import Blockchain, ReceiveBlockResult
-from src.mempool import Mempool
+from src.mempool_manager import MempoolManager
 from src.store import FullNodeStore
 from src.full_node import FullNode
 from src.server.connection import NodeType
@@ -54,7 +54,7 @@ class TestRpc:
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
         unspent_store = await UnspentStore.create("blockchain_test.db")
-        mempool = Mempool(unspent_store)
+        mempool_manager = MempoolManager(unspent_store)
 
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
         await store.add_block(blocks[0])
@@ -65,7 +65,7 @@ class TestRpc:
             await store.add_block(blocks[i])
 
         config = load_config("config.yaml", "full_node")
-        full_node_1 = FullNode(store, b, config, mempool, unspent_store)
+        full_node_1 = FullNode(store, b, config, mempool_manager, unspent_store)
         server_1 = ChiaServer(test_node_1_port, full_node_1, NodeType.FULL_NODE)
         _ = await server_1.start_server("127.0.0.1", None)
         full_node_1._set_server(server_1)
@@ -75,7 +75,8 @@ class TestRpc:
             server_1.close_all()
 
         unspent_store2 = await UnspentStore.create("blockchain_test_2.db")
-        full_node_2 = FullNode(store, b, config, mempool, unspent_store2)
+        mempool_manager2 = MempoolManager(unspent_store2)
+        full_node_2 = FullNode(store, b, config, mempool_manager2, unspent_store2)
         server_2 = ChiaServer(test_node_2_port, full_node_2, NodeType.FULL_NODE)
         full_node_2._set_server(server_2)
 
@@ -101,7 +102,6 @@ class TestRpc:
             header = await client.get_header(state["lca"].header_hash)
             assert header == blocks[8].header
 
-            # TODO implement get pool balances
             coins = await client.get_unspent_coins(
                 blocks[-1].body.coinbase.puzzle_hash, blocks[-1].header_hash
             )

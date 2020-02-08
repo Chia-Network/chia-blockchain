@@ -2,7 +2,7 @@ import asyncio
 from typing import Optional
 import pytest
 
-from src.farming.farming_tools import best_solution_program
+from src.util.bundle_tools import best_solution_program
 from src.server.outbound_message import OutboundMessage
 from src.protocols import peer_protocol
 from src.types.full_block import FullBlock
@@ -53,17 +53,17 @@ class TestBlockchainTransactions:
         )
 
         assert spend_bundle is not None
-        tx: peer_protocol.Transaction = peer_protocol.Transaction(spend_bundle)
+        tx: peer_protocol.NewTransaction = peer_protocol.NewTransaction(spend_bundle)
         async for _ in full_node_1.transaction(tx):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
             assert outbound.message.function == "maybe_transaction"
 
-        sb = await full_node_1.mempool.get_spendbundle(spend_bundle.name())
+        sb = await full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
         assert sb is spend_bundle
 
         last_block = blocks[10]
-        next_spendbundle = await full_node_1.mempool.create_bundle_for_tip(
+        next_spendbundle = await full_node_1.mempool_manager.create_bundle_for_tip(
             last_block.header
         )
         assert next_spendbundle is not None

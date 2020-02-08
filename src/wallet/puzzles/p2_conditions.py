@@ -20,7 +20,7 @@ from src.types.hashable.Program import Program
 # contract:
 # generate puzzle: (() . puzzle_parameters)
 # generate solution: (1 . (puzzle_parameters . solution_parameters))
-from src.util.run_program import run_program
+from clvm import run_program
 
 
 def make_contract():

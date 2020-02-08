@@ -1,16 +1,16 @@
+import io
+from typing import Any
+
 from clvm import to_sexp_f
 from clvm.serialize import sexp_from_stream, sexp_to_stream
 from clvm.subclass_sexp import BaseSExp
 
 from src.types.sized_bytes import bytes32
-from .Hash import std_hash
-
-from ...atoms import bin_methods
+from src.util.Hash import std_hash
 
 SExp = to_sexp_f(1).__class__
 
-
-class Program(SExp, bin_methods):  # type: ignore # noqa
+class Program(SExp):  # type: ignore # noqa
     """
     A thin wrapper around s-expression data intended to be invoked with "eval".
     """
@@ -28,6 +28,16 @@ class Program(SExp, bin_methods):  # type: ignore # noqa
 
     def stream(self, f):
         sexp_to_stream(self, f)
+
+    @classmethod
+    def from_bytes(cls, blob: bytes) -> Any:
+        f = io.BytesIO(blob)
+        return cls.parse(f)  # type: ignore # noqa
+
+    def __bytes__(self) -> bytes:
+        f = io.BytesIO()
+        self.stream(f)  # type: ignore # noqa
+        return f.getvalue()
 
     def __str__(self):
         return bytes(self).hex()

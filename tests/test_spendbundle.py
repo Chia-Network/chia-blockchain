@@ -1,4 +1,4 @@
-from src.types.hashable.Hash import std_hash
+from src.util.Hash import std_hash
 from src.util.Conditions import conditions_by_opcode
 from src.util.consensus import (
     conditions_for_solution,
