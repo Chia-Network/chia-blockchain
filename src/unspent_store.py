@@ -110,7 +110,7 @@ class UnspentStore:
         await self.add_unspent(fees_coin)
 
     def nuke_diffs(self):
-        self.head_diffs = dict()
+        self.head_diffs.clear()
 
     # Received new tip, just update diffs
     async def new_heads(self, blocks: List[FullBlock]):
