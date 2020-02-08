@@ -22,7 +22,7 @@ from src.types.hashable.CoinRecord import CoinRecord
 from src.types.header_block import HeaderBlock
 from src.types.header import Header
 from src.types.sized_bytes import bytes32
-from src.unspent_store import UnspentStore
+from src.coin_store import CoinStore
 from src.util.ConsensusError import Err
 from src.util.blockchain_check_conditions import blockchain_check_conditions_dict
 from src.util.condition_tools import hash_key_pairs_for_conditions_dict
@@ -66,7 +66,7 @@ class Blockchain:
     # Genesis block
     genesis: FullBlock
     # Unspent Store
-    unspent_store: UnspentStore
+    unspent_store: CoinStore
     # Store
     store: FullNodeStore
     # Coinbase freeze period
@@ -74,7 +74,7 @@ class Blockchain:
 
     @staticmethod
     async def create(
-        unspent_store: UnspentStore,
+        unspent_store: CoinStore,
         store: FullNodeStore,
         override_constants: Dict = {},
     ):

@@ -14,7 +14,7 @@ from src.types.full_block import FullBlock
 from src.types.hashable.Coin import Coin
 from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
-from src.unspent_store import UnspentStore
+from src.coin_store import CoinStore
 from src.util.ints import uint8, uint32, uint64
 from src.util.errors import BlockNotInBlockchain
 from tests.block_tools import BlockTools
@@ -45,7 +45,7 @@ def event_loop():
 class TestGenesisBlock:
     @pytest.mark.asyncio
     async def test_basic_blockchain(self):
-        unspent_store = await UnspentStore.create(Path("blockchain_test"))
+        unspent_store = await CoinStore.create(Path("blockchain_test"))
         store = await FullNodeStore.create(Path("blockchain_test"))
         await store._clear_database()
         bc1 = await Blockchain.create(unspent_store, store)
@@ -73,7 +73,7 @@ class TestBlockValidation:
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
         store = await FullNodeStore.create(Path("blockchain_test"))
         await store._clear_database()
-        unspent_store = await UnspentStore.create(Path("blockchain_test"))
+        unspent_store = await CoinStore.create(Path("blockchain_test"))
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
         for i in range(1, 9):
             result, removed = await b.receive_block(blocks[i])
@@ -282,7 +282,7 @@ class TestBlockValidation:
         # Make it 5x faster than target time
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 2)
 
-        unspent_store = await UnspentStore.create(Path("blockchain_test"))
+        unspent_store = await CoinStore.create(Path("blockchain_test"))
         store = await FullNodeStore.create(Path("blockchain_test"))
         await store._clear_database()
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
@@ -312,7 +312,7 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_basic_reorg(self):
         blocks = bt.get_consecutive_blocks(test_constants, 100, [], 9)
-        unspent_store = await UnspentStore.create(Path("blockchain_test"))
+        unspent_store = await CoinStore.create(Path("blockchain_test"))
         store = await FullNodeStore.create(Path("blockchain_test"))
         await store._clear_database()
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
@@ -341,7 +341,7 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self):
         blocks = bt.get_consecutive_blocks(test_constants, 20, [], 9, b"0")
-        unspent_store = await UnspentStore.create(Path("blockchain_test"))
+        unspent_store = await CoinStore.create(Path("blockchain_test"))
         store = await FullNodeStore.create(Path("blockchain_test"))
         await store._clear_database()
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
@@ -383,7 +383,7 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_lca(self):
         blocks = bt.get_consecutive_blocks(test_constants, 5, [], 9, b"0")
-        unspent_store = await UnspentStore.create(Path("blockchain_test"))
+        unspent_store = await CoinStore.create(Path("blockchain_test"))
         store = await FullNodeStore.create(Path("blockchain_test"))
         await store._clear_database()
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
@@ -410,7 +410,7 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_get_header_hashes(self):
         blocks = bt.get_consecutive_blocks(test_constants, 5, [], 9, b"0")
-        unspent_store = await UnspentStore.create(Path("blockchain_test"))
+        unspent_store = await CoinStore.create(Path("blockchain_test"))
         store = await FullNodeStore.create(Path("blockchain_test"))
         await store._clear_database()
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)

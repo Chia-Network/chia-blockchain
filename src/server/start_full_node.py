@@ -21,7 +21,7 @@ from src.server.server import ChiaServer
 from src.server.connection import NodeType
 from src.types.full_block import FullBlock
 from src.types.peer_info import PeerInfo
-from src.unspent_store import UnspentStore
+from src.coin_store import CoinStore
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli
 from setproctitle import setproctitle
@@ -42,7 +42,7 @@ async def main():
 
     genesis: FullBlock = FullBlock.from_bytes(constants["GENESIS_BLOCK"])
     await store.add_block(genesis)
-    unspent_store = await UnspentStore.create(db_path)
+    unspent_store = await CoinStore.create(db_path)
 
     log.info("Initializing blockchain from disk")
     blockchain = await Blockchain.create(unspent_store, store)

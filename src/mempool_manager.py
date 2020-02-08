@@ -11,7 +11,7 @@ from src.types.header import Header
 from src.types.mempool_item import MempoolItem
 from src.mempool import Mempool
 from src.types.sized_bytes import bytes32
-from src.unspent_store import UnspentStore
+from src.coin_store import CoinStore
 from src.util.ConsensusError import Err
 from src.util.mempool_check_conditions import (
     get_name_puzzle_conditions,
@@ -23,7 +23,7 @@ from sortedcontainers import SortedDict
 
 
 class MempoolManager:
-    def __init__(self, unspent_store: UnspentStore, override_constants: Dict = {}):
+    def __init__(self, unspent_store: CoinStore, override_constants: Dict = {}):
         # Allow passing in custom overrides
         self.constants: Dict = consensus_constants
         for key, value in override_constants.items():

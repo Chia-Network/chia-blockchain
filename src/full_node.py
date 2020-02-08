@@ -31,7 +31,7 @@ from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
-from src.unspent_store import UnspentStore
+from src.coin_store import CoinStore
 from src.util import errors
 from src.util.api_decorators import api_request
 from src.util.errors import BlockNotInBlockchain, InvalidUnfinishedBlock
@@ -47,7 +47,7 @@ class FullNode:
         blockchain: Blockchain,
         config: Dict,
         mempool_manager: MempoolManager,
-        unspent_store: UnspentStore,
+        unspent_store: CoinStore,
         name: str = None,
     ):
         self.config: Dict = config
@@ -56,7 +56,7 @@ class FullNode:
         self.mempool_manager: MempoolManager = mempool_manager
         self._shut_down = False  # Set to true to close all infinite loops
         self.server: Optional[ChiaServer] = None
-        self.unspent_store: UnspentStore = unspent_store
+        self.unspent_store: CoinStore = unspent_store
         if name:
             self.log = logging.getLogger(name)
         else:
