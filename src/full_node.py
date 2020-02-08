@@ -13,7 +13,7 @@ from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.weight_verifier import verify_weight
 from src.store import FullNodeStore
-from src.protocols import farmer_protocol, peer_protocol, timelord_protocol
+from src.protocols import farmer_protocol, full_node_protocol, timelord_protocol
 from src.util.bundle_tools import best_solution_program
 from src.mempool_manager import MempoolManager
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
@@ -160,7 +160,7 @@ class FullNode:
             assert block
             blocks.append(block)
         for block in blocks:
-            request = peer_protocol.Block(block)
+            request = full_node_protocol.Block(block)
             yield OutboundMessage(
                 NodeType.FULL_NODE, Message("block", request), Delivery.RESPOND
             )
@@ -188,7 +188,7 @@ class FullNode:
 
         async def introducer_client():
             async def on_connect() -> OutboundMessageGenerator:
-                msg = Message("request_peers", peer_protocol.RequestPeers())
+                msg = Message("request_peers", full_node_protocol.RequestPeers())
                 yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
 
             while not self._shut_down:
@@ -267,7 +267,7 @@ class FullNode:
             if self._shut_down:
                 return
             # Download all the header hashes and find the fork point
-            request = peer_protocol.RequestAllHeaderHashes(tip_block.header_hash)
+            request = full_node_protocol.RequestAllHeaderHashes(tip_block.header_hash)
             yield OutboundMessage(
                 NodeType.FULL_NODE,
                 Message("request_all_header_hashes", request),
@@ -344,7 +344,7 @@ class FullNode:
                             highest_height_requested = batch_end - 1
 
                         request_made = True
-                        request_hb = peer_protocol.RequestHeaderBlocks(
+                        request_hb = full_node_protocol.RequestHeaderBlocks(
                             tip_block.header.get_hash(),
                             [uint32(h) for h in range(batch_start, batch_end)],
                         )
@@ -452,7 +452,7 @@ class FullNode:
                         if batch_end - 1 > highest_height_requested:
                             highest_height_requested = batch_end - 1
                         request_made = True
-                        request_sync = peer_protocol.RequestSyncBlocks(
+                        request_sync = full_node_protocol.RequestSyncBlocks(
                             tip_block.header_hash,
                             [
                                 uint32(height)
@@ -554,7 +554,7 @@ class FullNode:
         for block in potential_fut_blocks:
             if self._shut_down:
                 return
-            async for msg in self.block(peer_protocol.Block(block)):
+            async for msg in self.block(full_node_protocol.Block(block)):
                 yield msg
 
         # Update farmers and timelord with most recent information
@@ -565,12 +565,12 @@ class FullNode:
 
     @api_request
     async def request_all_header_hashes(
-        self, request: peer_protocol.RequestAllHeaderHashes
+        self, request: full_node_protocol.RequestAllHeaderHashes
     ) -> OutboundMessageGenerator:
         try:
             header_hashes = self.blockchain.get_header_hashes(request.tip_header_hash)
             message = Message(
-                "all_header_hashes", peer_protocol.AllHeaderHashes(header_hashes)
+                "all_header_hashes", full_node_protocol.AllHeaderHashes(header_hashes)
             )
             yield OutboundMessage(NodeType.FULL_NODE, message, Delivery.RESPOND)
         except ValueError:
@@ -578,7 +578,7 @@ class FullNode:
 
     @api_request
     async def all_header_hashes(
-        self, all_header_hashes: peer_protocol.AllHeaderHashes
+        self, all_header_hashes: full_node_protocol.AllHeaderHashes
     ) -> OutboundMessageGenerator:
         assert len(all_header_hashes.header_hashes) > 0
         self.store.set_potential_hashes(all_header_hashes.header_hashes)
@@ -590,7 +590,7 @@ class FullNode:
 
     @api_request
     async def request_header_blocks(
-        self, request: peer_protocol.RequestHeaderBlocks
+        self, request: full_node_protocol.RequestHeaderBlocks
     ) -> OutboundMessageGenerator:
         """
         A peer requests a list of header blocks, by height. Used for syncing or light clients.
@@ -626,14 +626,14 @@ class FullNode:
             self.log.info(f"{e}")
             return
 
-        response = peer_protocol.HeaderBlocks(request.tip_header_hash, header_blocks)
+        response = full_node_protocol.HeaderBlocks(request.tip_header_hash, header_blocks)
         yield OutboundMessage(
             NodeType.FULL_NODE, Message("header_blocks", response), Delivery.RESPOND
         )
 
     @api_request
     async def header_blocks(
-        self, request: peer_protocol.HeaderBlocks
+        self, request: full_node_protocol.HeaderBlocks
     ) -> OutboundMessageGenerator:
         """
         Receive header blocks from a peer.
@@ -650,7 +650,7 @@ class FullNode:
 
     @api_request
     async def request_sync_blocks(
-        self, request: peer_protocol.RequestSyncBlocks
+        self, request: full_node_protocol.RequestSyncBlocks
     ) -> OutboundMessageGenerator:
         """
         Responsd to a peers request for syncing blocks.
@@ -690,13 +690,13 @@ class FullNode:
             )
             return
         response = Message(
-            "sync_blocks", peer_protocol.SyncBlocks(request.tip_header_hash, blocks)
+            "sync_blocks", full_node_protocol.SyncBlocks(request.tip_header_hash, blocks)
         )
         yield OutboundMessage(NodeType.FULL_NODE, response, Delivery.RESPOND)
 
     @api_request
     async def sync_blocks(
-        self, request: peer_protocol.SyncBlocks
+        self, request: full_node_protocol.SyncBlocks
     ) -> OutboundMessageGenerator:
         """
         We have received the blocks that we needed for syncing. Add them to processing queue.
@@ -872,7 +872,7 @@ class FullNode:
         unfinished_block_obj: FullBlock = FullBlock(pos, None, block_header, block_body)
 
         # Propagate to ourselves (which validates and does further propagations)
-        request = peer_protocol.UnfinishedBlock(unfinished_block_obj)
+        request = full_node_protocol.UnfinishedBlock(unfinished_block_obj)
         async for m in self.unfinished_block(request):
             # Yield all new messages (propagation to peers)
             yield m
@@ -910,13 +910,13 @@ class FullNode:
         if self.store.get_sync_mode():
             self.store.add_potential_future_block(new_full_block)
         else:
-            async for msg in self.block(peer_protocol.Block(new_full_block)):
+            async for msg in self.block(full_node_protocol.Block(new_full_block)):
                 yield msg
 
     # PEER PROTOCOL
     @api_request
     async def new_proof_of_time(
-        self, new_proof_of_time: peer_protocol.NewProofOfTime
+        self, new_proof_of_time: full_node_protocol.NewProofOfTime
     ) -> OutboundMessageGenerator:
         """
         A proof of time, received by a peer full node. If we have the rest of the block,
@@ -948,7 +948,7 @@ class FullNode:
 
     @api_request
     async def unfinished_block(
-        self, unfinished_block: peer_protocol.UnfinishedBlock
+        self, unfinished_block: full_node_protocol.UnfinishedBlock
     ) -> OutboundMessageGenerator:
         """
         We have received an unfinished block, either created by us, or from another peer.
@@ -1043,7 +1043,7 @@ class FullNode:
 
     @api_request
     async def transaction(
-        self, tx: peer_protocol.NewTransaction
+        self, tx: full_node_protocol.NewTransaction
     ) -> OutboundMessageGenerator:
         """
         Receives a full transaction from peer.
@@ -1051,7 +1051,7 @@ class FullNode:
         """
         added, error = await self.mempool_manager.add_spendbundle(tx.transaction)
         if added:
-            maybeTX = peer_protocol.TransactionId(tx.transaction.name())
+            maybeTX = full_node_protocol.TransactionId(tx.transaction.name())
             yield OutboundMessage(
                 NodeType.FULL_NODE,
                 Message("maybe_transaction", maybeTX),
@@ -1065,7 +1065,7 @@ class FullNode:
 
     @api_request
     async def maybe_transaction(
-        self, tx_id: peer_protocol.TransactionId
+        self, tx_id: full_node_protocol.TransactionId
     ) -> OutboundMessageGenerator:
         """
         Receives a transaction_id, ignore if we've seen it already.
@@ -1075,7 +1075,7 @@ class FullNode:
             self.log.info(f"tx_id({tx_id.transaction_id}) already seen")
             return
         else:
-            requestTX = peer_protocol.RequestTransaction(tx_id.transaction_id)
+            requestTX = full_node_protocol.RequestTransaction(tx_id.transaction_id)
             yield OutboundMessage(
                 NodeType.FULL_NODE,
                 Message("request_transaction", requestTX),
@@ -1084,14 +1084,14 @@ class FullNode:
 
     @api_request
     async def request_transaction(
-        self, tx_id: peer_protocol.RequestTransaction
+        self, tx_id: full_node_protocol.RequestTransaction
     ) -> OutboundMessageGenerator:
         """ Peer has request a full transaction from us. """
         spend_bundle = await self.mempool_manager.get_spendbundle(tx_id.transaction_id)
         if spend_bundle is None:
             return
 
-        transaction = peer_protocol.NewTransaction(spend_bundle)
+        transaction = full_node_protocol.NewTransaction(spend_bundle)
         yield OutboundMessage(
             NodeType.FULL_NODE, Message("transaction", transaction), Delivery.RESPOND,
         )
@@ -1099,7 +1099,7 @@ class FullNode:
         self.log.info(f"sending transaction (tx_id: {spend_bundle.name()}) to peer")
 
     @api_request
-    async def block(self, block: peer_protocol.Block) -> OutboundMessageGenerator:
+    async def block(self, block: full_node_protocol.Block) -> OutboundMessageGenerator:
         """
         Receive a full block from a peer full node (or ourselves).
         """
@@ -1168,7 +1168,7 @@ class FullNode:
                 )
                 msg = Message(
                     "request_block",
-                    peer_protocol.RequestBlock(block.block.prev_header_hash),
+                    full_node_protocol.RequestBlock(block.block.prev_header_hash),
                 )
                 self.store.add_disconnected_block(block.block)
                 yield OutboundMessage(NodeType.FULL_NODE, msg, Delivery.RESPOND)
@@ -1238,7 +1238,7 @@ class FullNode:
 
         # Recursively process the next block if we have it
         if next_block is not None:
-            async for ret_msg in self.block(peer_protocol.Block(next_block)):
+            async for ret_msg in self.block(full_node_protocol.Block(next_block)):
                 yield ret_msg
 
         # Removes all temporary data for old blocks
@@ -1250,7 +1250,7 @@ class FullNode:
 
     @api_request
     async def request_block(
-        self, request_block: peer_protocol.RequestBlock
+        self, request_block: full_node_protocol.RequestBlock
     ) -> OutboundMessageGenerator:
         block: Optional[FullBlock] = await self.store.get_block(
             request_block.header_hash
@@ -1258,12 +1258,12 @@ class FullNode:
         if block is not None:
             yield OutboundMessage(
                 NodeType.FULL_NODE,
-                Message("block", peer_protocol.Block(block)),
+                Message("block", full_node_protocol.Block(block)),
                 Delivery.RESPOND,
             )
 
     @api_request
-    async def peers(self, request: peer_protocol.Peers) -> OutboundMessageGenerator:
+    async def peers(self, request: full_node_protocol.Peers) -> OutboundMessageGenerator:
         if self.server is None:
             return
         conns = self.server.global_connections

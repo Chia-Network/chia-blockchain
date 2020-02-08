@@ -4,7 +4,7 @@ import pytest
 
 from src.util.bundle_tools import best_solution_program
 from src.server.outbound_message import OutboundMessage
-from src.protocols import peer_protocol
+from src.protocols import full_node_protocol
 from src.types.full_block import FullBlock
 from src.types.hashable.SpendBundle import SpendBundle
 from src.util.ConsensusError import Err
@@ -43,7 +43,7 @@ class TestBlockchainTransactions:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         for block in blocks:
-            async for _ in full_node_1.block(peer_protocol.Block(block)):
+            async for _ in full_node_1.block(full_node_protocol.Block(block)):
                 pass
 
         spent_block = blocks[1]
@@ -53,7 +53,7 @@ class TestBlockchainTransactions:
         )
 
         assert spend_bundle is not None
-        tx: peer_protocol.NewTransaction = peer_protocol.NewTransaction(spend_bundle)
+        tx: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle)
         async for _ in full_node_1.transaction(tx):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -77,7 +77,7 @@ class TestBlockchainTransactions:
         )
 
         next_block = new_blocks[11]
-        async for _ in full_node_1.block(peer_protocol.Block(next_block)):
+        async for _ in full_node_1.block(full_node_protocol.Block(next_block)):
             pass
 
         tips = full_node_1.blockchain.get_current_tips()
@@ -122,7 +122,7 @@ class TestBlockchainTransactions:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         for block in blocks:
-            async for _ in full_node_1.block(peer_protocol.Block(block)):
+            async for _ in full_node_1.block(full_node_protocol.Block(block)):
                 pass
 
         spent_block = blocks[1]
@@ -165,7 +165,7 @@ class TestBlockchainTransactions:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         for block in blocks:
-            async for _ in full_node_1.block(peer_protocol.Block(block)):
+            async for _ in full_node_1.block(full_node_protocol.Block(block)):
                 pass
 
         spent_block = blocks[1]

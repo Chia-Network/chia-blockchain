@@ -4,7 +4,7 @@ from time import time
 import pytest
 
 from src.server.outbound_message import OutboundMessage
-from src.protocols import peer_protocol
+from src.protocols import full_node_protocol
 from src.types.ConditionVarPair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
 from src.util.ints import uint64
@@ -44,14 +44,14 @@ class TestMempool:
 
         block = blocks[1]
         print(f"block coinbase: {block.body.coinbase.name()}")
-        async for _ in full_node_1.block(peer_protocol.Block(block)):
+        async for _ in full_node_1.block(full_node_protocol.Block(block)):
             pass
 
         spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, block.body.coinbase
         )
         assert spend_bundle is not None
-        tx: peer_protocol.NewTransaction = peer_protocol.NewTransaction(spend_bundle)
+        tx: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle)
         async for _ in full_node_1.transaction(tx):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -74,14 +74,14 @@ class TestMempool:
         full_node_1, full_node_2, server_1, server_2 = two_nodes_standard_freeze
 
         block = blocks[1]
-        async for _ in full_node_1.block(peer_protocol.Block(block)):
+        async for _ in full_node_1.block(full_node_protocol.Block(block)):
             pass
 
         spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, block.body.coinbase
         )
         assert spend_bundle is not None
-        tx: peer_protocol.NewTransaction = peer_protocol.NewTransaction(spend_bundle)
+        tx: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle)
 
         async for _ in full_node_1.transaction(tx):
             outbound: OutboundMessage = _
@@ -96,7 +96,7 @@ class TestMempool:
         )
 
         for i in range(1, 201):
-            async for _ in full_node_1.block(peer_protocol.Block(blocks[i])):
+            async for _ in full_node_1.block(full_node_protocol.Block(blocks[i])):
                 pass
 
         async for _ in full_node_1.transaction(tx):
@@ -121,7 +121,7 @@ class TestMempool:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
-        async for _ in full_node_1.block(peer_protocol.Block(block)):
+        async for _ in full_node_1.block(full_node_protocol.Block(block)):
             pass
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
@@ -129,7 +129,7 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: peer_protocol.NewTransaction = peer_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -140,7 +140,7 @@ class TestMempool:
             1000, other_receiver.get_new_puzzlehash(), block.body.coinbase
         )
         assert spend_bundle2 is not None
-        tx2: peer_protocol.NewTransaction = peer_protocol.NewTransaction(spend_bundle2)
+        tx2: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle2)
         async for _ in full_node_1.transaction(tx2):
             pass
 
@@ -164,14 +164,14 @@ class TestMempool:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
-        async for _ in full_node_1.block(peer_protocol.Block(block)):
+        async for _ in full_node_1.block(full_node_protocol.Block(block)):
             pass
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, block.body.coinbase
         )
         assert spend_bundle1 is not None
-        tx1: peer_protocol.NewTransaction = peer_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -182,7 +182,7 @@ class TestMempool:
         )
 
         assert spend_bundle2 is not None
-        tx2: peer_protocol.NewTransaction = peer_protocol.NewTransaction(spend_bundle2)
+        tx2: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle2)
         async for _ in full_node_1.transaction(tx2):
             pass
 
@@ -206,7 +206,7 @@ class TestMempool:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
-        async for _ in full_node_1.block(peer_protocol.Block(block)):
+        async for _ in full_node_1.block(full_node_protocol.Block(block)):
             pass
 
         cvp = ConditionVarPair(
@@ -221,7 +221,7 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: peer_protocol.NewTransaction = peer_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -245,7 +245,7 @@ class TestMempool:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
-        async for _ in full_node_1.block(peer_protocol.Block(block)):
+        async for _ in full_node_1.block(full_node_protocol.Block(block)):
             pass
 
         cvp = ConditionVarPair(
@@ -260,7 +260,7 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: peer_protocol.NewTransaction = peer_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -284,7 +284,7 @@ class TestMempool:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
-        async for _ in full_node_1.block(peer_protocol.Block(block)):
+        async for _ in full_node_1.block(full_node_protocol.Block(block)):
             pass
 
         cvp = ConditionVarPair(
@@ -297,7 +297,7 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: peer_protocol.NewTransaction = peer_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -323,7 +323,7 @@ class TestMempool:
         block = blocks[1]
 
         for b in blocks:
-            async for _ in full_node_1.block(peer_protocol.Block(b)):
+            async for _ in full_node_1.block(full_node_protocol.Block(b)):
                 pass
 
         cvp = ConditionVarPair(
@@ -336,7 +336,7 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: peer_protocol.NewTransaction = peer_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -362,7 +362,7 @@ class TestMempool:
         block = blocks[1]
 
         for b in blocks:
-            async for _ in full_node_1.block(peer_protocol.Block(b)):
+            async for _ in full_node_1.block(full_node_protocol.Block(b)):
                 pass
 
         cvp = ConditionVarPair(
@@ -375,7 +375,7 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: peer_protocol.NewTransaction = peer_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -401,7 +401,7 @@ class TestMempool:
         block = blocks[1]
 
         for b in blocks:
-            async for _ in full_node_1.block(peer_protocol.Block(b)):
+            async for _ in full_node_1.block(full_node_protocol.Block(b)):
                 pass
 
         cvp = ConditionVarPair(
@@ -414,7 +414,7 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: peer_protocol.NewTransaction = peer_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -440,7 +440,7 @@ class TestMempool:
         block = blocks[1]
 
         for b in blocks:
-            async for _ in full_node_1.block(peer_protocol.Block(b)):
+            async for _ in full_node_1.block(full_node_protocol.Block(b)):
                 pass
 
         time_now = uint64(int(time() * 1000))
@@ -455,7 +455,7 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: peer_protocol.NewTransaction = peer_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -481,7 +481,7 @@ class TestMempool:
         block = blocks[1]
 
         for b in blocks:
-            async for _ in full_node_1.block(peer_protocol.Block(b)):
+            async for _ in full_node_1.block(full_node_protocol.Block(b)):
                 pass
 
         time_now = uint64(int(time() * 1000))
@@ -499,7 +499,7 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: peer_protocol.NewTransaction = peer_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             assert outbound.message.function != "maybe_transaction"
@@ -510,7 +510,7 @@ class TestMempool:
         # Sleep so that 3 sec passes
         await asyncio.sleep(3)
 
-        tx2: peer_protocol.NewTransaction = peer_protocol.NewTransaction(spend_bundle1)
+        tx2: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
         async for _ in full_node_1.transaction(tx2):
             outbound_2: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool

@@ -329,6 +329,7 @@ class Timelord:
     async def _manage_discriminant_queue(self):
         while not self._is_shutdown:
             async with self.lock:
+                log.info("Looping")
                 if len(self.discriminant_queue) > 0:
                     max_weight = max([h for _, h in self.discriminant_queue])
                     if max_weight <= self.best_weight_three_proofs:

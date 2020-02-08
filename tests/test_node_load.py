@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from src.protocols import peer_protocol
+from src.protocols import full_node_protocol
 from src.server.connection import NodeType
 from src.server.outbound_message import Delivery, Message, OutboundMessage
 from src.types.peer_info import PeerInfo
@@ -30,7 +30,7 @@ class TestNodeLoad:
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
 
         for i in range(1, num_blocks - 1):
-            async for _ in full_node_1.block(peer_protocol.Block(blocks[i])):
+            async for _ in full_node_1.block(full_node_protocol.Block(blocks[i])):
                 pass
 
         await server_2.start_client(
@@ -42,13 +42,13 @@ class TestNodeLoad:
         num_unfinished_blocks = 1000
         start_unf = time.time()
         for i in range(num_unfinished_blocks):
-            msg = Message("unfinished_block", peer_protocol.UnfinishedBlock(blocks[9]))
+            msg = Message("unfinished_block", full_node_protocol.UnfinishedBlock(blocks[9]))
             server_1.push_message(
                 OutboundMessage(NodeType.FULL_NODE, msg, Delivery.BROADCAST)
             )
 
         # Send the whole block ast the end so we can detect when the node is done
-        block_msg = Message("block", peer_protocol.Block(blocks[9]))
+        block_msg = Message("block", full_node_protocol.Block(blocks[9]))
         server_1.push_message(
             OutboundMessage(NodeType.FULL_NODE, block_msg, Delivery.BROADCAST)
         )
@@ -80,7 +80,7 @@ class TestNodeLoad:
 
         start_unf = time.time()
         for i in range(1, num_blocks):
-            msg = Message("block", peer_protocol.Block(blocks[i]))
+            msg = Message("block", full_node_protocol.Block(blocks[i]))
             server_1.push_message(
                 OutboundMessage(NodeType.FULL_NODE, msg, Delivery.BROADCAST)
             )

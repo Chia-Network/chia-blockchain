@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import AsyncGenerator, Dict
 
-from src.protocols.peer_protocol import Peers, RequestPeers
+from src.protocols.full_node_protocol import Peers, RequestPeers
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
 from src.types.sized_bytes import bytes32

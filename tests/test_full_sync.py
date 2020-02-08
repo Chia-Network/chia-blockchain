@@ -4,7 +4,7 @@ import time
 import pytest
 
 from src.types.peer_info import PeerInfo
-from src.protocols import peer_protocol
+from src.protocols import full_node_protocol
 from src.util.ints import uint16
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 
@@ -28,7 +28,7 @@ class TestFullSync:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         for i in range(1, num_blocks):
-            async for _ in full_node_1.block(peer_protocol.Block(blocks[i])):
+            async for _ in full_node_1.block(full_node_protocol.Block(blocks[i])):
                 pass
 
         await server_2.start_client(
@@ -64,15 +64,15 @@ class TestFullSync:
 
         # 10 blocks to node_1
         for i in range(1, num_blocks):
-            async for _ in full_node_1.block(peer_protocol.Block(blocks[i])):
+            async for _ in full_node_1.block(full_node_protocol.Block(blocks[i])):
                 pass
         # 4 different blocks to node_2
         for i in range(1, num_blocks_2):
-            async for _ in full_node_2.block(peer_protocol.Block(blocks_2[i])):
+            async for _ in full_node_2.block(full_node_protocol.Block(blocks_2[i])):
                 pass
 
         # 6th block from node_1 to node_2
-        async for _ in full_node_2.block(peer_protocol.Block(blocks[5])):
+        async for _ in full_node_2.block(full_node_protocol.Block(blocks[5])):
             pass
 
         await server_2.start_client(

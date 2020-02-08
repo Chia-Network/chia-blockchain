@@ -74,15 +74,21 @@ class Harvester:
                 continue
 
             found = False
+            failed_to_open = False
             for filename in potential_filenames:
                 if filename.exists():
-                    self.provers[partial_filename_str] = DiskProver(str(filename))
+                    try:
+                        self.provers[partial_filename_str] = DiskProver(str(filename))
+                    except ValueError:
+                        log.error(f"Failed to open file {filename}.")
+                        failed_to_open = True
+                        break
                     log.info(
                         f"Farming plot {filename} of size {self.provers[partial_filename_str].get_size()}"
                     )
                     found = True
                     break
-            if not found:
+            if not found and not failed_to_open:
                 log.warning(f"Plot at {potential_filenames} does not exist.")
 
     @api_request
