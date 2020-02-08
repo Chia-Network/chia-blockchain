@@ -7,6 +7,7 @@ from src.types.full_block import FullBlock
 from src.types.header import Header
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint16
+from src.types.hashable.CoinRecord import CoinRecord
 
 
 class RpcClient:
@@ -76,12 +77,17 @@ class RpcClient:
     async def stop_node(self) -> Dict:
         return await self.fetch("stop_node", {})
 
-    async def get_pool_balances(self) -> Dict:
-        response = await self.fetch("get_pool_balances", {})
-        new_response = {}
-        for pk, bal in response.items():
-            new_response[hexstr_to_bytes(pk)] = bal
-        return new_response
+    async def get_unspent_coins(
+        self, puzzle_hash: bytes32, header_hash: Optional[bytes32] = None
+    ) -> List:
+        if header_hash is not None:
+            d = {"puzzle_hash": puzzle_hash.hex(), "header_hash": header_hash.hex()}
+        else:
+            d = {"puzzle_hash": puzzle_hash.hex()}
+        return [
+            CoinRecord.from_json(coin)
+            for coin in await self.fetch("get_unspent_coins", d)
+        ]
 
     async def get_heaviest_block_seen(self) -> Header:
         response = await self.fetch("get_heaviest_block_seen", {})

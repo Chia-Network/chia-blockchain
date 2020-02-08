@@ -210,7 +210,7 @@ class UnspentStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            return CoinRecord.from_bytes(row[6])
+            return CoinRecord(Coin.from_bytes(row[6]), row[1], row[2], row[3], row[4])
         return None
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
@@ -229,7 +229,9 @@ class UnspentStore:
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
-            coins.add(CoinRecord.from_bytes(row[6]).coin)
+            coins.add(
+                CoinRecord(Coin.from_bytes(row[6]), row[1], row[2], row[3], row[4])
+            )
         return list(coins)
 
     # TODO figure out if we want to really delete when doing rollback

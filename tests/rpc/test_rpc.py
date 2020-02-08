@@ -58,7 +58,7 @@ class TestRpc:
 
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
         await store.add_block(blocks[0])
-        for i in range(1, 9):
+        for i in range(1, len(blocks)):
             assert (await b.receive_block(blocks[i]))[
                 0
             ] == ReceiveBlockResult.ADDED_TO_HEAD
@@ -74,6 +74,13 @@ class TestRpc:
             full_node_1._shutdown()
             server_1.close_all()
 
+        unspent_store2 = await UnspentStore.create("blockchain_test_2.db")
+        full_node_2 = FullNode(store, b, config, mempool, unspent_store2)
+        server_2 = ChiaServer(test_node_2_port, full_node_2, NodeType.FULL_NODE)
+        full_node_2._set_server(server_2)
+
+        _ = await server_2.start_server("127.0.0.1", None)
+
         rpc_cleanup = await start_rpc_server(full_node_1, stop_node_cb, test_rpc_port)
 
         try:
@@ -86,22 +93,33 @@ class TestRpc:
             assert state["ips"] > 0
 
             block = await client.get_block(state["lca"].header_hash)
-            assert block == blocks[6]
+            print([b.header_hash for b in blocks])
+            print(block.header_hash)
+            assert block == blocks[8]
             assert (await client.get_block(bytes([1] * 32))) is None
 
             header = await client.get_header(state["lca"].header_hash)
-            assert header == blocks[6].header
+            assert header == blocks[8].header
 
             # TODO implement get pool balances
-            # assert len(await client.get_pool_balances()) > 0
+            coins = await client.get_unspent_coins(
+                blocks[-1].body.coinbase.puzzle_hash, blocks[-1].header_hash
+            )
+            assert len(coins) == 22
+            coins_lca = await client.get_unspent_coins(
+                blocks[-1].body.coinbase.puzzle_hash
+            )
+            assert len(coins_lca) == 18
+
             assert len(await client.get_connections()) == 0
 
-            unspent_store2 = await UnspentStore.create("blockchain_test_2.db")
-            full_node_2 = FullNode(store, b, config, mempool, unspent_store2)
-            server_2 = ChiaServer(test_node_2_port, full_node_2, NodeType.FULL_NODE)
-            full_node_2._set_server(server_2)
+            await client.open_connection(server_2._host, server_2._port)
+            connections = await client.get_connections()
+            assert len(connections) == 1
 
-            _ = await server_2.start_server("127.0.0.1", None)
+            await client.close_connection(connections[0]["node_id"])
+            assert len(await client.get_connections()) == 0
+
             await asyncio.sleep(2)  # Allow server to start
         except AssertionError:
             # Checks that the RPC manages to stop the node

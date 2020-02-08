@@ -4,7 +4,6 @@ from typing import Callable, List, Optional, Tuple, Dict
 import aiohttp
 
 import asyncssh
-from blspy import PrivateKey, PublicKey
 from yaml import safe_load
 
 from definitions import ROOT_DIR
@@ -23,6 +22,7 @@ from src.types.header import Header
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
 from src.rpc.rpc_client import RpcClient
+from src.util.byte_types import hexstr_to_bytes
 
 log = logging.getLogger(__name__)
 
@@ -103,8 +103,6 @@ class FullNodeUI:
         self.block = None
         self.closed: bool = False
         self.num_blocks: int = 10
-        self.num_top_block_pools: int = 10
-        self.top_winners: List[Tuple[uint64, bytes32]] = []
         self.our_winners: List[Tuple[uint64, bytes32]] = []
         self.prev_route: str = "home/"
         self.route: str = "home/"
@@ -112,14 +110,14 @@ class FullNodeUI:
         self.parent_close_cb = parent_close_cb
         self.kb = self.setup_keybindings()
         self.style = Style([("error", "#ff0044")])
-        self.pool_pks: List[PublicKey] = []
+        self.puzzle_hashes: List[bytes32] = []
         key_config_filename = ROOT_DIR / "config" / "keys.yaml"
         if key_config_filename.exists():
             config = safe_load(open(key_config_filename, "r"))
 
-            self.pool_pks = [
-                PrivateKey.from_bytes(bytes.fromhex(ce)).get_public_key()
-                for ce in config["pool_sks"]
+            self.puzzle_hashes = [
+                hexstr_to_bytes(config["pool_target"]),
+                hexstr_to_bytes(config["farmer_target"]),
             ]
 
         self.draw_initial()
@@ -211,13 +209,9 @@ class FullNodeUI:
         )
         self.search_block_field.accept_handler = self.async_to_sync(self.search_block)
 
-        self.top_block_pools_msg = Label(text=f"Top block pools")
-        self.top_block_pools_labels = [
-            Label(text="Top block pool") for _ in range(self.num_top_block_pools)
-        ]
-        self.our_pools_msg = Label(text=f"Our pool winnings")
+        self.our_pools_msg = Label(text=f"Our winnings")
         self.our_pools_labels = [
-            Label(text="Our winnings") for _ in range(len(self.pool_pks))
+            Label(text="Our winnings") for _ in range(len(self.puzzle_hashes))
         ]
 
         self.close_ui_button = Button("Close UI", handler=self.close)
@@ -339,7 +333,7 @@ class FullNodeUI:
         else:
             self.syncing.text = "Not syncing"
 
-        total_iters = self.lca_block.challenge.total_iters
+        total_iters = self.lca_block.data.total_iters
 
         new_block_labels = []
         for i, b in enumerate(self.latest_blocks):
@@ -352,16 +346,6 @@ class FullNodeUI:
                 f"block/{b.header_hash}"
             )
             new_block_labels.append(self.latest_blocks_labels[i])
-
-        top_block_pools_labels = self.top_block_pools_labels
-        if len(self.top_winners) > 0:
-            new_top_block_pools_labels = []
-            for i, (winnings, pk) in enumerate(self.top_winners):
-                self.top_block_pools_labels[
-                    i
-                ].text = f"Public key {pk.hex()}: {winnings/1000000000000} chias."
-                new_top_block_pools_labels.append(self.top_block_pools_labels[i])
-            top_block_pools_labels = new_top_block_pools_labels
 
         our_pools_labels = self.our_pools_labels
         if len(self.our_winners) > 0:
@@ -411,9 +395,6 @@ class FullNodeUI:
                 Window(height=1, char="-", style="class:line"),
                 self.search_block_msg,
                 self.search_block_field,
-                Window(height=1, char="-", style="class:line"),
-                self.top_block_pools_msg,
-                *top_block_pools_labels,
                 Window(height=1, char="-", style="class:line"),
                 self.our_pools_msg,
                 *our_pools_labels,
@@ -486,22 +467,16 @@ class FullNodeUI:
                     self.latest_blocks = await self.get_latest_blocks(self.tips)
 
                     self.data_initialized = True
-                    if counter % 50 == 0:
-                        # Only request balances periodically, since it's an expensive operation
-                        coin_balances: Dict[
-                            bytes, uint64
-                        ] = await self.rpc_client.get_pool_balances()
-                        self.top_winners = sorted(
-                            [(rewards, key) for key, rewards in coin_balances.items()],
-                            reverse=True,
-                        )[: self.num_top_block_pools]
-
-                        self.our_winners = [
-                            (coin_balances[bytes(pk)], bytes(pk))
-                            if bytes(pk) in coin_balances
-                            else (0, bytes(pk))
-                            for pk in self.pool_pks
-                        ]
+                    if counter % 10 == 0:
+                        all_coins = []
+                        for puzzle_hash in self.puzzle_hashes:
+                            coins = await self.rpc_client.get_unspent_coins(
+                                puzzle_hash, self.latest_blocks[-1].header_hash
+                            )
+                            all_coins.append(
+                                (sum(coin.coin.amount for coin in coins), puzzle_hash)
+                            )
+                        self.our_winners = all_coins
 
                     counter += 1
                     await asyncio.sleep(5)

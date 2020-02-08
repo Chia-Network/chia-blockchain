@@ -10,6 +10,7 @@ from src.types.header import Header
 from src.types.full_block import FullBlock
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint64
+from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
 
 
@@ -166,25 +167,23 @@ class RpcApiHandler:
             self.stop_cb()
         return obj_to_response("")
 
-    # async def get_pool_balances(self, request) -> web.Response:
-    #     """
-    #     Retrieves the coinbase balances earned by all pools.
-    #     TODO: remove after transactions and coins are added.
-    #     """
+    async def get_unspent_coins(self, request) -> web.Response:
+        """
+        Retrieves the unspent coins for a given puzzlehash.
+        """
+        request_data = await request.json()
+        puzzle_hash = hexstr_to_bytes(request_data["puzzle_hash"])
+        if "header_hash" in request_data:
+            header_hash = bytes32(hexstr_to_bytes(request_data["header_hash"]))
+            header = self.full_node.blockchain.headers.get(header_hash)
+        else:
+            header = None
 
-    #     ppks: List[
-    #         Tuple[uint32, PublicKey]
-    #     ] = await self.full_node.store.get_pool_pks_hack()
+        coin_records = await self.full_node.blockchain.unspent_store.get_coin_records_by_puzzle_hash(
+            puzzle_hash, header
+        )
 
-    #     coin_balances: Dict[str, uint64] = {}
-    #     for height, pk in ppks:
-    #         pool_pk = f"0x{bytes(pk).hex()}"
-    #         if pool_pk not in coin_balances:
-    #             coin_balances[pool_pk] = uint64(0)
-    #         coin_balances[pool_pk] = uint64(
-    #             coin_balances[pool_pk] + calculate_block_reward(height)
-    #         )
-    #     return obj_to_response(coin_balances)
+        return obj_to_response(coin_records)
 
     async def get_heaviest_block_seen(self, request) -> web.Response:
         """
@@ -218,7 +217,7 @@ async def start_rpc_server(full_node: FullNode, stop_node_cb: Callable, rpc_port
             web.post("/open_connection", handler.open_connection),
             web.post("/close_connection", handler.close_connection),
             web.post("/stop_node", handler.stop_node),
-            # web.post("/get_pool_balances", handler.get_pool_balances),
+            web.post("/get_unspent_coins", handler.get_unspent_coins),
             web.post("/get_heaviest_block_seen", handler.get_heaviest_block_seen),
         ]
     )

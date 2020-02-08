@@ -8,6 +8,7 @@ import json
 from hashlib import sha256
 from typing import Any, BinaryIO, List, Type, get_type_hints, Union
 from src.util.byte_types import hexstr_to_bytes
+from src.types.hashable.Program import Program
 
 from blspy import (
     ChainCode,
@@ -50,6 +51,7 @@ unhashable_types = [
     ExtendedPublicKey,
     ExtendedPrivateKey,
     ChainCode,
+    Program,
 ]
 
 
