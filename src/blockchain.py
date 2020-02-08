@@ -913,7 +913,6 @@ class Blockchain:
             # Create DiffStore
             await self.create_diffs_for_tips(self.lca_block)
 
-    # TODO Ask Mariano about this
     def find_fork_for_lca(self, old_lca: Header) -> uint32:
         """ Tries to find height where new chain (current) diverged from the old chain where old_lca was the LCA"""
         tmp_old: Header = old_lca
