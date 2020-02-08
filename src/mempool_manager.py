@@ -2,7 +2,7 @@ import collections
 from typing import Dict, Optional, Tuple, List, Set
 
 from src.consensus.constants import constants as consensus_constants
-from src.farming.farming_tools import best_solution_program
+from src.util.bundle_tools import best_solution_program
 from src.types.full_block import FullBlock
 from src.types.hashable.Coin import Coin
 from src.types.hashable.SpendBundle import SpendBundle

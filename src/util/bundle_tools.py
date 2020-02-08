@@ -4,7 +4,7 @@ from src.types.hashable.Program import Program
 from src.types.hashable.SpendBundle import SpendBundle
 
 
-def best_solution_program(bundle: SpendBundle):
+def best_solution_program(bundle: SpendBundle) -> Program:
     """
     This could potentially do a lot of clever and complicated compression
     optimizations in conjunction with choosing the set of SpendBundles to include.

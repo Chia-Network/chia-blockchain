@@ -57,7 +57,7 @@ class TestMempool:
             # Maybe transaction means that it's accepted in mempool
             assert outbound.message.function == "maybe_transaction"
 
-        sb = await full_node_1.mempool.get_spendbundle(spend_bundle.name())
+        sb = await full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
         assert sb is spend_bundle
 
     @pytest.mark.asyncio
@@ -88,7 +88,7 @@ class TestMempool:
             # Maybe transaction means that it's accepted in mempool
             assert outbound.message.function != "maybe_transaction"
 
-        sb = await full_node_1.mempool.get_spendbundle(spend_bundle.name())
+        sb = await full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
         assert sb is None
 
         blocks = bt.get_consecutive_blocks(
@@ -104,7 +104,7 @@ class TestMempool:
             # Maybe transaction means that it's accepted in mempool
             assert outbound_2.message.function == "maybe_transaction"
         print(blocks[1].body.coinbase.name())
-        sb = await full_node_1.mempool.get_spendbundle(spend_bundle.name())
+        sb = await full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
         assert sb is spend_bundle
 
     @pytest.mark.asyncio
@@ -144,8 +144,8 @@ class TestMempool:
         async for _ in full_node_1.transaction(tx2):
             pass
 
-        sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
-        sb2 = await full_node_1.mempool.get_spendbundle(spend_bundle2.name())
+        sb1 = await full_node_1.mempool_manager.get_spendbundle(spend_bundle1.name())
+        sb2 = await full_node_1.mempool_manager.get_spendbundle(spend_bundle2.name())
 
         assert sb1 == spend_bundle1
         assert sb2 is None
@@ -186,8 +186,8 @@ class TestMempool:
         async for _ in full_node_1.transaction(tx2):
             pass
 
-        sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
-        sb2 = await full_node_1.mempool.get_spendbundle(spend_bundle2.name())
+        sb1 = await full_node_1.mempool_manager.get_spendbundle(spend_bundle1.name())
+        sb2 = await full_node_1.mempool_manager.get_spendbundle(spend_bundle2.name())
 
         assert sb1 is None
         assert sb2 == spend_bundle2
@@ -227,7 +227,7 @@ class TestMempool:
             # Maybe transaction means that it's accepted in mempool
             assert outbound.message.function != "maybe_transaction"
 
-        sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
+        sb1 = await full_node_1.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is None
 
@@ -266,7 +266,7 @@ class TestMempool:
             # Maybe transaction means that it's accepted in mempool
             assert outbound.message.function == "maybe_transaction"
 
-        sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
+        sb1 = await full_node_1.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is spend_bundle1
 
@@ -303,7 +303,7 @@ class TestMempool:
             # Maybe transaction means that it's accepted in mempool
             assert outbound.message.function != "maybe_transaction"
 
-        sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
+        sb1 = await full_node_1.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is None
 
@@ -342,7 +342,7 @@ class TestMempool:
             # Maybe transaction means that it's accepted in mempool
             assert outbound.message.function == "maybe_transaction"
 
-        sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
+        sb1 = await full_node_1.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is spend_bundle1
 
@@ -381,7 +381,7 @@ class TestMempool:
             # Maybe transaction means that it's accepted in mempool
             assert outbound.message.function == "maybe_transaction"
 
-        sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
+        sb1 = await full_node_1.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is spend_bundle1
 
@@ -420,7 +420,7 @@ class TestMempool:
             # Maybe transaction means that it's accepted in mempool
             assert outbound.message.function != "maybe_transaction"
 
-        sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
+        sb1 = await full_node_1.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is None
 
@@ -461,7 +461,7 @@ class TestMempool:
             # Maybe transaction means that it's accepted in mempool
             assert outbound.message.function == "maybe_transaction"
 
-        sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
+        sb1 = await full_node_1.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is spend_bundle1
 
@@ -504,7 +504,7 @@ class TestMempool:
             outbound: OutboundMessage = _
             assert outbound.message.function != "maybe_transaction"
 
-        sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
+        sb1 = await full_node_1.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is None
         # Sleep so that 3 sec passes
@@ -516,6 +516,6 @@ class TestMempool:
             # Maybe transaction means that it's accepted in mempool
             assert outbound_2.message.function == "maybe_transaction"
 
-        sb1 = await full_node_1.mempool.get_spendbundle(spend_bundle1.name())
+        sb1 = await full_node_1.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is spend_bundle1

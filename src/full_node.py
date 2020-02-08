@@ -14,7 +14,7 @@ from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.weight_verifier import verify_weight
 from src.store import FullNodeStore
 from src.protocols import farmer_protocol, peer_protocol, timelord_protocol
-from src.farming.farming_tools import best_solution_program
+from src.util.bundle_tools import best_solution_program
 from src.mempool_manager import MempoolManager
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
