@@ -875,39 +875,28 @@ class Blockchain:
                     # Create DiffStore
                     await self.create_diffs_for_tips(self.lca_block)
             if self.lca_block.height >= old_lca.height:
-                if self.lca_block.prev_header_hash == old_lca.header_hash:
-                    # New LCA is a child of the old one, just add it
-                    full = await self.store.get_block(self.lca_block.header_hash)
-                    if full is None:
-                        return
-                    await self.unspent_store.new_lca(full)
+                if self.is_descendant(self.lca_block, old_lca):
+                    # Add blocks between old and new lca block
+                    await self._from_fork_to_lca(old_lca, self.lca_block)
                     # Nuke DiffStore
                     self.unspent_store.nuke_diffs()
                     # Create DiffStore
                     await self.create_diffs_for_tips(self.lca_block)
                 else:
-                    if self.is_descendant(self.lca_block, old_lca):
-                        # Add blocks between old and new lca block
-                        await self._from_fork_to_lca(old_lca, self.lca_block)
-                        # Nuke DiffStore
-                        self.unspent_store.nuke_diffs()
-                        # Create DiffStore
-                        await self.create_diffs_for_tips(self.lca_block)
-                    else:
-                        # Find Fork
-                        fork_h = self.find_fork_for_lca(old_lca)
-                        # Rollback to fork_point
-                        await self.unspent_store.rollback_lca_to_block(fork_h)
-                        # Add blocks from fork_point to new_lca
-                        fork_hash = self.height_to_hash[fork_h]
-                        fork_head = self.headers[fork_hash]
-                        await self._from_fork_to_lca(fork_head, self.lca_block)
-                        #  Nuke DiffStore
-                        self.unspent_store.nuke_diffs()
-                        # Create DiffStore
-                        await self.create_diffs_for_tips(self.lca_block)
+                    # Find Fork
+                    fork_h = self.find_fork_for_lca(old_lca)
+                    # Rollback to fork_point
+                    await self.unspent_store.rollback_lca_to_block(fork_h)
+                    # Add blocks from fork_point to new_lca
+                    fork_hash = self.height_to_hash[fork_h]
+                    fork_head = self.headers[fork_hash]
+                    await self._from_fork_to_lca(fork_head, self.lca_block)
+                    #  Nuke DiffStore
+                    self.unspent_store.nuke_diffs()
+                    # Create DiffStore
+                    await self.create_diffs_for_tips(self.lca_block)
         else:
-            # If LCA has not changes just update the difference
+            # If LCA has not changed just update the difference
             self.unspent_store.nuke_diffs()
             # Create DiffStore
             await self.create_diffs_for_tips(self.lca_block)
