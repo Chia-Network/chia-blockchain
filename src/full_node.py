@@ -626,7 +626,9 @@ class FullNode:
             self.log.info(f"{e}")
             return
 
-        response = full_node_protocol.HeaderBlocks(request.tip_header_hash, header_blocks)
+        response = full_node_protocol.HeaderBlocks(
+            request.tip_header_hash, header_blocks
+        )
         yield OutboundMessage(
             NodeType.FULL_NODE, Message("header_blocks", response), Delivery.RESPOND
         )
@@ -690,7 +692,8 @@ class FullNode:
             )
             return
         response = Message(
-            "sync_blocks", full_node_protocol.SyncBlocks(request.tip_header_hash, blocks)
+            "sync_blocks",
+            full_node_protocol.SyncBlocks(request.tip_header_hash, blocks),
         )
         yield OutboundMessage(NodeType.FULL_NODE, response, Delivery.RESPOND)
 
@@ -759,9 +762,9 @@ class FullNode:
 
         assert target_tip is not None
         # Grab best transactions from Mempool for given tip target
-        spend_bundle: Optional[SpendBundle] = await self.mempool_manager.create_bundle_for_tip(
-            target_tip
-        )
+        spend_bundle: Optional[
+            SpendBundle
+        ] = await self.mempool_manager.create_bundle_for_tip(target_tip)
         spend_bundle_fees = 0
         aggregate_sig: Optional[BLSSignature] = None
         solution_program: Optional[Program] = None
@@ -1121,7 +1124,9 @@ class FullNode:
             # Tries to add the block to the blockchain
             added, replaced = await self.blockchain.receive_block(block.block, val, pos)
             if added == ReceiveBlockResult.ADDED_TO_HEAD:
-                await self.mempool_manager.new_tips(await self.blockchain.get_full_tips())
+                await self.mempool_manager.new_tips(
+                    await self.blockchain.get_full_tips()
+                )
 
         if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return
@@ -1263,7 +1268,9 @@ class FullNode:
             )
 
     @api_request
-    async def peers(self, request: full_node_protocol.Peers) -> OutboundMessageGenerator:
+    async def peers(
+        self, request: full_node_protocol.Peers
+    ) -> OutboundMessageGenerator:
         if self.server is None:
             return
         conns = self.server.global_connections

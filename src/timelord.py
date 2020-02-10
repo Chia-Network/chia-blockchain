@@ -47,6 +47,7 @@ class Timelord:
         self.avg_ips: Dict = {}
         self.discriminant_queue: List[Tuple[bytes32, uint64]] = []
         self._is_shutdown = False
+        self.tasks: List[asyncio.Task] = []
 
     async def _shutdown(self):
         async with self.lock:
@@ -60,6 +61,9 @@ class Timelord:
             self.active_discriminants.clear()
             self.active_discriminants_start_time.clear()
         self._is_shutdown = True
+
+        for task in self.tasks:
+            await task
 
     async def _stop_worst_process(self, worst_weight_active):
         # This is already inside a lock, no need to lock again.
@@ -204,7 +208,6 @@ class Timelord:
         disc: int = create_discriminant(
             challenge_hash, constants["DISCRIMINANT_SIZE_BITS"]
         )
-        print("Creating disc of size", constants["DISCRIMINANT_SIZE_BITS"], disc)
 
         log.info("Attempting SSH connection")
         proc = await asyncio.create_subprocess_shell(
@@ -241,7 +244,9 @@ class Timelord:
             self.active_discriminants[challenge_hash] = (writer, challenge_weight, ip)
             self.active_discriminants_start_time[challenge_hash] = time.time()
 
-        asyncio.create_task(self._send_iterations(challenge_hash, writer))
+        self.tasks.append(
+            asyncio.create_task(self._send_iterations(challenge_hash, writer))
+        )
 
         # Listen to the server until "STOP" is received.
         while True:
@@ -329,7 +334,12 @@ class Timelord:
     async def _manage_discriminant_queue(self):
         while not self._is_shutdown:
             async with self.lock:
-                log.info("Looping")
+                log.warning(f"Done tasks {len([t for t in self.tasks if t.done()])}")
+                log.warning(
+                    f"Not done tasks {len([t for t in self.tasks if not t.done()])}"
+                )
+                # Clear done tasks
+                self.tasks = [t for t in self.tasks if not t.done()]
                 if len(self.discriminant_queue) > 0:
                     max_weight = max([h for _, h in self.discriminant_queue])
                     if max_weight <= self.best_weight_three_proofs:
@@ -362,9 +372,11 @@ class Timelord:
                             ip, port = self.free_servers[0]
                             self.free_servers = self.free_servers[1:]
                             self.discriminant_queue.remove((disc, max_weight))
-                            asyncio.create_task(
-                                self._do_process_communication(
-                                    disc, max_weight, ip, port
+                            self.tasks.append(
+                                asyncio.create_task(
+                                    self._do_process_communication(
+                                        disc, max_weight, ip, port
+                                    )
                                 )
                             )
                         else:

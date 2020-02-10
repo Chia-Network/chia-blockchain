@@ -10,6 +10,7 @@ from src.util.Hash import std_hash
 
 SExp = to_sexp_f(1).__class__
 
+
 class Program(SExp):  # type: ignore # noqa
     """
     A thin wrapper around s-expression data intended to be invoked with "eval".

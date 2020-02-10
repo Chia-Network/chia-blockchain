@@ -51,7 +51,9 @@ class TestMempool:
             1000, receiver_puzzlehash, block.body.coinbase
         )
         assert spend_bundle is not None
-        tx: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle)
+        tx: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(
+            spend_bundle
+        )
         async for _ in full_node_1.transaction(tx):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -81,7 +83,9 @@ class TestMempool:
             1000, receiver_puzzlehash, block.body.coinbase
         )
         assert spend_bundle is not None
-        tx: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle)
+        tx: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(
+            spend_bundle
+        )
 
         async for _ in full_node_1.transaction(tx):
             outbound: OutboundMessage = _
@@ -129,7 +133,9 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(
+            spend_bundle1
+        )
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -140,7 +146,9 @@ class TestMempool:
             1000, other_receiver.get_new_puzzlehash(), block.body.coinbase
         )
         assert spend_bundle2 is not None
-        tx2: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle2)
+        tx2: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(
+            spend_bundle2
+        )
         async for _ in full_node_1.transaction(tx2):
             pass
 
@@ -171,7 +179,9 @@ class TestMempool:
             1000, receiver_puzzlehash, block.body.coinbase
         )
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(
+            spend_bundle1
+        )
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -182,7 +192,9 @@ class TestMempool:
         )
 
         assert spend_bundle2 is not None
-        tx2: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle2)
+        tx2: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(
+            spend_bundle2
+        )
         async for _ in full_node_1.transaction(tx2):
             pass
 
@@ -221,7 +233,9 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(
+            spend_bundle1
+        )
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -260,7 +274,9 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(
+            spend_bundle1
+        )
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -297,7 +313,9 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(
+            spend_bundle1
+        )
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -336,7 +354,9 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(
+            spend_bundle1
+        )
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -375,7 +395,9 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(
+            spend_bundle1
+        )
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -414,7 +436,9 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(
+            spend_bundle1
+        )
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -455,7 +479,9 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(
+            spend_bundle1
+        )
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
@@ -499,7 +525,9 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
+        tx1: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(
+            spend_bundle1
+        )
         async for _ in full_node_1.transaction(tx1):
             outbound: OutboundMessage = _
             assert outbound.message.function != "maybe_transaction"
@@ -510,7 +538,9 @@ class TestMempool:
         # Sleep so that 3 sec passes
         await asyncio.sleep(3)
 
-        tx2: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle1)
+        tx2: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(
+            spend_bundle1
+        )
         async for _ in full_node_1.transaction(tx2):
             outbound_2: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool

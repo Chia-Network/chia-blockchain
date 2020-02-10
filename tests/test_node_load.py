@@ -42,7 +42,9 @@ class TestNodeLoad:
         num_unfinished_blocks = 1000
         start_unf = time.time()
         for i in range(num_unfinished_blocks):
-            msg = Message("unfinished_block", full_node_protocol.UnfinishedBlock(blocks[9]))
+            msg = Message(
+                "unfinished_block", full_node_protocol.UnfinishedBlock(blocks[9])
+            )
             server_1.push_message(
                 OutboundMessage(NodeType.FULL_NODE, msg, Delivery.BROADCAST)
             )

@@ -53,7 +53,9 @@ class TestBlockchainTransactions:
         )
 
         assert spend_bundle is not None
-        tx: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(spend_bundle)
+        tx: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(
+            spend_bundle
+        )
         async for _ in full_node_1.transaction(tx):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool

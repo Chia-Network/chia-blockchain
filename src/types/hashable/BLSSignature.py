@@ -12,6 +12,7 @@ ZERO96 = bytes96([0] * 96)
 class BLSPublicKey(bytes48):
     pass
 
+
 # TODO Stop using this after BLSLibrary is
 @dataclass(frozen=True)
 @streamable
