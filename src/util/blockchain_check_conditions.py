@@ -47,7 +47,7 @@ def blockchain_assert_block_index_exceeds(
     except ValueError:
         return Err.INVALID_CONDITION
     # + 1 because min block it can be included is +1 from current
-    if header.height < expected_block_index:
+    if header.height <= expected_block_index:
         return Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED
     return None
 
@@ -63,7 +63,7 @@ def blockchain_assert_block_age_exceeds(
         expected_block_index = expected_block_age + unspent.confirmed_block_index
     except ValueError:
         return Err.INVALID_CONDITION
-    if header.height < expected_block_index:
+    if header.height <= expected_block_index:
         return Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED
     return None
 
@@ -78,7 +78,7 @@ def blockchain_assert_time_exceeds(condition: ConditionVarPair):
         return Err.INVALID_CONDITION
 
     current_time = uint64(int(time.time() * 1000))
-    if current_time < expected_mili_time:
+    if current_time <= expected_mili_time:
         return Err.ASSERT_TIME_EXCEEDS_FAILED
     return None
 
