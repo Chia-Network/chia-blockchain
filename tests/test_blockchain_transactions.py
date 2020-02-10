@@ -2,6 +2,8 @@ import asyncio
 from typing import Optional
 import pytest
 
+from src.types.ConditionVarPair import ConditionVarPair
+from src.types.condition_opcodes import ConditionOpcode
 from src.util.bundle_tools import best_solution_program
 from src.server.outbound_message import OutboundMessage
 from src.protocols import full_node_protocol
@@ -194,3 +196,75 @@ class TestBlockchainTransactions:
         )
 
         assert error is Err.DUPLICATE_OUTPUT
+
+    @pytest.mark.asyncio
+    async def test_assert_my_coin_id(self, two_nodes):
+
+        num_blocks = 10
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        # Farm blocks
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        for block in blocks:
+            async for _ in full_node_1.block(full_node_protocol.Block(block)):
+                pass
+
+        # Coinbase that gets spent
+        spent_block = blocks[1]
+        bad_block = blocks[2]
+        valid_cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_MY_COIN_ID, spent_block.body.coinbase.name(), None
+        )
+        valid_dic = {valid_cvp.opcode: [valid_cvp]}
+        bad_cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_MY_COIN_ID, bad_block.body.coinbase.name(), None
+        )
+
+        bad_dic = {bad_cvp.opcode: [bad_cvp]}
+        bad_spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, spent_block.body.coinbase, bad_dic
+        )
+
+        valid_spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, spent_block.body.coinbase, valid_dic
+        )
+
+        # Invalid block bundle
+        invalid_program = best_solution_program(bad_spend_bundle)
+        aggsig = bad_spend_bundle.aggregated_signature
+
+        # Create another block that includes our transaction
+        dic_h = {11: (invalid_program, aggsig)}
+        invalid_new_blocks = bt.get_consecutive_blocks(
+            test_constants, 1, blocks, 10, b"", coinbase_puzzlehash, dic_h
+        )
+
+        # Try to validate that block
+        next_block = invalid_new_blocks[11]
+        error = await full_node_1.blockchain.validate_transactions(
+            next_block, next_block.body.fees_coin.amount
+        )
+
+        assert error is Err.ASSERT_MY_COIN_ID_FAILED
+
+        # Valid block bundle
+        valid_program = best_solution_program(valid_spend_bundle)
+        aggsig = valid_spend_bundle.aggregated_signature
+
+        # Create another block that includes our transaction
+        dic_h = {11: (valid_program, aggsig)}
+        new_blocks = bt.get_consecutive_blocks(
+            test_constants, 1, blocks[:11], 10, b"1", coinbase_puzzlehash, dic_h
+        )
+        next_block = new_blocks[11]
+        error = await full_node_1.blockchain.validate_transactions(
+            next_block, next_block.body.fees_coin.amount
+        )
+        assert  error is None
