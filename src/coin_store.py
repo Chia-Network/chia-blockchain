@@ -7,7 +7,7 @@ from src.types.hashable.Coin import Coin
 from src.types.hashable.CoinRecord import CoinRecord
 from src.types.sized_bytes import bytes32
 from src.types.header import Header
-from src.util.ints import uint32, uint8
+from src.util.ints import uint32
 
 
 class DiffStore:
@@ -22,19 +22,19 @@ class DiffStore:
         return self
 
 
-class UnspentStore:
+class CoinStore:
     """
-    This object handles unspent coins in DB.
+    This object handles CoinRecords in DB.
     Coins from genesis to LCA are stored on disk db, coins from lca to head are stored in DiffStore object for each tip.
     When blockchain notifies UnspentStore of new LCA, LCA is added to the disk db,
     DiffStores are updated/recreated. (managed by blockchain.py)
     """
 
-    unspent_db: aiosqlite.Connection
+    coin_record_db: aiosqlite.Connection
     # Whether or not we are syncing
     sync_mode: bool = False
     lock: asyncio.Lock
-    lca_unspent_coins: Dict[str, CoinRecord]
+    lca_coin_records: Dict[str, CoinRecord]
     head_diffs: Dict[bytes32, DiffStore]
     cache_size: uint32
 
@@ -44,51 +44,51 @@ class UnspentStore:
 
         self.cache_size = cache_size
         # All full blocks which have been added to the blockchain. Header_hash -> block
-        self.unspent_db = await aiosqlite.connect(db_path)
-        await self.unspent_db.execute(
+        self.coin_record_db = await aiosqlite.connect(db_path)
+        await self.coin_record_db.execute(
             (
-                f"CREATE TABLE IF NOT EXISTS unspent("
+                f"CREATE TABLE IF NOT EXISTS coin_record("
                 f"coin_name text PRIMARY KEY,"
                 f" confirmed_index bigint,"
                 f" spent_index bigint,"
                 f" spent int,"
                 f" coinbase int,"
                 f" puzzle_hash text,"
-                f" unspent blob)"
+                f" coin_record blob)"
             )
         )
 
         # Useful for reorg lookups
-        await self.unspent_db.execute(
-            "CREATE INDEX IF NOT EXISTS coin_confirmed_index on unspent(confirmed_index)"
+        await self.coin_record_db.execute(
+            "CREATE INDEX IF NOT EXISTS coin_confirmed_index on coin_record(confirmed_index)"
         )
 
-        await self.unspent_db.execute(
-            "CREATE INDEX IF NOT EXISTS coin_spent_index on unspent(spent_index)"
+        await self.coin_record_db.execute(
+            "CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index)"
         )
 
-        await self.unspent_db.execute(
-            "CREATE INDEX IF NOT EXISTS coin_spent on unspent(spent)"
+        await self.coin_record_db.execute(
+            "CREATE INDEX IF NOT EXISTS coin_spent on coin_record(spent)"
         )
 
-        await self.unspent_db.execute(
-            "CREATE INDEX IF NOT EXISTS coin_spent on unspent(puzzle_hash)"
+        await self.coin_record_db.execute(
+            "CREATE INDEX IF NOT EXISTS coin_spent on coin_record(puzzle_hash)"
         )
 
-        await self.unspent_db.commit()
+        await self.coin_record_db.commit()
         # Lock
         self.lock = asyncio.Lock()  # external
-        self.lca_unspent_coins = dict()
+        self.lca_coin_records = dict()
         self.head_diffs = dict()
         return self
 
     async def close(self):
-        await self.unspent_db.close()
+        await self.coin_record_db.close()
 
     async def _clear_database(self):
-        cursor = await self.unspent_db.execute("DELETE FROM unspent")
+        cursor = await self.coin_record_db.execute("DELETE FROM coin_record")
         await cursor.close()
-        await self.unspent_db.commit()
+        await self.coin_record_db.commit()
 
     async def add_lcas(self, blocks: List[FullBlock]):
         for block in blocks:
@@ -101,16 +101,20 @@ class UnspentStore:
             await self.set_spent(coin_name, block.height)
 
         for coin in additions:
-            unspent: CoinRecord = CoinRecord(coin, block.height, 0, 0, 0)  # type: ignore # noqa
-            await self.add_unspent(unspent)
+            record: CoinRecord = CoinRecord(coin, block.height, uint32(0), False, False)
+            await self.add_coin_record(record)
 
-        coinbase: CoinRecord = CoinRecord(block.body.coinbase, block.height, 0, 0, 1)  # type: ignore # noqa
-        fees_coin: CoinRecord = CoinRecord(block.body.fees_coin, block.height, 0, 0, 1)  # type: ignore # noqa
-        await self.add_unspent(coinbase)
-        await self.add_unspent(fees_coin)
+        coinbase: CoinRecord = CoinRecord(
+            block.body.coinbase, block.height, uint32(0), False, True
+        )
+        fees_coin: CoinRecord = CoinRecord(
+            block.body.fees_coin, block.height, uint32(0), False, True
+        )
+        await self.add_coin_record(coinbase)
+        await self.add_coin_record(fees_coin)
 
     def nuke_diffs(self):
-        self.head_diffs = dict()
+        self.head_diffs.clear()
 
     # Received new tip, just update diffs
     async def new_heads(self, blocks: List[FullBlock]):
@@ -144,7 +148,7 @@ class UnspentStore:
                 removed.coin,
                 removed.confirmed_block_index,
                 block.height,
-                uint8(1),
+                True,
                 removed.coinbase,
             )  # type: ignore # noqa
             diff_store.diffs[spent.name.hex()] = spent
@@ -158,41 +162,37 @@ class UnspentStore:
         fees_coin: CoinRecord = CoinRecord(block.body.fees_coin, block.height, 0, 0, 1)  # type: ignore # noqa
         diff_store.diffs[fees_coin.name.hex()] = fees_coin
 
-    # Store unspent in DB and ram cache
-    async def add_unspent(self, unspent: CoinRecord) -> None:
-        cursor = await self.unspent_db.execute(
-            "INSERT OR REPLACE INTO unspent VALUES(?, ?, ?, ?, ?, ?, ?)",
+    # Store CoinRecord in DB and ram cache
+    async def add_coin_record(self, record: CoinRecord) -> None:
+        cursor = await self.coin_record_db.execute(
+            "INSERT OR REPLACE INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?)",
             (
-                unspent.coin.name().hex(),
-                unspent.confirmed_block_index,
-                unspent.spent_block_index,
-                int(unspent.spent),
-                int(unspent.coinbase),
-                str(unspent.coin.puzzle_hash.hex()),
-                bytes(unspent),
+                record.coin.name().hex(),
+                record.confirmed_block_index,
+                record.spent_block_index,
+                int(record.spent),
+                int(record.coinbase),
+                str(record.coin.puzzle_hash.hex()),
+                bytes(record),
             ),
         )
         await cursor.close()
-        await self.unspent_db.commit()
-        self.lca_unspent_coins[unspent.coin.name().hex()] = unspent
-        if len(self.lca_unspent_coins) > self.cache_size:
-            while len(self.lca_unspent_coins) > self.cache_size:
-                first_in = list(self.lca_unspent_coins.keys())[0]
-                del self.lca_unspent_coins[first_in]
+        await self.coin_record_db.commit()
+        self.lca_coin_records[record.coin.name().hex()] = record
+        if len(self.lca_coin_records) > self.cache_size:
+            while len(self.lca_coin_records) > self.cache_size:
+                first_in = list(self.lca_coin_records.keys())[0]
+                del self.lca_coin_records[first_in]
 
-    # Update unspent to be spent in DB
+    # Update coin_record to be spent in DB
     async def set_spent(self, coin_name: bytes32, index: uint32):
         current: Optional[CoinRecord] = await self.get_coin_record(coin_name)
         if current is None:
             return
         spent: CoinRecord = CoinRecord(
-            current.coin,
-            current.confirmed_block_index,
-            index,
-            uint8(1),
-            current.coinbase,
+            current.coin, current.confirmed_block_index, index, True, current.coinbase,
         )  # type: ignore # noqa
-        await self.add_unspent(spent)
+        await self.add_coin_record(spent)
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(
@@ -202,10 +202,10 @@ class UnspentStore:
             diff_store = self.head_diffs[header.header_hash]
             if coin_name.hex() in diff_store.diffs:
                 return diff_store.diffs[coin_name.hex()]
-        if coin_name.hex() in self.lca_unspent_coins:
-            return self.lca_unspent_coins[coin_name.hex()]
-        cursor = await self.unspent_db.execute(
-            "SELECT * from unspent WHERE coin_name=?", (coin_name.hex(),)
+        if coin_name.hex() in self.lca_coin_records:
+            return self.lca_coin_records[coin_name.hex()]
+        cursor = await self.coin_record_db.execute(
+            "SELECT * from coin_record WHERE coin_name=?", (coin_name.hex(),)
         )
         row = await cursor.fetchone()
         await cursor.close()
@@ -223,8 +223,8 @@ class UnspentStore:
             for _, record in diff_store.diffs.items():
                 if record.coin.puzzle_hash == puzzle_hash:
                     coins.add(record)
-        cursor = await self.unspent_db.execute(
-            "SELECT * from unspent WHERE puzzle_hash=?", (puzzle_hash.hex(),)
+        cursor = await self.coin_record_db.execute(
+            "SELECT * from coin_record WHERE puzzle_hash=?", (puzzle_hash.hex(),)
         )
         rows = await cursor.fetchall()
         await cursor.close()
@@ -238,30 +238,30 @@ class UnspentStore:
     async def rollback_lca_to_block(self, block_index):
         # Update memory cache
         delete_queue: bytes32 = []
-        for coin_name, coin_record in self.lca_unspent_coins.items():
+        for coin_name, coin_record in self.lca_coin_records.items():
             if coin_record.spent_block_index > block_index:
-                new_unspent = CoinRecord(
+                new_record = CoinRecord(
                     coin_record.coin,
                     coin_record.confirmed_block_index,
                     coin_record.spent_block_index,
-                    uint8(0),
+                    False,
                     coin_record.coinbase,
                 )
-                self.lca_unspent_coins[coin_record.coin.name().hex()] = new_unspent
+                self.lca_coin_records[coin_record.coin.name().hex()] = new_record
             if coin_record.confirmed_block_index > block_index:
                 delete_queue.append(coin_name)
 
         for coin_name in delete_queue:
-            del self.lca_unspent_coins[coin_name]
+            del self.lca_coin_records[coin_name]
 
         # Delete from storage
-        c1 = await self.unspent_db.execute(
-            "DELETE FROM unspent WHERE confirmed_index>?", (block_index,)
+        c1 = await self.coin_record_db.execute(
+            "DELETE FROM coin_record WHERE confirmed_index>?", (block_index,)
         )
         await c1.close()
-        c2 = await self.unspent_db.execute(
-            "UPDATE unspent SET spent_index = 0, spent = 0 WHERE spent_index>?",
+        c2 = await self.coin_record_db.execute(
+            "UPDATE coin_record SET spent_index = 0, spent = 0 WHERE spent_index>?",
             (block_index,),
         )
         await c2.close()
-        await self.unspent_db.commit()
+        await self.coin_record_db.commit()

@@ -7,7 +7,7 @@ from src.types.ConditionVarPair import ConditionVarPair
 from src.types.hashable.CoinRecord import CoinRecord
 from src.types.header import Header
 from src.types.sized_bytes import bytes32
-from src.util.Conditions import ConditionOpcode
+from src.util.condition_tools import ConditionOpcode
 from src.util.ConsensusError import Err
 from src.util.ints import uint64
 

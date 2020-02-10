@@ -334,10 +334,6 @@ class Timelord:
     async def _manage_discriminant_queue(self):
         while not self._is_shutdown:
             async with self.lock:
-                log.warning(f"Done tasks {len([t for t in self.tasks if t.done()])}")
-                log.warning(
-                    f"Not done tasks {len([t for t in self.tasks if not t.done()])}"
-                )
                 # Clear done tasks
                 self.tasks = [t for t in self.tasks if not t.done()]
                 if len(self.discriminant_queue) > 0:
@@ -450,9 +446,6 @@ class Timelord:
         many iterations to run for.
         """
         async with self.lock:
-            log.info(
-                f"proof_of_space_info {proof_of_space_info.challenge_hash} {proof_of_space_info.iterations_needed}"
-            )
             if proof_of_space_info.challenge_hash in self.done_discriminants:
                 log.info(
                     f"proof_of_space_info {proof_of_space_info.challenge_hash} already done, returning"

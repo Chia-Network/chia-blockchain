@@ -9,7 +9,7 @@ from src.full_node import FullNode
 from src.server.connection import NodeType
 from src.server.server import ChiaServer
 from src.types.full_block import FullBlock
-from src.unspent_store import UnspentStore
+from src.coin_store import CoinStore
 from tests.block_tools import BlockTools
 from src.types.hashable.BLSSignature import BLSPublicKey
 from src.util.config import load_config
@@ -49,7 +49,7 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
 
     store_1 = await FullNodeStore.create(Path(db_name))
     await store_1._clear_database()
-    unspent_store_1 = await UnspentStore.create(Path(db_name))
+    unspent_store_1 = await CoinStore.create(Path(db_name))
     await unspent_store_1._clear_database()
     mempool_1 = MempoolManager(unspent_store_1, dic)
 

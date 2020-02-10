@@ -10,7 +10,7 @@ from src.store import FullNodeStore
 from src.full_node import FullNode
 from src.server.connection import NodeType
 from src.server.server import ChiaServer
-from src.unspent_store import UnspentStore
+from src.coin_store import CoinStore
 from tests.block_tools import BlockTools
 from src.rpc.rpc_server import start_rpc_server
 from src.rpc.rpc_client import RpcClient
@@ -53,7 +53,7 @@ class TestRpc:
         store = await FullNodeStore.create(db_filename)
         await store._clear_database()
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
-        unspent_store = await UnspentStore.create("blockchain_test.db")
+        unspent_store = await CoinStore.create("blockchain_test.db")
         mempool_manager = MempoolManager(unspent_store)
 
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
@@ -74,7 +74,7 @@ class TestRpc:
             full_node_1._shutdown()
             server_1.close_all()
 
-        unspent_store2 = await UnspentStore.create("blockchain_test_2.db")
+        unspent_store2 = await CoinStore.create("blockchain_test_2.db")
         mempool_manager2 = MempoolManager(unspent_store2)
         full_node_2 = FullNode(store, b, config, mempool_manager2, unspent_store2)
         server_2 = ChiaServer(test_node_2_port, full_node_2, NodeType.FULL_NODE)

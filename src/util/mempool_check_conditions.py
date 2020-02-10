@@ -9,11 +9,10 @@ from src.types.hashable.Program import Program
 from src.types.hashable.SpendBundle import SpendBundle
 from src.types.hashable.CoinRecord import CoinRecord
 from src.types.name_puzzle_condition import NPC
-from src.types.mempool import Mempool
+from src.mempool import Mempool
 from src.types.sized_bytes import bytes32
-from src.util.Conditions import ConditionOpcode
+from src.util.condition_tools import ConditionOpcode, conditions_dict_for_solution
 from src.util.ConsensusError import Err
-from src.util.consensus import conditions_dict_for_solution
 import time
 
 from src.util.ints import uint64

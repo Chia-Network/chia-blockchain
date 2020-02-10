@@ -1,4 +1,4 @@
-from src.util.Conditions import ConditionOpcode
+from src.util.condition_tools import ConditionOpcode
 
 
 

@@ -6,7 +6,7 @@ import pytest
 
 from src.blockchain import Blockchain, ReceiveBlockResult
 from src.store import FullNodeStore
-from src.unspent_store import UnspentStore
+from src.coin_store import CoinStore
 from tests.block_tools import BlockTools
 
 bt = BlockTools()
@@ -37,7 +37,7 @@ class TestUnspent:
     async def test_basic_unspent_store(self):
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
-        db = await UnspentStore.create(Path("fndb_test.db"))
+        db = await CoinStore.create(Path("fndb_test.db"))
         await db._clear_database()
 
         # Save/get block
@@ -55,7 +55,7 @@ class TestUnspent:
     async def test_set_spent(self):
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
-        db = await UnspentStore.create(Path("fndb_test.db"))
+        db = await CoinStore.create(Path("fndb_test.db"))
         await db._clear_database()
 
         # Save/get block
@@ -80,7 +80,7 @@ class TestUnspent:
     async def test_rollback(self):
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
-        db = await UnspentStore.create(Path("fndb_test.db"))
+        db = await CoinStore.create(Path("fndb_test.db"))
         await db._clear_database()
 
         # Save/get block
@@ -117,7 +117,7 @@ class TestUnspent:
     @pytest.mark.asyncio
     async def test_basic_reorg(self):
         blocks = bt.get_consecutive_blocks(test_constants, 100, [], 9)
-        unspent_store = await UnspentStore.create(Path("blockchain_test.db"))
+        unspent_store = await CoinStore.create(Path("blockchain_test.db"))
         store = await FullNodeStore.create(Path("blockchain_test.db"))
         await store._clear_database()
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
@@ -176,7 +176,7 @@ class TestUnspent:
     async def test_get_puzzle_hash(self):
         num_blocks = 20
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 9)
-        unspent_store = await UnspentStore.create(Path("blockchain_test.db"))
+        unspent_store = await CoinStore.create(Path("blockchain_test.db"))
         store = await FullNodeStore.create(Path("blockchain_test.db"))
         await store._clear_database()
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)

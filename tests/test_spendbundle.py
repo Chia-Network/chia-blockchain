@@ -1,9 +1,9 @@
 from src.util.Hash import std_hash
-from src.util.Conditions import conditions_by_opcode
-from src.util.consensus import (
-    conditions_for_solution,
-    created_outputs_for_conditions_dict,
+from src.util.condition_tools import (
+    conditions_by_opcode,
     aggsig_in_conditions_dict,
+    created_outputs_for_conditions_dict,
+    conditions_for_solution,
 )
 from src.wallet.puzzles import p2_delegated_puzzle
 from src.wallet.puzzles.puzzle_utils import make_create_coin_condition

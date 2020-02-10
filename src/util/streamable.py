@@ -22,7 +22,7 @@ from blspy import (
 )
 
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint32
+from src.util.ints import uint32, uint8
 from src.util.type_checking import (
     is_type_List,
     is_type_SpecificOptional,
@@ -132,6 +132,8 @@ class Streamable:
                 return cls.parse_one_item(inner_type, f)  # type: ignore
             else:
                 return None
+        if f_type is bool:
+            return bool.from_bytes(f.read(4), "big")
         if f_type == bytes:
             list_size = uint32(int.from_bytes(f.read(4), "big"))
             return f.read(list_size)
@@ -178,6 +180,8 @@ class Streamable:
         elif f_type is str:
             f.write(uint32(len(item)).to_bytes(4, "big"))
             f.write(item.encode("utf-8"))
+        elif f_type is bool:
+            f.write(bytes(item))
         else:
             raise NotImplementedError(f"can't stream {item}, {f_type}")
 

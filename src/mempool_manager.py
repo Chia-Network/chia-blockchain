@@ -9,21 +9,21 @@ from src.types.hashable.SpendBundle import SpendBundle
 from src.types.hashable.CoinRecord import CoinRecord
 from src.types.header import Header
 from src.types.mempool_item import MempoolItem
-from src.types.mempool import Mempool
+from src.mempool import Mempool
 from src.types.sized_bytes import bytes32
-from src.unspent_store import UnspentStore
+from src.coin_store import CoinStore
 from src.util.ConsensusError import Err
 from src.util.mempool_check_conditions import (
     get_name_puzzle_conditions,
     mempool_check_conditions_dict,
 )
-from src.util.consensus import hash_key_pairs_for_conditions_dict
+from src.util.condition_tools import hash_key_pairs_for_conditions_dict
 from src.util.ints import uint64, uint32
 from sortedcontainers import SortedDict
 
 
 class MempoolManager:
-    def __init__(self, unspent_store: UnspentStore, override_constants: Dict = {}):
+    def __init__(self, unspent_store: CoinStore, override_constants: Dict = {}):
         # Allow passing in custom overrides
         self.constants: Dict = consensus_constants
         for key, value in override_constants.items():
@@ -54,22 +54,23 @@ class MempoolManager:
         """
         Returns aggregated spendbundle that can be used for creating new block
         """
-        if header.header_hash in self.mempools:
-            mempool: Mempool = self.mempools[header.header_hash]
-            cost_sum = 0
-            spend_bundles: List[SpendBundle] = []
-            for dic in mempool.sorted_spends.values():
-                for item in dic.values():
-                    if item.cost + cost_sum <= 6000:
-                        spend_bundles.append(item.spend_bundle)
-                        cost_sum += item.cost
-                    else:
-                        break
+        async with self.unspent_store.lock:
+            if header.header_hash in self.mempools:
+                mempool: Mempool = self.mempools[header.header_hash]
+                cost_sum = 0
+                spend_bundles: List[SpendBundle] = []
+                for dic in mempool.sorted_spends.values():
+                    for item in dic.values():
+                        if item.cost + cost_sum <= 6000:
+                            spend_bundles.append(item.spend_bundle)
+                            cost_sum += item.cost
+                        else:
+                            break
 
-            block_bundle = SpendBundle.aggregate(spend_bundles)
-            return block_bundle
-        else:
-            return None
+                block_bundle = SpendBundle.aggregate(spend_bundles)
+                return block_bundle
+            else:
+                return None
 
     async def add_spendbundle(
         self, new_spend: SpendBundle, to_pool: Mempool = None
@@ -227,7 +228,9 @@ class MempoolManager:
                 # Setting ephemeral coin confirmed index to current + 1
                 if removal.name() in coin_records:
                     return Err.DOUBLE_SPEND, {}, []
-                coin_records[removal.name()] = CoinRecord(removal, mempool.header.height + 1, 0, 0, 0)  # type: ignore # noqa
+                coin_records[removal.name()] = CoinRecord(
+                    removal, mempool.header.height + 1, uint32(0), False, False
+                )
                 continue
             # 2. Checks we have it in the unspent_store
             unspent: Optional[CoinRecord] = await self.unspent_store.get_coin_record(
