@@ -36,41 +36,38 @@ config = safe_load(open(config_filename, "r"))
 
 
 class ChiaServer:
-    # Keeps track of all connections to and from this node.
-    global_connections: PeerConnections
-
-    # Optional listening server. You can also use this class without starting one.
-    _server: Optional[asyncio.AbstractServer]
-    _host: Optional[str]
-
-    # (StreamReader, StreamWriter, NodeType) aiter, gets things from server and clients and
-    # sends them through the pipeline
-    _srwt_aiter: push_aiter
-
-    # Tasks for entire server pipeline
-    _pipeline_task: asyncio.Task
-
-    # Aiter used to broadcase messages
-    _outbound_aiter: push_aiter
-
-    # Called for inbound connections after successful handshake
-    _on_inbound_connect: OnConnectFunc
-
     def __init__(self, port: int, api: Any, local_type: NodeType, name: str = None):
-        self.global_connections = PeerConnections([])
-        self._server = None
-        self._host = None
-        self._on_inbound_connect = None
+        # Keeps track of all connections to and from this node.
+        self.global_connections: PeerConnections = PeerConnections([])
+
+        # Optional listening server. You can also use this class without starting one.
+        self._server: Optional[asyncio.AbstractServer] = None
+        self._host: Optional[str] = None
+
+        # Called for inbound connections after successful handshake
+        self._on_inbound_connect: OnConnectFunc = None
+
         self._port = port  # TCP port to identify our node
         self._api = api  # API module that will be called from the requests
         self._local_type = local_type  # NodeType (farmer, full node, timelord, pool, harvester, wallet)
-        self._srwt_aiter = push_aiter()
-        self._outbound_aiter = push_aiter()
-        self._pipeline_task = self.initialize_pipeline(
+
+        # (StreamReader, StreamWriter, NodeType) aiter, gets things from server and clients and
+        # sends them through the pipeline
+        self._srwt_aiter: push_aiter = push_aiter()
+
+        # Aiter used to broadcase messages
+        self._outbound_aiter: push_aiter = push_aiter()
+
+        # Tasks for entire server pipeline
+        self._pipeline_task: asyncio.Task = self.initialize_pipeline(
             self._srwt_aiter, self._api, self._port
         )
-        self._ping_task = self._initialize_ping_task()
+
+        # Our unique random node id that we will other peers, regenerated on launch
         self._node_id = create_node_id()
+
+        # Taks list to keep references to tasks, so they don'y get GCd
+        self._tasks: List[asyncio.Task] = [self._initialize_ping_task()]
         if name:
             self.log = logging.getLogger(name)
         else:
@@ -100,7 +97,7 @@ class ChiaServer:
         srwt_aiter = map_aiter(add_connection_type, aiter)
 
         # Push all aiters that come from the server, into the pipeline
-        asyncio.create_task(self._add_to_srwt_aiter(srwt_aiter))
+        self._tasks.append(asyncio.create_task(self._add_to_srwt_aiter(srwt_aiter)))
 
         self.log.info(f"Server started on port {self._port}")
         return True
@@ -135,8 +132,10 @@ class ChiaServer:
             )
             self.global_connections.peers.remove(target_node)
             return False
-        asyncio.create_task(
-            self._add_to_srwt_aiter(iter_to_aiter([(reader, writer, on_connect)]))
+        self._tasks.append(
+            asyncio.create_task(
+                self._add_to_srwt_aiter(iter_to_aiter([(reader, writer, on_connect)]))
+            )
         )
         return True
 

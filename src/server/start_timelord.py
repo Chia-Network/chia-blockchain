@@ -1,6 +1,7 @@
 import asyncio
 import signal
 import logging
+from typing import Optional
 
 try:
     import uvloop
@@ -27,9 +28,12 @@ async def main():
     server = ChiaServer(config["port"], timelord, NodeType.TIMELORD)
     _ = await server.start_server(config["host"], None)
 
+    timelord_shutdown_task: Optional[asyncio.Task] = None
+
     def signal_received():
+        nonlocal timelord_shutdown_task
         server.close_all()
-        asyncio.create_task(timelord._shutdown())
+        timelord_shutdown_task = asyncio.create_task(timelord._shutdown())
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
@@ -44,6 +48,9 @@ async def main():
 
     async for msg in timelord._manage_discriminant_queue():
         server.push_message(msg)
+
+    if timelord_shutdown_task is not None:
+        await timelord_shutdown_task
 
     await server.await_closed()
     log.info("Timelord fully closed.")

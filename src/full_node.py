@@ -201,7 +201,7 @@ class FullNode:
                         continue
                 await asyncio.sleep(self.config["introducer_connect_interval"])
 
-        asyncio.create_task(introducer_client())
+        self.introducer_task = asyncio.create_task(introducer_client())
 
     def _shutdown(self):
         self._shut_down = True
