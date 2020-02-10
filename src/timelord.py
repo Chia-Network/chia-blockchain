@@ -62,9 +62,6 @@ class Timelord:
             self.active_discriminants_start_time.clear()
         self._is_shutdown = True
 
-        for task in self.tasks:
-            await task
-
     async def _stop_worst_process(self, worst_weight_active):
         # This is already inside a lock, no need to lock again.
         log.info(f"Stopping one process at weight {worst_weight_active}")

@@ -49,8 +49,10 @@ async def main():
     async for msg in timelord._manage_discriminant_queue():
         server.push_message(msg)
 
+    log.info("Closed discriminant queue.")
     if timelord_shutdown_task is not None:
         await timelord_shutdown_task
+    log.info("Shutdown timelord.")
 
     await server.await_closed()
     log.info("Timelord fully closed.")

@@ -332,7 +332,9 @@ class TestBlockchainTransactions:
         assert error is Err.ASSERT_COIN_CONSUMED_FAILED
 
         # bundle_together contains both transactions
-        bundle_together = SpendBundle.aggregate([block1_spend_bundle, block2_spend_bundle])
+        bundle_together = SpendBundle.aggregate(
+            [block1_spend_bundle, block2_spend_bundle]
+        )
         valid_program = best_solution_program(bundle_together)
         aggsig = bundle_together.aggregated_signature
 
