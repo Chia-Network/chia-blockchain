@@ -86,7 +86,7 @@ def mempool_assert_time_exceeds(condition: ConditionVarPair):
         return Err.INVALID_CONDITION
 
     current_time = uint64(int(time.time() * 1000))
-    if current_time < expected_mili_time:
+    if current_time <= expected_mili_time:
         return Err.ASSERT_TIME_EXCEEDS_FAILED
     return None
 
