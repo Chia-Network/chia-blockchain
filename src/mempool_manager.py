@@ -54,22 +54,23 @@ class MempoolManager:
         """
         Returns aggregated spendbundle that can be used for creating new block
         """
-        if header.header_hash in self.mempools:
-            mempool: Mempool = self.mempools[header.header_hash]
-            cost_sum = 0
-            spend_bundles: List[SpendBundle] = []
-            for dic in mempool.sorted_spends.values():
-                for item in dic.values():
-                    if item.cost + cost_sum <= 6000:
-                        spend_bundles.append(item.spend_bundle)
-                        cost_sum += item.cost
-                    else:
-                        break
+        async with self.unspent_store.lock:
+            if header.header_hash in self.mempools:
+                mempool: Mempool = self.mempools[header.header_hash]
+                cost_sum = 0
+                spend_bundles: List[SpendBundle] = []
+                for dic in mempool.sorted_spends.values():
+                    for item in dic.values():
+                        if item.cost + cost_sum <= 6000:
+                            spend_bundles.append(item.spend_bundle)
+                            cost_sum += item.cost
+                        else:
+                            break
 
-            block_bundle = SpendBundle.aggregate(spend_bundles)
-            return block_bundle
-        else:
-            return None
+                block_bundle = SpendBundle.aggregate(spend_bundles)
+                return block_bundle
+            else:
+                return None
 
     async def add_spendbundle(
         self, new_spend: SpendBundle, to_pool: Mempool = None

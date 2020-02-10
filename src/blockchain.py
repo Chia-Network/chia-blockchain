@@ -842,32 +842,33 @@ class Blockchain:
             self._reconsider_heights(self.lca_block, cur[0])
         self.lca_block = cur[0]
 
-        if old_lca is None:
-            full: Optional[FullBlock] = await self.store.get_block(
-                self.lca_block.header_hash
-            )
-            assert full is not None
-            await self.unspent_store.new_lca(full)
-            await self.create_diffs_for_tips(self.lca_block)
-        # If LCA changed update the unspent store
-        elif old_lca.header_hash != self.lca_block.header_hash:
-            # New LCA is lower height but not the a parent of old LCA (Reorg)
-            fork_h = self.find_fork_for_lca(old_lca, self.lca_block)
-            # Rollback to fork
-            await self.unspent_store.rollback_lca_to_block(fork_h)
-            # Nuke DiffStore
-            self.unspent_store.nuke_diffs()
-            # Add blocks between fork point and new lca
-            fork_hash = self.height_to_hash[fork_h]
-            fork_head = self.headers[fork_hash]
-            await self._from_fork_to_lca(fork_head, self.lca_block)
-            # Create DiffStore
-            await self.create_diffs_for_tips(self.lca_block)
-        else:
-            # If LCA has not changed just update the difference
-            self.unspent_store.nuke_diffs()
-            # Create DiffStore
-            await self.create_diffs_for_tips(self.lca_block)
+        async with self.unspent_store.lock:
+            if old_lca is None:
+                full: Optional[FullBlock] = await self.store.get_block(
+                    self.lca_block.header_hash
+                )
+                assert full is not None
+                await self.unspent_store.new_lca(full)
+                await self.create_diffs_for_tips(self.lca_block)
+            # If LCA changed update the unspent store
+            elif old_lca.header_hash != self.lca_block.header_hash:
+                # New LCA is lower height but not the a parent of old LCA (Reorg)
+                fork_h = self.find_fork_for_lca(old_lca, self.lca_block)
+                # Rollback to fork
+                await self.unspent_store.rollback_lca_to_block(fork_h)
+                # Nuke DiffStore
+                self.unspent_store.nuke_diffs()
+                # Add blocks between fork point and new lca
+                fork_hash = self.height_to_hash[fork_h]
+                fork_head = self.headers[fork_hash]
+                await self._from_fork_to_lca(fork_head, self.lca_block)
+                # Create DiffStore
+                await self.create_diffs_for_tips(self.lca_block)
+            else:
+                # If LCA has not changed just update the difference
+                self.unspent_store.nuke_diffs()
+                # Create DiffStore
+                await self.create_diffs_for_tips(self.lca_block)
 
     def find_fork_for_lca(self, old_lca: Header, new_lca: Header) -> uint32:
         """ Tries to find height where new chain (current) diverged from the old chain where old_lca was the LCA"""

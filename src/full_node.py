@@ -1049,19 +1049,20 @@ class FullNode:
         Receives a full transaction from peer.
         If tx is added to mempool, send tx_id to others. (maybe_transaction)
         """
-        added, error = await self.mempool_manager.add_spendbundle(tx.transaction)
-        if added:
-            maybeTX = peer_protocol.TransactionId(tx.transaction.name())
-            yield OutboundMessage(
-                NodeType.FULL_NODE,
-                Message("maybe_transaction", maybeTX),
-                Delivery.BROADCAST_TO_OTHERS,
-            )
-        else:
-            self.log.warning(
-                f"Wasn't able to add transaction with id {tx.transaction.name()}, error: {error}"
-            )
-            return
+        async with self.unspent_store.lock:
+            added, error = await self.mempool_manager.add_spendbundle(tx.transaction)
+            if added:
+                maybeTX = peer_protocol.TransactionId(tx.transaction.name())
+                yield OutboundMessage(
+                    NodeType.FULL_NODE,
+                    Message("maybe_transaction", maybeTX),
+                    Delivery.BROADCAST_TO_OTHERS,
+                )
+            else:
+                self.log.warning(
+                    f"Wasn't able to add transaction with id {tx.transaction.name()}, error: {error}"
+                )
+                return
 
     @api_request
     async def maybe_transaction(
