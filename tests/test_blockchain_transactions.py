@@ -349,7 +349,7 @@ class TestBlockchainTransactions:
         assert error is None
 
     @pytest.mark.asyncio
-    async def test_assert_block_age_exceeds(self, two_nodes):
+    async def test_assert_block_index_exceeds(self, two_nodes):
 
         num_blocks = 10
         wallet_a = WalletTool()
@@ -396,6 +396,74 @@ class TestBlockchainTransactions:
         )
 
         assert error is Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED
+
+        dic_h = {12: (program, aggsig)}
+        valid_new_blocks = bt.get_consecutive_blocks(
+            test_constants, 2, blocks[:11], 10, b"", coinbase_puzzlehash, dic_h
+        )
+
+        for block in valid_new_blocks:
+            async for _ in full_node_1.block(full_node_protocol.Block(block)):
+                pass
+
+        # Try to validate that block at index 12
+        next_block = valid_new_blocks[12]
+
+        error = await full_node_1.blockchain.validate_transactions(
+            next_block, next_block.body.fees_coin.amount
+        )
+
+        assert error is None
+
+    @pytest.mark.asyncio
+    async def test_assert_block_age_exceeds(self, two_nodes):
+
+        num_blocks = 10
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        # Farm blocks
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        for block in blocks:
+            async for _ in full_node_1.block(full_node_protocol.Block(block)):
+                pass
+
+        # Coinbase that gets spent
+        block1 = blocks[1]
+
+        # This condition requires block1 coinbase to be spent more than 10 block after it was farmed
+        # block index has to be greater than (1 + 10 = 11)
+        block1_cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS, int_to_bytes(10), None
+        )
+        block1_dic = {block1_cvp.opcode: [block1_cvp]}
+        block1_spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block1.body.coinbase, block1_dic
+        )
+
+        # program that will be sent to early
+        program = best_solution_program(block1_spend_bundle)
+        aggsig = block1_spend_bundle.aggregated_signature
+
+        # Create another block that includes our transaction
+        dic_h = {11: (program, aggsig)}
+        invalid_new_blocks = bt.get_consecutive_blocks(
+            test_constants, 1, blocks, 10, b"", coinbase_puzzlehash, dic_h
+        )
+
+        # Try to validate that block at index 11
+        next_block = invalid_new_blocks[11]
+        error = await full_node_1.blockchain.validate_transactions(
+            next_block, next_block.body.fees_coin.amount
+        )
+
+        assert error is Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED
 
         dic_h = {12: (program, aggsig)}
         valid_new_blocks = bt.get_consecutive_blocks(
