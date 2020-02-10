@@ -851,57 +851,25 @@ class Blockchain:
             await self.create_diffs_for_tips(self.lca_block)
         # If LCA changed update the unspent store
         elif old_lca.header_hash != self.lca_block.header_hash:
-            if self.lca_block.height < old_lca.height:
-                if self.is_descendant(old_lca, self.lca_block):
-                    # new LCA is lower height than the new LCA (linear REORG)
-                    await self.unspent_store.rollback_lca_to_block(
-                        self.lca_block.height
-                    )
-                    # Nuke DiffStore
-                    self.unspent_store.nuke_diffs()
-                    # Create DiffStore
-                    await self.create_diffs_for_tips(self.lca_block)
-                else:
-                    # New LCA is lower height but not the a parent of old LCA (Reorg)
-                    fork_h = self.find_fork_for_lca(old_lca)
-                    # Rollback to fork
-                    await self.unspent_store.rollback_lca_to_block(fork_h)
-                    # Nuke DiffStore
-                    self.unspent_store.nuke_diffs()
-                    # Add blocks between fork point and new lca
-                    fork_hash = self.height_to_hash[fork_h]
-                    fork_head = self.headers[fork_hash]
-                    await self._from_fork_to_lca(fork_head, self.lca_block)
-                    # Create DiffStore
-                    await self.create_diffs_for_tips(self.lca_block)
-            if self.lca_block.height >= old_lca.height:
-                if self.is_descendant(self.lca_block, old_lca):
-                    # Add blocks between old and new lca block
-                    await self._from_fork_to_lca(old_lca, self.lca_block)
-                    # Nuke DiffStore
-                    self.unspent_store.nuke_diffs()
-                    # Create DiffStore
-                    await self.create_diffs_for_tips(self.lca_block)
-                else:
-                    # Find Fork
-                    fork_h = self.find_fork_for_lca(old_lca)
-                    # Rollback to fork_point
-                    await self.unspent_store.rollback_lca_to_block(fork_h)
-                    # Add blocks from fork_point to new_lca
-                    fork_hash = self.height_to_hash[fork_h]
-                    fork_head = self.headers[fork_hash]
-                    await self._from_fork_to_lca(fork_head, self.lca_block)
-                    #  Nuke DiffStore
-                    self.unspent_store.nuke_diffs()
-                    # Create DiffStore
-                    await self.create_diffs_for_tips(self.lca_block)
+            # New LCA is lower height but not the a parent of old LCA (Reorg)
+            fork_h = self.find_fork_for_lca(old_lca, self.lca_block)
+            # Rollback to fork
+            await self.unspent_store.rollback_lca_to_block(fork_h)
+            # Nuke DiffStore
+            self.unspent_store.nuke_diffs()
+            # Add blocks between fork point and new lca
+            fork_hash = self.height_to_hash[fork_h]
+            fork_head = self.headers[fork_hash]
+            await self._from_fork_to_lca(fork_head, self.lca_block)
+            # Create DiffStore
+            await self.create_diffs_for_tips(self.lca_block)
         else:
             # If LCA has not changed just update the difference
             self.unspent_store.nuke_diffs()
             # Create DiffStore
             await self.create_diffs_for_tips(self.lca_block)
 
-    def find_fork_for_lca(self, old_lca: Header) -> uint32:
+    def find_fork_for_lca(self, old_lca: Header, new_lca: Header) -> uint32:
         """ Tries to find height where new chain (current) diverged from the old chain where old_lca was the LCA"""
         tmp_old: Header = old_lca
         while tmp_old.header_hash != self.genesis.header_hash:
@@ -909,7 +877,7 @@ class Blockchain:
                 return uint32(0)
             if tmp_old.height in self.height_to_hash:
                 chain_hash_at_h = self.height_to_hash[tmp_old.height]
-                if chain_hash_at_h == tmp_old.header_hash:
+                if chain_hash_at_h == tmp_old.header_hash and chain_hash_at_h != new_lca.header_hash:
                     return tmp_old.height
             tmp_old = self.headers[tmp_old.prev_header_hash]
         return uint32(0)
