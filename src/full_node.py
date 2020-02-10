@@ -738,7 +738,7 @@ class FullNode:
             request.challenge_hash,
             bytes(request.proof_of_space.proof),
         )
-        assert quality_string
+        assert len(quality_string) == 32
 
         # Retrieves the correct tip for the challenge
         tips: List[Header] = self.blockchain.get_current_tips()

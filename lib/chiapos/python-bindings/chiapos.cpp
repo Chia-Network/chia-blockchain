@@ -74,11 +74,10 @@ PYBIND11_MODULE(chiapos, m) {
             const uint8_t* challenge_ptr = reinterpret_cast<const uint8_t*>(challenge_str.data());
             std::vector<LargeBits> qualities = dp.GetQualitiesForChallenge(challenge_ptr);
             std::vector<py::bytes> ret;
-            uint8_t* quality_buf = new uint8_t[Util::ByteAlign(2 * dp.GetSize()) / 8];
+            uint8_t* quality_buf = new uint8_t[32];
             for (LargeBits quality : qualities) {
                 quality.ToBytes(quality_buf);
-                py::bytes quality_py = py::bytes(reinterpret_cast<char*>(quality_buf),
-                                                 Util::ByteAlign(2 * dp.GetSize()) / 8);
+                py::bytes quality_py = py::bytes(reinterpret_cast<char*>(quality_buf), 32);
                 ret.push_back(quality_py);
             }
             delete[] quality_buf;
@@ -113,10 +112,9 @@ PYBIND11_MODULE(chiapos, m) {
             if (quality.GetSize() == 0) {
                 return stdx::optional<py::bytes>();
             }
-            uint8_t* quality_buf = new uint8_t[Util::ByteAlign(2 * k) / 8];
+            uint8_t* quality_buf = new uint8_t[32];
             quality.ToBytes(quality_buf);
-            py::bytes quality_py = py::bytes(reinterpret_cast<char*>(quality_buf),
-                                             Util::ByteAlign(2 * k) / 8);
+            py::bytes quality_py = py::bytes(reinterpret_cast<char*>(quality_buf), 32);
             delete[] quality_buf;
             return stdx::optional<py::bytes>(quality_py);
         });

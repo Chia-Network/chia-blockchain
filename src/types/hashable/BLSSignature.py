@@ -23,7 +23,7 @@ class BLSSignature(Streamable):
 
     @dataclass(frozen=True)
     @streamable
-    class AGGSIGPair(Streamable):
+    class PkMessagePair(Streamable):
         public_key: BLSPublicKey
         message_hash: bytes32
 
@@ -39,7 +39,7 @@ class BLSSignature(Streamable):
             sig = blspy.PrependSignature.aggregate(wrapped_sigs).serialize()
         return cls(sig)
 
-    def validate(self, hash_key_pairs: List[AGGSIGPair]) -> bool:
+    def validate(self, hash_key_pairs: List[PkMessagePair]) -> bool:
         # check for special case of 0
         if len(hash_key_pairs) == 0:
             return True

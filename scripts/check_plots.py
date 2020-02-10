@@ -50,15 +50,15 @@ def main():
             try:
                 for i in range(args.num):
                     challenge = sha256(i.to_bytes(32, "big")).digest()
-                    for index, quality in enumerate(
+                    for index, quality_str in enumerate(
                         pr.get_qualities_for_challenge(challenge)
                     ):
                         proof = pr.get_full_proof(challenge, index)
                         total_proofs += 1
-                        ver_quality = v.validate_proof(
+                        ver_quality_str = v.validate_proof(
                             plot_seed, pr.get_size(), challenge, proof
                         )
-                        assert quality == ver_quality
+                        assert quality_str == ver_quality_str
             except BaseException as e:
                 print(
                     f"{type(e)}: {e} error in proving/verifying for plot {plot_filename}"

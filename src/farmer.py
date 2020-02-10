@@ -62,8 +62,10 @@ class Farmer:
         of space is sufficiently good, and if so, we ask for the whole proof.
         """
 
-        if challenge_response.quality in self.harvester_responses_challenge:
-            log.warning(f"Have already seen quality {challenge_response.quality}")
+        if challenge_response.quality_string in self.harvester_responses_challenge:
+            log.warning(
+                f"Have already seen quality string {challenge_response.quality_string}"
+            )
             return
         weight: uint64 = self.challenge_to_weight[challenge_response.challenge_hash]
         height: uint32 = self.challenge_to_height[challenge_response.challenge_hash]
@@ -75,7 +77,7 @@ class Farmer:
             raise RuntimeError("Did not find challenge")
 
         number_iters: uint64 = calculate_iterations_quality(
-            challenge_response.quality,
+            challenge_response.quality_string,
             challenge_response.plot_size,
             difficulty,
             self.proof_of_time_estimate_ips,
@@ -103,9 +105,11 @@ class Farmer:
             or estimate_secs < self.config["propagate_threshold"]
         ):
             self.harvester_responses_challenge[
-                challenge_response.quality
+                challenge_response.quality_string
             ] = challenge_response.challenge_hash
-            request = harvester_protocol.RequestProofOfSpace(challenge_response.quality)
+            request = harvester_protocol.RequestProofOfSpace(
+                challenge_response.quality_string
+            )
 
             yield OutboundMessage(
                 NodeType.HARVESTER,
@@ -129,7 +133,9 @@ class Farmer:
         if response.proof.pool_pubkey not in [sk.get_public_key() for sk in pool_sks]:
             raise RuntimeError("Pool pubkey not in list of approved keys")
 
-        challenge_hash: bytes32 = self.harvester_responses_challenge[response.quality]
+        challenge_hash: bytes32 = self.harvester_responses_challenge[
+            response.quality_string
+        ]
         challenge_weight: uint64 = self.challenge_to_weight[challenge_hash]
         challenge_height: uint32 = self.challenge_to_height[challenge_hash]
         new_proof_height: uint32 = uint32(challenge_height + 1)
@@ -140,17 +146,17 @@ class Farmer:
         if difficulty == 0:
             raise RuntimeError("Did not find challenge")
 
-        computed_quality = response.proof.verify_and_get_quality()
-        if response.quality != computed_quality:
+        computed_quality_string = response.proof.verify_and_get_quality_string()
+        if response.quality_string != computed_quality_string:
             raise RuntimeError("Invalid quality for proof of space")
 
-        self.harvester_responses_proofs[response.quality] = response.proof
+        self.harvester_responses_proofs[response.quality_string] = response.proof
         self.harvester_responses_proof_hash_to_qual[
             response.proof.get_hash()
-        ] = response.quality
+        ] = response.quality_string
 
         number_iters: uint64 = calculate_iterations_quality(
-            computed_quality,
+            computed_quality_string,
             response.proof.size,
             difficulty,
             self.proof_of_time_estimate_ips,
@@ -160,7 +166,8 @@ class Farmer:
 
         if estimate_secs < self.config["pool_share_threshold"]:
             request1 = harvester_protocol.RequestPartialProof(
-                response.quality, bytes.fromhex(self.key_config["farmer_target"]),
+                response.quality_string,
+                bytes.fromhex(self.key_config["farmer_target"]),
             )
             yield OutboundMessage(
                 NodeType.HARVESTER,
@@ -197,9 +204,15 @@ class Farmer:
         Receives a signature on a block header hash, which is required for submitting
         a block to the blockchain.
         """
-        header_hash: bytes32 = self.harvester_responses_header_hash[response.quality]
-        proof_of_space: bytes32 = self.harvester_responses_proofs[response.quality]
-        plot_pubkey = self.harvester_responses_proofs[response.quality].plot_pubkey
+        header_hash: bytes32 = self.harvester_responses_header_hash[
+            response.quality_string
+        ]
+        proof_of_space: bytes32 = self.harvester_responses_proofs[
+            response.quality_string
+        ]
+        plot_pubkey = self.harvester_responses_proofs[
+            response.quality_string
+        ].plot_pubkey
 
         assert response.header_hash_signature.verify(
             [Util.hash256(header_hash)], [plot_pubkey]
@@ -224,7 +237,9 @@ class Farmer:
         """
 
         farmer_target = bytes.fromhex(self.key_config["farmer_target"])
-        plot_pubkey = self.harvester_responses_proofs[response.quality].plot_pubkey
+        plot_pubkey = self.harvester_responses_proofs[
+            response.quality_string
+        ].plot_pubkey
 
         assert response.farmer_target_signature.verify(
             [Util.hash256(farmer_target)], [plot_pubkey]
@@ -335,7 +350,7 @@ class Farmer:
             self.unfinished_challenges[proof_of_space_arrived.weight] = []
         else:
             self.unfinished_challenges[proof_of_space_arrived.weight].append(
-                proof_of_space_arrived.quality
+                proof_of_space_arrived.quality_string
             )
 
     @api_request

@@ -72,14 +72,14 @@ def conditions_by_opcode(
 
 def hash_key_pairs_for_conditions_dict(
     conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]]
-) -> List[BLSSignature.AGGSIGPair]:
-    pairs: List[BLSSignature.AGGSIGPair] = []
+) -> List[BLSSignature.PkMessagePair]:
+    pairs: List[BLSSignature.PkMessagePair] = []
     for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
         # TODO: check types
         # assert len(_) == 3
         blspubkey: BLSPublicKey = BLSPublicKey(cvp.var1)
         message: bytes32 = bytes32(blspy.Util.hash256(cvp.var2))
-        pairs.append(BLSSignature.AGGSIGPair(blspubkey, message))
+        pairs.append(BLSSignature.PkMessagePair(blspubkey, message))
     return pairs
 
 

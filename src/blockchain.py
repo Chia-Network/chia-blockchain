@@ -485,7 +485,7 @@ class Blockchain:
         self,
         block: FullBlock,
         pre_validated: bool = False,
-        pos_quality: bytes32 = None,
+        pos_quality_string: bytes32 = None,
     ) -> Tuple[ReceiveBlockResult, Optional[Header]]:
         """
         Adds a new block into the blockchain, if it's valid and connected to the current
@@ -499,7 +499,9 @@ class Blockchain:
         if block.prev_header_hash not in self.headers and not genesis:
             return ReceiveBlockResult.DISCONNECTED_BLOCK, None
 
-        if not await self.validate_block(block, genesis, pre_validated, pos_quality):
+        if not await self.validate_block(
+            block, genesis, pre_validated, pos_quality_string
+        ):
             return ReceiveBlockResult.INVALID_BLOCK, None
 
         # Cache header in memory
@@ -518,7 +520,7 @@ class Blockchain:
         block: FullBlock,
         prev_full_block: Optional[FullBlock],
         pre_validated: bool = True,
-        pos_quality: bytes32 = None,
+        pos_quality_string: bytes32 = None,
     ) -> bool:
         """
         Block validation algorithm. Returns true if the candidate block is fully valid
@@ -535,7 +537,7 @@ class Blockchain:
                 return False
 
             # 3. Check coinbase signature with pool pk
-            pair = block.body.coinbase_signature.AGGSIGPair(
+            pair = block.body.coinbase_signature.PkMessagePair(
                 block.proof_of_space.pool_pubkey, block.body.coinbase.name(),
             )
 
@@ -600,9 +602,9 @@ class Blockchain:
                 return False
 
         # 10. Check proof of space based on challenge
-        if pos_quality is None:
-            pos_quality = block.proof_of_space.verify_and_get_quality()
-            if not pos_quality:
+        if pos_quality_string is None:
+            pos_quality_string = block.proof_of_space.verify_and_get_quality_string()
+            if not pos_quality_string:
                 return False
 
         # 11. Check block height = prev height + 1
@@ -620,7 +622,7 @@ class Blockchain:
         block: FullBlock,
         genesis: bool = False,
         pre_validated: bool = False,
-        pos_quality: bytes32 = None,
+        pos_quality_string: bytes32 = None,
     ) -> bool:
         """
         Block validation algorithm. Returns true iff the candidate block is fully valid,
@@ -636,7 +638,7 @@ class Blockchain:
         # 1. Validate unfinished block (check the rest of the conditions)
         if not (
             await self.validate_unfinished_block(
-                block, prev_full_block, pre_validated, pos_quality
+                block, prev_full_block, pre_validated, pos_quality_string
             )
         ):
             return False
@@ -652,14 +654,14 @@ class Blockchain:
             ips = uint64(self.constants["VDF_IPS_STARTING"])
 
         # 3. Check number of iterations on PoT is correct, based on prev block and PoS
-        if pos_quality is None:
-            pos_quality = block.proof_of_space.verify_and_get_quality()
+        if pos_quality_string is None:
+            pos_quality_string = block.proof_of_space.verify_and_get_quality_string()
 
-        if pos_quality is None:
+        if pos_quality_string is None:
             return False
 
         number_of_iters: uint64 = calculate_iterations_quality(
-            pos_quality,
+            pos_quality_string,
             block.proof_of_space.size,
             difficulty,
             ips,
@@ -788,12 +790,12 @@ class Blockchain:
             return False, None
 
         # 10. Check proof of space based on challenge
-        pos_quality = block.proof_of_space.verify_and_get_quality()
+        pos_quality_string = block.proof_of_space.verify_and_get_quality_string()
 
-        if not pos_quality:
+        if not pos_quality_string:
             return False, None
 
-        return True, bytes(pos_quality)
+        return True, bytes(pos_quality_string)
 
     def _reconsider_heights(self, old_lca: Optional[Header], new_lca: Header):
         """

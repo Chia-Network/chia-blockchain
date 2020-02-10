@@ -21,10 +21,10 @@
 
 class Verifier {
  public:
-    // Gets the quality string from a proof in proof ordering. The quality string is two
-    // adjacent values, determined by the quality index (1-32), and the proof in plot
-    // ordering.
-    LargeBits GetQualityString(uint8_t k, LargeBits proof, uint16_t quality_index) {
+    // Gets the quality string from a proof in proof ordering. The quality string is sha256 of
+    // the challenge + two adjacent values, determined by the quality index (1-32),
+    // and the proof in plot ordering.
+    LargeBits GetQualityString(uint8_t k, LargeBits proof, uint16_t quality_index, const uint8_t* challenge) {
         // Converts the proof from proof ordering to plot ordering
         for (uint8_t table_index = 1; table_index < 7; table_index++) {
             LargeBits new_proof;
@@ -40,8 +40,13 @@ class Verifier {
             }
             proof = new_proof;
         }
-        // Returns two of the x values, based on the quality index
-        return proof.Slice(k * quality_index, k * (quality_index + 2));
+        // Hashes two of the x values, based on the quality index
+        vector<unsigned char> hash_input(32 + Util::ByteAlign(2 * k) / 8, 0);
+        memcpy(hash_input.data(), challenge, 32);
+        proof.Slice(k * quality_index, k * (quality_index + 2)).ToBytes(hash_input.data() + 32);
+        vector<unsigned char> hash(picosha2::k_digest_size);
+        picosha2::hash256(hash_input.begin(), hash_input.end(), hash.begin(), hash.end());
+        return LargeBits(hash.data(), 32, 256);
     }
 
     // Validates a proof of space, and returns the quality string if the proof is valid for the given
@@ -107,7 +112,7 @@ class Verifier {
         // Makes sure the output is equal to the first k bits of the challenge
         if (challenge_bits.Slice(0, k) == ys[0].Slice(0, k)) {
             // Returns quality string, which requires changing proof to plot ordering
-            return GetQualityString(k, proof_bits, quality_index);
+            return GetQualityString(k, proof_bits, quality_index, challenge);
         } else {
             return LargeBits();
         }

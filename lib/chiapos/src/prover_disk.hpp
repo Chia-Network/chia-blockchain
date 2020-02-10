@@ -29,6 +29,7 @@
 #include "encoding.hpp"
 #include "calculate_bucket.hpp"
 #include "plotter_disk.hpp"
+#include "../lib/include/picosha2.hpp"
 
 // The DiskProver, given a correctly formatted plot file, can efficiently generate valid proofs
 // of space, for a given challenge.
@@ -127,7 +128,7 @@ class DiskProver {
         return k;
     }
 
-    // Given a challenge, returns a quality string, which is 2 adjecent x values,
+    // Given a challenge, returns a quality string, which is sha256(challenge + 2 adjecent x values),
     // from the 64 value proof. Note that this is more efficient than fetching all
     // 64 x values, which are in different parts of the disk.
     std::vector<LargeBits> GetQualitiesForChallenge(const uint8_t* challenge) {
@@ -165,8 +166,13 @@ class DiskProver {
             uint128_t new_line_point = ReadLinePoint(1, position);
             auto x1x2 = Encoding::LinePointToSquare(new_line_point);
 
-            // The final two x values (which are stored in the same location) are returned.
-            qualities.push_back(LargeBits(x1x2.second, k) + LargeBits(x1x2.first, k));
+            // The final two x values (which are stored in the same location) are hashed
+            vector<unsigned char> hash_input(32 + Util::ByteAlign(2 * k) / 8, 0);
+            memcpy(hash_input.data(), challenge, 32);
+            (LargeBits(x1x2.second, k) + LargeBits(x1x2.first, k)).ToBytes(hash_input.data() + 32);
+            vector<unsigned char> hash(picosha2::k_digest_size);
+            picosha2::hash256(hash_input.begin(), hash_input.end(), hash.begin(), hash.end());
+            qualities.push_back(LargeBits(hash.data(), 32, 256));
         }
         disk_file.clear();
         disk_file.sync();

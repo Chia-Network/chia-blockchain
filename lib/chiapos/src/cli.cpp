@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
             DiskProver prover(filename);
             vector<LargeBits> qualities = prover.GetQualitiesForChallenge(challenge_bytes);
             for (uint32_t i = 0; i < qualities.size(); i++) {
-                k = qualities[i].GetSize() / 2;
+                k = prover.GetSize() / 2;
                 uint8_t proof_data[8 * k];
                 LargeBits proof = prover.GetFullProof(challenge_bytes, i);
                 proof.ToBytes(proof_data);

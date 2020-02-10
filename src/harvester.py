@@ -25,7 +25,7 @@ class Harvester:
         # From filename to prover
         self.provers: Dict[Path, DiskProver] = {}
 
-        # From quality to (challenge_hash, filename, index)
+        # From quality string to (challenge_hash, filename, index)
         self.challenge_hashes: Dict[bytes32, Tuple[bytes32, Path, uint8]] = {}
         self._plot_notification_task = asyncio.create_task(self._plot_notification())
         self._is_shutdown: bool = False
@@ -94,7 +94,7 @@ class Harvester:
     @api_request
     async def new_challenge(self, new_challenge: harvester_protocol.NewChallenge):
         """
-        The harvester receives a new challenge from the farmer, and looks up the quality
+        The harvester receives a new challenge from the farmer, and looks up the quality string
         for any proofs of space that are are found in the plots. If proofs are found, a
         ChallengeResponse message is sent for each of the proofs found.
         """
@@ -114,16 +114,13 @@ class Harvester:
                     new_challenge.challenge_hash
                 )
             for index, quality_str in enumerate(quality_strings):
-                quality = ProofOfSpace.quality_str_to_quality(
-                    new_challenge.challenge_hash, quality_str
-                )
-                self.challenge_hashes[quality] = (
+                self.challenge_hashes[quality_str] = (
                     new_challenge.challenge_hash,
                     filename,
                     uint8(index),
                 )
                 response: harvester_protocol.ChallengeResponse = harvester_protocol.ChallengeResponse(
-                    new_challenge.challenge_hash, quality, prover.get_size()
+                    new_challenge.challenge_hash, quality_str, prover.get_size()
                 )
                 all_responses.append(response)
         for response in all_responses:
@@ -143,10 +140,12 @@ class Harvester:
         """
         response: Optional[harvester_protocol.RespondProofOfSpace] = None
         try:
-            # Using the quality find the right plot and index from our solutions
-            challenge_hash, filename, index = self.challenge_hashes[request.quality]
+            # Using the quality string, find the right plot and index from our solutions
+            challenge_hash, filename, index = self.challenge_hashes[
+                request.quality_string
+            ]
         except KeyError:
-            log.warning(f"Quality {request.quality} not found")
+            log.warning(f"Quality string {request.quality_string} not found")
             return
         if index is not None:
             proof_xs: bytes
@@ -170,7 +169,7 @@ class Harvester:
             )
 
             response = harvester_protocol.RespondProofOfSpace(
-                request.quality, proof_of_space
+                request.quality_string, proof_of_space
             )
         if response:
             yield OutboundMessage(
@@ -187,10 +186,10 @@ class Harvester:
         The farmer requests a signature on the header hash, for one of the proofs that we found.
         A signature is created on the header hash using the plot private key.
         """
-        if request.quality not in self.challenge_hashes:
+        if request.quality_string not in self.challenge_hashes:
             return
 
-        _, filename, _ = self.challenge_hashes[request.quality]
+        _, filename, _ = self.challenge_hashes[request.quality_string]
 
         plot_sk = PrivateKey.from_bytes(
             bytes.fromhex(self.plot_config["plots"][filename]["sk"])
@@ -203,7 +202,7 @@ class Harvester:
         )
 
         response: harvester_protocol.RespondHeaderSignature = harvester_protocol.RespondHeaderSignature(
-            request.quality, header_hash_signature,
+            request.quality_string, header_hash_signature,
         )
         yield OutboundMessage(
             NodeType.FARMER,
@@ -220,7 +219,7 @@ class Harvester:
         We look up the correct plot based on the quality, lookup the proof, and sign
         the farmer target hash using the plot private key. This will be used as a pool share.
         """
-        _, filename, _ = self.challenge_hashes[request.quality]
+        _, filename, _ = self.challenge_hashes[request.quality_string]
         plot_sk = PrivateKey.from_bytes(
             bytes.fromhex(self.plot_config["plots"][filename]["sk"])
         )
@@ -229,7 +228,7 @@ class Harvester:
         )
 
         response: harvester_protocol.RespondPartialProof = harvester_protocol.RespondPartialProof(
-            request.quality, farmer_target_signature
+            request.quality_string, farmer_target_signature
         )
         yield OutboundMessage(
             NodeType.FARMER,

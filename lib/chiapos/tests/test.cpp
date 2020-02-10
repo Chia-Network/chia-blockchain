@@ -343,7 +343,7 @@ void TestProofOfSpace(std::string filename, uint32_t iterations, uint8_t k, uint
                 proof.ToBytes(proof_data);
 
                 LargeBits quality = verifier.ValidateProof(plot_id, k, hash.data(), proof_data, k*8);
-                REQUIRE(quality.GetSize() == 2 * k);
+                REQUIRE(quality.GetSize() == 256);
                 REQUIRE(quality == qualities[index]);
                 success += 1;
 
