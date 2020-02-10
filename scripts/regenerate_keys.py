@@ -55,6 +55,15 @@ def main():
         default=True,
         help="Regenerate pool keys",
     )
+    parser.add_argument(
+        "-w",
+        "--wallet",
+        type=str2bool,
+        nargs="?",
+        const=True,
+        default=True,
+        help="Regenerate wallet keys",
+    )
     args = parser.parse_args()
 
     if key_config_filename.exists():
@@ -99,6 +108,11 @@ def main():
         )
         key_config["pool_sks"] = [bytes(pool_sk).hex() for pool_sk in pool_sks]
         key_config["pool_target"] = pool_target.hex()
+        with open(key_config_filename, "w") as f:
+            safe_dump(key_config, f)
+    if args.wallet:
+        wallet_sk = PrivateKey.from_seed(token_bytes(32))
+        key_config["wallet_sk"] = bytes(wallet_sk).hex()
         with open(key_config_filename, "w") as f:
             safe_dump(key_config, f)
 
