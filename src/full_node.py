@@ -7,11 +7,14 @@ from secrets import token_bytes
 from typing import AsyncGenerator, List, Optional, Tuple, Dict
 
 from chiapos import Verifier
+
+import src.protocols.wallet_protocol
 from src.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.block_rewards import calculate_base_fee
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.weight_verifier import verify_weight
+from src.protocols.wallet_protocol import FullProofForHash, ProofHash
 from src.store import FullNodeStore
 from src.protocols import farmer_protocol, full_node_protocol, timelord_protocol
 from src.util.bundle_tools import best_solution_program
@@ -1293,3 +1296,23 @@ class FullNode:
         for peer in to_connect:
             tasks.append(asyncio.create_task(self.server.start_client(peer)))
         await asyncio.gather(*tasks)
+
+    @api_request
+    async def request_proof_hashes(
+        self, request: src.protocols.wallet_protocol.ProofHash
+    ) -> OutboundMessageGenerator:
+        self.log.info(f"Received request for proof hash: {request}")
+        reply = ProofHash(std_hash(b"deadbeef"))
+        yield OutboundMessage(
+            NodeType.WALLET, Message("proof_hash", reply), Delivery.RESPOND
+        )
+
+    @api_request
+    async def request_full_proof_for_hash(
+        self, request: src.protocols.wallet_protocol.ProofHash
+    ) -> OutboundMessageGenerator:
+        self.log.info(f"Received request for full proof for hash: {request}")
+        proof = FullProofForHash(std_hash(b"test"), std_hash(b"test"))
+        yield OutboundMessage(
+            NodeType.WALLET, Message("full_proof_for_hash", proof), Delivery.RESPOND
+        )

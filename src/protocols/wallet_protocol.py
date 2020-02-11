@@ -64,3 +64,16 @@ class RequestBody:
 @cbor_message
 class RespondBody:
     body: Body
+
+
+@dataclass(frozen=True)
+@cbor_message
+class FullProofForHash:
+    proof_hash: bytes32
+    proof: bytes32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class ProofHash:
+    proof_hash: bytes32

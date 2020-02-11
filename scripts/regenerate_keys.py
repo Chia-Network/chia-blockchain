@@ -1,7 +1,7 @@
 import argparse
 from secrets import token_bytes
 
-from blspy import PrivateKey
+from blspy import PrivateKey, ExtendedPrivateKey
 from yaml import safe_dump, safe_load
 from src.pool import create_puzzlehash_for_pk
 from src.types.hashable.BLSSignature import BLSPublicKey
@@ -111,7 +111,7 @@ def main():
         with open(key_config_filename, "w") as f:
             safe_dump(key_config, f)
     if args.wallet:
-        wallet_sk = PrivateKey.from_seed(token_bytes(32))
+        wallet_sk = ExtendedPrivateKey.from_seed(token_bytes(32))
         key_config["wallet_sk"] = bytes(wallet_sk).hex()
         with open(key_config_filename, "w") as f:
             safe_dump(key_config, f)
