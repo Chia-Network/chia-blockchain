@@ -95,7 +95,7 @@ sudo sh install.sh
 #### Alternate method for Ubuntu 18.04 LTS
 In `./install.sh`:
 Change `python3` to `python3.7`
-Each line that starts with `pip ...` becomes `python -m pip ...`
+Each line that starts with `pip ...` becomes `python3.7 -m pip ...`
 
 ```bash
 sudo apt-get -y update
