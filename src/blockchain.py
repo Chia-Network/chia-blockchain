@@ -98,7 +98,7 @@ class Blockchain:
         if result != ReceiveBlockResult.ADDED_TO_HEAD:
             raise InvalidGenesisBlock()
 
-        headers_input: Dict[str, Header] = await self.load_headers_from_store()
+        headers_input: Dict[str, Header] = await self._load_headers_from_store()
 
         assert self.lca_block is not None
         if len(headers_input) > 0:
@@ -117,7 +117,7 @@ class Blockchain:
             )
         return self
 
-    async def load_headers_from_store(self) -> Dict[str, Header]:
+    async def _load_headers_from_store(self) -> Dict[str, Header]:
         """
         Loads headers from disk, into a list of Headers, that can be used
         to initialize the Blockchain class.
@@ -146,6 +146,16 @@ class Blockchain:
         Return the heads.
         """
         return self.tips[:]
+
+    async def get_full_tips(self) -> List[FullBlock]:
+        """ Return list of FullBlocks that are tips"""
+        result: List[FullBlock] = []
+        for tip in self.tips:
+            block = await self.store.get_block(tip.header_hash)
+            if not block:
+                continue
+            result.append(block)
+        return result
 
     def is_child_of_head(self, block: FullBlock) -> bool:
         """
@@ -715,7 +725,7 @@ class Blockchain:
                         return False
             else:
                 # Validate transactions, and verify that fee_base + TX fees = fee_coin.amount
-                err = await self.validate_transactions(block, fee_base)
+                err = await self._validate_transactions(block, fee_base)
                 if err:
                     return False
         else:
@@ -797,29 +807,23 @@ class Blockchain:
 
         return True, bytes(pos_quality_string)
 
-    def _reconsider_heights(self, old_lca: Optional[Header], new_lca: Header):
+    async def _reconsider_heads(
+        self, block: Header, genesis: bool
+    ) -> Tuple[bool, Optional[Header]]:
         """
-        Update the mapping from height to block hash, when the lca changes.
+        When a new block is added, this is called, to check if the new block is heavier
+        than one of the heads.
         """
-        curr_old: Optional[Header] = old_lca if old_lca else None
-        curr_new: Header = new_lca
-        while True:
-            fetched: Optional[Header]
-            if not curr_old or curr_old.height < curr_new.height:
-                self.height_to_hash[uint32(curr_new.height)] = curr_new.header_hash
-                self.headers[curr_new.header_hash] = curr_new
-                if curr_new.height == 0:
-                    return
-                curr_new = self.headers[curr_new.prev_header_hash]
-            elif curr_old.height > curr_new.height:
-                del self.height_to_hash[uint32(curr_old.height)]
-                curr_old = self.headers[curr_old.prev_header_hash]
-            else:
-                if curr_new.header_hash == curr_old.header_hash:
-                    return
-                self.height_to_hash[uint32(curr_new.height)] = curr_new.header_hash
-                curr_new = self.headers[curr_new.prev_header_hash]
-                curr_old = self.headers[curr_old.prev_header_hash]
+        removed: Optional[Header] = None
+        if len(self.tips) == 0 or block.weight > min([b.weight for b in self.tips]):
+            self.tips.append(block)
+            while len(self.tips) > self.constants["NUMBER_OF_HEADS"]:
+                self.tips.sort(key=lambda b: b.weight, reverse=True)
+                # This will loop only once
+                removed = self.tips.pop()
+            await self._reconsider_lca(genesis)
+            return True, removed
+        return False, None
 
     async def _reconsider_lca(self, genesis: bool):
         """
@@ -849,11 +853,11 @@ class Blockchain:
                 )
                 assert full is not None
                 await self.unspent_store.new_lca(full)
-                await self.create_diffs_for_tips(self.lca_block)
+                await self._create_diffs_for_tips(self.lca_block)
             # If LCA changed update the unspent store
             elif old_lca.header_hash != self.lca_block.header_hash:
                 # New LCA is lower height but not the a parent of old LCA (Reorg)
-                fork_h = self.find_fork_for_lca(old_lca, self.lca_block)
+                fork_h = self._find_fork_for_lca(old_lca, self.lca_block)
                 # Rollback to fork
                 await self.unspent_store.rollback_lca_to_block(fork_h)
                 # Nuke DiffStore
@@ -863,14 +867,38 @@ class Blockchain:
                 fork_head = self.headers[fork_hash]
                 await self._from_fork_to_lca(fork_head, self.lca_block)
                 # Create DiffStore
-                await self.create_diffs_for_tips(self.lca_block)
+                await self._create_diffs_for_tips(self.lca_block)
             else:
                 # If LCA has not changed just update the difference
                 self.unspent_store.nuke_diffs()
                 # Create DiffStore
-                await self.create_diffs_for_tips(self.lca_block)
+                await self._create_diffs_for_tips(self.lca_block)
 
-    def find_fork_for_lca(self, old_lca: Header, new_lca: Header) -> uint32:
+    def _reconsider_heights(self, old_lca: Optional[Header], new_lca: Header):
+        """
+        Update the mapping from height to block hash, when the lca changes.
+        """
+        curr_old: Optional[Header] = old_lca if old_lca else None
+        curr_new: Header = new_lca
+        while True:
+            fetched: Optional[Header]
+            if not curr_old or curr_old.height < curr_new.height:
+                self.height_to_hash[uint32(curr_new.height)] = curr_new.header_hash
+                self.headers[curr_new.header_hash] = curr_new
+                if curr_new.height == 0:
+                    return
+                curr_new = self.headers[curr_new.prev_header_hash]
+            elif curr_old.height > curr_new.height:
+                del self.height_to_hash[uint32(curr_old.height)]
+                curr_old = self.headers[curr_old.prev_header_hash]
+            else:
+                if curr_new.header_hash == curr_old.header_hash:
+                    return
+                self.height_to_hash[uint32(curr_new.height)] = curr_new.header_hash
+                curr_new = self.headers[curr_new.prev_header_hash]
+                curr_old = self.headers[curr_old.prev_header_hash]
+
+    def _find_fork_for_lca(self, old_lca: Header, new_lca: Header) -> uint32:
         """ Tries to find height where new chain (current) diverged from the old chain where old_lca was the LCA"""
         tmp_old: Header = old_lca
         while tmp_old.header_hash != self.genesis.header_hash:
@@ -886,36 +914,10 @@ class Blockchain:
             tmp_old = self.headers[tmp_old.prev_header_hash]
         return uint32(0)
 
-    def is_descendant(self, child: Header, maybe_parent: Header) -> bool:
-        """ Goes backward from potential child until it reaches potential parent or genesis"""
-        if child.header_hash == maybe_parent.header_hash:
-            return False
-
-        current = child
-
-        while current.header_hash != self.genesis.header_hash:
-            if current.header_hash == maybe_parent.header_hash:
-                return True
-            current = self.headers[current.prev_header_hash]
-            if maybe_parent.height < current.height:
-                break
-
-        return False
-
-    async def create_diffs_for_tips(self, target: Header):
+    async def _create_diffs_for_tips(self, target: Header):
         """ Adds to unspent store from tips down to target"""
         for tip in self.tips:
             await self._from_tip_to_lca_unspent(tip, target)
-
-    async def get_full_tips(self) -> List[FullBlock]:
-        """ Return list of FullBlocks that are tips"""
-        result: List[FullBlock] = []
-        for tip in self.tips:
-            block = await self.store.get_block(tip.header_hash)
-            if not block:
-                continue
-            result.append(block)
-        return result
 
     async def _from_tip_to_lca_unspent(self, head: Header, target: Header):
         """ Adds diffs to unspent store, from tip to lca target"""
@@ -950,25 +952,7 @@ class Blockchain:
 
         await self.unspent_store.add_lcas(blocks)
 
-    async def _reconsider_heads(
-        self, block: Header, genesis: bool
-    ) -> Tuple[bool, Optional[Header]]:
-        """
-        When a new block is added, this is called, to check if the new block is heavier
-        than one of the heads.
-        """
-        removed: Optional[Header] = None
-        if len(self.tips) == 0 or block.weight > min([b.weight for b in self.tips]):
-            self.tips.append(block)
-            while len(self.tips) > self.constants["NUMBER_OF_HEADS"]:
-                self.tips.sort(key=lambda b: b.weight, reverse=True)
-                # This will loop only once
-                removed = self.tips.pop()
-            await self._reconsider_lca(genesis)
-            return True, removed
-        return False, None
-
-    async def validate_transactions(
+    async def _validate_transactions(
         self, block: FullBlock, fee_base: uint64
     ) -> Optional[Err]:
 

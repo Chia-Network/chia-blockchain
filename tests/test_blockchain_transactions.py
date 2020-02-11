@@ -151,7 +151,7 @@ class TestBlockchainTransactions:
         )
 
         next_block = new_blocks[11]
-        error = await full_node_1.blockchain.validate_transactions(
+        error = await full_node_1.blockchain._validate_transactions(
             next_block, next_block.body.fees_coin.amount
         )
 
@@ -194,7 +194,7 @@ class TestBlockchainTransactions:
         )
 
         next_block = new_blocks[11]
-        error = await full_node_1.blockchain.validate_transactions(
+        error = await full_node_1.blockchain._validate_transactions(
             next_block, next_block.body.fees_coin.amount
         )
 
@@ -252,7 +252,7 @@ class TestBlockchainTransactions:
 
         # Try to validate that block
         next_block = invalid_new_blocks[11]
-        error = await full_node_1.blockchain.validate_transactions(
+        error = await full_node_1.blockchain._validate_transactions(
             next_block, next_block.body.fees_coin.amount
         )
 
@@ -269,7 +269,7 @@ class TestBlockchainTransactions:
             test_constants, 1, blocks[:11], 10, b"1", coinbase_puzzlehash, dic_h
         )
         next_block = new_blocks[11]
-        error = await full_node_1.blockchain.validate_transactions(
+        error = await full_node_1.blockchain._validate_transactions(
             next_block, next_block.body.fees_coin.amount
         )
         assert error is None
@@ -328,7 +328,7 @@ class TestBlockchainTransactions:
 
         # Try to validate that block
         next_block = invalid_new_blocks[11]
-        error = await full_node_1.blockchain.validate_transactions(
+        error = await full_node_1.blockchain._validate_transactions(
             next_block, next_block.body.fees_coin.amount
         )
 
@@ -349,7 +349,7 @@ class TestBlockchainTransactions:
 
         # Try to validate newly created block
         next_block = new_blocks[11]
-        error = await full_node_1.blockchain.validate_transactions(
+        error = await full_node_1.blockchain._validate_transactions(
             next_block, next_block.body.fees_coin.amount
         )
 
@@ -399,7 +399,7 @@ class TestBlockchainTransactions:
 
         # Try to validate that block at index 11
         next_block = invalid_new_blocks[11]
-        error = await full_node_1.blockchain.validate_transactions(
+        error = await full_node_1.blockchain._validate_transactions(
             next_block, next_block.body.fees_coin.amount
         )
 
@@ -417,7 +417,7 @@ class TestBlockchainTransactions:
         # Try to validate that block at index 12
         next_block = valid_new_blocks[12]
 
-        error = await full_node_1.blockchain.validate_transactions(
+        error = await full_node_1.blockchain._validate_transactions(
             next_block, next_block.body.fees_coin.amount
         )
 
@@ -468,7 +468,7 @@ class TestBlockchainTransactions:
 
         # Try to validate that block at index 11
         next_block = invalid_new_blocks[11]
-        error = await full_node_1.blockchain.validate_transactions(
+        error = await full_node_1.blockchain._validate_transactions(
             next_block, next_block.body.fees_coin.amount
         )
 
@@ -486,7 +486,7 @@ class TestBlockchainTransactions:
         # Try to validate that block at index 12
         next_block = valid_new_blocks[12]
 
-        error = await full_node_1.blockchain.validate_transactions(
+        error = await full_node_1.blockchain._validate_transactions(
             next_block, next_block.body.fees_coin.amount
         )
 
@@ -537,7 +537,7 @@ class TestBlockchainTransactions:
 
         # Try to validate that block before 3 sec
         next_block = invalid_new_blocks[11]
-        error = await full_node_1.blockchain.validate_transactions(
+        error = await full_node_1.blockchain._validate_transactions(
             next_block, next_block.body.fees_coin.amount
         )
 
@@ -558,7 +558,7 @@ class TestBlockchainTransactions:
         # Try to validate that block after 3 sec have passed
         next_block = valid_new_blocks[12]
 
-        error = await full_node_1.blockchain.validate_transactions(
+        error = await full_node_1.blockchain._validate_transactions(
             next_block, next_block.body.fees_coin.amount
         )
 
