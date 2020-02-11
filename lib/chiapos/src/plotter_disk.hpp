@@ -26,6 +26,21 @@
 #include <string>
 #include <utility>
 
+#if __has_include(<filesystem>)
+
+#include <filesystem>
+namespace filesystem = std::filesystem;
+
+#elif __has_include(<experimental/filesystem>)
+
+#include <experimental/filesystem>
+namespace filesystem = std::experimental::filesystem;
+
+#else
+#error "an implementation of filesystem is required!"
+#endif
+
+
 #include "util.hpp"
 #include "encoding.hpp"
 #include "calculate_bucket.hpp"
@@ -71,12 +86,31 @@ class DiskPlotter {
     // This method creates a plot on disk with the filename. A temporary file, "plotting" + filename,
     // is created and will be larger than the final plot file. This file is deleted at the end of
     // the process.
-    void CreatePlotDisk(std::string filename, uint8_t k, const uint8_t* memo,
+    void CreatePlotDisk(std::string tmp_dirname, std::string final_dirname, std::string filename,
+                        uint8_t k, const uint8_t* memo,
                         uint32_t memo_len, const uint8_t* id, uint32_t id_len) {
-        std::cout << std::endl << "Starting plotting progress into file " << filename << "." << std::endl;
+        std::cout << std::endl << "Starting plotting progress into temporary dir " << tmp_dirname << "." << std::endl;
         std::cout << "Memo: " << Util::HexStr(memo, memo_len) << std::endl;
         std::cout << "ID: " << Util::HexStr(id, id_len) << std::endl;
         std::cout << "Plot size is: " << static_cast<int>(k) << std::endl;
+
+        // Cross platform way to concatenate paths, c++17.
+        filesystem::path tmp_1_filename = filesystem::path(tmp_dirname) / filesystem::path(filename + ".tmp");
+        filesystem::path tmp_2_filename = filesystem::path(tmp_dirname) / filesystem::path(filename + ".2.tmp");
+        filesystem::path final_filename = filesystem::path(final_dirname) / filesystem::path(filename);
+
+        // Check if the paths exist
+        if (!filesystem::exists(tmp_dirname)) {
+            std::string err_string = "Directory " + tmp_dirname + " does not exist";
+            std::cerr << err_string << std::endl;
+            throw err_string;
+        }
+
+        if (!filesystem::exists(final_dirname)) {
+            std::string err_string = "Directory " + final_dirname + " does not exist";
+            std::cerr << err_string << std::endl;
+            throw err_string;
+        }
 
         // These variables are used in the WriteParkToFile method. They are preallocatted here
         // to save time.
@@ -88,27 +122,27 @@ class DiskPlotter {
         assert(k >= kMinPlotSize);
         assert(k <= kMaxPlotSize);
 
-        std::string plot_filename = filename + ".tmp";
+        std::cout << std::endl << "Starting phase 1/4: Forward Propagation... " << Timer::GetNow();
 
-        std::cout << std::endl << "Starting phase 1/4: Forward Propagation..." << std::endl;
         Timer p1;
         Timer all_phases;
-        std::vector<uint64_t> results = WritePlotFile(plot_filename, k, id, memo, memo_len);
+        std::vector<uint64_t> results = WritePlotFile(tmp_1_filename, k, id, memo, memo_len);
         p1.PrintElapsed("Time for phase 1 =");
 
-        std::cout << std::endl << "Starting phase 2/4: Backpropagation..." << std::endl;
+        std::cout << std::endl << "Starting phase 2/4: Backpropagation into " << tmp_1_filename << " and " << tmp_2_filename << " ..." << Timer::GetNow();
+
         Timer p2;
-        Backpropagate(filename, plot_filename, k, id, memo, memo_len, results);
+        Backpropagate(tmp_2_filename, tmp_1_filename, k, id, memo, memo_len, results);
         p2.PrintElapsed("Time for phase 2 =");
 
-        std::cout << std::endl << "Starting phase 3/4: Compression..." << std::endl;
+        std::cout << std::endl << "Starting phase 3/4: Compression... " << Timer::GetNow();
         Timer p3;
-        Phase3Results res = CompressTables(k, results, filename, plot_filename, id, memo, memo_len);
+        Phase3Results res = CompressTables(k, results, tmp_2_filename, tmp_1_filename, id, memo, memo_len);
         p3.PrintElapsed("Time for phase 3 =");
 
-        std::cout << std::endl << "Starting phase 4/4: Write Checkpoint tables..." << std::endl;
+        std::cout << std::endl << "Starting phase 4/4: Write Checkpoint tables... " << Timer::GetNow();
         Timer p4;
-        WriteCTables(k, k + 1, filename, plot_filename, res);
+        WriteCTables(k, k + 1, tmp_2_filename, tmp_1_filename, res);
         p4.PrintElapsed("Time for phase 4 =");
 
         std::cout << "Approximate working space used: " <<
@@ -117,7 +151,14 @@ class DiskPlotter {
                      static_cast<double>(res.final_table_begin_pointers[11])/(1024*1024*1024) << " GB" << std::endl;
         all_phases.PrintElapsed("Total time =");
 
-        remove(plot_filename.c_str());
+        bool removed_1 = filesystem::remove(tmp_1_filename);
+        filesystem::copy(tmp_2_filename, final_filename, filesystem::copy_options::overwrite_existing);
+
+        bool removed_2 = filesystem::remove(tmp_2_filename);
+
+        std::cout << "Removed " << tmp_1_filename << "? " << removed_1 << std::endl;
+        std::cout << "Removed " << tmp_2_filename << "? " << removed_2 << std::endl;
+        std::cout << "Copied final file to " << final_filename << std::endl;
 
         delete[] first_line_point_bytes;
         delete[] park_stubs_bytes;
@@ -885,7 +926,7 @@ class DiskPlotter {
              deltas_bits.ToBytes(park_deltas_bytes);
 
              uint16_t encoded_size = deltas_bits.GetSize() / 8;
-        
+
              assert((uint32_t)(encoded_size + 2) < CalculateMaxDeltasSize(k, table_index));
              writer.write((const char*)&encoded_size, 2);
              writer.write((const char*)park_deltas_bytes, encoded_size);

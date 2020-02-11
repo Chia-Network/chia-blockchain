@@ -2,11 +2,14 @@ import asyncio
 import logging
 import logging.config
 import signal
-import sys
-from typing import Dict, List
+from typing import List, Dict
 
 import miniupnpc
-import uvloop
+
+try:
+    import uvloop
+except ImportError:
+    uvloop = None
 
 from src.blockchain import Blockchain
 from src.consensus.constants import constants
@@ -16,33 +19,27 @@ from src.rpc.rpc_server import start_rpc_server
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.types.full_block import FullBlock
-from src.types.header_block import HeaderBlock
+from src.types.header_block import SmallHeaderBlock
 from src.types.peer_info import PeerInfo
-from src.util.network import parse_host_port
 from src.util.logging import initialize_logging
+from src.util.config import load_config_cli
 from setproctitle import setproctitle
-
-setproctitle("chia_full_node")
-initialize_logging("FullNode %(name)-23s")
-log = logging.getLogger(__name__)
-
-server_closed = False
 
 
 async def load_header_blocks_from_store(
     store: FullNodeStore,
-) -> Dict[str, HeaderBlock]:
-    seen_blocks: Dict[str, HeaderBlock] = {}
-    tips: List[HeaderBlock] = []
-    async for full_block in store.get_blocks():
-        if not tips or full_block.weight > tips[0].weight:
-            tips = [full_block.header_block]
-        seen_blocks[full_block.header_hash] = full_block.header_block
+) -> Dict[str, SmallHeaderBlock]:
+    seen_blocks: Dict[str, SmallHeaderBlock] = {}
+    tips: List[SmallHeaderBlock] = []
+    for small_header_block in await store.get_small_header_blocks():
+        if not tips or small_header_block.weight > tips[0].weight:
+            tips = [small_header_block]
+        seen_blocks[small_header_block.header_hash] = small_header_block
 
     header_blocks = {}
     if len(tips) > 0:
-        curr: HeaderBlock = tips[0]
-        reverse_blocks: List[HeaderBlock] = [curr]
+        curr: SmallHeaderBlock = tips[0]
+        reverse_blocks: List[SmallHeaderBlock] = [curr]
         while curr.height > 0:
             curr = seen_blocks[curr.prev_header_hash]
             reverse_blocks.append(curr)
@@ -53,42 +50,49 @@ async def load_header_blocks_from_store(
 
 
 async def main():
+    config = load_config_cli("config.yaml", "full_node")
+    setproctitle("chia_full_node")
+    initialize_logging("FullNode %(name)-23s", config["logging"])
+
+    log = logging.getLogger(__name__)
+    server_closed = False
+
     # Create the store (DB) and full node instance
-    db_id = 0
-    if "-id" in sys.argv:
-        db_id = int(sys.argv[sys.argv.index("-id") + 1])
-    store = await FullNodeStore.create(f"blockchain_{db_id}.db")
+    store = await FullNodeStore.create(f"blockchain_{config['database_id']}.db")
 
     genesis: FullBlock = FullBlock.from_bytes(constants["GENESIS_BLOCK"])
     await store.add_block(genesis)
 
     log.info("Initializing blockchain from disk")
-    header_blocks: Dict[str, HeaderBlock] = await load_header_blocks_from_store(store)
-    blockchain = await Blockchain.create(header_blocks)
+    small_header_blocks: Dict[
+        str, SmallHeaderBlock
+    ] = await load_header_blocks_from_store(store)
+    blockchain = await Blockchain.create(small_header_blocks)
 
-    full_node = FullNode(store, blockchain)
-    # Starts the full node server (which full nodes can connect to)
-    host, port = parse_host_port(full_node)
+    full_node = FullNode(store, blockchain, config)
 
-    if full_node.config["enable_upnp"]:
-        log.info(f"Attempting to enable UPnP (open up port {port})")
+    if config["enable_upnp"]:
+        log.info(f"Attempting to enable UPnP (open up port {config['port']})")
         try:
             upnp = miniupnpc.UPnP()
             upnp.discoverdelay = 5
             upnp.discover()
             upnp.selectigd()
-            upnp.addportmapping(port, "TCP", upnp.lanaddr, port, "chia", "")
-            log.info(f"Port {port} opened with UPnP.")
+            upnp.addportmapping(
+                config["port"], "TCP", upnp.lanaddr, config["port"], "chia", ""
+            )
+            log.info(f"Port {config['port']} opened with UPnP.")
         except Exception as e:
             log.warning(f"UPnP failed: {e}")
 
-    server = ChiaServer(port, full_node, NodeType.FULL_NODE)
+    # Starts the full node server (which full nodes can connect to)
+    server = ChiaServer(config["port"], full_node, NodeType.FULL_NODE)
     full_node._set_server(server)
-    _ = await server.start_server(host, full_node._on_connect)
+    _ = await server.start_server(config["host"], full_node._on_connect)
     rpc_cleanup = None
 
     def master_close_cb():
-        global server_closed
+        nonlocal server_closed
         if not server_closed:
             # Called by the UI, when node is closed, or when a signal is sent
             log.info("Closing all connections, and server...")
@@ -96,17 +100,14 @@ async def main():
             server.close_all()
             server_closed = True
 
-    if "-r" in sys.argv:
+    if config["start_rpc_server"]:
         # Starts the RPC server if -r is provided
-        index = sys.argv.index("-r")
-        rpc_port = int(sys.argv[index + 1])
-        rpc_cleanup = await start_rpc_server(full_node, master_close_cb, rpc_port)
+        rpc_cleanup = await start_rpc_server(
+            full_node, master_close_cb, config["rpc_port"]
+        )
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
-
-    connect_to_farmer = "-f" in sys.argv
-    connect_to_timelord = "-t" in sys.argv
 
     full_node._start_bg_tasks()
 
@@ -114,14 +115,14 @@ async def main():
     await asyncio.sleep(3)
     log.info(f"Connected to {len(server.global_connections.get_connections())} peers.")
 
-    if connect_to_farmer and not server_closed:
+    if config["connect_to_farmer"] and not server_closed:
         peer_info = PeerInfo(
             full_node.config["farmer_peer"]["host"],
             full_node.config["farmer_peer"]["port"],
         )
         _ = await server.start_client(peer_info, None)
 
-    if connect_to_timelord and not server_closed:
+    if config["connect_to_timelord"] and not server_closed:
         peer_info = PeerInfo(
             full_node.config["timelord_peer"]["host"],
             full_node.config["timelord_peer"]["port"],
@@ -130,15 +131,20 @@ async def main():
 
     # Awaits for server and all connections to close
     await server.await_closed()
+    log.info("Closed all node servers.")
 
     # Waits for the rpc server to close
     if rpc_cleanup is not None:
         await rpc_cleanup()
+    log.info("Closed RPC server.")
 
     await store.close()
+    log.info("Closed store.")
+
     await asyncio.get_running_loop().shutdown_asyncgens()
     log.info("Node fully closed.")
 
 
-uvloop.install()
+if uvloop is not None:
+    uvloop.install()
 asyncio.run(main())

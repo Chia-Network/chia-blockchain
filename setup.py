@@ -8,7 +8,6 @@ dependencies = [
     "pyyaml",           # Used for config file format
     "asyncssh",         # Used for SSH server for UI
     "miniupnpc",        # Allows users to open ports on their router
-    "uvloop",           # Faster replacement to asyncio
     "aiosqlite",        # asyncio wrapper for sqlite, to store blocks
     "aiohttp",          # HTTP server for full node rpc
     "setuptools-scm",   # Used for versioning
@@ -35,6 +34,9 @@ setup(
     keywords="chia blockchain node",
     install_requires=dependencies + dev_dependencies,
     setup_requires=["setuptools_scm"],
+    extras_require={
+        'uvloop':  ["uvloop"],
+    },
     use_scm_version={"fallback_version": "unknown-no-.git-directory"},
     long_description=open("README.md").read(),
     zip_safe=False,

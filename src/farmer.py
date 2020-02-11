@@ -1,12 +1,9 @@
 import logging
-import os
 from hashlib import sha256
 from typing import Any, Dict, List, Set
 
 from blspy import PrependSignature, PrivateKey, Util
-from yaml import safe_load
 
-from definitions import ROOT_DIR
 from src.consensus.block_rewards import calculate_block_reward
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_iterations_quality
@@ -27,15 +24,9 @@ HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 
 
 class Farmer:
-    def __init__(self):
-        config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
-        key_config_filename = os.path.join(ROOT_DIR, "config", "keys.yaml")
-        if not os.path.isfile(key_config_filename):
-            raise RuntimeError(
-                "Keys not generated. Run python3.7 ./scripts/regenerate_keys.py."
-            )
-        self.config = safe_load(open(config_filename, "r"))["farmer"]
-        self.key_config = safe_load(open(key_config_filename, "r"))
+    def __init__(self, farmer_config: Dict, key_config: Dict):
+        self.config = farmer_config
+        self.key_config = key_config
         self.harvester_responses_header_hash: Dict[bytes32, bytes32] = {}
         self.harvester_responses_challenge: Dict[bytes32, bytes32] = {}
         self.harvester_responses_proofs: Dict[bytes32, ProofOfSpace] = {}
