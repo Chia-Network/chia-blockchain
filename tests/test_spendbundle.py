@@ -1,4 +1,4 @@
-from src.util.Hash import std_hash
+from src.util.hash import std_hash
 from src.util.condition_tools import (
     conditions_by_opcode,
     aggsig_in_conditions_dict,
@@ -17,7 +17,7 @@ def test_1():
 
     conditions = [
         make_create_coin_condition(std_hash(bytes(pp)), amount)
-        for pp, amount in [(puzzle_program_1, 1000), (puzzle_program_2, 2000),]
+        for pp, amount in [(puzzle_program_1, 1000), (puzzle_program_2, 2000), ]
     ]
 
     assert conditions is not None

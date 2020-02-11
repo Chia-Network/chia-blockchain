@@ -1,8 +1,7 @@
-from hashlib import sha256
-
 from src.consensus.pot_iterations import calculate_iterations_quality
 from src.consensus.pos_quality import _expected_plot_size
 from src.util.ints import uint8, uint64
+from src.util.hash import std_hash
 
 
 class TestPotIterations:
@@ -33,7 +32,7 @@ class TestPotIterations:
 
         for b_index in range(total_blocks):
             qualities = [
-                sha256(b_index.to_bytes(32, "big") + bytes(farmer_index)).digest()
+                std_hash(b_index.to_bytes(32, "big") + bytes(farmer_index))
                 for farmer_index in range(len(farmer_ks))
             ]
             iters = [

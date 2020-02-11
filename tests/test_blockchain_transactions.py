@@ -240,6 +240,7 @@ class TestBlockchainTransactions:
         )
 
         # Invalid block bundle
+        assert bad_spend_bundle is not None
         invalid_program = best_solution_program(bad_spend_bundle)
         aggsig = bad_spend_bundle.aggregated_signature
 
@@ -258,6 +259,7 @@ class TestBlockchainTransactions:
         assert error is Err.ASSERT_MY_COIN_ID_FAILED
 
         # Valid block bundle
+        assert valid_spend_bundle is not None
         valid_program = best_solution_program(valid_spend_bundle)
         aggsig = valid_spend_bundle.aggregated_signature
 
@@ -314,6 +316,7 @@ class TestBlockchainTransactions:
         )
 
         # Invalid block bundle
+        assert block1_spend_bundle is not None
         solo_program = best_solution_program(block1_spend_bundle)
         aggsig = block1_spend_bundle.aggregated_signature
 
@@ -384,6 +387,7 @@ class TestBlockchainTransactions:
         )
 
         # program that will be sent to early
+        assert block1_spend_bundle is not None
         program = best_solution_program(block1_spend_bundle)
         aggsig = block1_spend_bundle.aggregated_signature
 
@@ -452,6 +456,7 @@ class TestBlockchainTransactions:
         )
 
         # program that will be sent to early
+        assert block1_spend_bundle is not None
         program = best_solution_program(block1_spend_bundle)
         aggsig = block1_spend_bundle.aggregated_signature
 
@@ -520,6 +525,7 @@ class TestBlockchainTransactions:
         )
 
         # program that will be sent to early
+        assert block1_spend_bundle is not None
         program = best_solution_program(block1_spend_bundle)
         aggsig = block1_spend_bundle.aggregated_signature
 

@@ -5,10 +5,10 @@ import dataclasses
 import io
 import pprint
 import json
-from hashlib import sha256
 from typing import Any, BinaryIO, List, Type, get_type_hints, Union
 from src.util.byte_types import hexstr_to_bytes
 from src.types.hashable.Program import Program
+from src.util.hash import std_hash
 
 from blspy import (
     ChainCode,
@@ -190,7 +190,7 @@ class Streamable:
             self.stream_one_item(f_type, getattr(self, f_name), f)
 
     def get_hash(self) -> bytes32:
-        return bytes32(sha256(bytes(self)).digest())
+        return bytes32(std_hash(bytes(self)))
 
     @classmethod
     def from_bytes(cls: Any, blob: bytes) -> Any:

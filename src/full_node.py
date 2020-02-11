@@ -23,7 +23,7 @@ from src.types.challenge import Challenge
 from src.types.full_block import FullBlock
 from src.types.hashable.Coin import Coin
 from src.types.hashable.BLSSignature import BLSSignature
-from src.util.Hash import std_hash
+from src.util.hash import std_hash
 from src.types.hashable.SpendBundle import SpendBundle
 from src.types.hashable.Program import Program
 from src.types.header import Header, HeaderData

@@ -6,7 +6,7 @@ from clvm.serialize import sexp_from_stream, sexp_to_stream
 from clvm.subclass_sexp import BaseSExp
 
 from src.types.sized_bytes import bytes32
-from src.util.Hash import std_hash
+from src.util.hash import std_hash
 
 SExp = to_sexp_f(1).__class__
 

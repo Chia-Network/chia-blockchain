@@ -1,5 +1,4 @@
 import argparse
-from hashlib import sha256
 from pathlib import Path
 
 from blspy import PrivateKey, PublicKey
@@ -9,6 +8,7 @@ from chiapos import DiskProver, Verifier
 from definitions import ROOT_DIR
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
+from src.util.hash import std_hash
 
 plot_root = ROOT_DIR / "plots"
 plot_config_filename = ROOT_DIR / "config" / "plots.yaml"
@@ -49,7 +49,7 @@ def main():
             total_proofs = 0
             try:
                 for i in range(args.num):
-                    challenge = sha256(i.to_bytes(32, "big")).digest()
+                    challenge = std_hash(i.to_bytes(32, "big"))
                     for index, quality_str in enumerate(
                         pr.get_qualities_for_challenge(challenge)
                     ):

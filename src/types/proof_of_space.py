@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from hashlib import sha256
 from typing import Optional
 
 from blspy import PublicKey
@@ -8,6 +7,7 @@ from chiapos import Verifier
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint8
 from src.util.streamable import Streamable, streamable
+from src.util.hash import std_hash
 
 
 @dataclass(frozen=True)
@@ -34,4 +34,4 @@ class ProofOfSpace(Streamable):
 
     @staticmethod
     def calculate_plot_seed(pool_pubkey: PublicKey, plot_pubkey: PublicKey) -> bytes32:
-        return bytes32(sha256(bytes(pool_pubkey) + bytes(plot_pubkey)).digest())
+        return bytes32(std_hash(bytes(pool_pubkey) + bytes(plot_pubkey)).digest())

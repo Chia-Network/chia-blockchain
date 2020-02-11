@@ -1,6 +1,5 @@
 import sys
 import time
-from hashlib import sha256
 from typing import Any, Dict, List, Tuple, Optional
 from pathlib import Path
 
@@ -28,6 +27,7 @@ from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.util.errors import NoProofsOfSpaceFound
 from src.util.ints import uint8, uint32, uint64
+from src.util.hash import std_hash
 
 # Can't go much lower than 19, since plots start having no solutions
 k: uint8 = uint8(19)
@@ -42,8 +42,8 @@ plot_sks: List[PrivateKey] = [
 plot_pks: List[PublicKey] = [sk.get_public_key() for sk in plot_sks]
 
 farmer_sk: PrivateKey = PrivateKey.from_seed(b"coinbase")
-coinbase_target = sha256(bytes(farmer_sk.get_public_key())).digest()
-fee_target = sha256(bytes(farmer_sk.get_public_key())).digest()
+coinbase_target = std_hash(bytes(farmer_sk.get_public_key()))
+fee_target = std_hash(bytes(farmer_sk.get_public_key()))
 n_wesolowski = uint8(3)
 
 
@@ -64,7 +64,7 @@ class BlockTools:
         self.filenames: List[str] = [
             "genesis-plots-"
             + str(k)
-            + sha256(int.to_bytes(i, 4, "big")).digest().hex()
+            + std_hash(int.to_bytes(i, 4, "big")).hex()
             + ".dat"
             for i in range(num_plots)
         ]
@@ -117,7 +117,7 @@ class BlockTools:
             else:
                 block_list.append(
                     self.create_genesis_block(
-                        test_constants, sha256(seed).digest(), seed
+                        test_constants, std_hash(seed), seed
                     )
                 )
             prev_difficulty = test_constants["DIFFICULTY_STARTING"]
