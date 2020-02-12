@@ -1316,3 +1316,14 @@ class FullNode:
         yield OutboundMessage(
             NodeType.WALLET, Message("full_proof_for_hash", proof), Delivery.RESPOND
         )
+
+    @api_request
+    async def wallet_transaction(self, spend_bundle: SpendBundle) -> OutboundMessageGenerator:
+        added, error = self.mempool_manager.add_spendbundle(spend_bundle)
+        if added:
+            yield OutboundMessage(
+                NodeType.WALLET, Message("transaction_ack", spend_bundle.name()), Delivery.RESPOND
+            )
+            yield OutboundMessage(
+                NodeType.FULL_NODE, Message("maybe_transaction", spend_bundle.name()), Delivery.BROADCAST
+            )

@@ -34,7 +34,9 @@ async def main():
     full_node_peer = PeerInfo(
         config["full_node_peer"]["host"], config["full_node_peer"]["port"]
     )
+
     server = ChiaServer(config["port"], wallet, NodeType.WALLET)
+    wallet.set_server(server)
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
