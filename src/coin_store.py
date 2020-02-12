@@ -54,7 +54,8 @@ class CoinStore:
                 f" spent int,"
                 f" coinbase int,"
                 f" puzzle_hash text,"
-                f" coin_record blob)"
+                f" coin_parent text,"
+                f" amount bigint)"
             )
         )
 
@@ -165,7 +166,7 @@ class CoinStore:
     # Store CoinRecord in DB and ram cache
     async def add_coin_record(self, record: CoinRecord) -> None:
         cursor = await self.coin_record_db.execute(
-            "INSERT OR REPLACE INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 record.coin.name().hex(),
                 record.confirmed_block_index,
@@ -173,7 +174,8 @@ class CoinStore:
                 int(record.spent),
                 int(record.coinbase),
                 str(record.coin.puzzle_hash.hex()),
-                bytes(record),
+                str(record.coin.parent_coin_info.hex()),
+                record.coin.amount,
             ),
         )
         await cursor.close()
@@ -210,7 +212,10 @@ class CoinStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            return CoinRecord(Coin.from_bytes(row[6]), row[1], row[2], row[3], row[4])
+            coin = Coin(bytes32(bytes.fromhex(row[6])),
+                        bytes32(bytes.fromhex(row[5])),
+                        row[7])
+            return CoinRecord(coin, row[1], row[2], row[3], row[4])
         return None
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
@@ -229,12 +234,14 @@ class CoinStore:
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
+            coin = Coin(bytes32(bytes.fromhex(row[6])),
+                        bytes32(bytes.fromhex(row[5])),
+                        row[7])
             coins.add(
-                CoinRecord(Coin.from_bytes(row[6]), row[1], row[2], row[3], row[4])
+                CoinRecord(coin, row[1], row[2], row[3], row[4])
             )
         return list(coins)
 
-    # TODO figure out if we want to really delete when doing rollback
     async def rollback_lca_to_block(self, block_index):
         # Update memory cache
         delete_queue: bytes32 = []
