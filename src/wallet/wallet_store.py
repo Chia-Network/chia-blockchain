@@ -10,18 +10,6 @@ from src.types.header import Header
 from src.util.ints import uint32
 
 
-class DiffStore:
-    header: Header
-    diffs: Dict[bytes32, CoinRecord]
-
-    @staticmethod
-    async def create(header: Header, diffs: Dict[bytes32, CoinRecord]):
-        self = DiffStore()
-        self.header = header
-        self.diffs = diffs
-        return self
-
-
 class WalletStore:
     """
     This object handles CoinRecords in DB.
@@ -35,7 +23,6 @@ class WalletStore:
     sync_mode: bool = False
     lock: asyncio.Lock
     lca_coin_records: Dict[str, CoinRecord]
-    head_diffs: Dict[bytes32, DiffStore]
     cache_size: uint32
 
     @classmethod
@@ -80,7 +67,6 @@ class WalletStore:
         # Lock
         self.lock = asyncio.Lock()  # external
         self.lca_coin_records = dict()
-        self.head_diffs = dict()
         return self
 
     async def close(self):
@@ -113,55 +99,6 @@ class WalletStore:
         )
         await self.add_coin_record(coinbase)
         await self.add_coin_record(fees_coin)
-
-    def nuke_diffs(self):
-        self.head_diffs.clear()
-
-    # Received new tip, just update diffs
-    async def new_heads(self, blocks: List[FullBlock]):
-        last: FullBlock = blocks[-1]
-        diff_store: DiffStore = await DiffStore.create(last.header, dict())
-
-        block: FullBlock
-        for block in blocks:
-            removals, additions = await block.tx_removals_and_additions()
-            await self.add_diffs(removals, additions, block, diff_store)
-
-        self.head_diffs[last.header_hash] = diff_store
-
-    async def add_diffs(
-        self,
-        removals: List[bytes32],
-        additions: List[Coin],
-        block: FullBlock,
-        diff_store: DiffStore,
-    ):
-
-        for coin_name in removals:
-            removed: Optional[CoinRecord] = None
-            if coin_name.hex() in diff_store.diffs:
-                removed = diff_store.diffs[coin_name.hex()]
-            if removed is None:
-                removed = await self.get_coin_record(coin_name)
-            if removed is None:
-                raise Exception
-            spent = CoinRecord(
-                removed.coin,
-                removed.confirmed_block_index,
-                block.height,
-                True,
-                removed.coinbase,
-            )  # type: ignore # noqa
-            diff_store.diffs[spent.name.hex()] = spent
-
-        for coin in additions:
-            added: CoinRecord = CoinRecord(coin, block.height, 0, 0, 0)  # type: ignore # noqa
-            diff_store.diffs[added.name.hex()] = added
-
-        coinbase: CoinRecord = CoinRecord(block.body.coinbase, block.height, 0, 0, 1)  # type: ignore # noqa
-        diff_store.diffs[coinbase.name.hex()] = coinbase
-        fees_coin: CoinRecord = CoinRecord(block.body.fees_coin, block.height, 0, 0, 1)  # type: ignore # noqa
-        diff_store.diffs[fees_coin.name.hex()] = fees_coin
 
     # Store CoinRecord in DB and ram cache
     async def add_coin_record(self, record: CoinRecord) -> None:
