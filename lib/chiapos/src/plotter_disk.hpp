@@ -19,7 +19,6 @@
 #include <stdio.h>
 
 #include <iostream>
-#include <fstream>
 #include <map>
 #include <algorithm>
 #include <vector>
@@ -46,6 +45,7 @@ namespace filesystem = std::experimental::filesystem;
 #include "calculate_bucket.hpp"
 #include "sort_on_disk.hpp"
 #include "pos_constants.hpp"
+#include "streams.hpp"
 
 // Constants that are only relevant for the plotting process.
 // Other constants can be found in pos_constants.hpp
@@ -89,11 +89,6 @@ class DiskPlotter {
     void CreatePlotDisk(std::string tmp_dirname, std::string final_dirname, std::string filename,
                         uint8_t k, const uint8_t* memo,
                         uint32_t memo_len, const uint8_t* id, uint32_t id_len) {
-        std::cout << std::endl << "Starting plotting progress into temporary dir " << tmp_dirname << "." << std::endl;
-        std::cout << "Memo: " << Util::HexStr(memo, memo_len) << std::endl;
-        std::cout << "ID: " << Util::HexStr(id, id_len) << std::endl;
-        std::cout << "Plot size is: " << static_cast<int>(k) << std::endl;
-
         // Cross platform way to concatenate paths, c++17.
         filesystem::path tmp_1_filename = filesystem::path(tmp_dirname) / filesystem::path(filename + ".tmp");
         filesystem::path tmp_2_filename = filesystem::path(tmp_dirname) / filesystem::path(filename + ".2.tmp");
@@ -111,6 +106,45 @@ class DiskPlotter {
             std::cerr << err_string << std::endl;
             throw err_string;
         }
+
+        double expected_space;
+        if (k <= 30) {
+            expected_space = (7 * 0.762 * k) / (1.0 * (1 << (30 - k)));
+        } else {
+            expected_space = 7 * 0.762 * k * (1 << (k - 30));
+        }
+        filesystem::space_info info = filesystem::space(tmp_dirname);
+        std::cout << "Expected space to occupy while plotting: " << expected_space << " GB.\n";
+        std::cout << "Available space in the temporary location: " << 1.0 * info.available / (1 << 30) << " GB.\n";
+
+        // Checks if there is enough space in the temporary directory.
+        if (std::ceil(expected_space) > (info.available / (1 << 30))) {
+            std::cout << "Stopped plotting: please free up some space (temporary directory).\n";
+            return ;
+        }
+
+        // Checks if there is enough space in the final directory.
+        info = filesystem::space(final_dirname);
+        if (std::ceil(expected_space / 7.0) > (info.available / (1 << 30))) {
+            std::cout << "Stopped plotting: please free up some space (final directory).\n";
+            return ;
+        }
+
+        // Preallocate the files into the temporary directory.
+        std::cout << "Preallocating the space for the temporary file. \n";
+        long long length = static_cast<uint128_t>(6) * 762 * k * (1 << k) / 1000;        
+        if (!Util::Preallocate(tmp_1_filename, length))
+            return ;
+
+        std::cout << "Preallocating the space for the final file. \n";
+        length = static_cast<uint128_t>(762) * k * (1 << k) / 1000;        
+        if (!Util::Preallocate(tmp_2_filename, length))
+            return;
+
+        std::cout << std::endl << "Starting plotting progress into temporary dir " << tmp_dirname << std::endl;
+        std::cout << "Memo: " << Util::HexStr(memo, memo_len) << std::endl;
+        std::cout << "ID: " << Util::HexStr(id, id_len) << std::endl;
+        std::cout << "Plot size is: " << static_cast<int>(k) << std::endl;
 
         // These variables are used in the WriteParkToFile method. They are preallocatted here
         // to save time.
@@ -232,7 +266,7 @@ class DiskPlotter {
     uint8_t* park_deltas_bytes;
 
     // Writes the plot file header to a file
-    uint32_t WriteHeader(std::ofstream &plot_file, uint8_t k, const uint8_t* id, const uint8_t* memo,
+    uint32_t WriteHeader(StreamWriter &plot_file, uint8_t k, const uint8_t* id, const uint8_t* memo,
                          uint32_t memo_len) {
         // 19 bytes  - "Proof of Space Plot" (utf-8)
         // 32 bytes  - unique plot id
@@ -280,10 +314,7 @@ class DiskPlotter {
                                         const uint8_t* memo, uint8_t memo_len) {
         // Note that the plot file is not the final file that will be stored on disk,
         // it is only present during plotting.
-        std::ofstream plot_file(plot_filename, std::ios::out | std::ios::trunc | std::ios::binary);
-        if (!plot_file.is_open()) {
-            throw std::string("File not opened correct");
-        }
+        StreamWriter plot_file(plot_filename);
         uint32_t header_size = WriteHeader(plot_file, k, id, memo, memo_len);
 
         std::cout << "Computing table 1" << std::endl;
@@ -356,6 +387,9 @@ class DiskPlotter {
         // For tables 1 through 6, sort the table, calculate matches, and write
         // the next table. This is the left table index.
         for (uint8_t table_index = 1; table_index < 7; table_index++) {
+            filesystem::space_info space = filesystem::space(filesystem::path(plot_filename));
+            std::cout << "Available space checkpoint in the temporary: " << 1.0 * space.available / (1 << 30) << " GB.\n";
+
             Timer table_timer;
             uint8_t metadata_size = kVectorLens[table_index + 1] * k;
 
@@ -385,8 +419,8 @@ class DiskPlotter {
             // Streams to read and right to tables. We will have handles to two tables. We will
             // read through the left table, compute matches, and evaluate f for matching entries,
             // writing results to the right table.
-            std::ifstream left_reader(plot_filename, std::fstream::in | std::fstream::binary);
-            std::fstream right_writer(plot_filename, std::fstream::out | std::fstream::in | std::fstream::binary);
+            StreamReader left_reader(plot_filename);
+            StreamWriter right_writer(plot_filename);
 
             left_reader.seekg(begin_byte);
             right_writer.seekp(begin_byte_next);
@@ -590,14 +624,17 @@ class DiskPlotter {
 
         // Iterates through each table (with a left and right pointer), starting at 6 & 7.
         for (uint8_t table_index = 7; table_index > 1; --table_index) {
+            filesystem::space_info space = filesystem::space(filesystem::path(plot_filename));
+            std::cout << "Available space checkpoint in the temporary: " << 1.0 * space.available / (1 << 30) << " GB.\n";
+
             //std::vector<std::pair<uint64_t, uint64_t> > match_positions;
             Timer table_timer;
 
             // We will have reader and writer for both tables.
-            std::ifstream left_reader(plot_filename, std::ios::in | std::ios::binary);
-            std::ofstream left_writer(plot_filename, std::ios::in | std::ios::out | std::ios::binary);
-            std::ifstream right_reader(plot_filename, std::ios::in | std::ios::binary);
-            std::ofstream right_writer(plot_filename, std::ios::in | std::ios::out | std::ios::binary);
+            StreamReader left_reader(plot_filename);
+            StreamWriter left_writer(plot_filename);
+            StreamReader right_reader(plot_filename);
+            StreamWriter right_writer(plot_filename);
 
             std::cout << "Backpropagating on table " << int{table_index} << std::endl;
 
@@ -887,7 +924,7 @@ class DiskPlotter {
     // the delta bits are optimized into a variable encoding scheme. Since we have many entries in each
     // park, we can approximate how much space each park with take.
     // Format is: [2k bits of first_line_point]  [EPP-1 stubs] [Deltas size] [EPP-1 deltas]....  [first_line_point] ...
-    void WriteParkToFile(std::ofstream &writer, uint64_t table_start, uint64_t park_index, uint32_t park_size_bytes,
+    void WriteParkToFile(StreamWriter &writer, uint64_t table_start, uint64_t park_index, uint32_t park_size_bytes,
                          uint128_t first_line_point, const std::vector<uint8_t>& park_deltas,
                          const std::vector<uint64_t>& park_stubs, uint8_t k, uint8_t table_index) {
         // Parks are fixed size, so we know where to start writing. The deltas will not go over
@@ -948,10 +985,7 @@ class DiskPlotter {
                                  std::string plot_filename, const uint8_t* id, const uint8_t* memo,
                                  uint32_t memo_len) {
         // In this phase we open a new file, where the final contents of the plot will be stored.
-        std::ofstream header_writer(filename, std::ios::out | std::ios::trunc | std::ios::binary);
-        if (!header_writer.is_open()) {
-            throw std::string("Final file not opened correct");
-        }
+        StreamWriter header_writer(filename);
         uint32_t header_size = WriteHeader(header_writer, k, id, memo, memo_len);
 
         uint8_t pos_size = k + 1;
@@ -980,12 +1014,15 @@ class DiskPlotter {
         // are written to disk to a final table. Finally, table_i is sorted by sort_key. This allows us to
         // compare to the next table.
         for (uint8_t table_index = 1; table_index < 7; table_index++) {
+            filesystem::space_info space = filesystem::space(filesystem::path(plot_filename));
+            std::cout << "Available space checkpoint in the temporary: " << 1.0 * space.available / (1 << 30) << " GB.\n";
+
             Timer table_timer;
             Timer computation_pass_1_timer;
             std::cout << "Compressing tables " << int{table_index} << " and " << int{table_index + 1} << std::endl;
-            std::ifstream left_reader(plot_filename, std::ios::in | std::ios::binary);
-            std::ifstream right_reader(plot_filename, std::ios::in | std::ios::binary);
-            std::ofstream right_writer(plot_filename, std::ios::in | std::ios::out | std::ios::binary);
+            StreamReader left_reader(plot_filename);
+            StreamReader right_reader(plot_filename);
+            StreamWriter right_writer(plot_filename);
 
             // The park size must be constant, for simplicity, but must be big enough to store EPP entries.
             // entry deltas are encoded with variable length, and thus there is no guarantee that they
@@ -1142,12 +1179,12 @@ class DiskPlotter {
             sort_timer.PrintElapsed("\tSort time:");
             Timer computation_pass_2_timer;
 
-            std::ifstream right_reader_2(plot_filename, std::ios::in | std::ios::binary);
-            std::ofstream right_writer_2(plot_filename, std::ios::in | std::ios::out | std::ios::binary);
+            StreamReader right_reader_2(plot_filename);
+            StreamWriter right_writer_2(plot_filename);
             right_reader_2.seekg(plot_table_begin_pointers[table_index + 1]);
             right_writer_2.seekp(plot_table_begin_pointers[table_index + 1]);
 
-            std::ofstream final_table_writer(filename, std::ios::in | std::ios::out | std::ios::binary);
+            StreamWriter final_table_writer(filename);
             final_table_writer.seekp(final_table_begin_pointers[table_index]);
             final_entries_written = 0;
 
@@ -1286,10 +1323,10 @@ class DiskPlotter {
     // C3 (deltas of f7s between C1 checkpoints)
     void WriteCTables(uint8_t k, uint8_t pos_size, std::string filename, std::string plot_filename,
                       Phase3Results& res) {
-        std::ofstream final_file_writer_1(filename, std::ios::in | std::ios::out | std::ios::binary);
-        std::ofstream final_file_writer_2(filename, std::ios::in | std::ios::out | std::ios::binary);
-        std::ofstream final_file_writer_3(filename, std::ios::in | std::ios::out | std::ios::binary);
-        std::ifstream plot_file_reader(plot_filename, std::ios::in | std::ios::binary);
+        StreamWriter final_file_writer_1(filename);
+        StreamWriter final_file_writer_2(filename);
+        StreamWriter final_file_writer_3(filename);
+        StreamReader plot_file_reader(plot_filename);
 
         uint32_t P7_park_size = Util::ByteAlign((k+1) * kEntriesPerPark)/8;
         uint64_t number_of_p7_parks = ((res.final_entries_written == 0 ? 0 : res.final_entries_written - 1)

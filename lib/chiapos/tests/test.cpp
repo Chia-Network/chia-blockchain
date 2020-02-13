@@ -23,6 +23,7 @@
 #include "prover_disk.hpp"
 #include "verifier.hpp"
 #include "encoding.hpp"
+#include "streams.hpp"
 
 using namespace std;
 
@@ -632,4 +633,37 @@ TEST_CASE("Sort on disk") {
         delete[] memory;
     }
 
+}
+
+TEST_CASE("Streams") {
+    SECTION("Read succesfully") {
+        std::string filename("test.bin");
+        fstream file(filename, fstream::in | fstream::out | fstream::trunc | fstream::binary);
+        file.close();
+        StreamReader sr(filename);
+        StreamWriter sw(filename);
+        uint8_t bytes[] = {0, 1, 2, 3};
+        uint8_t buf[4];
+        sw.write(reinterpret_cast<char*>(bytes), 4);
+        sw.flush();
+        REQUIRE_NOTHROW(sr.read(reinterpret_cast<char*>(buf), 4));
+        for (uint8_t i = 0; i < 4; i++) {
+            REQUIRE(buf[i] == i);
+        }
+        remove(filename.c_str());
+    }
+
+    SECTION("Eof reached and read failed") {
+        std::string filename("test.bin");
+        fstream file(filename, fstream::in | fstream::out | fstream::trunc | fstream::binary);
+        file.close();
+        StreamReader sr(filename);
+        StreamWriter sw(filename);
+        uint8_t bytes[] = {0, 1, 2, 3};
+        uint8_t buf[5];
+        sw.write(reinterpret_cast<char*>(bytes), 4);
+        sw.flush();
+        REQUIRE_THROWS(sr.read(reinterpret_cast<char*>(buf), 5));
+        remove(filename.c_str());
+    }
 }

@@ -30,6 +30,17 @@
 #include <set>
 #include <map>
 #include <queue>
+#include <fstream>
+#include "streams.hpp"
+
+#if defined(__LINUX__) || defined(__APPLE__)
+
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/types.h> 
+#include <sys/stat.h> 
+
+#endif
 
 // __uint__128_t is only available in 64 bit architectures and on certain
 // compilers.
@@ -95,14 +106,14 @@ class Util {
         return s.str();
     }
 
-    static void WriteZeroesHeap(std::ofstream &file, uint32_t num_bytes) {
+    static void WriteZeroesHeap(StreamWriter &file, uint32_t num_bytes) {
         uint8_t* buf = new uint8_t[num_bytes];
         memset(buf, 0, num_bytes);
         file.write(reinterpret_cast<char*>(buf), num_bytes);
         delete[] buf;
     }
 
-    static void WriteZeroesStack(std::ofstream &file, uint32_t num_bytes) {
+    static void WriteZeroesStack(StreamWriter &file, uint32_t num_bytes) {
         uint8_t buf[num_bytes];
         memset(buf, 0, num_bytes);
         file.write(reinterpret_cast<char*>(buf), num_bytes);
@@ -262,6 +273,62 @@ class Util {
             }
         }
         return num_islands;
+    }
+
+    static bool Preallocate(const std::string& filename, long long length) {
+        Timer t_prealloc;
+
+        #if defined(__LINUX__) || defined(__APPLE__)
+            int fd = open(filename.c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0777);
+            if (fd == -1) {
+                std::cout << "Error while opening the file: " << errno << "\n";
+                return false;
+            }
+        #endif
+
+        #ifdef __LINUX__
+            if (fallocate(fd, 0, 0, length) == -1) {
+                std::cout << "Error while fallocating. Error number: " << errno << "\n";
+                return false;
+            } 
+            std::cout << "OK fallocate.\n";
+        #elif __APPLE__
+            fstore_t fstore;
+            fstore.fst_flags = F_ALLOCATEALL;
+            fstore.fst_posmode = F_PEOFPOSMODE;
+            fstore.fst_offset = 0;
+            fstore.fst_length = length;
+            fstore.fst_bytesalloc = 0;
+
+            if (fcntl(fd, F_PREALLOCATE, &fstore) == -1) {
+                std::cout << "Error while allocating! Error number: " << errno << "\n";
+                return false;
+            } 
+            std::cout << "OK allocated " << fstore.fst_bytesalloc << " bytes.\n";
+            //ftruncate(fd, length);
+        #elif
+            std::cout << "Preallocation not supported on this OS. Creating the file without preallocation.\n";
+            std::ofstream file_stream(filename, std::ios::out | std::ios::trunc | std::ios::binary);
+            if (!file_stream.is_open()) {
+                throw std::string("File not opened correctly");
+                return false;
+            }
+            file_stream.close();
+        #endif
+
+        #if defined(__LINUX__) || defined(__APPLE__)
+            struct stat buf;
+            int ret = fstat(fd, &buf);
+            if (ret == -1) {
+                std::cout << "Fstat failed... stopping.\n";
+                return false;
+            }
+            std::cout << "Blocks preallocated: " << buf.st_blocks << "\n";
+            close(fd);
+        #endif
+
+        t_prealloc.PrintElapsed("Preallocation time: ");
+        return true;
     }
 };
 
