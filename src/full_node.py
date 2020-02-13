@@ -1319,7 +1319,7 @@ class FullNode:
 
     @api_request
     async def wallet_transaction(self, spend_bundle: SpendBundle) -> OutboundMessageGenerator:
-        added, error = self.mempool_manager.add_spendbundle(spend_bundle)
+        added, error = await self.mempool_manager.add_spendbundle(spend_bundle)
         if added:
             yield OutboundMessage(
                 NodeType.WALLET, Message("transaction_ack", spend_bundle.name()), Delivery.RESPOND
