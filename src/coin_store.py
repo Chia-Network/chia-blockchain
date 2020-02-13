@@ -213,9 +213,9 @@ class CoinStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            coin = Coin(bytes32(bytes.fromhex(row[6])),
-                        bytes32(bytes.fromhex(row[5])),
-                        row[7])
+            coin = Coin(
+                bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
+            )
             return CoinRecord(coin, row[1], row[2], row[3], row[4])
         return None
 
@@ -235,12 +235,10 @@ class CoinStore:
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])),
-                        bytes32(bytes.fromhex(row[5])),
-                        row[7])
-            coins.add(
-                CoinRecord(coin, row[1], row[2], row[3], row[4])
+            coin = Coin(
+                bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
             )
+            coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4]))
         return list(coins)
 
     async def rollback_lca_to_block(self, block_index):
