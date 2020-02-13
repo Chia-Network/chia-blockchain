@@ -10,10 +10,7 @@ from src.util.ints import uint32
 
 class WalletStore:
     """
-    This object handles CoinRecords in DB.
-    Coins from genesis to LCA are stored on disk db, coins from lca to head are stored in DiffStore object for each tip.
-    When blockchain notifies UnspentStore of new LCA, LCA is added to the disk db,
-    DiffStores are updated/recreated. (managed by blockchain.py)
+    This object handles CoinRecords in DB used by wallet.
     """
 
     coin_record_db: aiosqlite.Connection
@@ -28,7 +25,7 @@ class WalletStore:
         self = cls()
 
         self.cache_size = cache_size
-        # All full blocks which have been added to the blockchain. Header_hash -> block
+
         self.coin_record_db = await aiosqlite.connect(db_path)
         await self.coin_record_db.execute(
             (
