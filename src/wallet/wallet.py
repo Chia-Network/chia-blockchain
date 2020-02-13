@@ -159,13 +159,13 @@ class Wallet:
         Try to use coins from the store, if there isn't enough of "unused" 
         coins use change coins that are not confirmed yet
         """
-        for coin in unspent:
+        for coinrecord in unspent:
             if sum >= amount:
                 break
-            if coin.name in self.unconfirmed_removals:
+            if coinrecord.coin.name in self.unconfirmed_removals:
                 continue
-            sum += coin.amount
-            used_coins.add(coin)
+            sum += coinrecord.coin.amount
+            used_coins.add(coinrecord.coin)
 
         """
         This happens when we couldn't use one of the coins because it's already used 
@@ -183,7 +183,7 @@ class Wallet:
         if sum >= amount:
             return used_coins
         else:
-            #This shouldn't happen because of: if amount > self.get_unconfirmed_balance():
+            # This shouldn't happen because of: if amount > self.get_unconfirmed_balance():
             return None
 
     def set_server(self, server: ChiaServer):
