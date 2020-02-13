@@ -22,9 +22,17 @@ class SendTransaction:
 
 @dataclass(frozen=True)
 @cbor_message
+class TransactionAck:
+    txid: bytes32
+    status: bool
+
+
+@dataclass(frozen=True)
+@cbor_message
 class NewLCA:
     lca_hash: bytes32
     height: uint32
+    weight: uint32
 
 
 @dataclass(frozen=True)
