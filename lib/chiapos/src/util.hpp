@@ -292,7 +292,7 @@ class Util {
                 return false;
             } 
             std::cout << "OK fallocate.\n";
-        #elif __APPLE__
+        #elif defined(__APPLE__)
             fstore_t fstore;
             fstore.fst_flags = F_ALLOCATEALL;
             fstore.fst_posmode = F_PEOFPOSMODE;
@@ -306,7 +306,7 @@ class Util {
             } 
             std::cout << "OK allocated " << fstore.fst_bytesalloc << " bytes.\n";
             //ftruncate(fd, length);
-        #elif
+        #else
             std::cout << "Preallocation not supported on this OS. Creating the file without preallocation.\n";
             std::ofstream file_stream(filename, std::ios::out | std::ios::trunc | std::ios::binary);
             if (!file_stream.is_open()) {
