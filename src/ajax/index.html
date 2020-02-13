@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html">
+  <title>Github API Webapp using jQuery - Treehouse Demo</title>
+  <meta name="author" content="Jake Rocheleau">
+  <link rel="shortcut icon" href="http://d15dxvojnvxp1x.cloudfront.net/assets/favicon.ico">
+  <link rel="icon" href="http://d15dxvojnvxp1x.cloudfront.net/assets/favicon.ico">
+  <script type="text/javascript" src="js/jquery-1.10.2.min.js"></script>
+</head>
+
+<body>
+  <div id="w">
+    <h1>Simple Github API Webapp</h1>
+    <p>Enter a single Github username below and click the button to display profile info via JSON.</p>
+    
+    <input type="text" name="ghusername" id="ghusername" placeholder="Github username...">
+    
+    <a href="#" id="ghsubmitbtn">Pull User Data</a>
+    
+    <div id="ghapidata" class="clearfix"></div>
+  </div>
+<script type = "text/javascript" >
+var added_blocks;
+var hashed_blocks;
+
+    $(function() {
+            $('#ghsubmitbtn').on('click', function(e) {
+                    e.preventDefault();
+                    $('#ghapidata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
+
+                    var username = $('#ghusername').val();
+
+
+
+                    jQuery.ajax({
+                            url: "http://127.0.0.1:8555/get_blockchain_state",
+                            type: "POST",
+                            crossDomain: true,
+                            data: null,
+                            dataType: "json",
+                            contentType: "application/json; charset=utf-8",
+                            success: function(data) {
+                                console.log(data);
+
+added_blocks=[];
+hashed_blocks=[];
+
+var tips=[];
+
+for (i = 0; i < data.tips.length; i++) {
+tips.push(JSON.parse(data.tips[i]));
+}
+lca_block = JSON.parse(data.lca);
+
+        var heads=data.tips;
+
+console.log(heads);
+
+function makeCall() {
+   // we're done - don't return a chained promise
+   if (!((added_blocks.length < 10) && (heads.length > 0)))
+     return;
+
+            heads.sort(function(a,b){
+    if(a.height < b.height){
+        return 1;
+    } else if(a.height == b.height){
+        return 0;
+    } else { // a > b
+        return -1;
+    }
+});
+
+var max_block = JSON.parse(heads[0]);
+
+if(headerInArray(max_block, added_blocks)==-1)
+{
+                added_blocks[added_blocks.length]=max_block;
+}
+
+
+            heads.shift();
+
+                                        var blockargs = '{"header_hash": "' + max_block.header.data.prev_header_hash.slice(2) + '"}';
+                                        console.log("load " + blockargs);
+
+                                         return jQuery.ajax({
+                                            url: "http://127.0.0.1:8555/get_header",
+                                            type: "POST",
+                                            crossDomain: true,
+                                            data: blockargs,
+                                            dataType: "json",
+                                            contentType: "application/json; charset=utf-8",
+                                            success: function(data) {
+heads.push(data);
+
+                                            }
+                                        }).then (function () {
+      return makeCall();
+   });
+}
+
+function makeHash(index) {
+
+if (index>=added_blocks.length)
+  return;
+
+console.log(added_blocks);
+console.log(index);
+
+var jsn=added_blocks[index];
+
+function toByteArray(buf,hexString) {
+hexString=hexString.slice(2);
+console.log(hexString);
+  for (var i = 0; i < hexString.length; i += 2) {
+    buf.push(parseInt(hexString.substr(i, 2), 16));
+  }
+  return buf;
+}
+
+function buf2hex(buffer) { // buffer is an ArrayBuffer
+  return Array.prototype.map.call(new Uint8Array(buffer), x => ('00' + x.toString(16)).slice(-2)).join('');
+}  
+console.log(jsn);
+var buf=[];
+buf=toByteArray(buf,jsn.header.data.prev_header_hash);
+var ts=jsn.header.data.timestamp;
+buf.push(0,0,0,0,0xff&(ts>>24),0xff&(ts>>16),0xff&(ts>>8),0xff&ts);
+buf=toByteArray(buf,jsn.header.data.filter_hash);
+buf=toByteArray(buf,jsn.header.data.proof_of_space_hash);
+buf=toByteArray(buf,jsn.header.data.body_hash);
+buf=toByteArray(buf,jsn.header.data.extension_data);
+buf=toByteArray(buf,jsn.header.harvester_signature);
+console.log(buf);
+console.log(buf2hex(buf));
+
+return window.crypto.subtle.digest("SHA-256",new Uint8Array(buf))
+.then(function(hash){
+    hashed_blocks[index]=buf2hex(hash);
+    console.log(hashed_blocks[index]);
+    return makeHash(index+1);
+});
+}
+
+
+var promiseResolvedAtEnd = makeCall().then 
+(function () {makeHash(0).then 
+(function () {
+                                var outhtml = "<div>";
+
+                                if (added_blocks.length == 0) {
+                                    outhtml = outhtml + '<p>No repos!</p></div>';
+                                } else {
+                                    outhtml = outhtml + '<p><strong>Repos List:</strong></p> <ul>';
+for (index = 0; index < added_blocks.length; index++) { 
+
+console.log(added_blocks[index]);
+console.log(hashed_blocks[index]);
+                                                outhtml = outhtml + '<li><a href="javascript:headerClicked('+index+')">'+added_blocks[index].challenge.height + ': '+hashed_blocks[index];
+console.log(tips);
+if(headerInArray(added_blocks[index], tips)!=-1)
+outhtml = outhtml + ' TIP';
+if(headersEqual(added_blocks[index], lca_block))
+outhtml = outhtml + ' LCA';
+
+outhtml = outhtml + '</a></li>';
+                                            }
+                                    outhtml = outhtml + '</ul></div>';
+}
+
+                                    $('#ghapidata').html(outhtml);
+
+})});
+
+
+}});
+
+
+                    }); // end click event handler
+
+            }); 
+
+function headerClicked(index) {
+    alert(JSON.stringify(added_blocks[index]));
+}
+
+function headersEqual(a,b){
+if((a.header.data.prev_header_hash==b.header.data.prev_header_hash) &&
+(a.header.data.timestamp==b.header.data.timestamp) &&
+(a.header.data.filter_hash==b.header.data.filter_hash) &&
+(a.header.data.proof_of_space_hash==b.header.data.proof_of_space_hash) &&
+(a.header.data.body_hash==b.header.data.body_hash) &&
+(a.header.data.extension_data==b.header.data.extension_data) &&
+(a.header.harvester_signature==b.header.harvester_signature))
+{
+return true;
+}
+return false;
+}
+
+function headerInArray(a,b){
+for (i = 0; i < b.length; i++) {
+if(headersEqual(a,b[i])){
+return i;
+}
+}
+return -1;
+}
+
+
+       </script>
+</body>
+</html>
