@@ -51,10 +51,10 @@ class Wallet:
     header_hash: List[bytes32]
     start_index: int
 
-    unconfirmed_removals: List[Coin]
+    unconfirmed_removals: Set[Coin]
     unconfirmed_removal_amount: int
 
-    unconfirmed_additions: List[Coin]
+    unconfirmed_additions: Set[Coin]
     unconfirmed_addition_amount: int
 
     # This dict maps coin_id to SpendBundle, it will contain duplicate values by design
@@ -87,8 +87,8 @@ class Wallet:
         path = Path(f"wallet_db_{pub_hex}.db")
         self.wallet_store = await WalletStore.create(path)
         self.header_hash = []
-        self.unconfirmed_additions = []
-        self.unconfirmed_removals = []
+        self.unconfirmed_additions = set()
+        self.unconfirmed_removals = set()
         self.pending_spend_bundles = {}
         self.coin_spend_bundle_map = {}
         self.unconfirmed_addition_amount = 0
@@ -145,8 +145,46 @@ class Wallet:
         return puzzlehash
 
     async def select_coins(self, amount) -> Optional[Set[Coin]]:
-        # TODO pick proper coins
-        return None
+
+        if amount > self.get_unconfirmed_balance():
+            return None
+
+        unspent: Set[
+            CoinRecord
+        ] = await self.wallet_store.get_coin_records_by_spent(False)
+        sum = 0
+        used_coins: Set = set()
+
+        """
+        Try to use coins from the store, if there isn't enough of "unused" 
+        coins use change coins that are not confirmed yet
+        """
+        for coin in unspent:
+            if sum >= amount:
+                break
+            if coin.name in self.unconfirmed_removals:
+                continue
+            sum += coin.amount
+            used_coins.add(coin)
+
+        """
+        This happens when we couldn't use one of the coins because it's already used 
+        but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
+        """
+        if sum < amount:
+            for coin in self.unconfirmed_additions:
+                if sum > amount:
+                    break
+                if coin.name in self.unconfirmed_removals:
+                    continue
+                sum += coin.amount
+                used_coins.add(coin)
+
+        if sum >= amount:
+            return used_coins
+        else:
+            #This shouldn't happen because of: if amount > self.get_unconfirmed_balance():
+            return None
 
     def set_server(self, server: ChiaServer):
         self.server = server
