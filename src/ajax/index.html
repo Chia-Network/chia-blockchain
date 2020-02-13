@@ -13,10 +13,15 @@
 <body>
   <div id="w">
     <h1>Simple Github API Webapp</h1>
+
+    <a href="#" id="connsubmitbtn">Pull Connection</a>
+
+    <div id="conndata" class="clearfix"></div>
+
     <p>Enter a single Github username below and click the button to display profile info via JSON.</p>
     
     <input type="text" name="ghusername" id="ghusername" placeholder="Github username...">
-    
+
     <a href="#" id="ghsubmitbtn">Pull User Data</a>
     
     <div id="ghapidata" class="clearfix"></div>
@@ -25,7 +30,38 @@
 var added_blocks;
 var hashed_blocks;
 
+var NodeType=["FULL_NODE","HARVESTER","FARMER","TIMELORD","INTRODUCER"];
+
     $(function() {
+
+            $('#connsubmitbtn').on('click', function(e) {
+                    e.preventDefault();
+                    $('#ghapidata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
+
+                    jQuery.ajax({
+                            url: "http://127.0.0.1:8555/get_connections",
+                            type: "POST",
+                            crossDomain: true,
+                            data: null,
+                            dataType: "json",
+                            contentType: "application/json; charset=utf-8",
+                            success: function(data) {
+
+outhtml='<div><ul>';
+
+for (i = 0; i < data.length; i++) {
+console.log(data[i].node_id);
+
+  outhtml = outhtml + '<li><a href="javascript:connClicked(\''+data[i].node_id+'\')">' + NodeType[data[i].type-1] + ' ' + data[i].peer_host + ' ' + data[i].peer_port + '/' + data[i].peer_server_port + ' ' + data[i].node_id +'</li>';
+}
+                                    outhtml = outhtml + '</ul></div>';
+
+                                    $('#conndata').html(outhtml);
+
+                                console.log(data);
+}})});
+
+
             $('#ghsubmitbtn').on('click', function(e) {
                     e.preventDefault();
                     $('#ghapidata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
@@ -186,6 +222,23 @@ outhtml = outhtml + '</a></li>';
 function headerClicked(index) {
     alert(JSON.stringify(added_blocks[index]));
 }
+
+function connClicked(node_id) {
+    console.log(node_id);
+
+var nodeargs = '{"node_id": "' + node_id.slice(2) + '"}';
+
+                    jQuery.ajax({
+                            url: "http://127.0.0.1:8555/close_connection",
+                            type: "POST",
+                            crossDomain: true,
+                            data: nodeargs,
+                            dataType: "json",
+                            contentType: "application/json; charset=utf-8",
+                            success: function(data) {}});
+
+}
+
 
 function headersEqual(a,b){
 if((a.header.data.prev_header_hash==b.header.data.prev_header_hash) &&
