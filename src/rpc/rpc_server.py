@@ -4,6 +4,7 @@ import json
 from typing import Any, Callable, List, Optional, Dict, Tuple
 
 from aiohttp import web
+import aiohttp_cors
 
 from blspy import PublicKey
 from src.full_node import FullNode
@@ -218,19 +219,42 @@ async def start_rpc_server(full_node: FullNode, stop_node_cb: Callable, rpc_port
     """
     handler = RpcApiHandler(full_node, stop_node_cb)
     app = web.Application()
-    app.add_routes(
-        [
-            web.post("/get_blockchain_state", handler.get_blockchain_state),
-            web.post("/get_block", handler.get_block),
-            web.post("/get_header", handler.get_header),
-            web.post("/get_connections", handler.get_connections),
-            web.post("/open_connection", handler.open_connection),
-            web.post("/close_connection", handler.close_connection),
-            web.post("/stop_node", handler.stop_node),
-            web.post("/get_pool_balances", handler.get_pool_balances),
-            web.post("/get_heaviest_block_seen", handler.get_heaviest_block_seen),
-        ]
-    )
+
+    cors = aiohttp_cors.setup(app, defaults={
+        "*": aiohttp_cors.ResourceOptions(
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers="*",
+        )
+    })
+
+    get_blockchain_state_resource = cors.add(app.router.add_resource("/get_blockchain_state"))
+    cors.add(get_blockchain_state_resource.add_route("POST", handler.get_blockchain_state))
+
+    get_block_resource = cors.add(app.router.add_resource("/get_block"))
+    cors.add(get_block_resource.add_route("POST", handler.get_block))
+
+    get_header_resource = cors.add(app.router.add_resource("/get_header"))
+    cors.add(get_header_resource.add_route("POST", handler.get_header))
+
+    get_connections_resource = cors.add(app.router.add_resource("/get_connections"))
+    cors.add(get_connections_resource.add_route("POST", handler.get_connections))
+
+    open_connection_resource = cors.add(app.router.add_resource("/open_connection"))
+    cors.add(open_connection_resource.add_route("POST", handler.open_connection))
+
+    close_connection_resource = cors.add(app.router.add_resource("/close_connection"))
+    cors.add(close_connection_resource.add_route("POST", handler.close_connection))
+
+    stop_node_resource = cors.add(app.router.add_resource("/stop_node"))
+    cors.add(stop_node_resource.add_route("POST", handler.stop_node))
+
+    get_pool_balances_resource = cors.add(app.router.add_resource("/get_pool_balances"))
+    cors.add(get_pool_balances_resource.add_route("POST", handler.get_pool_balances))
+
+    get_heaviest_block_seen_resource = cors.add(app.router.add_resource("/get_heaviest_block_seen"))
+    cors.add(get_heaviest_block_seen_resource.add_route("POST", handler.get_heaviest_block_seen))
+
     runner = web.AppRunner(app, access_log=None)
     await runner.setup()
     site = web.TCPSite(runner, "localhost", rpc_port)
