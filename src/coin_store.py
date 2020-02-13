@@ -98,12 +98,12 @@ class CoinStore:
     async def new_lca(self, block: FullBlock):
         removals, additions = await block.tx_removals_and_additions()
 
-        for coin_name in removals:
-            await self.set_spent(coin_name, block.height)
-
         for coin in additions:
             record: CoinRecord = CoinRecord(coin, block.height, uint32(0), False, False)
             await self.add_coin_record(record)
+
+        for coin_name in removals:
+            await self.set_spent(coin_name, block.height)
 
         coinbase: CoinRecord = CoinRecord(
             block.body.coinbase, block.height, uint32(0), False, True
@@ -111,6 +111,7 @@ class CoinStore:
         fees_coin: CoinRecord = CoinRecord(
             block.body.fees_coin, block.height, uint32(0), False, True
         )
+
         await self.add_coin_record(coinbase)
         await self.add_coin_record(fees_coin)
 
