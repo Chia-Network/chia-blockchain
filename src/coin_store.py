@@ -138,6 +138,15 @@ class CoinStore:
         diff_store: DiffStore,
     ):
 
+        for coin in additions:
+            added: CoinRecord = CoinRecord(coin, block.height, 0, 0, 0)  # type: ignore # noqa
+            diff_store.diffs[added.name.hex()] = added
+
+        coinbase: CoinRecord = CoinRecord(block.body.coinbase, block.height, 0, 0, 1)  # type: ignore # noqa
+        diff_store.diffs[coinbase.name.hex()] = coinbase
+        fees_coin: CoinRecord = CoinRecord(block.body.fees_coin, block.height, 0, 0, 1)  # type: ignore # noqa
+        diff_store.diffs[fees_coin.name.hex()] = fees_coin
+
         for coin_name in removals:
             removed: Optional[CoinRecord] = None
             if coin_name.hex() in diff_store.diffs:
@@ -154,15 +163,6 @@ class CoinStore:
                 removed.coinbase,
             )  # type: ignore # noqa
             diff_store.diffs[spent.name.hex()] = spent
-
-        for coin in additions:
-            added: CoinRecord = CoinRecord(coin, block.height, 0, 0, 0)  # type: ignore # noqa
-            diff_store.diffs[added.name.hex()] = added
-
-        coinbase: CoinRecord = CoinRecord(block.body.coinbase, block.height, 0, 0, 1)  # type: ignore # noqa
-        diff_store.diffs[coinbase.name.hex()] = coinbase
-        fees_coin: CoinRecord = CoinRecord(block.body.fees_coin, block.height, 0, 0, 1)  # type: ignore # noqa
-        diff_store.diffs[fees_coin.name.hex()] = fees_coin
 
     # Store CoinRecord in DB and ram cache
     async def add_coin_record(self, record: CoinRecord) -> None:
