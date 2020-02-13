@@ -56,4 +56,4 @@ class TestWalletProtocol:
             # TODO check if we've synced proof hashes and verified number of proofs
             await asyncio.sleep(0.1)
 
-        server.close_all()
+        await wallet.wallet_store.close()
