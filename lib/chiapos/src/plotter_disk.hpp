@@ -107,6 +107,13 @@ class DiskPlotter {
             throw err_string;
         }
 
+        if (filesystem::exists(tmp_1_filename)) {
+            filesystem::remove(tmp_1_filename);
+        }
+        if (filesystem::exists(tmp_2_filename)) {
+            filesystem::remove(tmp_2_filename);
+        }
+
         double expected_space;
         if (k <= 30) {
             expected_space = (7 * 0.762 * k) / (1.0 * (1 << (30 - k)));
