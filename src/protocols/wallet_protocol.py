@@ -72,6 +72,7 @@ class RequestBody:
 @cbor_message
 class RespondBody:
     body: Body
+    height: uint32
 
 
 @dataclass(frozen=True)

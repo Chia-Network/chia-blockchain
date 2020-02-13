@@ -21,7 +21,6 @@ def event_loop():
 
 
 class TestWalletProtocol:
-
     @pytest.fixture(scope="function")
     async def two_nodes(self):
         async for _ in setup_two_nodes({"COINBASE_FREEZE_PERIOD": 0}):
@@ -41,39 +40,7 @@ class TestWalletProtocol:
         sk = bytes(ExtendedPrivateKey.from_seed(self.seed)).hex()
         key_config = {"wallet_sk": sk}
 
-        wallet = Wallet({}, key_config)
-        server = ChiaServer(8223, wallet, NodeType.WALLET)
-
-        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
-        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
-
-        _ = await server.start_server("127.0.0.1", wallet._on_connect)
-        await asyncio.sleep(2)
-        full_node_peer = PeerInfo(server_1._host, server_1._port)
-        _ = await server.start_client(full_node_peer, None)
-
-        start_unf = time.time()
-        while time.time() - start_unf < 3:
-            # TODO check if we've synced proof hashes and verified number of proofs
-            await asyncio.sleep(0.1)
-
-        server.close_all()
-
-    @pytest.mark.asyncio
-    async def test_wallet_connect(self, two_nodes):
-        num_blocks = 10
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
-
-        for i in range(1, num_blocks):
-            async for _ in full_node_1.block(full_node_protocol.Block(blocks[i])):
-                pass
-
-        self.seed = urandom(1024)
-        sk = bytes(ExtendedPrivateKey.from_seed(self.seed)).hex()
-        key_config = {"wallet_sk": sk}
-
-        wallet = Wallet({}, key_config)
+        wallet = await Wallet.create({}, key_config)
         server = ChiaServer(8223, wallet, NodeType.WALLET)
 
         asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
