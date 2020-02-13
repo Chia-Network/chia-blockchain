@@ -67,6 +67,9 @@ class Wallet:
     # TODO Don't allow user to send tx until wallet is synced
     synced: bool
 
+    # Queue of SpendBundles that FullNode hasn't acked yet.
+    send_queue: Dict[bytes32, SpendBundle]
+
     @staticmethod
     async def create(config: Dict, key_config: Dict, name: str = None):
         self = Wallet()
@@ -95,6 +98,8 @@ class Wallet:
         self.unconfirmed_removal_amount = 0
 
         self.synced = False
+
+        self.send_queue = {}
 
         return self
 
@@ -344,6 +349,9 @@ class Wallet:
         Called when body is received from the FullNode
         """
 
+        # Retry sending queued up transactions
+        await self.retry_send_queue()
+
         additions: List[Coin] = []
 
         if self.can_generate_puzzle_hash(response.body.coinbase.puzzle_hash):
@@ -371,7 +379,22 @@ class Wallet:
     async def new_tip(self, header: src.protocols.wallet_protocol.Header):
         self.log.info("new tip received")
 
-    async def send_transaction(self, spend_bundle: SpendBundle):
+    async def retry_send_queue(self):
+        for key, val in self.send_queue:
+            await self._send_transaction(val)
+
+    def remove_from_queue(self, spendbundle_id: bytes32):
+        if spendbundle_id in self.send_queue:
+            del self.send_queue[spendbundle_id]
+
+    async def push_transaction(self, spend_bundle: SpendBundle):
+        """ Use this API to make transactions. """
+        self.send_queue[spend_bundle.name] = spend_bundle
+        await self._send_transaction(spend_bundle)
+
+    async def _send_transaction(self, spend_bundle: SpendBundle):
+        """ Sends spendbundle to connected full Nodes."""
+
         msg = OutboundMessage(
             NodeType.FULL_NODE,
             Message("wallet_transaction", spend_bundle),
@@ -384,6 +407,7 @@ class Wallet:
     async def transaction_ack(self, ack: src.protocols.wallet_protocol.TransactionAck):
         # TODO Remove from retry queue
         if ack.status:
+            self.remove_from_queue(ack.txid)
             self.log.info(f"SpendBundle has been received by the FullNode. id: {id}")
         else:
             self.log.info(f"SpendBundle has been rejected by the FullNode. id: {id}")
