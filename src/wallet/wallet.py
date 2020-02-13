@@ -64,6 +64,9 @@ class Wallet:
     pending_spend_bundles: Dict[bytes32, SpendBundle]
     log: logging.Logger
 
+    # TODO Don't allow user to send tx until wallet is synced
+    synced: bool
+
     @staticmethod
     async def create(config: Dict, key_config: Dict, name: str = None):
         self = Wallet()
@@ -90,6 +93,9 @@ class Wallet:
         self.coin_spend_bundle_map = {}
         self.unconfirmed_addition_amount = 0
         self.unconfirmed_removal_amount = 0
+
+        self.synced = False
+
         return self
 
     def get_next_public_key(self) -> PublicKey:
@@ -98,7 +104,7 @@ class Wallet:
         self.next_address = self.next_address + 1
         return pubkey
 
-    async def get_balance(self) -> uint64:
+    async def get_confirmed_balance(self) -> uint64:
         record_list: Set[
             CoinRecord
         ] = await self.wallet_store.get_coin_records_by_spent(False)
@@ -108,6 +114,11 @@ class Wallet:
         for removal in self.unconfirmed_removals:
             amount = uint64(amount - removal.amount)
         return uint64(amount)
+
+    async def get_unconfirmed_balance(self) -> uint64:
+        confirmed = await self.get_confirmed_balance()
+        result = confirmed - self.unconfirmed_removal_amount
+        return uint64(result)
 
     def can_generate_puzzle_hash(self, hash: bytes32) -> bool:
         return any(

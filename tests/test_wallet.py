@@ -45,6 +45,6 @@ class TestWallet:
             a = RespondBody(blocks[i].body, blocks[i].height)
             await wallet.received_body(a)
 
-        assert await wallet.get_balance() == 144000000000000
+        assert await wallet.get_confirmed_balance() == 144000000000000
 
         await wallet.wallet_store.close()
