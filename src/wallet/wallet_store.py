@@ -2,6 +2,8 @@ import asyncio
 from typing import Dict, Optional, List
 from pathlib import Path
 import aiosqlite
+
+from src.types.body import Body
 from src.types.full_block import FullBlock
 from src.types.hashable.Coin import Coin
 from src.types.hashable.CoinRecord import CoinRecord
@@ -77,29 +79,6 @@ class WalletStore:
         await cursor.close()
         await self.coin_record_db.commit()
 
-    async def add_lcas(self, blocks: List[FullBlock]):
-        for block in blocks:
-            await self.new_lca(block)
-
-    async def new_lca(self, block: FullBlock):
-        removals, additions = await block.tx_removals_and_additions()
-
-        for coin_name in removals:
-            await self.set_spent(coin_name, block.height)
-
-        for coin in additions:
-            record: CoinRecord = CoinRecord(coin, block.height, uint32(0), False, False)
-            await self.add_coin_record(record)
-
-        coinbase: CoinRecord = CoinRecord(
-            block.body.coinbase, block.height, uint32(0), False, True
-        )
-        fees_coin: CoinRecord = CoinRecord(
-            block.body.fees_coin, block.height, uint32(0), False, True
-        )
-        await self.add_coin_record(coinbase)
-        await self.add_coin_record(fees_coin)
-
     # Store CoinRecord in DB and ram cache
     async def add_coin_record(self, record: CoinRecord) -> None:
         cursor = await self.coin_record_db.execute(
@@ -156,15 +135,30 @@ class WalletStore:
         return None
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
+    async def get_coin_records_by_spent(
+        self, spent: bool
+    ) -> List[CoinRecord]:
+        coins = set()
+
+        cursor = await self.coin_record_db.execute(
+            "SELECT * from coin_record WHERE spent=?", (int(spent),)
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        for row in rows:
+            coin = Coin(bytes32(bytes.fromhex(row[6])),
+                        bytes32(bytes.fromhex(row[5])),
+                        row[7])
+            coins.add(
+                CoinRecord(coin, row[1], row[2], row[3], row[4])
+            )
+        return list(coins)
+
+    # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(
         self, puzzle_hash: bytes32, header: Header = None
     ) -> List[CoinRecord]:
         coins = set()
-        if header is not None and header.header_hash in self.head_diffs:
-            diff_store = self.head_diffs[header.header_hash]
-            for _, record in diff_store.diffs.items():
-                if record.coin.puzzle_hash == puzzle_hash:
-                    coins.add(record)
         cursor = await self.coin_record_db.execute(
             "SELECT * from coin_record WHERE puzzle_hash=?", (puzzle_hash.hex(),)
         )
