@@ -51,7 +51,12 @@ var NodeType = ["FULL_NODE", "HARVESTER", "FARMER", "TIMELORD", "INTRODUCER"];
 
 $(function() {
 
-    {
+    loadConnections();
+    loadPools();
+    loadBlocks();
+});
+
+    function loadConnections(){
         $('#conndata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
 
         jQuery.ajax({
@@ -79,7 +84,7 @@ $(function() {
         })
     }
 
-    {
+    function loadPools(){
         $('#pooldata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
 
         jQuery.ajax({
@@ -109,7 +114,7 @@ var sorted = arr.sort((a, b) => b.value - a.value);
     }
 
 
-    {
+    function loadBlocks(){
         $('#blockdata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
 
         jQuery.ajax({
@@ -254,7 +259,6 @@ var sorted = arr.sort((a, b) => b.value - a.value);
 
     } // end click event handler
 
-});
 
 function headerClicked(hash) {
     var blockargs = '{"header_hash": "' + hash + '"}';
@@ -286,7 +290,7 @@ function connClicked(node_id) {
         data: nodeargs,
         dataType: "json",
         contentType: "application/json; charset=utf-8",
-        success: function(data) {}
+        success: function(data) {loadConnections()}
     });
 
 }
