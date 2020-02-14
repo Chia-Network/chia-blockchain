@@ -1,0 +1,7 @@
+zerorpc
+pyzmq
+future
+msgpack-python
+gevent
+pyinstaller
+pypiwin32

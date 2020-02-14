@@ -61,3 +61,5 @@ pip-delete-this-directory.txt
 
 # Packaging
 chia-blockchain.tar.gz
+
+src/wallet/electron/node_modules/
