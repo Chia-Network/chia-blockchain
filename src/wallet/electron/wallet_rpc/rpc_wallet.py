@@ -6,6 +6,9 @@ from typing import Any
 
 from aiohttp import web
 from blspy import ExtendedPrivateKey
+
+from src.server.outbound_message import NodeType
+from src.server.server import ChiaServer
 from src.wallet.wallet import Wallet
 
 
@@ -41,7 +44,7 @@ class RpcWalletApiHandler:
     def __init__(self, wallet: Wallet):
         self.wallet = wallet
 
-    async def get_next_puzzle_hash(self) -> web.Response:
+    async def get_next_puzzle_hash(self, request) -> web.Response:
         """
         Returns a new puzzlehash
         """
@@ -60,7 +63,12 @@ async def start_rpc_server():
     """
     sk = bytes(ExtendedPrivateKey.from_seed(b"")).hex()
     key_config = {"wallet_sk": sk}
+
     wallet = await Wallet.create({}, key_config)
+    server = ChiaServer(9257, wallet, NodeType.WALLET)
+    wallet.set_server(server)
+    _ = await server.start_server("127.0.0.1", wallet._on_connect)
+
     handler = RpcWalletApiHandler(wallet)
     app = web.Application()
     app.add_routes(
@@ -72,6 +80,7 @@ async def start_rpc_server():
     await runner.setup()
     site = web.TCPSite(runner, "localhost", 9256)
     await site.start()
+    await server.await_closed()
 
     async def cleanup():
         await runner.cleanup()
@@ -80,8 +89,9 @@ async def start_rpc_server():
 
 
 async def main():
-    await start_rpc_server()
+    cleanup = await start_rpc_server()
     print('start running on {}')
+    await cleanup()
 
 if __name__ == '__main__':
     asyncio.run(main())
