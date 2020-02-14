@@ -1,0 +1,141 @@
+.wallet .nav-pills img {
+  width: 40px;
+  height: 40px;
+  margin-right: 15px;
+}
+
+.wallet .nav-pills h2 {
+  margin-bottom: 0;
+  line-height: 1;
+  color: #18214d;
+  font-size: 22px;
+}
+
+.wallet .nav-pills p {
+  margin-bottom: 0;
+  color: #18214d;
+}
+
+.wallet .nav-pills a.active {
+  background: #0f7dff;
+}
+.wallet .nav-pills a {
+  border-top: 1px solid #e0e3eb;
+  padding: 15px;
+}
+.wallet .nav-pills a:first-child {
+  border-top: 0;
+  border-top-right-radius: 5px;
+  border-top-left-radius: 5px;
+}
+.wallet .nav-pills a:last-child {
+  border-bottom-right-radius: 5px;
+  border-bottom-left-radius: 5px;
+}
+.wallet .nav-pills,
+.wallet .tab-content {
+  box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.04);
+  border-radius: 5px;
+}
+
+.wallet .nav-pills h3 {
+  color: #18214d;
+  margin-bottom: 0;
+}
+
+.wallet .nav-pills a {
+  border-radius: 0;
+}
+.wallet .nav-pills a.active h2,
+.wallet .nav-pills a.active h3,
+.wallet .nav-pills a.active p {
+  color: #ffffff;
+}
+
+.wallet .tab-content {
+  padding: 20px;
+}
+
+.wallet .tab-content li i {
+  font-size: 22px;
+  color: #0f7dff;
+  background: rgba(15, 125, 255, 0.13);
+  width: 40px;
+  height: 40px;
+  border-radius: 50px;
+  text-align: center;
+  line-height: 45px;
+  margin-right: 15px;
+}
+
+.wallet .tab-content h2 {
+  margin-bottom: 0;
+  font-size: 18px;
+}
+.wallet .tab-content h3 {
+  margin-bottom: 0;
+  font-size: 18px;
+}
+
+.wallet .tab-content li:first-child {
+  border-bottom: 1px solid #e0e3eb;
+  padding-bottom: 15px;
+  margin-bottom: 15px;
+}
+
+.wallet .tab-content button.green {
+  background: #26de81;
+  color: #ffffff;
+  box-shadow: 0px 0px 15px 0px #26de81ad;
+}
+.wallet .tab-content button.red {
+  background: #ff231f;
+  box-shadow: 0px 0px 15px 0px #ff231fad;
+  color: #ffffff;
+}
+.wallet .tab-content button {
+  padding: 12px 60px;
+  margin-right: 10px;
+}
+.wallet .tab-content button:focus {
+  box-shadow: none;
+}
+.wallet .tab-content ul {
+  margin: 35px 0 40px;
+}
+.wallet-address {
+  border-top: 1px solid #e0e3eb;
+  padding-top: 45px;
+  margin-top: 50px;
+}
+.wallet-address input {
+  padding: 25px 15px;
+  font-size: 14px;
+}
+.wallet-address .input-group-prepend button {
+  padding: 13px 20px;
+  border-top-right-radius: 5px !important;
+  border-bottom-right-radius: 5px !important;
+}
+.wallet-history {
+  border-top: 1px solid #e0e3eb;
+  padding-top: 35px;
+  margin-top: 45px;
+}
+.wallet-address input {
+  border: 1px solid #e0e3eb;
+}
+.wallet-history i {
+  margin-left: 14px;
+}
+.wallet-address h4 {
+  margin-bottom: 20px;
+}
+
+.wallet-address .input-group {
+  padding-top: 30px;
+}
+.wallet .tab-content h2.wallet-title {
+  color: #18214d;
+  font-size: 24px;
+}

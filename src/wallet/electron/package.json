@@ -1,0 +1,25 @@
+{
+  "name": "chiawallet",
+  "version": "1.0.0",
+  "description": "A minimal Electron and Python Wallet ",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "repository": "https://github.com/chia-networks/",
+  "keywords": [
+    "Chia"
+  ],
+  "author": "Straya Markovic",
+  "license": "MIT",
+  "dependencies": {
+    "@erebos/rpc-electron": "^0.11.0",
+    "@erebos/rpc-http-browser": "^0.11.0",
+    "electron-rebuild": "^1.10.0",
+    "zerorpc": "git+https://github.com/0rpc/zerorpc-node.git"
+  },
+  "devDependencies": {
+    "electron": "^1.7.6",
+    "electron-packager": "^9.0.1"
+  }
+}
