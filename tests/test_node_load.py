@@ -30,7 +30,9 @@ class TestNodeLoad:
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
 
         for i in range(1, num_blocks - 1):
-            async for _ in full_node_1.block(full_node_protocol.Block(blocks[i])):
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(blocks[i])
+            ):
                 pass
 
         await server_2.start_client(
@@ -43,14 +45,15 @@ class TestNodeLoad:
         start_unf = time.time()
         for i in range(num_unfinished_blocks):
             msg = Message(
-                "unfinished_block", full_node_protocol.UnfinishedBlock(blocks[9])
+                "respond_unfinished_block",
+                full_node_protocol.RespondUnfinishedBlock(blocks[9]),
             )
             server_1.push_message(
                 OutboundMessage(NodeType.FULL_NODE, msg, Delivery.BROADCAST)
             )
 
         # Send the whole block ast the end so we can detect when the node is done
-        block_msg = Message("block", full_node_protocol.Block(blocks[9]))
+        block_msg = Message("respond_block", full_node_protocol.RespondBlock(blocks[9]))
         server_1.push_message(
             OutboundMessage(NodeType.FULL_NODE, block_msg, Delivery.BROADCAST)
         )
@@ -82,7 +85,7 @@ class TestNodeLoad:
 
         start_unf = time.time()
         for i in range(1, num_blocks):
-            msg = Message("block", full_node_protocol.Block(blocks[i]))
+            msg = Message("respond_block", full_node_protocol.RespondBlock(blocks[i]))
             server_1.push_message(
                 OutboundMessage(NodeType.FULL_NODE, msg, Delivery.BROADCAST)
             )

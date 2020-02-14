@@ -27,7 +27,7 @@ from src.util.ConsensusError import Err
 from src.util.blockchain_check_conditions import blockchain_check_conditions_dict
 from src.util.condition_tools import hash_key_pairs_for_conditions_dict
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
-from src.util.errors import BlockNotInBlockchain, InvalidGenesisBlock
+from src.util.errors import InvalidGenesisBlock
 from src.util.ints import uint32, uint64
 from src.types.challenge import Challenge
 
@@ -209,38 +209,6 @@ class Blockchain:
             curr = self.headers[curr.prev_header_hash]
             ret_hashes.append(curr.header_hash)
         return list(reversed(ret_hashes))
-
-    def get_header_hashes_by_height(
-        self, heights: List[uint32], tip_header_hash: bytes32
-    ) -> List[bytes32]:
-        """
-        Returns a list of header blocks, one for each height requested.
-        """
-        if len(heights) == 0:
-            return []
-
-        sorted_heights = sorted(
-            [(height, index) for index, height in enumerate(heights)], reverse=True
-        )
-
-        curr_block: Optional[Header] = self.headers.get(tip_header_hash, None)
-
-        if curr_block is None:
-            raise BlockNotInBlockchain(
-                f"Header hash {tip_header_hash} not present in chain."
-            )
-        headers: List[Tuple[int, Header]] = []
-        for height, index in sorted_heights:
-            if height > curr_block.height:
-                raise ValueError("Height is not valid for tip {tip_header_hash}")
-            while height < curr_block.height:
-                curr_block = self.headers.get(curr_block.prev_header_hash, None)
-                if curr_block is None:
-                    raise ValueError(f"Do not have header {height}")
-            headers.append((index, curr_block))
-
-        # Return sorted by index (original order)
-        return [b.header_hash for _, b in sorted(headers, key=lambda pair: pair[0])]
 
     def find_fork_point(self, alternate_chain: List[bytes32]) -> uint32:
         """

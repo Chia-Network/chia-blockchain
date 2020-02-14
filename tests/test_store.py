@@ -41,6 +41,7 @@ class TestStore:
     async def test_basic_store(self):
         assert sqlite3.threadsafety == 1
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
+        blocks_alt = bt.get_consecutive_blocks(test_constants, 3, [], 9, b"1")
         db_filename = Path("blockchain_test.db")
         db_filename_2 = Path("blockchain_test_2.db")
         db_filename_3 = Path("blockchain_test_3.db")
@@ -64,8 +65,11 @@ class TestStore:
                 await db.add_block(block)
                 assert block == await db.get_block(block.header_hash)
 
-            # Get headers
-            assert len(await db.get_headers()) == len(blocks)
+            await db.add_block(blocks_alt[2])
+            assert len(await db.get_blocks_at([1, 2])) == 3
+
+            # Get headers (added alt block also, so +1)
+            assert len(await db.get_headers()) == len(blocks) + 1
 
             # Save/get sync
             for sync_mode in (False, True):
@@ -94,6 +98,16 @@ class TestStore:
             assert db.get_candidate_block(blocks[5].header_hash) == partial
             db.clear_candidate_blocks_below(uint32(8))
             assert db.get_candidate_block(blocks[5].header_hash) is None
+
+            # Proof of time heights
+            chall_iters = (bytes32(bytes([1] * 32)), uint32(32532535))
+            chall_iters_2 = (bytes32(bytes([3] * 32)), uint32(12522535))
+            assert db.get_proof_of_time_heights(chall_iters) is None
+            db.add_proof_of_time_heights(chall_iters, 5)
+            db.add_proof_of_time_heights(chall_iters_2, 7)
+            db.clear_proof_of_time_heights_below(6)
+            assert db.get_proof_of_time_heights(chall_iters) is None
+            assert db.get_proof_of_time_heights(chall_iters_2) is not None
 
             # Add/get unfinished block
             i = 1

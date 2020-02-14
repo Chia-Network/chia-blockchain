@@ -116,9 +116,7 @@ class BlockTools:
                 block_list.append(FullBlock.from_bytes(test_constants["GENESIS_BLOCK"]))
             else:
                 block_list.append(
-                    self.create_genesis_block(
-                        test_constants, std_hash(seed), seed
-                    )
+                    self.create_genesis_block(test_constants, std_hash(seed), seed)
                 )
             prev_difficulty = test_constants["DIFFICULTY_STARTING"]
             curr_difficulty = prev_difficulty

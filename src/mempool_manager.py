@@ -72,9 +72,22 @@ class MempoolManager:
             else:
                 return None
 
+    async def is_fee_enough(self, fees: uint64, cost: uint64) -> bool:
+        """
+        Determines whether any of the pools can accept a transaction with a given fees
+        and cost.
+        """
+        if fees < 0:
+            return False
+        fees_per_cost = fees / cost
+        for pool in self.mempools.values():
+            if not pool.at_full_capacity() or fees_per_cost >= pool.get_min_fee_rate():
+                return True
+        return False
+
     async def add_spendbundle(
         self, new_spend: SpendBundle, to_pool: Mempool = None
-    ) -> Tuple[bool, Optional[Err]]:
+    ) -> Tuple[Optional[uint64], Optional[Err]]:
         """
         Tries to add spendbundle to either self.mempools or to_pool if it's specified.
         Returns true if it's added in any of pools, Returns error if it fails.
@@ -86,12 +99,12 @@ class MempoolManager:
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
         fail_reason, npc_list, cost = await get_name_puzzle_conditions(program)
         if fail_reason:
-            return False, fail_reason
+            return None, fail_reason
 
         fees = new_spend.fees()
 
         if cost == 0:
-            return False, Err.UNKNOWN
+            return None, Err.UNKNOWN
         fees_per_cost: float = fees / cost
 
         # build removal list
@@ -101,13 +114,13 @@ class MempoolManager:
         # Check additions for max coin amount
         for coin in additions:
             if coin.amount >= consensus_constants["MAX_COIN_AMOUNT"]:
-                return False, Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
+                return None, Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
 
         #  Watch out for duplicate outputs
         addition_counter = collections.Counter(_.name() for _ in additions)
         for k, v in addition_counter.items():
             if v > 1:
-                return False, Err.DUPLICATE_OUTPUT
+                return None, Err.DUPLICATE_OUTPUT
 
         # Spend might be valid for on pool but not for others
         added_count = 0
@@ -163,7 +176,7 @@ class MempoolManager:
             for unspent in unspents.values():
                 coin = removals_dic[unspent.coin.name()]
                 if unspent.coin.puzzle_hash != coin.puzzle_hash:
-                    return False, Err.WRONG_PUZZLE_HASH
+                    return None, Err.WRONG_PUZZLE_HASH
 
             # Verify conditions, create hash_key list for aggsig check
             hash_key_pairs = []
@@ -189,7 +202,7 @@ class MempoolManager:
 
             # Verify aggregated signature
             if not new_spend.aggregated_signature.validate(hash_key_pairs):
-                return False, Err.BAD_AGGREGATE_SIGNATURE
+                return None, Err.BAD_AGGREGATE_SIGNATURE
 
             # Remove all conflicting Coins and SpendBundles
             if fail_reason:
@@ -203,9 +216,9 @@ class MempoolManager:
             added_count += 1
 
         if added_count > 0:
-            return True, None
+            return uint64(cost), None
         else:
-            return False, errors[0]
+            return None, errors[0]
 
     async def check_removals(
         self, additions: List[Coin], removals: List[Coin], mempool: Mempool

@@ -15,8 +15,7 @@ from src.types.hashable.Coin import Coin
 from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
 from src.coin_store import CoinStore
-from src.util.ints import uint8, uint32, uint64
-from src.util.errors import BlockNotInBlockchain
+from src.util.ints import uint8, uint64
 from tests.block_tools import BlockTools
 
 bt = BlockTools()
@@ -53,9 +52,6 @@ class TestGenesisBlock:
         genesis_block = bc1.get_current_tips()[0]
         assert genesis_block.height == 0
         assert (
-            bc1.get_header_hashes_by_height([uint32(0)], genesis_block.header_hash)
-        )[0] == genesis_block.header_hash
-        assert (
             bc1.get_next_difficulty(genesis_block.header_hash)
         ) == genesis_block.weight
         assert bc1.get_next_ips(bc1.genesis) > 0
@@ -82,32 +78,6 @@ class TestBlockValidation:
 
         await unspent_store.close()
         await store.close()
-
-    @pytest.mark.asyncio
-    async def test_get_header_hashes(self, initial_blockchain):
-        blocks, b = initial_blockchain
-        header_hashes_1 = b.get_header_hashes_by_height(
-            [0, 8, 3], blocks[8].header_hash
-        )
-        assert header_hashes_1 == [
-            blocks[0].header_hash,
-            blocks[8].header_hash,
-            blocks[3].header_hash,
-        ]
-
-        try:
-            b.get_header_hashes_by_height([0, 8, 3], blocks[6].header_hash)
-            thrown = False
-        except ValueError:
-            thrown = True
-        assert thrown
-
-        try:
-            b.get_header_hashes_by_height([0, 8, 3], blocks[9].header_hash)
-            thrown_2 = False
-        except BlockNotInBlockchain:
-            thrown_2 = True
-        assert thrown_2
 
     @pytest.mark.asyncio
     async def test_prev_pointer(self, initial_blockchain):

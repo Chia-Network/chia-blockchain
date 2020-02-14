@@ -48,7 +48,9 @@ class TestBlockchainTransactions:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         for block in blocks:
-            async for _ in full_node_1.block(full_node_protocol.Block(block)):
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(block)
+            ):
                 pass
 
         spent_block = blocks[1]
@@ -58,13 +60,13 @@ class TestBlockchainTransactions:
         )
 
         assert spend_bundle is not None
-        tx: full_node_protocol.NewTransaction = full_node_protocol.NewTransaction(
+        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
             spend_bundle
         )
-        async for _ in full_node_1.transaction(tx):
+        async for _ in full_node_1.respond_transaction(tx):
             outbound: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
-            assert outbound.message.function == "maybe_transaction"
+            assert outbound.message.function == "new_transaction"
 
         sb = await full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
         assert sb is spend_bundle
@@ -84,7 +86,9 @@ class TestBlockchainTransactions:
         )
 
         next_block = new_blocks[11]
-        async for _ in full_node_1.block(full_node_protocol.Block(next_block)):
+        async for _ in full_node_1.respond_block(
+            full_node_protocol.RespondBlock(next_block)
+        ):
             pass
 
         tips = full_node_1.blockchain.get_current_tips()
@@ -129,7 +133,9 @@ class TestBlockchainTransactions:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         for block in blocks:
-            async for _ in full_node_1.block(full_node_protocol.Block(block)):
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(block)
+            ):
                 pass
 
         spent_block = blocks[1]
@@ -172,7 +178,9 @@ class TestBlockchainTransactions:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         for block in blocks:
-            async for _ in full_node_1.block(full_node_protocol.Block(block)):
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(block)
+            ):
                 pass
 
         spent_block = blocks[1]
@@ -216,7 +224,9 @@ class TestBlockchainTransactions:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         for block in blocks:
-            async for _ in full_node_1.block(full_node_protocol.Block(block)):
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(block)
+            ):
                 pass
 
         # Coinbase that gets spent
@@ -290,7 +300,9 @@ class TestBlockchainTransactions:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         for block in blocks:
-            async for _ in full_node_1.block(full_node_protocol.Block(block)):
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(block)
+            ):
                 pass
 
         # Coinbase that gets spent
@@ -371,7 +383,9 @@ class TestBlockchainTransactions:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         for block in blocks:
-            async for _ in full_node_1.block(full_node_protocol.Block(block)):
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(block)
+            ):
                 pass
 
         # Coinbase that gets spent
@@ -411,7 +425,9 @@ class TestBlockchainTransactions:
         )
 
         for block in valid_new_blocks:
-            async for _ in full_node_1.block(full_node_protocol.Block(block)):
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(block)
+            ):
                 pass
 
         # Try to validate that block at index 12
@@ -439,7 +455,9 @@ class TestBlockchainTransactions:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         for block in blocks:
-            async for _ in full_node_1.block(full_node_protocol.Block(block)):
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(block)
+            ):
                 pass
 
         # Coinbase that gets spent
@@ -480,7 +498,9 @@ class TestBlockchainTransactions:
         )
 
         for block in valid_new_blocks:
-            async for _ in full_node_1.block(full_node_protocol.Block(block)):
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(block)
+            ):
                 pass
 
         # Try to validate that block at index 12
@@ -508,7 +528,9 @@ class TestBlockchainTransactions:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         for block in blocks:
-            async for _ in full_node_1.block(full_node_protocol.Block(block)):
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(block)
+            ):
                 pass
 
         # Coinbase that gets spent
@@ -552,7 +574,9 @@ class TestBlockchainTransactions:
         )
 
         for block in valid_new_blocks:
-            async for _ in full_node_1.block(full_node_protocol.Block(block)):
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(block)
+            ):
                 pass
 
         # Try to validate that block after 3 sec have passed

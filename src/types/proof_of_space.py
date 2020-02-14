@@ -34,4 +34,4 @@ class ProofOfSpace(Streamable):
 
     @staticmethod
     def calculate_plot_seed(pool_pubkey: PublicKey, plot_pubkey: PublicKey) -> bytes32:
-        return bytes32(std_hash(bytes(pool_pubkey) + bytes(plot_pubkey)).digest())
+        return bytes32(std_hash(bytes(pool_pubkey) + bytes(plot_pubkey)))

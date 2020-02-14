@@ -19,6 +19,8 @@ class FullNodeStore:
     db: aiosqlite.Connection
     # Whether or not we are syncing
     sync_mode: bool
+    # Whether we are waiting for tips (at the start of sync) or already syncing
+    waiting_for_tips: bool
     # Potential new tips that we have received from others.
     potential_tips: Dict[bytes32, FullBlock]
     # List of all header hashes up to the tip, download up front
@@ -35,6 +37,8 @@ class FullNodeStore:
     potential_future_blocks: List[FullBlock]
     # Current estimate of the speed of the network timelords
     proof_of_time_estimate_ips: uint64
+    # Proof of time heights
+    proof_of_time_heights: Dict[Tuple[bytes32, uint64], uint32]
     # Our best unfinished block
     unfinished_blocks_leader: Tuple[uint32, uint64]
     # Blocks which we have created, but don't have proof of space yet, old ones are cleared
@@ -45,6 +49,7 @@ class FullNodeStore:
     seen_unfinished_blocks: set
     # Blocks which we have received but our blockchain does not reach, old ones are cleared
     disconnected_blocks: Dict[bytes32, FullBlock]
+
     # Lock
     lock: asyncio.Lock
 
@@ -80,6 +85,7 @@ class FullNodeStore:
         await self.db.commit()
 
         self.sync_mode = False
+        self.waiting_for_tips = True
         self.potential_tips = {}
         self.potential_hashes = []
         self.potential_headers = {}
@@ -88,6 +94,7 @@ class FullNodeStore:
         self.potential_blocks_received = {}
         self.potential_future_blocks = []
         self.proof_of_time_estimate_ips = uint64(10000)
+        self.proof_of_time_heights = {}
         self.unfinished_blocks_leader = (
             uint32(0),
             uint64((1 << 64) - 1),
@@ -131,6 +138,22 @@ class FullNodeStore:
         if row is not None:
             return FullBlock.from_bytes(row[2])
         return None
+
+    async def get_blocks_at(self, heights: List[uint32]) -> List[FullBlock]:
+        if len(heights) == 0:
+            return []
+
+        heights_db = tuple(heights)
+        formatted_str = (
+            f'SELECT * from blocks WHERE height in ({"?," * (len(heights_db) - 1)}?)'
+        )
+        cursor = await self.db.execute(formatted_str, heights_db)
+        rows = await cursor.fetchall()
+        await cursor.close()
+        blocks: List[FullBlock] = []
+        for row in rows:
+            blocks.append(FullBlock.from_bytes(row[2]))
+        return blocks
 
     async def get_headers(self) -> List[Header]:
         cursor = await self.db.execute("SELECT * from headers")
@@ -181,6 +204,12 @@ class FullNodeStore:
     def get_sync_mode(self) -> bool:
         return self.sync_mode
 
+    def set_waiting_for_tips(self, waiting_for_tips: bool) -> None:
+        self.waiting_for_tips = waiting_for_tips
+
+    def get_waiting_for_tips(self) -> bool:
+        return self.waiting_for_tips
+
     async def clear_sync_info(self):
         self.potential_tips.clear()
         self.potential_headers.clear()
@@ -188,6 +217,7 @@ class FullNodeStore:
         await cursor.close()
         self.potential_blocks_received.clear()
         self.potential_future_blocks.clear()
+        self.waiting_for_tips = True
 
     def get_potential_tips_tuples(self) -> List[Tuple[bytes32, FullBlock]]:
         return list(self.potential_tips.items())
@@ -256,9 +286,15 @@ class FullNodeStore:
         return (res[0], res[1], res[2])
 
     def clear_candidate_blocks_below(self, height: uint32) -> None:
-        for key in list(self.candidate_blocks.keys()):
-            if self.candidate_blocks[key][3] < height:
+        del_keys = []
+        for key, value in self.candidate_blocks.items():
+            if value[3] < height:
+                del_keys.append(key)
+        for key in del_keys:
+            try:
                 del self.candidate_blocks[key]
+            except KeyError:
+                pass
 
     def add_unfinished_block(
         self, key: Tuple[bytes32, uint64], block: FullBlock
@@ -281,9 +317,15 @@ class FullNodeStore:
         return self.unfinished_blocks.copy()
 
     def clear_unfinished_blocks_below(self, height: uint32) -> None:
-        for key in list(self.unfinished_blocks.keys()):
-            if self.unfinished_blocks[key].height < height:
+        del_keys = []
+        for key, unf in self.unfinished_blocks.items():
+            if unf.height < height:
+                del_keys.append(key)
+        for key in del_keys:
+            try:
                 del self.unfinished_blocks[key]
+            except KeyError:
+                pass
 
     def set_unfinished_block_leader(self, key: Tuple[bytes32, uint64]) -> None:
         self.unfinished_blocks_leader = key
@@ -296,3 +338,24 @@ class FullNodeStore:
 
     def get_proof_of_time_estimate_ips(self) -> uint64:
         return self.proof_of_time_estimate_ips
+
+    def add_proof_of_time_heights(
+        self, challenge_iters: Tuple[bytes32, uint64], height: uint32
+    ) -> None:
+        self.proof_of_time_heights[challenge_iters] = height
+
+    def get_proof_of_time_heights(
+        self, challenge_iters: Tuple[bytes32, uint64]
+    ) -> Optional[uint32]:
+        return self.proof_of_time_heights.get(challenge_iters, None)
+
+    def clear_proof_of_time_heights_below(self, height: uint32) -> None:
+        del_keys: List = []
+        for key, value in self.proof_of_time_heights.items():
+            if value < height:
+                del_keys.append(key)
+        for key in del_keys:
+            try:
+                del self.proof_of_time_heights[key]
+            except KeyError:
+                pass
