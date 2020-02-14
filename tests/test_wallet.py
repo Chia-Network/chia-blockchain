@@ -73,7 +73,9 @@ class TestWallet:
 
         assert await wallet.get_confirmed_balance() == 144000000000000
 
-        spend_bundle = await wallet.generate_signed_transaction(10, wallet_b.get_new_puzzlehash(), 0)
+        spend_bundle = await wallet.generate_signed_transaction(
+            10, wallet_b.get_new_puzzlehash(), 0
+        )
         await wallet.push_transaction(spend_bundle)
 
         confirmed_balance = await wallet.get_confirmed_balance()

@@ -29,7 +29,7 @@ async def main():
     log = logging.getLogger(__name__)
     setproctitle("Chia_Wallet")
 
-    wallet = Wallet(config, key_config)
+    wallet = await Wallet.create(config, key_config)
 
     full_node_peer = PeerInfo(
         config["full_node_peer"]["host"], config["full_node_peer"]["port"]

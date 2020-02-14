@@ -12,7 +12,7 @@ you can use p2_conditions.
 This roughly corresponds to bitcoin's graftroot.
 """
 
-import clvm
+from typing import List
 
 from clvm_tools import binutils
 
@@ -31,7 +31,7 @@ def puzzle_for_pk(public_key) -> Program:
 
 def solution_for_conditions(puzzle_reveal, conditions):
     delegated_puzzle = p2_conditions.puzzle_for_conditions(conditions)
-    solution = []
+    solution: List = []
     return Program.to([puzzle_reveal, [delegated_puzzle, solution]])
 
 

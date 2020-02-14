@@ -1,4 +1,4 @@
-from src.types.hashable import BLSSignature
+from src.types.hashable.BLSSignature import BLSSignature
 from src.util.condition_tools import (
     conditions_by_opcode,
     hash_key_pairs_for_conditions_dict,

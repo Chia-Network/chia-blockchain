@@ -17,7 +17,7 @@ from src.types.hashable.Program import Program
 from src.types.hashable.SpendBundle import SpendBundle
 from src.types.name_puzzle_condition import NPC
 from src.types.sized_bytes import bytes32
-from src.util.Hash import std_hash
+from src.util.hash import std_hash
 from src.util.api_decorators import api_request
 from src.util.condition_tools import (
     conditions_for_solution,
@@ -160,7 +160,7 @@ class Wallet:
         used_coins: Set = set()
 
         """
-        Try to use coins from the store, if there isn't enough of "unused" 
+        Try to use coins from the store, if there isn't enough of "unused"
         coins use change coins that are not confirmed yet
         """
         for coinrecord in unspent:
@@ -172,7 +172,7 @@ class Wallet:
             used_coins.add(coinrecord.coin)
 
         """
-        This happens when we couldn't use one of the coins because it's already used 
+        This happens when we couldn't use one of the coins because it's already used
         but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
         """
         if sum < amount:

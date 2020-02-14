@@ -32,7 +32,9 @@ class TestWalletProtocol:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         for i in range(1, num_blocks):
-            async for _ in full_node_1.block(full_node_protocol.Block(blocks[i])):
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(blocks[i])
+            ):
                 pass
 
         sk = bytes(ExtendedPrivateKey.from_seed(b"")).hex()

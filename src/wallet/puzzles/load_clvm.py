@@ -1,6 +1,6 @@
 import pkg_resources
 
-from src.types.hashable import Program
+from src.types.hashable.Program import Program
 
 
 def load_clvm(filename):
