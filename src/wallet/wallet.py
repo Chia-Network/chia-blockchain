@@ -42,7 +42,7 @@ class Wallet:
     private_key: ExtendedPrivateKey
     key_config: Dict
     config: Dict
-    server: ChiaServer
+    server: Optional[ChiaServer]
     next_address: int = 0
     pubkey_num_lookup: Dict[bytes, int]
     tmp_coins: Set[Coin]
@@ -68,8 +68,6 @@ class Wallet:
 
     # Queue of SpendBundles that FullNode hasn't acked yet.
     send_queue: Dict[bytes32, SpendBundle]
-
-    server: ChiaServer
 
     @staticmethod
     async def create(config: Dict, key_config: Dict, name: str = None):
