@@ -1,33 +1,16 @@
 import asyncio
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Set
 from pathlib import Path
 import aiosqlite
-from src.types.full_block import FullBlock
 from src.types.hashable.Coin import Coin
 from src.types.hashable.CoinRecord import CoinRecord
 from src.types.sized_bytes import bytes32
-from src.types.header import Header
 from src.util.ints import uint32
 
 
-class DiffStore:
-    header: Header
-    diffs: Dict[bytes32, CoinRecord]
-
-    @staticmethod
-    async def create(header: Header, diffs: Dict[bytes32, CoinRecord]):
-        self = DiffStore()
-        self.header = header
-        self.diffs = diffs
-        return self
-
-
-class CoinStore:
+class WalletStore:
     """
-    This object handles CoinRecords in DB.
-    Coins from genesis to LCA are stored on disk db, coins from lca to head are stored in DiffStore object for each tip.
-    When blockchain notifies UnspentStore of new LCA, LCA is added to the disk db,
-    DiffStores are updated/recreated. (managed by blockchain.py)
+    This object handles CoinRecords in DB used by wallet.
     """
 
     coin_record_db: aiosqlite.Connection
@@ -35,7 +18,6 @@ class CoinStore:
     sync_mode: bool = False
     lock: asyncio.Lock
     lca_coin_records: Dict[str, CoinRecord]
-    head_diffs: Dict[bytes32, DiffStore]
     cache_size: uint32
 
     @classmethod
@@ -43,7 +25,7 @@ class CoinStore:
         self = cls()
 
         self.cache_size = cache_size
-        # All full blocks which have been added to the blockchain. Header_hash -> block
+
         self.coin_record_db = await aiosqlite.connect(db_path)
         await self.coin_record_db.execute(
             (
@@ -80,7 +62,6 @@ class CoinStore:
         # Lock
         self.lock = asyncio.Lock()  # external
         self.lca_coin_records = dict()
-        self.head_diffs = dict()
         return self
 
     async def close(self):
@@ -90,79 +71,6 @@ class CoinStore:
         cursor = await self.coin_record_db.execute("DELETE FROM coin_record")
         await cursor.close()
         await self.coin_record_db.commit()
-
-    async def add_lcas(self, blocks: List[FullBlock]):
-        for block in blocks:
-            await self.new_lca(block)
-
-    async def new_lca(self, block: FullBlock):
-        removals, additions = await block.tx_removals_and_additions()
-
-        for coin in additions:
-            record: CoinRecord = CoinRecord(coin, block.height, uint32(0), False, False)
-            await self.add_coin_record(record)
-
-        for coin_name in removals:
-            await self.set_spent(coin_name, block.height)
-
-        coinbase: CoinRecord = CoinRecord(
-            block.body.coinbase, block.height, uint32(0), False, True
-        )
-        fees_coin: CoinRecord = CoinRecord(
-            block.body.fees_coin, block.height, uint32(0), False, True
-        )
-
-        await self.add_coin_record(coinbase)
-        await self.add_coin_record(fees_coin)
-
-    def nuke_diffs(self):
-        self.head_diffs.clear()
-
-    # Received new tip, just update diffs
-    async def new_heads(self, blocks: List[FullBlock]):
-        last: FullBlock = blocks[-1]
-        diff_store: DiffStore = await DiffStore.create(last.header, dict())
-
-        block: FullBlock
-        for block in blocks:
-            removals, additions = await block.tx_removals_and_additions()
-            await self.add_diffs(removals, additions, block, diff_store)
-
-        self.head_diffs[last.header_hash] = diff_store
-
-    async def add_diffs(
-        self,
-        removals: List[bytes32],
-        additions: List[Coin],
-        block: FullBlock,
-        diff_store: DiffStore,
-    ):
-
-        for coin in additions:
-            added: CoinRecord = CoinRecord(coin, block.height, 0, 0, 0)  # type: ignore # noqa
-            diff_store.diffs[added.name.hex()] = added
-
-        coinbase: CoinRecord = CoinRecord(block.body.coinbase, block.height, 0, 0, 1)  # type: ignore # noqa
-        diff_store.diffs[coinbase.name.hex()] = coinbase
-        fees_coin: CoinRecord = CoinRecord(block.body.fees_coin, block.height, 0, 0, 1)  # type: ignore # noqa
-        diff_store.diffs[fees_coin.name.hex()] = fees_coin
-
-        for coin_name in removals:
-            removed: Optional[CoinRecord] = None
-            if coin_name.hex() in diff_store.diffs:
-                removed = diff_store.diffs[coin_name.hex()]
-            if removed is None:
-                removed = await self.get_coin_record(coin_name)
-            if removed is None:
-                raise Exception
-            spent = CoinRecord(
-                removed.coin,
-                removed.confirmed_block_index,
-                block.height,
-                True,
-                removed.coinbase,
-            )  # type: ignore # noqa
-            diff_store.diffs[spent.name.hex()] = spent
 
     # Store CoinRecord in DB and ram cache
     async def add_coin_record(self, record: CoinRecord) -> None:
@@ -198,13 +106,7 @@ class CoinStore:
         await self.add_coin_record(spent)
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
-    async def get_coin_record(
-        self, coin_name: bytes32, header: Header = None
-    ) -> Optional[CoinRecord]:
-        if header is not None and header.header_hash in self.head_diffs:
-            diff_store = self.head_diffs[header.header_hash]
-            if coin_name.hex() in diff_store.diffs:
-                return diff_store.diffs[coin_name.hex()]
+    async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
         if coin_name.hex() in self.lca_coin_records:
             return self.lca_coin_records[coin_name.hex()]
         cursor = await self.coin_record_db.execute(
@@ -220,15 +122,26 @@ class CoinStore:
         return None
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
+    async def get_coin_records_by_spent(self, spent: bool) -> Set[CoinRecord]:
+        coins = set()
+
+        cursor = await self.coin_record_db.execute(
+            "SELECT * from coin_record WHERE spent=?", (int(spent),)
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        for row in rows:
+            coin = Coin(
+                bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
+            )
+            coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4]))
+        return coins
+
+    # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(
-        self, puzzle_hash: bytes32, header: Header = None
+        self, puzzle_hash: bytes32
     ) -> List[CoinRecord]:
         coins = set()
-        if header is not None and header.header_hash in self.head_diffs:
-            diff_store = self.head_diffs[header.header_hash]
-            for _, record in diff_store.diffs.items():
-                if record.coin.puzzle_hash == puzzle_hash:
-                    coins.add(record)
         cursor = await self.coin_record_db.execute(
             "SELECT * from coin_record WHERE puzzle_hash=?", (puzzle_hash.hex(),)
         )

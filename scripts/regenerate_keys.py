@@ -1,7 +1,7 @@
 import argparse
 from secrets import token_bytes
 
-from blspy import PrivateKey
+from blspy import PrivateKey, ExtendedPrivateKey
 from yaml import safe_dump, safe_load
 from src.pool import create_puzzlehash_for_pk
 from src.types.hashable.BLSSignature import BLSPublicKey
@@ -55,6 +55,15 @@ def main():
         default=True,
         help="Regenerate pool keys",
     )
+    parser.add_argument(
+        "-w",
+        "--wallet",
+        type=str2bool,
+        nargs="?",
+        const=True,
+        default=True,
+        help="Regenerate wallet keys",
+    )
     args = parser.parse_args()
 
     if key_config_filename.exists():
@@ -99,6 +108,11 @@ def main():
         )
         key_config["pool_sks"] = [bytes(pool_sk).hex() for pool_sk in pool_sks]
         key_config["pool_target"] = pool_target.hex()
+        with open(key_config_filename, "w") as f:
+            safe_dump(key_config, f)
+    if args.wallet:
+        wallet_sk = ExtendedPrivateKey.from_seed(token_bytes(32))
+        key_config["wallet_sk"] = bytes(wallet_sk).hex()
         with open(key_config_filename, "w") as f:
             safe_dump(key_config, f)
 

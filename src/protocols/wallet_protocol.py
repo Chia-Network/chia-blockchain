@@ -22,9 +22,17 @@ class SendTransaction:
 
 @dataclass(frozen=True)
 @cbor_message
+class TransactionAck:
+    txid: bytes32
+    status: bool
+
+
+@dataclass(frozen=True)
+@cbor_message
 class NewLCA:
     lca_hash: bytes32
     height: uint32
+    weight: uint32
 
 
 @dataclass(frozen=True)
@@ -64,3 +72,17 @@ class RequestBody:
 @cbor_message
 class RespondBody:
     body: Body
+    height: uint32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class FullProofForHash:
+    proof_hash: bytes32
+    proof: bytes32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class ProofHash:
+    proof_hash: bytes32

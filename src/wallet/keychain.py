@@ -1,5 +1,9 @@
 from src.types.hashable import BLSSignature
-from src.util.condition_tools import conditions_by_opcode, hash_key_pairs_for_conditions_dict, conditions_for_solution
+from src.util.condition_tools import (
+    conditions_by_opcode,
+    hash_key_pairs_for_conditions_dict,
+    conditions_for_solution,
+)
 from src.wallet.BLSPrivateKey import BLSPrivateKey
 
 

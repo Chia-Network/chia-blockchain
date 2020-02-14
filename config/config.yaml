@@ -121,3 +121,13 @@ introducer:
   # recent_peer_threshold seconds
   recent_peer_threshold: 6000
   logging: *logging
+
+wallet:
+  host: 127.0.0.1
+  port: 8223
+
+  full_node_peer:
+    host: 127.0.0.1
+    port: 8444
+
+  logging: *logging
