@@ -1,36 +1,47 @@
-<!doctype html>
-<html lang="en-US">
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="Content-Type" content="text/html">
-  <title>Github API Webapp using jQuery - Treehouse Demo</title>
-  <meta name="author" content="Jake Rocheleau">
-  <link rel="shortcut icon" href="http://d15dxvojnvxp1x.cloudfront.net/assets/favicon.ico">
-  <link rel="icon" href="http://d15dxvojnvxp1x.cloudfront.net/assets/favicon.ico">
-  <script type="text/javascript" src="js/jquery-1.10.2.min.js"></script>
+<html><head><link rel="stylesheet" href="styles.css">
+<title>Chia Blockchain Status</title>
+<link rel="shortcut icon" href="favicon.ico">
+<link rel="icon" href="favicon.ico">
+<script type="text/javascript" src="js/jquery-1.10.2.min.js"></script>
 </head>
+<body><main>
+<p>Chia Testnet Blockchain: Currently synced</p>
+<p>Current LCA timestamp (UTC): 2020-02-14 17:39:38</p>
+<p>Current difficulty: 180215135210</p>
+<p>Current VDF iterations per second: 143531 (update at 22560)</p>
+<p>Total iterations since genesis: 839678047791</p>
 
-<body>
-  <div id="w">
+<hr>
 
-    <a href="#" id="poolsubmitbtn">Pull Connection</a>
-
-    <div id="pooldata" class="clearfix"></div>
-
-    <h1>Simple Github API Webapp</h1>
-
-    <a href="#" id="connsubmitbtn">Pull Connection</a>
+<p>Connections</p>
 
     <div id="conndata" class="clearfix"></div>
 
-    <p>Enter a single Github username below and click the button to display profile info via JSON.</p>
-    
-    <input type="text" name="ghusername" id="ghusername" placeholder="Github username...">
+<p>Add a connection ip:port</p>
+<input type="text" name="connport" id="connport" placeholder="">
 
-    <a href="#" id="ghsubmitbtn">Pull User Data</a>
-    
-    <div id="ghapidata" class="clearfix"></div>
-  </div>
+<hr>
+
+<p>Latest blocks</p>
+
+    <div id="blockdata" class="clearfix"></div>
+
+<p>Search block by hash</p>
+<input type="text" name="blockhash" id="blockhash" placeholder="">
+
+<hr>
+
+<p>Top block pools</p>
+
+    <div id="pooldata" class="clearfix"></div>
+
+<hr>
+
+<center>
+    <a href="#" id="stopnode">Stop node and close UI</a>
+</center>
+</main>
+
 <script type = "text/javascript" >
 
 var added_blocks;
@@ -40,9 +51,8 @@ var NodeType = ["FULL_NODE", "HARVESTER", "FARMER", "TIMELORD", "INTRODUCER"];
 
 $(function() {
 
-    $('#connsubmitbtn').on('click', function(e) {
-        e.preventDefault();
-        $('#ghapidata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
+    {
+        $('#conndata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
 
         jQuery.ajax({
             url: "http://127.0.0.1:8555/get_connections",
@@ -53,12 +63,12 @@ $(function() {
             contentType: "application/json; charset=utf-8",
             success: function(data) {
 
-                outhtml = '<div><ul>';
+                outhtml = '<div><ul style="list-style-type:none;">';
 
                 for (i = 0; i < data.length; i++) {
                     console.log(data[i].node_id);
 
-                    outhtml = outhtml + '<li><a href="javascript:connClicked(\'' + data[i].node_id + '\')">' + NodeType[data[i].type - 1] + ' ' + data[i].peer_host + ' ' + data[i].peer_port + '/' + data[i].peer_server_port + ' ' + data[i].node_id + '</li>';
+                    outhtml = outhtml + '<li><a href="javascript:connClicked(\'' + data[i].node_id + '\')">' + NodeType[data[i].type - 1] + ' ' + data[i].peer_host + ' ' + data[i].peer_port + '/' + data[i].peer_server_port + ' ' + data[i].node_id.substring(0, 25) + '...</li>';
                 }
                 outhtml = outhtml + '</ul></div>';
 
@@ -67,11 +77,10 @@ $(function() {
                 console.log(data);
             }
         })
-    });
+    }
 
-    $('#poolsubmitbtn').on('click', function(e) {
-        e.preventDefault();
-        $('#ghapidata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
+    {
+        $('#pooldata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
 
         jQuery.ajax({
             url: "http://127.0.0.1:8555/get_pool_balances",
@@ -82,10 +91,13 @@ $(function() {
             contentType: "application/json; charset=utf-8",
             success: function(data) {
 
-                outhtml = '<div><ul>';
+var arr = Object.entries(data).map(([key, value]) => ({key,value}));
+var sorted = arr.sort((a, b) => b.value - a.value);
 
-                for (key in data) {
-                    outhtml = outhtml + '<li>' + key + ' ' + data[key] + '</li>';
+                outhtml = '<div><ul style="list-style-type:none;">';
+
+                for (i = 0; i < arr.length; i++) {
+                    outhtml = outhtml + '<li>' + sorted[i].key.substring(0,60) + '... ' + sorted[i].value/1000000000000 + ' chias</li>';
                 }
                 outhtml = outhtml + '</ul></div>';
 
@@ -94,14 +106,11 @@ $(function() {
                 console.log(data);
             }
         })
-    });
+    }
 
 
-    $('#ghsubmitbtn').on('click', function(e) {
-        e.preventDefault();
-        $('#ghapidata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
-
-        var username = $('#ghusername').val();
+    {
+        $('#blockdata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
 
         jQuery.ajax({
             url: "http://127.0.0.1:8555/get_blockchain_state",
@@ -216,14 +225,14 @@ $(function() {
                         var outhtml = "<div>";
 
                         if (added_blocks.length == 0) {
-                            outhtml = outhtml + '<p>No repos!</p></div>';
+                            outhtml = outhtml + '<p>No blocks!</p></div>';
                         } else {
-                            outhtml = outhtml + '<p><strong>Repos List:</strong></p> <ul>';
+                            outhtml = outhtml + '<ul style="list-style-type:none;">';
                             for (index = 0; index < added_blocks.length; index++) {
 
                                 console.log(added_blocks[index]);
                                 console.log(hashed_blocks[index]);
-                                outhtml = outhtml + '<li><a href="javascript:headerClicked(' + index + ')">' + added_blocks[index].challenge.height + ': ' + hashed_blocks[index];
+                                outhtml = outhtml + '<li><a href="javascript:headerClicked(\'' + hashed_blocks[index] + '\')">' + added_blocks[index].challenge.height + ': ' + hashed_blocks[index];
                                 console.log(tips);
                                 if (headerInArray(added_blocks[index], tips) != -1)
                                     outhtml = outhtml + ' TIP';
@@ -235,7 +244,7 @@ $(function() {
                             outhtml = outhtml + '</ul></div>';
                         }
 
-                        $('#ghapidata').html(outhtml);
+                        $('#blockdata').html(outhtml);
 
                     })
                 });
@@ -243,12 +252,26 @@ $(function() {
         });
 
 
-    }); // end click event handler
+    } // end click event handler
 
 });
 
-function headerClicked(index) {
-    alert(JSON.stringify(added_blocks[index]));
+function headerClicked(hash) {
+    var blockargs = '{"header_hash": "' + hash + '"}';
+
+    jQuery.ajax({
+        url: "http://127.0.0.1:8555/get_block",
+        type: "POST",
+        crossDomain: true,
+        data: blockargs,
+        dataType: "json",
+        contentType: "application/json; charset=utf-8",
+        success: function(data) {
+var newWindow = window.open();
+newWindow.document.write("<html><body><pre>"+JSON.stringify(JSON.parse(data), null, ' ')+"</pre></body></html>");
+}
+    });
+
 }
 
 function connClicked(node_id) {
@@ -267,7 +290,6 @@ function connClicked(node_id) {
     });
 
 }
-
 
 function headersEqual(a, b) {
     if ((a.header.data.prev_header_hash == b.header.data.prev_header_hash) &&
