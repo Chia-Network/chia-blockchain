@@ -1,7 +1,6 @@
 import asyncio
 import signal
 import time
-from os import urandom
 
 import pytest
 from blspy import ExtendedPrivateKey
@@ -36,8 +35,7 @@ class TestWalletProtocol:
             async for _ in full_node_1.block(full_node_protocol.Block(blocks[i])):
                 pass
 
-        self.seed = urandom(1024)
-        sk = bytes(ExtendedPrivateKey.from_seed(self.seed)).hex()
+        sk = bytes(ExtendedPrivateKey.from_seed(b"")).hex()
         key_config = {"wallet_sk": sk}
 
         wallet = await Wallet.create({}, key_config)

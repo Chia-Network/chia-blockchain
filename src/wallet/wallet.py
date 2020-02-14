@@ -45,7 +45,6 @@ class Wallet:
     server: ChiaServer
     next_address: int = 0
     pubkey_num_lookup: Dict[bytes, int]
-    tmp_balance: int
     tmp_coins: Set[Coin]
     wallet_store: WalletStore
     header_hash: List[bytes32]
@@ -70,6 +69,8 @@ class Wallet:
     # Queue of SpendBundles that FullNode hasn't acked yet.
     send_queue: Dict[bytes32, SpendBundle]
 
+    server: ChiaServer
+
     @staticmethod
     async def create(config: Dict, key_config: Dict, name: str = None):
         self = Wallet()
@@ -84,7 +85,6 @@ class Wallet:
             self.log = logging.getLogger(__name__)
 
         self.pubkey_num_lookup = {}
-        self.tmp_balance = 0
         self.tmp_coins = set()
         pub_hex = self.private_key.get_public_key().serialize().hex()
         path = Path(f"wallet_db_{pub_hex}.db")
@@ -100,6 +100,7 @@ class Wallet:
         self.synced = False
 
         self.send_queue = {}
+        self.server = None
 
         return self
 
@@ -114,15 +115,15 @@ class Wallet:
             CoinRecord
         ] = await self.wallet_store.get_coin_records_by_spent(False)
         amount: uint64 = uint64(0)
+
         for record in record_list:
             amount = uint64(amount + record.coin.amount)
-        for removal in self.unconfirmed_removals:
-            amount = uint64(amount - removal.amount)
+
         return uint64(amount)
 
     async def get_unconfirmed_balance(self) -> uint64:
         confirmed = await self.get_confirmed_balance()
-        result = confirmed - self.unconfirmed_removal_amount
+        result = confirmed - self.unconfirmed_removal_amount + self.unconfirmed_addition_amount
         return uint64(result)
 
     def can_generate_puzzle_hash(self, hash: bytes32) -> bool:
@@ -151,7 +152,7 @@ class Wallet:
 
     async def select_coins(self, amount) -> Optional[Set[Coin]]:
 
-        if amount > self.get_unconfirmed_balance():
+        if amount > await self.get_unconfirmed_balance():
             return None
 
         unspent: Set[
@@ -227,8 +228,6 @@ class Wallet:
     async def generate_unsigned_transaction(
         self, amount: int, newpuzzlehash: bytes32, fee: int = 0
     ) -> List[Tuple[Program, CoinSolution]]:
-        if self.tmp_balance < amount:
-            return []
         utxos = await self.select_coins(amount + fee)
         if utxos is None:
             return []
@@ -249,13 +248,12 @@ class Wallet:
                     changepuzzlehash = self.get_new_puzzlehash()
                     primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
                     # add change coin into temp_utxo set
-                    self.tmp_coins.add(Coin(coin, changepuzzlehash, uint64(change)))
+                    self.tmp_coins.add(Coin(coin.name(), changepuzzlehash, uint64(change)))
                 solution = self.make_solution(primaries=primaries)
                 output_created = True
             else:
                 solution = self.make_solution(consumed=[coin.name()])
             spends.append((puzzle, CoinSolution(coin, solution)))
-        self.tmp_balance -= amount + fee
         return spends
 
     def sign_transaction(self, spends: List[Tuple[Program, CoinSolution]]):
@@ -389,7 +387,28 @@ class Wallet:
 
     async def push_transaction(self, spend_bundle: SpendBundle):
         """ Use this API to make transactions. """
-        self.send_queue[spend_bundle.name] = spend_bundle
+        self.send_queue[spend_bundle.name()] = spend_bundle
+        additions: List[Coin] = spend_bundle.additions()
+        removals: List[Coin] = spend_bundle.removals()
+
+        addition_amount = 0
+        for coin in additions:
+            if self.can_generate_puzzle_hash(coin.puzzle_hash):
+                self.unconfirmed_additions.add(coin)
+                self.coin_spend_bundle_map[coin.name()] = spend_bundle
+                addition_amount += coin.amount
+
+        removal_amount = 0
+        for coin in removals:
+            self.unconfirmed_removals.add(coin)
+            self.coin_spend_bundle_map[coin.name()] = spend_bundle
+            removal_amount += coin.amount
+
+        # Update unconfirmed state
+        self.unconfirmed_removal_amount += removal_amount
+        self.unconfirmed_addition_amount += addition_amount
+
+        self.pending_spend_bundles[spend_bundle.name()] = spend_bundle
         await self._send_transaction(spend_bundle)
 
     async def _send_transaction(self, spend_bundle: SpendBundle):
@@ -400,12 +419,12 @@ class Wallet:
             Message("wallet_transaction", spend_bundle),
             Delivery.BROADCAST,
         )
-        async for reply in self.server.push_message(msg):
-            self.log.info(reply)
+        if self.server:
+            async for reply in self.server.push_message(msg):
+                self.log.info(reply)
 
     @api_request
     async def transaction_ack(self, ack: src.protocols.wallet_protocol.TransactionAck):
-        # TODO Remove from retry queue
         if ack.status:
             self.remove_from_queue(ack.txid)
             self.log.info(f"SpendBundle has been received by the FullNode. id: {id}")
