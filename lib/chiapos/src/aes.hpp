@@ -226,7 +226,7 @@ uint8_t RoundKey256[240]; // AES_KEYLEN 32   Key length in bytes
 // This function produces Nb(Nr+1) round keys. The round keys are used in each round to decrypt the states.
 static void KeyExpansion(uint8_t* RoundKey, const uint8_t* Key, int keyNr, int keyNk)
 {
-  unsigned i, j, k;
+  int i, j, k;
   uint8_t tempa[4]; // Used for the column/row operations
   
   // The first round key is the key itself.
