@@ -171,14 +171,14 @@
                     <h4>Wallet Deposit Address</h4>
                     <p>Use this address to receive Chia</p>
                     <div class="input-group">
-                      <input type="text" class="form-control" value="Ad87deD4gEe8dG57Ede4eEg5dREs4d5e8f4e">
+                      <input type="text" class="form-control" id="puzzle_holder" value="">
                       <div class="input-group-prepend">
-                        <button class="btn btn-primary">COPY</button>
+                        <button class="btn btn-primary" id="copy" >COPY</button>
                       </div>
                     </div>
                   </div>
                   <div class="col-md-4">
-                    <img src="assets/img/qr-code-light.svg" alt="qr-code">
+                    <canvas id="qr_canvas" width="300" height="300"></canvas>
                   </div>
                 </div>
               </div>
