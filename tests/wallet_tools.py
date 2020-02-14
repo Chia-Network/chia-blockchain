@@ -47,7 +47,6 @@ class WalletTool:
         pubkey = self.extended_secret_key.public_child(
             self.next_address
         ).get_public_key()
-        print("Signing with pubkey", pubkey, self.next_address)
         self.pubkey_num_lookup[pubkey.serialize()] = self.next_address
         self.next_address = self.next_address + 1
         return pubkey
@@ -71,9 +70,6 @@ class WalletTool:
     def get_keys(self, puzzle_hash):
         for child in range(self.next_address):
             pubkey = self.extended_secret_key.public_child(child).get_public_key()
-            print("PK", pubkey, child)
-            print("Hash", puzzle_hash, puzzle_for_pk(pubkey.serialize()).get_hash())
-            print("GET puzzle:", puzzle_for_pk(pubkey.serialize()))
             if puzzle_hash == puzzle_for_pk(pubkey.serialize()).get_hash():
                 return (
                     pubkey,
@@ -91,9 +87,7 @@ class WalletTool:
 
     def get_new_puzzlehash(self):
         puzzle = self.get_new_puzzle()
-        print("Puzzle", puzzle)
         puzzlehash = puzzle.get_hash()
-        print("Puzzle hash:", puzzlehash)
         return puzzlehash
 
     def sign(self, value, pubkey):

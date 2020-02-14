@@ -1,5 +1,6 @@
 import collections
 from typing import Dict, Optional, Tuple, List, Set
+import logging
 
 from src.consensus.constants import constants as consensus_constants
 from src.util.bundle_tools import best_solution_program
@@ -20,6 +21,9 @@ from src.util.mempool_check_conditions import (
 from src.util.condition_tools import hash_key_pairs_for_conditions_dict
 from src.util.ints import uint64, uint32
 from sortedcontainers import SortedDict
+
+
+log = logging.getLogger(__name__)
 
 
 class MempoolManager:
@@ -72,7 +76,7 @@ class MempoolManager:
             else:
                 return None
 
-    async def is_fee_enough(self, fees: uint64, cost: uint64) -> bool:
+    def is_fee_enough(self, fees: uint64, cost: uint64) -> bool:
         """
         Determines whether any of the pools can accept a transaction with a given fees
         and cost.
@@ -162,7 +166,7 @@ class MempoolManager:
                 for item in conflicting_pool_items.values():
                     if item.fee_per_cost >= fees_per_cost:
                         tmp_error = Err.MEMPOOL_CONFLICT
-                        await self.add_to_potential_tx_set(new_spend)
+                        self.add_to_potential_tx_set(new_spend)
                         break
             elif fail_reason:
                 errors.append(fail_reason)
@@ -191,7 +195,7 @@ class MempoolManager:
                         error is Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED
                         or error is Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED
                     ):
-                        await self.add_to_potential_tx_set(new_spend)
+                        self.add_to_potential_tx_set(new_spend)
                     break
                 hash_key_pairs.extend(
                     hash_key_pairs_for_conditions_dict(npc.condition_dict)
@@ -245,12 +249,12 @@ class MempoolManager:
                     removal, mempool.header.height + 1, uint32(0), False, False
                 )
                 continue
+            log.warning(f"Getting removal {removal}")
             # 2. Checks we have it in the unspent_store
             unspent: Optional[CoinRecord] = await self.unspent_store.get_coin_record(
                 removal.name(), mempool.header
             )
             if unspent is None:
-                print(f"unkown unspent {removal.name()}")
                 return Err.UNKNOWN_UNSPENT, {}, []
             # 3. Checks if it's been spent already
             if unspent.spent == 1:
@@ -271,7 +275,7 @@ class MempoolManager:
         # 5. If coins can be spent return list of unspents as we see them in local storage
         return None, coin_records, []
 
-    async def add_to_potential_tx_set(self, spend: SpendBundle):
+    def add_to_potential_tx_set(self, spend: SpendBundle):
         """
         Adds SpendBundles that have failed to be added to the pool in potential tx set.
         This is later used to retry to add them.
@@ -282,14 +286,14 @@ class MempoolManager:
             first_in = list(self.potential_txs.keys())[0]
             del self.potential_txs[first_in]
 
-    async def seen(self, bundle_hash: bytes32) -> bool:
+    def seen(self, bundle_hash: bytes32) -> bool:
         """ Return true if we saw this spendbundle before """
         if bundle_hash in self.seen_bundle_hashes:
             return True
         else:
             return False
 
-    async def get_spendbundle(self, bundle_hash: bytes32) -> Optional[SpendBundle]:
+    def get_spendbundle(self, bundle_hash: bytes32) -> Optional[SpendBundle]:
         """ Returns a full SpendBundle if it's inside one the mempools"""
         for pool in self.mempools.values():
             if bundle_hash in pool.spends:

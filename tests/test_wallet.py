@@ -1,5 +1,4 @@
 import asyncio
-from os import urandom
 
 import pytest
 from blspy import ExtendedPrivateKey

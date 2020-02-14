@@ -68,7 +68,7 @@ class TestBlockchainTransactions:
             # Maybe transaction means that it's accepted in mempool
             assert outbound.message.function == "new_transaction"
 
-        sb = await full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
+        sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
         assert sb is spend_bundle
 
         last_block = blocks[10]

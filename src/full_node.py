@@ -591,7 +591,6 @@ class FullNode:
         Requests a full transaction if we haven't seen it previously, and if the fees are enough.
         """
         if self.mempool_manager.seen(transaction.transaction_id):
-            self.log.info(f"tx_id({transaction.transaction_id}) already seen")
             return
         elif self.mempool_manager.is_fee_enough(transaction.fees, transaction.cost):
             requestTX = full_node_protocol.RequestTransaction(
@@ -608,9 +607,7 @@ class FullNode:
         self, request: full_node_protocol.RequestTransaction
     ) -> OutboundMessageGenerator:
         """ Peer has requested a full transaction from us. """
-        spend_bundle = await self.mempool_manager.get_spendbundle(
-            request.transaction_id
-        )
+        spend_bundle = self.mempool_manager.get_spendbundle(request.transaction_id)
         if spend_bundle is None:
             reject = full_node_protocol.RejectTransactionRequest(request.transaction_id)
             yield OutboundMessage(
