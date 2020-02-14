@@ -271,8 +271,15 @@ function headerClicked(hash) {
         dataType: "json",
         contentType: "application/json; charset=utf-8",
         success: function(data) {
+
+output=JSON.stringify(JSON.parse(data),function(k,v){
+   if(v instanceof Array)
+      return JSON.stringify(v);
+   return v;
+},2);
+
 var newWindow = window.open();
-newWindow.document.write("<html><body><pre>"+JSON.stringify(JSON.parse(data), null, ' ')+"</pre></body></html>");
+newWindow.document.write("<html><body><pre>"+output+"</pre></body></html>");
 }
     });
 
