@@ -4,7 +4,7 @@ import aiohttp_jinja2
 import os
 from src.util.config import load_config_cli
 from middlewares import setup_middlewares
-from node_state import init_rpc
+from node_state import query_node
 
 
 # setup the directoriers (relative to this file) and app object
