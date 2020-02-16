@@ -7,7 +7,7 @@
 <body>
     <h1>{{ title }}</h1>
     <h2>Status</h2>
-    <h3>{{ state }}</h3>
+    <div><span class='name'>Status:</span> {{ state }}</div>
     <div><span class='name'>Sync mode:</span> {{ blockchain_state.sync_mode }}</div>
     <div><span class='name'><a href="./lca">Least common ancestor</a></span>
         <div><span class='name'>Height:</span> {{ blockchain_state.lca.challenge.height }}</div>
