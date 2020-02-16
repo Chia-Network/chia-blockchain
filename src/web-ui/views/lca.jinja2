@@ -1,11 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>{{ title }}</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-    <h1>{{ title }}</h1>
+{% extends 'layout.html' %}
+{% block content %}
     {{ lca }}
-</body>
-</html>
+{% endblock %}

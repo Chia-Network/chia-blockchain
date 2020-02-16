@@ -1,39 +1,32 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>{{ title }}</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-    <h1>{{ title }}</h1>
-    <h2>Status</h2>
-    <div><span class='name'>Status:</span> {{ state }}</div>
-    <div><span class='name'>Sync mode:</span> {{ blockchain_state.sync_mode }}</div>
-    <div><span class='name'><a href="./lca">Least common ancestor</a></span>
-        <div><span class='name'>Height:</span> {{ blockchain_state.lca.challenge.height }}</div>
-        <div><span class='name'>Total iterations since genesis:</span> {{ blockchain_state.lca.challenge.total_iters }}</div>
-    </div>
-    <div><span class='name'>Tip heights</span>
-        {% for tip in blockchain_state.tips %}
-            {{ tip.challenge.height }}
-        {% endfor %}  
-    </div>
-    <div><span class='name'>Current difficulty:</span> {{ blockchain_state.difficulty }}</div>    
-    <div><span class='name'>Current VDF iterations per second:</span> {{ blockchain_state.ips }}</div>    
-    
-    <h3>Connections</h3>
-        {% for connection in connections %}
-        <div>
-            <span>{{ connection.type_name }}</span> -
-            <a href="./connection?node_id={{connection.node_id}}">
-                <span>{{ connection.peer_host }}:{{ connection.peer_port }}/{{ connection.peer_server_port }}</span>
-            </a>
-        </div>
-        {% endfor %}        
-
-    <h3>Our Pool Winnings</h3>
-    {% for winner in our_winners %}
-        <div><span class='name'>Public key</span> {{ winner[2] }}: {{ winner[0] / 1000000000000 }} chias</div>
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Status</h2>
+<div><span class='name'>Status:</span> {{ state }}</div>
+<div><span class='name'>Sync mode:</span> {{ blockchain_state.sync_mode }}</div>
+<div><span class='name'><a href="./lca">Least common ancestor</a></span>
+    <div><span class='name'>Height:</span> {{ blockchain_state.lca.challenge.height }}</div>
+    <div><span class='name'>Total iterations since genesis:</span> {{ blockchain_state.lca.challenge.total_iters }}</div>
+</div>
+<div><span class='name'>Tip heights</span>
+    {% for tip in blockchain_state.tips %}
+        {{ tip.challenge.height }}
     {% endfor %}  
-</body>
-</html>
+</div>
+<div><span class='name'>Current difficulty:</span> {{ blockchain_state.difficulty }}</div>    
+<div><span class='name'>Current VDF iterations per second:</span> {{ blockchain_state.ips }}</div>    
+
+<h3>Connections</h3>
+    {% for connection in connections %}
+    <div>
+        <span>{{ connection.type_name }}</span> -
+        <a href="./connection?node_id={{connection.node_id}}">
+            <span>{{ connection.peer_host }}:{{ connection.peer_port }}/{{ connection.peer_server_port }}</span>
+        </a>
+    </div>
+    {% endfor %}        
+
+<h3>Our Pool Winnings</h3>
+{% for winner in our_winners %}
+    <div><span class='name'>Public key</span> {{ winner[2] }}: {{ winner[0] / 1000000000000 }} chias</div>
+{% endfor %}  
+{% endblock %}
