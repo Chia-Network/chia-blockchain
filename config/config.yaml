@@ -113,6 +113,9 @@ ui:
   ssh_filename: config/ssh_host_key
   logging: *logging
 
+  # Which port to use to host the web ui on
+  webui_port: 8080
+
 introducer:
   host: 127.0.0.1
   port: 8445

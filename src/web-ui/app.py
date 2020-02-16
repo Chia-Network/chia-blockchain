@@ -25,10 +25,9 @@ app.on_startup.append(init_rpc)
 @routes.get('/')
 @aiohttp_jinja2.template('index.jinja2')
 async def index(request):
-    return {'title': 'Chia Full Node',
-            'state': app['node']['state'],
-            'connectionCount': app['node']['connectionCount']}
+    # the node property contains the state of the chia node when it was last queried
+    return app['node']
 
 
 app.add_routes(routes)
-web.run_app(app)
+web.run_app(app, port=app['config']['webui_port'])
