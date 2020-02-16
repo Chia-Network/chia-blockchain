@@ -3,7 +3,7 @@ from src.rpc.rpc_client import RpcClient
 from src.server.outbound_message import NodeType
 
 
-async def init_rpc(app):
+async def query_node(app):
     node = {}
     node['title'] = 'Chia Full Node'
 

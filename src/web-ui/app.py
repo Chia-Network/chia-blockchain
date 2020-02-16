@@ -19,7 +19,7 @@ app['static_root_url'] = 'static'
 routes = web.RouteTableDef()
 app.router.add_static('/static/', path=abs_static_path, name='static')
 setup_middlewares(app)
-app.on_startup.append(init_rpc)
+app.on_startup.append(query_node)
 
 
 @routes.get('/')
