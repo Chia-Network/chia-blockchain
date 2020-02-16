@@ -47,3 +47,4 @@ async def query_node(app):
 
     finally:
         app['node'] = node
+        app['ready'] = True

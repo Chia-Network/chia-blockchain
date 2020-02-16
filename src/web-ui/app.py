@@ -10,7 +10,13 @@ from blspy import PrivateKey
 
 def setup_app():
     app = web.Application()
+    app['ready'] = False
     try:
+        abs_app_dir_path = os.path.dirname(os.path.realpath(__file__))
+        aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(os.path.join(abs_app_dir_path, 'views')))
+        app.router.add_static('/static/', path=os.path.join(abs_app_dir_path, 'static'), name='static')
+        setup_middlewares(app)
+
         app['config'] = load_config_cli("config.yaml", "ui")
         app['key_config'] = load_config_cli("keys.yaml", None)
         app['key_config']['pool_pks'] = [
@@ -18,10 +24,6 @@ def setup_app():
                         for ce in app['key_config']["pool_sks"]
                     ]
 
-        abs_app_dir_path = os.path.dirname(os.path.realpath(__file__))
-        aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(os.path.join(abs_app_dir_path, 'views')))
-        app.router.add_static('/static/', path=os.path.join(abs_app_dir_path, 'static'), name='static')
-        setup_middlewares(app)
         app.on_startup.append(query_node)
 
     finally:
@@ -36,7 +38,10 @@ routes = web.RouteTableDef()
 @aiohttp_jinja2.template('index.jinja2')
 async def index(request):
     # the node property contains the state of the chia node when it was last queried
-    return app['node']
+    if app['ready']:
+        return app['node']
+
+    return {}
 
 
 app.add_routes(routes)
