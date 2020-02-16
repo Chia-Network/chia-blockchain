@@ -9,9 +9,18 @@
     <h2>Status</h2>
     <h3>{{ state }}</h3>
     <div><span class='name'>Sync mode:</span> {{ blockchain_state.sync_mode }}</div>
+    <div><span class='name'><a href="./lca">Least common ancestor</a></span>
+        <div><span class='name'>Height:</span> {{ blockchain_state.lca.challenge.height }}</div>
+        <div><span class='name'>Total iterations since genesis:</span> {{ blockchain_state.lca.challenge.total_iters }}</div>
+    </div>
+    <div><span class='name'>Tip heights</span>
+        {% for tip in blockchain_state.tips %}
+            {{ tip.challenge.height }}
+        {% endfor %}  
+    </div>
     <div><span class='name'>Current difficulty:</span> {{ blockchain_state.difficulty }}</div>    
-    <div><span class='name'>Current VDF iterations per second:</span> {{ blockchain_state.ips }}</div>
-
+    <div><span class='name'>Current VDF iterations per second:</span> {{ blockchain_state.ips }}</div>    
+    
     <h3>Connections</h3>
     <ul>
         {% for connection in connections %}
