@@ -1,5 +1,6 @@
 from aiohttp import client_exceptions
 from src.rpc.rpc_client import RpcClient
+from src.server.outbound_message import NodeType
 
 
 async def init_rpc(app):
@@ -9,10 +10,12 @@ async def init_rpc(app):
     try:
         rpc_client: RpcClient = await RpcClient.create(app['config']['rpc_port'])
         connections = await rpc_client.get_connections()
+        for con in connections:
+            con['type_name'] = NodeType(con['type']).name
+
         blockchain_state = await rpc_client.get_blockchain_state()
         rpc_client.close()
 
-        node['connectionCount'] = len(connections)
         node['connections'] = connections
         node['blockchain_state'] = blockchain_state
         node['state'] = 'Running'

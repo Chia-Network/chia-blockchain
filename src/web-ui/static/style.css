@@ -7,3 +7,11 @@ body {
   a {
     color: #00B7FF;
   }
+
+  div {
+    margin-left: 2em;
+  }
+
+  .name {
+    font-weight: bold;
+  }

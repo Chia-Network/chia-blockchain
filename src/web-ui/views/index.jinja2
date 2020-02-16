@@ -7,7 +7,21 @@
 <body>
     <h1>{{ title }}</h1>
     <h2>Status</h2>
-    <div>{{ state }}</div>    
-    <div>{{ connectionCount }}</div>
+    <h3>{{ state }}</h3>
+    <div><span class='name'>Sync mode:</span> {{ blockchain_state.sync_mode }}</div>
+    <div><span class='name'>Current difficulty:</span> {{ blockchain_state.difficulty }}</div>    
+    <div><span class='name'>Current VDF iterations per second:</span> {{ blockchain_state.ips }}</div>
+
+    <h3>Connections</h3>
+    <ul>
+        {% for connection in connections %}
+        <li>
+            <span>{{ connection.type_name }}</span> -
+            <a href="./connection?node_id={{connection.node_id}}">
+                <span>{{ connection.peer_host }}:{{ connection.peer_port }}/{{ connection.peer_server_port }}</span>
+            </a>
+        </li>
+        {% endfor %}        
+    </ul>
 </body>
 </html>
