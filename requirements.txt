@@ -1,4 +1,5 @@
 aiohttp==3.6.2
+aiohttp-jinja2==1.2.0
 aiosqlite==0.11.0
 aiter==0.13.20191203
 appdirs==1.4.3
@@ -19,6 +20,7 @@ flake8==3.7.9
 idna==2.8
 importlib-metadata==1.4.0
 isort==4.3.21
+Jinja2==2.11.1
 mccabe==0.6.1
 miniupnpc==2.0.2
 more-itertools==8.1.0
