@@ -21,6 +21,7 @@ async def query_node(app):
         coin_balances: Dict[
             bytes, uint64
         ] = pool_balances
+
         top_winners = sorted(
             [(rewards, key) for key, rewards in coin_balances.items()],
             reverse=True,
