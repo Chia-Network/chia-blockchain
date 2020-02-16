@@ -27,9 +27,9 @@ async def query_node(app):
         )[: 10]
 
         our_winners = [
-            (coin_balances[bytes(pk)], bytes(pk))
+            (coin_balances[bytes(pk)], bytes(pk), bytes(pk).hex())
             if bytes(pk) in coin_balances
-            else (0, bytes(pk))
+            else (0, bytes(pk), bytes(pk).hex())
             for pk in app['key_config']['pool_pks']
         ]
 

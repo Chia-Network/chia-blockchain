@@ -33,7 +33,7 @@
 
     <h3>Our Pool Winnings</h3>
     {% for winner in our_winners %}
-        <div>{{ winner[0] / 1000000000000 }}</div>
+        <div><span class='name'>Public key</span> {{ winner[2] }}: {{ winner[0] / 1000000000000 }} chias</div>
     {% endfor %}  
 </body>
 </html>
