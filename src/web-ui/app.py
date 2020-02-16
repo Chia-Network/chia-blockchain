@@ -5,6 +5,7 @@ import os
 from src.util.config import load_config_cli
 from middlewares import setup_middlewares
 from node_state import query_node
+from blspy import PrivateKey
 
 
 # setup the directoriers (relative to this file) and app object
@@ -14,6 +15,12 @@ abs_static_path = os.path.join(abs_app_dir_path, 'static')
 
 app = web.Application()
 app['config'] = load_config_cli("config.yaml", "ui")
+app['key_config'] = load_config_cli("keys.yaml", None)
+app['key_config']['pool_pks'] = [
+                PrivateKey.from_bytes(bytes.fromhex(ce)).get_public_key()
+                for ce in app['key_config']["pool_sks"]
+            ]
+
 env = aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(abs_template_path))
 app['static_root_url'] = 'static'
 routes = web.RouteTableDef()

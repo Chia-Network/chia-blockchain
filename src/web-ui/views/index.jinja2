@@ -22,15 +22,18 @@
     <div><span class='name'>Current VDF iterations per second:</span> {{ blockchain_state.ips }}</div>    
     
     <h3>Connections</h3>
-    <ul>
         {% for connection in connections %}
-        <li>
+        <div>
             <span>{{ connection.type_name }}</span> -
             <a href="./connection?node_id={{connection.node_id}}">
                 <span>{{ connection.peer_host }}:{{ connection.peer_port }}/{{ connection.peer_server_port }}</span>
             </a>
-        </li>
+        </div>
         {% endfor %}        
-    </ul>
+
+    <h3>Our Pool Winnings</h3>
+    {% for winner in our_winners %}
+        <div>{{ winner[0] / 1000000000000 }}</div>
+    {% endfor %}  
 </body>
 </html>
