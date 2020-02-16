@@ -8,25 +8,28 @@ from node_state import query_node
 from blspy import PrivateKey
 
 
-# setup the directoriers (relative to this file) and app object
-abs_app_dir_path = os.path.dirname(os.path.realpath(__file__))
-abs_template_path = os.path.join(abs_app_dir_path, 'views')
-abs_static_path = os.path.join(abs_app_dir_path, 'static')
+def setup_app():
+    app = web.Application()
+    try:
+        app['config'] = load_config_cli("config.yaml", "ui")
+        app['key_config'] = load_config_cli("keys.yaml", None)
+        app['key_config']['pool_pks'] = [
+                        PrivateKey.from_bytes(bytes.fromhex(ce)).get_public_key()
+                        for ce in app['key_config']["pool_sks"]
+                    ]
 
-app = web.Application()
-app['config'] = load_config_cli("config.yaml", "ui")
-app['key_config'] = load_config_cli("keys.yaml", None)
-app['key_config']['pool_pks'] = [
-                PrivateKey.from_bytes(bytes.fromhex(ce)).get_public_key()
-                for ce in app['key_config']["pool_sks"]
-            ]
+        abs_app_dir_path = os.path.dirname(os.path.realpath(__file__))
+        aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(os.path.join(abs_app_dir_path, 'views')))
+        app.router.add_static('/static/', path=os.path.join(abs_app_dir_path, 'static'), name='static')
+        setup_middlewares(app)
+        app.on_startup.append(query_node)
 
-env = aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(abs_template_path))
-app['static_root_url'] = 'static'
+    finally:
+        return app
+
+
+app = setup_app()
 routes = web.RouteTableDef()
-app.router.add_static('/static/', path=abs_static_path, name='static')
-setup_middlewares(app)
-app.on_startup.append(query_node)
 
 
 @routes.get('/')
