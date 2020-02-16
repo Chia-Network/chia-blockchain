@@ -7,7 +7,6 @@ from src.util.ints import uint64
 
 async def query_node(app):
     node = {}
-    node['title'] = 'Chia Full Node'
 
     try:
         rpc_client: RpcClient = await RpcClient.create(app['config']['rpc_port'])

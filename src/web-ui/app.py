@@ -39,7 +39,17 @@ routes = web.RouteTableDef()
 async def index(request):
     # the node property contains the state of the chia node when it was last queried
     if app['ready']:
-        return app['node']
+        return dict(title='Chia Full Node', **app['node'])
+
+    return {}
+
+
+@routes.get('/lca')
+@aiohttp_jinja2.template('lca.jinja2')
+async def lca(request):
+    # the node property contains the state of the chia node when it was last queried
+    if app['ready']:
+        return dict(title='Least Common Ancestor', **app['node']['blockchain_state'])
 
     return {}
 
