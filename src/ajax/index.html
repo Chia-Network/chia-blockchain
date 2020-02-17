@@ -148,7 +148,7 @@ var sorted = arr.sort((a, b) => b.value - a.value);
                     $('#synced').html("Chia Testnet Blockchain: Currently synced");
                 }
 
-                $('#timestamp').html("Current LCA timestamp (UTC): "+new Date(1000*lca_block.header.data.timestamp).toLocaleDateString("en-US"));
+                $('#timestamp').html("Current LCA timestamp (UTC): "+new Date(1000*lca_block.header.data.timestamp).toISOString());
                 $('#difficulty').html("Current difficulty: "+data.difficulty.toString());
                 $('#ips').html("Current VDF iterations per second: "+data.ips.toString());
                 $('#iterations').html("Total iterations since genesis: "+lca_block.challenge.total_iters.toString());
