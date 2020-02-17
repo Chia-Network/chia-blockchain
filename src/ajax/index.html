@@ -5,11 +5,11 @@
 <script type="text/javascript" src="js/jquery-1.10.2.min.js"></script>
 </head>
 <body><main>
-<p>Chia Testnet Blockchain: Currently synced</p>
-<p>Current LCA timestamp (UTC): 2020-02-14 17:39:38</p>
-<p>Current difficulty: 180215135210</p>
-<p>Current VDF iterations per second: 143531 (update at 22560)</p>
-<p>Total iterations since genesis: 839678047791</p>
+<p id="synced">Chia Testnet Blockchain:</p>
+<p id="timestamp">Current LCA timestamp (UTC):</p>
+<p id="difficulty">Current difficulty:</p>
+<p id="ips">Current VDF iterations per second:</p>
+<p id="iterations">Total iterations since genesis:</p>
 
 <hr>
 
@@ -136,6 +136,22 @@ var sorted = arr.sort((a, b) => b.value - a.value);
                     tips.push(JSON.parse(data.tips[i]));
                 }
                 lca_block = JSON.parse(data.lca);
+
+                if(data.sync_mode)
+                {
+                    if (data.max_height >= 0)
+                        $('#synced').html("Chia Testnet Blockchain: Syncing up to "+data.max_height.toString());
+                    else
+                        $('#synced').html("Chia Testnet Blockchain: Syncing");
+                }
+                else {
+                    $('#synced').html("Chia Testnet Blockchain: Currently synced");
+                }
+
+                $('#timestamp').html("Current LCA timestamp (UTC): "+new Date(1000*lca_block.header.data.timestamp).toLocaleDateString("en-US"));
+                $('#difficulty').html("Current difficulty: "+data.difficulty.toString());
+                $('#ips').html("Current VDF iterations per second: "+data.ips.toString());
+                $('#iterations').html("Total iterations since genesis: "+lca_block.challenge.total_iters.toString());
 
                 var heads = data.tips;
 
