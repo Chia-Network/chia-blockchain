@@ -60,7 +60,7 @@ $(function() {
         $('#conndata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
 
         jQuery.ajax({
-            url: "http://127.0.0.1:8555/get_connections",
+            url: "get_connections",
             type: "POST",
             crossDomain: true,
             data: null,
@@ -88,7 +88,7 @@ $(function() {
         $('#pooldata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
 
         jQuery.ajax({
-            url: "http://127.0.0.1:8555/get_pool_balances",
+            url: "get_pool_balances",
             type: "POST",
             crossDomain: true,
             data: null,
@@ -118,7 +118,7 @@ var sorted = arr.sort((a, b) => b.value - a.value);
         $('#blockdata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
 
         jQuery.ajax({
-            url: "http://127.0.0.1:8555/get_blockchain_state",
+            url: "get_blockchain_state",
             type: "POST",
             crossDomain: true,
             data: null,
@@ -167,7 +167,7 @@ var sorted = arr.sort((a, b) => b.value - a.value);
                     console.log("load " + blockargs);
 
                     return jQuery.ajax({
-                        url: "http://127.0.0.1:8555/get_header",
+                        url: "get_header",
                         type: "POST",
                         crossDomain: true,
                         data: blockargs,
@@ -264,7 +264,7 @@ function headerClicked(hash) {
     var blockargs = '{"header_hash": "' + hash + '"}';
 
     jQuery.ajax({
-        url: "http://127.0.0.1:8555/get_block",
+        url: "get_block",
         type: "POST",
         crossDomain: true,
         data: blockargs,
@@ -291,7 +291,7 @@ function connClicked(node_id) {
     var nodeargs = '{"node_id": "' + node_id.slice(2) + '"}';
 
     jQuery.ajax({
-        url: "http://127.0.0.1:8555/close_connection",
+        url: "close_connection",
         type: "POST",
         crossDomain: true,
         data: nodeargs,

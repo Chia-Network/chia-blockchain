@@ -1,5 +1,4 @@
 aiohttp==3.6.2
-aiohttp_cors==0.7.0
 aiosqlite==0.11.0
 aiter==0.13.20191203
 appdirs==1.4.3
