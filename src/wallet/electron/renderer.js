@@ -1,20 +1,79 @@
 //import { createRPC } from '@erebos/rpc-http-browser'
-const erebos = require('@erebos/rpc-http-browser')
-const rpc = erebos.createRPC('http://localhost:9256')
+const jquery = require('jquery')
+var QRCode = require('qrcode')
+var canvas = document.getElementById('qr_canvas')
 
 let send = document.querySelector('#send')
 let new_address = document.querySelector('#new_address')
+let copy = document.querySelector("#copy")
 
 send.addEventListener('click', () => {
-    rpc.request('send', "").then(res => {
-        console.log(res)
-    })
+
 })
 
 new_address.addEventListener('click', () => {
-  rpc.request('/get_next_puzzle_hash', "").then(res => {
-    console.log(res)
-  })
+    console.log("new address requesting")
+
+    jquery.ajax({
+        type: 'POST',
+        url: 'http://127.0.0.1:9256/get_next_puzzle_hash',
+        dataType: 'json'
+    })
+    .done(function(response) {
+    // Make sure that the formMessages div has the 'success' class.
+        console.log(response)
+        let puzzle_holder = document.querySelector("#puzzle_holder")
+        puzzle_holder.value = response["puzzlehash"]
+        QRCode.toCanvas(canvas, response["puzzlehash"], function (error) {
+        if (error) console.error(error)
+        console.log('success!');
+        })
+    })
+    .fail(function(data) {
+        // Make sure that the formMessages div has the 'error' class.
+        console.log(data)
+    });
 })
 
-send.dispatchEvent(new Event('input'))
+copy.addEventListener("click", () => {
+    let puzzle_holder = document.querySelector("#puzzle_holder")
+    puzzle_holder.select();
+
+  /* Copy the text inside the text field */
+    document.execCommand("copy");
+})
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function get_new_puzzlehash() {
+    //wait for wallet.py to start up
+    await sleep(300)
+    jquery.ajax({
+        type: 'POST',
+        url: 'http://127.0.0.1:9256/get_next_puzzle_hash',
+        dataType: 'json'
+    })
+    .done(function(response) {
+    // Make sure that the formMessages div has the 'success' class.
+        console.log(response)
+        let puzzle_holder = document.querySelector("#puzzle_holder")
+        puzzle_holder.value = response["puzzlehash"]
+        QRCode.toCanvas(canvas, response["puzzlehash"], function (error) {
+        if (error) console.error(error)
+        console.log('success!');
+        })
+    })
+    .fail(function(data) {
+        // Make sure that the formMessages div has the 'error' class.
+        console.log(data)
+
+        get_new_puzzlehash()
+    });
+}
+
+get_new_puzzlehash()
+

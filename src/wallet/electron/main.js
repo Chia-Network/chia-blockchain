@@ -22,12 +22,12 @@ const guessPackaged = () => {
 
 const getScriptPath = () => {
   if (!guessPackaged()) {
-    return path.join("../../../", PY_FOLDER, PY_MODULE + '.py')
+    return path.join( PY_FOLDER, PY_MODULE + '.py')
   }
   if (process.platform === 'win32') {
-    return path.join("../../../", PY_DIST_FOLDER, PY_MODULE, PY_MODULE + '.exe')
+    return path.join(PY_DIST_FOLDER, PY_MODULE, PY_MODULE + '.exe')
   }
-  return path.join("../../../", PY_DIST_FOLDER, PY_MODULE, PY_MODULE)
+  return path.join(PY_DIST_FOLDER, PY_MODULE, PY_MODULE)
 }
 
 const selectPort = () => {
@@ -46,7 +46,7 @@ const createPyProc = () => {
   }
 
   if (pyProc != null) {
-    console.log(pyProc)
+    //console.log(pyProc)
     console.log('child process success on port ' + port)
   }
 }
