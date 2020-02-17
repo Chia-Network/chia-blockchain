@@ -6,9 +6,12 @@ from typing import Any
 
 from aiohttp import web
 from blspy import ExtendedPrivateKey
+from setproctitle import setproctitle
 
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
+from src.types.peer_info import PeerInfo
+from src.util.config import load_config_cli, load_config
 from src.wallet.wallet import Wallet
 
 
@@ -48,10 +51,35 @@ class RpcWalletApiHandler:
         """
         Returns a new puzzlehash
         """
-        print("hello1")
         puzzlehash = self.wallet.get_new_puzzlehash().hex()
         response = {
             "puzzlehash": puzzlehash,
+        }
+        return obj_to_response(response)
+
+    async def send_transaction(self, request) -> web.Response:
+        #breakpoint()
+        request_data = await request.json()
+        if "amount" in request_data and "puzzlehash" in request_data:
+            amount = int(request_data["amount"])
+            puzzlehash = request_data["puzzlehash"]
+            tx = await self.wallet.generate_signed_transaction(amount, puzzlehash)
+
+            if tx is None:
+                response = {
+                    "success": False
+                }
+                return obj_to_response(response)
+
+            await self.wallet.push_transaction(tx)
+
+            response = {
+                "success": True
+            }
+            return obj_to_response(response)
+
+        response = {
+            "success": False
         }
         return obj_to_response(response)
 
@@ -61,19 +89,31 @@ async def start_rpc_server():
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.
     """
-    sk = bytes(ExtendedPrivateKey.from_seed(b"")).hex()
-    key_config = {"wallet_sk": sk}
+    config = load_config("config.yaml", "wallet")
+    try:
+        key_config = load_config("keys.yaml")
+    except FileNotFoundError:
+        raise RuntimeError(
+            "Keys not generated. Run python3 ./scripts/regenerate_keys.py."
+        )
+    wallet = await Wallet.create(config, key_config)
 
-    wallet = await Wallet.create({}, key_config)
     server = ChiaServer(9257, wallet, NodeType.WALLET)
     wallet.set_server(server)
+    full_node_peer = PeerInfo(
+        config["full_node_peer"]["host"], config["full_node_peer"]["port"]
+    )
+
     _ = await server.start_server("127.0.0.1", wallet._on_connect)
+    await asyncio.sleep(1)
+    _ = await server.start_client(full_node_peer, None)
 
     handler = RpcWalletApiHandler(wallet)
     app = web.Application()
     app.add_routes(
         [
             web.post("/get_next_puzzle_hash", handler.get_next_puzzle_hash),
+            web.post("/send_transaction", handler.send_transaction),
         ]
     )
     runner = web.AppRunner(app, access_log=None)

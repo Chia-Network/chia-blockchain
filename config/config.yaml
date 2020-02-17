@@ -125,9 +125,11 @@ introducer:
 wallet:
   host: 127.0.0.1
   port: 8223
+  rpc_port: 9256
 
   full_node_peer:
     host: 127.0.0.1
     port: 8444
+
 
   logging: *logging
