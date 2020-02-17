@@ -210,6 +210,7 @@ class RpcApiHandler:
                     )
         return obj_to_response(max_tip)
 
+
 async def start_rpc_server(full_node: FullNode, stop_node_cb: Callable, rpc_port: int):
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
