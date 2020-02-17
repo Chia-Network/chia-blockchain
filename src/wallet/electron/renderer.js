@@ -15,12 +15,7 @@ var myBalance = 0
 var myUnconfirmedBalance = 0
 
 send.addEventListener('click', () => {
-    if (myUnconfirmedBalance == 0) {
-        dialogs.alert("You don\'t have enough chia for this transactions", ok => {
 
-        })
-        return
-    }
     puzzlehash = receiver_address.value
     amount_value = amount.value
     data = {"puzzlehash": puzzlehash, "amount": amount_value}
@@ -33,6 +28,13 @@ send.addEventListener('click', () => {
     })
     .done(function(response) {
         console.log(response)
+        success = response["success"]
+        if (!success) {
+            dialogs.alert("You don\'t have enough chia for this transactions", ok => {
+
+            })
+            return
+        }
     })
     .fail(function(data) {
         console.log(data)
@@ -81,5 +83,64 @@ async function get_new_puzzlehash(timeout) {
     });
 }
 
-get_new_puzzlehash(300)
+async function get_wallet_balance(timeout) {
+    //wait for wallet.py to start up
+    await sleep(timeout)
+    jquery.ajax({
+        type: 'POST',
+        url: 'http://127.0.0.1:9256/get_wallet_balance',
+        dataType: 'json'
+    })
+    .done(function(response) {
+        console.log(response)
+
+    })
+    .fail(function(data) {
+        console.log(data)
+        get_wallet_balance(1000)
+    });
+}
+
+async function get_transactions(timeout) {
+    //wait for wallet.py to start up
+    await sleep(timeout)
+    jquery.ajax({
+        type: 'POST',
+        url: 'http://127.0.0.1:9256/get_transactions',
+        dataType: 'json'
+    })
+    .done(function(response) {
+        console.log(response)
+
+    })
+    .fail(function(data) {
+        console.log(data)
+        get_transactions(1000)
+    });
+}
+
+async function get_server_ready(timeout) {
+    //wait for wallet.py to start up
+    await sleep(timeout)
+    jquery.ajax({
+        type: 'POST',
+        url: 'http://127.0.0.1:9256/get_server_ready',
+        dataType: 'json'
+    })
+    .done(function(response) {
+        console.log(response)
+        success = response["success"]
+        if (success) {
+            get_transactions(0)
+            get_new_puzzlehash(0)
+            get_wallet_balance(0)
+        }
+    })
+    .fail(function(data) {
+        console.log(data)
+        get_server_ready(100)
+    });
+}
+
+get_server_ready(100)
 

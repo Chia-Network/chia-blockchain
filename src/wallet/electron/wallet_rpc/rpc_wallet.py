@@ -58,7 +58,6 @@ class RpcWalletApiHandler:
         return obj_to_response(response)
 
     async def send_transaction(self, request) -> web.Response:
-        #breakpoint()
         request_data = await request.json()
         if "amount" in request_data and "puzzlehash" in request_data:
             amount = int(request_data["amount"])
@@ -80,6 +79,29 @@ class RpcWalletApiHandler:
 
         response = {
             "success": False
+        }
+        return obj_to_response(response)
+
+    async def get_server_ready(self, request) -> web.Response:
+
+        response = {
+            "success": True
+        }
+        return obj_to_response(response)
+
+    async def get_transactions(self, request) -> web.Response:
+
+        response = {
+            "success": True
+        }
+        return obj_to_response(response)
+
+    async def get_wallet_balance(self, request) -> web.Response:
+
+        response = {
+            "success": True,
+            "confirmed_wallet_balance": 0,
+            "unconfirmed_wallet_balance": 0,
         }
         return obj_to_response(response)
 
@@ -114,6 +136,9 @@ async def start_rpc_server():
         [
             web.post("/get_next_puzzle_hash", handler.get_next_puzzle_hash),
             web.post("/send_transaction", handler.send_transaction),
+            web.post("/get_server_ready", handler.get_server_ready),
+            web.post("/get_transaction", handler.get_transactions),
+            web.post("/get_wallet_balance", handler.get_wallet_balance),
         ]
     )
     runner = web.AppRunner(app, access_log=None)
