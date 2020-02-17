@@ -23,7 +23,7 @@
 {% for connection in connections %}
     <div>
         <span>{{ connection.type_name }}</span> -
-        <a href="./connection?node_id={{connection.node_id}}">
+        <a href="./connection?node_id={{ connection.node_id | string | urlencode }}">
             <span>{{ connection.peer_host }}:{{ connection.peer_port }}/{{ connection.peer_server_port }}</span>
         </a>
     </div>
