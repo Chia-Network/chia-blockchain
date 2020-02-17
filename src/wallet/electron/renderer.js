@@ -31,7 +31,6 @@ send.addEventListener('click', () => {
         success = response["success"]
         if (!success) {
             dialogs.alert("You don\'t have enough chia for this transactions", ok => {
-
             })
             return
         }
@@ -49,7 +48,6 @@ new_address.addEventListener('click', () => {
 copy.addEventListener("click", () => {
     let puzzle_holder = document.querySelector("#puzzle_holder")
     puzzle_holder.select();
-
   /* Copy the text inside the text field */
     document.execCommand("copy");
 })
@@ -93,7 +91,6 @@ async function get_wallet_balance(timeout) {
     })
     .done(function(response) {
         console.log(response)
-
     })
     .fail(function(data) {
         console.log(data)
@@ -111,7 +108,6 @@ async function get_transactions(timeout) {
     })
     .done(function(response) {
         console.log(response)
-
     })
     .fail(function(data) {
         console.log(data)

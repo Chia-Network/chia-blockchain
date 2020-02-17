@@ -137,7 +137,7 @@ async def start_rpc_server():
             web.post("/get_next_puzzle_hash", handler.get_next_puzzle_hash),
             web.post("/send_transaction", handler.send_transaction),
             web.post("/get_server_ready", handler.get_server_ready),
-            web.post("/get_transaction", handler.get_transactions),
+            web.post("/get_transactions", handler.get_transactions),
             web.post("/get_wallet_balance", handler.get_wallet_balance),
         ]
     )
