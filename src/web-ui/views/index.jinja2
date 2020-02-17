@@ -6,13 +6,14 @@
 {{ render_field('Sync mode', blockchain_state.sync_mode) }}
 <div>
     <span class='name'><a href="./lca">Least common ancestor</a></span>
-    {{ render_field('Height', blockchain_state.lca.challenge.height) }}
-    {{ render_field('Total iterations since genesis', blockchain_state.lca.challenge.total_iters) }}
 </div>
 <div>
-    <span class='name'>Tip heights</span>
+    <span class='name'>Tips</span>
     {% for tip in blockchain_state.tips %}
-        {{ tip.challenge.height }}
+        <div>
+            <span>Height: </span>
+            <a href="./SmallHeaderBlock/{{ tip.challenge.proof_of_space_hash | string | urlencode }}">{{ tip.challenge.height }}</a>
+        </div>
     {% endfor %}  
 </div>
 
