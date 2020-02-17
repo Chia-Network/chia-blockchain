@@ -1,29 +1,33 @@
 {% extends 'layout.html' %}
+{% from '_macros.jinja2' import render_field %}
 {% block content %}
 <h2>Status</h2>
-<div><span class='name'>Status:</span> {{ state }}</div>
-<div><span class='name'>Sync mode:</span> {{ blockchain_state.sync_mode }}</div>
-<div><span class='name'><a href="./lca">Least common ancestor</a></span>
-    <div><span class='name'>Height:</span> {{ blockchain_state.lca.challenge.height }}</div>
-    <div><span class='name'>Total iterations since genesis:</span> {{ blockchain_state.lca.challenge.total_iters }}</div>
+{{ render_field('Status', state) }}
+{{ render_field('Sync mode', blockchain_state.sync_mode) }}
+<div>
+    <span class='name'><a href="./lca">Least common ancestor</a></span>
+    {{ render_field('Height', blockchain_state.lca.challenge.height) }}
+    {{ render_field('Total iterations since genesis', blockchain_state.lca.challenge.total_iters) }}
 </div>
-<div><span class='name'>Tip heights</span>
+<div>
+    <span class='name'>Tip heights</span>
     {% for tip in blockchain_state.tips %}
         {{ tip.challenge.height }}
     {% endfor %}  
 </div>
-<div><span class='name'>Current difficulty:</span> {{ blockchain_state.difficulty }}</div>    
-<div><span class='name'>Current VDF iterations per second:</span> {{ blockchain_state.ips }}</div>    
+
+{{ render_field('Current difficulty', blockchain_state.difficulty) }}
+{{ render_field('Current VDF iterations per second', blockchain_state.ips) }} 
 
 <h3>Connections</h3>
-    {% for connection in connections %}
+{% for connection in connections %}
     <div>
         <span>{{ connection.type_name }}</span> -
         <a href="./connection?node_id={{connection.node_id}}">
             <span>{{ connection.peer_host }}:{{ connection.peer_port }}/{{ connection.peer_server_port }}</span>
         </a>
     </div>
-    {% endfor %}        
+{% endfor %}        
 
 <h3>Our Pool Winnings</h3>
 {% for winner in our_winners %}
