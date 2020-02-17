@@ -163,7 +163,16 @@
                   </div>
                 </li>
               </ul>
-              <button class="btn green" id="new_address">NEW ADDRESS</button>
+              <div class="wallet-address">
+                <p>Receiver Address:</p>
+              <div class="input-group" style="padding-top:0px">
+              <input type="text" class="form-control"  id="receiver_puzzle_hash" value="">
+              </div>/
+                <p>Amount:</p>
+                <div class="input-group" style="padding-top:0px; padding-bottom:15px;">
+                <input type="text" class="form-control" id="amount_to_send" value="">
+              </div>
+              </div>
               <button class="btn red" id="send">SEND</button>
               <div class="wallet-address">
                 <div class="row">
@@ -175,6 +184,9 @@
                       <div class="input-group-prepend">
                         <button class="btn btn-primary" id="copy" >COPY</button>
                       </div>
+                    </div>
+                    <div class="input-group">
+                    <button class="btn green" style="padding-top:20px;" id="new_address">NEW ADDRESS</button>
                     </div>
                   </div>
                   <div class="col-md-4">
