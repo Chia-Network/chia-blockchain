@@ -2,6 +2,8 @@
 const jquery = require('jquery')
 var QRCode = require('qrcode')
 var canvas = document.getElementById('qr_canvas')
+const Dialogs = require('dialogs')
+const dialogs = Dialogs()
 
 let send = document.querySelector('#send')
 let new_address = document.querySelector('#new_address')
@@ -9,7 +11,16 @@ let copy = document.querySelector("#copy")
 let receiver_address = document.querySelector("#receiver_puzzle_hash")
 let amount = document.querySelector("#amount_to_send")
 
+var myBalance = 0
+var myUnconfirmedBalance = 0
+
 send.addEventListener('click', () => {
+    if (myUnconfirmedBalance == 0) {
+        dialogs.alert("You don\'t have enough chia for this transactions", ok => {
+
+        })
+        return
+    }
     puzzlehash = receiver_address.value
     amount_value = amount.value
     data = {"puzzlehash": puzzlehash, "amount": amount_value}

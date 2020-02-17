@@ -13,6 +13,7 @@
   "author": "Straya Markovic",
   "license": "MIT",
   "dependencies": {
+    "dialogs": "^2.0.1",
     "electron-rebuild": "^1.10.0",
     "jquery": "^3.4.1",
     "qrcode": "^1.4.4",
