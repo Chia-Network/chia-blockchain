@@ -1,6 +1,7 @@
 from typing import List, Optional, Dict, Tuple
 
 import clvm
+from clvm.casts import int_to_bytes, int_from_bytes
 from os import urandom
 from blspy import ExtendedPrivateKey
 
@@ -131,19 +132,25 @@ class WalletTool:
     ):
         spends = []
         spend_value = coin.amount
-        change = spend_value - amount - fee
         puzzle_hash = coin.puzzle_hash
         pubkey, secretkey = self.get_keys(puzzle_hash)
         puzzle = puzzle_for_pk(pubkey.serialize())
         if ConditionOpcode.CREATE_COIN not in condition_dic:
             condition_dic[ConditionOpcode.CREATE_COIN] = []
 
-        output = ConditionVarPair(ConditionOpcode.CREATE_COIN, newpuzzlehash, amount)
+        output = ConditionVarPair(
+            ConditionOpcode.CREATE_COIN, newpuzzlehash, int_to_bytes(amount)
+        )
         condition_dic[output.opcode].append(output)
+        amount_total = sum(
+            int_from_bytes(cvp.var2)
+            for cvp in condition_dic[ConditionOpcode.CREATE_COIN]
+        )
+        change = spend_value - amount_total - fee
         if change > 0:
             changepuzzlehash = self.get_new_puzzlehash()
             change_output = ConditionVarPair(
-                ConditionOpcode.CREATE_COIN, changepuzzlehash, change
+                ConditionOpcode.CREATE_COIN, changepuzzlehash, int_to_bytes(change)
             )
             condition_dic[output.opcode].append(change_output)
             solution = self.make_solution(condition_dic)

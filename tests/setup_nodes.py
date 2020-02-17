@@ -35,6 +35,8 @@ test_constants: Dict[str, Any] = {
     "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
     "PROPAGATION_THRESHOLD": 10,
     "PROPAGATION_DELAY_THRESHOLD": 20,
+    "TX_PER_SEC": 1,
+    "MEMPOOL_BLOCK_BUFFER": 10,
 }
 test_constants["GENESIS_BLOCK"] = bytes(
     bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
@@ -51,7 +53,7 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     await store_1._clear_database()
     unspent_store_1 = await CoinStore.create(Path(db_name))
     await unspent_store_1._clear_database()
-    mempool_1 = MempoolManager(unspent_store_1, dic)
+    mempool_1 = MempoolManager(unspent_store_1, test_constants_copy)
 
     b_1: Blockchain = await Blockchain.create(
         unspent_store_1, store_1, test_constants_copy

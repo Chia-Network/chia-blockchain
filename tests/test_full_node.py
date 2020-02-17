@@ -1,11 +1,21 @@
 import asyncio
 import pytest
+from clvm.casts import int_to_bytes
+import random
+from typing import Dict
+from secrets import token_bytes
 
 from src.protocols import full_node_protocol as fnp
 from src.types.peer_info import PeerInfo
+from src.util.bundle_tools import best_solution_program
 from src.util.ints import uint16, uint32, uint64
+from src.types.ConditionVarPair import ConditionVarPair
+from src.types.condition_opcodes import ConditionOpcode
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.wallet_tools import WalletTool
+
+
+num_blocks = 5
 
 
 @pytest.fixture(scope="module")
@@ -16,13 +26,12 @@ def event_loop():
 
 @pytest.fixture(scope="module")
 async def two_nodes():
-    async for _ in setup_two_nodes():
+    async for _ in setup_two_nodes({"COINBASE_FREEZE_PERIOD": 0}):
         yield _
 
 
 @pytest.fixture(scope="module")
 def wallet_blocks():
-    num_blocks = 3
     wallet_a = WalletTool()
     coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
     wallet_receiver = WalletTool()
@@ -38,7 +47,7 @@ class TestFullNode:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         _, _, blocks = wallet_blocks
 
-        for i in range(1, 3):
+        for i in range(1, num_blocks):
             async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks[i])):
                 pass
 
@@ -54,11 +63,11 @@ class TestFullNode:
 
         assert len(msgs_1) == 1
         assert msgs_1[0].message.data == fnp.RequestBlock(
-            uint32(3), blocks[-1].header_hash
+            uint32(num_blocks), blocks[-1].header_hash
         )
 
         new_tip_2 = fnp.NewTip(
-            blocks[-2].height, blocks[-2].weight, blocks[-2].header_hash
+            blocks[3].height, blocks[3].weight, blocks[3].header_hash
         )
         msgs_2 = [x async for x in full_node_1.new_tip(new_tip_2)]
         assert len(msgs_2) == 0
@@ -66,37 +75,84 @@ class TestFullNode:
     @pytest.mark.asyncio
     async def test_new_transaction(self, two_nodes, wallet_blocks):
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-
         wallet_a, wallet_receiver, blocks = wallet_blocks
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
-        spent_block = blocks[1]
+        conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
+
+        # Mempool has capacity of 100, make 110 unspents that we can use
+        puzzle_hashes = []
+        for _ in range(110):
+            receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+            puzzle_hashes.append(receiver_puzzlehash)
+            output = ConditionVarPair(
+                ConditionOpcode.CREATE_COIN, receiver_puzzlehash, int_to_bytes(1000)
+            )
+            conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
 
         spend_bundle = wallet_a.generate_signed_transaction(
-            1001, receiver_puzzlehash, spent_block.body.coinbase
+            100,
+            receiver_puzzlehash,
+            blocks[1].body.coinbase,
+            condition_dic=conditions_dict,
         )
         assert spend_bundle is not None
 
-        tx_id_1 = spend_bundle.get_hash()
-        new_transaction_1 = fnp.NewTransaction(tx_id_1, uint64(100), uint64(100))
+        new_transaction = fnp.NewTransaction(
+            spend_bundle.get_hash(), uint64(100), uint64(100)
+        )
         # Not seen
-        msgs_1 = [x async for x in full_node_1.new_transaction(new_transaction_1)]
-        assert len(msgs_1) == 1
-        assert msgs_1[0].message.data == fnp.RequestTransaction(tx_id_1)
+        msgs = [x async for x in full_node_1.new_transaction(new_transaction)]
+        assert len(msgs) == 1
+        assert msgs[0].message.data == fnp.RequestTransaction(spend_bundle.get_hash())
 
-        respond_transaction_1 = fnp.RespondTransaction(spend_bundle)
-        [x async for x in full_node_1.respond_transaction(respond_transaction_1)]
+        respond_transaction_2 = fnp.RespondTransaction(spend_bundle)
+        [x async for x in full_node_1.respond_transaction(respond_transaction_2)]
 
+        program = best_solution_program(spend_bundle)
+        aggsig = spend_bundle.aggregated_signature
+
+        dic_h = {5: (program, aggsig)}
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        blocks_new = bt.get_consecutive_blocks(
+            test_constants,
+            1,
+            blocks[:-1],
+            10,
+            reward_puzzlehash=coinbase_puzzlehash,
+            transaction_data_at_height=dic_h,
+        )
         # Already seen
-        msgs_3 = [x async for x in full_node_1.new_transaction(new_transaction_1)]
-        assert len(msgs_3) == 0
+        msgs = [x async for x in full_node_1.new_transaction(new_transaction)]
+        assert len(msgs) == 0
 
-        # for _ in range(10):
-        #     spend_bundle = wallet_a.generate_signed_transaction(
-        #         1001, receiver_puzzlehash, spent_block.body.coinbase
-        #     )
-        #     assert spend_bundle is not None
-        #     new_transaction_1 = fnp.NewTransaction(
-        #         spend_bundle.get_hash(), uint64(100), uint64(100)
-        #     )
-        #     respond_transaction_2 = fnp.RespondTransaction(spend_bundle)
-        #     [x async for x in full_node_1.respond_transaction(respond_transaction_2)]
+        # Farm one block
+        [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks_new[-1]))]
+
+        # Fill mempool
+        for puzzle_hash in puzzle_hashes:
+            coin_record = (
+                await full_node_1.unspent_store.get_coin_records_by_puzzle_hash(
+                    puzzle_hash, blocks_new[-1].header
+                )
+            )[0]
+            receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+            spend_bundle = wallet_receiver.generate_signed_transaction(
+                500, receiver_puzzlehash, coin_record.coin, fee=random.randint(0, 499)
+            )
+            respond_transaction = fnp.RespondTransaction(spend_bundle)
+            [x async for x in full_node_1.respond_transaction(respond_transaction)]
+
+        # Mempool is full
+        new_transaction = fnp.NewTransaction(token_bytes(32), uint64(10000), uint64(1))
+        msgs = [x async for x in full_node_1.new_transaction(new_transaction)]
+        assert len(msgs) == 0
+
+    @pytest.mark.asyncio
+    async def test_request_transaction(self, two_nodes, wallet_blocks):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        wallet_a, wallet_receiver, blocks = wallet_blocks
+
+        tx_id = token_bytes(32)
+        request_transaction = fnp.RequestTransaction(tx_id)
+        msgs = [x async for x in full_node_1.request_transaction(request_transaction)]
+        assert len(msgs) == 1
+        assert msgs[0].message.data == fnp.RejectTransactionRequest(tx_id)

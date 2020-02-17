@@ -249,7 +249,6 @@ class MempoolManager:
                     removal, mempool.header.height + 1, uint32(0), False, False
                 )
                 continue
-            log.warning(f"Getting removal {removal}")
             # 2. Checks we have it in the unspent_store
             unspent: Optional[CoinRecord] = await self.unspent_store.get_coin_record(
                 removal.name(), mempool.header
