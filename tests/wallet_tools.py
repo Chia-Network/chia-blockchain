@@ -43,6 +43,7 @@ class WalletTool:
         self.extended_secret_key = ExtendedPrivateKey.from_seed(self.seed)
         self.generator_lookups: Dict = {}
         self.name = "MyChiaWallet"
+        self.puzzle_pk_cache = {}
 
     def get_next_public_key(self):
         pubkey = self.extended_secret_key.public_child(
@@ -69,13 +70,19 @@ class WalletTool:
         )
 
     def get_keys(self, puzzle_hash):
-        for child in range(self.next_address):
+        if puzzle_hash in self.puzzle_pk_cache:
+            child = self.puzzle_pk_cache[puzzle_hash]
             pubkey = self.extended_secret_key.public_child(child).get_public_key()
-            if puzzle_hash == puzzle_for_pk(pubkey.serialize()).get_hash():
-                return (
-                    pubkey,
-                    self.extended_secret_key.private_child(child).get_private_key(),
-                )
+            private = self.extended_secret_key.private_child(child).get_private_key()
+            return pubkey, private
+        else:
+            for child in range(self.next_address):
+                pubkey = self.extended_secret_key.public_child(child).get_public_key()
+                if puzzle_hash == puzzle_for_pk(pubkey.serialize()).get_hash():
+                    return (
+                        pubkey,
+                        self.extended_secret_key.private_child(child).get_private_key(),
+                    )
 
     def puzzle_for_pk(self, pubkey):
         return puzzle_for_pk(pubkey)
@@ -84,6 +91,7 @@ class WalletTool:
         pubkey_a = self.get_next_public_key()
         pubkey = pubkey_a.serialize()
         puzzle = puzzle_for_pk(pubkey)
+        self.puzzle_pk_cache[puzzle.get_hash()] = self.next_address - 1
         return puzzle
 
     def get_new_puzzlehash(self):
