@@ -40,7 +40,7 @@ sh install.sh
 
 . .venv/bin/activate
 ```
-### CentOS 7
+### CentOS 7.7
 
 ```bash
 sudo yum update
@@ -63,9 +63,28 @@ git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sh install.sh
+
 . .venv/bin/activate
 ```
+### RHEL 8.1
 
+```bash
+sudo yum update
+sudo yum install gcc-c++ cmake3 git openssl openssl-devel
+sudo yum install wget make libffi-devel gmp-devel sqlite-devel
+
+# Install Python 3.7.5 (current rpm's are 3.6.x)
+wget https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tgz
+tar -zxvf Python-3.7.5.tgz; cd Python-3.7.5
+./configure --enable-optimizations; sudo make install; cd ..
+
+git clone https://github.com/Chia-Network/chia-blockchain.git
+cd chia-blockchain
+
+sh install.sh
+
+. .venv/bin/activate
+```
 ### Windows (WSL + Ubuntu)
 #### Install WSL + Ubuntu 18.04 LTS, upgrade to Ubuntu 19.x
 
@@ -89,6 +108,7 @@ git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sudo sh install.sh
+
 . .venv/bin/activate
 ```
 
@@ -129,14 +149,14 @@ sh install.sh
 
 ## Step 2: Install timelord (optional)
 Note: this step is needed only if you intend to run a timelord or a local simulation.
-These assume you've already successfully installed harvester, farmer, plotting, and full node above. boost 1.67 or newer is required on all platforms.
+These assume you've already successfully installed harvester, farmer, plotting, and full node above. boost 1.66 or newer is required on all platforms.
 ### Ubuntu/Debian
 ```bash
 cd chia-blockchain
 
 sh install_timelord.sh
 ```
-### Amazon Linux 2 and CentOS 7
+### Amazon Linux 2 and CentOS 7.7
 ```bash
 #Only for Amazon Linux 2
 sudo amazon-linux-extras install epel
@@ -154,7 +174,14 @@ cd chia-blockchain
 
 sh install_timelord.sh
 ```
+### RHEL 8.1
+```bash
+sudo yum install mpfr-devel boost boost-devel
 
+cd chia-blockchain
+
+sh install_timelord.sh
+```
 ### Windows (WSL + Ubuntu)
 #### Install WSL + Ubuntu upgraded to 19.x
 ```bash
