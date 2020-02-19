@@ -48,6 +48,7 @@ yarl==1.4.2
 zipp==2.0.0
 sortedcontainers==2.1.0
 -e lib/chiapos
+-e lib/bip158
 -e lib/py-setproctitle
 -e lib/chiavdf/fast_vdf
 -e git+https://github.com/Chia-Network/clvm.git@134c2f92d575a542272ce0cbe59c167b255e50ae#egg=clvm
