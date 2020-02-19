@@ -169,6 +169,7 @@ tar -zxvf boost_1_72_0.tar.gz
 cd boost_1_72_0
 ./bootstrap.sh --prefix=/usr/local
 sudo ./b2 install --prefix=/usr/local --with=all; cd ..
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 
 cd chia-blockchain
 
