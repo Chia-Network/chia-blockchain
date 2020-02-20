@@ -1,5 +1,5 @@
 {% extends 'layout.html' %}
-{% from '_macros.jinja2' import render_field %}
+{% from '_macros.jinja2' import render_field, render_field_link %}
 {% block content %}
 <h2>Status</h2>
 {{ render_field('Status', state) }}
@@ -10,10 +10,7 @@
 <div>
     <span class='name'>Tips</span>
     {% for tip in blockchain_state.tips %}
-        <div>
-            <span>Height: </span>
-            <a href="./SmallHeaderBlock/{{ tip.challenge.proof_of_space_hash | string | urlencode }}">{{ tip.challenge.height }}</a>
-        </div>
+        {{ render_field_link('Height', tip.challenge.height, './SmallHeaderBlock/' + tip.challenge.proof_of_space_hash | string) }}
     {% endfor %}  
 </div>
 
@@ -22,16 +19,11 @@
 
 <h3>Connections</h3>
 {% for connection in connections %}
-    <div>
-        <span>{{ connection.type_name }}</span> -
-        <a href="./connection?node_id={{ connection.node_id | string | urlencode }}">
-            <span>{{ connection.peer_host }}:{{ connection.peer_port }}/{{ connection.peer_server_port }}</span>
-        </a>
-    </div>
+    {{ render_field_link(connection.type_name, connection.peer_host + ':' +  connection.peer_port | string + '/' + connection.peer_server_port | string, './connection?node_id=' + connection.node_id | string) }}
 {% endfor %}        
 
 <h3>Our Pool Winnings</h3>
 {% for winner in our_winners %}
-    {{ render_field('Public key', winner[2] | string + (winner[0] / 1000000000000) | string) }}
+    {{ render_field('Public key', winner[2] | string + ' - ' + (winner[0] / 1000000000000) | string + ' chia') }}
 {% endfor %}  
 {% endblock %}
