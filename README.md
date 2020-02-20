@@ -40,7 +40,7 @@ sh install.sh
 
 . .venv/bin/activate
 ```
-### CentOS 7
+### CentOS 7.7
 
 ```bash
 sudo yum update
@@ -63,9 +63,28 @@ git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sh install.sh
+
 . .venv/bin/activate
 ```
+### RHEL 8.1
 
+```bash
+sudo yum update
+sudo yum install gcc-c++ cmake3 git openssl openssl-devel
+sudo yum install wget make libffi-devel gmp-devel sqlite-devel
+
+# Install Python 3.7.5 (current rpm's are 3.6.x)
+wget https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tgz
+tar -zxvf Python-3.7.5.tgz; cd Python-3.7.5
+./configure --enable-optimizations; sudo make install; cd ..
+
+git clone https://github.com/Chia-Network/chia-blockchain.git
+cd chia-blockchain
+
+sh install.sh
+
+. .venv/bin/activate
+```
 ### Windows (WSL + Ubuntu)
 #### Install WSL + Ubuntu 18.04 LTS, upgrade to Ubuntu 19.x
 
@@ -89,13 +108,14 @@ git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sudo sh install.sh
+
 . .venv/bin/activate
 ```
 
 #### Alternate method for Ubuntu 18.04 LTS
 In `./install.sh`:
 Change `python3` to `python3.7`
-Each line that starts with `pip ...` becomes `python -m pip ...`
+Each line that starts with `pip ...` becomes `python3.7 -m pip ...`
 
 ```bash
 sudo apt-get -y update
@@ -129,14 +149,14 @@ sh install.sh
 
 ## Step 2: Install timelord (optional)
 Note: this step is needed only if you intend to run a timelord or a local simulation.
-These assume you've already successfully installed harvester, farmer, plotting, and full node above. boost 1.67 or newer is required on all platforms.
+These assume you've already successfully installed harvester, farmer, plotting, and full node above. boost 1.66 or newer is required on all platforms.
 ### Ubuntu/Debian
 ```bash
 cd chia-blockchain
 
 sh install_timelord.sh
 ```
-### Amazon Linux 2 and CentOS 7
+### Amazon Linux 2 and CentOS 7.7
 ```bash
 #Only for Amazon Linux 2
 sudo amazon-linux-extras install epel
@@ -149,12 +169,20 @@ tar -zxvf boost_1_72_0.tar.gz
 cd boost_1_72_0
 ./bootstrap.sh --prefix=/usr/local
 sudo ./b2 install --prefix=/usr/local --with=all; cd ..
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 
 cd chia-blockchain
 
 sh install_timelord.sh
 ```
+### RHEL 8.1
+```bash
+sudo yum install mpfr-devel boost boost-devel
 
+cd chia-blockchain
+
+sh install_timelord.sh
+```
 ### Windows (WSL + Ubuntu)
 #### Install WSL + Ubuntu upgraded to 19.x
 ```bash
@@ -189,7 +217,9 @@ python -m scripts.regenerate_keys
 ## Step 4a: Run a full node
 To run a full node on port 8444, and connect to the testnet, run the following command.
 This will also start an ssh server in port 8222 for the UI, which you can connect to
-to see the state of the node.
+to see the state of the node. If you want to see std::out log output, modify the logging.std_out
+variable in ./config/config.yaml.
+
 ```bash
 ./scripts/run_full_node.sh
 ssh -p 8222 localhost
@@ -201,7 +231,8 @@ Farmers are entities in the network who use their hard drive space to try to cre
 blocks (like Bitcoin's miners), and earn block rewards. First, you must generate some hard drive plots, which
 can take a long time depending on the [size of the plots](https://github.com/Chia-Network/chia-blockchain/wiki/k-sizes)
 (the k variable). Then, run the farmer + full node with the following script. A full node is also started,
-which you can ssh into to view the node UI (previous ssh command).
+which you can ssh into to view the node UI (previous ssh command). You can also change the working directory and
+final directory for plotting, with the "-t" and "-d" arguments to the create_plots script.
 ```bash
 python -m scripts.create_plots -k 20 -n 10
 sh ./scripts/run_farming.sh
@@ -229,8 +260,6 @@ Due to the nature of proof of space lookups by the harvester in the current alph
 the number of plots on a physical drive to 50 or less. This limit should significantly increase before beta.
 
 You can also run the simulation, which runs all servers and multiple full nodes, locally, at once.
-If you want to run the simulation, change the introducer ip in ./config/config.yaml so that the
-full node points to the local introducer (127.0.0.1:8445).
 
 Note the the simulation is local only and requires installation of timelords and VDFs.
 
@@ -239,4 +268,16 @@ ips to external peers.
 
 ```bash
 sh ./scripts/run_all_simulation.sh
+```
+
+For increased networking performance, install uvloop:
+```bash
+pip install -e ".[uvloop]"
+```
+
+You can also use the [HTTP RPC](https://github.com/Chia-Network/chia-blockchain/wiki/Networking-and-Serialization#rpc) api to access information and control the full node:
+
+
+```bash
+curl -X POST  http://localhost:8555/get_blockchain_state
 ```

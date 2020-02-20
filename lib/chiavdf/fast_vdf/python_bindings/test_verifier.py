@@ -54,7 +54,7 @@ witness = bytes([
 witness_type = 2
 
 t1 = time.time()
-result = verify(
+result_1 = verify(
     1024,
     challenge_hash,
     a,
@@ -65,10 +65,11 @@ result = verify(
 )
 t2 = time.time()
 
-print(f"Result test 1: {result}")
+print(f"Result test 1: {result_1}")
 print(f"Test time: {t2 - t1}")
+assert result_1
 
-result = verify(
+result_2 = verify(
     1024,
     challenge_hash,
     a,
@@ -78,4 +79,5 @@ result = verify(
     witness_type
 )
 
-print(f"Result test 2: {result}")
+print(f"Result test 2: {result_2}")
+assert not result_2

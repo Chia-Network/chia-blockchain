@@ -64,6 +64,8 @@ int main(int argc, char *argv[]) {
         // Default values
         uint8_t k = 20;
         string filename = "plot.dat";
+        string tempdir = ".";
+        string finaldir = ".";
         string operation = "help";
         string memo  = "0102030405";
         string id = "022fb42c08c12de3a6af053880199806532e79515f94e83461612101f9412f9e";
@@ -71,6 +73,8 @@ int main(int argc, char *argv[]) {
         options.allow_unrecognised_options()
                .add_options()
                 ("k, size", "Plot size", cxxopts::value<uint8_t>(k))
+                ("t, tempdir", "Temporary directory", cxxopts::value<string>(tempdir))
+                ("d, finaldir", "Final directory", cxxopts::value<string>(finaldir))
                 ("f, file", "Filename", cxxopts::value<string>(filename))
                 ("m, memo", "Memo to insert into the plot", cxxopts::value<string>(memo))
                 ("i, id", "Unique 32-byte seed for the plot", cxxopts::value<string>(id))
@@ -82,6 +86,7 @@ int main(int argc, char *argv[]) {
             HelpAndQuit(options);
         }
         operation = argv[1];
+        std::cout << "operation" << operation << std::endl;
 
         if (operation == "help") {
             HelpAndQuit(options);
@@ -101,7 +106,7 @@ int main(int argc, char *argv[]) {
             HexToBytes(id, id_bytes);
 
             DiskPlotter plotter = DiskPlotter();
-            plotter.CreatePlotDisk(filename, k, memo_bytes, 5, id_bytes, 32);
+            plotter.CreatePlotDisk(tempdir, finaldir, filename, k, memo_bytes, 5, id_bytes, 32);
         } else if (operation == "prove") {
             if (argc < 3) {
                 HelpAndQuit(options);

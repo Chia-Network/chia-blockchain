@@ -340,7 +340,7 @@ class FullNodeUI:
             else:
                 self.syncing.text = f"Syncing"
         else:
-            self.syncing.text = "Not syncing"
+            self.syncing.text = "Synced"
 
         total_iters = self.lca_block.challenge.total_iters
 
@@ -489,7 +489,7 @@ class FullNodeUI:
                     self.latest_blocks = await self.get_latest_blocks(self.tips)
 
                     self.data_initialized = True
-                    if counter % 20 == 0:
+                    if counter % 50 == 0:
                         # Only request balances periodically, since it's an expensive operation
                         coin_balances: Dict[
                             bytes, uint64
