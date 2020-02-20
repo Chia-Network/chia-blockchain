@@ -32,6 +32,6 @@
 
 <h3>Our Pool Winnings</h3>
 {% for winner in our_winners %}
-    <div><span class='name'>Public key</span> {{ winner[2] }}: {{ winner[0] / 1000000000000 }} chias</div>
+    {{ render_field('Public key', winner[2] | string + (winner[0] / 1000000000000) | string) }}
 {% endfor %}  
 {% endblock %}
