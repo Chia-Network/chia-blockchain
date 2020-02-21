@@ -29,6 +29,16 @@ PyBIP158::PyBIP158(std::vector< std::vector< unsigned char > >& hashes)
     filter=new GCSFilter({0, 0, 20, 1 << 20},elements);
 }
 
+PyBIP158::PyBIP158(std::vector< unsigned char > & encoded_filter)
+{
+    filter=new GCSFilter({0, 0, 20, 1 << 20}, encoded_filter);
+}
+
+const std::vector<unsigned char>& PyBIP158::GetEncoded()
+{
+    return filter->GetEncoded();
+}
+
 PyBIP158::~PyBIP158()
 {
     delete filter;

@@ -25,6 +25,8 @@ public:
 public:
 
     PyBIP158(std::vector< std::vector< unsigned char > >& hashes);
+    PyBIP158(std::vector< unsigned char > & encoded_filter);
+    const std::vector<unsigned char>& GetEncoded();
     ~PyBIP158();
     
     bool Match(std::vector< unsigned char >& hash);
