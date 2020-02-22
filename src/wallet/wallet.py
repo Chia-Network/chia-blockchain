@@ -357,7 +357,7 @@ class Wallet:
 
         npc_list: List[NPC]
         if response.body.transactions:
-            error, npc_list, cost = await get_name_puzzle_conditions(
+            error, npc_list, cost = get_name_puzzle_conditions(
                 response.body.transactions
             )
 

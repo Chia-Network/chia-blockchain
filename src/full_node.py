@@ -6,6 +6,7 @@ from asyncio import Event
 from secrets import token_bytes
 from typing import AsyncGenerator, List, Optional, Tuple, Dict
 
+from chiabip158 import PyBIP158
 from chiapos import Verifier
 
 import src.protocols.wallet_protocol
@@ -1245,8 +1246,21 @@ class FullNode:
         prev_header_hash: bytes32 = target_tip.get_hash()
         timestamp: uint64 = uint64(int(time.time()))
 
-        # TODO(straya): use a real BIP158 filter based on transactions
-        filter_hash: bytes32 = token_bytes(32)
+        # Create filter
+        byte_array_tx: List[bytes32] = []
+        if spend_bundle:
+            additions: List[Coin] = spend_bundle.additions()
+            removals: List[Coin] = spend_bundle.removals()
+            for coin in additions:
+                byte_array_tx.append(bytearray(coin.puzzle_hash))
+            for coin in removals:
+                byte_array_tx.append(bytearray(coin.name()))
+        byte_array_tx.append(bytearray(request.coinbase.puzzle_hash))
+        byte_array_tx.append(bytearray(fees_coin.puzzle_hash))
+
+        bip158: PyBIP158 = PyBIP158(byte_array_tx)
+        encoded_filter = bytes(bip158.GetEncoded())
+
         proof_of_space_hash: bytes32 = request.proof_of_space.get_hash()
         body_hash: Body = body.get_hash()
         difficulty = self.blockchain.get_next_difficulty(target_tip.header_hash)
@@ -1264,7 +1278,7 @@ class FullNode:
             uint32(target_tip.height + 1),
             prev_header_hash,
             timestamp,
-            filter_hash,
+            encoded_filter,
             proof_of_space_hash,
             body_hash,
             target_tip.weight + difficulty,

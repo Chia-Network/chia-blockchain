@@ -62,7 +62,7 @@ class FullBlock(Streamable):
         if self.body.transactions is not None:
             # ensure block program generates solutions
             # This should never throw here, block must be valid if it comes to here
-            err, npc_list, cost = await get_name_puzzle_conditions(
+            err, npc_list, cost = get_name_puzzle_conditions(
                 self.body.transactions
             )
             # build removals list

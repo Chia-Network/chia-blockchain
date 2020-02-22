@@ -91,7 +91,7 @@ def mempool_assert_time_exceeds(condition: ConditionVarPair):
     return None
 
 
-async def get_name_puzzle_conditions(
+def get_name_puzzle_conditions(
     block_program: Program,
 ) -> Tuple[Optional[Err], List[NPC], int]:
     """

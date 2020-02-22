@@ -27,7 +27,7 @@ class TestFilter:
         key_config = {"wallet_sk": sk}
 
         wallet = await Wallet.create({}, key_config)
-        wallet.wallet_store._clear_database()
+        await wallet.wallet_store._clear_database()
 
         num_blocks = 2
         blocks = bt.get_consecutive_blocks(

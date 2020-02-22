@@ -927,7 +927,7 @@ class Blockchain:
         if not block.body.transactions:
             return Err.UNKNOWN
         # Get List of names removed, puzzles hashes for removed coins and conditions crated
-        error, npc_list, cost = await get_name_puzzle_conditions(
+        error, npc_list, cost = get_name_puzzle_conditions(
             block.body.transactions
         )
 

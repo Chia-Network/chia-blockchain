@@ -5,6 +5,7 @@ from pathlib import Path
 
 import blspy
 from blspy import PrependSignature, PrivateKey, PublicKey
+from chiabip158 import PyBIP158
 
 from chiapos import DiskPlotter, DiskProver
 from lib.chiavdf.inkfish.classgroup import ClassGroup
@@ -17,7 +18,7 @@ from src.pool import create_coinbase_coin_and_signature
 from src.types.body import Body
 from src.types.challenge import Challenge
 from src.types.classgroup import ClassgroupElement
-from src.types.full_block import FullBlock
+from src.types.full_block import FullBlock, additions_for_npc
 from src.types.hashable.BLSSignature import BLSSignature
 from src.types.hashable.Coin import Coin
 from src.types.hashable.Program import Program
@@ -30,6 +31,8 @@ from src.util.ints import uint8, uint32, uint64
 from src.util.hash import std_hash
 
 # Can't go much lower than 19, since plots start having no solutions
+from src.util.mempool_check_conditions import get_name_puzzle_conditions
+
 k: uint8 = uint8(19)
 # Uses many plots for testing, in order to guarantee proofs of space at every height
 num_plots = 40
@@ -442,11 +445,27 @@ class BlockTools:
             extension_data,
         )
 
+        # Create filter
+        byte_array_tx: List[bytes32] = []
+        if transactions:
+            error, npc_list, _ = get_name_puzzle_conditions(transactions)
+            additions: List[Coin] = additions_for_npc(npc_list)
+            for coin in additions:
+                byte_array_tx.append(bytearray(coin.puzzle_hash))
+            for npc in npc_list:
+                byte_array_tx.append(bytearray(npc.coin_name))
+
+        byte_array_tx.append(bytearray(coinbase_coin.puzzle_hash))
+        byte_array_tx.append(bytearray(fees_coin.puzzle_hash))
+
+        bip158: PyBIP158 = PyBIP158(byte_array_tx)
+        encoded = bytes(bip158.GetEncoded())
+
         header_data: HeaderData = HeaderData(
             height,
             prev_header_hash,
             timestamp,
-            bytes([0] * 32),
+            encoded,
             proof_of_space.get_hash(),
             body.get_hash(),
             uint64(prev_weight + difficulty),

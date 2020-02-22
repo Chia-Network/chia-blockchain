@@ -101,7 +101,7 @@ class MempoolManager:
         # Calculate the cost and fees
         program = best_solution_program(new_spend)
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-        fail_reason, npc_list, cost = await get_name_puzzle_conditions(program)
+        fail_reason, npc_list, cost = get_name_puzzle_conditions(program)
         if fail_reason:
             return None, fail_reason
 
