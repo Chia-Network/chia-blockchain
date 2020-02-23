@@ -38,7 +38,7 @@ jobs:
         cd ../../../
     - name: Lint source with flake8
       run: |
-        ./.venv/bin/flake8 src --exclude src/wallet
+        ./.venv/bin/flake8 src --exclude src/wallet/electron/node_modules
     - name: Lint source with mypy
       run: |
         ./.venv/bin/mypy src tests
