@@ -1665,3 +1665,25 @@ class FullNode:
                 Message("maybe_transaction", spend_bundle.name()),
                 Delivery.BROADCAST,
             )
+
+    @api_request
+    async def request_additions(
+        self, request: src.protocols.wallet_protocol.RequestAdditions
+    ) -> OutboundMessageGenerator:
+        block: Optional[FullBlock] = await self.store.get_block(request.header_hash)
+        if block:
+            additions = block.additions()
+            response = src.protocols.wallet_protocol.Additions(
+                block.height, block.header_hash, additions
+            )
+            yield OutboundMessage(
+                NodeType.WALLET,
+                Message("response_additions", response),
+                Delivery.BROADCAST,
+            )
+        else:
+            yield OutboundMessage(
+                NodeType.WALLET,
+                Message("response_reject_additions", request),
+                Delivery.BROADCAST,
+            )

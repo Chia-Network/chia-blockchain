@@ -421,6 +421,25 @@ class Wallet:
             async for reply in self.server.push_message(msg):
                 self.log.info(reply)
 
+    async def _request_add_list(self, height: uint32, header_hash: bytes32):
+        obj = src.protocols.wallet_protocol.RequestAdditions(height, header_hash)
+        msg = OutboundMessage(
+            NodeType.FULL_NODE,
+            Message("request_additions", obj),
+            Delivery.BROADCAST,
+        )
+        if self.server:
+            async for reply in self.server.push_message(msg):
+                self.log.info(reply)
+
+    @api_request
+    async def response_additions(self, response: src.protocols.wallet_protocol.Additions):
+        print(response)
+
+    @api_request
+    async def response_additions_rejected(self, response: src.protocols.wallet_protocol.RequestAdditions):
+        print(f"request rejected {response}")
+
     @api_request
     async def transaction_ack(self, ack: src.protocols.wallet_protocol.TransactionAck):
         if ack.status:

@@ -927,9 +927,7 @@ class Blockchain:
         if not block.body.transactions:
             return Err.UNKNOWN
         # Get List of names removed, puzzles hashes for removed coins and conditions crated
-        error, npc_list, cost = get_name_puzzle_conditions(
-            block.body.transactions
-        )
+        error, npc_list, cost = get_name_puzzle_conditions(block.body.transactions)
 
         if cost > 6000:
             return Err.BLOCK_COST_EXCEEDS_MAX
