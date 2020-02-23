@@ -5,13 +5,11 @@ import json
 from typing import Any
 
 from aiohttp import web
-from blspy import ExtendedPrivateKey
-from setproctitle import setproctitle
 
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.types.peer_info import PeerInfo
-from src.util.config import load_config_cli, load_config
+from src.util.config import load_config
 from src.wallet.wallet import Wallet
 
 
@@ -65,35 +63,25 @@ class RpcWalletApiHandler:
             tx = await self.wallet.generate_signed_transaction(amount, puzzlehash)
 
             if tx is None:
-                response = {
-                    "success": False
-                }
+                response = {"success": False}
                 return obj_to_response(response)
 
             await self.wallet.push_transaction(tx)
 
-            response = {
-                "success": True
-            }
+            response = {"success": True}
             return obj_to_response(response)
 
-        response = {
-            "success": False
-        }
+        response = {"success": False}
         return obj_to_response(response)
 
     async def get_server_ready(self, request) -> web.Response:
 
-        response = {
-            "success": True
-        }
+        response = {"success": True}
         return obj_to_response(response)
 
     async def get_transactions(self, request) -> web.Response:
 
-        response = {
-            "success": True
-        }
+        response = {"success": True}
         return obj_to_response(response)
 
     async def get_wallet_balance(self, request) -> web.Response:
@@ -155,8 +143,9 @@ async def start_rpc_server():
 
 async def main():
     cleanup = await start_rpc_server()
-    print('start running on {}')
+    print("start running on {}")
     await cleanup()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     asyncio.run(main())

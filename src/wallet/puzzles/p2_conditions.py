@@ -10,8 +10,6 @@ require a delegated puzzle program, so in those cases, this is just what
 the doctor ordered.
 """
 
-import clvm
-
 from clvm_tools import binutils
 
 from src.types.hashable.Program import Program

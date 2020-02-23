@@ -121,7 +121,11 @@ class Wallet:
 
     async def get_unconfirmed_balance(self) -> uint64:
         confirmed = await self.get_confirmed_balance()
-        result = confirmed - self.unconfirmed_removal_amount + self.unconfirmed_addition_amount
+        result = (
+            confirmed
+            - self.unconfirmed_removal_amount
+            + self.unconfirmed_addition_amount
+        )
         return uint64(result)
 
     def can_generate_puzzle_hash(self, hash: bytes32) -> bool:
@@ -153,9 +157,9 @@ class Wallet:
         if amount > await self.get_unconfirmed_balance():
             return None
 
-        unspent: Set[
-            CoinRecord
-        ] = await self.wallet_store.get_coin_records_by_spent(False)
+        unspent: Set[CoinRecord] = await self.wallet_store.get_coin_records_by_spent(
+            False
+        )
         sum = 0
         used_coins: Set = set()
 
@@ -246,7 +250,9 @@ class Wallet:
                     changepuzzlehash = self.get_new_puzzlehash()
                     primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
                     # add change coin into temp_utxo set
-                    self.tmp_coins.add(Coin(coin.name(), changepuzzlehash, uint64(change)))
+                    self.tmp_coins.add(
+                        Coin(coin.name(), changepuzzlehash, uint64(change))
+                    )
                 solution = self.make_solution(primaries=primaries)
                 output_created = True
             else:
@@ -424,20 +430,22 @@ class Wallet:
     async def _request_add_list(self, height: uint32, header_hash: bytes32):
         obj = src.protocols.wallet_protocol.RequestAdditions(height, header_hash)
         msg = OutboundMessage(
-            NodeType.FULL_NODE,
-            Message("request_additions", obj),
-            Delivery.BROADCAST,
+            NodeType.FULL_NODE, Message("request_additions", obj), Delivery.BROADCAST,
         )
         if self.server:
             async for reply in self.server.push_message(msg):
                 self.log.info(reply)
 
     @api_request
-    async def response_additions(self, response: src.protocols.wallet_protocol.Additions):
+    async def response_additions(
+        self, response: src.protocols.wallet_protocol.Additions
+    ):
         print(response)
 
     @api_request
-    async def response_additions_rejected(self, response: src.protocols.wallet_protocol.RequestAdditions):
+    async def response_additions_rejected(
+        self, response: src.protocols.wallet_protocol.RequestAdditions
+    ):
         print(f"request rejected {response}")
 
     @api_request

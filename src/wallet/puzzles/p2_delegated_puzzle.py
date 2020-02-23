@@ -24,8 +24,10 @@ from . import p2_conditions
 
 def puzzle_for_pk(public_key) -> Program:
     aggsig = ConditionOpcode.AGG_SIG[0]
-    TEMPLATE = (f"(c (c (q {aggsig}) (c (q 0x%s) (c (sha256tree (f (a))) (q ())))) "
-                f"((c (f (a)) (f (r (a))))))")
+    TEMPLATE = (
+        f"(c (c (q {aggsig}) (c (q 0x%s) (c (sha256tree (f (a))) (q ())))) "
+        f"((c (f (a)) (f (r (a))))))"
+    )
     return Program.to(binutils.assemble(TEMPLATE % public_key.hex()))
 
 
