@@ -487,9 +487,9 @@ class TestFullNode:
     #     unf_block_req_bad = fnp.RespondUnfinishedBlock(unf_block_not_child)
     #     assert len([x async for x in full_node_1.respond_unfinished_block(unf_block_req_bad)]) == 0
 
-        # Already seen
-        # Slow block should delay prop
-        # Highest height should propagate
-        # Slow equal height should not
-        # Fastest equal height should
-        # Don't propagate at old height
+    # Already seen
+    # Slow block should delay prop
+    # Highest height should propagate
+    # Slow equal height should not
+    # Fastest equal height should
+    # Don't propagate at old height

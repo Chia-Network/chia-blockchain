@@ -25,7 +25,9 @@ class Keychain(dict):
 
     def signature_for_solution(self, solution):
         signatures = []
-        conditions_dict = conditions_by_opcode(conditions_for_solution(solution))
+        conditions = conditions_for_solution(solution)
+        assert conditions[1] is not None
+        conditions_dict = conditions_by_opcode(conditions[1])
         for _ in hash_key_pairs_for_conditions_dict(conditions_dict):
             signature = self.sign(_)
             signatures.append(signature)
