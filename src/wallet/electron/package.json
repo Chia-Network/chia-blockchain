@@ -16,11 +16,10 @@
     "dialogs": "^2.0.1",
     "electron-rebuild": "^1.10.0",
     "jquery": "^3.4.1",
-    "qrcode": "^1.4.4",
-    "zerorpc": "git+https://github.com/0rpc/zerorpc-node.git"
+    "qrcode": "^1.4.4"
   },
   "devDependencies": {
-    "electron": "^1.7.6",
+    "electron": "^1.8.8",
     "electron-packager": "^9.0.1"
   }
 }
