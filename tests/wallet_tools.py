@@ -43,7 +43,7 @@ class WalletTool:
         self.extended_secret_key = ExtendedPrivateKey.from_seed(self.seed)
         self.generator_lookups: Dict = {}
         self.name = "MyChiaWallet"
-        self.puzzle_pk_cache = {}
+        self.puzzle_pk_cache: Dict = {}
 
     def get_next_public_key(self):
         pubkey = self.extended_secret_key.public_child(

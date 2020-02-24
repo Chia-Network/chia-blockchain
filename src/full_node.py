@@ -752,8 +752,6 @@ class FullNode:
         A proof of time, received by a peer full node. If we have the rest of the block,
         we can complete it. Otherwise, we just verify and propagate the proof.
         """
-        finish_block: bool = False
-        propagate_proof: bool = False
         if (
             self.store.get_unfinished_block(
                 (
@@ -763,33 +761,26 @@ class FullNode:
             )
             is not None
         ):
-            finish_block = True
-        elif respond_proof_of_time.proof.is_valid(constants["DISCRIMINANT_SIZE_BITS"]):
-            propagate_proof = True
-
-        if finish_block or propagate_proof:
             height: Optional[uint32] = self.store.get_proof_of_time_heights(
                 (
                     respond_proof_of_time.proof.challenge_hash,
                     respond_proof_of_time.proof.number_of_iterations,
                 )
             )
-            if height is None:
-                return
-            yield OutboundMessage(
-                NodeType.FULL_NODE,
-                Message(
-                    "new_proof_of_time",
-                    full_node_protocol.NewProofOfTime(
-                        height,
-                        respond_proof_of_time.proof.challenge_hash,
-                        respond_proof_of_time.proof.number_of_iterations,
+            if height is not None:
+                yield OutboundMessage(
+                    NodeType.FULL_NODE,
+                    Message(
+                        "new_proof_of_time",
+                        full_node_protocol.NewProofOfTime(
+                            height,
+                            respond_proof_of_time.proof.challenge_hash,
+                            respond_proof_of_time.proof.number_of_iterations,
+                        ),
                     ),
-                ),
-                Delivery.BROADCAST_TO_OTHERS,
-            )
+                    Delivery.BROADCAST_TO_OTHERS,
+                )
 
-        if finish_block:
             request = timelord_protocol.ProofOfTimeFinished(respond_proof_of_time.proof)
             async for msg in self.proof_of_time_finished(request):
                 yield msg
@@ -931,13 +922,23 @@ class FullNode:
         )
         if prev_block is not None:
             challenge = self.blockchain.get_challenge(prev_block)
-            if (
-                self.store.get_unfinished_block(
-                    (challenge, self.new_unfinished_block.iterations_needed)
-                )
-                is not None
-            ):
-                return
+            if challenge is not None:
+                if (
+                    self.store.get_unfinished_block(
+                        (
+                            challenge.get_hash(),
+                            new_unfinished_block.number_of_iterations,
+                        )
+                    )
+                    is not None
+                ):
+                    return
+            assert challenge is not None
+            print(self.store.unfinished_blocks.keys())
+            print(
+                "It's none..",
+                (challenge.get_hash(), new_unfinished_block.number_of_iterations),
+            )
             yield OutboundMessage(
                 NodeType.FULL_NODE,
                 Message(

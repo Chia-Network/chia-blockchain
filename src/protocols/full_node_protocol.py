@@ -82,7 +82,7 @@ class RespondProofOfTime:
 @cbor_message
 class RejectProofOfTimeRequest:
     challenge_hash: bytes32
-    iterations: uint64
+    number_of_iterations: uint64
 
 
 @dataclass(frozen=True)
@@ -111,14 +111,14 @@ class RespondCompactProofOfTime:
 @cbor_message
 class RejectCompactProofOfTimeRequest:
     challenge_hash: bytes32
-    iterations: uint64
+    number_of_iterations: uint64
 
 
 @dataclass(frozen=True)
 @cbor_message
 class NewUnfinishedBlock:
     previous_header_hash: bytes32
-    iterations: uint64
+    number_of_iterations: uint64
     new_header_hash: bytes32
 
 
