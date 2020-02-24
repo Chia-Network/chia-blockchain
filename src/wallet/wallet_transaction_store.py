@@ -2,7 +2,6 @@ import asyncio
 from typing import Dict, Optional, List
 from pathlib import Path
 import aiosqlite
-from src.types.hashable.SpendBundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32
 from src.wallet.transaction_record import TransactionRecord
@@ -106,8 +105,14 @@ class WalletTransactionStore:
         if current is None:
             return
         tx: TransactionRecord = TransactionRecord(
-            index, current.created_at_index, True, current.sent, current.created_at_time, current.spend_bundle, current.additions,
-            current.removals
+            index,
+            current.created_at_index,
+            True,
+            current.sent,
+            current.created_at_time,
+            current.spend_bundle,
+            current.additions,
+            current.removals,
         )
         await self.add_transaction_record(tx)
 
@@ -117,8 +122,14 @@ class WalletTransactionStore:
         if current is None:
             return
         tx: TransactionRecord = TransactionRecord(
-            current.confirmed_block_index, current.created_at_index, current.confirmed, True, current.created_at_time, current.spend_bundle,
-            current.additions, current.removals
+            current.confirmed_block_index,
+            current.created_at_index,
+            current.confirmed,
+            True,
+            current.created_at_time,
+            current.spend_bundle,
+            current.additions,
+            current.removals,
         )
         await self.add_transaction_record(tx)
 

@@ -25,7 +25,12 @@ class WalletStateManager:
     synced: bool
 
     @staticmethod
-    async def create(config: Dict, wallet_store: WalletStore, tx_store: WalletTransactionStore, name: str = None):
+    async def create(
+        config: Dict,
+        wallet_store: WalletStore,
+        tx_store: WalletTransactionStore,
+        name: str = None,
+    ):
         self = WalletStateManager()
         print("init wallet")
         self.config = config
@@ -61,19 +66,15 @@ class WalletStateManager:
 
         for record in unconfirmed_tx:
             for name, coin in record.additions.items():
-                addition_amount += coin.additions
+                addition_amount += coin.amount
             for name, coin in record.removals.items():
                 removal_amount += coin.amount
 
-        result = (
-            confirmed
-            - removal_amount
-            + addition_amount
-        )
+        result = confirmed - removal_amount + addition_amount
         return uint64(result)
 
     async def unconfirmed_additions(self) -> Dict[bytes32, Coin]:
-        additions: Dict[Coin] = {}
+        additions: Dict[bytes32, Coin] = {}
         unconfirmed_tx = await self.tx_store.get_not_confirmed()
         for record in unconfirmed_tx:
             for name, coin in record.additions.items():
@@ -81,7 +82,7 @@ class WalletStateManager:
         return additions
 
     async def unconfirmed_removals(self) -> Dict[bytes32, Coin]:
-        removals: Dict[Coin] = {}
+        removals: Dict[bytes32, Coin] = {}
         unconfirmed_tx = await self.tx_store.get_not_confirmed()
         for record in unconfirmed_tx:
             for name, coin in record.removals.items():
@@ -119,7 +120,7 @@ class WalletStateManager:
             for coin in (await self.unconfirmed_additions()).values():
                 if sum > amount:
                     break
-                if coin.name in self.unconfirmed_removals:
+                if coin.name in (await self.unconfirmed_removals()).values():
                     continue
                 sum += coin.amount
                 used_coins.add(coin)
@@ -156,7 +157,9 @@ class WalletStateManager:
             rem_dict[rem.name()] = rem
 
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
-        tx_record = TransactionRecord(0, 0, False, False, now, spend_bundle, add_dict, rem_dict)
+        tx_record = TransactionRecord(
+            uint32(0), uint32(0), False, False, now, spend_bundle, add_dict, rem_dict
+        )
         await self.tx_store.add_transaction_record(tx_record)
 
     async def remove_from_queue(self, spendbundle_id: bytes32):

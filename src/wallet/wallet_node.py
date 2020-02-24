@@ -33,6 +33,7 @@ class WalletNode:
     start_index: int
     log: logging.Logger
     wallet: Wallet
+    tx_store: WalletTransactionStore
 
     @staticmethod
     async def create(config: Dict, key_config: Dict, name: str = None):
@@ -52,7 +53,9 @@ class WalletNode:
         self.wallet_store = await WalletStore.create(path)
         self.tx_store = await WalletTransactionStore.create(path)
 
-        self.wallet_state_manager = await WalletStateManager.create(config, self.wallet_store, self.tx_store)
+        self.wallet_state_manager = await WalletStateManager.create(
+            config, self.wallet_store, self.tx_store
+        )
         self.wallet = await Wallet.create(config, key_config, self.wallet_state_manager)
 
         self.server = None
@@ -113,9 +116,13 @@ class WalletNode:
         additions: List[Coin] = []
 
         if self.wallet.can_generate_puzzle_hash(response.body.coinbase.puzzle_hash):
-            await self.wallet_state_manager.coin_added(response.body.coinbase, response.height, True)
+            await self.wallet_state_manager.coin_added(
+                response.body.coinbase, response.height, True
+            )
         if self.wallet.can_generate_puzzle_hash(response.body.fees_coin.puzzle_hash):
-            await self.wallet_state_manager.coin_added(response.body.fees_coin, response.height, True)
+            await self.wallet_state_manager.coin_added(
+                response.body.fees_coin, response.height, True
+            )
 
         npc_list: List[NPC]
         if response.body.transactions:
@@ -127,11 +134,15 @@ class WalletNode:
 
             for added_coin in additions:
                 if self.wallet.can_generate_puzzle_hash(added_coin.puzzle_hash):
-                    await self.wallet_state_manager.coin_added(added_coin, response.height, False)
+                    await self.wallet_state_manager.coin_added(
+                        added_coin, response.height, False
+                    )
 
             for npc in npc_list:
                 if self.wallet.can_generate_puzzle_hash(npc.puzzle_hash):
-                    await self.wallet_state_manager.coin_removed(npc.coin_name, response.height)
+                    await self.wallet_state_manager.coin_removed(
+                        npc.coin_name, response.height
+                    )
 
     @api_request
     async def new_lca(self, header: src.protocols.wallet_protocol.Header):

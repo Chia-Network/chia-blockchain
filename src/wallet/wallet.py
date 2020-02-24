@@ -3,6 +3,7 @@ import clvm
 from blspy import ExtendedPrivateKey, PublicKey
 import logging
 
+from src.server.outbound_message import OutboundMessage, NodeType, Message, Delivery
 from src.server.server import ChiaServer
 from src.types.hashable.BLSSignature import BLSSignature
 from src.types.hashable.CoinSolution import CoinSolution
@@ -48,7 +49,12 @@ class Wallet:
     send_queue: Dict[bytes32, SpendBundle]
 
     @staticmethod
-    async def create(config: Dict, key_config: Dict, wallet_state_manager: WalletStateManager, name: str = None):
+    async def create(
+        config: Dict,
+        key_config: Dict,
+        wallet_state_manager: WalletStateManager,
+        name: str = None,
+    ):
         self = Wallet()
         print("init wallet")
         self.config = config
@@ -209,5 +215,10 @@ class Wallet:
 
     async def _send_transaction(self, spend_bundle: SpendBundle):
         if self.server:
+            msg = OutboundMessage(
+                NodeType.FULL_NODE,
+                Message("wallet_transaction", spend_bundle),
+                Delivery.BROADCAST,
+            )
             async for reply in self.server.push_message(msg):
                 self.log.info(reply)

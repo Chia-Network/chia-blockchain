@@ -60,7 +60,9 @@ class RpcWalletApiHandler:
         if "amount" in request_data and "puzzlehash" in request_data:
             amount = int(request_data["amount"])
             puzzlehash = request_data["puzzlehash"]
-            tx = await self.wallet_node.wallet.generate_signed_transaction(amount, puzzlehash)
+            tx = await self.wallet_node.wallet.generate_signed_transaction(
+                amount, puzzlehash
+            )
 
             if tx is None:
                 response = {"success": False}
