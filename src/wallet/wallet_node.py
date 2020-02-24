@@ -54,7 +54,7 @@ class WalletNode:
         self.tx_store = await WalletTransactionStore.create(path)
 
         self.wallet_state_manager = await WalletStateManager.create(
-            config, self.wallet_store, self.tx_store
+            config, key_config, self.wallet_store, self.tx_store
         )
         self.wallet = await Wallet.create(config, key_config, self.wallet_state_manager)
 

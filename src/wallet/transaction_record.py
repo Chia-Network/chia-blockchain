@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Optional, List
 
 from src.types.hashable.Coin import Coin
 from src.types.hashable.SpendBundle import SpendBundle
@@ -21,10 +21,9 @@ class TransactionRecord(Streamable):
     sent: bool
     created_at_time: uint64
     spend_bundle: Optional[SpendBundle]
-    additions: Dict[bytes32, Coin]
-    removals: Dict[bytes32, Coin]
+    additions: List[Coin]
+    removals: List[Coin]
 
-    @property
     def name(self) -> bytes32:
         if self.spend_bundle:
             return self.spend_bundle.name()

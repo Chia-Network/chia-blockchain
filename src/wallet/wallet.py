@@ -67,12 +67,15 @@ class Wallet:
         self.wallet_state_manager = wallet_state_manager
         self.pubkey_num_lookup = {}
 
+        self.server = None
+
         return self
 
     def get_next_public_key(self) -> PublicKey:
         pubkey = self.private_key.public_child(self.next_address).get_public_key()
         self.pubkey_num_lookup[pubkey.serialize()] = self.next_address
         self.next_address = self.next_address + 1
+        self.wallet_state_manager.next_address = self.next_address
         return pubkey
 
     async def get_confirmed_balance(self) -> uint64:
@@ -103,6 +106,7 @@ class Wallet:
     def get_new_puzzlehash(self) -> bytes32:
         puzzle: Program = self.get_new_puzzle()
         puzzlehash: bytes32 = puzzle.get_hash()
+        self.wallet_state_manager.puzzlehash_set.add(puzzlehash)
         return puzzlehash
 
     def set_server(self, server: ChiaServer):

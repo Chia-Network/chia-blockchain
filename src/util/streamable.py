@@ -181,7 +181,7 @@ class Streamable:
             f.write(uint32(len(item)).to_bytes(4, "big"))
             f.write(item.encode("utf-8"))
         elif f_type is bool:
-            f.write(bytes(item))
+            f.write(int(item).to_bytes(4, "big"))
         else:
             raise NotImplementedError(f"can't stream {item}, {f_type}")
 
