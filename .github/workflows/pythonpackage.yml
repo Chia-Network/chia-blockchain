@@ -21,6 +21,7 @@ jobs:
     - name: Install dependencies
       run: |
         brew update && brew install gmp boost || echo ""
+        sudo apt-get install libboost1.70 libboost1.70-dev | echo ""
         sh install.sh
     - name: Test proof of space
       run: |
