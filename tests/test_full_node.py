@@ -7,6 +7,7 @@ from secrets import token_bytes
 
 from src.protocols import full_node_protocol as fnp
 from src.types.peer_info import PeerInfo
+from src.types.hashable.SpendBundle import SpendBundle
 from src.util.bundle_tools import best_solution_program
 from src.util.ints import uint16, uint32, uint64
 from src.types.ConditionVarPair import ConditionVarPair
@@ -31,13 +32,21 @@ async def two_nodes():
 
 
 @pytest.fixture(scope="module")
-def wallet_blocks():
+async def wallet_blocks(two_nodes):
+    """
+    Sets up the node with 10 blocks, and returns a payer and payee wallet.
+    """
+    full_node_1, _, _, _ = two_nodes
     wallet_a = WalletTool()
     coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
     wallet_receiver = WalletTool()
     blocks = bt.get_consecutive_blocks(
         test_constants, num_blocks, [], 10, reward_puzzlehash=coinbase_puzzlehash
     )
+    for i in range(1, num_blocks):
+        async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks[i])):
+            pass
+
     return wallet_a, wallet_receiver, blocks
 
 
@@ -46,10 +55,6 @@ class TestFullNode:
     async def test_new_tip(self, two_nodes, wallet_blocks):
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         _, _, blocks = wallet_blocks
-
-        for i in range(1, num_blocks):
-            async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks[i])):
-                pass
 
         await server_2.start_client(
             PeerInfo(server_1._host, uint16(server_1._port)), None
@@ -127,6 +132,8 @@ class TestFullNode:
         # Farm one block
         [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks_new[-1]))]
 
+        spend_bundles = []
+        total_fee = 0
         # Fill mempool
         for puzzle_hash in puzzle_hashes:
             coin_record = (
@@ -135,19 +142,46 @@ class TestFullNode:
                 )
             )[0]
             receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+            fee = random.randint(0, 499)
             spend_bundle = wallet_receiver.generate_signed_transaction(
-                500, receiver_puzzlehash, coin_record.coin, fee=random.randint(0, 499)
+                500, receiver_puzzlehash, coin_record.coin, fee=fee
             )
             respond_transaction = fnp.RespondTransaction(spend_bundle)
-            [x async for x in full_node_1.respond_transaction(respond_transaction)]
+            res = [
+                x async for x in full_node_1.respond_transaction(respond_transaction)
+            ]
+
+            # Added to mempool
+            if len(res) > 0:
+                total_fee += fee
+                spend_bundles.append(spend_bundle)
 
         # Mempool is full
         new_transaction = fnp.NewTransaction(token_bytes(32), uint64(10000), uint64(1))
         msgs = [x async for x in full_node_1.new_transaction(new_transaction)]
         assert len(msgs) == 0
 
+        agg = SpendBundle.aggregate(spend_bundles)
+        program = best_solution_program(agg)
+        aggsig = agg.aggregated_signature
+
+        dic_h = {6: (program, aggsig)}
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+
+        blocks_new = bt.get_consecutive_blocks(
+            test_constants,
+            1,
+            blocks_new,
+            10,
+            reward_puzzlehash=coinbase_puzzlehash,
+            transaction_data_at_height=dic_h,
+            fees=uint64(total_fee),
+        )
+        # Farm one block to clear mempool
+        [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks_new[-1]))]
+
     @pytest.mark.asyncio
-    async def test_request_transaction(self, two_nodes, wallet_blocks):
+    async def test_request_respond_transaction(self, two_nodes, wallet_blocks):
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         wallet_a, wallet_receiver, blocks = wallet_blocks
 
@@ -156,3 +190,47 @@ class TestFullNode:
         msgs = [x async for x in full_node_1.request_transaction(request_transaction)]
         assert len(msgs) == 1
         assert msgs[0].message.data == fnp.RejectTransactionRequest(tx_id)
+
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        spend_bundle = wallet_a.generate_signed_transaction(
+            100, receiver_puzzlehash, blocks[2].body.coinbase,
+        )
+        assert spend_bundle is not None
+        respond_transaction = fnp.RespondTransaction(spend_bundle)
+        prop = [x async for x in full_node_1.respond_transaction(respond_transaction)]
+        assert len(prop) == 1
+        assert isinstance(prop[0].message.data, fnp.NewTransaction)
+
+        request_transaction = fnp.RequestTransaction(spend_bundle.get_hash())
+        msgs = [x async for x in full_node_1.request_transaction(request_transaction)]
+        assert len(msgs) == 1
+        assert msgs[0].message.data == fnp.RespondTransaction(spend_bundle)
+
+    @pytest.mark.asyncio
+    async def test_respond_transaction_fail(self, two_nodes, wallet_blocks):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        wallet_a, wallet_receiver, blocks = wallet_blocks
+
+        tx_id = token_bytes(32)
+        request_transaction = fnp.RequestTransaction(tx_id)
+        msgs = [x async for x in full_node_1.request_transaction(request_transaction)]
+        assert len(msgs) == 1
+        assert msgs[0].message.data == fnp.RejectTransactionRequest(tx_id)
+
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        # Invalid transaction does not propagate
+        spend_bundle = wallet_a.generate_signed_transaction(
+            100000000000000, receiver_puzzlehash, blocks[3].body.coinbase,
+        )
+        assert spend_bundle is not None
+        respond_transaction = fnp.RespondTransaction(spend_bundle)
+        assert (
+            len([x async for x in full_node_1.respond_transaction(respond_transaction)])
+            == 0
+        )
+
+    @pytest.mark.asyncio
+    async def test_new_pot(self, two_nodes, wallet_blocks):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        wallet_a, wallet_receiver, blocks = wallet_blocks

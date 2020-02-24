@@ -131,11 +131,10 @@ class MempoolManager:
         errors: List[Err] = []
         targets: List[Mempool]
 
-        if to_pool:
+        if to_pool is not None:
             targets = [to_pool]
         else:
             targets = list(self.mempools.values())
-
         for pool in targets:
             # Check if more is created than spent
             if fees < 0:

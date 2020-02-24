@@ -1008,6 +1008,7 @@ class Blockchain:
 
         # Check coinbase reward
         if fees + fee_base != block.body.fees_coin.amount:
+            print("Fees,", fees, fee_base, block.body.fees_coin.amount)
             return Err.BAD_COINBASE_REWARD
 
         # Verify that removed coin puzzle_hashes match with calculated puzzle_hashes

@@ -58,6 +58,8 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     b_1: Blockchain = await Blockchain.create(
         unspent_store_1, store_1, test_constants_copy
     )
+    await mempool_1.new_tips(await b_1.get_full_tips())
+
     await store_1.add_block(FullBlock.from_bytes(test_constants_copy["GENESIS_BLOCK"]))
 
     config = load_config("config.yaml", "full_node")

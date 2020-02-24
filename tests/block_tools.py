@@ -104,6 +104,7 @@ class BlockTools:
         seed: bytes = b"",
         reward_puzzlehash: bytes32 = None,
         transaction_data_at_height: Dict[int, Tuple[Program, BLSSignature]] = None,
+        fees: uint64 = uint64(0),
     ) -> List[FullBlock]:
         if transaction_data_at_height is None:
             transaction_data_at_height = {}
@@ -263,6 +264,7 @@ class BlockTools:
                     reward_puzzlehash,
                     transactions,
                     aggsig,
+                    fees,
                 )
             )
         return block_list
@@ -303,6 +305,7 @@ class BlockTools:
         reward_puzzlehash: bytes32 = None,
         transactions: Program = None,
         aggsig: BLSSignature = None,
+        fees: uint64 = uint64(0),
     ) -> FullBlock:
         """
         Creates the next block with the specified details.
@@ -341,6 +344,7 @@ class BlockTools:
             reward_puzzlehash,
             transactions,
             aggsig,
+            fees,
         )
 
     def _create_block(
@@ -359,6 +363,7 @@ class BlockTools:
         reward_puzzlehash: bytes32 = None,
         transactions: Program = None,
         aggsig: BLSSignature = None,
+        fees: uint64 = uint64(0),
     ) -> FullBlock:
         """
         Creates a block with the specified details. Uses the stored plots to create a proof of space,
@@ -418,7 +423,7 @@ class BlockTools:
             fee_reward = 0
         else:
             coinbase_reward = block_rewards.calculate_block_reward(height)
-            fee_reward = block_rewards.calculate_base_fee(height)
+            fee_reward = uint64(block_rewards.calculate_base_fee(height) + fees)
 
         coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
             height, reward_puzzlehash, coinbase_reward, pool_sk
