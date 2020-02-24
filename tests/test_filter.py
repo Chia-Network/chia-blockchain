@@ -6,6 +6,7 @@ from blspy import ExtendedPrivateKey
 from chiabip158 import PyBIP158
 
 from src.wallet.wallet import Wallet
+from src.wallet.wallet_node import WalletNode
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 
 
@@ -25,9 +26,9 @@ class TestFilter:
     async def test_basic_filter_test(self, two_nodes):
         sk = bytes(ExtendedPrivateKey.from_seed(b"")).hex()
         key_config = {"wallet_sk": sk}
-
-        wallet = await Wallet.create({}, key_config)
-        await wallet.wallet_store._clear_database()
+        wallet_node = await WalletNode.create({}, key_config)
+        wallet = wallet_node.wallet
+        await wallet_node.wallet_store._clear_database()
 
         num_blocks = 2
         blocks = bt.get_consecutive_blocks(
@@ -53,4 +54,5 @@ class TestFilter:
             assert present
             assert fee_present
 
-        await wallet.wallet_store.close()
+        await wallet_node.wallet_store.close()
+        await wallet_node.tx_store.close()

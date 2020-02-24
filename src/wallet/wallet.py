@@ -27,7 +27,6 @@ from src.wallet.puzzles.puzzle_utils import (
 )
 
 from src.wallet.wallet_state_manager import WalletStateManager
-from src.wallet.wallet_store import WalletStore
 
 
 class Wallet:
@@ -37,7 +36,6 @@ class Wallet:
     server: Optional[ChiaServer]
     next_address: int = 0
     pubkey_num_lookup: Dict[bytes, int]
-    wallet_store: WalletStore
     wallet_state_manager: WalletStateManager
 
     log: logging.Logger
