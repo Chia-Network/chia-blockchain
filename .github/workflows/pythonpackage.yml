@@ -20,8 +20,9 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        brew update && brew install gmp boost || echo ""
+        brew update && brew install gmp boost openssl || echo ""
         sudo apt-get install libboost1.70 libboost1.70-dev | echo ""
+        sudo apt-get install libssl-dev
         sh install.sh
     - name: Test proof of space
       run: |
