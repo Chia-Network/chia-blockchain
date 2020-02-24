@@ -140,7 +140,8 @@ class WalletNode:
     async def retry_send_queue(self):
         records = await self.wallet_state_manager.get_send_queue()
         for record in records:
-            await self._send_transaction(record.spend_bundle)
+            if record.spend_bundle:
+                await self._send_transaction(record.spend_bundle)
 
     async def _send_transaction(self, spend_bundle: SpendBundle):
         """ Sends spendbundle to connected full Nodes."""

@@ -36,7 +36,7 @@ class WalletTransactionStore:
                 f" confirmed int,"
                 f" sent int,"
                 f" created_at_time bigint,"
-                f" spend_bundle blob)"
+                f" transaction_record blob)"
             )
         )
 
@@ -89,7 +89,7 @@ class WalletTransactionStore:
                 int(record.confirmed),
                 int(record.sent),
                 record.created_at_time,
-                bytes(record.spend_bundle),
+                bytes(record),
             ),
         )
         await cursor.close()
@@ -106,8 +106,9 @@ class WalletTransactionStore:
         if current is None:
             return
         tx: TransactionRecord = TransactionRecord(
-            index, current.created_at_index, True, current.sent, current.created_at_time, current.spend_bundle,
-        )  # type: ignore # noqa
+            index, current.created_at_index, True, current.sent, current.created_at_time, current.spend_bundle, current.additions,
+            current.removals
+        )
         await self.add_transaction_record(tx)
 
     # Update transaction_record to be sent in DB
@@ -116,8 +117,9 @@ class WalletTransactionStore:
         if current is None:
             return
         tx: TransactionRecord = TransactionRecord(
-            index, current.created_at_index, current.confirmed, True, current.created_at_time, current.spend_bundle,
-        )  # type: ignore # noqa
+            current.confirmed_block_index, current.created_at_index, current.confirmed, True, current.created_at_time, current.spend_bundle,
+            current.additions, current.removals
+        )
         await self.add_transaction_record(tx)
 
     # Checks DB and cache for TransactionRecord with id: id and returns it
@@ -130,8 +132,7 @@ class WalletTransactionStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            spend_bundle = SpendBundle.from_bytes(row[6])
-            record = TransactionRecord(row[1], row[2], row[3], row[4], row[4], spend_bundle)
+            record = TransactionRecord.from_bytes(row[6])
             return record
         return None
 
@@ -143,8 +144,20 @@ class WalletTransactionStore:
         await cursor.close()
         records = []
         for row in rows:
-            spend_bundle = SpendBundle.from_bytes(row[6])
-            record = TransactionRecord(row[1], row[2], row[3], row[4], row[4], spend_bundle)
+            record = TransactionRecord.from_bytes(row[6])
+            records.append(record)
+
+        return records
+
+    async def get_not_confirmed(self) -> List[TransactionRecord]:
+        cursor = await self.transaction_db.execute(
+            "SELECT * from transaction_record WHERE confirmed=?", (0,)
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        records = []
+        for row in rows:
+            record = TransactionRecord.from_bytes(row[6])
             records.append(record)
 
         return records
