@@ -94,3 +94,39 @@ class TestFullSync:
             await asyncio.sleep(0.1)
 
         raise Exception("Took too long to process blocks")
+
+    @pytest.mark.asyncio
+    async def test_reorg_sync(self, two_nodes):
+        blocks_2 = bt.get_consecutive_blocks(test_constants, 50, [], 9)
+        blocks = bt.get_consecutive_blocks(test_constants, 50, blocks_2[:25], 9, b"1")
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        # All blocks from first chain to node_1
+        for i in range(1, len(blocks)):
+            async for _ in full_node_1.block(peer_protocol.Block(blocks[i])):
+                pass
+
+        # All blocks from second chain to node_2
+        for i in range(1, len(blocks_2)):
+            async for _ in full_node_2.block(peer_protocol.Block(blocks_2[i])):
+                pass
+
+        await server_2.start_client(
+            PeerInfo(server_1._host, uint16(server_1._port)), None
+        )
+        await asyncio.sleep(2)  # Allow connections to get made
+
+        start_unf = time.time()
+
+        while time.time() - start_unf < 30:
+            # The second node should eventually catch up to the first one, and have the
+            # same tip at height len(blocks_1) - 1.
+            if (
+                max(h.height for h in full_node_2.blockchain.get_current_tips())
+                == len(blocks) - 1
+            ):
+                print(f"Time taken to sync {len(blocks)} is {time.time() - start_unf}")
+                return
+            await asyncio.sleep(0.1)
+
+        raise Exception("Took too long to process blocks")

@@ -47,7 +47,7 @@ def verify_weight(
             blockchain.constants["MIN_BLOCK_TIME"],
         )
 
-        # Check vdf iters, valid pot, pot challenge hash
+        # Check vdf iters, valid pot, fully check challenge
         if (
             header_block.proof_of_time is None
             or num_iters != header_block.proof_of_time.number_of_iterations
@@ -55,8 +55,21 @@ def verify_weight(
                 blockchain.constants["DISCRIMINANT_SIZE_BITS"]
             )
             or header_block.challenge is None
-            or header_block.proof_of_time.challenge_hash
-            != prev_block.challenge.get_hash()
+            or not (
+                header_block.challenge.prev_challenge_hash
+                == header_block.proof_of_time.challenge_hash
+                == prev_block.challenge.get_hash()
+            )
+            or not (
+                header_block.challenge.proof_of_space_hash
+                == header_block.header.data.proof_of_space_hash
+                == header_block.proof_of_space.get_hash()
+            )
+            or header_block.challenge.proof_of_time_output_hash
+            != header_block.proof_of_time.get_hash()
+            or header_block.challenge.height != prev_block.challenge.height + 1
+            or header_block.challenge.total_weight
+            != prev_block.challenge.total_weight + next_difficulty
             or header_block.challenge.total_iters
             != prev_block.challenge.total_iters + num_iters
         ):
