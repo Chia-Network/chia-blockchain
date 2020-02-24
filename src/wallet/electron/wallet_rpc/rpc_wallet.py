@@ -10,7 +10,7 @@ from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.types.peer_info import PeerInfo
 from src.util.config import load_config
-from src.wallet.wallet import Wallet
+from src.wallet.wallet_node import WalletNode
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -42,14 +42,14 @@ class RpcWalletApiHandler:
     to the full node.
     """
 
-    def __init__(self, wallet: Wallet):
-        self.wallet = wallet
+    def __init__(self, wallet_node: WalletNode):
+        self.wallet_node = wallet_node
 
     async def get_next_puzzle_hash(self, request) -> web.Response:
         """
         Returns a new puzzlehash
         """
-        puzzlehash = self.wallet.get_new_puzzlehash().hex()
+        puzzlehash = self.wallet_node.wallet.get_new_puzzlehash().hex()
         response = {
             "puzzlehash": puzzlehash,
         }
@@ -60,13 +60,13 @@ class RpcWalletApiHandler:
         if "amount" in request_data and "puzzlehash" in request_data:
             amount = int(request_data["amount"])
             puzzlehash = request_data["puzzlehash"]
-            tx = await self.wallet.generate_signed_transaction(amount, puzzlehash)
+            tx = await self.wallet_node.wallet.generate_signed_transaction(amount, puzzlehash)
 
             if tx is None:
                 response = {"success": False}
                 return obj_to_response(response)
 
-            await self.wallet.push_transaction(tx)
+            await self.wallet_node.wallet.push_transaction(tx)
 
             response = {"success": True}
             return obj_to_response(response)
@@ -106,19 +106,19 @@ async def start_rpc_server():
         raise RuntimeError(
             "Keys not generated. Run python3 ./scripts/regenerate_keys.py."
         )
-    wallet = await Wallet.create(config, key_config)
+    wallet_node = await WalletNode.create(config, key_config)
 
-    server = ChiaServer(9257, wallet, NodeType.WALLET)
-    wallet.set_server(server)
+    server = ChiaServer(9257, wallet_node, NodeType.WALLET)
+    wallet_node.set_server(server)
     full_node_peer = PeerInfo(
         config["full_node_peer"]["host"], config["full_node_peer"]["port"]
     )
 
-    _ = await server.start_server("127.0.0.1", wallet._on_connect)
+    _ = await server.start_server("127.0.0.1", wallet_node._on_connect)
     await asyncio.sleep(1)
     _ = await server.start_client(full_node_peer, None)
 
-    handler = RpcWalletApiHandler(wallet)
+    handler = RpcWalletApiHandler(wallet_node)
     app = web.Application()
     app.add_routes(
         [

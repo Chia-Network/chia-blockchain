@@ -1,31 +1,20 @@
-from pathlib import Path
-from typing import Dict, Optional, List, Set, Tuple
+from typing import Dict, Optional, List, Tuple
 import clvm
 from blspy import ExtendedPrivateKey, PublicKey
 import logging
-import src.protocols.wallet_protocol
-from src.full_node import OutboundMessageGenerator
-from src.protocols.wallet_protocol import ProofHash
-from src.server.outbound_message import OutboundMessage, NodeType, Message, Delivery
+
 from src.server.server import ChiaServer
-from src.types.full_block import additions_for_npc
 from src.types.hashable.BLSSignature import BLSSignature
-from src.types.hashable.Coin import Coin
-from src.types.hashable.CoinRecord import CoinRecord
 from src.types.hashable.CoinSolution import CoinSolution
 from src.types.hashable.Program import Program
 from src.types.hashable.SpendBundle import SpendBundle
-from src.types.name_puzzle_condition import NPC
 from src.types.sized_bytes import bytes32
-from src.util.hash import std_hash
-from src.util.api_decorators import api_request
 from src.util.condition_tools import (
     conditions_for_solution,
     conditions_by_opcode,
     hash_key_pairs_for_conditions_dict,
 )
-from src.util.ints import uint32, uint64
-from src.util.mempool_check_conditions import get_name_puzzle_conditions
+from src.util.ints import uint64
 from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.puzzles.p2_conditions import puzzle_for_conditions
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
@@ -35,6 +24,8 @@ from src.wallet.puzzles.puzzle_utils import (
     make_assert_coin_consumed_condition,
     make_create_coin_condition,
 )
+
+from src.wallet.wallet_state_manager import WalletStateManager
 from src.wallet.wallet_store import WalletStore
 
 
@@ -45,22 +36,9 @@ class Wallet:
     server: Optional[ChiaServer]
     next_address: int = 0
     pubkey_num_lookup: Dict[bytes, int]
-    tmp_coins: Set[Coin]
     wallet_store: WalletStore
-    header_hash: List[bytes32]
-    start_index: int
+    wallet_state_manager: WalletStateManager
 
-    unconfirmed_removals: Set[Coin]
-    unconfirmed_removal_amount: int
-
-    unconfirmed_additions: Set[Coin]
-    unconfirmed_addition_amount: int
-
-    # This dict maps coin_id to SpendBundle, it will contain duplicate values by design
-    coin_spend_bundle_map: Dict[bytes32, SpendBundle]
-
-    # Spendbundle_ID : Spendbundle
-    pending_spend_bundles: Dict[bytes32, SpendBundle]
     log: logging.Logger
 
     # TODO Don't allow user to send tx until wallet is synced
@@ -70,7 +48,7 @@ class Wallet:
     send_queue: Dict[bytes32, SpendBundle]
 
     @staticmethod
-    async def create(config: Dict, key_config: Dict, name: str = None):
+    async def create(config: Dict, key_config: Dict, wallet_state_manager: WalletStateManager, name: str = None):
         self = Wallet()
         print("init wallet")
         self.config = config
@@ -82,23 +60,8 @@ class Wallet:
         else:
             self.log = logging.getLogger(__name__)
 
+        self.wallet_state_manager = wallet_state_manager
         self.pubkey_num_lookup = {}
-        self.tmp_coins = set()
-        pub_hex = self.private_key.get_public_key().serialize().hex()
-        path = Path(f"wallet_db_{pub_hex}.db")
-        self.wallet_store = await WalletStore.create(path)
-        self.header_hash = []
-        self.unconfirmed_additions = set()
-        self.unconfirmed_removals = set()
-        self.pending_spend_bundles = {}
-        self.coin_spend_bundle_map = {}
-        self.unconfirmed_addition_amount = 0
-        self.unconfirmed_removal_amount = 0
-
-        self.synced = False
-
-        self.send_queue = {}
-        self.server = None
 
         return self
 
@@ -109,24 +72,10 @@ class Wallet:
         return pubkey
 
     async def get_confirmed_balance(self) -> uint64:
-        record_list: Set[
-            CoinRecord
-        ] = await self.wallet_store.get_coin_records_by_spent(False)
-        amount: uint64 = uint64(0)
-
-        for record in record_list:
-            amount = uint64(amount + record.coin.amount)
-
-        return uint64(amount)
+        return await self.wallet_state_manager.get_confirmed_balance()
 
     async def get_unconfirmed_balance(self) -> uint64:
-        confirmed = await self.get_confirmed_balance()
-        result = (
-            confirmed
-            - self.unconfirmed_removal_amount
-            + self.unconfirmed_addition_amount
-        )
-        return uint64(result)
+        return await self.wallet_state_manager.get_unconfirmed_balance()
 
     def can_generate_puzzle_hash(self, hash: bytes32) -> bool:
         return any(
@@ -151,48 +100,6 @@ class Wallet:
         puzzle: Program = self.get_new_puzzle()
         puzzlehash: bytes32 = puzzle.get_hash()
         return puzzlehash
-
-    async def select_coins(self, amount) -> Optional[Set[Coin]]:
-
-        if amount > await self.get_unconfirmed_balance():
-            return None
-
-        unspent: Set[CoinRecord] = await self.wallet_store.get_coin_records_by_spent(
-            False
-        )
-        sum = 0
-        used_coins: Set = set()
-
-        """
-        Try to use coins from the store, if there isn't enough of "unused"
-        coins use change coins that are not confirmed yet
-        """
-        for coinrecord in unspent:
-            if sum >= amount:
-                break
-            if coinrecord.coin.name in self.unconfirmed_removals:
-                continue
-            sum += coinrecord.coin.amount
-            used_coins.add(coinrecord.coin)
-
-        """
-        This happens when we couldn't use one of the coins because it's already used
-        but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
-        """
-        if sum < amount:
-            for coin in self.unconfirmed_additions:
-                if sum > amount:
-                    break
-                if coin.name in self.unconfirmed_removals:
-                    continue
-                sum += coin.amount
-                used_coins.add(coin)
-
-        if sum >= amount:
-            return used_coins
-        else:
-            # This shouldn't happen because of: if amount > self.get_unconfirmed_balance():
-            return None
 
     def set_server(self, server: ChiaServer):
         self.server = server
@@ -230,7 +137,7 @@ class Wallet:
     async def generate_unsigned_transaction(
         self, amount: int, newpuzzlehash: bytes32, fee: int = 0
     ) -> List[Tuple[Program, CoinSolution]]:
-        utxos = await self.select_coins(amount + fee)
+        utxos = await self.wallet_state_manager.select_coins(amount + fee)
         if utxos is None:
             return []
         spends: List[Tuple[Program, CoinSolution]] = []
@@ -249,10 +156,7 @@ class Wallet:
                 if change > 0:
                     changepuzzlehash = self.get_new_puzzlehash()
                     primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
-                    # add change coin into temp_utxo set
-                    self.tmp_coins.add(
-                        Coin(coin.name(), changepuzzlehash, uint64(change))
-                    )
+
                 solution = self.make_solution(primaries=primaries)
                 output_created = True
             else:
@@ -298,167 +202,12 @@ class Wallet:
             return None
         return self.sign_transaction(transaction)
 
-    async def coin_removed(self, coin_name: bytes32, index: uint32):
-        self.log.info("remove coin")
-        await self.wallet_store.set_spent(coin_name, index)
-
-    async def coin_added(self, coin: Coin, index: uint32, coinbase: bool):
-        self.log.info("add coin")
-        coin_record: CoinRecord = CoinRecord(coin, index, uint32(0), False, coinbase)
-        await self.wallet_store.add_coin_record(coin_record)
-
-    async def _on_connect(self) -> OutboundMessageGenerator:
-        """
-        Whenever we connect to a FullNode we request new proof_hashes by sending last proof hash we have
-        """
-        self.log.info(f"Requesting proof hashes")
-        request = ProofHash(std_hash(b"deadbeef"))
-        yield OutboundMessage(
-            NodeType.FULL_NODE,
-            Message("request_proof_hashes", request),
-            Delivery.BROADCAST,
-        )
-
-    @api_request
-    async def proof_hash(
-        self, request: src.protocols.wallet_protocol.ProofHash
-    ) -> OutboundMessageGenerator:
-        """
-        Received a proof hash from the FullNode
-        """
-        self.log.info(f"Received a new proof hash: {request}")
-        reply_request = ProofHash(std_hash(b"a"))
-        # TODO Store and decide if we want full proof for this proof hash
-        yield OutboundMessage(
-            NodeType.FULL_NODE,
-            Message("request_full_proof_for_hash", reply_request),
-            Delivery.RESPOND,
-        )
-
-    @api_request
-    async def full_proof_for_hash(
-        self, request: src.protocols.wallet_protocol.FullProofForHash
-    ):
-        """
-        We've received a full proof for hash we requested
-        """
-        # TODO Validate full proof
-        self.log.info(f"Received new proof: {request}")
-
-    @api_request
-    async def received_body(self, response: src.protocols.wallet_protocol.RespondBody):
-        """
-        Called when body is received from the FullNode
-        """
-
-        # Retry sending queued up transactions
-        await self.retry_send_queue()
-
-        additions: List[Coin] = []
-
-        if self.can_generate_puzzle_hash(response.body.coinbase.puzzle_hash):
-            await self.coin_added(response.body.coinbase, response.height, True)
-        if self.can_generate_puzzle_hash(response.body.fees_coin.puzzle_hash):
-            await self.coin_added(response.body.fees_coin, response.height, True)
-
-        npc_list: List[NPC]
-        if response.body.transactions:
-            error, npc_list, cost = get_name_puzzle_conditions(
-                response.body.transactions
-            )
-
-            additions.extend(additions_for_npc(npc_list))
-
-            for added_coin in additions:
-                if self.can_generate_puzzle_hash(added_coin.puzzle_hash):
-                    await self.coin_added(added_coin, response.height, False)
-
-            for npc in npc_list:
-                if self.can_generate_puzzle_hash(npc.puzzle_hash):
-                    await self.coin_removed(npc.coin_name, response.height)
-
-    @api_request
-    async def new_tip(self, header: src.protocols.wallet_protocol.Header):
-        self.log.info("new tip received")
-
-    async def retry_send_queue(self):
-        for key, val in self.send_queue:
-            await self._send_transaction(val)
-
-    def remove_from_queue(self, spendbundle_id: bytes32):
-        if spendbundle_id in self.send_queue:
-            del self.send_queue[spendbundle_id]
-
     async def push_transaction(self, spend_bundle: SpendBundle):
         """ Use this API to make transactions. """
-        self.send_queue[spend_bundle.name()] = spend_bundle
-        additions: List[Coin] = spend_bundle.additions()
-        removals: List[Coin] = spend_bundle.removals()
-
-        addition_amount = 0
-        for coin in additions:
-            if self.can_generate_puzzle_hash(coin.puzzle_hash):
-                self.unconfirmed_additions.add(coin)
-                self.coin_spend_bundle_map[coin.name()] = spend_bundle
-                addition_amount += coin.amount
-
-        removal_amount = 0
-        for coin in removals:
-            self.unconfirmed_removals.add(coin)
-            self.coin_spend_bundle_map[coin.name()] = spend_bundle
-            removal_amount += coin.amount
-
-        # Update unconfirmed state
-        self.unconfirmed_removal_amount += removal_amount
-        self.unconfirmed_addition_amount += addition_amount
-
-        self.pending_spend_bundles[spend_bundle.name()] = spend_bundle
+        await self.wallet_state_manager.add_pending_transaction(spend_bundle)
         await self._send_transaction(spend_bundle)
 
     async def _send_transaction(self, spend_bundle: SpendBundle):
-        """ Sends spendbundle to connected full Nodes."""
-
-        msg = OutboundMessage(
-            NodeType.FULL_NODE,
-            Message("wallet_transaction", spend_bundle),
-            Delivery.BROADCAST,
-        )
         if self.server:
             async for reply in self.server.push_message(msg):
                 self.log.info(reply)
-
-    async def _request_add_list(self, height: uint32, header_hash: bytes32):
-        obj = src.protocols.wallet_protocol.RequestAdditions(height, header_hash)
-        msg = OutboundMessage(
-            NodeType.FULL_NODE, Message("request_additions", obj), Delivery.BROADCAST,
-        )
-        if self.server:
-            async for reply in self.server.push_message(msg):
-                self.log.info(reply)
-
-    @api_request
-    async def response_additions(
-        self, response: src.protocols.wallet_protocol.Additions
-    ):
-        print(response)
-
-    @api_request
-    async def response_additions_rejected(
-        self, response: src.protocols.wallet_protocol.RequestAdditions
-    ):
-        print(f"request rejected {response}")
-
-    @api_request
-    async def transaction_ack(self, ack: src.protocols.wallet_protocol.TransactionAck):
-        if ack.status:
-            self.remove_from_queue(ack.txid)
-            self.log.info(f"SpendBundle has been received by the FullNode. id: {id}")
-        else:
-            self.log.info(f"SpendBundle has been rejected by the FullNode. id: {id}")
-
-    async def requestLCA(self):
-        msg = OutboundMessage(
-            NodeType.FULL_NODE, Message("request_lca", None), Delivery.BROADCAST,
-        )
-        async for reply in self.server.push_message(msg):
-            self.log.info(reply)
