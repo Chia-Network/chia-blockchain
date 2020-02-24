@@ -1,2 +1,0 @@
-*.pyc
-__pycache__/
