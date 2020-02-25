@@ -9,7 +9,7 @@ const path = require('path')
  *************************************************************/
 
 const PY_DIST_FOLDER = 'pydist'
-const PY_FOLDER = 'wallet_rpc'
+const PY_FOLDER = 'rpc'
 const PY_MODULE = 'rpc_wallet' // without .py suffix
 
 let pyProc = null
