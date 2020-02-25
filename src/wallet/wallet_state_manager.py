@@ -180,3 +180,10 @@ class WalletStateManager:
         """
         records = await self.tx_store.get_not_sent()
         return records
+
+    async def get_all_transactions(self) -> List[TransactionRecord]:
+        """
+        Retrieves all confirmed and pending transactions
+        """
+        records = await self.tx_store.get_all_transactions()
+        return records

@@ -17,7 +17,7 @@ class WalletStore:
     # Whether or not we are syncing
     sync_mode: bool = False
     lock: asyncio.Lock
-    lca_coin_records: Dict[str, CoinRecord]
+    coin_record_cache: Dict[str, CoinRecord]
     cache_size: uint32
 
     @classmethod
@@ -61,7 +61,7 @@ class WalletStore:
         await self.coin_record_db.commit()
         # Lock
         self.lock = asyncio.Lock()  # external
-        self.lca_coin_records = dict()
+        self.coin_record_cache = dict()
         return self
 
     async def close(self):
@@ -89,11 +89,11 @@ class WalletStore:
         )
         await cursor.close()
         await self.coin_record_db.commit()
-        self.lca_coin_records[record.coin.name().hex()] = record
-        if len(self.lca_coin_records) > self.cache_size:
-            while len(self.lca_coin_records) > self.cache_size:
-                first_in = list(self.lca_coin_records.keys())[0]
-                del self.lca_coin_records[first_in]
+        self.coin_record_cache[record.coin.name().hex()] = record
+        if len(self.coin_record_cache) > self.cache_size:
+            while len(self.coin_record_cache) > self.cache_size:
+                first_in = list(self.coin_record_cache.keys())[0]
+                del self.coin_record_cache[first_in]
 
     # Update coin_record to be spent in DB
     async def set_spent(self, coin_name: bytes32, index: uint32):
@@ -102,13 +102,13 @@ class WalletStore:
             return
         spent: CoinRecord = CoinRecord(
             current.coin, current.confirmed_block_index, index, True, current.coinbase,
-        )  # type: ignore # noqa
+        )
         await self.add_coin_record(spent)
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
-        if coin_name.hex() in self.lca_coin_records:
-            return self.lca_coin_records[coin_name.hex()]
+        if coin_name.hex() in self.coin_record_cache:
+            return self.coin_record_cache[coin_name.hex()]
         cursor = await self.coin_record_db.execute(
             "SELECT * from coin_record WHERE coin_name=?", (coin_name.hex(),)
         )
@@ -157,7 +157,7 @@ class WalletStore:
     async def rollback_lca_to_block(self, block_index):
         # Update memory cache
         delete_queue: bytes32 = []
-        for coin_name, coin_record in self.lca_coin_records.items():
+        for coin_name, coin_record in self.coin_record_cache.items():
             if coin_record.spent_block_index > block_index:
                 new_record = CoinRecord(
                     coin_record.coin,
@@ -166,12 +166,12 @@ class WalletStore:
                     False,
                     coin_record.coinbase,
                 )
-                self.lca_coin_records[coin_record.coin.name().hex()] = new_record
+                self.coin_record_cache[coin_record.coin.name().hex()] = new_record
             if coin_record.confirmed_block_index > block_index:
                 delete_queue.append(coin_name)
 
         for coin_name in delete_queue:
-            del self.lca_coin_records[coin_name]
+            del self.coin_record_cache[coin_name]
 
         # Delete from storage
         c1 = await self.coin_record_db.execute(

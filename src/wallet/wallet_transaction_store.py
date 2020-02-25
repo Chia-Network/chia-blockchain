@@ -172,3 +172,16 @@ class WalletTransactionStore:
             records.append(record)
 
         return records
+
+    async def get_all_transactions(self) -> List[TransactionRecord]:
+        cursor = await self.transaction_db.execute(
+            "SELECT * from transaction_record"
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        records = []
+        for row in rows:
+            record = TransactionRecord.from_bytes(row[6])
+            records.append(record)
+
+        return records

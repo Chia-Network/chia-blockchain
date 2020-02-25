@@ -203,6 +203,7 @@ class Wallet:
     async def generate_signed_transaction(
         self, amount, newpuzzlehash, fee: int = 0
     ) -> Optional[SpendBundle]:
+        """ Use this to generate transaction. """
         transaction = await self.generate_unsigned_transaction(
             amount, newpuzzlehash, fee
         )
@@ -211,7 +212,7 @@ class Wallet:
         return self.sign_transaction(transaction)
 
     async def push_transaction(self, spend_bundle: SpendBundle):
-        """ Use this API to make transactions. """
+        """ Use this API to send transactions. """
         await self.wallet_state_manager.add_pending_transaction(spend_bundle)
         await self._send_transaction(spend_bundle)
 
