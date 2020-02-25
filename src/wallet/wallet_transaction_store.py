@@ -174,9 +174,7 @@ class WalletTransactionStore:
         return records
 
     async def get_all_transactions(self) -> List[TransactionRecord]:
-        cursor = await self.transaction_db.execute(
-            "SELECT * from transaction_record"
-        )
+        cursor = await self.transaction_db.execute("SELECT * from transaction_record")
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
