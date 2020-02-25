@@ -6,8 +6,10 @@ const int max_length = 2048;
 const int kMaxProcessesAllowed = 3;
 std::mutex socket_mutex;
 
+int process_number;
+
 void PrintInfo(std::string input) {
-    print("VDF Server: " + input);
+    print("VDF Client " + to_string(process_number) + ": " + input);
 }
 
 void CreateAndWriteProof(integer D, form x, int64_t num_iterations, WesolowskiCallback& weso, bool& stop_signal, tcp::socket& sock) {
@@ -25,7 +27,7 @@ void CreateAndWriteProof(integer D, form x, int64_t num_iterations, WesolowskiCa
     boost::asio::write(sock, boost::asio::buffer(str_result.c_str(), str_result.size()));
 }
 
-void session(tcp::socket sock) {
+void session(tcp::socket& sock) {
     try {
         char disc[350];
         char disc_size[5];
@@ -173,31 +175,27 @@ void session(tcp::socket sock) {
     }
 }
 
-void server(boost::asio::io_context& io_context, unsigned short port)
-{
-  tcp::acceptor a(io_context, tcp::endpoint(tcp::v4(), port));
-  std::thread t(session, a.accept());
-  t.join();
-}
-
 int main(int argc, char* argv[])
 {
-  try
-  {
-    if (argc != 2)
+  try {
+    if (argc != 4)
     {
-      PrintInfo("Usage: blocking_tcp_echo_server <port>");
+      std::cerr << "Usage: ./vdf_client <host> <port> <process_number>\n";
       return 1;
     }
 
-    boost::asio::io_context io_context;
+    boost::asio::io_service io_service;
 
-    server(io_context, std::atoi(argv[1]));
-  }
-  catch (std::exception& e)
-  {
-    PrintInfo("Exception: " + to_string(e.what()));
-  }
+    tcp::resolver resolver(io_service);
+    tcp::resolver::query query(tcp::v6(), argv[1], argv[2], boost::asio::ip::resolver_query_base::v4_mapped);
+    tcp::resolver::iterator iterator = resolver.resolve(query);
 
+    tcp::socket s(io_service);
+    boost::asio::connect(s, iterator);
+    process_number = atoi(argv[3]);
+    session(s);
+  } catch (std::exception& e) {
+    std::cerr << "Exception: " << e.what() << "\n";
+  }
   return 0;
 }

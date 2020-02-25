@@ -6,6 +6,7 @@
 /vdf
 /server
 /vdf_server
+/vdf_client
 /verifier
 /verifier_test
 /build/*
