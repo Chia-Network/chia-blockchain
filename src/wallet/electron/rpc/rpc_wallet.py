@@ -82,7 +82,9 @@ class RpcWalletApiHandler:
         return obj_to_response(response)
 
     async def get_transactions(self, request) -> web.Response:
-        transactions = await self.wallet_node.wallet_state_manager.get_all_transactions()
+        transactions = (
+            await self.wallet_node.wallet_state_manager.get_all_transactions()
+        )
 
         response = {"success": True, "txs": transactions}
         return obj_to_response(response)
