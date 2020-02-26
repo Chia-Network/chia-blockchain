@@ -37,6 +37,7 @@ test_constants: Dict[str, Any] = {
     "PROPAGATION_DELAY_THRESHOLD": 20,
     "TX_PER_SEC": 1,
     "MEMPOOL_BLOCK_BUFFER": 10,
+    "VDF_IPS_STARTING": 50,
 }
 test_constants["GENESIS_BLOCK"] = bytes(
     bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")

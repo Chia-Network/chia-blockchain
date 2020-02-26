@@ -1125,7 +1125,7 @@ class FullNode:
             header_block: Optional[HeaderBlock] = self.blockchain.get_header_block(
                 full_block
             )
-            if header_block is not None:
+            if header_block is not None and header_block.height == request.height:
                 response = full_node_protocol.RespondHeaderBlock(header_block)
                 yield OutboundMessage(
                     NodeType.FULL_NODE,
@@ -1275,7 +1275,7 @@ class FullNode:
 
         block_header_data_hash: bytes32 = block_header_data.get_hash()
 
-        # self.stores this block so we can submit it to the blockchain after it's signed by harvester
+        # Stores this block so we can submit it to the blockchain after it's signed by harvester
         self.store.add_candidate_block(
             proof_of_space_hash,
             body,
@@ -1590,8 +1590,22 @@ class FullNode:
             yield _
 
     @api_request
-    async def peers(
-        self, request: full_node_protocol.Peers
+    async def request_peers(
+        self, request: full_node_protocol.RequestPeers
+    ) -> OutboundMessageGenerator:
+        if self.server is None:
+            return
+        peers = self.server.global_connections.peers.get_peers()
+
+        yield OutboundMessage(
+            NodeType.FULL_NODE,
+            Message("respond_peers", full_node_protocol.RespondPeers(peers)),
+            Delivery.RESPOND,
+        )
+
+    @api_request
+    async def respond_peers(
+        self, request: full_node_protocol.RespondPeers
     ) -> OutboundMessageGenerator:
         if self.server is None:
             return
@@ -1634,20 +1648,3 @@ class FullNode:
         yield OutboundMessage(
             NodeType.WALLET, Message("full_proof_for_hash", proof), Delivery.RESPOND
         )
-
-    @api_request
-    async def wallet_transaction(
-        self, spend_bundle: SpendBundle
-    ) -> OutboundMessageGenerator:
-        added, error = await self.mempool_manager.add_spendbundle(spend_bundle)
-        if added:
-            yield OutboundMessage(
-                NodeType.WALLET,
-                Message("transaction_ack", spend_bundle.name()),
-                Delivery.RESPOND,
-            )
-            yield OutboundMessage(
-                NodeType.FULL_NODE,
-                Message("maybe_transaction", spend_bundle.name()),
-                Delivery.BROADCAST,
-            )

@@ -6,6 +6,7 @@ import logging
 import src.protocols.wallet_protocol
 from src.full_node import OutboundMessageGenerator
 from src.protocols.wallet_protocol import ProofHash
+from src.protocols.full_node_protocol import RespondTransaction
 from src.server.outbound_message import OutboundMessage, NodeType, Message, Delivery
 from src.server.server import ChiaServer
 from src.types.full_block import additions_for_npc
@@ -414,7 +415,7 @@ class Wallet:
 
         msg = OutboundMessage(
             NodeType.FULL_NODE,
-            Message("wallet_transaction", spend_bundle),
+            Message("respond_transaction", RespondTransaction(spend_bundle)),
             Delivery.BROADCAST,
         )
         if self.server:

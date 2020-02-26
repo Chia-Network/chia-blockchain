@@ -1,6 +1,7 @@
 import sys
 import time
 from typing import Any, Dict, List, Tuple, Optional
+import random
 from pathlib import Path
 
 import blspy
@@ -373,9 +374,10 @@ class BlockTools:
         plot_pk = None
         plot_sk = None
         qualities: List[bytes] = []
-        for pn in range(num_plots):
+        for i in range(num_plots * 3):
             # Allow passing in seed, to create reorgs and different chains
-            seeded_pn = (pn + 17 * int.from_bytes(seed, "big")) % num_plots
+            random.seed(seed + i.to_bytes(4, "big"))
+            seeded_pn = random.randint(0, num_plots - 1)
             filename = self.filenames[seeded_pn]
             plot_pk = plot_pks[seeded_pn]
             plot_sk = plot_sks[seeded_pn]

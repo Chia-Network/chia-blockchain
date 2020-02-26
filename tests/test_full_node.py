@@ -2,15 +2,18 @@ import asyncio
 import pytest
 from clvm.casts import int_to_bytes
 import random
+import time
 from typing import Dict
 from secrets import token_bytes
 
 from src.protocols import full_node_protocol as fnp
+from src.protocols import timelord_protocol
 from src.types.peer_info import PeerInfo
 from src.types.full_block import FullBlock
+from src.types.proof_of_space import ProofOfSpace
 from src.types.hashable.SpendBundle import SpendBundle
 from src.util.bundle_tools import best_solution_program
-from src.util.ints import uint16, uint32, uint64
+from src.util.ints import uint16, uint32, uint64, uint8
 from src.types.ConditionVarPair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
@@ -446,50 +449,313 @@ class TestFullNode:
         assert len(res) == 1
         assert res[0].message.data.block.header_hash == blocks_new[0].header_hash
 
-    # @pytest.mark.asyncio
-    # async def test_respond_unfinished(self, two_nodes, wallet_blocks):
-    #     full_node_1, full_node_2, server_1, server_2 = two_nodes
-    #     wallet_a, wallet_receiver, blocks = wallet_blocks
+    @pytest.mark.asyncio
+    async def test_respond_unfinished(self, two_nodes, wallet_blocks):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        wallet_a, wallet_receiver, blocks = wallet_blocks
 
-    #     coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-    #     blocks_list = [(await full_node_1.blockchain.get_full_tips())[0]]
-    #     while blocks_list[0].height != 0:
-    #         b = await full_node_1.store.get_block(blocks_list[0].prev_header_hash)
-    #         blocks_list.insert(0, b)
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        blocks_list = [(await full_node_1.blockchain.get_full_tips())[0]]
+        while blocks_list[0].height != 0:
+            b = await full_node_1.store.get_block(blocks_list[0].prev_header_hash)
+            blocks_list.insert(0, b)
 
-    #     candidates = []
-    #     for i in range(50):
-    #         blocks_new = bt.get_consecutive_blocks(
-    #             test_constants,
-    #             1,
-    #             blocks_list,
-    #             10,
-    #             reward_puzzlehash=coinbase_puzzlehash,
-    #             seed=b"another seed 4",
-    #         )
-    #         candidates.append(blocks_new[-1])
+        blocks_new = bt.get_consecutive_blocks(
+            test_constants,
+            100,
+            blocks_list[:],
+            20,
+            reward_puzzlehash=coinbase_puzzlehash,
+            seed=b"Another seed 4",
+        )
+        for block in blocks_new:
+            [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(block))]
 
-    #     print([c.proof_of_time.number_of_iterations for c in candidates])
+        candidates = []
+        for i in range(50):
+            blocks_new_2 = bt.get_consecutive_blocks(
+                test_constants,
+                1,
+                blocks_new[:],
+                10,
+                reward_puzzlehash=coinbase_puzzlehash,
+                seed=bytes([i]) + b"Another seed",
+            )
+            candidates.append(blocks_new_2[-1])
 
-    #     unf_block = FullBlock(
-    #         candidates[0].proof_of_space,
-    #         None,
-    #         candidates[0].header,
-    #         candidates[0].body,
-    #     )
-    #     unf_block_not_child = FullBlock(
-    #         candidates[0].proof_of_space,
-    #         None,
-    #         candidates[0].header,
-    #         candidates[0].body,
-    #     )
+        unf_block_not_child = FullBlock(
+            blocks_new[30].proof_of_space,
+            None,
+            blocks_new[30].header,
+            blocks_new[30].body,
+        )
 
-    #     unf_block_req_bad = fnp.RespondUnfinishedBlock(unf_block_not_child)
-    #     assert len([x async for x in full_node_1.respond_unfinished_block(unf_block_req_bad)]) == 0
+        unf_block_req_bad = fnp.RespondUnfinishedBlock(unf_block_not_child)
+        assert (
+            len(
+                [
+                    x
+                    async for x in full_node_1.respond_unfinished_block(
+                        unf_block_req_bad
+                    )
+                ]
+            )
+            == 0
+        )
 
-    # Already seen
-    # Slow block should delay prop
-    # Highest height should propagate
-    # Slow equal height should not
-    # Fastest equal height should
-    # Don't propagate at old height
+        candidates = sorted(candidates, key=lambda c: c.proof_of_time.number_of_iterations)  # type: ignore
+
+        def get_cand(index: int):
+            unf_block = FullBlock(
+                candidates[index].proof_of_space,
+                None,
+                candidates[index].header,
+                candidates[index].body,
+            )
+            return fnp.RespondUnfinishedBlock(unf_block)
+
+        # Highest height should propagate
+        # Slow block should delay prop
+        start = time.time()
+        propagation_messages = [
+            x async for x in full_node_1.respond_unfinished_block(get_cand(30))
+        ]
+        assert len(propagation_messages) == 2
+        assert isinstance(
+            propagation_messages[0].message.data, timelord_protocol.ProofOfSpaceInfo
+        )
+        assert isinstance(propagation_messages[1].message.data, fnp.NewUnfinishedBlock)
+        assert time.time() - start > 3
+
+        # Already seen
+        assert (
+            len([x async for x in full_node_1.respond_unfinished_block(get_cand(30))])
+            == 0
+        )
+
+        # Slow equal height should not propagate
+        assert (
+            len([x async for x in full_node_1.respond_unfinished_block(get_cand(49))])
+            == 0
+        )
+        # Fastest equal height should propagate
+        start = time.time()
+        assert (
+            len([x async for x in full_node_1.respond_unfinished_block(get_cand(0))])
+            == 2
+        )
+        assert time.time() - start < 3
+
+        # Equal height (fast) should propagate
+        for i in range(1, 5):
+            # Checks a few blocks in case they have the same PoS
+            if (
+                candidates[i].proof_of_space.get_hash()
+                != candidates[0].proof_of_space.get_hash()
+            ):
+                start = time.time()
+                assert (
+                    len(
+                        [
+                            x
+                            async for x in full_node_1.respond_unfinished_block(
+                                get_cand(i)
+                            )
+                        ]
+                    )
+                    == 2
+                )
+                assert time.time() - start < 3
+                break
+
+        # Equal height (slow) should not propagate
+        assert (
+            len([x async for x in full_node_1.respond_unfinished_block(get_cand(40))])
+            == 0
+        )
+
+        # Don't propagate at old height
+        [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(candidates[0]))]
+        blocks_new_3 = bt.get_consecutive_blocks(
+            test_constants,
+            1,
+            blocks_new[:] + [candidates[0]],
+            10,
+            reward_puzzlehash=coinbase_puzzlehash,
+        )
+        unf_block_new = FullBlock(
+            blocks_new_3[-1].proof_of_space,
+            None,
+            blocks_new_3[-1].header,
+            blocks_new_3[-1].body,
+        )
+
+        unf_block_new_req = fnp.RespondUnfinishedBlock(unf_block_new)
+        [x async for x in full_node_1.respond_unfinished_block(unf_block_new_req)]
+
+        assert (
+            len([x async for x in full_node_1.respond_unfinished_block(get_cand(10))])
+            == 0
+        )
+
+    @pytest.mark.asyncio
+    async def test_request_all_header_hashes(self, two_nodes, wallet_blocks):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        wallet_a, wallet_receiver, blocks = wallet_blocks
+        tips = full_node_1.blockchain.get_current_tips()
+        request = fnp.RequestAllHeaderHashes(tips[0].header_hash)
+        msgs = [x async for x in full_node_1.request_all_header_hashes(request)]
+        assert len(msgs) == 1
+        assert len(msgs[0].message.data.header_hashes) > 0
+
+    @pytest.mark.asyncio
+    async def test_request_block(self, two_nodes, wallet_blocks):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        wallet_a, wallet_receiver, blocks = wallet_blocks
+
+        msgs = [
+            x
+            async for x in full_node_1.request_header_block(
+                fnp.RequestHeaderBlock(uint32(1), blocks[1].header_hash)
+            )
+        ]
+        assert len(msgs) == 1
+        assert msgs[0].message.data.header_block.header_hash == blocks[1].header_hash
+
+        msgs_reject_1 = [
+            x
+            async for x in full_node_1.request_header_block(
+                fnp.RequestHeaderBlock(uint32(1), blocks[2].header_hash)
+            )
+        ]
+        assert len(msgs_reject_1) == 1
+        assert msgs_reject_1[0].message.data == fnp.RejectHeaderBlockRequest(
+            uint32(1), blocks[2].header_hash
+        )
+
+        msgs_reject_2 = [
+            x
+            async for x in full_node_1.request_header_block(
+                fnp.RequestHeaderBlock(uint32(1), bytes([0] * 32))
+            )
+        ]
+        assert len(msgs_reject_2) == 1
+        assert msgs_reject_2[0].message.data == fnp.RejectHeaderBlockRequest(
+            uint32(1), bytes([0] * 32)
+        )
+
+        # Full blocks
+        msgs_2 = [
+            x
+            async for x in full_node_1.request_block(
+                fnp.RequestBlock(uint32(1), blocks[1].header_hash)
+            )
+        ]
+        assert len(msgs_2) == 1
+        assert msgs_2[0].message.data.block.header_hash == blocks[1].header_hash
+
+        msgs_reject_3 = [
+            x
+            async for x in full_node_1.request_block(
+                fnp.RequestHeaderBlock(uint32(1), bytes([0] * 32))
+            )
+        ]
+        assert len(msgs_reject_3) == 1
+        assert msgs_reject_3[0].message.data == fnp.RejectBlockRequest(
+            uint32(1), bytes([0] * 32)
+        )
+
+    @pytest.mark.asyncio
+    async def test_respond_block(self, two_nodes, wallet_blocks):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        wallet_a, wallet_receiver, blocks = wallet_blocks
+
+        # Already seen
+        msgs = [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks[0]))]
+        assert len(msgs) == 0
+
+        tip_hashes = set(
+            [t.header_hash for t in full_node_1.blockchain.get_current_tips()]
+        )
+        blocks_list = [(await full_node_1.blockchain.get_full_tips())[0]]
+        while blocks_list[0].height != 0:
+            b = await full_node_1.store.get_block(blocks_list[0].prev_header_hash)
+            blocks_list.insert(0, b)
+
+        blocks_new = bt.get_consecutive_blocks(
+            test_constants, 5, blocks_list[:], 10, seed=b"Another seed 5",
+        )
+
+        # In sync mode
+        full_node_1.store.set_sync_mode(True)
+        msgs = [
+            _ async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks_new[-5]))
+        ]
+        assert len(msgs) == 0
+        full_node_1.store.set_sync_mode(False)
+
+        # If invalid, do nothing
+        block_invalid = FullBlock(
+            ProofOfSpace(
+                blocks_new[-5].proof_of_space.challenge_hash,
+                blocks_new[-5].proof_of_space.pool_pubkey,
+                blocks_new[-5].proof_of_space.plot_pubkey,
+                uint8(blocks_new[-5].proof_of_space.size + 1),
+                blocks_new[-5].proof_of_space.proof,
+            ),
+            blocks_new[-5].proof_of_time,
+            blocks_new[-5].header,
+            blocks_new[-5].body,
+        )
+        msgs = [
+            _ async for _ in full_node_1.respond_block(fnp.RespondBlock(block_invalid))
+        ]
+        assert len(msgs) == 0
+
+        # If a few blocks behind, request short sync
+        msgs = [
+            _ async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks_new[-3]))
+        ]
+        assert len(msgs) == 1
+        assert isinstance(msgs[0].message.data, fnp.RequestBlock)
+
+        # Updates full nodes, farmers, and timelords
+        tip_hashes_again = set(
+            [t.header_hash for t in full_node_1.blockchain.get_current_tips()]
+        )
+        assert tip_hashes_again == tip_hashes
+        msgs = [
+            _ async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks_new[-5]))
+        ]
+        assert len(msgs) == 4
+        # Updates blockchain tips
+        tip_hashes_again = set(
+            [t.header_hash for t in full_node_1.blockchain.get_current_tips()]
+        )
+        assert tip_hashes_again != tip_hashes
+
+        # If orphan, don't send anything
+        blocks_orphan = bt.get_consecutive_blocks(
+            test_constants, 1, blocks_list[:-5], 10, seed=b"Another seed 6",
+        )
+
+        msgs = [
+            _
+            async for _ in full_node_1.respond_block(
+                fnp.RespondBlock(blocks_orphan[-1])
+            )
+        ]
+        assert len(msgs) == 0
+
+    @pytest.mark.asyncio
+    async def test_request_peers(self, two_nodes, wallet_blocks):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        wallet_a, wallet_receiver, blocks = wallet_blocks
+
+        await server_2.start_client(
+            PeerInfo(server_1._host, uint16(server_1._port)), None
+        )
+        await asyncio.sleep(2)  # Allow connections to get made
+
+        msgs = [_ async for _ in full_node_1.request_peers(fnp.RequestPeers())]
+        assert len(msgs[0].message.data.peer_list) > 0

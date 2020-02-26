@@ -170,7 +170,7 @@ class RequestPeers:
 
 @dataclass(frozen=True)
 @cbor_message
-class Peers:
+class RespondPeers:
     peer_list: List[PeerInfo]
 
 
