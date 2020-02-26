@@ -1,9 +1,11 @@
 import io
 from dataclasses import dataclass
+from typing import List
 
 from clvm.casts import int_to_bytes, int_from_bytes
 
 from src.types.sized_bytes import bytes32
+from src.util.hash import std_hash
 from src.util.ints import uint64
 from src.util.streamable import streamable, Streamable
 
@@ -22,6 +24,10 @@ class Coin(Streamable):
     def name(self) -> bytes32:
         return self.get_hash()
 
+    @property
+    def name_str(self) -> str:
+        return self.name().hex()
+
     @classmethod
     def from_bytes(cls, blob):
         parent_coin_info = blob[:32]
@@ -35,3 +41,13 @@ class Coin(Streamable):
         f.write(self.puzzle_hash)
         f.write(int_to_bytes(self.amount))
         return f.getvalue()
+
+
+def hash_coin_list(coin_list: List[Coin]) -> bytes32:
+    coin_list.sort(key=lambda x: x.name_str, reverse=True)
+    buffer = bytearray()
+
+    for coin in coin_list:
+        buffer.extend(coin.name())
+
+    return std_hash(buffer)

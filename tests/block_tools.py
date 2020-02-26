@@ -20,12 +20,13 @@ from src.types.challenge import Challenge
 from src.types.classgroup import ClassgroupElement
 from src.types.full_block import FullBlock, additions_for_npc
 from src.types.hashable.BLSSignature import BLSSignature
-from src.types.hashable.Coin import Coin
+from src.types.hashable.Coin import Coin, hash_coin_list
 from src.types.hashable.Program import Program
 from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
+from src.util.MerkleSet import MerkleSet
 from src.util.errors import NoProofsOfSpaceFound
 from src.util.ints import uint8, uint32, uint64
 from src.util.hash import std_hash
@@ -447,12 +448,16 @@ class BlockTools:
 
         # Create filter
         byte_array_tx: List[bytes32] = []
+        tx_additions: List[Coin] = []
+        tx_removals: List[bytes32] = []
         if transactions:
             error, npc_list, _ = get_name_puzzle_conditions(transactions)
             additions: List[Coin] = additions_for_npc(npc_list)
             for coin in additions:
+                tx_additions.append(coin)
                 byte_array_tx.append(bytearray(coin.puzzle_hash))
             for npc in npc_list:
+                tx_removals.append(npc.coin_name)
                 byte_array_tx.append(bytearray(npc.coin_name))
 
         byte_array_tx.append(bytearray(coinbase_coin.puzzle_hash))
@@ -460,6 +465,32 @@ class BlockTools:
 
         bip158: PyBIP158 = PyBIP158(byte_array_tx)
         encoded = bytes(bip158.GetEncoded())
+
+        removal_merkle_set = MerkleSet()
+        addition_merkle_set = MerkleSet()
+
+        tx_additions.append(coinbase_coin)
+        tx_additions.append(fees_coin)
+
+        # Create removal Merkle set
+        for coin_name in tx_removals:
+            removal_merkle_set.add_already_hashed(coin_name)
+
+        # Create addition Merkle set
+        puzzlehash_coin_map: Dict[bytes32, List[Coin]] = {}
+        for coin in tx_additions:
+            if coin.puzzle_hash in puzzlehash_coin_map:
+                puzzlehash_coin_map[coin.puzzle_hash].append(coin)
+            else:
+                puzzlehash_coin_map[coin.puzzle_hash] = [coin]
+
+        # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
+        for puzzle, coins in puzzlehash_coin_map.items():
+            addition_merkle_set.add_already_hashed(puzzle)
+            addition_merkle_set.add_already_hashed(hash_coin_list(coins))
+
+        additions_root = addition_merkle_set.get_root()
+        removal_root = removal_merkle_set.get_root()
 
         header_data: HeaderData = HeaderData(
             height,
@@ -470,8 +501,8 @@ class BlockTools:
             body.get_hash(),
             uint64(prev_weight + difficulty),
             uint64(prev_iters + number_iters),
-            bytes([0] * 32),
-            bytes([0] * 32),
+            additions_root,
+            removal_root,
         )
 
         header_hash_sig: PrependSignature = plot_sk.sign_prepend(header_data.get_hash())

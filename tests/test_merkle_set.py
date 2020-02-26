@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from src.util.MerkleSet import ReferenceMerkleSet, confirm_included_already_hashed
+from src.util.MerkleSet import MerkleSet, confirm_included_already_hashed
 from tests.setup_nodes import test_constants, bt
 from tests.wallet_tools import WalletTool
 
@@ -27,7 +27,7 @@ class TestMerkleSet:
             reward_puzzlehash=wallet_tool.get_new_puzzlehash(),
         )
 
-        merkle_set = ReferenceMerkleSet()
+        merkle_set = MerkleSet()
         for block in blocks:
             merkle_set.add_already_hashed(block.body.coinbase.name())
 

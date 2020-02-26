@@ -73,7 +73,7 @@ def get_bit(mybytes, pos):
     return (mybytes[pos // 8] >> (7 - (pos % 8))) & 1
 
 
-class ReferenceMerkleSet:
+class MerkleSet:
     def __init__(self, root=None):
         self.root = root
         if root is None:
@@ -336,7 +336,7 @@ def deserialize_proof(proof):
         r, pos = _deserialize(proof, 0, [])
         if pos != len(proof):
             raise SetError()
-        return ReferenceMerkleSet(r)
+        return MerkleSet(r)
     except IndexError:
         raise SetError()
 

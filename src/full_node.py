@@ -3,7 +3,6 @@ import concurrent
 import logging
 import time
 from asyncio import Event
-from secrets import token_bytes
 from typing import AsyncGenerator, List, Optional, Tuple, Dict
 
 from chiabip158 import PyBIP158
@@ -18,6 +17,7 @@ from src.consensus.weight_verifier import verify_weight
 from src.protocols.wallet_protocol import FullProofForHash, ProofHash
 from src.store import FullNodeStore
 from src.protocols import farmer_protocol, full_node_protocol, timelord_protocol
+from src.util.MerkleSet import MerkleSet
 from src.util.bundle_tools import best_solution_program
 from src.mempool_manager import MempoolManager
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
@@ -25,7 +25,7 @@ from src.server.server import ChiaServer
 from src.types.body import Body
 from src.types.challenge import Challenge
 from src.types.full_block import FullBlock
-from src.types.hashable.Coin import Coin
+from src.types.hashable.Coin import Coin, hash_coin_list
 from src.types.hashable.BLSSignature import BLSSignature
 from src.util.hash import std_hash
 from src.types.hashable.SpendBundle import SpendBundle
@@ -1271,8 +1271,39 @@ class FullNode:
         iterations_needed: uint64 = calculate_iterations(
             request.proof_of_space, difficulty, vdf_ips, constants["MIN_BLOCK_TIME"],
         )
-        additions_root = token_bytes(32)  # TODO(straya)
-        removal_root = token_bytes(32)  # TODO(straya)
+
+        removal_merkle_set = MerkleSet()
+        addition_merkle_set = MerkleSet()
+
+        additions = []
+        removals = []
+
+        if spend_bundle:
+            additions = spend_bundle.additions()
+            removals = spend_bundle.removals()
+
+        additions.append(request.coinbase)
+        additions.append(fees_coin)
+
+        # Create removal Merkle set
+        for coin in removals:
+            removal_merkle_set.add_already_hashed(coin.name())
+
+        # Create addition Merkle set
+        puzzlehash_coins_map: Dict[bytes32, List[Coin]] = {}
+        for coin in additions:
+            if coin.puzzle_hash in puzzlehash_coins_map:
+                puzzlehash_coins_map[coin.puzzle_hash].append(coin)
+            else:
+                puzzlehash_coins_map[coin.puzzle_hash] = [coin]
+
+        # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
+        for puzzle, coins in puzzlehash_coins_map.items():
+            addition_merkle_set.add_already_hashed(puzzle)
+            addition_merkle_set.add_already_hashed(hash_coin_list(coins))
+
+        additions_root = addition_merkle_set.get_root()
+        removal_root = removal_merkle_set.get_root()
 
         block_header_data: HeaderData = HeaderData(
             uint32(target_tip.height + 1),
