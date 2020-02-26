@@ -17,13 +17,14 @@ from src.consensus.pot_iterations import (
 from src.store import FullNodeStore
 
 from src.types.full_block import FullBlock, additions_for_npc
-from src.types.hashable.Coin import Coin
+from src.types.hashable.Coin import Coin, hash_coin_list
 from src.types.hashable.CoinRecord import CoinRecord
 from src.types.header_block import HeaderBlock
 from src.types.header import Header
 from src.types.sized_bytes import bytes32
 from src.coin_store import CoinStore
 from src.util.ConsensusError import Err
+from src.util.MerkleSet import MerkleSet
 from src.util.blockchain_check_conditions import blockchain_check_conditions_dict
 from src.util.condition_tools import hash_key_pairs_for_conditions_dict
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
@@ -683,18 +684,19 @@ class Blockchain:
             if coinbase_reward != block.body.coinbase.amount:
                 return False
             fee_base = calculate_base_fee(block.height)
-            # 8. If there is no agg signature, there should be no transactions either
+
+            # 8 Validate transactions
             # target reward_fee = 1/8 coinbase reward + tx fees
-            if not block.body.aggregated_signature:
-                if block.body.transactions:
-                    return False
-                else:
-                    if fee_base != block.body.fees_coin.amount:
-                        return False
-            else:
+            if block.body.transactions:
                 # Validate transactions, and verify that fee_base + TX fees = fee_coin.amount
                 err = await self._validate_transactions(block, fee_base)
                 if err:
+                    return False
+            else:
+                if fee_base != block.body.fees_coin.amount:
+                    return False
+                root_error = self._validate_merkle_root(block)
+                if root_error:
                     return False
         else:
             # 6b. Check challenge total_weight = parent total_weight + difficulty
@@ -920,6 +922,52 @@ class Blockchain:
 
         await self.unspent_store.add_lcas(blocks)
 
+    def _validate_merkle_root(
+        self,
+        block: FullBlock,
+        tx_additions: List[Coin] = None,
+        tx_removals: List[bytes32] = None,
+    ) -> Optional[Err]:
+        additions = []
+        removals = []
+        if tx_additions:
+            additions.extend(tx_additions)
+        if tx_removals:
+            removals.extend(tx_removals)
+
+        additions.append(block.body.coinbase)
+        additions.append(block.body.fees_coin)
+
+        removal_merkle_set = MerkleSet()
+        addition_merkle_set = MerkleSet()
+
+        # Create removal Merkle set
+        for coin_name in removals:
+            removal_merkle_set.add_already_hashed(coin_name)
+
+        # Create addition Merkle set
+        puzzlehash_coins_map: Dict[bytes32, List[Coin]] = {}
+        for coin in additions:
+            if coin.puzzle_hash in puzzlehash_coins_map:
+                puzzlehash_coins_map[coin.puzzle_hash].append(coin)
+            else:
+                puzzlehash_coins_map[coin.puzzle_hash] = [coin]
+
+        # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
+        for puzzle, coins in puzzlehash_coins_map.items():
+            addition_merkle_set.add_already_hashed(puzzle)
+            addition_merkle_set.add_already_hashed(hash_coin_list(coins))
+
+        additions_root = addition_merkle_set.get_root()
+        removals_root = removal_merkle_set.get_root()
+
+        if block.header.data.additions_root != additions_root:
+            return Err.BAD_ADDITION_ROOT
+        if block.header.data.removals_root != removals_root:
+            return Err.BAD_REMOVAL_ROOT
+
+        return None
+
     async def _validate_transactions(
         self, block: FullBlock, fee_base: uint64
     ) -> Optional[Err]:
@@ -953,6 +1001,11 @@ class Blockchain:
             additions_dic[coin.name()] = coin
             if coin.amount >= consensus_constants["MAX_COIN_AMOUNT"]:
                 return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
+
+        # Validate addition and removal roots
+        root_error = self._validate_merkle_root(block, additions, removals)
+        if root_error:
+            return root_error
 
         # Watch out for duplicate outputs
         addition_counter = collections.Counter(_.name() for _ in additions)

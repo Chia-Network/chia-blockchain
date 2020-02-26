@@ -28,15 +28,31 @@ class TestMerkleSet:
         )
 
         merkle_set = MerkleSet()
+        merkle_set_reverse = MerkleSet()
+
+        for block in reversed(blocks):
+            merkle_set_reverse.add_already_hashed(block.body.coinbase.name())
+
         for block in blocks:
             merkle_set.add_already_hashed(block.body.coinbase.name())
 
         for block in blocks:
-            result, proof = merkle_set.is_included_already_hashed(block.body.coinbase.name())
+            result, proof = merkle_set.is_included_already_hashed(
+                block.body.coinbase.name()
+            )
             assert result is True
-            result_fee, proof_fee = merkle_set.is_included_already_hashed(block.body.fees_coin.name())
+            result_fee, proof_fee = merkle_set.is_included_already_hashed(
+                block.body.fees_coin.name()
+            )
             assert result_fee is False
-            validate_proof = confirm_included_already_hashed(merkle_set.get_root(), block.body.coinbase.name(), proof)
-            validate_proof_fee = confirm_included_already_hashed(merkle_set.get_root(), block.body.fees_coin.name(), proof_fee)
+            validate_proof = confirm_included_already_hashed(
+                merkle_set.get_root(), block.body.coinbase.name(), proof
+            )
+            validate_proof_fee = confirm_included_already_hashed(
+                merkle_set.get_root(), block.body.fees_coin.name(), proof_fee
+            )
             assert validate_proof is True
             assert validate_proof_fee is False
+
+        # Test if order of adding items change the outcome
+        assert merkle_set.get_root() == merkle_set_reverse.get_root()
