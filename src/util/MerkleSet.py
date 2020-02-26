@@ -1,4 +1,4 @@
-from hashlib import blake2b, sha256
+from hashlib import sha256
 
 """
 A simple, confidence-inspiring Merkle Set standard
@@ -10,7 +10,6 @@ Reasonably simple implementation
 
 The main tricks in this standard are:
 
-Uses blake2b because that has the best performance on 512 bit inputs
 Skips repeated hashing of exactly two things even when they share prefix bits
 
 
@@ -45,7 +44,7 @@ prehashed = {}
 def init_prehashed():
     for x in [EMPTY, TERMINAL, MIDDLE]:
         for y in [EMPTY, TERMINAL, MIDDLE]:
-            prehashed[x + y] = blake2b(bytes([0] * 30) + x + y)
+            prehashed[x + y] = sha256(bytes([0] * 30) + x + y)
 
 
 init_prehashed()
@@ -65,7 +64,7 @@ def compress_root(mystr):
     if mystr[0:1] == EMPTY:
         assert mystr[1:] == BLANK
         return BLANK
-    return blake2b(mystr).digest()[:32]
+    return sha256(mystr).digest()[:32]
 
 
 def get_bit(mybytes, pos):
