@@ -2,7 +2,7 @@ import asyncio
 import signal
 import logging
 
-from src.wallet.wallet import Wallet
+from src.wallet.wallet_node import WalletNode
 
 try:
     import uvloop
@@ -29,7 +29,7 @@ async def main():
     log = logging.getLogger(__name__)
     setproctitle("Chia_Wallet")
 
-    wallet = await Wallet.create(config, key_config)
+    wallet = await WalletNode.create(config, key_config)
 
     full_node_peer = PeerInfo(
         config["full_node_peer"]["host"], config["full_node_peer"]["port"]

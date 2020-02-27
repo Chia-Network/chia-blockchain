@@ -44,5 +44,4 @@ class Program(SExp):  # type: ignore # noqa
         return bytes(self).hex()
 
     def get_hash(self) -> bytes32:
-        # print("Bytes self", bytes(self))
         return bytes32(std_hash(bytes(self)))

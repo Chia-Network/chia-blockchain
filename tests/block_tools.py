@@ -6,6 +6,7 @@ from pathlib import Path
 
 import blspy
 from blspy import PrependSignature, PrivateKey, PublicKey
+from chiabip158 import PyBIP158
 
 from chiapos import DiskPlotter, DiskProver
 from lib.chiavdf.inkfish.classgroup import ClassGroup
@@ -18,19 +19,22 @@ from src.pool import create_coinbase_coin_and_signature
 from src.types.body import Body
 from src.types.challenge import Challenge
 from src.types.classgroup import ClassgroupElement
-from src.types.full_block import FullBlock
+from src.types.full_block import FullBlock, additions_for_npc
 from src.types.hashable.BLSSignature import BLSSignature
-from src.types.hashable.Coin import Coin
-from src.types.hashable.Program import Program
+from src.types.hashable.coin import Coin, hash_coin_list
+from src.types.hashable.program import Program
 from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
+from src.util.merkle_set import MerkleSet
 from src.util.errors import NoProofsOfSpaceFound
 from src.util.ints import uint8, uint32, uint64
 from src.util.hash import std_hash
 
 # Can't go much lower than 19, since plots start having no solutions
+from src.util.mempool_check_conditions import get_name_puzzle_conditions
+
 k: uint8 = uint8(19)
 # Uses many plots for testing, in order to guarantee proofs of space at every height
 num_plots = 40
@@ -444,17 +448,63 @@ class BlockTools:
             extension_data,
         )
 
+        # Create filter
+        byte_array_tx: List[bytes32] = []
+        tx_additions: List[Coin] = []
+        tx_removals: List[bytes32] = []
+        if transactions:
+            error, npc_list, _ = get_name_puzzle_conditions(transactions)
+            additions: List[Coin] = additions_for_npc(npc_list)
+            for coin in additions:
+                tx_additions.append(coin)
+                byte_array_tx.append(bytearray(coin.puzzle_hash))
+            for npc in npc_list:
+                tx_removals.append(npc.coin_name)
+                byte_array_tx.append(bytearray(npc.coin_name))
+
+        byte_array_tx.append(bytearray(coinbase_coin.puzzle_hash))
+        byte_array_tx.append(bytearray(fees_coin.puzzle_hash))
+
+        bip158: PyBIP158 = PyBIP158(byte_array_tx)
+        encoded = bytes(bip158.GetEncoded())
+
+        removal_merkle_set = MerkleSet()
+        addition_merkle_set = MerkleSet()
+
+        tx_additions.append(coinbase_coin)
+        tx_additions.append(fees_coin)
+
+        # Create removal Merkle set
+        for coin_name in tx_removals:
+            removal_merkle_set.add_already_hashed(coin_name)
+
+        # Create addition Merkle set
+        puzzlehash_coin_map: Dict[bytes32, List[Coin]] = {}
+        for coin in tx_additions:
+            if coin.puzzle_hash in puzzlehash_coin_map:
+                puzzlehash_coin_map[coin.puzzle_hash].append(coin)
+            else:
+                puzzlehash_coin_map[coin.puzzle_hash] = [coin]
+
+        # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
+        for puzzle, coins in puzzlehash_coin_map.items():
+            addition_merkle_set.add_already_hashed(puzzle)
+            addition_merkle_set.add_already_hashed(hash_coin_list(coins))
+
+        additions_root = addition_merkle_set.get_root()
+        removal_root = removal_merkle_set.get_root()
+
         header_data: HeaderData = HeaderData(
             height,
             prev_header_hash,
             timestamp,
-            bytes([0] * 32),
+            encoded,
             proof_of_space.get_hash(),
             body.get_hash(),
             uint64(prev_weight + difficulty),
             uint64(prev_iters + number_iters),
-            bytes([0] * 32),
-            bytes([0] * 32),
+            additions_root,
+            removal_root,
         )
 
         header_hash_sig: PrependSignature = plot_sk.sign_prepend(header_data.get_hash())

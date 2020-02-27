@@ -10,12 +10,10 @@ the doctor ordered.
 """
 
 
-import clvm
-
 from clvm_tools import binutils
 
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.hashable.Program import Program
+from src.types.hashable.program import Program
 
 
 def puzzle_for_pk(public_key):

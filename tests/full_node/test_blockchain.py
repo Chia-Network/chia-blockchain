@@ -6,15 +6,14 @@ from pathlib import Path
 import pytest
 from blspy import PrivateKey
 
-from src.blockchain import Blockchain, ReceiveBlockResult
-from src.consensus.constants import constants
-from src.store import FullNodeStore
+from src.full_node.blockchain import Blockchain, ReceiveBlockResult
+from src.full_node.store import FullNodeStore
 from src.types.body import Body
 from src.types.full_block import FullBlock
-from src.types.hashable.Coin import Coin
+from src.types.hashable.coin import Coin
 from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
-from src.coin_store import CoinStore
+from src.full_node.coin_store import CoinStore
 from src.util.ints import uint8, uint64
 from tests.block_tools import BlockTools
 
@@ -29,6 +28,7 @@ test_constants: Dict[str, Any] = {
     "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
     "DIFFICULTY_WARP_FACTOR": 4,  # DELAY divides EPOCH in order to warp efficiently.
     "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
+    "VDF_IPS_STARTING": 50,
 }
 test_constants["GENESIS_BLOCK"] = bytes(
     bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
@@ -47,7 +47,7 @@ class TestGenesisBlock:
         unspent_store = await CoinStore.create(Path("blockchain_test.db"))
         store = await FullNodeStore.create(Path("blockchain_test.db"))
         await store._clear_database()
-        bc1 = await Blockchain.create(unspent_store, store)
+        bc1 = await Blockchain.create(unspent_store, store, test_constants)
         assert len(bc1.get_current_tips()) == 1
         genesis_block = bc1.get_current_tips()[0]
         assert genesis_block.height == 0
@@ -90,7 +90,7 @@ class TestBlockValidation:
                     blocks[9].header.data.height,
                     bytes([1] * 32),
                     blocks[9].header.data.timestamp,
-                    blocks[9].header.data.filter_hash,
+                    blocks[9].header.data.filter,
                     blocks[9].header.data.proof_of_space_hash,
                     blocks[9].header.data.body_hash,
                     blocks[9].header.data.weight,
@@ -117,7 +117,7 @@ class TestBlockValidation:
                     blocks[9].header.data.height,
                     blocks[9].header.data.prev_header_hash,
                     blocks[9].header.data.timestamp - 1000,
-                    blocks[9].header.data.filter_hash,
+                    blocks[9].header.data.filter,
                     blocks[9].header.data.proof_of_space_hash,
                     blocks[9].header.data.body_hash,
                     blocks[9].header.data.weight,
@@ -141,7 +141,7 @@ class TestBlockValidation:
                     blocks[9].header.data.height,
                     blocks[9].header.data.prev_header_hash,
                     uint64(int(time.time() + 3600 * 3)),
-                    blocks[9].header.data.filter_hash,
+                    blocks[9].header.data.filter,
                     blocks[9].header.data.proof_of_space_hash,
                     blocks[9].header.data.body_hash,
                     blocks[9].header.data.weight,
@@ -167,7 +167,7 @@ class TestBlockValidation:
                     blocks[9].header.data.height,
                     blocks[9].header.data.prev_header_hash,
                     blocks[9].header.data.timestamp,
-                    blocks[9].header.data.filter_hash,
+                    blocks[9].header.data.filter,
                     blocks[9].header.data.proof_of_space_hash,
                     bytes([1] * 32),
                     blocks[9].header.data.weight,
@@ -268,7 +268,7 @@ class TestBlockValidation:
         assert diff_27 > diff_26
         assert (diff_27 / diff_26) <= test_constants["DIFFICULTY_FACTOR"]
 
-        assert (b.get_next_ips(blocks[1])) == constants["VDF_IPS_STARTING"]
+        assert (b.get_next_ips(blocks[1])) == test_constants["VDF_IPS_STARTING"]
         assert (b.get_next_ips(blocks[24])) == (b.get_next_ips(blocks[23]))
         assert (b.get_next_ips(blocks[25])) == (b.get_next_ips(blocks[24]))
         assert (b.get_next_ips(blocks[26])) > (b.get_next_ips(blocks[25]))
@@ -292,7 +292,7 @@ class TestReorgs:
         assert b.get_current_tips()[0].height == 100
 
         blocks_reorg_chain = bt.get_consecutive_blocks(
-            test_constants, 30, blocks[:90], 9, b"1"
+            test_constants, 30, blocks[:90], 9, b"2"
         )
         for i in range(1, len(blocks_reorg_chain)):
             reorg_block = blocks_reorg_chain[i]
@@ -321,9 +321,10 @@ class TestReorgs:
 
         # Reorg from genesis
         blocks_reorg_chain = bt.get_consecutive_blocks(
-            test_constants, 21, [blocks[0]], 9, b"1"
+            test_constants, 21, [blocks[0]], 9, b"3"
         )
         for i in range(1, len(blocks_reorg_chain)):
+            print("I", i)
             reorg_block = blocks_reorg_chain[i]
             result, removed = await b.receive_block(reorg_block)
             if reorg_block.height == 0:
@@ -336,7 +337,7 @@ class TestReorgs:
 
         # Reorg back to original branch
         blocks_reorg_chain_2 = bt.get_consecutive_blocks(
-            test_constants, 3, blocks[:-1], 9, b"3"
+            test_constants, 3, blocks[:-1], 9, b"4"
         )
         result, _ = await b.receive_block(blocks_reorg_chain_2[20])
         assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
@@ -389,8 +390,6 @@ class TestReorgs:
             await b.receive_block(blocks[i])
         header_hashes = b.get_header_hashes(blocks[-1].header_hash)
         assert len(header_hashes) == 6
-        print(header_hashes)
-        print([block.header_hash for block in blocks])
         assert header_hashes == [block.header_hash for block in blocks]
 
         await unspent_store.close()

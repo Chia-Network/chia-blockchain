@@ -5,11 +5,9 @@ In this puzzle program, the solution must be a reveal of the puzzle with the giv
 hash along with its solution.
 """
 
-import clvm
-
 from clvm_tools import binutils
 
-from src.types.hashable.Program import Program
+from src.types.hashable.program import Program
 
 """
 solution: (puzzle_reveal . solution_to_puzzle)

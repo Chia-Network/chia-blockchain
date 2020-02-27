@@ -1,7 +1,6 @@
 from src.util.condition_tools import ConditionOpcode
 
 
-
 def make_create_coin_condition(puzzle_hash, amount):
     return [ConditionOpcode.CREATE_COIN, puzzle_hash, amount]
 
@@ -16,6 +15,7 @@ def make_assert_coin_consumed_condition(coin_name):
 
 def make_assert_my_coin_id_condition(coin_name):
     return [ConditionOpcode.ASSERT_MY_COIN_ID, coin_name]
+
 
 def make_assert_block_index_exceeds_condition(block_index):
     return [ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS, block_index]

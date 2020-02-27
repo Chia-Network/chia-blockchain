@@ -6,11 +6,11 @@ from clvm.EvalError import EvalError
 from clvm.casts import int_from_bytes
 from clvm.subclass_sexp import BaseSExp
 
-from src.types.ConditionVarPair import ConditionVarPair
+from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.hashable.BLSSignature import BLSSignature, BLSPublicKey
-from src.types.hashable.Coin import Coin
-from src.types.hashable.Program import Program
+from src.types.hashable.coin import Coin
+from src.types.hashable.program import Program
 from src.types.sized_bytes import bytes32
 from .ConsensusError import Err, ConsensusError
 

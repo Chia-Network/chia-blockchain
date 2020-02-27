@@ -2,7 +2,7 @@ import blspy
 
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
-from src.types.hashable.Coin import Coin
+from src.types.hashable.coin import Coin
 from src.types.hashable.BLSSignature import BLSSignature, BLSPublicKey
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 

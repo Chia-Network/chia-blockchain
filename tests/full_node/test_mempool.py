@@ -5,7 +5,7 @@ import pytest
 
 from src.server.outbound_message import OutboundMessage
 from src.protocols import full_node_protocol
-from src.types.ConditionVarPair import ConditionVarPair
+from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
 from src.util.ints import uint64
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
@@ -43,7 +43,6 @@ class TestMempool:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
-        print(f"block coinbase: {block.body.coinbase.name()}")
         async for _ in full_node_1.respond_block(
             full_node_protocol.RespondBlock(block)
         ):
@@ -113,7 +112,6 @@ class TestMempool:
             outbound_2: OutboundMessage = _
             # Maybe transaction means that it's accepted in mempool
             assert outbound_2.message.function == "new_transaction"
-        print(blocks[1].body.coinbase.name())
         sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
         assert sb is spend_bundle
 

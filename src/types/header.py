@@ -13,7 +13,7 @@ class HeaderData(Streamable):
     height: uint32
     prev_header_hash: bytes32
     timestamp: uint64
-    filter_hash: bytes32
+    filter: bytes
     proof_of_space_hash: bytes32
     body_hash: bytes32
     weight: uint64

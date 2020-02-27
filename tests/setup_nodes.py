@@ -2,14 +2,14 @@ from typing import Any, Dict
 from pathlib import Path
 import asyncio
 
-from src.blockchain import Blockchain
-from src.mempool_manager import MempoolManager
-from src.store import FullNodeStore
-from src.full_node import FullNode
+from src.full_node.blockchain import Blockchain
+from src.full_node.mempool_manager import MempoolManager
+from src.full_node.store import FullNodeStore
+from src.full_node.full_node import FullNode
 from src.server.connection import NodeType
 from src.server.server import ChiaServer
 from src.types.full_block import FullBlock
-from src.coin_store import CoinStore
+from src.full_node.coin_store import CoinStore
 from tests.block_tools import BlockTools
 from src.types.hashable.BLSSignature import BLSPublicKey
 from src.util.config import load_config
@@ -68,7 +68,13 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
         config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = introducer_port
     full_node_1 = FullNode(
-        store_1, b_1, config, mempool_1, unspent_store_1, f"full_node_{port}"
+        store_1,
+        b_1,
+        config,
+        mempool_1,
+        unspent_store_1,
+        f"full_node_{port}",
+        test_constants_copy,
     )
     server_1 = ChiaServer(port, full_node_1, NodeType.FULL_NODE)
     _ = await server_1.start_server(config["host"], full_node_1._on_connect)
@@ -117,8 +123,11 @@ async def setup_farmer(port, dic={}):
         "pool_sks": [bytes(pool_sk).hex()],
         "pool_target": pool_target.hex(),
     }
+    test_constants_copy = test_constants.copy()
+    for k in dic.keys():
+        test_constants_copy[k] = dic[k]
 
-    farmer = Farmer(config, key_config)
+    farmer = Farmer(config, key_config, test_constants_copy)
     server = ChiaServer(port, farmer, NodeType.FARMER)
     _ = await server.start_server(config["host"], farmer._on_connect)
 
@@ -143,8 +152,11 @@ async def setup_introducer(port, dic={}):
 
 async def setup_timelord(port, dic={}):
     config = load_config("config.yaml", "timelord")
+    test_constants_copy = test_constants.copy()
+    for k in dic.keys():
+        test_constants_copy[k] = dic[k]
 
-    timelord = Timelord(config)
+    timelord = Timelord(config, test_constants_copy["DISCRIMINANT_SIZE_BITS"])
     server = ChiaServer(port, timelord, NodeType.TIMELORD)
     _ = await server.start_server(port, None)
 

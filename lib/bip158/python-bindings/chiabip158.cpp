@@ -24,6 +24,8 @@ PYBIND11_MODULE(chiabip158, mod) {
     py::class_<PyBIP158, std::shared_ptr<PyBIP158>> clsPyBIP158(mod, "PyBIP158");
     
     clsPyBIP158.def(py::init<std::vector< std::vector< unsigned char > >&>());
+    clsPyBIP158.def(py::init< std::vector< unsigned char > &>());
+    clsPyBIP158.def("GetEncoded",(const std::vector< unsigned char >& (PyBIP158::*)()) &PyBIP158::GetEncoded);
     clsPyBIP158.def("Match", (bool (PyBIP158::*)(std::vector< unsigned char >&)) &PyBIP158::Match);
     clsPyBIP158.def("MatchAny", (bool (PyBIP158::*)(std::vector< std::vector< unsigned char > >&)) &PyBIP158::MatchAny);
 }

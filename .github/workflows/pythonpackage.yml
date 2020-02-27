@@ -20,7 +20,9 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        brew update && brew install gmp boost || echo ""
+        brew update && brew install gmp boost openssl || echo ""
+        sudo apt-get install libboost-all-dev || echo ""
+        sudo apt-get install libssl-dev || echo ""
         sh install.sh
     - name: Test proof of space
       run: |
@@ -38,7 +40,7 @@ jobs:
         cd ../../../
     - name: Lint source with flake8
       run: |
-        ./.venv/bin/flake8 src --exclude src/wallet
+        ./.venv/bin/flake8 src --exclude src/wallet/electron/node_modules
     - name: Lint source with mypy
       run: |
         ./.venv/bin/mypy src tests

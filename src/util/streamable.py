@@ -7,7 +7,7 @@ import pprint
 import json
 from typing import Any, BinaryIO, List, Type, get_type_hints, Union
 from src.util.byte_types import hexstr_to_bytes
-from src.types.hashable.Program import Program
+from src.types.hashable.program import Program
 from src.util.hash import std_hash
 
 from blspy import (
@@ -181,7 +181,7 @@ class Streamable:
             f.write(uint32(len(item)).to_bytes(4, "big"))
             f.write(item.encode("utf-8"))
         elif f_type is bool:
-            f.write(bytes(item))
+            f.write(int(item).to_bytes(4, "big"))
         else:
             raise NotImplementedError(f"can't stream {item}, {f_type}")
 

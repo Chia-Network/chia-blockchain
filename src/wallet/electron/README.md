@@ -1,9 +1,12 @@
-# Install
-python3 -m venv .venv
-. .venv/bin/activate
+# Electron Wallet
+## Install
 
-pip install zerorpc
-pip install pyinstaller
+```npm install --runtime=electron --target=1.7.6```   
 
-npm install --runtime=electron --target=1.7.6
-npm install electron-rebuild && ./node_modules/.bin/electron-rebuild
+## Run:
+```npm start```
+
+## Error
+If run fails because of electron try doing this
+
+```npm install electron-rebuild && ./node_modules/.bin/electron-rebuild```

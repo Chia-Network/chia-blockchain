@@ -62,4 +62,8 @@ pip-delete-this-directory.txt
 # Packaging
 chia-blockchain.tar.gz
 
+# Electron wallet node modules
 src/wallet/electron/node_modules/
+
+# Bip158 build dir
+lib/bip158/build/

@@ -331,7 +331,7 @@ class FullNodeUI:
             else:
                 self.syncing.text = f"Syncing"
         else:
-            self.syncing.text = "Not syncing"
+            self.syncing.text = "Synced"
 
         total_iters = self.lca_block.data.total_iters
 

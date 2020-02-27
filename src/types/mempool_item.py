@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from src.types.hashable.SpendBundle import SpendBundle
+from src.types.hashable.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
 

@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from src.blockchain import Blockchain, ReceiveBlockResult
-from src.store import FullNodeStore
-from src.coin_store import CoinStore
+from src.full_node.blockchain import Blockchain, ReceiveBlockResult
+from src.full_node.store import FullNodeStore
+from src.full_node.coin_store import CoinStore
 from tests.block_tools import BlockTools
 
 bt = BlockTools()

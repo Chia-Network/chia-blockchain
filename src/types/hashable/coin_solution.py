@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from .Coin import Coin
-from .Program import Program
+from .coin import Coin
+from .program import Program
 from src.util.streamable import Streamable, streamable
 
 

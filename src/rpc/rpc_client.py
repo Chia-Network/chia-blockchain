@@ -7,7 +7,7 @@ from src.types.full_block import FullBlock
 from src.types.header import Header
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint16
-from src.types.hashable.CoinRecord import CoinRecord
+from src.types.hashable.coin_record import CoinRecord
 
 
 class RpcClient:

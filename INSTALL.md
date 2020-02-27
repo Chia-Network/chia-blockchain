@@ -5,7 +5,7 @@ To install the chia-blockchain node, follow the instructions according to your o
 Make sure [brew](https://brew.sh/) is available before starting the setup.
 ```bash
 brew upgrade python
-brew install cmake gmp
+brew install cmake gmp boost openssl
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain

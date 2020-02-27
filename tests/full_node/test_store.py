@@ -6,8 +6,7 @@ import sqlite3
 import random
 
 import pytest
-from src.consensus.constants import constants
-from src.store import FullNodeStore
+from src.full_node.store import FullNodeStore
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
@@ -58,7 +57,7 @@ class TestStore:
         try:
             await db._clear_database()
 
-            genesis = FullBlock.from_bytes(constants["GENESIS_BLOCK"])
+            genesis = FullBlock.from_bytes(test_constants["GENESIS_BLOCK"])
 
             # Save/get block
             for block in blocks:

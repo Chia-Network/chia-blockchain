@@ -11,10 +11,10 @@ from src.protocols import timelord_protocol
 from src.types.peer_info import PeerInfo
 from src.types.full_block import FullBlock
 from src.types.proof_of_space import ProofOfSpace
-from src.types.hashable.SpendBundle import SpendBundle
+from src.types.hashable.spend_bundle import SpendBundle
 from src.util.bundle_tools import best_solution_program
 from src.util.ints import uint16, uint32, uint64, uint8
-from src.types.ConditionVarPair import ConditionVarPair
+from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.wallet_tools import WalletTool

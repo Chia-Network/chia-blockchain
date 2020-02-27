@@ -4,13 +4,13 @@ from typing import Optional
 import pytest
 from clvm.casts import int_to_bytes
 
-from src.types.ConditionVarPair import ConditionVarPair
+from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
 from src.util.bundle_tools import best_solution_program
 from src.server.outbound_message import OutboundMessage
 from src.protocols import full_node_protocol
 from src.types.full_block import FullBlock
-from src.types.hashable.SpendBundle import SpendBundle
+from src.types.hashable.spend_bundle import SpendBundle
 from src.util.ConsensusError import Err
 from src.util.ints import uint64
 from tests.setup_nodes import setup_two_nodes, test_constants, bt

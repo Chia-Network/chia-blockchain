@@ -2,7 +2,8 @@ from dataclasses import dataclass
 from typing import List, Tuple
 
 from src.types.body import Body
-from src.types.hashable.SpendBundle import SpendBundle
+from src.types.hashable.coin import Coin
+from src.types.hashable.spend_bundle import SpendBundle
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
@@ -86,3 +87,33 @@ class FullProofForHash:
 @cbor_message
 class ProofHash:
     proof_hash: bytes32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RequestAdditions:
+    height: uint32
+    header_hash: bytes32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RequestRemovals:
+    height: uint32
+    header_hash: bytes32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class Additions:
+    height: uint32
+    header_hash: bytes32
+    coins: List[Coin]
+
+
+@dataclass(frozen=True)
+@cbor_message
+class Removals:
+    height: uint32
+    header_hash: bytes32
+    coins: List[Coin]

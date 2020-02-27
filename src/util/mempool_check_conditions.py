@@ -4,12 +4,12 @@ import clvm
 from clvm import EvalError
 from clvm.casts import int_from_bytes
 
-from src.types.ConditionVarPair import ConditionVarPair
-from src.types.hashable.Program import Program
-from src.types.hashable.SpendBundle import SpendBundle
-from src.types.hashable.CoinRecord import CoinRecord
+from src.types.condition_var_pair import ConditionVarPair
+from src.types.hashable.program import Program
+from src.types.hashable.spend_bundle import SpendBundle
+from src.types.hashable.coin_record import CoinRecord
 from src.types.name_puzzle_condition import NPC
-from src.mempool import Mempool
+from src.full_node.mempool import Mempool
 from src.types.sized_bytes import bytes32
 from src.util.condition_tools import ConditionOpcode, conditions_dict_for_solution
 from src.util.ConsensusError import Err
@@ -91,7 +91,7 @@ def mempool_assert_time_exceeds(condition: ConditionVarPair):
     return None
 
 
-async def get_name_puzzle_conditions(
+def get_name_puzzle_conditions(
     block_program: Program,
 ) -> Tuple[Optional[Err], List[NPC], int]:
     """

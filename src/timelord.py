@@ -19,8 +19,11 @@ log = logging.getLogger(__name__)
 
 
 class Timelord:
-    def __init__(self, config: Dict):
+    def __init__(
+        self, config: Dict, discrimant_size_bits=constants["DISCRIMINANT_SIZE_BITS"]
+    ):
         self.config: Dict = config
+        self.discriminant_size_bits = discrimant_size_bits
         self.free_servers: List[Tuple[str, str]] = list(
             zip(self.config["vdf_server_ips"], self.config["vdf_server_ports"])
         )
@@ -202,9 +205,7 @@ class Timelord:
     async def _do_process_communication(
         self, challenge_hash, challenge_weight, ip, port
     ):
-        disc: int = create_discriminant(
-            challenge_hash, constants["DISCRIMINANT_SIZE_BITS"]
-        )
+        disc: int = create_discriminant(challenge_hash, self.discriminant_size_bits)
 
         log.info("Attempting SSH connection")
         proc = await asyncio.create_subprocess_shell(
@@ -310,7 +311,7 @@ class Timelord:
                     self.config["n_wesolowski"],
                     proof_bytes,
                 )
-                if not proof_of_time.is_valid(constants["DISCRIMINANT_SIZE_BITS"]):
+                if not proof_of_time.is_valid(self.discriminant_size_bits):
                     log.error("Invalid proof of time")
 
                 response = timelord_protocol.ProofOfTimeFinished(proof_of_time)

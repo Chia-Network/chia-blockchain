@@ -5,6 +5,7 @@ from blspy import ExtendedPrivateKey
 
 from src.protocols.wallet_protocol import RespondBody
 from src.wallet.wallet import Wallet
+from src.wallet.wallet_node import WalletNode
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 
 
@@ -25,8 +26,10 @@ class TestWallet:
         sk = bytes(ExtendedPrivateKey.from_seed(b"")).hex()
         key_config = {"wallet_sk": sk}
 
-        wallet = await Wallet.create({}, key_config)
-        await wallet.wallet_store._clear_database()
+        wallet_node = await WalletNode.create({}, key_config)
+        wallet = wallet_node.wallet
+        await wallet_node.wallet_store._clear_database()
+        await wallet_node.tx_store._clear_database()
 
         num_blocks = 10
         blocks = bt.get_consecutive_blocks(
@@ -39,11 +42,12 @@ class TestWallet:
 
         for i in range(1, num_blocks):
             a = RespondBody(blocks[i].body, blocks[i].height)
-            await wallet.received_body(a)
+            await wallet_node.received_body(a)
 
         assert await wallet.get_confirmed_balance() == 144000000000000
 
-        await wallet.wallet_store.close()
+        await wallet_node.wallet_store.close()
+        await wallet_node.tx_store.close()
 
     @pytest.mark.asyncio
     async def test_wallet_make_transaction(self, two_nodes):
@@ -52,10 +56,15 @@ class TestWallet:
         key_config = {"wallet_sk": sk}
         key_config_b = {"wallet_sk": sk_b}
 
-        wallet = await Wallet.create({}, key_config)
-        await wallet.wallet_store._clear_database()
-        wallet_b = await Wallet.create({}, key_config_b)
-        await wallet_b.wallet_store._clear_database()
+        wallet_node = await WalletNode.create({}, key_config)
+        wallet = wallet_node.wallet
+        await wallet_node.wallet_store._clear_database()
+        await wallet_node.tx_store._clear_database()
+
+        wallet_node_b = await WalletNode.create({}, key_config_b)
+        wallet_b = wallet_node_b.wallet
+        await wallet_node_b.wallet_store._clear_database()
+        await wallet_node_b.tx_store._clear_database()
 
         num_blocks = 10
         blocks = bt.get_consecutive_blocks(
@@ -68,7 +77,7 @@ class TestWallet:
 
         for i in range(1, num_blocks):
             a = RespondBody(blocks[i].body, blocks[i].height)
-            await wallet.received_body(a)
+            await wallet_node.received_body(a)
 
         assert await wallet.get_confirmed_balance() == 144000000000000
 
@@ -83,5 +92,8 @@ class TestWallet:
         assert confirmed_balance == 144000000000000
         assert unconfirmed_balance == confirmed_balance - 10
 
-        await wallet.wallet_store.close()
-        await wallet_b.wallet_store.close()
+        await wallet_node.wallet_store.close()
+        await wallet_node.tx_store.close()
+
+        await wallet_node_b.wallet_store.close()
+        await wallet_node_b.tx_store.close()

@@ -3,38 +3,39 @@ import concurrent
 import logging
 import time
 from asyncio import Event
-from secrets import token_bytes
 from typing import AsyncGenerator, List, Optional, Tuple, Dict
 
+from chiabip158 import PyBIP158
 from chiapos import Verifier
 
 import src.protocols.wallet_protocol
-from src.blockchain import Blockchain, ReceiveBlockResult
+from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.block_rewards import calculate_base_fee
-from src.consensus.constants import constants
+from src.consensus.constants import constants as consensus_constants
 from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.weight_verifier import verify_weight
 from src.protocols.wallet_protocol import FullProofForHash, ProofHash
-from src.store import FullNodeStore
+from src.full_node.store import FullNodeStore
 from src.protocols import farmer_protocol, full_node_protocol, timelord_protocol
+from src.util.merkle_set import MerkleSet
 from src.util.bundle_tools import best_solution_program
-from src.mempool_manager import MempoolManager
+from src.full_node.mempool_manager import MempoolManager
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
 from src.types.body import Body
 from src.types.challenge import Challenge
 from src.types.full_block import FullBlock
-from src.types.hashable.Coin import Coin
+from src.types.hashable.coin import Coin, hash_coin_list
 from src.types.hashable.BLSSignature import BLSSignature
 from src.util.hash import std_hash
-from src.types.hashable.SpendBundle import SpendBundle
-from src.types.hashable.Program import Program
+from src.types.hashable.spend_bundle import SpendBundle
+from src.types.hashable.program import Program
 from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
-from src.coin_store import CoinStore
+from src.full_node.coin_store import CoinStore
 from src.util import errors
 from src.util.api_decorators import api_request
 from src.util.errors import InvalidUnfinishedBlock
@@ -52,7 +53,9 @@ class FullNode:
         mempool_manager: MempoolManager,
         unspent_store: CoinStore,
         name: str = None,
+        override_constants={},
     ):
+
         self.config: Dict = config
         self.store: FullNodeStore = store
         self.blockchain: Blockchain = blockchain
@@ -60,6 +63,9 @@ class FullNode:
         self._shut_down = False  # Set to true to close all infinite loops
         self.server: Optional[ChiaServer] = None
         self.unspent_store: CoinStore = unspent_store
+        self.constants = consensus_constants.copy()
+        for key, value in override_constants.items():
+            self.constants[key] = value
         if name:
             self.log = logging.getLogger(name)
         else:
@@ -934,11 +940,6 @@ class FullNode:
                 ):
                     return
             assert challenge is not None
-            print(self.store.unfinished_blocks.keys())
-            print(
-                "It's none..",
-                (challenge.get_hash(), new_unfinished_block.number_of_iterations),
-            )
             yield OutboundMessage(
                 NodeType.FULL_NODE,
                 Message(
@@ -1030,7 +1031,7 @@ class FullNode:
             int(iterations_needed / (self.store.get_proof_of_time_estimate_ips()))
         )
 
-        if expected_time > constants["PROPAGATION_DELAY_THRESHOLD"]:
+        if expected_time > self.constants["PROPAGATION_DELAY_THRESHOLD"]:
             self.log.info(f"Block is slow, expected {expected_time} seconds, waiting")
             # If this block is slow, sleep to allow faster blocks to come out first
             await asyncio.sleep(5)
@@ -1043,7 +1044,7 @@ class FullNode:
             # If this is the first block we see at this height, propagate
             self.store.set_unfinished_block_leader((block.height, expected_time))
         elif block.height == leader[0]:
-            if expected_time > leader[1] + constants["PROPAGATION_THRESHOLD"]:
+            if expected_time > leader[1] + self.constants["PROPAGATION_THRESHOLD"]:
                 # If VDF is expected to finish X seconds later than the best, don't propagate
                 self.log.info(
                     f"VDF will finish too late {expected_time} seconds, so don't propagate"
@@ -1245,8 +1246,21 @@ class FullNode:
         prev_header_hash: bytes32 = target_tip.get_hash()
         timestamp: uint64 = uint64(int(time.time()))
 
-        # TODO(straya): use a real BIP158 filter based on transactions
-        filter_hash: bytes32 = token_bytes(32)
+        # Create filter
+        byte_array_tx: List[bytes32] = []
+        if spend_bundle:
+            additions: List[Coin] = spend_bundle.additions()
+            removals: List[Coin] = spend_bundle.removals()
+            for coin in additions:
+                byte_array_tx.append(bytearray(coin.puzzle_hash))
+            for coin in removals:
+                byte_array_tx.append(bytearray(coin.name()))
+        byte_array_tx.append(bytearray(request.coinbase.puzzle_hash))
+        byte_array_tx.append(bytearray(fees_coin.puzzle_hash))
+
+        bip158: PyBIP158 = PyBIP158(byte_array_tx)
+        encoded_filter = bytes(bip158.GetEncoded())
+
         proof_of_space_hash: bytes32 = request.proof_of_space.get_hash()
         body_hash: Body = body.get_hash()
         difficulty = self.blockchain.get_next_difficulty(target_tip.header_hash)
@@ -1255,16 +1269,50 @@ class FullNode:
         vdf_ips: uint64 = self.blockchain.get_next_ips(target_tip_block)
 
         iterations_needed: uint64 = calculate_iterations(
-            request.proof_of_space, difficulty, vdf_ips, constants["MIN_BLOCK_TIME"],
+            request.proof_of_space,
+            difficulty,
+            vdf_ips,
+            self.constants["MIN_BLOCK_TIME"],
         )
-        additions_root = token_bytes(32)  # TODO(straya)
-        removal_root = token_bytes(32)  # TODO(straya)
+
+        removal_merkle_set = MerkleSet()
+        addition_merkle_set = MerkleSet()
+
+        additions = []
+        removals = []
+
+        if spend_bundle:
+            additions = spend_bundle.additions()
+            removals = spend_bundle.removals()
+
+        additions.append(request.coinbase)
+        additions.append(fees_coin)
+
+        # Create removal Merkle set
+        for coin in removals:
+            removal_merkle_set.add_already_hashed(coin.name())
+
+        # Create addition Merkle set
+        puzzlehash_coins_map: Dict[bytes32, List[Coin]] = {}
+        for coin in additions:
+            if coin.puzzle_hash in puzzlehash_coins_map:
+                puzzlehash_coins_map[coin.puzzle_hash].append(coin)
+            else:
+                puzzlehash_coins_map[coin.puzzle_hash] = [coin]
+
+        # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
+        for puzzle, coins in puzzlehash_coins_map.items():
+            addition_merkle_set.add_already_hashed(puzzle)
+            addition_merkle_set.add_already_hashed(hash_coin_list(coins))
+
+        additions_root = addition_merkle_set.get_root()
+        removal_root = removal_merkle_set.get_root()
 
         block_header_data: HeaderData = HeaderData(
             uint32(target_tip.height + 1),
             prev_header_hash,
             timestamp,
-            filter_hash,
+            encoded_filter,
             proof_of_space_hash,
             body_hash,
             target_tip.weight + difficulty,
@@ -1648,3 +1696,25 @@ class FullNode:
         yield OutboundMessage(
             NodeType.WALLET, Message("full_proof_for_hash", proof), Delivery.RESPOND
         )
+
+    @api_request
+    async def request_additions(
+        self, request: src.protocols.wallet_protocol.RequestAdditions
+    ) -> OutboundMessageGenerator:
+        block: Optional[FullBlock] = await self.store.get_block(request.header_hash)
+        if block:
+            additions = block.additions()
+            response = src.protocols.wallet_protocol.Additions(
+                block.height, block.header_hash, additions
+            )
+            yield OutboundMessage(
+                NodeType.WALLET,
+                Message("response_additions", response),
+                Delivery.BROADCAST,
+            )
+        else:
+            yield OutboundMessage(
+                NodeType.WALLET,
+                Message("response_reject_additions", request),
+                Delivery.BROADCAST,
+            )

@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from typing import Optional
 
 from src.types.hashable.BLSSignature import BLSSignature
-from src.types.hashable.Program import Program
-from src.types.hashable.Coin import Coin
+from src.types.hashable.program import Program
+from src.types.hashable.coin import Coin
 from src.util.ints import uint64
 from src.util.streamable import Streamable, streamable
 from src.types.sized_bytes import bytes32

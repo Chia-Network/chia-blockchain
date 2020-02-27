@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Set
 from blspy import PrivateKey, Util
 
 from src.consensus.block_rewards import calculate_block_reward
-from src.consensus.constants import constants
+from src.consensus.constants import constants as consensus_constants
 from src.consensus.pot_iterations import calculate_iterations_quality
 from src.pool import create_coinbase_coin_and_signature
 from src.protocols import farmer_protocol, harvester_protocol
@@ -23,7 +23,7 @@ HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 
 
 class Farmer:
-    def __init__(self, farmer_config: Dict, key_config: Dict):
+    def __init__(self, farmer_config: Dict, key_config: Dict, override_constants={}):
         self.config = farmer_config
         self.key_config = key_config
         self.harvester_responses_header_hash: Dict[bytes32, bytes32] = {}
@@ -39,6 +39,9 @@ class Farmer:
         self.current_weight: uint64 = uint64(0)
         self.coinbase_rewards: Dict[uint32, Any] = {}
         self.proof_of_time_estimate_ips: uint64 = uint64(10000)
+        self.constants = consensus_constants.copy()
+        for key, value in override_constants.items():
+            self.constants[key] = value
 
     async def _on_connect(self):
         # Sends a handshake to the harvester
@@ -81,7 +84,7 @@ class Farmer:
             challenge_response.plot_size,
             difficulty,
             self.proof_of_time_estimate_ips,
-            constants["MIN_BLOCK_TIME"],
+            self.constants["MIN_BLOCK_TIME"],
         )
         if height < 1000:  # As the difficulty adjusts, don't fetch all qualities
             if challenge_response.challenge_hash not in self.challenge_to_best_iters:
@@ -160,7 +163,7 @@ class Farmer:
             response.proof.size,
             difficulty,
             self.proof_of_time_estimate_ips,
-            constants["MIN_BLOCK_TIME"],
+            self.constants["MIN_BLOCK_TIME"],
         )
         estimate_secs: float = number_iters / self.proof_of_time_estimate_ips
 

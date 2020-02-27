@@ -5,7 +5,7 @@ from typing import Any, Callable, List, Optional
 
 from aiohttp import web
 
-from src.full_node import FullNode
+from src.full_node.full_node import FullNode
 from src.types.header import Header
 from src.types.full_block import FullBlock
 from src.types.peer_info import PeerInfo

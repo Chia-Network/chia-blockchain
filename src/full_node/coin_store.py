@@ -3,8 +3,8 @@ from typing import Dict, Optional, List
 from pathlib import Path
 import aiosqlite
 from src.types.full_block import FullBlock
-from src.types.hashable.Coin import Coin
-from src.types.hashable.CoinRecord import CoinRecord
+from src.types.hashable.coin import Coin
+from src.types.hashable.coin_record import CoinRecord
 from src.types.sized_bytes import bytes32
 from src.types.header import Header
 from src.util.ints import uint32

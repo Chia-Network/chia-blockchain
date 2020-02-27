@@ -14,15 +14,15 @@ from src.consensus.pot_iterations import (
     calculate_ips_from_iterations,
     calculate_iterations_quality,
 )
-from src.store import FullNodeStore
+from src.full_node.store import FullNodeStore
 
 from src.types.full_block import FullBlock, additions_for_npc
-from src.types.hashable.Coin import Coin
-from src.types.hashable.CoinRecord import CoinRecord
+from src.types.hashable.coin import Coin
+from src.types.hashable.coin_record import CoinRecord
 from src.types.header_block import HeaderBlock
 from src.types.header import Header
 from src.types.sized_bytes import bytes32
-from src.coin_store import CoinStore
+from src.full_node.coin_store import CoinStore
 from src.util.ConsensusError import Err
 from src.util.blockchain_check_conditions import blockchain_check_conditions_dict
 from src.util.condition_tools import hash_key_pairs_for_conditions_dict
@@ -82,7 +82,7 @@ class Blockchain:
         in the consensus constants config.
         """
         self = Blockchain()
-        self.constants = consensus_constants
+        self.constants = consensus_constants.copy()
         for key, value in override_constants.items():
             self.constants[key] = value
         self.tips = []
@@ -744,8 +744,7 @@ class Blockchain:
         pool.shutdown(wait=True)
         return results
 
-    @staticmethod
-    def pre_validate_block_multi(data) -> Tuple[bool, Optional[bytes]]:
+    def pre_validate_block_multi(self, data) -> Tuple[bool, Optional[bytes]]:
         """
             Validates all parts of FullBlock that don't need to be serially checked
         """
@@ -755,9 +754,7 @@ class Blockchain:
             return False, None
 
         # 4. Check PoT
-        if not block.proof_of_time.is_valid(
-            consensus_constants["DISCRIMINANT_SIZE_BITS"]
-        ):
+        if not block.proof_of_time.is_valid(self.constants["DISCRIMINANT_SIZE_BITS"]):
             return False, None
 
         # 9. Check harvester signature of header data is valid based on harvester key
@@ -927,9 +924,7 @@ class Blockchain:
         if not block.body.transactions:
             return Err.UNKNOWN
         # Get List of names removed, puzzles hashes for removed coins and conditions crated
-        error, npc_list, cost = await get_name_puzzle_conditions(
-            block.body.transactions
-        )
+        error, npc_list, cost = get_name_puzzle_conditions(block.body.transactions)
 
         if cost > 6000:
             return Err.BLOCK_COST_EXCEEDS_MAX
@@ -953,7 +948,7 @@ class Blockchain:
         # Check additions for max coin amount
         for coin in additions:
             additions_dic[coin.name()] = coin
-            if coin.amount >= consensus_constants["MAX_COIN_AMOUNT"]:
+            if coin.amount >= self.constants["MAX_COIN_AMOUNT"]:
                 return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
 
         # Watch out for duplicate outputs
@@ -1008,7 +1003,6 @@ class Blockchain:
 
         # Check coinbase reward
         if fees + fee_base != block.body.fees_coin.amount:
-            print("Fees,", fees, fee_base, block.body.fees_coin.amount)
             return Err.BAD_COINBASE_REWARD
 
         # Verify that removed coin puzzle_hashes match with calculated puzzle_hashes

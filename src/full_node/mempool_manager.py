@@ -5,14 +5,14 @@ import logging
 from src.consensus.constants import constants as consensus_constants
 from src.util.bundle_tools import best_solution_program
 from src.types.full_block import FullBlock
-from src.types.hashable.Coin import Coin
-from src.types.hashable.SpendBundle import SpendBundle
-from src.types.hashable.CoinRecord import CoinRecord
+from src.types.hashable.coin import Coin
+from src.types.hashable.spend_bundle import SpendBundle
+from src.types.hashable.coin_record import CoinRecord
 from src.types.header import Header
 from src.types.mempool_item import MempoolItem
-from src.mempool import Mempool
+from src.full_node.mempool import Mempool
 from src.types.sized_bytes import bytes32
-from src.coin_store import CoinStore
+from src.full_node.coin_store import CoinStore
 from src.util.ConsensusError import Err
 from src.util.mempool_check_conditions import (
     get_name_puzzle_conditions,
@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 class MempoolManager:
     def __init__(self, unspent_store: CoinStore, override_constants: Dict = {}):
         # Allow passing in custom overrides
-        self.constants: Dict = consensus_constants
+        self.constants: Dict = consensus_constants.copy()
         for key, value in override_constants.items():
             self.constants[key] = value
 
@@ -44,9 +44,9 @@ class MempoolManager:
         self.old_mempools: SortedDict[uint32, Dict[bytes32, MempoolItem]] = SortedDict()
         self.unspent_store = unspent_store
 
-        tx_per_sec = consensus_constants["TX_PER_SEC"]
-        sec_per_block = consensus_constants["BLOCK_TIME_TARGET"]
-        block_buffer_count = consensus_constants["MEMPOOL_BLOCK_BUFFER"]
+        tx_per_sec = self.constants["TX_PER_SEC"]
+        sec_per_block = self.constants["BLOCK_TIME_TARGET"]
+        block_buffer_count = self.constants["MEMPOOL_BLOCK_BUFFER"]
 
         # MEMPOOL_SIZE = 60000
         self.mempool_size = tx_per_sec * sec_per_block * block_buffer_count
@@ -101,7 +101,7 @@ class MempoolManager:
         # Calculate the cost and fees
         program = best_solution_program(new_spend)
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-        fail_reason, npc_list, cost = await get_name_puzzle_conditions(program)
+        fail_reason, npc_list, cost = get_name_puzzle_conditions(program)
         if fail_reason:
             return None, fail_reason
 
@@ -117,7 +117,7 @@ class MempoolManager:
 
         # Check additions for max coin amount
         for coin in additions:
-            if coin.amount >= consensus_constants["MAX_COIN_AMOUNT"]:
+            if coin.amount >= self.constants["MAX_COIN_AMOUNT"]:
                 return None, Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
 
         #  Watch out for duplicate outputs
