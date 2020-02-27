@@ -35,6 +35,12 @@
 
     <div id="pooldata" class="clearfix"></div>
 
+<hr>	
+
+<center>	
+    <a href="javascript:stopNode()">Stop node</a>	
+</center>
+
 </main>
 
 <script type = "text/javascript" >
@@ -57,7 +63,6 @@ $(function() {
         jQuery.ajax({
             url: "get_connections",
             type: "POST",
-            crossDomain: true,
             data: null,
             dataType: "json",
             contentType: "application/json; charset=utf-8",
@@ -85,7 +90,6 @@ $(function() {
         jQuery.ajax({
             url: "get_pool_balances",
             type: "POST",
-            crossDomain: true,
             data: null,
             dataType: "json",
             contentType: "application/json; charset=utf-8",
@@ -115,7 +119,6 @@ function loadBlocks(hash) {
     jQuery.ajax({
         url: "get_blockchain_state",
         type: "POST",
-        crossDomain: true,
         data: null,
         dataType: "json",
         contentType: "application/json; charset=utf-8",
@@ -127,8 +130,12 @@ function loadBlocks(hash) {
 
             var tips = [];
 
+            //tipheight="Heights of tips: ";
+
             for (i = 0; i < data.tips.length; i++) {
-                tips.push(JSON.parse(data.tips[i]));
+                tipobj=JSON.parse(data.tips[i]);
+                //tipheight=tipheight+tipobj.height+" ";
+                tips.push(tipobj);
             }
 
             lca_block = JSON.parse(data.lca);
@@ -143,6 +150,7 @@ function loadBlocks(hash) {
             }
 
             $('#timestamp').html("Current LCA timestamp (UTC): " + new Date(1000 * lca_block.header.data.timestamp).toISOString());
+            // $('#tipheight').html(tipheight);
             $('#difficulty').html("Current difficulty: " + data.difficulty.toString());
             $('#ips').html("Current VDF iterations per second: " + data.ips.toString());
             $('#iterations').html("Total iterations since genesis: " + lca_block.challenge.total_iters.toString());
@@ -201,7 +209,6 @@ function makeCall(hash, heads, added_blocks) {
     return jQuery.ajax({
         url: "get_header",
         type: "POST",
-        crossDomain: true,
         data: blockargs,
         dataType: "json",
         contentType: "application/json; charset=utf-8",
@@ -299,7 +306,6 @@ function headHashClicked(hash) {
     jQuery.ajax({
         url: "get_block",
         type: "POST",
-        crossDomain: true,
         data: blockargs,
         dataType: "json",
         contentType: "application/json; charset=utf-8",
@@ -326,12 +332,25 @@ function connClicked(node_id) {
     jQuery.ajax({
         url: "close_connection",
         type: "POST",
-        crossDomain: true,
         data: nodeargs,
         dataType: "json",
         contentType: "application/json; charset=utf-8",
         success: function(data) {
             loadConnections()
+        }
+    });
+
+}
+
+function stopNode() {
+
+    jQuery.ajax({
+        url: "stop_node",
+        type: "POST",
+        data: null,
+        dataType: "json",
+        contentType: "application/json; charset=utf-8",
+        success: function(data) {
         }
     });
 
@@ -349,7 +368,6 @@ console.log(nodeargs);
     jQuery.ajax({
         url: "open_connection",
         type: "POST",
-        crossDomain: true,
         data: nodeargs,
         dataType: "json",
         contentType: "application/json; charset=utf-8",
