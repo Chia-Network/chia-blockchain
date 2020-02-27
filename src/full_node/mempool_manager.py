@@ -1,5 +1,5 @@
 import collections
-from typing import Dict, Optional, Tuple, List, Set
+from typing import Dict, Optional, Tuple, List
 import logging
 
 from src.consensus.constants import constants as consensus_constants
@@ -35,8 +35,8 @@ class MempoolManager:
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self.potential_txs: Dict[bytes32, SpendBundle] = {}
-        # TODO limit the size of seen_bundle_hashes
-        self.seen_bundle_hashes: Set[bytes32] = set()
+        # Keep track of seen spend_bundles
+        self.seen_bundle_hashes: Dict[bytes32, bytes32] = {}
         # Mempool for each tip
         self.mempools: Dict[bytes32, Mempool] = {}
 
@@ -51,6 +51,7 @@ class MempoolManager:
         # MEMPOOL_SIZE = 60000
         self.mempool_size = tx_per_sec * sec_per_block * block_buffer_count
         self.potential_cache_size = 300
+        self.seen_cache_size = 10000
         self.coinbase_freeze = self.constants["COINBASE_FREEZE_PERIOD"]
 
     # TODO This is hack, it should use proper cost, const. Minimize work, double check/verify solution.
@@ -89,6 +90,11 @@ class MempoolManager:
                 return True
         return False
 
+    def maybe_pop_seen(self):
+        while len(self.seen_bundle_hashes) > 0:
+            first_in = list(self.seen_bundle_hashes.keys())[0]
+            self.seen_bundle_hashes.pop(first_in)
+
     async def add_spendbundle(
         self, new_spend: SpendBundle, to_pool: Mempool = None
     ) -> Tuple[Optional[uint64], Optional[Err]]:
@@ -96,7 +102,8 @@ class MempoolManager:
         Tries to add spendbundle to either self.mempools or to_pool if it's specified.
         Returns true if it's added in any of pools, Returns error if it fails.
         """
-        self.seen_bundle_hashes.add(new_spend.name())
+        self.seen_bundle_hashes[new_spend.name()] = new_spend.name()
+        self.maybe_pop_seen()
 
         # Calculate the cost and fees
         program = best_solution_program(new_spend)
@@ -282,7 +289,7 @@ class MempoolManager:
 
         while len(self.potential_txs) > self.potential_cache_size:
             first_in = list(self.potential_txs.keys())[0]
-            del self.potential_txs[first_in]
+            self.potential_txs.pop(first_in)
 
     def seen(self, bundle_hash: bytes32) -> bool:
         """ Return true if we saw this spendbundle before """
