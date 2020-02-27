@@ -30,12 +30,13 @@ class TestFilter:
         await wallet_node.wallet_store._clear_database()
 
         num_blocks = 2
+        ph = await wallet.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
             test_constants,
             num_blocks,
             [],
             10,
-            reward_puzzlehash=wallet.get_new_puzzlehash(),
+            reward_puzzlehash=ph,
         )
 
         for i in range(1, num_blocks):

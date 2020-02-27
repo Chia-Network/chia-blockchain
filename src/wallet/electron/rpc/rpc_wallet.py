@@ -49,7 +49,7 @@ class RpcWalletApiHandler:
         """
         Returns a new puzzlehash
         """
-        puzzlehash = self.wallet_node.wallet.get_new_puzzlehash().hex()
+        puzzlehash = await self.wallet_node.wallet.get_new_puzzlehash().hex()
         response = {
             "puzzlehash": puzzlehash,
         }

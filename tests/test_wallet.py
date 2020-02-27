@@ -4,7 +4,6 @@ import pytest
 from blspy import ExtendedPrivateKey
 
 from src.protocols.wallet_protocol import RespondBody
-from src.wallet.wallet import Wallet
 from src.wallet.wallet_node import WalletNode
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 
@@ -32,12 +31,13 @@ class TestWallet:
         await wallet_node.tx_store._clear_database()
 
         num_blocks = 10
+        ph = await wallet.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
             test_constants,
             num_blocks,
             [],
             10,
-            reward_puzzlehash=wallet.get_new_puzzlehash(),
+            reward_puzzlehash=ph,
         )
 
         for i in range(1, num_blocks):
@@ -67,12 +67,13 @@ class TestWallet:
         await wallet_node_b.tx_store._clear_database()
 
         num_blocks = 10
+        ph = await wallet.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
             test_constants,
             num_blocks,
             [],
             10,
-            reward_puzzlehash=wallet.get_new_puzzlehash(),
+            reward_puzzlehash=ph,
         )
 
         for i in range(1, num_blocks):
@@ -82,7 +83,7 @@ class TestWallet:
         assert await wallet.get_confirmed_balance() == 144000000000000
 
         spend_bundle = await wallet.generate_signed_transaction(
-            10, wallet_b.get_new_puzzlehash(), 0
+            10, await wallet_b.get_new_puzzlehash(), 0
         )
         await wallet.push_transaction(spend_bundle)
 
