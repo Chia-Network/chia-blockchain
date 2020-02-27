@@ -181,7 +181,7 @@ class Wallet:
             secretkey = BLSPrivateKey(secretkey)
             code_ = [puzzle, solution.solution]
             sexp = clvm.to_sexp_f(code_)
-            err, con = conditions_for_solution(sexp)
+            err, con, cost = conditions_for_solution(sexp)
             if err or not con:
                 return None
             conditions_dict = conditions_by_opcode(con)

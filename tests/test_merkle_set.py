@@ -28,6 +28,11 @@ class TestMerkleSet:
         )
 
         merkle_set = MerkleSet()
+        merkle_set_reverse = MerkleSet()
+
+        for block in reversed(blocks):
+            merkle_set_reverse.add_already_hashed(block.body.coinbase.name())
+
         for block in blocks:
             merkle_set.add_already_hashed(block.body.coinbase.name())
 
@@ -48,3 +53,6 @@ class TestMerkleSet:
             )
             assert validate_proof is True
             assert validate_proof_fee is False
+
+        # Test if order of adding items change the outcome
+        assert merkle_set.get_root() == merkle_set_reverse.get_root()

@@ -34,4 +34,10 @@ constants: Dict[str, Any] = {
     "COINBASE_FREEZE_PERIOD": 200,
     # Max coin amount int(1 << 48)
     "MAX_COIN_AMOUNT": 281474976710656,
+    # Raw size per block target = 1,000,000 bytes
+    # Rax TX (single in, single out) = 219 bytes (not compressed)
+    # TX = 457 vBytes
+    # floor(1,000,000 / 219) * 457 = 2086662 (size in vBytes)
+    # Max block cost in virtual bytes
+    "MAX_BLOCK_COST": 2086662,
 }

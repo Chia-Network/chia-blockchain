@@ -65,7 +65,7 @@ class MempoolManager:
                 spend_bundles: List[SpendBundle] = []
                 for dic in mempool.sorted_spends.values():
                     for item in dic.values():
-                        if item.cost + cost_sum <= 6000:
+                        if item.cost + cost_sum <= self.constants["MAX_BLOCK_COST"]:
                             spend_bundles.append(item.spend_bundle)
                             cost_sum += item.cost
                         else:
