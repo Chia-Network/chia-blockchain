@@ -2,7 +2,6 @@ import asyncio
 
 import pytest
 
-from src.util.merkle_set import MerkleSet, confirm_included_already_hashed
 from src.util.bundle_tools import best_solution_program
 from src.util.cost_calculator import calculate_cost_of_program
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
