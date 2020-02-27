@@ -27,6 +27,7 @@ from src.types.challenge import Challenge
 from src.types.full_block import FullBlock
 from src.types.hashable.Coin import Coin, hash_coin_list
 from src.types.hashable.BLSSignature import BLSSignature
+from src.util.cost_calculator import calculate_cost_of_program
 from src.util.hash import std_hash
 from src.types.hashable.SpendBundle import SpendBundle
 from src.types.hashable.Program import Program
@@ -1225,10 +1226,10 @@ class FullNode:
         fee_hash = std_hash(std_hash(target_tip.height))
         fees_coin = Coin(fee_hash, request.fees_target_puzzle_hash, full_fee_reward)
 
-        # SpendBundle has all signatures already aggregated
-
-        # TODO(straya): calculate cost of all transactions
+        # Calculate the cost of transactions
         cost = uint64(0)
+        if solution_program:
+            cost = calculate_cost_of_program(solution_program)
 
         extension_data: bytes32 = bytes32([0] * 32)
 

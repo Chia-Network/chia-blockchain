@@ -177,7 +177,7 @@ class WalletTool:
             secretkey = BLSPrivateKey(secretkey)
             code_ = [puzzle, solution.solution]
             sexp = Program.to(code_)
-            err, con = conditions_for_solution(sexp)
+            err, con, cost = conditions_for_solution(sexp)
             if not con:
                 return
             conditions_dict = conditions_by_opcode(con)

@@ -93,45 +93,47 @@ def mempool_assert_time_exceeds(condition: ConditionVarPair):
 
 def get_name_puzzle_conditions(
     block_program: Program,
-) -> Tuple[Optional[Err], List[NPC], int]:
+) -> Tuple[Optional[Err], List[NPC], uint64]:
     """
     Returns an error if it's unable to evaluate, otherwise
     returns a list of NPC (coin_name, solved_puzzle_hash, conditions_dict)
     """
-
+    cost_sum = 0
     try:
-        cost, sexp = run_program(block_program, [])
+        cost_run, sexp = run_program(block_program, [])
+        cost_sum += cost_run
     except EvalError:
         breakpoint()
-        return Err.INVALID_COIN_SOLUTION, [], 0
+        return Err.INVALID_COIN_SOLUTION, [], uint64(0)
 
     npc_list = []
     for name_solution in sexp.as_iter():
         _ = name_solution.as_python()
         if len(_) != 2:
-            return Err.INVALID_COIN_SOLUTION, [], cost
+            return Err.INVALID_COIN_SOLUTION, [], uint64(cost_sum)
         if not isinstance(_[0], bytes) or len(_[0]) != 32:
-            return Err.INVALID_COIN_SOLUTION, [], cost
+            return Err.INVALID_COIN_SOLUTION, [], uint64(cost_sum)
         coin_name = bytes32(_[0])
         if not isinstance(_[1], list) or len(_[1]) != 2:
-            return Err.INVALID_COIN_SOLUTION, [], cost
+            return Err.INVALID_COIN_SOLUTION, [], uint64(cost_sum)
         puzzle_solution_program = name_solution.rest().first()
         puzzle_program = puzzle_solution_program.first()
         puzzle_hash = Program(puzzle_program).get_hash()
         try:
-            error, conditions_dict = conditions_dict_for_solution(
+            error, conditions_dict, cost_run = conditions_dict_for_solution(
                 puzzle_solution_program
             )
+            cost_sum += cost_run
             if error:
-                return error, [], cost
+                return error, [], uint64(cost_sum)
         except clvm.EvalError:
-            return Err.INVALID_COIN_SOLUTION, [], cost
+            return Err.INVALID_COIN_SOLUTION, [], uint64(cost_sum)
         if conditions_dict is None:
             conditions_dict = {}
         npc: NPC = NPC(coin_name, puzzle_hash, conditions_dict)
         npc_list.append(npc)
 
-    return None, npc_list, cost
+    return None, npc_list, uint64(cost_sum)
 
 
 def mempool_check_conditions_dict(

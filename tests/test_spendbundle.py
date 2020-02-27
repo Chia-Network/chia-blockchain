@@ -25,7 +25,7 @@ def test_1():
         puzzle_program_0, conditions
     )
 
-    error, output_conditions = conditions_for_solution(puzzle_hash_solution)
+    error, output_conditions, cost = conditions_for_solution(puzzle_hash_solution)
     assert error is None
     from pprint import pprint
 

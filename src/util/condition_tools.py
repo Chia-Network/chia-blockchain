@@ -12,6 +12,7 @@ from src.types.hashable.BLSSignature import BLSSignature, BLSPublicKey
 from src.types.hashable.Coin import Coin
 from src.types.hashable.Program import Program
 from src.types.sized_bytes import bytes32
+from src.util.ints import uint64
 from .ConsensusError import Err, ConsensusError
 
 
@@ -111,16 +112,16 @@ def created_outputs_for_conditions_dict(
 
 def conditions_dict_for_solution(
     solution,
-) -> Tuple[Optional[Err], Optional[Dict[ConditionOpcode, List[ConditionVarPair]]]]:
-    error, result = conditions_for_solution(solution)
+) -> Tuple[Optional[Err], Optional[Dict[ConditionOpcode, List[ConditionVarPair]]], uint64]:
+    error, result, cost = conditions_for_solution(solution)
     if error or result is None:
-        return error, None
-    return None, conditions_by_opcode(result)
+        return error, None, uint64(0)
+    return None, conditions_by_opcode(result), cost
 
 
 def conditions_for_solution(
     solution_program, run_program=clvm.run_program
-) -> Tuple[Optional[Err], Optional[List[ConditionVarPair]]]:
+) -> Tuple[Optional[Err], Optional[List[ConditionVarPair]], uint64]:
     # get the standard script for a puzzle hash and feed in the solution
     args = Program.to(solution_program)
     try:
@@ -128,6 +129,6 @@ def conditions_for_solution(
         solution_sexp = args.rest().first()
         cost, r = run_program(puzzle_sexp, solution_sexp)
         error, result = parse_sexp_to_conditions(r)
-        return error, result
+        return error, result, cost
     except EvalError:
-        return Err.SEXP_ERROR, None
+        return Err.SEXP_ERROR, None, uint64(0)

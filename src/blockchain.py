@@ -977,7 +977,7 @@ class Blockchain:
         # Get List of names removed, puzzles hashes for removed coins and conditions crated
         error, npc_list, cost = get_name_puzzle_conditions(block.body.transactions)
 
-        if cost > 6000:
+        if cost > consensus_constants["MAX_BLOCK_COST"]:
             return Err.BLOCK_COST_EXCEEDS_MAX
         if error:
             return error
