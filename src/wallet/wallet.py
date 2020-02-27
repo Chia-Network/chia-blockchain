@@ -91,7 +91,9 @@ class Wallet:
         puzzle: Program = self.puzzle_for_pk(pubkey)
         puzzlehash: bytes32 = puzzle.get_hash()
 
-        await self.wallet_state_manager.tx_store.add_derivation_path_of_interest(index, puzzlehash, pubkey, WalletType.STANDARD_WALLET)
+        await self.wallet_state_manager.tx_store.add_derivation_path_of_interest(
+            index, puzzlehash, pubkey, WalletType.STANDARD_WALLET
+        )
 
         return puzzlehash
 
@@ -114,8 +116,12 @@ class Wallet:
             ret.append(make_assert_my_coin_id_condition(me["id"]))
         return clvm.to_sexp_f([puzzle_for_conditions(ret), []])
 
-    async def get_keys(self, hash: bytes32) -> Optional[Tuple[PublicKey, ExtendedPrivateKey]]:
-        index_for_puzzlehash = await self.wallet_state_manager.tx_store.index_for_puzzle_hash(hash)
+    async def get_keys(
+        self, hash: bytes32
+    ) -> Optional[Tuple[PublicKey, ExtendedPrivateKey]]:
+        index_for_puzzlehash = await self.wallet_state_manager.tx_store.index_for_puzzle_hash(
+            hash
+        )
         if index_for_puzzlehash == -1:
             raise
         pubkey = self.private_key.public_child(index_for_puzzlehash).get_public_key()
@@ -200,7 +206,10 @@ class Wallet:
         if self.server:
             msg = OutboundMessage(
                 NodeType.FULL_NODE,
-                Message("respond_transaction", full_node_protocol.RespondTransaction(spend_bundle)),
+                Message(
+                    "respond_transaction",
+                    full_node_protocol.RespondTransaction(spend_bundle),
+                ),
                 Delivery.BROADCAST,
             )
             async for reply in self.server.push_message(msg):

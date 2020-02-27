@@ -33,11 +33,7 @@ class TestWallet:
         num_blocks = 10
         ph = await wallet.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            test_constants,
-            num_blocks,
-            [],
-            10,
-            reward_puzzlehash=ph,
+            test_constants, num_blocks, [], 10, reward_puzzlehash=ph,
         )
 
         for i in range(1, num_blocks):
@@ -69,11 +65,7 @@ class TestWallet:
         num_blocks = 10
         ph = await wallet.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            test_constants,
-            num_blocks,
-            [],
-            10,
-            reward_puzzlehash=ph,
+            test_constants, num_blocks, [], 10, reward_puzzlehash=ph,
         )
 
         for i in range(1, num_blocks):

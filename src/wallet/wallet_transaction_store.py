@@ -212,16 +212,12 @@ class WalletTransactionStore:
 
         return records
 
-    async def add_derivation_path_of_interest(self, index: int, puzzlehash: bytes32, pubkey: bytes, wallet_type: WalletType):
+    async def add_derivation_path_of_interest(
+        self, index: int, puzzlehash: bytes32, pubkey: bytes, wallet_type: WalletType
+    ):
         cursor = await self.transaction_db.execute(
             "INSERT OR REPLACE INTO derivation_paths VALUES(?, ?, ?, ?, ?)",
-            (
-                index,
-                pubkey.hex(),
-                puzzlehash.hex(),
-                wallet_type.value,
-                0
-            ),
+            (index, pubkey.hex(), puzzlehash.hex(), wallet_type.value, 0),
         )
 
         await cursor.close()
@@ -274,4 +270,3 @@ class WalletTransactionStore:
             return row[0]
 
         return 0
-

@@ -114,11 +114,15 @@ class WalletNode:
 
         additions: List[Coin] = []
 
-        if await self.wallet.can_generate_puzzle_hash(response.body.coinbase.puzzle_hash):
+        if await self.wallet.can_generate_puzzle_hash(
+            response.body.coinbase.puzzle_hash
+        ):
             await self.wallet_state_manager.coin_added(
                 response.body.coinbase, response.height, True
             )
-        if await self.wallet.can_generate_puzzle_hash(response.body.fees_coin.puzzle_hash):
+        if await self.wallet.can_generate_puzzle_hash(
+            response.body.fees_coin.puzzle_hash
+        ):
             await self.wallet_state_manager.coin_added(
                 response.body.fees_coin, response.height, True
             )
