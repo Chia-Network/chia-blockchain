@@ -18,7 +18,7 @@
     <div id="conndata" class="clearfix"></div>
 
 <p>Add a connection ip:port</p>
-<input type="text" name="connport" id="connport" placeholder="">
+<input type="text" size="100" name="connport" id="connport" placeholder="">
 
 <hr>
 
@@ -27,7 +27,7 @@
     <div id="blockdata" class="clearfix"></div>
 
 <p>Search block by hash</p>
-<input type="text" name="blockhash" id="blockhash" placeholder="">
+<input type="text" size="100" name="blockhash" id="blockhash" placeholder="">
 
 <hr>
 
@@ -53,7 +53,7 @@ $(function() {
 
     loadConnections();
     loadPools();
-    loadBlocks();
+    loadBlocks(null);
 });
 
     function loadConnections(){
@@ -114,7 +114,7 @@ var sorted = arr.sort((a, b) => b.value - a.value);
     }
 
 
-function loadBlocks() {
+function loadBlocks(hash) {
     $('#blockdata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
 
     jQuery.ajax({
@@ -135,6 +135,7 @@ function loadBlocks() {
             for (i = 0; i < data.tips.length; i++) {
                 tips.push(JSON.parse(data.tips[i]));
             }
+
             lca_block = JSON.parse(data.lca);
 
             if (data.sync_mode) {
@@ -151,11 +152,16 @@ function loadBlocks() {
             $('#ips').html("Current VDF iterations per second: " + data.ips.toString());
             $('#iterations').html("Total iterations since genesis: " + lca_block.challenge.total_iters.toString());
 
-            var heads = data.tips;
+            heads=[];
+
+            if(hash==null)
+            {
+            heads = data.tips;
+            }
 
             console.log(heads);
 
-            var promiseResolvedAtEnd = makeCall(heads, added_blocks).then(function() {
+            var promiseResolvedAtEnd = makeCall(hash, heads, added_blocks).then(function() {
                 makeHash(0, added_blocks).then(function() {
                     htmlBlocks(added_blocks, tips, lca_block);
                 });
@@ -164,7 +170,9 @@ function loadBlocks() {
     })
 };
 
-function makeCall(heads, added_blocks) {
+function makeCall(hash, heads, added_blocks) {
+    if(hash==null)
+    {
     // we're done - don't return a chained promise
     if (!((added_blocks.length < 10) && (heads.length > 0)))
         return;
@@ -187,6 +195,12 @@ function makeCall(heads, added_blocks) {
     heads.shift();
 
     var blockargs = '{"header_hash": "' + max_block.header.data.prev_header_hash.slice(2) + '"}';
+    }
+    else
+    {
+    var blockargs = '{"header_hash": "' + hash + '"}';
+    }
+
     console.log("load " + blockargs);
 
     return jQuery.ajax({
@@ -204,7 +218,7 @@ function makeCall(heads, added_blocks) {
             console.log('An error occured');
         }
     }).then(function() {
-        return makeCall(heads, added_blocks);
+        return makeCall(null, heads, added_blocks);
     });
 }
 
@@ -263,7 +277,8 @@ function htmlBlocks(added_blocks, tips, lca_block) {
 
             console.log(added_blocks[index]);
             console.log(hashed_blocks[index]);
-            outhtml = outhtml + '<li><a href="javascript:headerClicked(\'' + hashed_blocks[index] + '\')">' + added_blocks[index].challenge.height + ': ' + hashed_blocks[index];
+            outhtml = outhtml + '<li><a href="javascript:headIndexClicked(\'' + hashed_blocks[index] + '\')">' + added_blocks[index].challenge.height + '</a>: ';
+            outhtml = outhtml + '<a href="javascript:headHashClicked(\'' + hashed_blocks[index] + '\')">' + hashed_blocks[index] +'</a>';
             console.log(tips);
             if (headerInArray(added_blocks[index], tips) != -1)
                 outhtml = outhtml + ' TIP';
@@ -279,7 +294,11 @@ function htmlBlocks(added_blocks, tips, lca_block) {
 
 }
 
-function headerClicked(hash) {
+function headIndexClicked(hash) {
+    loadBlocks(hash);
+}
+
+function headHashClicked(hash) {
     var blockargs = '{"header_hash": "' + hash + '"}';
 
     jQuery.ajax({
@@ -298,7 +317,7 @@ function headerClicked(hash) {
             }, 2);
 
             var newWindow = window.open();
-            newWindow.document.write("<html><body><pre>" + output + "</pre></body></html>");
+            newWindow.document.write("<html><title>"+hash+"</title><body><pre>" + output + "</pre></body></html>");
         }
     });
 
@@ -322,6 +341,33 @@ function connClicked(node_id) {
     });
 
 }
+
+$( "#connport" ).keyup(function (e) {
+    if (e.keyCode === 13) {
+console.log("hi");
+console.log($( "#connport" ).val());
+
+    var conn = new URL("http://"+$( "#connport" ).val())
+    var nodeargs = '{"host": "' + conn.hostname + '", "port": ' + conn.port + '}';
+console.log(nodeargs);
+
+    jQuery.ajax({
+        url: "open_connection",
+        type: "POST",
+        crossDomain: true,
+        data: nodeargs,
+        dataType: "json",
+        contentType: "application/json; charset=utf-8",
+        success: function(data) {loadConnections()}
+    });
+}
+});
+
+$( "#blockhash" ).keyup(function (e) {
+    if (e.keyCode === 13) {
+loadBlocks($( "#blockhash" ).val());
+}
+});
 
 function headersEqual(a, b) {
     if ((a.header.data.prev_header_hash == b.header.data.prev_header_hash) &&
