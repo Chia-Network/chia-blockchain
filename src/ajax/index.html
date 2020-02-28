@@ -313,10 +313,11 @@ console.log(data);
             }, 2);
 
             var newWindow = window.open();
-            newWindow.document.write("<html><title>"+hash+"</title><body><pre>" + output + "</pre></body></html>");
+            newWindow.document.write('<html><head><link rel="stylesheet" href="styles.css"><title>'+
+                hash+'</title><link rel="shortcut icon" href="favicon.ico"><link rel="icon" href="favicon.ico"></head><body><main><p>Hash: ' + 
+                hash + "</p><pre>" + output + "</pre></main></body></html>");
         }
     });
-
 }
 
 function connClicked(node_id) {
