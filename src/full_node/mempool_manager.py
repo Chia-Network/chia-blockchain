@@ -91,7 +91,7 @@ class MempoolManager:
         return False
 
     def maybe_pop_seen(self):
-        while len(self.seen_bundle_hashes) > 0:
+        while len(self.seen_bundle_hashes) > self.seen_cache_size:
             first_in = list(self.seen_bundle_hashes.keys())[0]
             self.seen_bundle_hashes.pop(first_in)
 
