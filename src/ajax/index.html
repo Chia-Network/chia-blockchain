@@ -1,7 +1,7 @@
-<html><head><link rel="stylesheet" href="styles.css">
+<html><head><link rel="stylesheet" href="css/styles.css">
 <title>Chia Blockchain Status</title>
-<link rel="shortcut icon" href="favicon.ico">
-<link rel="icon" href="favicon.ico">
+<link rel="shortcut icon" href="css/favicon.ico">
+<link rel="icon" href="css/favicon.ico">
 <script type="text/javascript" src="js/jquery-1.10.2.min.js"></script>
 </head>
 <body><main>
@@ -44,9 +44,6 @@
 
 <script type = "text/javascript" >
 
-var added_blocks;
-var hashed_blocks;
-
 var NodeType = ["FULL_NODE", "HARVESTER", "FARMER", "TIMELORD", "INTRODUCER"];
 
 $(function() {
@@ -56,67 +53,70 @@ $(function() {
     loadBlocks(null);
 });
 
-    function loadConnections(){
-        $('#conndata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
+function loadConnections() {
+    $('#conndata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
 
-console.log("get_connections");
+    console.log("get_connections");
 
-        jQuery.ajax({
-            url: "get_connections",
-            type: "POST",
-            data: null,
-            dataType: "json",
-            contentType: "application/json; charset=utf-8",
-            success: function(data) {
-console.log(data);
-                outhtml = '<div><ul style="list-style-type:none;">';
+    jQuery.ajax({
+        url: "get_connections",
+        type: "POST",
+        data: null,
+        dataType: "json",
+        contentType: "application/json; charset=utf-8",
+        success: function(data) {
+            console.log(data);
+            outhtml = '<div><ul style="list-style-type:none;">';
 
-                for (i = 0; i < data.length; i++) {
+            for (i = 0; i < data.length; i++) {
 
-                    outhtml = outhtml + '<li><a href="javascript:connClicked(\'' + data[i].node_id + '\')">' + NodeType[data[i].type - 1] + ' ' + data[i].peer_host + ' ' + data[i].peer_port + '/' + data[i].peer_server_port + ' ' + data[i].node_id.substring(0, 25) + '...</li>';
-                }
-                outhtml = outhtml + '</ul></div>';
-
-                $('#conndata').html(outhtml);
-
+                outhtml = outhtml + '<li><a href="javascript:connClicked(\'' + data[i].node_id + '\')">' + NodeType[data[i].type - 1] + ' ' + data[i].peer_host + ' ' + data[i].peer_port + '/' + data[i].peer_server_port + ' ' + data[i].node_id.substring(0, 25) + '...</li>';
             }
-        })
-    }
+            outhtml = outhtml + '</ul></div>';
 
-    function loadPools(){
-        $('#pooldata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
+            $('#conndata').html(outhtml);
 
-console.log("get_pool_balances");
+        }
+    })
+}
 
-        jQuery.ajax({
-            url: "get_pool_balances",
-            type: "POST",
-            data: null,
-            dataType: "json",
-            contentType: "application/json; charset=utf-8",
-            success: function(data) {
-console.log(data);
-var arr = Object.entries(data).map(([key, value]) => ({key,value}));
-var sorted = arr.sort((a, b) => b.value - a.value);
+function loadPools() {
+    $('#pooldata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
 
-                outhtml = '<div><ul style="list-style-type:none;">';
+    console.log("get_pool_balances");
 
-                for (i = 0; i < arr.length; i++) {
-                    outhtml = outhtml + '<li>' + sorted[i].key.substring(0,60) + '... ' + sorted[i].value/1000000000000 + ' chias</li>';
-                }
-                outhtml = outhtml + '</ul></div>';
+    jQuery.ajax({
+        url: "get_pool_balances",
+        type: "POST",
+        data: null,
+        dataType: "json",
+        contentType: "application/json; charset=utf-8",
+        success: function(data) {
+            console.log(data);
+            var arr = Object.entries(data).map(([key, value]) => ({
+                key,
+                value
+            }));
+            var sorted = arr.sort((a, b) => b.value - a.value);
 
-                $('#pooldata').html(outhtml);
+            outhtml = '<div><ul style="list-style-type:none;">';
 
+            for (i = 0; i < arr.length; i++) {
+                outhtml = outhtml + '<li>' + sorted[i].key.substring(0, 60) + '... ' + sorted[i].value / 1000000000000 + ' chias</li>';
             }
-        })
-    }
+            outhtml = outhtml + '</ul></div>';
+
+            $('#pooldata').html(outhtml);
+
+        }
+    })
+}
 
 
 function loadBlocks(hash) {
     $('#blockdata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
 
-console.log("get_blockchain_state");
+    console.log("get_blockchain_state");
 
     jQuery.ajax({
         url: "get_blockchain_state",
@@ -125,17 +125,17 @@ console.log("get_blockchain_state");
         dataType: "json",
         contentType: "application/json; charset=utf-8",
         success: function(data) {
-console.log(data);
+            console.log(data);
             added_blocks = [];
             hashed_blocks = [];
 
             var tips = [];
 
-            tipheight="Heights of tips: ";
+            tipheight = "Heights of tips: ";
 
             for (i = 0; i < data.tips.length; i++) {
-                tipobj=JSON.parse(data.tips[i]);
-                tipheight=tipheight+tipobj.challenge.height+" ";
+                tipobj = JSON.parse(data.tips[i]);
+                tipheight = tipheight + tipobj.challenge.height + " ";
                 tips.push(tipobj);
             }
 
@@ -156,11 +156,10 @@ console.log(data);
             $('#ips').html("Current VDF iterations per second: " + data.ips.toString());
             $('#iterations').html("Total iterations since genesis: " + lca_block.challenge.total_iters.toString());
 
-            heads=[];
+            heads = [];
 
-            if(hash==null)
-            {
-            heads = tips.slice();
+            if (hash == null) {
+                heads = tips.slice();
             }
 
 
@@ -174,38 +173,35 @@ console.log(data);
 };
 
 function makeCall(hash, heads, added_blocks) {
-    if(hash==null)
-    {
-    // we're done - don't return a chained promise
-    if (!((added_blocks.length < 10) && (heads.length > 0)))
-        return;
+    if (hash == null) {
+        // we're done - don't return a chained promise
+        if (!((added_blocks.length < 10) && (heads.length > 0)))
+            return;
 
 
-    heads.sort(function(a, b) {
-        if (a.challenge.height < b.challenge.height) {
-            return 1;
-        } else if (a.challenge.height == b.challenge.height) {
-            return 0;
-        } else { // a > b
-            return -1;
+        heads.sort(function(a, b) {
+            if (a.challenge.height < b.challenge.height) {
+                return 1;
+            } else if (a.challenge.height == b.challenge.height) {
+                return 0;
+            } else { // a > b
+                return -1;
+            }
+        });
+        var max_block = heads[0];
+
+        if (headerInArray(max_block, added_blocks) == -1) {
+            added_blocks[added_blocks.length] = max_block;
         }
-    });
-    var max_block = heads[0];
 
-    if (headerInArray(max_block, added_blocks) == -1) {
-        added_blocks[added_blocks.length] = max_block;
+        heads.shift();
+
+        var blockargs = '{"header_hash": "' + max_block.header.data.prev_header_hash.slice(2) + '"}';
+    } else {
+        var blockargs = '{"header_hash": "' + hash + '"}';
     }
 
-    heads.shift();
-
-    var blockargs = '{"header_hash": "' + max_block.header.data.prev_header_hash.slice(2) + '"}';
-    }
-    else
-    {
-    var blockargs = '{"header_hash": "' + hash + '"}';
-    }
-
-console.log("get_header "+blockargs);
+    console.log("get_header " + blockargs);
 
     return jQuery.ajax({
         url: "get_header",
@@ -214,7 +210,7 @@ console.log("get_header "+blockargs);
         dataType: "json",
         contentType: "application/json; charset=utf-8",
         success: function(data) {
-console.log(data);
+            console.log(data);
             heads.push(JSON.parse(data));
 
         },
@@ -231,7 +227,6 @@ function makeHash(index, added_blocks) {
 
     if (index >= added_blocks.length)
         return;
-
 
     var jsn = added_blocks[index];
 
@@ -274,7 +269,7 @@ function htmlBlocks(added_blocks, tips, lca_block) {
         for (index = 0; index < added_blocks.length; index++) {
 
             outhtml = outhtml + '<li><a href="javascript:headIndexClicked(\'' + hashed_blocks[index] + '\')">' + added_blocks[index].challenge.height + '</a>: ';
-            outhtml = outhtml + '<a href="javascript:headHashClicked(\'' + hashed_blocks[index] + '\')">' + hashed_blocks[index] +'</a>';
+            outhtml = outhtml + '<a href="javascript:headHashClicked(\'' + hashed_blocks[index] + '\')">' + hashed_blocks[index] + '</a>';
             if (headerInArray(added_blocks[index], tips) != -1)
                 outhtml = outhtml + ' TIP';
             if (headersEqual(added_blocks[index], lca_block))
@@ -296,7 +291,7 @@ function headIndexClicked(hash) {
 function headHashClicked(hash) {
     var blockargs = '{"header_hash": "' + hash + '"}';
 
-console.log("get_block "+blockargs);
+    console.log("get_block " + blockargs);
 
     jQuery.ajax({
         url: "get_block",
@@ -305,7 +300,7 @@ console.log("get_block "+blockargs);
         dataType: "json",
         contentType: "application/json; charset=utf-8",
         success: function(data) {
-console.log(data);
+            console.log(data);
             output = JSON.stringify(JSON.parse(data), function(k, v) {
                 if (v instanceof Array)
                     return JSON.stringify(v);
@@ -313,8 +308,8 @@ console.log(data);
             }, 2);
 
             var newWindow = window.open();
-            newWindow.document.write('<html><head><link rel="stylesheet" href="styles.css"><title>'+
-                hash+'</title><link rel="shortcut icon" href="favicon.ico"><link rel="icon" href="favicon.ico"></head><body><main><p>Hash: ' + 
+            newWindow.document.write('<html><head><link rel="stylesheet" href="css/styles.css"><title>' +
+                hash + '</title><link rel="shortcut icon" href="css/favicon.ico"><link rel="icon" href="css/favicon.ico"></head><body><main><p>Header hash: ' +
                 hash + "</p><pre>" + output + "</pre></main></body></html>");
         }
     });
@@ -324,7 +319,7 @@ function connClicked(node_id) {
 
     var nodeargs = '{"node_id": "' + node_id.slice(2) + '"}';
 
-console.log("close_connection "+nodeargs);
+    console.log("close_connection " + nodeargs);
 
     jQuery.ajax({
         url: "close_connection",
@@ -333,7 +328,7 @@ console.log("close_connection "+nodeargs);
         dataType: "json",
         contentType: "application/json; charset=utf-8",
         success: function(data) {
-console.log(data);
+            console.log(data);
             loadConnections()
         }
     });
@@ -342,7 +337,7 @@ console.log(data);
 
 function stopNode() {
 
-console.log("stop_node");
+    console.log("stop_node");
 
     jQuery.ajax({
         url: "stop_node",
@@ -351,40 +346,40 @@ console.log("stop_node");
         dataType: "json",
         contentType: "application/json; charset=utf-8",
         success: function(data) {
-console.log(data);
+            console.log(data);
         }
     });
 
 }
 
-$( "#connport" ).keyup(function (e) {
+$("#connport").keyup(function(e) {
     if (e.keyCode === 13) {
 
-    var conn = new URL("http://"+$( "#connport" ).val())
-    var nodeargs = '{"host": "' + conn.hostname + '", "port": ' + conn.port + '}';
+        var conn = new URL("http://" + $("#connport").val())
+        var nodeargs = '{"host": "' + conn.hostname + '", "port": ' + conn.port + '}';
 
-console.log("open_connection "+nodeargs);
+        console.log("open_connection " + nodeargs);
 
-    jQuery.ajax({
-        url: "open_connection",
-        type: "POST",
-        data: nodeargs,
-        dataType: "json",
-        contentType: "application/json; charset=utf-8",
-        success: function(data) {
-console.log(data);
-setTimeout(function(){
-loadConnections();
-}, 3000);
-}
-    });
-}
+        jQuery.ajax({
+            url: "open_connection",
+            type: "POST",
+            data: nodeargs,
+            dataType: "json",
+            contentType: "application/json; charset=utf-8",
+            success: function(data) {
+                console.log(data);
+                setTimeout(function() {
+                    loadConnections();
+                }, 3000);
+            }
+        });
+    }
 });
 
-$( "#blockhash" ).keyup(function (e) {
+$("#blockhash").keyup(function(e) {
     if (e.keyCode === 13) {
-loadBlocks($( "#blockhash" ).val());
-}
+        loadBlocks($("#blockhash").val());
+    }
 });
 
 function headersEqual(a, b) {
@@ -409,6 +404,6 @@ function headerInArray(a, b) {
     return -1;
 }
 
-       </script>
+</script>
 </body>
 </html>
