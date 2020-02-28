@@ -544,6 +544,8 @@ class FullNode:
         potential_fut_blocks = (self.store.get_potential_future_blocks()).copy()
         self.store.set_sync_mode(False)
 
+        await self.blockchain.recreate_diff_stores()
+
         async with self.store.lock:
             await self.store.clear_sync_info()
 
@@ -597,8 +599,14 @@ class FullNode:
         A peer notifies us of a new transaction.
         Requests a full transaction if we haven't seen it previously, and if the fees are enough.
         """
+        # Ignore if syncing
+        if self.store.get_sync_mode():
+            breakpoint()
+            return
+        # Ignore if already seen
         if self.mempool_manager.seen(transaction.transaction_id):
             return
+
         elif self.mempool_manager.is_fee_enough(transaction.fees, transaction.cost):
             requestTX = full_node_protocol.RequestTransaction(
                 transaction.transaction_id
@@ -614,6 +622,10 @@ class FullNode:
         self, request: full_node_protocol.RequestTransaction
     ) -> OutboundMessageGenerator:
         """ Peer has requested a full transaction from us. """
+        # Ignore if syncing
+        if self.store.get_sync_mode():
+            breakpoint()
+            return
         spend_bundle = self.mempool_manager.get_spendbundle(request.transaction_id)
         if spend_bundle is None:
             reject = full_node_protocol.RejectTransactionRequest(request.transaction_id)
@@ -641,6 +653,10 @@ class FullNode:
         Receives a full transaction from peer.
         If tx is added to mempool, send tx_id to others. (new_transaction)
         """
+        # Ignore if syncing
+        if self.store.get_sync_mode():
+            breakpoint()
+            return
         async with self.unspent_store.lock:
             cost, error = await self.mempool_manager.add_spendbundle(tx.transaction)
             if cost is not None:
