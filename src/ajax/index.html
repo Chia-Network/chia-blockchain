@@ -12,6 +12,13 @@
 <p id="ips">Current VDF iterations per second:</p>
 <p id="iterations">Total iterations since genesis:</p>
 
+<p><a href="javascript:loadBlocks(null)">Blocks</a></p>
+
+    <div id="blockdata" class="clearfix"></div>
+
+<p>Search block by hash</p>
+<input type="text" size="100" name="blockhash" id="blockhash" placeholder="">
+
 <hr>
 
 <p><a href="javascript:loadConnections()">Connections</a></p>
@@ -20,15 +27,6 @@
 
 <p>Add a connection ip:port</p>
 <input type="text" size="100" name="connport" id="connport" placeholder="">
-
-<hr>
-
-<p><a href="javascript:loadBlocks(null)">Blocks</a></p>
-
-    <div id="blockdata" class="clearfix"></div>
-
-<p>Search block by hash</p>
-<input type="text" size="100" name="blockhash" id="blockhash" placeholder="">
 
 <hr>
 
