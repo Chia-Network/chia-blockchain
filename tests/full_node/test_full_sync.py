@@ -50,7 +50,7 @@ class TestFullSync:
                 print(f"Time taken to sync {num_blocks} is {time.time() - start_unf}")
 
                 return
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.3)
 
         raise Exception(f"Took too long to process blocks, stopped at: {time.time() - start_unf}")
 
