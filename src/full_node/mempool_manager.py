@@ -1,6 +1,8 @@
 import collections
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, Tuple, List, Set
 import logging
+
+from chiabip158 import PyBIP158
 
 from src.consensus.constants import constants as consensus_constants
 from src.util.bundle_tools import best_solution_program
@@ -342,6 +344,22 @@ class MempoolManager:
             new_pools[new_pool.header.header_hash] = new_pool
 
         self.mempools = new_pools
+
+    async def create_filter_for_pools(self) -> bytes:
+        # Create filter for items in mempools
+        byte_array_tx: List[bytes32] = []
+        added_items: Set[bytes32] = set()
+        for mempool in self.mempools:
+            for key, item in mempool.spends.items():
+                if key in added_items:
+                    continue
+                added_items.add(key)
+                byte_array_tx.append(bytearray(item.name()))
+
+        bip158: PyBIP158 = PyBIP158(byte_array_tx)
+        encoded_filter = bytes(bip158.GetEncoded())
+
+        return encoded_filter
 
     async def update_pool(self, pool: Mempool, new_tip: FullBlock):
         """
