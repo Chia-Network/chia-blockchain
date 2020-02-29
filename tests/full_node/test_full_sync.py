@@ -52,7 +52,9 @@ class TestFullSync:
                 return
             await asyncio.sleep(0.1)
 
-        raise Exception(f"Took too long to process blocks, stopped at: {time.time() - start_unf}")
+        raise Exception(
+            f"Took too long to process blocks, stopped at: {time.time() - start_unf}"
+        )
 
     @pytest.mark.asyncio
     async def test_short_sync(self, two_nodes):

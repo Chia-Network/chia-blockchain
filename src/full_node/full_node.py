@@ -1735,3 +1735,20 @@ class FullNode:
                 Message("response_reject_additions", request),
                 Delivery.BROADCAST,
             )
+
+    @api_request
+    async def request_transaction_with_filter(
+        self, request: src.protocols.full_node_protocol.ReceivedMempoolFilter
+    ):
+        mempool_filter = PyBIP158(request.filter)
+        transactions = await self.mempool_manager.get_items_not_in_filter(
+            mempool_filter
+        )
+
+        for tx in transactions:
+            transaction = full_node_protocol.RespondTransaction(tx.spend_bundle)
+            yield OutboundMessage(
+                NodeType.FULL_NODE,
+                Message("respond_transaction", transaction),
+                Delivery.RESPOND,
+            )

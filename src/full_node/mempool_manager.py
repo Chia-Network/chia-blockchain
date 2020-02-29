@@ -361,6 +361,23 @@ class MempoolManager:
 
         return encoded_filter
 
+    async def get_items_not_in_filter(
+        self, mempool_filter: PyBIP158
+    ) -> List[MempoolItem]:
+        items: List[MempoolItem] = []
+        added_items: Set[bytes32] = set()
+
+        for mempool in self.mempools:
+            for key, item in mempool.spends.items():
+                if key in added_items:
+                    continue
+                if mempool_filter.Match(key):
+                    continue
+                added_items.add(key)
+                items.append(item)
+
+        return items
+
     async def update_pool(self, pool: Mempool, new_tip: FullBlock):
         """
         Called when new tip extends the tip we had mempool for.

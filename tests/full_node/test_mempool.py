@@ -588,7 +588,7 @@ class TestMempool:
 
         for b in blocks:
             async for _ in full_node_1.respond_block(
-                    full_node_protocol.RespondBlock(b)
+                full_node_protocol.RespondBlock(b)
             ):
                 pass
 
@@ -637,7 +637,7 @@ class TestMempool:
 
         for b in blocks:
             async for _ in full_node_1.respond_block(
-                    full_node_protocol.RespondBlock(b)
+                full_node_protocol.RespondBlock(b)
             ):
                 pass
 
@@ -658,6 +658,8 @@ class TestMempool:
             # Maybe transaction means that it's accepted in mempool
             assert outbound.message.function == "new_transaction"
 
-        mempool_bundle = full_node_1.mempool_manager.get_spendbundle(spend_bundle1.name())
+        mempool_bundle = full_node_1.mempool_manager.get_spendbundle(
+            spend_bundle1.name()
+        )
 
         assert mempool_bundle is None
