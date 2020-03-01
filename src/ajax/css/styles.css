@@ -24,15 +24,3 @@ main {
   border: .07em solid rgba(0,0,0,.5);
   border-radius: .5em;
 }
-
-
-/* Expando Bits */
-
-.expando {
-  display: none;
-}
-
-.expando:target {
-  display: block;
-}
-

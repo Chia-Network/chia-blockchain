@@ -12,7 +12,7 @@
 <p id="ips">Current VDF iterations per second:</p>
 <p id="iterations">Total iterations since genesis:</p>
 
-<p><a href="javascript:loadBlocks(null)">Blocks</a></p>
+<div id="blockimg"></div>
 
     <div id="blockdata" class="clearfix"></div>
 
@@ -21,7 +21,7 @@
 
 <hr>
 
-<p><a href="javascript:loadConnections()">Connections</a></p>
+<div id="connimg"></div>
 
     <div id="conndata" class="clearfix"></div>
 
@@ -30,7 +30,7 @@
 
 <hr>
 
-<p><a href="javascript:loadPools()">Pools</a></p>
+<div id="poolimg"></div>
 
     <div id="pooldata" class="clearfix"></div>
 
@@ -53,8 +53,15 @@ $(function() {
     loadBlocks(null);
 });
 
+var connReload=null;
+
 function loadConnections() {
-    $('#conndata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
+    if(connReload!=null) {
+        clearTimeout(connReload);
+        connReload=null;
+    }
+
+    $('#connimg').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
 
     console.log("get_connections");
 
@@ -75,13 +82,24 @@ function loadConnections() {
             outhtml = outhtml + '</ul></div>';
 
             $('#conndata').html(outhtml);
+            $('#connimg').html('<a href="javascript:loadConnections()">Connections</a>');
 
+            connReload=setTimeout(function() {
+                loadConnections();
+            }, 1*60*1000);
         }
     })
 }
 
+var poolReload=null;
+
 function loadPools() {
-    $('#pooldata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
+    if(poolReload!=null) {
+        clearTimeout(poolReload);
+        poolReload=null;
+    }
+
+    $('#poolimg').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
 
     console.log("get_pool_balances");
 
@@ -107,14 +125,25 @@ function loadPools() {
             outhtml = outhtml + '</ul></div>';
 
             $('#pooldata').html(outhtml);
+            $('#poolimg').html('<a href="javascript:loadPools()">Pools</a>');
+            
+            poolReload=setTimeout(function() {
+                loadPools();
+            }, 5*60*1000);
 
         }
     })
 }
 
+var blockReload=null;
 
 function loadBlocks(hash) {
-    $('#blockdata').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
+    if(blockReload!=null) {
+        clearTimeout(blockReload);
+        blockReload=null;
+    }
+
+    $('#blockimg').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
 
     console.log("get_blockchain_state");
 
@@ -160,8 +189,11 @@ function loadBlocks(hash) {
 
             if (hash == null) {
                 heads = tips.slice();
-            }
 
+                blockReload=setTimeout(function() {
+                    loadBlocks(hash);
+                }, 1*60*1000);
+            }
 
             var promiseResolvedAtEnd = makeCall(hash, heads, added_blocks).then(function() {
                 makeHash(0, added_blocks).then(function() {
@@ -281,6 +313,7 @@ function htmlBlocks(added_blocks, tips, lca_block) {
     }
 
     $('#blockdata').html(outhtml);
+    $('#blockimg').html('<a href="javascript:loadBlocks(null)">Blocks</a>');
 
 }
 
