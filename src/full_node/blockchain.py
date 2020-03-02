@@ -827,19 +827,24 @@ class Blockchain:
                 fork_h = self._find_fork_for_lca(old_lca, self.lca_block)
                 # Rollback to fork
                 await self.unspent_store.rollback_lca_to_block(fork_h)
-                # Nuke DiffStore
-                self.unspent_store.nuke_diffs()
+
                 # Add blocks between fork point and new lca
                 fork_hash = self.height_to_hash[fork_h]
                 fork_head = self.headers[fork_hash]
                 await self._from_fork_to_lca(fork_head, self.lca_block)
-                # Create DiffStore
-                await self._create_diffs_for_tips(self.lca_block)
+                if not self.store.get_sync_mode():
+                    await self.recreate_diff_stores()
             else:
                 # If LCA has not changed just update the difference
                 self.unspent_store.nuke_diffs()
                 # Create DiffStore
                 await self._create_diffs_for_tips(self.lca_block)
+
+    async def recreate_diff_stores(self):
+        # Nuke DiffStore
+        self.unspent_store.nuke_diffs()
+        # Create DiffStore
+        await self._create_diffs_for_tips(self.lca_block)
 
     def _reconsider_heights(self, old_lca: Optional[Header], new_lca: Header):
         """

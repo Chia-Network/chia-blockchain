@@ -7,6 +7,7 @@ from src.server.outbound_message import OutboundMessage
 from src.protocols import full_node_protocol
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
+from src.types.hashable.spend_bundle import SpendBundle
 from src.util.ints import uint64
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.wallet_tools import WalletTool
@@ -31,7 +32,7 @@ class TestMempool:
 
     @pytest.mark.asyncio
     async def test_basic_mempool(self, two_nodes):
-        num_blocks = 3
+        num_blocks = 2
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
         wallet_receiver = WalletTool()
@@ -51,7 +52,7 @@ class TestMempool:
         spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, block.header.data.coinbase
         )
-        assert spend_bundle is not None
+
         tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
             spend_bundle
         )
@@ -65,7 +66,7 @@ class TestMempool:
 
     @pytest.mark.asyncio
     async def test_coinbase_freeze(self, two_nodes_standard_freeze):
-        num_blocks = 3
+        num_blocks = 2
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
         wallet_receiver = WalletTool()
@@ -117,7 +118,7 @@ class TestMempool:
 
     @pytest.mark.asyncio
     async def test_double_spend(self, two_nodes):
-        num_blocks = 3
+        num_blocks = 2
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
         wallet_receiver = WalletTool()
@@ -166,7 +167,7 @@ class TestMempool:
 
     @pytest.mark.asyncio
     async def test_double_spend_with_higher_fee(self, two_nodes):
-        num_blocks = 3
+        num_blocks = 2
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
         wallet_receiver = WalletTool()
@@ -214,7 +215,7 @@ class TestMempool:
 
     @pytest.mark.asyncio
     async def test_invalid_block_index(self, two_nodes):
-        num_blocks = 3
+        num_blocks = 2
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
         wallet_receiver = WalletTool()
@@ -257,7 +258,7 @@ class TestMempool:
 
     @pytest.mark.asyncio
     async def test_correct_block_index(self, two_nodes):
-        num_blocks = 3
+        num_blocks = 2
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
         wallet_receiver = WalletTool()
@@ -300,7 +301,7 @@ class TestMempool:
 
     @pytest.mark.asyncio
     async def test_invalid_block_age(self, two_nodes):
-        num_blocks = 3
+        num_blocks = 2
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
         wallet_receiver = WalletTool()
@@ -384,7 +385,7 @@ class TestMempool:
 
     @pytest.mark.asyncio
     async def test_correct_my_id(self, two_nodes):
-        num_blocks = 4
+        num_blocks = 2
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
         wallet_receiver = WalletTool()
@@ -427,7 +428,7 @@ class TestMempool:
 
     @pytest.mark.asyncio
     async def test_invalid_my_id(self, two_nodes):
-        num_blocks = 4
+        num_blocks = 2
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
         wallet_receiver = WalletTool()
@@ -457,7 +458,6 @@ class TestMempool:
             1000, receiver_puzzlehash, block.header.data.coinbase, dic
         )
 
-        assert spend_bundle1 is not None
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
             spend_bundle1
         )
@@ -472,7 +472,7 @@ class TestMempool:
 
     @pytest.mark.asyncio
     async def test_assert_time_exceeds(self, two_nodes):
-        num_blocks = 4
+        num_blocks = 2
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
         wallet_receiver = WalletTool()
@@ -502,7 +502,6 @@ class TestMempool:
             1000, receiver_puzzlehash, block.header.data.coinbase, dic
         )
 
-        assert spend_bundle1 is not None
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
             spend_bundle1
         )
@@ -517,7 +516,7 @@ class TestMempool:
 
     @pytest.mark.asyncio
     async def test_assert_time_exceeds_both_cases(self, two_nodes):
-        num_blocks = 4
+        num_blocks = 2
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
         wallet_receiver = WalletTool()
@@ -558,9 +557,6 @@ class TestMempool:
             outbound: OutboundMessage = _
             assert outbound.message.function != "new_transaction"
 
-        sb1 = full_node_1.mempool_manager.get_spendbundle(spend_bundle1.name())
-
-        assert sb1 is None
         # Sleep so that 3 sec passes
         await asyncio.sleep(3)
 
@@ -575,3 +571,101 @@ class TestMempool:
         sb1 = full_node_1.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is spend_bundle1
+
+    @pytest.mark.asyncio
+    async def test_correct_coin_consumed(self, two_nodes):
+        num_blocks = 2
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        block = blocks[1]
+        block2 = blocks[2]
+
+        for b in blocks:
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(b)
+            ):
+                pass
+
+        cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_COIN_CONSUMED,
+            block2.header.data.coinbase.name(),
+            None,
+        )
+        dic = {cvp.opcode: [cvp]}
+
+        spend_bundle1 = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.header.data.coinbase, dic
+        )
+
+        spend_bundle2 = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block2.header.data.coinbase
+        )
+
+        bundle = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
+
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
+            bundle
+        )
+        async for _ in full_node_1.respond_transaction(tx1):
+            outbound: OutboundMessage = _
+            # Maybe transaction means that it's accepted in mempool
+            assert outbound.message.function == "new_transaction"
+
+        mempool_bundle = full_node_1.mempool_manager.get_spendbundle(bundle.name())
+
+        assert mempool_bundle is bundle
+
+    @pytest.mark.asyncio
+    async def test_invalid_coin_consumed(self, two_nodes):
+        num_blocks = 2
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        block = blocks[1]
+        block2 = blocks[2]
+
+        for b in blocks:
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(b)
+            ):
+                pass
+
+        cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_COIN_CONSUMED,
+            block2.header.data.coinbase.name(),
+            None,
+        )
+        dic = {cvp.opcode: [cvp]}
+
+        spend_bundle1 = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.header.data.coinbase, dic
+        )
+
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
+            spend_bundle1
+        )
+        async for _ in full_node_1.respond_transaction(tx1):
+            outbound: OutboundMessage = _
+            # Maybe transaction means that it's accepted in mempool
+            assert outbound.message.function == "new_transaction"
+
+        mempool_bundle = full_node_1.mempool_manager.get_spendbundle(
+            spend_bundle1.name()
+        )
+
+        assert mempool_bundle is None

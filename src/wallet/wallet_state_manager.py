@@ -18,13 +18,11 @@ class WalletStateManager:
     tx_store: WalletTransactionStore
     header_hash: List[bytes32]
     start_index: int
-    next_address: int
 
     log: logging.Logger
 
     # TODO Don't allow user to send tx until wallet is synced
     synced: bool
-    puzzlehash_set: set
 
     @staticmethod
     async def create(
@@ -46,9 +44,7 @@ class WalletStateManager:
         self.wallet_store = wallet_store
         self.tx_store = tx_store
         self.synced = False
-        self.next_address = 0
 
-        self.puzzlehash_set = set()
         return self
 
     async def get_confirmed_balance(self) -> uint64:
@@ -70,7 +66,7 @@ class WalletStateManager:
 
         for record in unconfirmed_tx:
             for coin in record.additions:
-                if coin.puzzle_hash in self.puzzlehash_set:
+                if await self.tx_store.puzzle_hash_exists(coin.puzzle_hash):
                     addition_amount += coin.amount
             for coin in record.removals:
                 removal_amount += coin.amount

@@ -2,6 +2,8 @@ import collections
 from typing import Dict, Optional, Tuple, List, Set
 import logging
 
+from chiabip158 import PyBIP158
+
 from src.consensus.constants import constants as consensus_constants
 from src.util.bundle_tools import best_solution_program
 from src.types.full_block import FullBlock
@@ -35,8 +37,8 @@ class MempoolManager:
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self.potential_txs: Dict[bytes32, SpendBundle] = {}
-        # TODO limit the size of seen_bundle_hashes
-        self.seen_bundle_hashes: Set[bytes32] = set()
+        # Keep track of seen spend_bundles
+        self.seen_bundle_hashes: Dict[bytes32, bytes32] = {}
         # Mempool for each tip
         self.mempools: Dict[bytes32, Mempool] = {}
 
@@ -51,6 +53,7 @@ class MempoolManager:
         # MEMPOOL_SIZE = 60000
         self.mempool_size = tx_per_sec * sec_per_block * block_buffer_count
         self.potential_cache_size = 300
+        self.seen_cache_size = 10000
         self.coinbase_freeze = self.constants["COINBASE_FREEZE_PERIOD"]
 
     # TODO This is hack, it should use proper cost, const. Minimize work, double check/verify solution.
@@ -89,6 +92,11 @@ class MempoolManager:
                 return True
         return False
 
+    def maybe_pop_seen(self):
+        while len(self.seen_bundle_hashes) > self.seen_cache_size:
+            first_in = list(self.seen_bundle_hashes.keys())[0]
+            self.seen_bundle_hashes.pop(first_in)
+
     async def add_spendbundle(
         self, new_spend: SpendBundle, to_pool: Mempool = None
     ) -> Tuple[Optional[uint64], Optional[Err]]:
@@ -96,7 +104,8 @@ class MempoolManager:
         Tries to add spendbundle to either self.mempools or to_pool if it's specified.
         Returns true if it's added in any of pools, Returns error if it fails.
         """
-        self.seen_bundle_hashes.add(new_spend.name())
+        self.seen_bundle_hashes[new_spend.name()] = new_spend.name()
+        self.maybe_pop_seen()
 
         # Calculate the cost and fees
         program = best_solution_program(new_spend)
@@ -282,7 +291,7 @@ class MempoolManager:
 
         while len(self.potential_txs) > self.potential_cache_size:
             first_in = list(self.potential_txs.keys())[0]
-            del self.potential_txs[first_in]
+            self.potential_txs.pop(first_in)
 
     def seen(self, bundle_hash: bytes32) -> bool:
         """ Return true if we saw this spendbundle before """
@@ -335,6 +344,39 @@ class MempoolManager:
             new_pools[new_pool.header.header_hash] = new_pool
 
         self.mempools = new_pools
+
+    async def create_filter_for_pools(self) -> bytes:
+        # Create filter for items in mempools
+        byte_array_tx: List[bytes32] = []
+        added_items: Set[bytes32] = set()
+        for mempool in self.mempools:
+            for key, item in mempool.spends.items():
+                if key in added_items:
+                    continue
+                added_items.add(key)
+                byte_array_tx.append(bytearray(item.name()))
+
+        bip158: PyBIP158 = PyBIP158(byte_array_tx)
+        encoded_filter = bytes(bip158.GetEncoded())
+
+        return encoded_filter
+
+    async def get_items_not_in_filter(
+        self, mempool_filter: PyBIP158
+    ) -> List[MempoolItem]:
+        items: List[MempoolItem] = []
+        added_items: Set[bytes32] = set()
+
+        for mempool in self.mempools:
+            for key, item in mempool.spends.items():
+                if key in added_items:
+                    continue
+                if mempool_filter.Match(key):
+                    continue
+                added_items.add(key)
+                items.append(item)
+
+        return items
 
     async def update_pool(self, pool: Mempool, new_tip: FullBlock):
         """

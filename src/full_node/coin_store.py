@@ -31,8 +31,6 @@ class CoinStore:
     """
 
     coin_record_db: aiosqlite.Connection
-    # Whether or not we are syncing
-    sync_mode: bool = False
     lock: asyncio.Lock
     lca_coin_records: Dict[str, CoinRecord]
     head_diffs: Dict[bytes32, DiffStore]

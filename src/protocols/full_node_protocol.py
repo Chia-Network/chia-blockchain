@@ -204,3 +204,8 @@ class RespondHeaderBlock:
 class RejectHeaderBlockRequest:
     height: uint32
     header_hash: bytes32
+
+
+@dataclass(frozen=True)
+class ReceivedMempoolFilter:
+    filter: bytes

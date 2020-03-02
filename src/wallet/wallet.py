@@ -25,6 +25,7 @@ from src.wallet.puzzles.puzzle_utils import (
     make_assert_coin_consumed_condition,
     make_create_coin_condition,
 )
+from src.wallet.util.wallet_types import WalletType
 
 from src.wallet.wallet_state_manager import WalletStateManager
 
@@ -34,8 +35,6 @@ class Wallet:
     key_config: Dict
     config: Dict
     server: Optional[ChiaServer]
-    next_address: int = 0
-    pubkey_num_lookup: Dict[bytes, int]
     wallet_state_manager: WalletStateManager
 
     log: logging.Logger
@@ -64,17 +63,13 @@ class Wallet:
             self.log = logging.getLogger(__name__)
 
         self.wallet_state_manager = wallet_state_manager
-        self.pubkey_num_lookup = {}
 
         self.server = None
 
         return self
 
-    def get_next_public_key(self) -> PublicKey:
-        pubkey = self.private_key.public_child(self.next_address).get_public_key()
-        self.pubkey_num_lookup[pubkey.serialize()] = self.next_address
-        self.next_address = self.next_address + 1
-        self.wallet_state_manager.next_address = self.next_address
+    def get_public_key(self, index) -> PublicKey:
+        pubkey = self.private_key.public_child(index).get_public_key()
         return pubkey
 
     async def get_confirmed_balance(self) -> uint64:
@@ -83,40 +78,27 @@ class Wallet:
     async def get_unconfirmed_balance(self) -> uint64:
         return await self.wallet_state_manager.get_unconfirmed_balance()
 
-    def can_generate_puzzle_hash(self, hash: bytes32) -> bool:
-        return any(
-            map(
-                lambda child: hash
-                == puzzle_for_pk(
-                    self.private_key.public_child(child).get_public_key().serialize()
-                ).get_hash(),
-                reversed(range(self.next_address)),
-            )
-        )
+    async def can_generate_puzzle_hash(self, hash: bytes32) -> bool:
+        return await self.wallet_state_manager.tx_store.puzzle_hash_exists(hash)
 
     def puzzle_for_pk(self, pubkey) -> Program:
         return puzzle_for_pk(pubkey)
 
-    def get_new_puzzle(self) -> Program:
-        pubkey: bytes = self.get_next_public_key().serialize()
-        puzzle: Program = puzzle_for_pk(pubkey)
-        return puzzle
-
-    def get_new_puzzlehash(self) -> bytes32:
-        puzzle: Program = self.get_new_puzzle()
+    async def get_new_puzzlehash(self) -> bytes32:
+        index = await self.wallet_state_manager.tx_store.get_max_derivation_path()
+        index += 1
+        pubkey: bytes = self.get_public_key(index).serialize()
+        puzzle: Program = self.puzzle_for_pk(pubkey)
         puzzlehash: bytes32 = puzzle.get_hash()
-        self.wallet_state_manager.puzzlehash_set.add(puzzlehash)
+
+        await self.wallet_state_manager.tx_store.add_derivation_path_of_interest(
+            index, puzzlehash, pubkey, WalletType.STANDARD_WALLET
+        )
+
         return puzzlehash
 
     def set_server(self, server: ChiaServer):
         self.server = server
-
-    def sign(self, value: bytes32, pubkey: PublicKey):
-        private_key = self.private_key.private_child(
-            self.pubkey_num_lookup[pubkey]
-        ).get_private_key()
-        bls_key = BLSPrivateKey(private_key)
-        return bls_key.sign(value)
 
     def make_solution(self, primaries=None, min_time=0, me=None, consumed=None):
         ret = []
@@ -134,12 +116,17 @@ class Wallet:
             ret.append(make_assert_my_coin_id_condition(me["id"]))
         return clvm.to_sexp_f([puzzle_for_conditions(ret), []])
 
-    def get_keys(self, hash: bytes32) -> Optional[Tuple[PublicKey, ExtendedPrivateKey]]:
-        for child in range(self.next_address):
-            pubkey = self.private_key.public_child(child).get_public_key()
-            if hash == puzzle_for_pk(pubkey.serialize()).get_hash():
-                return pubkey, self.private_key.private_child(child).get_private_key()
-        return None
+    async def get_keys(
+        self, hash: bytes32
+    ) -> Optional[Tuple[PublicKey, ExtendedPrivateKey]]:
+        index_for_puzzlehash = await self.wallet_state_manager.tx_store.index_for_puzzle_hash(
+            hash
+        )
+        if index_for_puzzlehash == -1:
+            raise
+        pubkey = self.private_key.public_child(index_for_puzzlehash).get_public_key()
+        private = self.private_key.private_child(index_for_puzzlehash).get_private_key()
+        return pubkey, private
 
     async def generate_unsigned_transaction(
         self, amount: int, newpuzzlehash: bytes32, fee: int = 0
@@ -153,7 +140,7 @@ class Wallet:
         change = spend_value - amount - fee
         for coin in utxos:
             puzzle_hash = coin.puzzle_hash
-            maybe = self.get_keys(puzzle_hash)
+            maybe = await self.get_keys(puzzle_hash)
             if not maybe:
                 return []
             pubkey, secretkey = maybe
@@ -161,7 +148,7 @@ class Wallet:
             if output_created is False:
                 primaries = [{"puzzlehash": newpuzzlehash, "amount": amount}]
                 if change > 0:
-                    changepuzzlehash = self.get_new_puzzlehash()
+                    changepuzzlehash = await self.get_new_puzzlehash()
                     primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
 
                 solution = self.make_solution(primaries=primaries)
@@ -171,10 +158,10 @@ class Wallet:
             spends.append((puzzle, CoinSolution(coin, solution)))
         return spends
 
-    def sign_transaction(self, spends: List[Tuple[Program, CoinSolution]]):
+    async def sign_transaction(self, spends: List[Tuple[Program, CoinSolution]]):
         sigs = []
         for puzzle, solution in spends:
-            keys = self.get_keys(solution.coin.puzzle_hash)
+            keys = await self.get_keys(solution.coin.puzzle_hash)
             if not keys:
                 return None
             pubkey, secretkey = keys
@@ -208,7 +195,7 @@ class Wallet:
         )
         if len(transaction) == 0:
             return None
-        return self.sign_transaction(transaction)
+        return await self.sign_transaction(transaction)
 
     async def push_transaction(self, spend_bundle: SpendBundle):
         """ Use this API to send transactions. """
@@ -219,7 +206,10 @@ class Wallet:
         if self.server:
             msg = OutboundMessage(
                 NodeType.FULL_NODE,
-                Message("respond_transaction", full_node_protocol.RespondTransaction(spend_bundle)),
+                Message(
+                    "respond_transaction",
+                    full_node_protocol.RespondTransaction(spend_bundle),
+                ),
                 Delivery.BROADCAST,
             )
             async for reply in self.server.push_message(msg):

@@ -114,11 +114,15 @@ class WalletNode:
 
         additions: List[Coin] = []
 
-        if self.wallet.can_generate_puzzle_hash(response.header.data.coinbase.puzzle_hash):
+        if await self.wallet.can_generate_puzzle_hash(
+            response.header.data.coinbase.puzzle_hash
+        ):
             await self.wallet_state_manager.coin_added(
                 response.header.data.coinbase, response.height, True
             )
-        if self.wallet.can_generate_puzzle_hash(response.header.data.fees_coin.puzzle_hash):
+        if await self.wallet.can_generate_puzzle_hash(
+            response.header.data.fees_coin.puzzle_hash
+        ):
             await self.wallet_state_manager.coin_added(
                 response.header.data.fees_coin, response.height, True
             )
@@ -132,13 +136,13 @@ class WalletNode:
             additions.extend(additions_for_npc(npc_list))
 
             for added_coin in additions:
-                if self.wallet.can_generate_puzzle_hash(added_coin.puzzle_hash):
+                if await self.wallet.can_generate_puzzle_hash(added_coin.puzzle_hash):
                     await self.wallet_state_manager.coin_added(
                         added_coin, response.height, False
                     )
 
             for npc in npc_list:
-                if self.wallet.can_generate_puzzle_hash(npc.puzzle_hash):
+                if await self.wallet.can_generate_puzzle_hash(npc.puzzle_hash):
                     await self.wallet_state_manager.coin_removed(
                         npc.coin_name, response.height
                     )
