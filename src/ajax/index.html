@@ -54,6 +54,7 @@ $(function() {
 });
 
 var connReload=null;
+var connhtml="";
 
 function loadConnections() {
     if(connReload!=null) {
@@ -81,7 +82,10 @@ function loadConnections() {
             }
             outhtml = outhtml + '</ul></div>';
 
-            $('#conndata').html(outhtml);
+            if(outhtml!=connhtml) {
+                $('#conndata').html(outhtml);
+                connhtml=outhtml;
+            }
             $('#connimg').html('<a href="javascript:loadConnections()">Connections</a>');
 
             connReload=setTimeout(function() {
@@ -92,6 +96,7 @@ function loadConnections() {
 }
 
 var poolReload=null;
+var poolhtml="";
 
 function loadPools() {
     if(poolReload!=null) {
@@ -124,7 +129,11 @@ function loadPools() {
             }
             outhtml = outhtml + '</ul></div>';
 
-            $('#pooldata').html(outhtml);
+            if(outhtml!=poolhtml) {
+                $('#pooldata').html(outhtml);
+                poolhtml=outhtml;
+            }
+
             $('#poolimg').html('<a href="javascript:loadPools()">Pools</a>');
             
             poolReload=setTimeout(function() {
@@ -136,6 +145,7 @@ function loadPools() {
 }
 
 var blockReload=null;
+var blockhtml="";
 
 function loadBlocks(hash) {
     if(blockReload!=null) {
@@ -311,8 +321,10 @@ function htmlBlocks(added_blocks, tips, lca_block) {
         }
         outhtml = outhtml + '</ul></div>';
     }
-
-    $('#blockdata').html(outhtml);
+    if(outhtml!=blockhtml) {
+        $('#blockdata').html(outhtml);
+        blockhtml=outhtml;
+    }
     $('#blockimg').html('<a href="javascript:loadBlocks(null)">Blocks</a>');
 
 }
