@@ -8,7 +8,6 @@ from blspy import PrivateKey
 
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.store import FullNodeStore
-from src.types.body import Body
 from src.types.full_block import FullBlock
 from src.types.hashable.coin import Coin
 from src.types.header import Header, HeaderData
@@ -90,17 +89,24 @@ class TestBlockValidation:
                     blocks[9].header.data.height,
                     bytes([1] * 32),
                     blocks[9].header.data.timestamp,
-                    blocks[9].header.data.filter,
+                    blocks[9].header.data.filter_hash,
                     blocks[9].header.data.proof_of_space_hash,
-                    blocks[9].header.data.body_hash,
                     blocks[9].header.data.weight,
                     blocks[9].header.data.total_iters,
                     blocks[9].header.data.additions_root,
                     blocks[9].header.data.removals_root,
+                    blocks[9].header.data.coinbase,
+                    blocks[9].header.data.coinbase_signature,
+                    blocks[9].header.data.fees_coin,
+                    blocks[9].header.data.aggregated_signature,
+                    blocks[9].header.data.cost,
+                    blocks[9].header.data.extension_data,
+                    blocks[9].header.data.generator_hash,
                 ),
                 blocks[9].header.harvester_signature,
             ),
-            blocks[9].body,
+            blocks[9].transactions_generator,
+            blocks[9].transactions_filter,
         )
         result, removed = await b.receive_block(block_bad)
         assert (result) == ReceiveBlockResult.DISCONNECTED_BLOCK
@@ -117,17 +123,24 @@ class TestBlockValidation:
                     blocks[9].header.data.height,
                     blocks[9].header.data.prev_header_hash,
                     blocks[9].header.data.timestamp - 1000,
-                    blocks[9].header.data.filter,
+                    blocks[9].header.data.filter_hash,
                     blocks[9].header.data.proof_of_space_hash,
-                    blocks[9].header.data.body_hash,
                     blocks[9].header.data.weight,
                     blocks[9].header.data.total_iters,
                     blocks[9].header.data.additions_root,
                     blocks[9].header.data.removals_root,
+                    blocks[9].header.data.coinbase,
+                    blocks[9].header.data.coinbase_signature,
+                    blocks[9].header.data.fees_coin,
+                    blocks[9].header.data.aggregated_signature,
+                    blocks[9].header.data.cost,
+                    blocks[9].header.data.extension_data,
+                    blocks[9].header.data.generator_hash,
                 ),
                 blocks[9].header.harvester_signature,
             ),
-            blocks[9].body,
+            blocks[9].transactions_generator,
+            blocks[9].transactions_filter,
         )
         result, removed = await b.receive_block(block_bad)
         assert (result) == ReceiveBlockResult.INVALID_BLOCK
@@ -141,23 +154,30 @@ class TestBlockValidation:
                     blocks[9].header.data.height,
                     blocks[9].header.data.prev_header_hash,
                     uint64(int(time.time() + 3600 * 3)),
-                    blocks[9].header.data.filter,
+                    blocks[9].header.data.filter_hash,
                     blocks[9].header.data.proof_of_space_hash,
-                    blocks[9].header.data.body_hash,
                     blocks[9].header.data.weight,
                     blocks[9].header.data.total_iters,
                     blocks[9].header.data.additions_root,
                     blocks[9].header.data.removals_root,
+                    blocks[9].header.data.coinbase,
+                    blocks[9].header.data.coinbase_signature,
+                    blocks[9].header.data.fees_coin,
+                    blocks[9].header.data.aggregated_signature,
+                    blocks[9].header.data.cost,
+                    blocks[9].header.data.extension_data,
+                    blocks[9].header.data.generator_hash,
                 ),
                 blocks[9].header.harvester_signature,
             ),
-            blocks[9].body,
+            blocks[9].transactions_generator,
+            blocks[9].transactions_filter,
         )
         result, removed = await b.receive_block(block_bad)
         assert (result) == ReceiveBlockResult.INVALID_BLOCK
 
     @pytest.mark.asyncio
-    async def test_body_hash(self, initial_blockchain):
+    async def test_generator_hash(self, initial_blockchain):
         blocks, b = initial_blockchain
         block_bad = FullBlock(
             blocks[9].proof_of_space,
@@ -167,17 +187,24 @@ class TestBlockValidation:
                     blocks[9].header.data.height,
                     blocks[9].header.data.prev_header_hash,
                     blocks[9].header.data.timestamp,
-                    blocks[9].header.data.filter,
+                    blocks[9].header.data.filter_hash,
                     blocks[9].header.data.proof_of_space_hash,
-                    bytes([1] * 32),
                     blocks[9].header.data.weight,
                     blocks[9].header.data.total_iters,
                     blocks[9].header.data.additions_root,
                     blocks[9].header.data.removals_root,
+                    blocks[9].header.data.coinbase,
+                    blocks[9].header.data.coinbase_signature,
+                    blocks[9].header.data.fees_coin,
+                    blocks[9].header.data.aggregated_signature,
+                    blocks[9].header.data.cost,
+                    blocks[9].header.data.extension_data,
+                    bytes([1] * 32),
                 ),
                 blocks[9].header.harvester_signature,
             ),
-            blocks[9].body,
+            blocks[9].transactions_generator,
+            blocks[9].transactions_filter,
         )
         result, removed = await b.receive_block(block_bad)
         assert result == ReceiveBlockResult.INVALID_BLOCK
@@ -193,7 +220,8 @@ class TestBlockValidation:
                 blocks[9].header.data,
                 PrivateKey.from_seed(b"0").sign_prepend(b"random junk"),
             ),
-            blocks[9].body,
+            blocks[9].transactions_generator,
+            blocks[9].transactions_filter,
         )
         result, removed = await b.receive_block(block_bad)
         assert result == ReceiveBlockResult.INVALID_BLOCK
@@ -215,7 +243,8 @@ class TestBlockValidation:
             ),
             blocks[9].proof_of_time,
             blocks[9].header,
-            blocks[9].body,
+            blocks[9].transactions_generator,
+            blocks[9].transactions_filter,
         )
         result, removed = await b.receive_block(block_bad)
         assert result == ReceiveBlockResult.INVALID_BLOCK
@@ -228,20 +257,33 @@ class TestBlockValidation:
         block_bad = FullBlock(
             blocks[9].proof_of_space,
             blocks[9].proof_of_time,
-            blocks[9].header,
-            Body(
-                Coin(
-                    blocks[7].body.coinbase.parent_coin_info,
-                    blocks[9].body.coinbase.puzzle_hash,
-                    uint64(9999999999),
+            Header(
+                HeaderData(
+                    blocks[9].header.data.height,
+                    blocks[9].header.data.prev_header_hash,
+                    blocks[9].header.data.timestamp,
+                    blocks[9].header.data.filter_hash,
+                    blocks[9].header.data.proof_of_space_hash,
+                    blocks[9].header.data.weight,
+                    blocks[9].header.data.total_iters,
+                    blocks[9].header.data.additions_root,
+                    blocks[9].header.data.removals_root,
+                    Coin(
+                        blocks[9].header.data.coinbase.parent_coin_info,
+                        blocks[9].header.data.coinbase.puzzle_hash,
+                        uint64(9999999999),
+                    ),
+                    blocks[9].header.data.coinbase_signature,
+                    blocks[9].header.data.fees_coin,
+                    blocks[9].header.data.aggregated_signature,
+                    blocks[9].header.data.cost,
+                    blocks[9].header.data.extension_data,
+                    blocks[9].header.data.generator_hash,
                 ),
-                blocks[9].body.coinbase_signature,
-                blocks[9].body.fees_coin,
-                None,
-                blocks[9].body.aggregated_signature,
-                blocks[9].body.cost,
-                blocks[9].body.extension_data,
+                blocks[9].header.harvester_signature,
             ),
+            blocks[9].transactions_generator,
+            blocks[9].transactions_filter,
         )
         result, removed = await b.receive_block(block_bad)
         assert result == ReceiveBlockResult.INVALID_BLOCK
@@ -324,7 +366,6 @@ class TestReorgs:
             test_constants, 21, [blocks[0]], 9, b"3"
         )
         for i in range(1, len(blocks_reorg_chain)):
-            print("I", i)
             reorg_block = blocks_reorg_chain[i]
             result, removed = await b.receive_block(reorg_block)
             if reorg_block.height == 0:

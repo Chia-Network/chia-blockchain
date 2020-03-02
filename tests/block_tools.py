@@ -16,7 +16,6 @@ from src.consensus import block_rewards, pot_iterations
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_ips_from_iterations
 from src.pool import create_coinbase_coin_and_signature
-from src.types.body import Body
 from src.types.challenge import Challenge
 from src.types.classgroup import ClassgroupElement
 from src.types.full_block import FullBlock, additions_for_npc
@@ -438,20 +437,11 @@ class BlockTools:
         fee_hash = blspy.Util.hash256(coinbase_coin.name())
         fees_coin = Coin(fee_hash, reward_puzzlehash, uint64(fee_reward))
 
-        body: Body = Body(
-            coinbase_coin,
-            coinbase_signature,
-            fees_coin,
-            transactions,
-            aggsig,
-            cost,
-            extension_data,
-        )
-
         # Create filter
         byte_array_tx: List[bytes32] = []
         tx_additions: List[Coin] = []
         tx_removals: List[bytes32] = []
+        encoded = None
         if transactions:
             error, npc_list, _ = get_name_puzzle_conditions(transactions)
             additions: List[Coin] = additions_for_npc(npc_list)
@@ -462,11 +452,8 @@ class BlockTools:
                 tx_removals.append(npc.coin_name)
                 byte_array_tx.append(bytearray(npc.coin_name))
 
-        byte_array_tx.append(bytearray(coinbase_coin.puzzle_hash))
-        byte_array_tx.append(bytearray(fees_coin.puzzle_hash))
-
-        bip158: PyBIP158 = PyBIP158(byte_array_tx)
-        encoded = bytes(bip158.GetEncoded())
+            bip158: PyBIP158 = PyBIP158(byte_array_tx)
+            encoded = bytes(bip158.GetEncoded())
 
         removal_merkle_set = MerkleSet()
         addition_merkle_set = MerkleSet()
@@ -494,24 +481,37 @@ class BlockTools:
         additions_root = addition_merkle_set.get_root()
         removal_root = removal_merkle_set.get_root()
 
+        generator_hash = (
+            transactions.get_hash() if transactions is not None else bytes32([0] * 32)
+        )
+        filter_hash = std_hash(encoded) if encoded is not None else bytes32([0] * 32)
+
         header_data: HeaderData = HeaderData(
             height,
             prev_header_hash,
             timestamp,
-            encoded,
+            filter_hash,
             proof_of_space.get_hash(),
-            body.get_hash(),
             uint64(prev_weight + difficulty),
             uint64(prev_iters + number_iters),
             additions_root,
             removal_root,
+            coinbase_coin,
+            coinbase_signature,
+            fees_coin,
+            aggsig,
+            cost,
+            extension_data,
+            generator_hash,
         )
 
         header_hash_sig: PrependSignature = plot_sk.sign_prepend(header_data.get_hash())
 
         header: Header = Header(header_data, header_hash_sig)
 
-        full_block: FullBlock = FullBlock(proof_of_space, proof_of_time, header, body)
+        full_block: FullBlock = FullBlock(
+            proof_of_space, proof_of_time, header, transactions, encoded
+        )
 
         return full_block
 

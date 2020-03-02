@@ -114,19 +114,19 @@ class WalletNode:
 
         additions: List[Coin] = []
 
-        if self.wallet.can_generate_puzzle_hash(response.body.coinbase.puzzle_hash):
+        if self.wallet.can_generate_puzzle_hash(response.header.data.coinbase.puzzle_hash):
             await self.wallet_state_manager.coin_added(
-                response.body.coinbase, response.height, True
+                response.header.data.coinbase, response.height, True
             )
-        if self.wallet.can_generate_puzzle_hash(response.body.fees_coin.puzzle_hash):
+        if self.wallet.can_generate_puzzle_hash(response.header.data.fees_coin.puzzle_hash):
             await self.wallet_state_manager.coin_added(
-                response.body.fees_coin, response.height, True
+                response.header.data.fees_coin, response.height, True
             )
 
         npc_list: List[NPC]
-        if response.body.transactions:
+        if response.transactions_generator:
             error, npc_list, cost = get_name_puzzle_conditions(
-                response.body.transactions
+                response.transactions_generator
             )
 
             additions.extend(additions_for_npc(npc_list))

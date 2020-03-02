@@ -342,8 +342,8 @@ class MempoolManager:
         This function removes removals and additions that happened in block from mempool.
         """
         removals, additions = await new_tip.tx_removals_and_additions()
-        additions.append(new_tip.body.coinbase)
-        additions.append(new_tip.body.fees_coin)
+        additions.append(new_tip.header.data.coinbase)
+        additions.append(new_tip.header.data.fees_coin)
         pool.header = new_tip.header
         items: Dict[bytes32, MempoolItem] = {}
 

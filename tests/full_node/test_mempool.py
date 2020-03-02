@@ -49,7 +49,7 @@ class TestMempool:
             pass
 
         spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.body.coinbase
+            1000, receiver_puzzlehash, block.header.data.coinbase
         )
         assert spend_bundle is not None
         tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
@@ -83,7 +83,7 @@ class TestMempool:
             pass
 
         spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.body.coinbase
+            1000, receiver_puzzlehash, block.header.data.coinbase
         )
         assert spend_bundle is not None
         tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
@@ -135,7 +135,7 @@ class TestMempool:
             pass
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.body.coinbase
+            1000, receiver_puzzlehash, block.header.data.coinbase
         )
 
         assert spend_bundle1 is not None
@@ -149,7 +149,7 @@ class TestMempool:
 
         other_receiver = WalletTool()
         spend_bundle2 = wallet_a.generate_signed_transaction(
-            1000, other_receiver.get_new_puzzlehash(), block.body.coinbase
+            1000, other_receiver.get_new_puzzlehash(), block.header.data.coinbase
         )
         assert spend_bundle2 is not None
         tx2: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
@@ -184,7 +184,7 @@ class TestMempool:
             pass
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.body.coinbase
+            1000, receiver_puzzlehash, block.header.data.coinbase
         )
         assert spend_bundle1 is not None
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
@@ -196,7 +196,7 @@ class TestMempool:
             assert outbound.message.function == "new_transaction"
 
         spend_bundle2 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.body.coinbase, fee=1
+            1000, receiver_puzzlehash, block.header.data.coinbase, fee=1
         )
 
         assert spend_bundle2 is not None
@@ -239,7 +239,7 @@ class TestMempool:
         dic = {ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.body.coinbase, dic
+            1000, receiver_puzzlehash, block.header.data.coinbase, dic
         )
 
         assert spend_bundle1 is not None
@@ -282,7 +282,7 @@ class TestMempool:
         dic = {ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.body.coinbase, dic
+            1000, receiver_puzzlehash, block.header.data.coinbase, dic
         )
 
         assert spend_bundle1 is not None
@@ -323,7 +323,7 @@ class TestMempool:
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.body.coinbase, dic
+            1000, receiver_puzzlehash, block.header.data.coinbase, dic
         )
 
         assert spend_bundle1 is not None
@@ -366,7 +366,7 @@ class TestMempool:
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.body.coinbase, dic
+            1000, receiver_puzzlehash, block.header.data.coinbase, dic
         )
 
         assert spend_bundle1 is not None
@@ -404,12 +404,12 @@ class TestMempool:
                 pass
 
         cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_MY_COIN_ID, block.body.coinbase.name(), None
+            ConditionOpcode.ASSERT_MY_COIN_ID, block.header.data.coinbase.name(), None
         )
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.body.coinbase, dic
+            1000, receiver_puzzlehash, block.header.data.coinbase, dic
         )
 
         assert spend_bundle1 is not None
@@ -447,12 +447,14 @@ class TestMempool:
                 pass
 
         cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_MY_COIN_ID, blocks[2].body.coinbase.name(), None
+            ConditionOpcode.ASSERT_MY_COIN_ID,
+            blocks[2].header.data.coinbase.name(),
+            None,
         )
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.body.coinbase, dic
+            1000, receiver_puzzlehash, block.header.data.coinbase, dic
         )
 
         assert spend_bundle1 is not None
@@ -497,7 +499,7 @@ class TestMempool:
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.body.coinbase, dic
+            1000, receiver_puzzlehash, block.header.data.coinbase, dic
         )
 
         assert spend_bundle1 is not None
@@ -545,7 +547,7 @@ class TestMempool:
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.body.coinbase, dic
+            1000, receiver_puzzlehash, block.header.data.coinbase, dic
         )
 
         assert spend_bundle1 is not None

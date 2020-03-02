@@ -31,9 +31,9 @@ class TestCostCalculation:
         )
 
         spend_bundle = wallet_tool.generate_signed_transaction(
-            blocks[1].body.coinbase.amount,
+            blocks[1].header.data.coinbase.amount,
             receiver.get_new_puzzlehash(),
-            blocks[1].body.coinbase,
+            blocks[1].header.data.coinbase,
         )
         assert spend_bundle is not None
         program = best_solution_program(spend_bundle)

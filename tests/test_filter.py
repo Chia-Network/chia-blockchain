@@ -41,8 +41,8 @@ class TestFilter:
         for i in range(1, num_blocks):
             byte_array_tx: List[bytes] = []
             block = blocks[i]
-            coinbase = bytearray(block.body.coinbase.puzzle_hash)
-            fee = bytearray(block.body.fees_coin.puzzle_hash)
+            coinbase = bytearray(block.header.data.coinbase.puzzle_hash)
+            fee = bytearray(block.header.data.fees_coin.puzzle_hash)
             byte_array_tx.append(coinbase)
             byte_array_tx.append(fee)
 

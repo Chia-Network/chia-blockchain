@@ -4,7 +4,7 @@ import aiosqlite
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from src.types.body import Body
+from src.types.hashable.program import Program
 from src.types.full_block import FullBlock
 from src.types.header import HeaderData, Header
 from src.types.header_block import HeaderBlock
@@ -42,7 +42,10 @@ class FullNodeStore:
     # Our best unfinished block
     unfinished_blocks_leader: Tuple[uint32, uint64]
     # Blocks which we have created, but don't have proof of space yet, old ones are cleared
-    candidate_blocks: Dict[bytes32, Tuple[Body, HeaderData, ProofOfSpace, uint32]]
+    candidate_blocks: Dict[
+        bytes32,
+        Tuple[Optional[Program], Optional[bytes], HeaderData, ProofOfSpace, uint32],
+    ]
     # Blocks which are not finalized yet (no proof of time), old ones are cleared
     unfinished_blocks: Dict[Tuple[bytes32, uint64], FullBlock]
     # Header hashes of unfinished blocks that we have seen recently
@@ -270,25 +273,32 @@ class FullNodeStore:
     def add_candidate_block(
         self,
         pos_hash: bytes32,
-        body: Body,
+        transactions_generator: Optional[Program],
+        transactions_filter: Optional[bytes],
         header: HeaderData,
         pos: ProofOfSpace,
         height: uint32 = uint32(0),
     ):
-        self.candidate_blocks[pos_hash] = (body, header, pos, height)
+        self.candidate_blocks[pos_hash] = (
+            transactions_generator,
+            transactions_filter,
+            header,
+            pos,
+            height,
+        )
 
     def get_candidate_block(
         self, pos_hash: bytes32
-    ) -> Optional[Tuple[Body, HeaderData, ProofOfSpace]]:
+    ) -> Optional[Tuple[Optional[Program], Optional[bytes], HeaderData, ProofOfSpace]]:
         res = self.candidate_blocks.get(pos_hash, None)
         if res is None:
             return None
-        return (res[0], res[1], res[2])
+        return (res[0], res[1], res[2], res[3])
 
     def clear_candidate_blocks_below(self, height: uint32) -> None:
         del_keys = []
         for key, value in self.candidate_blocks.items():
-            if value[3] < height:
+            if value[4] < height:
                 del_keys.append(key)
         for key in del_keys:
             try:

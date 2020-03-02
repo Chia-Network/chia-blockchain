@@ -35,7 +35,7 @@ async def start_ssh_server(ssh_port: int, ssh_key_filename: str, rpc_port: int):
     uis = []  # type: ignore
     permenantly_closed = False
     ssh_server = None
-    node_stop_task: Optional[asyncio.Task] = None
+    node_stop_task = None
 
     rpc_client: RpcClient = await RpcClient.create(rpc_port)
 

@@ -1,10 +1,11 @@
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
-from src.types.body import Body
 from src.types.hashable.coin import Coin
 from src.types.hashable.spend_bundle import SpendBundle
 from src.types.header_block import HeaderBlock
+from src.types.header import Header
+from src.types.hashable.program import Program
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
 from src.util.ints import uint32
@@ -44,16 +45,15 @@ class RequestHeader:
 
 @dataclass(frozen=True)
 @cbor_message
-class Header:
+class RespondHeader:
     header_block: HeaderBlock
     bip158_filter: bytes
 
 
 @dataclass(frozen=True)
 @cbor_message
-class RequestAncestors:
-    header_hash: bytes32
-    previous_heights_desired: List[uint32]
+class RequestAllProofHashes:
+    pass
 
 
 @dataclass(frozen=True)
@@ -72,7 +72,8 @@ class RequestBody:
 @dataclass(frozen=True)
 @cbor_message
 class RespondBody:
-    body: Body
+    header: Header
+    transactions_generator: Optional[Program]
     height: uint32
 
 

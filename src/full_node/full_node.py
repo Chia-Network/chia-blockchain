@@ -22,7 +22,6 @@ from src.util.bundle_tools import best_solution_program
 from src.full_node.mempool_manager import MempoolManager
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
-from src.types.body import Body
 from src.types.challenge import Challenge
 from src.types.full_block import FullBlock
 from src.types.hashable.coin import Coin, hash_coin_list
@@ -1234,20 +1233,12 @@ class FullNode:
         extension_data: bytes32 = bytes32([0] * 32)
 
         # Creates a block with transactions, coinbase, and fees
-        body: Body = Body(
-            request.coinbase,
-            request.coinbase_signature,
-            fees_coin,
-            solution_program,
-            aggregate_sig,
-            cost,
-            extension_data,
-        )
         # Creates the block header
         prev_header_hash: bytes32 = target_tip.get_hash()
         timestamp: uint64 = uint64(int(time.time()))
 
         # Create filter
+        encoded_filter: Optional[bytes] = None
         byte_array_tx: List[bytes32] = []
         if spend_bundle:
             additions: List[Coin] = spend_bundle.additions()
@@ -1256,14 +1247,11 @@ class FullNode:
                 byte_array_tx.append(bytearray(coin.puzzle_hash))
             for coin in removals:
                 byte_array_tx.append(bytearray(coin.name()))
-        byte_array_tx.append(bytearray(request.coinbase.puzzle_hash))
-        byte_array_tx.append(bytearray(fees_coin.puzzle_hash))
 
-        bip158: PyBIP158 = PyBIP158(byte_array_tx)
-        encoded_filter = bytes(bip158.GetEncoded())
+            bip158: PyBIP158 = PyBIP158(byte_array_tx)
+            encoded_filter = bytes(bip158.GetEncoded())
 
         proof_of_space_hash: bytes32 = request.proof_of_space.get_hash()
-        body_hash: Body = body.get_hash()
         difficulty = self.blockchain.get_next_difficulty(target_tip.header_hash)
 
         assert target_tip_block is not None
@@ -1309,17 +1297,33 @@ class FullNode:
         additions_root = addition_merkle_set.get_root()
         removal_root = removal_merkle_set.get_root()
 
+        generator_hash = (
+            solution_program.get_hash()
+            if solution_program is not None
+            else bytes32([0] * 32)
+        )
+        filter_hash = (
+            std_hash(encoded_filter)
+            if encoded_filter is not None
+            else bytes32([0] * 32)
+        )
         block_header_data: HeaderData = HeaderData(
             uint32(target_tip.height + 1),
             prev_header_hash,
             timestamp,
-            encoded_filter,
+            filter_hash,
             proof_of_space_hash,
-            body_hash,
             target_tip.weight + difficulty,
             uint64(target_tip.data.total_iters + iterations_needed),
             additions_root,
             removal_root,
+            request.coinbase,
+            request.coinbase_signature,
+            fees_coin,
+            aggregate_sig,
+            cost,
+            extension_data,
+            generator_hash,
         )
 
         block_header_data_hash: bytes32 = block_header_data.get_hash()
@@ -1327,7 +1331,8 @@ class FullNode:
         # Stores this block so we can submit it to the blockchain after it's signed by harvester
         self.store.add_candidate_block(
             proof_of_space_hash,
-            body,
+            solution_program,
+            encoded_filter,
             block_header_data,
             request.proof_of_space,
             target_tip.height + 1,
@@ -1350,7 +1355,7 @@ class FullNode:
         we call the unfinished_block routine.
         """
         candidate: Optional[
-            Tuple[Body, HeaderData, ProofOfSpace]
+            Tuple[Optional[Program], Optional[bytes], HeaderData, ProofOfSpace]
         ] = self.store.get_candidate_block(header_signature.pos_hash)
         if candidate is None:
             self.log.warning(
@@ -1358,14 +1363,16 @@ class FullNode:
             )
             return
         # Verifies that we have the correct header and body self.stored
-        block_body, block_header_data, pos = candidate
+        generator, filt, block_header_data, pos = candidate
 
         assert block_header_data.get_hash() == header_signature.header_hash
 
         block_header: Header = Header(
             block_header_data, header_signature.header_signature
         )
-        unfinished_block_obj: FullBlock = FullBlock(pos, None, block_header, block_body)
+        unfinished_block_obj: FullBlock = FullBlock(
+            pos, None, block_header, generator, filt
+        )
 
         # Propagate to ourselves (which validates and does further propagations)
         request = full_node_protocol.RespondUnfinishedBlock(unfinished_block_obj)
@@ -1400,7 +1407,8 @@ class FullNode:
             unfinished_block_obj.proof_of_space,
             request.proof,
             unfinished_block_obj.header,
-            unfinished_block_obj.body,
+            unfinished_block_obj.transactions_generator,
+            unfinished_block_obj.transactions_filter,
         )
 
         if self.store.get_sync_mode():

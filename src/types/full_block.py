@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Tuple, List, Optional
 
 from src.types.name_puzzle_condition import NPC
-from src.types.body import Body
+from src.types.hashable.program import Program
 from src.types.hashable.coin import Coin
 from src.types.header import Header
 from src.types.sized_bytes import bytes32
@@ -32,7 +32,8 @@ class FullBlock(Streamable):
     proof_of_space: ProofOfSpace
     proof_of_time: Optional[ProofOfTime]
     header: Header
-    body: Body
+    transactions_generator: Optional[Program]
+    transactions_filter: Optional[bytes]
 
     @property
     def prev_header_hash(self) -> bytes32:
@@ -53,15 +54,17 @@ class FullBlock(Streamable):
     def additions(self) -> List[Coin]:
         additions: List[Coin] = []
 
-        if self.body.transactions is not None:
+        if self.transactions_generator is not None:
             # This should never throw here, block must be valid if it comes to here
-            err, npc_list, cost = get_name_puzzle_conditions(self.body.transactions)
+            err, npc_list, cost = get_name_puzzle_conditions(
+                self.transactions_generator
+            )
             # created coins
             if npc_list is not None:
                 additions.extend(additions_for_npc(npc_list))
 
-        additions.append(self.body.coinbase)
-        additions.append(self.body.fees_coin)
+        additions.append(self.header.data.coinbase)
+        additions.append(self.header.data.fees_coin)
 
         return additions
 
@@ -74,9 +77,11 @@ class FullBlock(Streamable):
         removals: List[bytes32] = []
         additions: List[Coin] = []
 
-        if self.body.transactions is not None:
+        if self.transactions_generator is not None:
             # This should never throw here, block must be valid if it comes to here
-            err, npc_list, cost = get_name_puzzle_conditions(self.body.transactions)
+            err, npc_list, cost = get_name_puzzle_conditions(
+                self.transactions_generator
+            )
             # build removals list
             if npc_list is None:
                 return [], []

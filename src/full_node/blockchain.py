@@ -31,6 +31,7 @@ from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.errors import InvalidGenesisBlock
 from src.util.ints import uint32, uint64
 from src.types.challenge import Challenge
+from src.util.hash import std_hash
 
 log = logging.getLogger(__name__)
 
@@ -511,16 +512,12 @@ class Blockchain:
             if block.proof_of_space.get_hash() != block.header.data.proof_of_space_hash:
                 return False
 
-            # 2. Check body hash
-            if block.body.get_hash() != block.header.data.body_hash:
-                return False
-
             # 3. Check coinbase signature with pool pk
-            pair = block.body.coinbase_signature.PkMessagePair(
-                block.proof_of_space.pool_pubkey, block.body.coinbase.name(),
+            pair = block.header.data.coinbase_signature.PkMessagePair(
+                block.proof_of_space.pool_pubkey, block.header.data.coinbase.name(),
             )
 
-            if not block.body.coinbase_signature.validate([pair]):
+            if not block.header.data.coinbase_signature.validate([pair]):
                 return False
 
             # 4. Check harvester signature of header data is valid based on harvester key
@@ -559,7 +556,10 @@ class Blockchain:
             ):
                 return False
 
-        # 7. Check filter hash is correct TODO
+        # 7. Check filter hash is correct
+        if block.header.data.filter_hash != bytes32([0] * 32):
+            if std_hash(block.transactions_filter) != block.header.data.filter_hash:
+                return False
 
         # 8. Check extension data, if any is added
 
@@ -681,19 +681,19 @@ class Blockchain:
                 return False
 
             coinbase_reward = calculate_block_reward(block.height)
-            if coinbase_reward != block.body.coinbase.amount:
+            if coinbase_reward != block.header.data.coinbase.amount:
                 return False
             fee_base = calculate_base_fee(block.height)
 
             # 8 Validate transactions
             # target reward_fee = 1/8 coinbase reward + tx fees
-            if block.body.transactions:
+            if block.transactions_generator:
                 # Validate transactions, and verify that fee_base + TX fees = fee_coin.amount
                 err = await self._validate_transactions(block, fee_base)
                 if err:
                     return False
             else:
-                if fee_base != block.body.fees_coin.amount:
+                if fee_base != block.header.data.fees_coin.amount:
                     return False
                 root_error = self._validate_merkle_root(block)
                 if root_error:
@@ -932,8 +932,8 @@ class Blockchain:
         if tx_removals:
             removals.extend(tx_removals)
 
-        additions.append(block.body.coinbase)
-        additions.append(block.body.fees_coin)
+        additions.append(block.header.data.coinbase)
+        additions.append(block.header.data.fees_coin)
 
         removal_merkle_set = MerkleSet()
         addition_merkle_set = MerkleSet()
@@ -969,10 +969,10 @@ class Blockchain:
         self, block: FullBlock, fee_base: uint64
     ) -> Optional[Err]:
 
-        if not block.body.transactions:
+        if not block.transactions_generator:
             return Err.UNKNOWN
         # Get List of names removed, puzzles hashes for removed coins and conditions crated
-        error, npc_list, cost = get_name_puzzle_conditions(block.body.transactions)
+        error, npc_list, cost = get_name_puzzle_conditions(block.transactions_generator)
 
         if cost > self.constants["MAX_BLOCK_COST"]:
             return Err.BLOCK_COST_EXCEEDS_MAX
@@ -1003,6 +1003,8 @@ class Blockchain:
         root_error = self._validate_merkle_root(block, additions, removals)
         if root_error:
             return root_error
+
+        # TODO(straya): validate filter
 
         # Watch out for duplicate outputs
         addition_counter = collections.Counter(_.name() for _ in additions)
@@ -1055,7 +1057,7 @@ class Blockchain:
         fees = removed - added
 
         # Check coinbase reward
-        if fees + fee_base != block.body.fees_coin.amount:
+        if fees + fee_base != block.header.data.fees_coin.amount:
             return Err.BAD_COINBASE_REWARD
 
         # Verify that removed coin puzzle_hashes match with calculated puzzle_hashes
@@ -1077,9 +1079,9 @@ class Blockchain:
             )
 
         # Verify aggregated signature
-        if not block.body.aggregated_signature:
+        if not block.header.data.aggregated_signature:
             return Err.BAD_AGGREGATE_SIGNATURE
-        if not block.body.aggregated_signature.validate(hash_key_pairs):
+        if not block.header.data.aggregated_signature.validate(hash_key_pairs):
             return Err.BAD_AGGREGATE_SIGNATURE
 
         return None

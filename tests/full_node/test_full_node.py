@@ -100,7 +100,7 @@ class TestFullNode:
         spend_bundle = wallet_a.generate_signed_transaction(
             100,
             receiver_puzzlehash,
-            blocks[1].body.coinbase,
+            blocks[1].header.data.coinbase,
             condition_dic=conditions_dict,
         )
         assert spend_bundle is not None
@@ -197,7 +197,7 @@ class TestFullNode:
 
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
         spend_bundle = wallet_a.generate_signed_transaction(
-            100, receiver_puzzlehash, blocks[2].body.coinbase,
+            100, receiver_puzzlehash, blocks[2].header.data.coinbase,
         )
         assert spend_bundle is not None
         respond_transaction = fnp.RespondTransaction(spend_bundle)
@@ -225,7 +225,7 @@ class TestFullNode:
 
         # Invalid transaction does not propagate
         spend_bundle = wallet_a.generate_signed_transaction(
-            100000000000000, receiver_puzzlehash, blocks[3].body.coinbase,
+            100000000000000, receiver_puzzlehash, blocks[3].header.data.coinbase,
         )
         assert spend_bundle is not None
         respond_transaction = fnp.RespondTransaction(spend_bundle)
@@ -255,7 +255,8 @@ class TestFullNode:
             blocks_new[-1].proof_of_space,
             None,
             blocks_new[-1].header,
-            blocks_new[-1].body,
+            blocks_new[-1].transactions_generator,
+            blocks_new[-1].transactions_filter,
         )
         unf_block_req = fnp.RespondUnfinishedBlock(unf_block)
 
@@ -336,7 +337,8 @@ class TestFullNode:
             blocks_new[-1].proof_of_space,
             None,
             blocks_new[-1].header,
-            blocks_new[-1].body,
+            blocks_new[-1].transactions_generator,
+            blocks_new[-1].transactions_filter,
         )
         unf_block_req = fnp.RespondUnfinishedBlock(unf_block)
         [x async for x in full_node_1.respond_unfinished_block(unf_block_req)]
@@ -395,7 +397,8 @@ class TestFullNode:
             blocks_new[-1].proof_of_space,
             None,
             blocks_new[-1].header,
-            blocks_new[-1].body,
+            blocks_new[-1].transactions_generator,
+            blocks_new[-1].transactions_filter,
         )
         unf_block_req = fnp.RespondUnfinishedBlock(unf_block)
         [x async for x in full_node_1.respond_unfinished_block(unf_block_req)]
@@ -425,7 +428,8 @@ class TestFullNode:
             blocks_new[-1].proof_of_space,
             None,
             blocks_new[-1].header,
-            blocks_new[-1].body,
+            blocks_new[-1].transactions_generator,
+            blocks_new[-1].transactions_filter,
         )
         unf_block_req = fnp.RespondUnfinishedBlock(unf_block)
 
@@ -487,7 +491,8 @@ class TestFullNode:
             blocks_new[30].proof_of_space,
             None,
             blocks_new[30].header,
-            blocks_new[30].body,
+            blocks_new[30].transactions_generator,
+            blocks_new[30].transactions_filter,
         )
 
         unf_block_req_bad = fnp.RespondUnfinishedBlock(unf_block_not_child)
@@ -510,7 +515,8 @@ class TestFullNode:
                 candidates[index].proof_of_space,
                 None,
                 candidates[index].header,
-                candidates[index].body,
+                candidates[index].transactions_generator,
+                candidates[index].transactions_filter,
             )
             return fnp.RespondUnfinishedBlock(unf_block)
 
@@ -587,7 +593,8 @@ class TestFullNode:
             blocks_new_3[-1].proof_of_space,
             None,
             blocks_new_3[-1].header,
-            blocks_new_3[-1].body,
+            blocks_new_3[-1].transactions_generator,
+            blocks_new_3[-1].transactions_filter,
         )
 
         unf_block_new_req = fnp.RespondUnfinishedBlock(unf_block_new)
@@ -705,7 +712,8 @@ class TestFullNode:
             ),
             blocks_new[-5].proof_of_time,
             blocks_new[-5].header,
-            blocks_new[-5].body,
+            blocks_new[-5].transactions_generator,
+            blocks_new[-5].transactions_filter,
         )
         msgs = [
             _ async for _ in full_node_1.respond_block(fnp.RespondBlock(block_invalid))

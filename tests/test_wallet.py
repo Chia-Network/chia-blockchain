@@ -4,7 +4,6 @@ import pytest
 from blspy import ExtendedPrivateKey
 
 from src.protocols.wallet_protocol import RespondBody
-from src.wallet.wallet import Wallet
 from src.wallet.wallet_node import WalletNode
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 
@@ -41,7 +40,9 @@ class TestWallet:
         )
 
         for i in range(1, num_blocks):
-            a = RespondBody(blocks[i].body, blocks[i].height)
+            a = RespondBody(
+                blocks[i].header, blocks[i].transactions_generator, blocks[i].height
+            )
             await wallet_node.received_body(a)
 
         assert await wallet.get_confirmed_balance() == 144000000000000
@@ -76,7 +77,9 @@ class TestWallet:
         )
 
         for i in range(1, num_blocks):
-            a = RespondBody(blocks[i].body, blocks[i].height)
+            a = RespondBody(
+                blocks[i].header, blocks[i].transactions_generator, blocks[i].height
+            )
             await wallet_node.received_body(a)
 
         assert await wallet.get_confirmed_balance() == 144000000000000

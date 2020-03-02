@@ -89,7 +89,8 @@ class TestStore:
             # Add/get candidate block
             assert db.get_candidate_block(0) is None
             partial = (
-                blocks[5].body,
+                blocks[5].transactions_generator,
+                blocks[5].transactions_filter,
                 blocks[5].header.data,
                 blocks[5].proof_of_space,
             )

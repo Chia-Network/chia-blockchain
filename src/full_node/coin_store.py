@@ -106,10 +106,10 @@ class CoinStore:
             await self.set_spent(coin_name, block.height)
 
         coinbase: CoinRecord = CoinRecord(
-            block.body.coinbase, block.height, uint32(0), False, True
+            block.header.data.coinbase, block.height, uint32(0), False, True
         )
         fees_coin: CoinRecord = CoinRecord(
-            block.body.fees_coin, block.height, uint32(0), False, True
+            block.header.data.fees_coin, block.height, uint32(0), False, True
         )
 
         await self.add_coin_record(coinbase)
@@ -142,9 +142,9 @@ class CoinStore:
             added: CoinRecord = CoinRecord(coin, block.height, 0, 0, 0)  # type: ignore # noqa
             diff_store.diffs[added.name.hex()] = added
 
-        coinbase: CoinRecord = CoinRecord(block.body.coinbase, block.height, 0, 0, 1)  # type: ignore # noqa
+        coinbase: CoinRecord = CoinRecord(block.header.data.coinbase, block.height, 0, 0, 1)  # type: ignore # noqa
         diff_store.diffs[coinbase.name.hex()] = coinbase
-        fees_coin: CoinRecord = CoinRecord(block.body.fees_coin, block.height, 0, 0, 1)  # type: ignore # noqa
+        fees_coin: CoinRecord = CoinRecord(block.header.data.fees_coin, block.height, 0, 0, 1)  # type: ignore # noqa
         diff_store.diffs[fees_coin.name.hex()] = fees_coin
 
         for coin_name in removals:

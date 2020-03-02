@@ -56,11 +56,11 @@ class TestRpc:
             assert header == blocks[7].header
 
             coins = await client.get_unspent_coins(
-                blocks[-1].body.coinbase.puzzle_hash, blocks[-1].header_hash
+                blocks[-1].header.data.coinbase.puzzle_hash, blocks[-1].header_hash
             )
             assert len(coins) == 16
             coins_lca = await client.get_unspent_coins(
-                blocks[-1].body.coinbase.puzzle_hash
+                blocks[-1].header.data.coinbase.puzzle_hash
             )
             assert len(coins_lca) == 16
 
