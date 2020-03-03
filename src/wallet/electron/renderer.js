@@ -10,7 +10,9 @@ let new_address = document.querySelector('#new_address')
 let copy = document.querySelector("#copy")
 let receiver_address = document.querySelector("#receiver_puzzle_hash")
 let amount = document.querySelector("#amount_to_send")
-
+let table = document.querySelector("#tx_table").getElementsByTagName('tbody')[0]
+let green_checkmark = "<i class=\"icon ion-md-checkmark-circle-outline green\"></i>"
+let red_checkmark = "<i class=\"icon ion-md-close-circle-outline red\"></i>"
 var myBalance = 0
 var myUnconfirmedBalance = 0
 
@@ -108,6 +110,44 @@ async function get_transactions(timeout) {
     })
     .done(function(response) {
         console.log(response)
+        clean_table()
+
+        for (var i = 0; i < response.txs.length; i++) {
+            var tx = JSON.parse(response.txs[i]);
+            console.log(tx);
+            var row = table.insertRow(0);
+            var cell_type = row.insertCell(0);
+            var cell_to = row.insertCell(1);
+            var cell_date = row.insertCell(2);
+            var cell_status = row.insertCell(3);
+            var cell_amount = row.insertCell(4);
+            var cell_fee = row.insertCell(5);
+            //type of transaction
+            if (tx["incoming"]) {
+                cell_type.innerHTML = "Incoming"
+            } else {
+                cell_type.innerHTML = "Outgoing"
+            }
+            // Receiving puzzle hash
+            cell_to.innerHTML = tx["to_puzzle_hash"]
+
+            // Date
+            var date = new Date(parseInt(tx["created_at_time"]) * 1000);
+            cell_date.innerHTML = "" + date
+
+            // Confirmation status
+            if (tx["confirmed"]) {
+                 index = tx["confirmed_block_index"]
+                 cell_status.innerHTML = "Confirmed" + green_checkmark +"</br>" + "Block: " + index;
+            } else {
+                 cell_status.innerHTML = "Pending " + red_checkmark;
+            }
+
+            // Amount and Fee
+            cell_amount.innerHTML = tx["amount"];
+            cell_fee.innerHTML = tx["fee_amount"]
+        }
+
     })
     .fail(function(data) {
         console.log(data)
@@ -138,5 +178,11 @@ async function get_server_ready(timeout) {
     });
 }
 
+function clean_table() {
+    while (table.rows.length > 0) {
+            table.deleteRow(0);
+    }
+}
+clean_table()
 get_server_ready(100)
 

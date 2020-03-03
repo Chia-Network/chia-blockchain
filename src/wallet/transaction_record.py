@@ -12,7 +12,7 @@ from src.util.ints import uint32, uint64
 @streamable
 class TransactionRecord(Streamable):
     """
-    Used for storing transaction data and status in wallets
+    Used for storing transaction data and status in wallets.
     """
 
     confirmed_block_index: uint32
@@ -23,6 +23,10 @@ class TransactionRecord(Streamable):
     spend_bundle: Optional[SpendBundle]
     additions: List[Coin]
     removals: List[Coin]
+    incoming: bool
+    to_puzzle_hash: bytes32
+    amount: uint64
+    fee_amount: uint64
 
     def name(self) -> bytes32:
         if self.spend_bundle:

@@ -1,4 +1,5 @@
 import time
+from secrets import token_bytes
 from typing import Dict, Optional, List, Set, Tuple
 import logging
 from src.types.hashable.coin import Coin
@@ -208,15 +209,45 @@ class WalletStateManager:
         now = uint64(int(time.time()))
         add_list: List[Coin] = []
         rem_list: List[Coin] = []
+        total_removed = 0
+        total_added = 0
+        outgoing_amount = 0
+
         for add in spend_bundle.additions():
+            total_added += add.amount
             add_list.append(add)
         for rem in spend_bundle.removals():
+            total_removed += rem.amount
             rem_list.append(rem)
 
+        fee_amount = total_removed - total_added
+
+        # Figure out if we are sending to ourself or someone else.
+        to_puzzle_hash: Optional[bytes32] = None
+        for add in add_list:
+            if not await self.tx_store.puzzle_hash_exists(add.puzzle_hash):
+                to_puzzlehash = add.puzzle_hash
+                outgoing_amount += to_puzzlehash
+                break
+
+        # If there is no addition for outside puzzlehash we are sending tx to ourself
+        incoming = False
+        if to_puzzle_hash is None:
+            incoming = True
+            to_puzzle_hash = add_list[0]
+
+        if incoming:
+            tx_record = TransactionRecord(
+                uint32(0), uint32(0), False, False, now, spend_bundle,
+                add_list, rem_list, incoming, to_puzzle_hash, total_added, fee_amount
+            )
+        else:
+            tx_record = TransactionRecord(
+                uint32(0), uint32(0), False, False, now, spend_bundle,
+                add_list, rem_list, incoming, to_puzzle_hash, outgoing_amount, fee_amount
+            )
+
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
-        tx_record = TransactionRecord(
-            uint32(0), uint32(0), False, False, now, spend_bundle, add_list, rem_list
-        )
         await self.tx_store.add_transaction_record(tx_record)
 
     async def remove_from_queue(self, spendbundle_id: bytes32):

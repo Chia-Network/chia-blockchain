@@ -36,7 +36,11 @@ class WalletTransactionStore:
                 f" confirmed int,"
                 f" sent int,"
                 f" created_at_time bigint,"
-                f" transaction_record blob)"
+                f" transaction_record blob,"
+                f" incoming int,"
+                f" to_puzzle_hash text,"
+                f" amount int,"
+                f" fee_amount int)"
             )
         )
 
@@ -108,7 +112,7 @@ class WalletTransactionStore:
     # Store TransactionRecord in DB and Cache
     async def add_transaction_record(self, record: TransactionRecord) -> None:
         cursor = await self.transaction_db.execute(
-            "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 record.name().hex(),
                 record.confirmed_block_index,
@@ -117,6 +121,10 @@ class WalletTransactionStore:
                 int(record.sent),
                 record.created_at_time,
                 bytes(record),
+                int(record.incoming),
+                record.to_puzzle_hash.hex(),
+                record.amount,
+                record.fee_amount
             ),
         )
         await cursor.close()
@@ -141,6 +149,8 @@ class WalletTransactionStore:
             current.spend_bundle,
             current.additions,
             current.removals,
+            current.incoming,
+            current.to_puzzle_hash
         )
         await self.add_transaction_record(tx)
 
@@ -158,6 +168,10 @@ class WalletTransactionStore:
             current.spend_bundle,
             current.additions,
             current.removals,
+            current.incoming,
+            current.to_puzzle_hash,
+            current.amount,
+            current.fee_amount
         )
         await self.add_transaction_record(tx)
 
