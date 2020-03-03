@@ -1,6 +1,10 @@
 import time
+<<<<<<< HEAD
 from secrets import token_bytes
 from typing import Dict, Optional, List, Set, Tuple
+=======
+from typing import Dict, Optional, List, Set
+>>>>>>> e31305d... formatting
 import logging
 from src.types.hashable.coin import Coin
 from src.types.hashable.coin_record import CoinRecord
@@ -238,13 +242,33 @@ class WalletStateManager:
 
         if incoming:
             tx_record = TransactionRecord(
-                uint32(0), uint32(0), False, False, now, spend_bundle,
-                add_list, rem_list, incoming, to_puzzle_hash, total_added, fee_amount
+                uint32(0),
+                uint32(0),
+                False,
+                False,
+                now,
+                spend_bundle,
+                add_list,
+                rem_list,
+                incoming,
+                to_puzzle_hash,
+                uint64(total_added),
+                uint64(fee_amount),
             )
         else:
             tx_record = TransactionRecord(
-                uint32(0), uint32(0), False, False, now, spend_bundle,
-                add_list, rem_list, incoming, to_puzzle_hash, outgoing_amount, fee_amount
+                uint32(0),
+                uint32(0),
+                False,
+                False,
+                now,
+                spend_bundle,
+                add_list,
+                rem_list,
+                incoming,
+                to_puzzle_hash,
+                uint64(outgoing_amount),
+                uint64(fee_amount),
             )
 
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it

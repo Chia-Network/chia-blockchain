@@ -124,7 +124,7 @@ class WalletTransactionStore:
                 int(record.incoming),
                 record.to_puzzle_hash.hex(),
                 record.amount,
-                record.fee_amount
+                record.fee_amount,
             ),
         )
         await cursor.close()
@@ -150,7 +150,9 @@ class WalletTransactionStore:
             current.additions,
             current.removals,
             current.incoming,
-            current.to_puzzle_hash
+            current.to_puzzle_hash,
+            current.amount,
+            current.fee_amount,
         )
         await self.add_transaction_record(tx)
 
@@ -171,7 +173,7 @@ class WalletTransactionStore:
             current.incoming,
             current.to_puzzle_hash,
             current.amount,
-            current.fee_amount
+            current.fee_amount,
         )
         await self.add_transaction_record(tx)
 
