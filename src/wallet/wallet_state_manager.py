@@ -230,15 +230,15 @@ class WalletStateManager:
         to_puzzle_hash: Optional[bytes32] = None
         for add in add_list:
             if not await self.tx_store.puzzle_hash_exists(add.puzzle_hash):
-                to_puzzlehash = add.puzzle_hash
-                outgoing_amount += to_puzzlehash
+                to_puzzle_hash = add.puzzle_hash
+                outgoing_amount += add.amount
                 break
 
         # If there is no addition for outside puzzlehash we are sending tx to ourself
         incoming = False
         if to_puzzle_hash is None:
             incoming = True
-            to_puzzle_hash = add_list[0]
+            to_puzzle_hash = add_list[0].puzzle_hash
 
         if incoming:
             tx_record = TransactionRecord(
