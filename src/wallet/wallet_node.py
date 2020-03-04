@@ -9,8 +9,6 @@ from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
 from src.wallet.wallet import Wallet
 from src.wallet.wallet_state_manager import WalletStateManager
-from src.wallet.wallet_store import WalletStore
-from src.wallet.wallet_transaction_store import WalletTransactionStore
 
 
 class WalletNode:
@@ -18,13 +16,11 @@ class WalletNode:
     key_config: Dict
     config: Dict
     server: Optional[ChiaServer]
-    wallet_store: WalletStore
     wallet_state_manager: WalletStateManager
     header_hash: List[bytes32]
     start_index: int
     log: logging.Logger
     wallet: Wallet
-    tx_store: WalletTransactionStore
     constants: Dict
 
     @staticmethod
@@ -46,15 +42,9 @@ class WalletNode:
 
         pub_hex = self.private_key.get_public_key().serialize().hex()
         path = Path(f"wallet_db_{pub_hex}.db")
-        self.wallet_store = await WalletStore.create(path)
-        self.tx_store = await WalletTransactionStore.create(path)
 
         self.wallet_state_manager = await WalletStateManager.create(
-            config,
-            key_config,
-            self.wallet_store,
-            self.tx_store,
-            override_constants=override_constants,
+            config, path, override_constants=override_constants,
         )
         self.wallet = await Wallet.create(config, key_config, self.wallet_state_manager)
 

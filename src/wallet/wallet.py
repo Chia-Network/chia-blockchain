@@ -79,19 +79,19 @@ class Wallet:
         return await self.wallet_state_manager.get_unconfirmed_balance()
 
     async def can_generate_puzzle_hash(self, hash: bytes32) -> bool:
-        return await self.wallet_state_manager.tx_store.puzzle_hash_exists(hash)
+        return await self.wallet_state_manager.puzzle_store.puzzle_hash_exists(hash)
 
     def puzzle_for_pk(self, pubkey) -> Program:
         return puzzle_for_pk(pubkey)
 
     async def get_new_puzzlehash(self) -> bytes32:
-        index = await self.wallet_state_manager.tx_store.get_max_derivation_path()
+        index = await self.wallet_state_manager.puzzle_store.get_max_derivation_path()
         index += 1
         pubkey: bytes = self.get_public_key(index).serialize()
         puzzle: Program = self.puzzle_for_pk(pubkey)
         puzzlehash: bytes32 = puzzle.get_hash()
 
-        await self.wallet_state_manager.tx_store.add_derivation_path_of_interest(
+        await self.wallet_state_manager.puzzle_store.add_derivation_path_of_interest(
             index, puzzlehash, pubkey, WalletType.STANDARD_WALLET
         )
 
@@ -119,7 +119,7 @@ class Wallet:
     async def get_keys(
         self, hash: bytes32
     ) -> Optional[Tuple[PublicKey, ExtendedPrivateKey]]:
-        index_for_puzzlehash = await self.wallet_state_manager.tx_store.index_for_puzzle_hash(
+        index_for_puzzlehash = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
             hash
         )
         if index_for_puzzlehash == -1:

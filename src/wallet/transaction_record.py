@@ -15,18 +15,17 @@ class TransactionRecord(Streamable):
     Used for storing transaction data and status in wallets.
     """
 
-    confirmed_block_index: uint32
-    created_at_index: uint32
-    confirmed: bool
-    sent: bool
+    confirmed_at_index: uint32
     created_at_time: uint64
-    spend_bundle: Optional[SpendBundle]
-    additions: List[Coin]
-    removals: List[Coin]
-    incoming: bool
     to_puzzle_hash: bytes32
     amount: uint64
     fee_amount: uint64
+    incoming: bool
+    confirmed: bool
+    sent: bool
+    spend_bundle: Optional[SpendBundle]
+    additions: List[Coin]
+    removals: List[Coin]
 
     def name(self) -> bytes32:
         if self.spend_bundle:

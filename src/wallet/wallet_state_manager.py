@@ -1,4 +1,5 @@
 import time
+from pathlib import Path
 
 from typing import Dict, Optional, List, Set, Tuple
 import logging
@@ -17,6 +18,7 @@ from src.util.ints import uint32, uint64
 from src.util.hash import std_hash
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.block_record import BlockRecord
+from src.wallet.wallet_puzzle_store import WalletPuzzleStore
 from src.wallet.wallet_store import WalletStore
 from src.wallet.wallet_transaction_store import WalletTransactionStore
 from src.full_node.blockchain import ReceiveBlockResult
@@ -28,6 +30,7 @@ class WalletStateManager:
     config: Dict
     wallet_store: WalletStore
     tx_store: WalletTransactionStore
+    puzzle_store: WalletPuzzleStore
     # Map from header hash to BlockRecord
     block_records: Dict[bytes32, BlockRecord]
     # Specifies the LCA path
@@ -44,26 +47,29 @@ class WalletStateManager:
     @staticmethod
     async def create(
         config: Dict,
-        key_config: Dict,
-        wallet_store: WalletStore,
-        tx_store: WalletTransactionStore,
+        db_path: Path,
         name: str = None,
-        override_constants: Dict = {},
+        override_constants: Optional[Dict] = None,
     ):
         self = WalletStateManager()
         self.config = config
         self.constants = consensus_constants.copy()
-        for key, value in override_constants.items():
-            self.constants[key] = value
+
+        if override_constants:
+            for key, value in override_constants.items():
+                self.constants[key] = value
+
         if name:
             self.log = logging.getLogger(name)
         else:
             self.log = logging.getLogger(__name__)
 
-        self.wallet_store = wallet_store
-        self.tx_store = tx_store
+        self.wallet_store = await WalletStore.create(db_path)
+        self.tx_store = await WalletTransactionStore.create(db_path)
+        self.puzzle_store = await WalletPuzzleStore.create(db_path)
+
         self.synced = False
-        self.block_records = await wallet_store.get_lca_path()
+        self.block_records = await self.wallet_store.get_lca_path()
         genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
 
         if len(self.block_records) > 0:
@@ -126,7 +132,7 @@ class WalletStateManager:
 
         for record in unconfirmed_tx:
             for coin in record.additions:
-                if await self.tx_store.puzzle_hash_exists(coin.puzzle_hash):
+                if await self.puzzle_store.puzzle_hash_exists(coin.puzzle_hash):
                     addition_amount += coin.amount
             for coin in record.removals:
                 removal_amount += coin.amount
@@ -228,47 +234,29 @@ class WalletStateManager:
         # Figure out if we are sending to ourself or someone else.
         to_puzzle_hash: Optional[bytes32] = None
         for add in add_list:
-            if not await self.tx_store.puzzle_hash_exists(add.puzzle_hash):
+            if not await self.puzzle_store.puzzle_hash_exists(add.puzzle_hash):
                 to_puzzle_hash = add.puzzle_hash
                 outgoing_amount += add.amount
                 break
 
         # If there is no addition for outside puzzlehash we are sending tx to ourself
-        incoming = False
         if to_puzzle_hash is None:
-            incoming = True
             to_puzzle_hash = add_list[0].puzzle_hash
+            outgoing_amount += total_added
 
-        if incoming:
-            tx_record = TransactionRecord(
-                uint32(0),
-                uint32(0),
-                False,
-                False,
-                now,
-                spend_bundle,
-                add_list,
-                rem_list,
-                incoming,
-                to_puzzle_hash,
-                uint64(total_added),
-                uint64(fee_amount),
-            )
-        else:
-            tx_record = TransactionRecord(
-                uint32(0),
-                uint32(0),
-                False,
-                False,
-                now,
-                spend_bundle,
-                add_list,
-                rem_list,
-                incoming,
-                to_puzzle_hash,
-                uint64(outgoing_amount),
-                uint64(fee_amount),
-            )
+        tx_record = TransactionRecord(
+            confirmed_at_index=uint32(0),
+            created_at_time=now,
+            to_puzzle_hash=to_puzzle_hash,
+            amount=uint64(outgoing_amount),
+            fee_amount=uint64(fee_amount),
+            incoming=False,
+            confirmed=False,
+            sent=False,
+            spend_bundle=spend_bundle,
+            additions=add_list,
+            removals=rem_list,
+        )
 
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
         await self.tx_store.add_transaction_record(tx_record)
@@ -374,7 +362,7 @@ class WalletStateManager:
         my_coin_records: Set[
             CoinRecord
         ] = await self.wallet_store.get_coin_records_by_spent(False)
-        my_puzzle_hashes = await self.tx_store.get_all_puzzle_hashes()
+        my_puzzle_hashes = await self.puzzle_store.get_all_puzzle_hashes()
 
         removals_of_interests: bytes32 = []
         additions_of_interest: bytes32 = []
@@ -393,7 +381,7 @@ class WalletStateManager:
         """ Returns the list of coins that are relevant to us.(We can spend them) """
 
         result: List[Coin] = []
-        my_puzzle_hashes: Set[bytes32] = await self.tx_store.get_all_puzzle_hashes()
+        my_puzzle_hashes: Set[bytes32] = await self.puzzle_store.get_all_puzzle_hashes()
 
         for coin in additions:
             if coin.puzzle_hash in my_puzzle_hashes:
