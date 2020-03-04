@@ -1,8 +1,10 @@
 import time
 
-from lib.bip158.chiabip158 import PyBIP158
 from typing import Dict, Optional, List, Set, Tuple
 import logging
+
+from chiabip158 import PyBIP158
+
 from src.types.hashable.coin import Coin
 from src.types.hashable.coin_record import CoinRecord
 from src.types.hashable.spend_bundle import SpendBundle
