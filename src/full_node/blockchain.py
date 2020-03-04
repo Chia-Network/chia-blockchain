@@ -188,8 +188,9 @@ class Blockchain:
             new_difficulty = None
         return Challenge(
             prev_challenge_hash,
-            block.proof_of_space.get_hash(),
-            block.proof_of_time.output.get_hash(),
+            std_hash(
+                block.proof_of_space.get_hash() + block.proof_of_time.output.get_hash()
+            ),
             new_difficulty,
         )
 

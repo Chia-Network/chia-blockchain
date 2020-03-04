@@ -12,7 +12,7 @@ from src.server.outbound_message import Delivery, Message, NodeType, OutboundMes
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32, uint64, uint128
 
 log = logging.getLogger(__name__)
 
@@ -30,13 +30,13 @@ class Farmer:
         self.harvester_responses_challenge: Dict[bytes32, bytes32] = {}
         self.harvester_responses_proofs: Dict[bytes32, ProofOfSpace] = {}
         self.harvester_responses_proof_hash_to_qual: Dict[bytes32, bytes32] = {}
-        self.challenges: Dict[uint64, List[farmer_protocol.ProofOfSpaceFinalized]] = {}
-        self.challenge_to_weight: Dict[bytes32, uint64] = {}
+        self.challenges: Dict[uint128, List[farmer_protocol.ProofOfSpaceFinalized]] = {}
+        self.challenge_to_weight: Dict[bytes32, uint128] = {}
         self.challenge_to_height: Dict[bytes32, uint32] = {}
         self.challenge_to_best_iters: Dict[bytes32, uint64] = {}
         self.seen_challenges: Set[bytes32] = set()
-        self.unfinished_challenges: Dict[uint64, List[bytes32]] = {}
-        self.current_weight: uint64 = uint64(0)
+        self.unfinished_challenges: Dict[uint128, List[bytes32]] = {}
+        self.current_weight: uint128 = uint128(0)
         self.coinbase_rewards: Dict[uint32, Any] = {}
         self.proof_of_time_estimate_ips: uint64 = uint64(10000)
         self.constants = consensus_constants.copy()
@@ -70,7 +70,7 @@ class Farmer:
                 f"Have already seen quality string {challenge_response.quality_string}"
             )
             return
-        weight: uint64 = self.challenge_to_weight[challenge_response.challenge_hash]
+        weight: uint128 = self.challenge_to_weight[challenge_response.challenge_hash]
         height: uint32 = self.challenge_to_height[challenge_response.challenge_hash]
         difficulty: uint64 = uint64(0)
         for posf in self.challenges[weight]:
@@ -139,7 +139,7 @@ class Farmer:
         challenge_hash: bytes32 = self.harvester_responses_challenge[
             response.quality_string
         ]
-        challenge_weight: uint64 = self.challenge_to_weight[challenge_hash]
+        challenge_weight: uint128 = self.challenge_to_weight[challenge_hash]
         challenge_height: uint32 = self.challenge_to_height[challenge_hash]
         new_proof_height: uint32 = uint32(challenge_height + 1)
         difficulty: uint64 = uint64(0)

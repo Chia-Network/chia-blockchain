@@ -3,19 +3,10 @@ from typing import Dict, Optional, List
 from blspy import ExtendedPrivateKey
 import logging
 import src.protocols.wallet_protocol
-from src.full_node.full_node import OutboundMessageGenerator
-from src.protocols.wallet_protocol import ProofHash
-from src.server.outbound_message import OutboundMessage, NodeType, Message, Delivery
+from src.consensus.constants import constants as consensus_constants
 from src.server.server import ChiaServer
-from src.types.full_block import additions_for_npc
-from src.types.hashable.coin import Coin
-from src.types.hashable.spend_bundle import SpendBundle
-from src.types.name_puzzle_condition import NPC
 from src.types.sized_bytes import bytes32
-from src.util.hash import std_hash
 from src.util.api_decorators import api_request
-from src.util.ints import uint32
-from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from src.wallet.wallet import Wallet
 from src.wallet.wallet_state_manager import WalletStateManager
 from src.wallet.wallet_store import WalletStore
@@ -34,14 +25,20 @@ class WalletNode:
     log: logging.Logger
     wallet: Wallet
     tx_store: WalletTransactionStore
+    constants: Dict
 
     @staticmethod
-    async def create(config: Dict, key_config: Dict, name: str = None):
+    async def create(
+        config: Dict, key_config: Dict, name: str = None, override_constants: Dict = {}
+    ):
         self = WalletNode()
         self.config = config
         self.key_config = key_config
         sk_hex = self.key_config["wallet_sk"]
         self.private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
+        self.constants = consensus_constants.copy()
+        for key, value in override_constants.items():
+            self.constants[key] = value
         if name:
             self.log = logging.getLogger(name)
         else:
@@ -53,7 +50,11 @@ class WalletNode:
         self.tx_store = await WalletTransactionStore.create(path)
 
         self.wallet_state_manager = await WalletStateManager.create(
-            config, key_config, self.wallet_store, self.tx_store
+            config,
+            key_config,
+            self.wallet_store,
+            self.tx_store,
+            override_constants=override_constants,
         )
         self.wallet = await Wallet.create(config, key_config, self.wallet_state_manager)
 
@@ -65,131 +66,13 @@ class WalletNode:
         self.server = server
         self.wallet.set_server(server)
 
-    async def _on_connect(self) -> OutboundMessageGenerator:
+    async def _sync(self):
         """
-        Whenever we connect to a FullNode we request new proof_hashes by sending last proof hash we have
+        Wallet has fallen far behind (or is starting up for the first time), and must be synced
+        up to the tip of the blockchain
         """
-        self.log.info(f"Requesting proof hashes")
-        request = ProofHash(std_hash(b"deadbeef"))
-        yield OutboundMessage(
-            NodeType.FULL_NODE,
-            Message("request_proof_hashes", request),
-            Delivery.BROADCAST,
-        )
-
-    @api_request
-    async def proof_hash(
-        self, request: src.protocols.wallet_protocol.ProofHash
-    ) -> OutboundMessageGenerator:
-        """
-        Received a proof hash from the FullNode
-        """
-        self.log.info(f"Received a new proof hash: {request}")
-        reply_request = ProofHash(std_hash(b"a"))
-        # TODO Store and decide if we want full proof for this proof hash
-        yield OutboundMessage(
-            NodeType.FULL_NODE,
-            Message("request_full_proof_for_hash", reply_request),
-            Delivery.RESPOND,
-        )
-
-    @api_request
-    async def full_proof_for_hash(
-        self, request: src.protocols.wallet_protocol.FullProofForHash
-    ):
-        """
-        We've received a full proof for hash we requested
-        """
-        # TODO Validate full proof
-        self.log.info(f"Received new proof: {request}")
-
-    @api_request
-    async def received_body(self, response: src.protocols.wallet_protocol.RespondBody):
-        """
-        Called when body is received from the FullNode
-        """
-
-        # Retry sending queued up transactions
-        await self.retry_send_queue()
-
-        additions: List[Coin] = []
-
-        if await self.wallet.can_generate_puzzle_hash(
-            response.header.data.coinbase.puzzle_hash
-        ):
-            await self.wallet_state_manager.coin_added(
-                response.header.data.coinbase, response.height, True
-            )
-        if await self.wallet.can_generate_puzzle_hash(
-            response.header.data.fees_coin.puzzle_hash
-        ):
-            await self.wallet_state_manager.coin_added(
-                response.header.data.fees_coin, response.height, True
-            )
-
-        npc_list: List[NPC]
-        if response.transactions_generator:
-            error, npc_list, cost = get_name_puzzle_conditions(
-                response.transactions_generator
-            )
-
-            additions.extend(additions_for_npc(npc_list))
-
-            for added_coin in additions:
-                if await self.wallet.can_generate_puzzle_hash(added_coin.puzzle_hash):
-                    await self.wallet_state_manager.coin_added(
-                        added_coin, response.height, False
-                    )
-
-            for npc in npc_list:
-                if await self.wallet.can_generate_puzzle_hash(npc.puzzle_hash):
-                    await self.wallet_state_manager.coin_removed(
-                        npc.coin_name, response.height
-                    )
-
-    @api_request
-    async def new_lca(self, header: src.protocols.wallet_protocol.Header):
-        self.log.info("new tip received")
-
-    async def retry_send_queue(self):
-        records = await self.wallet_state_manager.get_send_queue()
-        for record in records:
-            if record.spend_bundle:
-                await self._send_transaction(record.spend_bundle)
-
-    async def _send_transaction(self, spend_bundle: SpendBundle):
-        """ Sends spendbundle to connected full Nodes."""
-        await self.wallet_state_manager.add_pending_transaction(spend_bundle)
-
-        msg = OutboundMessage(
-            NodeType.FULL_NODE,
-            Message("wallet_transaction", spend_bundle),
-            Delivery.BROADCAST,
-        )
-        if self.server:
-            async for reply in self.server.push_message(msg):
-                self.log.info(reply)
-
-    async def _request_add_list(self, height: uint32, header_hash: bytes32):
-        obj = src.protocols.wallet_protocol.RequestAdditions(height, header_hash)
-        msg = OutboundMessage(
-            NodeType.FULL_NODE, Message("request_additions", obj), Delivery.BROADCAST,
-        )
-        if self.server:
-            async for reply in self.server.push_message(msg):
-                self.log.info(reply)
-
-    @api_request
-    async def response_additions(
-        self, response: src.protocols.wallet_protocol.Additions
-    ):
-        print(response)
-
-    @api_request
-    async def response_additions_rejected(
-        self, response: src.protocols.wallet_protocol.RequestAdditions
-    ):
-        print(f"request rejected {response}")
+        # TODO(mariano): implement
+        pass
 
     @api_request
     async def transaction_ack(self, ack: src.protocols.wallet_protocol.TransactionAck):
@@ -199,9 +82,132 @@ class WalletNode:
         else:
             self.log.info(f"SpendBundle has been rejected by the FullNode. id: {id}")
 
-    async def requestLCA(self):
-        msg = OutboundMessage(
-            NodeType.FULL_NODE, Message("request_lca", None), Delivery.BROADCAST,
-        )
-        async for reply in self.server.push_message(msg):
-            self.log.info(reply)
+    @api_request
+    async def respond_all_proof_hashes(
+        self, response: src.protocols.wallet_protocol.RespondAllProofHashes
+    ):
+        # TODO(mariano): save proof hashes
+        pass
+
+    @api_request
+    async def respond_all_header_hashes_after(
+        self, response: src.protocols.wallet_protocol.RespondAllHeaderHashesAfter
+    ):
+        # TODO(mariano): save header_hashes
+        pass
+
+    @api_request
+    async def reject_all_header_hashes_after_request(
+        self, response: src.protocols.wallet_protocol.RejectAllHeaderHashesAfterRequest
+    ):
+        # TODO(mariano): retry
+        pass
+
+    @api_request
+    async def new_lca(self, response: src.protocols.wallet_protocol.NewLCA):
+        # TODO(mariano): implement
+        # 1. If already have, ignore.
+        # 2. If extends chain:
+        # - Get header
+        # 3. If disconnected:
+        # - If far:
+        #     - Perform full sync
+        # - If close:
+        #     - Get header
+        pass
+
+    @api_request
+    async def respond_header(
+        self, response: src.protocols.wallet_protocol.RespondHeader
+    ):
+        # TODO(mariano): implement
+        # 1. If disconnected and close, get parent header and return
+        # 2. If we have transactions, fetch adds/deletes
+        # adds_deletes = await self.wallet_state_manager.filter_additions_removals()
+        # 3. If we don't have, don't fetch
+        # 4. If we have the next header cached, process it
+        pass
+
+    @api_request
+    async def reject_header_request(
+        self, response: src.protocols.wallet_protocol.RejectHeaderRequest
+    ):
+        # TODO(mariano): implement
+        pass
+
+    @api_request
+    async def respond_removals(
+        self, response: src.protocols.wallet_protocol.RespondRemovals
+    ):
+        # TODO(mariano): implement
+        pass
+
+    @api_request
+    async def reject_removals_request(
+        self, response: src.protocols.wallet_protocol.RejectRemovalsRequest
+    ):
+        # TODO(mariano): implement
+        pass
+
+    # @api_request
+    # async def received_body(self, response: src.protocols.wallet_protocol.RespondBody):
+    #     """
+    #     Called when body is received from the FullNode
+    #     """
+
+    #     # Retry sending queued up transactions
+    #     await self.retry_send_queue()
+
+    #     additions: List[Coin] = []
+
+    #     if await self.wallet.can_generate_puzzle_hash(
+    #         response.header.data.coinbase.puzzle_hash
+    #     ):
+    #         await self.wallet_state_manager.coin_added(
+    #             response.header.data.coinbase, response.height, True
+    #         )
+    #     if await self.wallet.can_generate_puzzle_hash(
+    #         response.header.data.fees_coin.puzzle_hash
+    #     ):
+    #         await self.wallet_state_manager.coin_added(
+    #             response.header.data.fees_coin, response.height, True
+    #         )
+
+    #     npc_list: List[NPC]
+    #     if response.transactions_generator:
+    #         error, npc_list, cost = get_name_puzzle_conditions(
+    #             response.transactions_generator
+    #         )
+
+    #         additions.extend(additions_for_npc(npc_list))
+
+    #         for added_coin in additions:
+    #             if await self.wallet.can_generate_puzzle_hash(added_coin.puzzle_hash):
+    #                 await self.wallet_state_manager.coin_added(
+    #                     added_coin, response.height, False
+    #                 )
+
+    #         for npc in npc_list:
+    #             if await self.wallet.can_generate_puzzle_hash(npc.puzzle_hash):
+    #                 await self.wallet_state_manager.coin_removed(
+    #                     npc.coin_name, response.height
+    #                 )
+
+    # async def retry_send_queue(self):
+    #     records = await self.wallet_state_manager.get_send_queue()
+    #     for record in records:
+    #         if record.spend_bundle:
+    #             await self._send_transaction(record.spend_bundle)
+
+    # async def _send_transaction(self, spend_bundle: SpendBundle):
+    #     """ Sends spendbundle to connected full Nodes."""
+    #     await self.wallet_state_manager.add_pending_transaction(spend_bundle)
+
+    #     msg = OutboundMessage(
+    #         NodeType.FULL_NODE,
+    #         Message("wallet_transaction", spend_bundle),
+    #         Delivery.BROADCAST,
+    #     )
+    #     if self.server:
+    #         async for reply in self.server.push_message(msg):
+    #             self.log.info(reply)

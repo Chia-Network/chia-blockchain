@@ -10,6 +10,5 @@ from src.util.streamable import Streamable, streamable
 @streamable
 class Challenge(Streamable):
     prev_challenge_hash: bytes32
-    proof_of_space_hash: bytes32
-    proof_of_time_output_hash: bytes32
+    proofs_hash: bytes32
     new_work_difficulty: Optional[uint64]  # New difficulty once per epoch

@@ -4,7 +4,7 @@ from typing import Optional
 from blspy import PrependSignature
 
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint64, uint32
+from src.util.ints import uint64, uint32, uint128
 from src.util.streamable import Streamable, streamable
 from src.types.hashable.BLSSignature import BLSSignature
 from src.types.hashable.coin import Coin
@@ -18,7 +18,7 @@ class HeaderData(Streamable):
     timestamp: uint64
     filter_hash: bytes32
     proof_of_space_hash: bytes32
-    weight: uint64
+    weight: uint128
     total_iters: uint64
     additions_root: bytes32
     removals_root: bytes32
@@ -50,5 +50,5 @@ class Header(Streamable):
         return self.data.prev_header_hash
 
     @property
-    def weight(self) -> bytes32:
+    def weight(self) -> uint128:
         return self.data.weight

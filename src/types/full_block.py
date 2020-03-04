@@ -8,7 +8,7 @@ from src.types.header import Header
 from src.types.sized_bytes import bytes32
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.condition_tools import created_outputs_for_conditions_dict
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32, uint128
 from src.util.streamable import Streamable, streamable
 from src.types.proof_of_space import ProofOfSpace
 from src.types.proof_of_time import ProofOfTime
@@ -44,7 +44,7 @@ class FullBlock(Streamable):
         return self.header.height
 
     @property
-    def weight(self) -> uint64:
+    def weight(self) -> uint128:
         return self.header.data.weight
 
     @property

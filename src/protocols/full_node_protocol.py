@@ -8,7 +8,7 @@ from src.types.peer_info import PeerInfo
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32, uint64, uint128
 
 
 """
@@ -20,7 +20,7 @@ Protocol between full nodes.
 @cbor_message
 class NewTip:
     height: uint32
-    weight: uint64
+    weight: uint128
     header_hash: bytes32
 
 

@@ -10,6 +10,7 @@ from src.types.header import HeaderData, Header
 from src.types.header_block import HeaderBlock
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
+from src.util.hash import std_hash
 from src.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
@@ -74,7 +75,7 @@ class FullNodeStore:
         # Headers
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS headers(height bigint, header_hash "
-            "text PRIMARY KEY, header blob)"
+            "text PRIMARY KEY, proof_hash text, header blob)"
         )
 
         # Height index so we can look up in order of height for sync purposes
@@ -119,15 +120,18 @@ class FullNodeStore:
         await self.db.commit()
 
     async def add_block(self, block: FullBlock) -> None:
+        assert block.proof_of_time is not None
         cursor_1 = await self.db.execute(
             "INSERT OR REPLACE INTO blocks VALUES(?, ?, ?)",
             (block.height, block.header_hash.hex(), bytes(block)),
         )
         await cursor_1.close()
-        # assert block.challenge is not None
+        proof_hash = std_hash(
+            block.proof_of_space.get_hash() + block.proof_of_time.get_hash()
+        )
         cursor_2 = await self.db.execute(
-            ("INSERT OR REPLACE INTO headers VALUES(?, ?, ?)"),
-            (block.height, block.header_hash.hex(), bytes(block.header),),
+            ("INSERT OR REPLACE INTO headers VALUES(?, ?, ?, ?)"),
+            (block.height, block.header_hash.hex(), proof_hash, bytes(block.header),),
         )
         await cursor_2.close()
         await self.db.commit()
@@ -162,7 +166,13 @@ class FullNodeStore:
         cursor = await self.db.execute("SELECT * from headers")
         rows = await cursor.fetchall()
         await cursor.close()
-        return [Header.from_bytes(row[2]) for row in rows]
+        return [Header.from_bytes(row[3]) for row in rows]
+
+    async def get_proof_hashes(self) -> Dict[bytes32, bytes32]:
+        cursor = await self.db.execute("SELECT header_hash, proof_hash from headers")
+        rows = await cursor.fetchall()
+        await cursor.close()
+        return {row[0]: row[1] for row in rows}
 
     async def add_potential_block(self, block: FullBlock) -> None:
         cursor = await self.db.execute(

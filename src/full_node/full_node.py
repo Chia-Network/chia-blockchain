@@ -14,9 +14,13 @@ from src.consensus.block_rewards import calculate_base_fee
 from src.consensus.constants import constants as consensus_constants
 from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.weight_verifier import verify_weight
-from src.protocols.wallet_protocol import FullProofForHash, ProofHash
 from src.full_node.store import FullNodeStore
-from src.protocols import farmer_protocol, full_node_protocol, timelord_protocol
+from src.protocols import (
+    farmer_protocol,
+    full_node_protocol,
+    timelord_protocol,
+    wallet_protocol,
+)
 from src.util.merkle_set import MerkleSet
 from src.util.bundle_tools import best_solution_program
 from src.full_node.mempool_manager import MempoolManager
@@ -39,7 +43,7 @@ from src.full_node.coin_store import CoinStore
 from src.util import errors
 from src.util.api_decorators import api_request
 from src.util.errors import InvalidUnfinishedBlock
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32, uint64, uint128
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
@@ -51,7 +55,7 @@ class FullNode:
         blockchain: Blockchain,
         config: Dict,
         mempool_manager: MempoolManager,
-        unspent_store: CoinStore,
+        coin_store: CoinStore,
         name: str = None,
         override_constants={},
     ):
@@ -62,7 +66,7 @@ class FullNode:
         self.mempool_manager: MempoolManager = mempool_manager
         self._shut_down = False  # Set to true to close all infinite loops
         self.server: Optional[ChiaServer] = None
-        self.unspent_store: CoinStore = unspent_store
+        self.coin_store: CoinStore = coin_store
         self.constants = consensus_constants.copy()
         for key, value in override_constants.items():
             self.constants[key] = value
@@ -97,7 +101,7 @@ class FullNode:
                         tip.prev_header_hash
                     )
                 else:
-                    difficulty = tip.weight
+                    difficulty = uint64(tip.weight)
                 requests.append(
                     farmer_protocol.ProofOfSpaceFinalized(
                         challenge_hash, tip.height, tip.weight, difficulty
@@ -158,7 +162,7 @@ class FullNode:
 
     async def _on_connect(self) -> OutboundMessageGenerator:
         """
-        Whenever we connect to another node, send them our current heads. Also send heads to farmers
+        Whenever we connect to another node / wallet, send them our current heads. Also send heads to farmers
         and challenges to timelords.
         """
         tips: List[Header] = self.blockchain.get_current_tips()
@@ -167,6 +171,12 @@ class FullNode:
             yield OutboundMessage(
                 NodeType.FULL_NODE, Message("new_tip", request), Delivery.RESPOND
             )
+        # If connected to a wallet, send the LCA
+        lca = self.blockchain.lca_block
+        new_lca = wallet_protocol.NewLCA(lca.header_hash, lca.height, lca.weight)
+        yield OutboundMessage(
+            NodeType.WALLET, Message("new_lca", new_lca), Delivery.RESPOND
+        )
 
         # Update farmers and timelord with most recent information
         async for msg in self._send_challenges_to_timelords(Delivery.RESPOND):
@@ -223,7 +233,7 @@ class FullNode:
         self.log.info("Waiting to receive tips from peers.")
         # TODO: better way to tell that we have finished receiving tips
         await asyncio.sleep(5)
-        highest_weight: uint64 = uint64(0)
+        highest_weight: uint128 = uint128(0)
         tip_block: FullBlock
         tip_height = 0
         sync_start_time = time.time()
@@ -656,7 +666,7 @@ class FullNode:
         if self.store.get_sync_mode():
             breakpoint()
             return
-        async with self.unspent_store.lock:
+        async with self.coin_store.lock:
             cost, error = await self.mempool_manager.add_spendbundle(tx.transaction)
             if cost is not None:
                 fees = tx.transaction.fees()
@@ -1329,7 +1339,7 @@ class FullNode:
             timestamp,
             filter_hash,
             proof_of_space_hash,
-            target_tip.weight + difficulty,
+            uint128(target_tip.weight + difficulty),
             uint64(target_tip.data.total_iters + iterations_needed),
             additions_root,
             removal_root,
@@ -1466,7 +1476,7 @@ class FullNode:
         """
         header_hash = respond_block.block.header.get_hash()
 
-        # Adds the block to seen, and check if it's seen before
+        # Adds the block to seen, and check if it's seen before (which means header is in memory)
         if self.blockchain.contains_block(header_hash):
             return
 
@@ -1489,6 +1499,7 @@ class FullNode:
             [respond_block.block]
         )
         val, pos = prevalidate_block[0]
+        prev_lca = self.blockchain.lca_block
 
         async with self.store.lock:
             # Tries to add the block to the blockchain
@@ -1620,6 +1631,16 @@ class FullNode:
                     Delivery.BROADCAST,
                 )
 
+            # Tell peer wallets about the new LCA, if it changed
+            new_lca = self.blockchain.lca_block
+            if new_lca != prev_lca:
+                new_lca_req = wallet_protocol.NewLCA(
+                    new_lca.header_hash, new_lca.height, new_lca.weight
+                )
+                yield OutboundMessage(
+                    NodeType.WALLET, Message("new_lca", new_lca_req), Delivery.BROADCAST
+                )
+
             # Tell farmer about the new block
             yield OutboundMessage(
                 NodeType.FARMER,
@@ -1702,61 +1723,241 @@ class FullNode:
             tasks.append(asyncio.create_task(self.server.start_client(peer)))
         await asyncio.gather(*tasks)
 
+    # WALLET PROTOCOL
     @api_request
-    async def request_proof_hashes(
-        self, request: src.protocols.wallet_protocol.ProofHash
+    async def request_all_proof_hashes(
+        self, request: src.protocols.wallet_protocol.RequestAllProofHashes
     ) -> OutboundMessageGenerator:
-        self.log.info(f"Received request for proof hash: {request}")
-        reply = ProofHash(std_hash(b"deadbeef"))
+        proof_hashes_map = await self.store.get_proof_hashes()
+        curr = self.blockchain.lca_block
+
+        hashes: List[Tuple[bytes32, Optional[uint64]]] = []
+        while curr.height > 0:
+            difficulty_change: Optional[uint64] = None
+            if (
+                curr.height % self.constants["DIFFICULTY_EPOCH"]
+                == self.constants["DIFFICULTY_DELAY"]
+            ):
+                difficulty_change = self.blockchain.get_next_difficulty(
+                    curr.prev_header_hash
+                )
+            hashes.append((proof_hashes_map[curr.header_hash], difficulty_change))
+            curr = self.blockchain.headers[curr.prev_header_hash]
+
+        response = wallet_protocol.RespondAllProofHashes(hashes)
         yield OutboundMessage(
-            NodeType.WALLET, Message("proof_hash", reply), Delivery.RESPOND
+            NodeType.WALLET,
+            Message("respond_all_proof_hashes", response),
+            Delivery.RESPOND,
         )
 
     @api_request
-    async def request_full_proof_for_hash(
-        self, request: src.protocols.wallet_protocol.ProofHash
+    async def request_all_header_hashes_after(
+        self, request: src.protocols.wallet_protocol.RequestAllHeaderHashesAfter
     ) -> OutboundMessageGenerator:
-        self.log.info(f"Received request for full proof for hash: {request}")
-        proof = FullProofForHash(std_hash(b"test"), std_hash(b"test"))
+        header_hash: Optional[bytes32] = self.blockchain.height_to_hash.get(
+            request.starting_height, None
+        )
+        if not header_hash:
+            reject = wallet_protocol.RejectAllHeaderHashesAfterRequest(
+                request.starting_height, request.previous_challenge_hash
+            )
+            yield OutboundMessage(
+                NodeType.WALLET,
+                Message("reject_all_header_hashes_after_request", reject),
+                Delivery.RESPOND,
+            )
+            return
+        block: Optional[FullBlock] = await self.store.get_block(header_hash)
+        header_hash_again: Optional[bytes32] = self.blockchain.height_to_hash.get(
+            request.starting_height, None
+        )
+
+        if (
+            not block
+            or block.proof_of_space.challenge_hash != request.previous_challenge_hash
+            or header_hash_again != header_hash
+        ):
+            reject = wallet_protocol.RejectAllHeaderHashesAfterRequest(
+                request.starting_height, request.previous_challenge_hash
+            )
+            yield OutboundMessage(
+                NodeType.WALLET,
+                Message("reject_all_header_hashes_after_request", reject),
+                Delivery.RESPOND,
+            )
+            return
+        header_hashes: List[bytes32] = []
+        for height in range(
+            request.starting_height, self.blockchain.lca_block.height + 1
+        ):
+            header_hashes.append(self.blockchain.height_to_hash[uint32(height)])
+        response = wallet_protocol.RespondAllHeaderHashesAfter(
+            request.starting_height, request.previous_challenge_hash, header_hashes
+        )
         yield OutboundMessage(
-            NodeType.WALLET, Message("full_proof_for_hash", proof), Delivery.RESPOND
+            NodeType.WALLET,
+            Message("respond_all_header_hashes_after", response),
+            Delivery.RESPOND,
+        )
+
+    @api_request
+    async def request_header(
+        self, request: src.protocols.wallet_protocol.RequestHeader
+    ) -> OutboundMessageGenerator:
+        full_block: Optional[FullBlock] = await self.store.get_block(
+            request.header_hash
+        )
+        if full_block is not None:
+            header_block: Optional[HeaderBlock] = self.blockchain.get_header_block(
+                full_block
+            )
+            if header_block is not None and header_block.height == request.height:
+                response = wallet_protocol.RespondHeader(
+                    header_block, full_block.transactions_filter
+                )
+                yield OutboundMessage(
+                    NodeType.WALLET,
+                    Message("respond_block", response),
+                    Delivery.RESPOND,
+                )
+                return
+        reject = wallet_protocol.RejectHeaderRequest(
+            request.height, request.header_hash
+        )
+        yield OutboundMessage(
+            NodeType.WALLET, Message("reject_header_request", reject), Delivery.RESPOND,
+        )
+
+    @api_request
+    async def request_removals(
+        self, request: src.protocols.wallet_protocol.RequestRemovals
+    ) -> OutboundMessageGenerator:
+        block: Optional[FullBlock] = await self.store.get_block(request.header_hash)
+        if (
+            block is None
+            or block.height != request.height
+            or self.blockchain.height_to_hash[block.height] != block.header_hash
+        ):
+            yield OutboundMessage(
+                NodeType.WALLET,
+                Message("reject_removals_request", request),
+                Delivery.RESPOND,
+            )
+
+        assert block is not None
+        all_removals, _ = await block.tx_removals_and_additions()
+
+        # If there are no transactions, respond with empty lists
+        if block.transactions_generator is None:
+            response = src.protocols.wallet_protocol.RespondRemovals(
+                block.height, block.header_hash, [], []
+            )
+            yield OutboundMessage(
+                NodeType.WALLET,
+                Message("respond_removals", response),
+                Delivery.RESPOND,
+            )
+
+        coins_map: List[Tuple[bytes32, Optional[Coin]]] = []
+        proofs_map: List[Tuple[bytes32, bytes]] = []
+
+        if request.coin_names is None:
+            for removal in all_removals:
+                cr = await self.coin_store.get_coin_record(removal)
+                assert cr is not None
+                coins_map.append((cr.coin.name, cr.coin))
+            response = src.protocols.wallet_protocol.RespondRemovals(
+                block.height, block.header_hash, coins_map, None
+            )
+
+        else:
+            assert block.transactions_generator
+            removal_merkle_set = MerkleSet()
+            for coin_name in all_removals:
+                removal_merkle_set.add_already_hashed(coin_name)
+            assert removal_merkle_set.get_root() == block.header.data.removals_root
+            for coin_name in request.coin_names:
+                result, proof = removal_merkle_set.is_included_already_hashed(coin_name)
+                proofs_map.append((coin_name, proof))
+                if coin_name in all_removals:
+                    cr = await self.coin_store.get_coin_record(removal)
+                    assert cr is not None
+                    coins_map.append((coin_name, cr.coin))
+                    assert result
+                else:
+                    coins_map.append((coin_name, None))
+                    assert not result
+            response = src.protocols.wallet_protocol.RespondRemovals(
+                block.height, block.header_hash, coins_map, proofs_map
+            )
+
+        yield OutboundMessage(
+            NodeType.WALLET, Message("respond_removals", response), Delivery.RESPOND,
         )
 
     @api_request
     async def request_additions(
         self, request: src.protocols.wallet_protocol.RequestAdditions
     ) -> OutboundMessageGenerator:
+        # TODO(mariano): implement
         block: Optional[FullBlock] = await self.store.get_block(request.header_hash)
-        if block:
-            additions = block.additions()
-            response = src.protocols.wallet_protocol.Additions(
-                block.height, block.header_hash, additions
-            )
+        if (
+            block is None
+            or block.height != request.height
+            or self.blockchain.height_to_hash[block.height] != block.header_hash
+        ):
             yield OutboundMessage(
                 NodeType.WALLET,
-                Message("response_additions", response),
-                Delivery.BROADCAST,
-            )
-        else:
-            yield OutboundMessage(
-                NodeType.WALLET,
-                Message("response_reject_additions", request),
-                Delivery.BROADCAST,
-            )
-
-    @api_request
-    async def request_transaction_with_filter(
-        self, request: src.protocols.full_node_protocol.ReceivedMempoolFilter
-    ):
-        mempool_filter = PyBIP158(request.filter)
-        transactions = await self.mempool_manager.get_items_not_in_filter(
-            mempool_filter
-        )
-
-        for tx in transactions:
-            transaction = full_node_protocol.RespondTransaction(tx.spend_bundle)
-            yield OutboundMessage(
-                NodeType.FULL_NODE,
-                Message("respond_transaction", transaction),
+                Message("reject_removals_request", request),
                 Delivery.RESPOND,
             )
+
+        assert block is not None
+        additions: List[Coin] = block.additions()
+        puzzlehash_coins_map: Dict[bytes32, List[Coin]] = {}
+        for coin in additions:
+            if coin.puzzle_hash in puzzlehash_coins_map:
+                puzzlehash_coins_map[coin.puzzle_hash].append(coin)
+            else:
+                puzzlehash_coins_map[coin.puzzle_hash] = [coin]
+
+        coins_map: List[Tuple[bytes32, List[Coin]]] = []
+
+        if request.puzzle_hashes is None:
+            for puzzle_hash, coins in puzzlehash_coins_map:
+                coins_map.append((puzzle_hash, coins))
+                response = wallet_protocol.RespondAdditions(
+                    block.height, block.header_hash, coins_map, None
+                )
+        else:
+            # Create addition Merkle set
+            addition_merkle_set = MerkleSet()
+            # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
+            for puzzle, coins in puzzlehash_coins_map.items():
+                addition_merkle_set.add_already_hashed(puzzle)
+                addition_merkle_set.add_already_hashed(hash_coin_list(coins))
+
+            assert addition_merkle_set.get_root() == block.header.data.removals_root
+            for puzzle_hash in request.puzzle_hashes:
+                result, proof = addition_merkle_set.is_included_already_hashed(
+                    puzzle_hash
+                )
+            # TODO(mariano): finish implementing
+            #     if puzzle_hash in all_removals:
+            #         cr = await self.coin_store.get_coin_record(removal)
+            #         assert cr is not None
+            #         coins_map.append((coin_name, cr.coin))
+            #         # proofs_map.append((puzzle_hash, proof))
+            #         assert result
+            #     else:
+            #         coins_map.append((coin_name, None))
+            #         assert not result
+            #         # proofs_map.append((puzzle_hash, proof))
+            # response = src.protocols.wallet_protocol.RespondRemovals(
+            #     block.height, block.header_hash, coins_map, proofs_map
+            # )
+
+        yield OutboundMessage(
+            NodeType.WALLET, Message("respond_additions", response), Delivery.RESPOND,
+        )

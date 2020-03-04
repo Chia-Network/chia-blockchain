@@ -13,7 +13,7 @@ from src.types.classgroup import ClassgroupElement
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
-from src.util.ints import uint64
+from src.util.ints import uint64, uint128
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class Timelord:
         self.seen_discriminants: List[bytes32] = []
         self.proof_count: Dict = {}
         self.avg_ips: Dict = {}
-        self.discriminant_queue: List[Tuple[bytes32, uint64]] = []
+        self.discriminant_queue: List[Tuple[bytes32, uint128]] = []
         self._is_shutdown = False
         self.tasks: List[asyncio.Task] = []
 

@@ -141,7 +141,7 @@ class TestFullNode:
         # Fill mempool
         for puzzle_hash in puzzle_hashes:
             coin_record = (
-                await full_node_1.unspent_store.get_coin_records_by_puzzle_hash(
+                await full_node_1.coin_store.get_coin_records_by_puzzle_hash(
                     puzzle_hash, blocks_new[-1].header
                 )
             )[0]
@@ -347,7 +347,7 @@ class TestFullNode:
         assert blocks_new[-1].proof_of_time is not None
         respond_pot = fnp.RespondProofOfTime(blocks_new[-1].proof_of_time)
         res = [x async for x in full_node_1.respond_proof_of_time(respond_pot)]
-        assert len(res) == 4
+        assert len(res) == 5
 
     @pytest.mark.asyncio
     async def test_new_unfinished(self, two_nodes, wallet_blocks):
@@ -735,7 +735,7 @@ class TestFullNode:
         msgs = [
             _ async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks_new[-5]))
         ]
-        assert len(msgs) == 4
+        assert len(msgs) == 5
         # Updates blockchain tips
         tip_hashes_again = set(
             [t.header_hash for t in full_node_1.blockchain.get_current_tips()]

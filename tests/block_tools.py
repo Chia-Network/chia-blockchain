@@ -28,7 +28,7 @@ from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.util.merkle_set import MerkleSet
 from src.util.errors import NoProofsOfSpaceFound
-from src.util.ints import uint8, uint32, uint64
+from src.util.ints import uint8, uint32, uint64, uint128
 from src.util.hash import std_hash
 
 # Can't go much lower than 19, since plots start having no solutions
@@ -289,7 +289,7 @@ class BlockTools:
             uint32(0),
             bytes([0] * 32),
             uint64(0),
-            uint64(0),
+            uint128(0),
             uint64(int(time.time())),
             uint64(test_constants["DIFFICULTY_STARTING"]),
             uint64(test_constants["VDF_IPS_STARTING"]),
@@ -321,15 +321,19 @@ class BlockTools:
         if update_difficulty:
             challenge = Challenge(
                 prev_block.proof_of_space.challenge_hash,
-                prev_block.proof_of_space.get_hash(),
-                prev_block.proof_of_time.output.get_hash(),
+                std_hash(
+                    prev_block.proof_of_space.get_hash()
+                    + prev_block.proof_of_time.output.get_hash()
+                ),
                 difficulty,
             )
         else:
             challenge = Challenge(
                 prev_block.proof_of_space.challenge_hash,
-                prev_block.proof_of_space.get_hash(),
-                prev_block.proof_of_time.output.get_hash(),
+                std_hash(
+                    prev_block.proof_of_space.get_hash()
+                    + prev_block.proof_of_time.output.get_hash()
+                ),
                 None,
             )
 
@@ -358,7 +362,7 @@ class BlockTools:
         height: uint32,
         prev_header_hash: bytes32,
         prev_iters: uint64,
-        prev_weight: uint64,
+        prev_weight: uint128,
         timestamp: uint64,
         difficulty: uint64,
         ips: uint64,
@@ -492,7 +496,7 @@ class BlockTools:
             timestamp,
             filter_hash,
             proof_of_space.get_hash(),
-            uint64(prev_weight + difficulty),
+            uint128(prev_weight + difficulty),
             uint64(prev_iters + number_iters),
             additions_root,
             removal_root,
