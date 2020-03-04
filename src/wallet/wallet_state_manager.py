@@ -1,10 +1,7 @@
 import time
-<<<<<<< HEAD
-from secrets import token_bytes
+
+from lib.bip158.chiabip158 import PyBIP158
 from typing import Dict, Optional, List, Set, Tuple
-=======
-from typing import Dict, Optional, List, Set
->>>>>>> e31305d... formatting
 import logging
 from src.types.hashable.coin import Coin
 from src.types.hashable.coin_record import CoinRecord
@@ -366,16 +363,50 @@ class WalletStateManager:
             tmp_old = self.block_records[tmp_old.prev_header_hash]
         return uint32(0)
 
-    def get_filter_additions_removals(
+    async def get_filter_additions_removals(
         self, transactions_fitler: bytes
-    ) -> Tuple[List[bytes32], List[Coin]]:
-        # TODO(straya): get all of wallet's additions and removals which are included in filter
-        return ([], [])
+    ) -> Tuple[List[bytes32], List[bytes32]]:
+        """ Returns a list of our coin ids, and a list of puzzle_hashes that positively match with provided filter. """
 
-    def get_relevant_additions(self, additions: List[Coin]) -> List[Coin]:
-        # TODO(straya): get all additions which are relevant to us (we can spend) from the list
-        return []
+        tx_filter = PyBIP158(transactions_fitler)
+        my_coin_records: Set[
+            CoinRecord
+        ] = await self.wallet_store.get_coin_records_by_spent(False)
+        my_puzzle_hashes = await self.tx_store.get_all_puzzle_hashes()
 
-    def get_relevant_removals(self, removals: List[Coin]) -> List[Coin]:
-        # TODO(straya): get all removals which are relevant to us (our money was spent) from the list
-        return []
+        removals_of_interests: bytes32 = []
+        additions_of_interest: bytes32 = []
+
+        for record in my_coin_records:
+            if tx_filter.Match(bytearray(record.name())):
+                removals_of_interests.append(record.name())
+
+        for puzzle_hash in my_puzzle_hashes:
+            if tx_filter.Match(bytearray(puzzle_hash)):
+                additions_of_interest.append(puzzle_hash)
+
+        return (removals_of_interests, additions_of_interest)
+
+    async def get_relevant_additions(self, additions: List[Coin]) -> List[Coin]:
+        """ Returns the list of coins that are relevant to us.(We can spend them) """
+
+        result: List[Coin] = []
+        my_puzzle_hashes: Set[bytes32] = await self.tx_store.get_all_puzzle_hashes()
+
+        for coin in additions:
+            if coin.puzzle_hash in my_puzzle_hashes:
+                result.append(coin)
+
+        return result
+
+    async def get_relevant_removals(self, removals: List[Coin]) -> List[Coin]:
+        """ Returns a list of our unspent coins that are in the passed list. """
+
+        result: List[Coin] = []
+        my_coins: Dict[bytes32, Coin] = await self.wallet_store.get_unspent_coins()
+
+        for coin in removals:
+            if coin.name() in my_coins:
+                result.append(coin)
+
+        return result

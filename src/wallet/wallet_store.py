@@ -144,6 +144,18 @@ class WalletStore:
             coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4]))
         return coins
 
+    async def get_unspent_coins(self) -> Dict[bytes32, Coin]:
+        """ Returns a dictionary of all unspent coins. """
+        result: Dict[bytes32, Coin] = {}
+        unspent_coin_records: Set[CoinRecord] = await self.get_coin_records_by_spent(
+            False
+        )
+
+        for record in unspent_coin_records:
+            result[record.name()] = record.coin
+
+        return result
+
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(
         self, puzzle_hash: bytes32

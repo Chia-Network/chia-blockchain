@@ -1,5 +1,5 @@
 import asyncio
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Set
 from pathlib import Path
 import aiosqlite
 from src.types.sized_bytes import bytes32
@@ -274,6 +274,18 @@ class WalletTransactionStore:
             return row[0]
 
         return -1
+
+    async def get_all_puzzle_hashes(self) -> Set[bytes32]:
+        """ Return a set containing all puzzle_hashes we generated. """
+        cursor = await self.transaction_db.execute("SELECT * from derivation_paths")
+        rows = await cursor.fetchall()
+        await cursor.close()
+        result: Set[bytes32] = set()
+
+        for row in rows:
+            result.add(row[2])
+
+        return result
 
     async def get_max_derivation_path(self):
         cursor = await self.transaction_db.execute(
