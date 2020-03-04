@@ -400,3 +400,13 @@ class WalletStateManager:
                 result.append(coin)
 
         return result
+
+    async def close_all_stores(self):
+        await self.wallet_store.close()
+        await self.tx_store.close()
+        await self.puzzle_store.close()
+
+    async def clear_all_stores(self):
+        await self.wallet_store._clear_database()
+        await self.tx_store._clear_database()
+        await self.puzzle_store._clear_database()

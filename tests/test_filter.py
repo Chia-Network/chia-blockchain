@@ -27,7 +27,7 @@ class TestFilter:
         key_config = {"wallet_sk": sk}
         wallet_node = await WalletNode.create({}, key_config)
         wallet = wallet_node.wallet
-        await wallet_node.wallet_store._clear_database()
+        await wallet_node.wallet_state_manager.clear_all_stores()
 
         num_blocks = 2
         ph = await wallet.get_new_puzzlehash()
@@ -50,5 +50,4 @@ class TestFilter:
             assert present
             assert fee_present
 
-        await wallet_node.wallet_store.close()
-        await wallet_node.tx_store.close()
+        await wallet_node.wallet_state_manager.close_all_stores()
