@@ -9,12 +9,10 @@ from src.wallet.transaction_record import TransactionRecord
 
 class WalletTransactionStore:
     """
-    This object handles CoinRecords in DB used by wallet.
+    WalletTransactionStore stores transaction history for the wallet.
     """
 
     db_connection: aiosqlite.Connection
-    # Whether or not we are syncing
-    sync_mode: bool = False
     lock: asyncio.Lock
     cache_size: uint32
     tx_record_cache: Dict[bytes32, TransactionRecord]
@@ -88,8 +86,11 @@ class WalletTransactionStore:
         await cursor.close()
         await self.db_connection.commit()
 
-    # Store TransactionRecord in DB and Cache
     async def add_transaction_record(self, record: TransactionRecord) -> None:
+        """
+        Store TransactionRecord in DB and Cache.
+        """
+
         cursor = await self.db_connection.execute(
             "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
@@ -113,8 +114,11 @@ class WalletTransactionStore:
                 first_in = list(self.tx_record_cache.keys())[0]
                 self.tx_record_cache.pop(first_in)
 
-    # Update transaction_record to be confirmed in DB
     async def set_confirmed(self, id: bytes32, index: uint32):
+        """
+        Updates transaction to be confirmed.
+        """
+
         current: Optional[TransactionRecord] = await self.get_transaction_record(id)
         if current is None:
             return
@@ -133,8 +137,11 @@ class WalletTransactionStore:
         )
         await self.add_transaction_record(tx)
 
-    # Update transaction_record to be sent in DB
     async def set_sent(self, id: bytes32):
+        """
+        Updates transaction to be sent. (Full Node has received spend_bundle and sent ack).
+        """
+
         current: Optional[TransactionRecord] = await self.get_transaction_record(id)
         if current is None:
             return
@@ -153,8 +160,11 @@ class WalletTransactionStore:
         )
         await self.add_transaction_record(tx)
 
-    # Checks DB and cache for TransactionRecord with id: id and returns it
     async def get_transaction_record(self, id: bytes32) -> Optional[TransactionRecord]:
+        """
+        Checks DB and cache for TransactionRecord with id: id and returns it.
+        """
+
         if id.hex() in self.tx_record_cache:
             return self.tx_record_cache[id.hex()]
         cursor = await self.db_connection.execute(
@@ -168,6 +178,10 @@ class WalletTransactionStore:
         return None
 
     async def get_not_sent(self) -> List[TransactionRecord]:
+        """
+        Returns the list of transaction that have not been received by full node yet.
+        """
+
         cursor = await self.db_connection.execute(
             "SELECT * from transaction_record WHERE sent=?", (0,)
         )
@@ -181,12 +195,17 @@ class WalletTransactionStore:
         return records
 
     async def get_not_confirmed(self) -> List[TransactionRecord]:
+        """
+        Returns the list of transaction that have not yet been confirmed.
+        """
+
         cursor = await self.db_connection.execute(
             "SELECT * from transaction_record WHERE confirmed=?", (0,)
         )
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
+
         for row in rows:
             record = TransactionRecord.from_bytes(row[0])
             records.append(record)
@@ -194,10 +213,15 @@ class WalletTransactionStore:
         return records
 
     async def get_all_transactions(self) -> List[TransactionRecord]:
+        """
+        Returns all stored transactions.
+        """
+
         cursor = await self.db_connection.execute("SELECT * from transaction_record")
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
+
         for row in rows:
             record = TransactionRecord.from_bytes(row[0])
             records.append(record)

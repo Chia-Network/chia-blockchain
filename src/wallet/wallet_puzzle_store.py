@@ -9,11 +9,10 @@ from src.wallet.util.wallet_types import WalletType
 
 class WalletPuzzleStore:
     """
-    This object handles CoinRecords in DB used by wallet.
+    WalletPuzzleStore keeps track of all generated puzzle_hashes and their derivation path / wallet.
     """
 
     db_connection: aiosqlite.Connection
-    # Whether or not we are syncing
     lock: asyncio.Lock
     cache_size: uint32
 
@@ -61,6 +60,7 @@ class WalletPuzzleStore:
         await self.db_connection.close()
 
     async def _init_cache(self):
+        # TODO create cache
         print("init cache here")
 
     async def _clear_database(self):
@@ -71,6 +71,10 @@ class WalletPuzzleStore:
     async def add_derivation_path_of_interest(
         self, index: int, puzzlehash: bytes32, pubkey: bytes, wallet_type: WalletType
     ):
+        """
+        Inserts new derivation path, puzzle, pubkey, wallet into DB.
+        """
+
         cursor = await self.db_connection.execute(
             "INSERT OR REPLACE INTO derivation_paths VALUES(?, ?, ?, ?, ?)",
             (index, pubkey.hex(), puzzlehash.hex(), wallet_type.value, 0),
@@ -80,6 +84,10 @@ class WalletPuzzleStore:
         await self.db_connection.commit()
 
     async def puzzle_hash_exists(self, puzzle_hash: bytes32) -> bool:
+        """
+        Checks if passed puzzle_hash is present in the db.
+        """
+
         cursor = await self.db_connection.execute(
             "SELECT * from derivation_paths WHERE puzzle_hash=?", (puzzle_hash.hex(),)
         )
@@ -92,6 +100,11 @@ class WalletPuzzleStore:
         return False
 
     async def index_for_pubkey(self, pubkey: str) -> int:
+        """
+        Returns derivation path for the given pubkey.
+        Returns -1 if not present.
+        """
+
         cursor = await self.db_connection.execute(
             "SELECT * from derivation_paths WHERE pubkey=?", (pubkey,)
         )
@@ -103,9 +116,14 @@ class WalletPuzzleStore:
 
         return -1
 
-    async def index_for_puzzle_hash(self, pubkey: bytes32) -> int:
+    async def index_for_puzzle_hash(self, puzzle_hash: bytes32) -> int:
+        """
+        Returns the derivation path for the puzzle_hash.
+        Returns -1 if not present.
+        """
+
         cursor = await self.db_connection.execute(
-            "SELECT * from derivation_paths WHERE puzzle_hash=?", (pubkey.hex(),)
+            "SELECT * from derivation_paths WHERE puzzle_hash=?", (puzzle_hash.hex(),)
         )
         row = await cursor.fetchone()
         await cursor.close()
@@ -116,7 +134,10 @@ class WalletPuzzleStore:
         return -1
 
     async def get_all_puzzle_hashes(self) -> Set[bytes32]:
-        """ Return a set containing all puzzle_hashes we generated. """
+        """
+        Return a set containing all puzzle_hashes we generated.
+        """
+
         cursor = await self.db_connection.execute("SELECT * from derivation_paths")
         rows = await cursor.fetchall()
         await cursor.close()
@@ -128,6 +149,10 @@ class WalletPuzzleStore:
         return result
 
     async def get_max_derivation_path(self):
+        """
+        Returns the highest derivation path currently stored.
+        """
+
         cursor = await self.db_connection.execute(
             "SELECT MAX(id) FROM derivation_paths;"
         )
