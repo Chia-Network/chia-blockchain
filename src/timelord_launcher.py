@@ -50,7 +50,7 @@ async def spawn_process(host, port, counter):
 
 async def main():
     await asyncio.sleep(15)
-    
+
     host = config["host"]
     port = config["port"]
     process_count = config["process_count"]
