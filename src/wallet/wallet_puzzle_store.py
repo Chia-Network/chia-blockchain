@@ -64,7 +64,7 @@ class WalletPuzzleStore:
         print("init cache here")
 
     async def _clear_database(self):
-        cursor = await self.db_connection.execute("DELETE FROM transaction_record")
+        cursor = await self.db_connection.execute("DELETE FROM derivation_paths")
         await cursor.close()
         await self.db_connection.commit()
 
