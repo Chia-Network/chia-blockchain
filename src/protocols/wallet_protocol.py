@@ -65,6 +65,7 @@ class RejectAllHeaderHashesAfterRequest:
 @cbor_message
 class NewLCA:
     lca_hash: bytes32
+    prev_header_hash: bytes32
     height: uint32
     weight: uint128
 

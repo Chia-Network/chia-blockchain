@@ -8,7 +8,6 @@ from typing import AsyncGenerator, List, Optional, Tuple, Dict
 from chiabip158 import PyBIP158
 from chiapos import Verifier
 
-import src.protocols.wallet_protocol
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.block_rewards import calculate_base_fee
 from src.consensus.constants import constants as consensus_constants
@@ -173,7 +172,9 @@ class FullNode:
             )
         # If connected to a wallet, send the LCA
         lca = self.blockchain.lca_block
-        new_lca = wallet_protocol.NewLCA(lca.header_hash, lca.height, lca.weight)
+        new_lca = wallet_protocol.NewLCA(
+            lca.header_hash, lca.prev_header_hash, lca.height, lca.weight
+        )
         yield OutboundMessage(
             NodeType.WALLET, Message("new_lca", new_lca), Delivery.RESPOND
         )
@@ -664,7 +665,6 @@ class FullNode:
         """
         # Ignore if syncing
         if self.store.get_sync_mode():
-            breakpoint()
             return
         async with self.coin_store.lock:
             cost, error = await self.mempool_manager.add_spendbundle(tx.transaction)
@@ -1635,7 +1635,10 @@ class FullNode:
             new_lca = self.blockchain.lca_block
             if new_lca != prev_lca:
                 new_lca_req = wallet_protocol.NewLCA(
-                    new_lca.header_hash, new_lca.height, new_lca.weight
+                    new_lca.header_hash,
+                    new_lca.prev_header_hash,
+                    new_lca.height,
+                    new_lca.weight,
                 )
                 yield OutboundMessage(
                     NodeType.WALLET, Message("new_lca", new_lca_req), Delivery.BROADCAST
@@ -1726,7 +1729,7 @@ class FullNode:
     # WALLET PROTOCOL
     @api_request
     async def request_all_proof_hashes(
-        self, request: src.protocols.wallet_protocol.RequestAllProofHashes
+        self, request: wallet_protocol.RequestAllProofHashes
     ) -> OutboundMessageGenerator:
         proof_hashes_map = await self.store.get_proof_hashes()
         curr = self.blockchain.lca_block
@@ -1753,7 +1756,7 @@ class FullNode:
 
     @api_request
     async def request_all_header_hashes_after(
-        self, request: src.protocols.wallet_protocol.RequestAllHeaderHashesAfter
+        self, request: wallet_protocol.RequestAllHeaderHashesAfter
     ) -> OutboundMessageGenerator:
         header_hash: Optional[bytes32] = self.blockchain.height_to_hash.get(
             request.starting_height, None
@@ -1803,7 +1806,7 @@ class FullNode:
 
     @api_request
     async def request_header(
-        self, request: src.protocols.wallet_protocol.RequestHeader
+        self, request: wallet_protocol.RequestHeader
     ) -> OutboundMessageGenerator:
         full_block: Optional[FullBlock] = await self.store.get_block(
             request.header_hash
@@ -1831,7 +1834,7 @@ class FullNode:
 
     @api_request
     async def request_removals(
-        self, request: src.protocols.wallet_protocol.RequestRemovals
+        self, request: wallet_protocol.RequestRemovals
     ) -> OutboundMessageGenerator:
         block: Optional[FullBlock] = await self.store.get_block(request.header_hash)
         if (
@@ -1850,7 +1853,7 @@ class FullNode:
 
         # If there are no transactions, respond with empty lists
         if block.transactions_generator is None:
-            response = src.protocols.wallet_protocol.RespondRemovals(
+            response = wallet_protocol.RespondRemovals(
                 block.height, block.header_hash, [], []
             )
             yield OutboundMessage(
@@ -1867,7 +1870,7 @@ class FullNode:
                 cr = await self.coin_store.get_coin_record(removal)
                 assert cr is not None
                 coins_map.append((cr.coin.name, cr.coin))
-            response = src.protocols.wallet_protocol.RespondRemovals(
+            response = wallet_protocol.RespondRemovals(
                 block.height, block.header_hash, coins_map, None
             )
 
@@ -1888,7 +1891,7 @@ class FullNode:
                 else:
                     coins_map.append((coin_name, None))
                     assert not result
-            response = src.protocols.wallet_protocol.RespondRemovals(
+            response = wallet_protocol.RespondRemovals(
                 block.height, block.header_hash, coins_map, proofs_map
             )
 
@@ -1898,9 +1901,8 @@ class FullNode:
 
     @api_request
     async def request_additions(
-        self, request: src.protocols.wallet_protocol.RequestAdditions
+        self, request: wallet_protocol.RequestAdditions
     ) -> OutboundMessageGenerator:
-        # TODO(mariano): implement
         block: Optional[FullBlock] = await self.store.get_block(request.header_hash)
         if (
             block is None
@@ -1923,6 +1925,7 @@ class FullNode:
                 puzzlehash_coins_map[coin.puzzle_hash] = [coin]
 
         coins_map: List[Tuple[bytes32, List[Coin]]] = []
+        proofs_map: List[Tuple[bytes32, bytes, Optional[bytes]]] = []
 
         if request.puzzle_hashes is None:
             for puzzle_hash, coins in puzzlehash_coins_map:
@@ -1943,20 +1946,22 @@ class FullNode:
                 result, proof = addition_merkle_set.is_included_already_hashed(
                     puzzle_hash
                 )
-            # TODO(mariano): finish implementing
-            #     if puzzle_hash in all_removals:
-            #         cr = await self.coin_store.get_coin_record(removal)
-            #         assert cr is not None
-            #         coins_map.append((coin_name, cr.coin))
-            #         # proofs_map.append((puzzle_hash, proof))
-            #         assert result
-            #     else:
-            #         coins_map.append((coin_name, None))
-            #         assert not result
-            #         # proofs_map.append((puzzle_hash, proof))
-            # response = src.protocols.wallet_protocol.RespondRemovals(
-            #     block.height, block.header_hash, coins_map, proofs_map
-            # )
+            if puzzle_hash in puzzlehash_coins_map:
+                coins_map.append((puzzle_hash, puzzlehash_coins_map[puzzle_hash]))
+                hash_coin_str = hash_coin_list(puzzlehash_coins_map[puzzle_hash])
+                result_2, proof_2 = addition_merkle_set.is_included_already_hashed(
+                    hash_coin_str
+                )
+                assert result
+                assert result_2
+                proofs_map.append((puzzle_hash, proof, proof_2))
+            else:
+                coins_map.append((puzzle_hash, []))
+                assert not result
+                proofs_map.append((puzzle_hash, proof, None))
+            response = wallet_protocol.RespondAdditions(
+                block.height, block.header_hash, coins_map, proofs_map
+            )
 
         yield OutboundMessage(
             NodeType.WALLET, Message("respond_additions", response), Delivery.RESPOND,

@@ -1,16 +1,18 @@
 from pathlib import Path
-from typing import Dict, Optional, List
+import asyncio
+from typing import Dict, Optional
 from blspy import ExtendedPrivateKey
 import logging
-import src.protocols.wallet_protocol
+from src.protocols import wallet_protocol
 from src.consensus.constants import constants as consensus_constants
 from src.server.server import ChiaServer
-from src.types.sized_bytes import bytes32
+from src.server.connection import OutboundMessage, NodeType, Delivery, Message
 from src.util.api_decorators import api_request
 from src.wallet.wallet import Wallet
 from src.wallet.wallet_state_manager import WalletStateManager
 from src.wallet.wallet_store import WalletStore
 from src.wallet.wallet_transaction_store import WalletTransactionStore
+from src.util.ints import uint32
 
 
 class WalletNode:
@@ -20,8 +22,6 @@ class WalletNode:
     server: Optional[ChiaServer]
     wallet_store: WalletStore
     wallet_state_manager: WalletStateManager
-    header_hash: List[bytes32]
-    start_index: int
     log: logging.Logger
     wallet: Wallet
     tx_store: WalletTransactionStore
@@ -75,7 +75,7 @@ class WalletNode:
         pass
 
     @api_request
-    async def transaction_ack(self, ack: src.protocols.wallet_protocol.TransactionAck):
+    async def transaction_ack(self, ack: wallet_protocol.TransactionAck):
         if ack.status:
             await self.wallet_state_manager.remove_from_queue(ack.txid)
             self.log.info(f"SpendBundle has been received by the FullNode. id: {id}")
@@ -84,42 +84,58 @@ class WalletNode:
 
     @api_request
     async def respond_all_proof_hashes(
-        self, response: src.protocols.wallet_protocol.RespondAllProofHashes
+        self, response: wallet_protocol.RespondAllProofHashes
     ):
         # TODO(mariano): save proof hashes
         pass
 
     @api_request
     async def respond_all_header_hashes_after(
-        self, response: src.protocols.wallet_protocol.RespondAllHeaderHashesAfter
+        self, response: wallet_protocol.RespondAllHeaderHashesAfter
     ):
         # TODO(mariano): save header_hashes
         pass
 
     @api_request
     async def reject_all_header_hashes_after_request(
-        self, response: src.protocols.wallet_protocol.RejectAllHeaderHashesAfterRequest
+        self, response: wallet_protocol.RejectAllHeaderHashesAfterRequest
     ):
         # TODO(mariano): retry
         pass
 
     @api_request
-    async def new_lca(self, response: src.protocols.wallet_protocol.NewLCA):
-        # TODO(mariano): implement
-        # 1. If already have, ignore.
-        # 2. If extends chain:
-        # - Get header
-        # 3. If disconnected:
-        # - If far:
-        #     - Perform full sync
-        # - If close:
-        #     - Get header
-        pass
+    async def new_lca(self, request: wallet_protocol.NewLCA):
+        # If already seen LCA, ignore.
+        if request.lca_hash in self.wallet_state_manager.block_records:
+            return
+
+        lca = self.wallet_state_manager.block_records[self.wallet_state_manager.lca]
+
+        # If it's not the heaviest chain, ignore.
+        if request.weight < lca.weight:
+            return
+
+        if int(request.height) - int(lca.height) > 10:
+            try:
+                # Performs sync, and catch exceptions so we don't close the connection
+                async for ret_msg in self._sync():
+                    yield ret_msg
+            except asyncio.CancelledError:
+                self.log.error("Syncing failed, CancelledError")
+            except BaseException as e:
+                self.log.error(f"Error {type(e)}{e} with syncing")
+        else:
+            header_request = wallet_protocol.RequestHeader(
+                uint32(request.height - 1), request.prev_header_hash
+            )
+            yield OutboundMessage(
+                NodeType.FULL_NODE,
+                Message("request_header", header_request),
+                Delivery.RESPOND,
+            )
 
     @api_request
-    async def respond_header(
-        self, response: src.protocols.wallet_protocol.RespondHeader
-    ):
+    async def respond_header(self, response: wallet_protocol.RespondHeader):
         # TODO(mariano): implement
         # 1. If disconnected and close, get parent header and return
         # 2. If we have transactions, fetch adds/deletes
@@ -130,27 +146,25 @@ class WalletNode:
 
     @api_request
     async def reject_header_request(
-        self, response: src.protocols.wallet_protocol.RejectHeaderRequest
+        self, response: wallet_protocol.RejectHeaderRequest
     ):
         # TODO(mariano): implement
         pass
 
     @api_request
-    async def respond_removals(
-        self, response: src.protocols.wallet_protocol.RespondRemovals
-    ):
+    async def respond_removals(self, response: wallet_protocol.RespondRemovals):
         # TODO(mariano): implement
         pass
 
     @api_request
     async def reject_removals_request(
-        self, response: src.protocols.wallet_protocol.RejectRemovalsRequest
+        self, response: wallet_protocol.RejectRemovalsRequest
     ):
         # TODO(mariano): implement
         pass
 
     # @api_request
-    # async def received_body(self, response: src.protocols.wallet_protocol.RespondBody):
+    # async def received_body(self, response: wallet_protocol.RespondBody):
     #     """
     #     Called when body is received from the FullNode
     #     """
