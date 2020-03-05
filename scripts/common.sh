@@ -1,5 +1,5 @@
 _kill_servers() {
-  PROCS=`ps -e | grep -E 'chia_|vdf_server' | awk '!/grep/' | awk '{print $1}'`
+  PROCS=`ps -e | grep -E 'chia_|vdf_client|timelord_' | awk '!/grep/' | awk '{print $1}'`
   if [ -n "$PROCS" ]; then
     echo "$PROCS" | xargs -L1 kill
   fi
