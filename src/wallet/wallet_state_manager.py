@@ -401,6 +401,22 @@ class WalletStateManager:
 
         return result
 
+    # TODO Mariano, call this when reorg occurs
+    async def reorg_rollback(self, index: uint32):
+        """
+        Rolls back and updates the coin_store and transaction store.
+        """
+        print("Doing reorg...")
+        # TODO Straya
+
+    async def retry_sending_after_reorg(self, records: List[TransactionRecord]):
+        """
+        Retries sending spend_bundle to the Full_Node, after confirmed tx
+        get's excluded from chain because of the reorg.
+        """
+        print("Resending...")
+        # TODO Straya
+
     async def close_all_stores(self):
         await self.wallet_store.close()
         await self.tx_store.close()
