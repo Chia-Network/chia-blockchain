@@ -81,7 +81,7 @@ class RequestHeader:
 @cbor_message
 class RespondHeader:
     header_block: HeaderBlock
-    bip158_filter: Optional[bytes]
+    transactions_filter: Optional[bytes]
 
 
 @dataclass(frozen=True)

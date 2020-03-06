@@ -2,7 +2,7 @@ const electron = require('electron')
 const app = electron.app
 const BrowserWindow = electron.BrowserWindow
 const path = require('path')
-
+const WebSocket = require('ws');
 
 /*************************************************************
  * py process
@@ -10,7 +10,7 @@ const path = require('path')
 
 const PY_DIST_FOLDER = 'pydist'
 const PY_FOLDER = 'rpc'
-const PY_MODULE = 'rpc_wallet' // without .py suffix
+const PY_MODULE = 'websocket_server' // without .py suffix
 
 let pyProc = null
 let pyPort = null
@@ -68,7 +68,14 @@ app.on('will-quit', exitPyProc)
 let mainWindow = null
 
 const createWindow = () => {
-  mainWindow = new BrowserWindow({width: 1500, height: 800})
+  console.log(process.versions)
+  mainWindow = new BrowserWindow({
+      width: 1500,
+      height: 800,
+      webPreferences: {
+        nodeIntegration: true
+    },})
+
   mainWindow.loadURL(require('url').format({
     pathname: path.join(__dirname, 'wallet-dark.html'),
     protocol: 'file:',

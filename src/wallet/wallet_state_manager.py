@@ -365,18 +365,18 @@ class WalletStateManager:
         ] = await self.wallet_store.get_coin_records_by_spent(False)
         my_puzzle_hashes = await self.puzzle_store.get_all_puzzle_hashes()
 
-        removals_of_interests: bytes32 = []
+        removals_of_interest: bytes32 = []
         additions_of_interest: bytes32 = []
 
         for record in my_coin_records:
             if tx_filter.Match(bytearray(record.name())):
-                removals_of_interests.append(record.name())
+                removals_of_interest.append(record.name())
 
         for puzzle_hash in my_puzzle_hashes:
             if tx_filter.Match(bytearray(puzzle_hash)):
                 additions_of_interest.append(puzzle_hash)
 
-        return (removals_of_interests, additions_of_interest)
+        return (additions_of_interest, removals_of_interest)
 
     async def get_relevant_additions(self, additions: List[Coin]) -> List[Coin]:
         """ Returns the list of coins that are relevant to us.(We can spend them) """
@@ -407,9 +407,14 @@ class WalletStateManager:
         Rolls back and updates the coin_store and transaction store. It's possible this height
         is the tip, or even beyond the tip.
         """
-        print("Doing reorg...")
         await self.wallet_store.rollback_lca_to_block(index)
-        # TODO Straya
+
+        reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(
+            index
+        )
+        await self.tx_store.rollback_to_block(index)
+
+        await self.retry_sending_after_reorg(reorged)
 
     async def retry_sending_after_reorg(self, records: List[TransactionRecord]):
         """

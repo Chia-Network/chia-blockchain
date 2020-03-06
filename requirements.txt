@@ -47,6 +47,7 @@ wcwidth==0.1.8
 yarl==1.4.2
 zipp==2.0.0
 sortedcontainers==2.1.0
+websockets==8.1.0
 -e lib/chiapos
 -e lib/bip158
 -e lib/py-setproctitle

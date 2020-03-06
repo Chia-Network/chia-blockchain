@@ -11,6 +11,7 @@ from src.util.ints import uint32
 from src.util.api_decorators import api_request
 from src.wallet.wallet import Wallet
 from src.wallet.wallet_state_manager import WalletStateManager
+from src.wallet.block_record import BlockRecord
 
 
 class WalletNode:
@@ -22,6 +23,7 @@ class WalletNode:
     log: logging.Logger
     wallet: Wallet
     constants: Dict
+    short_sync_threshold: int
 
     @staticmethod
     async def create(
@@ -49,6 +51,7 @@ class WalletNode:
         self.wallet = await Wallet.create(config, key_config, self.wallet_state_manager)
 
         self.server = None
+        self.short_sync_threshold = 10
 
         return self
 
@@ -105,7 +108,7 @@ class WalletNode:
         if request.weight < lca.weight:
             return
 
-        if int(request.height) - int(lca.height) > 10:
+        if int(request.height) - int(lca.height) > self.short_sync_threshold:
             try:
                 # Performs sync, and catch exceptions so we don't close the connection
                 async for ret_msg in self._sync():
@@ -126,15 +129,60 @@ class WalletNode:
 
     @api_request
     async def respond_header(self, response: wallet_protocol.RespondHeader):
-        # TODO(mariano): implement
+        block = response.header_block
         # 0. If we already have, return
+        if block.header_hash in self.wallet_state_manager.block_records:
+            return
+
+        lca = self.wallet_state_manager.block_records[self.wallet_state_manager.lca]
 
         # 1. If disconnected and close, get parent header and return
+        if block.prev_header_hash not in self.wallet_state_manager.block_records:
+            if block.height - lca.height < self.short_sync_threshold:
+                header_request = wallet_protocol.RequestHeader(
+                    uint32(block.height - 1), block.prev_header_hash,
+                )
+                yield OutboundMessage(
+                    NodeType.FULL_NODE,
+                    Message("request_header", header_request),
+                    Delivery.RESPOND,
+                )
+                return
+
         # 2. If we have transactions, fetch adds/deletes
-        # adds_deletes = await self.wallet_state_manager.filter_additions_removals()
-        # 3. If we don't have, don't fetch
-        # 4. If we have the next header cached, process it
-        pass
+        if response.transactions_filter is not None:
+            (
+                additions,
+                removals,
+            ) = await self.wallet_state_manager.get_filter_additions_removals(
+                response.transactions_filter
+            )
+            if len(additions) > 0:
+                request_a = wallet_protocol.RequestAdditions(
+                    block.height, block.header_hash, additions
+                )
+                yield OutboundMessage(
+                    NodeType.FULL_NODE,
+                    Message("request_additions", request_a),
+                    Delivery.RESPOND,
+                )
+
+                # Request additions
+            if len(removals) > 0:
+                request_r = wallet_protocol.RequestRemovals(
+                    block.height, block.header_hash, removals
+                )
+                yield OutboundMessage(
+                    NodeType.FULL_NODE,
+                    Message("request_removals", request_r),
+                    Delivery.RESPOND,
+                )
+        else:
+            block_record = BlockRecord(block.header_hash, block.prev_header_hash, block.height, block.weight, [], [])
+            res = await self.wallet_state_manager.receive_block(block_record, block)
+            # 3. If we don't have, don't fetch
+            # 4. If we have the next header cached, process it
+            pass
 
     @api_request
     async def reject_header_request(
