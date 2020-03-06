@@ -227,3 +227,26 @@ class WalletTransactionStore:
             records.append(record)
 
         return records
+
+    async def get_transaction_above(self, height: uint32) -> List[TransactionRecord]:
+        cursor = await self.db_connection.execute(
+            "SELECT * from transaction_record WHERE confirmed_at_index>?", (height,)
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        records = []
+
+        for row in rows:
+            record = TransactionRecord.from_bytes(row[0])
+            records.append(record)
+
+        return records
+
+    async def rollback_to_block(self, block_index):
+
+        # Delete from storage
+        c1 = await self.db_connection.execute(
+            "DELETE FROM transaction_record WHERE confirmed_at_index>?", (block_index,)
+        )
+        await c1.close()
+        await self.db_connection.commit()

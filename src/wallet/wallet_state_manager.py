@@ -406,8 +406,12 @@ class WalletStateManager:
         """
         Rolls back and updates the coin_store and transaction store.
         """
-        print("Doing reorg...")
-        # TODO Straya
+        await self.wallet_store.rollback_lca_to_block(index)
+
+        reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(index)
+        await self.tx_store.rollback_to_block(index)
+
+        await self.retry_sending_after_reorg(reorged)
 
     async def retry_sending_after_reorg(self, records: List[TransactionRecord]):
         """
