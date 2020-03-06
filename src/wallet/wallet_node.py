@@ -8,7 +8,7 @@ from blspy import ExtendedPrivateKey
 from src.util.merkle_set import (
     confirm_included_already_hashed,
     confirm_not_included_already_hashed,
-)
+    MerkleSet)
 from src.protocols import wallet_protocol
 from src.consensus.constants import constants as consensus_constants
 from src.server.server import ChiaServer
@@ -503,6 +503,14 @@ class WalletNode:
                     all_coins
                 )
             ]
+
+            # Verify removals root
+            removals_merkle_set = MerkleSet()
+            for coin in removals:
+                removals_merkle_set.add_already_hashed(coin.name())
+            removals_root = removals_merkle_set.get_root()
+            if header_block.header.data.removals_root != removals_root:
+                return
         else:
             removals = []
             assert len(response.coins) == len(response.proofs)
@@ -566,6 +574,17 @@ class WalletNode:
             additions = await self.wallet_state_manager.get_relevant_additions(
                 all_coins
             )
+            # Verify root
+            additions_merkle_set = MerkleSet()
+
+            # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
+            for puzzle_hash, coins in response.coins:
+                additions_merkle_set.add_already_hashed(puzzle_hash)
+                additions_merkle_set.add_already_hashed(hash_coin_list(coins))
+
+            additions_root = additions_merkle_set.get_root()
+            if header_block.header.data.additions_root != additions_root:
+                return
         else:
             additions = []
             assert len(response.coins) == len(response.proofs)
