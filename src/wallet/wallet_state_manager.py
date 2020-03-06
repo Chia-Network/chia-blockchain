@@ -1,6 +1,11 @@
 import time
+from pathlib import Path
+
 from typing import Dict, Optional, List, Set, Tuple
 import logging
+
+from chiabip158 import PyBIP158
+
 from src.types.hashable.coin import Coin
 from src.types.hashable.coin_record import CoinRecord
 from src.types.hashable.spend_bundle import SpendBundle
@@ -13,6 +18,7 @@ from src.util.ints import uint32, uint64
 from src.util.hash import std_hash
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.block_record import BlockRecord
+from src.wallet.wallet_puzzle_store import WalletPuzzleStore
 from src.wallet.wallet_store import WalletStore
 from src.wallet.wallet_transaction_store import WalletTransactionStore
 from src.full_node.blockchain import ReceiveBlockResult
@@ -24,6 +30,7 @@ class WalletStateManager:
     config: Dict
     wallet_store: WalletStore
     tx_store: WalletTransactionStore
+    puzzle_store: WalletPuzzleStore
     # Map from header hash to BlockRecord
     block_records: Dict[bytes32, BlockRecord]
     # Specifies the LCA path
@@ -40,26 +47,29 @@ class WalletStateManager:
     @staticmethod
     async def create(
         config: Dict,
-        key_config: Dict,
-        wallet_store: WalletStore,
-        tx_store: WalletTransactionStore,
+        db_path: Path,
         name: str = None,
-        override_constants: Dict = {},
+        override_constants: Optional[Dict] = None,
     ):
         self = WalletStateManager()
         self.config = config
         self.constants = consensus_constants.copy()
-        for key, value in override_constants.items():
-            self.constants[key] = value
+
+        if override_constants:
+            for key, value in override_constants.items():
+                self.constants[key] = value
+
         if name:
             self.log = logging.getLogger(name)
         else:
             self.log = logging.getLogger(__name__)
 
-        self.wallet_store = wallet_store
-        self.tx_store = tx_store
+        self.wallet_store = await WalletStore.create(db_path)
+        self.tx_store = await WalletTransactionStore.create(db_path)
+        self.puzzle_store = await WalletPuzzleStore.create(db_path)
+
         self.synced = False
-        self.block_records = await wallet_store.get_lca_path()
+        self.block_records = await self.wallet_store.get_lca_path()
         genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
 
         if len(self.block_records) > 0:
@@ -122,7 +132,7 @@ class WalletStateManager:
 
         for record in unconfirmed_tx:
             for coin in record.additions:
-                if await self.tx_store.puzzle_hash_exists(coin.puzzle_hash):
+                if await self.puzzle_store.puzzle_hash_exists(coin.puzzle_hash):
                     addition_amount += coin.amount
             for coin in record.removals:
                 removal_amount += coin.amount
@@ -208,15 +218,47 @@ class WalletStateManager:
         now = uint64(int(time.time()))
         add_list: List[Coin] = []
         rem_list: List[Coin] = []
+        total_removed = 0
+        total_added = 0
+        outgoing_amount = 0
+
         for add in spend_bundle.additions():
+            total_added += add.amount
             add_list.append(add)
         for rem in spend_bundle.removals():
+            total_removed += rem.amount
             rem_list.append(rem)
 
-        # Wallet node will use this queue to retry sending this transaction until full nodes receives it
+        fee_amount = total_removed - total_added
+
+        # Figure out if we are sending to ourself or someone else.
+        to_puzzle_hash: Optional[bytes32] = None
+        for add in add_list:
+            if not await self.puzzle_store.puzzle_hash_exists(add.puzzle_hash):
+                to_puzzle_hash = add.puzzle_hash
+                outgoing_amount += add.amount
+                break
+
+        # If there is no addition for outside puzzlehash we are sending tx to ourself
+        if to_puzzle_hash is None:
+            to_puzzle_hash = add_list[0].puzzle_hash
+            outgoing_amount += total_added
+
         tx_record = TransactionRecord(
-            uint32(0), uint32(0), False, False, now, spend_bundle, add_list, rem_list
+            confirmed_at_index=uint32(0),
+            created_at_time=now,
+            to_puzzle_hash=to_puzzle_hash,
+            amount=uint64(outgoing_amount),
+            fee_amount=uint64(fee_amount),
+            incoming=False,
+            confirmed=False,
+            sent=False,
+            spend_bundle=spend_bundle,
+            additions=add_list,
+            removals=rem_list,
         )
+
+        # Wallet node will use this queue to retry sending this transaction until full nodes receives it
         await self.tx_store.add_transaction_record(tx_record)
 
     async def remove_from_queue(self, spendbundle_id: bytes32):
@@ -269,8 +311,9 @@ class WalletStateManager:
 
         # Not genesis, updated LCA
         if block.weight > self.block_records[self.lca].weight:
+
             fork_h = self.find_fork_for_lca(block)
-            await self.wallet_store.rollback_lca_to_block(fork_h)
+            await self.reorg_rollback(fork_h)
 
             # Add blocks between fork point and new lca
             fork_hash = self.height_to_hash[fork_h]
@@ -311,16 +354,77 @@ class WalletStateManager:
             tmp_old = self.block_records[tmp_old.prev_header_hash]
         return uint32(0)
 
-    def get_filter_additions_removals(
+    async def get_filter_additions_removals(
         self, transactions_fitler: bytes
-    ) -> Tuple[List[bytes32], List[Coin]]:
-        # TODO(straya): get all of wallet's additions and removals which are included in filter
-        return ([], [])
+    ) -> Tuple[List[bytes32], List[bytes32]]:
+        """ Returns a list of our coin ids, and a list of puzzle_hashes that positively match with provided filter. """
 
-    def get_relevant_additions(self, additions: List[Coin]) -> List[Coin]:
-        # TODO(straya): get all additions which are relevant to us (we can spend) from the list
-        return []
+        tx_filter = PyBIP158(transactions_fitler)
+        my_coin_records: Set[
+            CoinRecord
+        ] = await self.wallet_store.get_coin_records_by_spent(False)
+        my_puzzle_hashes = await self.puzzle_store.get_all_puzzle_hashes()
 
-    def get_relevant_removals(self, removals: List[Coin]) -> List[Coin]:
-        # TODO(straya): get all removals which are relevant to us (our money was spent) from the list
-        return []
+        removals_of_interests: bytes32 = []
+        additions_of_interest: bytes32 = []
+
+        for record in my_coin_records:
+            if tx_filter.Match(bytearray(record.name())):
+                removals_of_interests.append(record.name())
+
+        for puzzle_hash in my_puzzle_hashes:
+            if tx_filter.Match(bytearray(puzzle_hash)):
+                additions_of_interest.append(puzzle_hash)
+
+        return (removals_of_interests, additions_of_interest)
+
+    async def get_relevant_additions(self, additions: List[Coin]) -> List[Coin]:
+        """ Returns the list of coins that are relevant to us.(We can spend them) """
+
+        result: List[Coin] = []
+        my_puzzle_hashes: Set[bytes32] = await self.puzzle_store.get_all_puzzle_hashes()
+
+        for coin in additions:
+            if coin.puzzle_hash in my_puzzle_hashes:
+                result.append(coin)
+
+        return result
+
+    async def get_relevant_removals(self, removals: List[Coin]) -> List[Coin]:
+        """ Returns a list of our unspent coins that are in the passed list. """
+
+        result: List[Coin] = []
+        my_coins: Dict[bytes32, Coin] = await self.wallet_store.get_unspent_coins()
+
+        for coin in removals:
+            if coin.name() in my_coins:
+                result.append(coin)
+
+        return result
+
+    async def reorg_rollback(self, index: uint32):
+        """
+        Rolls back and updates the coin_store and transaction store. It's possible this height
+        is the tip, or even beyond the tip.
+        """
+        print("Doing reorg...")
+        await self.wallet_store.rollback_lca_to_block(index)
+        # TODO Straya
+
+    async def retry_sending_after_reorg(self, records: List[TransactionRecord]):
+        """
+        Retries sending spend_bundle to the Full_Node, after confirmed tx
+        get's excluded from chain because of the reorg.
+        """
+        print("Resending...")
+        # TODO Straya
+
+    async def close_all_stores(self):
+        await self.wallet_store.close()
+        await self.tx_store.close()
+        await self.puzzle_store.close()
+
+    async def clear_all_stores(self):
+        await self.wallet_store._clear_database()
+        await self.tx_store._clear_database()
+        await self.puzzle_store._clear_database()

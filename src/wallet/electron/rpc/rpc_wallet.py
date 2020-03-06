@@ -123,7 +123,7 @@ async def start_rpc_server():
         config["full_node_peer"]["host"], config["full_node_peer"]["port"]
     )
 
-    _ = await server.start_server("127.0.0.1", wallet_node._on_connect)
+    _ = await server.start_server("127.0.0.1", None)
     await asyncio.sleep(1)
     _ = await server.start_client(full_node_peer, None)
 

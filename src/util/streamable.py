@@ -216,9 +216,20 @@ class Streamable:
         return dataclass_from_dict(cls, json.loads(json_str))
 
     def recurse_str(self, d):
-        for key, value in d.items():
-            if type(value) in unhashable_types or issubclass(type(value), bytes):
-                d[key] = f"0x{bytes(value).hex()}"
-            if isinstance(value, dict):
-                self.recurse_str(value)
+        if isinstance(d, list):
+            for item in d:
+                if type(item) in unhashable_types or issubclass(type(item), bytes):
+                    item = f"0x{bytes(item).hex()}"
+                if isinstance(item, dict):
+                    self.recurse_str(item)
+                if isinstance(item, list):
+                    self.recurse_str(item)
+        else:
+            for key, value in d.items():
+                if type(value) in unhashable_types or issubclass(type(value), bytes):
+                    d[key] = f"0x{bytes(value).hex()}"
+                if isinstance(value, dict):
+                    self.recurse_str(value)
+                if isinstance(value, list):
+                    self.recurse_str(value)
         return d

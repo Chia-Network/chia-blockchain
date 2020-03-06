@@ -6,13 +6,11 @@ import logging
 from src.protocols import wallet_protocol
 from src.consensus.constants import constants as consensus_constants
 from src.server.server import ChiaServer
-from src.server.connection import OutboundMessage, NodeType, Delivery, Message
+from src.server.outbound_message import OutboundMessage, NodeType, Message, Delivery
+from src.util.ints import uint32
 from src.util.api_decorators import api_request
 from src.wallet.wallet import Wallet
 from src.wallet.wallet_state_manager import WalletStateManager
-from src.wallet.wallet_store import WalletStore
-from src.wallet.wallet_transaction_store import WalletTransactionStore
-from src.util.ints import uint32
 
 
 class WalletNode:
@@ -20,11 +18,9 @@ class WalletNode:
     key_config: Dict
     config: Dict
     server: Optional[ChiaServer]
-    wallet_store: WalletStore
     wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet: Wallet
-    tx_store: WalletTransactionStore
     constants: Dict
 
     @staticmethod
@@ -46,15 +42,9 @@ class WalletNode:
 
         pub_hex = self.private_key.get_public_key().serialize().hex()
         path = Path(f"wallet_db_{pub_hex}.db")
-        self.wallet_store = await WalletStore.create(path)
-        self.tx_store = await WalletTransactionStore.create(path)
 
         self.wallet_state_manager = await WalletStateManager.create(
-            config,
-            key_config,
-            self.wallet_store,
-            self.tx_store,
-            override_constants=override_constants,
+            config, path, override_constants=override_constants,
         )
         self.wallet = await Wallet.create(config, key_config, self.wallet_state_manager)
 
@@ -137,6 +127,8 @@ class WalletNode:
     @api_request
     async def respond_header(self, response: wallet_protocol.RespondHeader):
         # TODO(mariano): implement
+        # 0. If we already have, return
+
         # 1. If disconnected and close, get parent header and return
         # 2. If we have transactions, fetch adds/deletes
         # adds_deletes = await self.wallet_state_manager.filter_additions_removals()
