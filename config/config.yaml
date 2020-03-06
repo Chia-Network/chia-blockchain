@@ -4,7 +4,7 @@ ping_interval: 120
 
 # Controls logging of all servers (harvester, farmer, etc..). Each one can be overriden.
 logging: &logging
-  log_stdout: False  # If True, outputs to stdout instead of a file
+  log_stdout: True  # If True, outputs to stdout instead of a file
   log_filename: "chia.log"
 
 harvester:
@@ -124,8 +124,13 @@ introducer:
 
 wallet:
   host: 127.0.0.1
-  port: 8223
+  port: 8449
   rpc_port: 9256
+
+  # The minimum height that we care about for our transactions. Set to zero
+  # If we are restoring from private key and don't know the height.
+  starting_height: 0
+  num_sync_batches: 10
 
   full_node_peer:
     host: 127.0.0.1

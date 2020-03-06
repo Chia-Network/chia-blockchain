@@ -1,6 +1,8 @@
 from typing import Any, Dict
 from pathlib import Path
 import asyncio
+import blspy
+from secrets import token_bytes
 
 from src.full_node.blockchain import Blockchain
 from src.full_node.mempool_manager import MempoolManager
@@ -8,6 +10,7 @@ from src.full_node.store import FullNodeStore
 from src.full_node.full_node import FullNode
 from src.server.connection import NodeType
 from src.server.server import ChiaServer
+from src.wallet.wallet_node import WalletNode
 from src.types.full_block import FullBlock
 from src.full_node.coin_store import CoinStore
 from tests.block_tools import BlockTools
@@ -89,6 +92,33 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     await store_1.close()
     await unspent_store_1.close()
     Path(db_name).unlink()
+
+
+async def setup_wallet_node(port, introducer_port=None, dic={}):
+    config = load_config("config.yaml", "wallet")
+    key_config = {
+        "wallet_sk": bytes(blspy.ExtendedPrivateKey.from_seed(b"1234")).hex(),
+    }
+    test_constants_copy = test_constants.copy()
+    for k in dic.keys():
+        test_constants_copy[k] = dic[k]
+    db_path = "test-wallet-db" + token_bytes(32).hex()
+    if Path(db_path).exists():
+        Path(db_path).unlink()
+
+    wallet = await WalletNode.create(
+        config, key_config, db_path=db_path, override_constants=test_constants_copy
+    )
+    server = ChiaServer(port, wallet, NodeType.WALLET)
+    wallet.set_server(server)
+
+    yield (wallet, server)
+
+    server.close_all()
+    await wallet.wallet_state_manager.clear_all_stores()
+    await wallet.wallet_state_manager.close_all_stores()
+    Path(db_path).unlink()
+    await server.await_closed()
 
 
 async def setup_harvester(port, dic={}):
@@ -187,6 +217,24 @@ async def setup_two_nodes(dic={}):
     fn2, s2 = await node_iters[1].__anext__()
 
     yield (fn1, fn2, s1, s2)
+
+    for node_iter in node_iters:
+        try:
+            await node_iter.__anext__()
+        except StopAsyncIteration:
+            pass
+
+
+async def setup_node_and_wallet(dic={}):
+    node_iters = [
+        setup_full_node("blockchain_test.db", 21234, dic=dic),
+        setup_wallet_node(21235, dic=dic),
+    ]
+
+    full_node, s1 = await node_iters[0].__anext__()
+    wallet, s2 = await node_iters[1].__anext__()
+
+    yield (full_node, wallet, s1, s2)
 
     for node_iter in node_iters:
         try:

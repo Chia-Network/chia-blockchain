@@ -1821,7 +1821,7 @@ class FullNode:
                 )
                 yield OutboundMessage(
                     NodeType.WALLET,
-                    Message("respond_block", response),
+                    Message("respond_header", response),
                     Delivery.RESPOND,
                 )
                 return

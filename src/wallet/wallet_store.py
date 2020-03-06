@@ -16,7 +16,6 @@ class WalletStore:
 
     db_connection: aiosqlite.Connection
     # Whether or not we are syncing
-    sync_mode: bool = False
     lock: asyncio.Lock
     coin_record_cache: Dict[str, CoinRecord]
     cache_size: uint32
@@ -221,7 +220,6 @@ class WalletStore:
             if br.height > max_height:
                 max_height = br.height
         # Makes sure there's exactly one block per height
-        print(max_height, len(rows))
         assert max_height == len(rows) - 1
         return hash_to_br
 
@@ -232,7 +230,7 @@ class WalletStore:
                 block_record.header_hash.hex(),
                 block_record.height,
                 in_lca_path,
-                block_record,
+                bytes(block_record),
             ),
         )
         await cursor.close()

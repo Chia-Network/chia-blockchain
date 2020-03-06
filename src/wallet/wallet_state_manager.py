@@ -3,7 +3,7 @@ from pathlib import Path
 
 from typing import Dict, Optional, List, Set, Tuple
 import logging
-
+import asyncio
 from chiabip158 import PyBIP158
 
 from src.types.hashable.coin import Coin
@@ -39,6 +39,9 @@ class WalletStateManager:
     lca: Optional[bytes32]
     start_index: int
 
+    # Makes sure only one asyncio thread is changing the blockchain state at one time
+    lock: asyncio.Lock
+
     log: logging.Logger
 
     # TODO Don't allow user to send tx until wallet is synced
@@ -63,12 +66,14 @@ class WalletStateManager:
             self.log = logging.getLogger(name)
         else:
             self.log = logging.getLogger(__name__)
+        self.lock = asyncio.Lock()
 
         self.wallet_store = await WalletStore.create(db_path)
         self.tx_store = await WalletTransactionStore.create(db_path)
         self.puzzle_store = await WalletPuzzleStore.create(db_path)
-
+        self.lca = None
         self.synced = False
+        self.height_to_hash = {}
         self.block_records = await self.wallet_store.get_lca_path()
         genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
 
@@ -281,62 +286,96 @@ class WalletStateManager:
         records = await self.tx_store.get_all_transactions()
         return records
 
+    def find_fork_point(self, alternate_chain: List[bytes32]) -> uint32:
+        """
+        Takes in an alternate blockchain (headers), and compares it to self. Returns the last header
+        where both blockchains are equal.
+        """
+        lca: BlockRecord = self.block_records[self.lca]
+
+        if lca.height >= len(alternate_chain) - 1:
+            raise ValueError("Alternate chain is shorter")
+        low: uint32 = uint32(0)
+        high = lca.height
+        while low + 1 < high:
+            mid = uint32((low + high) // 2)
+            if self.height_to_hash[uint32(mid)] != alternate_chain[mid]:
+                high = mid
+            else:
+                low = mid
+        if low == high and low == 0:
+            assert self.height_to_hash[uint32(0)] == alternate_chain[0]
+            return uint32(0)
+        assert low + 1 == high
+        if self.height_to_hash[uint32(low)] == alternate_chain[low]:
+            if self.height_to_hash[uint32(high)] == alternate_chain[high]:
+                return high
+            else:
+                return low
+        elif low > 0:
+            assert self.height_to_hash[uint32(low - 1)] == alternate_chain[low - 1]
+            return uint32(low - 1)
+        else:
+            raise ValueError("Invalid genesis block")
+
     async def receive_block(
         self, block: BlockRecord, header_block: Optional[HeaderBlock] = None,
     ) -> ReceiveBlockResult:
-        if block.header_hash in self.block_records:
-            return ReceiveBlockResult.ALREADY_HAVE_BLOCK
+        async with self.lock:
+            if block.header_hash in self.block_records:
+                return ReceiveBlockResult.ALREADY_HAVE_BLOCK
 
-        if block.prev_header_hash not in self.block_records or block.height == 0:
-            return ReceiveBlockResult.DISCONNECTED_BLOCK
+            if block.prev_header_hash not in self.block_records and block.height != 0:
+                return ReceiveBlockResult.DISCONNECTED_BLOCK
 
-        if header_block is not None:
-            # TODO: validate header block
-            pass
+            if header_block is not None:
+                # TODO: validate header block
+                pass
 
-        self.block_records[block.header_hash] = block
-        await self.wallet_store.add_block_record(block, False)
+            self.block_records[block.header_hash] = block
+            await self.wallet_store.add_block_record(block, False)
 
-        # Genesis case
-        if self.lca is None:
-            assert block.height == 0
-            await self.wallet_store.add_block_to_path(block.header_hash)
-            self.lca = block.header_hash
-            for coin in block.additions:
-                await self.coin_added(coin, block.height, False)
-            for coin_name in block.removals:
-                await self.coin_removed(coin_name, block.height)
-            self.height_to_hash[uint32(0)] = block.header_hash
-            return ReceiveBlockResult.ADDED_TO_HEAD
+            # Genesis case
+            if self.lca is None:
+                assert block.height == 0
+                await self.wallet_store.add_block_to_path(block.header_hash)
+                self.lca = block.header_hash
+                for coin in block.additions:
+                    await self.coin_added(coin, block.height, False)
+                for coin_name in block.removals:
+                    await self.coin_removed(coin_name, block.height)
+                self.height_to_hash[uint32(0)] = block.header_hash
+                return ReceiveBlockResult.ADDED_TO_HEAD
 
-        # Not genesis, updated LCA
-        if block.weight > self.block_records[self.lca].weight:
+            # Not genesis, updated LCA
+            if block.weight > self.block_records[self.lca].weight:
 
-            fork_h = self.find_fork_for_lca(block)
-            await self.reorg_rollback(fork_h)
+                fork_h = self.find_fork_for_lca(block)
+                await self.reorg_rollback(fork_h)
 
-            # Add blocks between fork point and new lca
-            fork_hash = self.height_to_hash[fork_h]
-            blocks_to_add: List[BlockRecord] = []
-            tip_hash: bytes32 = block.header_hash
-            while True:
-                if tip_hash == fork_hash:
-                    break
-                record = self.block_records[tip_hash]
-                blocks_to_add.append(record)
-                tip_hash = record.prev_header_hash
-            blocks_to_add.reverse()
+                # Add blocks between fork point and new lca
+                fork_hash = self.height_to_hash[fork_h]
+                blocks_to_add: List[BlockRecord] = []
+                tip_hash: bytes32 = block.header_hash
+                while True:
+                    if tip_hash == fork_hash:
+                        break
+                    record = self.block_records[tip_hash]
+                    blocks_to_add.append(record)
+                    tip_hash = record.prev_header_hash
+                blocks_to_add.reverse()
 
-            for path_block in blocks_to_add:
-                self.height_to_hash[path_block.height] = path_block.header_hash
-                await self.wallet_store.add_block_to_path(path_block.header_hash)
-                for coin in path_block.additions:
-                    await self.coin_added(coin, path_block.height, False)
-                for coin_name in path_block.removals:
-                    await self.coin_removed(coin_name, path_block.height)
-            return ReceiveBlockResult.ADDED_TO_HEAD
+                for path_block in blocks_to_add:
+                    self.height_to_hash[path_block.height] = path_block.header_hash
+                    await self.wallet_store.add_block_to_path(path_block.header_hash)
+                    for coin in path_block.additions:
+                        await self.coin_added(coin, path_block.height, False)
+                    for coin_name in path_block.removals:
+                        await self.coin_removed(coin_name, path_block.height)
+                self.lca = block.header_hash
+                return ReceiveBlockResult.ADDED_TO_HEAD
 
-        return ReceiveBlockResult.ADDED_AS_ORPHAN
+            return ReceiveBlockResult.ADDED_AS_ORPHAN
 
     def find_fork_for_lca(self, new_lca: BlockRecord) -> uint32:
         """ Tries to find height where new chain (current) diverged from the old chain where old_lca was the LCA"""
@@ -358,8 +397,7 @@ class WalletStateManager:
         self, transactions_fitler: bytes
     ) -> Tuple[List[bytes32], List[bytes32]]:
         """ Returns a list of our coin ids, and a list of puzzle_hashes that positively match with provided filter. """
-
-        tx_filter = PyBIP158(transactions_fitler)
+        tx_filter = PyBIP158([b for b in transactions_fitler])
         my_coin_records: Set[
             CoinRecord
         ] = await self.wallet_store.get_coin_records_by_spent(False)

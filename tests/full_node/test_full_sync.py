@@ -6,7 +6,7 @@ import pytest
 from src.types.peer_info import PeerInfo
 from src.protocols import full_node_protocol
 from src.util.ints import uint16
-from tests.setup_nodes import setup_two_nodes, test_constants, bt
+from tests.setup_nodes import setup_two_nodes, setup_node_and_wallet, test_constants, bt
 
 
 @pytest.fixture(scope="module")
@@ -19,6 +19,11 @@ class TestFullSync:
     @pytest.fixture(scope="function")
     async def two_nodes(self):
         async for _ in setup_two_nodes():
+            yield _
+
+    @pytest.fixture(scope="function")
+    async def wallet_node(self):
+        async for _ in setup_node_and_wallet():
             yield _
 
     @pytest.mark.asyncio
@@ -46,6 +51,43 @@ class TestFullSync:
             if (
                 max([h.height for h in full_node_2.blockchain.get_current_tips()])
                 == num_blocks - 1
+            ):
+                print(f"Time taken to sync {num_blocks} is {time.time() - start_unf}")
+
+                return
+            await asyncio.sleep(0.1)
+
+        raise Exception(
+            f"Took too long to process blocks, stopped at: {time.time() - start_unf}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_basic_sync_wallet(self, wallet_node):
+        num_blocks = 25
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
+        full_node_1, wallet_node, server_1, server_2 = wallet_node
+
+        for i in range(1, num_blocks):
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(blocks[i])
+            ):
+                pass
+
+        await server_2.start_client(
+            PeerInfo(server_1._host, uint16(server_1._port)), None
+        )
+
+        await asyncio.sleep(2)  # Allow connections to get made
+        start_unf = time.time()
+
+        while time.time() - start_unf < 60:
+            # The second node should eventually catch up to the first one, and have the
+            # same tip at height num_blocks - 1.
+            if (
+                wallet_node.wallet_state_manager.block_records[
+                    wallet_node.wallet_state_manager.lca
+                ].height
+                == num_blocks - 7
             ):
                 print(f"Time taken to sync {num_blocks} is {time.time() - start_unf}")
 
