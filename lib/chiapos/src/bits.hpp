@@ -330,9 +330,7 @@ template <class T> class BitsGeneric {
         if (end_index > GetSize()) {
             end_index = GetSize();
         }
-        if (start_index < 0) {
-            start_index = 0;
-        }
+
         if (end_index == start_index) return BitsGeneric<T>();
         assert(end_index > start_index);
         uint32_t start_bucket = start_index / 128;
