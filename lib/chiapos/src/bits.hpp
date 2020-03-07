@@ -198,9 +198,10 @@ template <class T> class BitsGeneric {
         }
     }
 
-    BitsGeneric<T>(const BitsGeneric<T>& other) noexcept {
-        values_ = other.values_;
-        last_size_ = other.last_size_;
+    BitsGeneric<T>(const BitsGeneric<T>& other) noexcept :
+        values_(other.values_),
+        last_size_(other.last_size_)
+    {
     }
 
     BitsGeneric<T>& operator = (const BitsGeneric<T>& other) {
