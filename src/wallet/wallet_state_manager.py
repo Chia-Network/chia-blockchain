@@ -368,6 +368,13 @@ class WalletStateManager:
                 for path_block in blocks_to_add:
                     self.height_to_hash[path_block.height] = path_block.header_hash
                     await self.wallet_store.add_block_to_path(path_block.header_hash)
+                    if header_block:
+                        coinbase = header_block.header.data.coinbase
+                        fees_coin = header_block.header.data.fees_coin
+                        if (await self.is_addition_relevant(coinbase.puzzle_hash)):
+                            await self.coin_added(coinbase, path_block.height, True)
+                        if (await self.is_addition_relevant(fees_coin.puzzle_hash)):
+                            await self.coin_added(fees_coin, path_block.height, True)
                     for coin in path_block.additions:
                         await self.coin_added(coin, path_block.height, False)
                     for coin_name in path_block.removals:
@@ -426,6 +433,10 @@ class WalletStateManager:
             if coin.puzzle_hash in my_puzzle_hashes:
                 result.append(coin)
 
+        return result
+
+    async def is_addition_relevant(self, addition: Coin):
+        result = await self.puzzle_store.puzzle_hash_exists(addition.puzzle_hash)
         return result
 
     async def get_relevant_removals(self, removals: List[Coin]) -> List[Coin]:
