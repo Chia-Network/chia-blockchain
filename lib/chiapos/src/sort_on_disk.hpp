@@ -90,7 +90,7 @@ class Disk {
 
 class FileDisk : public Disk {
  public:
-    inline explicit FileDisk(std::string filename) {
+    inline explicit FileDisk(const std::string& filename) {
         Initialize(filename);
     }
 
@@ -128,7 +128,7 @@ class FileDisk : public Disk {
     }
 
  private:
-    void Initialize(std::string filename) {
+    void Initialize(const std::string& filename) {
         filename_ = filename;
 
         // Creates the file if it does not exist
