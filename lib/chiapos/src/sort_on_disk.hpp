@@ -98,13 +98,13 @@ class FileDisk : public Disk {
         f_.close();
     }
 
-    inline void Read(uint64_t begin, uint8_t* memcache, uint32_t length) {
+    inline void Read(uint64_t begin, uint8_t* memcache, uint32_t length) override {
         // Seek, read, and replace into memcache
         f_.seekg(begin);
         f_.read(reinterpret_cast<char*>(memcache), length);
     }
 
-    inline void Write(uint64_t begin, uint8_t* memcache, uint32_t length) {
+    inline void Write(uint64_t begin, uint8_t* memcache, uint32_t length) override {
         // Seek and write from memcache
         f_.seekp(begin);
         f_.write(reinterpret_cast<char*>(memcache), length);
@@ -113,12 +113,12 @@ class FileDisk : public Disk {
     /**
      * Returns a read handle at the specified byte offset from the beginning
      */
-    inline std::iostream* ReadHandle(uint64_t begin) {
+    inline std::iostream* ReadHandle(uint64_t begin) override {
         f_.seekg(begin);
         return &f_;
     }
 
-    inline std::iostream* WriteHandle(uint64_t begin) {
+    inline std::iostream* WriteHandle(uint64_t begin) override {
         f_.seekp(begin);
         return &f_;
     }
@@ -200,7 +200,7 @@ class BucketStore {
         }
     }
 
-    inline void SetSegmentId(uint64_t i, uint64_t v) const {
+    inline void SetSegmentId(uint64_t i, uint64_t v) {
         Util::IntToFourBytes(mem_ + i * seg_size_, v);
     }
 
