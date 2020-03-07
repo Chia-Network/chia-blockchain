@@ -33,7 +33,7 @@
 struct SmallVector {
     typedef uint16_t size_type;
 
-    SmallVector() {
+    SmallVector() noexcept {
         count_ = 0;
     }
 
@@ -56,7 +56,7 @@ struct SmallVector {
         return (*this);
     }
 
-    size_type size() const {
+    size_type size() const noexcept {
         return count_;
     }
 
@@ -71,7 +71,7 @@ struct SmallVector {
 struct ParkVector {
     typedef uint32_t size_type;
 
-    ParkVector() {
+    ParkVector() noexcept {
         count_ = 0;
     }
 
@@ -94,7 +94,7 @@ struct ParkVector {
         return (*this);
     }
 
-    size_type size() const {
+    size_type size() const noexcept {
         return count_;
     }
 
@@ -120,7 +120,7 @@ template <class T> class BitsGeneric {
  public:
     template <class> friend class BitsGeneric;
 
-    BitsGeneric<T>()  {
+    BitsGeneric<T>() noexcept {
         this->last_size_ = 0;
     }
 
@@ -198,7 +198,7 @@ template <class T> class BitsGeneric {
         }
     }
 
-    BitsGeneric<T>(const BitsGeneric<T>& other) {
+    BitsGeneric<T>(const BitsGeneric<T>& other) noexcept {
         values_ = other.values_;
         last_size_ = other.last_size_;
     }

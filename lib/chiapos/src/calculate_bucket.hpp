@@ -152,7 +152,7 @@ class F1Calculator {
     }
 
     // Returns an evaluation of F1(L), and the metadata (L) that must be stored to evaluate F2.
-    inline std::pair<Bits, Bits> CalculateBucket(const Bits& L) {
+    inline std::pair<Bits, Bits> CalculateBucket(const Bits& L) const {
         return std::make_pair(CalculateF(L), L);
     }
 
@@ -299,7 +299,7 @@ class FxCalculator {
     }
 
     // Composes two metadatas L and R, into a metadata for the next table.
-    inline Bits Compose(const Bits& L, const Bits& R) {
+    inline Bits Compose(const Bits& L, const Bits& R) const {
         switch (table_index_) {
             case 2:
             case 3:

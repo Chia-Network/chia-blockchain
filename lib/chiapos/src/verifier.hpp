@@ -116,7 +116,7 @@ class Verifier {
  private:
     // Compares two lists of k values, a and b. a > b iff max(a) > max(b),
     // if there is a tie, the next largest value is compared.
-    bool CompareProofBits(LargeBits left, LargeBits right, uint8_t k) {
+    bool CompareProofBits(LargeBits left, LargeBits right, uint8_t k) const {
         uint16_t size = left.GetSize() / k;
         assert(left.GetSize() == right.GetSize());
         for (int16_t i = size - 1; i >= 0; i--) {

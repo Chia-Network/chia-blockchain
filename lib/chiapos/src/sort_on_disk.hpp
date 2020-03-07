@@ -123,7 +123,7 @@ class FileDisk : public Disk {
         return &f_;
     }
 
-    inline std::string GetFileName() const {
+    inline std::string GetFileName() const noexcept {
         return filename_;
     }
 
@@ -200,21 +200,21 @@ class BucketStore {
         }
     }
 
-    inline void SetSegmentId(uint64_t i, uint64_t v) {
+    inline void SetSegmentId(uint64_t i, uint64_t v) const {
         Util::IntToFourBytes(mem_ + i * seg_size_, v);
     }
 
-    inline uint64_t GetSegmentId(uint64_t i) {
+    inline uint64_t GetSegmentId(uint64_t i) const {
         return Util::FourBytesToInt(mem_ + i * seg_size_);
     }
 
     // Get the first empty position from the head segment of bucket b.
-    inline uint64_t GetEntryPos(uint64_t b) {
+    inline uint64_t GetEntryPos(uint64_t b) const {
         return bucket_head_ids_[b] * seg_size_ + 4
                + bucket_head_counts_[b] * entry_len_;
     }
 
-    inline void Audit() {
+    inline void Audit() const {
         uint64_t count = 0;
         uint64_t pos = first_empty_seg_id_;
 
@@ -231,19 +231,19 @@ class BucketStore {
         assert(count == length_);
     }
 
-    inline uint64_t NumFree() {
+    inline uint64_t NumFree() const {
         uint64_t used = GetSegmentId(first_empty_seg_id_);
         return (bucket_sizes_.size() - used) * entries_per_seg_;
     }
 
-    inline bool IsEmpty() {
+    inline bool IsEmpty() const noexcept {
         for (uint64_t s : bucket_sizes_) {
             if (s > 0) return false;
         }
         return true;
     }
 
-    inline bool IsFull() {
+    inline bool IsFull() const noexcept {
         return first_empty_seg_id_ == length_;
     }
 
@@ -275,7 +275,7 @@ class BucketStore {
         bucket_head_counts_[b] += 1;
     }
 
-    inline uint64_t MaxBucket() {
+    inline uint64_t MaxBucket() const {
         uint64_t max_bucket_size = bucket_sizes_[0];
         uint64_t max_index = 0;
         for (uint64_t i = 1; i < bucket_sizes_.size(); i++) {
@@ -287,7 +287,7 @@ class BucketStore {
         return max_index;
     }
 
-    inline std::vector<uint64_t> BucketsBySize() {
+    inline std::vector<uint64_t> BucketsBySize() const {
         // Lukasz Wiklendt (https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes)
         std::vector<uint64_t> idx(bucket_sizes_.size());
         iota(idx.begin(), idx.end(), 0);
