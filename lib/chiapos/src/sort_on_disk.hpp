@@ -298,7 +298,7 @@ class BucketStore {
 
     // Similar to how 'Bits' class works, appends an entry to the entries list, such as all entries are stored into 128-bit blocks.
     // Bits class was avoided since it consumes more time than a uint128_t array.
-    void AddBucketEntry(uint8_t* big_endian_bytes, uint64_t num_bytes, uint16_t size_bits, uint128_t* entries, uint64_t& cnt) {
+    static void AddBucketEntry(uint8_t* big_endian_bytes, uint64_t num_bytes, uint16_t size_bits, uint128_t* entries, uint64_t& cnt) {
         assert(size_bits / 8 >= num_bytes);
         uint16_t extra_space = size_bits - num_bytes * 8;
         uint64_t init_cnt = cnt;
