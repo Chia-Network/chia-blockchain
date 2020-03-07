@@ -24,7 +24,7 @@ class Verifier {
     // Gets the quality string from a proof in proof ordering. The quality string is two
     // adjacent values, determined by the quality index (1-32), and the proof in plot
     // ordering.
-    LargeBits GetQualityString(uint8_t k, LargeBits proof, uint16_t quality_index) const {
+    static LargeBits GetQualityString(uint8_t k, LargeBits proof, uint16_t quality_index) {
         // Converts the proof from proof ordering to plot ordering
         for (uint8_t table_index = 1; table_index < 7; table_index++) {
             LargeBits new_proof;
