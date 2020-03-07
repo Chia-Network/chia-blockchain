@@ -57,7 +57,7 @@ class Timer {
         return ctime(&tt); // ctime includes newline
     }
 
-    void PrintElapsed(std::string name) const {
+    void PrintElapsed(const std::string& name) const {
         auto end = std::chrono::steady_clock::now();
         auto wall_clock_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                              end - this->wall_clock_time_start_).count();
