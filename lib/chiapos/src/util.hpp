@@ -45,9 +45,10 @@ std::ostream &operator<<(std::ostream & strm, uint128_t const & v) {
 
 class Timer {
  public:
-    Timer() {
-        this->wall_clock_time_start_ = std::chrono::steady_clock::now();
-        this->cpu_time_start_ = clock();
+    Timer() :
+        wall_clock_time_start_(std::chrono::steady_clock::now()),
+        cpu_time_start_(clock())
+    {
     }
 
     static char* GetNow()
