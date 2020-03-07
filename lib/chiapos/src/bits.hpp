@@ -503,8 +503,8 @@ template <class T> class BitsGeneric {
     friend BitsGeneric<X> operator>>(BitsGeneric<X> lhs, uint32_t shift_amount);
 
  private:
-    void SplitNumberByPrefix(uint128_t number, uint8_t num_bits, uint8_t prefix_size, uint128_t* prefix,
-                             uint128_t* suffix) const {
+    static void SplitNumberByPrefix(uint128_t number, uint8_t num_bits, uint8_t prefix_size, uint128_t* prefix,
+                             uint128_t* suffix) {
         assert(num_bits >= prefix_size);
         if (prefix_size == 0) {
             *prefix = 0;
