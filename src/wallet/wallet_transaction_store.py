@@ -132,9 +132,20 @@ class WalletTransactionStore:
             sent=current.sent,
             spend_bundle=current.spend_bundle,
             additions=current.additions,
-            removals=current.additions,
+            removals=current.removals,
         )
         await self.add_transaction_record(tx)
+
+    async def unconfirmed_with_removal_coin(self, removal_id: bytes32) -> Optional[TransactionRecord]:
+        """ Returns a record containing removed coin with id: removal_id"""
+
+        all_unconfirmed: List[TransactionRecord] = await self.get_not_confirmed()
+        for record in all_unconfirmed:
+            for coin in record.removals:
+                if coin.name() == removal_id:
+                    return record
+
+        return None
 
     async def set_sent(self, id: bytes32):
         """
@@ -155,7 +166,7 @@ class WalletTransactionStore:
             sent=True,
             spend_bundle=current.spend_bundle,
             additions=current.additions,
-            removals=current.additions,
+            removals=current.removals,
         )
         await self.add_transaction_record(tx)
 

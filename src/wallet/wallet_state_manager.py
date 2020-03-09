@@ -208,6 +208,10 @@ class WalletStateManager:
         """
         await self.wallet_store.set_spent(coin_name, index)
 
+        unconfirmed_record = await self.tx_store.unconfirmed_with_removal_coin(coin_name)
+        if unconfirmed_record:
+            await self.tx_store.set_confirmed(unconfirmed_record.name(), index)
+
     async def coin_added(self, coin: Coin, index: uint32, coinbase: bool):
         """
         Adding coin to the db

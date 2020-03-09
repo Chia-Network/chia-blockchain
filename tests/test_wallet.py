@@ -129,6 +129,5 @@ class TestWallet:
         confirmed_balance = await wallet.get_confirmed_balance()
         unconfirmed_balance = await wallet.get_unconfirmed_balance()
 
-        # TODO(straya): fix test
         assert confirmed_balance == new_funds - 10
         assert unconfirmed_balance == new_funds - 10
