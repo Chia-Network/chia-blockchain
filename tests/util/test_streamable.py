@@ -3,10 +3,13 @@ from dataclasses import dataclass
 from typing import List, Optional, Dict, Any
 
 from src.util.ints import uint32
+from src.types.hashable.coin import Coin
 from src.types.sized_bytes import bytes32
 from src.types.full_block import FullBlock
 from src.util.streamable import Streamable, streamable
 from tests.block_tools import BlockTools
+from src.protocols.wallet_protocol import RespondRemovals
+from src.util import cbor
 
 
 class TestStreamable(unittest.TestCase):
@@ -88,6 +91,13 @@ class TestStreamable(unittest.TestCase):
             uint32(5), [[tc1_a], [tc1_b, tc1_c], None], bytes32(bytes([1] * 32))
         )
         assert TestClass2.from_json(tc2.to_json()) == tc2
+
+    def test_recursive_types(self):
+        coin: Optional[Coin] = None
+        l1 = [(bytes32([2] * 32), coin)]
+        rr = RespondRemovals(uint32(1), bytes32([1] * 32), l1, None)
+        c = cbor.loads(cbor.dumps(rr))
+        RespondRemovals(c["height"], c["header_hash"], c["coins"], c["proofs"])
 
 
 if __name__ == "__main__":

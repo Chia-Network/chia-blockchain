@@ -25,6 +25,7 @@ from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint8
 from src.util.type_checking import (
     is_type_List,
+    is_type_Tuple,
     is_type_SpecificOptional,
     strictdataclass,
 )
@@ -132,6 +133,12 @@ class Streamable:
                 return cls.parse_one_item(inner_type, f)  # type: ignore
             else:
                 return None
+        if is_type_Tuple(f_type):
+            inner_types = f_type.__args__
+            full_list = []
+            for inner_type in inner_types:
+                full_list.append(cls.parse_one_item(inner_type, f))  # type: ignore
+            return tuple(full_list)
         if f_type is bool:
             return bool.from_bytes(f.read(4), "big")
         if f_type == bytes:
@@ -170,6 +177,11 @@ class Streamable:
             else:
                 f.write(bytes([1]))
                 self.stream_one_item(inner_type, item, f)
+        elif is_type_Tuple(f_type):
+            inner_types = f_type.__args__
+            assert len(item) == len(inner_types)
+            for i in range(len(item)):
+                self.stream_one_item(inner_types[i], item[i], f)
         elif f_type == bytes:
             f.write(uint32(len(item)).to_bytes(4, "big"))
             f.write(item)

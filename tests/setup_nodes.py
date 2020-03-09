@@ -94,10 +94,10 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     Path(db_name).unlink()
 
 
-async def setup_wallet_node(port, introducer_port=None, dic={}):
+async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
     config = load_config("config.yaml", "wallet")
     key_config = {
-        "wallet_sk": bytes(blspy.ExtendedPrivateKey.from_seed(b"1234")).hex(),
+        "wallet_sk": bytes(blspy.ExtendedPrivateKey.from_seed(key_seed)).hex(),
     }
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
@@ -235,6 +235,26 @@ async def setup_node_and_wallet(dic={}):
     wallet, s2 = await node_iters[1].__anext__()
 
     yield (full_node, wallet, s1, s2)
+
+    for node_iter in node_iters:
+        try:
+            await node_iter.__anext__()
+        except StopAsyncIteration:
+            pass
+
+
+async def setup_node_and_two_wallets(dic={}):
+    node_iters = [
+        setup_full_node("blockchain_test.db", 21234, dic=dic),
+        setup_wallet_node(21235, key_seed=b"Test node 1", dic=dic),
+        setup_wallet_node(21236, key_seed=b"Test node 2", dic=dic),
+    ]
+
+    full_node, s1 = await node_iters[0].__anext__()
+    wallet, s2 = await node_iters[1].__anext__()
+    wallet_2, s3 = await node_iters[2].__anext__()
+
+    yield (full_node, wallet, wallet_2, s1, s2, s3)
 
     for node_iter in node_iters:
         try:

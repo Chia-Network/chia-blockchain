@@ -144,7 +144,7 @@ class WalletPuzzleStore:
         result: Set[bytes32] = set()
 
         for row in rows:
-            result.add(row[2])
+            result.add(bytes32(bytes.fromhex(row[2])))
 
         return result
 

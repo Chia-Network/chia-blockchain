@@ -141,7 +141,6 @@ class WalletStateManager:
                     addition_amount += coin.amount
             for coin in record.removals:
                 removal_amount += coin.amount
-
         result = confirmed - removal_amount + addition_amount
         return uint64(result)
 
@@ -262,7 +261,6 @@ class WalletStateManager:
             additions=add_list,
             removals=rem_list,
         )
-
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
         await self.tx_store.add_transaction_record(tx_record)
 
@@ -418,8 +416,8 @@ class WalletStateManager:
         additions_of_interest: bytes32 = []
 
         for record in my_coin_records:
-            if tx_filter.Match(bytearray(record.name())):
-                removals_of_interest.append(record.name())
+            if tx_filter.Match(bytearray(record.name)):
+                removals_of_interest.append(record.name)
 
         for puzzle_hash in my_puzzle_hashes:
             if tx_filter.Match(bytearray(puzzle_hash)):

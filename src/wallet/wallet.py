@@ -233,5 +233,4 @@ class Wallet:
                 ),
                 Delivery.BROADCAST,
             )
-            async for reply in self.server.push_message(msg):
-                self.log.info(reply)
+            self.server.push_message(msg)

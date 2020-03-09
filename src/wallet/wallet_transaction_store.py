@@ -92,7 +92,7 @@ class WalletTransactionStore:
         """
 
         cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 bytes(record),
                 record.name().hex(),
@@ -118,7 +118,6 @@ class WalletTransactionStore:
         """
         Updates transaction to be confirmed.
         """
-
         current: Optional[TransactionRecord] = await self.get_transaction_record(id)
         if current is None:
             return

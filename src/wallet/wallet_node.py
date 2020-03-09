@@ -298,7 +298,6 @@ class WalletNode:
         self, block_record: BlockRecord, header_block: HeaderBlock
     ):
         if self.sync_mode:
-            print("Got sync mode block at heeight", block_record.height)
             self.potential_blocks_received[uint32(block_record.height)].set()
             self.potential_header_hashes[block_record.height] = block_record.header_hash
             self.cached_blocks[block_record.header_hash] = (block_record, header_block)
@@ -532,7 +531,7 @@ class WalletNode:
                         response.proofs[i][1],
                     )
                 else:
-                    assert response.coins[i][0] == coin.name
+                    assert response.coins[i][0] == coin.name()
                     assert confirm_included_already_hashed(
                         header_block.header.data.removals_root,
                         coin.name(),

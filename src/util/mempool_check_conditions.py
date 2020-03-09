@@ -103,7 +103,6 @@ def get_name_puzzle_conditions(
         cost_run, sexp = run_program(block_program, [])
         cost_sum += cost_run
     except EvalError:
-        breakpoint()
         return Err.INVALID_COIN_SOLUTION, [], uint64(0)
 
     npc_list = []

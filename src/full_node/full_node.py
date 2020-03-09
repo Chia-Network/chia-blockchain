@@ -609,7 +609,6 @@ class FullNode:
         """
         # Ignore if syncing
         if self.store.get_sync_mode():
-            breakpoint()
             return
         # Ignore if already seen
         if self.mempool_manager.seen(transaction.transaction_id):
@@ -632,7 +631,6 @@ class FullNode:
         """ Peer has requested a full transaction from us. """
         # Ignore if syncing
         if self.store.get_sync_mode():
-            breakpoint()
             return
         spend_bundle = self.mempool_manager.get_spendbundle(request.transaction_id)
         if spend_bundle is None:
@@ -1859,7 +1857,6 @@ class FullNode:
 
         coins_map: List[Tuple[bytes32, Optional[Coin]]] = []
         proofs_map: List[Tuple[bytes32, bytes]] = []
-
         if request.coin_names is None:
             for removal in all_removals:
                 cr = await self.coin_store.get_coin_record(removal)
@@ -1879,7 +1876,7 @@ class FullNode:
                 result, proof = removal_merkle_set.is_included_already_hashed(coin_name)
                 proofs_map.append((coin_name, proof))
                 if coin_name in all_removals:
-                    cr = await self.coin_store.get_coin_record(removal)
+                    cr = await self.coin_store.get_coin_record(coin_name)
                     assert cr is not None
                     coins_map.append((coin_name, cr.coin))
                     assert result
@@ -1936,7 +1933,7 @@ class FullNode:
                 addition_merkle_set.add_already_hashed(puzzle)
                 addition_merkle_set.add_already_hashed(hash_coin_list(coins))
 
-            assert addition_merkle_set.get_root() == block.header.data.removals_root
+            assert addition_merkle_set.get_root() == block.header.data.additions_root
             for puzzle_hash in request.puzzle_hashes:
                 result, proof = addition_merkle_set.is_included_already_hashed(
                     puzzle_hash
