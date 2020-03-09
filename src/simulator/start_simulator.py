@@ -14,7 +14,6 @@ except ImportError:
     uvloop = None
 
 from src.full_node.blockchain import Blockchain
-from src.consensus.constants import constants
 from src.full_node.store import FullNodeStore
 from src.rpc.rpc_server import start_rpc_server
 from src.full_node.mempool_manager import MempoolManager
@@ -69,7 +68,14 @@ async def main():
     mempool_manager = MempoolManager(unspent_store, test_constants)
     await mempool_manager.new_tips(await blockchain.get_full_tips())
 
-    full_node = FullNodeSimulator(store, blockchain, config, mempool_manager, unspent_store, override_constants=test_constants)
+    full_node = FullNodeSimulator(
+        store,
+        blockchain,
+        config,
+        mempool_manager,
+        unspent_store,
+        override_constants=test_constants,
+    )
 
     # Starts the full node server (which full nodes can connect to)
     server = ChiaServer(config["port"], full_node, NodeType.FULL_NODE)

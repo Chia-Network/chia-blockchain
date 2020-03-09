@@ -1,21 +1,11 @@
 from src.full_node.full_node import FullNode
-import time
-from typing import AsyncGenerator, List, Optional, Dict, Any
-
-from chiabip158 import PyBIP158
-from chiapos import Verifier
-
+from typing import AsyncGenerator, List, Dict
 from src.full_node.blockchain import Blockchain
-from src.consensus.block_rewards import calculate_base_fee
-from src.consensus.pot_iterations import calculate_iterations
 from src.full_node.store import FullNodeStore
 from src.protocols import (
-    farmer_protocol,
     full_node_protocol,
-    timelord_protocol,
     wallet_protocol,
 )
-from src.util.merkle_set import MerkleSet
 from src.util.bundle_tools import best_solution_program
 from src.full_node.mempool_manager import MempoolManager
 from src.server.outbound_message import OutboundMessage
@@ -34,18 +24,25 @@ bt = BlockTools()
 
 
 class FullNodeSimulator(FullNode):
-
     def __init__(
-            self,
-            store: FullNodeStore,
-            blockchain: Blockchain,
-            config: Dict,
-            mempool_manager: MempoolManager,
-            coin_store: CoinStore,
-            name: str = None,
-            override_constants=None,
+        self,
+        store: FullNodeStore,
+        blockchain: Blockchain,
+        config: Dict,
+        mempool_manager: MempoolManager,
+        coin_store: CoinStore,
+        name: str = None,
+        override_constants=None,
     ):
-        super().__init__(store, blockchain, config, mempool_manager, coin_store, name, override_constants)
+        super().__init__(
+            store,
+            blockchain,
+            config,
+            mempool_manager,
+            coin_store,
+            name,
+            override_constants,
+        )
 
     def _set_server(self, server: ChiaServer):
         super()._set_server(server)
@@ -60,7 +57,7 @@ class FullNodeSimulator(FullNode):
 
     @api_request
     async def respond_block(
-            self, respond_block: full_node_protocol.RespondBlock
+        self, respond_block: full_node_protocol.RespondBlock
     ) -> OutboundMessageGenerator:
         async for msg in super().respond_block(respond_block):
             yield msg
@@ -68,42 +65,42 @@ class FullNodeSimulator(FullNode):
     # WALLET PROTOCOL
     @api_request
     async def send_transaction(
-            self, tx: wallet_protocol.SendTransaction
+        self, tx: wallet_protocol.SendTransaction
     ) -> OutboundMessageGenerator:
         async for msg in super().send_transaction(tx):
             yield msg
 
     @api_request
     async def request_all_proof_hashes(
-            self, request: wallet_protocol.RequestAllProofHashes
+        self, request: wallet_protocol.RequestAllProofHashes
     ) -> OutboundMessageGenerator:
         async for msg in super().request_all_proof_hashes(request):
             yield msg
 
     @api_request
     async def request_all_header_hashes_after(
-            self, request: wallet_protocol.RequestAllHeaderHashesAfter
+        self, request: wallet_protocol.RequestAllHeaderHashesAfter
     ) -> OutboundMessageGenerator:
         async for msg in super().request_all_header_hashes_after(request):
             yield msg
 
     @api_request
     async def request_header(
-            self, request: wallet_protocol.RequestHeader
+        self, request: wallet_protocol.RequestHeader
     ) -> OutboundMessageGenerator:
         async for msg in super().request_header(request):
             yield msg
 
     @api_request
     async def request_removals(
-            self, request: wallet_protocol.RequestRemovals
+        self, request: wallet_protocol.RequestRemovals
     ) -> OutboundMessageGenerator:
         async for msg in super().request_removals(request):
             yield msg
 
     @api_request
     async def request_additions(
-            self, request: wallet_protocol.RequestAdditions
+        self, request: wallet_protocol.RequestAdditions
     ) -> OutboundMessageGenerator:
         async for msg in super().request_additions(request):
             yield msg
@@ -157,7 +154,5 @@ class FullNodeSimulator(FullNode):
         )
         new_lca = more_blocks[-1]
 
-        async for msg in self.respond_block(
-                full_node_protocol.RespondBlock(new_lca)
-        ):
+        async for msg in self.respond_block(full_node_protocol.RespondBlock(new_lca)):
             self.server.push_message(msg)

@@ -94,6 +94,7 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
     await unspent_store_1.close()
     Path(db_name).unlink()
 
+
 async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     # SETUP
     test_constants_copy = test_constants.copy()
@@ -326,6 +327,7 @@ async def setup_node_and_two_wallets(dic={}):
             await node_iter.__anext__()
         except StopAsyncIteration:
             pass
+
 
 async def setup_node_simulator_and_two_wallets(dic={}):
     node_iters = [

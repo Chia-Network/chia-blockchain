@@ -4,7 +4,9 @@ import pytest
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
 from tests.setup_nodes import (
-    setup_node_simulator_and_two_wallets, setup_node_simulator_and_wallet)
+    setup_node_simulator_and_two_wallets,
+    setup_node_simulator_and_wallet,
+)
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 
 
@@ -22,7 +24,9 @@ class TestWalletSimulator:
 
     @pytest.fixture(scope="function")
     async def two_wallet_nodes(self):
-        async for _ in setup_node_simulator_and_two_wallets({"COINBASE_FREEZE_PERIOD": 0}):
+        async for _ in setup_node_simulator_and_two_wallets(
+            {"COINBASE_FREEZE_PERIOD": 0}
+        ):
             yield _
 
     @pytest.mark.asyncio
@@ -60,7 +64,6 @@ class TestWalletSimulator:
         ) = two_wallet_nodes
         wallet = wallet_node.wallet
         ph = await wallet.get_new_puzzlehash()
-
 
         await server_2.start_client(
             PeerInfo(server_1._host, uint16(server_1._port)), None

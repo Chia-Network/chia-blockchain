@@ -136,7 +136,9 @@ class WalletTransactionStore:
         )
         await self.add_transaction_record(tx)
 
-    async def unconfirmed_with_removal_coin(self, removal_id: bytes32) -> Optional[TransactionRecord]:
+    async def unconfirmed_with_removal_coin(
+        self, removal_id: bytes32
+    ) -> Optional[TransactionRecord]:
         """ Returns a record containing removed coin with id: removal_id"""
 
         all_unconfirmed: List[TransactionRecord] = await self.get_not_confirmed()
