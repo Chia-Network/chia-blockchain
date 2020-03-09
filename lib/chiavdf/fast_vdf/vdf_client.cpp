@@ -9,7 +9,7 @@ std::mutex socket_mutex;
 int process_number;
 
 void PrintInfo(std::string input) {
-    print("VDF Client " + to_string(process_number) + ": " + input);
+    std::cout << "VDF Client: " << input << "\n";
 }
 
 void CreateAndWriteProof(integer D, form x, int64_t num_iterations, WesolowskiCallback& weso, bool& stop_signal, tcp::socket& sock) {
