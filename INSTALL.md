@@ -1,5 +1,7 @@
-To install the chia-blockchain node, follow the instructions according to your operating system.
+## Installation
 
+To install the chia-blockchain node, follow the instructions according to your operating system.
+After installing, follow the remaining instructions in [README.md](README.md) to run the software.
 
 ### MacOS
 Make sure [brew](https://brew.sh/) is available before starting the setup.
@@ -123,4 +125,3 @@ cd chia-blockchain
 sudo sh install.sh
 . .venv/bin/activate
 ```
-

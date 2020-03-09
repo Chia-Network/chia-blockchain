@@ -4,7 +4,7 @@ from blspy import ExtendedPrivateKey, PublicKey
 import logging
 from src.server.outbound_message import OutboundMessage, NodeType, Message, Delivery
 from src.server.server import ChiaServer
-from src.protocols import full_node_protocol
+from src.protocols import wallet_protocol
 from src.types.hashable.BLSSignature import BLSSignature
 from src.types.hashable.coin import Coin
 from src.types.hashable.coin_solution import CoinSolution
@@ -228,8 +228,7 @@ class Wallet:
             msg = OutboundMessage(
                 NodeType.FULL_NODE,
                 Message(
-                    "respond_transaction",
-                    full_node_protocol.RespondTransaction(spend_bundle),
+                    "send_transaction", wallet_protocol.SendTransaction(spend_bundle),
                 ),
                 Delivery.BROADCAST,
             )

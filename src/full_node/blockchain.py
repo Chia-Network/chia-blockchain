@@ -680,25 +680,6 @@ class Blockchain:
                 != prev_full_block.header.data.total_iters + number_of_iters
             ):
                 return False
-
-            coinbase_reward = calculate_block_reward(block.height)
-            if coinbase_reward != block.header.data.coinbase.amount:
-                return False
-            fee_base = calculate_base_fee(block.height)
-
-            # 8 Validate transactions
-            # target reward_fee = 1/8 coinbase reward + tx fees
-            if block.transactions_generator:
-                # Validate transactions, and verify that fee_base + TX fees = fee_coin.amount
-                err = await self._validate_transactions(block, fee_base)
-                if err:
-                    return False
-            else:
-                if fee_base != block.header.data.fees_coin.amount:
-                    return False
-                root_error = self._validate_merkle_root(block)
-                if root_error:
-                    return False
         else:
             # 6b. Check challenge total_weight = parent total_weight + difficulty
             if block.weight != difficulty:
@@ -706,6 +687,27 @@ class Blockchain:
 
             # 7b. Check challenge total_iters = parent total_iters + number_iters
             if block.header.data.total_iters != number_of_iters:
+                return False
+
+        coinbase_reward = calculate_block_reward(block.height)
+        if coinbase_reward != block.header.data.coinbase.amount:
+            return False
+        fee_base = calculate_base_fee(block.height)
+
+        # 8 Validate transactions
+        # target reward_fee = 1/8 coinbase reward + tx fees
+        if block.transactions_generator:
+            # Validate transactions, and verify that fee_base + TX fees = fee_coin.amount
+            err = await self._validate_transactions(block, fee_base)
+            if err:
+                return False
+        else:
+            if fee_base != block.header.data.fees_coin.amount:
+                return False
+            root_error = self._validate_merkle_root(block)
+            if root_error:
+                return False
+            if block.header.data.aggregated_signature is not None:
                 return False
 
         return True
@@ -937,9 +939,6 @@ class Blockchain:
             additions.extend(tx_additions)
         if tx_removals:
             removals.extend(tx_removals)
-
-        additions.append(block.header.data.coinbase)
-        additions.append(block.header.data.fees_coin)
 
         removal_merkle_set = MerkleSet()
         addition_merkle_set = MerkleSet()

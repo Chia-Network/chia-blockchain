@@ -104,7 +104,7 @@ class BlockTools:
         input_constants: Dict,
         num_blocks: int,
         block_list: List[FullBlock] = [],
-        seconds_per_block=constants["BLOCK_TIME_TARGET"],
+        seconds_per_block=None,
         seed: bytes = b"",
         reward_puzzlehash: bytes32 = None,
         transaction_data_at_height: Dict[int, Tuple[Program, BLSSignature]] = None,
@@ -115,6 +115,8 @@ class BlockTools:
         test_constants: Dict[str, Any] = constants.copy()
         for key, value in input_constants.items():
             test_constants[key] = value
+        if seconds_per_block is None:
+            seconds_per_block = test_constants["BLOCK_TIME_TARGET"]
 
         if len(block_list) == 0:
             if "GENESIS_BLOCK" in test_constants:
@@ -427,12 +429,8 @@ class BlockTools:
         extension_data: bytes32 = bytes32(bytes([0] * 32))
         cost = uint64(0)
 
-        if genesis:
-            coinbase_reward = block_rewards.calculate_block_reward(height)
-            fee_reward = 0
-        else:
-            coinbase_reward = block_rewards.calculate_block_reward(height)
-            fee_reward = uint64(block_rewards.calculate_base_fee(height) + fees)
+        coinbase_reward = block_rewards.calculate_block_reward(height)
+        fee_reward = uint64(block_rewards.calculate_base_fee(height) + fees)
 
         coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
             height, reward_puzzlehash, coinbase_reward, pool_sk
@@ -461,9 +459,6 @@ class BlockTools:
 
         removal_merkle_set = MerkleSet()
         addition_merkle_set = MerkleSet()
-
-        tx_additions.append(coinbase_coin)
-        tx_additions.append(fees_coin)
 
         # Create removal Merkle set
         for coin_name in tx_removals:

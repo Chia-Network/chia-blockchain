@@ -383,6 +383,17 @@ class WalletStateManager:
             return ReceiveBlockResult.ADDED_AS_ORPHAN
 
     async def validate_header_block(self, header_block: HeaderBlock) -> bool:
+        # POS challenge hash == POT challenge hash == prev challenge hash == Challenge prev challenge hash
+        # Validate PoS and get quality
+        # Calculate iters
+        # Validate PoT
+        # Valudate challenge
+        #   - proofs hash is goo
+        #   - new work difficulty is good if necessary
+        # Validate header:
+        #  - header hash and prev header hash match BR
+        #  - height and weight match BR
+        #  - add
         # TODO(mariano): implement
         return True
 
