@@ -817,7 +817,7 @@ class TestWalletProtocol:
         ]
         assert len(msgs) == 1
         assert msgs[0].message.data == wallet_protocol.TransactionAck(
-            spend_bundle.name(), False
+            spend_bundle.name(), True
         )
 
         msgs = [
