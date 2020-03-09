@@ -10,6 +10,7 @@ from src.full_node.store import FullNodeStore
 from src.full_node.full_node import FullNode
 from src.server.connection import NodeType
 from src.server.server import ChiaServer
+from src.simulator.full_node_simulator import FullNodeSimulator
 from src.wallet.wallet_node import WalletNode
 from src.types.full_block import FullBlock
 from src.full_node.coin_store import CoinStore
@@ -46,6 +47,52 @@ test_constants["GENESIS_BLOCK"] = bytes(
     bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
 )
 
+
+async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={}):
+    # SETUP
+    test_constants_copy = test_constants.copy()
+    for k in dic.keys():
+        test_constants_copy[k] = dic[k]
+
+    store_1 = await FullNodeStore.create(Path(db_name))
+    await store_1._clear_database()
+    unspent_store_1 = await CoinStore.create(Path(db_name))
+    await unspent_store_1._clear_database()
+    mempool_1 = MempoolManager(unspent_store_1, test_constants_copy)
+
+    b_1: Blockchain = await Blockchain.create(
+        unspent_store_1, store_1, test_constants_copy
+    )
+    await mempool_1.new_tips(await b_1.get_full_tips())
+
+    await store_1.add_block(FullBlock.from_bytes(test_constants_copy["GENESIS_BLOCK"]))
+
+    config = load_config("config.yaml", "full_node")
+    if introducer_port is not None:
+        config["introducer_peer"]["host"] = "127.0.0.1"
+        config["introducer_peer"]["port"] = introducer_port
+    full_node_1 = FullNodeSimulator(
+        store_1,
+        b_1,
+        config,
+        mempool_1,
+        unspent_store_1,
+        f"full_node_{port}",
+        test_constants_copy,
+    )
+    server_1 = ChiaServer(port, full_node_1, NodeType.FULL_NODE)
+    _ = await server_1.start_server(config["host"], full_node_1._on_connect)
+    full_node_1._set_server(server_1)
+
+    yield (full_node_1, server_1)
+
+    # TEARDOWN
+    full_node_1._shutdown()
+    server_1.close_all()
+    await server_1.await_closed()
+    await store_1.close()
+    await unspent_store_1.close()
+    Path(db_name).unlink()
 
 async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     # SETUP
@@ -227,7 +274,25 @@ async def setup_two_nodes(dic={}):
 
 async def setup_node_and_wallet(dic={}):
     node_iters = [
-        setup_full_node("blockchain_test.db", 21234, dic=dic),
+        setup_full_node_simulator("blockchain_test.db", 21234, dic=dic),
+        setup_wallet_node(21235, dic=dic),
+    ]
+
+    full_node, s1 = await node_iters[0].__anext__()
+    wallet, s2 = await node_iters[1].__anext__()
+
+    yield (full_node, wallet, s1, s2)
+
+    for node_iter in node_iters:
+        try:
+            await node_iter.__anext__()
+        except StopAsyncIteration:
+            pass
+
+
+async def setup_node_simulator_and_wallet(dic={}):
+    node_iters = [
+        setup_full_node_simulator("blockchain_test.db", 21234, dic=dic),
         setup_wallet_node(21235, dic=dic),
     ]
 
@@ -246,6 +311,25 @@ async def setup_node_and_wallet(dic={}):
 async def setup_node_and_two_wallets(dic={}):
     node_iters = [
         setup_full_node("blockchain_test.db", 21234, dic=dic),
+        setup_wallet_node(21235, key_seed=b"Test node 1", dic=dic),
+        setup_wallet_node(21236, key_seed=b"Test node 2", dic=dic),
+    ]
+
+    full_node, s1 = await node_iters[0].__anext__()
+    wallet, s2 = await node_iters[1].__anext__()
+    wallet_2, s3 = await node_iters[2].__anext__()
+
+    yield (full_node, wallet, wallet_2, s1, s2, s3)
+
+    for node_iter in node_iters:
+        try:
+            await node_iter.__anext__()
+        except StopAsyncIteration:
+            pass
+
+async def setup_node_simulator_and_two_wallets(dic={}):
+    node_iters = [
+        setup_full_node_simulator("blockchain_test.db", 21234, dic=dic),
         setup_wallet_node(21235, key_seed=b"Test node 1", dic=dic),
         setup_wallet_node(21236, key_seed=b"Test node 2", dic=dic),
     ]
