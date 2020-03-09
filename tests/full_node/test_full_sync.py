@@ -43,59 +43,22 @@ class TestFullSync:
         )
 
         await asyncio.sleep(2)  # Allow connections to get made
-        start_unf = time.time()
+        start = time.time()
 
-        while time.time() - start_unf < 60:
+        while time.time() - start < 60:
             # The second node should eventually catch up to the first one, and have the
             # same tip at height num_blocks - 1.
             if (
                 max([h.height for h in full_node_2.blockchain.get_current_tips()])
                 == num_blocks - 1
             ):
-                print(f"Time taken to sync {num_blocks} is {time.time() - start_unf}")
+                print(f"Time taken to sync {num_blocks} is {time.time() - start}")
 
                 return
             await asyncio.sleep(0.1)
 
         raise Exception(
-            f"Took too long to process blocks, stopped at: {time.time() - start_unf}"
-        )
-
-    @pytest.mark.asyncio
-    async def test_basic_sync_wallet(self, wallet_node):
-        num_blocks = 25
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
-        full_node_1, wallet_node, server_1, server_2 = wallet_node
-
-        for i in range(1, num_blocks):
-            async for _ in full_node_1.respond_block(
-                full_node_protocol.RespondBlock(blocks[i])
-            ):
-                pass
-
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
-
-        await asyncio.sleep(2)  # Allow connections to get made
-        start_unf = time.time()
-
-        while time.time() - start_unf < 60:
-            # The second node should eventually catch up to the first one, and have the
-            # same tip at height num_blocks - 1.
-            if (
-                wallet_node.wallet_state_manager.block_records[
-                    wallet_node.wallet_state_manager.lca
-                ].height
-                == num_blocks - 7
-            ):
-                print(f"Time taken to sync {num_blocks} is {time.time() - start_unf}")
-
-                return
-            await asyncio.sleep(0.1)
-
-        raise Exception(
-            f"Took too long to process blocks, stopped at: {time.time() - start_unf}"
+            f"Took too long to process blocks, stopped at: {time.time() - start}"
         )
 
     @pytest.mark.asyncio
@@ -132,17 +95,109 @@ class TestFullSync:
         )
         await asyncio.sleep(2)  # Allow connections to get made
 
-        start_unf = time.time()
+        start = time.time()
 
-        while time.time() - start_unf < 30:
+        while time.time() - start < 30:
             # The second node should eventually catch up to the first one, and have the
             # same tip at height num_blocks - 1.
             if (
                 max([h.height for h in full_node_2.blockchain.get_current_tips()])
                 == num_blocks - 1
             ):
-                print(f"Time taken to sync {num_blocks} is {time.time() - start_unf}")
+                print(f"Time taken to sync {num_blocks} is {time.time() - start}")
                 return
             await asyncio.sleep(0.1)
 
         raise Exception("Took too long to process blocks")
+
+    @pytest.mark.asyncio
+    async def test_basic_sync_wallet(self, wallet_node):
+        num_blocks = 25
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
+        full_node_1, wallet_node, server_1, server_2 = wallet_node
+
+        for i in range(1, len(blocks)):
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(blocks[i])
+            ):
+                pass
+
+        await server_2.start_client(
+            PeerInfo(server_1._host, uint16(server_1._port)), None
+        )
+
+        start = time.time()
+        found = False
+        while time.time() - start < 60:
+            # The second node should eventually catch up to the first one, and have the
+            # same tip at height num_blocks - 1.
+            if (
+                wallet_node.wallet_state_manager.block_records[
+                    wallet_node.wallet_state_manager.lca
+                ].height
+                == num_blocks - 6
+            ):
+                found = True
+                break
+            await asyncio.sleep(0.1)
+        if not found:
+            raise Exception(
+                f"Took too long to process blocks, stopped at: {time.time() - start}"
+            )
+
+        # Tests a reorg with the wallet
+        start = time.time()
+        found = False
+        blocks_reorg = bt.get_consecutive_blocks(test_constants, 15, blocks[:-5], 10)
+        for i in range(1, len(blocks_reorg)):
+            async for msg in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(blocks_reorg[i])
+            ):
+                server_1.push_message(msg)
+        start = time.time()
+
+        while time.time() - start < 60:
+            if (
+                wallet_node.wallet_state_manager.block_records[
+                    wallet_node.wallet_state_manager.lca
+                ].height
+                == 33
+            ):
+                found = True
+                break
+            await asyncio.sleep(0.1)
+        if not found:
+            raise Exception(
+                f"Took too long to process blocks, stopped at: {time.time() - start}"
+            )
+
+    @pytest.mark.asyncio
+    async def test_short_sync_wallet(self, wallet_node):
+        num_blocks = 8
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
+        full_node_1, wallet_node, server_1, server_2 = wallet_node
+
+        for i in range(1, len(blocks)):
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(blocks[i])
+            ):
+                pass
+
+        await server_2.start_client(
+            PeerInfo(server_1._host, uint16(server_1._port)), None
+        )
+        start = time.time()
+        while time.time() - start < 60:
+            # The second node should eventually catch up to the first one, and have the
+            # same tip at height num_blocks - 1.
+            if (
+                wallet_node.wallet_state_manager.block_records[
+                    wallet_node.wallet_state_manager.lca
+                ].height
+                == 6
+            ):
+                return
+            await asyncio.sleep(0.1)
+        raise Exception(
+            f"Took too long to process blocks, stopped at: {time.time() - start}"
+        )

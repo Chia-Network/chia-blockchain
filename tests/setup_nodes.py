@@ -102,7 +102,7 @@ async def setup_wallet_node(port, introducer_port=None, dic={}):
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
-    db_path = "test-wallet-db" + token_bytes(32).hex()
+    db_path = "test-wallet-db" + token_bytes(32).hex() + ".db"
     if Path(db_path).exists():
         Path(db_path).unlink()
 

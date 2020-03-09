@@ -172,9 +172,7 @@ class FullNode:
             )
         # If connected to a wallet, send the LCA
         lca = self.blockchain.lca_block
-        new_lca = wallet_protocol.NewLCA(
-            lca.header_hash, lca.prev_header_hash, lca.height, lca.weight
-        )
+        new_lca = wallet_protocol.NewLCA(lca.header_hash, lca.height, lca.weight)
         yield OutboundMessage(
             NodeType.WALLET, Message("new_lca", new_lca), Delivery.RESPOND
         )
@@ -1635,10 +1633,7 @@ class FullNode:
             new_lca = self.blockchain.lca_block
             if new_lca != prev_lca:
                 new_lca_req = wallet_protocol.NewLCA(
-                    new_lca.header_hash,
-                    new_lca.prev_header_hash,
-                    new_lca.height,
-                    new_lca.weight,
+                    new_lca.header_hash, new_lca.height, new_lca.weight,
                 )
                 yield OutboundMessage(
                     NodeType.WALLET, Message("new_lca", new_lca_req), Delivery.BROADCAST

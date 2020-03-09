@@ -4,7 +4,8 @@
 # from blspy import ExtendedPrivateKey
 
 # from src.wallet.wallet_node import WalletNode
-# from tests.setup_nodes import setup_two_nodes, test_constants, bt
+# from src.protocols import full_node_protocol
+# from tests.setup_nodes import setup_node_and_wallet, test_constants, bt
 
 
 # @pytest.fixture(scope="module")
@@ -15,31 +16,25 @@
 
 # class TestWallet:
 #     @pytest.fixture(scope="function")
-#     async def two_nodes(self):
-#         async for _ in setup_two_nodes({"COINBASE_FREEZE_PERIOD": 0}):
+#     async def wallet_node(self):
+#         async for _ in setup_node_and_wallet():
 #             yield _
 
 #     @pytest.mark.asyncio
-#     async def test_wallet_receive_body(self, two_nodes):
-#         sk = bytes(ExtendedPrivateKey.from_seed(b"")).hex()
-#         key_config = {"wallet_sk": sk}
-
-#         wallet_node = await WalletNode.create({}, key_config)
-#         wallet = wallet_node.wallet
-#         await wallet_node.wallet_store._clear_database()
-#         await wallet_node.tx_store._clear_database()
-
+#     async def test_wallet_receive_body(self, wallet_node):
 #         num_blocks = 10
+#         full_node_1, wallet_node, server_1, server_2 = wallet_node
+#         wallet = wallet_node.wallet
 #         ph = await wallet.get_new_puzzlehash()
 #         blocks = bt.get_consecutive_blocks(
 #             test_constants, num_blocks, [], 10, reward_puzzlehash=ph,
 #         )
-
-#         for i in range(1, num_blocks):
-#             a = RespondBody(
-#                 blocks[i].header, blocks[i].transactions_generator, blocks[i].height
-#             )
-#             await wallet_node.received_body(a)
+#         for i in range(1, len(blocks)):
+#             async for _ in full_node_1.respond_block(
+#                 full_node_protocol.RespondBlock(blocks[i])
+#             ):
+#                 pass
+#         await asyncio.sleep(50)
 
 #         assert await wallet.get_confirmed_balance() == 144000000000000
 

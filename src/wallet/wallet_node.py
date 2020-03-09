@@ -8,7 +8,8 @@ from blspy import ExtendedPrivateKey
 from src.util.merkle_set import (
     confirm_included_already_hashed,
     confirm_not_included_already_hashed,
-    MerkleSet)
+    MerkleSet,
+)
 from src.protocols import wallet_protocol
 from src.consensus.constants import constants as consensus_constants
 from src.server.server import ChiaServer
@@ -323,6 +324,9 @@ class WalletNode:
                     async for msg in self._block_finished(new_br, new_hb):
                         yield msg
             if res == ReceiveBlockResult.ADDED_TO_HEAD:
+                self.log.info(
+                    f"Updated LCA to {block_record.prev_header_hash} at height {block_record.height}"
+                )
                 # Removes outdated cached blocks if we're not syncing
                 if not self.sync_mode:
                     for header_hash in self.cached_blocks:
@@ -392,6 +396,7 @@ class WalletNode:
 
     @api_request
     async def new_lca(self, request: wallet_protocol.NewLCA):
+        print("Got LCA height", request)
         if self.sync_mode:
             return
         # If already seen LCA, ignore.
@@ -416,7 +421,7 @@ class WalletNode:
             self.sync_mode = False
         else:
             header_request = wallet_protocol.RequestHeader(
-                uint32(request.height - 1), request.prev_header_hash
+                uint32(request.height), request.lca_hash
             )
             yield OutboundMessage(
                 NodeType.FULL_NODE,
@@ -426,6 +431,7 @@ class WalletNode:
 
     @api_request
     async def respond_header(self, response: wallet_protocol.RespondHeader):
+        print("Got header height", response.header_block.header.height)
         block = response.header_block
         # If we already have, return
         if block.header_hash in self.wallet_state_manager.block_records:
@@ -507,7 +513,8 @@ class WalletNode:
             # Verify removals root
             removals_merkle_set = MerkleSet()
             for coin in removals:
-                removals_merkle_set.add_already_hashed(coin.name())
+                if coin is not None:
+                    removals_merkle_set.add_already_hashed(coin.name())
             removals_root = removals_merkle_set.get_root()
             if header_block.header.data.removals_root != removals_root:
                 return

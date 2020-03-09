@@ -329,8 +329,8 @@ class WalletStateManager:
                 return ReceiveBlockResult.DISCONNECTED_BLOCK
 
             if header_block is not None:
-                # TODO: validate header block
-                pass
+                if not self.validate_header_block(header_block):
+                    return ReceiveBlockResult.INVALID_BLOCK
 
             self.block_records[block.header_hash] = block
             await self.wallet_store.add_block_record(block, False)
@@ -368,12 +368,12 @@ class WalletStateManager:
                 for path_block in blocks_to_add:
                     self.height_to_hash[path_block.height] = path_block.header_hash
                     await self.wallet_store.add_block_to_path(path_block.header_hash)
-                    if header_block:
+                    if header_block is not None:
                         coinbase = header_block.header.data.coinbase
                         fees_coin = header_block.header.data.fees_coin
-                        if (await self.is_addition_relevant(coinbase.puzzle_hash)):
+                        if await self.is_addition_relevant(coinbase):
                             await self.coin_added(coinbase, path_block.height, True)
-                        if (await self.is_addition_relevant(fees_coin.puzzle_hash)):
+                        if await self.is_addition_relevant(fees_coin):
                             await self.coin_added(fees_coin, path_block.height, True)
                     for coin in path_block.additions:
                         await self.coin_added(coin, path_block.height, False)
@@ -383,6 +383,10 @@ class WalletStateManager:
                 return ReceiveBlockResult.ADDED_TO_HEAD
 
             return ReceiveBlockResult.ADDED_AS_ORPHAN
+
+    async def validate_header_block(self, header_block: HeaderBlock) -> bool:
+        # TODO(mariano): implement
+        return True
 
     def find_fork_for_lca(self, new_lca: BlockRecord) -> uint32:
         """ Tries to find height where new chain (current) diverged from the old chain where old_lca was the LCA"""
