@@ -56,7 +56,7 @@ class FullNode:
         mempool_manager: MempoolManager,
         coin_store: CoinStore,
         name: str = None,
-        override_constants={},
+        override_constants=None,
     ):
 
         self.config: Dict = config
@@ -67,8 +67,9 @@ class FullNode:
         self.server: Optional[ChiaServer] = None
         self.coin_store: CoinStore = coin_store
         self.constants = consensus_constants.copy()
-        for key, value in override_constants.items():
-            self.constants[key] = value
+        if override_constants:
+            for key, value in override_constants.items():
+                self.constants[key] = value
         if name:
             self.log = logging.getLogger(name)
         else:
