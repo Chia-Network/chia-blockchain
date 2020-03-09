@@ -45,9 +45,10 @@ std::ostream &operator<<(std::ostream & strm, uint128_t const & v) {
 
 class Timer {
  public:
-    Timer() {
-        this->wall_clock_time_start_ = std::chrono::steady_clock::now();
-        this->cpu_time_start_ = clock();
+    Timer() :
+        wall_clock_time_start_(std::chrono::steady_clock::now()),
+        cpu_time_start_(clock())
+    {
     }
 
     static char* GetNow()
@@ -57,7 +58,7 @@ class Timer {
         return ctime(&tt); // ctime includes newline
     }
 
-    void PrintElapsed(std::string name) {
+    void PrintElapsed(const std::string& name) const {
         auto end = std::chrono::steady_clock::now();
         auto wall_clock_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                              end - this->wall_clock_time_start_).count();
