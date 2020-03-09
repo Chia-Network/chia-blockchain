@@ -515,8 +515,8 @@ class WalletNode:
                 if coin is not None:
                     removals_merkle_set.add_already_hashed(coin.name())
             removals_root = removals_merkle_set.get_root()
-            if header_block.header.data.removals_root != removals_root:
-                return
+            assert header_block.header.data.removals_root == removals_root
+
         else:
             removals = []
             assert len(response.coins) == len(response.proofs)
