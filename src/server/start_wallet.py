@@ -38,14 +38,21 @@ async def main():
     server = ChiaServer(config["port"], wallet, NodeType.WALLET)
     wallet.set_server(server)
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
+    def master_close_cb():
+        server.close_all()
+        wallet._shutdown()
+
+    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
+    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
 
     _ = await server.start_server(config["host"], None)
-    await asyncio.sleep(1)
-    _ = await server.start_client(full_node_peer, None)
+    for i in range(10):
+        if await server.start_client(full_node_peer, None):
+            break
+        await asyncio.sleep(1)
 
     await server.await_closed()
+    await wallet.wallet_state_manager.close_all_stores()
     log.info("Wallet fully closed.")
 
 

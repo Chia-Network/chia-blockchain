@@ -298,6 +298,7 @@ class WalletNode:
         self, block_record: BlockRecord, header_block: HeaderBlock
     ):
         if self.sync_mode:
+            print("Got sync mode block at heeight", block_record.height)
             self.potential_blocks_received[uint32(block_record.height)].set()
             self.potential_header_hashes[block_record.height] = block_record.header_hash
             self.cached_blocks[block_record.header_hash] = (block_record, header_block)
@@ -396,7 +397,6 @@ class WalletNode:
 
     @api_request
     async def new_lca(self, request: wallet_protocol.NewLCA):
-        print("Got LCA height", request)
         if self.sync_mode:
             return
         # If already seen LCA, ignore.
@@ -431,7 +431,6 @@ class WalletNode:
 
     @api_request
     async def respond_header(self, response: wallet_protocol.RespondHeader):
-        print("Got header height", response.header_block.header.height)
         block = response.header_block
         # If we already have, return
         if block.header_hash in self.wallet_state_manager.block_records:
@@ -445,6 +444,7 @@ class WalletNode:
             [],
             [],
         )
+        finish_block = True
 
         # If we have transactions, fetch adds/deletes
         if response.transactions_filter is not None:
@@ -457,6 +457,7 @@ class WalletNode:
                 response.transactions_filter
             )
             if len(additions) > 0:
+                finish_block = False
                 request_a = wallet_protocol.RequestAdditions(
                     block.height, block.header_hash, additions
                 )
@@ -465,9 +466,8 @@ class WalletNode:
                     Message("request_additions", request_a),
                     Delivery.RESPOND,
                 )
-
-                # Request additions
             if len(removals) > 0:
+                finish_block = False
                 request_r = wallet_protocol.RequestRemovals(
                     block.height, block.header_hash, removals
                 )
@@ -476,7 +476,7 @@ class WalletNode:
                     Message("request_removals", request_r),
                     Delivery.RESPOND,
                 )
-        else:
+        if finish_block:
             # If we don't have any transactions in filter, don't fetch, and finish the block
             async for msg in self._block_finished(block_record, block):
                 yield msg

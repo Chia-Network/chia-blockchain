@@ -329,7 +329,7 @@ class WalletStateManager:
                 return ReceiveBlockResult.DISCONNECTED_BLOCK
 
             if header_block is not None:
-                if not self.validate_header_block(header_block):
+                if not await self.validate_header_block(header_block):
                     return ReceiveBlockResult.INVALID_BLOCK
 
             self.block_records[block.header_hash] = block

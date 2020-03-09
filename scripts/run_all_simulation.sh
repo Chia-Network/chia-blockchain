@@ -16,5 +16,6 @@ _run_bg_cmd python -m src.server.start_full_node --port=8444 --database_path="si
 _run_bg_cmd python -m src.server.start_full_node --port=8002 --database_path="simulation_2.db" --rpc_port=8556 --introducer_peer.host="127.0.0.1" --introducer_peer.port=8445
 _run_bg_cmd python -m src.ui.start_ui --port=8222 --rpc_port=8555
 _run_bg_cmd python -m src.ui.start_ui --port=8223 --rpc_port=8556
+_run_bg_cmd python -m src.server.start_wallet
 
 wait
