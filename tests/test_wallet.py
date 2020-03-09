@@ -1,16 +1,12 @@
 import asyncio
 
 import pytest
-from src.protocols import full_node_protocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
 from tests.setup_nodes import (
-    setup_node_and_wallet,
-    setup_node_and_two_wallets,
-    test_constants,
-    bt,
+    setup_node_simulator_and_two_wallets,
+    setup_node_simulator_and_wallet,
 )
-from src.util.bundle_tools import best_solution_program
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 
 
@@ -20,15 +16,17 @@ def event_loop():
     yield loop
 
 
-class TestWallet:
+class TestWalletSimulator:
     @pytest.fixture(scope="function")
     async def wallet_node(self):
-        async for _ in setup_node_and_wallet():
+        async for _ in setup_node_simulator_and_wallet():
             yield _
 
     @pytest.fixture(scope="function")
     async def two_wallet_nodes(self):
-        async for _ in setup_node_and_two_wallets({"COINBASE_FREEZE_PERIOD": 0}):
+        async for _ in setup_node_simulator_and_two_wallets(
+            {"COINBASE_FREEZE_PERIOD": 0}
+        ):
             yield _
 
     @pytest.mark.asyncio
@@ -37,22 +35,18 @@ class TestWallet:
         full_node_1, wallet_node, server_1, server_2 = wallet_node
         wallet = wallet_node.wallet
         ph = await wallet.get_new_puzzlehash()
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, reward_puzzlehash=ph,
-        )
+
         await server_2.start_client(
             PeerInfo(server_1._host, uint16(server_1._port)), None
         )
-        for i in range(1, len(blocks)):
-            async for msg in full_node_1.respond_block(
-                full_node_protocol.RespondBlock(blocks[i])
-            ):
-                server_1.push_message(msg)
+        for i in range(1, num_blocks):
+            await full_node_1.farm_new_block(ph)
+
         await asyncio.sleep(3)
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(1, num_blocks - 1)
+                for i in range(1, num_blocks - 2)
             ]
         )
         assert await wallet.get_confirmed_balance() == funds
@@ -70,24 +64,23 @@ class TestWallet:
         ) = two_wallet_nodes
         wallet = wallet_node.wallet
         ph = await wallet.get_new_puzzlehash()
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, reward_puzzlehash=ph,
-        )
+
         await server_2.start_client(
             PeerInfo(server_1._host, uint16(server_1._port)), None
         )
-        for i in range(1, len(blocks)):
-            async for msg in full_node_1.respond_block(
-                full_node_protocol.RespondBlock(blocks[i])
-            ):
-                server_1.push_message(msg)
-        await asyncio.sleep(2)
+
+        for i in range(0, num_blocks):
+            await full_node_1.farm_new_block(ph)
+
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(1, len(blocks) - 2)
+                for i in range(0, num_blocks - 2)
             ]
         )
+
+        await asyncio.sleep(2)
+
         assert await wallet.get_confirmed_balance() == funds
         assert await wallet.get_unconfirmed_balance() == funds
 
@@ -103,29 +96,18 @@ class TestWallet:
         assert confirmed_balance == funds
         assert unconfirmed_balance == funds - 10
 
-        program = best_solution_program(spend_bundle)
+        for i in range(0, num_blocks):
+            await full_node_1.farm_new_block(ph)
 
-        dic_h = {11: (program, spend_bundle.aggregated_signature)}
-        more_blocks = bt.get_consecutive_blocks(
-            test_constants,
-            num_blocks,
-            blocks,
-            10,
-            reward_puzzlehash=ph,
-            transaction_data_at_height=dic_h,
-        )
-        for i in range(1, len(more_blocks)):
-            async for msg in full_node_1.respond_block(
-                full_node_protocol.RespondBlock(more_blocks[i])
-            ):
-                server_1.push_message(msg)
         await asyncio.sleep(2)
+
         new_funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(1, len(more_blocks) - 2)
+                for i in range(0, (2 * num_blocks) - 2)
             ]
         )
+
         confirmed_balance = await wallet.get_confirmed_balance()
         unconfirmed_balance = await wallet.get_unconfirmed_balance()
 
