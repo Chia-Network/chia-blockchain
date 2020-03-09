@@ -127,11 +127,16 @@ class FullNodeStore:
         )
         await cursor_1.close()
         proof_hash = std_hash(
-            block.proof_of_space.get_hash() + block.proof_of_time.get_hash()
+            block.proof_of_space.get_hash() + block.proof_of_time.output.get_hash()
         )
         cursor_2 = await self.db.execute(
             ("INSERT OR REPLACE INTO headers VALUES(?, ?, ?, ?)"),
-            (block.height, block.header_hash.hex(), proof_hash, bytes(block.header),),
+            (
+                block.height,
+                block.header_hash.hex(),
+                proof_hash.hex(),
+                bytes(block.header),
+            ),
         )
         await cursor_2.close()
         await self.db.commit()
@@ -172,7 +177,7 @@ class FullNodeStore:
         cursor = await self.db.execute("SELECT header_hash, proof_hash from headers")
         rows = await cursor.fetchall()
         await cursor.close()
-        return {row[0]: row[1] for row in rows}
+        return {bytes.fromhex(row[0]): bytes.fromhex(row[1]) for row in rows}
 
     async def add_potential_block(self, block: FullBlock) -> None:
         cursor = await self.db.execute(

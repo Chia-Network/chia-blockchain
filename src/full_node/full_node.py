@@ -1740,7 +1740,8 @@ class FullNode:
             hashes.append((proof_hashes_map[curr.header_hash], difficulty_change))
             curr = self.blockchain.headers[curr.prev_header_hash]
 
-        response = wallet_protocol.RespondAllProofHashes(hashes)
+        hashes.append((proof_hashes_map[self.blockchain.genesis.header_hash], None))
+        response = wallet_protocol.RespondAllProofHashes(list(reversed(hashes)))
         yield OutboundMessage(
             NodeType.WALLET,
             Message("respond_all_proof_hashes", response),

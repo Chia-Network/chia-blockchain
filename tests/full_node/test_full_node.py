@@ -6,14 +6,14 @@ import time
 from typing import Dict
 from secrets import token_bytes
 
-from src.protocols import full_node_protocol as fnp
-from src.protocols import timelord_protocol
+from src.protocols import full_node_protocol as fnp, timelord_protocol, wallet_protocol
 from src.types.peer_info import PeerInfo
 from src.types.full_block import FullBlock
 from src.types.proof_of_space import ProofOfSpace
 from src.types.hashable.spend_bundle import SpendBundle
 from src.util.bundle_tools import best_solution_program
 from src.util.ints import uint16, uint32, uint64, uint8
+from src.util.hash import std_hash
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
@@ -767,3 +767,132 @@ class TestFullNode:
 
         msgs = [_ async for _ in full_node_1.request_peers(fnp.RequestPeers())]
         assert len(msgs[0].message.data.peer_list) > 0
+
+    @pytest.mark.asyncio
+    async def test_request_all_proof_hashes(self, two_nodes):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        num_blocks = test_constants["DIFFICULTY_EPOCH"] * 2
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
+        for block in blocks:
+            async for _ in full_node_1.respond_block(fnp.RespondBlock(block)):
+                pass
+        blocks_list = [(await full_node_1.blockchain.get_full_tips())[0]]
+        while blocks_list[0].height != 0:
+            b = await full_node_1.store.get_block(blocks_list[0].prev_header_hash)
+            blocks_list.insert(0, b)
+
+        msgs = [
+            _
+            async for _ in full_node_1.request_all_proof_hashes(
+                wallet_protocol.RequestAllProofHashes()
+            )
+        ]
+        hashes = msgs[0].message.data.hashes
+        assert len(hashes) >= num_blocks - 1
+        for i in range(len(hashes)):
+            if (
+                i % test_constants["DIFFICULTY_EPOCH"]
+                == test_constants["DIFFICULTY_DELAY"]
+            ):
+                assert hashes[i][1] is not None
+            else:
+                assert hashes[i][1] is None
+            assert hashes[i][0] == std_hash(
+                blocks_list[i].proof_of_space.get_hash()
+                + blocks_list[i].proof_of_time.output.get_hash()
+            )
+
+    @pytest.mark.asyncio
+    async def test_request_all_header_hashes_after(self, two_nodes):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        num_blocks = 18
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
+        for block in blocks[:10]:
+            async for _ in full_node_1.respond_block(fnp.RespondBlock(block)):
+                pass
+        blocks_list = [(await full_node_1.blockchain.get_full_tips())[0]]
+        while blocks_list[0].height != 0:
+            b = await full_node_1.store.get_block(blocks_list[0].prev_header_hash)
+            blocks_list.insert(0, b)
+
+        msgs = [
+            _
+            async for _ in full_node_1.request_all_header_hashes_after(
+                wallet_protocol.RequestAllHeaderHashesAfter(
+                    uint32(5), blocks_list[5].proof_of_space.challenge_hash
+                )
+            )
+        ]
+        assert len(msgs) == 1
+        assert isinstance(
+            msgs[0].message.data, wallet_protocol.RespondAllHeaderHashesAfter
+        )
+        assert msgs[0].message.data.starting_height == 5
+        assert (
+            msgs[0].message.data.previous_challenge_hash
+            == blocks_list[5].proof_of_space.challenge_hash
+        )
+        assert msgs[0].message.data.hashes[:3] == [
+            b.header_hash for b in blocks_list[5:8]
+        ]
+
+        # Wrong prev challenge
+        msgs = [
+            _
+            async for _ in full_node_1.request_all_header_hashes_after(
+                wallet_protocol.RequestAllHeaderHashesAfter(
+                    uint32(5), blocks_list[4].proof_of_space.challenge_hash
+                )
+            )
+        ]
+        assert len(msgs) == 1
+        assert isinstance(
+            msgs[0].message.data, wallet_protocol.RejectAllHeaderHashesAfterRequest
+        )
+        assert msgs[0].message.data.starting_height == 5
+        assert (
+            msgs[0].message.data.previous_challenge_hash
+            == blocks_list[4].proof_of_space.challenge_hash
+        )
+
+    @pytest.mark.asyncio
+    async def test_request_header(self, two_nodes):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        num_blocks = 2
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, seed=b"test_request_header"
+        )
+        for block in blocks[:2]:
+            async for _ in full_node_1.respond_block(fnp.RespondBlock(block)):
+                pass
+
+        msgs = [
+            _
+            async for _ in full_node_1.request_header(
+                wallet_protocol.RequestHeader(uint32(1), blocks[1].header_hash)
+            )
+        ]
+        assert len(msgs) == 1
+        assert isinstance(msgs[0].message.data, wallet_protocol.RespondHeader)
+        assert msgs[0].message.data.header_block.header == blocks[1].header
+        assert msgs[0].message.data.transactions_filter == blocks[1].transactions_filter
+
+        # Don't have
+        msgs = [
+            _
+            async for _ in full_node_1.request_header(
+                wallet_protocol.RequestHeader(uint32(2), blocks[2].header_hash)
+            )
+        ]
+        assert len(msgs) == 1
+        assert isinstance(msgs[0].message.data, wallet_protocol.RejectHeaderRequest)
+        assert msgs[0].message.data.height == 2
+        assert msgs[0].message.data.header_hash == blocks[2].header_hash
+
+    # @pytest.mark.asyncio
+    # async def test_request_removals(self, two_nodes, wallet_blocks):
+    #     full_node_1, full_node_2, server_1, server_2 = two_nodes
+    #     wallet_a, wallet_receiver, blocks = wallet_blocks
+
+    #     await server_2.start_client(
+    #         PeerInfo(server_1._host, uint16(server_1._port)), None
