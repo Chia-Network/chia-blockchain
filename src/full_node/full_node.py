@@ -1728,11 +1728,14 @@ class FullNode:
                 full_node_protocol.RespondTransaction(tx.transaction)
             )
         ]
-        # TODO(straya): we should return True in the case that the transaction was already received
+
         if len(msgs) > 0:
             response = wallet_protocol.TransactionAck(tx.transaction.name(), True)
         else:
-            response = wallet_protocol.TransactionAck(tx.transaction.name(), False)
+            if self.mempool_manager.get_spendbundle(tx.transaction.name) is None:
+                response = wallet_protocol.TransactionAck(tx.transaction.name(), False)
+            else:
+                response = wallet_protocol.TransactionAck(tx.transaction.name(), True)
         yield OutboundMessage(
             NodeType.WALLET, Message("transaction_ack", response), Delivery.RESPOND
         )
