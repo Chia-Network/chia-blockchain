@@ -72,7 +72,6 @@ setup(
     description='Chia proof of space plotting, proving, and verifying (wraps C++)',
     license='Apache License',
     python_requires='>=3.7',
-    install_requires=['pytest', 'cppimport', 'bitstring', 'flake8'],
     long_description=open('README.md').read(),
     ext_modules=[CMakeExtension('chiapos', '.')],
     cmdclass=dict(build_ext=CMakeBuild),
