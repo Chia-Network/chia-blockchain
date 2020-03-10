@@ -1,0 +1,43 @@
+# adapted from https://packaging.python.org/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
+
+name: Publish Python distributions to PyPI and TestPyPI
+
+on: push
+
+jobs:
+  build-n-publish:
+    name: Build and publish Python distributions to PyPI and TestPyPI
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        base: [".", "lib/chiapos", "lib/chiavdf/fast_vdf", "lib/py-setproctitle"]
+        os: [ubuntu-latest, macOS-latest]
+
+    steps:
+    - uses: actions/checkout@master
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+    - name: Install pep517
+      run:
+        python -m pip install pep517 wheel --user
+    - name: Build a binary wheel and a source tarball
+      run:
+        cd ${{ matrix.base }} && python -m pep517.build --binary --out-dir dist/ .
+    - uses: actions/upload-artifact@v1
+      with:
+        name: wheels-${{ matrix.os }}
+        path: ${{ matrix.base }}/dist
+    - name: Publish distribution to Test PyPI
+      if: 0
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        password: ${{ secrets.test_pypi_password }}
+        repository_url: https://test.pypi.org/legacy/
+    - name: Publish distribution to PyPI
+      if: startsWith(github.event.ref, 'refs/tags')
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        password: ${{ secrets.pypi_password }}
