@@ -139,16 +139,10 @@ class TestWalletSimulator:
         )
         assert await wallet.get_confirmed_balance() == funds
 
-        wallet_lca = wallet_node.wallet_state_manager.lca
-        lca_header: Header = wallet_node.wallet_state_manager.block_records[wallet_lca]
-
         await full_node_1.reorg_from_index_to_new_index(
             5, num_blocks + 3, token_bytes()
         )
         await asyncio.sleep(3)
-
-        for i in range(1, 5):
-            wallet_node.log.info(f"i si: {i}")
 
         funds = sum(
             [
