@@ -10,7 +10,6 @@ dependencies = [
     "miniupnpc",        # Allows users to open ports on their router
     "aiosqlite",        # asyncio wrapper for sqlite, to store blocks
     "aiohttp",          # HTTP server for full node rpc
-    "setuptools-scm",   # Used for versioning
     "prompt-toolkit",   # Used to create a terminal based UI for full node
     "colorlog"          # Adds color to logs
 ]
@@ -31,6 +30,19 @@ setup(
     description="Chia proof of space plotting, proving, and verifying (wraps C++)",
     license="Apache License",
     python_requires=">=3.7, <4",
+    packages=[
+        "definitions",
+        "lib.chiavdf.inkfish",
+        "scripts",
+        "src",
+        "src.consensus",
+        "src.protocols",
+        "src.rpc",
+        "src.server",
+        "src.types",
+        "src.ui",
+        "src.util",
+    ],
     keywords="chia blockchain node",
     install_requires=dependencies + dev_dependencies,
     setup_requires=["setuptools_scm"],
