@@ -1,3 +1,5 @@
+from secrets import token_bytes
+
 from src.full_node.full_node import FullNode
 from typing import AsyncGenerator, List, Dict
 from src.full_node.blockchain import Blockchain
@@ -16,6 +18,7 @@ from src.types.header import Header
 from src.types.sized_bytes import bytes32
 from src.full_node.coin_store import CoinStore
 from src.util.api_decorators import api_request
+from src.util.ints import uint32
 from tests.block_tools import BlockTools
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
@@ -105,6 +108,7 @@ class FullNodeSimulator(FullNode):
         async for msg in super().request_additions(request):
             yield msg
 
+    # WALLET LOCAL TEST PROTOCOL
     def get_tip(self):
         tips = self.blockchain.tips
         top = tips[0]
@@ -115,7 +119,6 @@ class FullNodeSimulator(FullNode):
 
         return top
 
-    # WALLET LOCAL TEST PROTOCOL
     async def get_current_blocks(self, tip: Header) -> List[FullBlock]:
 
         current_blocks: List[FullBlock] = []
@@ -156,3 +159,27 @@ class FullNodeSimulator(FullNode):
 
         async for msg in self.respond_block(full_node_protocol.RespondBlock(new_lca)):
             self.server.push_message(msg)
+
+    @api_request
+    async def reorg_from_index_to_new_index(
+        self, old_index: uint32, new_index: uint32, coinbase_ph: bytes32
+    ):
+        top_tip = self.get_tip()
+
+        current_blocks = await self.get_current_blocks(top_tip)
+        block_count = new_index - old_index
+
+        more_blocks = bt.get_consecutive_blocks(
+            self.constants,
+            block_count,
+            current_blocks[:old_index],
+            10,
+            seed=token_bytes(),
+            reward_puzzlehash=coinbase_ph,
+            transaction_data_at_height={},
+        )
+
+        for block in more_blocks:
+            async for msg in self.respond_block(full_node_protocol.RespondBlock(block)):
+                self.server.push_message(msg)
+                self.log.info(f"New message: {msg}")

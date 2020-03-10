@@ -46,6 +46,7 @@ class WalletStateManager:
 
     # TODO Don't allow user to send tx until wallet is synced
     synced: bool
+    genesis: FullBlock
 
     @staticmethod
     async def create(
@@ -76,6 +77,7 @@ class WalletStateManager:
         self.height_to_hash = {}
         self.block_records = await self.wallet_store.get_lca_path()
         genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
+        self.genesis = genesis
 
         if len(self.block_records) > 0:
             # Header hash with the highest weight
@@ -130,7 +132,9 @@ class WalletStateManager:
         valid_index = current_index - coinbase_freeze_period
         record_list: Set[
             CoinRecord
-        ] = await self.wallet_store.get_coin_records_by_spent_and_index(False, valid_index)
+        ] = await self.wallet_store.get_coin_records_by_spent_and_index(
+            False, valid_index
+        )
 
         amount: uint64 = uint64(0)
 
@@ -227,7 +231,6 @@ class WalletStateManager:
                 continue
             sum += coinrecord.coin.amount
             used_coins.add(coinrecord.coin)
-
 
         # This happens when we couldn't use one of the coins because it's already used
         # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
@@ -406,7 +409,7 @@ class WalletStateManager:
                 blocks_to_add: List[BlockRecord] = []
                 tip_hash: bytes32 = block.header_hash
                 while True:
-                    if tip_hash == fork_hash:
+                    if tip_hash == fork_hash or tip_hash == self.genesis.header_hash:
                         break
                     record = self.block_records[tip_hash]
                     blocks_to_add.append(record)
@@ -519,6 +522,7 @@ class WalletStateManager:
         Rolls back and updates the coin_store and transaction store. It's possible this height
         is the tip, or even beyond the tip.
         """
+        self.log.warning(f"Rolling back to {index}")
         await self.wallet_store.rollback_lca_to_block(index)
 
         reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(

@@ -143,12 +143,15 @@ class WalletStore:
             coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4]))
         return coins
 
-    async def get_coin_records_by_spent_and_index(self, spent: bool, index: uint32) -> Set[CoinRecord]:
+    async def get_coin_records_by_spent_and_index(
+        self, spent: bool, index: uint32
+    ) -> Set[CoinRecord]:
         """ Returns set of CoinRecords that have been confirmed before index height. """
         coins = set()
 
         cursor = await self.db_connection.execute(
-            "SELECT * from coin_record WHERE spent=? and confirmed_index<?", (int(spent), int(index),)
+            "SELECT * from coin_record WHERE spent=? and confirmed_index<?",
+            (int(spent), int(index),),
         )
         rows = await cursor.fetchall()
         await cursor.close()
