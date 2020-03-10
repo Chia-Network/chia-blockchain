@@ -118,6 +118,48 @@ class WalletStateManager:
             )
         return self
 
+    async def get_confirmed_spendable(self, current_index: uint32) -> uint64:
+        """
+        Returns the balance amount of all coins that are spendable.
+        Spendable - (Coinbase freeze period has passed.)
+        """
+        coinbase_freeze_period = self.constants["COINBASE_FREEZE_PERIOD"]
+        if current_index <= coinbase_freeze_period:
+            return uint64(0)
+
+        valid_index = current_index - coinbase_freeze_period
+        record_list: Set[
+            CoinRecord
+        ] = await self.wallet_store.get_coin_records_by_spent_and_index(False, valid_index)
+
+        amount: uint64 = uint64(0)
+
+        for record in record_list:
+            if record.confirmed_block_index + coinbase_freeze_period < current_index:
+                amount = uint64(amount + record.coin.amount)
+
+        return uint64(amount)
+
+    async def get_unconfirmed_spendable(self, current_index: uint32) -> uint64:
+        """
+        Returns the confirmed balance amount - sum of unconfirmed transactions.
+        """
+
+        confirmed = await self.get_confirmed_spendable(current_index)
+        unconfirmed_tx = await self.tx_store.get_not_confirmed()
+        addition_amount = 0
+        removal_amount = 0
+
+        for record in unconfirmed_tx:
+            for coin in record.additions:
+                if await self.puzzle_store.puzzle_hash_exists(coin.puzzle_hash):
+                    addition_amount += coin.amount
+            for coin in record.removals:
+                removal_amount += coin.amount
+
+        result = confirmed - removal_amount + addition_amount
+        return uint64(result)
+
     async def get_confirmed_balance(self) -> uint64:
         record_list: Set[
             CoinRecord
@@ -161,8 +203,12 @@ class WalletStateManager:
         return removals
 
     async def select_coins(self, amount) -> Optional[Set[Coin]]:
+        """ Returns a set of coins that can be used for generating a new transaction. """
+        if self.lca is None:
+            return None
 
-        if amount > await self.get_unconfirmed_balance():
+        current_index = self.block_records[self.lca].height
+        if amount > await self.get_unconfirmed_spendable(current_index):
             return None
 
         unspent: Set[CoinRecord] = await self.wallet_store.get_coin_records_by_spent(
@@ -171,22 +217,20 @@ class WalletStateManager:
         sum = 0
         used_coins: Set = set()
 
-        """
-        Try to use coins from the store, if there isn't enough of "unused"
-        coins use change coins that are not confirmed yet
-        """
+        # Try to use coins from the store, if there isn't enough of "unused"
+        # coins use change coins that are not confirmed yet
+        unconfirmed_removals = await self.unconfirmed_removals()
         for coinrecord in unspent:
             if sum >= amount:
                 break
-            if coinrecord.coin.name in await self.unconfirmed_removals():
+            if coinrecord.coin.name in unconfirmed_removals:
                 continue
             sum += coinrecord.coin.amount
             used_coins.add(coinrecord.coin)
 
-        """
-        This happens when we couldn't use one of the coins because it's already used
-        but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
-        """
+
+        # This happens when we couldn't use one of the coins because it's already used
+        # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
         if sum < amount:
             for coin in (await self.unconfirmed_additions()).values():
                 if sum > amount:
@@ -199,7 +243,7 @@ class WalletStateManager:
         if sum >= amount:
             return used_coins
         else:
-            # This shouldn't happen because of: if amount > self.get_unconfirmed_balance():
+            # This shouldn't happen because of: if amount > self.get_unconfirmed_balance_spendable():
             return None
 
     async def coin_removed(self, coin_name: bytes32, index: uint32):
