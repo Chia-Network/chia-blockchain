@@ -16,8 +16,32 @@ let amount = document.querySelector("#amount_to_send")
 let table = document.querySelector("#tx_table").getElementsByTagName('tbody')[0]
 let green_checkmark = "<i class=\"icon ion-md-checkmark-circle-outline green\"></i>"
 let red_checkmark = "<i class=\"icon ion-md-close-circle-outline red\"></i>"
+let balance_textfield = document.querySelector('#balance_textfield')
+let pending_textfield = document.querySelector('#pending_textfield')
+
 var myBalance = 0
 var myUnconfirmedBalance = 0
+
+console.log(global.location.search)
+function getQueryVariable(variable) {
+    var query = global.location.search.substring(1);
+    var vars = query.split('&');
+    for (var i = 0; i < vars.length; i++) {
+        var pair = vars[i].split('=');
+        if (decodeURIComponent(pair[0]) == variable) {
+            return decodeURIComponent(pair[1]);
+        }
+    }
+    console.log('Query variable %s not found', variable);
+}
+
+var local_test = getQueryVariable("testing")
+console.log("testing: " + local_test)
+
+if (local_test == "false") {
+    console.log("farm_button should be hidden")
+    farm_button.style.visibility="hidden"
+}
 
 function sleep(ms) {
     return new Promise((resolve) => {
@@ -185,7 +209,14 @@ async function get_wallet_balance() {
 }
 
 function get_wallet_balance_response(response) {
-    console.log("update balance");
+    console.log("update balance" + response);
+    if (response["success"]) {
+        var confirmed = parseInt(response["confirmed_wallet_balance"])
+        var unconfirmed = parseInt(response["unconfirmed_wallet_balance"])
+        var pending = confirmed - unconfirmed
+        balance_textfield.innerHTML = confirmed + "CH"
+        pending_textfield.innerHTML = pending + "CH"
+    }
 }
 
 async function get_transactions() {
@@ -230,7 +261,7 @@ function get_transactions_response(response) {
 
         // Confirmation status
         if (tx["confirmed"]) {
-             index = tx["confirmed_block_index"];
+             index = tx["confirmed_at_index"];
              cell_status.innerHTML = "Confirmed" + green_checkmark +"</br>" + "Block: " + index;
         } else {
              cell_status.innerHTML = "Pending " + red_checkmark;
@@ -246,8 +277,24 @@ function handle_state_changed(data) {
     state = data["state"]
     if (state == "coin_removed") {
         get_transactions()
+        get_wallet_balance()
     } else if (state == "coin_added") {
         get_transactions()
+        get_wallet_balance()
+    } else if (state == "pending_transaction") {
+        get_transactions()
+        get_wallet_balance()
+    } else if (state == "tx_sent") {
+        get_transactions()
+        get_wallet_balance()
+    } else if (state == "balance_changed") {
+        get_wallet_balance()
+    } else if (state == "status_changed") {
+        // if syncing, disable sending
+    } else if (state == "new_block") {
+        //display new height
+    } else if (state == "reorg") {
+        // ?
     }
 }
 

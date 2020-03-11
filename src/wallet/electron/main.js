@@ -6,10 +6,6 @@ const WebSocket = require('ws');
 const local_test = false
 
 var ui_html = "wallet-dark.html"
-if (local_test) {
-    // Has farm block button
-    ui_html = "wallet-dark-test.html"
-}
 
 /*************************************************************
  * py process
@@ -99,11 +95,13 @@ const createWindow = () => {
         nodeIntegration: true
     },})
 
+  query = "?testing="+local_test
   mainWindow.loadURL(require('url').format({
     pathname: path.join(__dirname, ui_html),
     protocol: 'file:',
     slashes: true
-  }))
+  }) + query
+  )
   mainWindow.webContents.openDevTools()
 
   mainWindow.on('closed', () => {
