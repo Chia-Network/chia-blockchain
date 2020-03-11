@@ -6,7 +6,6 @@ import logging
 import websockets
 
 from typing import Any, Dict
-from aiohttp import web
 from src.server.outbound_message import NodeType, OutboundMessage, Message, Delivery
 from src.server.server import ChiaServer
 from src.simulator.simulator_constants import test_constants
@@ -157,6 +156,7 @@ class WebSocketServer:
         if self.websocket is None:
             return
         asyncio.ensure_future(self.notify_ui_that_state_changed(state))
+
 
 async def start_websocket_server():
     """
