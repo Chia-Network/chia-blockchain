@@ -67,9 +67,9 @@ class WebSocketServer:
     async def send_transaction(self, websocket, request, response_api):
         if "amount" in request and "puzzlehash" in request:
             amount = int(request["amount"])
-            puzzlehash = request["puzzlehash"]
+            puzzle_hash = bytes.fromhex(request["puzzlehash"])
             tx = await self.wallet_node.wallet.generate_signed_transaction(
-                amount, puzzlehash
+                amount, puzzle_hash
             )
 
             if tx is None:
