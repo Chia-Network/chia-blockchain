@@ -8,6 +8,7 @@ from src.protocols import (
     full_node_protocol,
     wallet_protocol,
 )
+from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from src.util.bundle_tools import best_solution_program
 from src.full_node.mempool_manager import MempoolManager
 from src.server.outbound_message import OutboundMessage
@@ -15,10 +16,8 @@ from src.server.server import ChiaServer
 from src.types.full_block import FullBlock
 from src.types.hashable.spend_bundle import SpendBundle
 from src.types.header import Header
-from src.types.sized_bytes import bytes32
 from src.full_node.coin_store import CoinStore
 from src.util.api_decorators import api_request
-from src.util.ints import uint32
 from tests.block_tools import BlockTools
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
@@ -136,7 +135,8 @@ class FullNodeSimulator(FullNode):
         return current_blocks
 
     @api_request
-    async def farm_new_block(self, coinbase_ph: bytes32):
+    async def farm_new_block(self, request: FarmNewBlockProtocol):
+        self.log.info("Farming new block!")
         top_tip = self.get_tip()
 
         current_block = await self.get_current_blocks(top_tip)
@@ -152,7 +152,7 @@ class FullNodeSimulator(FullNode):
             1,
             current_block,
             10,
-            reward_puzzlehash=coinbase_ph,
+            reward_puzzlehash=request.puzzle_hash,
             transaction_data_at_height=dict_h,
         )
         new_lca = more_blocks[-1]
@@ -161,9 +161,10 @@ class FullNodeSimulator(FullNode):
             self.server.push_message(msg)
 
     @api_request
-    async def reorg_from_index_to_new_index(
-        self, old_index: uint32, new_index: uint32, coinbase_ph: bytes32
-    ):
+    async def reorg_from_index_to_new_index(self, request: ReorgProtocol):
+        new_index = request.new_index
+        old_index = request.old_index
+        coinbase_ph = request.puzzle_hash
         top_tip = self.get_tip()
 
         current_blocks = await self.get_current_blocks(top_tip)

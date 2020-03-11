@@ -149,6 +149,19 @@ class WalletTransactionStore:
 
         return None
 
+    async def unconfirmed_with_addition_coin(
+        self, removal_id: bytes32
+    ) -> Optional[TransactionRecord]:
+        """ Returns a record containing removed coin with id: removal_id"""
+
+        all_unconfirmed: List[TransactionRecord] = await self.get_not_confirmed()
+        for record in all_unconfirmed:
+            for coin in record.additions:
+                if coin.name() == removal_id:
+                    return record
+
+        return None
+
     async def set_sent(self, id: bytes32):
         """
         Updates transaction to be sent. (Full Node has received spend_bundle and sent ack).

@@ -69,12 +69,15 @@ class WalletNode:
 
         pub_hex = self.private_key.get_public_key().serialize().hex()
         if not db_path:
-            path = Path(f"wallet_db_{pub_hex}.db")
+            if config["testing"] is True:
+                path = Path(f"wallet_db_testing_{pub_hex}.db")
+            else:
+                path = Path(f"wallet_db_{pub_hex}.db")
         else:
             path = db_path
 
         self.wallet_state_manager = await WalletStateManager.create(
-            config, path, override_constants=self.constants,
+            config, path, self.constants
         )
         self.wallet = await Wallet.create(config, key_config, self.wallet_state_manager)
 

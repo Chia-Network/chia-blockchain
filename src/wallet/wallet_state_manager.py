@@ -12,7 +12,6 @@ from src.types.hashable.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.types.full_block import FullBlock
 from src.types.challenge import Challenge
-from src.consensus.constants import constants as consensus_constants
 from src.types.header_block import HeaderBlock
 from src.util.ints import uint32, uint64
 from src.util.hash import std_hash
@@ -50,18 +49,11 @@ class WalletStateManager:
 
     @staticmethod
     async def create(
-        config: Dict,
-        db_path: Path,
-        name: str = None,
-        override_constants: Optional[Dict] = None,
+        config: Dict, db_path: Path, constants: Dict, name: str = None,
     ):
         self = WalletStateManager()
         self.config = config
-        self.constants = consensus_constants.copy()
-
-        if override_constants:
-            for key, value in override_constants.items():
-                self.constants[key] = value
+        self.constants = constants
 
         if name:
             self.log = logging.getLogger(name)
@@ -265,6 +257,47 @@ class WalletStateManager:
         """
         Adding coin to the db
         """
+        if coinbase:
+            now = uint64(int(time.time()))
+            tx_record = TransactionRecord(
+                confirmed_at_index=uint32(index),
+                created_at_time=now,
+                to_puzzle_hash=coin.puzzle_hash,
+                amount=coin.amount,
+                fee_amount=uint64(0),
+                incoming=True,
+                confirmed=True,
+                sent=True,
+                spend_bundle=None,
+                additions=[coin],
+                removals=[],
+            )
+            await self.tx_store.add_transaction_record(tx_record)
+        else:
+            unconfirmed_record = await self.tx_store.unconfirmed_with_addition_coin(
+                coin.name()
+            )
+
+            if unconfirmed_record:
+                # This is the change from this transaction
+                await self.tx_store.set_confirmed(unconfirmed_record.name(), index)
+            else:
+                now = uint64(int(time.time()))
+                tx_record = TransactionRecord(
+                    confirmed_at_index=uint32(index),
+                    created_at_time=now,
+                    to_puzzle_hash=coin.puzzle_hash,
+                    amount=coin.amount,
+                    fee_amount=uint64(0),
+                    incoming=True,
+                    confirmed=True,
+                    sent=True,
+                    spend_bundle=None,
+                    additions=[coin],
+                    removals=[],
+                )
+                await self.tx_store.add_transaction_record(tx_record)
+
         coin_record: CoinRecord = CoinRecord(coin, index, uint32(0), False, coinbase)
         await self.wallet_store.add_coin_record(coin_record)
 

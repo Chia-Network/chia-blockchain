@@ -3,10 +3,8 @@ import logging
 import logging.config
 import signal
 from pathlib import Path
-from typing import Dict, Any
-
 from src.simulator.full_node_simulator import FullNodeSimulator
-from tests.block_tools import BlockTools
+from src.simulator.simulator_constants import test_constants
 
 try:
     import uvloop
@@ -24,24 +22,6 @@ from src.full_node.coin_store import CoinStore
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli
 from setproctitle import setproctitle
-
-test_constants: Dict[str, Any] = {
-    "DIFFICULTY_STARTING": 5,
-    "DISCRIMINANT_SIZE_BITS": 16,
-    "BLOCK_TIME_TARGET": 10,
-    "MIN_BLOCK_TIME": 2,
-    "DIFFICULTY_FACTOR": 3,
-    "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
-    "DIFFICULTY_WARP_FACTOR": 4,  # DELAY divides EPOCH in order to warp efficiently.
-    "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
-    "VDF_IPS_STARTING": 50,
-}
-
-
-bt = BlockTools()
-
-genesis = bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
-test_constants["GENESIS_BLOCK"] = bytes(genesis)
 
 
 async def main():

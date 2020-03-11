@@ -1,15 +1,19 @@
 import asyncio
 import dataclasses
 import json
+import logging
 
 import websockets
 
 from typing import Any, Dict
 from aiohttp import web
-from src.server.outbound_message import NodeType
+from src.server.outbound_message import NodeType, OutboundMessage, Message, Delivery
 from src.server.server import ChiaServer
+from src.simulator.simulator_constants import test_constants
+from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
-from src.util.config import load_config
+from src.util.config import load_config, load_config_cli
+from src.util.logging import initialize_logging
 from src.wallet.wallet_node import WalletNode
 
 
@@ -46,7 +50,7 @@ def format_response(command: str, response_data: Dict[str, Any]):
 
 class WebSocketServer:
     def __init__(self, wallet_node: WalletNode):
-        self.wallet_node = wallet_node
+        self.wallet_node: WalletNode = wallet_node
 
     async def get_next_puzzle_hash(self, websocket, response_api) -> web.Response:
         """
@@ -92,6 +96,15 @@ class WebSocketServer:
         response = {"success": True, "txs": transactions}
         await websocket.send(format_response(response_api, response))
 
+    async def farm_block(self, websocket, request, response_api):
+        puzzle_hash = bytes.fromhex(request["puzzle_hash"])
+        request = FarmNewBlockProtocol(puzzle_hash)
+        msg = OutboundMessage(
+            NodeType.FULL_NODE, Message("farm_new_block", request), Delivery.BROADCAST,
+        )
+
+        self.wallet_node.server.push_message(msg)
+
     async def get_wallet_balance(self, websocket, response_api):
         balance = await self.wallet_node.wallet.get_confirmed_balance()
         pending_balance = await self.wallet_node.wallet.get_unconfirmed_balance()
@@ -110,7 +123,6 @@ class WebSocketServer:
         """
 
         async for message in websocket:
-            print(message)
             decoded = json.loads(message)
             command = decoded["command"]
             data = None
@@ -126,6 +138,8 @@ class WebSocketServer:
                 await self.get_next_puzzle_hash(websocket, command)
             elif command == "get_transactions":
                 await self.get_transactions(websocket, command)
+            elif command == "farm_block":
+                await self.farm_block(websocket, data, command)
             else:
                 response = {"error": f"unknown_command {command}"}
                 await websocket.send(obj_to_response(response))
@@ -136,14 +150,26 @@ async def start_websocket_server():
     Starts WalletNode, WebSocketServer, and ChiaServer
     """
 
-    config = load_config("config.yaml", "wallet")
+    config = load_config_cli("config.yaml", "wallet")
+    initialize_logging("Wallet %(name)-25s", config["logging"])
+    log = logging.getLogger(__name__)
+    log.info(f"Config : {config}")
+
     try:
         key_config = load_config("keys.yaml")
     except FileNotFoundError:
         raise RuntimeError(
             "Keys not generated. Run python3 ./scripts/regenerate_keys.py."
         )
-    wallet_node = await WalletNode.create(config, key_config)
+
+    if config["testing"] is True:
+        print("Testing")
+        wallet_node = await WalletNode.create(
+            config, key_config, override_constants=test_constants
+        )
+    else:
+        print("not testing")
+        wallet_node = await WalletNode.create(config, key_config)
 
     handler = WebSocketServer(wallet_node)
     server = ChiaServer(9257, wallet_node, NodeType.WALLET)
