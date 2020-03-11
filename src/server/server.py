@@ -82,7 +82,6 @@ class ChiaServer:
         if self._server is not None or self._pipeline_task.done():
             return False
 
-        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
         ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH)
         ssl_context.load_cert_chain(certfile=config["server_crt"], keyfile=config["server_key"], password=config["server_pass"])
         if config["server_verify"]:
