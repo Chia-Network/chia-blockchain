@@ -51,9 +51,27 @@ const createPyProc = () => {
     pyProc = require('child_process').spawn('python', [script, "--testing", local_test])
   }
 
-  if (pyProc != null) {
-    console.log('child process success')
-  }
+    if (pyProc != null) {
+        pyProc.stdout.setEncoding('utf8');
+
+        pyProc.stdout.on('data', function(data) {
+            console.log(data.toString());
+        });
+
+        pyProc.stderr.setEncoding('utf8');
+        pyProc.stderr.on('data', function(data) {
+            //Here is where the error output goes
+            console.log('stderr: ' + data.toString());
+        });
+
+        pyProc.on('close', function(code) {
+            //Here you can get the exit code of the script
+            console.log('closing code: ' + code);
+            console.log('Full output of script: ',scriptOutput);
+        });
+
+        console.log('child process success')
+    }
 }
 
 const exitPyProc = () => {
