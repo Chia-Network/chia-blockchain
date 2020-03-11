@@ -3,8 +3,9 @@ import concurrent
 import logging
 import os
 import random
+import ssl
 from secrets import token_bytes
-from typing import Any, AsyncGenerator, List, Optional, Tuple
+from typing import Any, AsyncGenerator, List, Optional, Tuple, Dict
 
 from aiter import aiter_forker, iter_to_aiter, join_aiters, map_aiter, push_aiter
 from aiter.server import start_server_aiter
@@ -37,14 +38,12 @@ log = logging.getLogger(__name__)
 config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
 config = safe_load(open(config_filename, "r"))
 
-
 class ChiaServer:
     # Keeps track of all connections to and from this node.
     global_connections: PeerConnections
 
     # Optional listening server. You can also use this class without starting one.
     _server: Optional[asyncio.AbstractServer]
-    _host: Optional[str]
 
     # (StreamReader, StreamWriter, NodeType) aiter, gets things from server and clients and
     # sends them through the pipeline
@@ -62,7 +61,6 @@ class ChiaServer:
     def __init__(self, port: int, api: Any, local_type: NodeType):
         self.global_connections = PeerConnections([])
         self._server = None
-        self._host = None
         self._on_inbound_connect = None
         self._port = port  # TCP port to identify our node
         self._api = api  # API module that will be called from the requests
@@ -75,7 +73,7 @@ class ChiaServer:
         self._ping_task = self._initialize_ping_task()
         self._node_id = create_node_id()
 
-    async def start_server(self, host: str, on_connect: OnConnectFunc = None,) -> bool:
+    async def start_server(self, config: Dict, on_connect: OnConnectFunc = None,) -> bool:
         """
         Launches a listening server on host and port specified, to connect to NodeType nodes. On each
         connection, the on_connect asynchronous generator will be called, and responses will be sent.
@@ -83,17 +81,29 @@ class ChiaServer:
         """
         if self._server is not None or self._pipeline_task.done():
             return False
-        self._host = host
+
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+        ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH)
+        ssl_context.load_cert_chain(certfile=config["server_crt"], keyfile=config["server_key"], password=config["server_pass"])
+        if config["server_verify"]:
+            ssl_context.load_verify_locations(cafile=config["server_ca"])
+            ssl_context.verify_mode = ssl.CERT_REQUIRED
+        else:
+            ssl_context.verify_mode = ssl.CERT_NONE
 
         self._server, aiter = await start_server_aiter(
-            self._port, host=None, reuse_address=True
+            self._port, host=None, reuse_address=True, ssl=ssl_context
         )
+
         if on_connect is not None:
             self._on_inbound_connect = on_connect
 
         def add_connection_type(
             srw: Tuple[asyncio.StreamReader, asyncio.StreamWriter]
         ) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter, None]:
+            ssl_object = srw[1].get_extra_info(name="ssl_object")
+            peer_cert = ssl_object.getpeercert()
+            log.info(f"Client authed as {peer_cert}")
             return (srw[0], srw[1], None)
 
         srwt_aiter = map_aiter(add_connection_type, aiter)
@@ -105,23 +115,28 @@ class ChiaServer:
         return True
 
     async def start_client(
-        self, target_node: PeerInfo, on_connect: OnConnectFunc = None,
+        self, config: Dict, target_node: PeerInfo, on_connect: OnConnectFunc = None,
     ) -> bool:
         """
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
         An on connect method can also be specified, and this will be saved into the instance variables.
         """
-        if self._server is not None:
-            if (
-                self._host == target_node.host or target_node.host == "127.0.0.1"
-            ) and self._port == target_node.port:
-                self.global_connections.peers.remove(target_node)
-                return False
         if self._pipeline_task.done():
             return False
+
+        ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH)
+        ssl_context.check_hostname = False
+        ssl_context.load_cert_chain(certfile=config["client_crt"], keyfile=config["client_key"], password=config["client_pass"])
+
+        if config["client_verify"]:
+            ssl_context.load_verify_locations(cafile=config["client_ca"])
+            ssl_context.verify_mode = ssl.CERT_REQUIRED
+        else:
+            ssl_context.verify_mode = ssl.CERT_NONE
+
         try:
             reader, writer = await asyncio.open_connection(
-                target_node.host, int(target_node.port)
+                target_node.host, int(target_node.port), ssl=ssl_context
             )
         except (
             ConnectionRefusedError,
@@ -137,6 +152,11 @@ class ChiaServer:
         asyncio.create_task(
             self._add_to_srwt_aiter(iter_to_aiter([(reader, writer, on_connect)]))
         )
+
+        ssl_object = writer.get_extra_info(name="ssl_object")
+        peer_cert = ssl_object.getpeercert()
+        log.info(f"Server authed as {peer_cert}")
+        
         return True
 
     async def _add_to_srwt_aiter(

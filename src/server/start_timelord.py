@@ -25,7 +25,7 @@ async def main():
 
     timelord = Timelord(config)
     server = ChiaServer(config["port"], timelord, NodeType.TIMELORD)
-    _ = await server.start_server(config["host"], None)
+    _ = await server.start_server(config, None)
 
     coro = asyncio.start_server(
         timelord._handle_client,
@@ -47,7 +47,7 @@ async def main():
     )
 
     await asyncio.sleep(1)  # Prevents TCP simultaneous connect with full node
-    await server.start_client(full_node_peer, None)
+    await server.start_client(config, full_node_peer, None)
 
     vdf_server = asyncio.ensure_future(coro)
 

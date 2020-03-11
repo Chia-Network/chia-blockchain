@@ -88,7 +88,8 @@ async def main():
     # Starts the full node server (which full nodes can connect to)
     server = ChiaServer(config["port"], full_node, NodeType.FULL_NODE)
     full_node._set_server(server)
-    _ = await server.start_server(config["host"], full_node._on_connect)
+
+    _ = await server.start_server(config, full_node._on_connect)
     rpc_cleanup = None
 
     def master_close_cb():
@@ -120,14 +121,14 @@ async def main():
             full_node.config["farmer_peer"]["host"],
             full_node.config["farmer_peer"]["port"],
         )
-        _ = await server.start_client(peer_info, None)
+        _ = await server.start_client(config, peer_info, None)
 
     if config["connect_to_timelord"] and not server_closed:
         peer_info = PeerInfo(
             full_node.config["timelord_peer"]["host"],
             full_node.config["timelord_peer"]["port"],
         )
-        _ = await server.start_client(peer_info, None)
+        _ = await server.start_client(config, peer_info, None)
 
     # Awaits for server and all connections to close
     await server.await_closed()

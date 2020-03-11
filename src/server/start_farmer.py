@@ -55,10 +55,10 @@ async def main():
             NodeType.HARVESTER, Message("harvester_handshake", msg), Delivery.BROADCAST
         )
 
-    _ = await server.start_server(config["host"], on_connect)
+    _ = await server.start_server(config, on_connect)
     await asyncio.sleep(1)  # Prevents TCP simultaneous connect with harvester
-    _ = await server.start_client(harvester_peer, None)
-    _ = await server.start_client(full_node_peer, None)
+    _ = await server.start_client(config, harvester_peer, None)
+    _ = await server.start_client(config, full_node_peer, None)
 
     await server.await_closed()
     log.info("Farmer fully closed.")

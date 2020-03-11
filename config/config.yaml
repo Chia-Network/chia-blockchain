@@ -18,6 +18,17 @@ harvester:
   # plot_root: "/mnt/pos"
   logging: *logging
 
+  server_crt: "ssl/harvesterserver.crt"
+  server_key: "ssl/harvesterserver.key"
+  server_pass: "1234"
+  server_ca: "ssl/ca.crt"
+  server_verify: True
+  client_crt: "ssl/harvesterclient.crt"
+  client_key: "ssl/harvesterclient.key"
+  client_pass: "1234"
+  client_ca: "ssl/ca.crt"
+  client_verify: True
+
 farmer:
   # The farmer server (if run) will run on this host and port
   host: 127.0.0.1
@@ -35,6 +46,17 @@ farmer:
 
   propagate_threshold: 10000
   logging: *logging
+
+  server_crt: "ssl/farmerserver.crt"
+  server_key: "ssl/farmerserver.key"
+  server_pass: "1234"
+  server_ca: "ssl/ca.crt"
+  server_verify: True
+  client_crt: "ssl/farmerclient.crt"
+  client_key: "ssl/farmerclient.key"
+  client_pass: "1234"
+  client_ca: "ssl/ca.crt"
+  client_verify: True
 
 # Don't run this unless you want to run VDF clients on the local machine.
 timelord_launcher:
@@ -70,6 +92,17 @@ timelord:
     host: 127.0.0.1
     port: 8000
   logging: *logging
+
+  server_crt: "ssl/timelordserver.crt"
+  server_key: "ssl/timelordserver.key"
+  server_pass: "1234"
+  server_ca: "ssl/ca.crt"
+  server_verify: True
+  client_crt: "ssl/timelordclient.crt"
+  client_key: "ssl/timelordclient.key"
+  client_pass: "1234"
+  client_ca: "ssl/ca.crt"
+  client_verify: True
 
 full_node:
   # The full node server (if run) will run on this host and port
@@ -113,6 +146,17 @@ full_node:
       port: 8444
   logging: *logging
 
+  server_crt: "ssl/fullnodeserver.crt"
+  server_key: "ssl/fullnodeserver.key"
+  server_pass: "1234"
+  server_ca: "ssl/ca.crt"
+  server_verify: True
+  client_crt: "ssl/fullnodeclient.crt"
+  client_key: "ssl/fullnodeclient.key"
+  client_pass: "1234"
+  client_ca: "ssl/ca.crt"
+  client_verify: True
+
 ui:
    # The ui node server (if run) will run on this host and port
   host: 127.0.0.1
@@ -133,3 +177,15 @@ introducer:
   # recent_peer_threshold seconds
   recent_peer_threshold: 6000
   logging: *logging
+
+  server_crt: "ssl/introducerserver.crt"
+  server_key: "ssl/introducerserver.key"
+  server_pass: "1234"
+  server_ca: "ssl/ca.crt"
+  server_verify: True
+  client_crt: "ssl/introducerclient.crt"
+  client_key: "ssl/introducerclient.key"
+  client_pass: "1234"
+  client_ca: "ssl/ca.crt"
+  client_verify: True
+
