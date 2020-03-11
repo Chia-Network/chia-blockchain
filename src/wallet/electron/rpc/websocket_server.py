@@ -51,8 +51,9 @@ def format_response(command: str, response_data: Dict[str, Any]):
 class WebSocketServer:
     def __init__(self, wallet_node: WalletNode):
         self.wallet_node: WalletNode = wallet_node
+        self.websocket = None
 
-    async def get_next_puzzle_hash(self, websocket, response_api) -> web.Response:
+    async def get_next_puzzle_hash(self, websocket, response_api):
         """
         Returns a new puzzlehash
         """
@@ -129,6 +130,7 @@ class WebSocketServer:
             if "data" in decoded:
                 data = decoded["data"]
             if command == "start_server":
+                self.websocket = websocket
                 await self.server_ready(websocket, command)
             elif command == "get_wallet_balance":
                 await self.get_wallet_balance(websocket, command)
@@ -144,6 +146,17 @@ class WebSocketServer:
                 response = {"error": f"unknown_command {command}"}
                 await websocket.send(obj_to_response(response))
 
+    async def notify_ui_that_state_changed(self, state: str):
+        data = {
+            "state": state,
+        }
+
+        await self.websocket.send(format_response("state_changed", data))
+
+    def state_changed_callback(self, state: str):
+        if self.websocket is None:
+            return
+        asyncio.ensure_future(self.notify_ui_that_state_changed(state))
 
 async def start_websocket_server():
     """
@@ -172,6 +185,8 @@ async def start_websocket_server():
         wallet_node = await WalletNode.create(config, key_config)
 
     handler = WebSocketServer(wallet_node)
+    wallet_node.wallet_state_manager.set_callback(handler.state_changed_callback)
+
     server = ChiaServer(9257, wallet_node, NodeType.WALLET)
     wallet_node.set_server(server)
     full_node_peer = PeerInfo(
@@ -187,9 +202,11 @@ async def start_websocket_server():
     await server.await_closed()
 
 
-async def main():
-    await start_websocket_server()
+def main():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(start_websocket_server())
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

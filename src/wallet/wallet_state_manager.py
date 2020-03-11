@@ -1,7 +1,7 @@
 import time
 from pathlib import Path
 
-from typing import Dict, Optional, List, Set, Tuple
+from typing import Dict, Optional, List, Set, Tuple, Callable
 import logging
 import asyncio
 from chiabip158 import PyBIP158
@@ -47,6 +47,8 @@ class WalletStateManager:
     synced: bool
     genesis: FullBlock
 
+    state_changed_callback: Optional[Callable]
+
     @staticmethod
     async def create(
         config: Dict, db_path: Path, constants: Dict, name: str = None,
@@ -70,6 +72,7 @@ class WalletStateManager:
         self.block_records = await self.wallet_store.get_lca_path()
         genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
         self.genesis = genesis
+        self.state_changed_callback = None
 
         if len(self.block_records) > 0:
             # Header hash with the highest weight
@@ -111,6 +114,14 @@ class WalletStateManager:
                 genesis_hb,
             )
         return self
+
+    def set_callback(self, callback: Callable):
+        self.state_changed_callback = callback
+
+    def state_changed(self, state: str):
+        if self.state_changed_callback is None:
+            return
+        self.state_changed_callback(state)
 
     async def get_confirmed_spendable(self, current_index: uint32) -> uint64:
         """
@@ -253,6 +264,8 @@ class WalletStateManager:
         if unconfirmed_record:
             await self.tx_store.set_confirmed(unconfirmed_record.name(), index)
 
+        self.state_changed("coin_removed")
+
     async def coin_added(self, coin: Coin, index: uint32, coinbase: bool):
         """
         Adding coin to the db
@@ -300,6 +313,7 @@ class WalletStateManager:
 
         coin_record: CoinRecord = CoinRecord(coin, index, uint32(0), False, coinbase)
         await self.wallet_store.add_coin_record(coin_record)
+        self.state_changed("coin_added")
 
     async def add_pending_transaction(self, spend_bundle: SpendBundle):
         """
@@ -349,12 +363,14 @@ class WalletStateManager:
         )
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
         await self.tx_store.add_transaction_record(tx_record)
+        self.state_changed("pending_transaction")
 
     async def remove_from_queue(self, spendbundle_id: bytes32):
         """
         Full node received our transaction, no need to keep it in queue anymore
         """
         await self.tx_store.set_sent(spendbundle_id)
+        self.state_changed("tx_sent")
 
     async def get_send_queue(self) -> List[TransactionRecord]:
         """

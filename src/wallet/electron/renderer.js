@@ -57,6 +57,8 @@ function set_callbacks(socket) {
             send_transaction_response(data);
         } else if (command == "get_transactions") {
             get_transactions_response(data);
+        } else if (command == "state_changed") {
+            handle_state_changed(data)
         }
     });
 
@@ -237,6 +239,15 @@ function get_transactions_response(response) {
         // Amount and Fee
         cell_amount.innerHTML = tx["amount"];
         cell_fee.innerHTML = tx["fee_amount"];
+    }
+}
+
+function handle_state_changed(data) {
+    state = data["state"]
+    if (state == "coin_removed") {
+        get_transactions()
+    } else if (state == "coin_added") {
+        get_transactions()
     }
 }
 
