@@ -82,20 +82,27 @@ def main():
     if key_config is None:
         key_config = {}
 
+    wallet_target = None
+    if args.wallet:
+        wallet_sk = ExtendedPrivateKey.from_seed(token_bytes(32))
+        wallet_target = create_puzzlehash_for_pk(
+            BLSPublicKey(bytes(wallet_sk.get_public_key()))
+        )
+        key_config["wallet_sk"] = bytes(wallet_sk).hex()
+        with open(key_config_filename, "w") as f:
+            safe_dump(key_config, f)
     if args.farmer:
         # Replaces the farmer's private key. The farmer target allows spending
         # of the fees.
         farmer_sk = PrivateKey.from_seed(token_bytes(32))
-        wallet_sk = ExtendedPrivateKey.from_seed(token_bytes(32))
-        farmer_target = create_puzzlehash_for_pk(
-            BLSPublicKey(bytes(wallet_sk.get_public_key()))
-        )
+        if wallet_target is None:
+            farmer_target = create_puzzlehash_for_pk(
+                BLSPublicKey(bytes(wallet_sk.get_public_key()))
+            )
+        else:
+            farmer_target = wallet_target
         key_config["farmer_sk"] = bytes(farmer_sk).hex()
         key_config["farmer_target"] = farmer_target.hex()
-        with open(key_config_filename, "w") as f:
-            safe_dump(key_config, f)
-
-        key_config["wallet_sk"] = bytes(wallet_sk).hex()
         with open(key_config_filename, "w") as f:
             safe_dump(key_config, f)
     if args.harvester:
@@ -108,9 +115,12 @@ def main():
         # Replaces the pools keys and targes. Only useful if running a pool, or doing
         # solo farming. The pool target allows spending of the coinbase.
         pool_sks = [PrivateKey.from_seed(token_bytes(32)) for _ in range(2)]
-        pool_target = create_puzzlehash_for_pk(
-            BLSPublicKey(bytes(pool_sks[0].get_public_key()))
-        )
+        if wallet_target is None:
+            pool_target = create_puzzlehash_for_pk(
+                BLSPublicKey(bytes(wallet_sk.get_public_key()))
+            )
+        else:
+            pool_target = wallet_target
         key_config["pool_sks"] = [bytes(pool_sk).hex() for pool_sk in pool_sks]
         key_config["pool_target"] = pool_target.hex()
         with open(key_config_filename, "w") as f:
