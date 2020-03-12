@@ -117,6 +117,25 @@ class WebSocketServer:
 
         await websocket.send(format_response(response_api, response))
 
+    async def get_sync_status(self, websocket, response_api):
+        syncing = self.wallet_node.sync_mode
+
+        response = {
+            "syncing": syncing
+        }
+
+        await websocket.send(format_response(response_api, response))
+
+    async def get_height_info(self, websocket, response_api):
+        lca = self.wallet_node.wallet_state_manager.lca
+        height = self.wallet_node.wallet_state_manager.block_records[lca].height
+
+        response = {
+            "height": height
+        }
+
+        await websocket.send(format_response(response_api, response))
+
     async def handle_message(self, websocket, path):
         """
         This function gets called when new message is received via websocket.
@@ -141,6 +160,10 @@ class WebSocketServer:
                 await self.get_transactions(websocket, command)
             elif command == "farm_block":
                 await self.farm_block(websocket, data, command)
+            elif command == "get_sync_status":
+                await self.get_sync_status(websocket, command)
+            elif command == "get_height_info":
+                await self.get_height_info(websocket, command)
             else:
                 response = {"error": f"unknown_command {command}"}
                 await websocket.send(obj_to_response(response))

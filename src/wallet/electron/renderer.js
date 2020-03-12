@@ -73,6 +73,8 @@ function set_callbacks(socket) {
             get_new_puzzlehash();
             get_transactions();
             get_wallet_balance();
+            get_height_info();
+            get_sync_status();
         } else if (command == "get_next_puzzle_hash") {
             get_new_puzzlehash_response(data);
         } else if (command == "get_wallet_balance") {
@@ -82,7 +84,7 @@ function set_callbacks(socket) {
         } else if (command == "get_transactions") {
             get_transactions_response(data);
         } else if (command == "state_changed") {
-            handle_state_changed(data)
+            handle_state_changed(data);
         }
     });
 
@@ -277,6 +279,38 @@ function get_transactions_response(response) {
         cell_amount.innerHTML = tx["amount"];
         cell_fee.innerHTML = tx["fee_amount"];
     }
+}
+
+async function get_height_info() {
+    /*
+    Sends websocket request to get transactions
+    */
+    data = {
+        "command": "get_height_info",
+    }
+    json_data = JSON.stringify(data);
+    ws.send(json_data);
+}
+
+async function get_sync_status() {
+    /*
+    Sends websocket request to get transactions
+    */
+    data = {
+        "command": "get_sync_status",
+    }
+    json_data = JSON.stringify(data);
+    ws.send(json_data);
+}
+
+function get_height_info_response(response) {
+    height = response["height"]
+    console.log("height is " + height)
+}
+
+function get_sync_status_response(response) {
+    syncing = response["syncing"]
+    console.log("Syncing: " + syncing)
 }
 
 function handle_state_changed(data) {
