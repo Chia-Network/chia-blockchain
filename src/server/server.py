@@ -91,7 +91,7 @@ class ChiaServer:
             return False
 
         ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH)
-        certfile, keyfile, password, cafile = self.loadSSLConfig(config, "server")
+        certfile, keyfile, password, cafile = self.loadSSLConfig(config, "server_ssl")
         ssl_context.load_cert_chain(certfile=certfile, keyfile=keyfile, password=password)
         if cafile is None:
             ssl_context.verify_mode = ssl.CERT_NONE
@@ -133,7 +133,7 @@ class ChiaServer:
             return False
 
         ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH)
-        certfile, keyfile, password, cafile = self.loadSSLConfig(config, "client")
+        certfile, keyfile, password, cafile = self.loadSSLConfig(config, "client_ssl")
         ssl_context.load_cert_chain(certfile=certfile, keyfile=keyfile, password=password)
         if cafile is None:
             ssl_context.verify_mode = ssl.CERT_NONE
