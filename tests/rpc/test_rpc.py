@@ -62,7 +62,7 @@ class TestRpc:
         config = load_config("config.yaml", "full_node")
         full_node_1 = FullNode(store, b, config)
         server_1 = ChiaServer(test_node_1_port, full_node_1, NodeType.FULL_NODE)
-        _ = await server_1.start_server("127.0.0.1", None)
+        _ = await server_1.start_server(None, None)
         full_node_1._set_server(server_1)
 
         def stop_node_cb():
@@ -94,7 +94,7 @@ class TestRpc:
             server_2 = ChiaServer(test_node_2_port, full_node_2, NodeType.FULL_NODE)
             full_node_2._set_server(server_2)
 
-            _ = await server_2.start_server("127.0.0.1", None)
+            _ = await server_2.start_server(None, None)
             await asyncio.sleep(2)  # Allow server to start
             cons = await client.get_connections()
             assert len(cons) == 0

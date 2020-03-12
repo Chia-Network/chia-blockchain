@@ -14,6 +14,7 @@ from src.types.challenge import Challenge
 from src.util.ints import uint16, uint32, uint64
 from src.consensus.block_rewards import calculate_block_reward
 from src.util.byte_types import hexstr_to_bytes
+from src.util.config import load_config_cli
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -137,7 +138,8 @@ class RpcApiHandler:
         target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
 
         if self.full_node.server is None or not (
-            await self.full_node.server.start_client(target_node, None)
+            config = load_config_cli("config.yaml", "full_node")
+            await self.full_node.server.start_client(config, target_node, None)
         ):
             raise web.HTTPInternalServerError()
         return obj_to_response("")

@@ -73,6 +73,13 @@ class ChiaServer:
         self._ping_task = self._initialize_ping_task()
         self._node_id = create_node_id()
 
+    def loadSSLConfig(self, config: Dict, tipo: str):
+        try:
+            return config[tipo]["crt"],config[tipo]["key"],config[tipo]["pass"],config[tipo]["ca"]
+        except Exception:
+            pass
+        return "ssl/ca.crt","ssl/ca.key","1234",None
+
     async def start_server(self, config: Dict, on_connect: OnConnectFunc = None,) -> bool:
         """
         Launches a listening server on host and port specified, to connect to NodeType nodes. On each
@@ -83,26 +90,13 @@ class ChiaServer:
             return False
 
         ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH)
-
-        certfile=keyfile=password=""
-        verify=False
-        try:
-            certfile=config["server_crt"]
-            keyfile=config["server_key"]
-            password=config["server_pass"]
-            verify=config["server_verify"]
-        except:
-            certfile="ssl/ca.crt"
-            keyfile="ssl/ca.key"
-            password="1234"
-            verify=False
-
+        certfile,keyfile,password,cafile=self.loadSSLConfig(config,"server")
         ssl_context.load_cert_chain(certfile=certfile, keyfile=keyfile, password=password)
-        if verify:
-            ssl_context.load_verify_locations(cafile=config["server_ca"])
-            ssl_context.verify_mode = ssl.CERT_REQUIRED
-        else:
+        if cafile==None:
             ssl_context.verify_mode = ssl.CERT_NONE
+        else:
+            ssl_context.load_verify_locations(cafile=cafile)
+            ssl_context.verify_mode = ssl.CERT_REQUIRED
 
         self._server, aiter = await start_server_aiter(
             self._port, host=None, reuse_address=True, ssl=ssl_context
@@ -138,26 +132,13 @@ class ChiaServer:
             return False
 
         ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH)
-        
-        certfile=keyfile=password=""
-        verify=False
-        try:
-            certfile=config["client_crt"]
-            keyfile=config["client_key"]
-            password=config["client_pass"]
-            verify=config["client_verify"]
-        except:
-            certfile="ssl/ca.crt"
-            keyfile="ssl/ca.key"
-            password="1234"
-            verify=False
-
+        certfile,keyfile,password,cafile=self.loadSSLConfig(config,"client")
         ssl_context.load_cert_chain(certfile=certfile, keyfile=keyfile, password=password)
-        if verify:
-            ssl_context.load_verify_locations(cafile=config["client_ca"])
-            ssl_context.verify_mode = ssl.CERT_REQUIRED
-        else:
+        if cafile==None:
             ssl_context.verify_mode = ssl.CERT_NONE
+        else:
+            ssl_context.load_verify_locations(cafile=cafile)
+            ssl_context.verify_mode = ssl.CERT_REQUIRED
 
         try:
             reader, writer = await asyncio.open_connection(
