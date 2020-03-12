@@ -1,7 +1,7 @@
 from secrets import token_bytes
 
 from src.full_node.full_node import FullNode
-from typing import AsyncGenerator, List, Dict
+from typing import AsyncGenerator, List, Dict, Optional
 from src.full_node.blockchain import Blockchain
 from src.full_node.store import FullNodeStore
 from src.protocols import (
@@ -128,6 +128,7 @@ class FullNodeSimulator(FullNode):
                 current_blocks.append(self.blockchain.genesis)
                 break
             full = await self.store.get_block(tip_hash)
+            assert full is not None
             current_blocks.append(full)
             tip_hash = full.prev_header_hash
 
@@ -140,7 +141,10 @@ class FullNodeSimulator(FullNode):
         top_tip = self.get_tip()
 
         current_block = await self.get_current_blocks(top_tip)
-        bundle: SpendBundle = await self.mempool_manager.create_bundle_for_tip(top_tip)
+        bundle: Optional[
+            SpendBundle
+        ] = await self.mempool_manager.create_bundle_for_tip(top_tip)
+        assert bundle is not None
         dict_h = {}
 
         if bundle:
@@ -157,6 +161,7 @@ class FullNodeSimulator(FullNode):
         )
         new_lca = more_blocks[-1]
 
+        assert self.server is not None
         async for msg in self.respond_block(full_node_protocol.RespondBlock(new_lca)):
             self.server.push_message(msg)
 
@@ -179,7 +184,7 @@ class FullNodeSimulator(FullNode):
             reward_puzzlehash=coinbase_ph,
             transaction_data_at_height={},
         )
-
+        assert self.server is not None
         for block in more_blocks:
             async for msg in self.respond_block(full_node_protocol.RespondBlock(block)):
                 self.server.push_message(msg)

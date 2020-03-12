@@ -451,6 +451,10 @@ class WalletStateManager:
             if block.weight > self.block_records[self.lca].weight:
 
                 fork_h = self.find_fork_for_lca(block)
+                self.log.warning(
+                    f"Got block {block.header_hash} height {block.height} > LCA {self.lca}, "
+                    f"{self.block_records[self.lca].height}"
+                )
                 await self.reorg_rollback(fork_h)
 
                 # Add blocks between fork point and new lca
@@ -502,17 +506,17 @@ class WalletStateManager:
     def find_fork_for_lca(self, new_lca: BlockRecord) -> uint32:
         """ Tries to find height where new chain (current) diverged from the old chain where old_lca was the LCA"""
         tmp_old: BlockRecord = self.block_records[self.lca]
-        while tmp_old.header_hash != self.height_to_hash[uint32(0)]:
-            if tmp_old.header_hash == self.height_to_hash[uint32(0)]:
-                return uint32(0)
-            if tmp_old.height in self.height_to_hash:
-                chain_hash_at_h = self.height_to_hash[tmp_old.height]
-                if (
-                    chain_hash_at_h == tmp_old.header_hash
-                    and chain_hash_at_h != new_lca.header_hash
-                ):
-                    return tmp_old.height
-            tmp_old = self.block_records[tmp_old.prev_header_hash]
+        while new_lca.height > 0 or tmp_old.height > 0:
+            if new_lca.height > tmp_old.height:
+                new_lca = self.block_records[new_lca.prev_header_hash]
+            elif tmp_old.height > new_lca.height:
+                tmp_old = self.block_records[tmp_old.prev_header_hash]
+            else:
+                if new_lca.header_hash == tmp_old.header_hash:
+                    return new_lca.height
+                new_lca = self.block_records[new_lca.prev_header_hash]
+                tmp_old = self.block_records[tmp_old.prev_header_hash]
+        assert new_lca == tmp_old  # Genesis block is the same, genesis fork
         return uint32(0)
 
     async def get_filter_additions_removals(

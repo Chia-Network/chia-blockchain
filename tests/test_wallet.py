@@ -4,7 +4,6 @@ from secrets import token_bytes
 import pytest
 
 from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
-from src.types.header import Header
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
 from tests.setup_nodes import (
@@ -148,8 +147,8 @@ class TestWalletSimulator:
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(1, 4)
+                for i in range(1, 5)
             ]
         )
 
-        # assert await wallet.get_confirmed_balance() == funds
+        assert await wallet.get_confirmed_balance() == funds
