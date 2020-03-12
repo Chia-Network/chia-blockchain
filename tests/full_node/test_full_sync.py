@@ -47,10 +47,11 @@ class TestFullSync:
 
         while time.time() - start < 60:
             # The second node should eventually catch up to the first one, and have the
-            # same tip at height num_blocks - 1.
+            # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to a
+            # worse tip)
             if (
                 max([h.height for h in full_node_2.blockchain.get_current_tips()])
-                == num_blocks - 1
+                >= num_blocks - 3
             ):
                 print(f"Time taken to sync {num_blocks} is {time.time() - start}")
 

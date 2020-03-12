@@ -231,6 +231,7 @@ class FullNode:
         """
         self.log.info("Starting to perform sync with peers.")
         self.log.info("Waiting to receive tips from peers.")
+        self.store.set_waiting_for_tips(True)
         # TODO: better way to tell that we have finished receiving tips
         await asyncio.sleep(5)
         highest_weight: uint128 = uint128(0)
