@@ -6,7 +6,7 @@ if [ `uname` = "Linux" ] && type apt-get; then
     sudo apt-get install -y libgmp3-dev libboost-dev libboost-system-dev
 fi
 
-python3.8 -m venv .venv
+python3 -m venv .venv
 . .venv/bin/activate
 pip install wheel
 pip install -e .
