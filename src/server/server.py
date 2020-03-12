@@ -38,6 +38,7 @@ log = logging.getLogger(__name__)
 config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
 config = safe_load(open(config_filename, "r"))
 
+
 class ChiaServer:
     # Keeps track of all connections to and from this node.
     global_connections: PeerConnections
@@ -75,10 +76,10 @@ class ChiaServer:
 
     def loadSSLConfig(self, config: Dict, tipo: str):
         try:
-            return config[tipo]["crt"],config[tipo]["key"],config[tipo]["pass"],config[tipo]["ca"]
+            return config[tipo]["crt"], config[tipo]["key"], config[tipo]["pass"], config[tipo]["ca"]
         except Exception:
             pass
-        return "ssl/dummy.crt","ssl/dummy.key","1234",None
+        return "ssl/dummy.crt", "ssl/dummy.key", "1234", None
 
     async def start_server(self, config: Dict, on_connect: OnConnectFunc = None,) -> bool:
         """
@@ -90,9 +91,9 @@ class ChiaServer:
             return False
 
         ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH)
-        certfile,keyfile,password,cafile=self.loadSSLConfig(config,"server")
+        certfile, keyfile, password, cafile = self.loadSSLConfig(config, "server")
         ssl_context.load_cert_chain(certfile=certfile, keyfile=keyfile, password=password)
-        if cafile==None:
+        if cafile is None:
             ssl_context.verify_mode = ssl.CERT_NONE
         else:
             ssl_context.load_verify_locations(cafile=cafile)
@@ -132,9 +133,9 @@ class ChiaServer:
             return False
 
         ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH)
-        certfile,keyfile,password,cafile=self.loadSSLConfig(config,"client")
+        certfile, keyfile, password, cafile = self.loadSSLConfig(config, "client")
         ssl_context.load_cert_chain(certfile=certfile, keyfile=keyfile, password=password)
-        if cafile==None:
+        if cafile is None:
             ssl_context.verify_mode = ssl.CERT_NONE
         else:
             ssl_context.load_verify_locations(cafile=cafile)
@@ -162,7 +163,7 @@ class ChiaServer:
         ssl_object = writer.get_extra_info(name="ssl_object")
         peer_cert = ssl_object.getpeercert()
         log.info(f"Server authed as {peer_cert}")
-        
+
         return True
 
     async def _add_to_srwt_aiter(
