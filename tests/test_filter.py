@@ -7,6 +7,7 @@ from chiabip158 import PyBIP158
 
 from src.wallet.wallet_node import WalletNode
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
+from src.util.config import load_config
 
 
 @pytest.fixture(scope="module")
@@ -24,8 +25,9 @@ class TestFilter:
     @pytest.mark.asyncio
     async def test_basic_filter_test(self, two_nodes):
         sk = bytes(ExtendedPrivateKey.from_seed(b"")).hex()
+        config = load_config("config.yaml", "wallet")
         key_config = {"wallet_sk": sk}
-        wallet_node = await WalletNode.create({}, key_config)
+        wallet_node = await WalletNode.create(config, key_config)
         wallet = wallet_node.wallet
         await wallet_node.wallet_state_manager.clear_all_stores()
 
