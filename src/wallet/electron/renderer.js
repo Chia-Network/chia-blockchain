@@ -6,7 +6,9 @@ const Dialogs = require('dialogs')
 const dialogs = Dialogs()
 const WebSocket = require('ws');
 var ws = new WebSocket(host);
+let chia_formatter = require('./chia');
 
+// HTML
 let send = document.querySelector('#send')
 let farm_button = document.querySelector('#farm_block')
 let new_address = document.querySelector('#new_address')
@@ -14,18 +16,21 @@ let copy = document.querySelector("#copy")
 let receiver_address = document.querySelector("#receiver_puzzle_hash")
 let amount = document.querySelector("#amount_to_send")
 let table = document.querySelector("#tx_table").getElementsByTagName('tbody')[0]
-let green_checkmark = "<i class=\"icon ion-md-checkmark-circle-outline green\"></i>"
-let red_checkmark = "<i class=\"icon ion-md-close-circle-outline red\"></i>"
 let balance_textfield = document.querySelector('#balance_textfield')
 let pending_textfield = document.querySelector('#pending_textfield')
 let connection_textfield = document.querySelector('#connection_textfield')
 let syncing_textfield = document.querySelector('#syncing_textfield')
 let block_height_textfield = document.querySelector('#block_height_textfield')
+let standard_wallet_balance = document.querySelector('#standard_wallet_balance')
 
-let lock = "<i class=\"icon ion-md-lock\"></i>"
-var myBalance = 0
-var myUnconfirmedBalance = 0
+// UI checkmarks and lock icons
+const green_checkmark = "<i class=\"icon ion-md-checkmark-circle-outline green\"></i>"
+const red_checkmark = "<i class=\"icon ion-md-close-circle-outline red\"></i>"
+const lock = "<i class=\"icon ion-md-lock\"></i>"
+
+// Global variables
 var global_syncing = true
+
 
 console.log(global.location.search)
 function getQueryVariable(variable) {
@@ -128,10 +133,13 @@ send.addEventListener('click', () => {
         return
     }
     puzzlehash = receiver_address.value;
-    amount_value = amount.value;
+    amount_value = parseFloat(amount.value);
+    mojo_amount = chia_formatter(amount_value, 'chia').to('mojo')
+    console.log("Mojo amount: " + mojo_amount);
+
     data = {
         "puzzlehash": puzzlehash,
-        "amount": amount_value
+        "amount": mojo_amount
     }
 
     request = {
@@ -236,11 +244,18 @@ function get_wallet_balance_response(response) {
         var confirmed = parseInt(response["confirmed_wallet_balance"])
         var unconfirmed = parseInt(response["unconfirmed_wallet_balance"])
         var pending = confirmed - unconfirmed
-        balance_textfield.innerHTML = confirmed + " CH"
+        chia_confirmed = chia_formatter(confirmed, 'mojo').to('chia').toString()
+        chia_pending = chia_formatter(pending, 'mojo').to('chia').toString()
+
+        balance_textfield.innerHTML = chia_confirmed
+        standard_wallet_balance.innerHTML = chia_confirmed.toString() + " CH"
+        standard_wallet_balance.innerHTML = chia_confirmed.toString() + " CH"
         if (pending > 0) {
-            pending_textfield.innerHTML = lock + " -" + pending + " CH"
+            pending_textfield.innerHTML = lock + " - " + chia_pending + " CH"
+            standard_wallet_pending.innerHTML = lock + " - " + chia_pending + " CH"
         } else {
-            pending_textfield.innerHTML = lock + " 0" + " CH"
+            pending_textfield.innerHTML = lock + " " + chia_pending + " CH"
+            standard_wallet_pending.innerHTML = lock + " - " + chia_pending + " CH"
         }
     }
 }
@@ -359,7 +374,14 @@ async function get_connection_info_response(response) {
     connections = response["connections"]
     console.log("Connections:" + connections)
     console.log("Connected to: " + connections.length + " peers")
-    connection_textfield.innerHTML = connections.length + " connections"
+    count = connections.length;
+    if (count == 0) {
+        connection_textfield.innerHTML = "Not Connected!!!"
+    } else if (count == 1) {
+        connection_textfield.innerHTML = connections.length + " connection"
+    } else {
+        connection_textfield.innerHTML = connections.length + " connections"
+    }
 }
 
 function handle_state_changed(data) {
