@@ -83,8 +83,22 @@ class ChiaServer:
             return False
 
         ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH)
-        ssl_context.load_cert_chain(certfile=config["server_crt"], keyfile=config["server_key"], password=config["server_pass"])
-        if config["server_verify"]:
+
+        certfile=keyfile=password=""
+        verify=False
+        try:
+            certfile=config["server_crt"]
+            keyfile=config["server_key"]
+            password=config["server_pass"]
+            verify=config["server_verify"]
+        except:
+            certfile="ssl/ca.crt"
+            keyfile="ssl/ca.key"
+            password="1234"
+            verify=False
+
+        ssl_context.load_cert_chain(certfile=certfile, keyfile=keyfile, password=password)
+        if verify:
             ssl_context.load_verify_locations(cafile=config["server_ca"])
             ssl_context.verify_mode = ssl.CERT_REQUIRED
         else:
@@ -124,10 +138,22 @@ class ChiaServer:
             return False
 
         ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH)
-        ssl_context.check_hostname = False
-        ssl_context.load_cert_chain(certfile=config["client_crt"], keyfile=config["client_key"], password=config["client_pass"])
+        
+        certfile=keyfile=password=""
+        verify=False
+        try:
+            certfile=config["client_crt"]
+            keyfile=config["client_key"]
+            password=config["client_pass"]
+            verify=config["client_verify"]
+        except:
+            certfile="ssl/ca.crt"
+            keyfile="ssl/ca.key"
+            password="1234"
+            verify=False
 
-        if config["client_verify"]:
+        ssl_context.load_cert_chain(certfile=certfile, keyfile=keyfile, password=password)
+        if verify:
             ssl_context.load_verify_locations(cafile=config["client_ca"])
             ssl_context.verify_mode = ssl.CERT_REQUIRED
         else:
