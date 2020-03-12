@@ -176,12 +176,12 @@ async def start_websocket_server():
         )
 
     if config["testing"] is True:
-        print("Testing")
+        log.info(f"Testing")
         wallet_node = await WalletNode.create(
             config, key_config, override_constants=test_constants
         )
     else:
-        print("not testing")
+        log.info(f"Not Testing")
         wallet_node = await WalletNode.create(config, key_config)
 
     handler = WebSocketServer(wallet_node)

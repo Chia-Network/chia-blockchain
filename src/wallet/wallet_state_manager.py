@@ -132,7 +132,8 @@ class WalletStateManager:
         if current_index <= coinbase_freeze_period:
             return uint64(0)
 
-        valid_index = current_index - coinbase_freeze_period
+        valid_index = current_index - coinbase_freeze_period + 3
+
         record_list: Set[
             CoinRecord
         ] = await self.wallet_store.get_coin_records_by_spent_and_index(
@@ -142,8 +143,7 @@ class WalletStateManager:
         amount: uint64 = uint64(0)
 
         for record in record_list:
-            if record.confirmed_block_index + coinbase_freeze_period < current_index:
-                amount = uint64(amount + record.coin.amount)
+            amount = uint64(amount + record.coin.amount)
 
         return uint64(amount)
 

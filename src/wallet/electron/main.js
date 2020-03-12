@@ -63,7 +63,6 @@ const createPyProc = () => {
         pyProc.on('close', function(code) {
             //Here you can get the exit code of the script
             console.log('closing code: ' + code);
-            console.log('Full output of script: ',scriptOutput);
         });
 
         console.log('child process success')

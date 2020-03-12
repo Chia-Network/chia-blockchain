@@ -142,12 +142,14 @@ farm_button.addEventListener('click', () => {
     }
     json_data = JSON.stringify(request);
     ws.send(json_data);
+    dialogs.alert("Farmed new block!", ok => {});
 })
 
 function send_transaction_response(response) {
     /*
     Called when response is received for send_transaction request
     */
+    console.log(JSON.stringify(response));
     success = response["success"];
     if (!success) {
         dialogs.alert("You don\'t have enough chia for this transactions", ok => {
@@ -214,8 +216,12 @@ function get_wallet_balance_response(response) {
         var confirmed = parseInt(response["confirmed_wallet_balance"])
         var unconfirmed = parseInt(response["unconfirmed_wallet_balance"])
         var pending = confirmed - unconfirmed
-        balance_textfield.innerHTML = confirmed + "CH"
-        pending_textfield.innerHTML = pending + "CH"
+        balance_textfield.innerHTML = confirmed + " CH"
+        if (pending > 0) {
+            pending_textfield.innerHTML = "-" + pending + " CH"
+        } else {
+            pending_textfield.innerHTML = pending + " CH"
+        }
     }
 }
 
@@ -287,6 +293,7 @@ function handle_state_changed(data) {
     } else if (state == "tx_sent") {
         get_transactions()
         get_wallet_balance()
+        dialogs.alert("Transaction sent successfully!", ok => {});
     } else if (state == "balance_changed") {
         get_wallet_balance()
     } else if (state == "status_changed") {
