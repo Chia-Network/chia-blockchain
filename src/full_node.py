@@ -171,8 +171,8 @@ class FullNode:
             while not self._shut_down:
                 # The first time connecting to introducer, keep trying to connect
                 if self._num_needed_peers():
-                    if not await self.server.start_client(self.config, 
-                        introducer_peerinfo, on_connect
+                    if not await self.server.start_client(
+                        self.config, introducer_peerinfo, on_connect
                     ):
                         await asyncio.sleep(5)
                         continue
