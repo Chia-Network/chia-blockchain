@@ -43,7 +43,6 @@ class WalletNode:
     potential_header_hashes: Dict[uint32, bytes32]
     constants: Dict
     short_sync_threshold: int
-    sync_mode: bool
     _shut_down: bool
 
     @staticmethod
@@ -87,7 +86,6 @@ class WalletNode:
         self.cached_additions = {}
 
         # Sync data
-        self.sync_mode = False
         self._shut_down = False
         self.proof_hashes = []
         self.header_hashes = []
@@ -300,7 +298,7 @@ class WalletNode:
     async def _block_finished(
         self, block_record: BlockRecord, header_block: HeaderBlock
     ):
-        if self.sync_mode:
+        if self.wallet_state_manager.sync_mode:
             self.potential_blocks_received[uint32(block_record.height)].set()
             self.potential_header_hashes[block_record.height] = block_record.header_hash
             self.cached_blocks[block_record.header_hash] = (block_record, header_block)
@@ -331,7 +329,7 @@ class WalletNode:
                     f"Updated LCA to {block_record.prev_header_hash} at height {block_record.height}"
                 )
                 # Removes outdated cached blocks if we're not syncing
-                if not self.sync_mode:
+                if not self.wallet_state_manager.sync_mode:
                     for header_hash in self.cached_blocks:
                         if (
                             block_record.height
@@ -375,7 +373,7 @@ class WalletNode:
     async def respond_all_proof_hashes(
         self, response: wallet_protocol.RespondAllProofHashes
     ):
-        if not self.sync_mode:
+        if not self.wallet_state_manager.sync_mode:
             self.log.warning("Receiving proof hashes while not syncing.")
             return
         self.proof_hashes = response.hashes
@@ -384,7 +382,7 @@ class WalletNode:
     async def respond_all_header_hashes_after(
         self, response: wallet_protocol.RespondAllHeaderHashesAfter
     ):
-        if not self.sync_mode:
+        if not self.wallet_state_manager.sync_mode:
             self.log.warning("Receiving header hashes while not syncing.")
             return
         self.header_hashes = response.hashes
@@ -399,7 +397,7 @@ class WalletNode:
 
     @api_request
     async def new_lca(self, request: wallet_protocol.NewLCA):
-        if self.sync_mode:
+        if self.wallet_state_manager.sync_mode:
             return
         # If already seen LCA, ignore.
         if request.lca_hash in self.wallet_state_manager.block_records:
@@ -413,14 +411,14 @@ class WalletNode:
         if int(request.height) - int(lca.height) > self.short_sync_threshold:
             try:
                 # Performs sync, and catch exceptions so we don't close the connection
-                self.sync_mode = True
+                self.wallet_state_manager.set_sync_mode(True)
                 async for ret_msg in self._sync():
                     yield ret_msg
             except asyncio.CancelledError:
                 self.log.error("Syncing failed, CancelledError")
             except BaseException as e:
                 self.log.error(f"Error {type(e)}{e} with syncing")
-            self.sync_mode = False
+            self.wallet_state_manager.set_sync_mode(False)
         else:
             header_request = wallet_protocol.RequestHeader(
                 uint32(request.height), request.lca_hash

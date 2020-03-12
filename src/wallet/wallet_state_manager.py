@@ -44,7 +44,7 @@ class WalletStateManager:
     log: logging.Logger
 
     # TODO Don't allow user to send tx until wallet is synced
-    synced: bool
+    sync_mode: bool
     genesis: FullBlock
 
     state_changed_callback: Optional[Callable]
@@ -67,7 +67,7 @@ class WalletStateManager:
         self.tx_store = await WalletTransactionStore.create(db_path)
         self.puzzle_store = await WalletPuzzleStore.create(db_path)
         self.lca = None
-        self.synced = False
+        self.sync_mode = False
         self.height_to_hash = {}
         self.block_records = await self.wallet_store.get_lca_path()
         genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
@@ -122,6 +122,10 @@ class WalletStateManager:
         if self.state_changed_callback is None:
             return
         self.state_changed_callback(state)
+
+    def set_sync_mode(self, mode: bool):
+        self.sync_mode = mode
+        self.state_changed("sync_changed")
 
     async def get_confirmed_spendable(self, current_index: uint32) -> uint64:
         """
@@ -484,6 +488,7 @@ class WalletStateManager:
                     for coin_name in path_block.removals:
                         await self.coin_removed(coin_name, path_block.height)
                 self.lca = block.header_hash
+                self.state_changed("new_block")
                 return ReceiveBlockResult.ADDED_TO_HEAD
 
             return ReceiveBlockResult.ADDED_AS_ORPHAN
