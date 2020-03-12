@@ -139,3 +139,7 @@ wallet:
   testing: false
 
   logging: *logging
+
+  introducer_peer:
+    host: introducer.beta.chia.net  # Chia AWS introducer IPv4/IPv6
+    port: 8444
