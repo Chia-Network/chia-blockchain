@@ -137,8 +137,8 @@ class RpcApiHandler:
         port = request_data["port"]
         target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
 
+        config = load_config_cli("config.yaml", "full_node")
         if self.full_node.server is None or not (
-            config = load_config_cli("config.yaml", "full_node")
             await self.full_node.server.start_client(config, target_node, None)
         ):
             raise web.HTTPInternalServerError()
