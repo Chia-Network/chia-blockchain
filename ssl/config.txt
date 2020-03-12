@@ -1,0 +1,65 @@
+harvester:
+  server:
+    crt: "ssl/harvesterserver.crt"
+    key: "ssl/harvesterserver.key"
+    pass: "1234"
+    ca: "ssl/ca.crt"
+  
+  client:
+    crt: "ssl/harvesterclient.crt"
+    key: "ssl/harvesterclient.key"
+    pass: "1234"
+    ca: "ssl/ca.crt"
+
+farmer:
+  server:
+    crt: "ssl/farmerserver.crt"
+    key: "ssl/farmerserver.key"
+    pass: "1234"
+    ca: "ssl/ca.crt"
+  
+  client:
+    crt: "ssl/farmerclient.crt"
+    key: "ssl/farmerclient.key"
+    pass: "1234"
+    ca: "ssl/ca.crt"
+
+timelord:
+  server:
+    crt: "ssl/timelordserver.crt"
+    key: "ssl/timelordserver.key"
+    pass: "1234"
+    ca: "ssl/ca.crt"
+  
+  client:
+    crt: "ssl/timelordclient.crt"
+    key: "ssl/timelordclient.key"
+    pass: "1234"
+    ca: "ssl/ca.crt"
+
+full_node:
+  server:
+    crt: "ssl/fullnodeserver.crt"
+    key: "ssl/fullnodeserver.key"
+    pass: "1234"
+    ca: "ssl/ca.crt"
+  
+  client:
+    crt: "ssl/fullnodeclient.crt"
+    key: "ssl/fullnodeclient.key"
+    pass: "1234"
+    ca: "ssl/ca.crt"
+
+introducer:
+  server:
+    crt: "ssl/introducerserver.crt"
+    key: "ssl/introducerserver.key"
+    pass: "1234"
+    ca: "ssl/ca.crt"
+  
+  client:
+    crt: "ssl/introducerclient.crt"
+    key: "ssl/introducerclient.key"
+    pass: "1234"
+    ca: "ssl/ca.crt"
+

@@ -78,7 +78,7 @@ class ChiaServer:
             return config[tipo]["crt"],config[tipo]["key"],config[tipo]["pass"],config[tipo]["ca"]
         except Exception:
             pass
-        return "ssl/ca.crt","ssl/ca.key","1234",None
+        return "ssl/dummy.crt","ssl/dummy.key","1234",None
 
     async def start_server(self, config: Dict, on_connect: OnConnectFunc = None,) -> bool:
         """

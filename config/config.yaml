@@ -18,18 +18,6 @@ harvester:
   # plot_root: "/mnt/pos"
   logging: *logging
 
-  server:
-    crt: "ssl/harvesterserver.crt"
-    key: "ssl/harvesterserver.key"
-    pass: "1234"
-    ca: "ssl/ca.crt"
-  
-  client:
-    crt: "ssl/harvesterclient.crt"
-    key: "ssl/harvesterclient.key"
-    pass: "1234"
-    ca: "ssl/ca.crt"
-
 farmer:
   # The farmer server (if run) will run on this host and port
   host: 127.0.0.1
@@ -47,18 +35,6 @@ farmer:
 
   propagate_threshold: 10000
   logging: *logging
-
-  server:
-    crt: "ssl/farmerserver.crt"
-    key: "ssl/farmerserver.key"
-    pass: "1234"
-    ca: "ssl/ca.crt"
-  
-  client:
-    crt: "ssl/farmerclient.crt"
-    key: "ssl/farmerclient.key"
-    pass: "1234"
-    ca: "ssl/ca.crt"
 
 # Don't run this unless you want to run VDF clients on the local machine.
 timelord_launcher:
@@ -94,18 +70,6 @@ timelord:
     host: 127.0.0.1
     port: 8000
   logging: *logging
-
-  server:
-    crt: "ssl/timelordserver.crt"
-    key: "ssl/timelordserver.key"
-    pass: "1234"
-    ca: "ssl/ca.crt"
-  
-  client:
-    crt: "ssl/timelordclient.crt"
-    key: "ssl/timelordclient.key"
-    pass: "1234"
-    ca: "ssl/ca.crt"
 
 full_node:
   # The full node server (if run) will run on this host and port
@@ -149,18 +113,6 @@ full_node:
       port: 8444
   logging: *logging
 
-  server:
-    crt: "ssl/fullnodeserver.crt"
-    key: "ssl/fullnodeserver.key"
-    pass: "1234"
-    ca: "ssl/ca.crt"
-  
-  client:
-    crt: "ssl/fullnodeclient.crt"
-    key: "ssl/fullnodeclient.key"
-    pass: "1234"
-    ca: "ssl/ca.crt"
-
 ui:
    # The ui node server (if run) will run on this host and port
   host: 127.0.0.1
@@ -181,16 +133,4 @@ introducer:
   # recent_peer_threshold seconds
   recent_peer_threshold: 6000
   logging: *logging
-
-  server:
-    crt: "ssl/introducerserver.crt"
-    key: "ssl/introducerserver.key"
-    pass: "1234"
-    ca: "ssl/ca.crt"
-  
-  client:
-    crt: "ssl/introducerclient.crt"
-    key: "ssl/introducerclient.key"
-    pass: "1234"
-    ca: "ssl/ca.crt"
 
