@@ -120,9 +120,7 @@ class WebSocketServer:
     async def get_sync_status(self, websocket, response_api):
         syncing = self.wallet_node.wallet_state_manager.sync_mode
 
-        response = {
-            "syncing": syncing
-        }
+        response = {"syncing": syncing}
 
         await websocket.send(format_response(response_api, response))
 
@@ -130,18 +128,16 @@ class WebSocketServer:
         lca = self.wallet_node.wallet_state_manager.lca
         height = self.wallet_node.wallet_state_manager.block_records[lca].height
 
-        response = {
-            "height": height
-        }
+        response = {"height": height}
 
         await websocket.send(format_response(response_api, response))
 
     async def get_connection_info(self, websocket, response_api):
-        connections = self.wallet_node.server.global_connections.get_full_node_peerinfos()
+        connections = (
+            self.wallet_node.server.global_connections.get_full_node_peerinfos()
+        )
 
-        response = {
-            "connections": connections
-        }
+        response = {"connections": connections}
 
         await websocket.send(format_response(response_api, response))
 
