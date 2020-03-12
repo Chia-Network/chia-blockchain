@@ -1,6 +1,9 @@
 import asyncio
+from secrets import token_bytes
 
 import pytest
+
+from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
 from tests.setup_nodes import (
@@ -40,7 +43,7 @@ class TestWalletSimulator:
             PeerInfo(server_1._host, uint16(server_1._port)), None
         )
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(ph)
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
         await asyncio.sleep(3)
         funds = sum(
@@ -70,7 +73,7 @@ class TestWalletSimulator:
         )
 
         for i in range(0, num_blocks):
-            await full_node_1.farm_new_block(ph)
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [
@@ -97,7 +100,7 @@ class TestWalletSimulator:
         assert unconfirmed_balance == funds - 10
 
         for i in range(0, num_blocks):
-            await full_node_1.farm_new_block(ph)
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
         await asyncio.sleep(2)
 
@@ -113,3 +116,39 @@ class TestWalletSimulator:
 
         assert confirmed_balance == new_funds - 10
         assert unconfirmed_balance == new_funds - 10
+
+    @pytest.mark.asyncio
+    async def test_wallet_coinbase_reorg(self, wallet_node):
+        num_blocks = 10
+        full_node_1, wallet_node, server_1, server_2 = wallet_node
+        wallet = wallet_node.wallet
+        ph = await wallet.get_new_puzzlehash()
+
+        await server_2.start_client(
+            PeerInfo(server_1._host, uint16(server_1._port)), None
+        )
+        for i in range(1, num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+
+        await asyncio.sleep(3)
+        funds = sum(
+            [
+                calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
+                for i in range(1, num_blocks - 2)
+            ]
+        )
+        assert await wallet.get_confirmed_balance() == funds
+
+        await full_node_1.reorg_from_index_to_new_index(
+            ReorgProtocol(5, num_blocks + 3, token_bytes())
+        )
+        await asyncio.sleep(3)
+
+        funds = sum(
+            [
+                calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
+                for i in range(1, 5)
+            ]
+        )
+
+        assert await wallet.get_confirmed_balance() == funds

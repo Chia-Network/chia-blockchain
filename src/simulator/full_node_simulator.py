@@ -1,3 +1,5 @@
+from secrets import token_bytes
+
 from src.full_node.full_node import FullNode
 from typing import AsyncGenerator, List, Dict, Optional
 from src.full_node.blockchain import Blockchain
@@ -6,6 +8,7 @@ from src.protocols import (
     full_node_protocol,
     wallet_protocol,
 )
+from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from src.util.bundle_tools import best_solution_program
 from src.full_node.mempool_manager import MempoolManager
 from src.server.outbound_message import OutboundMessage
@@ -13,7 +16,6 @@ from src.server.server import ChiaServer
 from src.types.full_block import FullBlock
 from src.types.hashable.spend_bundle import SpendBundle
 from src.types.header import Header
-from src.types.sized_bytes import bytes32
 from src.full_node.coin_store import CoinStore
 from src.util.api_decorators import api_request
 from tests.block_tools import BlockTools
@@ -105,6 +107,7 @@ class FullNodeSimulator(FullNode):
         async for msg in super().request_additions(request):
             yield msg
 
+    # WALLET LOCAL TEST PROTOCOL
     def get_tip(self):
         tips = self.blockchain.tips
         top = tips[0]
@@ -115,7 +118,6 @@ class FullNodeSimulator(FullNode):
 
         return top
 
-    # WALLET LOCAL TEST PROTOCOL
     async def get_current_blocks(self, tip: Header) -> List[FullBlock]:
 
         current_blocks: List[FullBlock] = []
@@ -135,7 +137,8 @@ class FullNodeSimulator(FullNode):
         return current_blocks
 
     @api_request
-    async def farm_new_block(self, coinbase_ph: bytes32):
+    async def farm_new_block(self, request: FarmNewBlockProtocol):
+        self.log.info("Farming new block!")
         top_tip = self.get_tip()
         if top_tip is None or self.server is None:
             return
@@ -144,6 +147,7 @@ class FullNodeSimulator(FullNode):
         bundle: Optional[
             SpendBundle
         ] = await self.mempool_manager.create_bundle_for_tip(top_tip)
+        assert bundle is not None
         dict_h = {}
 
         if bundle is not None:
@@ -155,10 +159,36 @@ class FullNodeSimulator(FullNode):
             1,
             current_block,
             10,
-            reward_puzzlehash=coinbase_ph,
+            reward_puzzlehash=request.puzzle_hash,
             transaction_data_at_height=dict_h,
         )
         new_lca = more_blocks[-1]
 
+        assert self.server is not None
         async for msg in self.respond_block(full_node_protocol.RespondBlock(new_lca)):
             self.server.push_message(msg)
+
+    @api_request
+    async def reorg_from_index_to_new_index(self, request: ReorgProtocol):
+        new_index = request.new_index
+        old_index = request.old_index
+        coinbase_ph = request.puzzle_hash
+        top_tip = self.get_tip()
+
+        current_blocks = await self.get_current_blocks(top_tip)
+        block_count = new_index - old_index
+
+        more_blocks = bt.get_consecutive_blocks(
+            self.constants,
+            block_count,
+            current_blocks[:old_index],
+            10,
+            seed=token_bytes(),
+            reward_puzzlehash=coinbase_ph,
+            transaction_data_at_height={},
+        )
+        assert self.server is not None
+        for block in more_blocks:
+            async for msg in self.respond_block(full_node_protocol.RespondBlock(block)):
+                self.server.push_message(msg)
+                self.log.info(f"New message: {msg}")

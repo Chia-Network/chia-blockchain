@@ -3,6 +3,13 @@ const app = electron.app
 const BrowserWindow = electron.BrowserWindow
 const path = require('path')
 const WebSocket = require('ws');
+const local_test = false
+
+var ui_html = "wallet-dark.html"
+if (local_test) {
+    // Has farm block button
+    ui_html = "wallet-dark-test.html"
+}
 
 /*************************************************************
  * py process
@@ -37,17 +44,15 @@ const selectPort = () => {
 
 const createPyProc = () => {
   let script = getScriptPath()
-  let port = '' + selectPort()
 
   if (guessPackaged()) {
-    pyProc = require('child_process').execFile(script, [port])
+    pyProc = require('child_process').execFile(script, ["--testing", local_test])
   } else {
-    pyProc = require('child_process').spawn('python', [script])
+    pyProc = require('child_process').spawn('python', [script, "--testing", local_test])
   }
 
   if (pyProc != null) {
-    //console.log(pyProc)
-    console.log('child process success on port ' + port)
+    console.log('child process success')
   }
 }
 
@@ -77,7 +82,7 @@ const createWindow = () => {
     },})
 
   mainWindow.loadURL(require('url').format({
-    pathname: path.join(__dirname, 'wallet-dark.html'),
+    pathname: path.join(__dirname, ui_html),
     protocol: 'file:',
     slashes: true
   }))

@@ -69,12 +69,15 @@ class WalletNode:
 
         pub_hex = self.private_key.get_public_key().serialize().hex()
         if not db_path:
-            path = Path(f"wallet_db_{pub_hex}.db")
+            if config["testing"] is True:
+                path = Path(f"wallet_db_testing_{pub_hex}.db")
+            else:
+                path = Path(f"wallet_db_{pub_hex}.db")
         else:
             path = db_path
 
         self.wallet_state_manager = await WalletStateManager.create(
-            config, path, override_constants=self.constants,
+            config, path, self.constants
         )
         self.wallet = await Wallet.create(config, key_config, self.wallet_state_manager)
 
@@ -176,7 +179,6 @@ class WalletNode:
             )
             if fork_point_height == 0:
                 difficulty = self.constants["STARTING_DIFFICULTY"]
-                total_iters = self.wallet_st_manager.block_records[fork_point_hash].total_iters
             else:
                 fork_point_parent_hash = self.wallet_state_manager.block_records[
                     fork_point_hash
@@ -185,14 +187,8 @@ class WalletNode:
                     fork_point_parent_hash
                 ]
                 difficulty = uint64(weight - fork_point_parent_weight)
-                total_iters = self.wallet_state_manager.block_records[
-                    fork_point_parent_hash
-                ].total_iters + 
             for height in range(fork_point_height + 1, header_validate_start_height):
-                _, (difficulty_change, ips_change) = self.proof_hashes[height]
-                if difficulty_change is not None:
-                    difficulty = difficulty_change
-                    ips = ips_change
+                _, difficulty_change = self.proof_hashes[height]
                 weight += difficulty
                 block_record = BlockRecord(
                     self.header_hashes[height],
@@ -201,7 +197,7 @@ class WalletNode:
                     weight,
                     [],
                     [],
-                    ips,
+                    None,
                     None,
                 )
                 res = await self.wallet_state_manager.receive_block(block_record, None)

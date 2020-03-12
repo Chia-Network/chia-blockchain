@@ -8,6 +8,7 @@ const WebSocket = require('ws');
 var ws = new WebSocket(host);
 
 let send = document.querySelector('#send')
+let farm_button = document.querySelector('#farm_block')
 let new_address = document.querySelector('#new_address')
 let copy = document.querySelector("#copy")
 let receiver_address = document.querySelector("#receiver_puzzle_hash")
@@ -56,12 +57,14 @@ function set_callbacks(socket) {
             send_transaction_response(data);
         } else if (command == "get_transactions") {
             get_transactions_response(data);
+        } else if (command == "state_changed") {
+            handle_state_changed(data)
         }
     });
 
     socket.on('error', function clear() {
-        console.log("lol");
-        connect(1);
+        console.log("Not connected, reconnecting");
+        connect(100);
     });
 }
 
@@ -89,6 +92,28 @@ send.addEventListener('click', () => {
 
     request = {
         "command": "send_transaction",
+        "data": data
+    }
+    json_data = JSON.stringify(request);
+    ws.send(json_data);
+})
+
+farm_button.addEventListener('click', () => {
+    /*
+    Called when send button in ui is pressed.
+    */
+    console.log("farm block")
+    puzzle_hash = receiver_address.value;
+    if (puzzle_hash == "") {
+        dialogs.alert("Specify puzzle_hash for coinbase reward", ok => {
+        })
+        return
+    }
+    data = {
+        "puzzle_hash": puzzle_hash,
+    }
+    request = {
+        "command": "farm_block",
         "data": data
     }
     json_data = JSON.stringify(request);
@@ -214,6 +239,15 @@ function get_transactions_response(response) {
         // Amount and Fee
         cell_amount.innerHTML = tx["amount"];
         cell_fee.innerHTML = tx["fee_amount"];
+    }
+}
+
+function handle_state_changed(data) {
+    state = data["state"]
+    if (state == "coin_removed") {
+        get_transactions()
+    } else if (state == "coin_added") {
+        get_transactions()
     }
 }
 

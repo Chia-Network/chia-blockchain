@@ -1,7 +1,7 @@
 import time
 from pathlib import Path
 
-from typing import Dict, Optional, List, Set, Tuple
+from typing import Dict, Optional, List, Set, Tuple, Callable
 import logging
 import asyncio
 from chiabip158 import PyBIP158
@@ -12,7 +12,6 @@ from src.types.hashable.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.types.full_block import FullBlock
 from src.types.challenge import Challenge
-from src.consensus.constants import constants as consensus_constants
 from src.types.header_block import HeaderBlock
 from src.util.ints import uint32, uint64
 from src.util.hash import std_hash
@@ -50,21 +49,17 @@ class WalletStateManager:
 
     # TODO Don't allow user to send tx until wallet is synced
     synced: bool
+    genesis: FullBlock
+
+    state_changed_callback: Optional[Callable]
 
     @staticmethod
     async def create(
-        config: Dict,
-        db_path: Path,
-        name: str = None,
-        override_constants: Optional[Dict] = None,
+        config: Dict, db_path: Path, constants: Dict, name: str = None,
     ):
         self = WalletStateManager()
         self.config = config
-        self.constants = consensus_constants.copy()
-
-        if override_constants:
-            for key, value in override_constants.items():
-                self.constants[key] = value
+        self.constants = constants
 
         if name:
             self.log = logging.getLogger(name)
@@ -80,6 +75,8 @@ class WalletStateManager:
         self.height_to_hash = {}
         self.block_records = await self.wallet_store.get_lca_path()
         genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
+        self.genesis = genesis
+        self.state_changed_callback = None
 
         if len(self.block_records) > 0:
             # Header hash with the highest weight
@@ -122,6 +119,58 @@ class WalletStateManager:
                 genesis_hb,
             )
         return self
+
+    def set_callback(self, callback: Callable):
+        self.state_changed_callback = callback
+
+    def state_changed(self, state: str):
+        if self.state_changed_callback is None:
+            return
+        self.state_changed_callback(state)
+
+    async def get_confirmed_spendable(self, current_index: uint32) -> uint64:
+        """
+        Returns the balance amount of all coins that are spendable.
+        Spendable - (Coinbase freeze period has passed.)
+        """
+        coinbase_freeze_period = self.constants["COINBASE_FREEZE_PERIOD"]
+        if current_index <= coinbase_freeze_period:
+            return uint64(0)
+
+        valid_index = current_index - coinbase_freeze_period
+        record_list: Set[
+            CoinRecord
+        ] = await self.wallet_store.get_coin_records_by_spent_and_index(
+            False, valid_index
+        )
+
+        amount: uint64 = uint64(0)
+
+        for record in record_list:
+            if record.confirmed_block_index + coinbase_freeze_period < current_index:
+                amount = uint64(amount + record.coin.amount)
+
+        return uint64(amount)
+
+    async def get_unconfirmed_spendable(self, current_index: uint32) -> uint64:
+        """
+        Returns the confirmed balance amount - sum of unconfirmed transactions.
+        """
+
+        confirmed = await self.get_confirmed_spendable(current_index)
+        unconfirmed_tx = await self.tx_store.get_not_confirmed()
+        addition_amount = 0
+        removal_amount = 0
+
+        for record in unconfirmed_tx:
+            for coin in record.additions:
+                if await self.puzzle_store.puzzle_hash_exists(coin.puzzle_hash):
+                    addition_amount += coin.amount
+            for coin in record.removals:
+                removal_amount += coin.amount
+
+        result = confirmed - removal_amount + addition_amount
+        return uint64(result)
 
     async def get_confirmed_balance(self) -> uint64:
         record_list: Set[
@@ -166,8 +215,12 @@ class WalletStateManager:
         return removals
 
     async def select_coins(self, amount) -> Optional[Set[Coin]]:
+        """ Returns a set of coins that can be used for generating a new transaction. """
+        if self.lca is None:
+            return None
 
-        if amount > await self.get_unconfirmed_balance():
+        current_index = self.block_records[self.lca].height
+        if amount > await self.get_unconfirmed_spendable(current_index):
             return None
 
         unspent: Set[CoinRecord] = await self.wallet_store.get_coin_records_by_spent(
@@ -176,22 +229,19 @@ class WalletStateManager:
         sum = 0
         used_coins: Set = set()
 
-        """
-        Try to use coins from the store, if there isn't enough of "unused"
-        coins use change coins that are not confirmed yet
-        """
+        # Try to use coins from the store, if there isn't enough of "unused"
+        # coins use change coins that are not confirmed yet
+        unconfirmed_removals = await self.unconfirmed_removals()
         for coinrecord in unspent:
             if sum >= amount:
                 break
-            if coinrecord.coin.name in await self.unconfirmed_removals():
+            if coinrecord.coin.name in unconfirmed_removals:
                 continue
             sum += coinrecord.coin.amount
             used_coins.add(coinrecord.coin)
 
-        """
-        This happens when we couldn't use one of the coins because it's already used
-        but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
-        """
+        # This happens when we couldn't use one of the coins because it's already used
+        # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
         if sum < amount:
             for coin in (await self.unconfirmed_additions()).values():
                 if sum > amount:
@@ -204,7 +254,7 @@ class WalletStateManager:
         if sum >= amount:
             return used_coins
         else:
-            # This shouldn't happen because of: if amount > self.get_unconfirmed_balance():
+            # This shouldn't happen because of: if amount > self.get_unconfirmed_balance_spendable():
             return None
 
     async def coin_removed(self, coin_name: bytes32, index: uint32):
@@ -219,12 +269,56 @@ class WalletStateManager:
         if unconfirmed_record:
             await self.tx_store.set_confirmed(unconfirmed_record.name(), index)
 
+        self.state_changed("coin_removed")
+
     async def coin_added(self, coin: Coin, index: uint32, coinbase: bool):
         """
         Adding coin to the db
         """
+        if coinbase:
+            now = uint64(int(time.time()))
+            tx_record = TransactionRecord(
+                confirmed_at_index=uint32(index),
+                created_at_time=now,
+                to_puzzle_hash=coin.puzzle_hash,
+                amount=coin.amount,
+                fee_amount=uint64(0),
+                incoming=True,
+                confirmed=True,
+                sent=True,
+                spend_bundle=None,
+                additions=[coin],
+                removals=[],
+            )
+            await self.tx_store.add_transaction_record(tx_record)
+        else:
+            unconfirmed_record = await self.tx_store.unconfirmed_with_addition_coin(
+                coin.name()
+            )
+
+            if unconfirmed_record:
+                # This is the change from this transaction
+                await self.tx_store.set_confirmed(unconfirmed_record.name(), index)
+            else:
+                now = uint64(int(time.time()))
+                tx_record = TransactionRecord(
+                    confirmed_at_index=uint32(index),
+                    created_at_time=now,
+                    to_puzzle_hash=coin.puzzle_hash,
+                    amount=coin.amount,
+                    fee_amount=uint64(0),
+                    incoming=True,
+                    confirmed=True,
+                    sent=True,
+                    spend_bundle=None,
+                    additions=[coin],
+                    removals=[],
+                )
+                await self.tx_store.add_transaction_record(tx_record)
+
         coin_record: CoinRecord = CoinRecord(coin, index, uint32(0), False, coinbase)
         await self.wallet_store.add_coin_record(coin_record)
+        self.state_changed("coin_added")
 
     async def add_pending_transaction(self, spend_bundle: SpendBundle):
         """
@@ -274,12 +368,14 @@ class WalletStateManager:
         )
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
         await self.tx_store.add_transaction_record(tx_record)
+        self.state_changed("pending_transaction")
 
     async def remove_from_queue(self, spendbundle_id: bytes32):
         """
         Full node received our transaction, no need to keep it in queue anymore
         """
         await self.tx_store.set_sent(spendbundle_id)
+        self.state_changed("tx_sent")
 
     async def get_send_queue(self) -> List[TransactionRecord]:
         """
@@ -360,6 +456,10 @@ class WalletStateManager:
             if block.weight > self.block_records[self.lca].weight:
 
                 fork_h = self.find_fork_for_lca(block)
+                self.log.warning(
+                    f"Got block {block.header_hash} height {block.height} > LCA {self.lca}, "
+                    f"{self.block_records[self.lca].height}"
+                )
                 await self.reorg_rollback(fork_h)
 
                 # Add blocks between fork point and new lca
@@ -367,7 +467,7 @@ class WalletStateManager:
                 blocks_to_add: List[BlockRecord] = []
                 tip_hash: bytes32 = block.header_hash
                 while True:
-                    if tip_hash == fork_hash:
+                    if tip_hash == fork_hash or tip_hash == self.genesis.header_hash:
                         break
                     record = self.block_records[tip_hash]
                     blocks_to_add.append(record)
@@ -460,17 +560,17 @@ class WalletStateManager:
     def find_fork_for_lca(self, new_lca: BlockRecord) -> uint32:
         """ Tries to find height where new chain (current) diverged from the old chain where old_lca was the LCA"""
         tmp_old: BlockRecord = self.block_records[self.lca]
-        while tmp_old.header_hash != self.height_to_hash[uint32(0)]:
-            if tmp_old.header_hash == self.height_to_hash[uint32(0)]:
-                return uint32(0)
-            if tmp_old.height in self.height_to_hash:
-                chain_hash_at_h = self.height_to_hash[tmp_old.height]
-                if (
-                    chain_hash_at_h == tmp_old.header_hash
-                    and chain_hash_at_h != new_lca.header_hash
-                ):
-                    return tmp_old.height
-            tmp_old = self.block_records[tmp_old.prev_header_hash]
+        while new_lca.height > 0 or tmp_old.height > 0:
+            if new_lca.height > tmp_old.height:
+                new_lca = self.block_records[new_lca.prev_header_hash]
+            elif tmp_old.height > new_lca.height:
+                tmp_old = self.block_records[tmp_old.prev_header_hash]
+            else:
+                if new_lca.header_hash == tmp_old.header_hash:
+                    return new_lca.height
+                new_lca = self.block_records[new_lca.prev_header_hash]
+                tmp_old = self.block_records[tmp_old.prev_header_hash]
+        assert new_lca == tmp_old  # Genesis block is the same, genesis fork
         return uint32(0)
 
     async def get_filter_additions_removals(
@@ -529,6 +629,7 @@ class WalletStateManager:
         Rolls back and updates the coin_store and transaction store. It's possible this height
         is the tip, or even beyond the tip.
         """
+        self.log.warning(f"Rolling back to {index}")
         await self.wallet_store.rollback_lca_to_block(index)
 
         reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(

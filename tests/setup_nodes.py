@@ -80,7 +80,9 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
         f"full_node_{port}",
         test_constants_copy,
     )
-    server_1 = ChiaServer(port, full_node_1, NodeType.FULL_NODE)
+    server_1 = ChiaServer(
+        port, full_node_1, NodeType.FULL_NODE, name="full-node-simulator-server"
+    )
     _ = await server_1.start_server(config["host"], full_node_1._on_connect)
     full_node_1._set_server(server_1)
 
@@ -155,9 +157,13 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
         Path(db_path).unlink()
 
     wallet = await WalletNode.create(
-        config, key_config, db_path=db_path, override_constants=test_constants_copy
+        config,
+        key_config,
+        db_path=db_path,
+        override_constants=test_constants_copy,
+        name="wallet1",
     )
-    server = ChiaServer(port, wallet, NodeType.WALLET)
+    server = ChiaServer(port, wallet, NodeType.WALLET, name="wallet-server")
     wallet.set_server(server)
 
     yield (wallet, server)

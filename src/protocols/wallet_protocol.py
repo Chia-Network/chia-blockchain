@@ -36,7 +36,7 @@ class RequestAllProofHashes:
 @dataclass(frozen=True)
 @cbor_message
 class RespondAllProofHashes:
-    hashes: List[Tuple[bytes32, Optional[Tuple[uint64, uint64]]]]
+    hashes: List[Tuple[bytes32, Optional[uint64]]]
 
 
 @dataclass(frozen=True)

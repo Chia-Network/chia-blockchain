@@ -1747,9 +1747,9 @@ class FullNode:
         proof_hashes_map = await self.store.get_proof_hashes()
         curr = self.blockchain.lca_block
 
-        hashes: List[Tuple[bytes32, Optional[Tuple[uint64, uint64]]]] = []
+        hashes: List[Tuple[bytes32, Optional[uint64]]] = []
         while curr.height > 0:
-            difficulty_change_and_total_iters: Optional[Tuple[uint64, uint64]] = None
+            difficulty_change: Optional[uint64] = None
             if (
                 curr.height % self.constants["DIFFICULTY_EPOCH"]
                 == self.constants["DIFFICULTY_DELAY"]
@@ -1757,12 +1757,8 @@ class FullNode:
                 difficulty_change = self.blockchain.get_next_difficulty(
                     curr.prev_header_hash
                 )
-                difficulty_change_and_total_iters = (
-                    difficulty_change,
-                    curr.data.total_iters,
-                )
             hashes.append(
-                (proof_hashes_map[curr.header_hash], difficulty_change_and_total_iters)
+                (proof_hashes_map[curr.header_hash], difficulty_change)
             )
             curr = self.blockchain.headers[curr.prev_header_hash]
 

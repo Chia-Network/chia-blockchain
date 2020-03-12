@@ -111,8 +111,8 @@ class WalletStore:
         )
         await self.add_coin_record(spent)
 
-    # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
+        """ Returns CoinRecord with specified coin id. """
         if coin_name.hex() in self.coin_record_cache:
             return self.coin_record_cache[coin_name.hex()]
         cursor = await self.db_connection.execute(
@@ -127,12 +127,31 @@ class WalletStore:
             return CoinRecord(coin, row[1], row[2], row[3], row[4])
         return None
 
-    # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_spent(self, spent: bool) -> Set[CoinRecord]:
+        """ Returns set of CoinRecords that have not been spent yet. """
         coins = set()
 
         cursor = await self.db_connection.execute(
             "SELECT * from coin_record WHERE spent=?", (int(spent),)
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        for row in rows:
+            coin = Coin(
+                bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
+            )
+            coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4]))
+        return coins
+
+    async def get_coin_records_by_spent_and_index(
+        self, spent: bool, index: uint32
+    ) -> Set[CoinRecord]:
+        """ Returns set of CoinRecords that have been confirmed before index height. """
+        coins = set()
+
+        cursor = await self.db_connection.execute(
+            "SELECT * from coin_record WHERE spent=? and confirmed_index<?",
+            (int(spent), int(index),),
         )
         rows = await cursor.fetchall()
         await cursor.close()
