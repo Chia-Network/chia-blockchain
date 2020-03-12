@@ -86,11 +86,16 @@ def main():
         # Replaces the farmer's private key. The farmer target allows spending
         # of the fees.
         farmer_sk = PrivateKey.from_seed(token_bytes(32))
+        wallet_sk = ExtendedPrivateKey.from_seed(token_bytes(32))
         farmer_target = create_puzzlehash_for_pk(
-            BLSPublicKey(bytes(farmer_sk.get_public_key()))
+            BLSPublicKey(bytes(wallet_sk.get_public_key()))
         )
         key_config["farmer_sk"] = bytes(farmer_sk).hex()
         key_config["farmer_target"] = farmer_target.hex()
+        with open(key_config_filename, "w") as f:
+            safe_dump(key_config, f)
+
+        key_config["wallet_sk"] = bytes(wallet_sk).hex()
         with open(key_config_filename, "w") as f:
             safe_dump(key_config, f)
     if args.harvester:
@@ -108,11 +113,6 @@ def main():
         )
         key_config["pool_sks"] = [bytes(pool_sk).hex() for pool_sk in pool_sks]
         key_config["pool_target"] = pool_target.hex()
-        with open(key_config_filename, "w") as f:
-            safe_dump(key_config, f)
-    if args.wallet:
-        wallet_sk = ExtendedPrivateKey.from_seed(token_bytes(32))
-        key_config["wallet_sk"] = bytes(wallet_sk).hex()
         with open(key_config_filename, "w") as f:
             safe_dump(key_config, f)
 
