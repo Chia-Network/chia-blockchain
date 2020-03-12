@@ -1,5 +1,5 @@
 from src.full_node.full_node import FullNode
-from typing import AsyncGenerator, List, Dict
+from typing import AsyncGenerator, List, Dict, Optional
 from src.full_node.blockchain import Blockchain
 from src.full_node.store import FullNodeStore
 from src.protocols import (
@@ -126,6 +126,8 @@ class FullNodeSimulator(FullNode):
                 current_blocks.append(self.blockchain.genesis)
                 break
             full = await self.store.get_block(tip_hash)
+            if full is None:
+                break
             current_blocks.append(full)
             tip_hash = full.prev_header_hash
 
@@ -135,12 +137,16 @@ class FullNodeSimulator(FullNode):
     @api_request
     async def farm_new_block(self, coinbase_ph: bytes32):
         top_tip = self.get_tip()
+        if top_tip is None or self.server is None:
+            return
 
         current_block = await self.get_current_blocks(top_tip)
-        bundle: SpendBundle = await self.mempool_manager.create_bundle_for_tip(top_tip)
+        bundle: Optional[
+            SpendBundle
+        ] = await self.mempool_manager.create_bundle_for_tip(top_tip)
         dict_h = {}
 
-        if bundle:
+        if bundle is not None:
             program = best_solution_program(bundle)
             dict_h[top_tip.height + 1] = (program, bundle.aggregated_signature)
 

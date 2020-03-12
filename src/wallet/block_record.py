@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 from src.types.hashable.coin import Coin
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint128, uint32
+from src.util.ints import uint128, uint32, uint64
 from src.util.streamable import Streamable, streamable
 
 
@@ -21,3 +21,5 @@ class BlockRecord(Streamable):
     weight: uint128
     additions: List[Coin]
     removals: List[bytes32]
+    total_iters: uint64
+    new_challenge_hash: Optional[bytes32]

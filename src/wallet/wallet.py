@@ -50,6 +50,7 @@ class Wallet:
         wallet_state_manager: WalletStateManager,
         name: str = None,
     ):
+        # TODO(straya): consider loading farmer keys as well
         self = Wallet()
         self.config = config
         self.key_config = key_config

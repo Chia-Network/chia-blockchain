@@ -37,7 +37,7 @@ class WalletNode:
     cached_blocks: Dict[bytes32, Tuple[BlockRecord, HeaderBlock]]
     cached_removals: Dict[bytes32, List[bytes32]]
     cached_additions: Dict[bytes32, List[Coin]]
-    proof_hashes: List[Tuple[bytes32, Optional[uint64]]]
+    proof_hashes: List[Tuple[bytes32, Optional[Tuple[uint64, uint64]]]]
     header_hashes: List[bytes32]
     potential_blocks_received: Dict[uint32, asyncio.Event]
     potential_header_hashes: Dict[uint32, bytes32]
@@ -176,6 +176,7 @@ class WalletNode:
             )
             if fork_point_height == 0:
                 difficulty = self.constants["STARTING_DIFFICULTY"]
+                total_iters = self.wallet_st_manager.block_records[fork_point_hash].total_iters
             else:
                 fork_point_parent_hash = self.wallet_state_manager.block_records[
                     fork_point_hash
@@ -184,10 +185,14 @@ class WalletNode:
                     fork_point_parent_hash
                 ]
                 difficulty = uint64(weight - fork_point_parent_weight)
+                total_iters = self.wallet_state_manager.block_records[
+                    fork_point_parent_hash
+                ].total_iters + 
             for height in range(fork_point_height + 1, header_validate_start_height):
-                _, difficulty_change = self.proof_hashes[height]
+                _, (difficulty_change, ips_change) = self.proof_hashes[height]
                 if difficulty_change is not None:
                     difficulty = difficulty_change
+                    ips = ips_change
                 weight += difficulty
                 block_record = BlockRecord(
                     self.header_hashes[height],
@@ -196,6 +201,8 @@ class WalletNode:
                     weight,
                     [],
                     [],
+                    ips,
+                    None,
                 )
                 res = await self.wallet_state_manager.receive_block(block_record, None)
 
@@ -305,9 +312,25 @@ class WalletNode:
         # 1. If disconnected and close, get parent header and return
         lca = self.wallet_state_manager.block_records[self.wallet_state_manager.lca]
         if block_record.prev_header_hash in self.wallet_state_manager.block_records:
+            total_iters = uint64(
+                self.wallet_state_manager.block_records[
+                    block_record.prev_header_hash
+                ].total_iters
+                + header_block.proof_of_time.number_of_iterations
+            )
+            block_record_with_total_iters = BlockRecord(
+                block_record.header_hash,
+                block_record.prev_header_hash,
+                block_record.height,
+                block_record.weight,
+                block_record.additions,
+                block_record.removals,
+                total_iters,
+                block_record.new_challenge_hash,
+            )
             # We have completed a block that we can add to chain, so add it.
             res = await self.wallet_state_manager.receive_block(
-                block_record, header_block
+                block_record_with_total_iters, header_block
             )
             if res == ReceiveBlockResult.DISCONNECTED_BLOCK:
                 self.log.error("Attempted to add disconnected block")
@@ -434,6 +457,8 @@ class WalletNode:
         # If we already have, return
         if block.header_hash in self.wallet_state_manager.block_records:
             return
+        if block.height < 1:
+            return
 
         block_record = BlockRecord(
             block.header_hash,
@@ -442,6 +467,8 @@ class WalletNode:
             block.weight,
             [],
             [],
+            uint64(0),
+            response.header_block.challenge.get_hash(),
         )
         finish_block = True
 
@@ -546,6 +573,8 @@ class WalletNode:
             block_record.weight,
             additions,
             removals,
+            uint64(0),
+            header_block.challenge.get_hash(),
         )
         self.cached_blocks[response.header_hash] = (new_br, header_block)
         self.cached_removals[response.header_hash] = removals
@@ -630,6 +659,8 @@ class WalletNode:
             block_record.weight,
             additions,
             removals,
+            uint64(0),
+            header_block.challenge.get_hash(),
         )
         self.cached_blocks[response.header_hash] = (new_br, header_block)
         self.cached_additions[response.header_hash] = additions

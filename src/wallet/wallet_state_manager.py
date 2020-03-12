@@ -22,6 +22,10 @@ from src.wallet.wallet_puzzle_store import WalletPuzzleStore
 from src.wallet.wallet_store import WalletStore
 from src.wallet.wallet_transaction_store import WalletTransactionStore
 from src.full_node.blockchain import ReceiveBlockResult
+from src.consensus.pot_iterations import (
+    calculate_ips_from_iterations,
+    calculate_iterations_quality,
+)
 
 
 class WalletStateManager:
@@ -104,7 +108,6 @@ class WalletStateManager:
                 genesis_challenge,
                 genesis.header,
             )
-            # TODO(mariano): also check coinbase and fees coin
             await self.receive_block(
                 BlockRecord(
                     genesis.header_hash,
@@ -113,6 +116,8 @@ class WalletStateManager:
                     genesis.weight,
                     [],
                     [],
+                    uint64(self.constants["VDF_IPS_STARTING"]),
+                    genesis_challenge.get_hash(),
                 ),
                 genesis_hb,
             )
@@ -333,7 +338,7 @@ class WalletStateManager:
                 return ReceiveBlockResult.DISCONNECTED_BLOCK
 
             if header_block is not None:
-                if not await self.validate_header_block(header_block):
+                if not await self.validate_header_block(block, header_block):
                     return ReceiveBlockResult.INVALID_BLOCK
 
             self.block_records[block.header_hash] = block
@@ -388,19 +393,68 @@ class WalletStateManager:
 
             return ReceiveBlockResult.ADDED_AS_ORPHAN
 
-    async def validate_header_block(self, header_block: HeaderBlock) -> bool:
-        # POS challenge hash == POT challenge hash == prev challenge hash == Challenge prev challenge hash
+    async def validate_header_block(
+        self, br: BlockRecord, header_block: HeaderBlock
+    ) -> bool:
+        # TODO(mariano): implement
+        # POS challenge hash == POT challenge hash == Challenge prev challenge hash
+        if (
+            header_block.proof_of_space.challenge_hash
+            != header_block.proof_of_time.challenge_hash
+        ):
+            return False
+        if (
+            header_block.proof_of_space.challenge_hash
+            != header_block.challenge.prev_challenge_hash
+        ):
+            return False
+
+        if br.height > 0:
+            prev_br = self.block_records[br.prev_header_hash]
+            # If prev header block, check prev header block hash matchs
+            if prev_br.new_challenge_hash is not None:
+                if (
+                    header_block.proof_of_space.challenge_hash
+                    != prev_br.new_challenge_hash
+                ):
+                    return False
+
         # Validate PoS and get quality
+        quality_str: Optional[
+            bytes32
+        ] = header_block.proof_of_space.verify_and_get_quality_string()
+        if quality_str is None:
+            return False
+
         # Calculate iters
-        # Validate PoT
-        # Valudate challenge
+        number_of_iters: uint64 = calculate_iterations_quality(
+            quality_str,
+            header_block.proof_of_space.size,
+            difficulty,
+            br.ips,
+            self.constants["MIN_BLOCK_TIME"],
+        )
+
+        if number_of_iters != header_block.proof_of_time.number_of_iterations:
+            return False
+
+        # 4. Check PoT
+        if not header_block.proof_of_time.is_valid(
+            self.constants["DISCRIMINANT_SIZE_BITS"]
+        ):
+            return False
+
+        # Validate challenge
         #   - proofs hash is goo
         #   - new work difficulty is good if necessary
         # Validate header:
         #  - header hash and prev header hash match BR
         #  - height and weight match BR
-        #  - add
-        # TODO(mariano): implement
+        #  - check timestamp if we have required blocks
+        #  - check header pos hash
+        #  - check total iters match pot
+        #  - check coinbase sig
+        #  - check coinbase and fees amount
         return True
 
     def find_fork_for_lca(self, new_lca: BlockRecord) -> uint32:
