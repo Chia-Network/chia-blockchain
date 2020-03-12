@@ -118,7 +118,7 @@ class WebSocketServer:
         await websocket.send(format_response(response_api, response))
 
     async def get_sync_status(self, websocket, response_api):
-        syncing = self.wallet_node.sync_mode
+        syncing = self.wallet_node.wallet_state_manager.sync_mode
 
         response = {
             "syncing": syncing
@@ -132,6 +132,15 @@ class WebSocketServer:
 
         response = {
             "height": height
+        }
+
+        await websocket.send(format_response(response_api, response))
+
+    async def get_connection_info(self, websocket, response_api):
+        connections = self.wallet_node.server.global_connections.get_full_node_peerinfos()
+
+        response = {
+            "connections": connections
         }
 
         await websocket.send(format_response(response_api, response))
@@ -164,6 +173,8 @@ class WebSocketServer:
                 await self.get_sync_status(websocket, command)
             elif command == "get_height_info":
                 await self.get_height_info(websocket, command)
+            elif command == "get_connection_info":
+                await self.get_connection_info(websocket, command)
             else:
                 response = {"error": f"unknown_command {command}"}
                 await websocket.send(obj_to_response(response))

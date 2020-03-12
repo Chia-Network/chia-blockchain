@@ -18,9 +18,14 @@ let green_checkmark = "<i class=\"icon ion-md-checkmark-circle-outline green\"><
 let red_checkmark = "<i class=\"icon ion-md-close-circle-outline red\"></i>"
 let balance_textfield = document.querySelector('#balance_textfield')
 let pending_textfield = document.querySelector('#pending_textfield')
+let connection_textfield = document.querySelector('#connection_textfield')
+let syncing_textfield = document.querySelector('#syncing_textfield')
+let block_height_textfield = document.querySelector('#block_height_textfield')
 
+let lock = "<i class=\"icon ion-md-lock\"></i>"
 var myBalance = 0
 var myUnconfirmedBalance = 0
+var global_syncing = true
 
 console.log(global.location.search)
 function getQueryVariable(variable) {
@@ -75,6 +80,8 @@ function set_callbacks(socket) {
             get_wallet_balance();
             get_height_info();
             get_sync_status();
+            get_connection_info();
+            connection_checker();
         } else if (command == "get_next_puzzle_hash") {
             get_new_puzzlehash_response(data);
         } else if (command == "get_wallet_balance") {
@@ -85,6 +92,12 @@ function set_callbacks(socket) {
             get_transactions_response(data);
         } else if (command == "state_changed") {
             handle_state_changed(data);
+        } else if (command == "get_connection_info") {
+            get_connection_info_response(data)
+        } else if (command == "get_height_info") {
+            get_height_info_response(data)
+        } else if (command == "get_sync_status") {
+            get_sync_status_response(data)
         }
     });
 
@@ -109,6 +122,11 @@ send.addEventListener('click', () => {
     /*
     Called when send button in ui is pressed.
     */
+
+    if (global_syncing) {
+        dialogs.alert("Can't send transactions while syncing.", ok => {});
+        return
+    }
     puzzlehash = receiver_address.value;
     amount_value = amount.value;
     data = {
@@ -144,7 +162,7 @@ farm_button.addEventListener('click', () => {
     }
     json_data = JSON.stringify(request);
     ws.send(json_data);
-    dialogs.alert("Farmed new block!", ok => {});
+    //dialogs.alert("Farmed new block!", ok => {});
 })
 
 function send_transaction_response(response) {
@@ -220,9 +238,9 @@ function get_wallet_balance_response(response) {
         var pending = confirmed - unconfirmed
         balance_textfield.innerHTML = confirmed + " CH"
         if (pending > 0) {
-            pending_textfield.innerHTML = "-" + pending + " CH"
+            pending_textfield.innerHTML = lock + " -" + pending + " CH"
         } else {
-            pending_textfield.innerHTML = pending + " CH"
+            pending_textfield.innerHTML = lock + " 0" + " CH"
         }
     }
 }
@@ -283,7 +301,7 @@ function get_transactions_response(response) {
 
 async function get_height_info() {
     /*
-    Sends websocket request to get transactions
+    Sends websocket request to blockchain height
     */
     data = {
         "command": "get_height_info",
@@ -294,7 +312,7 @@ async function get_height_info() {
 
 async function get_sync_status() {
     /*
-    Sends websocket request to get transactions
+    Sends websocket request to see if wallet is syncing currently
     */
     data = {
         "command": "get_sync_status",
@@ -303,14 +321,45 @@ async function get_sync_status() {
     ws.send(json_data);
 }
 
+async function connection_checker() {
+    await sleep(10000);
+    await get_connection_info()
+    connection_checker()
+}
+
+async function get_connection_info() {
+    /*
+    Sends websocket request to get list of connections
+    */
+    data = {
+        "command": "get_connection_info",
+    }
+    json_data = JSON.stringify(data);
+    ws.send(json_data);
+}
+
 function get_height_info_response(response) {
     height = response["height"]
     console.log("height is " + height)
+    block_height_textfield.innerHTML = "" + height;
 }
 
 function get_sync_status_response(response) {
     syncing = response["syncing"]
     console.log("Syncing: " + syncing)
+    global_syncing = syncing
+    if (syncing) {
+        syncing_textfield.innerHTML = "Syncing in progress";
+    } else {
+        syncing_textfield.innerHTML = "Synced";
+    }
+}
+
+async function get_connection_info_response(response) {
+    connections = response["connections"]
+    console.log("Connections:" + connections)
+    console.log("Connected to: " + connections.length + " peers")
+    connection_textfield.innerHTML = connections.length + " connections"
 }
 
 function handle_state_changed(data) {
@@ -330,12 +379,15 @@ function handle_state_changed(data) {
         dialogs.alert("Transaction sent successfully!", ok => {});
     } else if (state == "balance_changed") {
         get_wallet_balance()
-    } else if (state == "status_changed") {
-        // if syncing, disable sending
+    } else if (state == "sync_changed") {
+        get_sync_status()
     } else if (state == "new_block") {
-        //display new height
+        get_height_info()
     } else if (state == "reorg") {
-        // ?
+        get_transactions()
+        get_wallet_balance()
+        get_height_info()
+        get_sync_status()
     }
 }
 
