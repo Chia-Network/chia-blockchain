@@ -222,9 +222,6 @@ async def start_websocket_server():
     full_node_peer = PeerInfo(
         config["full_node_peer"]["host"], config["full_node_peer"]["port"]
     )
-    introducer_peer = PeerInfo(
-        config["introducer_peer"]["host"], config["introducer_peer"]["port"]
-    )
 
     _ = await server.start_server("127.0.0.1", None)
     await asyncio.sleep(1)
@@ -233,7 +230,7 @@ async def start_websocket_server():
     await websockets.serve(handler.handle_message, "localhost", 9256)
 
     if config["testing"] is False:
-        _ = await server.start_client(introducer_peer, None)
+        wallet_node._start_bg_tasks()
 
     await server.await_closed()
 

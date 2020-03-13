@@ -5,12 +5,15 @@ from typing import Dict, Optional, Tuple, List
 import concurrent
 import logging
 from blspy import ExtendedPrivateKey
+
+from src.full_node.full_node import OutboundMessageGenerator
+from src.types.peer_info import PeerInfo
 from src.util.merkle_set import (
     confirm_included_already_hashed,
     confirm_not_included_already_hashed,
     MerkleSet,
 )
-from src.protocols import wallet_protocol
+from src.protocols import wallet_protocol, full_node_protocol
 from src.consensus.constants import constants as consensus_constants
 from src.server.server import ChiaServer
 from src.server.outbound_message import OutboundMessage, NodeType, Message, Delivery
@@ -103,6 +106,64 @@ class WalletNode:
 
     def _shutdown(self):
         self._shut_down = True
+
+    def _start_bg_tasks(self):
+        """
+        Start a background task connecting periodically to the introducer and
+        requesting the peer list.
+        """
+        introducer = self.config["introducer_peer"]
+        introducer_peerinfo = PeerInfo(introducer["host"], introducer["port"])
+
+        async def introducer_client():
+            async def on_connect() -> OutboundMessageGenerator:
+                msg = Message("request_peers", full_node_protocol.RequestPeers())
+                yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
+
+            while not self._shut_down:
+                # The first time connecting to introducer, keep trying to connect
+                if self._num_needed_peers():
+                    if not await self.server.start_client(
+                        introducer_peerinfo, on_connect
+                    ):
+                        await asyncio.sleep(5)
+                        continue
+                await asyncio.sleep(self.config["introducer_connect_interval"])
+
+        self.introducer_task = asyncio.create_task(introducer_client())
+
+    def _num_needed_peers(self) -> int:
+        assert self.server is not None
+        diff = self.config["target_peer_count"] - len(
+            self.server.global_connections.get_full_node_connections()
+        )
+        return diff if diff >= 0 else 0
+
+    @api_request
+    async def respond_peers(
+        self, request: full_node_protocol.RespondPeers
+    ) -> OutboundMessageGenerator:
+        if self.server is None:
+            return
+        conns = self.server.global_connections
+        for peer in request.peer_list:
+            conns.peers.add(peer)
+
+        # Pseudo-message to close the connection
+        yield OutboundMessage(NodeType.INTRODUCER, Message("", None), Delivery.CLOSE)
+
+        unconnected = conns.get_unconnected_peers(
+            recent_threshold=self.config["recent_peer_threshold"]
+        )
+        to_connect = unconnected[: self._num_needed_peers()]
+        if not len(to_connect):
+            return
+
+        self.log.info(f"Trying to connect to peers: {to_connect}")
+        tasks = []
+        for peer in to_connect:
+            tasks.append(asyncio.create_task(self.server.start_client(peer)))
+        await asyncio.gather(*tasks)
 
     async def _sync(self):
         """
