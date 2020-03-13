@@ -2005,3 +2005,30 @@ table td {
 #status_offset1 h3 {
     margin-bottom: 20px;
 }
+
+#table_container {
+    height: 400px;
+    overflow-y: scroll;
+    scrollbar-color: red yellow;
+}
+
+#table_container::-webkit-scrollbar {
+  width: 15px;
+}
+
+/* Track */
+#table_container::-webkit-scrollbar-track {
+  box-shadow: inset 0 0 5px #007bff;
+  border-radius: 10px;
+}
+
+/* Handle */
+#table_container::-webkit-scrollbar-thumb {
+  background: #007bff;
+  border-radius: 10px;
+}
+
+/* Handle on hover */
+#table_container::-webkit-scrollbar-thumb:hover {
+  background: #007bff;
+}
