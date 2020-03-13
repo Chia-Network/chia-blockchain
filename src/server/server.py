@@ -30,6 +30,7 @@ from src.util.errors import (
 )
 from src.util.ints import uint16
 from src.util.network import create_node_id
+import traceback
 
 config_filename = ROOT_DIR / "config" / "config.yaml"
 config = safe_load(open(config_filename, "r"))
@@ -453,6 +454,8 @@ class ChiaServer:
             else:
                 await result
         except Exception as e:
+            tb = traceback.format_exc()
+            self.log.error(f"{tb}")
             self.log.error(f"Error {type(e)} {e}, closing connection {connection}")
             self.global_connections.close(connection)
 
