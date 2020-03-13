@@ -1715,7 +1715,7 @@ class FullNode:
         self.log.info(f"Trying to connect to peers: {to_connect}")
         tasks = []
         for peer in to_connect:
-            tasks.append(asyncio.create_task(self.server.start_client(peer, self.config)))
+            tasks.append(asyncio.create_task(self.server.start_client(peer, None, self.config)))
         await asyncio.gather(*tasks)
 
     # WALLET PROTOCOL
