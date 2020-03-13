@@ -223,9 +223,9 @@ async def start_websocket_server():
         config["full_node_peer"]["host"], config["full_node_peer"]["port"]
     )
 
-    _ = await server.start_server("127.0.0.1", None)
+    _ = await server.start_server("127.0.0.1", None, config)
     await asyncio.sleep(1)
-    _ = await server.start_client(full_node_peer, None)
+    _ = await server.start_client(full_node_peer, None, config)
 
     await websockets.serve(handler.handle_message, "localhost", 9256)
 

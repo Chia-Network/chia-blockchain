@@ -124,7 +124,7 @@ class WalletNode:
                 # The first time connecting to introducer, keep trying to connect
                 if self._num_needed_peers():
                     if not await self.server.start_client(
-                        introducer_peerinfo, on_connect
+                        introducer_peerinfo, on_connect, self.config
                     ):
                         await asyncio.sleep(5)
                         continue
@@ -162,7 +162,7 @@ class WalletNode:
         self.log.info(f"Trying to connect to peers: {to_connect}")
         tasks = []
         for peer in to_connect:
-            tasks.append(asyncio.create_task(self.server.start_client(peer)))
+            tasks.append(asyncio.create_task(self.server.start_client(peer, None, self.config)))
         await asyncio.gather(*tasks)
 
     async def _sync(self):
