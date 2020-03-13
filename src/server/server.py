@@ -2,8 +2,9 @@ import asyncio
 import concurrent
 import logging
 import random
+import ssl
 from secrets import token_bytes
-from typing import Any, AsyncGenerator, List, Optional, Tuple
+from typing import Any, AsyncGenerator, List, Optional, Tuple, Dict
 
 from aiter import aiter_forker, iter_to_aiter, join_aiters, map_aiter, push_aiter
 from aiter.server import start_server_aiter
@@ -74,6 +75,14 @@ class ChiaServer:
         else:
             self.log = logging.getLogger(__name__)
 
+    def loadSSLConfig(self, tipo: str, config: Dict = None):
+        if config is not None:
+            try:
+                return config[tipo]["crt"], config[tipo]["key"], config[tipo]["pass"], config[tipo]["ca"]
+            except Exception:
+                pass
+        return "ssl/dummy.crt", "ssl/dummy.key", "1234", None
+
     async def start_server(self, host: str, on_connect: OnConnectFunc = None,) -> bool:
         """
         Launches a listening server on host and port specified, to connect to NodeType nodes. On each
@@ -84,15 +93,28 @@ class ChiaServer:
             return False
         self._host = host
 
+        ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH)
+        certfile, keyfile, password, cafile = self.loadSSLConfig("server_ssl", config)
+        ssl_context.load_cert_chain(certfile=certfile, keyfile=keyfile, password=password)
+        if cafile is None:
+            ssl_context.verify_mode = ssl.CERT_NONE
+        else:
+            ssl_context.load_verify_locations(cafile=cafile)
+            ssl_context.verify_mode = ssl.CERT_REQUIRED
+
         self._server, aiter = await start_server_aiter(
-            self._port, host=None, reuse_address=True
+            self._port, host=None, reuse_address=True, ssl=ssl_context
         )
+
         if on_connect is not None:
             self._on_inbound_connect = on_connect
 
         def add_connection_type(
             srw: Tuple[asyncio.StreamReader, asyncio.StreamWriter]
         ) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter, None]:
+            ssl_object = srw[1].get_extra_info(name="ssl_object")
+            peer_cert = ssl_object.getpeercert()
+            log.info(f"Client authed as {peer_cert}")
             return (srw[0], srw[1], None)
 
         srwt_aiter = map_aiter(add_connection_type, aiter)
@@ -118,9 +140,19 @@ class ChiaServer:
                 return False
         if self._pipeline_task.done():
             return False
+
+        ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH)
+        certfile, keyfile, password, cafile = self.loadSSLConfig("client_ssl", config)
+        ssl_context.load_cert_chain(certfile=certfile, keyfile=keyfile, password=password)
+        if cafile is None:
+            ssl_context.verify_mode = ssl.CERT_NONE
+        else:
+            ssl_context.load_verify_locations(cafile=cafile)
+            ssl_context.verify_mode = ssl.CERT_REQUIRED
+
         try:
             reader, writer = await asyncio.open_connection(
-                target_node.host, int(target_node.port)
+                target_node.host, int(target_node.port), ssl=ssl_context
             )
         except (
             ConnectionRefusedError,
@@ -138,6 +170,11 @@ class ChiaServer:
                 self._add_to_srwt_aiter(iter_to_aiter([(reader, writer, on_connect)]))
             )
         )
+
+        ssl_object = writer.get_extra_info(name="ssl_object")
+        peer_cert = ssl_object.getpeercert()
+        log.info(f"Server authed as {peer_cert}")
+
         return True
 
     async def _add_to_srwt_aiter(
