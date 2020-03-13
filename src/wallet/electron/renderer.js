@@ -279,7 +279,7 @@ function get_transactions_response(response) {
 
     for (var i = 0; i < response.txs.length; i++) {
         var tx = JSON.parse(response.txs[i]);
-        console.log(tx);
+        //console.log(tx);
         var row = table.insertRow(0);
         var cell_type = row.insertCell(0);
         var cell_to = row.insertCell(1);
@@ -309,8 +309,10 @@ function get_transactions_response(response) {
         }
 
         // Amount and Fee
-        cell_amount.innerHTML = tx["amount"];
-        cell_fee.innerHTML = tx["fee_amount"];
+        var amount = parseInt(tx["amount"])
+        var fee = parseInt(tx["fee_amount"])
+        cell_amount.innerHTML = " " + chia_formatter(amount, 'mojo').to('chia').toString() + " CH"
+        cell_fee.innerHTML = " " + chia_formatter(fee, 'mojo').to('chia').toString() + " CH"
     }
 }
 
