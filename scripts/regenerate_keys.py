@@ -86,7 +86,7 @@ def main():
     if args.wallet:
         wallet_sk = ExtendedPrivateKey.from_seed(token_bytes(32))
         wallet_target = create_puzzlehash_for_pk(
-            BLSPublicKey(bytes(wallet_sk.get_public_key()))
+            BLSPublicKey(bytes(wallet_sk.public_child(0).get_public_key()))
         )
         key_config["wallet_sk"] = bytes(wallet_sk).hex()
         with open(key_config_filename, "w") as f:
@@ -97,7 +97,7 @@ def main():
         farmer_sk = PrivateKey.from_seed(token_bytes(32))
         if wallet_target is None:
             farmer_target = create_puzzlehash_for_pk(
-                BLSPublicKey(bytes(wallet_sk.get_public_key()))
+                BLSPublicKey(bytes(farmer_sk.get_public_key()))
             )
         else:
             farmer_target = wallet_target
@@ -117,7 +117,7 @@ def main():
         pool_sks = [PrivateKey.from_seed(token_bytes(32)) for _ in range(2)]
         if wallet_target is None:
             pool_target = create_puzzlehash_for_pk(
-                BLSPublicKey(bytes(wallet_sk.get_public_key()))
+                BLSPublicKey(bytes(pool_sks[0].get_public_key()))
             )
         else:
             pool_target = wallet_target
