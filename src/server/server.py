@@ -83,7 +83,7 @@ class ChiaServer:
                 pass
         return "ssl/dummy.crt", "ssl/dummy.key", "1234", None
 
-    async def start_server(self, host: str, on_connect: OnConnectFunc = None,) -> bool:
+    async def start_server(self, host: str, on_connect: OnConnectFunc = None, config: Dict = None,) -> bool:
         """
         Launches a listening server on host and port specified, to connect to NodeType nodes. On each
         connection, the on_connect asynchronous generator will be called, and responses will be sent.
@@ -114,7 +114,7 @@ class ChiaServer:
         ) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter, None]:
             ssl_object = srw[1].get_extra_info(name="ssl_object")
             peer_cert = ssl_object.getpeercert()
-            log.info(f"Client authed as {peer_cert}")
+            self.log.info(f"Client authed as {peer_cert}")
             return (srw[0], srw[1], None)
 
         srwt_aiter = map_aiter(add_connection_type, aiter)
@@ -126,7 +126,7 @@ class ChiaServer:
         return True
 
     async def start_client(
-        self, target_node: PeerInfo, on_connect: OnConnectFunc = None,
+        self, target_node: PeerInfo, on_connect: OnConnectFunc = None, config: Dict = None,
     ) -> bool:
         """
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
@@ -173,7 +173,7 @@ class ChiaServer:
 
         ssl_object = writer.get_extra_info(name="ssl_object")
         peer_cert = ssl_object.getpeercert()
-        log.info(f"Server authed as {peer_cert}")
+        self.log.info(f"Server authed as {peer_cert}")
 
         return True
 
