@@ -45,9 +45,9 @@ async def main():
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
 
-    _ = await server.start_server(config["host"], None)
+    _ = await server.start_server(config["host"], None, config)
     for i in range(10):
-        if await server.start_client(full_node_peer, None):
+        if await server.start_client(full_node_peer, None, config):
             break
         await asyncio.sleep(1)
 

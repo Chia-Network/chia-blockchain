@@ -12,6 +12,7 @@ from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint64
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
+from src.util.config import load_config_cli
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -133,8 +134,9 @@ class RpcApiHandler:
         port = request_data["port"]
         target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
 
+        config = load_config_cli("config.yaml", "full_node")
         if self.full_node.server is None or not (
-            await self.full_node.server.start_client(target_node, None)
+            await self.full_node.server.start_client(target_node, None, config)
         ):
             raise web.HTTPInternalServerError()
         return obj_to_response("")

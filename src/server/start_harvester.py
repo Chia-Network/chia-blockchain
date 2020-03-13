@@ -31,7 +31,7 @@ async def main():
 
     harvester = Harvester(config, plot_config)
     server = ChiaServer(config["port"], harvester, NodeType.HARVESTER)
-    _ = await server.start_server(config["host"], None)
+    _ = await server.start_server(config["host"], None, config)
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
@@ -40,7 +40,7 @@ async def main():
         harvester.config["farmer_peer"]["host"], harvester.config["farmer_peer"]["port"]
     )
 
-    _ = await server.start_client(peer_info, None)
+    _ = await server.start_client(peer_info, None, config)
     await server.await_closed()
     harvester._shutdown()
     await harvester._await_shutdown()
