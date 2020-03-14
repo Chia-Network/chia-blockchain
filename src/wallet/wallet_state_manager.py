@@ -234,7 +234,7 @@ class WalletStateManager:
         for coinrecord in unspent:
             if sum >= amount:
                 break
-            if coinrecord.coin.name in unconfirmed_removals:
+            if coinrecord.coin.name() in unconfirmed_removals:
                 continue
             sum += coinrecord.coin.amount
             used_coins.add(coinrecord.coin)
