@@ -517,7 +517,7 @@ class WalletNode:
             ) = await self.wallet_state_manager.get_filter_additions_removals(
                 response.transactions_filter
             )
-            if len(additions) > 0:
+            if len(additions) > 0 or len(removals) > 0:
                 finish_block = False
                 request_a = wallet_protocol.RequestAdditions(
                     block.height, block.header_hash, additions
@@ -527,8 +527,6 @@ class WalletNode:
                     Message("request_additions", request_a),
                     Delivery.RESPOND,
                 )
-            if len(removals) > 0:
-                finish_block = False
                 request_r = wallet_protocol.RequestRemovals(
                     block.height, block.header_hash, removals
                 )
@@ -537,6 +535,7 @@ class WalletNode:
                     Message("request_removals", request_r),
                     Delivery.RESPOND,
                 )
+
         if finish_block:
             # If we don't have any transactions in filter, don't fetch, and finish the block
             async for msg in self._block_finished(block_record, block):
