@@ -19,6 +19,7 @@ class WalletStore:
     lock: asyncio.Lock
     coin_record_cache: Dict[str, CoinRecord]
     cache_size: uint32
+    unspent_coins: Optional[Set[CoinRecord]]
 
     @classmethod
     async def create(cls, db_path: Path, cache_size: uint32 = uint32(600000)):
@@ -59,14 +60,19 @@ class WalletStore:
         )
 
         await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS coin_spent on coin_record(puzzle_hash)"
+            "CREATE INDEX IF NOT EXISTS coin_puzzlehash on coin_record(puzzle_hash)"
         )
 
         await self.db_connection.commit()
         # Lock
         self.lock = asyncio.Lock()  # external
         self.coin_record_cache = dict()
+        self.unspent_coins = None
+        await self.cache_init()
         return self
+
+    async def cache_init(self):
+        self.unspent_coins = await self.get_coin_records_by_spent(False)
 
     async def close(self):
         await self.db_connection.close()
@@ -95,6 +101,11 @@ class WalletStore:
         )
         await cursor.close()
         await self.db_connection.commit()
+
+        if self.unspent_coins is not None:
+            if record.spent is False:
+                self.unspent_coins.add(record)
+
         self.coin_record_cache[record.coin.name().hex()] = record
         if len(self.coin_record_cache) > self.cache_size:
             while len(self.coin_record_cache) > self.cache_size:
@@ -109,6 +120,11 @@ class WalletStore:
         spent: CoinRecord = CoinRecord(
             current.coin, current.confirmed_block_index, index, True, current.coinbase,
         )
+
+        if self.unspent_coins is not None:
+            if current in self.unspent_coins:
+                self.unspent_coins.remove(current)
+
         await self.add_coin_record(spent)
 
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
@@ -129,6 +145,10 @@ class WalletStore:
 
     async def get_coin_records_by_spent(self, spent: bool) -> Set[CoinRecord]:
         """ Returns set of CoinRecords that have not been spent yet. """
+        if spent is False:
+            if self.unspent_coins is not None:
+                return self.unspent_coins
+
         coins = set()
 
         cursor = await self.db_connection.execute(
@@ -222,6 +242,10 @@ class WalletStore:
         await c2.close()
         await self.remove_blocks_from_path(block_index)
         await self.db_connection.commit()
+
+        if len(delete_queue) > 0:
+            self.unspent_coins = None
+            await self.cache_init()
 
     async def get_lca_path(self) -> Dict[bytes32, BlockRecord]:
         cursor = await self.db_connection.execute(

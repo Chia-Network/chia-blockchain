@@ -400,6 +400,13 @@ async function get_connection_info_response(response) {
 
 function handle_state_changed(data) {
     state = data["state"]
+    if(global_syncing) {
+        get_wallet_balance()
+        get_sync_status()
+        get_height_info()
+        return;
+    }
+
     if (state == "coin_removed") {
         get_transactions()
         get_wallet_balance()
