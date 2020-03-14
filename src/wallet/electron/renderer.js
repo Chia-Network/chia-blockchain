@@ -76,7 +76,7 @@ function set_callbacks(socket) {
 
         console.log("Received command: " + command);
         if (data) {
-            console.log("Received message data: " + JSON.stringify(data));
+            //console.log("Received message data: " + JSON.stringify(data));
         }
 
         if (command == "start_server") {
@@ -134,7 +134,7 @@ send.addEventListener('click', () => {
     }
     puzzlehash = receiver_address.value;
     amount_value = parseFloat(amount.value);
-    mojo_amount = chia_formatter(amount_value, 'chia').to('mojo')
+    mojo_amount = chia_formatter(amount_value, 'chia').to('mojo').value()
     console.log("Mojo amount: " + mojo_amount);
 
     data = {
@@ -271,10 +271,21 @@ async function get_transactions() {
     ws.send(json_data);
 }
 
+var glob_counter = 0
+
 function get_transactions_response(response) {
     /*
     Called when response is received for get_transactions request
     */
+    if (global_syncing) {
+        glob_counter++;
+        if ((glob_counter % 10) == 0) {
+
+        } else {
+            return
+        }
+    }
+
     clean_table()
 
     for (var i = 0; i < response.txs.length; i++) {
@@ -368,6 +379,7 @@ function get_sync_status_response(response) {
     if (syncing) {
         syncing_textfield.innerHTML = "Syncing in progress";
     } else {
+        get_transactions()
         syncing_textfield.innerHTML = "Synced";
     }
 }
