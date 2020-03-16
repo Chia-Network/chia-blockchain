@@ -1484,11 +1484,15 @@ class FullNode:
 
             # This is a block we asked for during sync
             await self.store.add_potential_block(respond_block.block)
-            if self.store.get_sync_mode():
+            if (
+                self.store.get_sync_mode()
+                and respond_block.block.height in self.store.potential_blocks_received
+            ):
                 # If we are still in sync mode, set it
                 self.store.get_potential_blocks_received(
                     respond_block.block.height
                 ).set()
+            return
 
         prevalidate_block = await self.blockchain.pre_validate_blocks(
             [respond_block.block]

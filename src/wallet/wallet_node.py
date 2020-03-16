@@ -332,17 +332,20 @@ class WalletNode:
                 )
                 # Removes outdated cached blocks if we're not syncing
                 if not self.sync_mode:
+                    remove_header_hashes = []
                     for header_hash in self.cached_blocks:
                         if (
                             block_record.height
                             - self.cached_blocks[header_hash][0].height
                             > 100
                         ):
-                            del self.cached_blocks[header_hash]
-                            if header_hash in self.cached_additions:
-                                del self.cached_additions[header_hash]
-                            if header_hash in self.cached_removals:
-                                del self.cached_removals[header_hash]
+                            remove_header_hashes.append(header_hash)
+                    for header_hash in remove_header_hashes:
+                        del self.cached_blocks[header_hash]
+                        if header_hash in self.cached_additions:
+                            del self.cached_additions[header_hash]
+                        if header_hash in self.cached_removals:
+                            del self.cached_removals[header_hash]
         else:
             if block_record.height - lca.height < self.short_sync_threshold:
                 # We have completed a block that is in the near future, so cache it, and fetch parent
