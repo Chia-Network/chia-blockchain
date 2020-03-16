@@ -67,9 +67,9 @@ class WebSocketServer:
     async def send_transaction(self, websocket, request, response_api):
         if "amount" in request and "puzzlehash" in request:
             amount = int(request["amount"])
-            puzzlehash = request["puzzlehash"]
+            puzzle_hash = bytes.fromhex(request["puzzlehash"])
             tx = await self.wallet_node.wallet.generate_signed_transaction(
-                amount, puzzlehash
+                amount, puzzle_hash
             )
 
             if tx is None:
@@ -117,6 +117,30 @@ class WebSocketServer:
 
         await websocket.send(format_response(response_api, response))
 
+    async def get_sync_status(self, websocket, response_api):
+        syncing = self.wallet_node.wallet_state_manager.sync_mode
+
+        response = {"syncing": syncing}
+
+        await websocket.send(format_response(response_api, response))
+
+    async def get_height_info(self, websocket, response_api):
+        lca = self.wallet_node.wallet_state_manager.lca
+        height = self.wallet_node.wallet_state_manager.block_records[lca].height
+
+        response = {"height": height}
+
+        await websocket.send(format_response(response_api, response))
+
+    async def get_connection_info(self, websocket, response_api):
+        connections = (
+            self.wallet_node.server.global_connections.get_full_node_peerinfos()
+        )
+
+        response = {"connections": connections}
+
+        await websocket.send(format_response(response_api, response))
+
     async def handle_message(self, websocket, path):
         """
         This function gets called when new message is received via websocket.
@@ -141,6 +165,12 @@ class WebSocketServer:
                 await self.get_transactions(websocket, command)
             elif command == "farm_block":
                 await self.farm_block(websocket, data, command)
+            elif command == "get_sync_status":
+                await self.get_sync_status(websocket, command)
+            elif command == "get_height_info":
+                await self.get_height_info(websocket, command)
+            elif command == "get_connection_info":
+                await self.get_connection_info(websocket, command)
             else:
                 response = {"error": f"unknown_command {command}"}
                 await websocket.send(obj_to_response(response))
@@ -176,12 +206,12 @@ async def start_websocket_server():
         )
 
     if config["testing"] is True:
-        print("Testing")
+        log.info(f"Testing")
         wallet_node = await WalletNode.create(
             config, key_config, override_constants=test_constants
         )
     else:
-        print("not testing")
+        log.info(f"Not Testing")
         wallet_node = await WalletNode.create(config, key_config)
 
     handler = WebSocketServer(wallet_node)
@@ -193,11 +223,14 @@ async def start_websocket_server():
         config["full_node_peer"]["host"], config["full_node_peer"]["port"]
     )
 
-    _ = await server.start_server("127.0.0.1", None)
+    _ = await server.start_server("127.0.0.1", None, config)
     await asyncio.sleep(1)
-    _ = await server.start_client(full_node_peer, None)
+    _ = await server.start_client(full_node_peer, None, config)
 
     await websockets.serve(handler.handle_message, "localhost", 9256)
+
+    if config["testing"] is False:
+        wallet_node._start_bg_tasks()
 
     await server.await_closed()
 

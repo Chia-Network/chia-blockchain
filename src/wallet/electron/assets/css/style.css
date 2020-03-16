@@ -1400,7 +1400,7 @@ tbody.ob-heading {
 }
 
 .wallet .tab-content button.green {
-  background: #26de81;
+  background: #3aac59;
   color: #ffffff;
   -webkit-box-shadow: 0px 0px 15px 0px #26de81ad;
           box-shadow: 0px 0px 15px 0px #26de81ad;
@@ -1991,4 +1991,44 @@ table {
 table td {
     word-wrap: break-word;         /* All browsers since IE 5.5+ */
     overflow-wrap: break-word;     /* Renamed property in CSS3 draft spec */
+}
+
+.status {
+    padding-bottom: 10px;
+    margin-bottom: 30px;
+}
+
+#status_offset h3 {
+    margin-bottom: 20px;
+}
+
+#status_offset1 h3 {
+    margin-bottom: 20px;
+}
+
+#table_container {
+    height: 400px;
+    overflow-y: scroll;
+    scrollbar-color: red yellow;
+}
+
+#table_container::-webkit-scrollbar {
+  width: 15px;
+}
+
+/* Track */
+#table_container::-webkit-scrollbar-track {
+  box-shadow: inset 0 0 5px #007bff;
+  border-radius: 10px;
+}
+
+/* Handle */
+#table_container::-webkit-scrollbar-thumb {
+  background: #007bff;
+  border-radius: 10px;
+}
+
+/* Handle on hover */
+#table_container::-webkit-scrollbar-thumb:hover {
+  background: #007bff;
 }

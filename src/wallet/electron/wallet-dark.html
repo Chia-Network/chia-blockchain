@@ -17,26 +17,32 @@
         aria-controls="headerMenu" aria-expanded="false" aria-label="Toggle navigation">
         <i class="icon ion-md-menu"></i>
       </button>
-
-      <div class="collapse navbar-collapse" id="headerMenu">
-        <ul class="navbar-nav mr-auto">
-
-        </ul>
-        <ul class="navbar-nav ml-auto">
-          <li class="nav-item header-custom-icon">
-          </li>
-          <li class="nav-item dropdown header-custom-icon">
-          </li>
-          <li class="nav-item dropdown header-img-icon">
-          </li>
-        </ul>
-      </div>
     </nav>
   </header>
   <div class="wallet ptb70">
     <div class="container">
       <div class="row">
         <div class="col-md-12 col-lg-4">
+          <div class="nav flex-column nav-pills status" role="tablist" aria-orientation="vertical">
+            <div class="nav-link d-flex justify-content-between align-items-center" data-toggle="pill"
+                 role="tab" aria-selected="true">
+              <div class="d-flex" id="status_offset">
+                <div>
+                  <h3>Status</h3>
+                  <p>Syncing: </p>
+                  <p>Block Height: </p>
+                  <p>Connected: </p>
+                </div>
+              </div>
+              <div id="status_offset1">
+                <h3 style="visibility: hidden;">Offset hack</h3>
+                <p class="text-right" id="syncing_textfield"></p>
+                <p class="text-right" id="block_height_textfield"></p>
+                <p class="text-right" id="connection_textfield"></p>
+              </div>
+            </div>
+          </div>
+
           <div class="nav flex-column nav-pills" role="tablist" aria-orientation="vertical">
             <a class="nav-link d-flex justify-content-between align-items-center active" data-toggle="pill"
               href="#coinBTC" role="tab" aria-selected="true">
@@ -48,11 +54,11 @@
                 </div>
               </div>
               <div>
-                <h3>0.00</h3>
-                <p class="text-right"><i class="icon ion-md-lock"></i> 0.00</p>
+                <h3 class="text-right" id="standard_wallet_balance">0.00</h3>
+                <p class="text-right" id="standard_wallet_pending"><i class="icon ion-md-lock"></i> 0.00</p>
               </div>
             </a>
-            <a class="nav-link d-flex justify-content-between align-items-center" data-toggle="pill" href="#coinETH"
+            <a class="nav-link d-flex justify-content-between align-items-center" data-toggle="pill" href="#rlwallet"
               role="tab" aria-selected="true">
               <div class="d-flex">
                 <img src="assets/img/circle-cropped.png" alt="btc">
@@ -138,6 +144,7 @@
               </div>
             </a>
           </div>
+
         </div>
         <div class="col-md-12 col-lg-8">
           <div class="tab-content">
@@ -150,7 +157,7 @@
                     <h2>Total Chia</h2>
                   </div>
                   <div>
-                    <h3>0.00 CH</h3>
+                    <h3 id="balance_textfield">0 CH</h3>
                   </div>
                 </li>
                 <li class="d-flex justify-content-between align-items-center">
@@ -159,7 +166,7 @@
                     <h2>Pending Transactions</h2>
                   </div>
                   <div>
-                    <h3>0.00 CH</h3>
+                    <h3 id="pending_textfield">0 CH</h3>
                   </div>
                 </li>
               </ul>
@@ -174,6 +181,7 @@
               </div>
               </div>
               <button class="btn red" id="send">SEND</button>
+              <button class="btn green" id="farm_block">FARM BLOCK</button>
               <div class="wallet-address">
                 <div class="row">
                   <div class="col-md-8">
@@ -195,7 +203,7 @@
                 </div>
               </div>
               <div class="wallet-history">
-                <table class="table" id="tx_table">
+                <table class="table">
                   <thead>
                     <tr>
                       <th>Type</th>
@@ -206,6 +214,9 @@
                       <th>Fee</th>
                     </tr>
                   </thead>
+                </table>
+                <div id="table_container">
+                <table class="table" id="tx_table">
                   <tbody>
                     <tr>
                       <td>f78aa297a2cccabd3925ee34b42832fc16b33b3d2a6a1c302a65142787f4b816</td>
@@ -239,6 +250,7 @@
                     </tr>
                   </tbody>
                 </table>
+                  </div>
               </div>
             </div>
           </div>

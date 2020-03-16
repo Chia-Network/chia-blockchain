@@ -44,7 +44,7 @@ class WalletStateManager:
     log: logging.Logger
 
     # TODO Don't allow user to send tx until wallet is synced
-    synced: bool
+    sync_mode: bool
     genesis: FullBlock
 
     state_changed_callback: Optional[Callable]
@@ -67,7 +67,7 @@ class WalletStateManager:
         self.tx_store = await WalletTransactionStore.create(db_path)
         self.puzzle_store = await WalletPuzzleStore.create(db_path)
         self.lca = None
-        self.synced = False
+        self.sync_mode = False
         self.height_to_hash = {}
         self.block_records = await self.wallet_store.get_lca_path()
         genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
@@ -123,6 +123,10 @@ class WalletStateManager:
             return
         self.state_changed_callback(state)
 
+    def set_sync_mode(self, mode: bool):
+        self.sync_mode = mode
+        self.state_changed("sync_changed")
+
     async def get_confirmed_spendable(self, current_index: uint32) -> uint64:
         """
         Returns the balance amount of all coins that are spendable.
@@ -132,7 +136,8 @@ class WalletStateManager:
         if current_index <= coinbase_freeze_period:
             return uint64(0)
 
-        valid_index = current_index - coinbase_freeze_period
+        valid_index = current_index - coinbase_freeze_period + 3
+
         record_list: Set[
             CoinRecord
         ] = await self.wallet_store.get_coin_records_by_spent_and_index(
@@ -142,8 +147,7 @@ class WalletStateManager:
         amount: uint64 = uint64(0)
 
         for record in record_list:
-            if record.confirmed_block_index + coinbase_freeze_period < current_index:
-                amount = uint64(amount + record.coin.amount)
+            amount = uint64(amount + record.coin.amount)
 
         return uint64(amount)
 
@@ -230,7 +234,7 @@ class WalletStateManager:
         for coinrecord in unspent:
             if sum >= amount:
                 break
-            if coinrecord.coin.name in unconfirmed_removals:
+            if coinrecord.coin.name() in unconfirmed_removals:
                 continue
             sum += coinrecord.coin.amount
             used_coins.add(coinrecord.coin)
@@ -484,6 +488,7 @@ class WalletStateManager:
                     for coin_name in path_block.removals:
                         await self.coin_removed(coin_name, path_block.height)
                 self.lca = block.header_hash
+                self.state_changed("new_block")
                 return ReceiveBlockResult.ADDED_TO_HEAD
 
             return ReceiveBlockResult.ADDED_AS_ORPHAN
