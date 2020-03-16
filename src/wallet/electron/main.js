@@ -6,10 +6,6 @@ const WebSocket = require('ws');
 const local_test = false
 
 var ui_html = "wallet-dark.html"
-if (local_test) {
-    // Has farm block button
-    ui_html = "wallet-dark-test.html"
-}
 
 /*************************************************************
  * py process
@@ -51,9 +47,26 @@ const createPyProc = () => {
     pyProc = require('child_process').spawn('python', [script, "--testing", local_test])
   }
 
-  if (pyProc != null) {
-    console.log('child process success')
-  }
+    if (pyProc != null) {
+        pyProc.stdout.setEncoding('utf8');
+
+        pyProc.stdout.on('data', function(data) {
+            console.log(data.toString());
+        });
+
+        pyProc.stderr.setEncoding('utf8');
+        pyProc.stderr.on('data', function(data) {
+            //Here is where the error output goes
+            console.log('stderr: ' + data.toString());
+        });
+
+        pyProc.on('close', function(code) {
+            //Here you can get the exit code of the script
+            console.log('closing code: ' + code);
+        });
+
+        console.log('child process success')
+    }
 }
 
 const exitPyProc = () => {
@@ -81,11 +94,13 @@ const createWindow = () => {
         nodeIntegration: true
     },})
 
+  query = "?testing="+local_test
   mainWindow.loadURL(require('url').format({
     pathname: path.join(__dirname, ui_html),
     protocol: 'file:',
     slashes: true
-  }))
+  }) + query
+  )
   mainWindow.webContents.openDevTools()
 
   mainWindow.on('closed', () => {

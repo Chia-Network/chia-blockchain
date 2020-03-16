@@ -208,7 +208,7 @@ class FullNode:
                 # The first time connecting to introducer, keep trying to connect
                 if self._num_needed_peers():
                     if not await self.server.start_client(
-                        introducer_peerinfo, on_connect
+                        introducer_peerinfo, on_connect, self.config
                     ):
                         await asyncio.sleep(5)
                         continue
@@ -231,6 +231,7 @@ class FullNode:
         """
         self.log.info("Starting to perform sync with peers.")
         self.log.info("Waiting to receive tips from peers.")
+        self.store.set_waiting_for_tips(True)
         # TODO: better way to tell that we have finished receiving tips
         await asyncio.sleep(5)
         highest_weight: uint128 = uint128(0)
@@ -1483,11 +1484,15 @@ class FullNode:
 
             # This is a block we asked for during sync
             await self.store.add_potential_block(respond_block.block)
-            if self.store.get_sync_mode():
+            if (
+                self.store.get_sync_mode()
+                and respond_block.block.height in self.store.potential_blocks_received
+            ):
                 # If we are still in sync mode, set it
                 self.store.get_potential_blocks_received(
                     respond_block.block.height
                 ).set()
+            return
 
         prevalidate_block = await self.blockchain.pre_validate_blocks(
             [respond_block.block]
@@ -1714,7 +1719,9 @@ class FullNode:
         self.log.info(f"Trying to connect to peers: {to_connect}")
         tasks = []
         for peer in to_connect:
-            tasks.append(asyncio.create_task(self.server.start_client(peer)))
+            tasks.append(
+                asyncio.create_task(self.server.start_client(peer, None, self.config))
+            )
         await asyncio.gather(*tasks)
 
     # WALLET PROTOCOL

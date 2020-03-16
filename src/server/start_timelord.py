@@ -26,7 +26,7 @@ async def main():
 
     timelord = Timelord(config)
     server = ChiaServer(config["port"], timelord, NodeType.TIMELORD)
-    _ = await server.start_server(config["host"], None)
+    _ = await server.start_server(config["host"], None, config)
 
     timelord_shutdown_task: Optional[asyncio.Task] = None
 
@@ -44,7 +44,7 @@ async def main():
     )
 
     await asyncio.sleep(1)  # Prevents TCP simultaneous connect with full node
-    await server.start_client(full_node_peer, None)
+    await server.start_client(full_node_peer, None, config)
 
     async for msg in timelord._manage_discriminant_queue():
         server.push_message(msg)

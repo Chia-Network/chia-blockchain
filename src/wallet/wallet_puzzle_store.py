@@ -162,4 +162,4 @@ class WalletPuzzleStore:
         if row[0]:
             return row[0]
 
-        return 0
+        return -1
