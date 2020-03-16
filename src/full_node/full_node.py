@@ -1737,6 +1737,8 @@ class FullNode:
         ]
 
         if len(msgs) > 0:
+            for msg in msgs:
+                yield msg
             response = wallet_protocol.TransactionAck(tx.transaction.name(), True)
         else:
             if self.mempool_manager.get_spendbundle(tx.transaction.name()) is None:
