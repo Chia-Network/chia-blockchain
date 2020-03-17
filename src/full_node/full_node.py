@@ -670,7 +670,7 @@ class FullNode:
                 fees = tx.transaction.fees()
                 assert fees >= 0
                 new_tx = full_node_protocol.NewTransaction(
-                    tx.transaction.name(), uint64(tx.transaction.fees()), cost
+                    tx.transaction.name(), cost, uint64(tx.transaction.fees()),
                 )
                 yield OutboundMessage(
                     NodeType.FULL_NODE,
