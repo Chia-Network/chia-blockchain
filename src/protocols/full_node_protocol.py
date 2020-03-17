@@ -207,5 +207,6 @@ class RejectHeaderBlockRequest:
 
 
 @dataclass(frozen=True)
-class ReceivedMempoolFilter:
+@cbor_message
+class RequestMempoolTransactions:
     filter: bytes

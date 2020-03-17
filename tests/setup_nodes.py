@@ -381,6 +381,7 @@ async def setup_three_simulators_and_two_wallets(dic={}):
         except StopAsyncIteration:
             pass
 
+
 async def setup_full_system(dic={}):
     node_iters = [
         setup_introducer(21233),

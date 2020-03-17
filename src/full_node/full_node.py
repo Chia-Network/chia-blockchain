@@ -20,6 +20,7 @@ from src.protocols import (
     timelord_protocol,
     wallet_protocol,
 )
+from src.types.mempool_item import MempoolItem
 from src.util.merkle_set import MerkleSet
 from src.util.bundle_tools import best_solution_program
 from src.full_node.mempool_manager import MempoolManager
@@ -176,6 +177,16 @@ class FullNode:
         new_lca = wallet_protocol.NewLCA(lca.header_hash, lca.height, lca.weight)
         yield OutboundMessage(
             NodeType.WALLET, Message("new_lca", new_lca), Delivery.RESPOND
+        )
+
+        # Send filter to node and request mempool items that are not in it
+        my_filter = self.mempool_manager.get_filter()
+        mempool_request = full_node_protocol.RequestMempoolTransactions(my_filter)
+
+        yield OutboundMessage(
+            NodeType.FULL_NODE,
+            Message("request_mempool_transactions", mempool_request),
+            Delivery.RESPOND,
         )
 
         # Update farmers and timelord with most recent information
@@ -1723,6 +1734,24 @@ class FullNode:
                 asyncio.create_task(self.server.start_client(peer, None, self.config))
             )
         await asyncio.gather(*tasks)
+
+    @api_request
+    async def request_mempool_transactions(
+        self, request: full_node_protocol.RequestMempoolTransactions
+    ) -> OutboundMessageGenerator:
+        received_filter = PyBIP158(bytearray(request.filter))
+
+        items: List[MempoolItem] = await self.mempool_manager.get_items_not_in_filter(
+            received_filter
+        )
+
+        for item in items:
+            transaction = full_node_protocol.RespondTransaction(item.spend_bundle)
+            yield OutboundMessage(
+                NodeType.FULL_NODE,
+                Message("respond_transaction", transaction),
+                Delivery.RESPOND,
+            )
 
     # WALLET PROTOCOL
     @api_request
