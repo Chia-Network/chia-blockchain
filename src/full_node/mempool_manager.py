@@ -84,7 +84,7 @@ class MempoolManager:
         Determines whether any of the pools can accept a transaction with a given fees
         and cost.
         """
-        if fees < 0:
+        if fees < 0 or cost < 1:
             return False
         fees_per_cost = fees / cost
         for pool in self.mempools.values():
