@@ -98,8 +98,9 @@ class Harvester:
         ChallengeResponse message is sent for each of the proofs found.
         """
 
-        if len(new_challenge.challenge_hash) != 32:
-            raise ValueError("Invalid challenge size")
+        challenge_size = len(new_challenge.challenge_hash)
+        if challenge_size != 32:
+            raise ValueError(f"Invalid challenge size {challenge_size}, 32 was expected")
         all_responses = []
         for filename, prover in self.provers.items():
             try:
@@ -107,24 +108,32 @@ class Harvester:
                     new_challenge.challenge_hash
                 )
             except RuntimeError:
-                log.error("Error using prover object. Reinitializing prover object.")
-                self.provers[filename] = DiskProver(filename)
-                quality_strings = prover.get_qualities_for_challenge(
-                    new_challenge.challenge_hash
-                )
-            for index, quality_str in enumerate(quality_strings):
-                quality = ProofOfSpace.quality_str_to_quality(
-                    new_challenge.challenge_hash, quality_str
-                )
-                self.challenge_hashes[quality] = (
-                    new_challenge.challenge_hash,
-                    filename,
-                    uint8(index),
-                )
-                response: harvester_protocol.ChallengeResponse = harvester_protocol.ChallengeResponse(
-                    new_challenge.challenge_hash, quality, prover.get_size()
-                )
-                all_responses.append(response)
+                log.error(f"Error using prover object on {filename}. Reinitializing prover object.")
+                quality_strings = None
+
+                try:
+                    self.provers[filename] = DiskProver(filename)
+                    quality_strings = prover.get_qualities_for_challenge(
+                        new_challenge.challenge_hash
+                    )
+                except RuntimeError:
+                    log.error(f"Retry-Error using prover object on {filename}. Giving up.")
+                    quality_strings = None
+                    
+            if quality_strings is not None:
+                for index, quality_str in enumerate(quality_strings):
+                    quality = ProofOfSpace.quality_str_to_quality(
+                        new_challenge.challenge_hash, quality_str
+                    )
+                    self.challenge_hashes[quality] = (
+                        new_challenge.challenge_hash,
+                        filename,
+                        uint8(index),
+                    )
+                    response: harvester_protocol.ChallengeResponse = harvester_protocol.ChallengeResponse(
+                        new_challenge.challenge_hash, quality, prover.get_size()
+                    )
+                    all_responses.append(response)
         for response in all_responses:
             yield OutboundMessage(
                 NodeType.FARMER,
