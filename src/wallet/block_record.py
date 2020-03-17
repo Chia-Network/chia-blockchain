@@ -21,5 +21,6 @@ class BlockRecord(Streamable):
     weight: uint128
     additions: List[Coin]
     removals: List[bytes32]
+    timestamp: Optional[uint64]
     total_iters: Optional[uint64]
     new_challenge_hash: Optional[bytes32]

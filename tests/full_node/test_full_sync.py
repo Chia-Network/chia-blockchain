@@ -114,7 +114,7 @@ class TestFullSync:
     @pytest.mark.asyncio
     async def test_basic_sync_wallet(self, wallet_node):
         num_blocks = 25
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [])
         full_node_1, wallet_node, server_1, server_2 = wallet_node
 
         for i in range(1, len(blocks)):
@@ -149,7 +149,7 @@ class TestFullSync:
         # Tests a reorg with the wallet
         start = time.time()
         found = False
-        blocks_reorg = bt.get_consecutive_blocks(test_constants, 15, blocks[:-5], 10)
+        blocks_reorg = bt.get_consecutive_blocks(test_constants, 45, blocks[:-5])
         for i in range(1, len(blocks_reorg)):
             async for msg in full_node_1.respond_block(
                 full_node_protocol.RespondBlock(blocks_reorg[i])
@@ -157,12 +157,12 @@ class TestFullSync:
                 server_1.push_message(msg)
         start = time.time()
 
-        while time.time() - start < 60:
+        while time.time() - start < 100:
             if (
                 wallet_node.wallet_state_manager.block_records[
                     wallet_node.wallet_state_manager.lca
                 ].height
-                == 33
+                == 63
             ):
                 found = True
                 break

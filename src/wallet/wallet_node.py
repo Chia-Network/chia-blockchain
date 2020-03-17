@@ -40,7 +40,7 @@ class WalletNode:
     cached_blocks: Dict[bytes32, Tuple[BlockRecord, HeaderBlock]]
     cached_removals: Dict[bytes32, List[bytes32]]
     cached_additions: Dict[bytes32, List[Coin]]
-    proof_hashes: List[Tuple[bytes32, Optional[Tuple[uint64, uint64]]]]
+    proof_hashes: List[Tuple[bytes32, Optional[Tuple[uint64, uint64, uint64]]]]
     header_hashes: List[bytes32]
     potential_blocks_received: Dict[uint32, asyncio.Event]
     potential_header_hashes: Dict[uint32, bytes32]
@@ -231,8 +231,10 @@ class WalletNode:
                 raise TimeoutError("Took too long to fetch proof hashes.")
 
             # TODO(mariano): Validate weight
-            # - Request headers for a random subset
-            # - Verify those proofs
+            # Create map from height to difficulty
+            # Randomly sample based on difficulty
+            # Send requests for these heights
+            # Verify these proofs
 
             weight = self.wallet_state_manager.block_records[fork_point_hash].weight
             header_validate_start_height = max(
@@ -249,7 +251,7 @@ class WalletNode:
                 ]
                 difficulty = uint64(weight - fork_point_parent_weight)
             for height in range(fork_point_height + 1, header_validate_start_height):
-                _, difficulty_change = self.proof_hashes[height]
+                _, difficulty_change, timestamp, total_iters = self.proof_hashes[height]
                 weight += difficulty
                 block_record = BlockRecord(
                     self.header_hashes[height],
@@ -258,10 +260,15 @@ class WalletNode:
                     weight,
                     [],
                     [],
-                    None,
+                    timestamp,
+                    total_iters,
                     None,
                 )
                 res = await self.wallet_state_manager.receive_block(block_record, None)
+                assert (
+                    res == ReceiveBlockResult.ADDED_TO_HEAD
+                    or res == ReceiveBlockResult.ADDED_AS_ORPHAN
+                )
 
         # Download headers in batches, and verify them as they come in. We download a few batches ahead,
         # in case there are delays. TODO(mariano): optimize sync by pipelining
@@ -273,10 +280,8 @@ class WalletNode:
         sleep_interval = 10
 
         for height_checkpoint in range(
-            header_validate_start_height + 1, tip_height + 1, 1
+            header_validate_start_height + 1, tip_height + 1
         ):
-            end_height = min(height_checkpoint + 1, tip_height + 1)
-
             total_time_slept = 0
             while True:
                 if self._shut_down:
@@ -290,7 +295,6 @@ class WalletNode:
                     batch_end = min(batch_start + 1, tip_height + 1)
 
                     if batch_start > tip_height:
-                        # We have asked for all blocks
                         break
 
                     blocks_missing = any(
@@ -303,9 +307,6 @@ class WalletNode:
                         time.time() - last_request_time > sleep_interval
                         and blocks_missing
                     ) or (batch_end - 1) > highest_height_requested:
-                        # If we are missing blocks in this batch, and we haven't made a request in a while,
-                        # Make a request for this batch. Also, if we have never requested this batch, make
-                        # the request
                         self.log.info(f"Requesting sync header {batch_start}")
                         if batch_end - 1 > highest_height_requested:
                             highest_height_requested = uint32(batch_end - 1)
@@ -319,13 +320,11 @@ class WalletNode:
                             Delivery.RANDOM,
                         )
                 if request_made:
-                    # Reset the timer for requests, so we don't overload other peers with requests
                     last_request_time = time.time()
                     request_made = False
 
                 awaitables = [
-                    self.potential_blocks_received[uint32(height)].wait()
-                    for height in range(height_checkpoint, end_height)
+                    self.potential_blocks_received[uint32(height_checkpoint)].wait()
                 ]
                 future = asyncio.gather(*awaitables, return_exceptions=True)
                 try:
@@ -339,21 +338,17 @@ class WalletNode:
                     total_time_slept += sleep_interval
                     self.log.info("Did not receive desired headers")
 
-            # Verifies this batch, which we are guaranteed to have (since we broke from the above loop)
-            for height in range(height_checkpoint, end_height):
-                hh = self.potential_header_hashes[height]
-                block_record, header_block = self.cached_blocks[hh]
+            hh = self.potential_header_hashes[height_checkpoint]
+            block_record, header_block = self.cached_blocks[hh]
 
-                res = await self.wallet_state_manager.receive_block(
-                    block_record, header_block
-                )
-                if (
-                    res == ReceiveBlockResult.INVALID_BLOCK
-                    or res == ReceiveBlockResult.DISCONNECTED_BLOCK
-                ):
-                    raise RuntimeError(
-                        f"Invalid block header {block_record.header_hash}"
-                    )
+            res = await self.wallet_state_manager.receive_block(
+                block_record, header_block
+            )
+            if (
+                res == ReceiveBlockResult.INVALID_BLOCK
+                or res == ReceiveBlockResult.DISCONNECTED_BLOCK
+            ):
+                raise RuntimeError(f"Invalid block header {block_record.header_hash}")
         self.log.info(
             f"Finished sync process up to height {max(self.wallet_state_manager.height_to_hash.keys())}"
         )
@@ -369,25 +364,9 @@ class WalletNode:
         # 1. If disconnected and close, get parent header and return
         lca = self.wallet_state_manager.block_records[self.wallet_state_manager.lca]
         if block_record.prev_header_hash in self.wallet_state_manager.block_records:
-            total_iters = uint64(
-                self.wallet_state_manager.block_records[
-                    block_record.prev_header_hash
-                ].total_iters
-                + header_block.proof_of_time.number_of_iterations
-            )
-            block_record_with_total_iters = BlockRecord(
-                block_record.header_hash,
-                block_record.prev_header_hash,
-                block_record.height,
-                block_record.weight,
-                block_record.additions,
-                block_record.removals,
-                total_iters,
-                block_record.new_challenge_hash,
-            )
             # We have completed a block that we can add to chain, so add it.
             res = await self.wallet_state_manager.receive_block(
-                block_record_with_total_iters, header_block
+                block_record, header_block
             )
             if res == ReceiveBlockResult.DISCONNECTED_BLOCK:
                 self.log.error("Attempted to add disconnected block")
@@ -527,7 +506,8 @@ class WalletNode:
             block.weight,
             [],
             [],
-            uint64(0),
+            response.header_block.header.data.timestamp,
+            response.header_block.header.data.total_iters,
             response.header_block.challenge.get_hash(),
         )
         finish_block = True
@@ -632,7 +612,8 @@ class WalletNode:
             block_record.weight,
             additions,
             removals,
-            uint64(0),
+            block_record.timestamp,
+            block_record.total_iters,
             header_block.challenge.get_hash(),
         )
         self.cached_blocks[response.header_hash] = (new_br, header_block)
@@ -718,7 +699,8 @@ class WalletNode:
             block_record.weight,
             additions,
             removals,
-            uint64(0),
+            block_record.timestamp,
+            block_record.total_iters,
             header_block.challenge.get_hash(),
         )
         self.cached_blocks[response.header_hash] = (new_br, header_block)

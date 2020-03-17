@@ -248,7 +248,8 @@ class Blockchain:
     def get_next_difficulty(self, header_hash: bytes32) -> uint64:
         """
         Returns the difficulty of the next block that extends onto header_hash.
-        Used to calculate the number of iterations.
+        Used to calculate the number of iterations. When changing this, also change the implementation
+        in wallet_state_manager.py.
         """
         block: Header = self.headers[header_hash]
 
@@ -670,22 +671,22 @@ class Blockchain:
             if block.proof_of_time.challenge_hash != prev_challenge.get_hash():
                 return False
 
-            # 6a. Check challenge total_weight = parent total_weight + difficulty
+            # 6a. Check total_weight = parent total_weight + difficulty
             if block.weight != prev_full_block.weight + difficulty:
                 return False
 
-            # 7a. Check challenge total_iters = parent total_iters + number_iters
+            # 7a. Check total_iters = parent total_iters + number_iters
             if (
                 block.header.data.total_iters
                 != prev_full_block.header.data.total_iters + number_of_iters
             ):
                 return False
         else:
-            # 6b. Check challenge total_weight = parent total_weight + difficulty
+            # 6b. Check total_weight = parent total_weight + difficulty
             if block.weight != difficulty:
                 return False
 
-            # 7b. Check challenge total_iters = parent total_iters + number_iters
+            # 7b. Check total_iters = parent total_iters + number_iters
             if block.header.data.total_iters != number_of_iters:
                 return False
 

@@ -854,6 +854,7 @@ class TestWalletProtocol:
             if (
                 i % test_constants["DIFFICULTY_EPOCH"]
                 == test_constants["DIFFICULTY_DELAY"]
+                or i % test_constants["DIFFICULTY_EPOCH"] == 0
             ):
                 assert hashes[i][1] is not None
             else:
