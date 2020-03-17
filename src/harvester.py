@@ -109,7 +109,7 @@ class Harvester:
                 )
             except RuntimeError:
                 log.error(f"Error using prover object on {filename}. Reinitializing prover object.")
-                    quality_strings = None
+                quality_strings = None
 
                 try:
                     self.provers[filename] = DiskProver(filename)
@@ -121,10 +121,10 @@ class Harvester:
                     quality_strings = None
 
                     if quality_strings is not None:
-                for index, quality_str in enumerate(quality_strings):
-                    quality = ProofOfSpace.quality_str_to_quality(
-                        new_challenge.challenge_hash, quality_str
-                    )
+                        for index, quality_str in enumerate(quality_strings):
+                            quality = ProofOfSpace.quality_str_to_quality(
+                              new_challenge.challenge_hash, quality_str
+                            )
                     self.challenge_hashes[quality] = (
                         new_challenge.challenge_hash,
                         filename,
