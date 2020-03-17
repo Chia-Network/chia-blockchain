@@ -355,6 +355,32 @@ async def setup_node_simulator_and_two_wallets(dic={}):
             pass
 
 
+async def setup_three_simulators_and_two_wallets(dic={}):
+    node_iters = [
+        setup_full_node_simulator("blockchain_test0.db", 21234, dic=dic),
+        setup_full_node_simulator("blockchain_test1.db", 21235, dic=dic),
+        setup_full_node_simulator("blockchain_test2.db", 21236, dic=dic),
+        setup_wallet_node(21237, key_seed=b"Test node 1", dic=dic),
+        setup_wallet_node(21238, key_seed=b"Test node 2", dic=dic),
+    ]
+
+    full_node0, s0 = await node_iters[0].__anext__()
+    full_node1, s1 = await node_iters[1].__anext__()
+    full_node2, s2 = await node_iters[2].__anext__()
+
+    wallet_0, s3 = await node_iters[3].__anext__()
+    wallet_1, s4 = await node_iters[4].__anext__()
+
+    full_nodes = [(full_node0, s0), (full_node1, s1), (full_node2, s2)]
+    wallets = [(wallet_0, s3), (wallet_1, s4)]
+    yield (full_nodes, wallets)
+
+    for node_iter in node_iters:
+        try:
+            await node_iter.__anext__()
+        except StopAsyncIteration:
+            pass
+
 async def setup_full_system(dic={}):
     node_iters = [
         setup_introducer(21233),
