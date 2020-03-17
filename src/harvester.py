@@ -109,7 +109,7 @@ class Harvester:
                 )
             except RuntimeError:
                 log.error(f"Error using prover object on {filename}. Reinitializing prover object.")
-                quality_strings = None
+                    quality_strings = None
 
                 try:
                     self.provers[filename] = DiskProver(filename)
