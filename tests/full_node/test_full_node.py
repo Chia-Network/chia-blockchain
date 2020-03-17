@@ -7,6 +7,7 @@ from typing import Dict
 from secrets import token_bytes
 
 from src.protocols import full_node_protocol as fnp, timelord_protocol, wallet_protocol
+from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
 from src.types.full_block import FullBlock
 from src.types.proof_of_space import ProofOfSpace
@@ -804,8 +805,15 @@ class TestWalletProtocol:
                 wallet_protocol.SendTransaction(spend_bundle)
             )
         ]
-        assert len(msgs) == 1
-        assert msgs[0].message.data == wallet_protocol.TransactionAck(
+        assert len(msgs) == 2
+
+        wallet_message = None
+        for msg in msgs:
+            if msg.peer_type == NodeType.WALLET:
+                wallet_message = msg
+
+        assert wallet_message is not None
+        assert wallet_message.message.data == wallet_protocol.TransactionAck(
             spend_bundle.name(), True
         )
 
