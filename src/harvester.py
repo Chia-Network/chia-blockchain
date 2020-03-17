@@ -119,8 +119,8 @@ class Harvester:
                 except RuntimeError:
                     log.error(f"Retry-Error using prover object on {filename}. Giving up.")
                     quality_strings = None
-                    
-            if quality_strings is not None:
+
+                    if quality_strings is not None:
                 for index, quality_str in enumerate(quality_strings):
                     quality = ProofOfSpace.quality_str_to_quality(
                         new_challenge.challenge_hash, quality_str
