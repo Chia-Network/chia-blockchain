@@ -79,12 +79,24 @@ class MempoolManager:
             else:
                 return None
 
+    def get_filter(self) -> bytes:
+        all_transactions: Set[bytes32] = set()
+        byte_array_list = []
+        for _, mempool in self.mempools.items():
+            for key, mempool_item in mempool.spends.items():
+                if key not in all_transactions:
+                    all_transactions.add(key)
+                    byte_array_list.append(bytearray(key))
+
+        filter: PyBIP158 = PyBIP158(byte_array_list)
+        return bytes(filter.GetEncoded())
+
     def is_fee_enough(self, fees: uint64, cost: uint64) -> bool:
         """
         Determines whether any of the pools can accept a transaction with a given fees
         and cost.
         """
-        if fees < 0:
+        if fees < 0 or cost < 1:
             return False
         fees_per_cost = fees / cost
         for pool in self.mempools.values():
@@ -365,15 +377,16 @@ class MempoolManager:
         self, mempool_filter: PyBIP158
     ) -> List[MempoolItem]:
         items: List[MempoolItem] = []
-        added_items: Set[bytes32] = set()
+        checked_items: Set[bytes32] = set()
 
-        for mempool in self.mempools:
+        for _, mempool in self.mempools.items():
             for key, item in mempool.spends.items():
-                if key in added_items:
+                if key in checked_items:
                     continue
-                if mempool_filter.Match(key):
+                if mempool_filter.Match(bytearray(key)):
+                    checked_items.add(key)
                     continue
-                added_items.add(key)
+                checked_items.add(key)
                 items.append(item)
 
         return items

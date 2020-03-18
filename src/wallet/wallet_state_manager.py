@@ -140,7 +140,7 @@ class WalletStateManager:
         if current_index <= coinbase_freeze_period:
             return uint64(0)
 
-        valid_index = current_index - coinbase_freeze_period + 3
+        valid_index = current_index - coinbase_freeze_period
 
         record_list: Set[
             CoinRecord
