@@ -14,7 +14,7 @@ from lib.chiavdf.inkfish.create_discriminant import create_discriminant
 from lib.chiavdf.inkfish.proof_of_time import create_proof_of_time_nwesolowski
 from src.consensus import block_rewards, pot_iterations
 from src.consensus.constants import constants
-from src.consensus.pot_iterations import calculate_ips_from_iterations
+from src.consensus.pot_iterations import calculate_min_iters_from_iterations
 from src.pool import create_coinbase_coin_and_signature
 from src.types.challenge import Challenge
 from src.types.classgroup import ClassgroupElement
@@ -30,6 +30,7 @@ from src.util.merkle_set import MerkleSet
 from src.util.errors import NoProofsOfSpaceFound
 from src.util.ints import uint8, uint32, uint64, uint128
 from src.util.hash import std_hash
+from src.util.significant_bits import truncate_to_significant_bits
 
 # Can't go much lower than 19, since plots start having no solutions
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
@@ -127,7 +128,7 @@ class BlockTools:
                 )
             prev_difficulty = test_constants["DIFFICULTY_STARTING"]
             curr_difficulty = prev_difficulty
-            curr_ips = test_constants["VDF_IPS_STARTING"]
+            curr_min_iters = test_constants["MIN_ITERS_STARTING"]
         elif len(block_list) < (
             test_constants["DIFFICULTY_EPOCH"] + test_constants["DIFFICULTY_DELAY"]
         ):
@@ -135,7 +136,7 @@ class BlockTools:
             prev_difficulty = block_list[0].weight
             curr_difficulty = block_list[0].weight
             assert test_constants["DIFFICULTY_STARTING"] == prev_difficulty
-            curr_ips = test_constants["VDF_IPS_STARTING"]
+            curr_min_iters = test_constants["MIN_ITERS_STARTING"]
         else:
             curr_difficulty = block_list[-1].weight - block_list[-2].weight
             prev_difficulty = (
@@ -143,11 +144,10 @@ class BlockTools:
                 - block_list[-2 - test_constants["DIFFICULTY_EPOCH"]].weight
             )
             assert block_list[-1].proof_of_time is not None
-            curr_ips = calculate_ips_from_iterations(
+            curr_min_iters = calculate_min_iters_from_iterations(
                 block_list[-1].proof_of_space,
                 curr_difficulty,
                 block_list[-1].proof_of_time.number_of_iterations,
-                test_constants["MIN_BLOCK_TIME"],
             )
 
         starting_height = block_list[-1].height + 1
@@ -179,7 +179,7 @@ class BlockTools:
                         block1.header.data.timestamp
                         - test_constants["BLOCK_TIME_TARGET"]
                     )
-                    iters1 = block1.header.data.total_iters
+                    iters1 = uint64(0)
                 timestamp2 = block_list[height2].header.data.timestamp
                 timestamp3 = block_list[height3].header.data.timestamp
 
@@ -204,7 +204,7 @@ class BlockTools:
                 )
 
                 # Round down after the division
-                new_difficulty: uint64 = uint64(
+                new_difficulty_precise: uint64 = uint64(
                     (term1 + term2)
                     // (
                         test_constants["DIFFICULTY_WARP_FACTOR"]
@@ -212,37 +212,35 @@ class BlockTools:
                         * (timestamp2 - timestamp1)
                     )
                 )
-
+                new_difficulty = uint64(
+                    truncate_to_significant_bits(
+                        new_difficulty_precise, test_constants["SIGNIFICANT_BITS"]
+                    )
+                )
+                max_diff = uint64(
+                    truncate_to_significant_bits(
+                        test_constants["DIFFICULTY_FACTOR"] * curr_difficulty,
+                        test_constants["SIGNIFICANT_BITS"],
+                    )
+                )
+                min_diff = uint64(
+                    truncate_to_significant_bits(
+                        curr_difficulty // test_constants["DIFFICULTY_FACTOR"],
+                        test_constants["SIGNIFICANT_BITS"],
+                    )
+                )
                 if new_difficulty >= curr_difficulty:
-                    new_difficulty = min(
-                        new_difficulty,
-                        uint64(test_constants["DIFFICULTY_FACTOR"] * curr_difficulty),
-                    )
+                    new_difficulty = min(new_difficulty, max_diff,)
                 else:
-                    new_difficulty = max(
-                        [
-                            uint64(1),
-                            new_difficulty,
-                            uint64(
-                                curr_difficulty // test_constants["DIFFICULTY_FACTOR"]
-                            ),
-                        ]
-                    )
+                    new_difficulty = max([uint64(1), new_difficulty, min_diff])
 
-                new_ips = uint64((iters3 - iters1) // (timestamp3 - timestamp1))
-                if new_ips >= curr_ips:
-                    curr_ips = min(
-                        new_ips, uint64(test_constants["IPS_FACTOR"] * new_ips)
+                curr_min_iters = uint64(
+                    (iters3 - iters1)
+                    // (
+                        test_constants["DIFFICULTY_EPOCH"]
+                        * test_constants["MIN_ITERS_PROPORTION"]
                     )
-                else:
-                    curr_ips = max(
-                        [
-                            uint64(1),
-                            new_ips,
-                            uint64(curr_ips // test_constants["IPS_FACTOR"]),
-                        ]
-                    )
-
+                )
                 prev_difficulty = curr_difficulty
                 curr_difficulty = new_difficulty
             time_taken = seconds_per_block
@@ -257,7 +255,6 @@ class BlockTools:
                 next_height % test_constants["DIFFICULTY_EPOCH"]
                 == test_constants["DIFFICULTY_DELAY"]
             )
-
             block_list.append(
                 self.create_next_block(
                     test_constants,
@@ -265,7 +262,7 @@ class BlockTools:
                     timestamp,
                     update_difficulty,
                     curr_difficulty,
-                    curr_ips,
+                    curr_min_iters,
                     seed,
                     reward_puzzlehash,
                     transactions,
@@ -294,7 +291,7 @@ class BlockTools:
             uint128(0),
             uint64(int(time.time())),
             uint64(test_constants["DIFFICULTY_STARTING"]),
-            uint64(test_constants["VDF_IPS_STARTING"]),
+            uint64(test_constants["MIN_ITERS_STARTING"]),
             seed,
             True,
         )
@@ -306,7 +303,7 @@ class BlockTools:
         timestamp: uint64,
         update_difficulty: bool,
         difficulty: uint64,
-        ips: uint64,
+        min_iters: uint64,
         seed: bytes = b"",
         reward_puzzlehash: bytes32 = None,
         transactions: Program = None,
@@ -348,7 +345,7 @@ class BlockTools:
             prev_block.weight,
             timestamp,
             uint64(difficulty),
-            ips,
+            min_iters,
             seed,
             False,
             reward_puzzlehash,
@@ -367,7 +364,7 @@ class BlockTools:
         prev_weight: uint128,
         timestamp: uint64,
         difficulty: uint64,
-        ips: uint64,
+        min_iters: uint64,
         seed: bytes,
         genesis: bool = False,
         reward_puzzlehash: bytes32 = None,
@@ -406,7 +403,7 @@ class BlockTools:
             challenge_hash, pool_pk, plot_pk, k, proof_xs
         )
         number_iters: uint64 = pot_iterations.calculate_iterations(
-            proof_of_space, difficulty, ips, test_constants["MIN_BLOCK_TIME"]
+            proof_of_space, difficulty, min_iters
         )
 
         disc: int = create_discriminant(
@@ -426,7 +423,8 @@ class BlockTools:
         if not reward_puzzlehash:
             reward_puzzlehash = fee_target
 
-        extension_data: bytes32 = bytes32(bytes([0] * 32))
+        # Use the extension data to create different blocks based on header hash
+        extension_data: bytes32 = bytes32([random.randint(0, 255) for _ in range(32)])
         cost = uint64(0)
 
         coinbase_reward = block_rewards.calculate_block_reward(height)
@@ -518,5 +516,6 @@ class BlockTools:
 # This code generates a genesis block, uncomment to output genesis block to terminal
 # This might take a while, using the python VDF implementation.
 # Run by doing python -m tests.block_tools
-# bt = BlockTools()
-# print(bytes(bt.create_genesis_block({}, bytes([1] * 32), b"0")))
+# if __name__ == '__main__':
+#     bt = BlockTools()
+#     print(bytes(bt.create_genesis_block({}, bytes([1] * 32), b"0")))

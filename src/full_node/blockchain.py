@@ -11,7 +11,7 @@ import blspy
 from src.consensus.block_rewards import calculate_block_reward, calculate_base_fee
 from src.consensus.constants import constants as consensus_constants
 from src.consensus.pot_iterations import (
-    calculate_ips_from_iterations,
+    calculate_min_iters_from_iterations,
     calculate_iterations_quality,
 )
 from src.full_node.store import FullNodeStore
@@ -32,6 +32,10 @@ from src.util.errors import InvalidGenesisBlock
 from src.util.ints import uint32, uint64
 from src.types.challenge import Challenge
 from src.util.hash import std_hash
+from src.util.significant_bits import (
+    truncate_to_significant_bits,
+    count_significant_bits,
+)
 
 log = logging.getLogger(__name__)
 
@@ -350,7 +354,7 @@ class Blockchain:
         )
 
         # Round down after the division
-        new_difficulty: uint64 = uint64(
+        new_difficulty_precise: uint64 = uint64(
             (term1 + term2)
             // (
                 self.constants["DIFFICULTY_WARP_FACTOR"]
@@ -358,20 +362,35 @@ class Blockchain:
                 * (timestamp2 - timestamp1)
             )
         )
+        # Take only DIFFICULTY_SIGNIFICANT_BITS significant bits
+        new_difficulty = uint64(
+            truncate_to_significant_bits(
+                new_difficulty_precise, self.constants["SIGNIFICANT_BITS"]
+            )
+        )
+        assert (
+            count_significant_bits(new_difficulty) <= self.constants["SIGNIFICANT_BITS"]
+        )
 
         # Only change by a max factor, to prevent attacks, as in greenpaper, and must be at least 1
-        if new_difficulty >= Tc:
-            return min(new_difficulty, uint64(self.constants["DIFFICULTY_FACTOR"] * Tc))
-        else:
-            return max(
-                [
-                    uint64(1),
-                    new_difficulty,
-                    uint64(Tc // self.constants["DIFFICULTY_FACTOR"]),
-                ]
+        max_diff = uint64(
+            truncate_to_significant_bits(
+                self.constants["DIFFICULTY_FACTOR"] * Tc,
+                self.constants["SIGNIFICANT_BITS"],
             )
+        )
+        min_diff = uint64(
+            truncate_to_significant_bits(
+                Tc // self.constants["DIFFICULTY_FACTOR"],
+                self.constants["SIGNIFICANT_BITS"],
+            )
+        )
+        if new_difficulty >= Tc:
+            return min(new_difficulty, max_diff)
+        else:
+            return max([uint64(1), new_difficulty, min_diff])
 
-    def get_next_ips(self, block: FullBlock) -> uint64:
+    def get_next_min_iters(self, block: FullBlock) -> uint64:
         """
         Returns the VDF speed in iterations per seconds, to be used for the next block. This depends on
         the number of iterations of the last epoch, and changes at the same block as the difficulty.
@@ -379,7 +398,7 @@ class Blockchain:
         next_height: uint32 = uint32(block.height + 1)
         if next_height < self.constants["DIFFICULTY_EPOCH"]:
             # First epoch has a hardcoded vdf speed
-            return self.constants["VDF_IPS_STARTING"]
+            return self.constants["MIN_ITERS_STARTING"]
 
         prev_block_header: Header = self.headers[block.prev_header_hash]
 
@@ -388,8 +407,8 @@ class Blockchain:
         iterations = uint64(
             block.header.data.total_iters - prev_block_header.data.total_iters
         )
-        prev_ips = calculate_ips_from_iterations(
-            proof_of_space, difficulty, iterations, self.constants["MIN_BLOCK_TIME"]
+        prev_min_iters = calculate_min_iters_from_iterations(
+            proof_of_space, difficulty, iterations
         )
 
         if (
@@ -398,12 +417,12 @@ class Blockchain:
         ):
             # Not at a point where ips would change, so return the previous ips
             # TODO: cache this for efficiency
-            return prev_ips
+            return prev_min_iters
 
-        # ips (along with difficulty) will change in this block, so we need to calculate the new one.
-        # The calculation is (iters_2 - iters_1) // (timestamp_2 - timestamp_1).
+        # min iters (along with difficulty) will change in this block, so we need to calculate the new one.
+        # The calculation is (iters_2 - iters_1) // epoch size
         # 1 and 2 correspond to height_1 and height_2, being the last block of the second to last, and last
-        # block of the last epochs. Basically, it's total iterations over time, of previous epoch.
+        # block of the last epochs. Basically, it's total iterations per block on average.
 
         # Height1 is the last block 2 epochs ago, so we can include the iterations taken for mining first block in epoch
         height1 = uint32(
@@ -441,27 +460,27 @@ class Blockchain:
         assert block2 is not None
 
         if block1 is not None:
-            timestamp1 = block1.data.timestamp
             iters1 = block1.data.total_iters
         else:
-            # In the case of height == -1, there is no timestamp here, so assume the genesis block
-            # took constants["BLOCK_TIME_TARGET"] seconds to mine.
-            genesis: Header = self.headers[self.height_to_hash[uint32(0)]]
-            timestamp1 = genesis.data.timestamp - self.constants["BLOCK_TIME_TARGET"]
-            iters1 = genesis.data.total_iters
+            # In the case of height == -1, iters = 0
+            iters1 = uint64(0)
 
-        timestamp2 = block2.data.timestamp
         iters2 = block2.data.total_iters
 
-        new_ips = uint64((iters2 - iters1) // (timestamp2 - timestamp1))
-
-        # Only change by a max factor, and must be at least 1
-        if new_ips >= prev_ips:
-            return min(new_ips, uint64(self.constants["IPS_FACTOR"] * new_ips))
-        else:
-            return max(
-                [uint64(1), new_ips, uint64(prev_ips // self.constants["IPS_FACTOR"])]
+        min_iters_precise = uint64(
+            (iters2 - iters1)
+            // (
+                self.constants["DIFFICULTY_EPOCH"]
+                * self.constants["MIN_ITERS_PROPORTION"]
             )
+        )
+        min_iters = uint64(
+            truncate_to_significant_bits(
+                min_iters_precise, self.constants["SIGNIFICANT_BITS"]
+            )
+        )
+        assert count_significant_bits(min_iters) <= self.constants["SIGNIFICANT_BITS"]
+        return min_iters
 
     async def receive_block(
         self,
@@ -625,14 +644,19 @@ class Blockchain:
             return False
 
         difficulty: uint64
-        ips: uint64
+        min_iters: uint64
         if not genesis:
             difficulty = self.get_next_difficulty(block.prev_header_hash)
             assert prev_full_block is not None
-            ips = self.get_next_ips(prev_full_block)
+            min_iters = self.get_next_min_iters(prev_full_block)
         else:
             difficulty = uint64(self.constants["DIFFICULTY_STARTING"])
-            ips = uint64(self.constants["VDF_IPS_STARTING"])
+            min_iters = uint64(self.constants["MIN_ITERS_STARTING"])
+
+        if count_significant_bits(difficulty) > self.constants["SIGNIFICANT_BITS"]:
+            return False
+        if count_significant_bits(min_iters) > self.constants["SIGNIFICANT_BITS"]:
+            return False
 
         # 3. Check number of iterations on PoT is correct, based on prev block and PoS
         if pos_quality_string is None:
@@ -642,11 +666,7 @@ class Blockchain:
             return False
 
         number_of_iters: uint64 = calculate_iterations_quality(
-            pos_quality_string,
-            block.proof_of_space.size,
-            difficulty,
-            ips,
-            self.constants["MIN_BLOCK_TIME"],
+            pos_quality_string, block.proof_of_space.size, difficulty, min_iters,
         )
 
         if block.proof_of_time is None:

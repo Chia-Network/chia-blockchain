@@ -61,13 +61,18 @@ class RpcApiHandler:
         lca_block = await self.full_node.store.get_block(lca.header_hash)
         if lca_block is None:
             raise web.HTTPNotFound()
-        ips: uint64 = self.full_node.blockchain.get_next_ips(lca_block)
+        min_iters: uint64 = self.full_node.blockchain.get_next_min_iters(lca_block)
+        ips: uint64 = min_iters // (
+            self.full_node.constants["BLOCK_TIME_TARGET"]
+            / self.full_node.constants["MIN_ITERS_PROPORTION"]
+        )
         response = {
             "tips": tips,
             "lca": lca,
             "sync_mode": sync_mode,
             "difficulty": difficulty,
             "ips": ips,
+            "min_iters": min_iters,
         }
         return obj_to_response(response)
 

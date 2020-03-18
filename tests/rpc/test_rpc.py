@@ -47,6 +47,7 @@ class TestRpc:
             assert len(state["tips"]) > 0
             assert state["difficulty"] > 0
             assert state["ips"] > 0
+            assert state["min_iters"] > 0
 
             block = await client.get_block(state["lca"].header_hash)
             assert block == blocks[7]

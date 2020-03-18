@@ -12,7 +12,6 @@ from src.types.hashable.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.types.full_block import FullBlock
 from src.types.challenge import Challenge
-from src.types.proof_of_space import ProofOfSpace
 from src.types.header_block import HeaderBlock
 from src.util.ints import uint32, uint64
 from src.util.hash import std_hash
@@ -23,10 +22,8 @@ from src.wallet.wallet_store import WalletStore
 from src.wallet.wallet_transaction_store import WalletTransactionStore
 from src.consensus.block_rewards import calculate_block_reward
 from src.full_node.blockchain import ReceiveBlockResult
-from src.consensus.pot_iterations import (
-    calculate_ips_from_iterations,
-    calculate_iterations_quality,
-)
+from src.consensus.pot_iterations import calculate_iterations_quality
+from src.util.significant_bits import truncate_to_significant_bits
 
 
 class WalletStateManager:
@@ -115,7 +112,6 @@ class WalletStateManager:
                     genesis.weight,
                     [],
                     [],
-                    genesis_hb.header.data.timestamp,
                     genesis_hb.header.data.total_iters,
                     genesis_challenge.get_hash(),
                 ),
@@ -444,6 +440,9 @@ class WalletStateManager:
                 if not await self.validate_header_block(block, header_block):
                     return ReceiveBlockResult.INVALID_BLOCK
 
+            if block.height % self.constants["DIFFICULTY_EPOCH"] == 0:
+                assert block.total_iters is not None
+
             self.block_records[block.header_hash] = block
             await self.wallet_store.add_block_record(block, False)
 
@@ -497,190 +496,49 @@ class WalletStateManager:
 
             return ReceiveBlockResult.ADDED_AS_ORPHAN
 
-    def get_next_difficulty(self, header_hash: bytes32) -> uint64:
-        """
-        Returns the difficulty of the next block that extends onto header_hash.
-        Used to calculate the number of iterations. Based on the implementation in blockchain.py.
-        """
-        block: BlockRecord = self.block_records[header_hash]
-
-        next_height: uint32 = uint32(block.height + 1)
-        if next_height < self.constants["DIFFICULTY_EPOCH"]:
-            # We are in the first epoch
-            return uint64(self.constants["DIFFICULTY_STARTING"])
-
-        # Epochs are diffined as intervals of DIFFICULTY_EPOCH blocks, inclusive and indexed at 0.
-        # For example, [0-2047], [2048-4095], etc. The difficulty changes DIFFICULTY_DELAY into the
-        # epoch, as opposed to the first block (as in Bitcoin).
-        elif (
-            next_height % self.constants["DIFFICULTY_EPOCH"]
-            != self.constants["DIFFICULTY_DELAY"]
-        ):
-            # Not at a point where difficulty would change
-            prev_block: BlockRecord = self.block_records[block.prev_header_hash]
-            assert prev_block is not None
-            if prev_block is None:
-                raise Exception("Previous block is invalid.")
-            return uint64(block.weight - prev_block.weight)
-
-        #       old diff                  curr diff       new diff
-        # ----------|-----|----------------------|-----|-----...
-        #           h1    h2                     h3   i-1
-        # Height1 is the last block 2 epochs ago, so we can include the time to mine 1st block in previous epoch
-        height1 = uint32(
-            next_height
-            - self.constants["DIFFICULTY_EPOCH"]
-            - self.constants["DIFFICULTY_DELAY"]
-            - 1
-        )
-        # Height2 is the DIFFICULTY DELAYth block in the previous epoch
-        height2 = uint32(next_height - self.constants["DIFFICULTY_EPOCH"] - 1)
-        # Height3 is the last block in the previous epoch
-        height3 = uint32(next_height - self.constants["DIFFICULTY_DELAY"] - 1)
-
-        # h1 to h2 timestamps are mined on previous difficulty, while  and h2 to h3 timestamps are mined on the
-        # current difficulty
-
-        block1, block2, block3 = None, None, None
-        # Once we are before the fork point (and before the LCA), we can use the height_to_hash map
-        if height1 >= 0:
-            # height1 could be -1, for the first difficulty calculation
-            block1 = self.block_records[self.height_to_hash[height1]]
-        block2 = self.block_records[self.height_to_hash[height2]]
-        block3 = self.block_records[self.height_to_hash[height3]]
-
-        # Current difficulty parameter (diff of block h = i - 1)
-        Tc = self.get_next_difficulty(block.prev_header_hash)
-
-        # Previous difficulty parameter (diff of block h = i - 2048 - 1)
-        Tp = self.get_next_difficulty(block2.prev_header_hash)
-        timestamp1: uint64
-        if block1:
-            assert block1.timestamp is not None
-            timestamp1 = block1.timestamp  # i - 512 - 1
-        else:
-            # In the case of height == -1, there is no timestamp here, so assume the genesis block
-            # took constants["BLOCK_TIME_TARGET"] seconds to mine.
-            genesis = self.block_records[self.height_to_hash[uint32(0)]]
-            timestamp1 = genesis.timestamp - self.constants["BLOCK_TIME_TARGET"]
-        assert block2.timestamp is not None and block3.timestamp is not None
-        timestamp2: uint64 = block2.timestamp  # i - 2048 + 512 - 1
-        timestamp3: uint64 = block3.timestamp  # i - 512 - 1
-
-        # Numerator fits in 128 bits, so big int is not necessary
-        # We multiply by the denominators here, so we only have one fraction in the end (avoiding floating point)
-        term1 = (
-            self.constants["DIFFICULTY_DELAY"]
-            * Tp
-            * (timestamp3 - timestamp2)
-            * self.constants["BLOCK_TIME_TARGET"]
-        )
-        term2 = (
-            (self.constants["DIFFICULTY_WARP_FACTOR"] - 1)
-            * (self.constants["DIFFICULTY_EPOCH"] - self.constants["DIFFICULTY_DELAY"])
-            * Tc
-            * (timestamp2 - timestamp1)
-            * self.constants["BLOCK_TIME_TARGET"]
-        )
-
-        # Round down after the division
-        new_difficulty: uint64 = uint64(
-            (term1 + term2)
-            // (
-                self.constants["DIFFICULTY_WARP_FACTOR"]
-                * (timestamp3 - timestamp2)
-                * (timestamp2 - timestamp1)
-            )
-        )
-
-        # Only change by a max factor, to prevent attacks, as in greenpaper, and must be at least 1
-        if new_difficulty >= Tc:
-            return min(new_difficulty, uint64(self.constants["DIFFICULTY_FACTOR"] * Tc))
-        else:
-            return max(
-                [
-                    uint64(1),
-                    new_difficulty,
-                    uint64(Tc // self.constants["DIFFICULTY_FACTOR"]),
-                ]
-            )
-
-    def get_next_ips(
-        self, block: BlockRecord, proof_of_space: ProofOfSpace, iterations: uint64
-    ) -> uint64:
-        """
-        Returns the VDF speed in iterations per seconds, to be used for the next block. This depends on
-        the number of iterations of the last epoch, and changes at the same block as the difficulty.
-        Based on the implementation in blockchain.py.
-        """
-        next_height: uint32 = uint32(block.height + 1)
-        if next_height < self.constants["DIFFICULTY_EPOCH"]:
-            # First epoch has a hardcoded vdf speed
-            return self.constants["VDF_IPS_STARTING"]
-
-        prev_block: BlockRecord = self.block_records[block.prev_header_hash]
-
-        difficulty = self.get_next_difficulty(prev_block.header_hash)
-        prev_ips = calculate_ips_from_iterations(
-            proof_of_space, difficulty, iterations, self.constants["MIN_BLOCK_TIME"]
-        )
-
+    def get_min_iters(self, block_record: BlockRecord) -> uint64:
+        curr = block_record
         if (
-            next_height % self.constants["DIFFICULTY_EPOCH"]
-            != self.constants["DIFFICULTY_DELAY"]
+            curr.height
+            < self.constants["DIFFICULTY_EPOCH"] + self.constants["DIFFICULTY_DELAY"]
         ):
-            # Not at a point where ips would change, so return the previous ips
-            # TODO: cache this for efficiency
-            return prev_ips
-
-        # ips (along with difficulty) will change in this block, so we need to calculate the new one.
-        # The calculation is (iters_2 - iters_1) // (timestamp_2 - timestamp_1).
-        # 1 and 2 correspond to height_1 and height_2, being the last block of the second to last, and last
-        # block of the last epochs. Basically, it's total iterations over time, of previous epoch.
-
-        # Height1 is the last block 2 epochs ago, so we can include the iterations taken for mining first block in epoch
-        height1 = uint32(
-            next_height
-            - self.constants["DIFFICULTY_EPOCH"]
-            - self.constants["DIFFICULTY_DELAY"]
-            - 1
-        )
-        # Height2 is the last block in the previous epoch
-        height2 = uint32(next_height - self.constants["DIFFICULTY_DELAY"] - 1)
-
-        block1: Optional[BlockRecord] = None
-        block2: Optional[BlockRecord] = None
-        # Once we are before the fork point (and before the LCA), we can use the height_to_hash map
-        if block1 is None and height1 >= 0:
-            # height1 could be -1, for the first difficulty calculation
-            block1 = self.block_records[self.height_to_hash[height1]]
-        block2 = self.block_records[self.height_to_hash[height2]]
-        assert block2 is not None
-
-        if block1 is not None:
-            timestamp1 = block1.timestamp
-            iters1 = block1.total_iters
-        else:
-            # In the case of height == -1, there is no timestamp here, so assume the genesis block
-            # took constants["BLOCK_TIME_TARGET"] seconds to mine.
-            genesis: BlockRecord = self.block_records[self.height_to_hash[uint32(0)]]
-            timestamp1 = genesis.timestamp - self.constants["BLOCK_TIME_TARGET"]
-            iters1 = genesis.total_iters
-
-        timestamp2 = block2.timestamp
-        iters2 = block2.total_iters
-        assert iters1 is not None and iters2 is not None
-        assert timestamp1 is not None and timestamp2 is not None
-
-        new_ips = uint64((iters2 - iters1) // (timestamp2 - timestamp1))
-
-        # Only change by a max factor, and must be at least 1
-        if new_ips >= prev_ips:
-            return min(new_ips, uint64(self.constants["IPS_FACTOR"] * new_ips))
-        else:
-            return max(
-                [uint64(1), new_ips, uint64(prev_ips // self.constants["IPS_FACTOR"])]
+            return self.constants["MIN_ITERS_STARTING"]
+        if (
+            curr.height % self.constants["DIFFICULTY_EPOCH"]
+            < self.constants["DIFFICULTY_DELAY"]
+        ):
+            # First few blocks of epoch (using old difficulty and min_iters)
+            height2 = (
+                curr.height
+                - (curr.height % self.constants["DIFFICULTY_EPOCH"])
+                - self.constants["DIFFICULTY_EPOCH"]
+                - 1
             )
+        else:
+            # The rest of the blocks of epoch (using new difficulty and min iters)
+            height2 = (
+                curr.height - (curr.height % self.constants["DIFFICULTY_EPOCH"]) - 1
+            )
+        height1 = height2 - self.constants["DIFFICULTY_EPOCH"]
+        assert height2 > 0
+
+        iters1: Optional[uint64] = uint64(0)
+        iters2: Optional[uint64] = None
+        while curr.height > height1 and curr.height > 0:
+            if curr.height == height2:
+                iters2 = curr.total_iters
+            curr = self.block_records[curr.prev_header_hash]
+        if height1 > -1:  # For height of -1, total iters is 0
+            iters1 = curr.total_iters
+        assert iters1 is not None
+        assert iters2 is not None
+        return uint64(
+            (iters2 - iters1)
+            // (
+                self.constants["DIFFICULTY_EPOCH"]
+                * self.constants["MIN_ITERS_PROPORTION"]
+            )
+        )
 
     async def validate_header_block(
         self, br: BlockRecord, header_block: HeaderBlock
@@ -714,29 +572,56 @@ class WalletStateManager:
         if quality_str is None:
             return False
 
-        # Calculate iters
         difficulty: uint64
-        ips: uint64
+        min_iters: uint64 = self.get_min_iters(br)
         prev_block: Optional[BlockRecord]
-        if br.height > 0:
-            prev_block = self.block_records[br.prev_header_hash]
-            difficulty = self.get_next_difficulty(br.prev_header_hash)
-            assert prev_block is not None
-            ips = self.get_next_ips(
-                prev_block,
-                header_block.proof_of_space,
-                header_block.proof_of_time.number_of_iterations,
-            )
+        if (
+            br.height % self.constants["DIFFICULTY_EPOCH"]
+            != self.constants["DIFFICULTY_DELAY"]
+        ):
+            # Only allow difficulty changes once per epoch
+            if br.height > 1:
+                prev_block = self.block_records[br.prev_header_hash]
+                assert prev_block is not None
+                prev_prev_block = self.block_records[prev_block.prev_header_hash]
+                assert prev_prev_block is not None
+                difficulty = uint64(br.weight - prev_block.weight)
+                assert difficulty == prev_block.weight - prev_prev_block.weight
+            elif br.height == 1:
+                prev_block = self.block_records[br.prev_header_hash]
+                assert prev_block is not None
+                difficulty = uint64(br.weight - prev_block.weight)
+                assert difficulty == prev_block.weight
+            else:
+                difficulty = uint64(br.weight)
+                assert difficulty == self.constants["DIFFICULTY_STARTING"]
         else:
-            difficulty = uint64(self.constants["DIFFICULTY_STARTING"])
-            ips = uint64(self.constants["VDF_IPS_STARTING"])
+            # This is a difficulty change, so check whether it's within the allowed range.
+            # (But don't check whether it's the right amount).
+            prev_block = self.block_records[br.prev_header_hash]
+            assert prev_block is not None
+            prev_prev_block = self.block_records[prev_block.prev_header_hash]
+            assert prev_prev_block is not None
+            difficulty = uint64(br.weight - prev_block.weight)
+            prev_difficulty = uint64(prev_block.weight - prev_prev_block.weight)
+            max_diff = uint64(
+                truncate_to_significant_bits(
+                    prev_difficulty * self.constants["DIFFICULTY_FACTOR"],
+                    self.constants["SIGNIFICANT_BITS"],
+                )
+            )
+            min_diff = uint64(
+                truncate_to_significant_bits(
+                    prev_difficulty // self.constants["DIFFICULTY_FACTOR"],
+                    self.constants["SIGNIFICANT_BITS"],
+                )
+            )
+
+            if difficulty < min_diff or difficulty > max_diff:
+                return False
 
         number_of_iters: uint64 = calculate_iterations_quality(
-            quality_str,
-            header_block.proof_of_space.size,
-            difficulty,
-            ips,
-            self.constants["MIN_BLOCK_TIME"],
+            quality_str, header_block.proof_of_space.size, difficulty, min_iters,
         )
 
         if header_block.proof_of_time is None:

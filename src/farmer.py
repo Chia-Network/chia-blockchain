@@ -79,12 +79,16 @@ class Farmer:
         if difficulty == 0:
             raise RuntimeError("Did not find challenge")
 
+        estimate_min = (
+            self.proof_of_time_estimate_ips
+            * self.constants["BLOCK_TIME_TARGET"]
+            / self.constants["MIN_ITERS_PROPORTION"]
+        )
         number_iters: uint64 = calculate_iterations_quality(
             challenge_response.quality_string,
             challenge_response.plot_size,
             difficulty,
-            self.proof_of_time_estimate_ips,
-            self.constants["MIN_BLOCK_TIME"],
+            estimate_min,
         )
         if height < 1000:  # As the difficulty adjusts, don't fetch all qualities
             if challenge_response.challenge_hash not in self.challenge_to_best_iters:
@@ -158,12 +162,13 @@ class Farmer:
             response.proof.get_hash()
         ] = response.quality_string
 
+        estimate_min = (
+            self.proof_of_time_estimate_ips
+            * self.constants["BLOCK_TIME_TARGET"]
+            / self.constants["MIN_ITERS_PROPORTION"]
+        )
         number_iters: uint64 = calculate_iterations_quality(
-            computed_quality_string,
-            response.proof.size,
-            difficulty,
-            self.proof_of_time_estimate_ips,
-            self.constants["MIN_BLOCK_TIME"],
+            computed_quality_string, response.proof.size, difficulty, estimate_min,
         )
         estimate_secs: float = number_iters / self.proof_of_time_estimate_ips
 

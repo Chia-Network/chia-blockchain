@@ -14,21 +14,22 @@ from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
 from src.full_node.coin_store import CoinStore
 from src.util.ints import uint8, uint64
+from src.consensus.constants import constants as consensus_constants
 from tests.block_tools import BlockTools
 
 bt = BlockTools()
-
-test_constants: Dict[str, Any] = {
-    "DIFFICULTY_STARTING": 5,
-    "DISCRIMINANT_SIZE_BITS": 16,
-    "BLOCK_TIME_TARGET": 10,
-    "MIN_BLOCK_TIME": 2,
-    "DIFFICULTY_FACTOR": 3,
-    "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
-    "DIFFICULTY_WARP_FACTOR": 4,  # DELAY divides EPOCH in order to warp efficiently.
-    "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
-    "VDF_IPS_STARTING": 50,
-}
+test_constants: Dict[str, Any] = consensus_constants.copy()
+test_constants.update(
+    {
+        "DIFFICULTY_STARTING": 5,
+        "DISCRIMINANT_SIZE_BITS": 16,
+        "BLOCK_TIME_TARGET": 10,
+        "MIN_BLOCK_TIME": 2,
+        "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
+        "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
+        "MIN_ITERS_STARTING": 50 * 2,
+    }
+)
 test_constants["GENESIS_BLOCK"] = bytes(
     bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
 )
@@ -53,7 +54,7 @@ class TestGenesisBlock:
         assert (
             bc1.get_next_difficulty(genesis_block.header_hash)
         ) == genesis_block.weight
-        assert bc1.get_next_ips(bc1.genesis) > 0
+        assert bc1.get_next_min_iters(bc1.genesis) > 0
 
         await unspent_store.close()
         await store.close()
@@ -310,11 +311,11 @@ class TestBlockValidation:
         assert diff_27 > diff_26
         assert (diff_27 / diff_26) <= test_constants["DIFFICULTY_FACTOR"]
 
-        assert (b.get_next_ips(blocks[1])) == test_constants["VDF_IPS_STARTING"]
-        assert (b.get_next_ips(blocks[24])) == (b.get_next_ips(blocks[23]))
-        assert (b.get_next_ips(blocks[25])) == (b.get_next_ips(blocks[24]))
-        assert (b.get_next_ips(blocks[26])) > (b.get_next_ips(blocks[25]))
-        assert (b.get_next_ips(blocks[27])) == (b.get_next_ips(blocks[26]))
+        assert (b.get_next_min_iters(blocks[1])) == test_constants["MIN_ITERS_STARTING"]
+        assert (b.get_next_min_iters(blocks[24])) == (b.get_next_min_iters(blocks[23]))
+        assert (b.get_next_min_iters(blocks[25])) == (b.get_next_min_iters(blocks[24]))
+        assert (b.get_next_min_iters(blocks[26])) > (b.get_next_min_iters(blocks[25]))
+        assert (b.get_next_min_iters(blocks[27])) == (b.get_next_min_iters(blocks[26]))
 
         await unspent_store.close()
         await store.close()

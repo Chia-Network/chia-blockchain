@@ -468,9 +468,9 @@ class TestFullNodeProtocol:
 
         blocks_new = bt.get_consecutive_blocks(
             test_constants,
-            100,
+            40,
             blocks_list[:],
-            20,
+            4,
             reward_puzzlehash=coinbase_puzzlehash,
             seed=b"Another seed 4",
         )
@@ -483,9 +483,9 @@ class TestFullNodeProtocol:
                 test_constants,
                 1,
                 blocks_new[:],
-                10,
+                4,
                 reward_puzzlehash=coinbase_puzzlehash,
-                seed=bytes([i]) + b"Another seed",
+                seed=i.to_bytes(4, "big") + b"Another seed",
             )
             candidates.append(blocks_new_2[-1])
 
@@ -1196,7 +1196,6 @@ class TestWalletProtocol:
         spend_bundles = []
         puzzle_hashes = [wallet_a.get_new_puzzlehash(), wallet_a.get_new_puzzlehash()]
         for i in range(5):
-            print("Doing puzzle hash", puzzle_hashes[i % 2])
             spend_bundles.append(
                 wallet_a.generate_signed_transaction(
                     100, puzzle_hashes[i % 2], blocks_new[i - 8].header.data.coinbase,

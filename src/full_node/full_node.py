@@ -111,7 +111,13 @@ class FullNode:
                 tips[0].header_hash
             )
             assert full_block is not None
-            proof_of_time_rate: uint64 = self.blockchain.get_next_ips(full_block)
+            proof_of_time_min_iters: uint64 = self.blockchain.get_next_min_iters(
+                full_block
+            )
+            proof_of_time_rate: uint64 = proof_of_time_min_iters // (
+                self.constants["BLOCK_TIME_TARGET"]
+                / self.constants["MIN_ITERS_PROPORTION"]
+            )
         rate_update = farmer_protocol.ProofOfTimeRate(proof_of_time_rate)
         yield OutboundMessage(
             NodeType.FARMER, Message("proof_of_time_rate", rate_update), delivery
@@ -534,7 +540,11 @@ class FullNode:
                     >= height
                 )
                 self.store.set_proof_of_time_estimate_ips(
-                    self.blockchain.get_next_ips(block)
+                    self.blockchain.get_next_min_iters(block)
+                    // (
+                        self.constants["BLOCK_TIME_TARGET"]
+                        / self.constants["MIN_ITERS_PROPORTION"]
+                    )
                 )
             self.log.info(
                 f"Took {time.time() - validation_start_time} seconds to validate and add blocks "
@@ -1279,13 +1289,10 @@ class FullNode:
         difficulty = self.blockchain.get_next_difficulty(target_tip.header_hash)
 
         assert target_tip_block is not None
-        vdf_ips: uint64 = self.blockchain.get_next_ips(target_tip_block)
+        vdf_min_iters: uint64 = self.blockchain.get_next_min_iters(target_tip_block)
 
         iterations_needed: uint64 = calculate_iterations(
-            request.proof_of_space,
-            difficulty,
-            vdf_ips,
-            self.constants["MIN_BLOCK_TIME"],
+            request.proof_of_space, difficulty, vdf_min_iters,
         )
 
         removal_merkle_set = MerkleSet()
@@ -1573,7 +1580,11 @@ class FullNode:
             difficulty = self.blockchain.get_next_difficulty(
                 respond_block.block.prev_header_hash
             )
-            next_vdf_ips = self.blockchain.get_next_ips(respond_block.block)
+            next_vdf_min_iters = self.blockchain.get_next_min_iters(respond_block.block)
+            next_vdf_ips = next_vdf_min_iters // (
+                self.constants["BLOCK_TIME_TARGET"]
+                / self.constants["MIN_ITERS_PROPORTION"]
+            )
             self.log.info(f"Difficulty {difficulty} IPS {next_vdf_ips}")
             if next_vdf_ips != self.store.get_proof_of_time_estimate_ips():
                 self.store.set_proof_of_time_estimate_ips(next_vdf_ips)
@@ -1754,9 +1765,9 @@ class FullNode:
         proof_hashes_map = await self.store.get_proof_hashes()
         curr = self.blockchain.lca_block
 
-        hashes: List[Tuple[bytes32, Optional[Tuple[uint64, uint64, uint64]]]] = []
+        hashes: List[Tuple[bytes32, Optional[Tuple[uint64, uint64]]]] = []
         while curr.height > 0:
-            difficulty_update: Optional[Tuple[uint64, uint64, uint64]] = None
+            difficulty_update: Optional[Tuple[uint64, uint64]] = None
             if (
                 curr.height % self.constants["DIFFICULTY_EPOCH"]
                 == self.constants["DIFFICULTY_DELAY"]
@@ -1764,7 +1775,6 @@ class FullNode:
             ):
                 difficulty_update = (
                     self.blockchain.get_next_difficulty(curr.prev_header_hash),
-                    curr.data.timestamp,
                     curr.data.total_iters,
                 )
             hashes.append((proof_hashes_map[curr.header_hash], difficulty_update))
@@ -1775,7 +1785,6 @@ class FullNode:
                 proof_hashes_map[self.blockchain.genesis.header_hash],
                 (
                     uint64(self.blockchain.genesis.weight),
-                    self.blockchain.genesis.header.data.timestamp,
                     self.blockchain.genesis.header.data.total_iters,
                 ),
             )

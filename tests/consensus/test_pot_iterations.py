@@ -37,11 +37,7 @@ class TestPotIterations:
             ]
             iters = [
                 calculate_iterations_quality(
-                    qualities[i],
-                    farmer_ks[i],
-                    uint64(50000000),
-                    uint64(5000),
-                    uint64(10),
+                    qualities[i], farmer_ks[i], uint64(50000000), uint64(5000 * 30),
                 )
                 for i in range(len(qualities))
             ]
