@@ -6,7 +6,7 @@
 #include "proof_common.h"
 #include "create_discriminant.h"
 
-void VerifyWesolowskiProof(integer &D, form x, form y, form proof, int iters, bool &is_valid)
+void VerifyWesolowskiProof(integer &D, form x, form y, form proof, uint64_t iters, bool &is_valid)
 {
     PulmarkReducer reducer;
     int int_size = (D.num_bits() + 16) >> 4;
