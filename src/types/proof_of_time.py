@@ -23,15 +23,15 @@ class ProofOfTime(Streamable):
         try:
             disc: int = int(
                 create_discriminant(
-                    self.challenge_hash, 
+                    self.challenge_hash,
                     discriminant_size_bits
                 ),
-                16
+                16,
             )
             x = ClassGroup.from_ab_discriminant(2, 1, disc)
             y = ClassGroup.from_ab_discriminant(self.output.a, self.output.b, disc)
-        except Exception as e:
-            return False 
+        except Exception:
+            return False
         return check_proof_of_time_nwesolowski(
             disc,
             x,
