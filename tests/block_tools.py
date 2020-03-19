@@ -234,11 +234,16 @@ class BlockTools:
                 else:
                     new_difficulty = max([uint64(1), new_difficulty, min_diff])
 
-                curr_min_iters = uint64(
+                min_iters_precise = uint64(
                     (iters3 - iters1)
                     // (
                         test_constants["DIFFICULTY_EPOCH"]
                         * test_constants["MIN_ITERS_PROPORTION"]
+                    )
+                )
+                curr_min_iters = uint64(
+                    truncate_to_significant_bits(
+                        min_iters_precise, test_constants["SIGNIFICANT_BITS"]
                     )
                 )
                 prev_difficulty = curr_difficulty
@@ -513,9 +518,9 @@ class BlockTools:
         return full_block
 
 
-# This code generates a genesis block, uncomment to output genesis block to terminal
+# This code generates a genesis block, call as main to output genesis block to terminal
 # This might take a while, using the python VDF implementation.
 # Run by doing python -m tests.block_tools
-# if __name__ == '__main__':
-#     bt = BlockTools()
-#     print(bytes(bt.create_genesis_block({}, bytes([1] * 32), b"0")))
+if __name__ == "__main__":
+    bt = BlockTools()
+    print(bytes(bt.create_genesis_block({}, bytes([1] * 32), b"0")))

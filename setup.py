@@ -6,12 +6,10 @@ dependencies = [
     "blspy",            # Signature library
     "cbor2",            # Used for network wire format
     "pyyaml",           # Used for config file format
-    "asyncssh",         # Used for SSH server for UI
     "miniupnpc",        # Allows users to open ports on their router
     "aiosqlite",        # asyncio wrapper for sqlite, to store blocks
     "aiohttp",          # HTTP server for full node rpc
     "setuptools-scm",   # Used for versioning
-    "prompt-toolkit",   # Used to create a terminal based UI for full node
     "colorlog"          # Adds color to logs
 ]
 dev_dependencies = [

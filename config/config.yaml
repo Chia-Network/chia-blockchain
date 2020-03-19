@@ -65,7 +65,7 @@ full_node:
   port: 8444
 
   # Run multiple nodes with different databases by changing the database_path
-  database_path: blockchain_v2_1.db
+  database_path: blockchain_v3.db
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True

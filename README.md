@@ -18,13 +18,10 @@ python -m scripts.regenerate_keys
 
 ## Step 3a: Run a full node
 To run a full node on port 8444, and connect to the testnet, run the following command.
-This will also start an ssh server in port 8222 for the UI, which you can connect to
-to see the state of the node. If you want to see std::out log output, modify the logging.std_out
-variable in ./config/config.yaml.
+If you want to see std::out log output, modify the logging.std_out variable in ./config/config.yaml.
 
 ```bash
 ./scripts/run_full_node.sh
-ssh -p 8222 localhost
 ```
 
 ## Step 3b: Run a farmer + full node
@@ -32,8 +29,8 @@ Instead of running only a full node (as in 4a), you can also run a farmer.
 Farmers are entities in the network who use their hard drive space to try to create
 blocks (like Bitcoin's miners), and earn block rewards. First, you must generate some hard drive plots, which
 can take a long time depending on the [size of the plots](https://github.com/Chia-Network/chia-blockchain/wiki/k-sizes)
-(the k variable). Then, run the farmer + full node with the following script. A full node is also started,
-which you can ssh into to view the node UI (previous ssh command). You can also change the working directory and
+(the k variable). Then, run the farmer + full node with the following script. A full node is also started.
+You can also change the working directory and
 final directory for plotting, with the "-t" and "-d" arguments to the create_plots script.
 ```bash
 python -m scripts.create_plots -k 20 -n 10
