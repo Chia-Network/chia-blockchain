@@ -28,7 +28,7 @@ class TestFilter:
         config = load_config("config.yaml", "wallet")
         key_config = {"wallet_sk": sk}
         wallet_node = await WalletNode.create(config, key_config)
-        wallet = wallet_node.wallet
+        wallet = wallet_node.main_wallet
         await wallet_node.wallet_state_manager.clear_all_stores()
 
         num_blocks = 2

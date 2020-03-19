@@ -52,11 +52,14 @@ class WebSocketServer:
         self.wallet_node: WalletNode = wallet_node
         self.websocket = None
 
-    async def get_next_puzzle_hash(self, websocket, response_api):
+    async def get_next_puzzle_hash(self, websocket, request, response_api):
         """
         Returns a new puzzlehash
         """
-        puzzlehash = (await self.wallet_node.wallet.get_new_puzzlehash()).hex()
+
+        wallet_id = int(request["wallet_id"])
+        wallet = self.wallet_node.wallets[wallet_id]
+        puzzlehash = (await wallet.get_new_puzzlehash()).hex()
 
         data = {
             "puzzlehash": puzzlehash,
@@ -65,32 +68,31 @@ class WebSocketServer:
         await websocket.send(format_response(response_api, data))
 
     async def send_transaction(self, websocket, request, response_api):
-        if "amount" in request and "puzzlehash" in request:
-            amount = int(request["amount"])
-            puzzle_hash = bytes.fromhex(request["puzzlehash"])
-            tx = await self.wallet_node.wallet.generate_signed_transaction(
-                amount, puzzle_hash
-            )
 
-            if tx is None:
-                data = {"success": False}
-                return await websocket.send(format_response(response_api, data))
+        wallet_id = int(request["wallet_id"])
+        wallet = self.wallet_node.wallets[wallet_id]
 
-            await self.wallet_node.wallet.push_transaction(tx)
+        tx = await wallet.generate_signed_transaction_dict(
+            request
+        )
 
-            data = {"success": True}
+        if tx is None:
+            data = {"success": False}
             return await websocket.send(format_response(response_api, data))
 
-        data = {"success": False}
-        await websocket.send(format_response(response_api, data))
+        await wallet.push_transaction(tx)
+
+        data = {"success": True}
+        return await websocket.send(format_response(response_api, data))
 
     async def server_ready(self, websocket, response_api):
         response = {"success": True}
         await websocket.send(format_response(response_api, response))
 
-    async def get_transactions(self, websocket, response_api):
+    async def get_transactions(self, websocket, request, response_api):
+        wallet_id = int(request["wallet_id"])
         transactions = (
-            await self.wallet_node.wallet_state_manager.get_all_transactions()
+            await self.wallet_node.wallet_state_manager.get_all_transactions(wallet_id)
         )
 
         response = {"success": True, "txs": transactions}
@@ -105,9 +107,11 @@ class WebSocketServer:
 
         self.wallet_node.server.push_message(msg)
 
-    async def get_wallet_balance(self, websocket, response_api):
-        balance = await self.wallet_node.wallet.get_confirmed_balance()
-        pending_balance = await self.wallet_node.wallet.get_unconfirmed_balance()
+    async def get_wallet_balance(self, websocket, request, response_api):
+        wallet_id = int(request["wallet_id"])
+        wallet = self.wallet_node.wallets[wallet_id]
+        balance = await wallet.get_confirmed_balance()
+        pending_balance = await wallet.get_unconfirmed_balance()
 
         response = {
             "success": True,
@@ -156,13 +160,13 @@ class WebSocketServer:
                 self.websocket = websocket
                 await self.server_ready(websocket, command)
             elif command == "get_wallet_balance":
-                await self.get_wallet_balance(websocket, command)
+                await self.get_wallet_balance(websocket, data, command)
             elif command == "send_transaction":
                 await self.send_transaction(websocket, data, command)
             elif command == "get_next_puzzle_hash":
-                await self.get_next_puzzle_hash(websocket, command)
+                await self.get_next_puzzle_hash(websocket, data, command)
             elif command == "get_transactions":
-                await self.get_transactions(websocket, command)
+                await self.get_transactions(websocket, data, command)
             elif command == "farm_block":
                 await self.farm_block(websocket, data, command)
             elif command == "get_sync_status":

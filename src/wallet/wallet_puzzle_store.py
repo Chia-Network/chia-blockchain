@@ -1,5 +1,5 @@
 import asyncio
-from typing import Set
+from typing import Set, Tuple, Optional
 from pathlib import Path
 import aiosqlite
 from src.types.sized_bytes import bytes32
@@ -31,6 +31,7 @@ class WalletPuzzleStore:
                 f" pubkey text,"
                 f" puzzle_hash text,"
                 f" wallet_type int,"
+                f" wallet_id int,"
                 f" used int)"
             )
         )
@@ -45,6 +46,10 @@ class WalletPuzzleStore:
 
         await self.db_connection.execute(
             "CREATE INDEX IF NOT EXISTS wallet_type on derivation_paths(wallet_type)"
+        )
+
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS wallet_ud on derivation_paths(wallet_id)"
         )
 
         await self.db_connection.execute(
@@ -69,15 +74,15 @@ class WalletPuzzleStore:
         await self.db_connection.commit()
 
     async def add_derivation_path_of_interest(
-        self, index: int, puzzlehash: bytes32, pubkey: bytes, wallet_type: WalletType
+        self, index: int, puzzlehash: bytes32, pubkey: bytes, wallet_type: WalletType, wallet_id: int
     ):
         """
         Inserts new derivation path, puzzle, pubkey, wallet into DB.
         """
 
         cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO derivation_paths VALUES(?, ?, ?, ?, ?)",
-            (index, pubkey.hex(), puzzlehash.hex(), wallet_type.value, 0),
+            "INSERT OR REPLACE INTO derivation_paths VALUES(?, ?, ?, ?, ?, ?)",
+            (index, pubkey.hex(), puzzlehash.hex(), wallet_type.value, wallet_id, 0),
         )
 
         await cursor.close()
@@ -132,6 +137,23 @@ class WalletPuzzleStore:
             return row[0]
 
         return -1
+
+    async def wallet_info_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[Tuple[int, WalletType]]:
+        """
+        Returns the derivation path for the puzzle_hash.
+        Returns -1 if not present.
+        """
+
+        cursor = await self.db_connection.execute(
+            "SELECT * from derivation_paths WHERE puzzle_hash=?", (puzzle_hash.hex(),)
+        )
+        row = await cursor.fetchone()
+        await cursor.close()
+
+        if row:
+            return row[4], WalletType(row[3])
+
+        return None
 
     async def get_all_puzzle_hashes(self) -> Set[bytes32]:
         """

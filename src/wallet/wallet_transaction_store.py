@@ -36,7 +36,8 @@ class WalletTransactionStore:
                 f" fee_amount bigint,"
                 f" incoming int,"
                 f" confirmed int,"
-                f" sent int)"
+                f" sent int,"
+                f" wallet_id int)"
             )
         )
 
@@ -69,6 +70,10 @@ class WalletTransactionStore:
             "CREATE INDEX IF NOT EXISTS tx_to_puzzle_hash on transaction_record(to_puzzle_hash)"
         )
 
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS wallet_id on transaction_record(wallet_id)"
+        )
+
         await self.db_connection.commit()
         # Lock
         self.lock = asyncio.Lock()  # external
@@ -92,7 +97,7 @@ class WalletTransactionStore:
         """
 
         cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 bytes(record),
                 record.name().hex(),
@@ -104,6 +109,7 @@ class WalletTransactionStore:
                 int(record.incoming),
                 int(record.confirmed),
                 int(record.sent),
+                record.wallet_id,
             ),
         )
         await cursor.close()
@@ -133,6 +139,7 @@ class WalletTransactionStore:
             spend_bundle=current.spend_bundle,
             additions=current.additions,
             removals=current.removals,
+            wallet_id=current.wallet_id
         )
         await self.add_transaction_record(tx)
 
@@ -182,6 +189,7 @@ class WalletTransactionStore:
             spend_bundle=current.spend_bundle,
             additions=current.additions,
             removals=current.removals,
+            wallet_id=current.wallet_id
         )
         await self.add_transaction_record(tx)
 
@@ -237,12 +245,12 @@ class WalletTransactionStore:
 
         return records
 
-    async def get_all_transactions(self) -> List[TransactionRecord]:
+    async def get_all_transactions(self, wallet_id: int) -> List[TransactionRecord]:
         """
         Returns all stored transactions.
         """
 
-        cursor = await self.db_connection.execute("SELECT * from transaction_record")
+        cursor = await self.db_connection.execute("SELECT * from transaction_record where wallet_id=?", (wallet_id,))
         rows = await cursor.fetchall()
         await cursor.close()
         records = []

@@ -1,7 +1,7 @@
 from pathlib import Path
 import asyncio
 import time
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, Tuple, List, Any
 import concurrent
 import random
 import logging
@@ -29,6 +29,7 @@ from src.types.header_block import HeaderBlock
 from src.types.full_block import FullBlock
 from src.types.hashable.coin import Coin, hash_coin_list
 from src.full_node.blockchain import ReceiveBlockResult
+import traceback
 
 
 class WalletNode:
@@ -38,7 +39,8 @@ class WalletNode:
     server: Optional[ChiaServer]
     wallet_state_manager: WalletStateManager
     log: logging.Logger
-    wallet: Wallet
+    main_wallet: Wallet
+    wallets: Dict[int, Any]
     cached_blocks: Dict[bytes32, Tuple[BlockRecord, HeaderBlock]]
     cached_removals: Dict[bytes32, List[bytes32]]
     cached_additions: Dict[bytes32, List[Coin]]
@@ -83,7 +85,13 @@ class WalletNode:
         self.wallet_state_manager = await WalletStateManager.create(
             config, path, self.constants
         )
-        self.wallet = await Wallet.create(config, key_config, self.wallet_state_manager)
+
+        main_wallet_info = await self.wallet_state_manager.get_main_wallet()
+        assert main_wallet_info is not None
+
+        self.main_wallet = await Wallet.create(config, key_config, self.wallet_state_manager, main_wallet_info)
+        self.wallets = {}
+        self.wallets[self.main_wallet.wallet_info.id] = self.main_wallet
 
         # Normal operation data
         self.cached_blocks = {}
@@ -104,7 +112,7 @@ class WalletNode:
 
     def set_server(self, server: ChiaServer):
         self.server = server
-        self.wallet.set_server(server)
+        self.main_wallet.set_server(server)
 
     def _shutdown(self):
         self._shut_down = True

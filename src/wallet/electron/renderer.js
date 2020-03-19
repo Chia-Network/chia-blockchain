@@ -30,9 +30,26 @@ const lock = "<i class=\"icon ion-md-lock\"></i>"
 
 // Global variables
 var global_syncing = true
-
-
 console.log(global.location.search)
+
+function create_side_wallet(href, wallet_name, wallet_description, wallet_amount) {
+    const wallet_side_info = `<a class="nav-link d-flex justify-content-between align-items-center" data-toggle="pill" href=${href}
+              role="tab" aria-selected="true">
+              <div class="d-flex">
+                <img src="assets/img/circle-cropped.png" alt="btc">
+                <div>
+                  <h2>${wallet_name}</h2>
+                  <p>$(wallet_description}</p>
+                </div>
+              </div>
+              <div>
+                <h3>${wallet_amount}</h3>
+                <p class="text-right"><i class="icon ion-md-lock"></i> 0.00</p>
+              </div>
+            </a>`
+    return wallet_side_info
+}
+
 function getQueryVariable(variable) {
     var query = global.location.search.substring(1);
     var vars = query.split('&');
@@ -46,7 +63,10 @@ function getQueryVariable(variable) {
 }
 
 var local_test = getQueryVariable("testing")
+var g_wallet_id = getQueryVariable("wallet_id")
+
 console.log("testing: " + local_test)
+console.log("wallet_id: " + g_wallet_id)
 
 if (local_test == "false") {
     console.log("farm_button should be hidden")
@@ -80,6 +100,7 @@ function set_callbacks(socket) {
         }
 
         if (command == "start_server") {
+            get_wallets();
             get_new_puzzlehash();
             get_transactions();
             get_wallet_balance();
@@ -132,14 +153,15 @@ send.addEventListener('click', () => {
         dialogs.alert("Can't send transactions while syncing.", ok => {});
         return
     }
-    puzzlehash = receiver_address.value;
+    puzzle_hash = receiver_address.value;
     amount_value = parseFloat(amount.value);
     mojo_amount = chia_formatter(amount_value, 'chia').to('mojo').value()
     console.log("Mojo amount: " + mojo_amount);
 
     data = {
-        "puzzlehash": puzzlehash,
-        "amount": mojo_amount
+        "puzzle_hash": puzzle_hash,
+        "amount": mojo_amount,
+        "wallet_id": g_wallet_id
     }
 
     request = {
@@ -163,6 +185,7 @@ farm_button.addEventListener('click', () => {
     }
     data = {
         "puzzle_hash": puzzle_hash,
+        "wallet_id": g_wallet_id,
     }
     request = {
         "command": "farm_block",
@@ -209,9 +232,15 @@ async function get_new_puzzlehash() {
     Sends websocket request for new puzzle_hash
     */
     data = {
-        "command": "get_next_puzzle_hash",
+    "wallet_id": g_wallet_id,
     }
-    json_data = JSON.stringify(data);
+
+    request = {
+        "command": "get_next_puzzle_hash",
+        "data": data
+    }
+
+    json_data = JSON.stringify(request);
     ws.send(json_data);
 }
 
@@ -232,9 +261,15 @@ async function get_wallet_balance() {
     Sends websocket request to get wallet balance
     */
     data = {
-        "command": "get_wallet_balance",
+        "wallet_id": g_wallet_id,
     }
-    json_data = JSON.stringify(data);
+
+    request = {
+        "command": "get_wallet_balance",
+        "data": data
+    }
+
+    json_data = JSON.stringify(request);
     ws.send(json_data);
 }
 
@@ -264,10 +299,17 @@ async function get_transactions() {
     /*
     Sends websocket request to get transactions
     */
+
     data = {
-        "command": "get_transactions",
+        "wallet_id": g_wallet_id,
     }
-    json_data = JSON.stringify(data);
+
+    request = {
+        "command": "get_transactions",
+        "data": data,
+    }
+
+    json_data = JSON.stringify(request);
     ws.send(json_data);
 }
 
@@ -432,6 +474,17 @@ function handle_state_changed(data) {
         get_height_info()
         get_sync_status()
     }
+}
+
+function get_wallets() {
+    /*
+    Sends websocket request to get list of all wallets available
+    */
+    data = {
+        "command": "get_wallets",
+    }
+    json_data = JSON.stringify(data);
+    ws.send(json_data);
 }
 
 function clean_table() {

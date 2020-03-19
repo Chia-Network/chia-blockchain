@@ -26,6 +26,7 @@ class TransactionRecord(Streamable):
     spend_bundle: Optional[SpendBundle]
     additions: List[Coin]
     removals: List[Coin]
+    wallet_id: uint64
 
     def name(self) -> bytes32:
         if self.spend_bundle:

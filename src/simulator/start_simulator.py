@@ -81,8 +81,6 @@ async def main():
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
 
-    full_node._start_bg_tasks()
-
     log.info("Waiting to connect to some peers...")
     await asyncio.sleep(3)
     log.info(f"Connected to {len(server.global_connections.get_connections())} peers.")
