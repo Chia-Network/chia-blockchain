@@ -48,3 +48,12 @@ async def query_node(app):
     finally:
         app['node'] = node
         app['ready'] = True
+
+
+def find_block(block_list, blockid):
+    for block in block_list:
+        hash = str(block.challenge.proof_of_space_hash)
+        if hash == blockid:
+            return block
+
+    return {}
