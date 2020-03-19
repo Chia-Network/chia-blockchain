@@ -57,3 +57,12 @@ def find_block(block_list, blockid):
             return block
 
     return {}
+
+
+def find_connection(connection_list, connectionid):
+    for connection in connection_list:
+        hash = str(connection['node_id'])
+        if hash == connectionid:
+            return connection
+
+    return {}
