@@ -139,7 +139,7 @@ class WalletTransactionStore:
             spend_bundle=current.spend_bundle,
             additions=current.additions,
             removals=current.removals,
-            wallet_id=current.wallet_id
+            wallet_id=current.wallet_id,
         )
         await self.add_transaction_record(tx)
 
@@ -189,7 +189,7 @@ class WalletTransactionStore:
             spend_bundle=current.spend_bundle,
             additions=current.additions,
             removals=current.removals,
-            wallet_id=current.wallet_id
+            wallet_id=current.wallet_id,
         )
         await self.add_transaction_record(tx)
 
@@ -250,7 +250,9 @@ class WalletTransactionStore:
         Returns all stored transactions.
         """
 
-        cursor = await self.db_connection.execute("SELECT * from transaction_record where wallet_id=?", (wallet_id,))
+        cursor = await self.db_connection.execute(
+            "SELECT * from transaction_record where wallet_id=?", (wallet_id,)
+        )
         rows = await cursor.fetchall()
         await cursor.close()
         records = []

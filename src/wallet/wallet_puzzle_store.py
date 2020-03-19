@@ -74,7 +74,12 @@ class WalletPuzzleStore:
         await self.db_connection.commit()
 
     async def add_derivation_path_of_interest(
-        self, index: int, puzzlehash: bytes32, pubkey: bytes, wallet_type: WalletType, wallet_id: int
+        self,
+        index: int,
+        puzzlehash: bytes32,
+        pubkey: bytes,
+        wallet_type: WalletType,
+        wallet_id: int,
     ):
         """
         Inserts new derivation path, puzzle, pubkey, wallet into DB.
@@ -138,7 +143,9 @@ class WalletPuzzleStore:
 
         return -1
 
-    async def wallet_info_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[Tuple[int, WalletType]]:
+    async def wallet_info_for_puzzle_hash(
+        self, puzzle_hash: bytes32
+    ) -> Optional[Tuple[int, WalletType]]:
         """
         Returns the derivation path for the puzzle_hash.
         Returns -1 if not present.

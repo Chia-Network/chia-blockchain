@@ -19,8 +19,14 @@ from src.types.hashable.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
 from src.util.streamable import streamable, Streamable
-from src.wallet.rl_wallet.rl_wallet_puzzles import rl_puzzle_for_pk, rl_make_aggregation_puzzle, rl_make_aggregation_solution, \
-    rl_make_solution_mode_2, make_clawback_solution, solution_for_rl
+from src.wallet.rl_wallet.rl_wallet_puzzles import (
+    rl_puzzle_for_pk,
+    rl_make_aggregation_puzzle,
+    rl_make_aggregation_solution,
+    rl_make_solution_mode_2,
+    make_clawback_solution,
+    solution_for_rl,
+)
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet import Wallet
 from src.wallet.wallet_coin_record import WalletCoinRecord
@@ -54,58 +60,86 @@ class RLWallet:
 
     @staticmethod
     async def create_rl_admin(
-            config: Dict,
-            key_config: Dict,
-            wallet_state_manager: WalletStateManager,
-            wallet: Wallet,
-            name: str = None,
+        config: Dict,
+        key_config: Dict,
+        wallet_state_manager: WalletStateManager,
+        wallet: Wallet,
+        name: str = None,
     ):
-        current_max_index = await wallet_state_manager.puzzle_store.get_max_derivation_path() + 1
+        current_max_index = (
+            await wallet_state_manager.puzzle_store.get_max_derivation_path() + 1
+        )
         my_pubkey_index = current_max_index + 1
         sk_hex = key_config["wallet_sk"]
         private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
-        pubkey_bytes: bytes = private_key.public_child(my_pubkey_index).get_public_key().serialize()
+        pubkey_bytes: bytes = private_key.public_child(
+            my_pubkey_index
+        ).get_public_key().serialize()
 
         rl_info = RLInfo("admin", pubkey_bytes, None, None, None)
         info_as_string = bytes(rl_info).hex()
-        await wallet_state_manager.user_store.create_wallet("RL Admin", WalletType.RATE_LIMITED, info_as_string)
+        await wallet_state_manager.user_store.create_wallet(
+            "RL Admin", WalletType.RATE_LIMITED, info_as_string
+        )
         wallet_info = await wallet_state_manager.user_store.get_last_wallet()
-        await wallet_state_manager.puzzle_store.add_derivation_path_of_interest(my_pubkey_index, token_bytes(), pubkey_bytes, WalletType.RATE_LIMITED, wallet_info.id)
+        await wallet_state_manager.puzzle_store.add_derivation_path_of_interest(
+            my_pubkey_index,
+            token_bytes(),
+            pubkey_bytes,
+            WalletType.RATE_LIMITED,
+            wallet_info.id,
+        )
 
-        self = RLWallet.create(config, key_config, wallet_state_manager, wallet_info, wallet, name)
+        self = RLWallet.create(
+            config, key_config, wallet_state_manager, wallet_info, wallet, name
+        )
         return self
 
     @staticmethod
     async def create_rl_user(
-            config: Dict,
-            key_config: Dict,
-            wallet_state_manager: WalletStateManager,
-            wallet: Wallet,
-            name: str = None,
+        config: Dict,
+        key_config: Dict,
+        wallet_state_manager: WalletStateManager,
+        wallet: Wallet,
+        name: str = None,
     ):
-        current_max_index = await wallet_state_manager.puzzle_store.get_max_derivation_path() + 1
+        current_max_index = (
+            await wallet_state_manager.puzzle_store.get_max_derivation_path() + 1
+        )
         my_pubkey_index = current_max_index + 1
         sk_hex = key_config["wallet_sk"]
         private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
-        pubkey_bytes: bytes = private_key.public_child(my_pubkey_index).get_public_key().serialize()
+        pubkey_bytes: bytes = private_key.public_child(
+            my_pubkey_index
+        ).get_public_key().serialize()
 
         rl_info = RLInfo("user", None, pubkey_bytes, None, None)
         info_as_string = bytes(rl_info).hex()
-        await wallet_state_manager.user_store.create_wallet("RL Admin", WalletType.RATE_LIMITED, info_as_string)
+        await wallet_state_manager.user_store.create_wallet(
+            "RL Admin", WalletType.RATE_LIMITED, info_as_string
+        )
         wallet_info = await wallet_state_manager.user_store.get_last_wallet()
-        await wallet_state_manager.puzzle_store.add_derivation_path_of_interest(my_pubkey_index, token_bytes(), pubkey_bytes, WalletType.RATE_LIMITED, wallet_info.id)
+        await wallet_state_manager.puzzle_store.add_derivation_path_of_interest(
+            my_pubkey_index,
+            token_bytes(),
+            pubkey_bytes,
+            WalletType.RATE_LIMITED,
+            wallet_info.id,
+        )
 
-        self = RLWallet.create(config, key_config, wallet_state_manager, wallet_info, wallet, name)
+        self = RLWallet.create(
+            config, key_config, wallet_state_manager, wallet_info, wallet, name
+        )
         return self
 
     @staticmethod
     async def create(
-            config: Dict,
-            key_config: Dict,
-            wallet_state_manager: WalletStateManager,
-            info: WalletInfo,
-            wallet: Wallet,
-            name: str = None,
+        config: Dict,
+        key_config: Dict,
+        wallet_state_manager: WalletStateManager,
+        info: WalletInfo,
+        wallet: Wallet,
+        name: str = None,
     ):
         self = RLWallet()
         self.config = config
@@ -125,34 +159,62 @@ class RLWallet:
         self.standard_wallet = wallet
         return self
 
-    def set_admin_info(self, interval: uint64, limit: uint64, origin_id: str, user_pubkey: str):
+    def set_admin_info(
+        self, interval: uint64, limit: uint64, origin_id: str, user_pubkey: str
+    ):
         user_pubkey_bytes = bytes.fromhex(user_pubkey)
-        rl_puzzle = rl_puzzle_for_pk(pubkey=user_pubkey_bytes,
-                                    rate_amount=limit,
-                                    interval_time=interval,
-                                    origin_id=bytes.fromhex(origin_id),
-                                    clawback_pk=self.rl_info.admin_pubkey)
+        rl_puzzle = rl_puzzle_for_pk(
+            pubkey=user_pubkey_bytes,
+            rate_amount=limit,
+            interval_time=interval,
+            origin_id=bytes.fromhex(origin_id),
+            clawback_pk=self.rl_info.admin_pubkey,
+        )
 
         rl_puzzle_hash = rl_puzzle.get_hash()
-        new_rl_info = RLInfo("admin", self.rl_info.admin_pubkey, user_pubkey_bytes, limit, interval, origin_id, rl_puzzle_hash)
+        new_rl_info = RLInfo(
+            "admin",
+            self.rl_info.admin_pubkey,
+            user_pubkey_bytes,
+            limit,
+            interval,
+            origin_id,
+            rl_puzzle_hash,
+        )
         data_str = bytes(new_rl_info).hex()
-        new_wallet_info = WalletInfo(self.wallet_info.id, self.wallet_info.name, self.wallet_info.type, data_str)
+        new_wallet_info = WalletInfo(
+            self.wallet_info.id, self.wallet_info.name, self.wallet_info.type, data_str
+        )
         await self.wallet_state_manager.user_store.update_wallet(new_wallet_info)
         self.wallet_info = new_wallet_info
         self.rl_info = new_rl_info
 
-    def set_user_info(self, interval: uint64, limit: uint64, origin_id: str, admin_pubkey: str):
+    def set_user_info(
+        self, interval: uint64, limit: uint64, origin_id: str, admin_pubkey: str
+    ):
         admin_pubkey_bytes = bytes.fromhex(admin_pubkey)
-        rl_puzzle = rl_puzzle_for_pk(pubkey=self.rl_info.user_pubkey,
-                                     rate_amount=limit,
-                                     interval_time=interval,
-                                     origin_id=bytes.fromhex(origin_id),
-                                     clawback_pk=self.rl_info.admin_pubkey)
+        rl_puzzle = rl_puzzle_for_pk(
+            pubkey=self.rl_info.user_pubkey,
+            rate_amount=limit,
+            interval_time=interval,
+            origin_id=bytes.fromhex(origin_id),
+            clawback_pk=self.rl_info.admin_pubkey,
+        )
 
         rl_puzzle_hash = rl_puzzle.get_hash()
-        new_rl_info = RLInfo("admin", admin_pubkey_bytes, self.rl_info.user_pubkey, limit, interval, origin_id, rl_puzzle_hash)
+        new_rl_info = RLInfo(
+            "admin",
+            admin_pubkey_bytes,
+            self.rl_info.user_pubkey,
+            limit,
+            interval,
+            origin_id,
+            rl_puzzle_hash,
+        )
         data_str = bytes(new_rl_info).hex()
-        new_wallet_info = WalletInfo(self.wallet_info.id, self.wallet_info.name, self.wallet_info.type, data_str)
+        new_wallet_info = WalletInfo(
+            self.wallet_info.id, self.wallet_info.name, self.wallet_info.type, data_str
+        )
         await self.wallet_state_manager.user_store.update_wallet(new_wallet_info)
         self.wallet_info = new_wallet_info
         self.rl_info = new_rl_info
@@ -163,16 +225,26 @@ class RLWallet:
         lca_header_hash = self.wallet_state_manager.lca
         lca = self.wallet_state_manager.block_records[lca_header_hash]
         height = lca.height
-        unlocked = int(((height - self.rl_coin_record.confirmed_block_index) / self.rl_info.interval) * int(self.rl_info.limit))
+        unlocked = int(
+            (
+                (height - self.rl_coin_record.confirmed_block_index)
+                / self.rl_info.interval
+            )
+            * int(self.rl_info.limit)
+        )
         total_amount = self.rl_coin_record.amount
         available_amount = min(unlocked, total_amount)
         return available_amount
 
     async def get_confirmed_balance(self) -> uint64:
-        return await self.wallet_state_manager.get_confirmed_balance_for_wallet(self.wallet_info.id)
+        return await self.wallet_state_manager.get_confirmed_balance_for_wallet(
+            self.wallet_info.id
+        )
 
     async def get_unconfirmed_balance(self) -> uint64:
-        return await self.wallet_state_manager.get_unconfirmed_balance(self.wallet_info.id)
+        return await self.wallet_state_manager.get_unconfirmed_balance(
+            self.wallet_info.id
+        )
 
     def can_generate_rl_puzzle_hash(self, hash):
         return await self.wallet_state_manager.puzzle_store.puzzle_hash_exists(hash)
@@ -204,7 +276,9 @@ class RLWallet:
         return pubkey, private
 
     async def get_rl_coin(self) -> Optional[Coin]:
-        rl_coins = await self.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(self.rl_info.rl_puzzle_hash)
+        rl_coins = await self.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
+            self.rl_info.rl_puzzle_hash
+        )
         for coin_record in rl_coins:
             if coin_record.spent is False:
                 return coin_record.coin
@@ -213,7 +287,9 @@ class RLWallet:
 
     async def get_rl_parent(self) -> Optional[Coin]:
         rl_parent_id = self.rl_coin_record.coin.parent_coin_info
-        rl_parent = await self.wallet_state_manager.wallet_store.get_coin_record_by_coin_id(rl_parent_id)
+        rl_parent = await self.wallet_state_manager.wallet_store.get_coin_record_by_coin_id(
+            rl_parent_id
+        )
         if rl_parent is None:
             return None
 
@@ -226,10 +302,23 @@ class RLWallet:
         pubkey, secretkey = self.get_keys(puzzle_hash)
         rl_parent: Coin = await self.get_rl_parent()
 
-        puzzle = rl_puzzle_for_pk(bytes(pubkey), self.rl_info.interval, self.rl_info.limit, self.rl_info.rl_origin.name(), self.rl_info.rl_clawback_pk)
+        puzzle = rl_puzzle_for_pk(
+            bytes(pubkey),
+            self.rl_info.interval,
+            self.rl_info.limit,
+            self.rl_info.rl_origin.name(),
+            self.rl_info.rl_clawback_pk,
+        )
 
-        solution = solution_for_rl(coin.parent_coin_info, puzzle_hash, coin.amount, to_puzzlehash, amount,
-                                        rl_parent.parent_coin_info, rl_parent.amount)
+        solution = solution_for_rl(
+            coin.parent_coin_info,
+            puzzle_hash,
+            coin.amount,
+            to_puzzlehash,
+            amount,
+            rl_parent.parent_coin_info,
+            rl_parent.amount,
+        )
 
         spends.append((puzzle, CoinSolution(coin, solution)))
         return spends
@@ -243,81 +332,125 @@ class RLWallet:
     def rl_sign_transaction(self, spends: (Program, [CoinSolution])):
         sigs = []
         for puzzle, solution in spends:
-            pubkey, secretkey = self.get_keys(
-                solution.coin.puzzle_hash)
-            signature = secretkey.sign(
-                Program(solution.solution).get_hash())
+            pubkey, secretkey = self.get_keys(solution.coin.puzzle_hash)
+            signature = secretkey.sign(Program(solution.solution).get_hash())
             sigs.append(signature)
 
         aggsig = BLSSignature.aggregate(sigs)
 
         solution_list: List[CoinSolution] = []
         for puzzle, coin_solution in spends:
-            solution_list.append(CoinSolution(coin_solution.coin, clvm.to_sexp_f([puzzle, coin_solution.solution])))
+            solution_list.append(
+                CoinSolution(
+                    coin_solution.coin, clvm.to_sexp_f([puzzle, coin_solution.solution])
+                )
+            )
 
         spend_bundle = SpendBundle(solution_list, aggsig)
         return spend_bundle
 
-    def generate_unsigned_clawback_transaction(self, clawback_coin: Coin, clawback_puzzle_hash: bytes32):
+    def generate_unsigned_clawback_transaction(
+        self, clawback_coin: Coin, clawback_puzzle_hash: bytes32
+    ):
         spends = []
         coin = clawback_coin
-        puzzle = rl_puzzle_for_pk(self.rl_info.user_pubkey, self.rl_info.limit, self.rl_info.interval, self.rl_info.rl_origin, self.rl_info.admin_pubkey)
+        puzzle = rl_puzzle_for_pk(
+            self.rl_info.user_pubkey,
+            self.rl_info.limit,
+            self.rl_info.interval,
+            self.rl_info.rl_origin,
+            self.rl_info.admin_pubkey,
+        )
         solution = make_clawback_solution(clawback_puzzle_hash, clawback_coin.amount)
         spends.append((puzzle, CoinSolution(coin, solution)))
         return spends
 
-    def sign_clawback_transaction(self, spends: (Program, [CoinSolution]), clawback_pubkey):
+    def sign_clawback_transaction(
+        self, spends: (Program, [CoinSolution]), clawback_pubkey
+    ):
         sigs = []
         for puzzle, solution in spends:
             pubkey, secretkey = self.get_keys_pk(clawback_pubkey)
-            signature = secretkey.sign(
-                Program(solution.solution).get_hash())
+            signature = secretkey.sign(Program(solution.solution).get_hash())
             sigs.append(signature)
         aggsig = BLSSignature.aggregate(sigs)
         solution_list = []
         for puzzle, coin_solution in spends:
-            solution_list.append(CoinSolution(coin_solution.coin, clvm.to_sexp_f([puzzle, coin_solution.solution])))
+            solution_list.append(
+                CoinSolution(
+                    coin_solution.coin, clvm.to_sexp_f([puzzle, coin_solution.solution])
+                )
+            )
 
         spend_bundle = SpendBundle(solution_list, aggsig)
         return spend_bundle
 
     def clawback_rl_coin(self, clawback_puzzle_hash: bytes32):
         rl_coin = await self.get_rl_coin()
-        transaction = self.generate_unsigned_clawback_transaction(rl_coin, clawback_puzzle_hash)
+        transaction = self.generate_unsigned_clawback_transaction(
+            rl_coin, clawback_puzzle_hash
+        )
         if transaction is None:
             return None
         return self.sign_clawback_transaction(transaction, self.rl_info.clawback_pk)
 
     # This is for using the AC locked coin and aggregating it into wallet - must happen in same block as RL Mode 2
-    def rl_generate_signed_aggregation_transaction(self, rl_info: RLInfo, consolidating_coin: Coin, rl_parent: Coin, rl_coin: Coin):
+    def rl_generate_signed_aggregation_transaction(
+        self, rl_info: RLInfo, consolidating_coin: Coin, rl_parent: Coin, rl_coin: Coin
+    ):
         list_of_coinsolutions = []
 
-        pubkey, secretkey = self.get_keys(
-            self.rl_coin_record.coin.puzzle_hash)
+        pubkey, secretkey = self.get_keys(self.rl_coin_record.coin.puzzle_hash)
         # Spend wallet coin
-        puzzle = rl_puzzle_for_pk(rl_info.user_pubkey, rl_info.limit, rl_info.interval, rl_info.rl_origin, rl_info.admin_pubkey)
+        puzzle = rl_puzzle_for_pk(
+            rl_info.user_pubkey,
+            rl_info.limit,
+            rl_info.interval,
+            rl_info.rl_origin,
+            rl_info.admin_pubkey,
+        )
 
-        solution = rl_make_solution_mode_2(rl_coin.puzzle_hash, consolidating_coin.parent_coin_info,
-                                                consolidating_coin.puzzle_hash, consolidating_coin.amount,
-                                                rl_coin.parent_coin_info, rl_coin.amount,
-                                                rl_parent.amount, rl_parent.parent_coin_info)
+        solution = rl_make_solution_mode_2(
+            rl_coin.puzzle_hash,
+            consolidating_coin.parent_coin_info,
+            consolidating_coin.puzzle_hash,
+            consolidating_coin.amount,
+            rl_coin.parent_coin_info,
+            rl_coin.amount,
+            rl_parent.amount,
+            rl_parent.parent_coin_info,
+        )
 
         signature = secretkey.sign(solution.get_hash())
-        list_of_coinsolutions.append(CoinSolution(self.rl_coin_record.coin, clvm.to_sexp_f([puzzle, solution])))
+        list_of_coinsolutions.append(
+            CoinSolution(self.rl_coin_record.coin, clvm.to_sexp_f([puzzle, solution]))
+        )
 
         # Spend consolidating coin
         puzzle = rl_make_aggregation_puzzle(self.rl_coin_record.coin.puzzle_hash)
-        solution = rl_make_aggregation_solution(consolidating_coin.name()
-                                                     , self.rl_coin_record.coin.parent_coin_info
-                                                     , self.rl_coin_record.coin.amount)
-        list_of_coinsolutions.append(CoinSolution(consolidating_coin, clvm.to_sexp_f([puzzle, solution])))
+        solution = rl_make_aggregation_solution(
+            consolidating_coin.name(),
+            self.rl_coin_record.coin.parent_coin_info,
+            self.rl_coin_record.coin.amount,
+        )
+        list_of_coinsolutions.append(
+            CoinSolution(consolidating_coin, clvm.to_sexp_f([puzzle, solution]))
+        )
         # Spend lock
-        puzstring = "(r (c (q 0x" + hexlify(consolidating_coin.name()).decode('ascii') + ") (q ())))"
+        puzstring = (
+            "(r (c (q 0x"
+            + hexlify(consolidating_coin.name()).decode("ascii")
+            + ") (q ())))"
+        )
 
         puzzle = Program(binutils.assemble(puzstring))
         solution = Program(binutils.assemble("()"))
-        list_of_coinsolutions.append(CoinSolution(Coin(self.rl_coin_record.coin,
-            puzzle.get_hash(), 0), clvm.to_sexp_f([puzzle, solution])))
+        list_of_coinsolutions.append(
+            CoinSolution(
+                Coin(self.rl_coin_record.coin, puzzle.get_hash(), 0),
+                clvm.to_sexp_f([puzzle, solution]),
+            )
+        )
 
         aggsig = BLSSignature.aggregate([signature])
 

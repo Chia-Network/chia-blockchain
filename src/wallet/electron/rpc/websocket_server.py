@@ -72,9 +72,7 @@ class WebSocketServer:
         wallet_id = int(request["wallet_id"])
         wallet = self.wallet_node.wallets[wallet_id]
 
-        tx = await wallet.generate_signed_transaction_dict(
-            request
-        )
+        tx = await wallet.generate_signed_transaction_dict(request)
 
         if tx is None:
             data = {"success": False}
@@ -91,8 +89,8 @@ class WebSocketServer:
 
     async def get_transactions(self, websocket, request, response_api):
         wallet_id = int(request["wallet_id"])
-        transactions = (
-            await self.wallet_node.wallet_state_manager.get_all_transactions(wallet_id)
+        transactions = await self.wallet_node.wallet_state_manager.get_all_transactions(
+            wallet_id
         )
 
         response = {"success": True, "txs": transactions}

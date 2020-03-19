@@ -148,7 +148,9 @@ class WalletStateManager:
         self.sync_mode = mode
         self.state_changed("sync_changed")
 
-    async def get_confirmed_spendable_for_wallet(self, current_index: uint32, wallet_id: int) -> uint64:
+    async def get_confirmed_spendable_for_wallet(
+        self, current_index: uint32, wallet_id: int
+    ) -> uint64:
         """
         Returns the balance amount of all coins that are spendable.
         Spendable - (Coinbase freeze period has passed.)
@@ -184,12 +186,16 @@ class WalletStateManager:
 
         return False
 
-    async def get_unconfirmed_spendable_for_wallet(self, current_index: uint32, wallet_id: int) -> uint64:
+    async def get_unconfirmed_spendable_for_wallet(
+        self, current_index: uint32, wallet_id: int
+    ) -> uint64:
         """
         Returns the confirmed balance amount - sum of unconfirmed transactions.
         """
 
-        confirmed = await self.get_confirmed_spendable_for_wallet(current_index, wallet_id)
+        confirmed = await self.get_confirmed_spendable_for_wallet(
+            current_index, wallet_id
+        )
         unconfirmed_tx = await self.tx_store.get_not_confirmed()
         addition_amount = 0
         removal_amount = 0
@@ -238,7 +244,9 @@ class WalletStateManager:
         result = confirmed - removal_amount + addition_amount
         return uint64(result)
 
-    async def unconfirmed_additions_for_wallet(self, wallet_id: int) -> Dict[bytes32, Coin]:
+    async def unconfirmed_additions_for_wallet(
+        self, wallet_id: int
+    ) -> Dict[bytes32, Coin]:
         """
         Returns new addition transactions that have not been confirmed yet.
         """
@@ -249,7 +257,9 @@ class WalletStateManager:
                 additions[coin.name()] = coin
         return additions
 
-    async def unconfirmed_removals_for_wallet(self, wallet_id: int) -> Dict[bytes32, Coin]:
+    async def unconfirmed_removals_for_wallet(
+        self, wallet_id: int
+    ) -> Dict[bytes32, Coin]:
         """
         Returns new removals transactions that have not been confirmed yet.
         """
@@ -278,7 +288,7 @@ class WalletStateManager:
         """
         Adding coin to the db
         """
-        info =  await self.puzzle_store.wallet_info_for_puzzle_hash(coin.puzzle_hash)
+        info = await self.puzzle_store.wallet_info_for_puzzle_hash(coin.puzzle_hash)
         assert info is not None
         wallet_id, wallet_type = info
         if coinbase:
@@ -324,7 +334,9 @@ class WalletStateManager:
                 )
                 await self.tx_store.add_transaction_record(tx_record)
 
-        coin_record: WalletCoinRecord = WalletCoinRecord(coin, index, uint32(0), False, coinbase, wallet_type, wallet_id)
+        coin_record: WalletCoinRecord = WalletCoinRecord(
+            coin, index, uint32(0), False, coinbase, wallet_type, wallet_id
+        )
         await self.wallet_store.add_coin_record(coin_record)
         self.state_changed("coin_added")
 
@@ -373,7 +385,7 @@ class WalletStateManager:
             spend_bundle=spend_bundle,
             additions=add_list,
             removals=rem_list,
-            wallet_id=wallet_id
+            wallet_id=wallet_id,
         )
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
         await self.tx_store.add_transaction_record(tx_record)
@@ -1015,4 +1027,6 @@ class WalletStateManager:
         return await self.wallet_store.get_coin_records_by_spent(spent)
 
     async def get_coin_records_by_spent_and_wallet(self, spent: bool, wallet_id):
-        return await self.wallet_store.get_coin_records_by_spent_and_wallet(spent, wallet_id)
+        return await self.wallet_store.get_coin_records_by_spent_and_wallet(
+            spent, wallet_id
+        )

@@ -89,7 +89,9 @@ class WalletNode:
         main_wallet_info = await self.wallet_state_manager.get_main_wallet()
         assert main_wallet_info is not None
 
-        self.main_wallet = await Wallet.create(config, key_config, self.wallet_state_manager, main_wallet_info)
+        self.main_wallet = await Wallet.create(
+            config, key_config, self.wallet_state_manager, main_wallet_info
+        )
         self.wallets = {}
         self.wallets[self.main_wallet.wallet_info.id] = self.main_wallet
 

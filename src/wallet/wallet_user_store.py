@@ -45,7 +45,6 @@ class WalletUserStore:
             "CREATE INDEX IF NOT EXISTS data on users_wallets(data)"
         )
 
-
         await self.db_connection.commit()
         # Lock
         self.lock = asyncio.Lock()  # external
@@ -68,12 +67,7 @@ class WalletUserStore:
     async def create_wallet(self, name: str, wallet_type: WalletType, data: str):
         cursor = await self.db_connection.execute(
             "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
-            (
-                None,
-                name,
-                wallet_type.value,
-                data
-            ),
+            (None, name, wallet_type.value, data),
         )
         await cursor.close()
         await self.db_connection.commit()
@@ -81,20 +75,13 @@ class WalletUserStore:
     async def update_wallet(self, wallet_info: WalletInfo):
         cursor = await self.db_connection.execute(
             "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
-            (
-                wallet_info.id,
-                wallet_info.name,
-                wallet_info.type,
-                wallet_info.data
-            ),
+            (wallet_info.id, wallet_info.name, wallet_info.type, wallet_info.data),
         )
         await cursor.close()
         await self.db_connection.commit()
 
     async def get_last_wallet(self) -> Optional[WalletInfo]:
-        cursor = await self.db_connection.execute(
-            "SELECT MAX(id) FROM users_wallets;"
-        )
+        cursor = await self.db_connection.execute("SELECT MAX(id) FROM users_wallets;")
         row = await cursor.fetchone()
         await cursor.close()
 
@@ -123,7 +110,9 @@ class WalletUserStore:
         Return a wallet by id
         """
 
-        cursor = await self.db_connection.execute("SELECT * from users_wallets WHERE id=?", (id,))
+        cursor = await self.db_connection.execute(
+            "SELECT * from users_wallets WHERE id=?", (id,)
+        )
         row = await cursor.fetchone()
         await cursor.close()
 

@@ -105,7 +105,9 @@ class TestTransactions:
         )
         assert await wallet_0.main_wallet.get_confirmed_balance() == funds
 
-        spend_bundle = await wallet_0.main_wallet.generate_signed_transaction(10, ph1, 0)
+        spend_bundle = await wallet_0.main_wallet.generate_signed_transaction(
+            10, ph1, 0
+        )
         await wallet_0.main_wallet.push_transaction(spend_bundle)
 
         await asyncio.sleep(3)
