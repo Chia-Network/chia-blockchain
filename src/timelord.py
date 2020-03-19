@@ -24,20 +24,16 @@ log = logging.getLogger(__name__)
 class Timelord:
     def __init__(self, config: Dict):
         self.config: Dict = config
-        self.free_servers: List[Tuple[str, str]] = list(
-            zip(self.config["vdf_server_ips"], self.config["vdf_server_ports"])
-        )
         self.ips_estimate = {
             k: v
             for k, v in list(
                 zip(
-                    self.config["servers_ips_estimate"]["ip"],
-                    self.config["servers_ips_estimate"]["ips"],
+                    self.config["vdf_clients"]["ip"],
+                    self.config["vdf_clients"]["ips_estimate"],
                 )
             )
         }
         self.lock: Lock = Lock()
-        self.server_count: int = len(self.free_servers)
         self.active_discriminants: Dict[bytes32, Tuple[StreamWriter, uint64, str]] = {}
         self.best_weight_three_proofs: int = -1
         self.active_discriminants_start_time: Dict = {}
@@ -49,7 +45,22 @@ class Timelord:
         self.proof_count: Dict = {}
         self.avg_ips: Dict = {}
         self.discriminant_queue: List[Tuple[bytes32, uint64]] = []
+        self.max_connection_time = self.config["max_connection_time"]
+        self.potential_free_clients: List = []
+        self.free_clients: List[Tuple[str, StreamReader, StreamWriter]] = []
         self._is_shutdown = False
+
+    async def _handle_client(self, reader: StreamReader, writer: StreamWriter):
+        async with self.lock:
+            client_ip = writer.get_extra_info('peername')[0]
+            log.info(f"New timelord connection from client: {client_ip}.")
+            if client_ip in self.ips_estimate.keys():
+                self.free_clients.append((client_ip, reader, writer))
+                log.info(f"Added new VDF client {client_ip}.")
+                for ip, end_time in list(self.potential_free_clients):
+                    if ip == client_ip:
+                        self.potential_free_clients.remove((ip, end_time))
+                        break
 
     async def _shutdown(self):
         async with self.lock:
@@ -99,10 +110,10 @@ class Timelord:
                 for k, _ in low_weights.items()
             }
 
-            server_ip = [v[2] for _, v in low_weights.items()]
+            client_ip = [v[2] for _, v in low_weights.items()]
             # ips maps an IP to the expected iterations per second of it.
             ips = {}
-            for ip in server_ip:
+            for ip in client_ip:
                 if ip in self.avg_ips:
                     current_ips, _ = self.avg_ips[ip]
                     ips[ip] = current_ips
@@ -121,6 +132,8 @@ class Timelord:
                 if expected_finish[k] == worst_finish
             )
         assert stop_writer is not None
+        _, _, stop_ip = self.active_discriminants[stop_discriminant]
+        self.potential_free_clients.append((stop_ip, time.time()))
         stop_writer.write(b"010")
         await stop_writer.drain()
         del self.active_discriminants[stop_discriminant]
@@ -159,17 +172,18 @@ class Timelord:
             else:
                 self.proof_count[challenge_weight] += 1
             if self.proof_count[challenge_weight] >= 3:
-                log.info("Cleaning up servers")
+                log.info("Cleaning up clients.")
                 self.best_weight_three_proofs = max(
                     self.best_weight_three_proofs, challenge_weight
                 )
                 for active_disc in list(self.active_discriminants):
-                    current_writer, current_weight, _ = self.active_discriminants[
+                    current_writer, current_weight, ip = self.active_discriminants[
                         active_disc
                     ]
                     if current_weight <= challenge_weight:
                         log.info(f"Active weight cleanup: {current_weight}")
                         log.info(f"Cleanup weight: {challenge_weight}")
+                        self.potential_free_clients.append((ip, time.time()))
                         current_writer.write(b"010")
                         await current_writer.drain()
                         del self.active_discriminants[active_disc]
@@ -196,45 +210,34 @@ class Timelord:
                         writer.write((iter_size + str(iter)).encode())
                         await writer.drain()
                         log.info(f"New iteration submitted: {iter}")
-            await asyncio.sleep(3)
+            await asyncio.sleep(1)
             async with self.lock:
                 if challenge_hash in self.done_discriminants:
                     alive_discriminant = False
 
     async def _do_process_communication(
-        self, challenge_hash, challenge_weight, ip, port
+        self, challenge_hash, challenge_weight, ip, reader, writer
     ):
         disc: int = create_discriminant(
             challenge_hash, constants["DISCRIMINANT_SIZE_BITS"]
         )
 
-        log.info("Attempting SSH connection")
-        proc = await asyncio.create_subprocess_shell(
-            f"./lib/chiavdf/fast_vdf/vdf_server {port}"
-        )
-
-        # TODO(Florin): Handle connection failure (attempt another server)
-        writer: Optional[StreamWriter] = None
-        reader: Optional[StreamReader] = None
-        for _ in range(10):
-            try:
-                reader, writer = await asyncio.open_connection(ip, port)
-                # socket = writer.get_extra_info("socket")
-                # socket.settimeout(None)
-                break
-            except Exception as e:
-                e_to_str = str(e)
-            await asyncio.sleep(1)
-        if not writer or not reader:
-            raise Exception("Unable to connect to VDF server")
-
         writer.write((str(len(str(disc))) + str(disc)).encode())
         await writer.drain()
 
-        ok = await reader.readexactly(2)
-        assert ok.decode() == "OK"
+        try:
+            ok = await reader.readexactly(2)
+        except (asyncio.IncompleteReadError, ConnectionResetError, Exception) as e:
+            log.warning(f"{type(e)} {e}")
+            async with self.lock:
+                if challenge_hash not in self.done_discriminants:
+                    self.done_discriminants.append(challenge_hash)
+            return
 
-        log.info("Got handshake with VDF server.")
+        if ok.decode() != "OK":
+            return
+
+        log.info("Got handshake with VDF client.")
 
         async with self.lock:
             self.active_discriminants[challenge_hash] = (writer, challenge_weight, ip)
@@ -242,24 +245,26 @@ class Timelord:
 
         asyncio.create_task(self._send_iterations(challenge_hash, writer))
 
-        # Listen to the server until "STOP" is received.
+        # Listen to the client until "STOP" is received.
         while True:
             try:
                 data = await reader.readexactly(4)
-            except (asyncio.IncompleteReadError, ConnectionResetError) as e:
+            except (asyncio.IncompleteReadError, ConnectionResetError, Exception) as e:
                 log.warning(f"{type(e)} {e}")
+                async with self.lock:
+                    if challenge_hash in self.active_discriminants:
+                        del self.active_discriminants[challenge_hash]
+                    if challenge_hash in self.active_discriminants_start_time:
+                        del self.active_discriminants_start_time[challenge_hash]
+                    if challenge_hash not in self.done_discriminants:
+                        self.done_discriminants.append(challenge_hash)
                 break
 
             if data.decode() == "STOP":
-                log.info("Stopped server")
+                log.info(f"Stopped client running on ip {ip}.")
                 async with self.lock:
                     writer.write(b"ACK")
                     await writer.drain()
-                    await proc.wait()
-                    # Server is now available.
-                    self.free_servers.append((ip, port))
-                    len_server = len(self.free_servers)
-                    log.info(f"Process ended... Server length {len_server}")
                 break
             else:
                 try:
@@ -268,9 +273,16 @@ class Timelord:
                     stdout_bytes_io: io.BytesIO = io.BytesIO(
                         bytes.fromhex(data.decode() + proof.decode())
                     )
-                except Exception as e:
-                    e_to_str = str(e)
-                    log.error(f"Socket error: {e_to_str}")
+                except (asyncio.IncompleteReadError, ConnectionResetError, Exception) as e:
+                    log.warning(f"{type(e)} {e}")
+                    async with self.lock:
+                        if challenge_hash in self.active_discriminants:
+                            del self.active_discriminants[challenge_hash]
+                        if challenge_hash in self.active_discriminants_start_time:
+                            del self.active_discriminants_start_time[challenge_hash]
+                        if challenge_hash not in self.done_discriminants:
+                            self.done_discriminants.append(challenge_hash)
+                    break
 
                 iterations_needed = uint64(
                     int.from_bytes(stdout_bytes_io.read(8), "big", signed=True)
@@ -348,17 +360,26 @@ class Timelord:
                                 for d in with_iters
                                 if min(self.pending_iters[d]) == min_iter
                             )
-                        if len(self.free_servers) != 0:
-                            ip, port = self.free_servers[0]
-                            self.free_servers = self.free_servers[1:]
+                        if len(self.free_clients) != 0:
+                            ip, sr, sw = self.free_clients[0]
+                            self.free_clients = self.free_clients[1:]
                             self.discriminant_queue.remove((disc, max_weight))
                             asyncio.create_task(
                                 self._do_process_communication(
-                                    disc, max_weight, ip, port
+                                    disc, max_weight, ip, sr, sw
                                 )
                             )
                         else:
-                            if len(self.active_discriminants) == self.server_count:
+                            self.potential_free_clients = [
+                                (ip, end_time)
+                                for ip, end_time
+                                in self.potential_free_clients
+                                if time.time() < end_time + self.max_connection_time
+                            ]
+                            if (
+                                len(self.potential_free_clients) == 0
+                                and len(self.active_discriminants) > 0
+                            ):
                                 worst_weight_active = min(
                                     [
                                         h

@@ -53,7 +53,7 @@ class FullNode:
     ) -> OutboundMessageGenerator:
         """
         Sends all of the current heads to all farmer peers. Also sends the latest
-        estimated proof of time rate, so farmer can calulate which proofs are good.
+        estimated proof of time rate, so farmer can calculate which proofs are good.
         """
         requests: List[farmer_protocol.ProofOfSpaceFinalized] = []
         async with self.store.lock:
@@ -485,7 +485,7 @@ class FullNode:
                     prev_block = await self.store.get_block(block.prev_header_hash)
                 assert prev_block is not None
 
-                # The block gets permanantly added to the blockchain
+                # The block gets permanently added to the blockchain
                 validated, pos = prevalidate_results[index]
                 index += 1
 
@@ -624,7 +624,7 @@ class FullNode:
         self, request: peer_protocol.RequestSyncBlocks
     ) -> OutboundMessageGenerator:
         """
-        Responsd to a peers request for syncing blocks.
+        Responds to a peers request for syncing blocks.
         """
         blocks: List[FullBlock] = []
         async with self.store.lock:

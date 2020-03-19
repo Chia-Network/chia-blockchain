@@ -279,5 +279,6 @@ You can also use the [HTTP RPC](https://github.com/Chia-Network/chia-blockchain/
 
 
 ```bash
-curl -X POST  http://localhost:8555/get_blockchain_state
+curl -X POST http://localhost:8555/get_blockchain_state
+curl -d '{"header_hash":"afe223d75d40dd7bd19bf35846d0c9dce608bfc77ee5baa9f9cd6b98436e428b"}' -H "Content-Type: application/json" -X POST http://localhost:8555/get_header
 ```

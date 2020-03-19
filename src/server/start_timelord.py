@@ -27,6 +27,13 @@ async def main():
     server = ChiaServer(config["port"], timelord, NodeType.TIMELORD)
     _ = await server.start_server(config["host"], None)
 
+    coro = asyncio.start_server(
+        timelord._handle_client,
+        config["vdf_server"]["host"],
+        config["vdf_server"]["port"],
+        loop=asyncio.get_running_loop()
+    )
+
     def signal_received():
         server.close_all()
         asyncio.create_task(timelord._shutdown())
@@ -42,10 +49,13 @@ async def main():
     await asyncio.sleep(1)  # Prevents TCP simultaneous connect with full node
     await server.start_client(full_node_peer, None)
 
+    vdf_server = asyncio.ensure_future(coro)
+
     async for msg in timelord._manage_discriminant_queue():
         server.push_message(msg)
 
     await server.await_closed()
+    vdf_server.cancel()
     log.info("Timelord fully closed.")
 
 

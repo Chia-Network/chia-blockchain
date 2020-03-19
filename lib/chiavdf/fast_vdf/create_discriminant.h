@@ -83,9 +83,17 @@ std::vector<uint8_t> EntropyFromSeed(std::vector<uint8_t>& seed, int byte_count)
 }
 
 integer CreateDiscriminant(std::vector<uint8_t>& seed, int length = 1024) {
-    auto primes = OddPrimesBelowM();
-    auto residues = BuildResidues();
-    auto sieve_info = BuildSieveInfo(primes);
+    static bool is_init = false;
+    static std::vector<int> residues;
+    static std::vector<pair<int, int>> sieve_info;
+
+    if (!is_init) {
+        auto primes = OddPrimesBelowM();
+        residues = BuildResidues();
+        sieve_info = BuildSieveInfo(primes);
+        is_init = true;
+    }
+
     int extra = length % 8;
     int size = (length >> 3) + (extra == 0 ? 2 : 3);
     auto entropy = EntropyFromSeed(seed, size);

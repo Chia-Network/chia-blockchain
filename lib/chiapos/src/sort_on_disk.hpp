@@ -90,7 +90,7 @@ class Disk {
 
 class FileDisk : public Disk {
  public:
-    inline explicit FileDisk(std::string filename) {
+    inline explicit FileDisk(const std::string& filename) {
         Initialize(filename);
     }
 
@@ -98,13 +98,13 @@ class FileDisk : public Disk {
         f_.close();
     }
 
-    inline void Read(uint64_t begin, uint8_t* memcache, uint32_t length) {
+    inline void Read(uint64_t begin, uint8_t* memcache, uint32_t length) override {
         // Seek, read, and replace into memcache
         f_.seekg(begin);
         f_.read(reinterpret_cast<char*>(memcache), length);
     }
 
-    inline void Write(uint64_t begin, uint8_t* memcache, uint32_t length) {
+    inline void Write(uint64_t begin, uint8_t* memcache, uint32_t length) override {
         // Seek and write from memcache
         f_.seekp(begin);
         f_.write(reinterpret_cast<char*>(memcache), length);
@@ -113,22 +113,22 @@ class FileDisk : public Disk {
     /**
      * Returns a read handle at the specified byte offset from the beginning
      */
-    inline std::iostream* ReadHandle(uint64_t begin) {
+    inline std::iostream* ReadHandle(uint64_t begin) override {
         f_.seekg(begin);
         return &f_;
     }
 
-    inline std::iostream* WriteHandle(uint64_t begin) {
+    inline std::iostream* WriteHandle(uint64_t begin) override {
         f_.seekp(begin);
         return &f_;
     }
 
-    inline std::string GetFileName() const {
+    inline std::string GetFileName() const noexcept {
         return filename_;
     }
 
  private:
-    void Initialize(std::string filename) {
+    void Initialize(const std::string& filename) {
         filename_ = filename;
 
         // Creates the file if it does not exist
@@ -204,17 +204,17 @@ class BucketStore {
         Util::IntToFourBytes(mem_ + i * seg_size_, v);
     }
 
-    inline uint64_t GetSegmentId(uint64_t i) {
+    inline uint64_t GetSegmentId(uint64_t i) const {
         return Util::FourBytesToInt(mem_ + i * seg_size_);
     }
 
     // Get the first empty position from the head segment of bucket b.
-    inline uint64_t GetEntryPos(uint64_t b) {
+    inline uint64_t GetEntryPos(uint64_t b) const {
         return bucket_head_ids_[b] * seg_size_ + 4
                + bucket_head_counts_[b] * entry_len_;
     }
 
-    inline void Audit() {
+    inline void Audit() const {
         uint64_t count = 0;
         uint64_t pos = first_empty_seg_id_;
 
@@ -231,19 +231,19 @@ class BucketStore {
         assert(count == length_);
     }
 
-    inline uint64_t NumFree() {
+    inline uint64_t NumFree() const {
         uint64_t used = GetSegmentId(first_empty_seg_id_);
         return (bucket_sizes_.size() - used) * entries_per_seg_;
     }
 
-    inline bool IsEmpty() {
+    inline bool IsEmpty() const noexcept {
         for (uint64_t s : bucket_sizes_) {
             if (s > 0) return false;
         }
         return true;
     }
 
-    inline bool IsFull() {
+    inline bool IsFull() const noexcept {
         return first_empty_seg_id_ == length_;
     }
 
@@ -275,7 +275,7 @@ class BucketStore {
         bucket_head_counts_[b] += 1;
     }
 
-    inline uint64_t MaxBucket() {
+    inline uint64_t MaxBucket() const {
         uint64_t max_bucket_size = bucket_sizes_[0];
         uint64_t max_index = 0;
         for (uint64_t i = 1; i < bucket_sizes_.size(); i++) {
@@ -287,7 +287,7 @@ class BucketStore {
         return max_index;
     }
 
-    inline std::vector<uint64_t> BucketsBySize() {
+    inline std::vector<uint64_t> BucketsBySize() const {
         // Lukasz Wiklendt (https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes)
         std::vector<uint64_t> idx(bucket_sizes_.size());
         iota(idx.begin(), idx.end(), 0);
@@ -298,7 +298,7 @@ class BucketStore {
 
     // Similar to how 'Bits' class works, appends an entry to the entries list, such as all entries are stored into 128-bit blocks.
     // Bits class was avoided since it consumes more time than a uint128_t array.
-    void AddBucketEntry(uint8_t* big_endian_bytes, uint64_t num_bytes, uint16_t size_bits, uint128_t* entries, uint64_t& cnt) {
+    static void AddBucketEntry(uint8_t* big_endian_bytes, uint64_t num_bytes, uint16_t size_bits, uint128_t* entries, uint64_t& cnt) {
         assert(size_bits / 8 >= num_bytes);
         uint16_t extra_space = size_bits - num_bytes * 8;
         uint64_t init_cnt = cnt;

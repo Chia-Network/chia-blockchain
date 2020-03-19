@@ -25,6 +25,9 @@ def main():
         "-n", "--num_plots", help="Number of plots", type=int, default=10
     )
     parser.add_argument(
+        "-i", "--index", help="First plot index", type=int, default=0
+    )
+    parser.add_argument(
         "-p", "--pool_pub_key", help="Hex public key of pool", type=str, default=""
     )
     parser.add_argument(
@@ -63,10 +66,10 @@ def main():
         pool_pk = pool_sk.get_public_key()
 
     print(
-        f"Creating {args.num_plots} plots of size {args.size}, sk_seed {sk_seed.hex()} ppk {pool_pk}"
+        f"Creating {args.num_plots} plots, from index {args.index} to {args.index + args.num_plots - 1}, of size {args.size}, sk_seed {sk_seed.hex()} ppk {pool_pk}"
     )
 
-    for i in range(args.num_plots):
+    for i in range(args.index, args.index + args.num_plots):
         # Generate a sk based on the seed, plot size (k), and index
         sk: PrivateKey = PrivateKey.from_seed(
             sk_seed + args.size.to_bytes(1, "big") + i.to_bytes(4, "big")

@@ -111,7 +111,7 @@ class DiskProver {
         memcpy(buffer, memo, this->memo_size);
     }
 
-    uint32_t GetMemoSize() {
+    uint32_t GetMemoSize() const noexcept {
         return this->memo_size;
     }
 
@@ -119,11 +119,11 @@ class DiskProver {
         memcpy(buffer, id, kIdLen);
     }
 
-    std::string GetFilename() {
+    std::string GetFilename() const noexcept {
         return filename;
     }
 
-    uint8_t GetSize() {
+    uint8_t GetSize() const noexcept {
         return k;
     }
 
@@ -489,7 +489,7 @@ class DiskProver {
     //     C(x1, x2) < C(x3, x4)
     //     For all comparisons up to f7
     //     Where a < b is defined as:  max(b) > max(a) where a and b are lists of k bit elements
-    std::vector<LargeBits> ReorderProof(const std::vector<Bits>& xs_input) {
+    std::vector<LargeBits> ReorderProof(const std::vector<Bits>& xs_input) const {
         F1Calculator f1(k, id);
         std::vector<std::pair<Bits, Bits> > results;
         LargeBits xs;

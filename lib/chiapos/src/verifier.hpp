@@ -24,7 +24,7 @@ class Verifier {
     // Gets the quality string from a proof in proof ordering. The quality string is two
     // adjacent values, determined by the quality index (1-32), and the proof in plot
     // ordering.
-    LargeBits GetQualityString(uint8_t k, LargeBits proof, uint16_t quality_index) {
+    static LargeBits GetQualityString(uint8_t k, LargeBits proof, uint16_t quality_index) {
         // Converts the proof from proof ordering to plot ordering
         for (uint8_t table_index = 1; table_index < 7; table_index++) {
             LargeBits new_proof;
@@ -116,7 +116,7 @@ class Verifier {
  private:
     // Compares two lists of k values, a and b. a > b iff max(a) > max(b),
     // if there is a tie, the next largest value is compared.
-    bool CompareProofBits(LargeBits left, LargeBits right, uint8_t k) {
+    static bool CompareProofBits(LargeBits left, LargeBits right, uint8_t k) {
         uint16_t size = left.GetSize() / k;
         assert(left.GetSize() == right.GetSize());
         for (int16_t i = size - 1; i >= 0; i--) {
