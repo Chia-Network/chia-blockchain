@@ -42,7 +42,7 @@ async def index(request):
     if app['ready']:
         return dict(title='Chia Full Node', **app['node'])
 
-    return {}
+    raise web.HTTPNotFound()
 
 
 @routes.get('/lca')
@@ -53,7 +53,7 @@ async def lca(request):
         block = app['node']['blockchain_state']['lca']
         return dict(title='Least Common Ancestor', block=block)
 
-    return {}
+    raise web.HTTPNotFound()
 
 
 @routes.get('/tips/{blockid}')
