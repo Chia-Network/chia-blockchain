@@ -7,4 +7,4 @@ In order to run this web app (assuming you have configured the chia dev environm
 python ./src/web-ui/app.py
 ````
 
-Navigate to http://127.0.0.1:8080
+Navigate to <http://127.0.0.1:8080>
