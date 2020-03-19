@@ -14,13 +14,22 @@
     {% endfor %}  
 </div>
 
+
 {{ render_field('Current difficulty', blockchain_state.difficulty) }}
 {{ render_field('Current VDF iterations per second', blockchain_state.ips) }} 
+
 
 <h3>Connections</h3>
 {% for connection in connections %}
     {{ render_field_link(connection.type_name, connection.peer_host + ':' +  connection.peer_port | string + '/' + connection.peer_server_port | string, './connections/' + connection.node_id | string | urlencode) }}
 {% endfor %}        
+
+
+<h3>Top Pool Winnings</h3>
+{% for winner in top_winners %}
+    {{ render_field('Public key', winner[2] | string + ' - ' + (winner[0] / 1000000000000) | string + ' chia') }}
+{% endfor %}  
+
 
 <h3>Our Pool Winnings</h3>
 {% for winner in our_winners %}
