@@ -5,6 +5,6 @@
 {% macro render_field_link(name, value, href='') -%}
     <div>
         <span class='name'>{{ name }}:</span>
-        <a href={{href |  urlencode }}>{{ value }}</a>
+        <a href={{href }}>{{ value }}</a>
     </div>
 {%- endmacro %}
