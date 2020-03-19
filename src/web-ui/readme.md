@@ -1,5 +1,7 @@
 # Introduction
 
+This folder tree is a [Flask](https://palletsprojects.com/p/jinja/) app that has the same basic UI function as the SSH terminal.
+
 In order to run this web app (assuming you have configured the chia dev environment)
 
 ````bash
