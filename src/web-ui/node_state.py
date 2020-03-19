@@ -22,7 +22,7 @@ async def query_node(app):
         ] = pool_balances
 
         top_winners = sorted(
-            [(rewards, key) for key, rewards in coin_balances.items()],
+            [(rewards, key, bytes(key).hex()) for key, rewards in coin_balances.items()],
             reverse=True,
         )[: 10]
 
