@@ -58,3 +58,4 @@ class Introducer:
 
         msg = Message("respond_peers", RespondPeers(peers))
         yield OutboundMessage(NodeType.FULL_NODE, msg, Delivery.RESPOND)
+        yield OutboundMessage(NodeType.WALLET, msg, Delivery.RESPOND)

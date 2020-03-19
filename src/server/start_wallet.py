@@ -11,7 +11,6 @@ except ImportError:
 
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
-from src.types.peer_info import PeerInfo
 from src.util.logging import initialize_logging
 from src.util.config import load_config, load_config_cli
 from setproctitle import setproctitle
@@ -31,10 +30,6 @@ async def main():
 
     wallet = await WalletNode.create(config, key_config)
 
-    full_node_peer = PeerInfo(
-        config["full_node_peer"]["host"], config["full_node_peer"]["port"]
-    )
-
     server = ChiaServer(config["port"], wallet, NodeType.WALLET)
     wallet.set_server(server)
 
@@ -46,10 +41,8 @@ async def main():
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
 
     _ = await server.start_server(config["host"], None, config)
-    for i in range(10):
-        if await server.start_client(full_node_peer, None, config):
-            break
-        await asyncio.sleep(1)
+
+    wallet._start_bg_tasks()
 
     await server.await_closed()
     await wallet.wallet_state_manager.close_all_stores()

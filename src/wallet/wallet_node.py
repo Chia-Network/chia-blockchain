@@ -123,12 +123,15 @@ class WalletNode:
                 yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
 
             while not self._shut_down:
-                # The first time connecting to introducer, keep trying to connect
                 if self._num_needed_peers():
                     if not await self.server.start_client(
                         introducer_peerinfo, on_connect, self.config
                     ):
                         await asyncio.sleep(5)
+                        continue
+                    await asyncio.sleep(5)
+                    if self._num_needed_peers() == self.config["target_peer_count"]:
+                        # Try again if we have 0 peers
                         continue
                 await asyncio.sleep(self.config["introducer_connect_interval"])
 

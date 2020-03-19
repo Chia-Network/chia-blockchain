@@ -1487,12 +1487,6 @@ class FullNode:
         """
         Receive a full block from a peer full node (or ourselves).
         """
-        header_hash = respond_block.block.header.get_hash()
-
-        # Adds the block to seen, and check if it's seen before (which means header is in memory)
-        if self.blockchain.contains_block(header_hash):
-            return
-
         if self.store.get_sync_mode():
             # This is a tip sent to us by another peer
             if self.store.get_waiting_for_tips():
@@ -1510,6 +1504,11 @@ class FullNode:
                 self.store.get_potential_blocks_received(
                     respond_block.block.height
                 ).set()
+            return
+
+        # Adds the block to seen, and check if it's seen before (which means header is in memory)
+        header_hash = respond_block.block.header.get_hash()
+        if self.blockchain.contains_block(header_hash):
             return
 
         prevalidate_block = await self.blockchain.pre_validate_blocks(

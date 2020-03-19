@@ -37,6 +37,8 @@ class WalletStateManager:
     block_records: Dict[bytes32, BlockRecord]
     # Specifies the LCA path
     height_to_hash: Dict[uint32, bytes32]
+    # Map from previous header hash, to new work difficulty
+    difficulty_resets_prev: Dict[bytes32, uint64]
     # Header hash of tip (least common ancestor)
     lca: Optional[bytes32]
     start_index: int
@@ -76,6 +78,7 @@ class WalletStateManager:
         genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
         self.genesis = genesis
         self.state_changed_callback = None
+        self.difficulty_resets_prev = {}
 
         if len(self.block_records) > 0:
             # Initializes the state based on the DB block records
@@ -469,6 +472,13 @@ class WalletStateManager:
             if header_block is not None:
                 if not await self.validate_header_block(block, header_block):
                     return ReceiveBlockResult.INVALID_BLOCK
+                if (block.height + 1) % self.constants[
+                    "DIFFICULTY_EPOCH"
+                ] == self.constants["DIFFICULTY_DELAY"]:
+                    assert header_block.challenge.new_work_difficulty is not None
+                    self.difficulty_resets_prev[
+                        block.header_hash
+                    ] = header_block.challenge.new_work_difficulty
 
             if (block.height + 1) % self.constants["DIFFICULTY_EPOCH"] == 0:
                 assert block.total_iters is not None
@@ -603,7 +613,7 @@ class WalletStateManager:
 
         if br.height > 0:
             prev_br = self.block_records[br.prev_header_hash]
-            # If prev header block, check prev header block hash matchs
+            # If prev header block, check prev header block hash matches
             if prev_br.new_challenge_hash is not None:
                 if (
                     header_block.proof_of_space.challenge_hash
@@ -650,6 +660,12 @@ class WalletStateManager:
             assert prev_prev_block is not None
             difficulty = uint64(br.weight - prev_block.weight)
             prev_difficulty = uint64(prev_block.weight - prev_prev_block.weight)
+
+            # Ensures the challenge for this block is valid (contains correct diff reset)
+            if prev_block.header_hash in self.difficulty_resets_prev:
+                if self.difficulty_resets_prev[prev_block.header_hash] != difficulty:
+                    return False
+
             max_diff = uint64(
                 truncate_to_significant_bits(
                     prev_difficulty * self.constants["DIFFICULTY_FACTOR"],
@@ -689,10 +705,8 @@ class WalletStateManager:
         )
         if proofs_hash != header_block.challenge.proofs_hash:
             return False
-
-        if header_block.challenge.new_work_difficulty is not None:
-            if header_block.challenge.new_work_difficulty != difficulty:
-                return False
+        # Note that we are not validating the work difficulty reset (since we don't know the
+        # next block yet. When we process the next block, we will check that it matches).
 
         # Validate header:
         if header_block.header.header_hash != br.header_hash:

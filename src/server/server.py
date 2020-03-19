@@ -309,6 +309,9 @@ class ChiaServer:
         # length encoding and CBOR serialization
         async def serve_forever():
             async for connection, message in expanded_messages_aiter:
+                if message is None:
+                    self.global_connections.close(connection, True)
+                    continue
                 self.log.info(
                     f"-> {message.function} to peer {connection.get_peername()}"
                 )
@@ -511,7 +514,7 @@ class ChiaServer:
 
     async def expand_outbound_messages(
         self, pair: Tuple[Connection, OutboundMessage]
-    ) -> AsyncGenerator[Tuple[Connection, Message], None]:
+    ) -> AsyncGenerator[Tuple[Connection, Optional[Message]], None]:
         """
         Expands each of the outbound messages into it's own message.
         """
@@ -545,4 +548,4 @@ class ChiaServer:
                     else:
                         yield (peer, outbound_message.message)
         elif outbound_message.delivery_method == Delivery.CLOSE:
-            self.global_connections.close(connection, True)
+            yield (connection, None)
