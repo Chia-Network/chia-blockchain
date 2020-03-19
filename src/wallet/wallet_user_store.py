@@ -1,6 +1,6 @@
 import asyncio
 from pathlib import Path
-from typing import Tuple, Set, Optional
+from typing import Set, Optional
 
 import aiosqlite
 from src.util.ints import uint32

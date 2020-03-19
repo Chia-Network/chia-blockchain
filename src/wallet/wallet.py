@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Tuple, Set, Any
+from typing import Dict, Optional, List, Tuple, Set
 import clvm
 from blspy import ExtendedPrivateKey, PublicKey
 import logging

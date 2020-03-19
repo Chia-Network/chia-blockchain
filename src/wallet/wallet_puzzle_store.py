@@ -3,7 +3,7 @@ from typing import Set, Tuple, Optional
 from pathlib import Path
 import aiosqlite
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint32
+from src.util.ints import uint32, uint64
 from src.wallet.util.wallet_types import WalletType
 
 
@@ -145,7 +145,7 @@ class WalletPuzzleStore:
 
     async def wallet_info_for_puzzle_hash(
         self, puzzle_hash: bytes32
-    ) -> Optional[Tuple[int, WalletType]]:
+    ) -> Optional[Tuple[uint64, WalletType]]:
         """
         Returns the derivation path for the puzzle_hash.
         Returns -1 if not present.
