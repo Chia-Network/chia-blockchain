@@ -6,6 +6,7 @@ from src.util.config import load_config_cli
 from middlewares import setup_middlewares
 from node_state import query_node
 from blspy import PrivateKey
+import urllib.parse
 
 
 def setup_app():
@@ -45,11 +46,34 @@ async def index(request):
 
 
 @routes.get('/lca')
-@aiohttp_jinja2.template('lca.jinja2')
+@aiohttp_jinja2.template('shb.jinja2')
 async def lca(request):
     # the node property contains the state of the chia node when it was last queried
     if app['ready']:
-        return dict(title='Least Common Ancestor', **app['node']['blockchain_state'])
+        block = app['node']['blockchain_state']['lca']
+        return dict(title='Least Common Ancestor', block=block)
+
+    return {}
+
+
+@routes.get('/block/{blockid}')
+@aiohttp_jinja2.template('shb.jinja2')
+async def SmallHeaderBlock(request):
+    # the node property contains the state of the chia node when it was last queried
+    if app['ready']:
+        blockid = urllib.parse.unquote(request.match_info['blockid'])
+        state = app['node']['blockchain_state']
+        block = find_block(state['tips'], blockid)
+        return dict(title='Tip', block=block)
+
+    return {}
+
+
+def find_block(block_list, blockid):
+    for block in block_list:
+        hash = str(block.challenge.proof_of_space_hash)
+        if hash == blockid:
+            return block
 
     return {}
 
