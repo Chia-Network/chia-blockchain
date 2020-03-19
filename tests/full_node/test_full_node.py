@@ -862,11 +862,17 @@ class TestWalletProtocol:
             if (
                 i % test_constants["DIFFICULTY_EPOCH"]
                 == test_constants["DIFFICULTY_DELAY"]
-                or i % test_constants["DIFFICULTY_EPOCH"] == 0
             ):
                 assert hashes[i][1] is not None
-            else:
+            elif i > 0:
                 assert hashes[i][1] is None
+            if (
+                i % test_constants["DIFFICULTY_EPOCH"]
+                == test_constants["DIFFICULTY_EPOCH"] - 1
+            ):
+                assert hashes[i][2] is not None
+            else:
+                assert hashes[i][2] is None
             assert hashes[i][0] == std_hash(
                 blocks_list[i].proof_of_space.get_hash()
                 + blocks_list[i].proof_of_time.output.get_hash()

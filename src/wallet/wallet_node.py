@@ -42,7 +42,7 @@ class WalletNode:
     cached_blocks: Dict[bytes32, Tuple[BlockRecord, HeaderBlock]]
     cached_removals: Dict[bytes32, List[bytes32]]
     cached_additions: Dict[bytes32, List[Coin]]
-    proof_hashes: List[Tuple[bytes32, Optional[Tuple[uint64, uint64]]]]
+    proof_hashes: List[Tuple[bytes32, Optional[uint64], Optional[uint64]]]
     header_hashes: List[bytes32]
     potential_blocks_received: Dict[uint32, asyncio.Event]
     potential_header_hashes: Dict[uint32, bytes32]
@@ -205,11 +205,14 @@ class WalletNode:
             self.header_hashes
         )
         fork_point_hash: bytes32 = self.header_hashes[fork_point_height]
-        self.log.info(f"Fork point: {fork_point_hash} at height {fork_point_height}")
+        # Sync a little behind, in case there is a short reorg
         tip_height = (
             len(self.header_hashes) - 5
             if len(self.header_hashes) > 5
             else len(self.header_hashes)
+        )
+        self.log.info(
+            f"Fork point: {fork_point_hash} at height {fork_point_height}. Will sync up to {tip_height}"
         )
         for height in range(0, tip_height + 1):
             self.potential_blocks_received[uint32(height)] = asyncio.Event()
@@ -243,8 +246,8 @@ class WalletNode:
             difficulty: uint64
             for i in range(tip_height):
                 if self.proof_hashes[i][1] is not None:
-                    difficulty = self.proof_hashes[i][1][1]
-                if i > fork_point_height and i % 2 == 1:  # Only add odd heights
+                    difficulty = self.proof_hashes[i][1]
+                if i > (fork_point_height + 1) and i % 2 == 1:  # Only add odd heights
                     heights.append(uint32(i))
                     difficulty_weights.append(difficulty)
 
@@ -253,12 +256,11 @@ class WalletNode:
                 list(
                     set(
                         random.choices(
-                            heights, difficulty_weights, k=min(15, len(heights))
+                            heights, difficulty_weights, k=min(50, len(heights))
                         )
                     )
                 )
             )
-            print("Query heights:", query_heights_odd)
             query_heights: List[uint32] = []
             for odd_height in query_heights_odd:
                 query_heights += [uint32(odd_height - 1), odd_height]
@@ -268,7 +270,6 @@ class WalletNode:
             last_request_time = float(0)
             highest_height_requested = uint32(0)
             request_made = False
-            print("Query heights:", query_heights)
 
             for height_index in range(len(query_heights)):
                 total_time_slept = 0
@@ -327,10 +328,6 @@ class WalletNode:
                         await asyncio.wait_for(aw, timeout=sleep_interval)
                         break
                     except concurrent.futures.TimeoutError:
-                        try:
-                            await aw
-                        except asyncio.CancelledError:
-                            pass
                         total_time_slept += sleep_interval
                         self.log.info("Did not receive desired headers")
 
@@ -348,11 +345,12 @@ class WalletNode:
 
             # Add blockrecords one at a time, to catch up to starting height
             weight = self.wallet_state_manager.block_records[fork_point_hash].weight
-            header_validate_start_height = max(
-                fork_point_height, self.config["starting_height"] - 1
+            header_validate_start_height = min(
+                max(fork_point_height, self.config["starting_height"] - 1),
+                tip_height + 1,
             )
             if fork_point_height == 0:
-                difficulty = self.constants["STARTING_DIFFICULTY"]
+                difficulty = self.constants["DIFFICULTY_STARTING"]
             else:
                 fork_point_parent_hash = self.wallet_state_manager.block_records[
                     fork_point_hash

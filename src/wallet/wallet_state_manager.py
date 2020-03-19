@@ -78,6 +78,7 @@ class WalletStateManager:
         self.state_changed_callback = None
 
         if len(self.block_records) > 0:
+            # Initializes the state based on the DB block records
             # Header hash with the highest weight
             self.lca = max(
                 (item[1].weight, item[0]) for item in self.block_records.items()
@@ -120,14 +121,23 @@ class WalletStateManager:
         return self
 
     def set_callback(self, callback: Callable):
+        """
+        Callback to be called when the state of the wallet changes.
+        """
         self.state_changed_callback = callback
 
     def state_changed(self, state: str):
+        """
+        Calls the callback if it's present.
+        """
         if self.state_changed_callback is None:
             return
         self.state_changed_callback(state)
 
     def set_sync_mode(self, mode: bool):
+        """
+        Sets the sync mode. This changes the behavior of the wallet node.
+        """
         self.sync_mode = mode
         self.state_changed("sync_changed")
 
@@ -176,6 +186,9 @@ class WalletStateManager:
         return uint64(result)
 
     async def get_confirmed_balance(self) -> uint64:
+        """
+        Returns the confirmed balance, including coinbase rewards that are not spendable.
+        """
         record_list: Set[
             CoinRecord
         ] = await self.wallet_store.get_coin_records_by_spent(False)
@@ -187,6 +200,10 @@ class WalletStateManager:
         return uint64(amount)
 
     async def get_unconfirmed_balance(self) -> uint64:
+        """
+        Returns the balance, including coinbase rewards that are not spendable, and unconfirmed
+        transactions.
+        """
         confirmed = await self.get_confirmed_balance()
         unconfirmed_tx = await self.tx_store.get_not_confirmed()
         addition_amount = 0
@@ -202,6 +219,9 @@ class WalletStateManager:
         return uint64(result)
 
     async def unconfirmed_additions(self) -> Dict[bytes32, Coin]:
+        """
+        Returns new addition transactions that have not been confirmed yet.
+        """
         additions: Dict[bytes32, Coin] = {}
         unconfirmed_tx = await self.tx_store.get_not_confirmed()
         for record in unconfirmed_tx:
@@ -210,6 +230,9 @@ class WalletStateManager:
         return additions
 
     async def unconfirmed_removals(self) -> Dict[bytes32, Coin]:
+        """
+        Returns new removals transactions that have not been confirmed yet.
+        """
         removals: Dict[bytes32, Coin] = {}
         unconfirmed_tx = await self.tx_store.get_not_confirmed()
         for record in unconfirmed_tx:
@@ -397,7 +420,7 @@ class WalletStateManager:
     def find_fork_point(self, alternate_chain: List[bytes32]) -> uint32:
         """
         Takes in an alternate blockchain (headers), and compares it to self. Returns the last header
-        where both blockchains are equal.
+        where both blockchains are equal. Used for syncing.
         """
         lca: BlockRecord = self.block_records[self.lca]
 
@@ -440,7 +463,7 @@ class WalletStateManager:
                 if not await self.validate_header_block(block, header_block):
                     return ReceiveBlockResult.INVALID_BLOCK
 
-            if block.height % self.constants["DIFFICULTY_EPOCH"] == 0:
+            if (block.height + 1) % self.constants["DIFFICULTY_EPOCH"] == 0:
                 assert block.total_iters is not None
 
             self.block_records[block.header_hash] = block
@@ -733,7 +756,6 @@ class WalletStateManager:
         """
 
         for height in heights:
-            breakpoint()
             prev_height = uint32(height - 1)
             # Get previous header block
             prev_hh = potential_header_hashes[prev_height]
@@ -766,12 +788,12 @@ class WalletStateManager:
             ):
                 return False
             if (
-                prev_height % self.constants["DIFFICULTY_EPOCH"]
+                height % self.constants["DIFFICULTY_EPOCH"]
                 == self.constants["DIFFICULTY_DELAY"]
             ):
-                diff_change = all_proof_hashes[prev_height][1]
+                diff_change = all_proof_hashes[height][1]
                 assert diff_change is not None
-                if prev_header_block.challenge.new_work_difficulty != diff_change[0]:
+                if prev_header_block.challenge.new_work_difficulty != diff_change:
                     return False
             else:
                 if prev_header_block.challenge.new_work_difficulty is not None:
@@ -818,9 +840,8 @@ class WalletStateManager:
                     + self.constants["DIFFICULTY_DELAY"]
                 )
 
-            difficulty_change = all_proof_hashes[diff_height][1]
-            assert difficulty_change is not None
-            difficulty = difficulty_change[0]
+            difficulty = all_proof_hashes[diff_height][1]
+            assert difficulty is not None
 
             # Validate pospace to get iters
             quality_str = header_block.proof_of_space.verify_and_get_quality_string()
@@ -850,15 +871,10 @@ class WalletStateManager:
                 if height1 == -1:
                     iters1 = uint64(0)
                 else:
-                    diff_change_1 = all_proof_hashes[height1][1]
-                    assert diff_change_1 is not None
-                    iters1 = diff_change_1[1]
-                for ph, i in enumerate(all_proof_hashes):
-                    print(i, ph)
-                print("Height2:", height2)
-                diff_change_2 = all_proof_hashes[height2][1]
-                assert diff_change_2 is not None
-                iters2 = diff_change_2[1]
+                    iters1 = all_proof_hashes[height1][2]
+                    assert iters1 is not None
+                iters2 = all_proof_hashes[height2][2]
+                assert iters2 is not None
 
                 min_iters = uint64(
                     (iters2 - iters1)

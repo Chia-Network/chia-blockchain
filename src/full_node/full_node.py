@@ -1796,28 +1796,29 @@ class FullNode:
         proof_hashes_map = await self.store.get_proof_hashes()
         curr = self.blockchain.lca_block
 
-        hashes: List[Tuple[bytes32, Optional[Tuple[uint64, uint64]]]] = []
+        hashes: List[Tuple[bytes32, Optional[uint64], Optional[uint64]]] = []
         while curr.height > 0:
-            difficulty_update: Optional[Tuple[uint64, uint64]] = None
+            difficulty_update: Optional[uint64] = None
+            iters_update: Optional[uint64] = None
             if (
                 curr.height % self.constants["DIFFICULTY_EPOCH"]
                 == self.constants["DIFFICULTY_DELAY"]
-                or curr.height % self.constants["DIFFICULTY_EPOCH"] == 0
             ):
-                difficulty_update = (
-                    self.blockchain.get_next_difficulty(curr.prev_header_hash),
-                    curr.data.total_iters,
+                difficulty_update = self.blockchain.get_next_difficulty(
+                    curr.prev_header_hash
                 )
-            hashes.append((proof_hashes_map[curr.header_hash], difficulty_update))
+            if (curr.height + 1) % self.constants["DIFFICULTY_EPOCH"] == 0:
+                iters_update = curr.data.total_iters
+            hashes.append(
+                (proof_hashes_map[curr.header_hash], difficulty_update, iters_update)
+            )
             curr = self.blockchain.headers[curr.prev_header_hash]
 
         hashes.append(
             (
                 proof_hashes_map[self.blockchain.genesis.header_hash],
-                (
-                    uint64(self.blockchain.genesis.weight),
-                    self.blockchain.genesis.header.data.total_iters,
-                ),
+                uint64(self.blockchain.genesis.weight),
+                None,
             )
         )
         response = wallet_protocol.RespondAllProofHashes(list(reversed(hashes)))

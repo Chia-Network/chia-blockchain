@@ -38,5 +38,3 @@ def test_1():
     )
     aggsigs = aggsig_in_conditions_dict(output_conditions_dict)
     pprint(aggsigs)
-    assert len(additions) == 2
-    assert len(aggsigs) == 1
