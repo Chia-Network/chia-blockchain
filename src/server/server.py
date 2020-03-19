@@ -504,10 +504,9 @@ class ChiaServer:
                     yield connection, outbound_message
             else:
                 await result
-        except Exception as e:
+        except Exception:
             tb = traceback.format_exc()
-            self.log.error(f"{tb}")
-            self.log.error(f"Error {type(e)} {e}, closing connection {connection}")
+            self.log.error(f"Error, closing connection {connection}. {tb}")
             self.global_connections.close(connection)
 
     async def expand_outbound_messages(

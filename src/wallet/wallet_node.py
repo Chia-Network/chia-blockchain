@@ -3,7 +3,9 @@ import asyncio
 import time
 from typing import Dict, Optional, Tuple, List
 import concurrent
+import random
 import logging
+import traceback
 from blspy import ExtendedPrivateKey
 
 from src.full_node.full_node import OutboundMessageGenerator
@@ -236,107 +238,113 @@ class WalletNode:
                 raise ValueError("Not enough proof hashes fetched.")
 
             # Creates map from height to difficulty
-            # heights: List[uint32] = []
-            # difficulty_weights: List[uint64] = []
-            # difficulty: uint64
-            # for i in range(tip_height):
-            #     if self.proof_hashes[i][1] is not None:
-            #         difficulty = self.proof_hashes[i][1][1]
-            #     if i > fork_point_height and i % 2 == 1:  # Only add odd heights
-            #         heights.append(uint32(i))
-            #         difficulty_weights.append(difficulty)
+            heights: List[uint32] = []
+            difficulty_weights: List[uint64] = []
+            difficulty: uint64
+            for i in range(tip_height):
+                if self.proof_hashes[i][1] is not None:
+                    difficulty = self.proof_hashes[i][1][1]
+                if i > fork_point_height and i % 2 == 1:  # Only add odd heights
+                    heights.append(uint32(i))
+                    difficulty_weights.append(difficulty)
 
             # Randomly sample based on difficulty
-            # query_heights = random.choices(heights, difficulty_weights, k=50)
+            query_heights_odd = sorted(
+                list(
+                    set(
+                        random.choices(
+                            heights, difficulty_weights, k=min(15, len(heights))
+                        )
+                    )
+                )
+            )
+            print("Query heights:", query_heights_odd)
+            query_heights: List[uint32] = []
+            for odd_height in query_heights_odd:
+                query_heights += [uint32(odd_height - 1), odd_height]
 
             # Send requests for these heights
             # Verify these proofs
-            # last_request_time = float(0)
-            # highest_height_requested = uint32(0)
-            # request_made = False
+            last_request_time = float(0)
+            highest_height_requested = uint32(0)
+            request_made = False
+            print("Query heights:", query_heights)
 
-            # # TODO: simplify and further pipeline this sync
-            # for height_index in range(len(query_heights)):
-            #     total_time_slept = 0
-            #     while True:
-            #         if self._shut_down:
-            #             return
-            #         if total_time_slept > timeout:
-            #             raise TimeoutError("Took too long to fetch blocks")
+            for height_index in range(len(query_heights)):
+                total_time_slept = 0
+                while True:
+                    if self._shut_down:
+                        return
+                    if total_time_slept > timeout:
+                        raise TimeoutError("Took too long to fetch blocks")
 
-            #         # Request batches that we don't have yet
-            #         for batch_start_index in range(
-            #             height_index,
-            #             min(height_index + self.config["num_sync_batches"]),
-            #             len(query_heights),
-            #         ):
-            #             batch_end_index = min(batch_start_index + 1, len(query_heights))
-            #             blocks_missing = any(
-            #                 [
-            #                     not (self.potential_blocks_received[uint32(h)]).is_set()
-            #                     for h in [
-            #                         query_heights[i]
-            #                         for i in range(batch_start_index, batch_end_index)
-            #                     ]
-            #                 ]
-            #             )
-            #             if (
-            #                 (
-            #                     time.time() - last_request_time > sleep_interval
-            #                     and blocks_missing
-            #                 )
-            #                 or (query_heights[batch_end_index] - 1)
-            #                 > highest_height_requested
-            #             ):
-            #                 self.log.info(
-            #                     f"Requesting sync header {query_heights[batch_start_index]}"
-            #                 )
-            #                 if (
-            #                     query_heights[batch_end_index] - 1
-            #                     > highest_height_requested
-            #                 ):
-            #                     highest_height_requested = uint32(
-            #                         query_heights[batch_end_index - 1]
-            #                     )
-            #                 request_made = True
-            #                 request_header = wallet_protocol.RequestHeader(
-            #                     uint32(query_heights[batch_start_index]),
-            #                     self.header_hashes[query_heights[batch_start_index]],
-            #                 )
-            #                 yield OutboundMessage(
-            #                     NodeType.FULL_NODE,
-            #                     Message("request_header", request_header),
-            #                     Delivery.RANDOM,
-            #                 )
-            #         if request_made:
-            #             last_request_time = time.time()
-            #             request_made = False
+                    # Request batches that we don't have yet
+                    for batch_start_index in range(
+                        height_index,
+                        min(
+                            height_index + self.config["num_sync_batches"],
+                            len(query_heights),
+                        ),
+                    ):
+                        blocks_missing = not self.potential_blocks_received[
+                            uint32(query_heights[batch_start_index])
+                        ].is_set()
+                        if (
+                            (
+                                time.time() - last_request_time > sleep_interval
+                                and blocks_missing
+                            )
+                            or (query_heights[batch_start_index])
+                            > highest_height_requested
+                        ):
+                            self.log.info(
+                                f"Requesting sync header {query_heights[batch_start_index]}"
+                            )
+                            if (
+                                query_heights[batch_start_index]
+                                > highest_height_requested
+                            ):
+                                highest_height_requested = uint32(
+                                    query_heights[batch_start_index]
+                                )
+                            request_made = True
+                            request_header = wallet_protocol.RequestHeader(
+                                uint32(query_heights[batch_start_index]),
+                                self.header_hashes[query_heights[batch_start_index]],
+                            )
+                            yield OutboundMessage(
+                                NodeType.FULL_NODE,
+                                Message("request_header", request_header),
+                                Delivery.RANDOM,
+                            )
+                    if request_made:
+                        last_request_time = time.time()
+                        request_made = False
+                    try:
+                        aw = self.potential_blocks_received[
+                            uint32(query_heights[height_index])
+                        ].wait()
+                        await asyncio.wait_for(aw, timeout=sleep_interval)
+                        break
+                    except concurrent.futures.TimeoutError:
+                        try:
+                            await aw
+                        except asyncio.CancelledError:
+                            pass
+                        total_time_slept += sleep_interval
+                        self.log.info("Did not receive desired headers")
 
-            #         awaitables = [
-            #             self.potential_blocks_received[
-            #                 uint32(query_heights[height_index])
-            #             ].wait()
-            #         ]
-            #         future = asyncio.gather(*awaitables, return_exceptions=True)
-            #         try:
-            #             await asyncio.wait_for(future, timeout=sleep_interval)
-            #             break
-            #         except concurrent.futures.TimeoutError:
-            #             try:
-            #                 await future
-            #             except asyncio.CancelledError:
-            #                 pass
-            #             total_time_slept += sleep_interval
-            #             self.log.info("Did not receive desired headers")
-
-            #     hh = self.potential_header_hashes[query_heights[height_index]]
-            #     block_record, header_block = self.cached_blocks[hh]
-
-            # TODO(mariano): Validate proof and hash of proof
-            # for query_height in query_heights:
-            #     prev_height = query_height - 1
-
-            #     pass
+            self.log.info(
+                f"Finished downloading sample of headers at heights: {query_heights}, validating."
+            )
+            # Validates the downloaded proofs
+            assert self.wallet_state_manager.validate_select_proofs(
+                self.proof_hashes,
+                query_heights_odd,
+                self.cached_blocks,
+                self.potential_header_hashes,
+            )
+            self.log.info("All proofs validated successfuly.")
 
             # Add blockrecords one at a time, to catch up to starting height
             weight = self.wallet_state_manager.block_records[fork_point_hash].weight
@@ -371,6 +379,9 @@ class WalletNode:
                     res == ReceiveBlockResult.ADDED_TO_HEAD
                     or res == ReceiveBlockResult.ADDED_AS_ORPHAN
                 )
+            self.log.info(
+                f"Fast sync successful up to height {header_validate_start_height - 1}"
+            )
 
         # Download headers in batches, and verify them as they come in. We download a few batches ahead,
         # in case there are delays. TODO(mariano): optimize sync by pipelining
@@ -575,10 +586,9 @@ class WalletNode:
                 self.wallet_state_manager.set_sync_mode(True)
                 async for ret_msg in self._sync():
                     yield ret_msg
-            except asyncio.CancelledError:
-                self.log.error("Syncing failed, CancelledError")
-            except BaseException as e:
-                self.log.error(f"Error {type(e)}{e} with syncing")
+            except (BaseException, asyncio.CancelledError) as e:
+                tb = traceback.format_exc()
+                self.log.error(f"Error with syncing. {type(e)} {tb}")
             self.wallet_state_manager.set_sync_mode(False)
         else:
             header_request = wallet_protocol.RequestHeader(

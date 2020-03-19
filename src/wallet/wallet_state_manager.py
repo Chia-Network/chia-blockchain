@@ -717,6 +717,172 @@ class WalletStateManager:
         assert new_lca == tmp_old  # Genesis block is the same, genesis fork
         return uint32(0)
 
+    def validate_select_proofs(
+        self,
+        all_proof_hashes: List[Tuple[bytes32, Optional[Tuple[uint64, uint64]]]],
+        heights: List[uint32],
+        cached_blocks: Dict[bytes32, Tuple[BlockRecord, HeaderBlock]],
+        potential_header_hashes: Dict[uint32, bytes32],
+    ) -> bool:
+        """
+        Given a full list of proof hashes (hash of pospace and time, along with difficulty resets), this function
+        checks that the proofs at the passed in heights are correct. This is used to validate the weight of a chain,
+        by probabilisticly sampling a few blocks, and only validating these. Cached blocks and potential header hashes
+        contains the actual data for the header blocks to validate. This method also requires the previous block for
+        each height to be present, to ensure an attacker can't grind on the challenge hash.
+        """
+
+        for height in heights:
+            breakpoint()
+            prev_height = uint32(height - 1)
+            # Get previous header block
+            prev_hh = potential_header_hashes[prev_height]
+            _, prev_header_block = cached_blocks[prev_hh]
+
+            # Validate proof hash of previous header block
+            if (
+                std_hash(
+                    prev_header_block.proof_of_space.get_hash()
+                    + prev_header_block.proof_of_time.output.get_hash()
+                )
+                != all_proof_hashes[prev_height][0]
+            ):
+                return False
+
+            # Calculate challenge hash (with difficulty)
+            if (
+                prev_header_block.challenge.prev_challenge_hash
+                != prev_header_block.proof_of_space.challenge_hash
+            ):
+                return False
+            if (
+                prev_header_block.challenge.prev_challenge_hash
+                != prev_header_block.proof_of_time.challenge_hash
+            ):
+                return False
+            if (
+                prev_header_block.challenge.proofs_hash
+                != all_proof_hashes[prev_height][0]
+            ):
+                return False
+            if (
+                prev_height % self.constants["DIFFICULTY_EPOCH"]
+                == self.constants["DIFFICULTY_DELAY"]
+            ):
+                diff_change = all_proof_hashes[prev_height][1]
+                assert diff_change is not None
+                if prev_header_block.challenge.new_work_difficulty != diff_change[0]:
+                    return False
+            else:
+                if prev_header_block.challenge.new_work_difficulty is not None:
+                    return False
+            challenge_hash = prev_header_block.challenge.get_hash()
+
+            # Get header block
+            hh = potential_header_hashes[height]
+            _, header_block = cached_blocks[hh]
+
+            # Validate challenge hash is == pospace challenge hash
+            if challenge_hash != header_block.proof_of_space.challenge_hash:
+                return False
+            # Validate challenge hash is == potime challenge hash
+            if challenge_hash != header_block.proof_of_time.challenge_hash:
+                return False
+            # Validate proof hash
+            if (
+                std_hash(
+                    header_block.proof_of_space.get_hash()
+                    + header_block.proof_of_time.output.get_hash()
+                )
+                != all_proof_hashes[height][0]
+            ):
+                return False
+
+            # Get difficulty
+            if (
+                height % self.constants["DIFFICULTY_EPOCH"]
+                < self.constants["DIFFICULTY_DELAY"]
+            ):
+                diff_height = (
+                    height
+                    - (height % self.constants["DIFFICULTY_EPOCH"])
+                    - (
+                        self.constants["DIFFICULTY_EPOCH"]
+                        - self.constants["DIFFICULTY_DELAY"]
+                    )
+                )
+            else:
+                diff_height = (
+                    height
+                    - (height % self.constants["DIFFICULTY_EPOCH"])
+                    + self.constants["DIFFICULTY_DELAY"]
+                )
+
+            difficulty_change = all_proof_hashes[diff_height][1]
+            assert difficulty_change is not None
+            difficulty = difficulty_change[0]
+
+            # Validate pospace to get iters
+            quality_str = header_block.proof_of_space.verify_and_get_quality_string()
+            assert quality_str is not None
+
+            if (
+                height
+                < self.constants["DIFFICULTY_EPOCH"]
+                + self.constants["DIFFICULTY_DELAY"]
+            ):
+                min_iters = self.constants["MIN_ITERS_STARTING"]
+            else:
+                if (
+                    height % self.constants["DIFFICULTY_EPOCH"]
+                    < self.constants["DIFFICULTY_DELAY"]
+                ):
+                    height2 = (
+                        height
+                        - (height % self.constants["DIFFICULTY_EPOCH"])
+                        - self.constants["DIFFICULTY_EPOCH"]
+                        - 1
+                    )
+                else:
+                    height2 = height - (height % self.constants["DIFFICULTY_EPOCH"]) - 1
+
+                height1 = height2 - self.constants["DIFFICULTY_EPOCH"]
+                if height1 == -1:
+                    iters1 = uint64(0)
+                else:
+                    diff_change_1 = all_proof_hashes[height1][1]
+                    assert diff_change_1 is not None
+                    iters1 = diff_change_1[1]
+                for ph, i in enumerate(all_proof_hashes):
+                    print(i, ph)
+                print("Height2:", height2)
+                diff_change_2 = all_proof_hashes[height2][1]
+                assert diff_change_2 is not None
+                iters2 = diff_change_2[1]
+
+                min_iters = uint64(
+                    (iters2 - iters1)
+                    // (
+                        self.constants["DIFFICULTY_EPOCH"]
+                        * self.constants["MIN_ITERS_PROPORTION"]
+                    )
+                )
+
+            number_of_iters: uint64 = calculate_iterations_quality(
+                quality_str, header_block.proof_of_space.size, difficulty, min_iters,
+            )
+
+            # Validate potime
+            if number_of_iters != header_block.proof_of_time.number_of_iterations:
+                return False
+
+            if not header_block.proof_of_time.is_valid(
+                self.constants["DISCRIMINANT_SIZE_BITS"]
+            ):
+                return False
+
+        return True
+
     async def get_filter_additions_removals(
         self, transactions_fitler: bytes
     ) -> Tuple[List[bytes32], List[bytes32]]:

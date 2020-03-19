@@ -145,7 +145,6 @@ class TestTransactions:
 
         ph = await wallet_0.wallet.get_new_puzzlehash()
 
-
         # wallet0 <-> sever0 <-> server1
 
         await wallet_server_0.start_client(

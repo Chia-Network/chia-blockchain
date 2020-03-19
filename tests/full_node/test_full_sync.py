@@ -21,11 +21,6 @@ class TestFullSync:
         async for _ in setup_two_nodes():
             yield _
 
-    @pytest.fixture(scope="function")
-    async def wallet_node(self):
-        async for _ in setup_node_and_wallet():
-            yield _
-
     @pytest.mark.asyncio
     async def test_basic_sync(self, two_nodes):
         num_blocks = 100
@@ -111,6 +106,18 @@ class TestFullSync:
 
         raise Exception("Took too long to process blocks")
 
+
+class TestWalletSync:
+    @pytest.fixture(scope="function")
+    async def wallet_node(self):
+        async for _ in setup_node_and_wallet():
+            yield _
+
+    @pytest.fixture(scope="function")
+    async def wallet_node_starting_height(self):
+        async for _ in setup_node_and_wallet(dic={"starting_height": 100}):
+            yield _
+
     @pytest.mark.asyncio
     async def test_basic_sync_wallet(self, wallet_node):
         num_blocks = 25
@@ -163,6 +170,41 @@ class TestFullSync:
                     wallet_node.wallet_state_manager.lca
                 ].height
                 == 63
+            ):
+                found = True
+                break
+            await asyncio.sleep(0.1)
+        if not found:
+            raise Exception(
+                f"Took too long to process blocks, stopped at: {time.time() - start}"
+            )
+
+    @pytest.mark.asyncio
+    async def test_fast_sync_wallet(self, wallet_node_starting_height):
+        num_blocks = 50
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [])
+        full_node_1, wallet_node, server_1, server_2 = wallet_node_starting_height
+
+        for i in range(1, len(blocks)):
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(blocks[i])
+            ):
+                pass
+
+        await server_2.start_client(
+            PeerInfo(server_1._host, uint16(server_1._port)), None
+        )
+
+        start = time.time()
+        found = False
+        while time.time() - start < 60:
+            # The second node should eventually catch up to the first one, and have the
+            # same tip at height num_blocks - 1.
+            if (
+                wallet_node.wallet_state_manager.block_records[
+                    wallet_node.wallet_state_manager.lca
+                ].height
+                == num_blocks - 6
             ):
                 found = True
                 break

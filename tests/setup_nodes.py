@@ -144,6 +144,8 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
 
 async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
     config = load_config("config.yaml", "wallet")
+    if "starting_height" in dic:
+        config["starting_height"] = dic["starting_height"]
     key_config = {
         "wallet_sk": bytes(blspy.ExtendedPrivateKey.from_seed(key_seed)).hex(),
     }
