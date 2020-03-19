@@ -27,7 +27,7 @@
 
 <h3>Latest Blocks</h3>
 {% for b in latest_blocks %}
-    {{ render_field_link('Height', b.challenge.height | string + ":" + b.header.data.prev_header_hash | string, './blocks/' + b.challenge.proof_of_space_hash | string | urlencode) }}
+    {{ render_field_link('Block', b.challenge.height | string + ":" + b.header.data.prev_header_hash | string, './blocks/' + b.challenge.proof_of_space_hash | string | urlencode) }}
 {% endfor %}     
 
 
