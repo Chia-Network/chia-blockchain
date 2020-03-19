@@ -452,6 +452,13 @@ class WalletStateManager:
     async def receive_block(
         self, block: BlockRecord, header_block: Optional[HeaderBlock] = None,
     ) -> ReceiveBlockResult:
+        """
+        Adds a new block to the blockchain. It doesn't have to be a new tip, can also be an orphan,
+        but it must be connected to the blockchain. If a header block is specified, the full header
+        and proofs will be validated. Otherwise, the block is added without validation (for use in
+        fast sync). If validation succeeds, block is adedd to DB. If it's a new TIP, transactions are
+        reorged accordingly.
+        """
         async with self.lock:
             if block.header_hash in self.block_records:
                 return ReceiveBlockResult.ALREADY_HAVE_BLOCK
@@ -466,6 +473,7 @@ class WalletStateManager:
             if (block.height + 1) % self.constants["DIFFICULTY_EPOCH"] == 0:
                 assert block.total_iters is not None
 
+            # Block is valid, so add it to the blockchain
             self.block_records[block.header_hash] = block
             await self.wallet_store.add_block_record(block, False)
 
@@ -520,6 +528,11 @@ class WalletStateManager:
             return ReceiveBlockResult.ADDED_AS_ORPHAN
 
     def get_min_iters(self, block_record: BlockRecord) -> uint64:
+        """
+        Returns the min_iters value, which is calculated every epoch. This requires looking
+        up the epoch barrier blocks, and taking 10% of the total iterations in the previous
+        epoch.
+        """
         curr = block_record
         if (
             curr.height
@@ -555,17 +568,27 @@ class WalletStateManager:
             iters1 = curr.total_iters
         assert iters1 is not None
         assert iters2 is not None
-        return uint64(
+        min_iters_precise = uint64(
             (iters2 - iters1)
             // (
                 self.constants["DIFFICULTY_EPOCH"]
                 * self.constants["MIN_ITERS_PROPORTION"]
             )
         )
+        # Truncates to only 12 bits plus 0s. This prevents grinding attacks.
+        return uint64(
+            truncate_to_significant_bits(
+                min_iters_precise, self.constants["SIGNIFICANT_BITS"]
+            )
+        )
 
     async def validate_header_block(
         self, br: BlockRecord, header_block: HeaderBlock
     ) -> bool:
+        """
+        Fully validates a header block. This requires the ancestors to be present in the blockchain.
+        This method also validates that the header block is consistent with the block record.
+        """
         # POS challenge hash == POT challenge hash == Challenge prev challenge hash
         if (
             header_block.proof_of_space.challenge_hash
@@ -935,6 +958,10 @@ class WalletStateManager:
         return result
 
     async def is_addition_relevant(self, addition: Coin):
+        """
+        Check whether we care about a new addition (puzzle_hash). Returns true if we
+        control this puzzle hash.
+        """
         result = await self.puzzle_store.puzzle_hash_exists(addition.puzzle_hash)
         return result
 
