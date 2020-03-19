@@ -55,16 +55,16 @@ async def lca(request):
     raise web.HTTPNotFound()
 
 
-@routes.get('/tips/{blockid}')
+@routes.get('/blocks/{blockid}')
 @aiohttp_jinja2.template('shb.jinja2')
 async def tips(request):
     # the node property contains the state of the chia node when it was last queried
     if app['ready']:
         blockid = urllib.parse.unquote(request.match_info['blockid'])
-        state = app['node']['blockchain_state']
-        block = find_block(state['tips'], blockid)
+        blocks = app['node']['latest_blocks']
+        block = find_block(blocks, blockid)
         if block != {}:
-            return dict(title='Tip', block=block)
+            return dict(title='Block', block=block)
 
     raise web.HTTPNotFound()
 

@@ -10,7 +10,7 @@
 <div>
     <span class='name'>Tips</span>
     {% for tip in blockchain_state.tips %}
-        {{ render_field_link('Height', tip.challenge.height, './tips/' + tip.challenge.proof_of_space_hash | string | urlencode) }}
+        {{ render_field_link('Height', tip.challenge.height, './blocks/' + tip.challenge.proof_of_space_hash | string | urlencode) }}
     {% endfor %}  
 </div>
 
@@ -23,6 +23,12 @@
 {% for connection in connections %}
     {{ render_field_link(connection.type_name, connection.peer_host + ':' +  connection.peer_port | string + '/' + connection.peer_server_port | string, './connections/' + connection.node_id | string | urlencode) }}
 {% endfor %}        
+
+
+<h3>Latest Blocks</h3>
+{% for b in latest_blocks %}
+    {{ render_field_link('Height', b.challenge.height | string + ":" + b.header.data.prev_header_hash | string, './blocks/' + b.challenge.proof_of_space_hash | string | urlencode) }}
+{% endfor %}     
 
 
 <h3>Top Pool Winnings</h3>

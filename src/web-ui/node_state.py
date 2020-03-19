@@ -1,8 +1,9 @@
 from aiohttp import client_exceptions
-from typing import Dict
 from src.rpc.rpc_client import RpcClient
 from src.server.outbound_message import NodeType
 from src.util.ints import uint64
+from typing import List, Optional, Dict
+from src.types.header_block import SmallHeaderBlock
 
 
 async def query_node(app):
@@ -10,6 +11,7 @@ async def query_node(app):
 
     try:
         rpc_client: RpcClient = await RpcClient.create(app['config']['rpc_port'])
+
         connections = await rpc_client.get_connections()
         for con in connections:
             con['type_name'] = NodeType(con['type']).name
@@ -33,6 +35,8 @@ async def query_node(app):
             for pk in app['key_config']['pool_pks']
         ]
 
+        latest_blocks = await get_latest_blocks(rpc_client, blockchain_state["tips"])
+
         rpc_client.close()
 
         node['connections'] = connections
@@ -40,6 +44,7 @@ async def query_node(app):
         node['pool_balances'] = pool_balances
         node['top_winners'] = top_winners
         node['our_winners'] = our_winners
+        node['latest_blocks'] = latest_blocks
         node['state'] = 'Running'
 
     except client_exceptions.ClientConnectorError:
@@ -66,3 +71,19 @@ def find_connection(connection_list, connectionid):
             return connection
 
     return {}
+
+
+async def get_latest_blocks(rpc_client, heads: List[SmallHeaderBlock]) -> List[SmallHeaderBlock]:
+    added_blocks: List[SmallHeaderBlock] = []
+    num_blocks = 10
+    while len(added_blocks) < num_blocks and len(heads) > 0:
+        heads = sorted(heads, key=lambda b: b.height, reverse=True)
+        max_block = heads[0]
+        if max_block not in added_blocks:
+            added_blocks.append(max_block)
+        heads.remove(max_block)
+        prev: Optional[SmallHeaderBlock] = await rpc_client.get_header(max_block.prev_header_hash)
+        if prev is not None:
+            heads.append(prev)
+
+    return added_blocks
