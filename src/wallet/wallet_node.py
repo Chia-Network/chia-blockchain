@@ -32,7 +32,6 @@ from src.types.header_block import HeaderBlock
 from src.types.full_block import FullBlock
 from src.types.hashable.coin import Coin, hash_coin_list
 from src.full_node.blockchain import ReceiveBlockResult
-import traceback
 
 
 class WalletNode:
