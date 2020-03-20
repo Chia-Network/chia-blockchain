@@ -68,6 +68,7 @@ class TestRpc:
             assert len(await client.get_connections()) == 0
 
             await client.open_connection(server_2._host, server_2._port)
+            await asyncio.sleep(2)
             connections = await client.get_connections()
             assert len(connections) == 1
 

@@ -424,12 +424,15 @@ class TestFullNodeProtocol:
 
         blocks_new = bt.get_consecutive_blocks(
             test_constants,
-            1,
+            2,
             blocks_list,
             10,
             reward_puzzlehash=coinbase_puzzlehash,
             seed=b"another seed 3",
         )
+        # Add one block
+        [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks_new[-2]))]
+
         unf_block = FullBlock(
             blocks_new[-1].proof_of_space,
             None,
@@ -446,7 +449,6 @@ class TestFullNodeProtocol:
         assert res[0].message.data == fnp.RejectUnfinishedBlockRequest(
             unf_block.header_hash
         )
-
         # Have unfinished block
         [x async for x in full_node_1.respond_unfinished_block(unf_block_req)]
         res = [x async for x in full_node_1.request_unfinished_block(req)]
@@ -735,7 +737,7 @@ class TestFullNodeProtocol:
         msgs = [
             _ async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks_new[-5]))
         ]
-        assert len(msgs) == 5
+        assert len(msgs) == 5 or len(msgs) == 6
         # Updates blockchain tips
         tip_hashes_again = set(
             [t.header_hash for t in full_node_1.blockchain.get_current_tips()]
