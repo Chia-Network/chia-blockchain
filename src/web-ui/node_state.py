@@ -46,13 +46,13 @@ async def query_node(app):
         node['our_winners'] = our_winners
         node['latest_blocks'] = latest_blocks
         node['state'] = 'Running'
+        app['ready'] = True
 
     except client_exceptions.ClientConnectorError:
         node['state'] = 'Not running'
 
     finally:
         app['node'] = node
-        app['ready'] = True
 
 
 def find_block(block_list, blockid):
@@ -87,3 +87,13 @@ async def get_latest_blocks(rpc_client, heads: List[SmallHeaderBlock]) -> List[S
             heads.append(prev)
 
     return added_blocks
+
+
+async def stop_node(app):
+    try:
+        rpc_client: RpcClient = await RpcClient.create(app['config']['rpc_port'])
+        await rpc_client.stop_node()
+        rpc_client.close()
+
+    except client_exceptions.ClientConnectorError:
+        print("exception occured while stopping node")

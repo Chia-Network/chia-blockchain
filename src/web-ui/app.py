@@ -4,7 +4,7 @@ import aiohttp_jinja2
 import os
 from src.util.config import load_config_cli
 from middlewares import setup_middlewares
-from node_state import query_node, find_block, find_connection
+from node_state import query_node, find_block, find_connection, stop_node
 from blspy import PrivateKey
 import urllib.parse
 
@@ -81,6 +81,11 @@ async def connections(request):
             return dict(title='Connection', connection=connection)
 
     raise web.HTTPNotFound()
+
+
+@routes.post('/stop')
+async def stop(request):
+    await stop_node(app)
 
 
 app.add_routes(routes)
