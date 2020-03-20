@@ -13,7 +13,7 @@ from src.types.classgroup import ClassgroupElement
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
-from src.util.ints import uint64, uint128
+from src.util.ints import uint64, uint128, int512
 
 log = logging.getLogger(__name__)
 
@@ -300,8 +300,9 @@ class Timelord:
                 except Exception as e:
                     e_to_str = str(e)
                     log.error(f"Socket error: {e_to_str}")
-
-                output = ClassgroupElement.from_bytes(y_bytes)
+                a = int.from_bytes(y_bytes[:129], "big", signed=True)
+                b = int.from_bytes(y_bytes[129:], "big", signed=True)
+                output = ClassgroupElement(int512(a), int512(b))
 
                 # Verifies our own proof just in case
                 proof_of_time = ProofOfTime(
