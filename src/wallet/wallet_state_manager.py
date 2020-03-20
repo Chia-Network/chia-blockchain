@@ -7,7 +7,6 @@ import asyncio
 from chiabip158 import PyBIP158
 
 from src.types.hashable.coin import Coin
-from src.types.hashable.coin_record import CoinRecord
 from src.types.hashable.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.types.full_block import FullBlock
@@ -17,6 +16,8 @@ from src.util.ints import uint32, uint64
 from src.util.hash import std_hash
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.block_record import BlockRecord
+from src.wallet.wallet_coin_record import WalletCoinRecord
+from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_puzzle_store import WalletPuzzleStore
 from src.wallet.wallet_store import WalletStore
 from src.wallet.wallet_transaction_store import WalletTransactionStore
@@ -24,6 +25,7 @@ from src.consensus.block_rewards import calculate_block_reward
 from src.full_node.blockchain import ReceiveBlockResult
 from src.consensus.pot_iterations import calculate_iterations_quality
 from src.util.significant_bits import truncate_to_significant_bits
+from src.wallet.wallet_user_store import WalletUserStore
 
 
 class WalletStateManager:
@@ -33,6 +35,7 @@ class WalletStateManager:
     wallet_store: WalletStore
     tx_store: WalletTransactionStore
     puzzle_store: WalletPuzzleStore
+    user_store: WalletUserStore
     # Map from header hash to BlockRecord
     block_records: Dict[bytes32, BlockRecord]
     # Specifies the LCA path
@@ -53,6 +56,7 @@ class WalletStateManager:
     genesis: FullBlock
 
     state_changed_callback: Optional[Callable]
+    db_path: Path
 
     @staticmethod
     async def create(
@@ -71,6 +75,7 @@ class WalletStateManager:
         self.wallet_store = await WalletStore.create(db_path)
         self.tx_store = await WalletTransactionStore.create(db_path)
         self.puzzle_store = await WalletPuzzleStore.create(db_path)
+        self.user_store = await WalletUserStore.create(db_path)
         self.lca = None
         self.sync_mode = False
         self.height_to_hash = {}
@@ -79,6 +84,7 @@ class WalletStateManager:
         self.genesis = genesis
         self.state_changed_callback = None
         self.difficulty_resets_prev = {}
+        self.db_path = db_path
 
         if len(self.block_records) > 0:
             # Initializes the state based on the DB block records
@@ -144,7 +150,9 @@ class WalletStateManager:
         self.sync_mode = mode
         self.state_changed("sync_changed")
 
-    async def get_confirmed_spendable(self, current_index: uint32) -> uint64:
+    async def get_confirmed_spendable_for_wallet(
+        self, current_index: uint32, wallet_id: int
+    ) -> uint64:
         """
         Returns the balance amount of all coins that are spendable.
         Spendable - (Coinbase freeze period has passed.)
@@ -156,9 +164,9 @@ class WalletStateManager:
         valid_index = current_index - coinbase_freeze_period
 
         record_list: Set[
-            CoinRecord
+            WalletCoinRecord
         ] = await self.wallet_store.get_coin_records_by_spent_and_index(
-            False, valid_index
+            False, valid_index, wallet_id
         )
 
         amount: uint64 = uint64(0)
@@ -168,46 +176,65 @@ class WalletStateManager:
 
         return uint64(amount)
 
-    async def get_unconfirmed_spendable(self, current_index: uint32) -> uint64:
+    async def does_coin_belongs_to_wallet(self, coin: Coin, wallet_id: int) -> bool:
+        info = await self.puzzle_store.wallet_info_for_puzzle_hash(coin.puzzle_hash)
+
+        if info is None:
+            return False
+
+        coin_wallet_id, wallet_type = info
+        if wallet_id == coin_wallet_id:
+            return True
+
+        return False
+
+    async def get_unconfirmed_spendable_for_wallet(
+        self, current_index: uint32, wallet_id: int
+    ) -> uint64:
         """
         Returns the confirmed balance amount - sum of unconfirmed transactions.
         """
 
-        confirmed = await self.get_confirmed_spendable(current_index)
+        confirmed = await self.get_confirmed_spendable_for_wallet(
+            current_index, wallet_id
+        )
         unconfirmed_tx = await self.tx_store.get_not_confirmed()
         addition_amount = 0
         removal_amount = 0
 
         for record in unconfirmed_tx:
             for coin in record.additions:
-                if await self.puzzle_store.puzzle_hash_exists(coin.puzzle_hash):
+                if self.does_coin_belongs_to_wallet(coin, wallet_id):
                     addition_amount += coin.amount
             for coin in record.removals:
-                removal_amount += coin.amount
+                if self.does_coin_belongs_to_wallet(coin, wallet_id):
+                    removal_amount += coin.amount
 
         result = confirmed - removal_amount + addition_amount
         return uint64(result)
 
-    async def get_confirmed_balance(self) -> uint64:
+    async def get_confirmed_balance_for_wallet(self, wallet_id: int) -> uint64:
         """
         Returns the confirmed balance, including coinbase rewards that are not spendable.
         """
         record_list: Set[
-            CoinRecord
-        ] = await self.wallet_store.get_coin_records_by_spent(False)
+            WalletCoinRecord
+        ] = await self.wallet_store.get_coin_records_by_spent_and_wallet(
+            False, wallet_id
+        )
         amount: uint64 = uint64(0)
 
         for record in record_list:
             amount = uint64(amount + record.coin.amount)
-
+        self.log.info(f"amount is {amount}")
         return uint64(amount)
 
-    async def get_unconfirmed_balance(self) -> uint64:
+    async def get_unconfirmed_balance(self, wallet_id) -> uint64:
         """
         Returns the balance, including coinbase rewards that are not spendable, and unconfirmed
         transactions.
         """
-        confirmed = await self.get_confirmed_balance()
+        confirmed = await self.get_confirmed_balance_for_wallet(wallet_id)
         unconfirmed_tx = await self.tx_store.get_not_confirmed()
         addition_amount = 0
         removal_amount = 0
@@ -221,7 +248,9 @@ class WalletStateManager:
         result = confirmed - removal_amount + addition_amount
         return uint64(result)
 
-    async def unconfirmed_additions(self) -> Dict[bytes32, Coin]:
+    async def unconfirmed_additions_for_wallet(
+        self, wallet_id: int
+    ) -> Dict[bytes32, Coin]:
         """
         Returns new addition transactions that have not been confirmed yet.
         """
@@ -232,7 +261,9 @@ class WalletStateManager:
                 additions[coin.name()] = coin
         return additions
 
-    async def unconfirmed_removals(self) -> Dict[bytes32, Coin]:
+    async def unconfirmed_removals_for_wallet(
+        self, wallet_id: int
+    ) -> Dict[bytes32, Coin]:
         """
         Returns new removals transactions that have not been confirmed yet.
         """
@@ -242,49 +273,6 @@ class WalletStateManager:
             for coin in record.removals:
                 removals[coin.name()] = coin
         return removals
-
-    async def select_coins(self, amount) -> Optional[Set[Coin]]:
-        """ Returns a set of coins that can be used for generating a new transaction. """
-        if self.lca is None:
-            return None
-
-        current_index = self.block_records[self.lca].height
-        if amount > await self.get_unconfirmed_spendable(current_index):
-            return None
-
-        unspent: Set[CoinRecord] = await self.wallet_store.get_coin_records_by_spent(
-            False
-        )
-        sum = 0
-        used_coins: Set = set()
-
-        # Try to use coins from the store, if there isn't enough of "unused"
-        # coins use change coins that are not confirmed yet
-        unconfirmed_removals = await self.unconfirmed_removals()
-        for coinrecord in unspent:
-            if sum >= amount:
-                break
-            if coinrecord.coin.name() in unconfirmed_removals:
-                continue
-            sum += coinrecord.coin.amount
-            used_coins.add(coinrecord.coin)
-
-        # This happens when we couldn't use one of the coins because it's already used
-        # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
-        if sum < amount:
-            for coin in (await self.unconfirmed_additions()).values():
-                if sum > amount:
-                    break
-                if coin.name in (await self.unconfirmed_removals()).values():
-                    continue
-                sum += coin.amount
-                used_coins.add(coin)
-
-        if sum >= amount:
-            return used_coins
-        else:
-            # This shouldn't happen because of: if amount > self.get_unconfirmed_balance_spendable():
-            return None
 
     async def coin_removed(self, coin_name: bytes32, index: uint32):
         """
@@ -304,6 +292,9 @@ class WalletStateManager:
         """
         Adding coin to the db
         """
+        info = await self.puzzle_store.wallet_info_for_puzzle_hash(coin.puzzle_hash)
+        assert info is not None
+        wallet_id, wallet_type = info
         if coinbase:
             now = uint64(int(time.time()))
             tx_record = TransactionRecord(
@@ -318,6 +309,7 @@ class WalletStateManager:
                 spend_bundle=None,
                 additions=[coin],
                 removals=[],
+                wallet_id=wallet_id,
             )
             await self.tx_store.add_transaction_record(tx_record)
         else:
@@ -342,14 +334,17 @@ class WalletStateManager:
                     spend_bundle=None,
                     additions=[coin],
                     removals=[],
+                    wallet_id=wallet_id,
                 )
                 await self.tx_store.add_transaction_record(tx_record)
 
-        coin_record: CoinRecord = CoinRecord(coin, index, uint32(0), False, coinbase)
+        coin_record: WalletCoinRecord = WalletCoinRecord(
+            coin, index, uint32(0), False, coinbase, wallet_type, wallet_id
+        )
         await self.wallet_store.add_coin_record(coin_record)
         self.state_changed("coin_added")
 
-    async def add_pending_transaction(self, spend_bundle: SpendBundle):
+    async def add_pending_transaction(self, spend_bundle: SpendBundle, wallet_id):
         """
         Called from wallet_node before new transaction is sent to the full_node
         """
@@ -394,6 +389,7 @@ class WalletStateManager:
             spend_bundle=spend_bundle,
             additions=add_list,
             removals=rem_list,
+            wallet_id=wallet_id,
         )
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
         await self.tx_store.add_transaction_record(tx_record)
@@ -413,11 +409,11 @@ class WalletStateManager:
         records = await self.tx_store.get_not_sent()
         return records
 
-    async def get_all_transactions(self) -> List[TransactionRecord]:
+    async def get_all_transactions(self, wallet_id: int) -> List[TransactionRecord]:
         """
         Retrieves all confirmed and pending transactions
         """
-        records = await self.tx_store.get_all_transactions()
+        records = await self.tx_store.get_all_transactions(wallet_id)
         return records
 
     def find_fork_point(self, alternate_chain: List[bytes32]) -> uint32:
@@ -942,7 +938,7 @@ class WalletStateManager:
         """ Returns a list of our coin ids, and a list of puzzle_hashes that positively match with provided filter. """
         tx_filter = PyBIP158([b for b in transactions_fitler])
         my_coin_records: Set[
-            CoinRecord
+            WalletCoinRecord
         ] = await self.wallet_store.get_coin_records_by_spent(False)
         my_puzzle_hashes = await self.puzzle_store.get_all_puzzle_hashes()
 
@@ -1017,8 +1013,27 @@ class WalletStateManager:
         await self.wallet_store.close()
         await self.tx_store.close()
         await self.puzzle_store.close()
+        await self.user_store.close()
 
     async def clear_all_stores(self):
         await self.wallet_store._clear_database()
         await self.tx_store._clear_database()
         await self.puzzle_store._clear_database()
+        await self.user_store._clear_database()
+
+    def unlink_db(self):
+        Path(self.db_path).unlink()
+
+    async def get_all_wallets(self) -> List[WalletInfo]:
+        return await self.user_store.get_all_wallets()
+
+    async def get_main_wallet(self):
+        return await self.user_store.get_wallet_by_id(1)
+
+    async def get_coin_records_by_spent(self, spent: bool):
+        return await self.wallet_store.get_coin_records_by_spent(spent)
+
+    async def get_coin_records_by_spent_and_wallet(self, spent: bool, wallet_id):
+        return await self.wallet_store.get_coin_records_by_spent_and_wallet(
+            spent, wallet_id
+        )

@@ -36,7 +36,7 @@ class TestWalletSimulator:
     async def test_wallet_coinbase(self, wallet_node):
         num_blocks = 10
         full_node_1, wallet_node, server_1, server_2 = wallet_node
-        wallet = wallet_node.wallet
+        wallet = wallet_node.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(
@@ -65,7 +65,7 @@ class TestWalletSimulator:
             server_2,
             server_3,
         ) = two_wallet_nodes
-        wallet = wallet_node.wallet
+        wallet = wallet_node.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(
@@ -88,7 +88,7 @@ class TestWalletSimulator:
         assert await wallet.get_unconfirmed_balance() == funds
 
         spend_bundle = await wallet.generate_signed_transaction(
-            10, await wallet_node_2.wallet.get_new_puzzlehash(), 0
+            10, await wallet_node_2.main_wallet.get_new_puzzlehash(), 0
         )
         await wallet.push_transaction(spend_bundle)
 
@@ -121,7 +121,7 @@ class TestWalletSimulator:
     async def test_wallet_coinbase_reorg(self, wallet_node):
         num_blocks = 10
         full_node_1, wallet_node, server_1, server_2 = wallet_node
-        wallet = wallet_node.wallet
+        wallet = wallet_node.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(

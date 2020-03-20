@@ -2,10 +2,11 @@ import asyncio
 import dataclasses
 import json
 import logging
+import traceback
 
 import websockets
 
-from typing import Any, Dict
+from typing import Any, Dict, List
 from src.server.outbound_message import NodeType, OutboundMessage, Message, Delivery
 from src.server.server import ChiaServer
 from src.simulator.simulator_constants import test_constants
@@ -13,6 +14,9 @@ from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
 from src.util.config import load_config, load_config_cli
 from src.util.logging import initialize_logging
+from src.wallet.rl_wallet.rl_wallet import RLWallet
+from src.wallet.util.wallet_types import WalletType
+from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_node import WalletNode
 
 
@@ -24,6 +28,8 @@ class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, o: Any):
         if dataclasses.is_dataclass(o):
             return o.to_json()
+        elif isinstance(o, WalletType):
+            return o.name
         elif hasattr(type(o), "__bytes__"):
             return f"0x{bytes(o).hex()}"
         return super().default(o)
@@ -48,15 +54,19 @@ def format_response(command: str, response_data: Dict[str, Any]):
 
 
 class WebSocketServer:
-    def __init__(self, wallet_node: WalletNode):
+    def __init__(self, wallet_node: WalletNode, log):
         self.wallet_node: WalletNode = wallet_node
         self.websocket = None
+        self.log = log
 
-    async def get_next_puzzle_hash(self, websocket, response_api):
+    async def get_next_puzzle_hash(self, websocket, request, response_api):
         """
         Returns a new puzzlehash
         """
-        puzzlehash = (await self.wallet_node.wallet.get_new_puzzlehash()).hex()
+
+        wallet_id = int(request["wallet_id"])
+        wallet = self.wallet_node.wallets[wallet_id]
+        puzzlehash = (await wallet.get_new_puzzlehash()).hex()
 
         data = {
             "puzzlehash": puzzlehash,
@@ -65,32 +75,29 @@ class WebSocketServer:
         await websocket.send(format_response(response_api, data))
 
     async def send_transaction(self, websocket, request, response_api):
-        if "amount" in request and "puzzlehash" in request:
-            amount = int(request["amount"])
-            puzzle_hash = bytes.fromhex(request["puzzlehash"])
-            tx = await self.wallet_node.wallet.generate_signed_transaction(
-                amount, puzzle_hash
-            )
 
-            if tx is None:
-                data = {"success": False}
-                return await websocket.send(format_response(response_api, data))
+        wallet_id = int(request["wallet_id"])
+        wallet = self.wallet_node.wallets[wallet_id]
 
-            await self.wallet_node.wallet.push_transaction(tx)
+        tx = await wallet.generate_signed_transaction_dict(request)
 
-            data = {"success": True}
+        if tx is None:
+            data = {"success": False}
             return await websocket.send(format_response(response_api, data))
 
-        data = {"success": False}
-        await websocket.send(format_response(response_api, data))
+        await wallet.push_transaction(tx)
+
+        data = {"success": True}
+        return await websocket.send(format_response(response_api, data))
 
     async def server_ready(self, websocket, response_api):
         response = {"success": True}
         await websocket.send(format_response(response_api, response))
 
-    async def get_transactions(self, websocket, response_api):
-        transactions = (
-            await self.wallet_node.wallet_state_manager.get_all_transactions()
+    async def get_transactions(self, websocket, request, response_api):
+        wallet_id = int(request["wallet_id"])
+        transactions = await self.wallet_node.wallet_state_manager.get_all_transactions(
+            wallet_id
         )
 
         response = {"success": True, "txs": transactions}
@@ -105,11 +112,14 @@ class WebSocketServer:
 
         self.wallet_node.server.push_message(msg)
 
-    async def get_wallet_balance(self, websocket, response_api):
-        balance = await self.wallet_node.wallet.get_confirmed_balance()
-        pending_balance = await self.wallet_node.wallet.get_unconfirmed_balance()
+    async def get_wallet_balance(self, websocket, request, response_api):
+        wallet_id = int(request["wallet_id"])
+        wallet = self.wallet_node.wallets[wallet_id]
+        balance = await wallet.get_confirmed_balance()
+        pending_balance = await wallet.get_unconfirmed_balance()
 
         response = {
+            "wallet_id": wallet_id,
             "success": True,
             "confirmed_wallet_balance": balance,
             "unconfirmed_wallet_balance": pending_balance,
@@ -141,6 +151,54 @@ class WebSocketServer:
 
         await websocket.send(format_response(response_api, response))
 
+    async def create_new_wallet(self, websocket, request, response_api):
+        config, key_config, wallet_state_manager, main_wallet = self.get_wallet_config()
+        if request["wallet_type"] == "rl_wallet":
+            if request["mode"] == "admin":
+                rl_admin: RLWallet = await RLWallet.create_rl_admin(
+                    config, key_config, wallet_state_manager, main_wallet
+                )
+                self.wallet_node.wallets[rl_admin.wallet_info.id] = rl_admin
+                response = {"success": True, "type": "rl_wallet"}
+                return await websocket.send(format_response(response_api, response))
+            elif request["mode"] == "user":
+                rl_user: RLWallet = await RLWallet.create_rl_user(
+                    config, key_config, wallet_state_manager, main_wallet
+                )
+                self.wallet_node.wallets[rl_user.wallet_info.id] = rl_user
+                response = {"success": True, "type": "rl_wallet"}
+                return await websocket.send(format_response(response_api, response))
+        elif request["wallet_type"] == "cc_wallet":
+            print("Create me!!")
+
+        response = {"success": False}
+        return await websocket.send(format_response(response_api, response))
+
+    def get_wallet_config(self):
+        return (
+            self.wallet_node.config,
+            self.wallet_node.key_config,
+            self.wallet_node.wallet_state_manager,
+            self.wallet_node.main_wallet,
+        )
+
+    async def get_wallets(self, websocket, response_api):
+        wallets: List[
+            WalletInfo
+        ] = await self.wallet_node.wallet_state_manager.get_all_wallets()
+
+        response = {"wallets": wallets}
+
+        return await websocket.send(format_response(response_api, response))
+
+    async def safe_handle(self, websocket, path):
+        try:
+            await self.handle_message(websocket, path)
+        except BaseException as e:
+            tb = traceback.format_exc()
+            self.log.error(f"Error while handling message: {tb}")
+            self.log.error(f"Error {type(e)} {e}")
+
     async def handle_message(self, websocket, path):
         """
         This function gets called when new message is received via websocket.
@@ -156,13 +214,13 @@ class WebSocketServer:
                 self.websocket = websocket
                 await self.server_ready(websocket, command)
             elif command == "get_wallet_balance":
-                await self.get_wallet_balance(websocket, command)
+                await self.get_wallet_balance(websocket, data, command)
             elif command == "send_transaction":
                 await self.send_transaction(websocket, data, command)
             elif command == "get_next_puzzle_hash":
-                await self.get_next_puzzle_hash(websocket, command)
+                await self.get_next_puzzle_hash(websocket, data, command)
             elif command == "get_transactions":
-                await self.get_transactions(websocket, command)
+                await self.get_transactions(websocket, data, command)
             elif command == "farm_block":
                 await self.farm_block(websocket, data, command)
             elif command == "get_sync_status":
@@ -171,6 +229,10 @@ class WebSocketServer:
                 await self.get_height_info(websocket, command)
             elif command == "get_connection_info":
                 await self.get_connection_info(websocket, command)
+            elif command == "create_new_wallet":
+                await self.create_new_wallet(websocket, data, command)
+            elif command == "get_wallets":
+                await self.get_wallets(websocket, command)
             else:
                 response = {"error": f"unknown_command {command}"}
                 await websocket.send(obj_to_response(response))
@@ -214,7 +276,7 @@ async def start_websocket_server():
         log.info(f"Not Testing")
         wallet_node = await WalletNode.create(config, key_config)
 
-    handler = WebSocketServer(wallet_node)
+    handler = WebSocketServer(wallet_node, log)
     wallet_node.wallet_state_manager.set_callback(handler.state_changed_callback)
 
     server = ChiaServer(9257, wallet_node, NodeType.WALLET)
@@ -227,7 +289,7 @@ async def start_websocket_server():
     await asyncio.sleep(1)
     _ = await server.start_client(full_node_peer, None, config)
 
-    await websockets.serve(handler.handle_message, "localhost", 9256)
+    await websockets.serve(handler.safe_handle, "localhost", 9256)
 
     if config["testing"] is False:
         wallet_node._start_bg_tasks()

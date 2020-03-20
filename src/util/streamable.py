@@ -5,6 +5,7 @@ import dataclasses
 import io
 import pprint
 import json
+from enum import Enum
 from typing import Any, BinaryIO, List, Type, get_type_hints, Union
 from src.util.byte_types import hexstr_to_bytes
 from src.types.hashable.program import Program
@@ -29,6 +30,7 @@ from src.util.type_checking import (
     is_type_SpecificOptional,
     strictdataclass,
 )
+from src.wallet.util.wallet_types import WalletType
 
 pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
 
@@ -236,6 +238,8 @@ class Streamable:
                     self.recurse_str(item)
                 if isinstance(item, list):
                     self.recurse_str(item)
+                if isinstance(item, Enum):
+                    item = item.name
         else:
             for key, value in d.items():
                 if type(value) in unhashable_types or issubclass(type(value), bytes):
@@ -244,4 +248,6 @@ class Streamable:
                     self.recurse_str(value)
                 if isinstance(value, list):
                     self.recurse_str(value)
+                if isinstance(value, Enum):
+                    d[key] = value.name
         return d

@@ -45,7 +45,7 @@ class TestTransactions:
     async def test_wallet_coinbase(self, wallet_node):
         num_blocks = 10
         full_node_1, wallet_node, server_1, server_2 = wallet_node
-        wallet = wallet_node.wallet
+        wallet = wallet_node.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(
@@ -74,8 +74,8 @@ class TestTransactions:
         full_node_1, server_1 = full_nodes[1]
         full_node_2, server_2 = full_nodes[2]
 
-        ph = await wallet_0.wallet.get_new_puzzlehash()
-        ph1 = await wallet_1.wallet.get_new_puzzlehash()
+        ph = await wallet_0.main_wallet.get_new_puzzlehash()
+        ph1 = await wallet_1.main_wallet.get_new_puzzlehash()
 
         #
         # wallet0 <-> sever0 <-> server1 <-> server2 <-> wallet1
@@ -103,10 +103,12 @@ class TestTransactions:
                 for i in range(1, num_blocks - 2)
             ]
         )
-        assert await wallet_0.wallet.get_confirmed_balance() == funds
+        assert await wallet_0.main_wallet.get_confirmed_balance() == funds
 
-        spend_bundle = await wallet_0.wallet.generate_signed_transaction(10, ph1, 0)
-        await wallet_0.wallet.push_transaction(spend_bundle)
+        spend_bundle = await wallet_0.main_wallet.generate_signed_transaction(
+            10, ph1, 0
+        )
+        await wallet_0.main_wallet.push_transaction(spend_bundle)
 
         await asyncio.sleep(3)
 
@@ -130,8 +132,8 @@ class TestTransactions:
             ]
         )
 
-        assert await wallet_0.wallet.get_confirmed_balance() == funds - 10
-        assert await wallet_1.wallet.get_confirmed_balance() == 10
+        assert await wallet_0.main_wallet.get_confirmed_balance() == funds - 10
+        assert await wallet_1.main_wallet.get_confirmed_balance() == 10
 
     @pytest.mark.asyncio
     async def test_mempool_tx_sync(self, three_nodes_two_wallets):
@@ -143,7 +145,7 @@ class TestTransactions:
         full_node_1, server_1 = full_nodes[1]
         full_node_2, server_2 = full_nodes[2]
 
-        ph = await wallet_0.wallet.get_new_puzzlehash()
+        ph = await wallet_0.main_wallet.get_new_puzzlehash()
 
         # wallet0 <-> sever0 <-> server1
 
@@ -172,12 +174,12 @@ class TestTransactions:
                 for i in range(1, num_blocks - 2)
             ]
         )
-        assert await wallet_0.wallet.get_confirmed_balance() == funds
+        assert await wallet_0.main_wallet.get_confirmed_balance() == funds
 
-        spend_bundle = await wallet_0.wallet.generate_signed_transaction(
+        spend_bundle = await wallet_0.main_wallet.generate_signed_transaction(
             10, token_bytes(), 0
         )
-        await wallet_0.wallet.push_transaction(spend_bundle)
+        await wallet_0.main_wallet.push_transaction(spend_bundle)
 
         await asyncio.sleep(2)
 

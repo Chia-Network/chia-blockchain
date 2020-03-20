@@ -27,6 +27,8 @@ from src.wallet.puzzles.puzzle_utils import (
     make_create_coin_condition,
 )
 from src.wallet.util.wallet_types import WalletType
+from src.wallet.wallet_coin_record import WalletCoinRecord
+from src.wallet.wallet_info import WalletInfo
 
 from src.wallet.wallet_state_manager import WalletStateManager
 
@@ -42,12 +44,14 @@ class Wallet:
 
     # TODO Don't allow user to send tx until wallet is synced
     synced: bool
+    wallet_info: WalletInfo
 
     @staticmethod
     async def create(
         config: Dict,
         key_config: Dict,
         wallet_state_manager: WalletStateManager,
+        info: WalletInfo,
         name: str = None,
     ):
         # TODO(straya): consider loading farmer keys as well
@@ -65,6 +69,8 @@ class Wallet:
 
         self.server = None
 
+        self.wallet_info = info
+
         return self
 
     def get_public_key(self, index) -> PublicKey:
@@ -72,10 +78,14 @@ class Wallet:
         return pubkey
 
     async def get_confirmed_balance(self) -> uint64:
-        return await self.wallet_state_manager.get_confirmed_balance()
+        return await self.wallet_state_manager.get_confirmed_balance_for_wallet(
+            self.wallet_info.id
+        )
 
     async def get_unconfirmed_balance(self) -> uint64:
-        return await self.wallet_state_manager.get_unconfirmed_balance()
+        return await self.wallet_state_manager.get_unconfirmed_balance(
+            self.wallet_info.id
+        )
 
     async def can_generate_puzzle_hash(self, hash: bytes32) -> bool:
         return await self.wallet_state_manager.puzzle_store.puzzle_hash_exists(hash)
@@ -91,7 +101,7 @@ class Wallet:
         puzzlehash: bytes32 = puzzle.get_hash()
 
         await self.wallet_state_manager.puzzle_store.add_derivation_path_of_interest(
-            index, puzzlehash, pubkey, WalletType.STANDARD_WALLET
+            index, puzzlehash, pubkey, WalletType.STANDARD_WALLET, self.wallet_info.id
         )
 
         return puzzlehash
@@ -127,15 +137,78 @@ class Wallet:
         private = self.private_key.private_child(index_for_puzzlehash).get_private_key()
         return pubkey, private
 
+    async def select_coins(self, amount) -> Optional[Set[Coin]]:
+        """ Returns a set of coins that can be used for generating a new transaction. """
+        if self.wallet_state_manager.lca is None:
+            return None
+
+        current_index = self.wallet_state_manager.block_records[
+            self.wallet_state_manager.lca
+        ].height
+        if (
+            amount
+            > await self.wallet_state_manager.get_unconfirmed_spendable_for_wallet(
+                current_index, self.wallet_info.id
+            )
+        ):
+            return None
+
+        unspent: Set[
+            WalletCoinRecord
+        ] = await self.wallet_state_manager.get_coin_records_by_spent_and_wallet(
+            False, self.wallet_info.id
+        )
+        sum = 0
+        used_coins: Set = set()
+
+        # Try to use coins from the store, if there isn't enough of "unused"
+        # coins use change coins that are not confirmed yet
+        unconfirmed_removals = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+            self.wallet_info.id
+        )
+        for coinrecord in unspent:
+            if sum >= amount:
+                break
+            if coinrecord.coin.name() in unconfirmed_removals:
+                continue
+            sum += coinrecord.coin.amount
+            used_coins.add(coinrecord.coin)
+
+        # This happens when we couldn't use one of the coins because it's already used
+        # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
+        if sum < amount:
+            for coin in (
+                await self.wallet_state_manager.unconfirmed_additions_for_wallet(
+                    self.wallet_info.id
+                )
+            ).values():
+                if sum > amount:
+                    break
+                if (
+                    coin.name
+                    in (
+                        await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+                            self.wallet_info.id
+                        )
+                    ).values()
+                ):
+                    continue
+                sum += coin.amount
+                used_coins.add(coin)
+
+        if sum >= amount:
+            return used_coins
+        else:
+            # This shouldn't happen because of: if amount > self.get_unconfirmed_balance_spendable():
+            return None
+
     async def generate_unsigned_transaction(
         self, amount: int, newpuzzlehash: bytes32, fee: int = 0
     ) -> List[Tuple[Program, CoinSolution]]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
         """
-        utxos: Optional[Set[Coin]] = await self.wallet_state_manager.select_coins(
-            amount + fee
-        )
+        utxos: Optional[Set[Coin]] = await self.select_coins(amount + fee)
         if utxos is None:
             return []
 
@@ -208,20 +281,36 @@ class Wallet:
 
         return spend_bundle
 
-    async def generate_signed_transaction(
-        self, amount, newpuzzlehash, fee: int = 0
+    async def generate_signed_transaction_dict(
+        self, data: Dict[str, str]
     ) -> Optional[SpendBundle]:
         """ Use this to generate transaction. """
-        transaction = await self.generate_unsigned_transaction(
-            amount, newpuzzlehash, fee
-        )
+        amount = int(data["amount"])
+
+        if "fee" in data:
+            fee = int(data["fee"])
+        else:
+            fee = 0
+
+        puzzle_hash = bytes.fromhex(data["puzzle_hash"])
+
+        return await self.generate_signed_transaction(amount, puzzle_hash, fee)
+
+    async def generate_signed_transaction(
+        self, amount, puzzle_hash, fee: int = 0
+    ) -> Optional[SpendBundle]:
+        """ Use this to generate transaction. """
+
+        transaction = await self.generate_unsigned_transaction(amount, puzzle_hash, fee)
         if len(transaction) == 0:
             return None
         return await self.sign_transaction(transaction)
 
     async def push_transaction(self, spend_bundle: SpendBundle):
         """ Use this API to send transactions. """
-        await self.wallet_state_manager.add_pending_transaction(spend_bundle)
+        await self.wallet_state_manager.add_pending_transaction(
+            spend_bundle, self.wallet_info.id
+        )
         await self._send_transaction(spend_bundle)
 
     async def _send_transaction(self, spend_bundle: SpendBundle):

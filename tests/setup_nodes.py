@@ -171,7 +171,7 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
     server.close_all()
     await wallet.wallet_state_manager.clear_all_stores()
     await wallet.wallet_state_manager.close_all_stores()
-    Path(db_path).unlink()
+    wallet.wallet_state_manager.unlink_db()
     await server.await_closed()
 
 

@@ -3,7 +3,7 @@ const app = electron.app
 const BrowserWindow = electron.BrowserWindow
 const path = require('path')
 const WebSocket = require('ws');
-const local_test = false
+const local_test = true
 
 var ui_html = "wallet-dark.html"
 
@@ -90,11 +90,12 @@ const createWindow = () => {
   mainWindow = new BrowserWindow({
       width: 1500,
       height: 800,
+      backgroundColor: '#131722',
       webPreferences: {
         nodeIntegration: true
     },})
 
-  query = "?testing="+local_test
+  query = "?testing="+local_test + "&wallet_id=1"
   mainWindow.loadURL(require('url').format({
     pathname: path.join(__dirname, ui_html),
     protocol: 'file:',
