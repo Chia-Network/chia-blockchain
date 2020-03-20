@@ -132,6 +132,8 @@ class Timelord:
                 if expected_finish[k] == worst_finish
             )
         assert stop_writer is not None
+        _, _, stop_ip = self.active_discriminants[stop_discriminant]
+        self.potential_free_clients.append((stop_ip, time.time()))
         stop_writer.write(b"010")
         await stop_writer.drain()
         del self.active_discriminants[stop_discriminant]
@@ -175,12 +177,13 @@ class Timelord:
                     self.best_weight_three_proofs, challenge_weight
                 )
                 for active_disc in list(self.active_discriminants):
-                    current_writer, current_weight, _ = self.active_discriminants[
+                    current_writer, current_weight, ip = self.active_discriminants[
                         active_disc
                     ]
                     if current_weight <= challenge_weight:
                         log.info(f"Active weight cleanup: {current_weight}")
                         log.info(f"Cleanup weight: {challenge_weight}")
+                        self.potential_free_clients.append((ip, time.time()))
                         current_writer.write(b"010")
                         await current_writer.drain()
                         del self.active_discriminants[active_disc]
@@ -207,7 +210,7 @@ class Timelord:
                         writer.write((iter_size + str(iter)).encode())
                         await writer.drain()
                         log.info(f"New iteration submitted: {iter}")
-            await asyncio.sleep(3)
+            await asyncio.sleep(1)
             async with self.lock:
                 if challenge_hash in self.done_discriminants:
                     alive_discriminant = False
@@ -260,7 +263,6 @@ class Timelord:
             if data.decode() == "STOP":
                 log.info(f"Stopped client running on ip {ip}.")
                 async with self.lock:
-                    self.potential_free_clients.append((ip, time.time()))
                     writer.write(b"ACK")
                     await writer.drain()
                 break
