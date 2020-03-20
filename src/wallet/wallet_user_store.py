@@ -1,6 +1,6 @@
 import asyncio
 from pathlib import Path
-from typing import Set, Optional
+from typing import Optional, List
 
 import aiosqlite
 from src.util.ints import uint32
@@ -90,7 +90,7 @@ class WalletUserStore:
 
         return await self.get_wallet_by_id(row[0])
 
-    async def get_all_wallets(self) -> Set[WalletInfo]:
+    async def get_all_wallets(self) -> List[WalletInfo]:
         """
         Return a set containing all wallets
         """
@@ -98,10 +98,10 @@ class WalletUserStore:
         cursor = await self.db_connection.execute("SELECT * from users_wallets")
         rows = await cursor.fetchall()
         await cursor.close()
-        result = set()
+        result = []
 
         for row in rows:
-            result.add(WalletInfo(row[0], row[1], WalletType(row[2]), row[3]))
+            result.append(WalletInfo(row[0], row[1], WalletType(row[2]), row[3]))
 
         return result
 

@@ -56,6 +56,7 @@ class WalletStateManager:
     genesis: FullBlock
 
     state_changed_callback: Optional[Callable]
+    db_path: Path
 
     @staticmethod
     async def create(
@@ -83,6 +84,7 @@ class WalletStateManager:
         self.genesis = genesis
         self.state_changed_callback = None
         self.difficulty_resets_prev = {}
+        self.db_path = db_path
 
         if len(self.block_records) > 0:
             # Initializes the state based on the DB block records
@@ -217,12 +219,14 @@ class WalletStateManager:
         """
         record_list: Set[
             WalletCoinRecord
-        ] = await self.wallet_store.get_coin_records_by_spent(False)
+        ] = await self.wallet_store.get_coin_records_by_spent_and_wallet(
+            False, wallet_id
+        )
         amount: uint64 = uint64(0)
 
         for record in record_list:
             amount = uint64(amount + record.coin.amount)
-
+        self.log.info(f"amount is {amount}")
         return uint64(amount)
 
     async def get_unconfirmed_balance(self, wallet_id) -> uint64:
@@ -1017,7 +1021,10 @@ class WalletStateManager:
         await self.puzzle_store._clear_database()
         await self.user_store._clear_database()
 
-    async def get_all_wallets(self) -> Set[WalletInfo]:
+    def unlink_db(self):
+        Path(self.db_path).unlink()
+
+    async def get_all_wallets(self) -> List[WalletInfo]:
         return await self.user_store.get_all_wallets()
 
     async def get_main_wallet(self):

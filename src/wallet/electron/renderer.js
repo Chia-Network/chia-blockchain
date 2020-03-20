@@ -22,6 +22,7 @@ let connection_textfield = document.querySelector('#connection_textfield')
 let syncing_textfield = document.querySelector('#syncing_textfield')
 let block_height_textfield = document.querySelector('#block_height_textfield')
 let standard_wallet_balance = document.querySelector('#standard_wallet_balance')
+let wallets_tab = document.querySelector('#wallets_tab')
 
 // UI checkmarks and lock icons
 const green_checkmark = "<i class=\"icon ion-md-checkmark-circle-outline green\"></i>"
@@ -32,22 +33,40 @@ const lock = "<i class=\"icon ion-md-lock\"></i>"
 var global_syncing = true
 console.log(global.location.search)
 
-function create_side_wallet(href, wallet_name, wallet_description, wallet_amount) {
-    const wallet_side_info = `<a class="nav-link d-flex justify-content-between align-items-center" data-toggle="pill" href=${href}
-              role="tab" aria-selected="true">
+function create_side_wallet(id, href, wallet_name, wallet_description, wallet_amount, active) {
+    var balance_id = "balance_wallet_" + id
+    var pending_id = "pending_wallet_" + id
+    var is_active = active ? "active" : "";
+    const template = `<a class="nav-link d-flex justify-content-between align-items-center ${is_active}" data-toggle="pill"
+              href="${href}" role="tab" aria-selected="true">
               <div class="d-flex">
                 <img src="assets/img/circle-cropped.png" alt="btc">
                 <div>
                   <h2>${wallet_name}</h2>
-                  <p>$(wallet_description}</p>
+                  <p>${wallet_description}</p>
                 </div>
               </div>
               <div>
-                <h3>${wallet_amount}</h3>
-                <p class="text-right"><i class="icon ion-md-lock"></i> 0.00</p>
+                <p class="text-right" id="${balance_id}">0.00</p>
+                <p class="text-right" id="${pending_id}"><i class="icon ion-md-lock"></i> 0.00</p>
               </div>
             </a>`
-    return wallet_side_info
+    return template
+}
+
+function create_wallet_button() {
+    create_button = `<a class="nav-link d-flex justify-content-between align-items-center" data-toggle="pill" href="./create_wallet.html"
+              role="tab" aria-selected="true">
+              <div class="d-flex">
+                <div>
+                  <h2> + Create New Wallet</h2>
+                </div>
+              </div>
+              <div>
+                <p class="text-right"><i class="icon ion-md-plus"></i></p>
+              </div>
+            </a>`
+    return create_button
 }
 
 function getQueryVariable(variable) {
@@ -103,7 +122,7 @@ function set_callbacks(socket) {
             get_wallets();
             get_new_puzzlehash();
             get_transactions();
-            get_wallet_balance();
+            get_wallet_balance(g_wallet_id);
             get_height_info();
             get_sync_status();
             get_connection_info();
@@ -124,6 +143,8 @@ function set_callbacks(socket) {
             get_height_info_response(data)
         } else if (command == "get_sync_status") {
             get_sync_status_response(data)
+        } else if (command == "get_wallets") {
+            get_wallets_response(data)
         }
     });
 
@@ -256,12 +277,12 @@ function get_new_puzzlehash_response(response) {
     })
 }
 
-async function get_wallet_balance() {
+async function get_wallet_balance(id) {
     /*
     Sends websocket request to get wallet balance
     */
     data = {
-        "wallet_id": g_wallet_id,
+        "wallet_id": id,
     }
 
     request = {
@@ -274,23 +295,36 @@ async function get_wallet_balance() {
 }
 
 function get_wallet_balance_response(response) {
-    console.log("update balance" + response);
+    console.log("update balance" + JSON.stringify(response));
     if (response["success"]) {
         var confirmed = parseInt(response["confirmed_wallet_balance"])
         var unconfirmed = parseInt(response["unconfirmed_wallet_balance"])
         var pending = confirmed - unconfirmed
+        var wallet_id = response["wallet_id"]
+
         chia_confirmed = chia_formatter(confirmed, 'mojo').to('chia').toString()
         chia_pending = chia_formatter(pending, 'mojo').to('chia').toString()
 
-        balance_textfield.innerHTML = chia_confirmed
-        standard_wallet_balance.innerHTML = chia_confirmed.toString() + " CH"
-        standard_wallet_balance.innerHTML = chia_confirmed.toString() + " CH"
-        if (pending > 0) {
-            pending_textfield.innerHTML = lock + " - " + chia_pending + " CH"
-            standard_wallet_pending.innerHTML = lock + " - " + chia_pending + " CH"
-        } else {
-            pending_textfield.innerHTML = lock + " " + chia_pending + " CH"
-            standard_wallet_pending.innerHTML = lock + " - " + chia_pending + " CH"
+        wallet_balance_holder = document.querySelector("#" + "balance_wallet_" + wallet_id )
+        wallet_pending_holder = document.querySelector("#" + "pending_wallet_" + wallet_id )
+
+        if (g_wallet_id == wallet_id) {
+            balance_textfield.innerHTML = chia_confirmed
+            if (pending > 0) {
+                pending_textfield.innerHTML = lock + " - " + chia_pending + " CH"
+            } else {
+                pending_textfield.innerHTML = lock + " " + chia_pending + " CH"
+            }
+        }
+        if (wallet_balance_holder) {
+            wallet_balance_holder.innerHTML = chia_confirmed.toString() + " CH"
+        }
+        if (wallet_pending_holder) {
+            if (pending > 0) {
+                wallet_pending_holder.innerHTML = lock + " - " + chia_pending + " CH"
+            } else {
+                wallet_pending_holder.innerHTML = lock + " " + chia_pending + " CH"
+            }
         }
     }
 }
@@ -443,7 +477,7 @@ async function get_connection_info_response(response) {
 function handle_state_changed(data) {
     state = data["state"]
     if(global_syncing) {
-        get_wallet_balance()
+        get_wallet_balance(g_wallet_id)
         get_sync_status()
         get_height_info()
         return;
@@ -451,26 +485,26 @@ function handle_state_changed(data) {
 
     if (state == "coin_removed") {
         get_transactions()
-        get_wallet_balance()
+        get_wallet_balance(g_wallet_id)
     } else if (state == "coin_added") {
         get_transactions()
-        get_wallet_balance()
+        get_wallet_balance(g_wallet_id)
     } else if (state == "pending_transaction") {
         get_transactions()
-        get_wallet_balance()
+        get_wallet_balance(g_wallet_id)
     } else if (state == "tx_sent") {
         get_transactions()
-        get_wallet_balance()
+        get_wallet_balance(g_wallet_id)
         dialogs.alert("Transaction sent successfully!", ok => {});
     } else if (state == "balance_changed") {
-        get_wallet_balance()
+        get_wallet_balance(g_wallet_id)
     } else if (state == "sync_changed") {
         get_sync_status()
     } else if (state == "new_block") {
         get_height_info()
     } else if (state == "reorg") {
         get_transactions()
-        get_wallet_balance()
+        get_wallet_balance(g_wallet_id)
         get_height_info()
         get_sync_status()
     }
@@ -485,6 +519,38 @@ function get_wallets() {
     }
     json_data = JSON.stringify(data);
     ws.send(json_data);
+}
+
+function get_wallets_response(data) {
+    wallets_tab.innerHTML = ""
+    new_innerHTML = ""
+    const wallets = data["wallets"]
+    console.log("received wallets" + wallets)
+
+    for (var i = 0; i < wallets.length; i++) {
+        var wallet = JSON.parse(wallets[i]);
+        var type = wallet["type"]
+        var id = wallet["id"]
+        var name = wallet["name"]
+        get_wallet_balance(id)
+        //href, wallet_name, wallet_description, wallet_amount
+        var href = ""
+        if (type == "STANDARD_WALLET") {
+            href = "wallet-dark.html"
+        } else if (type == "RATE_LIMITED") {
+            href = "rl_wallet/rl_wallet_admin.html"
+        }
+
+        console.log(wallet)
+        if (id == g_wallet_id) {
+            new_innerHTML += create_side_wallet(id, href, name, type, 0, true)
+        } else {
+            new_innerHTML += create_side_wallet(id, href, name, type, 0, false)
+        }
+
+    }
+    new_innerHTML += create_wallet_button()
+    wallets_tab.innerHTML = new_innerHTML
 }
 
 function clean_table() {

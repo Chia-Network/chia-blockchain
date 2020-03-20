@@ -93,7 +93,7 @@ class RLWallet:
             wallet_info.id,
         )
 
-        self = RLWallet.create(
+        self = await RLWallet.create(
             config, key_config, wallet_state_manager, wallet_info, wallet, name
         )
         return self
@@ -132,7 +132,7 @@ class RLWallet:
             wallet_info.id,
         )
 
-        self = RLWallet.create(
+        self = await RLWallet.create(
             config, key_config, wallet_state_manager, wallet_info, wallet, name
         )
         return self
@@ -251,6 +251,7 @@ class RLWallet:
         return available_amount
 
     async def get_confirmed_balance(self) -> uint64:
+        self.log.info(f"wallet_id balance {self.wallet_info.id}")
         return await self.wallet_state_manager.get_confirmed_balance_for_wallet(
             self.wallet_info.id
         )
@@ -260,7 +261,7 @@ class RLWallet:
             self.wallet_info.id
         )
 
-    def can_generate_rl_puzzle_hash(self, hash):
+    async def can_generate_rl_puzzle_hash(self, hash):
         return await self.wallet_state_manager.puzzle_store.puzzle_hash_exists(hash)
 
     async def get_keys(self, puzzle_hash: bytes32):

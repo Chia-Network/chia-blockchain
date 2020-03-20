@@ -6,7 +6,12 @@ from blspy import ExtendedPrivateKey
 from chiabip158 import PyBIP158
 
 from src.wallet.wallet_node import WalletNode
-from tests.setup_nodes import setup_two_nodes, test_constants, bt
+from tests.setup_nodes import (
+    setup_two_nodes,
+    test_constants,
+    bt,
+    setup_node_simulator_and_wallet,
+)
 from src.util.config import load_config
 
 
@@ -18,18 +23,17 @@ def event_loop():
 
 class TestFilter:
     @pytest.fixture(scope="function")
-    async def two_nodes(self):
-        async for _ in setup_two_nodes({"COINBASE_FREEZE_PERIOD": 0}):
+    async def wallet_and_node(self):
+        async for _ in setup_node_simulator_and_wallet():
             yield _
 
     @pytest.mark.asyncio
-    async def test_basic_filter_test(self, two_nodes):
+    async def test_basic_filter_test(self, wallet_and_node):
         sk = bytes(ExtendedPrivateKey.from_seed(b"")).hex()
         config = load_config("config.yaml", "wallet")
         key_config = {"wallet_sk": sk}
-        wallet_node = await WalletNode.create(config, key_config)
+        full_node_1, wallet_node, server_1, server_2 = wallet_and_node
         wallet = wallet_node.main_wallet
-        await wallet_node.wallet_state_manager.clear_all_stores()
 
         num_blocks = 2
         ph = await wallet.get_new_puzzlehash()
@@ -51,5 +55,3 @@ class TestFilter:
 
             assert present
             assert fee_present
-
-        await wallet_node.wallet_state_manager.close_all_stores()
