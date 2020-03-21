@@ -2,12 +2,12 @@ import signal
 import asyncio
 import logging
 from src.util.logging import initialize_logging
-from src.util.config import load_config_cli
+from src.util.config import load_config
 from asyncio import Lock
 from typing import List
 from setproctitle import setproctitle
 
-config = load_config_cli("config.yaml", "timelord_launcher")
+config = load_config("config.yaml", "timelord_launcher")
 
 active_processes: List = []
 stopped = False

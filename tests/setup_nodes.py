@@ -1,9 +1,11 @@
-from typing import Any, Dict
+import signal
+from typing import Any, Dict, Optional
 from pathlib import Path
 import asyncio
 import blspy
 from secrets import token_bytes
 
+from src.consensus.constants import constants
 from src.full_node.blockchain import Blockchain
 from src.full_node.mempool_manager import MempoolManager
 from src.full_node.store import FullNodeStore
@@ -11,6 +13,7 @@ from src.full_node.full_node import FullNode
 from src.server.connection import NodeType
 from src.server.server import ChiaServer
 from src.simulator.full_node_simulator import FullNodeSimulator
+from src.timelord_launcher import spawn_process, kill_processes
 from src.wallet.wallet_node import WalletNode
 from src.types.full_block import FullBlock
 from src.full_node.coin_store import CoinStore
@@ -233,16 +236,31 @@ async def setup_introducer(port, dic={}):
     server.close_all()
     await server.await_closed()
 
+async def setup_vdf_clients(port):
+    vdf_task = asyncio.create_task(spawn_process("127.0.0.1", port, 1))
+
+    yield vdf_task
+
+    await kill_processes()
 
 async def setup_timelord(port, dic={}):
     config = load_config("config.yaml", "timelord")
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
-
-    timelord = Timelord(config, test_constants_copy["DISCRIMINANT_SIZE_BITS"])
+    timelord = Timelord(config, test_constants_copy)
     server = ChiaServer(port, timelord, NodeType.TIMELORD)
-    _ = await server.start_server(port, None)
+    _ = await server.start_server(port, None, config)
+
+    coro = asyncio.start_server(
+        timelord._handle_client,
+        config["vdf_server"]["host"],
+        config["vdf_server"]["port"],
+        loop=asyncio.get_running_loop()
+    )
+
+    vdf_server = asyncio.ensure_future(coro)
+
 
     async def run_timelord():
         async for msg in timelord._manage_discriminant_queue():
@@ -252,6 +270,7 @@ async def setup_timelord(port, dic={}):
 
     yield (timelord, server)
 
+    vdf_server.cancel()
     server.close_all()
     await timelord._shutdown()
     await timelord_task
@@ -388,6 +407,7 @@ async def setup_full_system(dic={}):
         setup_harvester(21234),
         setup_farmer(21235),
         setup_timelord(21236),
+        setup_vdf_clients(8000),
         setup_full_node("blockchain_test.db", 21237, 21233, dic),
         setup_full_node("blockchain_test_2.db", 21238, 21233, dic),
     ]
@@ -396,8 +416,9 @@ async def setup_full_system(dic={}):
     harvester, harvester_server = await node_iters[1].__anext__()
     farmer, farmer_server = await node_iters[2].__anext__()
     timelord, timelord_server = await node_iters[3].__anext__()
-    node1, node1_server = await node_iters[4].__anext__()
-    node2, node2_server = await node_iters[5].__anext__()
+    vdf = await node_iters[4].__anext__()
+    node1, node1_server = await node_iters[5].__anext__()
+    node2, node2_server = await node_iters[6].__anext__()
 
     await harvester_server.start_client(
         PeerInfo(farmer_server._host, uint16(farmer_server._port)), None
@@ -405,6 +426,7 @@ async def setup_full_system(dic={}):
     await farmer_server.start_client(
         PeerInfo(node1_server._host, uint16(node1_server._port)), None
     )
+
     await timelord_server.start_client(
         PeerInfo(node1_server._host, uint16(node1_server._port)), None
     )

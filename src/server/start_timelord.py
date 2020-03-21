@@ -3,6 +3,8 @@ import signal
 import logging
 from typing import Optional
 
+from src.consensus.constants import constants
+
 try:
     import uvloop
 except ImportError:
@@ -24,7 +26,7 @@ async def main():
     log = logging.getLogger(__name__)
     setproctitle("chia_timelord")
 
-    timelord = Timelord(config)
+    timelord = Timelord(config, constants)
     server = ChiaServer(config["port"], timelord, NodeType.TIMELORD)
     _ = await server.start_server(config["host"], None, config)
 

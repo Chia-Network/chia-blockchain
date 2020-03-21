@@ -18,12 +18,27 @@ void CreateAndWriteProof(integer D, form x, int64_t num_iterations, WesolowskiCa
         PrintInfo("Got stop signal before completing the proof!");
         return ;
     }
+
     std::vector<unsigned char> bytes = ConvertIntegerToBytes(integer(num_iterations), 8);
+
+    // Writes the y, with prepended size
+    std::vector<unsigned char> y_size = ConvertIntegerToBytes(integer(result.y.size()), 8);
+    bytes.insert(bytes.end(), y_size.begin(), y_size.end());
     bytes.insert(bytes.end(), result.y.begin(), result.y.end());
+
     bytes.insert(bytes.end(), result.proof.begin(), result.proof.end());
     std::string str_result = BytesToStr(bytes);
+
+    const uint32_t length = str_result.size();
+    std::vector<unsigned char> prefix_bytes = ConvertIntegerToBytes(integer(length), 4);
+    std::string prefix = BytesToStr(prefix_bytes);
+
     std::lock_guard<std::mutex> lock(socket_mutex);
-    PrintInfo("Generated proof = " + str_result);;
+
+    PrintInfo("Sending length = " + to_string(length));
+    PrintInfo("Generated proof = " + str_result);
+
+    boost::asio::write(sock, boost::asio::buffer(prefix_bytes, 4));
     boost::asio::write(sock, boost::asio::buffer(str_result.c_str(), str_result.size()));
 }
 
