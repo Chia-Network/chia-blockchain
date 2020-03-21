@@ -43,12 +43,12 @@ async def refresh_loop(app_: web.Application):
             await asyncio.sleep(interval)
 
 
-t1: Thread = None
+refresh_thread: Thread = None
 
 
 async def startup(app_: web.Application):
-    t1 = Thread(target=asyncio.run, args=(refresh_loop(app_), ))
-    t1.start()
+    refresh_thread = Thread(target=asyncio.run, name='refresh_loop', args=(refresh_loop(app_), ))
+    refresh_thread.start()
 
 
 app: web.Application = setup_app()
@@ -114,3 +114,4 @@ web.run_app(app, port=app['config']['webui_port'])
 
 # signal the refresh loop to exit next time it wakes up
 keep_running = False
+print('waiting for threads to finish')
