@@ -4,6 +4,7 @@ from src.server.outbound_message import NodeType
 from src.util.ints import uint64
 from typing import List, Optional, Dict
 from src.types.header_block import SmallHeaderBlock
+import datetime
 
 
 async def query_node(app):
@@ -46,6 +47,7 @@ async def query_node(app):
         node['our_winners'] = our_winners
         node['latest_blocks'] = latest_blocks
         node['state'] = 'Running'
+        node['last_refresh'] = datetime.datetime.now()
         app['ready'] = True
 
     except client_exceptions.ClientConnectorError:

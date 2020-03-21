@@ -7,6 +7,8 @@ from middlewares import setup_middlewares
 from node_state import query_node, find_block, find_connection, stop_node
 from blspy import PrivateKey
 import urllib.parse
+import asyncio
+import threading
 
 
 def setup_app():
@@ -25,12 +27,31 @@ def setup_app():
                     for ce in app['key_config']["pool_sks"]
                 ]
 
-    app.on_startup.append(query_node)
-
     return app
 
 
+interval = 15
+keep_running = True
+
+
+async def refresh_loop(app_):
+    while keep_running:
+        await query_node(app_)
+        print('refreshed')
+        if keep_running:
+            await asyncio.sleep(interval)
+
+
+t1 = None
+
+
+async def startup(app_):
+    t1 = threading.Thread(target=asyncio.run, args=(refresh_loop(app_), ))
+    t1.start()
+
+
 app = setup_app()
+app.on_startup.append(startup)
 routes = web.RouteTableDef()
 
 
@@ -90,3 +111,4 @@ async def stop(request):
 
 app.add_routes(routes)
 web.run_app(app, port=app['config']['webui_port'])
+keep_running = False
