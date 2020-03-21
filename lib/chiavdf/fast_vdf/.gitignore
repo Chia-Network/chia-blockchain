@@ -5,7 +5,9 @@
 /compile_asm
 /vdf
 /server
+/vdf_bench
 /vdf_server
+/vdf_client
 /verifier
 /verifier_test
 /build/*

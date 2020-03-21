@@ -366,7 +366,7 @@ class Farmer:
         self, proof_of_time_rate: farmer_protocol.ProofOfTimeRate
     ):
         """
-        Updates our internal etimate of the iterations per second for the fastest proof of time
+        Updates our internal estimate of the iterations per second for the fastest proof of time
         in the network.
         """
         self.proof_of_time_estimate_ips = proof_of_time_rate.pot_estimate_ips

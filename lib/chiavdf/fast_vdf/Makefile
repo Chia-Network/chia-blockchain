@@ -19,15 +19,15 @@ endif
 
 .PHONY: all clean
 
-all: vdf_server
+all: vdf_client vdf_bench
 
 clean:
-	rm -f *.o vdf_server compile_asm
+	rm -f *.o vdf_client vdf_bench compile_asm
 
-vdf_server: vdf_server.o asm_compiled.o
+vdf_client vdf_bench: %: %.o asm_compiled.o
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-vdf_server.o: CXXFLAGS += $(OPT_CFLAGS)
+vdf_client.o vdf_bench.o: CXXFLAGS += $(OPT_CFLAGS)
 
 asm_compiled.s: compile_asm
 	./compile_asm

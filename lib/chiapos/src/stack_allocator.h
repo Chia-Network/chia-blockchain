@@ -54,17 +54,17 @@ class stack_allocator
 	
 	public:
 
-	explicit stack_allocator(const allocator_type& alloc = allocator_type()) 
+	explicit stack_allocator(const allocator_type& alloc = allocator_type()) noexcept
 		: m_allocator(alloc), m_begin(nullptr), m_end(nullptr), m_stack_pointer(nullptr)
 	{ }
 
-	explicit stack_allocator(pointer buffer, const allocator_type& alloc = allocator_type())
+	explicit stack_allocator(pointer buffer, const allocator_type& alloc = allocator_type()) noexcept
 		: m_allocator(alloc), m_begin(buffer), m_end(buffer + N), 
 			m_stack_pointer(buffer)
 	{ }
 
 	template <class U>
-	stack_allocator(const stack_allocator<U, N, Allocator>& other)
+	stack_allocator(const stack_allocator<U, N, Allocator>& other) noexcept
 		: m_allocator(other.m_allocator), m_begin(other.m_begin), m_end(other.m_end),
 			m_stack_pointer(other.m_stack_pointer)
 	{ }

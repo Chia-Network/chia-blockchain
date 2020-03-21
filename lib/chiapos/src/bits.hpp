@@ -33,7 +33,7 @@
 struct SmallVector {
     typedef uint16_t size_type;
 
-    SmallVector() {
+    SmallVector() noexcept {
         count_ = 0;
     }
 
@@ -56,7 +56,7 @@ struct SmallVector {
         return (*this);
     }
 
-    size_type size() const {
+    size_type size() const noexcept {
         return count_;
     }
 
@@ -71,7 +71,7 @@ struct SmallVector {
 struct ParkVector {
     typedef uint32_t size_type;
 
-    ParkVector() {
+    ParkVector() noexcept {
         count_ = 0;
     }
 
@@ -94,7 +94,7 @@ struct ParkVector {
         return (*this);
     }
 
-    size_type size() const {
+    size_type size() const noexcept {
         return count_;
     }
 
@@ -120,7 +120,7 @@ template <class T> class BitsGeneric {
  public:
     template <class> friend class BitsGeneric;
 
-    BitsGeneric<T>()  {
+    BitsGeneric<T>() noexcept {
         this->last_size_ = 0;
     }
 
@@ -198,9 +198,10 @@ template <class T> class BitsGeneric {
         }
     }
 
-    BitsGeneric<T>(const BitsGeneric<T>& other) {
-        values_ = other.values_;
-        last_size_ = other.last_size_;
+    BitsGeneric<T>(const BitsGeneric<T>& other) noexcept :
+        values_(other.values_),
+        last_size_(other.last_size_)
+    {
     }
 
     BitsGeneric<T>& operator = (const BitsGeneric<T>& other) {
@@ -329,9 +330,7 @@ template <class T> class BitsGeneric {
         if (end_index > GetSize()) {
             end_index = GetSize();
         }
-        if (start_index < 0) {
-            start_index = 0;
-        }
+
         if (end_index == start_index) return BitsGeneric<T>();
         assert(end_index > start_index);
         uint32_t start_bucket = start_index / 128;
@@ -502,8 +501,8 @@ template <class T> class BitsGeneric {
     friend BitsGeneric<X> operator>>(BitsGeneric<X> lhs, uint32_t shift_amount);
 
  private:
-    void SplitNumberByPrefix(uint128_t number, uint8_t num_bits, uint8_t prefix_size, uint128_t* prefix,
-                             uint128_t* suffix) const {
+    static void SplitNumberByPrefix(uint128_t number, uint8_t num_bits, uint8_t prefix_size, uint128_t* prefix,
+                             uint128_t* suffix) {
         assert(num_bits >= prefix_size);
         if (prefix_size == 0) {
             *prefix = 0;

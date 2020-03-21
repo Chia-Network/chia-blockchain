@@ -30,6 +30,13 @@ async def main():
 
     timelord_shutdown_task: Optional[asyncio.Task] = None
 
+    coro = asyncio.start_server(
+        timelord._handle_client,
+        config["vdf_server"]["host"],
+        config["vdf_server"]["port"],
+        loop=asyncio.get_running_loop()
+    )
+
     def signal_received():
         nonlocal timelord_shutdown_task
         server.close_all()
@@ -46,6 +53,8 @@ async def main():
     await asyncio.sleep(1)  # Prevents TCP simultaneous connect with full node
     await server.start_client(full_node_peer, None, config)
 
+    vdf_server = asyncio.ensure_future(coro)
+
     async for msg in timelord._manage_discriminant_queue():
         server.push_message(msg)
 
@@ -55,6 +64,7 @@ async def main():
     log.info("Shutdown timelord.")
 
     await server.await_closed()
+    vdf_server.cancel()
     log.info("Timelord fully closed.")
 
 

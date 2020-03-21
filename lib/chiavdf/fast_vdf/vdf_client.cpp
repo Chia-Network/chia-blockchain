@@ -10,8 +10,10 @@ const int max_length = 2048;
 const int kMaxProcessesAllowed = 3;
 std::mutex socket_mutex;
 
+int process_number;
+
 void PrintInfo(std::string input) {
-    print("VDF Server: " + input);
+    std::cout << "VDF Client: " << input << "\n";
 }
 
 void CreateAndWriteProof(integer D, form x, int64_t num_iterations, WesolowskiCallback& weso, bool& stop_signal, tcp::socket& sock) {
@@ -40,6 +42,11 @@ void CreateAndWriteProof(integer D, form x, int64_t num_iterations, WesolowskiCa
     boost::asio::write(sock, boost::asio::buffer(str_result.c_str(), str_result.size()));
 }
 
+void session(tcp::socket& sock) {
+    try {
+        char disc[350];
+        char disc_size[5];
+        boost::system::error_code error;
 
 class session
   : public std::enable_shared_from_this<session>
@@ -199,55 +206,26 @@ public:
         }
   }
 
-private:
-  tcp::socket socket_;
-};
-
-class server {
-public:
-  server(boost::asio::io_service& io_service, short port)
-    : acceptor_(io_service, tcp::endpoint(tcp::v4(), port)),
-      socket_(io_service)
-  {
-    io_service_ = &io_service;
-    do_accept();
-  }
-
-private:
-  void do_accept()
-  {
-    acceptor_.async_accept(this->socket_,
-        [this](boost::system::error_code ec)
-        {
-          if (!ec)
-          {
-            std::make_shared<session>(std::move(this->socket_))->start();
-          }
-        });
-  }
-  boost::asio::io_service* io_service_;
-  tcp::acceptor acceptor_;
-  tcp::socket socket_;
-};
-
 int main(int argc, char* argv[])
 {
-  try
-  {
-    if (argc != 2)
+  try {
+    if (argc != 4)
     {
-      std::cerr << "Usage: vdf_server <port>\n";
+      std::cerr << "Usage: ./vdf_client <host> <port> <process_number>\n";
       return 1;
     }
 
     boost::asio::io_service io_service;
 
-    server s(io_service, std::atoi(argv[1]));
+    tcp::resolver resolver(io_service);
+    tcp::resolver::query query(tcp::v6(), argv[1], argv[2], boost::asio::ip::resolver_query_base::v4_mapped);
+    tcp::resolver::iterator iterator = resolver.resolve(query);
 
-    io_service.run();
-  }
-  catch (std::exception& e)
-  {
+    tcp::socket s(io_service);
+    boost::asio::connect(s, iterator);
+    process_number = atoi(argv[3]);
+    session(s);
+  } catch (std::exception& e) {
     std::cerr << "Exception: " << e.what() << "\n";
   }
   return 0;
