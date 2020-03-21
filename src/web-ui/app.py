@@ -4,7 +4,7 @@ import aiohttp_jinja2
 import os
 from src.util.config import load_config_cli
 from middlewares import setup_middlewares
-from node_state import query_node, find_block, find_connection, stop_node
+from node_state import query_node, find_block, find_connection, stop_node, disconnect_peer
 from blspy import PrivateKey
 import urllib.parse
 import asyncio
@@ -37,7 +37,8 @@ keep_running: bool = True
 
 async def refresh_loop(app_: web.Application):
     while keep_running:
-        await query_node(app_)
+        app_['node'] = await query_node(app_['config']['rpc_port'], app_['key_config']['pool_pks'])
+        app_['ready'] = True
 
         if keep_running:
             await asyncio.sleep(interval)
@@ -106,7 +107,12 @@ async def connections(request):
 
 @routes.post('/stop')
 async def stop(request):
-    await stop_node(app)
+    await stop_node(app['config']['rpc_port'])
+
+
+@routes.post('/disconnect')
+async def disconnect(request):
+    await disconnect_peer(app['config']['rpc_port'])
 
 
 app.add_routes(routes)

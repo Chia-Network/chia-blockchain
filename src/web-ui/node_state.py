@@ -7,11 +7,11 @@ from src.types.header_block import SmallHeaderBlock
 import datetime
 
 
-async def query_node(app):
+async def query_node(port, pool_pks):
     node = {}
 
     try:
-        rpc_client: RpcClient = await RpcClient.create(app['config']['rpc_port'])
+        rpc_client: RpcClient = await RpcClient.create(port)
 
         connections = await rpc_client.get_connections()
         for con in connections:
@@ -33,7 +33,7 @@ async def query_node(app):
             (coin_balances[bytes(pk)], bytes(pk), bytes(pk).hex())
             if bytes(pk) in coin_balances
             else (0, bytes(pk), bytes(pk).hex())
-            for pk in app['key_config']['pool_pks']
+            for pk in pool_pks
         ]
 
         latest_blocks = await get_latest_blocks(rpc_client, blockchain_state["tips"])
@@ -48,13 +48,12 @@ async def query_node(app):
         node['latest_blocks'] = latest_blocks
         node['state'] = 'Running'
         node['last_refresh'] = datetime.datetime.now()
-        app['ready'] = True
 
     except client_exceptions.ClientConnectorError:
         node['state'] = 'Not running'
 
     finally:
-        app['node'] = node
+        return node
 
 
 def find_block(block_list, blockid):
@@ -91,11 +90,21 @@ async def get_latest_blocks(rpc_client: RpcClient, heads: List[SmallHeaderBlock]
     return added_blocks
 
 
-async def stop_node(app):
+async def stop_node(port):
     try:
-        rpc_client: RpcClient = await RpcClient.create(app['config']['rpc_port'])
+        rpc_client: RpcClient = await RpcClient.create(port)
         await rpc_client.stop_node()
         rpc_client.close()
 
     except client_exceptions.ClientConnectorError:
         print("exception occured while stopping node")
+
+
+async def disconnect_peer(port, node_id):
+    try:
+        rpc_client: RpcClient = await RpcClient.create(port)
+        await rpc_client.close_connection(node_id)
+        rpc_client.close()
+
+    except client_exceptions.ClientConnectorError:
+        print("exception occured while disconnecting peer")

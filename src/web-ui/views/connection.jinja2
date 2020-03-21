@@ -1,8 +1,9 @@
 {% extends 'layout.html' %}
 {% from '_macros.jinja2' import render_field %}
 {% block content %}
-
+<button onclick='disconnectPeer("{{ connection.node_id | string | urlencode }}")'>Disconnect</button>
 <h2>{{ connection.type_name }}</h2>
+{{ render_field('node_id', connection.node_id | string) }}
 {{ render_field('bytes_read', connection.bytes_read) }}
 {{ render_field('bytes_written', connection.bytes_written) }}
 {{ render_field('creation_time', connection.creation_time) }}
