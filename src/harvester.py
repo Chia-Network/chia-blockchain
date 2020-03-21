@@ -101,7 +101,9 @@ class Harvester:
 
         challenge_size = len(new_challenge.challenge_hash)
         if challenge_size != 32:
-            raise ValueError(f"Invalid challenge size {challenge_size}, 32 was expected")
+            raise ValueError(
+                f"Invalid challenge size {challenge_size}, 32 was expected"
+            )
         all_responses = []
         for filename, prover in self.provers.items():
             try:

@@ -236,12 +236,14 @@ async def setup_introducer(port, dic={}):
     server.close_all()
     await server.await_closed()
 
+
 async def setup_vdf_clients(port):
     vdf_task = asyncio.create_task(spawn_process("127.0.0.1", port, 1))
 
     yield vdf_task
 
     await kill_processes()
+
 
 async def setup_timelord(port, dic={}):
     config = load_config("config.yaml", "timelord")
@@ -256,11 +258,10 @@ async def setup_timelord(port, dic={}):
         timelord._handle_client,
         config["vdf_server"]["host"],
         config["vdf_server"]["port"],
-        loop=asyncio.get_running_loop()
+        loop=asyncio.get_running_loop(),
     )
 
     vdf_server = asyncio.ensure_future(coro)
-
 
     async def run_timelord():
         async for msg in timelord._manage_discriminant_queue():

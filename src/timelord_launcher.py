@@ -61,13 +61,12 @@ async def spawn_all_processes():
     host = config["host"]
     port = config["port"]
     process_count = config["process_count"]
-    awaitables = [
-        spawn_process(host, port, i)
-        for i in range(process_count)
-    ]
+    awaitables = [spawn_process(host, port, i) for i in range(process_count)]
     await asyncio.gather(*awaitables)
 
+
 if __name__ == "__main__":
+
     def signal_received():
         asyncio.create_task(kill_processes())
 

@@ -217,7 +217,7 @@ async def start_rpc_server(full_node: FullNode, stop_node_cb: Callable, rpc_port
     app = web.Application()
 
     # For serving index.html and friends
-    app.router.add_static('/', path='src/ajax/', name='static')
+    app.router.add_static("/", path="src/ajax/", name="static")
 
     app.add_routes(
         [

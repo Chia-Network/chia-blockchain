@@ -24,9 +24,7 @@ def main():
     parser.add_argument(
         "-n", "--num_plots", help="Number of plots", type=int, default=10
     )
-    parser.add_argument(
-        "-i", "--index", help="First plot index", type=int, default=0
-    )
+    parser.add_argument("-i", "--index", help="First plot index", type=int, default=0)
     parser.add_argument(
         "-p", "--pool_pub_key", help="Hex public key of pool", type=str, default=""
     )

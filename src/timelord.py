@@ -6,16 +6,14 @@ from asyncio import Lock, StreamReader, StreamWriter
 from typing import Dict, List, Optional, Tuple
 
 
-from lib.chiavdf.inkfish.classgroup import ClassGroup
 from lib.chiavdf.inkfish.create_discriminant import create_discriminant
-from lib.chiavdf.inkfish.proof_of_time import check_proof_of_time_nwesolowski
 from src.protocols import timelord_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.classgroup import ClassgroupElement
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
-from src.util.ints import uint8, uint64, int512
+from src.util.ints import uint64, int512, uint128
 
 log = logging.getLogger(__name__)
 
@@ -44,7 +42,7 @@ class Timelord:
         self.seen_discriminants: List[bytes32] = []
         self.proof_count: Dict = {}
         self.avg_ips: Dict = {}
-        self.discriminant_queue: List[Tuple[bytes32, uint64]] = []
+        self.discriminant_queue: List[Tuple[bytes32, uint128]] = []
         self.max_connection_time = self.config["max_connection_time"]
         self.potential_free_clients: List = []
         self.free_clients: List[Tuple[str, StreamReader, StreamWriter]] = []
@@ -52,7 +50,7 @@ class Timelord:
 
     async def _handle_client(self, reader: StreamReader, writer: StreamWriter):
         async with self.lock:
-            client_ip = writer.get_extra_info('peername')[0]
+            client_ip = writer.get_extra_info("peername")[0]
             log.info(f"New timelord connection from client: {client_ip}.")
             if client_ip in self.ips_estimate.keys():
                 self.free_clients.append((client_ip, reader, writer))
@@ -277,7 +275,11 @@ class Timelord:
                     stdout_bytes_io: io.BytesIO = io.BytesIO(
                         bytes.fromhex(proof.decode())
                     )
-                except (asyncio.IncompleteReadError, ConnectionResetError, Exception) as e:
+                except (
+                    asyncio.IncompleteReadError,
+                    ConnectionResetError,
+                    Exception,
+                ) as e:
                     log.warning(f"{type(e)} {e}")
                     async with self.lock:
                         if challenge_hash in self.active_discriminants:
@@ -293,9 +295,7 @@ class Timelord:
                 )
 
                 y_size_bytes = stdout_bytes_io.read(8)
-                y_size = uint64(
-                    int.from_bytes(y_size_bytes, "big", signed=True)
-                )
+                y_size = uint64(int.from_bytes(y_size_bytes, "big", signed=True))
 
                 y_bytes = stdout_bytes_io.read(y_size)
 
@@ -376,8 +376,7 @@ class Timelord:
                         else:
                             self.potential_free_clients = [
                                 (ip, end_time)
-                                for ip, end_time
-                                in self.potential_free_clients
+                                for ip, end_time in self.potential_free_clients
                                 if time.time() < end_time + self.max_connection_time
                             ]
                             if (

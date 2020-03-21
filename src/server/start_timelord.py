@@ -36,7 +36,7 @@ async def main():
         timelord._handle_client,
         config["vdf_server"]["host"],
         config["vdf_server"]["port"],
-        loop=asyncio.get_running_loop()
+        loop=asyncio.get_running_loop(),
     )
 
     def signal_received():
