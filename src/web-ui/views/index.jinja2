@@ -7,10 +7,10 @@
 <h2>Status</h2>
 {{ render_field('Status', state) }}
 {{ render_field('Sync mode', blockchain_state.sync_mode) }}
-<div>
+<div class='field'>
     <span class='name'><a href="./lca">Least common ancestor</a></span>
 </div>
-<div>
+<div class='field'>
     <span class='name'>Tips</span>
     {% for tip in blockchain_state.tips %}
         {{ render_field_link('Height', tip.challenge.height, './blocks/' + tip.challenge.proof_of_space_hash | string | urlencode) }}
@@ -44,6 +44,6 @@
 {% endfor %}
 
 
-<div>{{ last_refresh }}</div>
+<div id='footer'>{{ last_refresh }}</div>
 
 {% endblock %}
