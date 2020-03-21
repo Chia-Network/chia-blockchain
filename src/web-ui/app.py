@@ -8,16 +8,16 @@ from node_state import query_node, find_block, find_connection, stop_node
 from blspy import PrivateKey
 import urllib.parse
 import asyncio
-import threading
+from threading import Thread
 
 
-def setup_app():
+def setup_app() -> web.Application:
     app = web.Application()
     app['ready'] = False
 
-    abs_app_dir_path = os.path.dirname(os.path.realpath(__file__))
-    aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(os.path.join(abs_app_dir_path, 'views')))
-    app.router.add_static('/static/', path=os.path.join(abs_app_dir_path, 'static'), name='static')
+    app_dir = os.path.dirname(os.path.realpath(__file__))
+    aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(os.path.join(app_dir, 'views')))
+    app.router.add_static('/static/', path=os.path.join(app_dir, 'static'), name='static')
     setup_middlewares(app)
 
     app['config'] = load_config_cli("config.yaml", "ui")
@@ -27,32 +27,32 @@ def setup_app():
                     for ce in app['key_config']["pool_sks"]
                 ]
 
+    app.on_startup.append(startup)
     return app
 
 
-interval = 15
-keep_running = True
+interval: int = 15
+keep_running: bool = True
 
 
-async def refresh_loop(app_):
+async def refresh_loop(app_: web.Application):
     while keep_running:
         await query_node(app_)
-        print('refreshed')
+
         if keep_running:
             await asyncio.sleep(interval)
 
 
-t1 = None
+t1: Thread = None
 
 
-async def startup(app_):
-    t1 = threading.Thread(target=asyncio.run, args=(refresh_loop(app_), ))
+async def startup(app_: web.Application):
+    t1 = Thread(target=asyncio.run, args=(refresh_loop(app_), ))
     t1.start()
 
 
-app = setup_app()
-app.on_startup.append(startup)
-routes = web.RouteTableDef()
+app: web.Application = setup_app()
+routes: web.RouteTableDef = web.RouteTableDef()
 
 
 @routes.get('/')
@@ -111,4 +111,6 @@ async def stop(request):
 
 app.add_routes(routes)
 web.run_app(app, port=app['config']['webui_port'])
+
+# signal the refresh loop to exit next time it wakes up
 keep_running = False

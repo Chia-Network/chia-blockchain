@@ -75,7 +75,7 @@ def find_connection(connection_list, connectionid):
     return {}
 
 
-async def get_latest_blocks(rpc_client, heads: List[SmallHeaderBlock]) -> List[SmallHeaderBlock]:
+async def get_latest_blocks(rpc_client: RpcClient, heads: List[SmallHeaderBlock]) -> List[SmallHeaderBlock]:
     added_blocks: List[SmallHeaderBlock] = []
     num_blocks = 10
     while len(added_blocks) < num_blocks and len(heads) > 0:
