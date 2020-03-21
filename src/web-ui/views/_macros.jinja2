@@ -1,10 +1,13 @@
 {% macro render_field(name, value='') -%}
-    <div><span class='name'>{{ name }}:</span> {{ value }}</div>
+<div class='field'>
+    <span class='name'>{{ name }}:</span>
+    <span>{{ value }}</span>
+</div>
 {%- endmacro %}
 
 {% macro render_field_link(name, value, href='') -%}
-    <div>
-        <span class='name'>{{ name }}:</span>
-        <a href={{href }}>{{ value }}</a>
-    </div>
+<div class='field'>
+    <span class='name'>{{ name }}:</span>
+    <a href={{ href }}>{{ value }}</a>
+</div>
 {%- endmacro %}
