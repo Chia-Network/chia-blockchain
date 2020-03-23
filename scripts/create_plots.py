@@ -64,7 +64,8 @@ def main():
         pool_pk = pool_sk.get_public_key()
 
     print(
-        f"Creating {args.num_plots} plots, from index {args.index} to {args.index + args.num_plots - 1}, of size {args.size}, sk_seed {sk_seed.hex()} ppk {pool_pk}"
+        f"Creating {args.num_plots} plots, from index {args.index} to "
+        f"{args.index + args.num_plots - 1}, of size {args.size}, sk_seed {sk_seed.hex()} ppk {pool_pk}"
     )
 
     for i in range(args.index, args.index + args.num_plots):

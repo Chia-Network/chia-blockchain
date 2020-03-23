@@ -62,7 +62,7 @@ class ClassGroup(tuple):
         r = (a - b) // (2 * a)
         b, c = b + 2 * r * a, a * r * r + b * r + c
         return self.__class__((a, b, c))
-    
+
     def serialize(self):
         r = self.reduced()
         int_size_bits = int(self.discriminant().bit_length())
@@ -117,13 +117,13 @@ def check_proof_of_time_nwesolowski(discriminant, x, proof_blob,
         for _ in range(depth):
             iterations_1 = iter_list[-1]
             if not verify_wesolowski(
-                str(discriminant), 
+                str(discriminant),
                 str(x[0]),
-                str(x[1]), 
+                str(x[1]),
                 str(proof[-2][0]),
-                str(proof[-2][1]), 
+                str(proof[-2][1]),
                 str(proof[-1][0]),
-                str(proof[-1][1]), 
+                str(proof[-1][1]),
                 iterations_1,
             ):
                 return False
@@ -133,13 +133,13 @@ def check_proof_of_time_nwesolowski(discriminant, x, proof_blob,
             iter_list = iter_list[:-1]
 
         return verify_wesolowski(
-            str(discriminant), 
-            str(x[0]), 
+            str(discriminant),
+            str(x[0]),
             str(x[1]),
-            str(y[0]), 
+            str(y[0]),
             str(y[1]),
             str(proof[-1][0]),
-            str(proof[-1][1]), 
+            str(proof[-1][1]),
             iterations,
         )
     except Exception as e:
