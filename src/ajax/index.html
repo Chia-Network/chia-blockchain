@@ -30,12 +30,6 @@
 
 <hr>
 
-<div id="poolimg"></div>
-
-    <div id="pooldata" class="clearfix"></div>
-
-<hr>	
-
 <center>	
     <a href="javascript:stopNode()">Stop node</a>	
 </center>
@@ -49,7 +43,6 @@ var NodeType = ["FULL_NODE", "HARVESTER", "FARMER", "TIMELORD", "INTRODUCER"];
 $(function() {
 
     loadConnections();
-    loadPools();
     loadBlocks(null);
 });
 
@@ -95,55 +88,6 @@ function loadConnections() {
     })
 }
 
-var poolReload=null;
-var poolhtml="";
-
-function loadPools() {
-    if(poolReload!=null) {
-        clearTimeout(poolReload);
-        poolReload=null;
-    }
-
-    $('#poolimg').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
-
-    console.log("get_pool_balances");
-
-    jQuery.ajax({
-        url: "get_pool_balances",
-        type: "POST",
-        data: null,
-        dataType: "json",
-        contentType: "application/json; charset=utf-8",
-        success: function(data) {
-            console.log(data);
-            var arr = Object.entries(data).map(([key, value]) => ({
-                key,
-                value
-            }));
-            var sorted = arr.sort((a, b) => b.value - a.value);
-
-            outhtml = '<div><ul style="list-style-type:none;">';
-
-            for (i = 0; i < arr.length; i++) {
-                outhtml = outhtml + '<li>' + sorted[i].key.substring(0, 60) + '... ' + sorted[i].value / 1000000000000 + ' chias</li>';
-            }
-            outhtml = outhtml + '</ul></div>';
-
-            if(outhtml!=poolhtml) {
-                $('#pooldata').html(outhtml);
-                poolhtml=outhtml;
-            }
-
-            $('#poolimg').html('<a href="javascript:loadPools()">Pools</a>');
-            
-            poolReload=setTimeout(function() {
-                loadPools();
-            }, 5*60*1000);
-
-        }
-    })
-}
-
 var blockReload=null;
 var blockhtml="";
 
@@ -174,7 +118,7 @@ function loadBlocks(hash) {
 
             for (i = 0; i < data.tips.length; i++) {
                 tipobj = JSON.parse(data.tips[i]);
-                tipheight = tipheight + tipobj.challenge.height + " ";
+                tipheight = tipheight + tipobj.height + " ";
                 tips.push(tipobj);
             }
 
@@ -189,11 +133,11 @@ function loadBlocks(hash) {
                 $('#synced').html("Chia Testnet Blockchain: Currently synced");
             }
 
-            $('#timestamp').html("Current LCA timestamp (UTC): " + new Date(1000 * lca_block.header.data.timestamp).toISOString());
+            $('#timestamp').html("Current LCA timestamp (UTC): " + new Date(1000 * lca_block.data.timestamp).toISOString());
             $('#tipheight').html(tipheight);
             $('#difficulty').html("Current difficulty: " + data.difficulty.toString());
             $('#ips').html("Current VDF iterations per second: " + data.ips.toString());
-            $('#iterations').html("Total iterations since genesis: " + lca_block.challenge.total_iters.toString());
+            $('#iterations').html("Total iterations since genesis: " + lca_block.data.total_iters.toString());
 
             heads = [];
 
@@ -238,7 +182,7 @@ function makeCall(hash, heads, added_blocks) {
 
         heads.shift();
 
-        var blockargs = '{"header_hash": "' + max_block.header.data.prev_header_hash.slice(2) + '"}';
+        var blockargs = '{"header_hash": "' + max_block.data.prev_header_hash.slice(2) + '"}';
     } else {
         var blockargs = '{"header_hash": "' + hash + '"}';
     }
@@ -254,7 +198,6 @@ function makeCall(hash, heads, added_blocks) {
         success: function(data) {
             console.log(data);
             heads.push(JSON.parse(data));
-
         },
         error: function(err) {
             console.log('An error occured');
