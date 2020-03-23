@@ -6,6 +6,10 @@ import traceback
 from typing import Any, Dict, List
 from src.server.outbound_message import NodeType, OutboundMessage, Message, Delivery
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
+from src.types.peer_info import PeerInfo
+from src.util.config import load_config, load_config_cli
+from src.util.ints import uint64
+from src.util.logging import initialize_logging
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_info import WalletInfo
@@ -183,6 +187,34 @@ class WebSocketServer:
 
         return await websocket.send(format_response(response_api, response))
 
+    async def rl_set_admin_info(self, websocket, request,  response_api):
+        wallet_id = int(request["wallet_id"])
+        wallet: RLWallet = self.wallet_node.wallets[wallet_id]
+        user_pubkey = request["user_pubkey"]
+        limit = uint64(int(request["limit"]))
+        interval = uint64(int(request["interval"]))
+        amount = uint64(int(request["amount"]))
+
+        success = await wallet.admin_create_coin(interval, limit, user_pubkey, amount)
+
+        response = {"success" : success}
+
+        return  await websocket.send(format_response(response_api, response))
+
+    async def rl_set_user_info(self, websocket, request,  response_api):
+        wallet_id = int(request["wallet_id"])
+        wallet: RLWallet = self.wallet_node.wallets[wallet_id]
+        admin_pubkey = request["admin_pubkey"]
+        limit = uint64(int(request["limit"]))
+        interval = uint64(int(request["interval"]))
+        origin_id = request["origin_id"]
+
+        success = await wallet.set_user_info(interval, limit, origin_id, admin_pubkey)
+
+        response = {"success" : success}
+
+        return  await websocket.send(format_response(response_api, response))
+
     async def safe_handle(self, websocket, path):
         try:
             await self.handle_message(websocket, path)
@@ -224,6 +256,10 @@ class WebSocketServer:
                 await self.create_new_wallet(websocket, data, command)
             elif command == "get_wallets":
                 await self.get_wallets(websocket, command)
+            elif command == "rl_set_admin_info":
+                await self.rl_set_admin_info(websocket, data, command)
+            elif command == "rl_set_user_info":
+                await self.rl_set_user_info(websocket, data, command)
             else:
                 response = {"error": f"unknown_command {command}"}
                 await websocket.send(obj_to_response(response))

@@ -2031,3 +2031,7 @@ table td {
 #table_container::-webkit-scrollbar-thumb:hover {
   background: #007bff;
 }
+
+.hidden_area {
+  display: none;
+}

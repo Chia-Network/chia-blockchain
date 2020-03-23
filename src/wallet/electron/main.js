@@ -44,7 +44,7 @@ const createPyProc = () => {
   if (guessPackaged()) {
     pyProc = require('child_process').execFile(script, ["--testing", local_test])
   } else {
-    pyProc = require('child_process').spawn('python', [script, "--testing", local_test])
+    //pyProc = require('child_process').spawn('python', [script, "--testing", local_test])
   }
 
     if (pyProc != null) {
@@ -70,9 +70,11 @@ const createPyProc = () => {
 }
 
 const exitPyProc = () => {
-  pyProc.kill()
-  pyProc = null
-  pyPort = null
+  if (pyProc != null) {
+    pyProc.kill()
+    pyProc = null
+    pyPort = null
+  }
 }
 
 app.on('ready', createPyProc)
@@ -91,6 +93,7 @@ const createWindow = () => {
       width: 1500,
       height: 800,
       backgroundColor: '#131722',
+      show: false,
       webPreferences: {
         nodeIntegration: true
     },})
@@ -102,6 +105,11 @@ const createWindow = () => {
     slashes: true
   }) + query
   )
+
+  mainWindow.once('ready-to-show', function (){
+        mainWindow.show();
+  });
+
   mainWindow.webContents.openDevTools()
 
   mainWindow.on('closed', () => {

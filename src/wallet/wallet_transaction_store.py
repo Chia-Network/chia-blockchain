@@ -148,7 +148,7 @@ class WalletTransactionStore:
     ) -> Optional[TransactionRecord]:
         """ Returns a record containing removed coin with id: removal_id"""
 
-        all_unconfirmed: List[TransactionRecord] = await self.get_not_confirmed()
+        all_unconfirmed: List[TransactionRecord] = await self.get_all_unconfirmed()
         for record in all_unconfirmed:
             for coin in record.removals:
                 if coin.name() == removal_id:
@@ -161,7 +161,7 @@ class WalletTransactionStore:
     ) -> Optional[TransactionRecord]:
         """ Returns a record containing removed coin with id: removal_id"""
 
-        all_unconfirmed: List[TransactionRecord] = await self.get_not_confirmed()
+        all_unconfirmed: List[TransactionRecord] = await self.get_all_unconfirmed()
         for record in all_unconfirmed:
             for coin in record.additions:
                 if coin.name() == removal_id:
@@ -227,13 +227,31 @@ class WalletTransactionStore:
 
         return records
 
-    async def get_not_confirmed(self) -> List[TransactionRecord]:
+    async def get_all_unconfirmed(self) -> List[TransactionRecord]:
+        """
+        Returns the list of all transaction that have not yet been confirmed.
+        """
+
+        cursor = await self.db_connection.execute(
+            "SELECT * from transaction_record WHERE confirmed=?", (0,)
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        records = []
+
+        for row in rows:
+            record = TransactionRecord.from_bytes(row[0])
+            records.append(record)
+
+        return records
+
+    async def get_unconfirmed_for_wallet(self, wallet_id: int) -> List[TransactionRecord]:
         """
         Returns the list of transaction that have not yet been confirmed.
         """
 
         cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record WHERE confirmed=?", (0,)
+            "SELECT * from transaction_record WHERE confirmed=? and wallet_id=?", (0,wallet_id,)
         )
         rows = await cursor.fetchall()
         await cursor.close()

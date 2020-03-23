@@ -7,7 +7,7 @@ from secrets import token_bytes
 from typing import Dict, Optional, List, Tuple
 
 import clvm
-from blspy import ExtendedPrivateKey
+from blspy import ExtendedPrivateKey, ExtendedPublicKey
 from clvm_tools import binutils
 
 from src.server.server import ChiaServer
@@ -78,7 +78,7 @@ class RLWallet:
         ).get_public_key().serialize()
 
         rl_info = RLInfo("admin", pubkey_bytes, None, None, None, None, None, None)
-        info_as_string = bytes(rl_info).hex()
+        info_as_string = rl_info.to_json()
         await wallet_state_manager.user_store.create_wallet(
             "RL Admin", WalletType.RATE_LIMITED, info_as_string
         )
@@ -117,9 +117,9 @@ class RLWallet:
         ).get_public_key().serialize()
 
         rl_info = RLInfo("user", None, pubkey_bytes, None, None, None, None, None)
-        info_as_string = bytes(rl_info).hex()
+        info_as_string = rl_info.to_json()
         await wallet_state_manager.user_store.create_wallet(
-            "RL Admin", WalletType.RATE_LIMITED, info_as_string
+            "RL User", WalletType.RATE_LIMITED, info_as_string
         )
         wallet_info = await wallet_state_manager.user_store.get_last_wallet()
         if wallet_info is None:
@@ -162,27 +162,40 @@ class RLWallet:
 
         self.wallet_info = info
         self.standard_wallet = wallet
+        self.rl_info = RLInfo.from_json(info.data)
         return self
 
-    async def set_admin_info(
-        self, interval: uint64, limit: uint64, origin_id: str, user_pubkey: str
-    ):
-        origin_record = await self.wallet_state_manager.wallet_store.get_coin_record_by_coin_id(
-            bytes.fromhex(origin_id)
-        )
-        if origin_record is None:
-            raise
-        origin = origin_record.coin
+    async def admin_create_coin(
+        self, interval: uint64, limit: uint64, user_pubkey: str, amount: uint64
+    ) -> bool:
+        coins = await self.standard_wallet.select_coins(amount)
+        if coins is None:
+            return False
+
+        origin = coins.copy().pop()
+        origin_id = origin.name()
+        if user_pubkey.startswith("0x"):
+            user_pubkey = user_pubkey[2:]
+
         user_pubkey_bytes = bytes.fromhex(user_pubkey)
+
         rl_puzzle = rl_puzzle_for_pk(
             pubkey=user_pubkey_bytes,
             rate_amount=limit,
             interval_time=interval,
-            origin_id=bytes.fromhex(origin_id),
+            origin_id=origin_id,
             clawback_pk=self.rl_info.admin_pubkey,
         )
-
         rl_puzzle_hash = rl_puzzle.get_hash()
+
+
+        index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(self.rl_info.admin_pubkey.hex())
+
+        spend_bundle = await self.standard_wallet.generate_signed_transaction(amount, rl_puzzle_hash, 0, origin_id, coins)
+        if spend_bundle is None:
+            return False
+
+        await self.standard_wallet.push_transaction(spend_bundle)
         new_rl_info = RLInfo(
             "admin",
             self.rl_info.admin_pubkey,
@@ -193,19 +206,24 @@ class RLWallet:
             origin.name(),
             rl_puzzle_hash,
         )
-        data_str = bytes(new_rl_info).hex()
+
+        data_str = new_rl_info.to_json()
         new_wallet_info = WalletInfo(
             self.wallet_info.id, self.wallet_info.name, self.wallet_info.type, data_str
         )
         await self.wallet_state_manager.user_store.update_wallet(new_wallet_info)
         self.wallet_info = new_wallet_info
         self.rl_info = new_rl_info
+        return True
 
     async def set_user_info(
         self, interval: uint64, limit: uint64, origin_id: str, admin_pubkey: str
     ):
 
+        if admin_pubkey.startswith("0x"):
+            admin_pubkey = admin_pubkey[2:]
         admin_pubkey_bytes = bytes.fromhex(admin_pubkey)
+
         rl_puzzle = rl_puzzle_for_pk(
             pubkey=self.rl_info.user_pubkey,
             rate_amount=limit,
@@ -225,7 +243,7 @@ class RLWallet:
             origin_id,
             rl_puzzle_hash,
         )
-        data_str = bytes(new_rl_info).hex()
+        data_str = new_rl_info.to_json()
         new_wallet_info = WalletInfo(
             self.wallet_info.id, self.wallet_info.name, self.wallet_info.type, data_str
         )

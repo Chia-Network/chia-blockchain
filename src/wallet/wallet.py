@@ -203,22 +203,23 @@ class Wallet:
             return None
 
     async def generate_unsigned_transaction(
-        self, amount: int, newpuzzlehash: bytes32, fee: int = 0
+        self, amount: int, newpuzzlehash: bytes32, fee: int = 0, origin_id: bytes32 = None, coins: Set[Coin] = None
     ) -> List[Tuple[Program, CoinSolution]]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
         """
-        utxos: Optional[Set[Coin]] = await self.select_coins(amount + fee)
-        if utxos is None:
+        if coins is None:
+            coins = await self.select_coins(amount + fee)
+        if coins is None:
             return []
 
-        spend_value = sum([coin.amount for coin in utxos])
+        spend_value = sum([coin.amount for coin in coins])
         change = spend_value - amount - fee
 
         spends: List[Tuple[Program, CoinSolution]] = []
         output_created = False
 
-        for coin in utxos:
+        for coin in coins:
             # Get keys for puzzle_hash
             puzzle_hash = coin.puzzle_hash
             maybe = await self.get_keys(puzzle_hash)
@@ -230,7 +231,15 @@ class Wallet:
             puzzle: Program = puzzle_for_pk(pubkey.serialize())
 
             # Only one coin creates outputs
-            if output_created is False:
+            if output_created is False and origin_id is None:
+                primaries = [{"puzzlehash": newpuzzlehash, "amount": amount}]
+                if change > 0:
+                    changepuzzlehash = await self.get_new_puzzlehash()
+                    primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
+
+                solution = self.make_solution(primaries=primaries)
+                output_created = True
+            elif output_created is False and origin_id == coin.name():
                 primaries = [{"puzzlehash": newpuzzlehash, "amount": amount}]
                 if change > 0:
                     changepuzzlehash = await self.get_new_puzzlehash()
@@ -297,11 +306,11 @@ class Wallet:
         return await self.generate_signed_transaction(amount, puzzle_hash, fee)
 
     async def generate_signed_transaction(
-        self, amount, puzzle_hash, fee: int = 0
+        self, amount, puzzle_hash, fee: int = 0, origin_id: bytes32 = None, coins: Set[Coin] = None
     ) -> Optional[SpendBundle]:
         """ Use this to generate transaction. """
 
-        transaction = await self.generate_unsigned_transaction(amount, puzzle_hash, fee)
+        transaction = await self.generate_unsigned_transaction(amount, puzzle_hash, fee, origin_id, coins)
         if len(transaction) == 0:
             return None
         return await self.sign_transaction(transaction)
