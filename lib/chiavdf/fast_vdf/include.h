@@ -1,3 +1,6 @@
+#ifndef INCLUDE_H
+#define INCLUDE_H
+
 #ifdef NDEBUG
     #undef NDEBUG
 #endif
@@ -51,3 +54,5 @@ typedef __int128 int128;
 
 #define todo
 #define USED __attribute__((used))
+
+#endif // INCLUDE_H

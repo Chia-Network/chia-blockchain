@@ -1,3 +1,6 @@
+#ifndef INTEGER_COMMON_H
+#define INTEGER_COMMON_H
+
 //note: gmp already has c++ bindings so could have just used those. oh well
 
 //const bool output_stats=false;
@@ -431,3 +434,5 @@ USED string to_string(mpz_struct* t) {
     mpz_set(t_int.impl, t);
     return t_int.to_string();
 }
+
+#endif // INTEGER_COMMON_H

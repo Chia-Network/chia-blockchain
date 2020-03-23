@@ -65,7 +65,7 @@ class CMakeBuild(build_ext):
 
 
 setup(
-    name='chiavdf',
+    name='fastvdf',
     version='0.1',
     author='Florin Chirica',
     author_email='florin@chia.net',
@@ -74,7 +74,7 @@ setup(
     python_requires='>=3.5',
     install_requires=['pytest', 'cppimport', 'bitstring', 'flake8'],
     long_description=open('README.md').read(),
-    ext_modules=[CMakeExtension('chiavdf', '.')],
+    ext_modules=[CMakeExtension('fastvdf', '.')],
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
 )

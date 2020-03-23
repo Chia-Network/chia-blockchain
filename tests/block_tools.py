@@ -6,12 +6,10 @@ from pathlib import Path
 
 import blspy
 from blspy import PrependSignature, PrivateKey, PublicKey
+from fastvdf import prove
 from chiabip158 import PyBIP158
 
 from chiapos import DiskPlotter, DiskProver
-from lib.chiavdf.inkfish.classgroup import ClassGroup
-from lib.chiavdf.inkfish.create_discriminant import create_discriminant
-from lib.chiavdf.inkfish.proof_of_time import create_proof_of_time_nwesolowski
 from src.consensus import block_rewards, pot_iterations
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
@@ -28,7 +26,7 @@ from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.util.merkle_set import MerkleSet
 from src.util.errors import NoProofsOfSpaceFound
-from src.util.ints import uint8, uint32, uint64, uint128
+from src.util.ints import uint8, uint32, uint64, uint128, int512
 from src.util.hash import std_hash
 from src.util.significant_bits import truncate_to_significant_bits
 
@@ -49,7 +47,7 @@ plot_pks: List[PublicKey] = [sk.get_public_key() for sk in plot_sks]
 farmer_sk: PrivateKey = PrivateKey.from_seed(b"coinbase")
 coinbase_target = std_hash(bytes(farmer_sk.get_public_key()))
 fee_target = std_hash(bytes(farmer_sk.get_public_key()))
-n_wesolowski = uint8(3)
+n_wesolowski = uint8(0)
 
 
 class BlockTools:
@@ -410,16 +408,19 @@ class BlockTools:
         number_iters: uint64 = pot_iterations.calculate_iterations(
             proof_of_space, difficulty, min_iters
         )
+        int_size = (test_constants["DISCRIMINANT_SIZE_BITS"] + 16) >> 4
 
-        disc: int = create_discriminant(
-            challenge_hash, test_constants["DISCRIMINANT_SIZE_BITS"]
-        )
-        start_x: ClassGroup = ClassGroup.from_ab_discriminant(2, 1, disc)
-        y_cl, proof_bytes = create_proof_of_time_nwesolowski(
-            disc, start_x, number_iters, disc, n_wesolowski
+        result = prove(
+            challenge_hash, test_constants["DISCRIMINANT_SIZE_BITS"], number_iters
         )
 
-        output = ClassgroupElement(y_cl[0], y_cl[1])
+        output = ClassgroupElement(
+            int512(int.from_bytes(result[0:int_size], "big", signed=True,)),
+            int512(
+                int.from_bytes(result[int_size : 2 * int_size], "big", signed=True,)
+            ),
+        )
+        proof_bytes = result[2 * int_size : 4 * int_size]
 
         proof_of_time = ProofOfTime(
             challenge_hash, number_iters, output, n_wesolowski, proof_bytes,

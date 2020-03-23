@@ -1,3 +1,6 @@
+#ifndef CREATE_DISCRIMINANT_H
+#define CREATE_DISCRIMINANT_H
+
 const int m = 8 * 3 * 5 * 7 * 11 * 13;
 
 std::vector<int> OddPrimesBelowM() {
@@ -143,3 +146,5 @@ integer CreateDiscriminant(std::vector<uint8_t>& seed, int length = 1024) {
         n = n + integer((long long)m * (1 << 16));
     }
 }
+
+#endif // CREATE_DISCRIMINANT_H

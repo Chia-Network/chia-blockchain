@@ -10,11 +10,11 @@ from src.util.ints import uint64
 
 
 def rl_puzzle_for_pk(
-    pubkey: bytes32,
+    pubkey: bytes,
     rate_amount: uint64,
     interval_time: uint64,
     origin_id: bytes32,
-    clawback_pk: bytes32,
+    clawback_pk: bytes,
 ):
     """
         Solution to this puzzle must be in format:
@@ -30,6 +30,8 @@ def rl_puzzle_for_pk(
     """
 
     hex_pk = pubkey.hex()
+    clawback_pk_str = clawback_pk.hex()
+
     opcode_aggsig = hexlify(ConditionOpcode.AGG_SIG).decode("ascii")
     opcode_coin_block_age = hexlify(ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS).decode(
         "ascii"
@@ -58,7 +60,7 @@ def rl_puzzle_for_pk(
     )
 
     WHOLE_PUZZLE = f"(c {AGGSIG_ENTIRE_SOLUTION} ((c (i (= (f (a)) (q 1)) (q ((c (q {RATE_LIMIT_PUZZLE}) (r (a))))) (q {MODE_TWO})) (a))) (q ()))"  # noqa: E501
-    CLAWBACK = f"(c (c (q 0x{opcode_aggsig}) (c (q 0x{clawback_pk}) (c (sha256tree (a)) (q ())))) (r (a)))"
+    CLAWBACK = f"(c (c (q 0x{opcode_aggsig}) (c (q 0x{clawback_pk_str}) (c (sha256tree (a)) (q ())))) (r (a)))"
     WHOLE_PUZZLE_WITH_CLAWBACK = (
         f"((c (i (= (f (a)) (q 3)) (q {CLAWBACK}) (q {WHOLE_PUZZLE})) (a)))"
     )

@@ -97,7 +97,6 @@ class WalletNode:
 
         wallets: List[WalletInfo] = await self.wallet_state_manager.get_all_wallets()
         self.wallets = {}
-        self.wallets[self.main_wallet.wallet_info.id] = self.main_wallet
         main_wallet = await Wallet.create(
             config, key_config, self.wallet_state_manager, main_wallet_info
         )
@@ -105,6 +104,7 @@ class WalletNode:
         self.wallets[main_wallet_info.id] = main_wallet
 
         for wallet_info in wallets:
+            self.log.info(f"wallet_info {wallet_info}")
             if wallet_info.type == WalletType.STANDARD_WALLET:
                 if wallet_info.id == 1:
                     continue
@@ -144,6 +144,7 @@ class WalletNode:
         self.main_wallet.set_server(server)
 
     def _shutdown(self):
+        print("Shutting down")
         self._shut_down = True
 
     def _start_bg_tasks(self):
