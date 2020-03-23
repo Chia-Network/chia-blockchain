@@ -8,11 +8,18 @@ class ClassGroup(tuple):
 
     @classmethod
     def from_ab_discriminant(class_, a, b, discriminant):
-        assert discriminant < 0
-        assert discriminant % 4 == 1
+        if discriminant >= 0:
+            raise ValueError("Positive discriminant.")
+        if discriminant % 4 != 1:
+            raise ValueError("Invalid discriminant mod 4.")
+        if a == 0:
+            raise ValueError("a can't be 0.")
         c = (b * b - discriminant) // (4 * a)
         p = class_((a, b, c)).reduced()
-        assert p.discriminant() == discriminant
+        if p.discriminant() != discriminant:
+            raise ValueError(
+                "No classgroup element given the discriminant."
+            )
         return p
 
     @classmethod
@@ -20,7 +27,7 @@ class ClassGroup(tuple):
         int_size = (discriminant.bit_length() + 16) >> 4
         a = int.from_bytes(bytearray[0:int_size], "big", signed=True)
         b = int.from_bytes(bytearray[int_size:], "big", signed=True)
-        return ClassGroup((a, b, (b**2 - discriminant)//(4*a)))
+        return class_.from_ab_discriminant(a, b, discriminant)
 
     def __new__(cls, t):
         a, b, c = t
@@ -50,6 +57,8 @@ class ClassGroup(tuple):
     def reduced(self):
         a, b, c = self.normalized()
         while a > c or (a == c and b < 0):
+            if c == 0:
+                raise ValueError("Can't reduce the form.")
             s = (c + b) // (c + c)
             a, b, c = c, -b + 2 * s * c, c * s * s - b * s + a
         return self.__class__((a, b, c)).normalized()

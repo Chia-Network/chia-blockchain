@@ -1,4 +1,4 @@
-from chiavdf import verify
+from fastvdf import verify
 import time
 
 challenge_hash = bytes.fromhex('a4bb1461ade74ac602e9ae511af68bb254dfe65d61b7faf9fab82d0b4364a30b')

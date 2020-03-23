@@ -1,3 +1,6 @@
+#ifndef VDF_NEW_H
+#define VDF_NEW_H
+
 /**
     Copyright (C) 2012 William Hart
     
@@ -339,3 +342,5 @@ void nudupl_form(form &a, form &b, integer &D, integer &L)
     *a.b.impl = *fr.b;
     *a.c.impl = *fr.c;
 }
+
+#endif // VDF_NEW_H

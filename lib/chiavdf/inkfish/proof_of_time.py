@@ -6,7 +6,7 @@ from lib.chiavdf.inkfish.classgroup import ClassGroup
 from lib.chiavdf.inkfish.iterate_squarings import iterate_squarings
 from lib.chiavdf.inkfish import proof_pietrzak
 from lib.chiavdf.inkfish import proof_wesolowski
-
+from fastvdf import verify_wesolowski
 
 def generate_r_value(x, y, sqrt_mu, int_size_bits):
     """creates an r value by hashing the inputs"""
@@ -116,24 +116,11 @@ def check_proof_of_time_wesolowski(discriminant, x, proof_blob,
         return False
 
 def check_proof_of_time_nwesolowski(discriminant, x, proof_blob,
-                                    iterations, int_size_bits, recursion):
-    int_size = (int_size_bits + 16) >> 4
-    new_proof_blob = proof_blob[:4 * int_size]
-    iter_list = []
-    for i in range(4 * int_size, len(proof_blob), 4 * int_size + 8):
-        iter_list.append(int.from_bytes(proof_blob[i : (i + 8)], byteorder="big"))
-        new_proof_blob = new_proof_blob + proof_blob[(i + 8): (i + 8 + 4 * int_size)]
-
-    return check_proof_of_time_nwesolowski_inner(discriminant, x, new_proof_blob,
-                                    iterations, int_size_bits, iter_list, recursion)
-    
-
-def check_proof_of_time_nwesolowski_inner(discriminant, x, proof_blob,
-                                    iterations, int_size_bits, iter_list, recursion):
+                                    iterations, int_size_bits, depth):
     """
-    Recursive verification function for nested wesolowski. The proof blob
+    Check the nested wesolowski proof. The proof blob
     includes the output of the VDF, along with the proof. The following
-    table gives an example of the recursive calls for a depth of 3.
+    table gives an example of the checks for a depth of 2.
 
     x   |  proof_blob
     ---------------------------------------------
@@ -141,34 +128,60 @@ def check_proof_of_time_nwesolowski_inner(discriminant, x, proof_blob,
     y1  |  y3, proof3, y2, proof2
     y2  |  y3, proof3
     """
-    int_size = (int_size_bits + 16) >> 4
-    result_bytes = proof_blob[: (2 * int_size)]
-    proof_bytes = proof_blob[(2 * int_size):]
-    y = ClassGroup.from_bytes(result_bytes, discriminant)
-
-    proof = deserialize_proof(proof_bytes, discriminant)
-    if recursion * 2 + 1 != len(proof):
-        raise ValueError("Invalid n-wesolowski proof length.")
 
     try:
-        if len(proof) == 1:
-            return proof_wesolowski.verify_proof(x, y, proof[-1], iterations)
-        else:
-            assert(len(proof) % 2 == 1 and len(proof) > 2)
-            _, _, w = proof_wesolowski.approximate_parameters(iterations)
+        int_size = (int_size_bits + 16) >> 4
+        if (
+            len(proof_blob) !=
+            4 * int_size +
+            depth * (8 + 4 * int_size)
+        ):
+            return False
+        new_proof_blob = proof_blob[:4 * int_size]
+        iter_list = []
+        for i in range(4 * int_size, len(proof_blob), 4 * int_size + 8):
+            iter_list.append(int.from_bytes(proof_blob[i : (i + 8)], byteorder="big"))
+            new_proof_blob = new_proof_blob + proof_blob[(i + 8): (i + 8 + 4 * int_size)]
+        proof_blob = new_proof_blob
 
+        result_bytes = proof_blob[: (2 * int_size)]
+        proof_bytes = proof_blob[(2 * int_size):]
+        y = ClassGroup.from_bytes(result_bytes, discriminant)
+
+        proof = deserialize_proof(proof_bytes, discriminant)
+        if depth * 2 + 1 != len(proof):
+            return False
+
+        for _ in range(depth):
             iterations_1 = iter_list[-1]
-            iterations_2 = iterations - iterations_1
+            if not verify_wesolowski(
+                str(discriminant), 
+                str(x[0]),
+                str(x[1]), 
+                str(proof[-2][0]),
+                str(proof[-2][1]), 
+                str(proof[-1][0]),
+                str(proof[-1][1]), 
+                iterations_1,
+            ):
+                return False
+            x = proof[-2]
+            iterations = iterations - iterations_1
+            proof = proof[:-2]
+            iter_list = iter_list[:-1]
 
-            ver_outer = proof_wesolowski.verify_proof(x, proof[-2],
-                                                      proof[-1], iterations_1)
-            return ver_outer and check_proof_of_time_nwesolowski_inner(discriminant, proof[-2],
-                                                                 serialize_proof([y] + proof[:-2]),
-                                                                 iterations_2, int_size_bits, iter_list[:-1], recursion-1)
-
-    except Exception:
+        return verify_wesolowski(
+            str(discriminant), 
+            str(x[0]), 
+            str(x[1]),
+            str(y[0]), 
+            str(y[1]),
+            str(proof[-1][0]),
+            str(proof[-1][1]), 
+            iterations,
+        )
+    except Exception as e:
         return False
-
 
 def check_proof_of_time_pietrzak(discriminant, x, proof_blob, iterations, int_size_bits):
     int_size = (int_size_bits + 16) >> 4
