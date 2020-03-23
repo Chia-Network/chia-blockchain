@@ -119,7 +119,7 @@ function loadBlocks(hash) {
             for (i = 0; i < data.tips.length; i++) {
                 tipobj = JSON.parse(data.tips[i]);
                 tipheight = tipheight + tipobj.data.height + " ";
-                tipmetalist.push({hash: "Unknown", block: tipobj});
+                tipmetalist.push({hash: data.tip_hashes[i].slice(2), block: tipobj});
             }
 
             lca_block = JSON.parse(data.lca);

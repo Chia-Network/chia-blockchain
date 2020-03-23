@@ -66,8 +66,14 @@ class RpcApiHandler:
             self.full_node.constants["BLOCK_TIME_TARGET"]
             / self.full_node.constants["MIN_ITERS_PROPORTION"]
         )
+
+        tip_hashes=[]
+        for tip in tips:
+            tip_hashes.append(tip.header_hash)
+
         response = {
             "tips": tips,
+            "tip_hashes": tip_hashes,
             "lca": lca,
             "sync_mode": sync_mode,
             "difficulty": difficulty,
