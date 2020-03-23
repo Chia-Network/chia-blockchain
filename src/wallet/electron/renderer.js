@@ -5,7 +5,6 @@ var canvas = document.getElementById('qr_canvas')
 const Dialogs = require('dialogs')
 const dialogs = Dialogs()
 const WebSocket = require('ws');
-var ws = new WebSocket(host);
 let chia_formatter = require('./chia');
 
 // HTML
@@ -98,6 +97,8 @@ function sleep(ms) {
     });
 }
 
+var ws = new WebSocket(host);
+
 function set_callbacks(socket) {
     /*
     Sets callbacks for socket events
@@ -150,7 +151,7 @@ function set_callbacks(socket) {
 
     socket.on('error', function clear() {
         console.log("Not connected, reconnecting");
-        connect(100);
+        connect(1000);
     });
 }
 
@@ -426,9 +427,14 @@ async function get_sync_status() {
 }
 
 async function connection_checker() {
-    await sleep(10000);
-    await get_connection_info()
-    connection_checker()
+    try {
+        await sleep(5000);
+        await get_connection_info()
+        connection_checker()
+    } catch (error) {
+        console.log(error);
+        connection_textfield.innerHTML = "Not Connected";
+    }
 }
 
 async function get_connection_info() {
@@ -466,7 +472,7 @@ async function get_connection_info_response(response) {
     console.log("Connected to: " + connections.length + " peers")
     count = connections.length;
     if (count == 0) {
-        connection_textfield.innerHTML = "Not Connected!!!"
+        connection_textfield.innerHTML = "Not Connected"
     } else if (count == 1) {
         connection_textfield.innerHTML = connections.length + " connection"
     } else {

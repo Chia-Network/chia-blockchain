@@ -144,6 +144,7 @@ class WalletNode:
         self.main_wallet.set_server(server)
 
     def _shutdown(self):
+        print("Shutting down")
         self._shut_down = True
 
     def _start_bg_tasks(self):

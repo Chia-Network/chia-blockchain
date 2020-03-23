@@ -100,7 +100,7 @@ function set_callbacks(socket) {
     });
 
     socket.on('error', function clear() {
-        console.log("Not connected, reconnecting");
+        console.log("RL wallet not connected, reconnecting");
         connect(100);
     });
 }

@@ -1,19 +1,11 @@
 import asyncio
 import dataclasses
 import json
-import logging
 import traceback
-
-import websockets
 
 from typing import Any, Dict, List
 from src.server.outbound_message import NodeType, OutboundMessage, Message, Delivery
-from src.server.server import ChiaServer
-from src.simulator.simulator_constants import test_constants
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
-from src.types.peer_info import PeerInfo
-from src.util.config import load_config, load_config_cli
-from src.util.logging import initialize_logging
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_info import WalletInfo
@@ -194,10 +186,9 @@ class WebSocketServer:
     async def safe_handle(self, websocket, path):
         try:
             await self.handle_message(websocket, path)
-        except BaseException as e:
+        except BaseException:
             tb = traceback.format_exc()
             self.log.error(f"Error while handling message: {tb}")
-            self.log.error(f"Error {type(e)} {e}")
 
     async def handle_message(self, websocket, path):
         """
@@ -241,67 +232,10 @@ class WebSocketServer:
         data = {
             "state": state,
         }
-
-        await self.websocket.send(format_response("state_changed", data))
+        if self.websocket is not None:
+            await self.websocket.send(format_response("state_changed", data))
 
     def state_changed_callback(self, state: str):
         if self.websocket is None:
             return
         asyncio.ensure_future(self.notify_ui_that_state_changed(state))
-
-
-async def start_websocket_server():
-    """
-    Starts WalletNode, WebSocketServer, and ChiaServer
-    """
-
-    config = load_config_cli("config.yaml", "wallet")
-    initialize_logging("Wallet %(name)-25s", config["logging"])
-    log = logging.getLogger(__name__)
-    log.info(f"Config : {config}")
-
-    try:
-        key_config = load_config("keys.yaml")
-    except FileNotFoundError:
-        raise RuntimeError(
-            "Keys not generated. Run python3 ./scripts/regenerate_keys.py."
-        )
-
-    if config["testing"] is True:
-        log.info(f"Testing")
-        wallet_node = await WalletNode.create(
-            config, key_config, override_constants=test_constants
-        )
-    else:
-        log.info(f"Not Testing")
-        wallet_node = await WalletNode.create(config, key_config)
-
-    handler = WebSocketServer(wallet_node, log)
-    wallet_node.wallet_state_manager.set_callback(handler.state_changed_callback)
-
-    server = ChiaServer(9257, wallet_node, NodeType.WALLET)
-    wallet_node.set_server(server)
-    full_node_peer = PeerInfo(
-        config["full_node_peer"]["host"], config["full_node_peer"]["port"]
-    )
-
-    _ = await server.start_server("127.0.0.1", None, config)
-    await asyncio.sleep(1)
-    _ = await server.start_client(full_node_peer, None, config)
-
-    await websockets.serve(handler.safe_handle, "localhost", 9256)
-
-    if config["testing"] is False:
-        wallet_node._start_bg_tasks()
-
-    await server.await_closed()
-
-
-def main():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(start_websocket_server())
-
-
-if __name__ == "__main__":
-    main()
