@@ -3,7 +3,7 @@ const app = electron.app
 const BrowserWindow = electron.BrowserWindow
 const path = require('path')
 const WebSocket = require('ws');
-const local_test = true
+const local_test = false
 
 var ui_html = "wallet-dark.html"
 
@@ -44,7 +44,7 @@ const createPyProc = () => {
   if (guessPackaged()) {
     pyProc = require('child_process').execFile(script, ["--testing", local_test])
   } else {
-    //pyProc = require('child_process').spawn('python', [script, "--testing", local_test])
+    pyProc = require('child_process').spawn('python', [script, "--testing", local_test])
   }
 
     if (pyProc != null) {
