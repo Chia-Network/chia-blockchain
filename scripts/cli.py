@@ -103,7 +103,6 @@ async def main():
             connections = await client.get_connections()
             print ("Connections")
             print ("Type      IP                                      Ports      NodeID        Last Connect       MB Up|Dwn")
-            pp = pprint.PrettyPrinter(indent=4)
             for con in connections:
                 last_connect_tuple = struct_time(localtime(con['last_message_time']))
                 #last_connect = time.ctime(con['last_message_time'])
@@ -121,7 +120,14 @@ async def main():
                 print (con_str)
         elif args.block_header_hash != "":
             block = await client.get_block(hexstr_to_bytes(args.block_header_hash))
-            print(block)
+            #print(dir(block))
+            if block is not None:
+                print ("Block header:")
+                print (block.header)
+                block_time = struct_time(localtime(block.header.data.timestamp))
+                print ("Block time:",time.strftime("%a %b %d %Y %T %Z", block_time))
+            else:
+                print ("Block hash", args.block_header_hash, "not found.")
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
