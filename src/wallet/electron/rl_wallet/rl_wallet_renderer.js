@@ -5,23 +5,24 @@ var canvas = document.getElementById('qr_canvas')
 const Dialogs = require('dialogs')
 const dialogs = Dialogs()
 const WebSocket = require('ws');
-let chia_formatter = require('./chia');
+var ws = new WebSocket(host);
+let chia_formatter = require('../chia');
+const electron = require('electron')
+const path = require('path')
 
 // HTML
-let send = document.querySelector('#send')
-let farm_button = document.querySelector('#farm_block')
-let new_address = document.querySelector('#new_address')
-let copy = document.querySelector("#copy")
-let receiver_address = document.querySelector("#receiver_puzzle_hash")
-let amount = document.querySelector("#amount_to_send")
-let table = document.querySelector("#tx_table").getElementsByTagName('tbody')[0]
-let balance_textfield = document.querySelector('#balance_textfield')
-let pending_textfield = document.querySelector('#pending_textfield')
 let connection_textfield = document.querySelector('#connection_textfield')
 let syncing_textfield = document.querySelector('#syncing_textfield')
 let block_height_textfield = document.querySelector('#block_height_textfield')
-let standard_wallet_balance = document.querySelector('#standard_wallet_balance')
 let wallets_tab = document.querySelector('#wallets_tab')
+let admin_setup = document.querySelector('#admin_setup')
+let user_setup = document.querySelector('#user_setup')
+let admin_wallet = document.querySelector("#admin_wallet")
+let user_wallet = document.querySelector("#user_wallet")
+let copy_user_public_key = document.querySelector("#copy_user_public_key")
+let copy_admin_public_key = document.querySelector("#copy_admin_public_key")
+let wallet_copy_admin_public_key = document.querySelector("#wallet_copy_admin_public_key")
+let admin_copy_origin_id = document.querySelector("#admin_copy_origin_id")
 
 // UI checkmarks and lock icons
 const green_checkmark = "<i class=\"icon ion-md-checkmark-circle-outline green\"></i>"
@@ -31,16 +32,17 @@ const lock = "<i class=\"icon ion-md-lock\"></i>"
 // Global variables
 var global_syncing = true
 console.log(global.location.search)
+global_my_config = null
 
 function create_side_wallet(id, href, wallet_name, wallet_description, wallet_amount, active) {
     var balance_id = "balance_wallet_" + id
     var pending_id = "pending_wallet_" + id
-    var is_active = active ? "active" : "";
     href += "?wallet_id=" + id + "&testing=" + local_test
+    var is_active = active ? "active" : "";
     const template = `<a class="nav-link d-flex justify-content-between align-items-center ${is_active}" data-toggle="pill"
               href="${href}" role="tab" aria-selected="true">
               <div class="d-flex">
-                <img src="assets/img/circle-cropped.png" alt="btc">
+                <img src="../assets/img/circle-cropped.png" alt="btc">
                 <div>
                   <h2>${wallet_name}</h2>
                   <p>${wallet_description}</p>
@@ -55,7 +57,7 @@ function create_side_wallet(id, href, wallet_name, wallet_description, wallet_am
 }
 
 function create_wallet_button() {
-    create_button = `<a class="nav-link d-flex justify-content-between align-items-center" data-toggle="pill" href="./create_wallet.html"
+    create_button = `<a class="nav-link d-flex justify-content-between align-items-center" data-toggle="pill" href="../create_wallet.html"
               role="tab" aria-selected="true">
               <div class="d-flex">
                 <div>
@@ -87,18 +89,12 @@ var g_wallet_id = getQueryVariable("wallet_id")
 console.log("testing: " + local_test)
 console.log("wallet_id: " + g_wallet_id)
 
-if (local_test == "false") {
-    console.log("farm_button should be hidden")
-    farm_button.style.visibility="hidden"
-}
 
 function sleep(ms) {
     return new Promise((resolve) => {
         setTimeout(resolve, ms);
     });
 }
-
-var ws = new WebSocket(host);
 
 function set_callbacks(socket) {
     /*
@@ -122,15 +118,10 @@ function set_callbacks(socket) {
 
         if (command == "start_server") {
             get_wallets();
-            get_new_puzzlehash();
-            get_transactions();
-            get_wallet_balance(g_wallet_id);
             get_height_info();
             get_sync_status();
             get_connection_info();
             connection_checker();
-        } else if (command == "get_next_puzzle_hash") {
-            get_new_puzzlehash_response(data);
         } else if (command == "get_wallet_balance") {
             get_wallet_balance_response(data);
         } else if (command == "send_transaction") {
@@ -147,12 +138,17 @@ function set_callbacks(socket) {
             get_sync_status_response(data)
         } else if (command == "get_wallets") {
             get_wallets_response(data)
+        } else if (command == "rl_set_admin_info") {
+            rl_set_admin_info_response(data)
+        } else if (command == "rl_set_user_info") {
+            rl_set_user_info_response(data)
         }
+
     });
 
     socket.on('error', function clear() {
         console.log("Not connected, reconnecting");
-        connect(1000);
+        connect(100);
     });
 }
 
@@ -195,30 +191,6 @@ send.addEventListener('click', () => {
     ws.send(json_data);
 })
 
-farm_button.addEventListener('click', () => {
-    /*
-    Called when send button in ui is pressed.
-    */
-    console.log("farm block")
-    puzzle_hash = receiver_address.value;
-    if (puzzle_hash == "") {
-        dialogs.alert("Specify puzzle_hash for coinbase reward", ok => {
-        })
-        return
-    }
-    data = {
-        "puzzle_hash": puzzle_hash,
-        "wallet_id": g_wallet_id,
-    }
-    request = {
-        "command": "farm_block",
-        "data": data
-    }
-    json_data = JSON.stringify(request);
-    ws.send(json_data);
-    //dialogs.alert("Farmed new block!", ok => {});
-})
-
 function send_transaction_response(response) {
     /*
     Called when response is received for send_transaction request
@@ -232,52 +204,46 @@ function send_transaction_response(response) {
     }
 }
 
-new_address.addEventListener('click', () => {
-    /*
-    Called when new address button is pressed.
-    */
-    console.log("new address requesting");
-    get_new_puzzlehash(0);
-})
 
-copy.addEventListener("click", () => {
+copy_admin_public_key.addEventListener("click", () => {
     /*
     Called when copy button is pressed
     */
-    let puzzle_holder = document.querySelector("#puzzle_holder");
-    puzzle_holder.select();
+    let textfield = document.querySelector("#admin_public_key");
+    textfield.select();
     /* Copy the text inside the text field */
     document.execCommand("copy");
 })
 
-async function get_new_puzzlehash() {
+wallet_copy_admin_public_key.addEventListener("click", () => {
     /*
-    Sends websocket request for new puzzle_hash
+    Called when copy button is pressed
     */
-    data = {
-    "wallet_id": g_wallet_id,
-    }
+    let textfield = document.querySelector("#wallet_admin_public_key");
+    textfield.select();
+    /* Copy the text inside the text field */
+    document.execCommand("copy");
+})
 
-    request = {
-        "command": "get_next_puzzle_hash",
-        "data": data
-    }
-
-    json_data = JSON.stringify(request);
-    ws.send(json_data);
-}
-
-function get_new_puzzlehash_response(response) {
+admin_copy_origin_id.addEventListener("click", () => {
     /*
-    Called when response is received for get_new_puzzle_hash request
+    Called when copy button is pressed
     */
-    let puzzle_holder = document.querySelector("#puzzle_holder");
-    puzzle_holder.value = response["puzzlehash"];
-    QRCode.toCanvas(canvas, response["puzzlehash"], function (error) {
-    if (error) console.error(error)
-    console.log('success!');
-    })
-}
+    let textfield = document.querySelector("#admin_origin_id");
+    textfield.select();
+    /* Copy the text inside the text field */
+    document.execCommand("copy");
+})
+
+copy_user_public_key.addEventListener("click", () => {
+    /*
+    Called when copy button is pressed
+    */
+    let textfield = document.querySelector("#user_public_key");
+    textfield.select();
+    /* Copy the text inside the text field */
+    document.execCommand("copy");
+})
 
 async function get_wallet_balance(id) {
     /*
@@ -363,7 +329,7 @@ function get_transactions_response(response) {
             return
         }
     }
-
+    return
     clean_table()
 
     for (var i = 0; i < response.txs.length; i++) {
@@ -428,14 +394,9 @@ async function get_sync_status() {
 }
 
 async function connection_checker() {
-    try {
-        await sleep(5000);
-        await get_connection_info()
-        connection_checker()
-    } catch (error) {
-        console.log(error);
-        connection_textfield.innerHTML = "Not Connected";
-    }
+    await sleep(10000);
+    await get_connection_info()
+    connection_checker()
 }
 
 async function get_connection_info() {
@@ -473,7 +434,7 @@ async function get_connection_info_response(response) {
     console.log("Connected to: " + connections.length + " peers")
     count = connections.length;
     if (count == 0) {
-        connection_textfield.innerHTML = "Not Connected"
+        connection_textfield.innerHTML = "Not Connected!!!"
     } else if (count == 1) {
         connection_textfield.innerHTML = connections.length + " connection"
     } else {
@@ -502,7 +463,6 @@ function handle_state_changed(data) {
     } else if (state == "tx_sent") {
         get_transactions()
         get_wallet_balance(g_wallet_id)
-        dialogs.alert("Transaction sent successfully!", ok => {});
     } else if (state == "balance_changed") {
         get_wallet_balance(g_wallet_id)
     } else if (state == "sync_changed") {
@@ -528,6 +488,124 @@ function get_wallets() {
     ws.send(json_data);
 }
 
+function set_admin_create_button(button) {
+    button.addEventListener('click', () => {
+    /*
+    Called when create contract in admin mode was clicked
+    */
+    user_pubkey = document.querySelector("#admin_user_public_key").value
+    limit = document.querySelector("#admin_amount_per_interval").value
+    interval = document.querySelector("#admin_time_interval").value
+    amount = document.querySelector("#admin_amount_to_send").value
+
+    if (user_pubkey == "" || limit == "" || interval == "" || amount == "") {
+        dialogs.alert("Please fill all fields", ok => {
+        })
+        return
+    }
+    mojo_amount = chia_formatter(parseFloat(amount), 'chia').to('mojo').value()
+    mojo_limit = chia_formatter(parseFloat(limit), 'chia').to('mojo').value()
+    data = {
+        "wallet_id": g_wallet_id,
+        "user_pubkey": user_pubkey,
+        "limit": mojo_limit,
+        "interval": interval,
+        "amount": mojo_amount,
+    }
+    request = {
+        "command": "rl_set_admin_info",
+        "data": data
+    }
+    json_data = JSON.stringify(request);
+    ws.send(json_data);
+
+    })
+}
+
+function rl_set_admin_info_response(data) {
+    console.log("Data is:" + data)
+    if (data["success"] == true) {
+        reload()
+    } else {
+        dialogs.alert("Failed to create RL smart contract, check if you have enough chia available.", ok => {
+        })
+    }
+}
+
+function set_user_create_button(button) {
+    button.addEventListener('click', () => {
+    /*
+    Called when create contract in user mode was clicked
+    */
+    admin_pubkey = document.querySelector("#user_admin_public_key").value
+    limit = document.querySelector("#user_amount_per_interval").value
+    interval = document.querySelector("#user_time_interval").value
+
+    if (admin_pubkey == "" || limit == "" || interval == "") {
+        dialogs.alert("Please fill all fields", ok => {
+        })
+        return
+    }
+
+    mojo_limit = chia_formatter(parseFloat(limit), 'chia').to('mojo').value()
+    data = {
+        "wallet_id": g_wallet_id,
+        "admin_pubkey": admin_pubkey,
+        "limit": mojo_limit,
+        "interval": interval,
+    }
+
+    request = {
+        "command": "rl_set_user_info",
+        "data": data
+    }
+    json_data = JSON.stringify(request);
+    ws.send(json_data);
+
+    })
+}
+
+function render_wallet_config() {
+    type = global_my_config["type"]
+    admin_pubkey = global_my_config["admin_pubkey"]
+    user_pubkey = global_my_config["user_pubkey"]
+    limit = global_my_config["limit"]
+    interval = global_my_config["interval"]
+    rl_origin_id = global_my_config["rl_origin_id"]
+    console.log("type: " + type)
+    if (type == "admin") {
+        if (user_pubkey == null || limit == null || interval == null || rl_origin_id == null) {
+            // Render Admin Setup
+            console.log("Render Admin Setup")
+            document.querySelector("#admin_public_key").value = global_my_config["admin_pubkey"]
+            set_admin_create_button(document.querySelector("#admin_create_button"))
+            admin_setup.classList.remove("hidden_area");
+        } else {
+            // Render admin wallet
+            console.log("Render Admin Wallet")
+            limit_chia = chia_formatter(parseInt(limit), 'mojo').to('chia').toString()
+            admin_wallet.classList.remove("hidden_area");
+            document.querySelector("#admin_rate_limit").innerHTML = limit_chia + " CH / " + interval + " Blocks"
+            document.querySelector("#admin_user_puzzle_hash").value = global_my_config["rl_puzzle_hash"]
+            document.querySelector("#admin_public_key").value = global_my_config["admin_pubkey"]
+            document.querySelector("#wallet_admin_public_key").value = global_my_config["admin_pubkey"]
+            document.querySelector("#admin_origin_id").value = global_my_config["rl_origin_id"]
+        }
+    } else if (type == "user") {
+        if (admin_pubkey == null || limit == null || interval == null || rl_origin_id == null) {
+            // Render User Setup
+            limit_chia = chia_formatter(parseInt(limit), 'mojo').to('chia').toString()
+            document.querySelector("#user_public_key").value = global_my_config["user_pubkey"]
+            user_setup.classList.remove("hidden_area");
+            console.log("Render User Setup")
+        } else {
+            // Render user wallet
+            console.log("Render Admin Wallet")
+            user_wallet.classList.remove("hidden_area");
+        }
+    }
+}
+
 function get_wallets_response(data) {
     wallets_tab.innerHTML = ""
     new_innerHTML = ""
@@ -543,13 +621,17 @@ function get_wallets_response(data) {
         //href, wallet_name, wallet_description, wallet_amount
         var href = ""
         if (type == "STANDARD_WALLET") {
-            href = "wallet-dark.html"
+            href = "../wallet-dark.html"
         } else if (type == "RATE_LIMITED") {
-            href = "rl_wallet/rl_wallet.html"
+            href = "./rl_wallet.html"
         }
 
         console.log(wallet)
         if (id == g_wallet_id) {
+            my_wallet_info = JSON.parse(wallet["data"])
+            console.log(wallet["data"])
+            global_my_config = my_wallet_info
+            render_wallet_config()
             new_innerHTML += create_side_wallet(id, href, name, type, 0, true)
         } else {
             new_innerHTML += create_side_wallet(id, href, name, type, 0, false)
@@ -560,10 +642,30 @@ function get_wallets_response(data) {
     wallets_tab.innerHTML = new_innerHTML
 }
 
-function clean_table() {
+function clean_table(table) {
     while (table.rows.length > 0) {
         table.deleteRow(0);
     }
 }
 
-clean_table();
+function reload(){
+
+    newWindow = electron.remote.getCurrentWindow()
+
+    query = "?testing="+local_test + "&wallet_id=" + g_wallet_id
+    newWindow.loadURL(require('url').format({
+    pathname: path.join(__dirname, "../wallet-dark.html"),
+    protocol: 'file:',
+    slashes: true
+    }) + query
+    )
+
+    newWindow.once('ready-to-show', function (){
+        newWindow.show();
+    });
+
+    newWindow.on('closed', function() {
+        newWindow = null;
+    });
+}
+

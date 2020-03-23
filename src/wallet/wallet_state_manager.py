@@ -198,7 +198,7 @@ class WalletStateManager:
         confirmed = await self.get_confirmed_spendable_for_wallet(
             current_index, wallet_id
         )
-        unconfirmed_tx = await self.tx_store.get_not_confirmed()
+        unconfirmed_tx = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         addition_amount = 0
         removal_amount = 0
 
@@ -235,7 +235,7 @@ class WalletStateManager:
         transactions.
         """
         confirmed = await self.get_confirmed_balance_for_wallet(wallet_id)
-        unconfirmed_tx = await self.tx_store.get_not_confirmed()
+        unconfirmed_tx = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         addition_amount = 0
         removal_amount = 0
 
@@ -255,7 +255,7 @@ class WalletStateManager:
         Returns new addition transactions that have not been confirmed yet.
         """
         additions: Dict[bytes32, Coin] = {}
-        unconfirmed_tx = await self.tx_store.get_not_confirmed()
+        unconfirmed_tx = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         for record in unconfirmed_tx:
             for coin in record.additions:
                 additions[coin.name()] = coin
@@ -268,7 +268,7 @@ class WalletStateManager:
         Returns new removals transactions that have not been confirmed yet.
         """
         removals: Dict[bytes32, Coin] = {}
-        unconfirmed_tx = await self.tx_store.get_not_confirmed()
+        unconfirmed_tx = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         for record in unconfirmed_tx:
             for coin in record.removals:
                 removals[coin.name()] = coin
