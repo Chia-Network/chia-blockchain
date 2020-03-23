@@ -245,13 +245,16 @@ class WalletTransactionStore:
 
         return records
 
-    async def get_unconfirmed_for_wallet(self, wallet_id: int) -> List[TransactionRecord]:
+    async def get_unconfirmed_for_wallet(
+        self, wallet_id: int
+    ) -> List[TransactionRecord]:
         """
         Returns the list of transaction that have not yet been confirmed.
         """
 
         cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record WHERE confirmed=? and wallet_id=?", (0,wallet_id,)
+            "SELECT * from transaction_record WHERE confirmed=? and wallet_id=?",
+            (0, wallet_id,),
         )
         rows = await cursor.fetchall()
         await cursor.close()

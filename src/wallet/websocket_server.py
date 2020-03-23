@@ -6,10 +6,7 @@ import traceback
 from typing import Any, Dict, List
 from src.server.outbound_message import NodeType, OutboundMessage, Message, Delivery
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
-from src.types.peer_info import PeerInfo
-from src.util.config import load_config, load_config_cli
 from src.util.ints import uint64
-from src.util.logging import initialize_logging
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_info import WalletInfo
@@ -187,7 +184,7 @@ class WebSocketServer:
 
         return await websocket.send(format_response(response_api, response))
 
-    async def rl_set_admin_info(self, websocket, request,  response_api):
+    async def rl_set_admin_info(self, websocket, request, response_api):
         wallet_id = int(request["wallet_id"])
         wallet: RLWallet = self.wallet_node.wallets[wallet_id]
         user_pubkey = request["user_pubkey"]
@@ -197,11 +194,11 @@ class WebSocketServer:
 
         success = await wallet.admin_create_coin(interval, limit, user_pubkey, amount)
 
-        response = {"success" : success}
+        response = {"success": success}
 
-        return  await websocket.send(format_response(response_api, response))
+        return await websocket.send(format_response(response_api, response))
 
-    async def rl_set_user_info(self, websocket, request,  response_api):
+    async def rl_set_user_info(self, websocket, request, response_api):
         wallet_id = int(request["wallet_id"])
         wallet: RLWallet = self.wallet_node.wallets[wallet_id]
         admin_pubkey = request["admin_pubkey"]
@@ -211,9 +208,9 @@ class WebSocketServer:
 
         success = await wallet.set_user_info(interval, limit, origin_id, admin_pubkey)
 
-        response = {"success" : success}
+        response = {"success": success}
 
-        return  await websocket.send(format_response(response_api, response))
+        return await websocket.send(format_response(response_api, response))
 
     async def safe_handle(self, websocket, path):
         try:

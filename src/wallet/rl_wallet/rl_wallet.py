@@ -7,7 +7,7 @@ from secrets import token_bytes
 from typing import Dict, Optional, List, Tuple
 
 import clvm
-from blspy import ExtendedPrivateKey, ExtendedPublicKey
+from blspy import ExtendedPrivateKey
 from clvm_tools import binutils
 
 from src.server.server import ChiaServer
@@ -179,6 +179,8 @@ class RLWallet:
 
         user_pubkey_bytes = bytes.fromhex(user_pubkey)
 
+        assert self.rl_info.admin_pubkey is not None
+
         rl_puzzle = rl_puzzle_for_pk(
             pubkey=user_pubkey_bytes,
             rate_amount=limit,
@@ -188,10 +190,9 @@ class RLWallet:
         )
         rl_puzzle_hash = rl_puzzle.get_hash()
 
-
-        index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(self.rl_info.admin_pubkey.hex())
-
-        spend_bundle = await self.standard_wallet.generate_signed_transaction(amount, rl_puzzle_hash, 0, origin_id, coins)
+        spend_bundle = await self.standard_wallet.generate_signed_transaction(
+            amount, rl_puzzle_hash, 0, origin_id, coins
+        )
         if spend_bundle is None:
             return False
 
@@ -224,12 +225,14 @@ class RLWallet:
             admin_pubkey = admin_pubkey[2:]
         admin_pubkey_bytes = bytes.fromhex(admin_pubkey)
 
+        assert self.rl_info.user_pubkey is not None
+
         rl_puzzle = rl_puzzle_for_pk(
             pubkey=self.rl_info.user_pubkey,
             rate_amount=limit,
             interval_time=interval,
             origin_id=bytes.fromhex(origin_id),
-            clawback_pk=self.rl_info.admin_pubkey,
+            clawback_pk=admin_pubkey_bytes,
         )
 
         rl_puzzle_hash = rl_puzzle.get_hash()
@@ -385,7 +388,12 @@ class RLWallet:
     def generate_unsigned_clawback_transaction(
         self, clawback_coin: Coin, clawback_puzzle_hash: bytes32
     ):
-        if self.rl_info.limit is None or self.rl_info.interval is None:
+        if (
+            self.rl_info.limit is None
+            or self.rl_info.interval is None
+            or self.rl_info.user_pubkey is None
+            or self.rl_info.admin_pubkey is None
+        ):
             raise
         spends = []
         coin = clawback_coin
@@ -435,8 +443,16 @@ class RLWallet:
     async def rl_generate_signed_aggregation_transaction(
         self, rl_info: RLInfo, consolidating_coin: Coin, rl_parent: Coin, rl_coin: Coin
     ):
-        if rl_info.limit is None or rl_info.interval is None:
+        if (
+            rl_info.limit is None
+            or rl_info.interval is None
+            or rl_info.limit is None
+            or rl_info.interval is None
+            or rl_info.user_pubkey is None
+            or rl_info.admin_pubkey is None
+        ):
             raise
+
         list_of_coinsolutions = []
 
         pubkey, secretkey = await self.get_keys(self.rl_coin_record.coin.puzzle_hash)

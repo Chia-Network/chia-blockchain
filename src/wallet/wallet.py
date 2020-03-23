@@ -203,7 +203,12 @@ class Wallet:
             return None
 
     async def generate_unsigned_transaction(
-        self, amount: int, newpuzzlehash: bytes32, fee: int = 0, origin_id: bytes32 = None, coins: Set[Coin] = None
+        self,
+        amount: int,
+        newpuzzlehash: bytes32,
+        fee: int = 0,
+        origin_id: bytes32 = None,
+        coins: Set[Coin] = None,
     ) -> List[Tuple[Program, CoinSolution]]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -306,11 +311,18 @@ class Wallet:
         return await self.generate_signed_transaction(amount, puzzle_hash, fee)
 
     async def generate_signed_transaction(
-        self, amount, puzzle_hash, fee: int = 0, origin_id: bytes32 = None, coins: Set[Coin] = None
+        self,
+        amount,
+        puzzle_hash,
+        fee: int = 0,
+        origin_id: bytes32 = None,
+        coins: Set[Coin] = None,
     ) -> Optional[SpendBundle]:
         """ Use this to generate transaction. """
 
-        transaction = await self.generate_unsigned_transaction(amount, puzzle_hash, fee, origin_id, coins)
+        transaction = await self.generate_unsigned_transaction(
+            amount, puzzle_hash, fee, origin_id, coins
+        )
         if len(transaction) == 0:
             return None
         return await self.sign_transaction(transaction)
