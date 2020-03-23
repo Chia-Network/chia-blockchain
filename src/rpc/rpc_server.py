@@ -67,7 +67,7 @@ class RpcApiHandler:
             / self.full_node.constants["MIN_ITERS_PROPORTION"]
         )
 
-        tip_hashes=[]
+        tip_hashes = []
         for tip in tips:
             tip_hashes.append(tip.header_hash)
 
