@@ -118,7 +118,7 @@ function loadBlocks(hash) {
 
             for (i = 0; i < data.tips.length; i++) {
                 tipobj = JSON.parse(data.tips[i]);
-                tipheight = tipheight + tipobj.height + " ";
+                tipheight = tipheight + tipobj.data.height + " ";
                 tips.push(tipobj);
             }
 
@@ -166,9 +166,9 @@ function makeCall(hash, heads, added_blocks) {
 
 
         heads.sort(function(a, b) {
-            if (a.challenge.height < b.challenge.height) {
+            if (a.data.height < b.data.height) {
                 return 1;
-            } else if (a.challenge.height == b.challenge.height) {
+            } else if (a.data.height == b.data.height) {
                 return 0;
             } else { // a > b
                 return -1;
@@ -227,14 +227,14 @@ function makeHash(index, added_blocks) {
         return Array.prototype.map.call(new Uint8Array(buffer), x => ('00' + x.toString(16)).slice(-2)).join('');
     }
     var buf = [];
-    buf = toByteArray(buf, jsn.header.data.prev_header_hash);
-    var ts = jsn.header.data.timestamp;
+    buf = toByteArray(buf, jsn.data.prev_header_hash);
+    var ts = jsn.data.timestamp;
     buf.push(0, 0, 0, 0, 0xff & (ts >> 24), 0xff & (ts >> 16), 0xff & (ts >> 8), 0xff & ts);
-    buf = toByteArray(buf, jsn.header.data.filter_hash);
-    buf = toByteArray(buf, jsn.header.data.proof_of_space_hash);
-    buf = toByteArray(buf, jsn.header.data.body_hash);
-    buf = toByteArray(buf, jsn.header.data.extension_data);
-    buf = toByteArray(buf, jsn.header.harvester_signature);
+    buf = toByteArray(buf, jsn.data.filter_hash);
+    buf = toByteArray(buf, jsn.data.proof_of_space_hash);
+    buf = toByteArray(buf, jsn.data.body_hash);
+    buf = toByteArray(buf, jsn.data.extension_data);
+    buf = toByteArray(buf, jsn.harvester_signature);
 
     return window.crypto.subtle.digest("SHA-256", new Uint8Array(buf))
         .then(function(hash) {
@@ -371,13 +371,13 @@ $("#blockhash").keyup(function(e) {
 });
 
 function headersEqual(a, b) {
-    if ((a.header.data.prev_header_hash == b.header.data.prev_header_hash) &&
-        (a.header.data.timestamp == b.header.data.timestamp) &&
-        (a.header.data.filter_hash == b.header.data.filter_hash) &&
-        (a.header.data.proof_of_space_hash == b.header.data.proof_of_space_hash) &&
-        (a.header.data.body_hash == b.header.data.body_hash) &&
-        (a.header.data.extension_data == b.header.data.extension_data) &&
-        (a.header.harvester_signature == b.header.harvester_signature)) {
+    if ((a.data.prev_header_hash == b.data.prev_header_hash) &&
+        (a.data.timestamp == b.data.timestamp) &&
+        (a.data.filter_hash == b.data.filter_hash) &&
+        (a.data.proof_of_space_hash == b.data.proof_of_space_hash) &&
+        (a.data.body_hash == b.data.body_hash) &&
+        (a.data.extension_data == b.data.extension_data) &&
+        (a.harvester_signature == b.harvester_signature)) {
         return true;
     }
     return false;
