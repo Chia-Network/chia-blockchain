@@ -102,17 +102,21 @@ async def main():
         if args.connections:
             connections = await client.get_connections()
             print ("Connections")
-            print ("Type      IP                                       Ports      NodeID        Last Connection")
+            print ("Type      IP                                      Ports      NodeID        Last Connect       MB Up|Dwn")
             pp = pprint.PrettyPrinter(indent=4)
             for con in connections:
                 last_connect_tuple = struct_time(localtime(con['last_message_time']))
                 #last_connect = time.ctime(con['last_message_time'])
                 last_connect = time.strftime("%b %d %T", last_connect_tuple)
+                mb_down = con['bytes_read']/1024
+                mb_up = con['bytes_written']/1024
                 #print (last_connect)
                 con_str = (
-                    f"{NodeType(con['type']).name:9} {con['peer_host']:39} {con['peer_port']:5}/{con['peer_server_port']:<5}"
-                    f" {con['node_id'].hex()[:10]}..."
-                    f" {last_connect}"
+                    f"{NodeType(con['type']).name:9} {con['peer_host']:39} "
+                    f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
+                    f"{con['node_id'].hex()[:10]}... "
+                    f"{last_connect}  "
+                    f"{mb_down:7.1f}|{mb_up:<7.1f}"
                 )
                 print (con_str)
         elif args.block_header_hash != "":
