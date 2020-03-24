@@ -2031,3 +2031,86 @@ table td {
 #table_container::-webkit-scrollbar-thumb:hover {
   background: #007bff;
 }
+
+
+.navlink {
+  color: white;
+}
+.navlink-selected {
+  color: green !important;
+}
+.navlink-container {
+  font-size: 150% !important;
+  padding: 5px !important;
+}
+
+#connected_to_node_textfield {
+  margin-left: 15px;
+}
+
+.full-node-status {
+  padding: 15px;
+}
+
+.close-btn {
+  padding: 4px !important;
+}
+
+#new-ip-address, #new-port {
+  margin-left: 15px !important;
+  margin-right: 15px !important;
+}
+
+#new-ip-address-label {
+  padding-top: 15px !important;
+}
+
+#new-port-label {
+  padding-top: 15px !important;
+}
+
+#create-conn-button {
+  margin-left: 15px;
+  padding: 4px !important;
+}
+.create-connection {
+  border-top: 1px solid #e0e3eb;
+  padding-top: 20px;
+  margin-top: 25px;
+}
+
+.create-connection input {
+  padding: 25px 15px;
+  font-size: 14px;
+}
+
+.create-connection .input-group-prepend button {
+  padding: 13px 20px;
+  border-top-right-radius: 5px !important;
+  border-bottom-right-radius: 5px !important;
+}
+
+.create-connection input {
+  border: 1px solid #e0e3eb;
+}
+
+.create-connection h4 {
+  margin-bottom: 20px;
+}
+
+.create-connection .input-group {
+  padding-top: 30px;
+}
+#dark .create-connection input,
+#dark .create-connection input:focus {
+  border: 1px solid #2a2e39;
+  background: #2a2e39;
+  box-shadow: none;
+  color: #ffffff;
+}
+#dark .create-connection {
+  border-top: 1px solid #2a2e39;
+}
+#stop-node-button {
+  padding: 7px !important;
+}

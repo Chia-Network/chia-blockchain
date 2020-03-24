@@ -199,14 +199,14 @@ async def setup_farmer(port, dic={}):
     pool_target = create_puzzlehash_for_pk(
         BLSPublicKey(bytes(pool_sk.get_public_key()))
     )
-    farmer_sk = bt.farmer_sk
-    farmer_target = create_puzzlehash_for_pk(
-        BLSPublicKey(bytes(farmer_sk.get_public_key()))
+    wallet_sk = bt.wallet_sk
+    wallet_target = create_puzzlehash_for_pk(
+        BLSPublicKey(bytes(wallet_sk.get_public_key()))
     )
 
     key_config = {
-        "farmer_sk": bytes(farmer_sk).hex(),
-        "farmer_target": farmer_target.hex(),
+        "wallet_sk": bytes(wallet_sk).hex(),
+        "wallet_target": wallet_target.hex(),
         "pool_sks": [bytes(pool_sk).hex()],
         "pool_target": pool_target.hex(),
     }

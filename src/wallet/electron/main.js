@@ -4,8 +4,9 @@ const BrowserWindow = electron.BrowserWindow
 const path = require('path')
 const WebSocket = require('ws');
 const local_test = true
+const ipcMain = require('electron').ipcMain;
 
-var ui_html = "wallet-dark.html"
+var wallet_ui_html = "wallet-dark.html"
 
 /*************************************************************
  * py process
@@ -97,7 +98,7 @@ const createWindow = () => {
 
   query = "?testing="+local_test + "&wallet_id=1"
   mainWindow.loadURL(require('url').format({
-    pathname: path.join(__dirname, ui_html),
+    pathname: path.join(__dirname, wallet_ui_html),
     protocol: 'file:',
     slashes: true
   }) + query
@@ -122,3 +123,13 @@ app.on('activate', () => {
     createWindow()
   }
 })
+
+
+ipcMain.on('load-page', (event, arg) => {
+  mainWindow.loadURL(require('url').format({
+    pathname: path.join(__dirname, arg),
+    protocol: 'file:',
+    slashes: true
+  }) + query
+  );
+});

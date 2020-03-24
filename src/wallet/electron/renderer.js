@@ -8,6 +8,7 @@ const WebSocket = require('ws');
 let chia_formatter = require('./chia');
 
 // HTML
+let top_link = document.querySelector('#top_link')
 let send = document.querySelector('#send')
 let farm_button = document.querySelector('#farm_block')
 let new_address = document.querySelector('#new_address')
@@ -114,7 +115,7 @@ function set_callbacks(socket) {
         var command = message["command"];
         var data = message["data"];
 
-        console.log("Received command: " + command);
+        // console.log("Received command: " + command);
         if (data) {
             //console.log("Received message data: " + JSON.stringify(data));
         }
@@ -225,7 +226,7 @@ function send_transaction_response(response) {
     console.log(JSON.stringify(response));
     success = response["success"];
     if (!success) {
-        dialogs.alert("You don\'t have enough chia for this transactions", ok => {
+        dialogs.alert("You don\'t have enough chia for this transaction.", ok => {
         })
         return
     }

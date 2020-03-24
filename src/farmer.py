@@ -175,7 +175,7 @@ class Farmer:
         if estimate_secs < self.config["pool_share_threshold"]:
             request1 = harvester_protocol.RequestPartialProof(
                 response.quality_string,
-                bytes.fromhex(self.key_config["farmer_target"]),
+                bytes.fromhex(self.key_config["wallet_target"]),
             )
             yield OutboundMessage(
                 NodeType.HARVESTER,
@@ -194,7 +194,7 @@ class Farmer:
                 challenge_hash,
                 coinbase,
                 signature,
-                bytes.fromhex(self.key_config["farmer_target"]),
+                bytes.fromhex(self.key_config["wallet_target"]),
                 response.proof,
             )
 
@@ -244,7 +244,7 @@ class Farmer:
         share, to tell the pool where to pay the farmer.
         """
 
-        farmer_target = bytes.fromhex(self.key_config["farmer_target"])
+        farmer_target = bytes.fromhex(self.key_config["wallet_target"])
         plot_pubkey = self.harvester_responses_proofs[
             response.quality_string
         ].plot_pubkey

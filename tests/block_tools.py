@@ -44,9 +44,9 @@ plot_sks: List[PrivateKey] = [
 ]
 plot_pks: List[PublicKey] = [sk.get_public_key() for sk in plot_sks]
 
-farmer_sk: PrivateKey = PrivateKey.from_seed(b"coinbase")
-coinbase_target = std_hash(bytes(farmer_sk.get_public_key()))
-fee_target = std_hash(bytes(farmer_sk.get_public_key()))
+wallet_sk: PrivateKey = PrivateKey.from_seed(b"coinbase")
+coinbase_target = std_hash(bytes(wallet_sk.get_public_key()))
+fee_target = std_hash(bytes(wallet_sk.get_public_key()))
 n_wesolowski = uint8(0)
 
 
@@ -58,7 +58,7 @@ class BlockTools:
     def __init__(self):
         self.plot_config: Dict = {"plots": {}}
         self.pool_sk = pool_sk
-        self.farmer_sk = farmer_sk
+        self.wallet_sk = wallet_sk
 
         plot_seeds: List[bytes32] = [
             ProofOfSpace.calculate_plot_seed(pool_pk, plot_pk) for plot_pk in plot_pks

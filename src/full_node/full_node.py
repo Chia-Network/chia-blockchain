@@ -937,6 +937,17 @@ class FullNode:
                 and block.proof_of_time.number_of_iterations
                 == respond_compact_proof_of_time.proof.number_of_iterations
             ):
+                assert respond_compact_proof_of_time.proof.is_valid(
+                    self.constants["DISCRIMINANT_SIZE_BITS"]
+                )
+                block_new = FullBlock(
+                    block.proof_of_space,
+                    respond_compact_proof_of_time.proof,
+                    block.header,
+                    block.transactions_generator,
+                    block.transactions_filter,
+                )
+                await self.store.add_block(block_new)
                 yield OutboundMessage(
                     NodeType.FULL_NODE,
                     Message(
