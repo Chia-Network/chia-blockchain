@@ -1,6 +1,18 @@
 import asyncio
 import argparse
 import aiohttp
+import pprint
+import json
+import datetime
+import time
+from time import struct_time, localtime
+
+from src.server.connection import NodeType
+from src.types.full_block import FullBlock
+
+# from src.types.header_block import SmallHeaderBlock, HeaderBlock
+from src.types.sized_bytes import bytes32
+from src.util.ints import uint64
 from src.rpc.rpc_client import RpcClient
 from src.util.byte_types import hexstr_to_bytes
 
@@ -17,7 +29,7 @@ def str2bool(v: str) -> bool:
 
 
 async def main():
-    parser = argparse.ArgumentParser(description="block-by-header.py.")
+    parser = argparse.ArgumentParser(description="cli.py.")
 
     parser.add_argument(
         "-b",
@@ -55,25 +67,75 @@ async def main():
 
     args = parser.parse_args()
 
-    print(args)
+    # print(args)
 
     try:
         client = await RpcClient.create(args.rpc_port)
 
-        state = await client.get_blockchain_state()
-
         # TODO: Add other rpc calls
         # TODO: pretty print response
         if args.state:
-            state = await client.get_blockchain_state()
-            print(state)
+            blockchain_state = await client.get_blockchain_state()
+            lca_block = blockchain_state["lca"]
+            tips = blockchain_state["tips"]
+            difficulty = blockchain_state["difficulty"]
+            ips = blockchain_state["ips"]
+            sync_mode = blockchain_state["sync_mode"]
+            total_iters = lca_block.data.total_iters
+
+            # print (dir(lca_block))
+            if sync_mode:
+                print("Current Blockchain Status. Full Node Syncing")
+            else:
+                print("Current Blockchain Status. Full Node Synced")
+            print("Current least common ancestor ", lca_block.header_hash)
+            # print ("LCA time",time.ctime(lca_block.data.timestamp),"LCA height:",lca_block.height)
+            lca_time = struct_time(localtime(lca_block.data.timestamp))
+            print(
+                "LCA time",
+                time.strftime("%a %b %d %Y %T %Z", lca_time),
+                "LCA height:",
+                lca_block.height,
+            )
+            heads_text = "Heights of tips: " + str([h.height for h in tips])
+            difficulty_label = f"Current difficulty: {difficulty}"
+            print(heads_text)
+            print(difficulty_label)
+            print("Current VDF iterations per second:", ips)
+            # print("LCA data:\n", lca_block.data)
+            print("Total iterations since genesis:", total_iters)
+
         if args.connections:
             connections = await client.get_connections()
-            for connection in connections:
-                print(connection)
+            print("Connections")
+            print(
+                "Type      IP                                      Ports      NodeID        Last Connect       MB Up|Dwn"
+            )
+            for con in connections:
+                last_connect_tuple = struct_time(localtime(con["last_message_time"]))
+                # last_connect = time.ctime(con['last_message_time'])
+                last_connect = time.strftime("%b %d %T", last_connect_tuple)
+                mb_down = con["bytes_read"] / 1024
+                mb_up = con["bytes_written"] / 1024
+                # print (last_connect)
+                con_str = (
+                    f"{NodeType(con['type']).name:9} {con['peer_host']:39} "
+                    f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
+                    f"{con['node_id'].hex()[:10]}... "
+                    f"{last_connect}  "
+                    f"{mb_down:7.1f}|{mb_up:<7.1f}"
+                )
+                print(con_str)
         elif args.block_header_hash != "":
             block = await client.get_block(hexstr_to_bytes(args.block_header_hash))
-            print(block)
+            # print(dir(block))
+            if block is not None:
+                print("Block header:")
+                print(block.header)
+                block_time = struct_time(localtime(block.header.data.timestamp))
+                print("Block time:", time.strftime("%a %b %d %Y %T %Z", block_time))
+            else:
+                print("Block hash", args.block_header_hash, "not found.")
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):

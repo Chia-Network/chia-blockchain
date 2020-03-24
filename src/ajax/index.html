@@ -30,12 +30,6 @@
 
 <hr>
 
-<div id="poolimg"></div>
-
-    <div id="pooldata" class="clearfix"></div>
-
-<hr>	
-
 <center>	
     <a href="javascript:stopNode()">Stop node</a>	
 </center>
@@ -49,7 +43,6 @@ var NodeType = ["FULL_NODE", "HARVESTER", "FARMER", "TIMELORD", "INTRODUCER"];
 $(function() {
 
     loadConnections();
-    loadPools();
     loadBlocks(null);
 });
 
@@ -95,55 +88,6 @@ function loadConnections() {
     })
 }
 
-var poolReload=null;
-var poolhtml="";
-
-function loadPools() {
-    if(poolReload!=null) {
-        clearTimeout(poolReload);
-        poolReload=null;
-    }
-
-    $('#poolimg').html('<div id="loader"><img src="css/loader.gif" alt="loading..."></div>');
-
-    console.log("get_pool_balances");
-
-    jQuery.ajax({
-        url: "get_pool_balances",
-        type: "POST",
-        data: null,
-        dataType: "json",
-        contentType: "application/json; charset=utf-8",
-        success: function(data) {
-            console.log(data);
-            var arr = Object.entries(data).map(([key, value]) => ({
-                key,
-                value
-            }));
-            var sorted = arr.sort((a, b) => b.value - a.value);
-
-            outhtml = '<div><ul style="list-style-type:none;">';
-
-            for (i = 0; i < arr.length; i++) {
-                outhtml = outhtml + '<li>' + sorted[i].key.substring(0, 60) + '... ' + sorted[i].value / 1000000000000 + ' chias</li>';
-            }
-            outhtml = outhtml + '</ul></div>';
-
-            if(outhtml!=poolhtml) {
-                $('#pooldata').html(outhtml);
-                poolhtml=outhtml;
-            }
-
-            $('#poolimg').html('<a href="javascript:loadPools()">Pools</a>');
-            
-            poolReload=setTimeout(function() {
-                loadPools();
-            }, 5*60*1000);
-
-        }
-    })
-}
-
 var blockReload=null;
 var blockhtml="";
 
@@ -168,14 +112,14 @@ function loadBlocks(hash) {
             added_blocks = [];
             hashed_blocks = [];
 
-            var tips = [];
+            var tipmetalist = [];
 
             tipheight = "Heights of tips: ";
 
             for (i = 0; i < data.tips.length; i++) {
                 tipobj = JSON.parse(data.tips[i]);
-                tipheight = tipheight + tipobj.challenge.height + " ";
-                tips.push(tipobj);
+                tipheight = tipheight + tipobj.data.height + " ";
+                tipmetalist.push({hash: data.tip_hashes[i].slice(2), block: tipobj});
             }
 
             lca_block = JSON.parse(data.lca);
@@ -189,59 +133,62 @@ function loadBlocks(hash) {
                 $('#synced').html("Chia Testnet Blockchain: Currently synced");
             }
 
-            $('#timestamp').html("Current LCA timestamp (UTC): " + new Date(1000 * lca_block.header.data.timestamp).toISOString());
+            $('#timestamp').html("Current LCA timestamp (UTC): " + new Date(1000 * lca_block.data.timestamp).toISOString());
             $('#tipheight').html(tipheight);
             $('#difficulty').html("Current difficulty: " + data.difficulty.toString());
             $('#ips').html("Current VDF iterations per second: " + data.ips.toString());
-            $('#iterations').html("Total iterations since genesis: " + lca_block.challenge.total_iters.toString());
+            $('#iterations').html("Total iterations since genesis: " + lca_block.data.total_iters.toString());
 
-            heads = [];
+            headmetalist = [];
 
             if (hash == null) {
-                heads = tips.slice();
+                headmetalist = tipmetalist.slice();
 
                 blockReload=setTimeout(function() {
                     loadBlocks(hash);
                 }, 1*60*1000);
             }
 
-            var promiseResolvedAtEnd = makeCall(hash, heads, added_blocks).then(function() {
-                makeHash(0, added_blocks).then(function() {
-                    htmlBlocks(added_blocks, tips, lca_block);
+            var promiseResolvedAtEnd = makeCall(hash, headmetalist, added_blocks).then(function() {
+                    htmlBlocks(added_blocks, tipmetalist, lca_block);
                 });
-            });
         }
     })
 };
 
-function makeCall(hash, heads, added_blocks) {
+function makeCall(hash, headmetalist, added_blocks) {
+    var header_hash;
+
     if (hash == null) {
         // we're done - don't return a chained promise
-        if (!((added_blocks.length < 10) && (heads.length > 0)))
+        if (!((added_blocks.length < 10) && (headmetalist.length > 0)))
             return;
 
 
-        heads.sort(function(a, b) {
-            if (a.challenge.height < b.challenge.height) {
+        headmetalist.sort(function(ameta, bmeta) {
+
+            if (ameta.block.data.height < bmeta.block.data.height) {
                 return 1;
-            } else if (a.challenge.height == b.challenge.height) {
+            } else if (ameta.block.data.height == bmeta.block.data.height) {
                 return 0;
             } else { // a > b
                 return -1;
             }
         });
-        var max_block = heads[0];
+        var max_block = headmetalist[0];
 
         if (headerInArray(max_block, added_blocks) == -1) {
             added_blocks[added_blocks.length] = max_block;
         }
 
-        heads.shift();
+        headmetalist.shift();
 
-        var blockargs = '{"header_hash": "' + max_block.header.data.prev_header_hash.slice(2) + '"}';
+        header_hash=max_block.block.data.prev_header_hash.slice(2);
     } else {
-        var blockargs = '{"header_hash": "' + hash + '"}';
+        header_hash=hash;
     }
+
+    var blockargs = '{"header_hash": "' + header_hash + '"}';
 
     console.log("get_header " + blockargs);
 
@@ -253,54 +200,17 @@ function makeCall(hash, heads, added_blocks) {
         contentType: "application/json; charset=utf-8",
         success: function(data) {
             console.log(data);
-            heads.push(JSON.parse(data));
-
+            headmetalist.push({hash: header_hash, block: JSON.parse(data)});
         },
         error: function(err) {
             console.log('An error occured');
         }
     }).then(function() {
-        return makeCall(null, heads, added_blocks);
+        return makeCall(null, headmetalist, added_blocks);
     });
 }
 
-
-function makeHash(index, added_blocks) {
-
-    if (index >= added_blocks.length)
-        return;
-
-    var jsn = added_blocks[index];
-
-    function toByteArray(buf, hexString) {
-        hexString = hexString.slice(2);
-        for (var i = 0; i < hexString.length; i += 2) {
-            buf.push(parseInt(hexString.substr(i, 2), 16));
-        }
-        return buf;
-    }
-
-    function buf2hex(buffer) { // buffer is an ArrayBuffer
-        return Array.prototype.map.call(new Uint8Array(buffer), x => ('00' + x.toString(16)).slice(-2)).join('');
-    }
-    var buf = [];
-    buf = toByteArray(buf, jsn.header.data.prev_header_hash);
-    var ts = jsn.header.data.timestamp;
-    buf.push(0, 0, 0, 0, 0xff & (ts >> 24), 0xff & (ts >> 16), 0xff & (ts >> 8), 0xff & ts);
-    buf = toByteArray(buf, jsn.header.data.filter_hash);
-    buf = toByteArray(buf, jsn.header.data.proof_of_space_hash);
-    buf = toByteArray(buf, jsn.header.data.body_hash);
-    buf = toByteArray(buf, jsn.header.data.extension_data);
-    buf = toByteArray(buf, jsn.header.harvester_signature);
-
-    return window.crypto.subtle.digest("SHA-256", new Uint8Array(buf))
-        .then(function(hash) {
-            hashed_blocks[index] = buf2hex(hash);
-            return makeHash(index + 1, added_blocks);
-        });
-}
-
-function htmlBlocks(added_blocks, tips, lca_block) {
+function htmlBlocks(added_blocks, tipmetalist, lca_block) {
     var outhtml = "<div>";
 
 
@@ -310,11 +220,14 @@ function htmlBlocks(added_blocks, tips, lca_block) {
         outhtml = outhtml + '<ul style="list-style-type:none;">';
         for (index = 0; index < added_blocks.length; index++) {
 
-            outhtml = outhtml + '<li><a href="javascript:headIndexClicked(\'' + hashed_blocks[index] + '\')">' + added_blocks[index].challenge.height + '</a>: ';
-            outhtml = outhtml + '<a href="javascript:headHashClicked(\'' + hashed_blocks[index] + '\')">' + hashed_blocks[index] + '</a>';
-            if (headerInArray(added_blocks[index], tips) != -1)
+            block=added_blocks[index].block;
+            hash=added_blocks[index].hash;
+
+            outhtml = outhtml + '<li><a href="javascript:headIndexClicked(\'' + hash + '\')">' + block.data.height + '</a>: ';
+            outhtml = outhtml + '<a href="javascript:headHashClicked(\'' + hash + '\')">' + hash + '</a>';
+            if (headerInArray(added_blocks[index], tipmetalist) != -1)
                 outhtml = outhtml + ' TIP';
-            if (headersEqual(added_blocks[index], lca_block))
+            if (headersEqual(block, lca_block))
                 outhtml = outhtml + ' LCA';
 
             outhtml = outhtml + '</a></li>';
@@ -428,21 +341,22 @@ $("#blockhash").keyup(function(e) {
 });
 
 function headersEqual(a, b) {
-    if ((a.header.data.prev_header_hash == b.header.data.prev_header_hash) &&
-        (a.header.data.timestamp == b.header.data.timestamp) &&
-        (a.header.data.filter_hash == b.header.data.filter_hash) &&
-        (a.header.data.proof_of_space_hash == b.header.data.proof_of_space_hash) &&
-        (a.header.data.body_hash == b.header.data.body_hash) &&
-        (a.header.data.extension_data == b.header.data.extension_data) &&
-        (a.header.harvester_signature == b.header.harvester_signature)) {
+    if ((a.data.prev_header_hash == b.data.prev_header_hash) &&
+        (a.data.timestamp == b.data.timestamp) &&
+        (a.data.filter_hash == b.data.filter_hash) &&
+        (a.data.proof_of_space_hash == b.data.proof_of_space_hash) &&
+        (a.data.body_hash == b.data.body_hash) &&
+        (a.data.extension_data == b.data.extension_data) &&
+        (a.harvester_signature == b.harvester_signature)) {
         return true;
     }
     return false;
 }
 
-function headerInArray(a, b) {
-    for (i = 0; i < b.length; i++) {
-        if (headersEqual(a, b[i])) {
+function headerInArray(ameta, bmetalist) {
+
+    for (i = 0; i < bmetalist.length; i++) {
+        if (headersEqual(ameta.block, bmetalist[i].block)) {
             return i;
         }
     }

@@ -2114,3 +2114,7 @@ table td {
 #stop-node-button {
   padding: 7px !important;
 }
+
+.hidden_area {
+  display: none;
+}

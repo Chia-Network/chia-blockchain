@@ -95,7 +95,7 @@ function set_callbacks(socket) {
         console.log("Received command: " + command);
 
         if (command == "create_new_wallet") {
-            get_wallets();
+            go_to_main_wallet();
         }
     });
 
@@ -116,39 +116,16 @@ async function connect(timeout) {
     set_callbacks(ws);
 }
 
-
 async function connection_checker() {
     await sleep(10000);
     await get_connection_info()
     connection_checker()
 }
 
-
-function get_wallets() {
-    /*
-    Sends websocket request to get list of all wallets available
-    */
-    /*data = {
-        "command": "get_wallets",
-    }
-    json_data = JSON.stringify(data);
-    ws.send(json_data);*/
-
-    createWindow();
-
-}
-
-function createWindow(){
+function go_to_main_wallet(){
     //remote.getCurrentWindow().loadURL('../wallet-dark.html')
 
-    newWindow = new BrowserWindow({
-      width: 1500,
-      height: 800,
-      backgroundColor: '#131722',
-      show: false,
-      webPreferences: {
-        nodeIntegration: true
-    },})
+    newWindow = electron.remote.getCurrentWindow()
 
     query = "?testing="+local_test + "&wallet_id=1"
     newWindow.loadURL(require('url').format({

@@ -188,8 +188,6 @@ class FullNodeView {
         if (redisplay_blocks) {
             latest_blocks_tbody.innerHTML = "";
             for (let block of this.state.latest_blocks) {
-                console.log("BLOCK");
-                console.log(block);
                 let row = document.createElement("tr");
                 row.appendChild(this.create_table_cell(block.header_hash));
                 row.appendChild(this.create_table_cell(block.header.data.height));
@@ -227,7 +225,6 @@ class FullNodeView {
             let redisplay_blocks = false;
             if (!this.areEqualSets(tip_prev_hashes, this.state.tip_prev_hashes)) {
                 redisplay_blocks = true;
-                console.log("UPDATING BLOCKS");
                 this.state.latest_blocks = await this.get_latest_blocks(blockchain_state.tips);
                 this.state.tip_prev_hashes = tip_prev_hashes;
             }
