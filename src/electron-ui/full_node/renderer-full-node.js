@@ -14,10 +14,10 @@ let new_ip_field = document.querySelector("#new-ip-address");
 let new_port_field = document.querySelector("#new-port");
 let stop_node_button = document.querySelector("#stop-node-button");
 let latest_blocks_tbody = document.querySelector('#latest-blocks-tbody');
+const ipc = require('electron').ipcRenderer;
+const { unix_to_short_date } = require("../utils");
 
-let host = "127.0.0.1";
-let port = 8555;
-let rpc_client = new FullNodeRpcClient(host, port);
+let rpc_client = new FullNodeRpcClient();
 const connection_types = {
     1: "Full Node",
     2: "Harvester",
@@ -46,6 +46,7 @@ class FullNodeView {
         }
         this.update_view(true);
         this.initialize_handlers();
+        this.get_info();
         this.interval = setInterval(() => this.get_info(), 2000);
     }
 
@@ -71,7 +72,7 @@ class FullNodeView {
     }
 
     node_connected() {
-        connected_to_node_textfield.innerHTML = "Connected to node at port " + port;
+        connected_to_node_textfield.innerHTML = "Connected to full node";
         connected_to_node_textfield.style.color = "green";
         create_conn_button.disabled = false;
         stop_node_button.disabled = false;
@@ -137,24 +138,15 @@ class FullNodeView {
         return cell;
     }
 
-    unix_to_short_date(unix_timestamp) {
-       let d = new Date(unix_timestamp * 1000)
-       return d.toLocaleDateString('en-US', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-          }) + " " + d.toLocaleTimeString();
-    }
-
     async update_view(redisplay_blocks) {
         syncing_textfield.innerHTML = this.state.syncing ? "Yes" : "No";
         block_height_textfield.innerHTML = this.state.lca_height;
         max_block_height_textfield.innerHTML = this.state.max_height;
-        lca_time_textfield.innerHTML = this.unix_to_short_date(this.state.lca_timestamp);
+        lca_time_textfield.innerHTML = unix_to_short_date(this.state.lca_timestamp);
         connection_textfield.innerHTML = Object.keys(this.state.connections).length + " connections";
-        difficulty_textfield.innerHTML = this.state.difficulty;
-        ips_textfield.innerHTML = this.state.ips;
-        min_iters_textfield.innerHTML = this.state.min_iters;
+        difficulty_textfield.innerHTML = this.state.difficulty.toLocaleString();
+        ips_textfield.innerHTML = this.state.ips.toLocaleString();
+        min_iters_textfield.innerHTML = this.state.min_iters.toLocaleString();
 
         if (!this.areEqualSets(new Set(Object.keys(this.state.connections)), this.state.displayed_connections)) {
             // console.log("Updating connections");
@@ -167,8 +159,8 @@ class FullNodeView {
                 row.appendChild(this.create_table_cell(connection_types[connection.type]));
                 row.appendChild(this.create_table_cell(connection.peer_host));
                 row.appendChild(this.create_table_cell(connection.peer_server_port));
-                row.appendChild(this.create_table_cell(this.unix_to_short_date(connection.creation_time)));
-                row.appendChild(this.create_table_cell(this.unix_to_short_date(connection.last_message_time)));
+                row.appendChild(this.create_table_cell(unix_to_short_date(connection.creation_time)));
+                row.appendChild(this.create_table_cell(unix_to_short_date(connection.last_message_time)));
                 let action_cell = document.createElement("td");
                 let btn = document.createElement("button");
                 btn.innerHTML = "Close";
@@ -189,9 +181,22 @@ class FullNodeView {
             latest_blocks_tbody.innerHTML = "";
             for (let block of this.state.latest_blocks) {
                 let row = document.createElement("tr");
-                row.appendChild(this.create_table_cell(block.header_hash));
+                let link = document.createElement("a");
+                let action_cell = document.createElement("td");
+                action_cell.style.cursor = "pointer";
+                action_cell.onclick = async (r) => {
+                    console.log("Clicked", r.target.innerHTML);
+                    ipc.send('load-page', {
+                        "file": "full_node/block.html",
+                        "query": "?header_hash=" + block.header_hash,
+                    });
+                }
+                link.innerHTML = block.header_hash;
+                link.style.textDecoration = "underline";
+                action_cell.appendChild(link);
+                row.appendChild(action_cell);
                 row.appendChild(this.create_table_cell(block.header.data.height));
-                row.appendChild(this.create_table_cell(this.unix_to_short_date(block.header.data.timestamp)));
+                row.appendChild(this.create_table_cell(unix_to_short_date(block.header.data.timestamp)));
                 latest_blocks_tbody.appendChild(row);
             }
         }
@@ -200,7 +205,6 @@ class FullNodeView {
     async get_info() {
         if ((max_block_height_textfield === undefined) || (max_block_height_textfield === null)) {
             // Stop the interval if we changed tabs.
-            console.log("Stop view")
             this.stop();
             return;
         }
@@ -215,7 +219,6 @@ class FullNodeView {
             }
             this.state.connections = connections_obj;
             this.node_connected();
-            console.log("0");
             let blockchain_state = await rpc_client.get_blockchain_state();
             let max_height = 0;
             let tip_prev_hashes = new Set();
@@ -224,14 +227,12 @@ class FullNodeView {
                 tip_prev_hashes.add(tip.data.prev_header_hash);
             }
             let redisplay_blocks = false;
-            console.log("1");
             if (!this.areEqualSets(tip_prev_hashes, this.state.tip_prev_hashes)) {
                 redisplay_blocks = true;
                 this.state.latest_blocks = await this.get_latest_blocks(blockchain_state.tips);
                 this.state.tip_prev_hashes = tip_prev_hashes;
             }
 
-            console.log("2");
             this.state.max_height = max_height;
             this.state.lca_height = blockchain_state.lca.data.height;
             this.state.lca_timestamp = blockchain_state.lca.data.timestamp;

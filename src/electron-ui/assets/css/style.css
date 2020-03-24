@@ -41,12 +41,12 @@ img {
   margin-right: 15px;
 }
 
-.ptb70 {
-  padding: 70px 0;
+.ptb50 {
+  padding: 50px 0;
 }
 
-.pt70 {
-  padding-top: 70px;
+.pt50 {
+  padding-top: 50px;
 }
 
 .pb40 {
@@ -2117,4 +2117,10 @@ table td {
 
 .hidden_area {
   display: none;
+}
+
+#block-back {
+  margin-left: 20px !important;
+  color: #a2a2a2 !important;
+  text-decoration: underline !important;
 }

@@ -1,9 +1,9 @@
 const http = require('http')
 
 class FullNodeRpcClient {
-    constructor(host, port) {
-        this._host = host;
-        this._port = port;
+    constructor() {
+        this._host = "127.0.0.1";
+        this._port = 8555;
     }
 
     async get_blockchain_state() {
@@ -24,9 +24,9 @@ class FullNodeRpcClient {
     }
 
     async get_block(header_hash) {
-        return await this.make_request("get_block", {
+        return JSON.parse(await this.make_request("get_block", {
             "header_hash": header_hash,
-        });
+        }));
     }
 
     async get_connections() {
