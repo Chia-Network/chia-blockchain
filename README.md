@@ -16,15 +16,16 @@ First, create some keys by running the following script:
 python -m scripts.regenerate_keys
 ```
 
-## Step 3a: Run a full node
+## Step 3a: Run a full node + wallet
 To run a full node on port 8444, and connect to the testnet, run the following command.
 If you want to see std::out log output, modify the logging.std_out variable in ./config/config.yaml.
 
 ```bash
 ./scripts/run_full_node.sh
+npm run --prefix ./src/electron-ui start
 ```
 
-## Step 3b: Run a farmer + full node
+## Step 3b: Run a farmer + full node + wallet
 Instead of running only a full node (as in 4a), you can also run a farmer.
 Farmers are entities in the network who use their hard drive space to try to create
 blocks (like Bitcoin's miners), and earn block rewards. First, you must generate some hard drive plots, which
@@ -35,15 +36,17 @@ final directory for plotting, with the "-t" and "-d" arguments to the create_plo
 ```bash
 python -m scripts.create_plots -k 20 -n 10
 sh ./scripts/run_farming.sh
+npm run --prefix ./src/electron-ui start
 ```
 
 
-## Step 3c: Run a timelord + full node
+## Step 3c: Run a timelord + full node + wallet
 Timelords execute sequential verifiable delay functions (proofs of time), that get added to
 blocks to make them valid. This requires fast CPUs and a lot of memory as well as completing
 both install steps above.
 ```bash
 sh ./scripts/run_timelord.sh
+npm run --prefix ./src/electron-ui start
 ```
 
 ## Tips

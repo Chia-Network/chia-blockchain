@@ -3,7 +3,7 @@ set -e
 
 if [ `uname` = "Linux" ] && type apt-get; then
     # Debian/Ubuntu
-    sudo apt-get install -y libgmp3-dev libboost-dev libboost-system-dev
+    sudo apt-get install -y libgmp3-dev libboost-dev libboost-system-dev npm
 fi
 
 python3 -m venv .venv
@@ -13,6 +13,8 @@ pip install -e .
 pip install -r requirements.txt
 
 make -C lib/chiavdf/fast_vdf
+cd ./src/electron-ui
+npm install
 
 echo ""
 echo "Chia blockchain install.sh complete."
