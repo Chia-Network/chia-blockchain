@@ -82,6 +82,7 @@ class FullNodeView {
         connected_to_node_textfield.innerHTML = "Not connected to node";
         connected_to_node_textfield.style.color = "red";
         this.state.connections = {};
+        this.state.latest_blocks = [];
         create_conn_button.disabled = true;
         stop_node_button.disabled = true;
         this.update_view(true);

@@ -222,9 +222,6 @@ async def start_rpc_server(full_node: FullNode, stop_node_cb: Callable, rpc_port
     handler = RpcApiHandler(full_node, stop_node_cb)
     app = web.Application()
 
-    # For serving index.html and friends
-    app.router.add_static("/", path="src/ajax/", name="static")
-
     app.add_routes(
         [
             web.post("/get_blockchain_state", handler.get_blockchain_state),
