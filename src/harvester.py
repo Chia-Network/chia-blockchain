@@ -125,15 +125,15 @@ class Harvester:
                     quality = ProofOfSpace.quality_str_to_quality(
                       new_challenge.challenge_hash, quality_str
                     )
-            self.challenge_hashes[quality] = (
-                new_challenge.challenge_hash,
-                filename,
-                uint8(index),
-            )
-            response: harvester_protocol.ChallengeResponse = harvester_protocol.ChallengeResponse(
-                new_challenge.challenge_hash, quality, prover.get_size()
-            )
-            all_responses.append(response)
+                    self.challenge_hashes[quality] = (
+                        new_challenge.challenge_hash,
+                        filename,
+                        uint8(index),
+                    )
+                    response: harvester_protocol.ChallengeResponse = harvester_protocol.ChallengeResponse(
+                        new_challenge.challenge_hash, quality, prover.get_size()
+                    )
+                    all_responses.append(response)
         for response in all_responses:
             yield OutboundMessage(
                 NodeType.FARMER,
