@@ -2056,7 +2056,7 @@ table td {
   padding: 4px !important;
 }
 
-#new-ip-address, #new-port {
+#new-ip-address, #new-port, #new-header-hash {
   margin-left: 15px !important;
   margin-right: 15px !important;
 }
@@ -2068,6 +2068,12 @@ table td {
 #new-port-label {
   padding-top: 15px !important;
 }
+
+#new-header-hash-label {
+  padding-top: 15px !important;
+}
+
+
 
 #create-conn-button {
   margin-left: 15px;

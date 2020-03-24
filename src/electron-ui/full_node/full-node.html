@@ -56,7 +56,7 @@
         <div class="col-md-12 col-lg-8">
           <div class="tab-content">
             <div class="tab-pane fade show active" id="coinBTC" role="tabpanel">
-              <h2 class="wallet-title">Connections</h2>
+              <h3 class="wallet-title">Connections</h3>
               <div class="table-responsive">
                 <table class="table table-sm table-hover">
                 <thead>
@@ -74,7 +74,7 @@
                 </table>
               </div>
 
-              <h2 class="wallet-title">Create Connection</h2>
+              <h3 class="wallet-title">Create Connection</h3>
               <div class="create-connection">
                 <div class="input-group" style="padding-top:0px">
                   <p id="new-ip-address-label">Ip/domain:</p>
@@ -85,7 +85,17 @@
                 </div>
               </div>
               <div class="create-connection">
-              <h2 class="wallet-title">Latest Blocks</h2>
+                <h3 class="wallet-title">Search for block</h3>
+              </div>
+              <div class="create-connection">
+                <div class="input-group" style="padding-top:0px">
+                  <p id="new-header-hash-label">Header hash:</p>
+                  <input type="text" class="form-control"  id="new-header-hash" value="">
+                  <button class="btn btn-primary" id="search-button">Search</button>
+                </div>
+              </div>
+              <div class="create-connection">
+              <h3 class="wallet-title">Latest Blocks</h3>
               <table class="table table-sm table-hover">
                <thead>
                   <tr>

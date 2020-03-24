@@ -12,6 +12,8 @@ let connections_list_tbody = document.querySelector('#connections_list');
 let create_conn_button = document.querySelector("#create-conn-button");
 let new_ip_field = document.querySelector("#new-ip-address");
 let new_port_field = document.querySelector("#new-port");
+let header_hash_field = document.querySelector("#new-header-hash");
+let search_button = document.querySelector("#search-button");
 let stop_node_button = document.querySelector("#stop-node-button");
 let latest_blocks_tbody = document.querySelector('#latest-blocks-tbody');
 const ipc = require('electron').ipcRenderer;
@@ -69,6 +71,27 @@ class FullNodeView {
                 alert(error);
             }
         };
+        search_button.onclick = async () => {
+            try {
+                ipc.send('load-page', {
+                    "file": "full_node/block.html",
+                    "query": "?header_hash=" + header_hash_field.value,
+                });
+            } catch (error) {
+                alert(error);
+            }
+        };
+
+        new_port_field.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                create_conn_button.onclick();
+            }
+        });
+        header_hash_field.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                search_button.onclick();
+            }
+        });
     }
 
     node_connected() {

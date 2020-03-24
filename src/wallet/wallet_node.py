@@ -59,7 +59,6 @@ class WalletNode:
         config: Dict,
         key_config: Dict,
         name: str = None,
-        db_path=None,
         override_constants: Dict = {},
     ):
         self = WalletNode()
@@ -75,14 +74,7 @@ class WalletNode:
         else:
             self.log = logging.getLogger(__name__)
 
-        pub_hex = self.private_key.get_public_key().serialize().hex()
-        if not db_path:
-            if config["testing"] is True:
-                path = Path(f"wallet_db_testing_{pub_hex}.db")
-            else:
-                path = Path(f"wallet_db_{pub_hex}.db")
-        else:
-            path = db_path
+        path = Path(config["database_path"])
 
         self.wallet_state_manager = await WalletStateManager.create(
             config, path, self.constants

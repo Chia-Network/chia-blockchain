@@ -312,7 +312,7 @@ function get_wallet_balance_response(response) {
         wallet_pending_holder = document.querySelector("#" + "pending_wallet_" + wallet_id )
 
         if (g_wallet_id == wallet_id) {
-            balance_textfield.innerHTML = chia_confirmed
+            balance_textfield.innerHTML = chia_confirmed + " CH"
             if (pending > 0) {
                 pending_textfield.innerHTML = lock + " - " + chia_pending + " CH"
             } else {

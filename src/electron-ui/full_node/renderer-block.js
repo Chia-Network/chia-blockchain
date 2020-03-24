@@ -31,7 +31,10 @@ function create_table_row(textL, textR) {
 }
 
 async function render() {
-    const header_hash = getQueryVariable("header_hash");
+    let header_hash = getQueryVariable("header_hash");
+    if (!header_hash.startsWith("0x") && !header_hash.startsWith("0X")) {
+        header_hash = "0x" + header_hash;
+    }
     try {
         const block = await rpc_client.get_block(header_hash);
 
