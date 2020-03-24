@@ -1,18 +1,12 @@
 import asyncio
 import argparse
 import aiohttp
-import pprint
-import json
-import datetime
 import time
 from time import struct_time, localtime
 
 from src.server.connection import NodeType
-from src.types.full_block import FullBlock
 
 # from src.types.header_block import SmallHeaderBlock, HeaderBlock
-from src.types.sized_bytes import bytes32
-from src.util.ints import uint64
 from src.rpc.rpc_client import RpcClient
 from src.util.byte_types import hexstr_to_bytes
 
@@ -109,7 +103,8 @@ async def main():
             connections = await client.get_connections()
             print("Connections")
             print(
-                "Type      IP                                      Ports      NodeID        Last Connect       MB Up|Dwn"
+                f"Type      IP                                      Ports      NodeID        "
+                f"Last Connect       MB Up|Dwn"
             )
             for con in connections:
                 last_connect_tuple = struct_time(localtime(con["last_message_time"]))

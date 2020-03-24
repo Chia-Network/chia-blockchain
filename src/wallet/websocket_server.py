@@ -18,7 +18,6 @@ from src.server.outbound_message import NodeType, OutboundMessage, Message, Deli
 from src.server.server import ChiaServer
 from src.simulator.simulator_constants import test_constants
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
-from src.types.peer_info import PeerInfo
 from src.util.config import load_config_cli, load_config
 from src.util.ints import uint64
 from src.util.logging import initialize_logging
@@ -321,9 +320,6 @@ async def start_websocket_server():
 
     server = ChiaServer(9257, wallet_node, NodeType.WALLET)
     wallet_node.set_server(server)
-    full_node_peer = PeerInfo(
-        config["full_node_peer"]["host"], config["full_node_peer"]["port"]
-    )
 
     _ = await server.start_server("127.0.0.1", None, config)
 

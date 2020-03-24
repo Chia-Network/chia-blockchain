@@ -215,6 +215,7 @@ class FullNodeView {
             }
             this.state.connections = connections_obj;
             this.node_connected();
+            console.log("0");
             let blockchain_state = await rpc_client.get_blockchain_state();
             let max_height = 0;
             let tip_prev_hashes = new Set();
@@ -223,12 +224,14 @@ class FullNodeView {
                 tip_prev_hashes.add(tip.data.prev_header_hash);
             }
             let redisplay_blocks = false;
+            console.log("1");
             if (!this.areEqualSets(tip_prev_hashes, this.state.tip_prev_hashes)) {
                 redisplay_blocks = true;
                 this.state.latest_blocks = await this.get_latest_blocks(blockchain_state.tips);
                 this.state.tip_prev_hashes = tip_prev_hashes;
             }
 
+            console.log("2");
             this.state.max_height = max_height;
             this.state.lca_height = blockchain_state.lca.data.height;
             this.state.lca_timestamp = blockchain_state.lca.data.timestamp;
