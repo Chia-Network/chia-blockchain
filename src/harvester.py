@@ -120,20 +120,20 @@ class Harvester:
                     log.error(f"Retry-Error using prover object on {filename}. Giving up.")
                     quality_strings = None
 
-                    if quality_strings is not None:
-                        for index, quality_str in enumerate(quality_strings):
-                            quality = ProofOfSpace.quality_str_to_quality(
-                              new_challenge.challenge_hash, quality_str
-                            )
-                    self.challenge_hashes[quality] = (
-                        new_challenge.challenge_hash,
-                        filename,
-                        uint8(index),
+            if quality_strings is not None:
+                for index, quality_str in enumerate(quality_strings):
+                    quality = ProofOfSpace.quality_str_to_quality(
+                      new_challenge.challenge_hash, quality_str
                     )
-                    response: harvester_protocol.ChallengeResponse = harvester_protocol.ChallengeResponse(
-                        new_challenge.challenge_hash, quality, prover.get_size()
-                    )
-                    all_responses.append(response)
+            self.challenge_hashes[quality] = (
+                new_challenge.challenge_hash,
+                filename,
+                uint8(index),
+            )
+            response: harvester_protocol.ChallengeResponse = harvester_protocol.ChallengeResponse(
+                new_challenge.challenge_hash, quality, prover.get_size()
+            )
+            all_responses.append(response)
         for response in all_responses:
             yield OutboundMessage(
                 NodeType.FARMER,
