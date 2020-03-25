@@ -18,6 +18,7 @@ let stop_node_button = document.querySelector("#stop-node-button");
 let latest_blocks_tbody = document.querySelector('#latest-blocks-tbody');
 const ipc = require('electron').ipcRenderer;
 const { unix_to_short_date } = require("../utils");
+const { hash_header } = require("./header");
 
 let rpc_client = new FullNodeRpcClient();
 const connection_types = {
@@ -38,6 +39,7 @@ class FullNodeView {
             connections: {},
             displayed_connections: new Set(),
             max_height: 0,
+            lca_hash: "",
             lca_height: 0,
             lca_timestamp: 1585023165,
             syncing: false,
@@ -141,15 +143,16 @@ class FullNodeView {
         for (let tip of tips) {
             let curr = tip;
             while (curr.data.height > (max_height - NUM_LATEST_BLOCKS)) {
-                if (hashes.has(curr.data.prev_header_hash)) {
+                const hh = await hash_header(curr);
+                if (hashes.has(hh)) {
                     break;
                 }
-                let prev_header = await rpc_client.get_header(curr.data.prev_header_hash);
                 blocks.push({
-                    "header_hash": curr.data.prev_header_hash,
-                    "header": prev_header,
+                    "header_hash": hh,
+                    "header": curr,
                 });
-                hashes.add(curr.data.prev_header_hash);
+                hashes.add(hh);
+                let prev_header = await rpc_client.get_header(curr.data.prev_header_hash);
                 curr = prev_header;
             }
         }
@@ -175,7 +178,6 @@ class FullNodeView {
         min_iters_textfield.innerHTML = this.state.min_iters.toLocaleString();
 
         if (!this.areEqualSets(new Set(Object.keys(this.state.connections)), this.state.displayed_connections)) {
-            // console.log("Updating connections");
             connections_list_tbody.innerHTML = "";
             for (let node_id of Object.keys(this.state.connections)) {
                 let connection = this.state.connections[node_id];
@@ -216,11 +218,16 @@ class FullNodeView {
                         "query": "?header_hash=" + block.header_hash,
                     });
                 }
+                let hh = await hash_header(block.header);
+                let height_str = block.header.data.height;
+                if (hh === this.state.lca_hash) {
+                    height_str += " (LCA)";
+                }
                 link.innerHTML = block.header_hash;
                 link.style.textDecoration = "underline";
                 action_cell.appendChild(link);
                 row.appendChild(action_cell);
-                row.appendChild(this.create_table_cell(block.header.data.height));
+                row.appendChild(this.create_table_cell(height_str));
                 row.appendChild(this.create_table_cell(unix_to_short_date(block.header.data.timestamp)));
                 latest_blocks_tbody.appendChild(row);
             }
@@ -261,6 +268,7 @@ class FullNodeView {
 
             this.state.max_height = max_height;
             this.state.lca_height = blockchain_state.lca.data.height;
+            this.state.lca_hash = await hash_header(blockchain_state.lca);
             this.state.lca_timestamp = blockchain_state.lca.data.timestamp;
             this.state.syncing = blockchain_state.sync_mode;
             this.state.difficulty = blockchain_state.difficulty;
