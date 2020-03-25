@@ -18,17 +18,20 @@ from tests.wallet_tools import WalletTool
 
 def float_to_str(f):
     float_string = repr(f)
-    if 'e' in float_string:  # detect scientific notation
-        digits, exp = float_string.split('e')
-        digits = digits.replace('.', '').replace('-', '')
-        exp = int(exp)
-        zero_padding = '0' * (abs(int(exp)) - 1)  # minus 1 for decimal point in the sci notation
-        sign = '-' if f < 0 else ''
+    if "e" in float_string:  # detect scientific notation
+        digits, exp_str = float_string.split("e")
+        digits = digits.replace(".", "").replace("-", "")
+        exp = int(exp_str)
+        zero_padding = "0" * (
+            abs(int(exp)) - 1
+        )  # minus 1 for decimal point in the sci notation
+        sign = "-" if f < 0 else ""
         if exp > 0:
-            float_string = '{}{}{}.0'.format(sign, digits, zero_padding)
+            float_string = "{}{}{}.0".format(sign, digits, zero_padding)
         else:
-            float_string = '{}0.{}{}'.format(sign, zero_padding, digits)
+            float_string = "{}0.{}{}".format(sign, zero_padding, digits)
     return float_string
+
 
 def run_and_return_cost_time(chialisp):
     program = Program(binutils.assemble(chialisp))
@@ -42,8 +45,10 @@ def run_and_return_cost_time(chialisp):
     total_time = end - start
     return clvm_cost, total_time
 
+
 def get_cost_compared_to_addition(addition_cost, addition_time, other_time):
     return (addition_cost * other_time) / addition_time
+
 
 def benchmark_all_operators():
     addition = "(+ (q 10) (q 10))"
@@ -66,14 +71,39 @@ def benchmark_all_operators():
     point_add_cost, point_add_time = run_and_return_cost_time(point_add)
 
     one_addition = 1
-    one_substraction = get_cost_compared_to_addition(addition_cost, addition_time, substraction_time) / addition_cost
-    one_multiply = get_cost_compared_to_addition(addition_cost, addition_time, multiply_time) / addition_cost
-    one_greater = get_cost_compared_to_addition(addition_cost, addition_time, greater_time) / addition_cost
-    one_equal = get_cost_compared_to_addition(addition_cost, addition_time, equal_time) / addition_cost
-    one_if = get_cost_compared_to_addition(addition_cost, addition_time, if_time) / addition_cost
-    one_sha256 = get_cost_compared_to_addition(addition_cost, addition_time, sha256tree_time) / addition_cost
-    one_pubkey_for_exp = get_cost_compared_to_addition(addition_cost, addition_time, pubkey_for_exp_time) / addition_cost
-    one_point_add = get_cost_compared_to_addition(addition_cost, addition_time, point_add_time) / addition_cost  - 2 * one_pubkey_for_exp
+    one_substraction = (
+        get_cost_compared_to_addition(addition_cost, addition_time, substraction_time)
+        / addition_cost
+    )
+    one_multiply = (
+        get_cost_compared_to_addition(addition_cost, addition_time, multiply_time)
+        / addition_cost
+    )
+    one_greater = (
+        get_cost_compared_to_addition(addition_cost, addition_time, greater_time)
+        / addition_cost
+    )
+    one_equal = (
+        get_cost_compared_to_addition(addition_cost, addition_time, equal_time)
+        / addition_cost
+    )
+    one_if = (
+        get_cost_compared_to_addition(addition_cost, addition_time, if_time)
+        / addition_cost
+    )
+    one_sha256 = (
+        get_cost_compared_to_addition(addition_cost, addition_time, sha256tree_time)
+        / addition_cost
+    )
+    one_pubkey_for_exp = (
+        get_cost_compared_to_addition(addition_cost, addition_time, pubkey_for_exp_time)
+        / addition_cost
+    )
+    one_point_add = (
+        get_cost_compared_to_addition(addition_cost, addition_time, point_add_time)
+        / addition_cost
+        - 2 * one_pubkey_for_exp
+    )
 
     print(f"cost of addition is: {one_addition}")
     print(f"cost of one_substraction is: {one_substraction}")
@@ -84,6 +114,7 @@ def benchmark_all_operators():
     print(f"cost of one_sha256 is: {one_sha256}")
     print(f"cost of one_pubkey_for_exp is: {one_pubkey_for_exp}")
     print(f"cost of one_point_add is: {one_point_add}")
+
 
 if __name__ == "__main__":
     """
@@ -99,14 +130,24 @@ if __name__ == "__main__":
     public_keys = []
 
     for i in range(0, 1000):
-        private_key: BLSPrivateKey = BLSPrivateKey(extended_secret_key.private_child(i).get_private_key())
+        private_key: BLSPrivateKey = BLSPrivateKey(
+            extended_secret_key.private_child(i).get_private_key()
+        )
         public_key = private_key.public_key()
-        solution = wallet_tool.make_solution({ConditionOpcode.ASSERT_MY_COIN_ID: [ConditionVarPair(ConditionOpcode.ASSERT_MY_COIN_ID, token_bytes(), None)]})
+        solution = wallet_tool.make_solution(
+            {
+                ConditionOpcode.ASSERT_MY_COIN_ID: [
+                    ConditionVarPair(
+                        ConditionOpcode.ASSERT_MY_COIN_ID, token_bytes(), None
+                    )
+                ]
+            }
+        )
         puzzle = puzzle_for_pk(public_key)
         puzzles.append(puzzle)
         solutions.append(solution)
         private_keys.append(private_key)
-        public_keys.append(public_keys)
+        public_keys.append(public_key)
 
     # Run Puzzle 1000 times
     puzzle_start = time.time()
@@ -120,7 +161,7 @@ if __name__ == "__main__":
     print(f"Puzzle_time is: {puzzle_time}")
     print(f"Puzzle cost sum is: {clvm_cost}")
 
-    private_key: BLSPrivateKey = BLSPrivateKey(extended_secret_key.private_child(0).get_private_key())
+    private_key = BLSPrivateKey(extended_secret_key.private_child(0).get_private_key())
     public_key = private_key.public_key()
     message = token_bytes()
     signature = private_key.sign(message)
