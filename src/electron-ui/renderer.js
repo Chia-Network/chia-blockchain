@@ -33,7 +33,6 @@ const lock = "<i class=\"icon ion-md-lock\"></i>"
 // Global variables
 var global_syncing = true
 var global_sending_transaction = false
-console.log(global.location.search)
 
 function create_side_wallet(id, href, wallet_name, wallet_description, wallet_amount, active) {
     var balance_id = "balance_wallet_" + id
@@ -79,7 +78,6 @@ console.log("testing: " + local_test)
 console.log("wallet_id: " + g_wallet_id)
 
 if (local_test == "false") {
-    console.log("farm_button should be hidden")
     farm_button.style.visibility="hidden"
 }
 
@@ -201,7 +199,6 @@ farm_button.addEventListener('click', () => {
     /*
     Called when send button in ui is pressed.
     */
-    console.log("farm block")
     puzzle_hash = receiver_address.value;
     if (puzzle_hash == "") {
         dialogs.alert("Specify puzzle_hash for coinbase reward", ok => {
@@ -237,7 +234,6 @@ new_address.addEventListener('click', () => {
     /*
     Called when new address button is pressed.
     */
-    console.log("new address requesting");
     get_new_puzzlehash(0);
 })
 
@@ -273,11 +269,9 @@ function get_new_puzzlehash_response(response) {
     Called when response is received for get_new_puzzle_hash request
     */
     let puzzle_holder = document.querySelector("#puzzle_holder");
-    console.log("Response:", response);
     puzzle_holder.value = response["puzzlehash"];
     QRCode.toCanvas(canvas, response["puzzlehash"], function (error) {
     if (error) console.error(error)
-    console.log('success!');
     })
 }
 
@@ -299,7 +293,6 @@ async function get_wallet_balance(id) {
 }
 
 function get_wallet_balance_response(response) {
-    console.log("update balance" + JSON.stringify(response));
     if (response["success"]) {
         var confirmed = parseInt(response["confirmed_wallet_balance"])
         var unconfirmed = parseInt(response["unconfirmed_wallet_balance"])
@@ -434,7 +427,7 @@ async function connection_checker() {
         await get_connection_info()
         connection_checker()
     } catch (error) {
-        console.log(error);
+        console.error(error);
         connection_textfield.innerHTML = "Not Connected";
     }
 }
@@ -452,13 +445,11 @@ async function get_connection_info() {
 
 function get_height_info_response(response) {
     height = response["height"]
-    console.log("height is " + height)
     block_height_textfield.innerHTML = "" + height;
 }
 
 function get_sync_status_response(response) {
     syncing = response["syncing"]
-    console.log("Syncing: " + syncing)
     global_syncing = syncing
     if (syncing) {
         syncing_textfield.innerHTML = "Syncing in progress";
@@ -470,8 +461,6 @@ function get_sync_status_response(response) {
 
 async function get_connection_info_response(response) {
     connections = response["connections"]
-    console.log("Connections:" + connections)
-    console.log("Connected to: " + connections.length + " peers")
     count = connections.length;
     if (count == 0) {
         connection_textfield.innerHTML = "Not Connected"
@@ -533,7 +522,6 @@ function get_wallets_response(data) {
     wallets_tab.innerHTML = ""
     new_innerHTML = ""
     const wallets = data["wallets"]
-    console.log("received wallets" + wallets)
 
     for (var i = 0; i < wallets.length; i++) {
         var wallet = wallets[i];
@@ -549,7 +537,6 @@ function get_wallets_response(data) {
             href = "rl_wallet/rl_wallet.html"
         }
 
-        console.log(wallet)
         if (id == g_wallet_id) {
             new_innerHTML += create_side_wallet(id, href, name, type, 0, true)
         } else {
