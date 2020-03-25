@@ -10,6 +10,7 @@ blspy==0.1.14
 cbor2==5.0.1
 cffi==1.13.2
 chardet==3.0.4
+chiabip158==0.12
 Click==7.0
 colorlog==4.1.0
 cryptography==2.8
@@ -47,7 +48,6 @@ zipp==2.0.0
 sortedcontainers==2.1.0
 websockets==8.1.0
 -e lib/chiapos
--e lib/bip158
 -e lib/py-setproctitle
 -e lib/chiavdf/fast_vdf
 -e git+https://github.com/Chia-Network/clvm.git@bb538804062c01f999a228c4fc1e17a6e2835851#egg=clvm
