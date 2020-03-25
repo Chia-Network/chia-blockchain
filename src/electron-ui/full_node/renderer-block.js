@@ -31,16 +31,17 @@ async function render() {
         const prev_header = await rpc_client.get_header(block.header.data.prev_header_hash);
         let diff = block.header.data.weight - prev_header.data.weight;
 
-        let chia_cb = chia_formatter(block.header.data.coinbase.amount, 'mojo').to('chia').toString();
-        let chia_fees = chia_formatter(block.header.data.fees_coin.amount, 'mojo').to('chia').toString();
+        // TODO: don't use float here
+        let chia_cb = chia_formatter(parseFloat(BigInt(block.header.data.coinbase.amount)), 'mojo').to('chia').toString();
+        let chia_fees = chia_formatter(parseFloat(BigInt(block.header.data.fees_coin.amount)), 'mojo').to('chia').toString();
         block_tbody.innerHTML = "";
         block_tbody.appendChild(create_table_row("Header Hash", header_hash));
         block_tbody.appendChild(create_table_row("Timestamp", unix_to_short_date(block.header.data.timestamp)));
         block_tbody.appendChild(create_table_row("Height", block.header.data.height));
-        block_tbody.appendChild(create_table_row("Weight", block.header.data.weight.toLocaleString()));
+        block_tbody.appendChild(create_table_row("Weight", BigInt(block.header.data.weight).toLocaleString()));
         block_tbody.appendChild(create_table_row("Cost", block.header.data.cost));
-        block_tbody.appendChild(create_table_row("Difficulty", diff.toLocaleString()));
-        block_tbody.appendChild(create_table_row("Total VDF Iterations", block.header.data.total_iters.toLocaleString()));
+        block_tbody.appendChild(create_table_row("Difficulty", BigInt(diff).toLocaleString()));
+        block_tbody.appendChild(create_table_row("Total VDF Iterations", BigInt(block.header.data.total_iters).toLocaleString()));
         block_tbody.appendChild(create_table_row("Block VDF Iterations", block.proof_of_time.number_of_iterations));
         block_tbody.appendChild(create_table_row("Proof of Space Size", block.proof_of_space.size));
         block_tbody.appendChild(create_table_row("Plot Public Key", block.proof_of_space.plot_pubkey));

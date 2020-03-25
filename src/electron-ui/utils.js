@@ -16,7 +16,6 @@ function get_query_variable(variable) {
             return decodeURIComponent(pair[1]);
         }
     }
-    console.log('Query variable %s not found', variable);
 }
 
 module.exports = {

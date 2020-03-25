@@ -89,7 +89,6 @@ app.on('will-quit', exitPyProc)
 let mainWindow = null
 
 const createWindow = () => {
-  console.log(process.versions)
   mainWindow = new BrowserWindow({
       width: 1500,
       height: 800,

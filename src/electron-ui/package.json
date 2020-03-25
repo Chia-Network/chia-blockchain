@@ -21,7 +21,7 @@
     "big.js": "5.2.2"
   },
   "devDependencies": {
-    "electron": "^1.8.8",
-    "electron-packager": "^9.0.1"
+    "electron": "^8.2.0",
+    "electron-packager": "^14.2.1"
   }
 }

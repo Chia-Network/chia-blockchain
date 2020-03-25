@@ -1,6 +1,7 @@
 var Big = require('big.js');
 var units = require('./units');
 
+// TODO: use bigint instead of float
 const convert = (amount, from, to) => {
   if (Number.isNaN(parseFloat(amount)) || !Number.isFinite(amount)) {
     return 0;
