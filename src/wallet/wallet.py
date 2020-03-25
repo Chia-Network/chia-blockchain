@@ -261,7 +261,9 @@ class Wallet:
             conditions_dict = conditions_by_opcode(con)
 
             # Create signature
-            for pk_message in hash_key_pairs_for_conditions_dict(conditions_dict, bytes(solution.coin)):
+            for pk_message in hash_key_pairs_for_conditions_dict(
+                conditions_dict, bytes(solution.coin)
+            ):
                 signature = secretkey.sign(pk_message.message_hash)
                 signatures.append(signature)
 

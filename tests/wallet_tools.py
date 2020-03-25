@@ -180,7 +180,9 @@ class WalletTool:
                 return
             conditions_dict = conditions_by_opcode(con)
 
-            for _ in hash_key_pairs_for_conditions_dict(conditions_dict):
+            for _ in hash_key_pairs_for_conditions_dict(
+                conditions_dict, bytes(solution.coin)
+            ):
                 signature = secretkey.sign(_.message_hash)
                 sigs.append(signature)
         aggsig = BLSSignature.aggregate(sigs)
