@@ -379,6 +379,8 @@ class RLWallet:
             amount,
             rl_parent.parent_coin_info,
             rl_parent.amount,
+            None,
+            None,
         )
 
         spends.append((puzzle, CoinSolution(coin, solution)))
