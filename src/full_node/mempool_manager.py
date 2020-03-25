@@ -232,7 +232,7 @@ class MempoolManager:
                         potential_error = error
                     break
                 hash_key_pairs.extend(
-                    hash_key_pairs_for_conditions_dict(npc.condition_dict)
+                    hash_key_pairs_for_conditions_dict(npc.condition_dict, npc.coin_name)
                 )
             if error:
                 errors.append(error)
