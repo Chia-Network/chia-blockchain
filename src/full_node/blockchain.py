@@ -24,10 +24,10 @@ from src.types.header import Header
 from src.types.sized_bytes import bytes32
 from src.full_node.coin_store import CoinStore
 from src.util.ConsensusError import Err
+from src.util.cost_calculator import calculate_cost_of_program
 from src.util.merkle_set import MerkleSet
 from src.util.blockchain_check_conditions import blockchain_check_conditions_dict
 from src.util.condition_tools import hash_key_pairs_for_conditions_dict
-from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.errors import InvalidGenesisBlock
 from src.util.ints import uint32, uint64
 from src.types.challenge import Challenge
@@ -998,9 +998,9 @@ class Blockchain:
         if not block.transactions_generator:
             return Err.UNKNOWN
         # Get List of names removed, puzzles hashes for removed coins and conditions crated
-        error, npc_list, cost = get_name_puzzle_conditions(block.transactions_generator)
+        error, npc_list, cost = calculate_cost_of_program(block.transactions_generator)
 
-        if cost > self.constants["MAX_BLOCK_COST"]:
+        if cost > self.constants["MAX_BLOCK_COST_CLVM"]:
             return Err.BLOCK_COST_EXCEEDS_MAX
         if error:
             return error

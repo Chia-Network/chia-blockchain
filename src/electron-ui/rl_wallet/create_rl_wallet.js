@@ -6,6 +6,7 @@ const Dialogs = require('dialogs')
 const dialogs = Dialogs()
 const WebSocket = require('ws');
 var ws = new WebSocket(host);
+const { get_query_variable } = require("../utils");
 let chia_formatter = require('../chia');
 
 create_admin = document.querySelector('#create_admin');
@@ -52,20 +53,8 @@ function create_user_wallet() {
     ws.send(json_data);
 }
 
-function getQueryVariable(variable) {
-    var query = global.location.search.substring(1);
-    var vars = query.split('&');
-    for (var i = 0; i < vars.length; i++) {
-        var pair = vars[i].split('=');
-        if (decodeURIComponent(pair[0]) == variable) {
-            return decodeURIComponent(pair[1]);
-        }
-    }
-    console.log('Query variable %s not found', variable);
-}
-
-var local_test = getQueryVariable("testing")
-var g_wallet_id = getQueryVariable("wallet_id")
+var local_test = get_query_variable("testing")
+var g_wallet_id = get_query_variable("wallet_id")
 
 console.log("testing: " + local_test)
 console.log("wallet_id: " + g_wallet_id)

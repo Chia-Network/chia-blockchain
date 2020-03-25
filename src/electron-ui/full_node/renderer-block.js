@@ -1,21 +1,10 @@
 let FullNodeRpcClient = require('./full_node_rpc_client')
 let block_tbody = document.querySelector('#block-tbody');
 let block_title = document.querySelector('#block-title');
-const { unix_to_short_date } = require("../utils");
+const { unix_to_short_date, get_query_variable } = require("../utils");
 let chia_formatter = require('../chia');
 let rpc_client = new FullNodeRpcClient();
 
-function getQueryVariable(variable) {
-    var query = global.location.search.substring(1);
-    var vars = query.split('&');
-    for (var i = 0; i < vars.length; i++) {
-        var pair = vars[i].split('=');
-        if (decodeURIComponent(pair[0]) == variable) {
-            return decodeURIComponent(pair[1]);
-        }
-    }
-    console.log('Query variable %s not found', variable);
-}
 
 function create_table_row(textL, textR) {
     let row = document.createElement("tr");
@@ -31,7 +20,7 @@ function create_table_row(textL, textR) {
 }
 
 async function render() {
-    let header_hash = getQueryVariable("header_hash");
+    let header_hash = get_query_variable("header_hash");
     if (!header_hash.startsWith("0x") && !header_hash.startsWith("0X")) {
         header_hash = "0x" + header_hash;
     }
