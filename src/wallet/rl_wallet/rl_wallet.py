@@ -189,7 +189,18 @@ class RLWallet:
             origin_id=origin_id,
             clawback_pk=self.rl_info.admin_pubkey,
         )
+
         rl_puzzle_hash = rl_puzzle.get_hash()
+        index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(
+            self.rl_info.admin_pubkey.hex()
+        )
+        await self.wallet_state_manager.puzzle_store.add_derivation_path_of_interest(
+            index,
+            rl_puzzle_hash,
+            self.rl_info.admin_pubkey,
+            WalletType.RATE_LIMITED,
+            self.wallet_info.id,
+        )
 
         spend_bundle = await self.standard_wallet.generate_signed_transaction(
             amount, rl_puzzle_hash, 0, origin_id, coins
@@ -247,6 +258,19 @@ class RLWallet:
             origin_id,
             rl_puzzle_hash,
         )
+        rl_puzzle_hash = rl_puzzle.get_hash()
+
+        index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(
+            self.rl_info.user_pubkey.hex()
+        )
+        await self.wallet_state_manager.puzzle_store.add_derivation_path_of_interest(
+            index,
+            rl_puzzle_hash,
+            self.rl_info.user_pubkey,
+            WalletType.RATE_LIMITED,
+            self.wallet_info.id,
+        )
+
         data_str = json.dumps(new_rl_info.to_json_dict())
         new_wallet_info = WalletInfo(
             self.wallet_info.id, self.wallet_info.name, self.wallet_info.type, data_str

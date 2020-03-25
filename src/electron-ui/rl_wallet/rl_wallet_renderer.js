@@ -9,6 +9,7 @@ var ws = new WebSocket(host);
 let chia_formatter = require('../chia');
 const electron = require('electron')
 const path = require('path')
+const { get_query_variable } = require("../utils");
 
 // HTML
 let connection_textfield = document.querySelector('#connection_textfield')
@@ -71,20 +72,8 @@ function create_wallet_button() {
     return create_button
 }
 
-function getQueryVariable(variable) {
-    var query = global.location.search.substring(1);
-    var vars = query.split('&');
-    for (var i = 0; i < vars.length; i++) {
-        var pair = vars[i].split('=');
-        if (decodeURIComponent(pair[0]) == variable) {
-            return decodeURIComponent(pair[1]);
-        }
-    }
-    console.log('Query variable %s not found', variable);
-}
-
-var local_test = getQueryVariable("testing")
-var g_wallet_id = getQueryVariable("wallet_id")
+var local_test = get_query_variable("testing")
+var g_wallet_id = get_query_variable("wallet_id")
 
 console.log("testing: " + local_test)
 console.log("wallet_id: " + g_wallet_id)

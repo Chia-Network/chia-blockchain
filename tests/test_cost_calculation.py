@@ -2,6 +2,7 @@ import asyncio
 
 import pytest
 
+from src.consensus.constants import constants
 from src.util.bundle_tools import best_solution_program
 from src.util.cost_calculator import calculate_cost_of_program
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
@@ -38,9 +39,12 @@ class TestCostCalculation:
         assert spend_bundle is not None
         program = best_solution_program(spend_bundle)
 
-        value = calculate_cost_of_program(program)
+        error, npc_list, clvm_cost = calculate_cost_of_program(program)
 
         error, npc_list, cost = get_name_puzzle_conditions(program)
 
-        # create condition + agg_sig_condition + length + cpu_cost
-        assert value == 200 + 20 + len(bytes(program)) + cost
+        # Create condition + agg_sig_condition + length + cpu_cost
+        ratio = constants["CLVM_COST_RATIO_CONSTANT"]
+        assert (
+            clvm_cost == 200 * ratio + 20 * ratio + len(bytes(program)) * ratio + cost
+        )

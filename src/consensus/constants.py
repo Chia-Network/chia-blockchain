@@ -42,4 +42,9 @@ constants: Dict[str, Any] = {
     # floor(1,000,000 / 219) * 457 = 2086662 (size in vBytes)
     # Max block cost in virtual bytes
     "MAX_BLOCK_COST": 2086662,
+    # MAX block cost in clvm cost units = MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT
+    # 1 vByte = 25 clvm cost units
+    "CLVM_COST_RATIO_CONSTANT": 25,
+    # Max block cost in clvm cost units (MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT)
+    "MAX_BLOCK_COST_CLVM": 52166550,
 }
