@@ -22,7 +22,7 @@ class EnhancedJSONEncoder(json.JSONEncoder):
 
     def default(self, o: Any):
         if dataclasses.is_dataclass(o):
-            return o.to_json()
+            return o.to_json_dict()
         elif hasattr(type(o), "__bytes__"):
             return f"0x{bytes(o).hex()}"
         return super().default(o)

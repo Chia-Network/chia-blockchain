@@ -7,26 +7,26 @@ class FullNodeRpcClient {
     }
 
     async get_blockchain_state() {
-        let state = await this.make_request("get_blockchain_state", {});
-        let tips_parsed = [];
-        for (let tip of state.tips) {
-            tips_parsed.push(JSON.parse(tip));
-        }
-        state.tips = tips_parsed;
-        state.lca = JSON.parse(state.lca);
-        return state;
+        return await this.make_request("get_blockchain_state", {});
+        // let tips_parsed = [];
+        // for (let tip of state.tips) {
+        //     tips_parsed.push(JSON.parse(tip));
+        // }
+        // state.tips = tips_parsed;
+        // state.lca = JSON.parse(state.lca);
+        // return state;
     }
 
     async get_header(header_hash) {
-        return JSON.parse(await this.make_request("get_header", {
+        return await this.make_request("get_header", {
             "header_hash": header_hash,
-        }));
+        });
     }
 
     async get_block(header_hash) {
-        return JSON.parse(await this.make_request("get_block", {
+        return await this.make_request("get_block", {
             "header_hash": header_hash,
-        }));
+        });
     }
 
     async get_connections() {

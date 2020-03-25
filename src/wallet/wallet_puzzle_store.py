@@ -188,7 +188,7 @@ class WalletPuzzleStore:
         row = await cursor.fetchone()
         await cursor.close()
 
-        if row[0]:
+        if row[0] is not None:
             return row[0]
 
         return -1

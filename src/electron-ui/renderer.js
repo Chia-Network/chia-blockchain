@@ -31,6 +31,7 @@ const lock = "<i class=\"icon ion-md-lock\"></i>"
 
 // Global variables
 var global_syncing = true
+var global_sending_transaction = false
 console.log(global.location.search)
 
 function create_side_wallet(id, href, wallet_name, wallet_description, wallet_amount, active) {
@@ -177,23 +178,34 @@ send.addEventListener('click', () => {
         dialogs.alert("Can't send transactions while syncing.", ok => {});
         return
     }
-    puzzle_hash = receiver_address.value;
-    amount_value = parseFloat(amount.value);
-    mojo_amount = chia_formatter(amount_value, 'chia').to('mojo').value()
-    console.log("Mojo amount: " + mojo_amount);
-
-    data = {
-        "puzzle_hash": puzzle_hash,
-        "amount": mojo_amount,
-        "wallet_id": g_wallet_id
+    if (global_sending_transaction) {
+        return;
     }
+    global_sending_transaction = true;
+    send.disabled = true;
+    try {
+        puzzle_hash = receiver_address.value;
+        amount_value = parseFloat(amount.value);
+        mojo_amount = chia_formatter(amount_value, 'chia').to('mojo').value()
+        console.log("Mojo amount: " + mojo_amount);
 
-    request = {
-        "command": "send_transaction",
-        "data": data
+        data = {
+            "puzzle_hash": puzzle_hash,
+            "amount": mojo_amount,
+            "wallet_id": g_wallet_id
+        }
+
+        request = {
+            "command": "send_transaction",
+            "data": data
+        }
+        json_data = JSON.stringify(request);
+        ws.send(json_data);
+    } catch (error) {
+        alert("Error sending the transaction").
+        global_sending_transaction = false;
+        send.disabled = false;
     }
-    json_data = JSON.stringify(request);
-    ws.send(json_data);
 })
 
 farm_button.addEventListener('click', () => {
@@ -224,13 +236,12 @@ function send_transaction_response(response) {
     /*
     Called when response is received for send_transaction request
     */
-    console.log(JSON.stringify(response));
     success = response["success"];
     if (!success) {
-        dialogs.alert("You don\'t have enough chia for this transaction.", ok => {
-        })
-        return
+        dialogs.alert("Transaction failed. Note that block rewards have a lockup period of 200 blocks.");
     }
+    global_sending_transaction = false;
+    send.disabled = false;
 }
 
 new_address.addEventListener('click', () => {
@@ -273,6 +284,7 @@ function get_new_puzzlehash_response(response) {
     Called when response is received for get_new_puzzle_hash request
     */
     let puzzle_holder = document.querySelector("#puzzle_holder");
+    console.log("Response:", response);
     puzzle_holder.value = response["puzzlehash"];
     QRCode.toCanvas(canvas, response["puzzlehash"], function (error) {
     if (error) console.error(error)
@@ -368,8 +380,7 @@ function get_transactions_response(response) {
     clean_table()
 
     for (var i = 0; i < response.txs.length; i++) {
-        var tx = JSON.parse(response.txs[i]);
-        //console.log(tx);
+        var tx = response.txs[i];
         var row = table.insertRow(0);
         var cell_type = row.insertCell(0);
         var cell_to = row.insertCell(1);
@@ -536,7 +547,7 @@ function get_wallets_response(data) {
     console.log("received wallets" + wallets)
 
     for (var i = 0; i < wallets.length; i++) {
-        var wallet = JSON.parse(wallets[i]);
+        var wallet = wallets[i];
         var type = wallet["type"]
         var id = wallet["id"]
         var name = wallet["name"]

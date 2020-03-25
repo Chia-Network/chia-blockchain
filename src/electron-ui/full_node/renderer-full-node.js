@@ -99,6 +99,7 @@ class FullNodeView {
         connected_to_node_textfield.style.color = "green";
         create_conn_button.disabled = false;
         stop_node_button.disabled = false;
+        search_button.disabled = false;
     }
 
     node_not_connected() {
@@ -108,6 +109,7 @@ class FullNodeView {
         this.state.latest_blocks = [];
         create_conn_button.disabled = true;
         stop_node_button.disabled = true;
+        search_button.disabled = true;
         this.update_view(true);
     }
 
@@ -209,7 +211,6 @@ class FullNodeView {
                 let action_cell = document.createElement("td");
                 action_cell.style.cursor = "pointer";
                 action_cell.onclick = async (r) => {
-                    console.log("Clicked", r.target.innerHTML);
                     ipc.send('load-page', {
                         "file": "full_node/block.html",
                         "query": "?header_hash=" + block.header_hash,
@@ -235,6 +236,7 @@ class FullNodeView {
         if (this.state.getting_info) {
             return;
         }
+        this.state.getting_info = true;
         try {
             let connections_obj = {};
             let connections = await rpc_client.get_connections();

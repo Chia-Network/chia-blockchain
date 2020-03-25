@@ -38,8 +38,8 @@ class RpcClient:
 
     async def get_blockchain_state(self) -> Dict:
         response = await self.fetch("get_blockchain_state", {})
-        response["tips"] = [Header.from_json(tip) for tip in response["tips"]]
-        response["lca"] = Header.from_json(response["lca"])
+        response["tips"] = [Header.from_json_dict(tip) for tip in response["tips"]]
+        response["lca"] = Header.from_json_dict(response["lca"])
         return response
 
     async def get_block(self, header_hash) -> Optional[FullBlock]:
@@ -49,7 +49,7 @@ class RpcClient:
             if e.message == "Not Found":
                 return None
             raise
-        return FullBlock.from_json(response)
+        return FullBlock.from_json_dict(response)
 
     async def get_header(self, header_hash) -> Optional[Header]:
         try:
@@ -60,7 +60,7 @@ class RpcClient:
             if e.message == "Not Found":
                 return None
             raise
-        return Header.from_json(response)
+        return Header.from_json_dict(response)
 
     async def get_connections(self) -> List[Dict]:
         response = await self.fetch("get_connections", {})
@@ -85,13 +85,13 @@ class RpcClient:
         else:
             d = {"puzzle_hash": puzzle_hash.hex()}
         return [
-            CoinRecord.from_json(coin)
+            CoinRecord.from_json_dict(coin)
             for coin in await self.fetch("get_unspent_coins", d)
         ]
 
     async def get_heaviest_block_seen(self) -> Header:
         response = await self.fetch("get_heaviest_block_seen", {})
-        return Header.from_json(response)
+        return Header.from_json_dict(response)
 
     def close(self):
         self.closing_task = asyncio.create_task(self.session.close())

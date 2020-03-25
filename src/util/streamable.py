@@ -6,7 +6,7 @@ import io
 import pprint
 import json
 from enum import Enum
-from typing import Any, BinaryIO, List, Type, get_type_hints, Union
+from typing import Any, BinaryIO, List, Type, get_type_hints, Union, Dict
 from src.util.byte_types import hexstr_to_bytes
 from src.types.hashable.program import Program
 from src.util.hash import std_hash
@@ -23,7 +23,7 @@ from blspy import (
 )
 
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint32, uint8
+from src.util.ints import uint32, uint8, uint64, int64, uint128, int512
 from src.util.type_checking import (
     is_type_List,
     is_type_Tuple,
@@ -56,6 +56,8 @@ unhashable_types = [
     ChainCode,
     Program,
 ]
+# JSON does not support big ints, so these types must be serialized differently in JSON
+big_ints = [uint64, int64, uint128, int512]
 
 
 def dataclass_from_dict(klass, d):
@@ -217,37 +219,49 @@ class Streamable:
         return bytes(f.getvalue())
 
     def __str__(self: Any) -> str:
-        return pp.pformat(self.recurse_str(dataclasses.asdict(self)))
+        return pp.pformat(self.recurse_jsonify(dataclasses.asdict(self)))
 
     def __repr__(self: Any) -> str:
-        return pp.pformat(self.recurse_str(dataclasses.asdict(self)))
+        return pp.pformat(self.recurse_jsonify(dataclasses.asdict(self)))
 
-    def to_json(self) -> str:
-        return json.dumps(self.recurse_str(dataclasses.asdict(self)))
+    def to_json_dict(self) -> Dict:
+        return self.recurse_jsonify(dataclasses.asdict(self))
 
     @classmethod
-    def from_json(cls: Any, json_str: str) -> Any:
-        return dataclass_from_dict(cls, json.loads(json_str))
+    def from_json_dict(cls: Any, json_dict: Dict) -> Any:
+        return dataclass_from_dict(cls, json_dict)
 
-    def recurse_str(self, d):
+    def recurse_jsonify(self, d):
+        """
+        Makes bytes objects and unhashable types into strings with 0x, and makes large ints into
+        strings.
+        """
         if isinstance(d, list):
+            new_list = []
             for item in d:
                 if type(item) in unhashable_types or issubclass(type(item), bytes):
                     item = f"0x{bytes(item).hex()}"
                 if isinstance(item, dict):
-                    self.recurse_str(item)
+                    self.recurse_jsonify(item)
                 if isinstance(item, list):
-                    self.recurse_str(item)
+                    self.recurse_jsonify(item)
                 if isinstance(item, Enum):
                     item = item.name
+                if isinstance(item, int) and type(item) in big_ints:
+                    item = str(item)
+                new_list.append(item)
+            d = new_list
+
         else:
             for key, value in d.items():
                 if type(value) in unhashable_types or issubclass(type(value), bytes):
                     d[key] = f"0x{bytes(value).hex()}"
                 if isinstance(value, dict):
-                    self.recurse_str(value)
+                    self.recurse_jsonify(value)
                 if isinstance(value, list):
-                    self.recurse_str(value)
+                    self.recurse_jsonify(value)
                 if isinstance(value, Enum):
                     d[key] = value.name
+                if isinstance(value, int) and type(value) in big_ints:
+                    d[key] = str(value)
         return d

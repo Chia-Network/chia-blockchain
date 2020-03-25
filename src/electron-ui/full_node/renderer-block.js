@@ -44,7 +44,6 @@ async function render() {
 
         let chia_cb = chia_formatter(block.header.data.coinbase.amount, 'mojo').to('chia').toString();
         let chia_fees = chia_formatter(block.header.data.fees_coin.amount, 'mojo').to('chia').toString();
-        console.log(block);
         block_tbody.innerHTML = "";
         block_tbody.appendChild(create_table_row("Header Hash", header_hash));
         block_tbody.appendChild(create_table_row("Timestamp", unix_to_short_date(block.header.data.timestamp)));

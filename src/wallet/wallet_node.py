@@ -56,10 +56,7 @@ class WalletNode:
 
     @staticmethod
     async def create(
-        config: Dict,
-        key_config: Dict,
-        name: str = None,
-        override_constants: Dict = {},
+        config: Dict, key_config: Dict, name: str = None, override_constants: Dict = {},
     ):
         self = WalletNode()
         self.config = config

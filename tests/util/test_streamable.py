@@ -65,8 +65,8 @@ class TestStreamable(unittest.TestCase):
         }
         block = bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
 
-        str_block = block.to_json()
-        assert FullBlock.from_json(str_block) == block
+        dict_block = block.to_json_dict()
+        assert FullBlock.from_json_dict(dict_block) == block
 
     def test_recursive_json(self):
         @dataclass(frozen=True)
@@ -88,7 +88,7 @@ class TestStreamable(unittest.TestCase):
         tc2 = TestClass2(
             uint32(5), [[tc1_a], [tc1_b, tc1_c], None], bytes32(bytes([1] * 32))
         )
-        assert TestClass2.from_json(tc2.to_json()) == tc2
+        assert TestClass2.from_json_dict(tc2.to_json_dict()) == tc2
 
     def test_recursive_types(self):
         coin: Optional[Coin] = None

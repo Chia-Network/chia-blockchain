@@ -35,7 +35,7 @@ class EnhancedJSONEncoder(json.JSONEncoder):
 
     def default(self, o: Any):
         if dataclasses.is_dataclass(o):
-            return o.to_json()
+            return o.to_json_dict()
         elif isinstance(o, WalletType):
             return o.name
         elif hasattr(type(o), "__bytes__"):
@@ -83,11 +83,13 @@ class WebSocketServer:
         await websocket.send(format_response(response_api, data))
 
     async def send_transaction(self, websocket, request, response_api):
-
         wallet_id = int(request["wallet_id"])
         wallet = self.wallet_node.wallets[wallet_id]
-
-        tx = await wallet.generate_signed_transaction_dict(request)
+        try:
+            tx = await wallet.generate_signed_transaction_dict(request)
+        except BaseException:
+            data = {"success": False}
+            return await websocket.send(format_response(response_api, data))
 
         if tx is None:
             data = {"success": False}
@@ -281,12 +283,14 @@ class WebSocketServer:
             "state": state,
         }
         if self.websocket is not None:
+            # try:
             await self.websocket.send(format_response("state_changed", data))
+            # except Conne
 
     def state_changed_callback(self, state: str):
         if self.websocket is None:
             return
-        asyncio.ensure_future(self.notify_ui_that_state_changed(state))
+        asyncio.create_task(self.notify_ui_that_state_changed(state))
 
 
 async def start_websocket_server():

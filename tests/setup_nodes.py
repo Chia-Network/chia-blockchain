@@ -158,12 +158,9 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
     db_path = "test-wallet-db" + token_bytes(32).hex() + ".db"
     if Path(db_path).exists():
         Path(db_path).unlink()
-    config["database_path"] = db_path;
+    config["database_path"] = db_path
     wallet = await WalletNode.create(
-        config,
-        key_config,
-        override_constants=test_constants_copy,
-        name="wallet1",
+        config, key_config, override_constants=test_constants_copy, name="wallet1",
     )
     server = ChiaServer(port, wallet, NodeType.WALLET, name="wallet-server")
     wallet.set_server(server)

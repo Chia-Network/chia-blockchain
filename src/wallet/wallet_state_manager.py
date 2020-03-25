@@ -192,7 +192,7 @@ class WalletStateManager:
         self, current_index: uint32, wallet_id: int
     ) -> uint64:
         """
-        Returns the confirmed balance amount - sum of unconfirmed transactions.
+        Returns the confirmed balance amount +/- sum of unconfirmed transactions.
         """
 
         confirmed = await self.get_confirmed_spendable_for_wallet(

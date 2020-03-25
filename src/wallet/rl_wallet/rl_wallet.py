@@ -7,6 +7,7 @@ from secrets import token_bytes
 from typing import Dict, Optional, List, Tuple
 
 import clvm
+import json
 from blspy import ExtendedPrivateKey
 from clvm_tools import binutils
 
@@ -78,7 +79,7 @@ class RLWallet:
         ).get_public_key().serialize()
 
         rl_info = RLInfo("admin", pubkey_bytes, None, None, None, None, None, None)
-        info_as_string = rl_info.to_json()
+        info_as_string = json.dumps(rl_info.to_json_dict())
         await wallet_state_manager.user_store.create_wallet(
             "RL Admin", WalletType.RATE_LIMITED, info_as_string
         )
@@ -117,7 +118,7 @@ class RLWallet:
         ).get_public_key().serialize()
 
         rl_info = RLInfo("user", None, pubkey_bytes, None, None, None, None, None)
-        info_as_string = rl_info.to_json()
+        info_as_string = json.dumps(rl_info.to_json_dict())
         await wallet_state_manager.user_store.create_wallet(
             "RL User", WalletType.RATE_LIMITED, info_as_string
         )
@@ -162,7 +163,7 @@ class RLWallet:
 
         self.wallet_info = info
         self.standard_wallet = wallet
-        self.rl_info = RLInfo.from_json(info.data)
+        self.rl_info = RLInfo.from_json_dict(json.loads(info.data))
         return self
 
     async def admin_create_coin(
@@ -208,7 +209,7 @@ class RLWallet:
             rl_puzzle_hash,
         )
 
-        data_str = new_rl_info.to_json()
+        data_str = json.dumps(new_rl_info.to_json_dict())
         new_wallet_info = WalletInfo(
             self.wallet_info.id, self.wallet_info.name, self.wallet_info.type, data_str
         )
@@ -246,7 +247,7 @@ class RLWallet:
             origin_id,
             rl_puzzle_hash,
         )
-        data_str = new_rl_info.to_json()
+        data_str = json.dumps(new_rl_info.to_json_dict())
         new_wallet_info = WalletInfo(
             self.wallet_info.id, self.wallet_info.name, self.wallet_info.type, data_str
         )
