@@ -1006,7 +1006,8 @@ class WalletStateManager:
         Retries sending spend_bundle to the Full_Node, after confirmed tx
         get's excluded from chain because of the reorg.
         """
-        print("Resending...")
+        #print("Resending...")
+        self.log.info(f"Wallet Resending...")
         # TODO Straya
 
     async def close_all_stores(self):
