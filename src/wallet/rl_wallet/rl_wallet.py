@@ -190,7 +190,9 @@ class RLWallet:
         )
 
         rl_puzzle_hash = rl_puzzle.get_hash()
-        index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(self.rl_info.admin_pubkey.hex())
+        index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(
+            self.rl_info.admin_pubkey.hex()
+        )
         await self.wallet_state_manager.puzzle_store.add_derivation_path_of_interest(
             index,
             rl_puzzle_hash,
@@ -257,7 +259,9 @@ class RLWallet:
         )
         rl_puzzle_hash = rl_puzzle.get_hash()
 
-        index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(self.rl_info.user_pubkey.hex())
+        index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(
+            self.rl_info.user_pubkey.hex()
+        )
         await self.wallet_state_manager.puzzle_store.add_derivation_path_of_interest(
             index,
             rl_puzzle_hash,

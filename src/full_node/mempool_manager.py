@@ -16,10 +16,8 @@ from src.full_node.mempool import Mempool
 from src.types.sized_bytes import bytes32
 from src.full_node.coin_store import CoinStore
 from src.util.ConsensusError import Err
-from src.util.mempool_check_conditions import (
-    get_name_puzzle_conditions,
-    mempool_check_conditions_dict,
-)
+from src.util.cost_calculator import calculate_cost_of_program
+from src.util.mempool_check_conditions import mempool_check_conditions_dict
 from src.util.condition_tools import hash_key_pairs_for_conditions_dict
 from src.util.ints import uint64, uint32
 from sortedcontainers import SortedDict
@@ -56,7 +54,6 @@ class MempoolManager:
         self.seen_cache_size = 10000
         self.coinbase_freeze = self.constants["COINBASE_FREEZE_PERIOD"]
 
-    # TODO This is hack, it should use proper cost, const. Minimize work, double check/verify solution.
     async def create_bundle_for_tip(self, header: Header) -> Optional[SpendBundle]:
         """
         Returns aggregated spendbundle that can be used for creating new block
@@ -68,7 +65,7 @@ class MempoolManager:
                 spend_bundles: List[SpendBundle] = []
                 for dic in mempool.sorted_spends.values():
                     for item in dic.values():
-                        if item.cost + cost_sum <= self.constants["MAX_BLOCK_COST"]:
+                        if item.cost + cost_sum <= self.constants["MAX_BLOCK_COST_CLVM"]:
                             spend_bundles.append(item.spend_bundle)
                             cost_sum += item.cost
                         else:
@@ -122,7 +119,7 @@ class MempoolManager:
         # Calculate the cost and fees
         program = best_solution_program(new_spend)
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-        fail_reason, npc_list, cost = get_name_puzzle_conditions(program)
+        fail_reason, npc_list, cost = calculate_cost_of_program(program)
         if fail_reason:
             return None, fail_reason
 
