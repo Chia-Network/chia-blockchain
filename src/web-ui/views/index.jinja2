@@ -22,7 +22,7 @@
 
 <h3>Connections</h3>
 {% for connection in connections %}
-    {{ render_field_link(connection.type_name, connection.peer_host + ':' +  connection.peer_port | string + '/' + connection.peer_server_port | string, './connections/' + connection.node_id | string | urlencode) }}
+    {{ render_field_link(connection.type_name, connection.peer_host + ':' +  connection.peer_port | string + '/' + connection.peer_server_port | string, './connections/' + connection.node_id ) }}
 {% endfor %}
 
 

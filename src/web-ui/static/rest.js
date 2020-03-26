@@ -16,15 +16,14 @@ function stopNode()
 
 function disconnectPeer(node_id)
 {
-    alert(node_id);
-    return;
     $.ajax({
-        url: "/disconnect",
+        url: "/disconnect?node_id=" + node_id,
         type: "POST",
         success: function(data) {
             setTimeout(function() {
-                window.location.reload(); 
-            }, 5000);            
+                window.history.back();
+                window.location.reload();                  
+            }, 1000);            
         },
         error: function(data) {
             console.log(data.status);

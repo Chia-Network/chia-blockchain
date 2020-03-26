@@ -5,9 +5,10 @@ from src.util.ints import uint64
 from typing import List, Optional, Dict
 from src.types.header_block import SmallHeaderBlock
 import datetime
+import base64
 
 
-async def query_node(port, pool_pks):
+async def query_node(port, pool_pks) -> dict:
     node = {}
 
     try:
@@ -16,6 +17,7 @@ async def query_node(port, pool_pks):
         connections = await rpc_client.get_connections()
         for con in connections:
             con['type_name'] = NodeType(con['type']).name
+            con['node_id'] = str(base64.urlsafe_b64encode(con['node_id']))
 
         blockchain_state = await rpc_client.get_blockchain_state()
         pool_balances = await rpc_client.get_pool_balances()
@@ -49,8 +51,13 @@ async def query_node(port, pool_pks):
         node['state'] = 'Running'
         node['last_refresh'] = datetime.datetime.now()
 
-    except client_exceptions.ClientConnectorError:
+    except client_exceptions.ClientConnectorError as e:
         node['state'] = 'Not running'
+        print(e)
+
+    except Exception as e1:
+        print(str(e1))
+        raise e1
 
     finally:
         return node
@@ -90,7 +97,7 @@ async def get_latest_blocks(rpc_client: RpcClient, heads: List[SmallHeaderBlock]
     return added_blocks
 
 
-async def stop_node(port):
+async def stop_node(port) -> None:
     try:
         rpc_client: RpcClient = await RpcClient.create(port)
         await rpc_client.stop_node()
@@ -100,7 +107,7 @@ async def stop_node(port):
         print("exception occured while stopping node")
 
 
-async def disconnect_peer(port, node_id):
+async def disconnect_peer(port, node_id) -> None:
     try:
         rpc_client: RpcClient = await RpcClient.create(port)
         await rpc_client.close_connection(node_id)
