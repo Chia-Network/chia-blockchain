@@ -66,6 +66,31 @@ async def main():
         default=8555,
     )
 
+    parser.add_argument(
+        "-e",
+        "--exit-node",
+        help="Shut down running Full Node",
+        nargs="?",
+        const=True,
+        default=False,
+    )
+
+    parser.add_argument(
+        "-a",
+        "--add-connection",
+        help="Connect to another Full Node by ip:port",
+        type=str,
+        default="",
+    )
+
+    parser.add_argument(
+        "-r",
+        "--remove-connection",
+        help="Remove a Node by the first 10 characters of NodeID",
+        type=str,
+        default="",
+    )
+
     args = parser.parse_args()
 
     #print(args)
@@ -96,11 +121,9 @@ async def main():
             #print ("LCA time",time.ctime(lca_block.data.timestamp),"LCA height:",lca_block.height)
             lca_time = struct_time(localtime(lca_block.data.timestamp))
             print ("LCA time",time.strftime("%a %b %d %Y %T %Z", lca_time),"LCA height:",lca_block.height)
-            heads_text="Heights of tips: " + str([h.height for h in tips])
-            difficulty_label = f"Current difficulty: {difficulty}"
-            print(heads_text)
-            print (difficulty_label)
-            print ("Current VDF iterations per second:",ips)
+            print ("Heights of tips: " + str([h.height for h in tips]))
+            print (f"Current difficulty: {difficulty}")
+            print (f"Current VDF iterations per second: {ips:0}")
             #print("LCA data:\n", lca_block.data)
             print("Total iterations since genesis:",total_iters)
             print ("")
@@ -157,6 +180,38 @@ async def main():
             #if called together with other arguments, leave a blank line
             if args.state:
                 print ("")
+        if args.exit_node:
+            node_stop = await client.stop_node()
+            print (node_stop, "Node stopped.")
+        if args.add_connection:
+            if ":" not in args.add_connection:
+                print ("Enter a valid IP and port in the following format: 10.5.4.3:8000")
+            else:
+                ip, port = ":".join(args.add_connection.split(":")[:-1]), args.add_connection.split(":")[-1]
+            print(f"Connecting to {ip}, {port}")
+            try:
+                await client.open_connection(ip, int(port))
+            except BaseException:
+                # TODO: catch right exception
+                print(f"Failed to connect to {ip}:{port}")
+        if args.remove_connection:
+            result_txt = ""
+            if len(args.remove_connection)!=10:
+                result_txt = "Invalid NodeID"
+            else:
+                connections = await client.get_connections()
+                for con in (connections):
+                    if args.remove_connection == con['node_id'].hex()[:10]:
+                        print ("Attempting to disconnect","NodeID",args.remove_connection)
+                        try:
+                            await client.close_connection(con["node_id"])
+                        except BaseException:
+                            result_txt = f"Failed to disconnect NodeID {args.remove_connection}"
+                        else:
+                            result_txt = f"NodeID {args.remove_connection}... {NodeType(con['type']).name} {con['peer_host']} disconnected."
+                    elif (result_txt == ""):
+                         result_txt = f"NodeID {args.remove_connection}... not found."
+            print (result_txt)
         elif args.block_header_hash != "":
             block = await client.get_block(hexstr_to_bytes(args.block_header_hash))
             #print(dir(block))
