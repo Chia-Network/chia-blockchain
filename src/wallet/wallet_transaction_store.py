@@ -169,7 +169,7 @@ class WalletTransactionStore:
 
         return None
 
-    async def set_sent(self, id: bytes32):
+    async def set_sent(self, id: bytes32, sent: bool):
         """
         Updates transaction to be sent. (Full Node has received spend_bundle and sent ack).
         """
@@ -185,7 +185,7 @@ class WalletTransactionStore:
             fee_amount=current.fee_amount,
             incoming=current.incoming,
             confirmed=current.confirmed,
-            sent=True,
+            sent=sent,
             spend_bundle=current.spend_bundle,
             additions=current.additions,
             removals=current.removals,

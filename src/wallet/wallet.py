@@ -2,9 +2,6 @@ from typing import Dict, Optional, List, Tuple, Set
 import clvm
 from blspy import ExtendedPrivateKey, PublicKey
 import logging
-from src.server.outbound_message import OutboundMessage, NodeType, Message, Delivery
-from src.server.server import ChiaServer
-from src.protocols import wallet_protocol
 from src.types.hashable.BLSSignature import BLSSignature
 from src.types.hashable.coin import Coin
 from src.types.hashable.coin_solution import CoinSolution
@@ -37,7 +34,6 @@ class Wallet:
     private_key: ExtendedPrivateKey
     key_config: Dict
     config: Dict
-    server: Optional[ChiaServer]
     wallet_state_manager: WalletStateManager
 
     log: logging.Logger
@@ -66,8 +62,6 @@ class Wallet:
             self.log = logging.getLogger(__name__)
 
         self.wallet_state_manager = wallet_state_manager
-
-        self.server = None
 
         self.wallet_info = info
 
@@ -105,9 +99,6 @@ class Wallet:
         )
 
         return puzzlehash
-
-    def set_server(self, server: ChiaServer):
-        self.server = server
 
     def make_solution(self, primaries=None, min_time=0, me=None, consumed=None):
         condition_list = []
@@ -332,15 +323,3 @@ class Wallet:
         await self.wallet_state_manager.add_pending_transaction(
             spend_bundle, self.wallet_info.id
         )
-        await self._send_transaction(spend_bundle)
-
-    async def _send_transaction(self, spend_bundle: SpendBundle):
-        if self.server:
-            msg = OutboundMessage(
-                NodeType.FULL_NODE,
-                Message(
-                    "send_transaction", wallet_protocol.SendTransaction(spend_bundle),
-                ),
-                Delivery.BROADCAST,
-            )
-            self.server.push_message(msg)

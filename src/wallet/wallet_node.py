@@ -23,6 +23,7 @@ from src.util.ints import uint32, uint64
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
 from src.wallet.rl_wallet.rl_wallet import RLWallet
+from src.wallet.transaction_record import TransactionRecord
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet import Wallet
 from src.wallet.wallet_info import WalletInfo
@@ -76,6 +77,7 @@ class WalletNode:
         self.wallet_state_manager = await WalletStateManager.create(
             config, path, self.constants
         )
+        self.wallet_state_manager.set_pending_callback(self.pending_tx_handler)
 
         main_wallet_info = await self.wallet_state_manager.get_main_wallet()
         assert main_wallet_info is not None
@@ -128,9 +130,32 @@ class WalletNode:
 
         return self
 
+    def pending_tx_handler(self):
+        asyncio.ensure_future(self.resend_queue())
+
+    async def resend_queue(self):
+        if self.server is None:
+            return
+
+        records: List[
+            TransactionRecord
+        ] = await self.wallet_state_manager.tx_store.get_not_sent()
+
+        for record in records:
+            if record.spend_bundle is None:
+                continue
+            msg = OutboundMessage(
+                NodeType.FULL_NODE,
+                Message(
+                    "send_transaction",
+                    wallet_protocol.SendTransaction(record.spend_bundle),
+                ),
+                Delivery.BROADCAST,
+            )
+            self.server.push_message(msg)
+
     def set_server(self, server: ChiaServer):
         self.server = server
-        self.main_wallet.set_server(server)
 
     def _shutdown(self):
         print("Shutting down")
@@ -627,6 +652,9 @@ class WalletNode:
                 Message("request_header", header_request),
                 Delivery.RESPOND,
             )
+
+        # Try sending queued up transaction when new LCA arrives
+        await self.resend_queue()
 
     @api_request
     async def respond_header(self, response: wallet_protocol.RespondHeader):

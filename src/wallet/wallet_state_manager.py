@@ -56,6 +56,7 @@ class WalletStateManager:
     genesis: FullBlock
 
     state_changed_callback: Optional[Callable]
+    pending_tx_callback: Optional[Callable]
     db_path: Path
 
     @staticmethod
@@ -135,6 +136,12 @@ class WalletStateManager:
         """
         self.state_changed_callback = callback
 
+    def set_pending_callback(self, callback: Callable):
+        """
+        Callback to be called when new pending transaction enters the store
+        """
+        self.pending_tx_callback = callback
+
     def state_changed(self, state: str):
         """
         Calls the callback if it's present.
@@ -142,6 +149,15 @@ class WalletStateManager:
         if self.state_changed_callback is None:
             return
         self.state_changed_callback(state)
+
+    def tx_pending_changed(self):
+        """
+        Notifies the wallet node that there's new tx pending
+        """
+        if self.pending_tx_callback is None:
+            return
+
+        self.pending_tx_callback()
 
     def set_sync_mode(self, mode: bool):
         """
@@ -394,12 +410,13 @@ class WalletStateManager:
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
         await self.tx_store.add_transaction_record(tx_record)
         self.state_changed("pending_transaction")
+        self.tx_pending_changed()
 
     async def remove_from_queue(self, spendbundle_id: bytes32):
         """
         Full node received our transaction, no need to keep it in queue anymore
         """
-        await self.tx_store.set_sent(spendbundle_id)
+        await self.tx_store.set_sent(spendbundle_id, True)
         self.state_changed("tx_sent")
 
     async def get_send_queue(self) -> List[TransactionRecord]:
@@ -1006,9 +1023,13 @@ class WalletStateManager:
         Retries sending spend_bundle to the Full_Node, after confirmed tx
         get's excluded from chain because of the reorg.
         """
+        if len(records) == 0:
+            return
 
-        self.log.info(f"Wallet Resending...")
-        # TODO Straya - was print("Resending...")
+        for record in records:
+            await self.tx_store.set_sent(record.name(), False)
+
+        self.tx_pending_changed()
 
     async def close_all_stores(self):
         await self.wallet_store.close()
