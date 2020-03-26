@@ -50,5 +50,5 @@ websockets==8.1.0
 -e lib/chiapos
 -e lib/py-setproctitle
 -e lib/chiavdf/fast_vdf
--e git+https://github.com/Chia-Network/clvm.git@7df9425d036febf14aeb257aafa5f59dafc4a01f#egg=clvm
+-e git+https://github.com/Chia-Network/clvm.git@b912f3a0e0bd18a5ecbb29124a00fc68d8b03adb#egg=clvm
 -e git+https://github.com/Chia-Network/clvm_tools.git@6ff53bcfeb0c970647b6cfdde360d32b316b1326#egg=clvm_tools
