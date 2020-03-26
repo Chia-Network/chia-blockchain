@@ -9,6 +9,8 @@ from typing import Any, Dict, List
 
 import websockets
 
+from src.types.peer_info import PeerInfo
+
 try:
     import uvloop
 except ImportError:
@@ -312,6 +314,7 @@ async def start_websocket_server():
 
     if config["testing"] is True:
         log.info(f"Testing")
+        config["database_path"] = "test_db_wallet"
         wallet_node = await WalletNode.create(
             config, key_config, override_constants=test_constants
         )
@@ -326,6 +329,10 @@ async def start_websocket_server():
     wallet_node.set_server(server)
 
     _ = await server.start_server("127.0.0.1", None, config)
+    full_node_peer = PeerInfo(
+        config["full_node_peer"]["host"], config["full_node_peer"]["port"]
+    )
+    _ = await server.start_client(full_node_peer, None, config)
 
     def master_close_cb():
         server.close_all()

@@ -3,8 +3,9 @@ const app = electron.app
 const BrowserWindow = electron.BrowserWindow
 const path = require('path')
 const WebSocket = require('ws');
-const local_test = false
 const ipcMain = require('electron').ipcMain;
+var local_test = false
+global.sharedObj = {local_test: local_test};
 
 var wallet_ui_html = "wallet-dark.html"
 

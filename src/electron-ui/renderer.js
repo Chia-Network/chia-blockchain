@@ -6,6 +6,7 @@ const Dialogs = require('dialogs')
 const dialogs = Dialogs()
 const WebSocket = require('ws');
 let chia_formatter = require('./chia');
+const electron = require('electron')
 
 // HTML
 let top_link = document.querySelector('#top_link')
@@ -71,13 +72,13 @@ function create_wallet_button() {
     return create_button
 }
 
-var local_test = get_query_variable("testing")
+var local_test = electron.remote.getGlobal('sharedObj').local_test;
 var g_wallet_id = get_query_variable("wallet_id")
 
 console.log("testing: " + local_test)
 console.log("wallet_id: " + g_wallet_id)
 
-if (local_test == "false") {
+if (local_test == false) {
     farm_button.style.visibility="hidden"
 }
 
@@ -544,7 +545,7 @@ function get_wallets_response(data) {
         }
 
     }
-    new_innerHTML += create_wallet_button()
+    // new_innerHTML += create_wallet_button()
     wallets_tab.innerHTML = new_innerHTML
 }
 
