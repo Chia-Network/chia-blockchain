@@ -34,16 +34,19 @@ def float_to_str(f):
 
 
 def run_and_return_cost_time(chialisp):
-    program = Program(binutils.assemble(chialisp))
+
     start = time.time()
-    clvm_cost = 0
-    for i in range(0, 1000):
-        cost_run, sexp = run_program(program, [])
-        clvm_cost += cost_run
+    clvm_loop = f"((c (q ((c (f (a)) (c (f (a)) (c (f (r (a))) (c (f (r (r (a)))) (q ()))))))) (c (q ((c (i (f (r (a))) (q (i (q 1) ((c (f (a)) (c (f (a)) (c (- (f (r (a))) (q 1)) (c (f (r (r (a)))) (q ())))))) ((c (f (r (r (a)))) (q ()))))) (q (q ()))) (a)))) (a))))"
+    loop_program = Program(binutils.assemble(clvm_loop))
+    clvm_loop_solution = f"(1000 {chialisp})"
+    solution_program = Program(binutils.assemble(clvm_loop_solution))
+
+    cost, sexp = run_program(loop_program, solution_program)
 
     end = time.time()
     total_time = end - start
-    return clvm_cost, total_time
+
+    return cost, total_time
 
 
 def get_cost_compared_to_addition(addition_cost, addition_time, other_time):
@@ -51,15 +54,16 @@ def get_cost_compared_to_addition(addition_cost, addition_time, other_time):
 
 
 def benchmark_all_operators():
-    addition = "(+ (q 10) (q 10))"
+    addition = "(+ (q 1000000000) (q 1000000000))"
     substraction = "(- (q 1000000000) (q 1000000000))"
     multiply = "(* (q 1000000000) (q 1000000000))"
     greater = "(> (q 1000000000) (q 1000000000))"
     equal = "(= (q 1000000000) (q 1000000000))"
     if_clvm = "(i (= (q 1000000000) (q 1000000000)) (q 1000000000) (q 1000000000))"
-    sha256tree = "(sha256tree (q 1000000000))"
+    sha256tree = "(sha256 (q 1000000000))"
     pubkey_for_exp = "(pubkey_for_exp (q 1))"
-    point_add = "(point_add (pubkey_for_exp (q 1)) (pubkey_for_exp (q 2)))"
+    point_add = "(point_add (q 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb) (q 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb))"
+    point_add_cost, point_add_time = run_and_return_cost_time(point_add)
     addition_cost, addition_time = run_and_return_cost_time(addition)
     substraction_cost, substraction_time = run_and_return_cost_time(substraction)
     multiply_cost, multiply_time = run_and_return_cost_time(multiply)
@@ -68,7 +72,6 @@ def benchmark_all_operators():
     if_cost, if_time = run_and_return_cost_time(if_clvm)
     sha256tree_cost, sha256tree_time = run_and_return_cost_time(sha256tree)
     pubkey_for_exp_cost, pubkey_for_exp_time = run_and_return_cost_time(pubkey_for_exp)
-    point_add_cost, point_add_time = run_and_return_cost_time(point_add)
 
     one_addition = 1
     one_substraction = (
@@ -102,7 +105,6 @@ def benchmark_all_operators():
     one_point_add = (
         get_cost_compared_to_addition(addition_cost, addition_time, point_add_time)
         / addition_cost
-        - 2 * one_pubkey_for_exp
     )
 
     print(f"cost of addition is: {one_addition}")

@@ -147,7 +147,7 @@ class FullNodeSimulator(FullNode):
         bundle: Optional[
             SpendBundle
         ] = await self.mempool_manager.create_bundle_for_tip(top_tip)
-        assert bundle is not None
+
         dict_h = {}
 
         if bundle is not None:

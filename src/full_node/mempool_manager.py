@@ -73,9 +73,11 @@ class MempoolManager:
                             cost_sum += item.cost
                         else:
                             break
-
-                block_bundle = SpendBundle.aggregate(spend_bundles)
-                return block_bundle
+                if len(spend_bundles) > 0:
+                    block_bundle = SpendBundle.aggregate(spend_bundles)
+                    return block_bundle
+                else:
+                    return None
             else:
                 return None
 
