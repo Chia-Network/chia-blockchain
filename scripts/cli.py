@@ -125,7 +125,7 @@ async def main():
             print ("LCA time",time.strftime("%a %b %d %Y %T %Z", lca_time),"LCA height:",lca_block.height)
             print ("Heights of tips: " + str([h.height for h in tips]))
             print (f"Current difficulty: {difficulty}")
-            print (f"Current VDF iterations per second: {ips:0}")
+            print (f"Current VDF iterations per second: {ips:.0f}")
             #print("LCA data:\n", lca_block.data)
             print("Total iterations since genesis:",total_iters)
             print ("")
