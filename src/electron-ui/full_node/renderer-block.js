@@ -52,7 +52,12 @@ async function render() {
         block_tbody.appendChild(create_table_row("Coinbase Puzzle Hash", block.header.data.coinbase.puzzle_hash));
         block_tbody.appendChild(create_table_row("Fees Amount", chia_fees + " CH"));
         block_tbody.appendChild(create_table_row("Fees Puzzle Hash", block.header.data.fees_coin.puzzle_hash));
-        block_tbody.appendChild(create_table_row("Aggregated Signature", block.header.data.aggregated_signature.sig));
+
+        if (block.header.data.aggregated_signature === undefined || block.header.data.aggregated_signature === null) {
+            block_tbody.appendChild(create_table_row("Aggregated Signature", "None"));
+        } else {
+            block_tbody.appendChild(create_table_row("Aggregated Signature", block.header.data.aggregated_signature.sig));
+        }
     } catch (error) {
         console.log("ERROR", error);
         alert("Block " + header_hash + " not found.");

@@ -19,9 +19,13 @@ async function hash_header(header) {
     buf = buf.concat(big_int_to_array(BigInt(header.data.fees_coin.amount), 8));
 
     // TODO: handle no aggsig
-    let agg_sig_bytes = hex_to_array(header.data.aggregated_signature.sig);
-    buf.push(1);
-    buf = buf.concat(agg_sig_bytes);
+    if (header.data.aggregated_signature === undefined || header.data.aggregated_signature === null) {
+        buf.push(0);
+    } else {
+        buf.push(1);
+        let agg_sig_bytes = hex_to_array(header.data.aggregated_signature.sig);
+        buf = buf.concat(agg_sig_bytes);
+    }
     buf = buf.concat(big_int_to_array(BigInt(header.data.cost), 8))
     buf = buf.concat(hex_to_array(header.data.extension_data));
     buf = buf.concat(hex_to_array(header.data.generator_hash));
