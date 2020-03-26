@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
 from chiavdf import create_discriminant
-from lib.chiavdf.fast_vdf.classgroup import ClassGroup, check_proof_of_time_nwesolowski
 from src.types.classgroup import ClassgroupElement
 from src.types.sized_bytes import bytes32
+from src.util.classgroup_utils import ClassGroup, check_proof_of_time_nwesolowski
 from src.util.ints import uint8, uint64
 from src.util.streamable import Streamable, streamable
 
