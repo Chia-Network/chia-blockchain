@@ -4,7 +4,7 @@ ping_interval: 120
 
 # Controls logging of all servers (harvester, farmer, etc..). Each one can be overriden.
 logging: &logging
-  log_stdout: True  # If True, outputs to stdout instead of a file
+  log_stdout: False  # If True, outputs to stdout instead of a file
   log_filename: "chia.log"
 
 harvester:
@@ -84,6 +84,7 @@ full_node:
   start_rpc_server: True
   rpc_port: 8555
 
+  # Use UPnP to attempt to allow other full nodes to reach your node behind a gateway
   enable_upnp: True
   # Don't send any more than these number of headers and blocks, in one message
   max_headers_to_send: 1
