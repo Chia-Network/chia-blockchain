@@ -47,7 +47,7 @@ def main():
     args = parser.parse_args()
     if not key_config_filename.exists():
         raise RuntimeError(
-            "Keys not generated. Run python3 ./scripts/regenerate_keys.py."
+            "Keys not generated. Run python3 ./scripts/generate_keys.py."
         )
 
     # The seed is what will be used to generate a private key for each plot

@@ -22,7 +22,7 @@ async def main():
         key_config = load_config("keys.yaml")
     except FileNotFoundError:
         raise RuntimeError(
-            "Keys not generated. Run python3 ./scripts/regenerate_keys.py."
+            "Keys not generated. Run python3 ./scripts/generate_keys.py."
         )
     initialize_logging("Farmer %(name)-25s", config["logging"])
     log = logging.getLogger(__name__)

@@ -13,7 +13,7 @@ To install the chia-blockchain node, follow [these](INSTALL.md) instructions acc
 ## Step 2: Generate keys
 First, create some keys by running the following script:
 ```bash
-python -m scripts.regenerate_keys
+python -m scripts.generate_keys
 ```
 
 ## Step 3a: Run a full node + wallet
