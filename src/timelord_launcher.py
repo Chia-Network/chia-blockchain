@@ -1,6 +1,8 @@
 import signal
 import asyncio
 import logging
+import pathlib
+import pkg_resources
 from src.util.logging import initialize_logging
 from src.util.config import load_config
 from asyncio import Lock
@@ -28,13 +30,21 @@ async def kill_processes():
             process.kill()
 
 
+def find_vdf_client():
+    p = pathlib.Path(pkg_resources.get_distribution("chiavdf").location) / "vdf_client"
+    if p.is_file():
+        return p
+    raise FileNotFoundError("can't find vdf_client binary")
+
+
 async def spawn_process(host, port, counter):
     global stopped
     global active_processes
+    path_to_vdf_client = find_vdf_client()
     while not stopped:
         try:
             proc = await asyncio.create_subprocess_shell(
-                f"./lib/chiavdf/fast_vdf/vdf_client {host} {port} {counter}",
+                f"{path_to_vdf_client} {host} {port} {counter}",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
