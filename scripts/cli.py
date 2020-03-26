@@ -1,5 +1,6 @@
 import asyncio
 import argparse
+import sys
 import aiohttp
 import pprint
 import json
@@ -30,38 +31,40 @@ def str2bool(v: str) -> bool:
 
 
 async def main():
-    parser = argparse.ArgumentParser(description="cli.py.")
+    parser = argparse.ArgumentParser(description="Manage a Chia Full Node from the command line.",
+        epilog = "You can combine -s and -c. Try 'watch -n 10 python -m script.cli -s -c' if you have 'watch' installed."
+    )
 
     parser.add_argument(
         "-b",
         "--block_header_hash",
-        help="Block header hash string",
+        help="Look up a block by block header hash string.",
         type=str,
         default="",
     )
     parser.add_argument(
         "-s",
         "--state",
+        help="Show the current state of the blockchain.",
         type=str2bool,
         nargs="?",
         const=True,
         default=False,
-        help="Get state",
     )
     parser.add_argument(
         "-c",
         "--connections",
+        help="List nodes connected to this Full Node.",
         type=str2bool,
         nargs="?",
         const=True,
         default=False,
-        help="Get connections status",
     )
 
     parser.add_argument(
         "-p",
         "--rpc-port",
-        help="RPC port that full node is exposing",
+        help="Set the port where the Full Node is hosting the RPC interface. See the rpc_port under full_node in config.yaml. Defaults to 8555",
         type=int,
         default=8555,
     )
@@ -69,7 +72,7 @@ async def main():
     parser.add_argument(
         "-e",
         "--exit-node",
-        help="Shut down running Full Node",
+        help="Shut down the running Full Node",
         nargs="?",
         const=True,
         default=False,
@@ -91,10 +94,9 @@ async def main():
         default="",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(args=None if sys.argv[1:] else ['--help'])
 
     #print(args)
-
     try:
         client = await RpcClient.create(args.rpc_port)
 
