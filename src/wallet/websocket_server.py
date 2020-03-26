@@ -321,7 +321,7 @@ async def start_websocket_server():
     else:
         log.info(f"Not Testing")
         wallet_node = await WalletNode.create(config, key_config)
-    setproctitle("chia_wallet")
+    setproctitle("chia-wallet")
     handler = WebSocketServer(wallet_node, log)
     wallet_node.wallet_state_manager.set_callback(handler.state_changed_callback)
 
