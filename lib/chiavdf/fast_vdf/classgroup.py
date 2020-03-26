@@ -1,4 +1,4 @@
-from fastvdf import verify_wesolowski
+from chiavdf import verify_wesolowski
 
 class ClassGroup(tuple):
     @classmethod

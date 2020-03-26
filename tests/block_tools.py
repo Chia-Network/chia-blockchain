@@ -6,7 +6,7 @@ from pathlib import Path
 
 import blspy
 from blspy import PrependSignature, PrivateKey, PublicKey
-from fastvdf import prove
+from chiavdf import prove
 from chiabip158 import PyBIP158
 
 from chiapos import DiskPlotter, DiskProver
