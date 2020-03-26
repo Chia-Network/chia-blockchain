@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from fastvdf import create_discriminant
+from chiavdf import create_discriminant
 from lib.chiavdf.fast_vdf.classgroup import ClassGroup, check_proof_of_time_nwesolowski
 from src.types.classgroup import ClassgroupElement
 from src.types.sized_bytes import bytes32
