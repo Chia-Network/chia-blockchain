@@ -25,12 +25,6 @@ jobs:
         sudo apt-get install libboost-all-dev || echo ""
         sudo apt-get install libssl-dev || echo ""
         sh install.sh
-    - name: Test vdf
-      run: |
-        . .venv/bin/activate
-        cd lib/chiavdf/fast_vdf
-        python python_bindings/test_verifier.py
-        cd ../../../
     - name: Lint source with flake8
       run: |
         ./.venv/bin/flake8 src --exclude src/electron-ui/node_modules
