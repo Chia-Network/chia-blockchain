@@ -32,7 +32,7 @@ async def main():
     log = logging.getLogger(__name__)
     server_closed = False
 
-    db_path = Path(config["database_path"])
+    db_path = Path(config["simulator_database_path"])
 
     # Create the store (DB) and full node instance
     store = await FullNodeStore.create(db_path)

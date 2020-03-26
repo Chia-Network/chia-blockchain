@@ -78,6 +78,7 @@ full_node:
 
   # Run multiple nodes with different databases by changing the database_path
   database_path: blockchain_v3.db
+  simulator_database_path: simulator_blockchain_v3.db
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
