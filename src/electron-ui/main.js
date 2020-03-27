@@ -54,11 +54,9 @@ const createPyProc = () => {
     additional_args = ["--testing", local_test]
   }
   if (guessPackaged()) {
-    // pyProc = require('child_process').execFile(script, additional_args)
-    pyProc = require('child_process').execFile(script, ["--testing", local_test])
+    pyProc = require('child_process').execFile(script, additional_args)
   } else {
-    // pyProc = require('child_process').spawn('python', [script].concat(additional_args))
-    pyProc = require('child_process').spawn('python', [script, "--testing", local_test])
+    pyProc = require('child_process').spawn('python', [script].concat(additional_args))
   }
     if (pyProc != null) {
         pyProc.stdout.setEncoding('utf8');

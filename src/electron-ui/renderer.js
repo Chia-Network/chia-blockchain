@@ -500,7 +500,6 @@ function handle_state_changed(data) {
         get_height_info()
         return;
     }
-    console.log("state:", state);
 
     if (state == "coin_removed") {
         get_transactions()
