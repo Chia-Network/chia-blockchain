@@ -358,7 +358,7 @@ async def start_websocket_server():
         key_config = load_config("keys.yaml")
     except FileNotFoundError:
         raise RuntimeError(
-            "Keys not generated. Run python3 ./scripts/generate_keys.py."
+            "Keys not generated. Run generate-chia-keys"
         )
     if config["testing"] is True:
         log.info(f"Testing")

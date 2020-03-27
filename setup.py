@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 from setuptools import setup
 
 dependencies = [
@@ -30,10 +29,16 @@ setup(
     license="Apache License",
     python_requires=">=3.7, <4",
     keywords="chia blockchain node",
-    install_requires=dependencies + dev_dependencies,
+    install_requires=dependencies,
     setup_requires=["setuptools_scm"],
-    extras_require={
-        'uvloop':  ["uvloop"],
+    extras_require={"uvloop": ["uvloop"],},
+    entry_points={
+        "console_scripts": [
+            "chia = src.cmds.cli:main",
+            "check-chia-plots = src.cmds.check_plots:main",
+            "create-chia-plots = src.cmds.create_plots:main",
+            "generate-chia-keys = src.cmds.generate_keys:main",
+        ]
     },
     use_scm_version={"fallback_version": "unknown-no-.git-directory"},
     long_description=open("README.md").read(),

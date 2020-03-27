@@ -15,7 +15,7 @@ Remember that once you complete your install you **must be in the Python virtual
 ## Step 2: Generate keys
 First, create some keys by running the following script:
 ```bash
-python -m scripts.generate_keys
+generate-chia-keys
 ```
 
 ## Step 3a: Run a full node + wallet
@@ -36,7 +36,7 @@ can take a long time depending on the [size of the plots](https://github.com/Chi
 You can also change the working directory and
 final directory for plotting, with the "-t" and "-d" arguments to the create_plots script.
 ```bash
-python -m scripts.create_plots -k 20 -n 10
+create-chia-plots -k 20 -n 10
 sh ./scripts/run_farming.sh &
 ./scripts/run_wallet_ui.sh &
 ```

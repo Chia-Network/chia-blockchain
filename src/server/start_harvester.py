@@ -22,7 +22,7 @@ async def main():
         plot_config = load_config("plots.yaml")
     except FileNotFoundError:
         raise RuntimeError(
-            "Plots not generated. Run python3.7 ./scripts/create_plots.py."
+            "Plots not generated. Run create-chia-plots"
         )
 
     initialize_logging("Harvester %(name)-22s", config["logging"])

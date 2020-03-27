@@ -22,7 +22,7 @@ The first time the tests are run, BlockTools will create and persist many plots.
 proofs of space during testing. The next time tests are run, this won't be necessary.
 
 ```bash
-black src tests scripts && flake8 src scripts --exclude src/wallet/electron/node_modules  && mypy src scripts tests
+black src tests && flake8 src --exclude src/wallet/electron/node_modules  && mypy src tests
 py.test tests -s -v
 ```
 Black is used as an automatic style formatter to make things easier, and flake8 helps ensure consistent style.
