@@ -52,6 +52,7 @@ pip-delete-this-directory.txt
 .python-version
 .eggs
 .venv
+venv
 
 # mypy
 .mypy_cache/

@@ -3,7 +3,7 @@ If you want to run a timelord on Linux, you must install the wheel from source (
 some additional packages). See LINUX_TIMELORD.md.
 
 ```
-source .venv/bin/activate
+source ./activate
 pip install --force --no-binary chiavdf chiavdf==0.12.1
 ```
 

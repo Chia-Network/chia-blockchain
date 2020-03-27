@@ -1,4 +1,4 @@
-. .venv/bin/activate
+. ./activate
 . scripts/common.sh
 
 echo "Starting local blockchain simulation. Runs a local introducer and chia system."

@@ -30,7 +30,7 @@ Mypy is very useful for ensuring objects are of the correct type, so try to alwa
 
 ### Configure VS code
 1. Install Python extension
-2. Set the environment to ./.venv/bin/python
+2. Set the environment to ./venv/bin/python
 3. Install mypy plugin
 4. Preferences > Settings > Python > Linting > flake8 enabled
 5. Preferences > Settings > Python > Linting > mypy enabled

@@ -13,7 +13,7 @@ git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sh install.sh
-. .venv/bin/activate
+. ./activate
 ```
 
 ### Debian/Ubuntu

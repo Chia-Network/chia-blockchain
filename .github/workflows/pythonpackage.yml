@@ -27,16 +27,16 @@ jobs:
         sh install.sh
     - name: Lint source with flake8
       run: |
-        ./.venv/bin/flake8 src --exclude src/electron-ui/node_modules
+        ./venv/bin/flake8 src --exclude src/electron-ui/node_modules
     - name: Lint source with mypy
       run: |
-        ./.venv/bin/mypy src tests
+        ./venv/bin/mypy src tests
     - name: Install chiavdf from source
       if: matrix['python-version'] == '3.7' && startsWith(matrix.os, 'ubuntu')
       run: |
-        source .venv/bin/activate
+        source venv/bin/activate
         pip install --force --no-binary chiavdf chiavdf==0.12.1
     - name: Test blockchain code with pytest
       run: |
-        ./.venv/bin/py.test tests -s -v
+        ./venv/bin/py.test tests -s -v
 

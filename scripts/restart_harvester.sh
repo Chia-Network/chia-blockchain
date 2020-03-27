@@ -1,4 +1,4 @@
-. .venv/bin/activate
+. ./activate
 
 _restart_harvester_servers() {
   PROCS=`ps -e | grep -E 'chia_harvester' | awk '!/grep/' | awk '{print $1}'`

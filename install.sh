@@ -6,8 +6,9 @@ if [ `uname` = "Linux" ] && type apt-get; then
     sudo apt-get install -y libgmp3-dev libboost-dev libboost-system-dev npm python3-dev cmake
 fi
 
-python3 -m venv .venv
-. .venv/bin/activate
+python3 -m venv venv
+ln -s venv/bin/activate
+. ./activate
 # pip 20.x+ supports Linux binary wheels
 pip install --upgrade pip
 pip install wheel

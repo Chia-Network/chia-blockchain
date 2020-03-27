@@ -1,4 +1,4 @@
-. .venv/bin/activate
+. ./activate
 . scripts/common.sh
 
 # Starts an introducer

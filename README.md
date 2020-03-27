@@ -10,7 +10,7 @@ For alpha testnet most should only install harvesters, farmers, plotter and full
 ## Step 1: Install the code
 To install the chia-blockchain node, follow [these install](INSTALL.md) instructions according to your operating system.
 
-Remember that once you complete your install you **must be in the Python virtual environment** which you access from the chia-blockchain directory with the command `. .venv/bin/activate`. Both dots are critical and once executed correctly your cli prompt will look something like `(.venv) username@machine:~$` with the (.venv) prepended. Use `deactivate` to exit the venv.
+Remember that once you complete your install you **must be in the Python virtual environment** which you access from the chia-blockchain directory with the command `. ./activate`. Both dots are critical and once executed correctly your cli prompt will look something like `(venv) username@machine:~$` with the (venv) prepended. Use `deactivate` to exit the venv.
 
 ## Step 2: Generate keys
 First, create some keys by running the following script:
