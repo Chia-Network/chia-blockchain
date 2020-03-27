@@ -11,6 +11,7 @@ cbor2==5.0.1
 cffi==1.13.2
 chardet==3.0.4
 chiabip158==0.12
+chiapos==0.12
 Click==7.0
 colorlog==4.1.0
 cryptography==2.8
@@ -47,7 +48,6 @@ yarl==1.4.2
 zipp==2.0.0
 sortedcontainers==2.1.0
 websockets==8.1.0
--e lib/chiapos
 -e lib/chiavdf/fast_vdf
 -e git+https://github.com/Chia-Network/py-setproctitle.git@d2ed86c5080bb645d8f6b782a4a86706c860d9e6#egg=py-setproctitle
 -e git+https://github.com/Chia-Network/clvm.git@b912f3a0e0bd18a5ecbb29124a00fc68d8b03adb#egg=clvm

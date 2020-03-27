@@ -25,14 +25,6 @@ jobs:
         sudo apt-get install libboost-all-dev || echo ""
         sudo apt-get install libssl-dev || echo ""
         sh install.sh
-    - name: Test proof of space
-      run: |
-        cd lib/chiapos
-        mkdir -p build && cd build
-        cmake ../
-        cmake --build . -- -j 6
-        ./RunTests
-        cd ../../../
     - name: Test vdf
       run: |
         . .venv/bin/activate
