@@ -497,11 +497,18 @@ class ChiaServer:
             elif full_message.function == "pong":
                 return
 
-            f = getattr(api, full_message.function)
-            if f is None:
-                raise InvalidProtocolMessage(full_message.function)
+            f_with_peer_name = getattr(api, full_message.function + "_with_peer_name", None)
 
-            result = f(full_message.data)
+            if f_with_peer_name is not None:
+                result = f_with_peer_name(full_message.data, connection.get_peername())
+            else:
+                f = getattr(api, full_message.function, None)
+
+                if f is None:
+                    raise InvalidProtocolMessage(full_message.function)
+
+                result = f(full_message.data)
+
             if isinstance(result, AsyncGenerator):
                 async for outbound_message in result:
                     yield connection, outbound_message

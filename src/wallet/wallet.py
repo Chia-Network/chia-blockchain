@@ -38,8 +38,6 @@ class Wallet:
 
     log: logging.Logger
 
-    # TODO Don't allow user to send tx until wallet is synced
-    synced: bool
     wallet_info: WalletInfo
 
     @staticmethod
@@ -50,7 +48,6 @@ class Wallet:
         info: WalletInfo,
         name: str = None,
     ):
-        # TODO(straya): consider loading farmer keys as well
         self = Wallet()
         self.config = config
         self.key_config = key_config

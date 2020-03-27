@@ -137,6 +137,13 @@ class WalletNode:
         if self.server is None:
             return
 
+        messages = await self.messages_to_resend()
+        for msg in messages:
+            self.server.push_message(msg)
+
+    async def messages_to_resend(self) -> List[OutboundMessage]:
+        messages: List[OutboundMessage] = []
+
         records: List[
             TransactionRecord
         ] = await self.wallet_state_manager.tx_store.get_not_sent()
@@ -152,10 +159,18 @@ class WalletNode:
                 ),
                 Delivery.BROADCAST,
             )
-            self.server.push_message(msg)
+            messages.append(msg)
+
+        return messages
 
     def set_server(self, server: ChiaServer):
         self.server = server
+
+    async def _on_connect(self) -> OutboundMessageGenerator:
+        messages = await self.messages_to_resend()
+
+        for msg in messages:
+            yield msg
 
     def _shutdown(self):
         print("Shutting down")
@@ -220,7 +235,7 @@ class WalletNode:
         tasks = []
         for peer in to_connect:
             tasks.append(
-                asyncio.create_task(self.server.start_client(peer, None, self.config))
+                asyncio.create_task(self.server.start_client(peer, self._on_connect(), self.config))
             )
         await asyncio.gather(*tasks)
 
@@ -587,9 +602,9 @@ class WalletNode:
             return
 
     @api_request
-    async def transaction_ack(self, ack: wallet_protocol.TransactionAck):
+    async def transaction_ack_with_peer_name(self, ack: wallet_protocol.TransactionAck, name: str):
         if ack.status:
-            await self.wallet_state_manager.remove_from_queue(ack.txid)
+            await self.wallet_state_manager.remove_from_queue(ack.txid, name)
             self.log.info(f"SpendBundle has been received by the FullNode. id: {id}")
         else:
             self.log.info(f"SpendBundle has been rejected by the FullNode. id: {id}")

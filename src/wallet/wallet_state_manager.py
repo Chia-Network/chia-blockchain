@@ -321,11 +321,12 @@ class WalletStateManager:
                 fee_amount=uint64(0),
                 incoming=True,
                 confirmed=True,
-                sent=True,
+                sent=uint32(0),
                 spend_bundle=None,
                 additions=[coin],
                 removals=[],
                 wallet_id=wallet_id,
+                sent_to=[],
             )
             await self.tx_store.add_transaction_record(tx_record)
         else:
@@ -346,11 +347,12 @@ class WalletStateManager:
                     fee_amount=uint64(0),
                     incoming=True,
                     confirmed=True,
-                    sent=True,
+                    sent=uint32(0),
                     spend_bundle=None,
                     additions=[coin],
                     removals=[],
                     wallet_id=wallet_id,
+                    sent_to=[],
                 )
                 await self.tx_store.add_transaction_record(tx_record)
 
@@ -401,22 +403,23 @@ class WalletStateManager:
             fee_amount=uint64(fee_amount),
             incoming=False,
             confirmed=False,
-            sent=False,
+            sent=uint32(0),
             spend_bundle=spend_bundle,
             additions=add_list,
             removals=rem_list,
             wallet_id=wallet_id,
+            sent_to=[],
         )
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
         await self.tx_store.add_transaction_record(tx_record)
         self.state_changed("pending_transaction")
         self.tx_pending_changed()
 
-    async def remove_from_queue(self, spendbundle_id: bytes32):
+    async def remove_from_queue(self, spendbundle_id: bytes32, name: str):
         """
         Full node received our transaction, no need to keep it in queue anymore
         """
-        await self.tx_store.set_sent(spendbundle_id, True)
+        await self.tx_store.increment_sent(spendbundle_id, name)
         self.state_changed("tx_sent")
 
     async def get_send_queue(self) -> List[TransactionRecord]:
@@ -1027,7 +1030,7 @@ class WalletStateManager:
             return
 
         for record in records:
-            await self.tx_store.set_sent(record.name(), False)
+            await self.tx_store.set_not_sent(record.name())
 
         self.tx_pending_changed()
 

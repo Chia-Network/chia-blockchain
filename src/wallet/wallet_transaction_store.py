@@ -140,6 +140,7 @@ class WalletTransactionStore:
             additions=current.additions,
             removals=current.removals,
             wallet_id=current.wallet_id,
+            sent_to=current.sent_to,
         )
         await self.add_transaction_record(tx)
 
@@ -169,9 +170,43 @@ class WalletTransactionStore:
 
         return None
 
-    async def set_sent(self, id: bytes32, sent: bool):
+    async def increment_sent(self, id: bytes32, name: str):
         """
-        Updates transaction to be sent. (Full Node has received spend_bundle and sent ack).
+        Updates transaction sent count (Full Node has received spend_bundle and sent ack).
+        """
+
+        current: Optional[TransactionRecord] = await self.get_transaction_record(id)
+        if current is None:
+            return
+
+        # Don't increment count if it's already sent to othis peer
+        if name in current.sent_to:
+            return
+
+        sent_to = current.sent_to.copy()
+        sent_to.append(name)
+
+        tx: TransactionRecord = TransactionRecord(
+            confirmed_at_index=current.confirmed_at_index,
+            created_at_time=current.created_at_time,
+            to_puzzle_hash=current.to_puzzle_hash,
+            amount=current.amount,
+            fee_amount=current.fee_amount,
+            incoming=current.incoming,
+            confirmed=current.confirmed,
+            sent=uint32(current.sent + 1),
+            spend_bundle=current.spend_bundle,
+            additions=current.additions,
+            removals=current.removals,
+            wallet_id=current.wallet_id,
+            sent_to=sent_to,
+        )
+
+        await self.add_transaction_record(tx)
+
+    async def set_not_sent(self, id: bytes32):
+        """
+        Updates transaction sent count to 0.
         """
 
         current: Optional[TransactionRecord] = await self.get_transaction_record(id)
@@ -185,11 +220,12 @@ class WalletTransactionStore:
             fee_amount=current.fee_amount,
             incoming=current.incoming,
             confirmed=current.confirmed,
-            sent=sent,
+            sent=uint32(0),
             spend_bundle=current.spend_bundle,
             additions=current.additions,
             removals=current.removals,
             wallet_id=current.wallet_id,
+            sent_to=[],
         )
         await self.add_transaction_record(tx)
 
@@ -216,7 +252,7 @@ class WalletTransactionStore:
         """
 
         cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record WHERE sent=?", (0,)
+            "SELECT * from transaction_record WHERE sent<? and confirmed=?", (4, 0,)
         )
         rows = await cursor.fetchall()
         await cursor.close()
