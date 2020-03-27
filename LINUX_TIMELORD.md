@@ -4,7 +4,7 @@ some additional packages). See LINUX_TIMELORD.md.
 
 ```
 source .venv/bin/activate
-pip install --no-binary chiavdf chiavdf==0.12.1
+pip install --force --no-binary chiavdf chiavdf==0.12.1
 ```
 
 If the compile fails, it's likely due to a missing dependency. See INSTALL.md to determine
