@@ -35,6 +35,13 @@ class TestWalletSimulator:
             yield _
 
     @pytest.fixture(scope="function")
+    async def two_wallet_nodes_five_freeze(self):
+        async for _ in setup_node_simulator_and_two_wallets(
+            {"COINBASE_FREEZE_PERIOD": 5}
+        ):
+            yield _
+
+    @pytest.fixture(scope="function")
     async def three_sim_two_wallets(self):
         async for _ in setup_three_simulators_and_two_wallets(
             {"COINBASE_FREEZE_PERIOD": 0}
@@ -230,3 +237,91 @@ class TestWalletSimulator:
 
         bundle2 = full_node_2.mempool_manager.get_spendbundle(spend_bundle.name())
         assert bundle2 is not None
+
+    @pytest.mark.asyncio
+    async def test_wallet_make_transaction_hop(self, two_wallet_nodes_five_freeze):
+        num_blocks = 10
+        (
+            full_node_0,
+            wallet_node_0,
+            wallet_node_1,
+            full_node_server,
+            wallet_0_server,
+            wallet_1_server,
+        ) = two_wallet_nodes_five_freeze
+        wallet_0 = wallet_node_0.main_wallet
+        wallet_1 = wallet_node_1.main_wallet
+        ph = await wallet_0.get_new_puzzlehash()
+
+        await wallet_0_server.start_client(
+            PeerInfo(full_node_server._host, uint16(full_node_server._port)), None
+        )
+
+        await wallet_1_server.start_client(
+            PeerInfo(full_node_server._host, uint16(full_node_server._port)), None
+        )
+
+        for i in range(0, num_blocks):
+            await full_node_0.farm_new_block(FarmNewBlockProtocol(ph))
+
+        funds = sum(
+            [
+                calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
+                for i in range(0, num_blocks - 2)
+            ]
+        )
+
+        await asyncio.sleep(2)
+
+        assert await wallet_0.get_confirmed_balance() == funds
+        assert await wallet_0.get_unconfirmed_balance() == funds
+
+        spend_bundle = await wallet_0.generate_signed_transaction(
+            10, await wallet_node_1.main_wallet.get_new_puzzlehash(), 0
+        )
+        await wallet_0.push_transaction(spend_bundle)
+
+        await asyncio.sleep(1)
+        confirmed_balance = await wallet_0.get_confirmed_balance()
+        unconfirmed_balance = await wallet_0.get_unconfirmed_balance()
+
+        assert confirmed_balance == funds
+        assert unconfirmed_balance == funds - 10
+
+        for i in range(0, 3):
+            await full_node_0.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+
+        await asyncio.sleep(1)
+
+        new_funds = sum(
+            [
+                calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
+                for i in range(0, num_blocks)
+            ]
+        )
+
+        confirmed_balance = await wallet_0.get_confirmed_balance()
+        unconfirmed_balance = await wallet_0.get_unconfirmed_balance()
+        wallet_2_confirmed_balance = await wallet_1.get_confirmed_balance()
+
+        assert confirmed_balance == new_funds - 10
+        assert unconfirmed_balance == new_funds - 10
+        assert wallet_2_confirmed_balance == 10
+
+        spend_bundle = await wallet_1.generate_signed_transaction(
+            5, await wallet_0.get_new_puzzlehash(), 0
+        )
+        await wallet_1.push_transaction(spend_bundle)
+
+        for i in range(0, 3):
+            await full_node_0.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+
+        await asyncio.sleep(1)
+
+        confirmed_balance = await wallet_0.get_confirmed_balance()
+        unconfirmed_balance = await wallet_0.get_unconfirmed_balance()
+        wallet_2_confirmed_balance = await wallet_1.get_confirmed_balance()
+
+        assert confirmed_balance == new_funds - 5
+        assert unconfirmed_balance == new_funds - 5
+        assert wallet_2_confirmed_balance == 5

@@ -168,28 +168,20 @@ class WalletStateManager:
         self.sync_mode = mode
         self.state_changed("sync_changed")
 
-    async def get_confirmed_spendable_for_wallet(
-        self, current_index: uint32, wallet_id: int
+    async def get_confirmed_spendable_balance_for_wallet(
+        self, wallet_id: int
     ) -> uint64:
         """
         Returns the balance amount of all coins that are spendable.
         Spendable - (Coinbase freeze period has passed.)
         """
-        coinbase_freeze_period = self.constants["COINBASE_FREEZE_PERIOD"]
-        if current_index <= coinbase_freeze_period:
-            return uint64(0)
-
-        valid_index = current_index - coinbase_freeze_period
-
-        record_list: Set[
-            WalletCoinRecord
-        ] = await self.wallet_store.get_coin_records_by_spent_and_index(
-            False, valid_index, wallet_id
+        spendable: Set[WalletCoinRecord] = await self.get_spendable_coins_for_wallet(
+            wallet_id
         )
 
         amount: uint64 = uint64(0)
 
-        for record in record_list:
+        for record in spendable:
             amount = uint64(amount + record.coin.amount)
 
         return uint64(amount)
@@ -206,16 +198,12 @@ class WalletStateManager:
 
         return False
 
-    async def get_unconfirmed_spendable_for_wallet(
-        self, current_index: uint32, wallet_id: int
-    ) -> uint64:
+    async def get_unconfirmed_spendable_for_wallet(self, wallet_id: int) -> uint64:
         """
         Returns the confirmed balance amount +/- sum of unconfirmed transactions.
         """
 
-        confirmed = await self.get_confirmed_spendable_for_wallet(
-            current_index, wallet_id
-        )
+        confirmed = await self.get_confirmed_spendable_balance_for_wallet(wallet_id)
         unconfirmed_tx = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         addition_amount = 0
         removal_amount = 0
@@ -1071,7 +1059,19 @@ class WalletStateManager:
     async def get_coin_records_by_spent(self, spent: bool):
         return await self.wallet_store.get_coin_records_by_spent(spent)
 
-    async def get_coin_records_by_spent_and_wallet(self, spent: bool, wallet_id):
-        return await self.wallet_store.get_coin_records_by_spent_and_wallet(
-            spent, wallet_id
-        )
+    async def get_spendable_coins_for_wallet(
+        self, wallet_id: int
+    ) -> Set[WalletCoinRecord]:
+        if self.lca is None:
+            return set()
+
+        current_index = self.block_records[self.lca].height
+
+        coinbase_freeze_period = self.constants["COINBASE_FREEZE_PERIOD"]
+
+        if current_index <= coinbase_freeze_period:
+            return set()
+
+        valid_index = current_index - coinbase_freeze_period
+
+        return await self.wallet_store.get_spendable_for_index(valid_index, wallet_id)

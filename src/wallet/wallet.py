@@ -129,31 +129,28 @@ class Wallet:
 
     async def select_coins(self, amount) -> Optional[Set[Coin]]:
         """ Returns a set of coins that can be used for generating a new transaction. """
-        if self.wallet_state_manager.lca is None:
-            return None
 
-        current_index = self.wallet_state_manager.block_records[
-            self.wallet_state_manager.lca
-        ].height
         if (
             amount
             > await self.wallet_state_manager.get_unconfirmed_spendable_for_wallet(
-                current_index, self.wallet_info.id
+                self.wallet_info.id
             )
         ):
             return None
 
         unspent: Set[
             WalletCoinRecord
-        ] = await self.wallet_state_manager.get_coin_records_by_spent_and_wallet(
-            False, self.wallet_info.id
+        ] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
+            self.wallet_info.id
         )
         sum = 0
         used_coins: Set = set()
 
         # Try to use coins from the store, if there isn't enough of "unused"
         # coins use change coins that are not confirmed yet
-        unconfirmed_removals = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+        unconfirmed_removals: Dict[
+            bytes32, Coin
+        ] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.wallet_info.id
         )
         for coinrecord in unspent:
@@ -167,22 +164,15 @@ class Wallet:
         # This happens when we couldn't use one of the coins because it's already used
         # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
         if sum < amount:
-            for coin in (
-                await self.wallet_state_manager.unconfirmed_additions_for_wallet(
-                    self.wallet_info.id
-                )
-            ).values():
+            unconfirmed_additions = await self.wallet_state_manager.unconfirmed_additions_for_wallet(
+                self.wallet_info.id
+            )
+            for coin in unconfirmed_additions.values():
                 if sum > amount:
                     break
-                if (
-                    coin.name
-                    in (
-                        await self.wallet_state_manager.unconfirmed_removals_for_wallet(
-                            self.wallet_info.id
-                        )
-                    ).values()
-                ):
+                if coin.name() in unconfirmed_removals:
                     continue
+
                 sum += coin.amount
                 used_coins.add(coin)
 

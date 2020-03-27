@@ -189,19 +189,29 @@ class WalletStore:
             )
         return coins
 
-    async def get_coin_records_by_spent_and_index(
-        self, spent: bool, index: uint32, wallet_id: int
+    async def get_spendable_for_index(
+        self, index: uint32, wallet_id: int
     ) -> Set[WalletCoinRecord]:
         """ Returns set of CoinRecords that have been confirmed before index height. """
         coins = set()
 
-        cursor = await self.db_connection.execute(
-            "SELECT * from coin_record WHERE spent=? and confirmed_index<? and wallet_id=?",
-            (int(spent), int(index), wallet_id,),
+        cursor_coinbase_coins = await self.db_connection.execute(
+            "SELECT * from coin_record WHERE spent=? and confirmed_index<? and wallet_id=? and coinbase=?",
+            (0, int(index), wallet_id, 1),
         )
-        rows = await cursor.fetchall()
-        await cursor.close()
-        for row in rows:
+
+        coinbase_rows = await cursor_coinbase_coins.fetchall()
+        await cursor_coinbase_coins.close()
+
+        cursor_regular_coins = await self.db_connection.execute(
+            "SELECT * from coin_record WHERE spent=? and wallet_id=? and coinbase=?",
+            (0, wallet_id, 0,),
+        )
+
+        regular_rows = await cursor_regular_coins.fetchall()
+        await cursor_regular_coins.close()
+
+        for row in coinbase_rows:
             coin = Coin(
                 bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
             )
@@ -210,6 +220,17 @@ class WalletStore:
                     coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]
                 )
             )
+
+        for row in regular_rows:
+            coin = Coin(
+                bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
+            )
+            coins.add(
+                WalletCoinRecord(
+                    coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]
+                )
+            )
+
         return coins
 
     async def get_unspent_coins(self) -> Dict[bytes32, Coin]:
