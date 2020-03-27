@@ -3,7 +3,7 @@ set -e
 
 if [ `uname` = "Linux" ] && type apt-get; then
     # Debian/Ubuntu
-    sudo apt-get install -y libgmp3-dev libboost-dev libboost-system-dev npm
+    sudo apt-get install -y libgmp3-dev libboost-dev libboost-system-dev npm python3-dev cmake
 fi
 
 python3 -m venv .venv
