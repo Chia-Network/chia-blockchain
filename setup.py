@@ -1,15 +1,18 @@
 from setuptools import setup
 
 dependencies = [
-    "aiter",            # Used for async generator tools
-    "blspy",            # Signature library
-    "cbor2",            # Used for network wire format
-    "pyyaml",           # Used for config file format
-    "miniupnpc",        # Allows users to open ports on their router
-    "aiosqlite",        # asyncio wrapper for sqlite, to store blocks
-    "aiohttp",          # HTTP server for full node rpc
-    "setuptools-scm",   # Used for versioning
-    "colorlog"          # Adds color to logs
+    "aiter",  # Used for async generator tools
+    "blspy",  # Signature library
+    "cbor2",  # Used for network wire format
+    "pyyaml",  # Used for config file format
+    "miniupnpc",  # Allows users to open ports on their router
+    "aiosqlite",  # asyncio wrapper for sqlite, to store blocks
+    "aiohttp",  # HTTP server for full node rpc
+    "setuptools-scm",  # Used for versioning
+    "colorlog",  # Adds color to logs
+    "chiavdf",  # timelord and vdf verification
+    "chiabip158",  # bip158-style wallet filters
+    "chiapos",  # proof of space
 ]
 dev_dependencies = [
     "pytest",
@@ -18,7 +21,7 @@ dev_dependencies = [
     "isort",
     "autoflake",
     "black",
-    "pytest-asyncio"
+    "pytest-asyncio",
 ]
 
 setup(
