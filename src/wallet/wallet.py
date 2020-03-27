@@ -40,8 +40,6 @@ class Wallet:
 
     log: logging.Logger
 
-    # TODO Don't allow user to send tx until wallet is synced
-    synced: bool
     wallet_info: WalletInfo
 
     @staticmethod
@@ -52,7 +50,6 @@ class Wallet:
         info: WalletInfo,
         name: str = None,
     ):
-        # TODO(straya): consider loading farmer keys as well
         self = Wallet()
         self.config = config
         self.key_config = key_config
@@ -327,13 +324,15 @@ class Wallet:
 
     async def get_transaction_status(
         self, tx_id: SpendBundle
-    ) -> Optional[Tuple[MempoolInclusionStatus, Optional[str]]]:
+    ) -> List[Tuple[str, MempoolInclusionStatus, Optional[str]]]:
         tr: Optional[
             TransactionRecord
         ] = await self.wallet_state_manager.get_transaction(tx_id)
-        if tr is not None and tr.send_status is not None:
-            return (MempoolInclusionStatus(tr.send_status[0]), tr.send_status[1])
-        return None
+        ret_list = []
+        if tr is not None:
+            for (name, ss, err) in tr.sent_to:
+                ret_list.append((name, MempoolInclusionStatus(ss), err))
+        return ret_list
 
     async def push_transaction(self, spend_bundle: SpendBundle) -> None:
         """ Use this API to send transactions. """

@@ -22,11 +22,12 @@ class TransactionRecord(Streamable):
     fee_amount: uint64
     incoming: bool
     confirmed: bool
-    send_status: Optional[Tuple[uint8, Optional[str]]]
+    sent: uint32
     spend_bundle: Optional[SpendBundle]
     additions: List[Coin]
     removals: List[Coin]
     wallet_id: uint64
+    sent_to: List[Tuple[str, uint8, Optional[str]]]
 
     def name(self) -> bytes32:
         if self.spend_bundle:

@@ -105,11 +105,6 @@ function set_callbacks(socket) {
         var command = message["command"];
         var data = message["data"];
 
-        // console.log("Received command: " + command);
-        if (data) {
-            //console.log("Received message data: " + JSON.stringify(data));
-        }
-
         if (command == "start_server") {
             get_wallets();
             get_new_puzzlehash();
@@ -179,12 +174,15 @@ send.addEventListener('click', () => {
             alert("Please enter a 32 byte puzzle hash in hexadecimal format");
             return;
         }
+        amount_value = parseFloat(Number(amount.value));
+        if (isNaN(amount_value)) {
+            alert("Please enter a valid numeric amount");
+            return;
+        }
         global_sending_transaction = true;
         send.disabled = true;
         send.innerHTML = "SENDING...";
-        amount_value = parseFloat(amount.value);
         mojo_amount = chia_formatter(amount_value, 'chia').to('mojo').value()
-        console.log("Mojo amount: " + mojo_amount);
 
         data = {
             "puzzle_hash": puzzle_hash,
@@ -450,6 +448,7 @@ async function connection_checker() {
     } catch (error) {
         console.error(error);
         connection_textfield.innerHTML = "Not Connected";
+        connection_checker()
     }
 }
 

@@ -12,7 +12,7 @@ from src.types.sized_bytes import bytes32
 from src.types.full_block import FullBlock
 from src.types.challenge import Challenge
 from src.types.header_block import HeaderBlock
-from src.util.ints import uint32, uint64, uint8
+from src.util.ints import uint32, uint64
 from src.util.hash import std_hash
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.block_record import BlockRecord
@@ -323,11 +323,12 @@ class WalletStateManager:
                 fee_amount=uint64(0),
                 incoming=True,
                 confirmed=True,
-                send_status=(uint8(MempoolInclusionStatus.SUCCESS.value), None),
+                sent=uint32(0),
                 spend_bundle=None,
                 additions=[coin],
                 removals=[],
                 wallet_id=wallet_id,
+                sent_to=[],
             )
             await self.tx_store.add_transaction_record(tx_record)
         else:
@@ -348,11 +349,12 @@ class WalletStateManager:
                     fee_amount=uint64(0),
                     incoming=True,
                     confirmed=True,
-                    send_status=(uint8(MempoolInclusionStatus.SUCCESS.value), None),
+                    sent=uint32(0),
                     spend_bundle=None,
                     additions=[coin],
                     removals=[],
                     wallet_id=wallet_id,
+                    sent_to=[],
                 )
                 await self.tx_store.add_transaction_record(tx_record)
 
@@ -403,11 +405,12 @@ class WalletStateManager:
             fee_amount=uint64(fee_amount),
             incoming=False,
             confirmed=False,
-            send_status=None,
+            sent=uint32(0),
             spend_bundle=spend_bundle,
             additions=add_list,
             removals=rem_list,
             wallet_id=wallet_id,
+            sent_to=[],
         )
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
         await self.tx_store.add_transaction_record(tx_record)
@@ -417,13 +420,14 @@ class WalletStateManager:
     async def remove_from_queue(
         self,
         spendbundle_id: bytes32,
+        name: str,
         send_status: MempoolInclusionStatus,
         error: Optional[Err],
     ):
         """
         Full node received our transaction, no need to keep it in queue anymore
         """
-        await self.tx_store.set_send_status(spendbundle_id, send_status, error)
+        await self.tx_store.increment_sent(spendbundle_id, name, send_status, error)
         self.state_changed("tx_sent")
 
     async def get_send_queue(self) -> List[TransactionRecord]:
@@ -1037,7 +1041,7 @@ class WalletStateManager:
             return
 
         for record in records:
-            await self.tx_store.set_send_status(record.name(), None)
+            await self.tx_store.set_not_sent(record.name())
 
         self.tx_pending_changed()
 

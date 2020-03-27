@@ -115,17 +115,18 @@ class WebSocketServer:
                 "reason": f"Failed to push transaction {e}",
             }
             return await websocket.send(format_response(response_api, data))
-
+        self.log.error(tx)
         sent = False
         start = time.time()
         while time.time() - start < TIMEOUT:
-            err_and_status: Optional[
-                Tuple[MempoolInclusionStatus, Optional[str]]
+            sent_to: List[
+                Tuple[str, MempoolInclusionStatus, Optional[str]]
             ] = await wallet.get_transaction_status(tx.name())
-            if err_and_status is None:
+
+            if len(sent_to) == 0:
                 await asyncio.sleep(0.1)
                 continue
-            status, err = err_and_status
+            status, err = sent_to[0][1], sent_to[0][2]
             if status == MempoolInclusionStatus.SUCCESS:
                 data = {"status": "SUCCESS"}
                 sent = True
@@ -384,23 +385,28 @@ async def start_websocket_server():
     )
 
     log.info(f"Connecting to full node peer at {full_node_peer}")
+    server.global_connections.peers.add(full_node_peer)
     _ = await server.start_client(full_node_peer, None, config)
+
+    log.info("Starting websocket server.")
+    websocket_server = await websockets.serve(
+        handler.safe_handle, "localhost", config["rpc_port"]
+    )
+    log.info(f"Started websocket server at port {config['rpc_port']}.")
 
     def master_close_cb():
         server.close_all()
+        websocket_server.close()
         wallet_node._shutdown()
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
 
-    log.info("Starting websocket server.")
-    await websockets.serve(handler.safe_handle, "localhost", config["rpc_port"])
-    log.info(f"Started websocket server at port {config['rpc_port']}.")
-
     if config["testing"] is False:
         wallet_node._start_bg_tasks()
 
     await server.await_closed()
+    await websocket_server.wait_closed()
     await wallet_node.wallet_state_manager.close_all_stores()
     log.info("Wallet fully closed")
 
