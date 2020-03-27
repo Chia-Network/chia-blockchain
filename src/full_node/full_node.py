@@ -691,9 +691,10 @@ class FullNode:
             cost, status, error = await self.mempool_manager.add_spendbundle(
                 tx.transaction
             )
-            if cost is not None:
+            if status == MempoolInclusionStatus.SUCCESS:
                 fees = tx.transaction.fees()
                 assert fees >= 0
+                assert cost is not None
                 new_tx = full_node_protocol.NewTransaction(
                     tx.transaction.name(), cost, uint64(tx.transaction.fees()),
                 )
@@ -704,7 +705,7 @@ class FullNode:
                 )
             else:
                 self.log.warning(
-                    f"Wasn't able to add transaction with id {tx.transaction.name()}, error: {error}"
+                    f"Wasn't able to add transaction with id {tx.transaction.name()}, {status} error: {error}"
                 )
                 return
 
@@ -1794,9 +1795,12 @@ class FullNode:
                 cost, status, error = await self.mempool_manager.add_spendbundle(
                     tx.transaction
                 )
-                if cost is not None:
+                if status == MempoolInclusionStatus.SUCCESS:
+                    # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
+                    # vector.
                     fees = tx.transaction.fees()
                     assert fees >= 0
+                    assert cost is not None
                     new_tx = full_node_protocol.NewTransaction(
                         tx.transaction.name(), cost, uint64(tx.transaction.fees()),
                     )
@@ -1812,12 +1816,12 @@ class FullNode:
                     )
 
         error_name = error.name if error is not None else None
-        if status != MempoolInclusionStatus.FAILED:
+        if status == MempoolInclusionStatus.SUCCESS:
             response = wallet_protocol.TransactionAck(
                 tx.transaction.name(), status, error_name
             )
         else:
-            # If if failed, but it previously succeeded (in mempool), this is idempotence, return SUCESS
+            # If if failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
             if self.mempool_manager.get_spendbundle(tx.transaction.name()) is not None:
                 response = wallet_protocol.TransactionAck(
                     tx.transaction.name(), MempoolInclusionStatus.SUCCESS, None

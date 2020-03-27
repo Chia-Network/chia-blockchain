@@ -27,6 +27,7 @@ from src.util.merkle_set import (
     confirm_included_already_hashed,
     confirm_not_included_already_hashed,
 )
+from src.util.ConsensusError import Err
 
 
 async def get_block_path(full_node: FullNode):
@@ -839,7 +840,9 @@ class TestWalletProtocol:
         ]
         assert len(msgs) == 1
         assert msgs[0].message.data == wallet_protocol.TransactionAck(
-            spend_bundle.name(), MempoolInclusionStatus.SUCCESS, None
+            spend_bundle_bad.name(),
+            MempoolInclusionStatus.FAILED,
+            Err.COIN_AMOUNT_EXCEEDS_MAXIMUM.name,
         )
 
     @pytest.mark.asyncio
