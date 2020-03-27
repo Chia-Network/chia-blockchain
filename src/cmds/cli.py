@@ -27,7 +27,7 @@ def str2bool(v: str) -> bool:
 async def async_main():
     parser = argparse.ArgumentParser(
         description="Manage a Chia Full Node from the command line.",
-        epilog="You can combine -s and -c. Try 'watch -n 10 python -m script.cli -s -c' if you have 'watch' installed.",
+        epilog="You can combine -s and -c. Try 'watch -n 10 chia -s -c' if you have 'watch' installed.",
     )
 
     parser.add_argument(
