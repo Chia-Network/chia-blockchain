@@ -36,7 +36,7 @@ class BLSSignature(Streamable):
             sig = ZERO96
         else:
             wrapped_sigs = [blspy.PrependSignature.from_bytes(_.sig) for _ in sigs]
-            sig = blspy.PrependSignature.aggregate(wrapped_sigs).serialize()
+            sig = bytes(blspy.PrependSignature.aggregate(wrapped_sigs))
         return cls(sig)
 
     def validate(self, hash_key_pairs: List[PkMessagePair]) -> bool:

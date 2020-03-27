@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Tuple, Set
+from typing import Dict, Optional, List, Tuple, Set, Any
 import clvm
 from blspy import ExtendedPrivateKey, PublicKey
 import logging
@@ -13,7 +13,8 @@ from src.util.condition_tools import (
     conditions_by_opcode,
     hash_key_pairs_for_conditions_dict,
 )
-from src.util.ints import uint64
+from src.types.mempool_inclusion_status import MempoolInclusionStatus
+from src.util.ints import uint64, uint32
 from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.puzzles.p2_conditions import puzzle_for_conditions
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
@@ -25,6 +26,7 @@ from src.wallet.puzzles.puzzle_utils import (
 )
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_coin_record import WalletCoinRecord
+from src.wallet.transaction_record import TransactionRecord
 from src.wallet.wallet_info import WalletInfo
 
 from src.wallet.wallet_state_manager import WalletStateManager
@@ -64,7 +66,7 @@ class Wallet:
 
         return self
 
-    def get_public_key(self, index) -> PublicKey:
+    def get_public_key(self, index: uint32) -> PublicKey:
         pubkey = self.private_key.public_child(index).get_public_key()
         return pubkey
 
@@ -81,13 +83,13 @@ class Wallet:
     async def can_generate_puzzle_hash(self, hash: bytes32) -> bool:
         return await self.wallet_state_manager.puzzle_store.puzzle_hash_exists(hash)
 
-    def puzzle_for_pk(self, pubkey) -> Program:
+    def puzzle_for_pk(self, pubkey: bytes) -> Program:
         return puzzle_for_pk(pubkey)
 
     async def get_new_puzzlehash(self) -> bytes32:
         index = await self.wallet_state_manager.puzzle_store.get_max_derivation_path()
         index += 1
-        pubkey: bytes = self.get_public_key(index).serialize()
+        pubkey: bytes = bytes(self.get_public_key(index))
         puzzle: Program = self.puzzle_for_pk(pubkey)
         puzzlehash: bytes32 = puzzle.get_hash()
 
@@ -192,9 +194,9 @@ class Wallet:
 
     async def generate_unsigned_transaction(
         self,
-        amount: int,
+        amount: uint64,
         newpuzzlehash: bytes32,
-        fee: int = 0,
+        fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
     ) -> List[Tuple[Program, CoinSolution]]:
@@ -221,7 +223,7 @@ class Wallet:
 
             # Get puzzle for pubkey
             pubkey, secretkey = maybe
-            puzzle: Program = puzzle_for_pk(pubkey.serialize())
+            puzzle: Program = puzzle_for_pk(bytes(pubkey))
 
             # Only one coin creates outputs
             if output_created is False and origin_id is None:
@@ -247,7 +249,9 @@ class Wallet:
             spends.append((puzzle, CoinSolution(coin, solution)))
         return spends
 
-    async def sign_transaction(self, spends: List[Tuple[Program, CoinSolution]]):
+    async def sign_transaction(
+        self, spends: List[Tuple[Program, CoinSolution]]
+    ) -> Optional[SpendBundle]:
         signatures = []
         for puzzle, solution in spends:
             # Get keys
@@ -284,25 +288,28 @@ class Wallet:
         return spend_bundle
 
     async def generate_signed_transaction_dict(
-        self, data: Dict[str, str]
+        self, data: Dict[str, Any]
     ) -> Optional[SpendBundle]:
         """ Use this to generate transaction. """
-        amount = int(data["amount"])
+        # Check that both are integers
+        if not isinstance(data["amount"], int) or not isinstance(data["amount"], int):
+            raise ValueError("An integer amount or fee is required (too many decimals)")
+        amount = uint64(data["amount"])
 
         if "fee" in data:
-            fee = int(data["fee"])
+            fee = uint64(data["fee"])
         else:
-            fee = 0
+            fee = uint64(0)
 
-        puzzle_hash = bytes.fromhex(data["puzzle_hash"])
+        puzzle_hash = bytes32(bytes.fromhex(data["puzzle_hash"]))
 
         return await self.generate_signed_transaction(amount, puzzle_hash, fee)
 
     async def generate_signed_transaction(
         self,
-        amount,
-        puzzle_hash,
-        fee: int = 0,
+        amount: uint64,
+        puzzle_hash: bytes32,
+        fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
     ) -> Optional[SpendBundle]:
@@ -315,7 +322,19 @@ class Wallet:
             return None
         return await self.sign_transaction(transaction)
 
-    async def push_transaction(self, spend_bundle: SpendBundle):
+    async def get_transaction_status(
+        self, tx_id: SpendBundle
+    ) -> List[Tuple[str, MempoolInclusionStatus, Optional[str]]]:
+        tr: Optional[
+            TransactionRecord
+        ] = await self.wallet_state_manager.get_transaction(tx_id)
+        ret_list = []
+        if tr is not None:
+            for (name, ss, err) in tr.sent_to:
+                ret_list.append((name, MempoolInclusionStatus(ss), err))
+        return ret_list
+
+    async def push_transaction(self, spend_bundle: SpendBundle) -> None:
         """ Use this API to send transactions. """
         await self.wallet_state_manager.add_pending_transaction(
             spend_bundle, self.wallet_info.id

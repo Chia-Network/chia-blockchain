@@ -1,11 +1,11 @@
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 from src.types.hashable.coin import Coin
 from src.types.hashable.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.streamable import Streamable, streamable
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32, uint64, uint8
 
 
 @dataclass(frozen=True)
@@ -27,7 +27,7 @@ class TransactionRecord(Streamable):
     additions: List[Coin]
     removals: List[Coin]
     wallet_id: uint64
-    sent_to: List[str]
+    sent_to: List[Tuple[str, uint8, Optional[str]]]
 
     def name(self) -> bytes32:
         if self.spend_bundle:

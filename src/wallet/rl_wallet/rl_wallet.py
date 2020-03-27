@@ -74,9 +74,9 @@ class RLWallet:
         my_pubkey_index = current_max_index + 1
         sk_hex = key_config["wallet_sk"]
         private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
-        pubkey_bytes: bytes = private_key.public_child(
-            my_pubkey_index
-        ).get_public_key().serialize()
+        pubkey_bytes: bytes = bytes(
+            private_key.public_child(my_pubkey_index).get_public_key()
+        )
 
         rl_info = RLInfo("admin", pubkey_bytes, None, None, None, None, None, None)
         info_as_string = json.dumps(rl_info.to_json_dict())
@@ -113,9 +113,9 @@ class RLWallet:
         my_pubkey_index = current_max_index + 1
         sk_hex = key_config["wallet_sk"]
         private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
-        pubkey_bytes: bytes = private_key.public_child(
-            my_pubkey_index
-        ).get_public_key().serialize()
+        pubkey_bytes: bytes = bytes(
+            private_key.public_child(my_pubkey_index).get_public_key()
+        )
 
         rl_info = RLInfo("user", None, pubkey_bytes, None, None, None, None, None)
         info_as_string = json.dumps(rl_info.to_json_dict())
@@ -203,7 +203,7 @@ class RLWallet:
         )
 
         spend_bundle = await self.standard_wallet.generate_signed_transaction(
-            amount, rl_puzzle_hash, 0, origin_id, coins
+            amount, rl_puzzle_hash, uint64(0), origin_id, coins
         )
         if spend_bundle is None:
             return False

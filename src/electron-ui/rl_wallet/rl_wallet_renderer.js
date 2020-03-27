@@ -185,11 +185,13 @@ function send_transaction_response(response) {
     Called when response is received for send_transaction request
     */
     console.log(JSON.stringify(response));
-    success = response["success"];
-    if (!success) {
-        dialogs.alert("You don\'t have enough chia for this transactions", ok => {
-        })
-        return
+    status = response["status"];
+    if (status === "SUCCESS") {
+        dialogs.alert("Transaction accepted succesfully into the mempool.", ok => {});
+    } else if (status === "PENDING") {
+        dialogs.alert("Transaction is pending acceptance into the mempool. Reason: " + response["reason"], ok => {});
+    } else if (status === "FAILED") {
+        dialogs.alert("Transaction failed. Reason: " + response["reason"], ok => {});
     }
 }
 

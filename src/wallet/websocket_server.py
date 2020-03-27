@@ -3,9 +3,10 @@ import dataclasses
 import json
 import logging
 import signal
+import time
 import traceback
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
 import websockets
 
@@ -27,7 +28,11 @@ from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_node import WalletNode
+from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from setproctitle import setproctitle
+
+# Timeout for response from wallet/full node for sending a transaction
+TIMEOUT = 5
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -89,17 +94,59 @@ class WebSocketServer:
         wallet = self.wallet_node.wallets[wallet_id]
         try:
             tx = await wallet.generate_signed_transaction_dict(request)
-        except BaseException:
-            data = {"success": False}
+        except BaseException as e:
+            data = {
+                "status": "FAILED",
+                "reason": f"Failed to generate signed transaction {e}",
+            }
             return await websocket.send(format_response(response_api, data))
 
         if tx is None:
-            data = {"success": False}
+            data = {
+                "status": "FAILED",
+                "reason": "Failed to generate signed transaction",
+            }
             return await websocket.send(format_response(response_api, data))
+        try:
+            await wallet.push_transaction(tx)
+        except BaseException as e:
+            data = {
+                "status": "FAILED",
+                "reason": f"Failed to push transaction {e}",
+            }
+            return await websocket.send(format_response(response_api, data))
+        self.log.error(tx)
+        sent = False
+        start = time.time()
+        while time.time() - start < TIMEOUT:
+            sent_to: List[
+                Tuple[str, MempoolInclusionStatus, Optional[str]]
+            ] = await wallet.get_transaction_status(tx.name())
 
-        await wallet.push_transaction(tx)
+            if len(sent_to) == 0:
+                await asyncio.sleep(0.1)
+                continue
+            status, err = sent_to[0][1], sent_to[0][2]
+            if status == MempoolInclusionStatus.SUCCESS:
+                data = {"status": "SUCCESS"}
+                sent = True
+                break
+            elif status == MempoolInclusionStatus.PENDING:
+                assert err is not None
+                data = {"status": "PENDING", "reason": err}
+                sent = True
+                break
+            elif status == MempoolInclusionStatus.FAILED:
+                assert err is not None
+                data = {"status": "FAILED", "reason": err}
+                sent = True
+                break
+        if not sent:
+            data = {
+                "status": "FAILED",
+                "reason": "Timed out. Transaction may or may not have been sent.",
+            }
 
-        data = {"success": True}
         return await websocket.send(format_response(response_api, data))
 
     async def server_ready(self, websocket, response_api):
@@ -234,9 +281,13 @@ class WebSocketServer:
     async def safe_handle(self, websocket, path):
         try:
             await self.handle_message(websocket, path)
-        except BaseException:
-            tb = traceback.format_exc()
-            self.log.error(f"Error while handling message: {tb}")
+        except (BaseException, websockets.exceptions.ConnectionClosedError) as e:
+            if isinstance(e, websockets.exceptions.ConnectionClosedError):
+                self.log.warning("ConnectionClosedError. Closing websocket.")
+                await websocket.close()
+            else:
+                tb = traceback.format_exc()
+                self.log.error(f"Error while handling message: {tb}")
 
     async def handle_message(self, websocket, path):
         """
@@ -311,10 +362,9 @@ async def start_websocket_server():
         raise RuntimeError(
             "Keys not generated. Run python3 ./scripts/generate_keys.py."
         )
-
     if config["testing"] is True:
         log.info(f"Testing")
-        config["database_path"] = "test_db_wallet"
+        config["database_path"] = "test_db_wallet.db"
         wallet_node = await WalletNode.create(
             config, key_config, override_constants=test_constants
         )
@@ -325,28 +375,38 @@ async def start_websocket_server():
     handler = WebSocketServer(wallet_node, log)
     wallet_node.wallet_state_manager.set_callback(handler.state_changed_callback)
 
-    server = ChiaServer(9257, wallet_node, NodeType.WALLET)
+    log.info(f"Starting wallet server on port {config['port']}.")
+    server = ChiaServer(config["port"], wallet_node, NodeType.WALLET)
     wallet_node.set_server(server)
 
     _ = await server.start_server("127.0.0.1", None, config)
     full_node_peer = PeerInfo(
         config["full_node_peer"]["host"], config["full_node_peer"]["port"]
     )
+
+    log.info(f"Connecting to full node peer at {full_node_peer}")
+    server.global_connections.peers.add(full_node_peer)
     _ = await server.start_client(full_node_peer, None, config)
+
+    log.info("Starting websocket server.")
+    websocket_server = await websockets.serve(
+        handler.safe_handle, "localhost", config["rpc_port"]
+    )
+    log.info(f"Started websocket server at port {config['rpc_port']}.")
 
     def master_close_cb():
         server.close_all()
+        websocket_server.close()
         wallet_node._shutdown()
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
 
-    await websockets.serve(handler.safe_handle, "localhost", 9256)
-
     if config["testing"] is False:
         wallet_node._start_bg_tasks()
 
     await server.await_closed()
+    await websocket_server.wait_closed()
     await wallet_node.wallet_state_manager.close_all_stores()
     log.info("Wallet fully closed")
 

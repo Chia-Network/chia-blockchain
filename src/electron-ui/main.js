@@ -4,7 +4,13 @@ const BrowserWindow = electron.BrowserWindow
 const path = require('path')
 const WebSocket = require('ws');
 const ipcMain = require('electron').ipcMain;
-var local_test = false
+
+// Whether to enter test mode. Uses the full node simulator and test constants.
+var local_test = false;
+
+// Only takes effect if local_test is false. Connects to a local introducer.
+var local_introducer = false;
+
 global.sharedObj = {local_test: local_test};
 
 var wallet_ui_html = "wallet-dark.html"
@@ -42,24 +48,27 @@ const selectPort = () => {
 
 const createPyProc = () => {
   let script = getScriptPath()
-
-  if (guessPackaged()) {
-    pyProc = require('child_process').execFile(script, ["--testing", local_test])
+  if (!local_test && local_introducer) {
+    additional_args = ["--testing", local_test, "--introducer_peer.host", "127.0.0.1", "--introducer_peer.port", "8445"]
   } else {
-    pyProc = require('child_process').spawn('python', [script, "--testing", local_test])
+    additional_args = ["--testing", local_test]
   }
-
+  if (guessPackaged()) {
+    pyProc = require('child_process').execFile(script, additional_args)
+  } else {
+    pyProc = require('child_process').spawn('python', [script].concat(additional_args))
+  }
     if (pyProc != null) {
         pyProc.stdout.setEncoding('utf8');
 
         pyProc.stdout.on('data', function(data) {
-            console.log(data.toString());
+            process.stdout.write(data.toString());
         });
 
         pyProc.stderr.setEncoding('utf8');
         pyProc.stderr.on('data', function(data) {
             //Here is where the error output goes
-            console.log('stderr: ' + data.toString());
+            process.stdout.write('stderr: ' + data.toString());
         });
 
         pyProc.on('close', function(code) {

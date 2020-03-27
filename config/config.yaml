@@ -113,6 +113,9 @@ full_node:
   introducer_peer:
       host: introducer.beta.chia.net  # Chia AWS introducer IPv4/IPv6
       port: 8444
+  wallet_peer:
+    host: 127.0.0.1
+    port: 8449
   logging: *logging
 
 ui:
@@ -150,8 +153,8 @@ wallet:
     host: 127.0.0.1
     port: 8444
 
-  testing: false
-  database_path: blockchain_wallet_v3.db
+  testing: False
+  database_path: blockchain_wallet_v4.db
 
   logging: *logging
 

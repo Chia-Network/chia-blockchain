@@ -497,7 +497,9 @@ class ChiaServer:
             elif full_message.function == "pong":
                 return
 
-            f_with_peer_name = getattr(api, full_message.function + "_with_peer_name", None)
+            f_with_peer_name = getattr(
+                api, full_message.function + "_with_peer_name", None
+            )
 
             if f_with_peer_name is not None:
                 result = f_with_peer_name(full_message.data, connection.get_peername())

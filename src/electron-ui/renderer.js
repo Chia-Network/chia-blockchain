@@ -105,11 +105,6 @@ function set_callbacks(socket) {
         var command = message["command"];
         var data = message["data"];
 
-        // console.log("Received command: " + command);
-        if (data) {
-            //console.log("Received message data: " + JSON.stringify(data));
-        }
-
         if (command == "start_server") {
             get_wallets();
             get_new_puzzlehash();
@@ -169,13 +164,25 @@ send.addEventListener('click', () => {
     if (global_sending_transaction) {
         return;
     }
-    global_sending_transaction = true;
-    send.disabled = true;
+
     try {
         puzzle_hash = receiver_address.value;
-        amount_value = parseFloat(amount.value);
+        if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
+            puzzle_hash = puzzle_hash.substring(2);
+        }
+        if (puzzle_hash.length != 64) {
+            alert("Please enter a 32 byte puzzle hash in hexadecimal format");
+            return;
+        }
+        amount_value = parseFloat(Number(amount.value));
+        if (isNaN(amount_value)) {
+            alert("Please enter a valid numeric amount");
+            return;
+        }
+        global_sending_transaction = true;
+        send.disabled = true;
+        send.innerHTML = "SENDING...";
         mojo_amount = chia_formatter(amount_value, 'chia').to('mojo').value()
-        console.log("Mojo amount: " + mojo_amount);
 
         data = {
             "puzzle_hash": puzzle_hash,
@@ -193,6 +200,7 @@ send.addEventListener('click', () => {
         alert("Error sending the transaction").
         global_sending_transaction = false;
         send.disabled = false;
+        send.innerHTML = "SEND";
     }
 })
 
@@ -223,12 +231,22 @@ function send_transaction_response(response) {
     /*
     Called when response is received for send_transaction request
     */
-    success = response["success"];
-    if (!success) {
-        dialogs.alert("Transaction failed. Note that block rewards have a lockup period of 200 blocks.");
-    }
+   console.log(JSON.stringify(response));
+   status = response["status"];
+   if (status === "SUCCESS") {
+       dialogs.alert("Transaction accepted succesfully into the mempool.", ok => {});
+       receiver_address.value = "";
+       amount.value = "";
+   } else if (status === "PENDING") {
+       dialogs.alert("Transaction is pending acceptance into the mempool. Reason: " + response["reason"], ok => {});
+       receiver_address.value = "";
+       amount.value = "";
+   } else if (status === "FAILED") {
+       dialogs.alert("Transaction failed. Reason: " + response["reason"], ok => {});
+   }
     global_sending_transaction = false;
     send.disabled = false;
+    send.innerHTML = "SEND";
 }
 
 new_address.addEventListener('click', () => {
@@ -430,6 +448,7 @@ async function connection_checker() {
     } catch (error) {
         console.error(error);
         connection_textfield.innerHTML = "Not Connected";
+        connection_checker()
     }
 }
 
@@ -493,7 +512,6 @@ function handle_state_changed(data) {
     } else if (state == "tx_sent") {
         get_transactions()
         get_wallet_balance(g_wallet_id)
-        dialogs.alert("Transaction sent successfully!", ok => {});
     } else if (state == "balance_changed") {
         get_wallet_balance(g_wallet_id)
     } else if (state == "sync_changed") {

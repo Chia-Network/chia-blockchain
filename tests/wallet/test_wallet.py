@@ -10,7 +10,8 @@ from src.util.ints import uint16, uint32
 from tests.setup_nodes import (
     setup_node_simulator_and_two_wallets,
     setup_node_simulator_and_wallet,
-    setup_three_simulators_and_two_wallets)
+    setup_three_simulators_and_two_wallets,
+)
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 
 
@@ -36,7 +37,7 @@ class TestWalletSimulator:
     @pytest.fixture(scope="function")
     async def three_sim_two_wallets(self):
         async for _ in setup_three_simulators_and_two_wallets(
-                {"COINBASE_FREEZE_PERIOD": 0}
+            {"COINBASE_FREEZE_PERIOD": 0}
         ):
             yield _
 
@@ -185,11 +186,11 @@ class TestWalletSimulator:
 
         for block in all_blocks:
             async for _ in full_node_1.respond_block(
-                    full_node_protocol.RespondBlock(block)
+                full_node_protocol.RespondBlock(block)
             ):
                 pass
             async for _ in full_node_2.respond_block(
-                    full_node_protocol.RespondBlock(block)
+                full_node_protocol.RespondBlock(block)
             ):
                 pass
 

@@ -3,8 +3,10 @@ from typing import Dict, Optional, List
 from pathlib import Path
 import aiosqlite
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint32
+from src.util.ints import uint32, uint8
 from src.wallet.transaction_record import TransactionRecord
+from src.types.mempool_inclusion_status import MempoolInclusionStatus
+from src.util.ConsensusError import Err
 
 
 class WalletTransactionStore:
@@ -108,7 +110,7 @@ class WalletTransactionStore:
                 record.fee_amount,
                 int(record.incoming),
                 int(record.confirmed),
-                int(record.sent),
+                record.sent,
                 record.wallet_id,
             ),
         )
@@ -170,7 +172,13 @@ class WalletTransactionStore:
 
         return None
 
-    async def increment_sent(self, id: bytes32, name: str):
+    async def increment_sent(
+        self,
+        id: bytes32,
+        name: str,
+        send_status: MempoolInclusionStatus,
+        err: Optional[Err],
+    ):
         """
         Updates transaction sent count (Full Node has received spend_bundle and sent ack).
         """
@@ -184,7 +192,9 @@ class WalletTransactionStore:
             return
 
         sent_to = current.sent_to.copy()
-        sent_to.append(name)
+
+        err_str = err.name if err is not None else None
+        sent_to.append((name, uint8(send_status.value), err_str))
 
         tx: TransactionRecord = TransactionRecord(
             confirmed_at_index=current.confirmed_at_index,

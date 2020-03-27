@@ -26,6 +26,8 @@ from src.full_node.blockchain import ReceiveBlockResult
 from src.consensus.pot_iterations import calculate_iterations_quality
 from src.util.significant_bits import truncate_to_significant_bits
 from src.wallet.wallet_user_store import WalletUserStore
+from src.types.mempool_inclusion_status import MempoolInclusionStatus
+from src.util.ConsensusError import Err
 
 
 class WalletStateManager:
@@ -220,10 +222,10 @@ class WalletStateManager:
 
         for record in unconfirmed_tx:
             for coin in record.additions:
-                if self.does_coin_belongs_to_wallet(coin, wallet_id):
+                if await self.does_coin_belongs_to_wallet(coin, wallet_id):
                     addition_amount += coin.amount
             for coin in record.removals:
-                if self.does_coin_belongs_to_wallet(coin, wallet_id):
+                if await self.does_coin_belongs_to_wallet(coin, wallet_id):
                     removal_amount += coin.amount
 
         result = confirmed - removal_amount + addition_amount
@@ -415,11 +417,17 @@ class WalletStateManager:
         self.state_changed("pending_transaction")
         self.tx_pending_changed()
 
-    async def remove_from_queue(self, spendbundle_id: bytes32, name: str):
+    async def remove_from_queue(
+        self,
+        spendbundle_id: bytes32,
+        name: str,
+        send_status: MempoolInclusionStatus,
+        error: Optional[Err],
+    ):
         """
         Full node received our transaction, no need to keep it in queue anymore
         """
-        await self.tx_store.increment_sent(spendbundle_id, name)
+        await self.tx_store.increment_sent(spendbundle_id, name, send_status, error)
         self.state_changed("tx_sent")
 
     async def get_send_queue(self) -> List[TransactionRecord]:
@@ -435,6 +443,9 @@ class WalletStateManager:
         """
         records = await self.tx_store.get_all_transactions(wallet_id)
         return records
+
+    async def get_transaction(self, tx_id: SpendBundle) -> Optional[TransactionRecord]:
+        return await self.tx_store.get_transaction_record(tx_id)
 
     def find_fork_point(self, alternate_chain: List[bytes32]) -> uint32:
         """

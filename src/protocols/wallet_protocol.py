@@ -7,6 +7,7 @@ from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
 from src.util.ints import uint32, uint64, uint128
+from src.types.mempool_inclusion_status import MempoolInclusionStatus
 
 
 """
@@ -24,7 +25,8 @@ class SendTransaction:
 @cbor_message
 class TransactionAck:
     txid: bytes32
-    status: bool
+    status: MempoolInclusionStatus
+    error: Optional[str]
 
 
 @dataclass(frozen=True)

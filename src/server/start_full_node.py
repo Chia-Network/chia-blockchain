@@ -112,6 +112,13 @@ async def main():
         )
         _ = await server.start_client(peer_info, None, config)
 
+    if not server_closed:
+        peer_info = PeerInfo(
+            full_node.config["wallet_peer"]["host"],
+            full_node.config["wallet_peer"]["port"],
+        )
+        _ = await server.start_client(peer_info, None, config)
+
     # Awaits for server and all connections to close
     await server.await_closed()
     log.info("Closed all node servers.")

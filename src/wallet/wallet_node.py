@@ -1,7 +1,7 @@
 from pathlib import Path
 import asyncio
 import time
-from typing import Dict, Optional, Tuple, List, Any
+from typing import Dict, Optional, Tuple, List, Any, AsyncGenerator
 import concurrent
 import random
 import logging
@@ -33,6 +33,8 @@ from src.types.header_block import HeaderBlock
 from src.types.full_block import FullBlock
 from src.types.hashable.coin import Coin, hash_coin_list
 from src.full_node.blockchain import ReceiveBlockResult
+from src.types.mempool_inclusion_status import MempoolInclusionStatus
+from src.util.ConsensusError import Err
 
 
 class WalletNode:
@@ -49,6 +51,7 @@ class WalletNode:
     cached_additions: Dict[bytes32, List[Coin]]
     proof_hashes: List[Tuple[bytes32, Optional[uint64], Optional[uint64]]]
     header_hashes: List[bytes32]
+    header_hashes_error: bool
     potential_blocks_received: Dict[uint32, asyncio.Event]
     potential_header_hashes: Dict[uint32, bytes32]
     constants: Dict
@@ -122,6 +125,7 @@ class WalletNode:
         self._shut_down = False
         self.proof_hashes = []
         self.header_hashes = []
+        self.header_hashes_error = False
         self.short_sync_threshold = 10
         self.potential_blocks_received = {}
         self.potential_header_hashes = {}
@@ -166,7 +170,7 @@ class WalletNode:
     def set_server(self, server: ChiaServer):
         self.server = server
 
-    async def _on_connect(self) -> OutboundMessageGenerator:
+    async def _on_connect(self) -> AsyncGenerator[OutboundMessage, None]:
         messages = await self.messages_to_resend()
 
         for msg in messages:
@@ -235,7 +239,9 @@ class WalletNode:
         tasks = []
         for peer in to_connect:
             tasks.append(
-                asyncio.create_task(self.server.start_client(peer, self._on_connect(), self.config))
+                asyncio.create_task(
+                    self.server.start_client(peer, self._on_connect, self.config)
+                )
             )
         await asyncio.gather(*tasks)
 
@@ -246,6 +252,7 @@ class WalletNode:
         """
         # 1. Get all header hashes
         self.header_hashes = []
+        self.header_hashes_error = False
         self.proof_hashes = []
         self.potential_header_hashes = {}
         genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
@@ -264,6 +271,10 @@ class WalletNode:
         while time.time() - start_wait < timeout:
             if self._shut_down:
                 return
+            if self.header_hashes_error:
+                raise ValueError(
+                    f"Received error from full node while fetching hashes from {request_header_hashes}."
+                )
             if len(self.header_hashes) > 0:
                 break
             await asyncio.sleep(0.5)
@@ -602,12 +613,27 @@ class WalletNode:
             return
 
     @api_request
-    async def transaction_ack_with_peer_name(self, ack: wallet_protocol.TransactionAck, name: str):
-        if ack.status:
-            await self.wallet_state_manager.remove_from_queue(ack.txid, name)
-            self.log.info(f"SpendBundle has been received by the FullNode. id: {id}")
+    async def transaction_ack_with_peer_name(
+        self, ack: wallet_protocol.TransactionAck, name: str
+    ):
+        if ack.status == MempoolInclusionStatus.SUCCESS:
+            self.log.info(
+                f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}"
+            )
+        elif ack.status == MempoolInclusionStatus.PENDING:
+            self.log.info(
+                f"SpendBundle has been received (and is pending) by the FullNode. {ack}"
+            )
         else:
-            self.log.info(f"SpendBundle has been rejected by the FullNode. id: {id}")
+            self.log.info(f"SpendBundle has been rejected by the FullNode. {ack}")
+        if ack.error is not None:
+            await self.wallet_state_manager.remove_from_queue(
+                ack.txid, name, ack.status, Err[ack.error]
+            )
+        else:
+            await self.wallet_state_manager.remove_from_queue(
+                ack.txid, name, ack.status, None
+            )
 
     @api_request
     async def respond_all_proof_hashes(
@@ -631,9 +657,8 @@ class WalletNode:
     async def reject_all_header_hashes_after_request(
         self, response: wallet_protocol.RejectAllHeaderHashesAfterRequest
     ):
-        # TODO(mariano): retry
         self.log.error("All header hashes after request rejected")
-        pass
+        self.header_hashes_error = True
 
     @api_request
     async def new_lca(self, request: wallet_protocol.NewLCA):
