@@ -24,7 +24,7 @@ def str2bool(v: str) -> bool:
         raise argparse.ArgumentTypeError("Boolean value expected.")
 
 
-async def main():
+async def async_main():
     parser = argparse.ArgumentParser(
         description="Manage a Chia Full Node from the command line.",
         epilog="You can combine -s and -c. Try 'watch -n 10 python -m script.cli -s -c' if you have 'watch' installed.",
@@ -256,4 +256,9 @@ async def main():
     await client.await_closed()
 
 
-asyncio.run(main())
+def main():
+    asyncio.run(async_main())
+
+
+if __name__ == '__main__':
+    main()
