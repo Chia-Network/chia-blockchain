@@ -171,8 +171,12 @@ send.addEventListener('click', () => {
     }
     global_sending_transaction = true;
     send.disabled = true;
+    send.innerHTML = "SENDING...";
     try {
         puzzle_hash = receiver_address.value;
+        if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
+            puzzle_hash = puzzle_hash.substring(2);
+        }
         amount_value = parseFloat(amount.value);
         mojo_amount = chia_formatter(amount_value, 'chia').to('mojo').value()
         console.log("Mojo amount: " + mojo_amount);
@@ -193,6 +197,7 @@ send.addEventListener('click', () => {
         alert("Error sending the transaction").
         global_sending_transaction = false;
         send.disabled = false;
+        send.innerHTML = "SEND";
     }
 })
 
@@ -223,12 +228,18 @@ function send_transaction_response(response) {
     /*
     Called when response is received for send_transaction request
     */
-    success = response["success"];
-    if (!success) {
-        dialogs.alert("Transaction failed. Note that block rewards have a lockup period of 200 blocks.");
-    }
+   console.log(JSON.stringify(response));
+   status = response["status"];
+   if (status === "SUCCESS") {
+       dialogs.alert("Transaction accepted succesfully into the mempool.", ok => {});
+   } else if (status === "PENDING") {
+       dialogs.alert("Transaction is pending acceptance into the mempool. Reason: " + response["reason"], ok => {});
+   } else if (status === "FAILED") {
+       dialogs.alert("Transaction failed. Reason: " + response["reason"], ok => {});
+   }
     global_sending_transaction = false;
     send.disabled = false;
+    send.innerHTML = "SEND";
 }
 
 new_address.addEventListener('click', () => {
@@ -480,6 +491,7 @@ function handle_state_changed(data) {
         get_height_info()
         return;
     }
+    console.log("state:", state);
 
     if (state == "coin_removed") {
         get_transactions()
@@ -493,6 +505,7 @@ function handle_state_changed(data) {
     } else if (state == "tx_sent") {
         get_transactions()
         get_wallet_balance(g_wallet_id)
+        console.log("data", data);
         dialogs.alert("Transaction sent successfully!", ok => {});
     } else if (state == "balance_changed") {
         get_wallet_balance(g_wallet_id)

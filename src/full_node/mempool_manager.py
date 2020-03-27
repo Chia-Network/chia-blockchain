@@ -20,6 +20,7 @@ from src.util.cost_calculator import calculate_cost_of_program
 from src.util.mempool_check_conditions import mempool_check_conditions_dict
 from src.util.condition_tools import hash_key_pairs_for_conditions_dict
 from src.util.ints import uint64, uint32
+from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from sortedcontainers import SortedDict
 
 
@@ -113,7 +114,7 @@ class MempoolManager:
 
     async def add_spendbundle(
         self, new_spend: SpendBundle, to_pool: Mempool = None
-    ) -> Tuple[Optional[uint64], Optional[Err]]:
+    ) -> Tuple[Optional[uint64], MempoolInclusionStatus, Optional[Err]]:
         """
         Tries to add spendbundle to either self.mempools or to_pool if it's specified.
         Returns true if it's added in any of pools, Returns error if it fails.
@@ -126,12 +127,12 @@ class MempoolManager:
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
         fail_reason, npc_list, cost = calculate_cost_of_program(program)
         if fail_reason:
-            return None, fail_reason
+            return None, MempoolInclusionStatus.FAILED, fail_reason
 
         fees = new_spend.fees()
 
         if cost == 0:
-            return None, Err.UNKNOWN
+            return None, MempoolInclusionStatus.FAILED, Err.UNKNOWN
         fees_per_cost: float = fees / cost
 
         # build removal list
@@ -141,18 +142,26 @@ class MempoolManager:
         # Check additions for max coin amount
         for coin in additions:
             if coin.amount >= self.constants["MAX_COIN_AMOUNT"]:
-                return None, Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
+                return (
+                    None,
+                    MempoolInclusionStatus.FAILED,
+                    Err.COIN_AMOUNT_EXCEEDS_MAXIMUM,
+                )
 
         #  Watch out for duplicate outputs
         addition_counter = collections.Counter(_.name() for _ in additions)
         for k, v in addition_counter.items():
             if v > 1:
-                return None, Err.DUPLICATE_OUTPUT
+                return None, MempoolInclusionStatus.FAILED, Err.DUPLICATE_OUTPUT
 
         # Spend might be valid for on pool but not for others
         added_count = 0
         errors: List[Err] = []
         targets: List[Mempool]
+
+        # If the trasaction is added to potential set (to be retried), this is set.
+        added_to_potential: bool = False
+        potential_error: Optional[Err] = None
 
         if to_pool is not None:
             targets = [to_pool]
@@ -169,7 +178,6 @@ class MempoolManager:
                     errors.append(Err.INVALID_FEE_LOW_FEE)
                     continue
                 if fees_per_cost < pool.get_min_fee_rate():
-                    # Add to potential tx set, maybe fee get's lower in future
                     errors.append(Err.INVALID_FEE_LOW_FEE)
                     continue
 
@@ -189,6 +197,8 @@ class MempoolManager:
                     if item.fee_per_cost >= fees_per_cost:
                         tmp_error = Err.MEMPOOL_CONFLICT
                         self.add_to_potential_tx_set(new_spend)
+                        added_to_potential = True
+                        potential_error = Err.MEMPOOL_CONFLICT
                         break
             elif fail_reason:
                 errors.append(fail_reason)
@@ -202,7 +212,7 @@ class MempoolManager:
             for unspent in unspents.values():
                 coin = removals_dic[unspent.coin.name()]
                 if unspent.coin.puzzle_hash != coin.puzzle_hash:
-                    return None, Err.WRONG_PUZZLE_HASH
+                    return None, MempoolInclusionStatus.FAILED, Err.WRONG_PUZZLE_HASH
 
             # Verify conditions, create hash_key list for aggsig check
             hash_key_pairs = []
@@ -218,6 +228,8 @@ class MempoolManager:
                         or error is Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED
                     ):
                         self.add_to_potential_tx_set(new_spend)
+                        added_to_potential = True
+                        potential_error = error
                     break
                 hash_key_pairs.extend(
                     hash_key_pairs_for_conditions_dict(npc.condition_dict)
@@ -228,7 +240,7 @@ class MempoolManager:
 
             # Verify aggregated signature
             if not new_spend.aggregated_signature.validate(hash_key_pairs):
-                return None, Err.BAD_AGGREGATE_SIGNATURE
+                return None, MempoolInclusionStatus.FAILED, Err.BAD_AGGREGATE_SIGNATURE
 
             # Remove all conflicting Coins and SpendBundles
             if fail_reason:
@@ -242,9 +254,11 @@ class MempoolManager:
             added_count += 1
 
         if added_count > 0:
-            return uint64(cost), None
+            return uint64(cost), MempoolInclusionStatus.SUCCESS, None
+        elif added_to_potential:
+            return uint64(cost), MempoolInclusionStatus.PENDING, potential_error
         else:
-            return None, errors[0]
+            return None, MempoolInclusionStatus.FAILED, errors[0]
 
     async def check_removals(
         self, additions: List[Coin], removals: List[Coin], mempool: Mempool

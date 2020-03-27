@@ -1,11 +1,12 @@
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 from src.types.hashable.coin import Coin
 from src.types.hashable.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.streamable import Streamable, streamable
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32, uint64, uint8
+from src.util.ConsensusError import Err
 
 
 @dataclass(frozen=True)
@@ -22,7 +23,7 @@ class TransactionRecord(Streamable):
     fee_amount: uint64
     incoming: bool
     confirmed: bool
-    sent: bool
+    send_status: Optional[Tuple[uint8, Optional[Err]]]
     spend_bundle: Optional[SpendBundle]
     additions: List[Coin]
     removals: List[Coin]

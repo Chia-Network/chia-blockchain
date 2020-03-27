@@ -16,6 +16,7 @@ from src.util.condition_tools import (
     conditions_by_opcode,
     hash_key_pairs_for_conditions_dict,
 )
+from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.util.ints import uint64
 from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.puzzles.p2_conditions import puzzle_for_conditions
@@ -28,9 +29,11 @@ from src.wallet.puzzles.puzzle_utils import (
 )
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_coin_record import WalletCoinRecord
+from src.wallet.transaction_record import TransactionRecord
 from src.wallet.wallet_info import WalletInfo
 
 from src.wallet.wallet_state_manager import WalletStateManager
+from src.util.ConsensusError import Err
 
 
 class Wallet:
@@ -326,6 +329,17 @@ class Wallet:
         if len(transaction) == 0:
             return None
         return await self.sign_transaction(transaction)
+
+    async def get_transaction_status(
+        self, tx_id: SpendBundle
+    ) -> Optional[Tuple[MempoolInclusionStatus, Optional[Err]]]:
+        tr: Optional[
+            TransactionRecord
+        ] = await self.wallet_state_manager.get_transaction(tx_id)
+        if tr is not None:
+            assert tr.send_status is not None
+            return (MempoolInclusionStatus(tr.send_status[0]), tr.send_status[1])
+        return None
 
     async def push_transaction(self, spend_bundle: SpendBundle):
         """ Use this API to send transactions. """

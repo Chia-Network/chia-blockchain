@@ -3,8 +3,10 @@ from typing import Dict, Optional, List
 from pathlib import Path
 import aiosqlite
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint32
+from src.util.ints import uint32, uint8
 from src.wallet.transaction_record import TransactionRecord
+from src.types.mempool_inclusion_status import MempoolInclusionStatus
+from src.util.ConsensusError import Err
 
 
 class WalletTransactionStore:
@@ -108,7 +110,7 @@ class WalletTransactionStore:
                 record.fee_amount,
                 int(record.incoming),
                 int(record.confirmed),
-                int(record.sent),
+                1 if record.send_status is not None else 0,
                 record.wallet_id,
             ),
         )
@@ -135,7 +137,7 @@ class WalletTransactionStore:
             fee_amount=current.fee_amount,
             incoming=current.incoming,
             confirmed=True,
-            sent=current.sent,
+            send_status=(uint8(MempoolInclusionStatus.SUCCESS.value), None),
             spend_bundle=current.spend_bundle,
             additions=current.additions,
             removals=current.removals,
@@ -169,7 +171,12 @@ class WalletTransactionStore:
 
         return None
 
-    async def set_sent(self, id: bytes32):
+    async def set_send_status(
+        self,
+        id: bytes32,
+        send_status: MempoolInclusionStatus,
+        err: Optional[Err] = None,
+    ):
         """
         Updates transaction to be sent. (Full Node has received spend_bundle and sent ack).
         """
@@ -185,7 +192,7 @@ class WalletTransactionStore:
             fee_amount=current.fee_amount,
             incoming=current.incoming,
             confirmed=current.confirmed,
-            sent=True,
+            send_status=(uint8(send_status.value), err),
             spend_bundle=current.spend_bundle,
             additions=current.additions,
             removals=current.removals,

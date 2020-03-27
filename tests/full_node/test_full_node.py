@@ -20,6 +20,7 @@ from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.wallet_tools import WalletTool
+from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.hashable.coin import hash_coin_list
 from src.util.merkle_set import (
     MerkleSet,
@@ -816,7 +817,7 @@ class TestWalletProtocol:
 
         assert wallet_message is not None
         assert wallet_message.message.data == wallet_protocol.TransactionAck(
-            spend_bundle.name(), True
+            spend_bundle.name(), MempoolInclusionStatus.SUCCESS, None
         )
 
         msgs = [
@@ -827,7 +828,7 @@ class TestWalletProtocol:
         ]
         assert len(msgs) == 1
         assert msgs[0].message.data == wallet_protocol.TransactionAck(
-            spend_bundle.name(), True
+            spend_bundle.name(), MempoolInclusionStatus.SUCCESS, None
         )
 
         msgs = [
@@ -838,7 +839,7 @@ class TestWalletProtocol:
         ]
         assert len(msgs) == 1
         assert msgs[0].message.data == wallet_protocol.TransactionAck(
-            spend_bundle_bad.name(), False
+            spend_bundle.name(), MempoolInclusionStatus.SUCCESS, None
         )
 
     @pytest.mark.asyncio

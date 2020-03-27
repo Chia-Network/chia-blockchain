@@ -8,13 +8,6 @@ class FullNodeRpcClient {
 
     async get_blockchain_state() {
         return await this.make_request("get_blockchain_state", {});
-        // let tips_parsed = [];
-        // for (let tip of state.tips) {
-        //     tips_parsed.push(JSON.parse(tip));
-        // }
-        // state.tips = tips_parsed;
-        // state.lca = JSON.parse(state.lca);
-        // return state;
     }
 
     async get_header(header_hash) {

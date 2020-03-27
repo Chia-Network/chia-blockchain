@@ -32,6 +32,7 @@ from src.types.header_block import HeaderBlock
 from src.types.full_block import FullBlock
 from src.types.hashable.coin import Coin, hash_coin_list
 from src.full_node.blockchain import ReceiveBlockResult
+from src.types.mempool_inclusion_status import MempoolInclusionStatus
 
 
 class WalletNode:
@@ -48,6 +49,7 @@ class WalletNode:
     cached_additions: Dict[bytes32, List[Coin]]
     proof_hashes: List[Tuple[bytes32, Optional[uint64], Optional[uint64]]]
     header_hashes: List[bytes32]
+    header_hashes_error: bool
     potential_blocks_received: Dict[uint32, asyncio.Event]
     potential_header_hashes: Dict[uint32, bytes32]
     constants: Dict
@@ -120,6 +122,7 @@ class WalletNode:
         self._shut_down = False
         self.proof_hashes = []
         self.header_hashes = []
+        self.header_hashes_error = False
         self.short_sync_threshold = 10
         self.potential_blocks_received = {}
         self.potential_header_hashes = {}
@@ -206,6 +209,7 @@ class WalletNode:
         """
         # 1. Get all header hashes
         self.header_hashes = []
+        self.header_hashes_error = False
         self.proof_hashes = []
         self.potential_header_hashes = {}
         genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
@@ -224,6 +228,10 @@ class WalletNode:
         while time.time() - start_wait < timeout:
             if self._shut_down:
                 return
+            if self.header_hashes_error:
+                raise ValueError(
+                    f"Received error from full node while fetching hashes from {request_header_hashes}."
+                )
             if len(self.header_hashes) > 0:
                 break
             await asyncio.sleep(0.5)
@@ -563,11 +571,17 @@ class WalletNode:
 
     @api_request
     async def transaction_ack(self, ack: wallet_protocol.TransactionAck):
-        if ack.status:
-            await self.wallet_state_manager.remove_from_queue(ack.txid)
-            self.log.info(f"SpendBundle has been received by the FullNode. id: {id}")
+        if ack.status == MempoolInclusionStatus.SUCCESS:
+            self.log.info(
+                f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}"
+            )
+        elif ack.status == MempoolInclusionStatus.PENDING:
+            self.log.info(
+                f"SpendBundle has been received (and is pending) by the FullNode. {ack}"
+            )
         else:
-            self.log.info(f"SpendBundle has been rejected by the FullNode. id: {id}")
+            self.log.info(f"SpendBundle has been rejected by the FullNode. {ack}")
+        await self.wallet_state_manager.remove_from_queue(ack.txid, ack.status)
 
     @api_request
     async def respond_all_proof_hashes(
@@ -591,9 +605,8 @@ class WalletNode:
     async def reject_all_header_hashes_after_request(
         self, response: wallet_protocol.RejectAllHeaderHashesAfterRequest
     ):
-        # TODO(mariano): retry
         self.log.error("All header hashes after request rejected")
-        pass
+        self.header_hashes_error = True
 
     @api_request
     async def new_lca(self, request: wallet_protocol.NewLCA):
