@@ -8,7 +8,7 @@ You will need to enable [UPnP](https://www.homenethowto.com/ports-and-nat/upnp-a
 For alpha testnet most should only install harvesters, farmers, plotter and full nodes. Building timelords and VDFs is for sophisticated users in most environments. Chia Network and additional volunteers are running sufficient time lords for testnet consensus.
 
 ## Step 1: Install the code
-To install the chia-blockchain node, follow [these](INSTALL.md) instructions according to your operating system.
+To install the chia-blockchain node, follow [these](INSTALL.md) instructions according to your operating system. Remember that once you complete your install you **must be in the Python virtual environment** which you access from the chia-blockchain directory with the command `. .venv/bin/activate`. Both dots are critical and once executed correctly your cli prompt will look something like `(.venv) hoffmang@machine:~$` with the (.venv) prepended.
 
 ## Step 2: Generate keys
 First, create some keys by running the following script:
@@ -21,8 +21,8 @@ To run a full node on port 8444, and connect to the testnet, run the following c
 If you want to see std::out log output, modify the logging.std_out variable in ./config/config.yaml.
 
 ```bash
-./scripts/run_full_node.sh
-npm run --prefix ./src/electron-ui start
+./scripts/run_full_node.sh &
+./scripts/run_wallet_ui.sh &
 ```
 
 ## Step 3b: Run a farmer + full node + wallet
@@ -35,8 +35,8 @@ You can also change the working directory and
 final directory for plotting, with the "-t" and "-d" arguments to the create_plots script.
 ```bash
 python -m scripts.create_plots -k 20 -n 10
-sh ./scripts/run_farming.sh
-npm run --prefix ./src/electron-ui start
+sh ./scripts/run_farming.sh &
+./scripts/run_wallet_ui.sh &
 ```
 
 
@@ -45,8 +45,8 @@ Timelords execute sequential verifiable delay functions (proofs of time), that g
 blocks to make them valid. This requires fast CPUs and a lot of memory as well as completing
 both install steps above.
 ```bash
-sh ./scripts/run_timelord.sh
-npm run --prefix ./src/electron-ui start
+sh ./scripts/run_timelord.sh &
+./scripts/run_wallet_ui.sh &
 ```
 
 ## Tips
@@ -84,4 +84,3 @@ You can also use the [HTTP RPC](https://github.com/Chia-Network/chia-blockchain/
 curl -X POST http://localhost:8555/get_blockchain_state
 curl -d '{"header_hash":"afe223d75d40dd7bd19bf35846d0c9dce608bfc77ee5baa9f9cd6b98436e428b"}' -H "Content-Type: application/json" -X POST http://localhost:8555/get_header
 ```
-
