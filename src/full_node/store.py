@@ -114,10 +114,11 @@ class FullNodeStore:
         await self.db.close()
 
     async def _clear_database(self):
-        await self.db.execute("DELETE FROM blocks")
-        await self.db.execute("DELETE FROM potential_blocks")
-        await self.db.execute("DELETE FROM headers")
-        await self.db.commit()
+        async with self.lock:
+            await self.db.execute("DELETE FROM blocks")
+            await self.db.execute("DELETE FROM potential_blocks")
+            await self.db.execute("DELETE FROM headers")
+            await self.db.commit()
 
     async def add_block(self, block: FullBlock) -> None:
         assert block.proof_of_time is not None

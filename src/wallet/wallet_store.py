@@ -17,7 +17,6 @@ class WalletStore:
 
     db_connection: aiosqlite.Connection
     # Whether or not we are syncing
-    lock: asyncio.Lock
     coin_record_cache: Dict[str, WalletCoinRecord]
     cache_size: uint32
 
@@ -74,8 +73,6 @@ class WalletStore:
         )
 
         await self.db_connection.commit()
-        # Lock
-        self.lock = asyncio.Lock()  # external
         self.coin_record_cache = dict()
         return self
 

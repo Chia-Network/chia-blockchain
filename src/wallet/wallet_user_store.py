@@ -14,7 +14,6 @@ class WalletUserStore:
     """
 
     db_connection: aiosqlite.Connection
-    lock: asyncio.Lock
     cache_size: uint32
 
     @classmethod
@@ -46,8 +45,6 @@ class WalletUserStore:
         )
 
         await self.db_connection.commit()
-        # Lock
-        self.lock = asyncio.Lock()  # external
         await self.init_wallet()
         return self
 

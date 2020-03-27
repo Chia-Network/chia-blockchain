@@ -336,9 +336,7 @@ class WebSocketServer:
             "state": state,
         }
         if self.websocket is not None:
-            # try:
             await self.websocket.send(format_response("state_changed", data))
-            # except Conne
 
     def state_changed_callback(self, state: str):
         if self.websocket is None:
