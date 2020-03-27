@@ -169,14 +169,19 @@ send.addEventListener('click', () => {
     if (global_sending_transaction) {
         return;
     }
-    global_sending_transaction = true;
-    send.disabled = true;
-    send.innerHTML = "SENDING...";
+
     try {
         puzzle_hash = receiver_address.value;
         if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
             puzzle_hash = puzzle_hash.substring(2);
         }
+        if (puzzle_hash.length != 64) {
+            alert("Please enter a 32 byte puzzle hash in hexadecimal format");
+            return;
+        }
+        global_sending_transaction = true;
+        send.disabled = true;
+        send.innerHTML = "SENDING...";
         amount_value = parseFloat(amount.value);
         mojo_amount = chia_formatter(amount_value, 'chia').to('mojo').value()
         console.log("Mojo amount: " + mojo_amount);

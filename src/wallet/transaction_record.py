@@ -6,7 +6,6 @@ from src.types.hashable.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.streamable import Streamable, streamable
 from src.util.ints import uint32, uint64, uint8
-from src.util.ConsensusError import Err
 
 
 @dataclass(frozen=True)
@@ -23,7 +22,7 @@ class TransactionRecord(Streamable):
     fee_amount: uint64
     incoming: bool
     confirmed: bool
-    send_status: Optional[Tuple[uint8, Optional[Err]]]
+    send_status: Optional[Tuple[uint8, Optional[str]]]
     spend_bundle: Optional[SpendBundle]
     additions: List[Coin]
     removals: List[Coin]

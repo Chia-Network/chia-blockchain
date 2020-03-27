@@ -5,7 +5,6 @@ import logging
 import signal
 import time
 import traceback
-import asyncio
 
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -30,7 +29,6 @@ from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_node import WalletNode
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
-from src.util.ConsensusError import Err
 from setproctitle import setproctitle
 
 # Timeout for response from wallet/full node for sending a transaction
@@ -96,10 +94,10 @@ class WebSocketServer:
         wallet = self.wallet_node.wallets[wallet_id]
         try:
             tx = await wallet.generate_signed_transaction_dict(request)
-        except BaseException:
+        except BaseException as e:
             data = {
                 "status": "FAILED",
-                "reason": "Failed to generate signed transaction",
+                "reason": f"Failed to generate signed transaction {e}",
             }
             return await websocket.send(format_response(response_api, data))
 
@@ -109,13 +107,20 @@ class WebSocketServer:
                 "reason": "Failed to generate signed transaction",
             }
             return await websocket.send(format_response(response_api, data))
+        try:
+            await wallet.push_transaction(tx)
+        except BaseException as e:
+            data = {
+                "status": "FAILED",
+                "reason": f"Failed to push transaction {e}",
+            }
+            return await websocket.send(format_response(response_api, data))
 
-        await wallet.push_transaction(tx)
         sent = False
         start = time.time()
         while time.time() - start < TIMEOUT:
             err_and_status: Optional[
-                Tuple[MempoolInclusionStatus, Optional[Err]]
+                Tuple[MempoolInclusionStatus, Optional[str]]
             ] = await wallet.get_transaction_status(tx.name())
             if err_and_status is None:
                 await asyncio.sleep(0.1)
@@ -127,12 +132,12 @@ class WebSocketServer:
                 break
             elif status == MempoolInclusionStatus.PENDING:
                 assert err is not None
-                data = {"status": "PENDING", "reason": str(err)}
+                data = {"status": "PENDING", "reason": err}
                 sent = True
                 break
             elif status == MempoolInclusionStatus.FAILED:
                 assert err is not None
-                data = {"status": "FAILED", "reason": str(err)}
+                data = {"status": "FAILED", "reason": err}
                 sent = True
                 break
         if not sent:

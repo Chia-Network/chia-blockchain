@@ -34,6 +34,7 @@ from src.types.full_block import FullBlock
 from src.types.hashable.coin import Coin, hash_coin_list
 from src.full_node.blockchain import ReceiveBlockResult
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
+from src.util.ConsensusError import Err
 
 
 class WalletNode:
@@ -606,7 +607,14 @@ class WalletNode:
             )
         else:
             self.log.info(f"SpendBundle has been rejected by the FullNode. {ack}")
-        await self.wallet_state_manager.remove_from_queue(ack.txid, ack.status)
+        if ack.error is not None:
+            await self.wallet_state_manager.remove_from_queue(
+                ack.txid, ack.status, Err[ack.error]
+            )
+        else:
+            await self.wallet_state_manager.remove_from_queue(
+                ack.txid, ack.status, None
+            )
 
     @api_request
     async def respond_all_proof_hashes(

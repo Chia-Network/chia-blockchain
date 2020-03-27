@@ -184,6 +184,7 @@ class WalletTransactionStore:
         current: Optional[TransactionRecord] = await self.get_transaction_record(id)
         if current is None:
             return
+        err_name = err.name if err is not None else None
         tx: TransactionRecord = TransactionRecord(
             confirmed_at_index=current.confirmed_at_index,
             created_at_time=current.created_at_time,
@@ -192,7 +193,9 @@ class WalletTransactionStore:
             fee_amount=current.fee_amount,
             incoming=current.incoming,
             confirmed=current.confirmed,
-            send_status=(uint8(send_status.value), err) if send_status is not None else None,
+            send_status=(uint8(send_status.value), err_name)
+            if send_status is not None
+            else None,
             spend_bundle=current.spend_bundle,
             additions=current.additions,
             removals=current.removals,

@@ -21,13 +21,13 @@ class BLSPrivateKey:
         return cls(blspy.PrivateKey.from_bytes(blob))
 
     def sign(self, message_hash: bytes32) -> BLSSignature:
-        return BLSSignature(self.pk.sign_prepend_prehashed(message_hash).serialize())
+        return BLSSignature(bytes(self.pk.sign_prepend_prehashed(message_hash)))
 
     def public_key(self) -> BLSPublicKey:
-        return BLSPublicKey(self.pk.get_public_key().serialize())
+        return BLSPublicKey(self.pk.get_public_key())
 
     def secret_exponent(self):
         return int.from_bytes(bytes(self), "big")
 
     def __bytes__(self):
-        return self.pk.serialize()
+        return bytes(self.pk)

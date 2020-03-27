@@ -64,13 +64,13 @@ const createPyProc = () => {
         pyProc.stdout.setEncoding('utf8');
 
         pyProc.stdout.on('data', function(data) {
-            console.log(data.toString());
+            process.stdout.write(data.toString());
         });
 
         pyProc.stderr.setEncoding('utf8');
         pyProc.stderr.on('data', function(data) {
             //Here is where the error output goes
-            console.log('stderr: ' + data.toString());
+            process.stdout.write('stderr: ' + data.toString());
         });
 
         pyProc.on('close', function(code) {

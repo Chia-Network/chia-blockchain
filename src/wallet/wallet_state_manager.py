@@ -27,6 +27,7 @@ from src.consensus.pot_iterations import calculate_iterations_quality
 from src.util.significant_bits import truncate_to_significant_bits
 from src.wallet.wallet_user_store import WalletUserStore
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
+from src.util.ConsensusError import Err
 
 
 class WalletStateManager:
@@ -165,7 +166,6 @@ class WalletStateManager:
         Sets the sync mode. This changes the behavior of the wallet node.
         """
         self.sync_mode = mode
-        self.log.warn(f"Setting sync mode {self.sync_mode}")
         self.state_changed("sync_changed")
 
     async def get_confirmed_spendable_for_wallet(
@@ -222,10 +222,10 @@ class WalletStateManager:
 
         for record in unconfirmed_tx:
             for coin in record.additions:
-                if self.does_coin_belongs_to_wallet(coin, wallet_id):
+                if await self.does_coin_belongs_to_wallet(coin, wallet_id):
                     addition_amount += coin.amount
             for coin in record.removals:
-                if self.does_coin_belongs_to_wallet(coin, wallet_id):
+                if await self.does_coin_belongs_to_wallet(coin, wallet_id):
                     removal_amount += coin.amount
 
         result = confirmed - removal_amount + addition_amount
@@ -415,12 +415,15 @@ class WalletStateManager:
         self.tx_pending_changed()
 
     async def remove_from_queue(
-        self, spendbundle_id: bytes32, send_status: MempoolInclusionStatus
+        self,
+        spendbundle_id: bytes32,
+        send_status: MempoolInclusionStatus,
+        error: Optional[Err],
     ):
         """
         Full node received our transaction, no need to keep it in queue anymore
         """
-        await self.tx_store.set_send_status(spendbundle_id, send_status)
+        await self.tx_store.set_send_status(spendbundle_id, send_status, error)
         self.state_changed("tx_sent")
 
     async def get_send_queue(self) -> List[TransactionRecord]:

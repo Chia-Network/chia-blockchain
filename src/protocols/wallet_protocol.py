@@ -7,7 +7,6 @@ from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
 from src.util.ints import uint32, uint64, uint128
-from src.util.ConsensusError import Err
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 
 
@@ -27,7 +26,7 @@ class SendTransaction:
 class TransactionAck:
     txid: bytes32
     status: MempoolInclusionStatus
-    error: Optional[Err]
+    error: Optional[str]
 
 
 @dataclass(frozen=True)

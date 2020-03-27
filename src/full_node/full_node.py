@@ -1811,19 +1811,20 @@ class FullNode:
                         f"status {status} error: {error}"
                     )
 
+        error_name = error.name if error is not None else None
         if status != MempoolInclusionStatus.FAILED:
             response = wallet_protocol.TransactionAck(
-                tx.transaction.name(), status, error
+                tx.transaction.name(), status, error_name
             )
         else:
             # If if failed, but it previously succeeded (in mempool), this is idempotence, return SUCESS
-            if self.mempool_manager.get_spendbundle(tx.transaction.name()) is None:
+            if self.mempool_manager.get_spendbundle(tx.transaction.name()) is not None:
                 response = wallet_protocol.TransactionAck(
                     tx.transaction.name(), MempoolInclusionStatus.SUCCESS, None
                 )
             else:
                 response = wallet_protocol.TransactionAck(
-                    tx.transaction.name(), status, error
+                    tx.transaction.name(), status, error_name
                 )
         yield OutboundMessage(
             NodeType.WALLET, Message("transaction_ack", response), Delivery.RESPOND
