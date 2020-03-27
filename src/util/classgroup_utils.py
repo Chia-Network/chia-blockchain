@@ -1,4 +1,5 @@
-from fastvdf import verify_wesolowski
+from chiavdf import verify_wesolowski
+
 
 class ClassGroup(tuple):
     @classmethod
@@ -71,11 +72,12 @@ class ClassGroup(tuple):
                          for x in [r[0], r[1]]])
 
 
-def deserialize_proof(proof_blob,  discriminant):
+def deserialize_proof(proof_blob, discriminant):
     int_size = (discriminant.bit_length() + 16) >> 4
     proof_arr = [proof_blob[_:_ + 2 * int_size]
-                 for _ in range(0, len(proof_blob), 2*int_size)]
+                 for _ in range(0, len(proof_blob), 2 * int_size)]
     return [ClassGroup.from_bytes(blob, discriminant) for blob in proof_arr]
+
 
 def check_proof_of_time_nwesolowski(discriminant, x, proof_blob,
                                     iterations, int_size_bits, depth):
@@ -94,9 +96,7 @@ def check_proof_of_time_nwesolowski(discriminant, x, proof_blob,
     try:
         int_size = (int_size_bits + 16) >> 4
         if (
-            len(proof_blob) !=
-            4 * int_size +
-            depth * (8 + 4 * int_size)
+            len(proof_blob) != 4 * int_size + depth * (8 + 4 * int_size)
         ):
             return False
         new_proof_blob = proof_blob[:4 * int_size]
@@ -142,8 +142,9 @@ def check_proof_of_time_nwesolowski(discriminant, x, proof_blob,
             str(proof[-1][1]),
             iterations,
         )
-    except Exception as e:
+    except Exception:
         return False
+
 
 """
 Copyright 2018 Chia Network Inc

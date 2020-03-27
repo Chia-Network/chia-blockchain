@@ -25,18 +25,17 @@ jobs:
         sudo apt-get install libboost-all-dev || echo ""
         sudo apt-get install libssl-dev || echo ""
         sh install.sh
-    - name: Test vdf
-      run: |
-        . .venv/bin/activate
-        cd lib/chiavdf/fast_vdf
-        python python_bindings/test_verifier.py
-        cd ../../../
     - name: Lint source with flake8
       run: |
         ./.venv/bin/flake8 src --exclude src/electron-ui/node_modules
     - name: Lint source with mypy
       run: |
         ./.venv/bin/mypy src tests
+    - name: Install chiavdf from source
+      if: matrix['python-version'] == '3.7' && startsWith(matrix.os, 'ubuntu')
+      run: |
+        source .venv/bin/activate
+        pip install --force --no-binary chiavdf chiavdf==0.12.1
     - name: Test blockchain code with pytest
       run: |
         ./.venv/bin/py.test tests -s -v

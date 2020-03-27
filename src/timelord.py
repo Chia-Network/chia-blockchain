@@ -6,7 +6,7 @@ from asyncio import Lock, StreamReader, StreamWriter
 from typing import Dict, List, Optional, Tuple
 
 
-from fastvdf import create_discriminant
+from chiavdf import create_discriminant
 from src.protocols import timelord_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.classgroup import ClassgroupElement

@@ -14,7 +14,6 @@ pip install wheel
 pip install -e .
 pip install -r requirements.txt
 
-make -C lib/chiavdf/fast_vdf
 cd ./src/electron-ui
 npm install
 

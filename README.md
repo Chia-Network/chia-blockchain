@@ -43,6 +43,10 @@ sh ./scripts/run_farming.sh &
 
 
 ## Step 3c: Run a timelord + full node + wallet
+
+*Note*
+If you want to run a timelord on Linux, see LINUX_TIMELORD.md.
+
 Timelords execute sequential verifiable delay functions (proofs of time), that get added to
 blocks to make them valid. This requires fast CPUs and a lot of memory as well as completing
 both install steps above.
