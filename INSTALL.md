@@ -18,6 +18,15 @@ sh install.sh
 
 ### Debian/Ubuntu
 
+On Ubuntu 18.04, you need python 3.7.
+
+```bash
+sudo add-apt-repository ppa:deadsnakes/ppa
+sudo apt install python3.7-venv python3.7-dev
+```
+
+Install dependencies.
+
 ```bash
 sudo apt-get update
 sudo apt-get install build-essential git cmake libgmp3-dev python3-dev -y
