@@ -174,7 +174,7 @@ class WalletTransactionStore:
     async def set_send_status(
         self,
         id: bytes32,
-        send_status: MempoolInclusionStatus,
+        send_status: Optional[MempoolInclusionStatus],
         err: Optional[Err] = None,
     ):
         """
@@ -192,7 +192,7 @@ class WalletTransactionStore:
             fee_amount=current.fee_amount,
             incoming=current.incoming,
             confirmed=current.confirmed,
-            send_status=(uint8(send_status.value), err),
+            send_status=(uint8(send_status.value), err) if send_status is not None else None,
             spend_bundle=current.spend_bundle,
             additions=current.additions,
             removals=current.removals,

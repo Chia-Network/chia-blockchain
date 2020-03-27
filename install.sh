@@ -8,6 +8,7 @@ fi
 
 python3 -m venv .venv
 . .venv/bin/activate
+# pip 20.x+ supports Linux binary wheels
 pip install --upgrade pip
 pip install wheel
 pip install -e .
