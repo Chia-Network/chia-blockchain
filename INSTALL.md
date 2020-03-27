@@ -18,19 +18,24 @@ sh install.sh
 
 ### Debian/Ubuntu
 
-On Ubuntu 18.04, you need python 3.7.
+On Ubuntu 18.04, you need python 3.7. It's not available in the default
+repository, so you need to add an alternate source.
 
 ```bash
-sudo add-apt-repository ppa:deadsnakes/ppa
-sudo apt install python3.7-venv python3.7-dev
+sudo -s
+apt install software-properties-common -y  # for add-apt-repository
+add-apt-repository ppa:deadsnakes/ppa -y
+exit
 ```
 
 Install dependencies.
 
 ```bash
-sudo apt-get update
-sudo apt-get install build-essential git cmake libgmp3-dev python3-dev -y
-sudo apt-get install python3-venv libssl-dev libboost-all-dev -y
+sudo -s
+apt-get update
+apt-get install python3.7-venv python3.7-dev -y  # install python3.7 with venv and headers
+apt-get install build-essential git cmake libgmp3-dev libssl-dev libboost-all-dev -y
+exit
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain

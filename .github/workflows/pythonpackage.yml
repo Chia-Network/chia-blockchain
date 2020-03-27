@@ -19,23 +19,31 @@ jobs:
       uses: actions/setup-python@v1.1.1
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Install Mac dependencies
+      if: startsWith(matrix.os, 'mac')
       run: |
-        brew update && brew install gmp boost openssl || echo ""
-        sudo apt-get install libboost-all-dev || echo ""
-        sudo apt-get install libssl-dev || echo ""
+        brew update && brew install gmp boost openssl
+    - name: Install ubuntu dependencies
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        sudo apt-get install libboost-all-dev libssl-dev
+    - name: Run install script
+      env:
+        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+      run: |
         sh install.sh
+    - name: Install time lord
+      run: |
+        sh install-timelord.sh
+    - name: Install developer requirements
+      run: |
+        venv/bin/python -m pip install -r requirements-dev.txt
     - name: Lint source with flake8
       run: |
         ./venv/bin/flake8 src --exclude src/electron-ui/node_modules
     - name: Lint source with mypy
       run: |
         ./venv/bin/mypy src tests
-    - name: Install chiavdf from source
-      if: matrix['python-version'] == '3.7' && startsWith(matrix.os, 'ubuntu')
-      run: |
-        source venv/bin/activate
-        pip install --force --no-binary chiavdf chiavdf==0.12.1
     - name: Test blockchain code with pytest
       run: |
         ./venv/bin/py.test tests -s -v

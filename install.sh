@@ -1,4 +1,3 @@
-#!/bin/bash
 set -e
 
 if [ `uname` = "Linux" ] && type apt-get; then
@@ -6,12 +5,16 @@ if [ `uname` = "Linux" ] && type apt-get; then
     sudo apt-get install -y libgmp3-dev libboost-dev libboost-system-dev npm python3-dev cmake
 fi
 
-python3 -m venv venv
+# this fancy syntax sets INSTALL_PYTHON_PATH to "python3.7" unless INSTALL_PYTHON_VERSION is defined
+# if INSTALL_PYTHON_VERSION=3.8, then INSTALL_PYTHON_PATH becomes python3.8
+
+INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION:-3.7}
+
+$INSTALL_PYTHON_PATH -m venv venv
 ln -s venv/bin/activate
 . ./activate
 # pip 20.x+ supports Linux binary wheels
 pip install --upgrade pip
-pip install wheel
 pip install -e .
 pip install -r requirements.txt
 

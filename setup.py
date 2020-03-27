@@ -13,6 +13,7 @@ dependencies = [
     "chiavdf",  # timelord and vdf verification
     "chiabip158",  # bip158-style wallet filters
     "chiapos",  # proof of space
+    "sortedcontainers",
 ]
 dev_dependencies = [
     "pytest",
