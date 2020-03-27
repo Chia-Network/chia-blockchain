@@ -31,6 +31,11 @@ jobs:
     - name: Lint source with mypy
       run: |
         ./.venv/bin/mypy src tests
+    - name: Install chiavdf from source
+      if: matrix['python-version'] == '3.7' && startsWith(matrix.os, 'ubuntu')
+      run: |
+        source .venv/bin/activate
+        pip install --force --no-binary chiavdf chiavdf==0.12.1
     - name: Test blockchain code with pytest
       run: |
         ./.venv/bin/py.test tests -s -v
