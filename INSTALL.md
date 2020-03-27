@@ -20,10 +20,8 @@ sh install.sh
 
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential git cmake libgmp3-dev --no-install-recommends
-sudo apt-get install python3-dev python3-venv --no-install-recommends
-sudo apt-get install libssl-dev
-sudo apt-get install libboost-all-dev
+sudo apt-get install build-essential git cmake libgmp3-dev python3-dev -y
+sudo apt-get install python3-venv libssl-dev libboost-all-dev -y
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
