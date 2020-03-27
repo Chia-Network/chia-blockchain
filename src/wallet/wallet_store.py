@@ -1,4 +1,3 @@
-#import asyncio
 from typing import Dict, Optional, List, Set
 from pathlib import Path
 import aiosqlite
