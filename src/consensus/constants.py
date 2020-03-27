@@ -34,8 +34,8 @@ constants: Dict[str, Any] = {
     "MEMPOOL_BLOCK_BUFFER": 10,
     # Coinbase rewards are not spendable for 200 blocks
     "COINBASE_FREEZE_PERIOD": 200,
-    # Max coin amount int(1 << 64)
-    "MAX_COIN_AMOUNT": 18446744073709600000,
+    # Max coin amount int(1 << 48)
+    "MAX_COIN_AMOUNT": 281474976710656,
     # Raw size per block target = 1,000,000 bytes
     # Rax TX (single in, single out) = 219 bytes (not compressed)
     # TX = 457 vBytes
