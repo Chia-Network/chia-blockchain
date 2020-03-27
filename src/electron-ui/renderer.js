@@ -232,8 +232,12 @@ function send_transaction_response(response) {
    status = response["status"];
    if (status === "SUCCESS") {
        dialogs.alert("Transaction accepted succesfully into the mempool.", ok => {});
+       receiver_address.value = "";
+       amount.value = "";
    } else if (status === "PENDING") {
        dialogs.alert("Transaction is pending acceptance into the mempool. Reason: " + response["reason"], ok => {});
+       receiver_address.value = "";
+       amount.value = "";
    } else if (status === "FAILED") {
        dialogs.alert("Transaction failed. Reason: " + response["reason"], ok => {});
    }
@@ -505,8 +509,6 @@ function handle_state_changed(data) {
     } else if (state == "tx_sent") {
         get_transactions()
         get_wallet_balance(g_wallet_id)
-        console.log("data", data);
-        dialogs.alert("Transaction sent successfully!", ok => {});
     } else if (state == "balance_changed") {
         get_wallet_balance(g_wallet_id)
     } else if (state == "sync_changed") {

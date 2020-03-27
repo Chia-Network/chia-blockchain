@@ -5,6 +5,7 @@ import logging
 import signal
 import time
 import traceback
+import asyncio
 
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -274,9 +275,13 @@ class WebSocketServer:
     async def safe_handle(self, websocket, path):
         try:
             await self.handle_message(websocket, path)
-        except BaseException:
-            tb = traceback.format_exc()
-            self.log.error(f"Error while handling message: {tb}")
+        except (BaseException, websockets.exceptions.ConnectionClosedError) as e:
+            if isinstance(e, websockets.exceptions.ConnectionClosedError):
+                self.log.warning("ConnectionClosedError. Closing websocket.")
+                await websocket.close()
+            else:
+                tb = traceback.format_exc()
+                self.log.error(f"Error while handling message: {tb}")
 
     async def handle_message(self, websocket, path):
         """

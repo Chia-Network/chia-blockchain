@@ -327,8 +327,7 @@ class Wallet:
         tr: Optional[
             TransactionRecord
         ] = await self.wallet_state_manager.get_transaction(tx_id)
-        if tr is not None:
-            assert tr.send_status is not None
+        if tr is not None and tr.send_status is not None:
             return (MempoolInclusionStatus(tr.send_status[0]), tr.send_status[1])
         return None
 
