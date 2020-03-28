@@ -53,6 +53,7 @@ pip-delete-this-directory.txt
 .eggs
 .venv
 venv
+activate
 
 # mypy
 .mypy_cache/

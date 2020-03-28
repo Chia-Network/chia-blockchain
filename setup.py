@@ -14,6 +14,7 @@ dependencies = [
     "chiabip158",  # bip158-style wallet filters
     "chiapos",  # proof of space
     "sortedcontainers",
+    "websockets", #websockets
 ]
 dev_dependencies = [
     "pytest",
