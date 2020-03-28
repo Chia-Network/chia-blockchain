@@ -112,10 +112,15 @@ class Harvester:
                 )
             except RuntimeError:
                 log.error("Error using prover object. Reinitializing prover object.")
-                self.provers[filename] = DiskProver(str(filename))
-                quality_strings = prover.get_qualities_for_challenge(
-                    new_challenge.challenge_hash
-                )
+                try:
+                    self.provers[filename] = DiskProver(str(filename))
+                    quality_strings = prover.get_qualities_for_challenge(
+                        new_challenge.challenge_hash
+                    )
+                except RuntimeError:
+                    log.error(f"Retry-Error using prover object on {filename}. Giving up.")
+                    quality_strings = None
+
             for index, quality_str in enumerate(quality_strings):
                 self.challenge_hashes[quality_str] = (
                     new_challenge.challenge_hash,
