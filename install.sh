@@ -11,7 +11,9 @@ fi
 INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION:-3.7}
 
 $INSTALL_PYTHON_PATH -m venv venv
-ln -s venv/bin/activate
+if [ ! -f "activate" ]; then
+    ln -s venv/bin/activate
+fi
 . ./activate
 # pip 20.x+ supports Linux binary wheels
 pip install --upgrade pip
