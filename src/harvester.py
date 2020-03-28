@@ -6,7 +6,7 @@ from typing import Dict, Optional, Tuple
 from blspy import PrependSignature, PrivateKey, PublicKey, Util
 
 from chiapos import DiskProver
-from definitions import ROOT_DIR
+from src.definitions import ROOT_DIR
 from src.protocols import harvester_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.proof_of_space import ProofOfSpace

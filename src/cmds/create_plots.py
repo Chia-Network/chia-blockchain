@@ -6,7 +6,7 @@ from blspy import PrivateKey, PublicKey
 from yaml import safe_dump, safe_load
 
 from chiapos import DiskPlotter
-from definitions import ROOT_DIR
+from src.definitions import ROOT_DIR
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 

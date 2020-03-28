@@ -10,7 +10,7 @@ from aiter import aiter_forker, iter_to_aiter, join_aiters, map_aiter, push_aite
 from aiter.server import start_server_aiter
 from yaml import safe_load
 
-from definitions import ROOT_DIR
+from src.definitions import ROOT_DIR
 from src.protocols.shared_protocol import (
     Handshake,
     HandshakeAck,

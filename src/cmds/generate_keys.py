@@ -6,7 +6,7 @@ from yaml import safe_dump, safe_load
 from src.pool import create_puzzlehash_for_pk
 from src.types.hashable.BLSSignature import BLSPublicKey
 
-from definitions import ROOT_DIR
+from src.definitions import ROOT_DIR
 
 key_config_filename = ROOT_DIR / "config" / "keys.yaml"
 
