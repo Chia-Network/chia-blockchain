@@ -1,7 +1,7 @@
 import yaml
 import argparse
 from typing import Dict, Any, Callable, Optional
-from definitions import ROOT_DIR
+from src.definitions import ROOT_DIR
 
 
 def load_config(filename: str, sub_config: Optional[str] = None) -> Dict:

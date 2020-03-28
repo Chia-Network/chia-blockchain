@@ -5,7 +5,7 @@ from blspy import PrivateKey, PublicKey
 from yaml import safe_load
 
 from chiapos import DiskProver, Verifier
-from definitions import ROOT_DIR
+from src.definitions import ROOT_DIR
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.hash import std_hash
