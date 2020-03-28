@@ -22,7 +22,6 @@ The first time the tests are run, BlockTools will create and persist many plots.
 proofs of space during testing. The next time tests are run, this won't be necessary.
 
 ```bash
-pip install -r requirements-dev.txt   # you only need to do this once
 black src tests && flake8 src --exclude src/wallet/electron/node_modules  && mypy src tests
 py.test tests -s -v
 ```

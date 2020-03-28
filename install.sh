@@ -17,8 +17,8 @@ fi
 . ./activate
 # pip 20.x+ supports Linux binary wheels
 pip install --upgrade pip
-pip install -e .
 pip install -r requirements.txt
+pip install -e .
 
 cd ./src/electron-ui
 npm install
