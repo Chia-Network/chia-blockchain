@@ -6,6 +6,7 @@ import time
 from typing import Dict
 from secrets import token_bytes
 
+from src.consensus.constants import constants
 from src.protocols import full_node_protocol as fnp, timelord_protocol, wallet_protocol
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
@@ -798,7 +799,7 @@ class TestWalletProtocol:
             100, wallet_a.get_new_puzzlehash(), blocks_new[-1].header.data.coinbase,
         )
         spend_bundle_bad = wallet_a.generate_signed_transaction(
-            1000000000000000,
+            uint64.from_bytes(constants["MAX_COIN_AMOUNT"]),
             wallet_a.get_new_puzzlehash(),
             blocks_new[-1].header.data.coinbase,
         )
