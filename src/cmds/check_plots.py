@@ -25,6 +25,8 @@ def main():
     )
     args = parser.parse_args()
 
+    print ("Checking plots in plots.yaml")
+
     v = Verifier()
     if plot_config_filename.exists():
         plot_config = safe_load(open(plot_config_filename, "r"))
