@@ -114,7 +114,7 @@ async def stop(request) -> None:
 @routes.post('/disconnect')
 async def disconnect(request) -> None:
     params = request.rel_url.query
-    node_id = base64.urlsafe_b64decode(params['node_id'])
+    node_id = bytes.fromhex(params['node_id'])
     await disconnect_peer(app['config']['rpc_port'], node_id)
 
 

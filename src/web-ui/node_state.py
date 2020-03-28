@@ -17,7 +17,8 @@ async def query_node(port, pool_pks) -> dict:
         connections = await rpc_client.get_connections()
         for con in connections:
             con['type_name'] = NodeType(con['type']).name
-            con['node_id'] = str(base64.urlsafe_b64encode(con['node_id']))
+            node_id = con['node_id']
+            con['node_id'] =node_id.hex()
 
         blockchain_state = await rpc_client.get_blockchain_state()
         pool_balances = await rpc_client.get_pool_balances()

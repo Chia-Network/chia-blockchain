@@ -18,9 +18,10 @@ def create_error_middleware(overrides):
         try:
             response = await handler(request)
 
-            override = overrides.get(response.status)
-            if override:
-                return await override(request)
+            if response is not None:
+                override = overrides.get(response.status)
+                if override:
+                    return await override(request)
 
             return response
 
