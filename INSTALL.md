@@ -19,10 +19,12 @@ sh install.sh
 ### Debian/Ubuntu
 
 On Ubuntu 18.04, you need python 3.7. It's not available in the default
-repository, so you need to add an alternate source.
+repository, so you need to add an alternate source. You can skip this step
+on Ubuntu 19.x
 
 ```bash
-sudo apt install software-properties-common -y  # for add-apt-repository
+# for add-apt-repository
+sudo apt install software-properties-common -y
 sudo add-apt-repository ppa:deadsnakes/ppa -y
 exit
 ```
@@ -31,7 +33,7 @@ Install dependencies.
 
 ```bash
 sudo apt-get update
-sudo apt-get install python3.7-venv python3.7-dev -y  # install python3.7 with venv and headers
+sudo apt-get install python3.7-venv python3.7-dev -y
 sudo apt-get install build-essential git cmake libgmp3-dev libssl-dev libboost-all-dev -y
 exit
 
