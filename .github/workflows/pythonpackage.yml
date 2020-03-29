@@ -41,7 +41,7 @@ jobs:
         venv/bin/python -m pip install -r requirements-dev.txt
     - name: Lint source with flake8
       run: |
-        ./venv/bin/flake8 src --exclude src/electron-ui/node_modules
+        ./venv/bin/flake8 src
     - name: Lint source with mypy
       run: |
         ./venv/bin/mypy src tests

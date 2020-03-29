@@ -20,7 +20,7 @@ pip install --upgrade pip
 pip install -r requirements.txt
 pip install -e .
 
-cd ./src/electron-ui
+cd ./electron-ui
 npm install
 
 echo ""
