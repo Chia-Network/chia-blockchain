@@ -1,6 +1,6 @@
 The Linux chiavdf wheels are currently missing an executable required to run a timelord.
 If you want to run a timelord on Linux, you must install the wheel from source (which may require
-some additional packages). See LINUX_TIMELORD.md.
+some additional packages).
 
 ```
 source ./activate
