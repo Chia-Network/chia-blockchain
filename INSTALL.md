@@ -26,7 +26,6 @@ on Ubuntu 19.x
 # for add-apt-repository
 sudo apt install software-properties-common -y
 sudo add-apt-repository ppa:deadsnakes/ppa -y
-exit
 ```
 
 Install dependencies.
@@ -35,7 +34,6 @@ Install dependencies.
 sudo apt-get update
 sudo apt-get install python3.7-venv python3.7-dev -y
 sudo apt-get install build-essential git cmake libgmp3-dev libssl-dev libboost-all-dev -y
-exit
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
