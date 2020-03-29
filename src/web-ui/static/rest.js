@@ -27,6 +27,10 @@ function disconnectPeer(node_id)
         },
         error: function(data) {
             console.log(data.status);
+            setTimeout(function() {
+                window.history.back();
+                window.location.reload();                  
+            }, 1000);            
         }
     });
 }

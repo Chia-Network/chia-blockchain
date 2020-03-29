@@ -9,7 +9,6 @@ from blspy import PrivateKey
 import urllib.parse
 import asyncio
 from threading import Thread
-import base64
 
 
 def setup_app() -> web.Application:
@@ -32,14 +31,25 @@ def setup_app() -> web.Application:
     return app
 
 
+refreshing: bool = False
 interval: int = 15
 keep_running: bool = True
 
 
+async def refresh(app_: web.Application) -> None:
+    global refreshing
+    if refreshing is False:
+        try:
+            refreshing = True
+            app_['node'] = await query_node(app_['config']['rpc_port'], app_['key_config']['pool_pks'])
+            app_['ready'] = True
+        finally:
+            refreshing = False
+
+
 async def refresh_loop(app_: web.Application) -> None:
     while keep_running:
-        app_['node'] = await query_node(app_['config']['rpc_port'], app_['key_config']['pool_pks'])
-        app_['ready'] = True
+        await refresh(app_)
 
         if keep_running:
             await asyncio.sleep(interval)
@@ -116,6 +126,7 @@ async def disconnect(request) -> None:
     params = request.rel_url.query
     node_id = bytes.fromhex(params['node_id'])
     await disconnect_peer(app['config']['rpc_port'], node_id)
+    await refresh(app)
 
 
 app.add_routes(routes)
