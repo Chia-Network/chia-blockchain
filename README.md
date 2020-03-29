@@ -7,6 +7,8 @@ You will need to enable [UPnP](https://www.homenethowto.com/ports-and-nat/upnp-a
 
 For alpha testnet most should only install harvesters, farmers, plotter and full nodes. Building timelords and VDFs is for sophisticated users in most environments. Chia Network and additional volunteers are running sufficient time lords for testnet consensus.
 
+All data is now stored in $CHIA_ROOT or ~/.chia/VERSION-DIR/ if unset. You can find databases, keys, plots, logs here.
+
 ## Step 1: Install the code
 To install the chia-blockchain node, follow [these install](INSTALL.md) instructions according to your operating system.
 
