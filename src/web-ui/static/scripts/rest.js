@@ -3,16 +3,19 @@ var busy = new busy_indicator(document.getElementById("busybox"), document.query
 function stopNode()
 {
     busy.show();
+    window.navigate
     $.ajax({
         url: "/stop",
         type: "POST",
         success: function(data) {
             setTimeout(function() {
-                busy.hide(); 
-            }, 5000);           
+                gotoRoot();
+            }, 5000);
         },
         error: function(data) {
-            busy.hide(); 
+            setTimeout(function() {
+                gotoRoot();
+            }, 5000);
         }
     });
 }
@@ -26,13 +29,20 @@ function disconnectPeer(node_id)
         type: "POST",
         success: function(data) {
             setTimeout(function() {
-                busy.hide();                
-            }, 1000);            
+                gotoRoot();
+            }, 1000);
         },
         error: function(data) {
             setTimeout(function() {
-                busy.hide();                      
-            }, 1000);            
+                gotoRoot();
+            }, 1000);
         }
     });
+}
+
+function gotoRoot()
+{
+    busy.hide();
+    var url = window.location.protocol + "://" + window.location.hostname + ":" + window.location.port;
+    window.location.assign(url);
 }
