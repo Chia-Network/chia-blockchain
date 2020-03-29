@@ -1,47 +1,40 @@
 var busy = new busy_indicator(document.getElementById("busybox"), document.querySelector("#busydiv"));
 
-function stopNode()
-{
+function stopNode() {
     busy.show();
     window.navigate
     $.ajax({
         url: "/stop",
         type: "POST",
         success: function(data) {
-            setTimeout(function() {
-                gotoRoot();
-            }, 5000);
+            gotoRoot(10000);
         },
         error: function(data) {
-            setTimeout(function() {
-                gotoRoot();
-            }, 5000);
+            console.log(data);
+            gotoRoot(1000);
         }
     });
 }
 
-function disconnectPeer(node_id)
-{
+function disconnectPeer(node_id) {
     busy.show();
 
     $.ajax({
         url: "/disconnect?node_id=" + node_id,
         type: "POST",
         success: function(data) {
-            setTimeout(function() {
-                gotoRoot();
-            }, 1000);
+            gotoRoot(1000);
         },
         error: function(data) {
-            setTimeout(function() {
-                gotoRoot();
-            }, 1000);
+            console.log(data);            
+            gotoRoot(1000);
         }
     });
 }
 
-function gotoRoot()
-{
-    busy.hide();
-    window.location.assign("/");
+function gotoRoot(wait) {
+    setTimeout(function() {
+        busy.hide();
+        window.location.assign("/");
+    }, wait);
 }

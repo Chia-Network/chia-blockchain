@@ -55,11 +55,8 @@ async def refresh_loop(app_: web.Application) -> None:
             await asyncio.sleep(interval)
 
 
-refresh_thread: Thread = None
-
-
 async def startup(app_: web.Application) -> None:
-    refresh_thread = Thread(target=asyncio.run, name='refresh_loop', args=(refresh_loop(app_), ))
+    refresh_thread: Thread = Thread(target=asyncio.run, name='refresh_loop', args=(refresh_loop(app_), ))
     refresh_thread.start()
 
 
@@ -129,6 +126,8 @@ async def connections(request):
 @routes.post('/stop')
 async def stop(request) -> None:
     await stop_node(app['config']['rpc_port'])
+    global keep_running
+    keep_running = False
     app['node']['state'] = 'Not running'
 
 
