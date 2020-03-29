@@ -46,6 +46,7 @@ setup(
         "src.protocols",
         "src.rpc",
         "src.server",
+        "src.simulator",
         "src.types",
         "src.types.hashable",
         "src.util",
@@ -62,7 +63,10 @@ setup(
             "chia-generate-keys = src.cmds.generate_keys:main",
         ]
     },
-    package_data={"src.util": ["initial-*.yaml"], "src.server": ["dummy.crt", "dummy.key"],},
+    package_data={
+        "src.util": ["initial-*.yaml"],
+        "src.server": ["dummy.crt", "dummy.key"],
+    },
     use_scm_version={"fallback_version": "unknown-no-.git-directory"},
     long_description=open("README.md").read(),
     zip_safe=False,
