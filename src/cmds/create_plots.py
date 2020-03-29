@@ -30,24 +30,26 @@ def main():
     parser.add_argument(
         "-t",
         "--tmp_dir",
-        help="Temporary directory for plotting files (relative or absolute)",
-        type=str,
-        default="./plots.tmp",
+        help="Temporary directory for plotting files (relative to final directory)",
+        type=Path,
+        default=Path("./plots.tmp"),
+    )
+
+    new_plots_root = path_from_root(
+        load_config("config.yaml").get("new_plots_root", "plots")
     )
     parser.add_argument(
         "-d",
         "--final_dir",
         help="Final directory for plots (relative or absolute)",
-        type=str,
-        default="./plots",
+        type=Path,
+        default=new_plots_root,
     )
 
     # We need the keys file, to access pool keys (if the exist), and the sk_seed.
     args = parser.parse_args()
     if not key_config_filename.exists():
-        raise RuntimeError(
-            "Keys not generated. Run generate-chia-keys"
-        )
+        raise RuntimeError("Keys not generated. Run generate-chia-keys")
 
     # The seed is what will be used to generate a private key for each plot
     key_config = load_config(key_config_filename)
@@ -67,7 +69,9 @@ def main():
         f"{args.index + args.num_plots - 1}, of size {args.size}, sk_seed {sk_seed.hex()} ppk {pool_pk}"
     )
 
-    new_plot_root = path_from_root(load_config("config.yaml").get("new_plot_root", "plots"))
+    tmp_dir = args.final_dir / args.tmp_dir
+    mkdir(tmp_dir)
+    mkdir(args.final_dir)
     for i in range(args.index, args.index + args.num_plots):
         # Generate a sk based on the seed, plot size (k), and index
         sk: PrivateKey = PrivateKey.from_seed(
@@ -78,23 +82,22 @@ def main():
         plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(
             pool_pk, sk.get_public_key()
         )
-        filename: Path = new_plot_root / f"plot-{i}-{args.size}-{plot_seed}.dat"
+        filename: Path = f"plot-{i}-{args.size}-{plot_seed}.dat"
         full_path: Path = args.final_dir / filename
         if full_path.exists():
             print(f"Plot {filename} already exists")
-        else:
-            # Creates the plot. This will take a long time for larger plots.
-            mkdir(filename.parent)
-            mkdir(args.tmp_dir)
-            plotter: DiskPlotter = DiskPlotter()
-            plotter.create_plot_disk(
-                args.tmp_dir,
-                args.final_dir,
-                str(filename),
-                args.size,
-                bytes([]),
-                plot_seed,
-            )
+            continue
+
+        # Creates the plot. This will take a long time for larger plots.
+        plotter: DiskPlotter = DiskPlotter()
+        plotter.create_plot_disk(
+            str(tmp_dir),
+            str(args.final_dir),
+            str(filename),
+            args.size,
+            bytes([]),
+            plot_seed,
+        )
 
         # Updates the config if necessary.
         plot_config = load_config(plot_config_filename)
@@ -109,6 +112,7 @@ def main():
 
         # Dumps the new config to disk.
         save_config(plot_config_filename, plot_config)
+    tmp_dir.rmdir()
 
 
 if __name__ == "__main__":
