@@ -3,6 +3,7 @@ THE_PATH=`python -c 'import pkg_resources; print( pkg_resources.get_distribution
 
 if [ -e $THE_PATH ]
 then
+  echo $THE_PATH
   echo "vdf_client already exists, no action taken"
 else
   if [ -e venv/bin/python ]
