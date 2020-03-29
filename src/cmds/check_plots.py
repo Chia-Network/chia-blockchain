@@ -11,7 +11,7 @@ from src.util.config import load_config
 from src.util.hash import std_hash
 
 plot_root = path_from_root() / "plots"
-plot_config_filename = "plots.yaml"
+plot_config_filename = path_from_root() / "config" / "plots.yaml"
 
 
 def main():

@@ -7,10 +7,11 @@ from src.path import mkdir, path_from_root
 
 
 def migrate_config_file(filename: str, path: pathlib.Path) -> None:
+    filepath = pathlib.Path(filename)
     default_config_file = pkg_resources.resource_string(
-        __name__, f"initial-{filename}"
+        __name__, f"initial-{filepath.parts[-1]}"
     ).decode()
-    mkdir(path.parent)
+    mkdir(str(path.parent))
     with open(path, "w") as f:
         f.write(default_config_file)
 

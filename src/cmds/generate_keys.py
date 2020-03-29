@@ -2,12 +2,13 @@ import argparse
 from secrets import token_bytes
 
 from blspy import PrivateKey, ExtendedPrivateKey
+from src.path import mkdir, path_from_root
 from src.pool import create_puzzlehash_for_pk
 from src.types.hashable.BLSSignature import BLSPublicKey
 from src.util.config import load_config, save_config
 
 
-key_config_filename = "keys.yaml"
+key_config_filename = path_from_root() / "config" / "keys.yaml"
 
 
 def str2bool(v: str) -> bool:
@@ -66,6 +67,7 @@ def main():
             quit()
     else:
         # Create the file if if doesn't exist
+        mkdir(key_config_filename.parent)
         open(key_config_filename, "a").close()
 
     key_config = load_config(key_config_filename)

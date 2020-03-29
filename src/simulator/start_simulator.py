@@ -2,7 +2,7 @@ import asyncio
 import logging
 import logging.config
 import signal
-from pathlib import Path
+from src.path import mkdir, path_from_root
 from src.simulator.full_node_simulator import FullNodeSimulator
 from src.simulator.simulator_constants import test_constants
 
@@ -32,7 +32,8 @@ async def main():
     log = logging.getLogger(__name__)
     server_closed = False
 
-    db_path = Path(config["simulator_database_path"])
+    db_path = path_from_root(config["simulator_database_path"])
+    mkdir(db_path.parent)
 
     # Create the store (DB) and full node instance
     store = await FullNodeStore.create(db_path)

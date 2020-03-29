@@ -7,7 +7,7 @@ from src.path import mkdir, path_from_root
 
 def initialize_logging(prefix: str, logging_config: Dict):
     log_path = path_from_root("log") / "debug.log"
-    mkdir(log_path.parent)
+    mkdir(str(log_path.parent))
     if logging_config["log_stdout"]:
         handler = colorlog.StreamHandler()
         handler.setFormatter(

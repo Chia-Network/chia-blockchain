@@ -1,6 +1,7 @@
-from setuptools_scm import get_version
+from pkg_resources import get_distribution, DistributionNotFound
 
 try:
-    __version__ = version = get_version()
-except LookupError:
-    pass
+    __version__ = get_distribution("chiablockchain").version
+except DistributionNotFound:
+    # package is not installed
+    __version__ = "unknown"

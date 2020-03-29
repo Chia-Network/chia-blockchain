@@ -5,18 +5,18 @@ from pathlib import Path
 from blspy import PrivateKey, PublicKey
 
 from chiapos import DiskPlotter
+from src.path import make_path_relative, mkdir, path_from_root
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.config import load_config, save_config
-
-plot_config_filename = "plots.yaml"
-key_config_filename = "keys.yaml"
 
 
 def main():
     """
     Script for creating plots and adding them to the plot config file.
     """
+    plot_config_filename = path_from_root() / "config" / "plots.yaml"
+    key_config_filename = path_from_root() / "config" / "keys.yaml"
 
     parser = argparse.ArgumentParser(description="Chia plotting script.")
     parser.add_argument("-k", "--size", help="Plot size", type=int, default=20)
@@ -32,7 +32,7 @@ def main():
         "--tmp_dir",
         help="Temporary directory for plotting files (relative or absolute)",
         type=str,
-        default="./plots",
+        default="./plots.tmp",
     )
     parser.add_argument(
         "-d",
@@ -67,6 +67,7 @@ def main():
         f"{args.index + args.num_plots - 1}, of size {args.size}, sk_seed {sk_seed.hex()} ppk {pool_pk}"
     )
 
+    new_plot_root = path_from_root(load_config("config.yaml").get("new_plot_root", "plots"))
     for i in range(args.index, args.index + args.num_plots):
         # Generate a sk based on the seed, plot size (k), and index
         sk: PrivateKey = PrivateKey.from_seed(
@@ -77,12 +78,14 @@ def main():
         plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(
             pool_pk, sk.get_public_key()
         )
-        filename: Path = Path(f"plot-{i}-{args.size}-{plot_seed}.dat")
+        filename: Path = new_plot_root / f"plot-{i}-{args.size}-{plot_seed}.dat"
         full_path: Path = args.final_dir / filename
         if full_path.exists():
             print(f"Plot {filename} already exists")
         else:
             # Creates the plot. This will take a long time for larger plots.
+            mkdir(filename.parent)
+            mkdir(args.tmp_dir)
             plotter: DiskPlotter = DiskPlotter()
             plotter.create_plot_disk(
                 args.tmp_dir,
@@ -94,11 +97,11 @@ def main():
             )
 
         # Updates the config if necessary.
-        if plot_config_filename.exists():
-            plot_config = load_config(plot_config_filename)
-        plot_config_plots_new = deepcopy(plot_config["plots"])
-        if full_path not in plot_config_plots_new:
-            plot_config_plots_new[str(full_path)] = {
+        plot_config = load_config(plot_config_filename)
+        plot_config_plots_new = deepcopy(plot_config.get("plots", []))
+        relative_path = make_path_relative(full_path)
+        if relative_path not in plot_config_plots_new:
+            plot_config_plots_new[str(relative_path)] = {
                 "sk": bytes(sk).hex(),
                 "pool_pk": bytes(pool_pk).hex(),
             }
