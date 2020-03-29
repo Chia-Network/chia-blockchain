@@ -78,7 +78,7 @@ async def index(request) -> None:
 
 @routes.get('/not_running')
 @aiohttp_jinja2.template('not_running.jinja2')
-async def index(request) -> None:
+async def not_running(request) -> None:
     if app['node']['state'] == 'Running':
         raise web.HTTPFound('/')
 
