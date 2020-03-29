@@ -2,13 +2,12 @@ import argparse
 from secrets import token_bytes
 
 from blspy import PrivateKey, ExtendedPrivateKey
-from yaml import safe_dump, safe_load
 from src.pool import create_puzzlehash_for_pk
 from src.types.hashable.BLSSignature import BLSPublicKey
+from src.util.config import load_config, save_config
 
-from src.definitions import ROOT_DIR
 
-key_config_filename = ROOT_DIR / "config" / "keys.yaml"
+key_config_filename = "keys.yaml"
 
 
 def str2bool(v: str) -> bool:
@@ -69,7 +68,7 @@ def main():
         # Create the file if if doesn't exist
         open(key_config_filename, "a").close()
 
-    key_config = safe_load(open(key_config_filename, "r"))
+    key_config = load_config(key_config_filename)
     if key_config is None:
         key_config = {}
 
@@ -81,14 +80,12 @@ def main():
         )
         key_config["wallet_sk"] = bytes(wallet_sk).hex()
         key_config["wallet_target"] = wallet_target.hex()
-        with open(key_config_filename, "w") as f:
-            safe_dump(key_config, f)
+        save_config(key_config_filename, key_config)
     if args.harvester:
         # Replaces the harvester's sk seed. Used to generate plot private keys, which are
         # used to sign farmed blocks.
         key_config["sk_seed"] = token_bytes(32).hex()
-        with open(key_config_filename, "w") as f:
-            safe_dump(key_config, f)
+        save_config(key_config_filename, key_config)
     if args.pool:
         # Replaces the pools keys and targes. Only useful if running a pool, or doing
         # solo farming. The pool target allows spending of the coinbase.
@@ -101,8 +98,7 @@ def main():
             pool_target = wallet_target
         key_config["pool_sks"] = [bytes(pool_sk).hex() for pool_sk in pool_sks]
         key_config["pool_target"] = pool_target.hex()
-        with open(key_config_filename, "w") as f:
-            safe_dump(key_config, f)
+        save_config(key_config_filename, key_config)
 
 
 if __name__ == "__main__":
