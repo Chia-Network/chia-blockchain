@@ -43,6 +43,5 @@ function disconnectPeer(node_id)
 function gotoRoot()
 {
     busy.hide();
-    var url = window.location.protocol + "://" + window.location.hostname + ":" + window.location.port;
-    window.location.assign(url);
+    window.location.assign("/");
 }

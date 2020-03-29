@@ -8,7 +8,7 @@ import datetime
 
 
 async def query_node(port, pool_pks) -> dict:
-    node = {}
+    node = {'state': 'Not running'}
 
     rpc_client: RpcClient = None
     try:
@@ -41,8 +41,6 @@ async def query_node(port, pool_pks) -> dict:
 
         latest_blocks = await get_latest_blocks(rpc_client, blockchain_state["tips"])
 
-        rpc_client.close()
-
         node['connections'] = connections
         node['blockchain_state'] = blockchain_state
         node['pool_balances'] = pool_balances
@@ -53,8 +51,7 @@ async def query_node(port, pool_pks) -> dict:
         node['last_refresh'] = datetime.datetime.now()
 
     except client_exceptions.ClientConnectorError as e:
-        node['state'] = 'Not running'
-        print(e)
+        print(str(e))
 
     except Exception as e1:
         print(str(e1))
@@ -63,7 +60,8 @@ async def query_node(port, pool_pks) -> dict:
     finally:
         if rpc_client is not None:
             rpc_client.close()
-        return node
+
+    return node
 
 
 def find_block(block_list, blockid):
@@ -105,7 +103,6 @@ async def stop_node(port) -> None:
     try:
         rpc_client = await RpcClient.create(port)
         await rpc_client.stop_node()
-        rpc_client.close()
 
     except client_exceptions.ClientConnectorError:
         print("exception occured while stopping node")

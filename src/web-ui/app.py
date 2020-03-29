@@ -70,17 +70,27 @@ routes: web.RouteTableDef = web.RouteTableDef()
 @routes.get('/')
 @aiohttp_jinja2.template('index.jinja2')
 async def index(request) -> None:
-    # the node property contains the state of the chia node when it was last queried
+    if app['node']['state'] == 'Not running':
+        raise web.HTTPFound('/not_running')
+
     if app['ready']:
-        return dict(title='Chia Full Node', **app['node'])
+        return dict(title='Chia Node', **app['node'])
 
     raise web.HTTPNotFound()
+
+
+@routes.get('/not_running')
+@aiohttp_jinja2.template('not_running.jinja2')
+async def index(request) -> None:
+    if app['node']['state'] == 'Running':
+        raise web.HTTPFound('/')
+
+    return dict(title='Chia Node Not Running', **app['node'])
 
 
 @routes.get('/lca')
 @aiohttp_jinja2.template('shb.jinja2')
 async def lca(request):
-    # the node property contains the state of the chia node when it was last queried
     if app['ready']:
         block = app['node']['blockchain_state']['lca']
         return dict(title='Least Common Ancestor', block=block)
@@ -119,6 +129,7 @@ async def connections(request):
 @routes.post('/stop')
 async def stop(request) -> None:
     await stop_node(app['config']['rpc_port'])
+    app['node']['state'] = 'Not running'
 
 
 @routes.post('/disconnect')
