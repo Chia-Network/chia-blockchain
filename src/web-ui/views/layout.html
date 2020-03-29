@@ -2,12 +2,22 @@
 <html lang="en">
 <head>
     <title>{{ title }}</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <script src="/static/jquery-1.10.2.min.js"></script>
-    <script src="/static/rest.js"></script>    
+    <link rel="stylesheet" href="/static/styles/style.css" type="text/css">
+    <script src="/static/scripts/jquery-1.10.2.min.js" type="text/javascript"></script>
+
+    <link rel="stylesheet" href="/static/styles/busy_indicator.css" type="text/css">
+    <script src="/static/scripts/busy_indicator.js" type="text/javascript"></script>
+
 </head>
 <body>
+    <div id="busybox" class="bg">
+        <div id="busydiv"></div>
+    </div>
     <h1>{{ title }}</h1>
-    {% block content %}{% endblock %}
+    <div id="content">
+        {% block content %}{% endblock %}
+    </div>    
+    <script src="/static/scripts/rest.js" type="text/javascript"></script>       
+       
 </body>
 </html>

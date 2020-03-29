@@ -5,20 +5,20 @@ from src.util.ints import uint64
 from typing import List, Optional, Dict
 from src.types.header_block import SmallHeaderBlock
 import datetime
-import base64
 
 
 async def query_node(port, pool_pks) -> dict:
     node = {}
 
+    rpc_client: RpcClient = None
     try:
-        rpc_client: RpcClient = await RpcClient.create(port)
+        rpc_client = await RpcClient.create(port)
 
         connections = await rpc_client.get_connections()
         for con in connections:
             con['type_name'] = NodeType(con['type']).name
             node_id = con['node_id']
-            con['node_id'] =node_id.hex()
+            con['node_id'] = node_id.hex()
 
         blockchain_state = await rpc_client.get_blockchain_state()
         pool_balances = await rpc_client.get_pool_balances()
@@ -61,6 +61,8 @@ async def query_node(port, pool_pks) -> dict:
         raise e1
 
     finally:
+        if rpc_client is not None:
+            rpc_client.close()
         return node
 
 
@@ -99,20 +101,29 @@ async def get_latest_blocks(rpc_client: RpcClient, heads: List[SmallHeaderBlock]
 
 
 async def stop_node(port) -> None:
+    rpc_client: RpcClient = None
     try:
-        rpc_client: RpcClient = await RpcClient.create(port)
+        rpc_client = await RpcClient.create(port)
         await rpc_client.stop_node()
         rpc_client.close()
 
     except client_exceptions.ClientConnectorError:
         print("exception occured while stopping node")
 
+    finally:
+        if rpc_client is not None:
+            rpc_client.close()
+
 
 async def disconnect_peer(port, node_id) -> None:
+    rpc_client: RpcClient = None
     try:
-        rpc_client: RpcClient = await RpcClient.create(port)
+        rpc_client = await RpcClient.create(port)
         await rpc_client.close_connection(node_id)
-        rpc_client.close()
 
     except client_exceptions.ClientConnectorError:
         print("exception occured while disconnecting peer")
+
+    finally:
+        if rpc_client is not None:
+            rpc_client.close()

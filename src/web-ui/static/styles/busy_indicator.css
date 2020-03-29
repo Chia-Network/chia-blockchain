@@ -1,0 +1,29 @@
+/**********************************************************************
+ * Busy indicator
+ **********************************************************************/
+#busybox {
+}
+
+#busybox div {
+        position: fixed;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: 8px solid white;
+        border-left-color: transparent;
+        border-right-color: transparent;
+
+        animation: busybox_kf 1s linear 0s infinite normal none running;
+}
+
+@keyframes busybox_kf {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+}
+
+@-webkit-keyframes busybox_kf {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+}
+
+
