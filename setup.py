@@ -57,9 +57,9 @@ setup(
     entry_points={
         "console_scripts": [
             "chia = src.cmds.cli:main",
-            "check-chia-plots = src.cmds.check_plots:main",
-            "create-chia-plots = src.cmds.create_plots:main",
-            "generate-chia-keys = src.cmds.generate_keys:main",
+            "chia-check-plots = src.cmds.check_plots:main",
+            "chia-create-plots = src.cmds.create_plots:main",
+            "chia-generate-keys = src.cmds.generate_keys:main",
         ]
     },
     package_data={"src.util": ["initial-*.yaml"], "src.server": ["dummy.crt", "dummy.key"],},

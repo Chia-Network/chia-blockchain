@@ -49,7 +49,7 @@ def main():
     # We need the keys file, to access pool keys (if the exist), and the sk_seed.
     args = parser.parse_args()
     if not key_config_filename.exists():
-        raise RuntimeError("Keys not generated. Run generate-chia-keys")
+        raise RuntimeError("Keys not generated. Run chia-generate-keys")
 
     # The seed is what will be used to generate a private key for each plot
     key_config = load_config(key_config_filename)
