@@ -4,13 +4,13 @@ from pathlib import Path
 from blspy import PrivateKey, PublicKey
 
 from chiapos import DiskProver, Verifier
-from src.definitions import ROOT_DIR
+from src.path import path_from_root
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.config import load_config
 from src.util.hash import std_hash
 
-plot_root = ROOT_DIR / "plots"
+plot_root = path_from_root() / "plots"
 plot_config_filename = "plots.yaml"
 
 

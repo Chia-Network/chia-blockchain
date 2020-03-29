@@ -3,26 +3,26 @@ import argparse
 import pathlib
 import pkg_resources
 from typing import Dict, Any, Callable, Optional
-from src.definitions import ROOT_DIR
+from src.path import mkdir, path_from_root
 
 
 def migrate_config_file(filename: str, path: pathlib.Path) -> None:
     default_config_file = pkg_resources.resource_string(
         __name__, f"initial-{filename}"
     ).decode()
-    path.parent.mkdir(parents=True, exist_ok=True)
+    mkdir(path.parent)
     with open(path, "w") as f:
         f.write(default_config_file)
 
 
 def save_config(filename: str, config_data):
-    path = ROOT_DIR / "config" / filename
+    path = path_from_root("config") / filename
     with open(path, "w") as f:
         yaml.safe_dump(config_data, f)
 
 
 def load_config(filename: str, sub_config: Optional[str] = None) -> Dict:
-    path = ROOT_DIR / "config" / filename
+    path = path_from_root("config") / filename
     if not path.is_file():
         migrate_config_file(filename, path)
     if sub_config is not None:

@@ -1,4 +1,3 @@
-from pathlib import Path
 import asyncio
 import time
 from typing import Dict, Optional, Tuple, List, Any, AsyncGenerator
@@ -15,6 +14,7 @@ from src.util.merkle_set import (
     confirm_not_included_already_hashed,
     MerkleSet,
 )
+from src.path import path_from_root
 from src.protocols import wallet_protocol, full_node_protocol
 from src.consensus.constants import constants as consensus_constants
 from src.server.server import ChiaServer
@@ -75,7 +75,7 @@ class WalletNode:
         else:
             self.log = logging.getLogger(__name__)
 
-        path = Path(config["database_path"])
+        path = path_from_root(config["database_path"])
 
         self.wallet_state_manager = await WalletStateManager.create(
             config, path, self.constants
