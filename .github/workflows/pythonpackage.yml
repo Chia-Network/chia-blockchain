@@ -34,6 +34,7 @@ jobs:
         sh install.sh
     - name: Install time lord
       run: |
+        . ./activate
         sh install-timelord.sh
     - name: Install developer requirements
       run: |
