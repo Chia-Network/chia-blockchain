@@ -6,7 +6,7 @@ from typing import Dict, Optional, Tuple
 from blspy import PrependSignature, PrivateKey, PublicKey, Util
 
 from chiapos import DiskProver
-from definitions import ROOT_DIR
+from src.path import path_from_root
 from src.protocols import harvester_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.proof_of_space import ProofOfSpace
@@ -58,12 +58,9 @@ class Harvester:
         use any plots which don't have one of the pool keys.
         """
         for partial_filename_str, plot_config in self.plot_config["plots"].items():
-            partial_filename = Path(partial_filename_str)
-            potential_filenames = [partial_filename]
-            if "plot_root" in self.config:
-                potential_filenames.append(self.config["plot_root"] / partial_filename)
-            else:
-                potential_filenames.append(ROOT_DIR / "plots" / partial_filename)
+            plot_root = path_from_root(self.config.get("plot_root", "."))
+            partial_filename = path_from_root(partial_filename_str, plot_root)
+            potential_filenames = [partial_filename, path_from_root(partial_filename_str, plot_root)]
             pool_pubkey = PublicKey.from_bytes(bytes.fromhex(plot_config["pool_pk"]))
 
             # Only use plots that correct pools associated with them

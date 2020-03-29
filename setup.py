@@ -14,7 +14,7 @@ dependencies = [
     "chiabip158",  # bip158-style wallet filters
     "chiapos",  # proof of space
     "sortedcontainers",
-    "websockets", #websockets
+    "websockets",
 ]
 dev_dependencies = [
     "pytest",
@@ -36,14 +36,36 @@ setup(
     keywords="chia blockchain node",
     install_requires=dependencies,
     setup_requires=["setuptools_scm"],
-    extras_require={"uvloop": ["uvloop"],},
+    extras_require={"uvloop": ["uvloop"], },
+    packages=[
+        "src",
+        "src.cmds",
+        "src.consensus",
+        "src.full_node",
+        "src.pool",
+        "src.protocols",
+        "src.rpc",
+        "src.server",
+        "src.simulator",
+        "src.types",
+        "src.types.hashable",
+        "src.util",
+        "src.wallet",
+        "src.wallet.puzzles",
+        "src.wallet.rl_wallet",
+        "src.wallet.util",
+    ],
     entry_points={
         "console_scripts": [
             "chia = src.cmds.cli:main",
-            "check-chia-plots = src.cmds.check_plots:main",
-            "create-chia-plots = src.cmds.create_plots:main",
-            "generate-chia-keys = src.cmds.generate_keys:main",
+            "chia-check-plots = src.cmds.check_plots:main",
+            "chia-create-plots = src.cmds.create_plots:main",
+            "chia-generate-keys = src.cmds.generate_keys:main",
         ]
+    },
+    package_data={
+        "src.util": ["initial-*.yaml"],
+        "src.server": ["dummy.crt", "dummy.key"],
     },
     use_scm_version={"fallback_version": "unknown-no-.git-directory"},
     long_description=open("README.md").read(),

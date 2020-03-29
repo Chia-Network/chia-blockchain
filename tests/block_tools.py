@@ -2,7 +2,6 @@ import sys
 import time
 from typing import Any, Dict, List, Tuple, Optional
 import random
-from pathlib import Path
 
 import blspy
 from blspy import PrependSignature, PrivateKey, PublicKey
@@ -13,6 +12,7 @@ from chiapos import DiskPlotter, DiskProver
 from src.consensus import block_rewards, pot_iterations
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
+from src.path import mkdir, path_from_root
 from src.pool import create_coinbase_coin_and_signature
 from src.types.challenge import Challenge
 from src.types.classgroup import ClassgroupElement
@@ -63,15 +63,15 @@ class BlockTools:
         plot_seeds: List[bytes32] = [
             ProofOfSpace.calculate_plot_seed(pool_pk, plot_pk) for plot_pk in plot_pks
         ]
-        self.plot_dir = Path("tests") / "plots"
+        self.plot_dir = path_from_root("tests") / "plots"
+        mkdir(self.plot_dir)
         self.filenames: List[str] = [
-            "genesis-plots-"
-            + str(k)
-            + std_hash(int.to_bytes(i, 4, "big")).hex()
-            + ".dat"
+            f"genesis-plots-{k}{std_hash(int.to_bytes(i, 4, 'big')).hex()}.dat"
             for i in range(num_plots)
         ]
         done_filenames = set()
+        temp_dir = self.plot_dir / "plot.tmp"
+        mkdir(temp_dir)
         try:
             for pn, filename in enumerate(self.filenames):
                 if not (self.plot_dir / filename).exists():

@@ -2,7 +2,6 @@ import asyncio
 import logging
 import logging.config
 import signal
-from pathlib import Path
 
 import miniupnpc
 
@@ -13,6 +12,7 @@ except ImportError:
 
 from src.full_node.blockchain import Blockchain
 from src.consensus.constants import constants
+from src.path import mkdir, path_from_root
 from src.full_node.store import FullNodeStore
 from src.full_node.full_node import FullNode
 from src.rpc.rpc_server import start_rpc_server
@@ -35,7 +35,8 @@ async def main():
     log = logging.getLogger(__name__)
     server_closed = False
 
-    db_path = Path(config["database_path"])
+    db_path = path_from_root(config["database_path"])
+    mkdir(db_path.parent)
 
     # Create the store (DB) and full node instance
     store = await FullNodeStore.create(db_path)

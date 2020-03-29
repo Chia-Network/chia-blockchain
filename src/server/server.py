@@ -1,6 +1,7 @@
 import asyncio
 import concurrent
 import logging
+import pkg_resources
 import random
 import ssl
 from secrets import token_bytes
@@ -8,9 +9,7 @@ from typing import Any, AsyncGenerator, List, Optional, Tuple, Dict
 
 from aiter import aiter_forker, iter_to_aiter, join_aiters, map_aiter, push_aiter
 from aiter.server import start_server_aiter
-from yaml import safe_load
 
-from definitions import ROOT_DIR
 from src.protocols.shared_protocol import (
     Handshake,
     HandshakeAck,
@@ -23,6 +22,7 @@ from src.server.outbound_message import Delivery, Message, NodeType, OutboundMes
 from src.types.peer_info import PeerInfo
 from src.types.sized_bytes import bytes32
 from src.util import partial_func
+from src.util.config import load_config
 from src.util.errors import (
     IncompatibleProtocolVersion,
     InvalidAck,
@@ -33,8 +33,7 @@ from src.util.ints import uint16
 from src.util.network import create_node_id
 import traceback
 
-config_filename = ROOT_DIR / "config" / "config.yaml"
-config = safe_load(open(config_filename, "r"))
+config = load_config("config.yaml")
 
 
 class ChiaServer:
@@ -86,7 +85,9 @@ class ChiaServer:
                 )
             except Exception:
                 pass
-        return "ssl/dummy.crt", "ssl/dummy.key", "1234", None
+        dummy_crt = pkg_resources.resource_filename(__name__, "dummy.crt")
+        dummy_key = pkg_resources.resource_filename(__name__, "dummy.key")
+        return dummy_crt, dummy_key, "1234", None
 
     async def start_server(
         self, host: str, on_connect: OnConnectFunc = None, config: Dict = None,

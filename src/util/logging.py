@@ -2,8 +2,12 @@ import logging
 import colorlog
 from typing import Dict
 
+from src.path import mkdir, path_from_root
+
 
 def initialize_logging(prefix: str, logging_config: Dict):
+    log_path = path_from_root("log") / "debug.log"
+    mkdir(str(log_path.parent))
     if logging_config["log_stdout"]:
         handler = colorlog.StreamHandler()
         handler.setFormatter(
@@ -18,10 +22,10 @@ def initialize_logging(prefix: str, logging_config: Dict):
         logger.addHandler(handler)
     else:
         print(
-            f"Starting process and logging to {logging_config['log_filename']}. Run with & to run in the background."
+            f"Starting process and logging to {log_path}. Run with & to run in the background."
         )
         logging.basicConfig(
-            filename=logging_config["log_filename"],
+            filename=log_path,
             filemode="a",
             format=f"{prefix}: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
             datefmt="%H:%M:%S",

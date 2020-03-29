@@ -2,16 +2,16 @@ import argparse
 from pathlib import Path
 
 from blspy import PrivateKey, PublicKey
-from yaml import safe_load
 
 from chiapos import DiskProver, Verifier
-from definitions import ROOT_DIR
+from src.path import path_from_root
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
+from src.util.config import load_config
 from src.util.hash import std_hash
 
-plot_root = ROOT_DIR / "plots"
-plot_config_filename = ROOT_DIR / "config" / "plots.yaml"
+plot_root = path_from_root() / "plots"
+plot_config_filename = path_from_root() / "config" / "plots.yaml"
 
 
 def main():
@@ -29,7 +29,7 @@ def main():
 
     v = Verifier()
     if plot_config_filename.exists():
-        plot_config = safe_load(open(plot_config_filename, "r"))
+        plot_config = load_config(plot_config_filename)
         for plot_filename, plot_info in plot_config["plots"].items():
             plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(
                 PublicKey.from_bytes(bytes.fromhex(plot_info["pool_pk"])),

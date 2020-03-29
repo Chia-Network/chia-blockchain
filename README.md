@@ -7,6 +7,8 @@ You will need to enable [UPnP](https://www.homenethowto.com/ports-and-nat/upnp-a
 
 For alpha testnet most should only install harvesters, farmers, plotter and full nodes. Building timelords and VDFs is for sophisticated users in most environments. Chia Network and additional volunteers are running sufficient time lords for testnet consensus.
 
+All data is now stored in $CHIA_ROOT or ~/.chia/VERSION-DIR/ if unset. You can find databases, keys, plots, logs here.
+
 ## Step 1: Install the code
 To install the chia-blockchain node, follow [these install](INSTALL.md) instructions according to your operating system.
 
@@ -15,7 +17,7 @@ Remember that once you complete your install you **must be in the Python virtual
 ## Step 2: Generate keys
 First, create some keys by running the following script:
 ```bash
-generate-chia-keys
+chia-generate-keys
 ```
 
 ## Step 3a: Run a full node + wallet
@@ -36,7 +38,7 @@ can take a long time depending on the [size of the plots](https://github.com/Chi
 You can also change the working directory and
 final directory for plotting, with the "-t" and "-d" arguments to the create_plots script.
 ```bash
-create-chia-plots -k 20 -n 10
+chia-create-plots -k 20 -n 10
 sh ./scripts/run_farming.sh &
 ./scripts/run_wallet_ui.sh &
 ```
