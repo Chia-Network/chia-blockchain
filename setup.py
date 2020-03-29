@@ -14,7 +14,7 @@ dependencies = [
     "chiabip158",  # bip158-style wallet filters
     "chiapos",  # proof of space
     "sortedcontainers",
-    "websockets", #websockets
+    "websockets",
 ]
 dev_dependencies = [
     "pytest",
@@ -62,6 +62,7 @@ setup(
             "generate-chia-keys = src.cmds.generate_keys:main",
         ]
     },
+    package_data={"src.util": ["initial-*.yaml"], "src.server": ["dummy.crt", "dummy.key"],},
     use_scm_version={"fallback_version": "unknown-no-.git-directory"},
     long_description=open("README.md").read(),
     zip_safe=False,

@@ -1,15 +1,28 @@
 import yaml
 import argparse
+import pathlib
+import pkg_resources
 from typing import Dict, Any, Callable, Optional
 from src.definitions import ROOT_DIR
 
 
+def migrate_config_file(filename: str, path: pathlib.Path) -> None:
+    default_config_file = pkg_resources.resource_string(
+        __name__, f"initial-{filename}"
+    ).decode()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w") as f:
+        f.write(default_config_file)
+
+
 def load_config(filename: str, sub_config: Optional[str] = None) -> Dict:
-    config_filename = ROOT_DIR / "config" / filename
+    path = ROOT_DIR / "config" / filename
+    if not path.is_file():
+        migrate_config_file(filename, path)
     if sub_config is not None:
-        return yaml.safe_load(open(config_filename, "r"))[sub_config]
+        return yaml.safe_load(open(path, "r"))[sub_config]
     else:
-        return yaml.safe_load(open(config_filename, "r"))
+        return yaml.safe_load(open(path, "r"))
 
 
 def load_config_cli(filename: str, sub_config: Optional[str] = None) -> Dict:
