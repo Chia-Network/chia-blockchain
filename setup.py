@@ -61,6 +61,7 @@ setup(
             "chia-check-plots = src.cmds.check_plots:main",
             "chia-create-plots = src.cmds.create_plots:main",
             "chia-generate-keys = src.cmds.generate_keys:main",
+            "chia-websocket-server = src.wallet.websocket_server:main",
         ]
     },
     package_data={
