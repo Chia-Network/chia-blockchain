@@ -15,6 +15,12 @@ def migrate_config_file(filename: str, path: pathlib.Path) -> None:
         f.write(default_config_file)
 
 
+def save_config(filename: str, config_data):
+    path = ROOT_DIR / "config" / filename
+    with open(path, "w") as f:
+        yaml.safe_dump(config_data, f)
+
+
 def load_config(filename: str, sub_config: Optional[str] = None) -> Dict:
     path = ROOT_DIR / "config" / filename
     if not path.is_file():

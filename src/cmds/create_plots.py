@@ -3,15 +3,14 @@ from copy import deepcopy
 from pathlib import Path
 
 from blspy import PrivateKey, PublicKey
-from yaml import safe_dump, safe_load
 
 from chiapos import DiskPlotter
-from src.definitions import ROOT_DIR
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
+from src.util.config import load_config, save_config
 
-plot_config_filename = ROOT_DIR / "config" / "plots.yaml"
-key_config_filename = ROOT_DIR / "config" / "keys.yaml"
+plot_config_filename = "plots.yaml"
+key_config_filename = "keys.yaml"
 
 
 def main():
@@ -51,7 +50,7 @@ def main():
         )
 
     # The seed is what will be used to generate a private key for each plot
-    key_config = safe_load(open(key_config_filename, "r"))
+    key_config = load_config(key_config_filename)
     sk_seed: bytes = bytes.fromhex(key_config["sk_seed"])
 
     pool_pk: PublicKey
@@ -96,9 +95,7 @@ def main():
 
         # Updates the config if necessary.
         if plot_config_filename.exists():
-            plot_config = safe_load(open(plot_config_filename, "r"))
-        else:
-            plot_config = {"plots": {}}
+            plot_config = load_config(plot_config_filename)
         plot_config_plots_new = deepcopy(plot_config["plots"])
         if full_path not in plot_config_plots_new:
             plot_config_plots_new[str(full_path)] = {
@@ -108,8 +105,7 @@ def main():
         plot_config["plots"].update(plot_config_plots_new)
 
         # Dumps the new config to disk.
-        with open(plot_config_filename, "w") as f:
-            safe_dump(plot_config, f)
+        save_config(plot_config_filename, plot_config)
 
 
 if __name__ == "__main__":
