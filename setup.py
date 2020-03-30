@@ -42,7 +42,7 @@ dev_dependencies = [
 ]
 
 setup(
-    name="chiablockchain",
+    name="chia-blockchain",
     author="Mariano Sorgente",
     author_email="mariano@chia.net",
     description="Chia proof of space plotting, proving, and verifying (wraps C++)",
@@ -67,6 +67,19 @@ setup(
         "src.wallet.puzzles",
         "src.wallet.rl_wallet",
         "src.wallet.util",
+    ],
+    scripts=[
+        "scripts/_chia-common",
+        "scripts/chia-drop-db",
+        "scripts/chia-start-all",
+        "scripts/chia-start-farmer",
+        "scripts/chia-start-harvester",
+        "scripts/chia-start-introducer",
+        "scripts/chia-start-node",
+        "scripts/chia-start-sim",
+        "scripts/chia-start-timelord",
+        "scripts/chia-start-wallet-gui",
+        "scripts/chia-stop-all",
     ],
     entry_points={
         "console_scripts": [

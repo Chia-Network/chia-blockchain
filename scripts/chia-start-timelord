@@ -1,5 +1,4 @@
-. ./activate
-. scripts/common.sh
+. _chia-common
 
 # Starts a timelord, and a full node
 

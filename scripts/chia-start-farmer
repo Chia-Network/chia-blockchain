@@ -1,5 +1,4 @@
-. ./activate
-. scripts/common.sh
+. _chia-common
 
 # Starts a harvester, farmer, and full node.
 

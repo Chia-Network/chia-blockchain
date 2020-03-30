@@ -25,8 +25,8 @@ To run a full node on port 8444, and connect to the testnet, run the following c
 If you want to see std::out log output, modify the logging.std_out variable in ./config/config.yaml.
 
 ```bash
-./scripts/run_full_node.sh &
-./scripts/run_wallet_ui.sh &
+chia-start-node &
+chia-start-wallet-gui &
 ```
 
 ## Step 3b: Run a farmer + full node + wallet
@@ -39,8 +39,8 @@ You can also change the working directory and
 final directory for plotting, with the "-t" and "-d" arguments to the create_plots script.
 ```bash
 chia-create-plots -k 20 -n 10
-sh ./scripts/run_farming.sh &
-./scripts/run_wallet_ui.sh &
+chia-start-farmer &
+chia-start-wallet-gui &
 ```
 
 
@@ -53,8 +53,8 @@ Timelords execute sequential verifiable delay functions (proofs of time), that g
 blocks to make them valid. This requires fast CPUs and a lot of memory as well as completing
 both install steps above.
 ```bash
-sh ./scripts/run_timelord.sh &
-./scripts/run_wallet_ui.sh &
+chia-start-timelord &
+chia-start-wallet-gui &
 ```
 
 ## Tips
@@ -77,7 +77,7 @@ The introducer will only know the local ips of the full nodes, so it cannot broa
 ips to external peers.
 
 ```bash
-sh ./scripts/run_all_simulation.sh
+chia-start-sim
 ```
 
 For increased networking performance, install uvloop:
