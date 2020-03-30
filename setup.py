@@ -13,8 +13,8 @@ dependencies = [
     "chiavdf",  # timelord and vdf verification
     "chiabip158",  # bip158-style wallet filters
     "chiapos",  # proof of space
-    "sortedcontainers",
-    "websockets",
+    "sortedcontainers",  # For maintaining sorted mempools
+    "websockets",  # For use in wallet RPC and electron UI
 ]
 dev_dependencies = [
     "pytest",

@@ -60,7 +60,10 @@ class Harvester:
         for partial_filename_str, plot_config in self.plot_config["plots"].items():
             plot_root = path_from_root(self.config.get("plot_root", "."))
             partial_filename = path_from_root(partial_filename_str, plot_root)
-            potential_filenames = [partial_filename, path_from_root(partial_filename_str, plot_root)]
+            potential_filenames = [
+                partial_filename,
+                path_from_root(partial_filename_str, plot_root),
+            ]
             pool_pubkey = PublicKey.from_bytes(bytes.fromhex(plot_config["pool_pk"]))
 
             # Only use plots that correct pools associated with them
@@ -115,7 +118,9 @@ class Harvester:
                         new_challenge.challenge_hash
                     )
                 except RuntimeError:
-                    log.error(f"Retry-Error using prover object on {filename}. Giving up.")
+                    log.error(
+                        f"Retry-Error using prover object on {filename}. Giving up."
+                    )
                     quality_strings = None
 
             for index, quality_str in enumerate(quality_strings):

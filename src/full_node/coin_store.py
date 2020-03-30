@@ -36,7 +36,9 @@ class CoinStore:
     cache_size: uint32
 
     @classmethod
-    async def create(cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)):
+    async def create(
+        cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)
+    ):
         self = cls()
 
         self.cache_size = cache_size

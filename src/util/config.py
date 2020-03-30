@@ -1,13 +1,13 @@
 import yaml
 import argparse
-import pathlib
+from pathlib import Path
 import pkg_resources
-from typing import Dict, Any, Callable, Optional
+from typing import Dict, Any, Callable, Optional, Union
 from src.path import mkdir, path_from_root
 
 
-def migrate_config_file(filename: str, path: pathlib.Path) -> None:
-    filepath = pathlib.Path(filename)
+def migrate_config_file(filename: Union[str, Path], path: Path) -> None:
+    filepath = Path(filename)
     default_config_file = pkg_resources.resource_string(
         __name__, f"initial-{filepath.parts[-1]}"
     ).decode()
@@ -16,13 +16,13 @@ def migrate_config_file(filename: str, path: pathlib.Path) -> None:
         f.write(default_config_file)
 
 
-def save_config(filename: str, config_data):
+def save_config(filename: Union[str, Path], config_data):
     path = path_from_root("config") / filename
     with open(path, "w") as f:
         yaml.safe_dump(config_data, f)
 
 
-def load_config(filename: str, sub_config: Optional[str] = None) -> Dict:
+def load_config(filename: Union[str, Path], sub_config: Optional[str] = None) -> Dict:
     path = path_from_root("config") / filename
     if not path.is_file():
         migrate_config_file(filename, path)

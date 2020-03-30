@@ -156,7 +156,7 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == funds
 
         await full_node_1.reorg_from_index_to_new_index(
-            ReorgProtocol(5, num_blocks + 3, token_bytes())
+            ReorgProtocol(uint32(5), uint32(num_blocks + 3), token_bytes())
         )
         await asyncio.sleep(3)
 

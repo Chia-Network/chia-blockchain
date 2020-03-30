@@ -1092,6 +1092,7 @@ class TestWalletProtocol:
         assert len(msgs) == 1
         assert isinstance(msgs[0].message.data, wallet_protocol.RespondRemovals)
         assert len(msgs[0].message.data.coins) == 1
+        assert msgs[0].message.data.proofs is not None
         assert len(msgs[0].message.data.proofs) == 1
         assert confirm_included_already_hashed(
             blocks_new[height_with_transactions].header.data.removals_root,
@@ -1115,6 +1116,7 @@ class TestWalletProtocol:
         assert isinstance(msgs[0].message.data, wallet_protocol.RespondRemovals)
         assert len(msgs[0].message.data.coins) == 1
         assert msgs[0].message.data.coins[0][1] is None
+        assert msgs[0].message.data.proofs is not None
         assert len(msgs[0].message.data.proofs) == 1
         assert confirm_not_included_already_hashed(
             blocks_new[height_with_transactions].header.data.removals_root,
@@ -1139,6 +1141,7 @@ class TestWalletProtocol:
         assert len(msgs[0].message.data.coins) == 2
         assert msgs[0].message.data.coins[0][1] is not None
         assert msgs[0].message.data.coins[1][1] is None
+        assert msgs[0].message.data.proofs is not None
         assert len(msgs[0].message.data.proofs) == 2
         assert confirm_included_already_hashed(
             blocks_new[height_with_transactions].header.data.removals_root,
@@ -1275,6 +1278,7 @@ class TestWalletProtocol:
         assert isinstance(msgs[0].message.data, wallet_protocol.RespondAdditions)
         assert len(msgs[0].message.data.coins) == 1
         assert len(msgs[0].message.data.coins[0][1]) == 3
+        assert msgs[0].message.data.proofs is not None
         assert len(msgs[0].message.data.proofs) == 1
         assert confirm_included_already_hashed(
             blocks_new[height_with_transactions].header.data.additions_root,
@@ -1308,6 +1312,7 @@ class TestWalletProtocol:
         assert isinstance(msgs[0].message.data, wallet_protocol.RespondAdditions)
         assert len(msgs[0].message.data.coins) == 1
         assert len(msgs[0].message.data.coins[0][1]) == 0
+        assert msgs[0].message.data.proofs is not None
         assert len(msgs[0].message.data.proofs) == 1
         assert confirm_not_included_already_hashed(
             blocks_new[height_with_transactions].header.data.additions_root,
@@ -1332,6 +1337,7 @@ class TestWalletProtocol:
         assert isinstance(msgs[0].message.data, wallet_protocol.RespondAdditions)
         assert len(msgs[0].message.data.coins) == 2
         assert len(msgs[0].message.data.coins[0][1]) == 3
+        assert msgs[0].message.data.proofs is not None
         assert len(msgs[0].message.data.proofs) == 2
         assert confirm_included_already_hashed(
             blocks_new[height_with_transactions].header.data.additions_root,

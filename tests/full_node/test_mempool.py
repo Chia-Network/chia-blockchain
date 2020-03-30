@@ -52,7 +52,7 @@ class TestMempool:
         spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, block.header.data.coinbase
         )
-
+        assert spend_bundle is not None
         tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
             spend_bundle
         )
@@ -458,6 +458,7 @@ class TestMempool:
             1000, receiver_puzzlehash, block.header.data.coinbase, dic
         )
 
+        assert spend_bundle1 is not None
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
             spend_bundle1
         )
@@ -502,6 +503,7 @@ class TestMempool:
             1000, receiver_puzzlehash, block.header.data.coinbase, dic
         )
 
+        assert spend_bundle1 is not None
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
             spend_bundle1
         )
@@ -656,6 +658,7 @@ class TestMempool:
             1000, receiver_puzzlehash, block.header.data.coinbase, dic
         )
 
+        assert spend_bundle1 is not None
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
             spend_bundle1
         )

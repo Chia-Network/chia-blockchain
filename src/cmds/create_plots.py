@@ -82,7 +82,7 @@ def main():
         plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(
             pool_pk, sk.get_public_key()
         )
-        filename: Path = f"plot-{i}-{args.size}-{plot_seed}.dat"
+        filename: str = f"plot-{i}-{args.size}-{plot_seed}.dat"
         full_path: Path = args.final_dir / filename
         if full_path.exists():
             print(f"Plot {filename} already exists")
@@ -93,7 +93,7 @@ def main():
         plotter.create_plot_disk(
             str(tmp_dir),
             str(args.final_dir),
-            str(filename),
+            filename,
             args.size,
             bytes([]),
             plot_seed,

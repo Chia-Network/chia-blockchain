@@ -5,6 +5,7 @@ import pytest
 from src.rpc.rpc_server import start_rpc_server
 from src.protocols import full_node_protocol
 from src.rpc.rpc_client import RpcClient
+from src.util.ints import uint16
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 
 
@@ -23,7 +24,7 @@ class TestRpc:
     @pytest.mark.asyncio
     async def test1(self, two_nodes):
         num_blocks = 10
-        test_rpc_port = 21522
+        test_rpc_port = uint16(21522)
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
 

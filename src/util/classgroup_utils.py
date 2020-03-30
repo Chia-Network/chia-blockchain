@@ -17,9 +17,7 @@ class ClassGroup(tuple):
         c = (b * b - discriminant) // (4 * a)
         p = class_((a, b, c)).reduced()
         if p.discriminant() != discriminant:
-            raise ValueError(
-                "No classgroup element given the discriminant."
-            )
+            raise ValueError("No classgroup element given the discriminant.")
         return p
 
     @classmethod
@@ -68,19 +66,23 @@ class ClassGroup(tuple):
         r = self.reduced()
         int_size_bits = int(self.discriminant().bit_length())
         int_size = (int_size_bits + 16) >> 4
-        return b''.join([x.to_bytes(int_size, "big", signed=True)
-                         for x in [r[0], r[1]]])
+        return b"".join(
+            [x.to_bytes(int_size, "big", signed=True) for x in [r[0], r[1]]]
+        )
 
 
 def deserialize_proof(proof_blob, discriminant):
     int_size = (discriminant.bit_length() + 16) >> 4
-    proof_arr = [proof_blob[_:_ + 2 * int_size]
-                 for _ in range(0, len(proof_blob), 2 * int_size)]
+    proof_arr = [
+        proof_blob[_ : _ + 2 * int_size]
+        for _ in range(0, len(proof_blob), 2 * int_size)
+    ]
     return [ClassGroup.from_bytes(blob, discriminant) for blob in proof_arr]
 
 
-def check_proof_of_time_nwesolowski(discriminant, x, proof_blob,
-                                    iterations, int_size_bits, depth):
+def check_proof_of_time_nwesolowski(
+    discriminant, x, proof_blob, iterations, int_size_bits, depth
+):
     """
     Check the nested wesolowski proof. The proof blob
     includes the output of the VDF, along with the proof. The following
@@ -95,19 +97,19 @@ def check_proof_of_time_nwesolowski(discriminant, x, proof_blob,
 
     try:
         int_size = (int_size_bits + 16) >> 4
-        if (
-            len(proof_blob) != 4 * int_size + depth * (8 + 4 * int_size)
-        ):
+        if len(proof_blob) != 4 * int_size + depth * (8 + 4 * int_size):
             return False
-        new_proof_blob = proof_blob[:4 * int_size]
+        new_proof_blob = proof_blob[: 4 * int_size]
         iter_list = []
         for i in range(4 * int_size, len(proof_blob), 4 * int_size + 8):
             iter_list.append(int.from_bytes(proof_blob[i : (i + 8)], byteorder="big"))
-            new_proof_blob = new_proof_blob + proof_blob[(i + 8): (i + 8 + 4 * int_size)]
+            new_proof_blob = (
+                new_proof_blob + proof_blob[(i + 8) : (i + 8 + 4 * int_size)]
+            )
         proof_blob = new_proof_blob
 
         result_bytes = proof_blob[: (2 * int_size)]
-        proof_bytes = proof_blob[(2 * int_size):]
+        proof_bytes = proof_blob[(2 * int_size) :]
         y = ClassGroup.from_bytes(result_bytes, discriminant)
 
         proof = deserialize_proof(proof_bytes, discriminant)
