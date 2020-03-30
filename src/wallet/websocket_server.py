@@ -336,7 +336,16 @@ class WebSocketServer:
             "state": state,
         }
         if self.websocket is not None:
-            await self.websocket.send(format_response("state_changed", data))
+            try:
+                await self.websocket.send(format_response("state_changed", data))
+            except (BaseException, websockets.exceptions.ConnectionClosedError) as e:
+                try:
+                    self.log.warning(f"Caught exception {type(e)}, closing websocket")
+                    await self.websocket.close()
+                except BrokenPipeError:
+                    pass
+                finally:
+                    self.websocket = None
 
     def state_changed_callback(self, state: str):
         if self.websocket is None:
@@ -391,8 +400,8 @@ async def start_websocket_server():
     log.info(f"Started websocket server at port {config['rpc_port']}.")
 
     def master_close_cb():
-        server.close_all()
         websocket_server.close()
+        server.close_all()
         wallet_node._shutdown()
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)

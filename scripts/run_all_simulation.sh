@@ -13,7 +13,7 @@ _run_bg_cmd python -m src.server.start_timelord
 _run_bg_cmd python -m src.timelord_launcher
 _run_bg_cmd python -m src.server.start_farmer
 _run_bg_cmd python -m src.server.start_introducer
-_run_bg_cmd python -m src.server.start_full_node --port=8444 --connect_to_farmer=True --connect_to_timelord=True --rpc_port=8555 --introducer_peer.host="127.0.0.1" --introducer_peer.port=8445
+_run_bg_cmd python -m src.server.start_full_node --port=8444 --database_path="simulation_1.db" --connect_to_farmer=True --connect_to_timelord=True --rpc_port=8555 --introducer_peer.host="127.0.0.1" --introducer_peer.port=8445
 _run_bg_cmd python -m src.server.start_full_node --port=8002 --database_path="simulation_2.db" --rpc_port=8556 --introducer_peer.host="127.0.0.1" --introducer_peer.port=8445
 
 wait
