@@ -3,6 +3,7 @@ import logging
 import logging.config
 import signal
 
+import aiosqlite
 import miniupnpc
 
 try:
@@ -39,11 +40,12 @@ async def main():
     mkdir(db_path.parent)
 
     # Create the store (DB) and full node instance
-    store = await FullNodeStore.create(db_path)
+    connection = await aiosqlite.connect(db_path)
+    store = await FullNodeStore.create(connection)
 
     genesis: FullBlock = FullBlock.from_bytes(constants["GENESIS_BLOCK"])
     await store.add_block(genesis)
-    unspent_store = await CoinStore.create(db_path)
+    unspent_store = await CoinStore.create(connection)
 
     log.info("Initializing blockchain from disk")
     blockchain = await Blockchain.create(unspent_store, store)
@@ -129,11 +131,8 @@ async def main():
         await rpc_cleanup()
     log.info("Closed RPC server.")
 
-    await store.close()
-    log.info("Closed store.")
-
-    await unspent_store.close()
-    log.info("Closed unspent store.")
+    await connection.close()
+    log.info("Closed db connection.")
 
     await asyncio.get_running_loop().shutdown_asyncgens()
     log.info("Node fully closed.")

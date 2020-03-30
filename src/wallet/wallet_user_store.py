@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Optional, List
 
 import aiosqlite
@@ -16,10 +15,10 @@ class WalletUserStore:
     cache_size: uint32
 
     @classmethod
-    async def create(cls, db_path: Path):
+    async def create(cls, connection: aiosqlite.Connection):
         self = cls()
 
-        self.db_connection = await aiosqlite.connect(db_path)
+        self.db_connection = connection
 
         await self.db_connection.execute(
             (
@@ -51,9 +50,6 @@ class WalletUserStore:
         all_wallets = await self.get_all_wallets()
         if len(all_wallets) == 0:
             await self.create_wallet("Chia Wallet", WalletType.STANDARD_WALLET, "")
-
-    async def close(self):
-        await self.db_connection.close()
 
     async def _clear_database(self):
         cursor = await self.db_connection.execute("DELETE FROM users_wallets")

@@ -2,6 +2,8 @@ import signal
 from typing import Any, Dict, Optional
 from pathlib import Path
 import asyncio
+
+import aiosqlite
 import blspy
 from secrets import token_bytes
 
@@ -55,9 +57,11 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
 
-    store_1 = await FullNodeStore.create(Path(db_name))
+    db_path = Path(db_name)
+    connection = await aiosqlite.connect(db_path)
+    store_1 = await FullNodeStore.create(connection)
     await store_1._clear_database()
-    unspent_store_1 = await CoinStore.create(Path(db_name))
+    unspent_store_1 = await CoinStore.create(connection)
     await unspent_store_1._clear_database()
     mempool_1 = MempoolManager(unspent_store_1, test_constants_copy)
 
@@ -93,8 +97,7 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
     full_node_1._shutdown()
     server_1.close_all()
     await server_1.await_closed()
-    await store_1.close()
-    await unspent_store_1.close()
+    await connection.close()
     Path(db_name).unlink()
 
 
@@ -104,9 +107,11 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
 
-    store_1 = await FullNodeStore.create(Path(db_name))
+    db_path = Path(db_name)
+    connection = await aiosqlite.connect(db_path)
+    store_1 = await FullNodeStore.create(connection)
     await store_1._clear_database()
-    unspent_store_1 = await CoinStore.create(Path(db_name))
+    unspent_store_1 = await CoinStore.create(connection)
     await unspent_store_1._clear_database()
     mempool_1 = MempoolManager(unspent_store_1, test_constants_copy)
 
@@ -139,9 +144,7 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     # TEARDOWN
     full_node_1._shutdown()
     server_1.close_all()
-    await server_1.await_closed()
-    await store_1.close()
-    await unspent_store_1.close()
+    await connection.close()
     Path(db_name).unlink()
 
 

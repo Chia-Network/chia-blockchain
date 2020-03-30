@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import aiosqlite
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from src.types.hashable.program import Program
@@ -58,11 +57,11 @@ class FullNodeStore:
     lock: asyncio.Lock
 
     @classmethod
-    async def create(cls, db_path: Path):
+    async def create(cls, connection):
         self = cls()
 
         # All full blocks which have been added to the blockchain. Header_hash -> block
-        self.db = await aiosqlite.connect(db_path)
+        self.db = connection
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS blocks(height bigint, header_hash text PRIMARY KEY, block blob)"
         )
@@ -109,9 +108,6 @@ class FullNodeStore:
         self.disconnected_blocks = {}
         self.lock = asyncio.Lock()  # external
         return self
-
-    async def close(self):
-        await self.db.close()
 
     async def _clear_database(self):
         async with self.lock:

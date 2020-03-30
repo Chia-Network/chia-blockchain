@@ -2,6 +2,7 @@ import asyncio
 from typing import Any, Dict
 from pathlib import Path
 
+import aiosqlite
 import pytest
 
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
@@ -40,7 +41,9 @@ class TestUnspent:
     async def test_basic_unspent_store(self):
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
-        db = await CoinStore.create(Path("fndb_test.db"))
+        db_path = Path("fndb_test.db")
+        connection = await aiosqlite.connect(db_path)
+        db = await CoinStore.create(connection)
         await db._clear_database()
 
         # Save/get block
@@ -51,14 +54,16 @@ class TestUnspent:
             assert block.header.data.coinbase == unspent.coin
             assert block.header.data.fees_coin == unspent_fee.coin
 
-        await db.close()
+        await connection.close()
         Path("fndb_test.db").unlink()
 
     @pytest.mark.asyncio
     async def test_set_spent(self):
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
-        db = await CoinStore.create(Path("fndb_test.db"))
+        db_path = Path("fndb_test.db")
+        connection = await aiosqlite.connect(db_path)
+        db = await CoinStore.create(connection)
         await db._clear_database()
 
         # Save/get block
@@ -76,14 +81,16 @@ class TestUnspent:
             assert unspent.spent == 1
             assert unspent_fee.spent == 1
 
-        await db.close()
+        await connection.close()
         Path("fndb_test.db").unlink()
 
     @pytest.mark.asyncio
     async def test_rollback(self):
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
-        db = await CoinStore.create(Path("fndb_test.db"))
+        db_path = Path("fndb_test.db")
+        connection = await aiosqlite.connect(db_path)
+        db = await CoinStore.create(connection)
         await db._clear_database()
 
         # Save/get block
@@ -114,14 +121,16 @@ class TestUnspent:
                 assert unspent is None
                 assert unspent_fee is None
 
-        await db.close()
+        await connection.close()
         Path("fndb_test.db").unlink()
 
     @pytest.mark.asyncio
     async def test_basic_reorg(self):
         blocks = bt.get_consecutive_blocks(test_constants, 100, [], 9)
-        unspent_store = await CoinStore.create(Path("blockchain_test.db"))
-        store = await FullNodeStore.create(Path("blockchain_test.db"))
+        db_path = Path("blockchain_test.db")
+        connection = await aiosqlite.connect(db_path)
+        unspent_store = await CoinStore.create(connection)
+        store = await FullNodeStore.create(connection)
         await store._clear_database()
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
         try:
@@ -166,21 +175,21 @@ class TestUnspent:
                     assert unspent.spent_block_index == 0
             assert b.get_current_tips()[0].height == 119
         except Exception as e:
-            await unspent_store.close()
-            await store.close()
+            await connection.close()
             Path("blockchain_test.db").unlink()
             raise e
 
-        await unspent_store.close()
-        await store.close()
+        await connection.close()
         Path("blockchain_test.db").unlink()
 
     @pytest.mark.asyncio
     async def test_get_puzzle_hash(self):
         num_blocks = 20
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 9)
-        unspent_store = await CoinStore.create(Path("blockchain_test.db"))
-        store = await FullNodeStore.create(Path("blockchain_test.db"))
+        db_path = Path("blockchain_test.db")
+        connection = await aiosqlite.connect(db_path)
+        unspent_store = await CoinStore.create(connection)
+        store = await FullNodeStore.create(connection)
         await store._clear_database()
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
         try:
@@ -197,11 +206,9 @@ class TestUnspent:
             )
             assert len(coins) == (num_blocks + 1) * 2
         except Exception as e:
-            await unspent_store.close()
-            await store.close()
+            await connection.close()
             Path("blockchain_test.db").unlink()
             raise e
 
-        await unspent_store.close()
-        await store.close()
+        await connection.close()
         Path("blockchain_test.db").unlink()

@@ -1,6 +1,5 @@
 import asyncio
 from typing import Set, Tuple, Optional
-from pathlib import Path
 import aiosqlite
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
@@ -17,12 +16,12 @@ class WalletPuzzleStore:
     cache_size: uint32
 
     @classmethod
-    async def create(cls, db_path: Path, cache_size: uint32 = uint32(600000)):
+    async def create(cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)):
         self = cls()
 
         self.cache_size = cache_size
 
-        self.db_connection = await aiosqlite.connect(db_path)
+        self.db_connection = connection
 
         await self.db_connection.execute(
             (

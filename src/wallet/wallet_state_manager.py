@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Dict, Optional, List, Set, Tuple, Callable
 import logging
 import asyncio
+
+import aiosqlite
 from chiabip158 import PyBIP158
 
 from src.types.hashable.coin import Coin
@@ -60,6 +62,7 @@ class WalletStateManager:
     state_changed_callback: Optional[Callable]
     pending_tx_callback: Optional[Callable]
     db_path: Path
+    db_connection: aiosqlite.Connection
 
     @staticmethod
     async def create(
@@ -75,10 +78,11 @@ class WalletStateManager:
             self.log = logging.getLogger(__name__)
         self.lock = asyncio.Lock()
 
-        self.wallet_store = await WalletStore.create(db_path)
-        self.tx_store = await WalletTransactionStore.create(db_path)
-        self.puzzle_store = await WalletPuzzleStore.create(db_path)
-        self.user_store = await WalletUserStore.create(db_path)
+        self.db_connection = await aiosqlite.connect(db_path)
+        self.wallet_store = await WalletStore.create(self.db_connection)
+        self.tx_store = await WalletTransactionStore.create(self.db_connection)
+        self.puzzle_store = await WalletPuzzleStore.create(self.db_connection)
+        self.user_store = await WalletUserStore.create(self.db_connection)
         self.lca = None
         self.sync_mode = False
         self.height_to_hash = {}
@@ -1035,10 +1039,7 @@ class WalletStateManager:
 
     async def close_all_stores(self):
         async with self.lock:
-            await self.wallet_store.close()
-            await self.tx_store.close()
-            await self.puzzle_store.close()
-            await self.user_store.close()
+            await self.db_connection.close()
 
     async def clear_all_stores(self):
         async with self.lock:

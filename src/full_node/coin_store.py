@@ -1,6 +1,5 @@
 import asyncio
 from typing import Dict, Optional, List
-from pathlib import Path
 import aiosqlite
 from src.types.full_block import FullBlock
 from src.types.hashable.coin import Coin
@@ -37,12 +36,12 @@ class CoinStore:
     cache_size: uint32
 
     @classmethod
-    async def create(cls, db_path: Path, cache_size: uint32 = uint32(600000)):
+    async def create(cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)):
         self = cls()
 
         self.cache_size = cache_size
         # All full blocks which have been added to the blockchain. Header_hash -> block
-        self.coin_record_db = await aiosqlite.connect(db_path)
+        self.coin_record_db = connection
         await self.coin_record_db.execute(
             (
                 f"CREATE TABLE IF NOT EXISTS coin_record("
@@ -80,9 +79,6 @@ class CoinStore:
         self.lca_coin_records = dict()
         self.head_diffs = dict()
         return self
-
-    async def close(self):
-        await self.coin_record_db.close()
 
     async def _clear_database(self):
         cursor = await self.coin_record_db.execute("DELETE FROM coin_record")

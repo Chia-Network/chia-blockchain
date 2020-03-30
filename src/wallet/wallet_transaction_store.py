@@ -1,5 +1,4 @@
 from typing import Dict, Optional, List
-from pathlib import Path
 import aiosqlite
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint8
@@ -18,12 +17,12 @@ class WalletTransactionStore:
     tx_record_cache: Dict[bytes32, TransactionRecord]
 
     @classmethod
-    async def create(cls, db_path: Path, cache_size: uint32 = uint32(600000)):
+    async def create(cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)):
         self = cls()
 
         self.cache_size = cache_size
 
-        self.db_connection = await aiosqlite.connect(db_path)
+        self.db_connection = connection
         await self.db_connection.execute(
             (
                 f"CREATE TABLE IF NOT EXISTS transaction_record("
@@ -77,9 +76,6 @@ class WalletTransactionStore:
         await self.db_connection.commit()
         self.tx_record_cache = dict()
         return self
-
-    async def close(self):
-        await self.db_connection.close()
 
     async def _init_cache(self):
         print("init cache here")

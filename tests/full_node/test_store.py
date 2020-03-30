@@ -5,6 +5,7 @@ from typing import Any, Dict
 import sqlite3
 import random
 
+import aiosqlite
 import pytest
 from src.full_node.store import FullNodeStore
 from src.types.full_block import FullBlock
@@ -50,8 +51,12 @@ class TestStore:
         if db_filename_3.exists():
             db_filename_3.unlink()
 
-        db = await FullNodeStore.create(db_filename)
-        db_2 = await FullNodeStore.create(db_filename_2)
+        connection = await aiosqlite.connect(db_filename)
+        connection_2 = await aiosqlite.connect(db_filename_2)
+        connection_3 = await aiosqlite.connect(db_filename_3)
+
+        db = await FullNodeStore.create(connection)
+        db_2 = await FullNodeStore.create(connection_2)
         try:
             await db._clear_database()
 
@@ -144,19 +149,20 @@ class TestStore:
             assert not db.seen_unfinished_block(h_hash_1)
 
         except Exception:
-            await db.close()
-            await db_2.close()
+            await connection.close()
+            await connection_2.close()
+            await connection_3.close()
             db_filename.unlink()
             db_filename_2.unlink()
             raise
 
         # Different database should have different data
-        db_3 = await FullNodeStore.create(db_filename_3)
+        db_3 = await FullNodeStore.create(connection_3)
         assert db_3.get_unfinished_block_leader() == (0, (1 << 64) - 1)
 
-        await db.close()
-        await db_2.close()
-        await db_3.close()
+        await connection.close()
+        await connection_2.close()
+        await connection_3.close()
         db_filename.unlink()
         db_filename_2.unlink()
         db_filename_3.unlink()
@@ -169,7 +175,8 @@ class TestStore:
         if db_filename.exists():
             db_filename.unlink()
 
-        db = await FullNodeStore.create(db_filename)
+        connection = await aiosqlite.connect(db_filename)
+        db = await FullNodeStore.create(connection)
         tasks = []
 
         for i in range(10000):
@@ -191,5 +198,5 @@ class TestStore:
                     )
                 )
         await asyncio.gather(*tasks)
-        await db.close()
+        await connection.close()
         db_filename.unlink()

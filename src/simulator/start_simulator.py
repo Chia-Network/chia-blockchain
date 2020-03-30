@@ -3,6 +3,8 @@ import logging
 import logging.config
 import signal
 from src.path import mkdir, path_from_root
+from pathlib import Path
+import aiosqlite
 from src.simulator.full_node_simulator import FullNodeSimulator
 from src.simulator.simulator_constants import test_constants
 
@@ -34,14 +36,15 @@ async def main():
 
     db_path = path_from_root(config["simulator_database_path"])
     mkdir(db_path.parent)
+    connection = await aiosqlite.connect(db_path)
 
     # Create the store (DB) and full node instance
-    store = await FullNodeStore.create(db_path)
+    store = await FullNodeStore.create(connection)
     await store._clear_database()
 
     genesis: FullBlock = FullBlock.from_bytes(test_constants["GENESIS_BLOCK"])
     await store.add_block(genesis)
-    unspent_store = await CoinStore.create(db_path)
+    unspent_store = await CoinStore.create(connection)
 
     log.info("Initializing blockchain from disk")
     blockchain = await Blockchain.create(unspent_store, store, test_constants)

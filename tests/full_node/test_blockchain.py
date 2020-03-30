@@ -3,6 +3,7 @@ import time
 from typing import Any, Dict
 from pathlib import Path
 
+import aiosqlite
 import pytest
 from blspy import PrivateKey
 
@@ -44,8 +45,10 @@ def event_loop():
 class TestGenesisBlock:
     @pytest.mark.asyncio
     async def test_basic_blockchain(self):
-        unspent_store = await CoinStore.create(Path("blockchain_test.db"))
-        store = await FullNodeStore.create(Path("blockchain_test.db"))
+        db_path = Path("blockchain_test.db")
+        connection = await aiosqlite.connect(db_path)
+        unspent_store = await CoinStore.create(connection)
+        store = await FullNodeStore.create(connection)
         await store._clear_database()
         bc1 = await Blockchain.create(unspent_store, store, test_constants)
         assert len(bc1.get_current_tips()) == 1
@@ -56,8 +59,7 @@ class TestGenesisBlock:
         ) == genesis_block.weight
         assert bc1.get_next_min_iters(bc1.genesis) > 0
 
-        await unspent_store.close()
-        await store.close()
+        await connection.close()
 
 
 class TestBlockValidation:
@@ -67,17 +69,18 @@ class TestBlockValidation:
         Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
         """
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
-        store = await FullNodeStore.create(Path("blockchain_test.db"))
+        db_path = Path("blockchain_test.db")
+        connection = await aiosqlite.connect(db_path)
+        store = await FullNodeStore.create(connection)
         await store._clear_database()
-        unspent_store = await CoinStore.create(Path("blockchain_test.db"))
+        unspent_store = await CoinStore.create(connection)
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
         for i in range(1, 9):
             result, removed = await b.receive_block(blocks[i])
             assert result == ReceiveBlockResult.ADDED_TO_HEAD
         yield (blocks, b)
 
-        await unspent_store.close()
-        await store.close()
+        await connection.close()
 
     @pytest.mark.asyncio
     async def test_prev_pointer(self, initial_blockchain):
@@ -294,9 +297,10 @@ class TestBlockValidation:
         num_blocks = 30
         # Make it 5x faster than target time
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 2)
-
-        unspent_store = await CoinStore.create(Path("blockchain_test.db"))
-        store = await FullNodeStore.create(Path("blockchain_test.db"))
+        db_path = Path("blockchain_test.db")
+        connection = await aiosqlite.connect(db_path)
+        unspent_store = await CoinStore.create(connection)
+        store = await FullNodeStore.create(connection)
         await store._clear_database()
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
         for i in range(1, num_blocks):
@@ -317,16 +321,17 @@ class TestBlockValidation:
         assert (b.get_next_min_iters(blocks[26])) > (b.get_next_min_iters(blocks[25]))
         assert (b.get_next_min_iters(blocks[27])) == (b.get_next_min_iters(blocks[26]))
 
-        await unspent_store.close()
-        await store.close()
+        await connection.close()
 
 
 class TestReorgs:
     @pytest.mark.asyncio
     async def test_basic_reorg(self):
         blocks = bt.get_consecutive_blocks(test_constants, 100, [], 9)
-        unspent_store = await CoinStore.create(Path("blockchain_test.db"))
-        store = await FullNodeStore.create(Path("blockchain_test.db"))
+        db_path = Path("blockchain_test.db")
+        connection = await aiosqlite.connect(db_path)
+        unspent_store = await CoinStore.create(connection)
+        store = await FullNodeStore.create(connection)
         await store._clear_database()
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
 
@@ -348,14 +353,15 @@ class TestReorgs:
                 assert result == ReceiveBlockResult.ADDED_TO_HEAD
         assert b.get_current_tips()[0].height == 119
 
-        await unspent_store.close()
-        await store.close()
+        await connection.close()
 
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self):
         blocks = bt.get_consecutive_blocks(test_constants, 20, [], 9, b"0")
-        unspent_store = await CoinStore.create(Path("blockchain_test.db"))
-        store = await FullNodeStore.create(Path("blockchain_test.db"))
+        db_path = Path("blockchain_test.db")
+        connection = await aiosqlite.connect(db_path)
+        unspent_store = await CoinStore.create(connection)
+        store = await FullNodeStore.create(connection)
         await store._clear_database()
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
         for i in range(1, len(blocks)):
@@ -390,14 +396,15 @@ class TestReorgs:
         result, _ = await b.receive_block(blocks_reorg_chain_2[22])
         assert result == ReceiveBlockResult.ADDED_TO_HEAD
 
-        await unspent_store.close()
-        await store.close()
+        await connection.close()
 
     @pytest.mark.asyncio
     async def test_lca(self):
         blocks = bt.get_consecutive_blocks(test_constants, 5, [], 9, b"0")
-        unspent_store = await CoinStore.create(Path("blockchain_test.db"))
-        store = await FullNodeStore.create(Path("blockchain_test.db"))
+        db_path = Path("blockchain_test.db")
+        connection = await aiosqlite.connect(db_path)
+        unspent_store = await CoinStore.create(connection)
+        store = await FullNodeStore.create(connection)
         await store._clear_database()
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
         for i in range(1, len(blocks)):
@@ -417,14 +424,15 @@ class TestReorgs:
             await b.receive_block(reorg[i])
         assert b.lca_block.header_hash == blocks[0].header_hash
 
-        await unspent_store.close()
-        await store.close()
+        await connection.close()
 
     @pytest.mark.asyncio
     async def test_get_header_hashes(self):
         blocks = bt.get_consecutive_blocks(test_constants, 5, [], 9, b"0")
-        unspent_store = await CoinStore.create(Path("blockchain_test.db"))
-        store = await FullNodeStore.create(Path("blockchain_test.db"))
+        db_path = Path("blockchain_test.db")
+        connection = await aiosqlite.connect(db_path)
+        unspent_store = await CoinStore.create(connection)
+        store = await FullNodeStore.create(connection)
         await store._clear_database()
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
 
@@ -434,5 +442,4 @@ class TestReorgs:
         assert len(header_hashes) == 6
         assert header_hashes == [block.header_hash for block in blocks]
 
-        await unspent_store.close()
-        await store.close()
+        await connection.close()
