@@ -20,7 +20,7 @@ var wallet_ui_html = "wallet-dark.html"
  *************************************************************/
 
 const PY_DIST_FOLDER = 'pydist'
-const PY_FOLDER = '../wallet'
+const PY_FOLDER = '../src/wallet'
 const PY_MODULE = 'websocket_server' // without .py suffix
 
 let pyProc = null
