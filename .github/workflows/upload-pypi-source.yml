@@ -1,0 +1,53 @@
+name: Build
+
+on: [push, pull_request]
+
+jobs:
+  build_wheels:
+    name: Build wheel on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest]
+
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 0
+        # we need fetch-depth 0 so setuptools_scm can resolve tags
+    - uses: actions/setup-python@v1
+      name: Install Python
+      with:
+        python-version: '3.7'
+
+    - name: Build source distribution
+      if: startsWith(matrix.os, 'mac')
+      run: |
+        pip install pep517
+        python -m pep517.build --source --out-dir dist .
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v1
+      with:
+        name: wheels
+        path: ./dist
+
+    - name: Install twine
+      run: pip install twine
+
+    - name: Publish distribution to Test PyPI
+      env:
+        TWINE_REPOSITORY_URL: https://test.pypi.org/legacy/
+        TWINE_USERNAME: __token__
+        TWINE_NON_INTERACTIVE: 1
+        TWINE_PASSWORD: ${{ secrets.test_pypi_password }}
+      run: twine upload --non-interactive --skip-existing --verbose 'dist/*'
+
+    - name: Publish distribution to PyPI
+      if: startsWith(github.event.ref, 'refs/tags')
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_NON_INTERACTIVE: 1
+        TWINE_PASSWORD: ${{ secrets.pypi_password }}
+      run: twine upload --non-interactive --skip-existing --verbose 'dist/*'
