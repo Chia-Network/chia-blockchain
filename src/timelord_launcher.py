@@ -43,10 +43,13 @@ async def spawn_process(host, port, counter):
     path_to_vdf_client = find_vdf_client()
     while not stopped:
         try:
+            dirname = path_to_vdf_client.parent
+            basename = path_to_vdf_client.name
             proc = await asyncio.create_subprocess_shell(
-                f"{path_to_vdf_client} {host} {port} {counter}",
+                f"{basename} {host} {port} {counter}",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                env={"PATH": dirname},
             )
         except Exception as e:
             log.warning(f"Exception while spawning process {counter}: {(e)}")
