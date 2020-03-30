@@ -72,7 +72,7 @@ def conditions_by_opcode(
 
 
 def hash_key_pairs_for_conditions_dict(
-    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]]
+    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]], coin_name: bytes32
 ) -> List[BLSSignature.PkMessagePair]:
     pairs: List[BLSSignature.PkMessagePair] = []
     for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
@@ -81,6 +81,10 @@ def hash_key_pairs_for_conditions_dict(
         blspubkey: BLSPublicKey = BLSPublicKey(cvp.var1)
         message: bytes32 = bytes32(blspy.Util.hash256(cvp.var2))
         pairs.append(BLSSignature.PkMessagePair(blspubkey, message))
+    for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG_ME, []):
+        aggsigme_blspubkey: BLSPublicKey = BLSPublicKey(cvp.var1)
+        aggsigme_message: bytes32 = bytes32(blspy.Util.hash256(cvp.var2 + coin_name))
+        pairs.append(BLSSignature.PkMessagePair(aggsigme_blspubkey, aggsigme_message))
     return pairs
 
 

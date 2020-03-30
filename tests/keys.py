@@ -57,5 +57,5 @@ def spend_coin(coin, conditions, index, keychain=DEFAULT_KEYCHAIN):
 
 def build_spend_bundle(coin, solution, keychain=DEFAULT_KEYCHAIN):
     coin_solution = CoinSolution(coin, solution)
-    signature = keychain.signature_for_solution(solution)
+    signature = keychain.signature_for_solution(solution, bytes(coin))
     return SpendBundle([coin_solution], signature)

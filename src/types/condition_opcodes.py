@@ -9,3 +9,4 @@ class ConditionOpcode(bytes, enum.Enum):
     ASSERT_TIME_EXCEEDS = bytes([54])
     ASSERT_BLOCK_INDEX_EXCEEDS = bytes([55])
     ASSERT_BLOCK_AGE_EXCEEDS = bytes([56])
+    AGG_SIG_ME = bytes([57])
