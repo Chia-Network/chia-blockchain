@@ -7,7 +7,7 @@ hash along with its solution.
 
 from clvm_tools import binutils
 
-from src.types.hashable.program import Program
+from src.types.program import Program
 
 """
 solution: (puzzle_reveal . solution_to_puzzle)

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List
 
 from src.types.full_block import FullBlock
-from src.types.hashable.spend_bundle import SpendBundle
+from src.types.spend_bundle import SpendBundle
 from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
 from src.types.proof_of_time import ProofOfTime

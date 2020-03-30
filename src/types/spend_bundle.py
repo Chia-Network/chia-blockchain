@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Dict
 
-from src.types.hashable.coin import Coin
+from src.types.coin import Coin
 from src.types.sized_bytes import bytes32
 from src.util.chain_utils import additions_for_solution
 from src.util.streamable import Streamable, streamable

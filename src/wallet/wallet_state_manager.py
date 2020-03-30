@@ -8,8 +8,8 @@ import asyncio
 import aiosqlite
 from chiabip158 import PyBIP158
 
-from src.types.hashable.coin import Coin
-from src.types.hashable.spend_bundle import SpendBundle
+from src.types.coin import Coin
+from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.types.full_block import FullBlock
 from src.types.challenge import Challenge
@@ -29,7 +29,7 @@ from src.consensus.pot_iterations import calculate_iterations_quality
 from src.util.significant_bits import truncate_to_significant_bits
 from src.wallet.wallet_user_store import WalletUserStore
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
-from src.util.ConsensusError import Err
+from src.util.errors import Err
 
 
 class WalletStateManager:

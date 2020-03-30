@@ -4,7 +4,7 @@ from binascii import hexlify
 from clvm_tools import binutils
 
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.hashable.program import Program
+from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
 

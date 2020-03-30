@@ -3,9 +3,9 @@ from typing import Tuple, Optional, List
 from src.consensus.constants import constants
 from src.consensus.condition_costs import ConditionCost
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.hashable.program import Program
+from src.types.program import Program
 from src.types.name_puzzle_condition import NPC
-from src.util.ConsensusError import Err
+from src.util.errors import Err
 from src.util.ints import uint64
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
 

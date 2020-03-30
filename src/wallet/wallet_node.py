@@ -31,10 +31,10 @@ from src.wallet.wallet_state_manager import WalletStateManager
 from src.wallet.block_record import BlockRecord
 from src.types.header_block import HeaderBlock
 from src.types.full_block import FullBlock
-from src.types.hashable.coin import Coin, hash_coin_list
+from src.types.coin import Coin, hash_coin_list
 from src.full_node.blockchain import ReceiveBlockResult
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
-from src.util.ConsensusError import Err
+from src.util.errors import Err
 
 
 class WalletNode:

@@ -20,9 +20,9 @@ from src.wallet.wallet_node import WalletNode
 from src.types.full_block import FullBlock
 from src.full_node.coin_store import CoinStore
 from tests.block_tools import BlockTools
-from src.types.hashable.BLSSignature import BLSPublicKey
+from src.types.BLSSignature import BLSPublicKey
 from src.util.config import load_config
-from src.pool import create_puzzlehash_for_pk
+from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.harvester import Harvester
 from src.farmer import Farmer
 from src.introducer import Introducer

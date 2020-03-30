@@ -2,11 +2,11 @@ from typing import Dict, Optional, List, Tuple, Set, Any
 import clvm
 from blspy import ExtendedPrivateKey, PublicKey
 import logging
-from src.types.hashable.BLSSignature import BLSSignature
-from src.types.hashable.coin import Coin
-from src.types.hashable.coin_solution import CoinSolution
-from src.types.hashable.program import Program
-from src.types.hashable.spend_bundle import SpendBundle
+from src.types.BLSSignature import BLSSignature
+from src.types.coin import Coin
+from src.types.coin_solution import CoinSolution
+from src.types.program import Program
+from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.condition_tools import (
     conditions_for_solution,

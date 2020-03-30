@@ -4,11 +4,11 @@ from typing import Optional, Dict, List
 from clvm.casts import int_from_bytes
 
 from src.types.condition_var_pair import ConditionVarPair
-from src.types.hashable.coin_record import CoinRecord
+from src.types.coin_record import CoinRecord
 from src.types.header import Header
 from src.types.sized_bytes import bytes32
 from src.util.condition_tools import ConditionOpcode
-from src.util.ConsensusError import Err
+from src.util.errors import Err
 from src.util.ints import uint64
 
 

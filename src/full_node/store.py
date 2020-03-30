@@ -3,7 +3,7 @@ import logging
 import aiosqlite
 from typing import Dict, List, Optional, Tuple
 
-from src.types.hashable.program import Program
+from src.types.program import Program
 from src.types.full_block import FullBlock
 from src.types.header import HeaderData, Header
 from src.types.header_block import HeaderBlock

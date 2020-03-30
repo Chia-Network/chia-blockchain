@@ -1,7 +1,7 @@
 from clvm_tools import binutils
 
-from src.types.hashable.program import Program
-from src.types.hashable.spend_bundle import SpendBundle
+from src.types.program import Program
+from src.types.spend_bundle import SpendBundle
 
 
 def best_solution_program(bundle: SpendBundle) -> Program:

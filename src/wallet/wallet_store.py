@@ -1,6 +1,6 @@
 from typing import Dict, Optional, List, Set
 import aiosqlite
-from src.types.hashable.coin import Coin
+from src.types.coin import Coin
 from src.wallet.block_record import BlockRecord
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32

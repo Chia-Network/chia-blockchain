@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Optional, List, Tuple
 
-from src.types.hashable.coin import Coin
-from src.types.hashable.spend_bundle import SpendBundle
+from src.types.coin import Coin
+from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.streamable import Streamable, streamable
 from src.util.ints import uint32, uint64, uint8

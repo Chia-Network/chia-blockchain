@@ -8,12 +8,12 @@ from clvm.subclass_sexp import BaseSExp
 
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.hashable.BLSSignature import BLSSignature, BLSPublicKey
-from src.types.hashable.coin import Coin
-from src.types.hashable.program import Program
+from src.types.BLSSignature import BLSSignature, BLSPublicKey
+from src.types.coin import Coin
+from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
-from .ConsensusError import Err, ConsensusError
+from src.util.errors import Err, ConsensusError
 
 
 def parse_sexp_to_condition(

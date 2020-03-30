@@ -6,7 +6,7 @@ from blspy import PrivateKey, Util
 from src.consensus.block_rewards import calculate_block_reward
 from src.consensus.constants import constants as consensus_constants
 from src.consensus.pot_iterations import calculate_iterations_quality
-from src.pool import create_coinbase_coin_and_signature
+from src.consensus.coinbase import create_coinbase_coin_and_signature
 from src.protocols import farmer_protocol, harvester_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.proof_of_space import ProofOfSpace

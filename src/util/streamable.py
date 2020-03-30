@@ -8,7 +8,7 @@ import json
 from enum import Enum
 from typing import Any, BinaryIO, List, Type, get_type_hints, Union, Dict
 from src.util.byte_types import hexstr_to_bytes
-from src.types.hashable.program import Program
+from src.types.program import Program
 from src.util.hash import std_hash
 
 from blspy import (

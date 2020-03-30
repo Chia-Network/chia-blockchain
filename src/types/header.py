@@ -6,8 +6,8 @@ from blspy import PrependSignature
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64, uint32, uint128
 from src.util.streamable import Streamable, streamable
-from src.types.hashable.BLSSignature import BLSSignature
-from src.types.hashable.coin import Coin
+from src.types.BLSSignature import BLSSignature
+from src.types.coin import Coin
 
 
 @dataclass(frozen=True)

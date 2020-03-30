@@ -5,7 +5,7 @@ This puzzle program is like p2_delegated_puzzle except instead of one public key
 it includes N public keys, any M of which needs to sign the delegated puzzle.
 """
 
-from src.types.hashable.program import Program
+from src.types.program import Program
 from clvm_tools import binutils
 
 from .load_clvm import load_clvm

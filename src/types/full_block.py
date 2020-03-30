@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from typing import Tuple, List, Optional
 
 from src.types.name_puzzle_condition import NPC
-from src.types.hashable.program import Program
-from src.types.hashable.coin import Coin
+from src.types.program import Program
+from src.types.coin import Coin
 from src.types.header import Header
 from src.types.sized_bytes import bytes32
 from src.util.mempool_check_conditions import get_name_puzzle_conditions

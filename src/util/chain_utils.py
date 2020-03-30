@@ -1,6 +1,6 @@
 from typing import List
 
-from src.types.hashable.coin import Coin
+from src.types.coin import Coin
 from src.util.condition_tools import (
     created_outputs_for_conditions_dict,
     conditions_dict_for_solution,

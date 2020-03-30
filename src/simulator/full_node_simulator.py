@@ -14,7 +14,7 @@ from src.full_node.mempool_manager import MempoolManager
 from src.server.outbound_message import OutboundMessage
 from src.server.server import ChiaServer
 from src.types.full_block import FullBlock
-from src.types.hashable.spend_bundle import SpendBundle
+from src.types.spend_bundle import SpendBundle
 from src.types.header import Header
 from src.full_node.coin_store import CoinStore
 from src.util.api_decorators import api_request

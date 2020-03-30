@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Dict, Any
 
 from src.util.ints import uint32
-from src.types.hashable.coin import Coin
+from src.types.coin import Coin
 from src.types.sized_bytes import bytes32
 from src.types.full_block import FullBlock
 from src.util.streamable import Streamable, streamable

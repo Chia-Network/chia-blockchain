@@ -13,7 +13,7 @@ the doctor ordered.
 from clvm_tools import binutils
 
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.hashable.program import Program
+from src.types.program import Program
 
 
 def puzzle_for_pk(public_key):

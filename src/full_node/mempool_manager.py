@@ -7,15 +7,15 @@ from chiabip158 import PyBIP158
 from src.consensus.constants import constants as consensus_constants
 from src.util.bundle_tools import best_solution_program
 from src.types.full_block import FullBlock
-from src.types.hashable.coin import Coin
-from src.types.hashable.spend_bundle import SpendBundle
-from src.types.hashable.coin_record import CoinRecord
+from src.types.coin import Coin
+from src.types.spend_bundle import SpendBundle
+from src.types.coin_record import CoinRecord
 from src.types.header import Header
 from src.types.mempool_item import MempoolItem
 from src.full_node.mempool import Mempool
 from src.types.sized_bytes import bytes32
 from src.full_node.coin_store import CoinStore
-from src.util.ConsensusError import Err
+from src.util.errors import Err
 from src.util.cost_calculator import calculate_cost_of_program
 from src.util.mempool_check_conditions import mempool_check_conditions_dict
 from src.util.condition_tools import hash_key_pairs_for_conditions_dict

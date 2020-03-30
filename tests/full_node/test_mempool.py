@@ -7,7 +7,7 @@ from src.server.outbound_message import OutboundMessage
 from src.protocols import full_node_protocol
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.hashable.spend_bundle import SpendBundle
+from src.types.spend_bundle import SpendBundle
 from src.util.ints import uint64
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.wallet_tools import WalletTool

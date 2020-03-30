@@ -13,19 +13,18 @@ from src.consensus import block_rewards, pot_iterations
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
 from src.path import mkdir, path_from_root
-from src.pool import create_coinbase_coin_and_signature
+from src.consensus.coinbase import create_coinbase_coin_and_signature
 from src.types.challenge import Challenge
 from src.types.classgroup import ClassgroupElement
 from src.types.full_block import FullBlock, additions_for_npc
-from src.types.hashable.BLSSignature import BLSSignature
-from src.types.hashable.coin import Coin, hash_coin_list
-from src.types.hashable.program import Program
+from src.types.BLSSignature import BLSSignature
+from src.types.coin import Coin, hash_coin_list
+from src.types.program import Program
 from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.util.merkle_set import MerkleSet
-from src.util.errors import NoProofsOfSpaceFound
 from src.util.ints import uint8, uint32, uint64, uint128, int512
 from src.util.hash import std_hash
 from src.util.significant_bits import truncate_to_significant_bits
@@ -97,6 +96,12 @@ class BlockTools:
                 ):
                     (self.plot_dir / filename).unlink()
             sys.exit(1)
+
+    @staticmethod
+    def get_harvester_signature(header_data: HeaderData, plot_pk: PublicKey):
+        for i, pk in enumerate(plot_pks):
+            if pk == plot_pk:
+                return plot_sks[i].sign_prepend(header_data.get_hash())
 
     def get_consecutive_blocks(
         self,
@@ -399,7 +404,7 @@ class BlockTools:
         assert plot_pk
         assert plot_sk
         if len(qualities) == 0:
-            raise NoProofsOfSpaceFound("No proofs for this challenge")
+            raise RuntimeError("No proofs for this challenge")
 
         proof_xs: bytes = prover.get_full_proof(challenge_hash, 0)
         proof_of_space: ProofOfSpace = ProofOfSpace(

@@ -2,7 +2,7 @@ from typing import List, Dict
 
 from sortedcontainers import SortedDict
 
-from src.types.hashable.coin import Coin
+from src.types.coin import Coin
 from src.types.mempool_item import MempoolItem
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64

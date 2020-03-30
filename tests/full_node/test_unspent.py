@@ -159,7 +159,7 @@ class TestUnspent:
 
             for i in range(1, len(blocks_reorg_chain)):
                 reorg_block = blocks_reorg_chain[i]
-                result, removed = await b.receive_block(reorg_block)
+                result, removed, error_code = await b.receive_block(reorg_block)
                 if reorg_block.height < 90:
                     assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
                 elif reorg_block.height < 99:
@@ -173,6 +173,7 @@ class TestUnspent:
                     assert unspent.confirmed_block_index == reorg_block.height
                     assert unspent.spent == 0
                     assert unspent.spent_block_index == 0
+                assert error_code is None
             assert b.get_current_tips()[0].height == 119
         except Exception as e:
             await connection.close()

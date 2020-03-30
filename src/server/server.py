@@ -23,12 +23,7 @@ from src.types.peer_info import PeerInfo
 from src.types.sized_bytes import bytes32
 from src.util import partial_func
 from src.util.config import load_config
-from src.util.errors import (
-    IncompatibleProtocolVersion,
-    InvalidAck,
-    InvalidHandshake,
-    InvalidProtocolMessage,
-)
+from src.util.errors import Err, ProtocolError
 from src.util.ints import uint16
 from src.util.network import create_node_id
 import traceback
@@ -385,19 +380,17 @@ class ChiaServer:
                 or not inbound_handshake
                 or not inbound_handshake.node_type
             ):
-                raise InvalidHandshake("Invalid handshake")
+                raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             if inbound_handshake.node_id == self._node_id:
-                raise InvalidHandshake(
-                    f"Should not connect to ourselves, aborting handshake."
-                )
+                raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             # Makes sure that we only start one connection with each peer
             connection.node_id = inbound_handshake.node_id
             connection.peer_server_port = int(inbound_handshake.server_port)
             connection.connection_type = inbound_handshake.node_type
             if not self.global_connections.add(connection):
-                raise InvalidHandshake(f"Duplicate connection to {connection}")
+                raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             # Send Ack message
             await connection.send(Message("handshake_ack", HandshakeAck()))
@@ -405,12 +398,12 @@ class ChiaServer:
             # Read Ack message
             full_message = await connection.read_one_message()
             if full_message.function != "handshake_ack":
-                raise InvalidAck("Invalid ack")
+                raise ProtocolError(Err.INVALID_ACK)
 
             if inbound_handshake.version != protocol_version:
-                raise IncompatibleProtocolVersion(
-                    f"Our node version {protocol_version} is not compatible with peer\
-                        {connection} version {inbound_handshake.version}"
+                raise ProtocolError(
+                    Err.INCOMPATIBLE_PROTOCOL_VERSION,
+                    [protocol_version, inbound_handshake.version],
                 )
 
             self.log.info(
@@ -422,14 +415,7 @@ class ChiaServer:
             )
             # Only yield a connection if the handshake is succesful and the connection is not a duplicate.
             yield connection
-        except (
-            IncompatibleProtocolVersion,
-            InvalidAck,
-            InvalidHandshake,
-            asyncio.IncompleteReadError,
-            OSError,
-            Exception,
-        ) as e:
+        except (ProtocolError, asyncio.IncompleteReadError, OSError, Exception,) as e:
             self.log.warning(f"{e}, handshake not completed. Connection not created.")
             # Make sure to close the connection even if it's not in global connections
             connection.close()
@@ -481,7 +467,9 @@ class ChiaServer:
         try:
             if len(full_message.function) == 0 or full_message.function.startswith("_"):
                 # This prevents remote calling of private methods that start with "_"
-                raise InvalidProtocolMessage(full_message.function)
+                raise ProtocolError(
+                    Err.INVALID_PROTOCOL_MESSAGE, [full_message.function]
+                )
 
             self.log.info(
                 f"<- {full_message.function} from peer {connection.get_peername()}"
@@ -508,7 +496,9 @@ class ChiaServer:
                 f = getattr(api, full_message.function, None)
 
                 if f is None:
-                    raise InvalidProtocolMessage(full_message.function)
+                    raise ProtocolError(
+                        Err.INVALID_PROTOCOL_MESSAGE, [full_message.function]
+                    )
 
                 result = f(full_message.data)
 

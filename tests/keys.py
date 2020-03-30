@@ -1,7 +1,7 @@
 import blspy
 
-from src.types.hashable.coin_solution import CoinSolution
-from src.types.hashable.spend_bundle import SpendBundle
+from src.types.coin_solution import CoinSolution
+from src.types.spend_bundle import SpendBundle
 
 from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.keychain import Keychain

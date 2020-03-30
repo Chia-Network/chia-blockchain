@@ -17,7 +17,7 @@ from typing import List
 from clvm_tools import binutils
 
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.hashable.program import Program
+from src.types.program import Program
 
 from . import p2_conditions
 

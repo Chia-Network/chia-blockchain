@@ -13,7 +13,7 @@ class BLSPublicKey(bytes48):
     pass
 
 
-# TODO Stop using this after BLSLibrary is
+# TODO Stop using this after BLSLibrary is updated
 @dataclass(frozen=True)
 @streamable
 class BLSSignature(Streamable):

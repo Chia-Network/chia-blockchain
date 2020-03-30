@@ -2,8 +2,8 @@ import asyncio
 from typing import Dict, Optional, List
 import aiosqlite
 from src.types.full_block import FullBlock
-from src.types.hashable.coin import Coin
-from src.types.hashable.coin_record import CoinRecord
+from src.types.coin import Coin
+from src.types.coin_record import CoinRecord
 from src.types.sized_bytes import bytes32
 from src.types.header import Header
 from src.util.ints import uint32

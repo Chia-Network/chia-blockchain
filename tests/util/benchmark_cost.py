@@ -8,8 +8,8 @@ from clvm_tools import binutils
 
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
-from src.types.hashable.BLSSignature import BLSSignature
-from src.types.hashable.program import Program
+from src.types.BLSSignature import BLSSignature
+from src.types.program import Program
 from src.util.condition_tools import parse_sexp_to_conditions
 from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk

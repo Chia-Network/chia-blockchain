@@ -5,18 +5,21 @@ from pathlib import Path
 
 import aiosqlite
 import pytest
-from blspy import PrivateKey
+from blspy import PrivateKey, PrependSignature
 
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.store import FullNodeStore
 from src.types.full_block import FullBlock
-from src.types.hashable.coin import Coin
+from src.types.coin import Coin
 from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
 from src.full_node.coin_store import CoinStore
 from src.util.ints import uint8, uint64
 from src.consensus.constants import constants as consensus_constants
-from tests.block_tools import BlockTools
+from tests.block_tools import BlockTools, plot_sks
+from src.util.errors import Err
+from src.consensus.coinbase import create_coinbase_coin_and_signature
+from src.types.sized_bytes import bytes32
 
 bt = BlockTools()
 test_constants: Dict[str, Any] = consensus_constants.copy()
@@ -76,7 +79,7 @@ class TestBlockValidation:
         unspent_store = await CoinStore.create(connection)
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
         for i in range(1, 9):
-            result, removed = await b.receive_block(blocks[i])
+            result, removed, error_code = await b.receive_block(blocks[i])
             assert result == ReceiveBlockResult.ADDED_TO_HEAD
         yield (blocks, b)
 
@@ -112,106 +115,129 @@ class TestBlockValidation:
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
         )
-        result, removed = await b.receive_block(block_bad)
+        result, removed, error_code = await b.receive_block(block_bad)
         assert (result) == ReceiveBlockResult.DISCONNECTED_BLOCK
+        assert error_code is None
+
+    @pytest.mark.asyncio
+    async def test_prev_block(self, initial_blockchain):
+        blocks, b = initial_blockchain
+        block_bad = blocks[10]
+        result, removed, error_code = await b.receive_block(block_bad)
+        assert (result) == ReceiveBlockResult.DISCONNECTED_BLOCK
+        assert error_code is None
 
     @pytest.mark.asyncio
     async def test_timestamp(self, initial_blockchain):
         blocks, b = initial_blockchain
         # Time too far in the past
+        new_header_data = HeaderData(
+            blocks[9].header.data.height,
+            blocks[9].header.data.prev_header_hash,
+            blocks[9].header.data.timestamp - 1000,
+            blocks[9].header.data.filter_hash,
+            blocks[9].header.data.proof_of_space_hash,
+            blocks[9].header.data.weight,
+            blocks[9].header.data.total_iters,
+            blocks[9].header.data.additions_root,
+            blocks[9].header.data.removals_root,
+            blocks[9].header.data.coinbase,
+            blocks[9].header.data.coinbase_signature,
+            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.aggregated_signature,
+            blocks[9].header.data.cost,
+            blocks[9].header.data.extension_data,
+            blocks[9].header.data.generator_hash,
+        )
+
         block_bad = FullBlock(
             blocks[9].proof_of_space,
             blocks[9].proof_of_time,
             Header(
-                HeaderData(
-                    blocks[9].header.data.height,
-                    blocks[9].header.data.prev_header_hash,
-                    blocks[9].header.data.timestamp - 1000,
-                    blocks[9].header.data.filter_hash,
-                    blocks[9].header.data.proof_of_space_hash,
-                    blocks[9].header.data.weight,
-                    blocks[9].header.data.total_iters,
-                    blocks[9].header.data.additions_root,
-                    blocks[9].header.data.removals_root,
-                    blocks[9].header.data.coinbase,
-                    blocks[9].header.data.coinbase_signature,
-                    blocks[9].header.data.fees_coin,
-                    blocks[9].header.data.aggregated_signature,
-                    blocks[9].header.data.cost,
-                    blocks[9].header.data.extension_data,
-                    blocks[9].header.data.generator_hash,
+                new_header_data,
+                BlockTools.get_harvester_signature(
+                    new_header_data, blocks[9].proof_of_space.plot_pubkey
                 ),
-                blocks[9].header.harvester_signature,
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
         )
-        result, removed = await b.receive_block(block_bad)
+        result, removed, error_code = await b.receive_block(block_bad)
         assert (result) == ReceiveBlockResult.INVALID_BLOCK
+        assert error_code == Err.TIMESTAMP_TOO_FAR_IN_PAST
 
         # Time too far in the future
+        new_header_data = HeaderData(
+            blocks[9].header.data.height,
+            blocks[9].header.data.prev_header_hash,
+            uint64(int(time.time() + 3600 * 3)),
+            blocks[9].header.data.filter_hash,
+            blocks[9].header.data.proof_of_space_hash,
+            blocks[9].header.data.weight,
+            blocks[9].header.data.total_iters,
+            blocks[9].header.data.additions_root,
+            blocks[9].header.data.removals_root,
+            blocks[9].header.data.coinbase,
+            blocks[9].header.data.coinbase_signature,
+            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.aggregated_signature,
+            blocks[9].header.data.cost,
+            blocks[9].header.data.extension_data,
+            blocks[9].header.data.generator_hash,
+        )
         block_bad = FullBlock(
             blocks[9].proof_of_space,
             blocks[9].proof_of_time,
             Header(
-                HeaderData(
-                    blocks[9].header.data.height,
-                    blocks[9].header.data.prev_header_hash,
-                    uint64(int(time.time() + 3600 * 3)),
-                    blocks[9].header.data.filter_hash,
-                    blocks[9].header.data.proof_of_space_hash,
-                    blocks[9].header.data.weight,
-                    blocks[9].header.data.total_iters,
-                    blocks[9].header.data.additions_root,
-                    blocks[9].header.data.removals_root,
-                    blocks[9].header.data.coinbase,
-                    blocks[9].header.data.coinbase_signature,
-                    blocks[9].header.data.fees_coin,
-                    blocks[9].header.data.aggregated_signature,
-                    blocks[9].header.data.cost,
-                    blocks[9].header.data.extension_data,
-                    blocks[9].header.data.generator_hash,
+                new_header_data,
+                BlockTools.get_harvester_signature(
+                    new_header_data, blocks[9].proof_of_space.plot_pubkey
                 ),
-                blocks[9].header.harvester_signature,
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
         )
-        result, removed = await b.receive_block(block_bad)
+        result, removed, error_code = await b.receive_block(block_bad)
         assert (result) == ReceiveBlockResult.INVALID_BLOCK
+        assert error_code == Err.TIMESTAMP_TOO_FAR_IN_FUTURE
 
     @pytest.mark.asyncio
     async def test_generator_hash(self, initial_blockchain):
         blocks, b = initial_blockchain
+        new_header_data = HeaderData(
+            blocks[9].header.data.height,
+            blocks[9].header.data.prev_header_hash,
+            blocks[9].header.data.timestamp,
+            blocks[9].header.data.filter_hash,
+            blocks[9].header.data.proof_of_space_hash,
+            blocks[9].header.data.weight,
+            blocks[9].header.data.total_iters,
+            blocks[9].header.data.additions_root,
+            blocks[9].header.data.removals_root,
+            blocks[9].header.data.coinbase,
+            blocks[9].header.data.coinbase_signature,
+            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.aggregated_signature,
+            blocks[9].header.data.cost,
+            blocks[9].header.data.extension_data,
+            bytes([1] * 32),
+        )
+
         block_bad = FullBlock(
             blocks[9].proof_of_space,
             blocks[9].proof_of_time,
             Header(
-                HeaderData(
-                    blocks[9].header.data.height,
-                    blocks[9].header.data.prev_header_hash,
-                    blocks[9].header.data.timestamp,
-                    blocks[9].header.data.filter_hash,
-                    blocks[9].header.data.proof_of_space_hash,
-                    blocks[9].header.data.weight,
-                    blocks[9].header.data.total_iters,
-                    blocks[9].header.data.additions_root,
-                    blocks[9].header.data.removals_root,
-                    blocks[9].header.data.coinbase,
-                    blocks[9].header.data.coinbase_signature,
-                    blocks[9].header.data.fees_coin,
-                    blocks[9].header.data.aggregated_signature,
-                    blocks[9].header.data.cost,
-                    blocks[9].header.data.extension_data,
-                    bytes([1] * 32),
+                new_header_data,
+                BlockTools.get_harvester_signature(
+                    new_header_data, blocks[9].proof_of_space.plot_pubkey
                 ),
-                blocks[9].header.harvester_signature,
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
         )
-        result, removed = await b.receive_block(block_bad)
+        result, removed, error_code = await b.receive_block(block_bad)
         assert result == ReceiveBlockResult.INVALID_BLOCK
+        assert error_code == Err.INVALID_TRANSACTIONS_GENERATOR_HASH
 
     @pytest.mark.asyncio
     async def test_harvester_signature(self, initial_blockchain):
@@ -227,70 +253,238 @@ class TestBlockValidation:
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
         )
-        result, removed = await b.receive_block(block_bad)
+        result, removed, error_code = await b.receive_block(block_bad)
         assert result == ReceiveBlockResult.INVALID_BLOCK
+        assert error_code == Err.INVALID_HARVESTER_SIGNATURE
 
     @pytest.mark.asyncio
     async def test_invalid_pos(self, initial_blockchain):
         blocks, b = initial_blockchain
 
-        bad_pos = bytearray([i for i in blocks[9].proof_of_space.proof])
-        bad_pos[0] = uint8((bad_pos[0] + 1) % 256)
+        bad_pos_proof = bytearray([i for i in blocks[9].proof_of_space.proof])
+        bad_pos_proof[0] = uint8((bad_pos_proof[0] + 1) % 256)
+        bad_pos = ProofOfSpace(
+            blocks[9].proof_of_space.challenge_hash,
+            blocks[9].proof_of_space.pool_pubkey,
+            blocks[9].proof_of_space.plot_pubkey,
+            blocks[9].proof_of_space.size,
+            bytes(bad_pos_proof),
+        )
+        new_header_data = HeaderData(
+            blocks[9].header.data.height,
+            blocks[9].header.data.prev_header_hash,
+            blocks[9].header.data.timestamp,
+            blocks[9].header.data.filter_hash,
+            bad_pos.get_hash(),
+            blocks[9].header.data.weight,
+            blocks[9].header.data.total_iters,
+            blocks[9].header.data.additions_root,
+            blocks[9].header.data.removals_root,
+            blocks[9].header.data.coinbase,
+            blocks[9].header.data.coinbase_signature,
+            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.aggregated_signature,
+            blocks[9].header.data.cost,
+            blocks[9].header.data.extension_data,
+            blocks[9].header.data.generator_hash,
+        )
+
         # Proof of space invalid
         block_bad = FullBlock(
-            ProofOfSpace(
-                blocks[9].proof_of_space.challenge_hash,
-                blocks[9].proof_of_space.pool_pubkey,
-                blocks[9].proof_of_space.plot_pubkey,
-                blocks[9].proof_of_space.size,
-                bytes(bad_pos),
-            ),
+            bad_pos,
             blocks[9].proof_of_time,
-            blocks[9].header,
+            Header(
+                new_header_data,
+                BlockTools.get_harvester_signature(
+                    new_header_data, blocks[9].proof_of_space.plot_pubkey
+                ),
+            ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
         )
-        result, removed = await b.receive_block(block_bad)
+        result, removed, error_code = await b.receive_block(block_bad)
         assert result == ReceiveBlockResult.INVALID_BLOCK
+        assert error_code == Err.INVALID_POSPACE
 
     @pytest.mark.asyncio
-    async def test_invalid_coinbase_height(self, initial_blockchain):
+    async def test_invalid_pos_hash(self, initial_blockchain):
         blocks, b = initial_blockchain
 
-        # Coinbase height invalid
+        bad_pos_proof = bytearray([i for i in blocks[9].proof_of_space.proof])
+        bad_pos_proof[0] = uint8((bad_pos_proof[0] + 1) % 256)
+        bad_pos = ProofOfSpace(
+            blocks[9].proof_of_space.challenge_hash,
+            blocks[9].proof_of_space.pool_pubkey,
+            blocks[9].proof_of_space.plot_pubkey,
+            blocks[9].proof_of_space.size,
+            bytes(bad_pos_proof),
+        )
+        new_header_data = HeaderData(
+            blocks[9].header.data.height,
+            blocks[9].header.data.prev_header_hash,
+            blocks[9].header.data.timestamp,
+            blocks[9].header.data.filter_hash,
+            bad_pos.get_hash(),
+            blocks[9].header.data.weight,
+            blocks[9].header.data.total_iters,
+            blocks[9].header.data.additions_root,
+            blocks[9].header.data.removals_root,
+            blocks[9].header.data.coinbase,
+            blocks[9].header.data.coinbase_signature,
+            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.aggregated_signature,
+            blocks[9].header.data.cost,
+            blocks[9].header.data.extension_data,
+            blocks[9].header.data.generator_hash,
+        )
+
+        # Proof of space has invalid
         block_bad = FullBlock(
             blocks[9].proof_of_space,
             blocks[9].proof_of_time,
             Header(
-                HeaderData(
-                    blocks[9].header.data.height,
-                    blocks[9].header.data.prev_header_hash,
-                    blocks[9].header.data.timestamp,
-                    blocks[9].header.data.filter_hash,
-                    blocks[9].header.data.proof_of_space_hash,
-                    blocks[9].header.data.weight,
-                    blocks[9].header.data.total_iters,
-                    blocks[9].header.data.additions_root,
-                    blocks[9].header.data.removals_root,
-                    Coin(
-                        blocks[9].header.data.coinbase.parent_coin_info,
-                        blocks[9].header.data.coinbase.puzzle_hash,
-                        uint64(9999999999),
-                    ),
-                    blocks[9].header.data.coinbase_signature,
-                    blocks[9].header.data.fees_coin,
-                    blocks[9].header.data.aggregated_signature,
-                    blocks[9].header.data.cost,
-                    blocks[9].header.data.extension_data,
-                    blocks[9].header.data.generator_hash,
+                new_header_data,
+                BlockTools.get_harvester_signature(
+                    new_header_data, blocks[9].proof_of_space.plot_pubkey
                 ),
-                blocks[9].header.harvester_signature,
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
         )
-        result, removed = await b.receive_block(block_bad)
+        result, removed, error_code = await b.receive_block(block_bad)
         assert result == ReceiveBlockResult.INVALID_BLOCK
+        assert error_code == Err.INVALID_POSPACE_HASH
+
+    @pytest.mark.asyncio
+    async def test_invalid_filter_hash(self, initial_blockchain):
+        blocks, b = initial_blockchain
+
+        new_header_data = HeaderData(
+            blocks[9].header.data.height,
+            blocks[9].header.data.prev_header_hash,
+            blocks[9].header.data.timestamp,
+            bytes32(bytes([3] * 32)),
+            blocks[9].header.data.proof_of_space_hash,
+            blocks[9].header.data.weight,
+            blocks[9].header.data.total_iters,
+            blocks[9].header.data.additions_root,
+            blocks[9].header.data.removals_root,
+            blocks[9].header.data.coinbase,
+            blocks[9].header.data.coinbase_signature,
+            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.aggregated_signature,
+            blocks[9].header.data.cost,
+            blocks[9].header.data.extension_data,
+            blocks[9].header.data.generator_hash,
+        )
+
+        block_bad = FullBlock(
+            blocks[9].proof_of_space,
+            blocks[9].proof_of_time,
+            Header(
+                new_header_data,
+                BlockTools.get_harvester_signature(
+                    new_header_data, blocks[9].proof_of_space.plot_pubkey
+                ),
+            ),
+            blocks[9].transactions_generator,
+            blocks[9].transactions_filter,
+        )
+        result, removed, error_code = await b.receive_block(block_bad)
+        assert result == ReceiveBlockResult.INVALID_BLOCK
+        assert error_code == Err.INVALID_TRANSACTIONS_FILTER_HASH
+
+    @pytest.mark.asyncio
+    async def test_invalid_coinbase_amount(self, initial_blockchain):
+        blocks, b = initial_blockchain
+
+        coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
+            blocks[9].header.data.height,
+            blocks[9].header.data.coinbase.puzzle_hash,
+            uint64(9991),
+            bt.pool_sk,
+        )
+        new_header_data = HeaderData(
+            blocks[9].header.data.height,
+            blocks[9].header.data.prev_header_hash,
+            blocks[9].header.data.timestamp,
+            blocks[9].header.data.filter_hash,
+            blocks[9].header.data.proof_of_space_hash,
+            blocks[9].header.data.weight,
+            blocks[9].header.data.total_iters,
+            blocks[9].header.data.additions_root,
+            blocks[9].header.data.removals_root,
+            coinbase_coin,
+            coinbase_signature,
+            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.aggregated_signature,
+            blocks[9].header.data.cost,
+            blocks[9].header.data.extension_data,
+            blocks[9].header.data.generator_hash,
+        )
+
+        # Coinbase amount invalid
+        block_bad = FullBlock(
+            blocks[9].proof_of_space,
+            blocks[9].proof_of_time,
+            Header(
+                new_header_data,
+                BlockTools.get_harvester_signature(
+                    new_header_data, blocks[9].proof_of_space.plot_pubkey
+                ),
+            ),
+            blocks[9].transactions_generator,
+            blocks[9].transactions_filter,
+        )
+        result, removed, error_code = await b.receive_block(block_bad)
+        assert result == ReceiveBlockResult.INVALID_BLOCK
+        assert error_code == Err.INVALID_COINBASE_AMOUNT
+
+    @pytest.mark.asyncio
+    async def test_invalid_coinbase_signature(self, initial_blockchain):
+        blocks, b = initial_blockchain
+
+        coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
+            blocks[9].header.data.height,
+            blocks[9].header.data.coinbase.puzzle_hash,
+            uint64(9991),
+            bt.pool_sk,
+        )
+        new_header_data = HeaderData(
+            blocks[9].header.data.height,
+            blocks[9].header.data.prev_header_hash,
+            blocks[9].header.data.timestamp,
+            blocks[9].header.data.filter_hash,
+            blocks[9].header.data.proof_of_space_hash,
+            blocks[9].header.data.weight,
+            blocks[9].header.data.total_iters,
+            blocks[9].header.data.additions_root,
+            blocks[9].header.data.removals_root,
+            blocks[9].header.data.coinbase,
+            coinbase_signature,
+            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.aggregated_signature,
+            blocks[9].header.data.cost,
+            blocks[9].header.data.extension_data,
+            blocks[9].header.data.generator_hash,
+        )
+
+        # Coinbase amount invalid
+        block_bad = FullBlock(
+            blocks[9].proof_of_space,
+            blocks[9].proof_of_time,
+            Header(
+                new_header_data,
+                BlockTools.get_harvester_signature(
+                    new_header_data, blocks[9].proof_of_space.plot_pubkey
+                ),
+            ),
+            blocks[9].transactions_generator,
+            blocks[9].transactions_filter,
+        )
+        result, removed, error_code = await b.receive_block(block_bad)
+        assert result == ReceiveBlockResult.INVALID_BLOCK
+        assert error_code == Err.INVALID_COINBASE_SIGNATURE
 
     @pytest.mark.asyncio
     async def test_difficulty_change(self):
@@ -304,8 +498,9 @@ class TestBlockValidation:
         await store._clear_database()
         b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
         for i in range(1, num_blocks):
-            result, removed = await b.receive_block(blocks[i])
+            result, removed, error_code = await b.receive_block(blocks[i])
             assert result == ReceiveBlockResult.ADDED_TO_HEAD
+            assert error_code is None
 
         diff_25 = b.get_next_difficulty(blocks[24].header_hash)
         diff_26 = b.get_next_difficulty(blocks[25].header_hash)
@@ -344,13 +539,14 @@ class TestReorgs:
         )
         for i in range(1, len(blocks_reorg_chain)):
             reorg_block = blocks_reorg_chain[i]
-            result, removed = await b.receive_block(reorg_block)
+            result, removed, error_code = await b.receive_block(reorg_block)
             if reorg_block.height < 90:
                 assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
             elif reorg_block.height < 99:
                 assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
             elif reorg_block.height >= 100:
                 assert result == ReceiveBlockResult.ADDED_TO_HEAD
+            assert error_code is None
         assert b.get_current_tips()[0].height == 119
 
         await connection.close()
@@ -374,7 +570,7 @@ class TestReorgs:
         )
         for i in range(1, len(blocks_reorg_chain)):
             reorg_block = blocks_reorg_chain[i]
-            result, removed = await b.receive_block(reorg_block)
+            result, removed, error_code = await b.receive_block(reorg_block)
             if reorg_block.height == 0:
                 assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
             elif reorg_block.height < 19:
@@ -387,13 +583,13 @@ class TestReorgs:
         blocks_reorg_chain_2 = bt.get_consecutive_blocks(
             test_constants, 3, blocks[:-1], 9, b"4"
         )
-        result, _ = await b.receive_block(blocks_reorg_chain_2[20])
+        result, _, error_code = await b.receive_block(blocks_reorg_chain_2[20])
         assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
 
-        result, _ = await b.receive_block(blocks_reorg_chain_2[21])
+        result, _, error_code = await b.receive_block(blocks_reorg_chain_2[21])
         assert result == ReceiveBlockResult.ADDED_TO_HEAD
 
-        result, _ = await b.receive_block(blocks_reorg_chain_2[22])
+        result, _, error_code = await b.receive_block(blocks_reorg_chain_2[22])
         assert result == ReceiveBlockResult.ADDED_TO_HEAD
 
         await connection.close()

@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
 
-from src.types.hashable.coin import Coin
-from src.types.hashable.spend_bundle import SpendBundle
+from src.types.coin import Coin
+from src.types.spend_bundle import SpendBundle
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message

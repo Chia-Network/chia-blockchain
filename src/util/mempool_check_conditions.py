@@ -5,14 +5,14 @@ from clvm import EvalError
 from clvm.casts import int_from_bytes
 
 from src.types.condition_var_pair import ConditionVarPair
-from src.types.hashable.program import Program
-from src.types.hashable.spend_bundle import SpendBundle
-from src.types.hashable.coin_record import CoinRecord
+from src.types.program import Program
+from src.types.spend_bundle import SpendBundle
+from src.types.coin_record import CoinRecord
 from src.types.name_puzzle_condition import NPC
 from src.full_node.mempool import Mempool
 from src.types.sized_bytes import bytes32
 from src.util.condition_tools import ConditionOpcode, conditions_dict_for_solution
-from src.util.ConsensusError import Err
+from src.util.errors import Err
 import time
 
 from src.util.ints import uint64

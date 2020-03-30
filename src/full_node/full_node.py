@@ -28,23 +28,21 @@ from src.server.outbound_message import Delivery, Message, NodeType, OutboundMes
 from src.server.server import ChiaServer
 from src.types.challenge import Challenge
 from src.types.full_block import FullBlock
-from src.types.hashable.coin import Coin, hash_coin_list
-from src.types.hashable.BLSSignature import BLSSignature
+from src.types.coin import Coin, hash_coin_list
+from src.types.BLSSignature import BLSSignature
 from src.util.cost_calculator import calculate_cost_of_program
 from src.util.hash import std_hash
-from src.types.hashable.spend_bundle import SpendBundle
-from src.types.hashable.program import Program
+from src.types.spend_bundle import SpendBundle
+from src.types.program import Program
 from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.full_node.coin_store import CoinStore
-from src.util import errors
 from src.util.api_decorators import api_request
-from src.util.errors import InvalidUnfinishedBlock
 from src.util.ints import uint32, uint64, uint128
-from src.util.ConsensusError import Err
+from src.util.errors import Err, ConsensusError
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
@@ -418,9 +416,7 @@ class FullNode:
         if not verify_weight(
             tip_block.header, headers, self.blockchain.headers[fork_point_hash],
         ):
-            raise errors.InvalidWeight(
-                f"Weight of {tip_block.header.get_hash()} not valid."
-            )
+            raise ConsensusError(Err.INVALID_WEIGHT, [tip_block.header])
 
         self.log.info(
             f"Validated weight of headers. Downloaded {len(headers)} headers, tip height {tip_height}"
@@ -536,13 +532,17 @@ class FullNode:
                 index += 1
 
                 async with self.store.lock:
-                    result, header_block = await self.blockchain.receive_block(
-                        block, validated, pos
-                    )
+                    (
+                        result,
+                        header_block,
+                        error_code,
+                    ) = await self.blockchain.receive_block(block, validated, pos)
                     if (
                         result == ReceiveBlockResult.INVALID_BLOCK
                         or result == ReceiveBlockResult.DISCONNECTED_BLOCK
                     ):
+                        if error_code is not None:
+                            raise ConsensusError(error_code, block.header_hash)
                         raise RuntimeError(f"Invalid block {block.header_hash}")
 
                     # Always immediately add the block to the database, after updating blockchain state
@@ -1072,15 +1072,17 @@ class FullNode:
         )
 
         assert prev_full_block is not None
-        if not await self.blockchain.validate_unfinished_block(block, prev_full_block):
-            raise InvalidUnfinishedBlock()
+        error_code, iterations_needed = await self.blockchain.validate_unfinished_block(
+            block, prev_full_block
+        )
+
+        if error_code is not None:
+            raise ConsensusError(error_code)
+        assert iterations_needed is not None
 
         challenge = self.blockchain.get_challenge(prev_full_block)
         assert challenge is not None
         challenge_hash = challenge.get_hash()
-        iterations_needed: uint64 = uint64(
-            block.header.data.total_iters - prev_full_block.header.data.total_iters
-        )
 
         if (
             self.store.get_unfinished_block((challenge_hash, iterations_needed))
@@ -1535,7 +1537,7 @@ class FullNode:
 
         async with self.store.lock:
             # Tries to add the block to the blockchain
-            added, replaced = await self.blockchain.receive_block(
+            added, replaced, error_code = await self.blockchain.receive_block(
                 respond_block.block, val, pos
             )
             if added == ReceiveBlockResult.ADDED_TO_HEAD:
@@ -1546,10 +1548,12 @@ class FullNode:
         if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return
         elif added == ReceiveBlockResult.INVALID_BLOCK:
-            self.log.warning(
-                f"Block {header_hash} at height {respond_block.block.height} is invalid."
+            self.log.error(
+                f"Block {header_hash} at height {respond_block.block.height} is invalid with code {error_code}."
             )
-            return
+            assert error_code is not None
+            raise ConsensusError(error_code, header_hash)
+
         elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
             self.log.warning(f"Disconnected block {header_hash}")
             tip_height = min(

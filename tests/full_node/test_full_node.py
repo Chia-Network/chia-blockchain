@@ -12,7 +12,7 @@ from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
 from src.types.full_block import FullBlock
 from src.types.proof_of_space import ProofOfSpace
-from src.types.hashable.spend_bundle import SpendBundle
+from src.types.spend_bundle import SpendBundle
 from src.util.bundle_tools import best_solution_program
 from src.util.ints import uint16, uint32, uint64, uint8
 from src.util.hash import std_hash
@@ -22,13 +22,13 @@ from src.types.condition_opcodes import ConditionOpcode
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.wallet_tools import WalletTool
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
-from src.types.hashable.coin import hash_coin_list
+from src.types.coin import hash_coin_list
 from src.util.merkle_set import (
     MerkleSet,
     confirm_included_already_hashed,
     confirm_not_included_already_hashed,
 )
-from src.util.ConsensusError import Err
+from src.util.errors import Err, ConsensusError
 
 
 async def get_block_path(full_node: FullNode):
@@ -720,10 +720,17 @@ class TestFullNodeProtocol:
             blocks_new[-5].transactions_generator,
             blocks_new[-5].transactions_filter,
         )
-        msgs = [
-            _ async for _ in full_node_1.respond_block(fnp.RespondBlock(block_invalid))
-        ]
-        assert len(msgs) == 0
+        threw = False
+        try:
+            msgs = [
+                _
+                async for _ in full_node_1.respond_block(
+                    fnp.RespondBlock(block_invalid)
+                )
+            ]
+        except ConsensusError:
+            threw = True
+        assert threw
 
         # If a few blocks behind, request short sync
         msgs = [

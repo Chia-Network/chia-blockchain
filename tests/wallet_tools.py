@@ -7,11 +7,11 @@ from blspy import ExtendedPrivateKey
 
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.hashable.program import Program
-from src.types.hashable.BLSSignature import BLSSignature
-from src.types.hashable.coin import Coin
-from src.types.hashable.coin_solution import CoinSolution
-from src.types.hashable.spend_bundle import SpendBundle
+from src.types.program import Program
+from src.types.BLSSignature import BLSSignature
+from src.types.coin import Coin
+from src.types.coin_solution import CoinSolution
+from src.types.spend_bundle import SpendBundle
 from src.util.condition_tools import (
     conditions_by_opcode,
     hash_key_pairs_for_conditions_dict,
