@@ -5,21 +5,10 @@ from blspy import PrivateKey, ExtendedPrivateKey
 from src.path import mkdir, path_from_root
 from src.pool import create_puzzlehash_for_pk
 from src.types.hashable.BLSSignature import BLSPublicKey
-from src.util.config import load_config, save_config
+from src.util.config import load_config, save_config, str2bool
 
 
 key_config_filename = path_from_root() / "config" / "keys.yaml"
-
-
-def str2bool(v: str) -> bool:
-    if isinstance(v, bool):
-        return v
-    if v.lower() in ("yes", "true", "t", "y", "1"):
-        return True
-    elif v.lower() in ("no", "false", "f", "n", "0"):
-        return False
-    else:
-        raise argparse.ArgumentTypeError("Boolean value expected.")
 
 
 def main():

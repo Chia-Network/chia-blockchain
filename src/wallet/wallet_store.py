@@ -14,7 +14,6 @@ class WalletStore:
     """
 
     db_connection: aiosqlite.Connection
-    # Whether or not we are syncing
     coin_record_cache: Dict[str, WalletCoinRecord]
     cache_size: uint32
 
@@ -318,6 +317,11 @@ class WalletStore:
         await self.db_connection.commit()
 
     async def get_lca_path(self) -> Dict[bytes32, BlockRecord]:
+        """
+        Returns block records representing the blockchain from the genesis
+        block up to the LCA (least common ancestor). Note that the DB also
+        contains many blocks not on this path, due to reorgs.
+        """
         cursor = await self.db_connection.execute(
             "SELECT * from block_records WHERE in_lca_path=1"
         )
@@ -366,6 +370,10 @@ class WalletStore:
         await self.db_connection.commit()
 
     async def remove_blocks_from_path(self, from_height: uint32) -> None:
+        """
+        When rolling back the LCA, sets in_lca_path to 0 for blocks over the given
+        height. This is used during reorgs to rollback the current lca.
+        """
         cursor = await self.db_connection.execute(
             "UPDATE block_records SET in_lca_path=0 WHERE height>?", (from_height,),
         )

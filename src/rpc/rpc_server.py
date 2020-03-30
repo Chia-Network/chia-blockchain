@@ -214,7 +214,9 @@ class RpcApiHandler:
         return obj_to_response(max_tip)
 
 
-async def start_rpc_server(full_node: FullNode, stop_node_cb: Callable, rpc_port: int):
+async def start_rpc_server(
+    full_node: FullNode, stop_node_cb: Callable, rpc_port: uint16
+):
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.
@@ -238,7 +240,7 @@ async def start_rpc_server(full_node: FullNode, stop_node_cb: Callable, rpc_port
 
     runner = web.AppRunner(app, access_log=None)
     await runner.setup()
-    site = web.TCPSite(runner, "localhost", rpc_port)
+    site = web.TCPSite(runner, "localhost", int(rpc_port))
     await site.start()
 
     async def cleanup():

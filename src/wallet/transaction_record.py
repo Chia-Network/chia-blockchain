@@ -27,6 +27,9 @@ class TransactionRecord(Streamable):
     additions: List[Coin]
     removals: List[Coin]
     wallet_id: uint64
+
+    # Represents the list of peers that we sent the transaction to, whether each one
+    # included it in the mempool, and what the error message (if any) was
     sent_to: List[Tuple[str, uint8, Optional[str]]]
 
     def name(self) -> bytes32:

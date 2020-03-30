@@ -190,7 +190,10 @@ class WalletStateManager:
 
         return uint64(amount)
 
-    async def does_coin_belongs_to_wallet(self, coin: Coin, wallet_id: int) -> bool:
+    async def does_coin_belong_to_wallet(self, coin: Coin, wallet_id: int) -> bool:
+        """
+        Returns true if we have the key for this coin.
+        """
         info = await self.puzzle_store.wallet_info_for_puzzle_hash(coin.puzzle_hash)
 
         if info is None:
@@ -214,10 +217,10 @@ class WalletStateManager:
 
         for record in unconfirmed_tx:
             for coin in record.additions:
-                if await self.does_coin_belongs_to_wallet(coin, wallet_id):
+                if await self.does_coin_belong_to_wallet(coin, wallet_id):
                     addition_amount += coin.amount
             for coin in record.removals:
-                if await self.does_coin_belongs_to_wallet(coin, wallet_id):
+                if await self.does_coin_belong_to_wallet(coin, wallet_id):
                     removal_amount += coin.amount
 
         result = confirmed - removal_amount + addition_amount

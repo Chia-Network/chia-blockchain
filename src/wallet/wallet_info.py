@@ -8,7 +8,7 @@ from src.wallet.util.wallet_types import WalletType
 @streamable
 class WalletInfo(Streamable):
     """
-    Wrapper around data that
+    # TODO(straya): describe
     """
 
     id: int

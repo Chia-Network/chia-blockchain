@@ -41,20 +41,35 @@ class WalletNode:
     private_key: ExtendedPrivateKey
     key_config: Dict
     config: Dict
+    constants: Dict
     server: Optional[ChiaServer]
-    wallet_state_manager: WalletStateManager
     log: logging.Logger
+
+    # Maintains the state of the wallet (blockchain and transactions), handles DB connections
+    wallet_state_manager: WalletStateManager
     main_wallet: Wallet
     wallets: Dict[int, Any]
+
+    # Maintains headers recently received. Once the desired removals and additions are downloaded,
+    # the data is persisted in the WalletStateManager. These variables are also used to store
+    # temporary sync data.
     cached_blocks: Dict[bytes32, Tuple[BlockRecord, HeaderBlock]]
     cached_removals: Dict[bytes32, List[bytes32]]
     cached_additions: Dict[bytes32, List[Coin]]
+
+    # Hashes of the PoT and PoSpace for all blocks (including occasional difficulty adjustments)
     proof_hashes: List[Tuple[bytes32, Optional[uint64], Optional[uint64]]]
+
+    # List of header hashes downloaded during sync
     header_hashes: List[bytes32]
     header_hashes_error: bool
+
+    # Event to signal when a block is received (during sync)
     potential_blocks_received: Dict[uint32, asyncio.Event]
     potential_header_hashes: Dict[uint32, bytes32]
-    constants: Dict
+
+    # How far away from LCA we must be to perform a full sync. Before then, do a short sync,
+    # which is consecutive requests for the previous block
     short_sync_threshold: int
     _shut_down: bool
 
@@ -219,6 +234,9 @@ class WalletNode:
     async def respond_peers(
         self, request: full_node_protocol.RespondPeers
     ) -> OutboundMessageGenerator:
+        """
+        We have received a list of full node peers that we can connect to.
+        """
         if self.server is None:
             return
         conns = self.server.global_connections
@@ -248,7 +266,7 @@ class WalletNode:
     async def _sync(self):
         """
         Wallet has fallen far behind (or is starting up for the first time), and must be synced
-        up to the tip of the blockchain
+        up to the LCA of the blockchain.
         """
         # 1. Get all header hashes
         self.header_hashes = []
@@ -286,6 +304,7 @@ class WalletNode:
             self.header_hashes
         )
         fork_point_hash: bytes32 = self.header_hashes[fork_point_height]
+
         # Sync a little behind, in case there is a short reorg
         tip_height = (
             len(self.header_hashes) - 5
@@ -337,12 +356,13 @@ class WalletNode:
                 list(
                     set(
                         random.choices(
-                            heights, difficulty_weights, k=min(50, len(heights))
+                            heights, difficulty_weights, k=min(100, len(heights))
                         )
                     )
                 )
             )
             query_heights: List[uint32] = []
+
             for odd_height in query_heights_odd:
                 query_heights += [uint32(odd_height - 1), odd_height]
 
@@ -546,6 +566,14 @@ class WalletNode:
     async def _block_finished(
         self, block_record: BlockRecord, header_block: HeaderBlock
     ):
+        """
+        This is called when we have finished a block (which means we have downloaded the header,
+        as well as the relevant additions and removals for the wallets). If a sync block is finished,
+        we don't add it to the database, but instead just set the potential_blocks_received.
+        During normal operation (not sync) we add block to the WSM (database), if the previous block
+        is present. If the previous block is not present, we cached the current block, and request
+        the previous.
+        """
         if self.wallet_state_manager.sync_mode:
             self.potential_blocks_received[uint32(block_record.height)].set()
             self.potential_header_hashes[block_record.height] = block_record.header_hash
@@ -616,6 +644,10 @@ class WalletNode:
     async def transaction_ack_with_peer_name(
         self, ack: wallet_protocol.TransactionAck, name: str
     ):
+        """
+        This is an ack for our previous SendTransaction call. This removes the transaction from
+        the send queue if we have sent it to enough nodes.
+        """
         if ack.status == MempoolInclusionStatus.SUCCESS:
             self.log.info(
                 f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}"
@@ -639,6 +671,9 @@ class WalletNode:
     async def respond_all_proof_hashes(
         self, response: wallet_protocol.RespondAllProofHashes
     ):
+        """
+        Receipt of proof hashes, used during sync for interactive weight verification protocol.
+        """
         if not self.wallet_state_manager.sync_mode:
             self.log.warning("Receiving proof hashes while not syncing.")
             return
@@ -648,6 +683,10 @@ class WalletNode:
     async def respond_all_header_hashes_after(
         self, response: wallet_protocol.RespondAllHeaderHashesAfter
     ):
+        """
+        Response containing all header hashes after a point. This is used to find the fork
+        point between our current blockchain, and the current heaviest tip.
+        """
         if not self.wallet_state_manager.sync_mode:
             self.log.warning("Receiving header hashes while not syncing.")
             return
@@ -657,11 +696,18 @@ class WalletNode:
     async def reject_all_header_hashes_after_request(
         self, response: wallet_protocol.RejectAllHeaderHashesAfterRequest
     ):
+        """
+        Error in requesting all header hashes.
+        """
         self.log.error("All header hashes after request rejected")
         self.header_hashes_error = True
 
     @api_request
     async def new_lca(self, request: wallet_protocol.NewLCA):
+        """
+        Notification from full node that a new LCA (Least common ancestor of the three blockchain
+        tips) has been added to the full node.
+        """
         if self.wallet_state_manager.sync_mode:
             return
         # If already seen LCA, ignore.
@@ -698,6 +744,10 @@ class WalletNode:
 
     @api_request
     async def respond_header(self, response: wallet_protocol.RespondHeader):
+        """
+        The full node responds to our RequestHeader call. We cannot finish this block
+        until we have the required additions / removals for our wallets.
+        """
         block = response.header_block
         # If we already have, return
         if block.header_hash in self.wallet_state_manager.block_records:
@@ -717,7 +767,7 @@ class WalletNode:
         )
         finish_block = True
 
-        # If we have transactions, fetch adds/deletes
+        # If the block has transactions, fetch adds/deletes
         if response.transactions_filter is not None:
             # Caches the block so we can finalize it when additions and removals arrive
             self.cached_blocks[block.header_hash] = (block_record, block)
@@ -755,11 +805,18 @@ class WalletNode:
     async def reject_header_request(
         self, response: wallet_protocol.RejectHeaderRequest
     ):
+        """
+        The full node has rejected our request for a header.
+        """
         # TODO(mariano): implement
         self.log.error("Header request rejected")
 
     @api_request
     async def respond_removals(self, response: wallet_protocol.RespondRemovals):
+        """
+        The full node has responded with the removals for a block. We will use this
+        to try to finish the block, and add it to the state.
+        """
         if response.header_hash not in self.cached_blocks:
             self.log.warning("Do not have header for removals")
             return
@@ -768,7 +825,8 @@ class WalletNode:
 
         removals: List[bytes32]
         if response.proofs is None:
-            # Find our removals
+            # If there are no proofs, it means all removals were returned in the response.
+            # we must find the ones relevant to our wallets.
             all_coins: List[Coin] = []
             for coin_name, coin in response.coins:
                 if coin is not None:
@@ -789,6 +847,8 @@ class WalletNode:
             assert header_block.header.data.removals_root == removals_root
 
         else:
+            # This means the full node has responded only with the relevant removals
+            # for our wallet. Each merkle proof must be verified.
             removals = []
             assert len(response.coins) == len(response.proofs)
             for i in range(len(response.coins)):
@@ -796,12 +856,14 @@ class WalletNode:
                 assert response.coins[i][0] == response.proofs[i][0]
                 coin = response.coins[i][1]
                 if coin is None:
+                    # Verifies merkle proof of exclusion
                     assert confirm_not_included_already_hashed(
                         header_block.header.data.removals_root,
                         response.coins[i][0],
                         response.proofs[i][1],
                     )
                 else:
+                    # Verifies merkle proof of inclusion of coin name
                     assert response.coins[i][0] == coin.name()
                     assert confirm_included_already_hashed(
                         header_block.header.data.removals_root,
@@ -833,11 +895,18 @@ class WalletNode:
     async def reject_removals_request(
         self, response: wallet_protocol.RejectRemovalsRequest
     ):
+        """
+        The full node has rejected our request for removals.
+        """
         # TODO(mariano): implement
         self.log.error("Removals request rejected")
 
     @api_request
     async def respond_additions(self, response: wallet_protocol.RespondAdditions):
+        """
+        The full node has responded with the additions for a block. We will use this
+        to try to finish the block, and add it to the state.
+        """
         if response.header_hash not in self.cached_blocks:
             self.log.warning("Do not have header for additions")
             return
@@ -846,7 +915,8 @@ class WalletNode:
 
         additions: List[Coin]
         if response.proofs is None:
-            # Find our removals
+            # If there are no proofs, it means all additions were returned in the response.
+            # we must find the ones relevant to our wallets.
             all_coins: List[Coin] = []
             for puzzle_hash, coin_list_0 in response.coins:
                 all_coins += coin_list_0
@@ -865,6 +935,8 @@ class WalletNode:
             if header_block.header.data.additions_root != additions_root:
                 return
         else:
+            # This means the full node has responded only with the relevant additions
+            # for our wallet. Each merkle proof must be verified.
             additions = []
             assert len(response.coins) == len(response.proofs)
             for i in range(len(response.coins)):
@@ -919,5 +991,8 @@ class WalletNode:
     async def reject_additions_request(
         self, response: wallet_protocol.RejectAdditionsRequest
     ):
+        """
+        The full node has rejected our request for additions.
+        """
         # TODO(mariano): implement
         self.log.error("Additions request rejected")

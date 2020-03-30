@@ -98,7 +98,7 @@ This will require multiple reboots. From an Administrator PowerShell
 `Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux`
 and then
 `Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform`.
-Once that is complete, install Ubuntu 18.04 LTS from the Windows Store.
+Once that is complete, install Ubuntu 18.04 LTS from the Microsoft Store.
 ```bash
 # Upgrade to 19.x
 sudo nano /etc/update-manager/release-upgrades
