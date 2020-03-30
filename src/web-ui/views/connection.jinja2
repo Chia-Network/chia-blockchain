@@ -1,7 +1,9 @@
 {% extends 'layout.html' %}
 {% from '_macros.jinja2' import render_field %}
 {% block content %}
-<button onclick='disconnectPeer("{{ connection.node_id }}")'>Disconnect</button>
+<button class="blue-button" onclick='disconnectPeer("{{ connection.node_id }}")'>Disconnect</button>
+
+<div class="with-shadow">
 <h2>{{ connection.type_name }}</h2>
 {{ render_field('node_id', connection.node_id ) }}
 {{ render_field('bytes_read', connection.bytes_read) }}
@@ -12,5 +14,5 @@
 {{ render_field('local_port', connection.local_port) }}
 {{ render_field('peer_host', connection.peer_host) }}
 {{ render_field('peer_server_port', connection.peer_server_port) }}
-
+</div>
 {% endblock %}

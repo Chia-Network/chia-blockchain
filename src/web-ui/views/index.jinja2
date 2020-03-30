@@ -2,8 +2,9 @@
 {% from '_macros.jinja2' import render_field, render_field_link %}
 {% block content %}
 
-<button onclick='stopNode()'>Shut Down Node</button>
+<button class="blue-button" onclick='stopNode()'>Shut Down Node</button>
 
+<div class="with-shadow">
 <h2>Status</h2>
 {{ render_field('Status', state) }}
 {{ render_field('Sync mode', blockchain_state.sync_mode) }}
@@ -18,32 +19,34 @@
 </div>
 {{ render_field('Current difficulty', blockchain_state.difficulty) }}
 {{ render_field('Current VDF iterations per second', blockchain_state.ips) }}
+</div>
 
-
+<div class="with-shadow">
 <h3>Connections</h3>
 {% for connection in connections %}
     {{ render_field_link(connection.type_name, connection.peer_host + ':' +  connection.peer_port | string + '/' + connection.peer_server_port | string, './connections/' + connection.node_id ) }}
 {% endfor %}
+</div>
 
-
+<div class="with-shadow">
 <h3>Latest Blocks</h3>
 {% for b in latest_blocks %}
     {{ render_field_link('Block', b.challenge.height | string + ":" + b.header.data.prev_header_hash | string, './blocks/' + b.challenge.proof_of_space_hash | string | urlencode) }}
 {% endfor %}
+</div>
 
-
+<div class="with-shadow">
 <h3>Our Pool Winnings</h3>
 {% for winner in our_winners %}
     {{ render_field('Public key', winner[2] | string + ' - ' + (winner[0] / 1000000000000) | string + ' chia') }}
 {% endfor %}
+</div>
 
-
+<div class="with-shadow">
 <h3>Top Pool Winnings</h3>
 {% for winner in top_winners %}
     {{ render_field('Public key', winner[2] | string + ' - ' + (winner[0] / 1000000000000) | string + ' chia') }}
 {% endfor %}
-
-
-<div id='footer'>{{ last_refresh }}</div>
+</div>
 
 {% endblock %}

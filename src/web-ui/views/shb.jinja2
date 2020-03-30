@@ -2,6 +2,7 @@
 {% from '_macros.jinja2' import render_field %}
 {% block content %}
 
+<div class="with-shadow">
 <h2>Challenge</h2>
 {{ render_field('Height', block.challenge.height) }}
 {{ render_field('prev_challenge_hash', block.challenge.prev_challenge_hash) }}
@@ -9,8 +10,14 @@
 {{ render_field('proof_of_time_output_hash', block.challenge.proof_of_time_output_hash) }}
 {{ render_field('total_iters', block.challenge.total_iters) }}
 {{ render_field('total_weight', block.challenge.total_weight) }}
+</div>
+
+<div class="with-shadow">
 <h2>Header</h2>
 {{ render_field('harvester_signature', block.header.harvester_signature) }}
+</div>
+
+<div class="with-shadow">
 <h3>Data</h3>
 {{ render_field('body_hash', block.header.data.body_hash) }}
 {{ render_field('extension_data', block.header.data.extension_data) }}
@@ -18,5 +25,5 @@
 {{ render_field('prev_header_hash', block.header.data.prev_header_hash) }}
 {{ render_field('proof_of_space_hash', block.header.data.proof_of_space_hash) }}
 {{ render_field('timestamp', block.header.data.timestamp) }}
-
+</div>
 {% endblock %}
