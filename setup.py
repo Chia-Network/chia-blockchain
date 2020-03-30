@@ -1,21 +1,36 @@
 from setuptools import setup
 
+SETPROCTITLE_GITHUB = (
+    "setproctitle @ "
+    "https://github.com/Chia-Network/py-setproctitle/tarball/"
+    "d2ed86c5080bb645d8f6b782a4a86706c860d9e6#egg=setproctitle-50.0.0"
+)
+
+CLVM_TOOLS_GITHUB = (
+    "clvm-tools @ "
+    "https://github.com/Chia-Network/clvm_tools/tarball/6ff53bcfeb0c970647b6cfdde360d32b316b1326#egg=clvm-tools"
+)
+
+
 dependencies = [
-    "aiter",  # Used for async generator tools
-    "blspy",  # Signature library
-    "cbor2",  # Used for network wire format
-    "pyyaml",  # Used for config file format
-    "miniupnpc",  # Allows users to open ports on their router
-    "aiosqlite",  # asyncio wrapper for sqlite, to store blocks
-    "aiohttp",  # HTTP server for full node rpc
-    "setuptools-scm",  # Used for versioning
-    "colorlog",  # Adds color to logs
-    "chiavdf",  # timelord and vdf verification
-    "chiabip158",  # bip158-style wallet filters
-    "chiapos",  # proof of space
-    "sortedcontainers",  # For maintaining sorted mempools
-    "websockets",  # For use in wallet RPC and electron UI
+    "aiter==0.13.20191203",  # Used for async generator tools
+    "blspy==0.1.14",  # Signature library
+    "cbor2==5.0.1",  # Used for network wire format
+    "clvm==0.4",  # contract language
+    "PyYAML==5.3",  # Used for config file format
+    "miniupnpc==2.0.2",  # Allows users to open ports on their router
+    "aiosqlite==0.11.0",  # asyncio wrapper for sqlite, to store blocks
+    "aiohttp==3.6.2",  # HTTP server for full node rpc
+    "colorlog==4.1.0",  # Adds color to logs
+    "chiavdf==0.12.1",  # timelord and vdf verification
+    "chiabip158==0.12",  # bip158-style wallet filters
+    "chiapos==0.12.2",  # proof of space
+    "sortedcontainers==2.1.0",  # For maintaining sorted mempools
+    "websockets==8.1.0",  # For use in wallet RPC and electron UI
+    SETPROCTITLE_GITHUB,  # custom internal version of setproctitle, this should go away
+    CLVM_TOOLS_GITHUB,  # clvm compiler tools
 ]
+
 dev_dependencies = [
     "pytest",
     "flake8",
@@ -36,7 +51,7 @@ setup(
     keywords="chia blockchain node",
     install_requires=dependencies,
     setup_requires=["setuptools_scm"],
-    extras_require={"uvloop": ["uvloop"], },
+    extras_require=dict(uvloop=["uvloop"], dev=dev_dependencies),
     packages=[
         "src",
         "src.cmds",
