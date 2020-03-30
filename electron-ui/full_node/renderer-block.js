@@ -3,6 +3,7 @@ let block_tbody = document.querySelector('#block-tbody');
 let block_title = document.querySelector('#block-title');
 const { unix_to_short_date, get_query_variable } = require("../utils");
 let chia_formatter = require('../chia');
+const ipc = require('electron').ipcRenderer;
 let rpc_client = new FullNodeRpcClient();
 
 
@@ -14,6 +15,34 @@ function create_table_row(textL, textR) {
     let cellR = document.createElement("td");
     let cellTextR = document.createTextNode(textR);
     cellR.appendChild(cellTextR);
+    row.appendChild(cellL);
+    row.appendChild(cellR);
+    return row;
+}
+function create_block_link(textL, header_hash) {
+    let row = document.createElement("tr");
+    let cellL = document.createElement("td");
+    let cellTextL = document.createTextNode(textL);
+    cellL.appendChild(cellTextL);
+    let cellR = document.createElement("td");
+    let cellTextR = document.createTextNode(header_hash);
+    var a = document.createElement('a');
+    a.appendChild(cellTextR);
+    a.style.padding = "0px";
+    a.style.textDecoration = "underline";
+    a.style.cursor = "pointer";
+    a.onclick = async () => {
+        try {
+            ipc.send('load-page', {
+                "file": "full_node/block.html",
+                "query": "?header_hash=" + header_hash
+            });
+        } catch (error) {
+            alert(error);
+        }
+    };
+
+    cellR.appendChild(a);
     row.appendChild(cellL);
     row.appendChild(cellR);
     return row;
@@ -39,6 +68,7 @@ async function render() {
         block_tbody.appendChild(create_table_row("Timestamp", unix_to_short_date(block.header.data.timestamp)));
         block_tbody.appendChild(create_table_row("Height", block.header.data.height));
         block_tbody.appendChild(create_table_row("Weight", BigInt(block.header.data.weight).toLocaleString()));
+        block_tbody.appendChild(create_block_link("Previous block", block.header.data.prev_header_hash));
         block_tbody.appendChild(create_table_row("Cost", block.header.data.cost));
         block_tbody.appendChild(create_table_row("Difficulty", BigInt(diff).toLocaleString()));
         block_tbody.appendChild(create_table_row("Total VDF Iterations", BigInt(block.header.data.total_iters).toLocaleString()));

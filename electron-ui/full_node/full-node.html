@@ -57,6 +57,19 @@
         <div class="col-md-12 col-lg-8">
           <div class="tab-content">
             <div class="tab-pane fade show active" id="coinBTC" role="tabpanel">
+              <h3 class="wallet-title">Latest Blocks</h3>
+              <table class="table table-sm table-hover">
+               <thead>
+                  <tr>
+                    <th scope="col">Block hash</th>
+                    <th scope="col" style="width: 100px;">Height</th>
+                    <th scope="col" style-"width: 200px;">Time created</th>
+                  </tr>
+                    <tbody id="latest-blocks-tbody">
+                    </tbody>
+                </thead>
+              </table>
+              <div class="create-connection">
               <h3 class="wallet-title">Connections</h3>
               <div class="table-responsive">
                 <table class="table table-sm table-hover">
@@ -74,7 +87,7 @@
                   </thead>
                 </table>
               </div>
-
+              </div>
               <h3 class="wallet-title">Create Connection</h3>
               <div class="create-connection">
                 <div class="input-group" style="padding-top:0px">
@@ -95,20 +108,7 @@
                   <button class="btn btn-primary" id="search-button">Search</button>
                 </div>
               </div>
-              <div class="create-connection">
-              <h3 class="wallet-title">Latest Blocks</h3>
-              <table class="table table-sm table-hover">
-               <thead>
-                  <tr>
-                    <th scope="col">Block hash</th>
-                    <th scope="col" style="width: 100px;">Height</th>
-                    <th scope="col" style-"width: 200px;">Time created</th>
-                  </tr>
-                    <tbody id="latest-blocks-tbody">
-                    </tbody>
-                </thead>
-              </table>
-              </div>
+
               <div class="create-connection">
                 <button class="btn btn-warning" id="stop-node-button">Stop node</button>
               </div>
