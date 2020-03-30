@@ -3,7 +3,6 @@ import logging
 import logging.config
 import signal
 from src.path import mkdir, path_from_root
-from pathlib import Path
 import aiosqlite
 from src.simulator.full_node_simulator import FullNodeSimulator
 from src.simulator.simulator_constants import test_constants
