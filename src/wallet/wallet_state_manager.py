@@ -442,7 +442,7 @@ class WalletStateManager:
     async def get_transaction(self, tx_id: SpendBundle) -> Optional[TransactionRecord]:
         return await self.tx_store.get_transaction_record(tx_id)
 
-    def find_fork_point(self, alternate_chain: List[bytes32]) -> uint32:
+    def find_fork_point_alternate_chain(self, alternate_chain: List[bytes32]) -> uint32:
         """
         Takes in an alternate blockchain (headers), and compares it to self. Returns the last header
         where both blockchains are equal. Used for syncing.
@@ -524,7 +524,9 @@ class WalletStateManager:
             # Not genesis, updated LCA
             if block.weight > self.block_records[self.lca].weight:
 
-                fork_h = self.find_fork_for_lca(block)
+                fork_h = self._find_fork_point_in_chain(
+                    self.block_records[self.lca], block
+                )
                 await self.reorg_rollback(fork_h)
 
                 # Add blocks between fork point and new lca
@@ -783,20 +785,22 @@ class WalletStateManager:
             return False
         return True
 
-    def find_fork_for_lca(self, new_lca: BlockRecord) -> uint32:
-        """ Tries to find height where new chain (current) diverged from the old chain where old_lca was the LCA"""
-        tmp_old: BlockRecord = self.block_records[self.lca]
-        while new_lca.height > 0 or tmp_old.height > 0:
-            if new_lca.height > tmp_old.height:
-                new_lca = self.block_records[new_lca.prev_header_hash]
-            elif tmp_old.height > new_lca.height:
-                tmp_old = self.block_records[tmp_old.prev_header_hash]
+    def _find_fork_point_in_chain(
+        self, block_1: BlockRecord, block_2: BlockRecord
+    ) -> uint32:
+        """ Tries to find height where new chain (block_2) diverged from block_1 (assuming prev blocks
+        are all included in chain)"""
+        while block_2.height > 0 or block_1.height > 0:
+            if block_2.height > block_1.height:
+                block_2 = self.block_records[block_2.prev_header_hash]
+            elif block_1.height > block_2.height:
+                block_1 = self.block_records[block_1.prev_header_hash]
             else:
-                if new_lca.header_hash == tmp_old.header_hash:
-                    return new_lca.height
-                new_lca = self.block_records[new_lca.prev_header_hash]
-                tmp_old = self.block_records[tmp_old.prev_header_hash]
-        assert new_lca == tmp_old  # Genesis block is the same, genesis fork
+                if block_2.header_hash == block_1.header_hash:
+                    return block_2.height
+                block_2 = self.block_records[block_2.prev_header_hash]
+                block_1 = self.block_records[block_1.prev_header_hash]
+        assert block_2 == block_1  # Genesis block is the same, genesis fork
         return uint32(0)
 
     def validate_select_proofs(

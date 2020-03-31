@@ -228,7 +228,24 @@ class WalletNode:
         diff = self.config["target_peer_count"] - len(
             self.server.global_connections.get_full_node_connections()
         )
-        return diff if diff >= 0 else 0
+        if diff < 0:
+            return 0
+
+        if "full_node_peer" in self.config:
+            full_node_peer = PeerInfo(
+                self.config["full_node_peer"]["host"],
+                self.config["full_node_peer"]["port"],
+            )
+            peers = [
+                c.get_peer_info()
+                for c in self.server.global_connections.get_full_node_connections()
+            ]
+            if full_node_peer in peers:
+                self.log.info(
+                    f"Will not attempt to connect to other nodes, already connected to {full_node_peer}"
+                )
+                return 0
+        return diff
 
     @api_request
     async def respond_peers(
@@ -300,7 +317,7 @@ class WalletNode:
             raise TimeoutError("Took too long to fetch header hashes.")
 
         # 2. Find fork point
-        fork_point_height: uint32 = self.wallet_state_manager.find_fork_point(
+        fork_point_height: uint32 = self.wallet_state_manager.find_fork_point_alternate_chain(
             self.header_hashes
         )
         fork_point_hash: bytes32 = self.header_hashes[fork_point_height]

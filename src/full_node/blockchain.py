@@ -3,7 +3,7 @@ import logging
 import multiprocessing
 import time
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Set
 import asyncio
 import concurrent
 import blspy
@@ -219,7 +219,7 @@ class Blockchain:
             ret_hashes.append(curr.header_hash)
         return list(reversed(ret_hashes))
 
-    def find_fork_point(self, alternate_chain: List[bytes32]) -> uint32:
+    def find_fork_point_alternate_chain(self, alternate_chain: List[bytes32]) -> uint32:
         """
         Takes in an alternate blockchain (headers), and compares it to self. Returns the last header
         where both blockchains are equal.
@@ -714,7 +714,8 @@ class Blockchain:
         prev_full_block: Optional[FullBlock]
         if not genesis:
             prev_full_block = await self.store.get_block(block.prev_header_hash)
-            assert prev_full_block is not None
+            if prev_full_block is None:
+                return Err.DOES_NOT_EXTEND
         else:
             prev_full_block = None
 
@@ -865,7 +866,7 @@ class Blockchain:
             # If LCA changed update the unspent store
             elif old_lca.header_hash != self.lca_block.header_hash:
                 # New LCA is lower height but not the a parent of old LCA (Reorg)
-                fork_h = self._find_fork_for_lca(old_lca, self.lca_block)
+                fork_h = self._find_fork_point_in_chain(old_lca, self.lca_block)
                 # Rollback to fork
                 await self.unspent_store.rollback_lca_to_block(fork_h)
 
@@ -911,20 +912,20 @@ class Blockchain:
                 curr_new = self.headers[curr_new.prev_header_hash]
                 curr_old = self.headers[curr_old.prev_header_hash]
 
-    def _find_fork_for_lca(self, old_lca: Header, new_lca: Header) -> uint32:
-        """ Tries to find height where new chain (current) diverged from the old chain where old_lca was the LCA"""
-        tmp_old: Header = old_lca
-        while tmp_old.header_hash != self.genesis.header_hash:
-            if tmp_old.header_hash == self.genesis.header_hash:
-                return uint32(0)
-            if tmp_old.height in self.height_to_hash:
-                chain_hash_at_h = self.height_to_hash[tmp_old.height]
-                if (
-                    chain_hash_at_h == tmp_old.header_hash
-                    and chain_hash_at_h != new_lca.header_hash
-                ):
-                    return tmp_old.height
-            tmp_old = self.headers[tmp_old.prev_header_hash]
+    def _find_fork_point_in_chain(self, block_1: Header, block_2: Header) -> uint32:
+        """ Tries to find height where new chain (block_2) diverged from block_1 (assuming prev blocks
+        are all included in chain)"""
+        while block_2.height > 0 or block_1.height > 0:
+            if block_2.height > block_1.height:
+                block_2 = self.headers[block_2.prev_header_hash]
+            elif block_1.height > block_2.height:
+                block_1 = self.headers[block_1.prev_header_hash]
+            else:
+                if block_2.header_hash == block_1.header_hash:
+                    return block_2.height
+                block_2 = self.headers[block_2.prev_header_hash]
+                block_1 = self.headers[block_1.prev_header_hash]
+        assert block_2 == block_1  # Genesis block is the same, genesis fork
         return uint32(0)
 
     async def _create_diffs_for_tips(self, target: Header):
@@ -1011,6 +1012,8 @@ class Blockchain:
     async def _validate_transactions(
         self, block: FullBlock, fee_base: uint64
     ) -> Optional[Err]:
+        # TODO(straya): review, further test the code, and number all the validation steps
+
         # 1. Check that transactions generator is present
         if not block.transactions_generator:
             return Err.UNKNOWN
@@ -1063,6 +1066,32 @@ class Blockchain:
                 return Err.DOUBLE_SPEND
 
         # Check if removals exist and were not previously spend. (unspent_db + diff_store + this_block)
+        fork_h = self._find_fork_point_in_chain(self.lca_block, block.header)
+
+        # Get additions and removals since (after) fork_h but not including this block
+        additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}
+        removals_since_fork: Set[bytes32] = set()
+        coinbases_since_fork: Dict[bytes32, uint32] = {}
+        curr: Optional[FullBlock] = await self.store.get_block(block.prev_header_hash)
+        assert curr is not None
+        while curr.height > fork_h:
+            removals_in_curr, additions_in_curr = await curr.tx_removals_and_additions()
+            for c_name in removals_in_curr:
+                removals_since_fork.add(c_name)
+            for c in additions_in_curr:
+                additions_since_fork[c.name()] = (c, curr.height)
+            additions_since_fork[curr.header.data.coinbase.name()] = (
+                curr.header.data.coinbase,
+                curr.height,
+            )
+            additions_since_fork[curr.header.data.fees_coin.name()] = (
+                curr.header.data.fees_coin,
+                curr.height,
+            )
+            coinbases_since_fork[curr.header.data.coinbase.name()] = curr.height
+            curr = await self.store.get_block(curr.prev_header_hash)
+            assert curr is not None
+
         removal_coin_records: Dict[bytes32, CoinRecord] = {}
         for rem in removals:
             if rem in additions_dic:
@@ -1073,9 +1102,13 @@ class Blockchain:
             else:
                 assert prev_header is not None
                 unspent = await self.unspent_store.get_coin_record(rem, prev_header)
-                if unspent:
-                    if unspent.spent == 1:
+                if unspent is not None and unspent.confirmed_block_index <= fork_h:
+                    # Spending something in the current chain, confirmed before fork
+                    # (We ignore all coins confirmed after fork)
+                    if unspent.spent == 1 and unspent.spent_block_index <= fork_h:
+                        # Spend in an ancestor block, so this is a double spend
                         return Err.DOUBLE_SPEND
+                    # If it's a coinbase, check that it's not frozen
                     if unspent.coinbase == 1:
                         if (
                             block.height
@@ -1084,7 +1117,32 @@ class Blockchain:
                             return Err.COINBASE_NOT_YET_SPENDABLE
                     removal_coin_records[unspent.name] = unspent
                 else:
-                    return Err.UNKNOWN_UNSPENT
+                    # This coin is not in the current heaviest chain, so it must be in the fork
+                    if rem not in additions_since_fork:
+                        # This coin does not exist in the fork
+                        return Err.UNKNOWN_UNSPENT
+                    if rem in coinbases_since_fork:
+                        # This coin is a coinbase coin
+                        if (
+                            block.height
+                            < coinbases_since_fork[rem] + self.coinbase_freeze
+                        ):
+                            return Err.COINBASE_NOT_YET_SPENDABLE
+                    new_coin, confirmed_height = additions_since_fork[rem]
+                    new_coin_record: CoinRecord = CoinRecord(
+                        new_coin,
+                        confirmed_height,
+                        uint32(0),
+                        False,
+                        (rem in coinbases_since_fork),
+                    )
+                    removal_coin_records[new_coin_record.name] = new_coin_record
+
+                # This check applies to both coins created before fork (pulled from coin_store),
+                # and coins created after fork (additions_since_fork)>
+                if rem in removals_since_fork:
+                    # This coin was spent in the fork
+                    return Err.DOUBLE_SPEND
 
         # Check fees
         removed = 0

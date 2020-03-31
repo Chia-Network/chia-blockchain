@@ -384,14 +384,15 @@ async def start_websocket_server():
     server = ChiaServer(config["port"], wallet_node, NodeType.WALLET)
     wallet_node.set_server(server)
 
-    _ = await server.start_server("127.0.0.1", None, config)
-    full_node_peer = PeerInfo(
-        config["full_node_peer"]["host"], config["full_node_peer"]["port"]
-    )
+    _ = await server.start_server(config["host"], None, config)
+    if "full_node_peer" in config:
+        full_node_peer = PeerInfo(
+            config["full_node_peer"]["host"], config["full_node_peer"]["port"]
+        )
 
-    log.info(f"Connecting to full node peer at {full_node_peer}")
-    server.global_connections.peers.add(full_node_peer)
-    _ = await server.start_client(full_node_peer, None, config)
+        log.info(f"Connecting to full node peer at {full_node_peer}")
+        server.global_connections.peers.add(full_node_peer)
+        _ = await server.start_client(full_node_peer, None, config)
 
     log.info("Starting websocket server.")
     websocket_server = await websockets.serve(

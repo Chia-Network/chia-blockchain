@@ -318,7 +318,9 @@ class FullNode:
 
         # Finding the fork point allows us to only download headers and blocks from the fork point
         header_hashes = self.store.get_potential_hashes()
-        fork_point_height: uint32 = self.blockchain.find_fork_point(header_hashes)
+        fork_point_height: uint32 = self.blockchain.find_fork_point_alternate_chain(
+            header_hashes
+        )
         fork_point_hash: bytes32 = header_hashes[fork_point_height]
         self.log.info(f"Fork point: {fork_point_hash} at height {fork_point_height}")
 
@@ -593,6 +595,12 @@ class FullNode:
             yield msg
         async for msg in self._send_tips_to_farmers():
             yield msg
+
+        lca = self.blockchain.lca_block
+        new_lca = wallet_protocol.NewLCA(lca.header_hash, lca.height, lca.weight)
+        yield OutboundMessage(
+            NodeType.WALLET, Message("new_lca", new_lca), Delivery.BROADCAST
+        )
 
     @api_request
     async def new_tip(
