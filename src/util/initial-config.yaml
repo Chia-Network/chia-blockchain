@@ -17,6 +17,8 @@ harvester:
   # Location of all the plots, default ./plots, for relative paths in plots.yaml.
   # plot_root: "/mnt/pos"
   logging: *logging
+  # new_plot_root is the default location where new plots are created by "chia-create-plots"
+  new_plot_root: plots
 
 farmer:
   # The farmer server (if run) will run on this host and port
@@ -166,6 +168,4 @@ wallet:
 
   introducer_peer:
     host: introducer.beta.chia.net  # Chia AWS introducer IPv4/IPv6
-    port: 8444
-
-new_plots_root: plots
+    port: 8445

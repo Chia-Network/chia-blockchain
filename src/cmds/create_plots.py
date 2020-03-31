@@ -36,7 +36,7 @@ def main():
     )
 
     new_plots_root = path_from_root(
-        load_config("config.yaml").get("new_plots_root", "plots")
+        load_config("config.yaml").get("harvester", {}).get("new_plot_root", "plots")
     )
     parser.add_argument(
         "-d",
