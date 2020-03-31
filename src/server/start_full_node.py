@@ -4,7 +4,6 @@ import logging.config
 import signal
 
 import aiosqlite
-import miniupnpc
 
 try:
     import uvloop
@@ -25,6 +24,7 @@ from src.types.peer_info import PeerInfo
 from src.full_node.coin_store import CoinStore
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli
+from src.util.pip_import import pip_import
 from setproctitle import setproctitle
 
 
@@ -59,6 +59,7 @@ async def main():
     if config["enable_upnp"]:
         log.info(f"Attempting to enable UPnP (open up port {config['port']})")
         try:
+            miniupnpc = pip_import("miniupnpc", "miniupnpc==2.0.2")
             upnp = miniupnpc.UPnP()
             upnp.discoverdelay = 5
             upnp.discover()
@@ -67,8 +68,8 @@ async def main():
                 config["port"], "TCP", upnp.lanaddr, config["port"], "chia", ""
             )
             log.info(f"Port {config['port']} opened with UPnP.")
-        except Exception as e:
-            log.warning(f"UPnP failed: {e}")
+        except Exception:
+            log.exception(f"UPnP failed")
 
     # Starts the full node server (which full nodes can connect to)
     server = ChiaServer(config["port"], full_node, NodeType.FULL_NODE)

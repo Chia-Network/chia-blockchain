@@ -18,7 +18,6 @@ dependencies = [
     "cbor2==5.0.1",  # Used for network wire format
     "clvm==0.4",  # contract language
     "PyYAML==5.3",  # Used for config file format
-    "miniupnpc==2.0.2",  # Allows users to open ports on their router
     "aiosqlite==0.11.0",  # asyncio wrapper for sqlite, to store blocks
     "aiohttp==3.6.2",  # HTTP server for full node rpc
     "colorlog==4.1.0",  # Adds color to logs
@@ -31,6 +30,9 @@ dependencies = [
     CLVM_TOOLS_GITHUB,  # clvm compiler tools
 ]
 
+upnp_dependencies = [
+    "miniupnpc==2.0.2",  # Allows users to open ports on their router
+]
 dev_dependencies = [
     "pytest",
     "flake8",
@@ -51,7 +53,7 @@ setup(
     keywords="chia blockchain node",
     install_requires=dependencies,
     setup_requires=["setuptools_scm"],
-    extras_require=dict(uvloop=["uvloop"], dev=dev_dependencies),
+    extras_require=dict(uvloop=["uvloop"], dev=dev_dependencies, upnp=upnp_dependencies),
     packages=[
         "src",
         "src.cmds",
