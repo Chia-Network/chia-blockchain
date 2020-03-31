@@ -25,7 +25,7 @@ from src.full_node.coin_store import CoinStore
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli
 from src.util.pip_import import pip_import
-from setproctitle import setproctitle
+from src.util.setproctitle import setproctitle
 
 
 async def main():

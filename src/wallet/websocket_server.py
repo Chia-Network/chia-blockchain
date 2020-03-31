@@ -29,7 +29,7 @@ from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_node import WalletNode
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
-from setproctitle import setproctitle
+from src.util.setproctitle import setproctitle
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 5

@@ -7,7 +7,7 @@ from src.util.logging import initialize_logging
 from src.util.config import load_config
 from asyncio import Lock
 from typing import List
-from setproctitle import setproctitle
+from src.util.setproctitle import setproctitle
 
 config = load_config("config.yaml", "timelord_launcher")
 

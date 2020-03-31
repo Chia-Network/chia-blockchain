@@ -1,5 +1,5 @@
 import unittest
-from setproctitle import setproctitle
+from src.util.setproctitle import setproctitle
 
 
 class TestSetProcTitle(unittest.TestCase):
