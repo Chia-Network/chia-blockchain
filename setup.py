@@ -24,7 +24,7 @@ dependencies = [
     "colorlog==4.1.0",  # Adds color to logs
     "chiavdf==0.12.2",  # timelord and vdf verification
     "chiabip158==0.12",  # bip158-style wallet filters
-    "chiapos==0.12.2",  # proof of space
+    "chiapos==0.12.3",  # proof of space
     "sortedcontainers==2.1.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
     SETPROCTITLE_GITHUB,  # custom internal version of setproctitle, this should go away
