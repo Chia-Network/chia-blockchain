@@ -166,6 +166,6 @@ wallet:
 
   introducer_peer:
     host: introducer.beta.chia.net  # Chia AWS introducer IPv4/IPv6
-    port: 8445
+    port: 8444
 
 new_plots_root: plots
