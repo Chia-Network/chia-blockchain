@@ -16,6 +16,7 @@ let header_hash_field = document.querySelector("#new-header-hash");
 let search_button = document.querySelector("#search-button");
 let stop_node_button = document.querySelector("#stop-node-button");
 let latest_blocks_tbody = document.querySelector('#latest-blocks-tbody');
+let startup_alert = document.querySelector('#startup-alert');
 const ipc = require('electron').ipcRenderer;
 const { unix_to_short_date } = require("../utils");
 const { hash_header } = require("./header");
@@ -69,6 +70,7 @@ class FullNodeView {
         stop_node_button.onclick = async () => {
             try {
                 await rpc_client.stop_node();
+                this.node_not_connected();
             } catch (error) {
                 alert(error);
             }
@@ -97,6 +99,7 @@ class FullNodeView {
     }
 
     node_connected() {
+        startup_alert.style.display = "none";
         connected_to_node_textfield.innerHTML = "Connected to full node";
         connected_to_node_textfield.style.color = "green";
         create_conn_button.disabled = false;
@@ -105,6 +108,7 @@ class FullNodeView {
     }
 
     node_not_connected() {
+        startup_alert.style.display = "block";
         connected_to_node_textfield.innerHTML = "Not connected to node";
         connected_to_node_textfield.style.color = "red";
         this.state.connections = {};

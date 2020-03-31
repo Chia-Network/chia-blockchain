@@ -244,6 +244,14 @@ class WalletNode:
                 self.log.info(
                     f"Will not attempt to connect to other nodes, already connected to {full_node_peer}"
                 )
+                for (
+                    connection
+                ) in self.server.global_connections.get_full_node_connections():
+                    if connection.get_peer_info() != full_node_peer:
+                        self.log.info(
+                            f"Closing unnecessary connection to {connection.get_peer_info()}."
+                        )
+                        self.server.global_connections.close(connection)
                 return 0
         return diff
 

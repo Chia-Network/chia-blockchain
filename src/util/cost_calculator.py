@@ -51,6 +51,9 @@ def calculate_cost_of_program(
                 total_vbyte_cost += (
                     len(cvp_list) * ConditionCost.ASSERT_COIN_CONSUMED.value
                 )
+            else:
+                # TODO(straya): do something if we hit this case
+                pass
 
     # Add raw size of the program
     total_vbyte_cost += len(bytes(program))

@@ -162,7 +162,7 @@ wallet:
   logging: *logging
 
   target_peer_count: 5
-  introducer_connect_interval: 60
+  introducer_connect_interval: 120
   # The introducer will only return peers who it has seen in the last
   # recent_peer_threshold seconds
   recent_peer_threshold: 6000
