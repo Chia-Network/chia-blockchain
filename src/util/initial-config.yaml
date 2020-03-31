@@ -149,9 +149,6 @@ wallet:
   starting_height: 0
   num_sync_batches: 10
 
-  # Note that if this peer is connected, the wallet will not make additional connections.
-  # Comment out the next three lines if you don't want this functionality, and instead
-  # you want to connect to multiple external (random) full nodes.
   full_node_peer:
     host: 127.0.0.1
     port: 8444
@@ -162,13 +159,13 @@ wallet:
   logging: *logging
 
   target_peer_count: 5
-  introducer_connect_interval: 120
+  introducer_connect_interval: 60
   # The introducer will only return peers who it has seen in the last
   # recent_peer_threshold seconds
   recent_peer_threshold: 6000
 
   introducer_peer:
     host: introducer.beta.chia.net  # Chia AWS introducer IPv4/IPv6
-    port: 8444
+    port: 8445
 
 new_plots_root: plots
