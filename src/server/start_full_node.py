@@ -12,7 +12,6 @@ except ImportError:
 
 from src.full_node.blockchain import Blockchain
 from src.consensus.constants import constants
-from src.path import mkdir, path_from_root
 from src.full_node.store import FullNodeStore
 from src.full_node.full_node import FullNode
 from src.rpc.rpc_server import start_rpc_server
@@ -24,6 +23,7 @@ from src.types.peer_info import PeerInfo
 from src.full_node.coin_store import CoinStore
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli
+from src.util.path import mkdir, path_from_root
 from src.util.pip_import import pip_import
 from src.util.setproctitle import setproctitle
 

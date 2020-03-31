@@ -2,7 +2,6 @@ import asyncio
 import logging
 import logging.config
 import signal
-from src.path import mkdir, path_from_root
 import aiosqlite
 from src.simulator.full_node_simulator import FullNodeSimulator
 from src.simulator.simulator_constants import test_constants
@@ -23,6 +22,7 @@ from src.full_node.coin_store import CoinStore
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli
 from src.util.setproctitle import setproctitle
+from src.util.path import mkdir, path_from_root
 
 
 async def main():

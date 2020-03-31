@@ -2,7 +2,7 @@ import logging
 import colorlog
 from typing import Dict
 
-from src.path import mkdir, path_from_root
+from src.util.path import mkdir, path_from_root
 
 
 def initialize_logging(prefix: str, logging_config: Dict):

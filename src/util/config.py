@@ -3,7 +3,7 @@ import argparse
 from pathlib import Path
 import pkg_resources
 from typing import Dict, Any, Callable, Optional, Union
-from src.path import mkdir, path_from_root
+from src.util.path import mkdir, path_from_root
 
 
 def migrate_config_file(filename: Union[str, Path], path: Path) -> None:

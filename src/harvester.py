@@ -6,13 +6,13 @@ from typing import Dict, Optional, Tuple
 from blspy import PrependSignature, PrivateKey, PublicKey, Util
 
 from chiapos import DiskProver
-from src.path import path_from_root
 from src.protocols import harvester_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
 from src.util.ints import uint8
+from src.util.path import path_from_root
 
 log = logging.getLogger(__name__)
 
