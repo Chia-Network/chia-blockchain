@@ -49,13 +49,12 @@ async def main():
 
     log.info("Initializing blockchain from disk")
     blockchain = await Blockchain.create(unspent_store, store)
+    log.info("Blockchain initialized")
 
     mempool_manager = MempoolManager(unspent_store)
     await mempool_manager.new_tips(await blockchain.get_full_tips())
-    # await mempool.initialize() TODO uncomment once it's implemented
 
     full_node = FullNode(store, blockchain, config, mempool_manager, unspent_store)
-    # Starts the full node server (which full nodes can connect to)
 
     if config["enable_upnp"]:
         log.info(f"Attempting to enable UPnP (open up port {config['port']})")

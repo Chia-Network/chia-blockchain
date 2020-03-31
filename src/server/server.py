@@ -383,14 +383,14 @@ class ChiaServer:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             if inbound_handshake.node_id == self._node_id:
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
+                raise ProtocolError(Err.SELF_CONNECTION)
 
             # Makes sure that we only start one connection with each peer
             connection.node_id = inbound_handshake.node_id
             connection.peer_server_port = int(inbound_handshake.server_port)
             connection.connection_type = inbound_handshake.node_type
             if not self.global_connections.add(connection):
-                raise ProtocolError(Err.INVALID_HANDSHAKE)
+                raise ProtocolError(Err.DUPLICATE_CONNECTION)
 
             # Send Ack message
             await connection.send(Message("handshake_ack", HandshakeAck()))

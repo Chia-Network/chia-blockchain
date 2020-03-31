@@ -623,6 +623,48 @@ class TestReorgs:
         await connection.close()
 
     @pytest.mark.asyncio
+    async def test_find_fork_point(self):
+        blocks = bt.get_consecutive_blocks(test_constants, 10, [], 9, b"7")
+        blocks_2 = bt.get_consecutive_blocks(test_constants, 6, blocks[:5], 9, b"8")
+        blocks_3 = bt.get_consecutive_blocks(test_constants, 8, blocks[:3], 9, b"9")
+
+        blocks_reorg = bt.get_consecutive_blocks(test_constants, 3, blocks[:9], 9, b"9")
+
+        db_path = Path("blockchain_test.db")
+        connection = await aiosqlite.connect(db_path)
+        unspent_store = await CoinStore.create(connection)
+        store = await FullNodeStore.create(connection)
+        await store._clear_database()
+        b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
+        for i in range(1, len(blocks)):
+            await b.receive_block(blocks[i])
+
+        for i in range(1, len(blocks_2)):
+            await b.receive_block(blocks_2[i])
+
+        assert b._find_fork_point_in_chain(blocks[10].header, blocks_2[10].header) == 4
+
+        for i in range(1, len(blocks_3)):
+            await b.receive_block(blocks_3[i])
+
+        assert b._find_fork_point_in_chain(blocks[10].header, blocks_3[10].header) == 2
+
+        assert b.lca_block.data == blocks[2].header.data
+
+        for i in range(1, len(blocks_reorg)):
+            await b.receive_block(blocks_reorg[i])
+
+        assert (
+            b._find_fork_point_in_chain(blocks[10].header, blocks_reorg[10].header) == 8
+        )
+        assert (
+            b._find_fork_point_in_chain(blocks_2[10].header, blocks_reorg[10].header)
+            == 4
+        )
+        assert b.lca_block.data == blocks[4].header.data
+        await connection.close()
+
+    @pytest.mark.asyncio
     async def test_get_header_hashes(self):
         blocks = bt.get_consecutive_blocks(test_constants, 5, [], 9, b"0")
         db_path = Path("blockchain_test.db")

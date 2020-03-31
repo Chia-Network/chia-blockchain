@@ -42,7 +42,6 @@ class CoinStore:
         self = cls()
 
         self.cache_size = cache_size
-        # All full blocks which have been added to the blockchain. Header_hash -> block
         self.coin_record_db = connection
         await self.coin_record_db.execute(
             (
