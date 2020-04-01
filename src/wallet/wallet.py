@@ -136,7 +136,9 @@ class Wallet:
                 self.wallet_info.id
             )
         ):
-            self.log.warning(f"Can't select amount higher than our spendable balance {amount}")
+            self.log.warning(
+                f"Can't select amount higher than our spendable balance {amount}"
+            )
             return None
 
         self.log.info(f"About to select coins for amount {amount}")
@@ -186,10 +188,12 @@ class Wallet:
             return used_coins
         else:
             # This shouldn't happen because of: if amount > self.get_unconfirmed_balance_spendable():
-            self.log.error(f"Wasn't able to select coins for amount: {amount}"
-                           f"unspent: {unspent}"
-                           f"unconfirmed_removals: {unconfirmed_removals}"
-                           f"unconfirmed_additions: {unconfirmed_additions}")
+            self.log.error(
+                f"Wasn't able to select coins for amount: {amount}"
+                f"unspent: {unspent}"
+                f"unconfirmed_removals: {unconfirmed_removals}"
+                f"unconfirmed_additions: {unconfirmed_additions}"
+            )
             return None
 
     async def generate_unsigned_transaction(
@@ -222,7 +226,9 @@ class Wallet:
             puzzle_hash = coin.puzzle_hash
             maybe = await self.get_keys(puzzle_hash)
             if not maybe:
-                self.log.error(f"Wallet couldn't find keys for puzzle_hash {puzzle_hash}")
+                self.log.error(
+                    f"Wallet couldn't find keys for puzzle_hash {puzzle_hash}"
+                )
                 return []
 
             # Get puzzle for pubkey
@@ -263,7 +269,9 @@ class Wallet:
             # Get keys
             keys = await self.get_keys(solution.coin.puzzle_hash)
             if not keys:
-                self.log.error(f"Sign transaction failed, No Keys for puzzlehash {solution.coin.puzzle_hash}")
+                self.log.error(
+                    f"Sign transaction failed, No Keys for puzzlehash {solution.coin.puzzle_hash}"
+                )
                 return None
 
             pubkey, secretkey = keys
