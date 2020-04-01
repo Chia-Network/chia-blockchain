@@ -20,7 +20,7 @@ sh install.sh
 
 On Ubuntu 18.04, you need python 3.7. It's not available in the default
 repository, so you need to add an alternate source. You can skip this step
-on Ubuntu 19.x
+if you install in Ubuntu 19.x or higher
 
 ```bash
 # for add-apt-repository
@@ -28,8 +28,7 @@ sudo apt install software-properties-common -y
 sudo add-apt-repository ppa:deadsnakes/ppa -y
 ```
 
-Install dependencies.
-
+Install dependencies for all Ubuntu.
 ```bash
 sudo apt-get update
 sudo apt-get install python3.7-venv python3.7-dev -y
@@ -42,6 +41,33 @@ sh install.sh
 
 . ./activate
 ```
+
+### Windows (WSL)
+#### Install WSL2 + Ubuntu 18.04 LTS
+
+From an Administrator PowerShell
+`Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux`
+and then
+`Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform`.
+This usually requires a reboot. Once that is complete, install Ubuntu 18.04 LTS from the Microsoft Store.
+```bash
+# add-apt-repository
+sudo apt install software-properties-common -y
+sudo add-apt-repository ppa:deadsnakes/ppa -y
+
+sudo apt-get -y update
+sudo apt-get -y upgrade
+
+sudo apt-get install python3.7-venv python3.7-dev -y
+sudo apt-get install build-essential git cmake libgmp3-dev libssl-dev libboost-all-dev -y
+
+git clone https://github.com/Chia-Network/chia-blockchain.git
+cd chia-blockchain
+
+sh install.sh
+. ./activate
+```
+
 ### Amazon Linux 2
 
 ```bash
@@ -62,6 +88,7 @@ sh install.sh
 
 . ./activate
 ```
+
 ### CentOS 7
 
 ```bash
@@ -88,31 +115,5 @@ git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sh install.sh
-. ./activate
-```
-
-### Windows (WSL + Ubuntu)
-#### Install WSL2 + Ubuntu 18.04 LTS
-
-From an Administrator PowerShell
-`Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux`
-and then
-`Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform`.
-This usually requires a reboot. Once that is complete, install Ubuntu 18.04 LTS from the Microsoft Store.
-```bash
-# add-apt-repository
-sudo apt install software-properties-common -y
-sudo add-apt-repository ppa:deadsnakes/ppa -y
-
-sudo apt-get -y update
-sudo apt-get -y upgrade
-
-sudo apt-get install python3.7-venv python3.7-dev -y
-sudo apt-get install build-essential git cmake libgmp3-dev libssl-dev libboost-all-dev -y
-
-git clone https://github.com/Chia-Network/chia-blockchain.git
-cd chia-blockchain
-
-sudo sh install.sh
 . ./activate
 ```
