@@ -3,7 +3,7 @@ from setuptools import setup
 
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
-    "blspy==0.1.14",  # Signature library
+    "blspy==0.1.15",  # Signature library
     "cbor2==5.0.1",  # Used for network wire format
     "clvm==0.4",  # contract language
     "PyYAML==5.3",  # Used for config file format
