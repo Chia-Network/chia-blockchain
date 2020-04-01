@@ -141,7 +141,7 @@ class WalletNode:
         self.proof_hashes = []
         self.header_hashes = []
         self.header_hashes_error = False
-        self.short_sync_threshold = 10
+        self.short_sync_threshold = 15
         self.potential_blocks_received = {}
         self.potential_header_hashes = {}
 
@@ -1026,6 +1026,7 @@ class WalletNode:
             for coin_name, coin in response.coins:
                 if coin is not None:
                     all_coins.append(coin)
+            # TODO: get relevant removals for this fork (we may not be in lca chain)
             removals = [
                 c.name()
                 for c in await self.wallet_state_manager.get_relevant_removals(

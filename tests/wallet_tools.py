@@ -135,11 +135,15 @@ class WalletTool:
         coin: Coin,
         condition_dic: Dict[ConditionOpcode, List[ConditionVarPair]],
         fee: int = 0,
+        secretkey=None,
     ):
         spends = []
         spend_value = coin.amount
         puzzle_hash = coin.puzzle_hash
-        pubkey, secretkey = self.get_keys(puzzle_hash)
+        if secretkey is None:
+            pubkey, secretkey = self.get_keys(puzzle_hash)
+        else:
+            pubkey = secretkey.get_public_key()
         puzzle = puzzle_for_pk(bytes(pubkey))
         if ConditionOpcode.CREATE_COIN not in condition_dic:
             condition_dic[ConditionOpcode.CREATE_COIN] = []

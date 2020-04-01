@@ -487,8 +487,30 @@ class WalletStateManager:
         fast sync). If validation succeeds, block is adedd to DB. If it's a new TIP, transactions are
         reorged accordingly.
         """
+        cb_and_fees_additions = []
+        if header_block is not None:
+            coinbase = header_block.header.data.coinbase
+            fees_coin = header_block.header.data.fees_coin
+            if await self.is_addition_relevant(coinbase):
+                cb_and_fees_additions.append(coinbase)
+            if await self.is_addition_relevant(fees_coin):
+                cb_and_fees_additions.append(fees_coin)
+        assert block.additions is not None
+        if len(cb_and_fees_additions) > 0:
+            block = BlockRecord(
+                block.header_hash,
+                block.prev_header_hash,
+                block.height,
+                block.weight,
+                block.additions + cb_and_fees_additions,
+                block.removals,
+                block.total_iters,
+                block.new_challenge_hash,
+            )
+
         assert block.additions is not None
         assert block.removals is not None
+
         async with self.lock:
             if block.header_hash in self.block_records:
                 return ReceiveBlockResult.ALREADY_HAVE_BLOCK
@@ -549,19 +571,18 @@ class WalletStateManager:
                 for path_block in blocks_to_add:
                     self.height_to_hash[path_block.height] = path_block.header_hash
                     await self.wallet_store.add_block_to_path(path_block.header_hash)
-                    if header_block is not None:
-                        coinbase = header_block.header.data.coinbase
-                        fees_coin = header_block.header.data.fees_coin
-                        if await self.is_addition_relevant(coinbase):
-                            await self.coin_added(coinbase, path_block.height, True)
-                        if await self.is_addition_relevant(fees_coin):
-                            await self.coin_added(fees_coin, path_block.height, True)
                     assert (
                         path_block.additions is not None
                         and path_block.removals is not None
                     )
                     for coin in path_block.additions:
-                        await self.coin_added(coin, path_block.height, False)
+                        is_coinbase = (
+                            True
+                            if bytes32((path_block.height).to_bytes(32, "big"))
+                            == coin.parent_coin_info
+                            else False
+                        )
+                        await self.coin_added(coin, path_block.height, is_coinbase)
                     for coin_name in path_block.removals:
                         await self.coin_removed(coin_name, path_block.height)
                 self.lca = block.header_hash
@@ -972,12 +993,13 @@ class WalletStateManager:
         return True
 
     async def get_filter_additions_removals(
-        self, new_block: BlockRecord, transactions_fitler: bytes
+        self, new_block: BlockRecord, transactions_filter: bytes
     ) -> Tuple[List[bytes32], List[bytes32]]:
         """ Returns a list of our coin ids, and a list of puzzle_hashes that positively match with provided filter. """
         assert new_block.prev_header_hash in self.block_records
 
-        tx_filter = PyBIP158([b for b in transactions_fitler])
+        tx_filter = PyBIP158([b for b in transactions_filter])
+
         # Find fork point
         fork_h: uint32 = self._find_fork_point_in_chain(
             self.block_records[self.lca], new_block
@@ -986,7 +1008,7 @@ class WalletStateManager:
         # Get all unspent coins
         my_coin_records_lca: Set[
             WalletCoinRecord
-        ] = await self.wallet_store.get_coin_records_by_spent(False)
+        ] = await self.wallet_store.get_coin_records_by_spent(False, uint32(fork_h + 1))
 
         # Filter coins up to and including fork point
         unspent_coin_names: Set[bytes32] = set()
