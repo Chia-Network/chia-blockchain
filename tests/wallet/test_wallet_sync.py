@@ -11,6 +11,7 @@ from src.types.spend_bundle import SpendBundle
 from src.util.bundle_tools import best_solution_program
 from tests.wallet_tools import WalletTool
 from src.types.coin import Coin
+from src.consensus.coinbase import create_coinbase_coin
 
 
 @pytest.fixture(scope="module")
@@ -291,7 +292,7 @@ class TestWalletSync:
                 wallet_node.wallet_state_manager.block_records[
                     wallet_node.wallet_state_manager.lca
                 ].height
-                >= 32  # Tip at 34, LCA at 32
+                >= 28  # Tip at 34, LCA at least 28
             ):
                 broke = True
                 break
@@ -300,6 +301,7 @@ class TestWalletSync:
             raise Exception(
                 f"Took too long to process blocks, stopped at: {time.time() - start}"
             )
+        server_2.global_connections.close_all_connections()
 
         # 2 block rewards and 3 fees
         assert await wallet_a.get_confirmed_balance() == (
@@ -313,10 +315,89 @@ class TestWalletSync:
             assert len(records) == 1
             assert records[0].spent and not records[0].coinbase
 
-        # TODO: Test spending the rewards earned in reorg
-        # blocks = bt.get_consecutive_blocks(
-        #     test_constants, 31, blocks[:4], 10, b"this is a reorg", coinbase_puzzlehash_rest, dic_h
-        # )
+        # Test spending the rewards earned in reorg
+        new_coinbase_puzzlehash = await wallet_a.get_new_puzzlehash()
+        another_puzzlehash = await wallet_a.get_new_puzzlehash()
+
+        dic_h = {}
+        pk, sk = await wallet_a.get_keys(new_coinbase_puzzlehash)
+        coinbase_coin = create_coinbase_coin(
+            25, new_coinbase_puzzlehash, uint64(14000000000000)
+        )
+        transaction_unsigned = wallet_a_dummy.generate_unsigned_transaction(
+            7000000000000, another_puzzlehash, coinbase_coin, {}, 0, secretkey=sk
+        )
+        spend_bundle = await wallet_a.sign_transaction(transaction_unsigned)
+        block_spendbundle = SpendBundle.aggregate([spend_bundle])
+        program = best_solution_program(block_spendbundle)
+        aggsig = block_spendbundle.aggregated_signature
+        dic_h[26] = (program, aggsig)
+
+        # Farm a block (25) to ourselves
+        blocks = bt.get_consecutive_blocks(
+            test_constants,
+            1,
+            blocks[:25],
+            10,
+            b"this is yet another reorg",
+            new_coinbase_puzzlehash,
+        )
+
+        # Brings height up to 40, with block 31 having half our reward spent to us
+        blocks = bt.get_consecutive_blocks(
+            test_constants,
+            15,
+            blocks,
+            10,
+            b"this is yet another reorg more blocks",
+            coinbase_puzzlehash_rest,
+            dic_h,
+        )
+        for block in blocks:
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(block)
+            ):
+                pass
+
+        await server_2.start_client(
+            PeerInfo(server_1._host, uint16(server_1._port)), None
+        )
+
+        broke = False
+        while time.time() - start < 60:
+            if (
+                wallet_node.wallet_state_manager.block_records[
+                    wallet_node.wallet_state_manager.lca
+                ].height
+                >= 38  # Tip at 40, LCA at 38
+            ):
+                broke = True
+                break
+            await asyncio.sleep(0.1)
+        if not broke:
+            raise Exception(
+                f"Took too long to process blocks, stopped at: {time.time() - start}"
+            )
+        # 2 block rewards and 4 fees, plus 7000000000000 coins
+        assert (
+            await wallet_a.get_confirmed_balance()
+            == (blocks[1].header.data.coinbase.amount * 2)
+            + (blocks[1].header.data.fees_coin.amount * 4)
+            + 7000000000000
+        )
+        records = await wallet_node.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
+            new_coinbase_puzzlehash
+        )
+        # Fee and coinbase
+        assert len(records) == 2
+        assert records[0].spent != records[1].spent
+        assert records[0].coinbase != records[1].coinbase
+        records = await wallet_node.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
+            another_puzzlehash
+        )
+        assert len(records) == 1
+        assert not records[0].spent
+        assert not records[0].coinbase
 
     @pytest.mark.asyncio
     async def test_random_order_wallet_node(self, wallet_node):
