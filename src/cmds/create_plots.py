@@ -5,10 +5,10 @@ from pathlib import Path
 from blspy import PrivateKey, PublicKey
 
 from chiapos import DiskPlotter
-from src.path import make_path_relative, mkdir, path_from_root
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.config import load_config, save_config
+from src.util.path import make_path_relative, mkdir, path_from_root
 
 
 def main():
@@ -36,7 +36,7 @@ def main():
     )
 
     new_plots_root = path_from_root(
-        load_config("config.yaml").get("new_plots_root", "plots")
+        load_config("config.yaml").get("harvester", {}).get("new_plot_root", "plots")
     )
     parser.add_argument(
         "-d",

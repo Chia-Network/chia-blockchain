@@ -20,7 +20,7 @@ sh install.sh
 
 On Ubuntu 18.04, you need python 3.7. It's not available in the default
 repository, so you need to add an alternate source. You can skip this step
-on Ubuntu 19.x
+if you install in Ubuntu 19.x or higher.
 
 ```bash
 # for add-apt-repository
@@ -28,8 +28,7 @@ sudo apt install software-properties-common -y
 sudo add-apt-repository ppa:deadsnakes/ppa -y
 ```
 
-Install dependencies.
-
+Install dependencies for all Ubuntu.
 ```bash
 sudo apt-get update
 sudo apt-get install python3.7-venv python3.7-dev -y
@@ -40,8 +39,35 @@ cd chia-blockchain
 
 sh install.sh
 
-. .venv/bin/activate
+. ./activate
 ```
+
+### Windows (WSL)
+#### Install WSL2 + Ubuntu 18.04 LTS
+
+From an Administrator PowerShell
+`Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux`
+and then
+`Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform`.
+This usually requires a reboot. Once that is complete, install Ubuntu 18.04 LTS from the Microsoft Store and run it. Then follow the steps below.
+```bash
+# add-apt-repository
+sudo apt install software-properties-common -y
+sudo add-apt-repository ppa:deadsnakes/ppa -y
+
+sudo apt-get -y update
+sudo apt-get -y upgrade
+
+sudo apt-get install python3.7-venv python3.7-dev -y
+sudo apt-get install build-essential git cmake libgmp3-dev libssl-dev libboost-all-dev -y
+
+git clone https://github.com/Chia-Network/chia-blockchain.git
+cd chia-blockchain
+
+sh install.sh
+. ./activate
+```
+
 ### Amazon Linux 2
 
 ```bash
@@ -60,8 +86,9 @@ cd chia-blockchain
 
 sh install.sh
 
-. .venv/bin/activate
+. ./activate
 ```
+
 ### CentOS 7
 
 ```bash
@@ -88,52 +115,5 @@ git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sh install.sh
-. .venv/bin/activate
-```
-
-### Windows (WSL + Ubuntu)
-#### Install WSL + Ubuntu 18.04 LTS, upgrade to Ubuntu 19.x
-
-This will require multiple reboots. From an Administrator PowerShell
-`Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux`
-and then
-`Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform`.
-Once that is complete, install Ubuntu 18.04 LTS from the Microsoft Store.
-```bash
-# Upgrade to 19.x
-sudo nano /etc/update-manager/release-upgrades
-# Change "Prompt=lts" to "Prompt=normal" save and exit
-
-sudo apt-get -y update
-sudo apt-get -y upgrade
-sudo do-release-upgrade
-
-sudo apt-get install -y build-essential cmake python3-dev python3-venv software-properties-common libgmp3-dev --no-install-recommends
-
-git clone https://github.com/Chia-Network/chia-blockchain.git
-cd chia-blockchain
-
-sudo sh install.sh
-. .venv/bin/activate
-```
-
-#### Alternate method for Ubuntu 18.04 LTS
-In `./install.sh`:
-Change `python3` to `python3.7`
-Each line that starts with `pip ...` becomes `python -m pip ...`
-
-```bash
-sudo apt-get -y update
-sudo apt-get install -y build-essential cmake python3-dev python3-venv software-properties-common libgmp3-dev --no-install-recommends
-
-# Install python3.7 with ppa
-sudo add-apt-repository -y ppa:deadsnakes/ppa
-sudo apt-get -y update
-sudo apt-get install -y python3.7 python3.7-venv python3.7-dev
-
-git clone https://github.com/Chia-Network/chia-blockchain.git
-cd chia-blockchain
-
-sudo sh install.sh
-. .venv/bin/activate
+. ./activate
 ```

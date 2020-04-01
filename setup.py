@@ -1,16 +1,5 @@
 from setuptools import setup
 
-SETPROCTITLE_GITHUB = (
-    "setproctitle @ "
-    "https://github.com/Chia-Network/py-setproctitle/tarball/"
-    "d2ed86c5080bb645d8f6b782a4a86706c860d9e6#egg=setproctitle-50.0.0"
-)
-
-CLVM_TOOLS_GITHUB = (
-    "clvm-tools @ "
-    "https://github.com/Chia-Network/clvm_tools/tarball/6ff53bcfeb0c970647b6cfdde360d32b316b1326#egg=clvm-tools"
-)
-
 
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
@@ -18,7 +7,6 @@ dependencies = [
     "cbor2==5.0.1",  # Used for network wire format
     "clvm==0.4",  # contract language
     "PyYAML==5.3",  # Used for config file format
-    "miniupnpc==2.0.2",  # Allows users to open ports on their router
     "aiosqlite==0.11.0",  # asyncio wrapper for sqlite, to store blocks
     "aiohttp==3.6.2",  # HTTP server for full node rpc
     "colorlog==4.1.0",  # Adds color to logs
@@ -27,10 +15,12 @@ dependencies = [
     "chiapos==0.12.3",  # proof of space
     "sortedcontainers==2.1.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
-    SETPROCTITLE_GITHUB,  # custom internal version of setproctitle, this should go away
-    CLVM_TOOLS_GITHUB,  # clvm compiler tools
+    "clvm-tools==0.1.1",  # clvm compiler tools
 ]
 
+upnp_dependencies = [
+    "miniupnpc==2.0.2",  # Allows users to open ports on their router
+]
 dev_dependencies = [
     "pytest",
     "flake8",
@@ -41,7 +31,7 @@ dev_dependencies = [
     "pytest-asyncio",
 ]
 
-setup(
+kwargs = dict(
     name="chia-blockchain",
     author="Mariano Sorgente",
     author_email="mariano@chia.net",
@@ -51,7 +41,9 @@ setup(
     keywords="chia blockchain node",
     install_requires=dependencies,
     setup_requires=["setuptools_scm"],
-    extras_require=dict(uvloop=["uvloop"], dev=dev_dependencies),
+    extras_require=dict(
+        uvloop=["uvloop"], dev=dev_dependencies, upnp=upnp_dependencies,
+    ),
     packages=[
         "src",
         "src.cmds",
@@ -98,3 +90,7 @@ setup(
     long_description=open("README.md").read(),
     zip_safe=False,
 )
+
+
+if __name__ == "__main__":
+    setup(**kwargs)

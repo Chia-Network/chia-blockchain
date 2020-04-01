@@ -150,3 +150,22 @@ class TestWalletSync:
         raise Exception(
             f"Took too long to process blocks, stopped at: {time.time() - start}"
         )
+
+    @pytest.mark.asyncio
+    async def test_short_sync_with_transactions_wallet(self, wallet_node):
+        full_node_1, wallet_node, server_1, server_2 = wallet_node
+
+        # Add consecutive transactions on blocks 5, 6, 7, 8
+        # Do a short sync from 4 to 20
+        pass
+
+    @pytest.mark.asyncio
+    async def test_long_sync_with_transactions_wallet(self, wallet_node):
+        # Add consecutive transactions on blocks 5, 6, 7, 8
+        # Do a long sync from 4 to 50
+        pass
+
+    @pytest.mark.asyncio
+    async def test_random_order_wallet_node(self, wallet_node):
+        # Call respond_removals and respond_additions in random orders
+        pass

@@ -11,10 +11,13 @@ from src.server.connection import NodeType
 from src.types.header_block import HeaderBlock
 from src.rpc.rpc_client import RpcClient
 from src.util.byte_types import hexstr_to_bytes
-from src.util.config import str2bool
+from src.util.config import load_config, str2bool
 
 
 async def async_main():
+    # a hack to generate the config.yaml file if missing
+    load_config("config.yaml")
+
     parser = argparse.ArgumentParser(
         description="Manage a Chia Full Node from the command line.",
         epilog="You can combine -s and -c. Try 'watch -n 10 chia -s -c' if you have 'watch' installed.",

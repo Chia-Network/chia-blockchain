@@ -14,7 +14,6 @@ from src.util.merkle_set import (
     confirm_not_included_already_hashed,
     MerkleSet,
 )
-from src.path import path_from_root
 from src.protocols import wallet_protocol, full_node_protocol
 from src.consensus.constants import constants as consensus_constants
 from src.server.server import ChiaServer
@@ -35,6 +34,7 @@ from src.types.coin import Coin, hash_coin_list
 from src.full_node.blockchain import ReceiveBlockResult
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.util.errors import Err
+from src.util.path import path_from_root
 
 
 class WalletNode:

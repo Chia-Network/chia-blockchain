@@ -23,6 +23,5 @@ class WalletCoinRecord(Streamable):
     wallet_type: WalletType
     wallet_id: int
 
-    @property
     def name(self) -> bytes32:
         return self.coin.name()

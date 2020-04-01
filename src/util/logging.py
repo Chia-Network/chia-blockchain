@@ -2,11 +2,11 @@ import logging
 import colorlog
 from typing import Dict
 
-from src.path import mkdir, path_from_root
+from src.util.path import mkdir, path_from_root
 
 
 def initialize_logging(prefix: str, logging_config: Dict):
-    log_path = path_from_root("log") / "debug.log"
+    log_path = path_from_root(logging_config.get("log_filename", "log/debug.log"))
     mkdir(str(log_path.parent))
     if logging_config["log_stdout"]:
         handler = colorlog.StreamHandler()

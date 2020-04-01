@@ -90,6 +90,7 @@ class WalletStateManager:
         genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
         self.genesis = genesis
         self.state_changed_callback = None
+        self.pending_tx_callback = None
         self.difficulty_resets_prev = {}
         self.db_path = db_path
 
@@ -265,13 +266,15 @@ class WalletStateManager:
         self, wallet_id: int
     ) -> Dict[bytes32, Coin]:
         """
-        Returns new addition transactions that have not been confirmed yet.
+        Returns change coins for the wallet_id.
+        (Unconfirmed addition transactions that have not been confirmed yet.)
         """
         additions: Dict[bytes32, Coin] = {}
         unconfirmed_tx = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         for record in unconfirmed_tx:
             for coin in record.additions:
-                additions[coin.name()] = coin
+                if await self.is_addition_relevant(coin):
+                    additions[coin.name()] = coin
         return additions
 
     async def unconfirmed_removals_for_wallet(
@@ -989,7 +992,7 @@ class WalletStateManager:
         unspent_coin_names: Set[bytes32] = set()
         for coin in my_coin_records_lca:
             if coin.confirmed_block_index <= fork_h:
-                unspent_coin_names.add(coin.name)
+                unspent_coin_names.add(coin.name())
 
         # Get all blocks after fork point up to but not including this block
         curr: BlockRecord = self.block_records[new_block.prev_header_hash]

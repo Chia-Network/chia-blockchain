@@ -12,7 +12,6 @@ from chiapos import DiskPlotter, DiskProver
 from src.consensus import block_rewards, pot_iterations
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
-from src.path import mkdir, path_from_root
 from src.consensus.coinbase import create_coinbase_coin_and_signature
 from src.types.challenge import Challenge
 from src.types.classgroup import ClassgroupElement
@@ -27,6 +26,7 @@ from src.types.sized_bytes import bytes32
 from src.util.merkle_set import MerkleSet
 from src.util.ints import uint8, uint32, uint64, uint128, int512
 from src.util.hash import std_hash
+from src.util.path import mkdir, path_from_root
 from src.util.significant_bits import truncate_to_significant_bits
 
 # Can't go much lower than 19, since plots start having no solutions

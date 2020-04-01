@@ -2,10 +2,10 @@ import argparse
 from secrets import token_bytes
 
 from blspy import PrivateKey, ExtendedPrivateKey
-from src.path import mkdir, path_from_root
 from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.types.BLSSignature import BLSPublicKey
 from src.util.config import load_config, save_config, str2bool
+from src.util.path import mkdir, path_from_root
 
 
 key_config_filename = path_from_root() / "config" / "keys.yaml"
