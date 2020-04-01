@@ -55,6 +55,9 @@ class WalletNode:
     # temporary sync data. The bytes is the transaction filter.
     cached_blocks: Dict[bytes32, Tuple[BlockRecord, HeaderBlock, Optional[bytes]]]
 
+    # Prev hash to curr hash
+    future_block_hashes: Dict[bytes32, bytes32]
+
     # Hashes of the PoT and PoSpace for all blocks (including occasional difficulty adjustments)
     proof_hashes: List[Tuple[bytes32, Optional[uint64], Optional[uint64]]]
 
@@ -131,6 +134,7 @@ class WalletNode:
 
         # Normal operation data
         self.cached_blocks = {}
+        self.future_block_hashes = {}
 
         # Sync data
         self._shut_down = False
@@ -306,6 +310,7 @@ class WalletNode:
         )
         timeout = 100
         sleep_interval = 10
+        sleep_interval_short = 1
         start_wait = time.time()
         while time.time() - start_wait < timeout:
             if self._shut_down:
@@ -568,95 +573,88 @@ class WalletNode:
                         pass
                     total_time_slept += sleep_interval
                     self.log.info("Did not receive desired headers")
+                    continue
 
-            hh = self.potential_header_hashes[height_checkpoint]
-            block_record, header_block, _ = self.cached_blocks[hh]
+                # Succesfully downloaded header. Now confirm it's added to chain.
+                hh = self.potential_header_hashes[height_checkpoint]
+                if hh in self.wallet_state_manager.block_records:
+                    # Successfully added the block to chain
+                    self.log.info("Header has been added to chain instantly.")
+                    break
+                else:
+                    # Not added to chain yet. Try again soon.
+                    await asyncio.sleep(sleep_interval_short)
+                    total_time_slept += sleep_interval_short
+                    if hh in self.wallet_state_manager.block_records:
+                        self.log.info("Header has been added to chain after sleep.")
+                        break
+                    else:
+                        self.log.warning(
+                            "Received header, but it has not been added to chain. Retrying."
+                        )
+                        _, hb, tfilter = self.cached_blocks[hh]
+                        respond_header_msg = wallet_protocol.RespondHeader(hb, tfilter)
+                        async for msg in self.respond_header(respond_header_msg):
+                            yield msg
 
-            res = await self.wallet_state_manager.receive_block(
-                block_record, header_block
-            )
-            if (
-                res == ReceiveBlockResult.INVALID_BLOCK
-                or res == ReceiveBlockResult.DISCONNECTED_BLOCK
-            ):
-                raise RuntimeError(f"Invalid block header {block_record.header_hash}")
         self.log.info(
             f"Finished sync process up to height {max(self.wallet_state_manager.height_to_hash.keys())}"
         )
 
     async def _block_finished(
-        self, block_record: BlockRecord, header_block: HeaderBlock, transaction_filter: Optional[bytes]
+        self,
+        block_record: BlockRecord,
+        header_block: HeaderBlock,
+        transaction_filter: Optional[bytes],
     ):
         """
         This is called when we have finished a block (which means we have downloaded the header,
-        as well as the relevant additions and removals for the wallets). If a sync block is finished,
-        we don't add it to the database, but instead just set the potential_blocks_received.
-        During normal operation (not sync) we add block to the WSM (database), if the previous block
-        is present. If the previous block is not present, we cached the current block, and request
-        the previous.
+        as well as the relevant additions and removals for the wallets).
         """
-        if self.wallet_state_manager.sync_mode:
-            self.potential_blocks_received[uint32(block_record.height)].set()
-            self.potential_header_hashes[block_record.height] = block_record.header_hash
-            self.cached_blocks[block_record.header_hash] = (block_record, header_block, transaction_filter)
-            return
-        # 1. If disconnected and close, get parent header and return
-        lca = self.wallet_state_manager.block_records[self.wallet_state_manager.lca]
-        if block_record.prev_header_hash in self.wallet_state_manager.block_records:
-            # We have completed a block that we can add to chain, so add it.
-            res = await self.wallet_state_manager.receive_block(
-                block_record, header_block
-            )
-            if res == ReceiveBlockResult.DISCONNECTED_BLOCK:
-                self.log.error("Attempted to add disconnected block")
-                return
-            elif res == ReceiveBlockResult.INVALID_BLOCK:
-                self.log.error("Attempted to add invalid block")
-                return
-            elif res == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
-                return
-            else:
-                # If we have the next block available, add it
-                if block_record.header_hash in self.cached_blocks:
-                    new_br, new_hb, new_filter = self.cached_blocks[block_record.header_hash]
-                    async for msg in self._block_finished(new_br, new_hb, new_filter):
-                        yield msg
-            if res == ReceiveBlockResult.ADDED_TO_HEAD:
-                self.log.info(
-                    f"Updated LCA to {block_record.prev_header_hash} at height {block_record.height}"
-                )
-                # Removes outdated cached blocks if we're not syncing
-                if not self.wallet_state_manager.sync_mode:
-                    remove_header_hashes = []
-                    for header_hash in self.cached_blocks:
-                        if (
-                            block_record.height
-                            - self.cached_blocks[header_hash][0].height
-                            > 100
-                        ):
-                            remove_header_hashes.append(header_hash)
-                    for header_hash in remove_header_hashes:
-                        del self.cached_blocks[header_hash]
-        else:
-            if block_record.height - lca.height < self.short_sync_threshold:
-                # We have completed a block that is in the near future, so cache it, and fetch parent
-                self.cached_blocks[block_record.prev_header_hash] = (
-                    block_record,
-                    header_block,
-                    transaction_filter
-                )
+        self.log.info(
+            f"Finishing block {block_record.header_hash} at height {block_record.height}"
+        )
+        assert block_record.prev_header_hash in self.wallet_state_manager.block_records
+        assert block_record.additions is not None and block_record.removals is not None
 
-                header_request = wallet_protocol.RequestHeader(
-                    uint32(block_record.height - 1), block_record.prev_header_hash,
-                )
-                yield OutboundMessage(
-                    NodeType.FULL_NODE,
-                    Message("request_header", header_request),
-                    Delivery.RESPOND,
-                )
-                return
-            self.log.warning("Block too far ahead in the future, should never get here")
+        # We have completed a block that we can add to chain, so add it.
+        res = await self.wallet_state_manager.receive_block(block_record, header_block)
+        if res == ReceiveBlockResult.DISCONNECTED_BLOCK:
+            self.log.error("Attempted to add disconnected block")
             return
+        elif res == ReceiveBlockResult.INVALID_BLOCK:
+            self.log.error("Attempted to add invalid block")
+            return
+        elif res == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
+            self.log.warning("Attempted to add block twice")
+        elif res == ReceiveBlockResult.ADDED_AS_ORPHAN:
+            pass
+        elif res == ReceiveBlockResult.ADDED_TO_HEAD:
+            self.log.info(
+                f"Updated LCA to {block_record.prev_header_hash} at height {block_record.height}"
+            )
+            # Removes outdated cached blocks if we're not syncing
+            if not self.wallet_state_manager.sync_mode:
+                remove_header_hashes = []
+                for header_hash in self.cached_blocks:
+                    if (
+                        block_record.height - self.cached_blocks[header_hash][0].height
+                        > 100
+                    ):
+                        remove_header_hashes.append(header_hash)
+                for header_hash in remove_header_hashes:
+                    del self.cached_blocks[header_hash]
+        else:
+            raise RuntimeError("Invalid state")
+
+        # Now for the cases of already have, orphan, and added to head, move on to the next block
+        if block_record.header_hash in self.future_block_hashes:
+            new_hh = self.future_block_hashes[block_record.header_hash]
+            _, new_hb, new_tfilter = self.cached_blocks[new_hh]
+            self.log.info(f"Moving on to the next block, {new_hb.height}")
+            respond_header_msg = wallet_protocol.RespondHeader(new_hb, new_tfilter)
+            async for msg in self.respond_header(respond_header_msg):
+                yield msg
 
     @api_request
     async def transaction_ack_with_peer_name(
@@ -767,6 +765,7 @@ class WalletNode:
         until we have the required additions / removals for our wallets.
         """
         block = response.header_block
+
         # If we already have, return
         if block.header_hash in self.wallet_state_manager.block_records:
             return
@@ -778,26 +777,63 @@ class WalletNode:
             block.prev_header_hash,
             block.height,
             block.weight,
-            [],
-            [],
+            None,
+            None,
             response.header_block.header.data.total_iters,
             response.header_block.challenge.get_hash(),
         )
-        finish_block = True
 
-        # If the block has transactions, fetch adds/deletes
+        if self.wallet_state_manager.sync_mode:
+            self.log.info(f"Received header block in sync {block.height}")
+            self.potential_blocks_received[uint32(block.height)].set()
+            self.potential_header_hashes[block.height] = block.header_hash
+
+        # Caches the block so we can finalize it when additions and removals arrive
+        self.cached_blocks[block_record.header_hash] = (
+            block_record,
+            block,
+            response.transactions_filter,
+        )
+
+        if block.prev_header_hash not in self.wallet_state_manager.block_records:
+            self.log.info(
+                f"We cannot yet add {block.height}, don't have previous in blockchain"
+            )
+            # We do not have the previous block record, so wait for that. When the previous gets added to chain,
+            # this method will get called again and we can continue. During sync, the previous blocks are already
+            # requested. During normal operation, this might not be the case.
+            self.future_block_hashes[block.prev_header_hash] = block.header_hash
+            self.log.info(
+                f"Adding to future, {block.prev_header_hash} of height {block.height - 1} = {block.header_hash}"
+            )
+
+            lca = self.wallet_state_manager.block_records[self.wallet_state_manager.lca]
+            if (
+                block_record.height - lca.height < self.short_sync_threshold
+                and not self.wallet_state_manager.sync_mode
+            ):
+                self.log.info(f"Requesting previous block, {block.height - 1}")
+                # Only requests the previous block if we are not in sync mode, close to the new block,
+                # and don't have prev
+                header_request = wallet_protocol.RequestHeader(
+                    uint32(block_record.height - 1), block_record.prev_header_hash,
+                )
+                yield OutboundMessage(
+                    NodeType.FULL_NODE,
+                    Message("request_header", header_request),
+                    Delivery.RESPOND,
+                )
+            return
+
+        # If the block has transactions that we are interested in, fetch adds/deletes
         if response.transactions_filter is not None:
-            # Caches the block so we can finalize it when additions and removals arrive
-            self.cached_blocks[block.header_hash] = (block_record, block, response.transactions_filter)
             (
                 additions,
                 removals,
             ) = await self.wallet_state_manager.get_filter_additions_removals(
-                block_record,
-                response.transactions_filter
+                block_record, response.transactions_filter
             )
             if len(additions) > 0 or len(removals) > 0:
-                finish_block = False
                 request_a = wallet_protocol.RequestAdditions(
                     block.height, block.header_hash, additions
                 )
@@ -806,11 +842,23 @@ class WalletNode:
                     Message("request_additions", request_a),
                     Delivery.RESPOND,
                 )
+                return
 
-        if finish_block:
-            # If we don't have any transactions in filter, don't fetch, and finish the block
-            async for msg in self._block_finished(block_record, block, response.transactions_filter):
-                yield msg
+        # If we don't have any transactions in filter, don't fetch, and finish the block
+        block_record = BlockRecord(
+            block_record.header_hash,
+            block_record.prev_header_hash,
+            block_record.height,
+            block_record.weight,
+            [],
+            [],
+            block_record.total_iters,
+            block_record.new_challenge_hash,
+        )
+        async for msg in self._block_finished(
+            block_record, block, response.transactions_filter
+        ):
+            yield msg
 
     @api_request
     async def reject_header_request(
@@ -831,7 +879,9 @@ class WalletNode:
         if response.header_hash not in self.cached_blocks:
             self.log.warning("Do not have header for additions")
             return
-        block_record, header_block, transaction_filter = self.cached_blocks[response.header_hash]
+        block_record, header_block, transaction_filter = self.cached_blocks[
+            response.header_hash
+        ]
         assert response.height == block_record.height
 
         additions: List[Coin]
@@ -894,19 +944,21 @@ class WalletNode:
             block_record.height,
             block_record.weight,
             additions,
-            [],
+            None,
             block_record.total_iters,
             header_block.challenge.get_hash(),
         )
-        self.cached_blocks[response.header_hash] = (new_br, header_block, transaction_filter)
-
-        assert transaction_filter is not None
-        (
-            _,
-            removals,
-        ) = await self.wallet_state_manager.get_filter_additions_removals(
+        self.cached_blocks[response.header_hash] = (
             new_br,
-            transaction_filter
+            header_block,
+            transaction_filter,
+        )
+
+        if transaction_filter is None:
+            raise RuntimeError("Got additions for block with no transactions.")
+
+        (_, removals,) = await self.wallet_state_manager.get_filter_additions_removals(
+            new_br, transaction_filter
         )
         if len(removals) > 0:
             request_r = wallet_protocol.RequestRemovals(
@@ -920,9 +972,20 @@ class WalletNode:
         else:
             # We have collected all three things: header, additions, and removals (since there are no
             # relevant removals for us). Can proceed. Otherwise, we wait for the removals to arrive.
-            async for msg in self._block_finished(new_br, header_block, transaction_filter):
+            new_br = BlockRecord(
+                new_br.header_hash,
+                new_br.prev_header_hash,
+                new_br.height,
+                new_br.weight,
+                new_br.additions,
+                [],
+                new_br.total_iters,
+                new_br.new_challenge_hash,
+            )
+            async for msg in self._block_finished(
+                new_br, header_block, transaction_filter
+            ):
                 yield msg
-
 
     @api_request
     async def respond_removals(self, response: wallet_protocol.RespondRemovals):
@@ -930,10 +993,18 @@ class WalletNode:
         The full node has responded with the removals for a block. We will use this
         to try to finish the block, and add it to the state.
         """
-        if response.header_hash not in self.cached_blocks:
-            self.log.warning("Do not have header for removals")
+        if (
+            response.header_hash not in self.cached_blocks
+            or self.cached_blocks[response.header_hash][0].additions is None
+        ):
+            self.log.warning(
+                "Do not have header for removals, or do not have additions"
+            )
             return
-        block_record, header_block, transaction_filter = self.cached_blocks[response.header_hash]
+
+        block_record, header_block, transaction_filter = self.cached_blocks[
+            response.header_hash
+        ]
         assert response.height == block_record.height
 
         removals: List[bytes32]
@@ -996,7 +1067,11 @@ class WalletNode:
             header_block.challenge.get_hash(),
         )
 
-        self.cached_blocks[response.header_hash] = (new_br, header_block, transaction_filter)
+        self.cached_blocks[response.header_hash] = (
+            new_br,
+            header_block,
+            transaction_filter,
+        )
 
         # We have collected all three things: header, additions, and removals. Can proceed.
         async for msg in self._block_finished(new_br, header_block, transaction_filter):

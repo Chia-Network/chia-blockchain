@@ -484,6 +484,8 @@ class WalletStateManager:
         fast sync). If validation succeeds, block is adedd to DB. If it's a new TIP, transactions are
         reorged accordingly.
         """
+        assert block.additions is not None
+        assert block.removals is not None
         async with self.lock:
             if block.header_hash in self.block_records:
                 return ReceiveBlockResult.ALREADY_HAVE_BLOCK
@@ -551,6 +553,10 @@ class WalletStateManager:
                             await self.coin_added(coinbase, path_block.height, True)
                         if await self.is_addition_relevant(fees_coin):
                             await self.coin_added(fees_coin, path_block.height, True)
+                    assert (
+                        path_block.additions is not None
+                        and path_block.removals is not None
+                    )
                     for coin in path_block.additions:
                         await self.coin_added(coin, path_block.height, False)
                     for coin_name in path_block.removals:
@@ -970,7 +976,9 @@ class WalletStateManager:
 
         tx_filter = PyBIP158([b for b in transactions_fitler])
         # Find fork point
-        fork_h: uint32 = self._find_fork_point_in_chain(self.block_records[self.lca], new_block)
+        fork_h: uint32 = self._find_fork_point_in_chain(
+            self.block_records[self.lca], new_block
+        )
 
         # Get all unspent coins
         my_coin_records_lca: Set[
@@ -993,13 +1001,17 @@ class WalletStateManager:
 
         # For each block, process additions to get all Coins, then process removals to get unspent coins
         for reorg_block in reorg_blocks:
-           for addition in reorg_block.additions:
-               unspent_coin_names.add(addition.name())
-           for removal in reorg_block.removals:
-               unspent_coin_names.remove(removal)
+            assert (
+                reorg_block.additions is not None and reorg_block.removals is not None
+            )
+            for addition in reorg_block.additions:
+                unspent_coin_names.add(addition.name())
+            for removal in reorg_block.removals:
+                unspent_coin_names.remove(removal)
 
-        for addition in new_block.additions:
-            unspent_coin_names.add(addition.name())
+        if new_block.additions is not None:
+            for addition in new_block.additions:
+                unspent_coin_names.add(addition.name())
 
         my_puzzle_hashes = await self.puzzle_store.get_all_puzzle_hashes()
 
