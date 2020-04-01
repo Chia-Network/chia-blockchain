@@ -52,10 +52,8 @@ class WalletNode:
 
     # Maintains headers recently received. Once the desired removals and additions are downloaded,
     # the data is persisted in the WalletStateManager. These variables are also used to store
-    # temporary sync data.
-    cached_blocks: Dict[bytes32, Tuple[BlockRecord, HeaderBlock]]
-    cached_removals: Dict[bytes32, List[bytes32]]
-    cached_additions: Dict[bytes32, List[Coin]]
+    # temporary sync data. The bytes is the transaction filter.
+    cached_blocks: Dict[bytes32, Tuple[BlockRecord, HeaderBlock, Optional[bytes]]]
 
     # Hashes of the PoT and PoSpace for all blocks (including occasional difficulty adjustments)
     proof_hashes: List[Tuple[bytes32, Optional[uint64], Optional[uint64]]]
@@ -133,8 +131,6 @@ class WalletNode:
 
         # Normal operation data
         self.cached_blocks = {}
-        self.cached_removals = {}
-        self.cached_additions = {}
 
         # Sync data
         self._shut_down = False
@@ -574,7 +570,7 @@ class WalletNode:
                     self.log.info("Did not receive desired headers")
 
             hh = self.potential_header_hashes[height_checkpoint]
-            block_record, header_block = self.cached_blocks[hh]
+            block_record, header_block, _ = self.cached_blocks[hh]
 
             res = await self.wallet_state_manager.receive_block(
                 block_record, header_block
@@ -589,7 +585,7 @@ class WalletNode:
         )
 
     async def _block_finished(
-        self, block_record: BlockRecord, header_block: HeaderBlock
+        self, block_record: BlockRecord, header_block: HeaderBlock, transaction_filter: Optional[bytes]
     ):
         """
         This is called when we have finished a block (which means we have downloaded the header,
@@ -602,7 +598,7 @@ class WalletNode:
         if self.wallet_state_manager.sync_mode:
             self.potential_blocks_received[uint32(block_record.height)].set()
             self.potential_header_hashes[block_record.height] = block_record.header_hash
-            self.cached_blocks[block_record.header_hash] = (block_record, header_block)
+            self.cached_blocks[block_record.header_hash] = (block_record, header_block, transaction_filter)
             return
         # 1. If disconnected and close, get parent header and return
         lca = self.wallet_state_manager.block_records[self.wallet_state_manager.lca]
@@ -622,8 +618,8 @@ class WalletNode:
             else:
                 # If we have the next block available, add it
                 if block_record.header_hash in self.cached_blocks:
-                    new_br, new_hb = self.cached_blocks[block_record.header_hash]
-                    async for msg in self._block_finished(new_br, new_hb):
+                    new_br, new_hb, new_filter = self.cached_blocks[block_record.header_hash]
+                    async for msg in self._block_finished(new_br, new_hb, new_filter):
                         yield msg
             if res == ReceiveBlockResult.ADDED_TO_HEAD:
                 self.log.info(
@@ -641,16 +637,13 @@ class WalletNode:
                             remove_header_hashes.append(header_hash)
                     for header_hash in remove_header_hashes:
                         del self.cached_blocks[header_hash]
-                        if header_hash in self.cached_additions:
-                            del self.cached_additions[header_hash]
-                        if header_hash in self.cached_removals:
-                            del self.cached_removals[header_hash]
         else:
             if block_record.height - lca.height < self.short_sync_threshold:
                 # We have completed a block that is in the near future, so cache it, and fetch parent
                 self.cached_blocks[block_record.prev_header_hash] = (
                     block_record,
                     header_block,
+                    transaction_filter
                 )
 
                 header_request = wallet_protocol.RequestHeader(
@@ -795,11 +788,12 @@ class WalletNode:
         # If the block has transactions, fetch adds/deletes
         if response.transactions_filter is not None:
             # Caches the block so we can finalize it when additions and removals arrive
-            self.cached_blocks[block.header_hash] = (block_record, block)
+            self.cached_blocks[block.header_hash] = (block_record, block, response.transactions_filter)
             (
                 additions,
                 removals,
             ) = await self.wallet_state_manager.get_filter_additions_removals(
+                block_record,
                 response.transactions_filter
             )
             if len(additions) > 0 or len(removals) > 0:
@@ -812,18 +806,10 @@ class WalletNode:
                     Message("request_additions", request_a),
                     Delivery.RESPOND,
                 )
-                request_r = wallet_protocol.RequestRemovals(
-                    block.height, block.header_hash, removals
-                )
-                yield OutboundMessage(
-                    NodeType.FULL_NODE,
-                    Message("request_removals", request_r),
-                    Delivery.RESPOND,
-                )
 
         if finish_block:
             # If we don't have any transactions in filter, don't fetch, and finish the block
-            async for msg in self._block_finished(block_record, block):
+            async for msg in self._block_finished(block_record, block, response.transactions_filter):
                 yield msg
 
     @api_request
@@ -837,96 +823,6 @@ class WalletNode:
         self.log.error("Header request rejected")
 
     @api_request
-    async def respond_removals(self, response: wallet_protocol.RespondRemovals):
-        """
-        The full node has responded with the removals for a block. We will use this
-        to try to finish the block, and add it to the state.
-        """
-        if response.header_hash not in self.cached_blocks:
-            self.log.warning("Do not have header for removals")
-            return
-        block_record, header_block = self.cached_blocks[response.header_hash]
-        assert response.height == block_record.height
-
-        removals: List[bytes32]
-        if response.proofs is None:
-            # If there are no proofs, it means all removals were returned in the response.
-            # we must find the ones relevant to our wallets.
-            all_coins: List[Coin] = []
-            for coin_name, coin in response.coins:
-                if coin is not None:
-                    all_coins.append(coin)
-            removals = [
-                c.name()
-                for c in await self.wallet_state_manager.get_relevant_removals(
-                    all_coins
-                )
-            ]
-
-            # Verify removals root
-            removals_merkle_set = MerkleSet()
-            for coin in removals:
-                if coin is not None:
-                    removals_merkle_set.add_already_hashed(coin.name())
-            removals_root = removals_merkle_set.get_root()
-            assert header_block.header.data.removals_root == removals_root
-
-        else:
-            # This means the full node has responded only with the relevant removals
-            # for our wallet. Each merkle proof must be verified.
-            removals = []
-            assert len(response.coins) == len(response.proofs)
-            for i in range(len(response.coins)):
-                # Coins are in the same order as proofs
-                assert response.coins[i][0] == response.proofs[i][0]
-                coin = response.coins[i][1]
-                if coin is None:
-                    # Verifies merkle proof of exclusion
-                    assert confirm_not_included_already_hashed(
-                        header_block.header.data.removals_root,
-                        response.coins[i][0],
-                        response.proofs[i][1],
-                    )
-                else:
-                    # Verifies merkle proof of inclusion of coin name
-                    assert response.coins[i][0] == coin.name()
-                    assert confirm_included_already_hashed(
-                        header_block.header.data.removals_root,
-                        coin.name(),
-                        response.proofs[i][1],
-                    )
-                    removals.append(response.coins[i][0])
-        additions = self.cached_additions.get(response.header_hash, [])
-        new_br = BlockRecord(
-            block_record.header_hash,
-            block_record.prev_header_hash,
-            block_record.height,
-            block_record.weight,
-            additions,
-            removals,
-            block_record.total_iters,
-            header_block.challenge.get_hash(),
-        )
-        self.cached_blocks[response.header_hash] = (new_br, header_block)
-        self.cached_removals[response.header_hash] = removals
-
-        if response.header_hash in self.cached_additions:
-            # We have collected all three things: header, additions, and removals. Can proceed.
-            # Otherwise, we wait for the additions to arrive
-            async for msg in self._block_finished(new_br, header_block):
-                yield msg
-
-    @api_request
-    async def reject_removals_request(
-        self, response: wallet_protocol.RejectRemovalsRequest
-    ):
-        """
-        The full node has rejected our request for removals.
-        """
-        # TODO(mariano): implement
-        self.log.error("Removals request rejected")
-
-    @api_request
     async def respond_additions(self, response: wallet_protocol.RespondAdditions):
         """
         The full node has responded with the additions for a block. We will use this
@@ -935,7 +831,7 @@ class WalletNode:
         if response.header_hash not in self.cached_blocks:
             self.log.warning("Do not have header for additions")
             return
-        block_record, header_block = self.cached_blocks[response.header_hash]
+        block_record, header_block, transaction_filter = self.cached_blocks[response.header_hash]
         assert response.height == block_record.height
 
         additions: List[Coin]
@@ -992,25 +888,129 @@ class WalletNode:
                     for coin in coin_list_1:
                         assert coin.puzzle_hash == response.coins[i][0]
                     additions += coin_list_1
-        removals = self.cached_removals.get(response.header_hash, [])
         new_br = BlockRecord(
             block_record.header_hash,
             block_record.prev_header_hash,
             block_record.height,
             block_record.weight,
             additions,
+            [],
+            block_record.total_iters,
+            header_block.challenge.get_hash(),
+        )
+        self.cached_blocks[response.header_hash] = (new_br, header_block, transaction_filter)
+
+        assert transaction_filter is not None
+        (
+            _,
+            removals,
+        ) = await self.wallet_state_manager.get_filter_additions_removals(
+            new_br,
+            transaction_filter
+        )
+        if len(removals) > 0:
+            request_r = wallet_protocol.RequestRemovals(
+                header_block.height, header_block.header_hash, removals
+            )
+            yield OutboundMessage(
+                NodeType.FULL_NODE,
+                Message("request_removals", request_r),
+                Delivery.RESPOND,
+            )
+        else:
+            # We have collected all three things: header, additions, and removals (since there are no
+            # relevant removals for us). Can proceed. Otherwise, we wait for the removals to arrive.
+            async for msg in self._block_finished(new_br, header_block, transaction_filter):
+                yield msg
+
+
+    @api_request
+    async def respond_removals(self, response: wallet_protocol.RespondRemovals):
+        """
+        The full node has responded with the removals for a block. We will use this
+        to try to finish the block, and add it to the state.
+        """
+        if response.header_hash not in self.cached_blocks:
+            self.log.warning("Do not have header for removals")
+            return
+        block_record, header_block, transaction_filter = self.cached_blocks[response.header_hash]
+        assert response.height == block_record.height
+
+        removals: List[bytes32]
+        if response.proofs is None:
+            # If there are no proofs, it means all removals were returned in the response.
+            # we must find the ones relevant to our wallets.
+            all_coins: List[Coin] = []
+            for coin_name, coin in response.coins:
+                if coin is not None:
+                    all_coins.append(coin)
+            removals = [
+                c.name()
+                for c in await self.wallet_state_manager.get_relevant_removals(
+                    all_coins
+                )
+            ]
+
+            # Verify removals root
+            removals_merkle_set = MerkleSet()
+            for coin in removals:
+                if coin is not None:
+                    removals_merkle_set.add_already_hashed(coin.name())
+            removals_root = removals_merkle_set.get_root()
+            assert header_block.header.data.removals_root == removals_root
+
+        else:
+            # This means the full node has responded only with the relevant removals
+            # for our wallet. Each merkle proof must be verified.
+            removals = []
+            assert len(response.coins) == len(response.proofs)
+            for i in range(len(response.coins)):
+                # Coins are in the same order as proofs
+                assert response.coins[i][0] == response.proofs[i][0]
+                coin = response.coins[i][1]
+                if coin is None:
+                    # Verifies merkle proof of exclusion
+                    assert confirm_not_included_already_hashed(
+                        header_block.header.data.removals_root,
+                        response.coins[i][0],
+                        response.proofs[i][1],
+                    )
+                else:
+                    # Verifies merkle proof of inclusion of coin name
+                    assert response.coins[i][0] == coin.name()
+                    assert confirm_included_already_hashed(
+                        header_block.header.data.removals_root,
+                        coin.name(),
+                        response.proofs[i][1],
+                    )
+                    removals.append(response.coins[i][0])
+
+        new_br = BlockRecord(
+            block_record.header_hash,
+            block_record.prev_header_hash,
+            block_record.height,
+            block_record.weight,
+            block_record.additions,
             removals,
             block_record.total_iters,
             header_block.challenge.get_hash(),
         )
-        self.cached_blocks[response.header_hash] = (new_br, header_block)
-        self.cached_additions[response.header_hash] = additions
 
-        if response.header_hash in self.cached_removals:
-            # We have collected all three things: header, additions, and removals. Can proceed.
-            # Otherwise, we wait for the removals to arrive
-            async for msg in self._block_finished(new_br, header_block):
-                yield msg
+        self.cached_blocks[response.header_hash] = (new_br, header_block, transaction_filter)
+
+        # We have collected all three things: header, additions, and removals. Can proceed.
+        async for msg in self._block_finished(new_br, header_block, transaction_filter):
+            yield msg
+
+    @api_request
+    async def reject_removals_request(
+        self, response: wallet_protocol.RejectRemovalsRequest
+    ):
+        """
+        The full node has rejected our request for removals.
+        """
+        # TODO(mariano): implement
+        self.log.error("Removals request rejected")
 
     @api_request
     async def reject_additions_request(

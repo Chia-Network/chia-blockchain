@@ -807,7 +807,7 @@ class WalletStateManager:
         self,
         all_proof_hashes: List[Tuple[bytes32, Optional[Tuple[uint64, uint64]]]],
         heights: List[uint32],
-        cached_blocks: Dict[bytes32, Tuple[BlockRecord, HeaderBlock]],
+        cached_blocks: Dict[bytes32, Tuple[BlockRecord, HeaderBlock, Optional[bytes]]],
         potential_header_hashes: Dict[uint32, bytes32],
     ) -> bool:
         """
@@ -822,7 +822,7 @@ class WalletStateManager:
             prev_height = uint32(height - 1)
             # Get previous header block
             prev_hh = potential_header_hashes[prev_height]
-            _, prev_header_block = cached_blocks[prev_hh]
+            _, prev_header_block, _ = cached_blocks[prev_hh]
 
             # Validate proof hash of previous header block
             if (
@@ -865,7 +865,7 @@ class WalletStateManager:
 
             # Get header block
             hh = potential_header_hashes[height]
-            _, header_block = cached_blocks[hh]
+            _, header_block, _ = cached_blocks[hh]
 
             # Validate challenge hash is == pospace challenge hash
             if challenge_hash != header_block.proof_of_space.challenge_hash:
@@ -963,21 +963,52 @@ class WalletStateManager:
         return True
 
     async def get_filter_additions_removals(
-        self, transactions_fitler: bytes
+        self, new_block: BlockRecord, transactions_fitler: bytes
     ) -> Tuple[List[bytes32], List[bytes32]]:
         """ Returns a list of our coin ids, and a list of puzzle_hashes that positively match with provided filter. """
+        assert new_block.prev_header_hash in self.block_records
+
         tx_filter = PyBIP158([b for b in transactions_fitler])
-        my_coin_records: Set[
+        # Find fork point
+        fork_h: uint32 = self._find_fork_point_in_chain(self.block_records[self.lca], new_block)
+
+        # Get all unspent coins
+        my_coin_records_lca: Set[
             WalletCoinRecord
         ] = await self.wallet_store.get_coin_records_by_spent(False)
+
+        # Filter coins up to and including fork point
+        unspent_coin_names: Set[bytes32] = set()
+        for coin in my_coin_records_lca:
+            if coin.confirmed_block_index <= fork_h:
+                unspent_coin_names.add(coin.name)
+
+        # Get all blocks after fork point up to but not including this block
+        curr: BlockRecord = self.block_records[new_block.prev_header_hash]
+        reorg_blocks: List[BlockRecord] = []
+        while curr.height > fork_h:
+            reorg_blocks.append(curr)
+            curr = self.block_records[curr.prev_header_hash]
+        reorg_blocks.reverse()
+
+        # For each block, process additions to get all Coins, then process removals to get unspent coins
+        for reorg_block in reorg_blocks:
+           for addition in reorg_block.additions:
+               unspent_coin_names.add(addition.name())
+           for removal in reorg_block.removals:
+               unspent_coin_names.remove(removal)
+
+        for addition in new_block.additions:
+            unspent_coin_names.add(addition.name())
+
         my_puzzle_hashes = await self.puzzle_store.get_all_puzzle_hashes()
 
         removals_of_interest: bytes32 = []
         additions_of_interest: bytes32 = []
 
-        for record in my_coin_records:
-            if tx_filter.Match(bytearray(record.name)):
-                removals_of_interest.append(record.name)
+        for coin_name in unspent_coin_names:
+            if tx_filter.Match(bytearray(coin_name)):
+                removals_of_interest.append(coin_name)
 
         for puzzle_hash in my_puzzle_hashes:
             if tx_filter.Match(bytearray(puzzle_hash)):
