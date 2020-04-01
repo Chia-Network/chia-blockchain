@@ -578,14 +578,12 @@ class WalletNode:
                 hh = self.potential_header_hashes[height_checkpoint]
                 if hh in self.wallet_state_manager.block_records:
                     # Successfully added the block to chain
-                    self.log.info("Header has been added to chain instantly.")
                     break
                 else:
                     # Not added to chain yet. Try again soon.
                     await asyncio.sleep(sleep_interval_short)
                     total_time_slept += sleep_interval_short
                     if hh in self.wallet_state_manager.block_records:
-                        self.log.info("Header has been added to chain after sleep.")
                         break
                     else:
                         self.log.warning(
@@ -627,6 +625,9 @@ class WalletNode:
         elif res == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return None
         elif res == ReceiveBlockResult.ADDED_AS_ORPHAN:
+            self.log.info(
+                f"Added orphan {block_record.prev_header_hash} at height {block_record.height}"
+            )
             pass
         elif res == ReceiveBlockResult.ADDED_TO_HEAD:
             self.log.info(
@@ -650,7 +651,6 @@ class WalletNode:
         if block_record.header_hash in self.future_block_hashes:
             new_hh = self.future_block_hashes[block_record.header_hash]
             _, new_hb, new_tfilter = self.cached_blocks[new_hh]
-            self.log.info(f"Moving on to the next block, {new_hb.height}")
             return wallet_protocol.RespondHeader(new_hb, new_tfilter)
         return None
 
@@ -786,7 +786,6 @@ class WalletNode:
             )
 
             if self.wallet_state_manager.sync_mode:
-                self.log.info(f"Received header block in sync {block.height}")
                 self.potential_blocks_received[uint32(block.height)].set()
                 self.potential_header_hashes[block.height] = block.header_hash
 
@@ -798,16 +797,10 @@ class WalletNode:
             )
 
             if block.prev_header_hash not in self.wallet_state_manager.block_records:
-                self.log.info(
-                    f"We cannot yet add {block.height}, don't have previous in blockchain"
-                )
                 # We do not have the previous block record, so wait for that. When the previous gets added to chain,
                 # this method will get called again and we can continue. During sync, the previous blocks are already
                 # requested. During normal operation, this might not be the case.
                 self.future_block_hashes[block.prev_header_hash] = block.header_hash
-                self.log.info(
-                    f"Adding to future, {block.prev_header_hash} of height {block.height - 1} = {block.header_hash}"
-                )
 
                 lca = self.wallet_state_manager.block_records[
                     self.wallet_state_manager.lca
@@ -816,7 +809,6 @@ class WalletNode:
                     block_record.height - lca.height < self.short_sync_threshold
                     and not self.wallet_state_manager.sync_mode
                 ):
-                    self.log.info(f"Requesting previous block, {block.height - 1}")
                     # Only requests the previous block if we are not in sync mode, close to the new block,
                     # and don't have prev
                     header_request = wallet_protocol.RequestHeader(

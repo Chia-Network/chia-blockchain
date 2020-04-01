@@ -240,7 +240,7 @@ class WalletStateManager:
 
         for record in record_list:
             amount = uint64(amount + record.coin.amount)
-        self.log.info(f"amount is {amount}")
+        self.log.info(f"Confirmed balance amount is {amount}")
         return uint64(amount)
 
     async def get_unconfirmed_balance(self, wallet_id) -> uint64:
