@@ -1,10 +1,5 @@
 from setuptools import setup
 
-CLVM_TOOLS_GITHUB = (
-    "clvm-tools @ "
-    "https://github.com/Chia-Network/clvm_tools/tarball/6ff53bcfeb0c970647b6cfdde360d32b316b1326#egg=clvm-tools"
-)
-
 
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
@@ -20,7 +15,7 @@ dependencies = [
     "chiapos==0.12.3",  # proof of space
     "sortedcontainers==2.1.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
-    CLVM_TOOLS_GITHUB,  # clvm compiler tools
+    "clvm-tools==0.1.1",  # clvm compiler tools
 ]
 
 upnp_dependencies = [
