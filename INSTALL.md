@@ -20,7 +20,7 @@ sh install.sh
 
 On Ubuntu 18.04, you need python 3.7. It's not available in the default
 repository, so you need to add an alternate source. You can skip this step
-if you install in Ubuntu 19.x or higher
+if you install in Ubuntu 19.x or higher.
 
 ```bash
 # for add-apt-repository
@@ -49,7 +49,7 @@ From an Administrator PowerShell
 `Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux`
 and then
 `Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform`.
-This usually requires a reboot. Once that is complete, install Ubuntu 18.04 LTS from the Microsoft Store.
+This usually requires a reboot. Once that is complete, install Ubuntu 18.04 LTS from the Microsoft Store and run it. Then follow the steps below.
 ```bash
 # add-apt-repository
 sudo apt install software-properties-common -y
