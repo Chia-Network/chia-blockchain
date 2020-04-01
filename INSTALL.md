@@ -52,14 +52,12 @@ and then
 This usually requires a reboot. Once that is complete, install Ubuntu 18.04 LTS from the Microsoft Store and run it. Then follow the steps below.
 ```bash
 # add-apt-repository
-sudo apt install software-properties-common -y
 sudo add-apt-repository ppa:deadsnakes/ppa -y
 
 sudo apt-get -y update
 sudo apt-get -y upgrade
 
-sudo apt-get install python3.7-venv python3.7-dev -y
-sudo apt-get install build-essential git cmake libgmp3-dev libssl-dev libboost-all-dev -y
+sudo apt-get install python3.7-venv python3.7-dev python3-pip git -y
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
