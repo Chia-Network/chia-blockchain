@@ -28,11 +28,10 @@ sudo apt install software-properties-common -y
 sudo add-apt-repository ppa:deadsnakes/ppa -y
 ```
 
-Install dependencies for all Ubuntu.
+Install dependencies for Ubuntu 18.04 from above or Ubuntu 19.x or higher.
 ```bash
 sudo apt-get update
-sudo apt-get install python3.7-venv python3.7-dev -y
-sudo apt-get install build-essential git cmake libgmp3-dev libssl-dev libboost-all-dev -y
+sudo apt-get install python3.7-venv python3.7-dev python3-pip git -y
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
