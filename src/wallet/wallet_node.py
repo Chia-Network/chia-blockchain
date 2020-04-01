@@ -626,12 +626,12 @@ class WalletNode:
             return None
         elif res == ReceiveBlockResult.ADDED_AS_ORPHAN:
             self.log.info(
-                f"Added orphan {block_record.prev_header_hash} at height {block_record.height}"
+                f"Added orphan {block_record.header_hash} at height {block_record.height}"
             )
             pass
         elif res == ReceiveBlockResult.ADDED_TO_HEAD:
             self.log.info(
-                f"Updated LCA to {block_record.prev_header_hash} at height {block_record.height}"
+                f"Updated LCA to {block_record.header_hash} at height {block_record.height}"
             )
             # Removes outdated cached blocks if we're not syncing
             if not self.wallet_state_manager.sync_mode:
