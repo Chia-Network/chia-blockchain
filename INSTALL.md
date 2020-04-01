@@ -90,23 +90,17 @@ sh install.sh
 
 ```bash
 sudo yum update
-sudo yum install centos-release-scl-rh epel-release
-sudo yum install devtoolset-8-toolchain cmake3 libffi-devel
-sudo yum install gmp-devel libsqlite3x-devel
-sudo yum install wget git openssl openssl-devel
+sudo yum install gcc openssl-devel bzip2-devel libffi libffi-devel
+sudo yum install libsqlite3x-devel
 
-sudo amazon-linux-extras install epel
-sudo yum install mpfr-devel
-
-# CMake - add a symlink for cmake3 - required by blspy
-sudo ln -s /usr/bin/cmake3 /usr/local/bin/cmake
-
-scl enable devtoolset-8 bash
-
-# Install Python 3.7.5 (current rpm's are 3.6.x)
-wget https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tgz
-tar -zxvf Python-3.7.5.tgz; cd Python-3.7.5
+# Install python 3.7
+wget https://www.python.org/ftp/python/3.7.7/Python-3.7.7.tgz
+tar -zxvf Python-3.7.7.tgz ; cd Python-3.7.7
 ./configure --enable-optimizations; sudo make install; cd ..
+
+# Install npm and node
+curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
+sudo yum install nodejs
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
