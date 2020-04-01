@@ -265,13 +265,15 @@ class WalletStateManager:
         self, wallet_id: int
     ) -> Dict[bytes32, Coin]:
         """
-        Returns new addition transactions that have not been confirmed yet.
+        Returns change coins for the wallet_id.
+        (Unconfirmed addition transactions that have not been confirmed yet.)
         """
         additions: Dict[bytes32, Coin] = {}
         unconfirmed_tx = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         for record in unconfirmed_tx:
             for coin in record.additions:
-                additions[coin.name()] = coin
+                if await self.is_addition_relevant(coin):
+                    additions[coin.name()] = coin
         return additions
 
     async def unconfirmed_removals_for_wallet(

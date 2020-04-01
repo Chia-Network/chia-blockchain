@@ -122,7 +122,7 @@ class Wallet:
             hash
         )
         if index_for_puzzlehash == -1:
-            raise
+            raise ValueError(f"No key for this puzzlehash {hash})")
         pubkey = self.private_key.public_child(index_for_puzzlehash).get_public_key()
         private = self.private_key.private_child(index_for_puzzlehash).get_private_key()
         return pubkey, private
@@ -136,8 +136,10 @@ class Wallet:
                 self.wallet_info.id
             )
         ):
+            self.log.warning(f"Can't select amount higher than our spendable balance {amount}")
             return None
 
+        self.log.info(f"About to select coins for amount {amount}")
         unspent: Set[
             WalletCoinRecord
         ] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
@@ -160,9 +162,11 @@ class Wallet:
                 continue
             sum += coinrecord.coin.amount
             used_coins.add(coinrecord.coin)
+            self.log.info(f"Selected coin: {coinrecord.coin.name()}")
 
         # This happens when we couldn't use one of the coins because it's already used
         # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
+        unconfirmed_additions = None
         if sum < amount:
             unconfirmed_additions = await self.wallet_state_manager.unconfirmed_additions_for_wallet(
                 self.wallet_info.id
@@ -175,11 +179,17 @@ class Wallet:
 
                 sum += coin.amount
                 used_coins.add(coin)
+                self.log.info(f"Selected used coin: {coin.name()}")
 
         if sum >= amount:
+            self.log.info(f"Successfully selected coins: {used_coins}")
             return used_coins
         else:
             # This shouldn't happen because of: if amount > self.get_unconfirmed_balance_spendable():
+            self.log.error(f"Wasn't able to select coins for amount: {amount}"
+                           f"unspent: {unspent}"
+                           f"unconfirmed_removals: {unconfirmed_removals}"
+                           f"unconfirmed_additions: {unconfirmed_additions}")
             return None
 
     async def generate_unsigned_transaction(
@@ -196,8 +206,10 @@ class Wallet:
         if coins is None:
             coins = await self.select_coins(amount + fee)
         if coins is None:
+            self.log.info(f"coins is None")
             return []
 
+        self.log.info(f"coins is not None {coins}")
         spend_value = sum([coin.amount for coin in coins])
         change = spend_value - amount - fee
 
@@ -205,10 +217,12 @@ class Wallet:
         output_created = False
 
         for coin in coins:
+            self.log.info(f"coin from coins {coin}")
             # Get keys for puzzle_hash
             puzzle_hash = coin.puzzle_hash
             maybe = await self.get_keys(puzzle_hash)
             if not maybe:
+                self.log.error(f"Wallet couldn't find keys for puzzle_hash {puzzle_hash}")
                 return []
 
             # Get puzzle for pubkey
@@ -237,6 +251,8 @@ class Wallet:
                 solution = self.make_solution(consumed=[coin.name()])
 
             spends.append((puzzle, CoinSolution(coin, solution)))
+
+        self.log.info(f"Spends is {spends}")
         return spends
 
     async def sign_transaction(
@@ -247,17 +263,20 @@ class Wallet:
             # Get keys
             keys = await self.get_keys(solution.coin.puzzle_hash)
             if not keys:
+                self.log.error(f"Sign transaction failed, No Keys for puzzlehash {solution.coin.puzzle_hash}")
                 return None
+
             pubkey, secretkey = keys
             secretkey = BLSPrivateKey(secretkey)
-
             code_ = [puzzle, solution.solution]
             sexp = clvm.to_sexp_f(code_)
 
             # Get AGGSIG conditions
             err, con, cost = conditions_for_solution(sexp)
             if err or not con:
+                self.log.error(f"Sign transcation failed, con:{con}, error: {err}")
                 return None
+
             conditions_dict = conditions_by_opcode(con)
 
             # Create signature
@@ -311,7 +330,10 @@ class Wallet:
             amount, puzzle_hash, fee, origin_id, coins
         )
         if len(transaction) == 0:
+            self.log.info("Unsigned transaction not generated")
             return None
+
+        self.log.error("About to sign a transaction")
         return await self.sign_transaction(transaction)
 
     async def get_transaction_status(
