@@ -61,6 +61,9 @@ sudo apt-get install python3.7-venv python3.7-dev python3-pip git -y
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
+# You will need to download the Windows native Wallet
+# and start chia-websocket-server in WSL2 instead of chia-wallet-gui
+
 sh install.sh
 . ./activate
 ```
@@ -69,14 +72,14 @@ sh install.sh
 
 ```bash
 sudo yum update
-sudo yum install gcc-c++ cmake3 wget git openssl openssl-devel
-sudo yum install python3 python3-devel libffi-devel gmp-devel
+sudo yum install python3 python3-devel git
 
-sudo amazon-linux-extras install epel
-sudo yum install mpfr-devel
+# Install npm and node
+curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
+sudo yum install nodejs
 
-# CMake - add a symlink for cmake3 - required by blspy
-sudo ln -s /usr/bin/cmake3 /usr/local/bin/cmake
+# uPnP and setproctitle require compiling
+sudo yum install gcc
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
@@ -86,7 +89,7 @@ sh install.sh
 . ./activate
 ```
 
-### CentOS 7
+### CentOS 7.7 or newer
 
 ```bash
 sudo yum update
