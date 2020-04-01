@@ -19,7 +19,7 @@ class BlockRecord(Streamable):
     prev_header_hash: bytes32
     height: uint32
     weight: uint128
-    additions: List[Coin]
-    removals: List[bytes32]
+    additions: Optional[List[Coin]]  # A block record without additions is not finished
+    removals: Optional[List[bytes32]]  # A block record without removals is not finished
     total_iters: Optional[uint64]
     new_challenge_hash: Optional[bytes32]

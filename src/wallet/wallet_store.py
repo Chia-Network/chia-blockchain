@@ -143,13 +143,20 @@ class WalletStore:
             )
         return None
 
-    async def get_coin_records_by_spent(self, spent: bool) -> Set[WalletCoinRecord]:
+    async def get_coin_records_by_spent(
+        self, spent: bool, spend_before_height: Optional[uint32] = None
+    ) -> Set[WalletCoinRecord]:
         """ Returns set of CoinRecords that have not been spent yet. """
         coins = set()
-
-        cursor = await self.db_connection.execute(
-            "SELECT * from coin_record WHERE spent=?", (int(spent),)
-        )
+        if spend_before_height:
+            cursor = await self.db_connection.execute(
+                "SELECT * from coin_record WHERE spent=? OR spent_index>=?",
+                (int(spent), spend_before_height),
+            )
+        else:
+            cursor = await self.db_connection.execute(
+                "SELECT * from coin_record WHERE spent=?", (int(spent),)
+            )
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
@@ -191,9 +198,10 @@ class WalletStore:
     ) -> Set[WalletCoinRecord]:
         """ Returns set of CoinRecords that have been confirmed before index height. """
         coins = set()
+        print("index,", index, "walelt id", wallet_id)
 
         cursor_coinbase_coins = await self.db_connection.execute(
-            "SELECT * from coin_record WHERE spent=? and confirmed_index<? and wallet_id=? and coinbase=?",
+            "SELECT * from coin_record WHERE spent=? and confirmed_index<=? and wallet_id=? and coinbase=?",
             (0, int(index), wallet_id, 1),
         )
 

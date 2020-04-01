@@ -129,15 +129,13 @@ class Wallet:
 
     async def select_coins(self, amount) -> Optional[Set[Coin]]:
         """ Returns a set of coins that can be used for generating a new transaction. """
+        spendable_am = await self.wallet_state_manager.get_unconfirmed_spendable_for_wallet(
+            self.wallet_info.id
+        )
 
-        if (
-            amount
-            > await self.wallet_state_manager.get_unconfirmed_spendable_for_wallet(
-                self.wallet_info.id
-            )
-        ):
+        if amount > spendable_am:
             self.log.warning(
-                f"Can't select amount higher than our spendable balance {amount}"
+                f"Can't select amount higher than our spendable balance {amount}, spendable {spendable_am}"
             )
             return None
 

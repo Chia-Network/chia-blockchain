@@ -279,16 +279,18 @@ class TestWalletSimulator:
         spend_bundle = await wallet_0.generate_signed_transaction(
             10, await wallet_node_1.main_wallet.get_new_puzzlehash(), 0
         )
+
         await wallet_0.push_transaction(spend_bundle)
 
         await asyncio.sleep(1)
+        # Full node height 11, wallet height 9
         confirmed_balance = await wallet_0.get_confirmed_balance()
         unconfirmed_balance = await wallet_0.get_unconfirmed_balance()
 
         assert confirmed_balance == funds
         assert unconfirmed_balance == funds - 10
 
-        for i in range(0, 3):
+        for i in range(0, 7):
             await full_node_0.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
         await asyncio.sleep(1)
@@ -300,6 +302,7 @@ class TestWalletSimulator:
             ]
         )
 
+        # Full node height 17, wallet height 15
         confirmed_balance = await wallet_0.get_confirmed_balance()
         unconfirmed_balance = await wallet_0.get_unconfirmed_balance()
         wallet_2_confirmed_balance = await wallet_1.get_confirmed_balance()
@@ -313,7 +316,7 @@ class TestWalletSimulator:
         )
         await wallet_1.push_transaction(spend_bundle)
 
-        for i in range(0, 3):
+        for i in range(0, 7):
             await full_node_0.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
         await asyncio.sleep(1)
