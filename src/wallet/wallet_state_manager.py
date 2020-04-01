@@ -90,6 +90,7 @@ class WalletStateManager:
         genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
         self.genesis = genesis
         self.state_changed_callback = None
+        self.pending_tx_callback = None
         self.difficulty_resets_prev = {}
         self.db_path = db_path
 
@@ -978,8 +979,8 @@ class WalletStateManager:
         additions_of_interest: bytes32 = []
 
         for record in my_coin_records:
-            if tx_filter.Match(bytearray(record.name)):
-                removals_of_interest.append(record.name)
+            if tx_filter.Match(bytearray(record.name())):
+                removals_of_interest.append(record.name())
 
         for puzzle_hash in my_puzzle_hashes:
             if tx_filter.Match(bytearray(puzzle_hash)):

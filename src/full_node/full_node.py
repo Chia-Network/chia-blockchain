@@ -2000,7 +2000,7 @@ class FullNode:
             response = wallet_protocol.RespondRemovals(
                 block.height, block.header_hash, [], proofs
             )
-        elif request.coin_names is None:
+        elif request.coin_names is None or len(request.coin_names) == 0:
             for removal in all_removals:
                 cr = await self.coin_store.get_coin_record(removal)
                 assert cr is not None

@@ -865,7 +865,7 @@ class WalletNode:
 
             # Verify removals root
             removals_merkle_set = MerkleSet()
-            for coin in removals:
+            for coin in all_coins:
                 if coin is not None:
                     removals_merkle_set.add_already_hashed(coin.name())
             removals_root = removals_merkle_set.get_root()
