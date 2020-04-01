@@ -149,7 +149,7 @@ wallet:
   # The minimum height that we care about for our transactions. Set to zero
   # If we are restoring from private key and don't know the height.
   starting_height: 0
-  num_sync_batches: 10
+  num_sync_batches: 50
 
   full_node_peer:
     host: 127.0.0.1
