@@ -36,7 +36,7 @@ dev_dependencies = [
     "pytest-asyncio",
 ]
 
-setup(
+kwargs = dict(
     name="chia-blockchain",
     author="Mariano Sorgente",
     author_email="mariano@chia.net",
@@ -46,7 +46,9 @@ setup(
     keywords="chia blockchain node",
     install_requires=dependencies,
     setup_requires=["setuptools_scm"],
-    extras_require=dict(uvloop=["uvloop"], dev=dev_dependencies, upnp=upnp_dependencies),
+    extras_require=dict(
+        uvloop=["uvloop"], dev=dev_dependencies, upnp=upnp_dependencies,
+    ),
     packages=[
         "src",
         "src.cmds",
@@ -93,3 +95,7 @@ setup(
     long_description=open("README.md").read(),
     zip_safe=False,
 )
+
+
+if __name__ == "__main__":
+    setup(**kwargs)
