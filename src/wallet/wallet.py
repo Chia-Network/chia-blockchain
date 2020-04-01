@@ -333,7 +333,7 @@ class Wallet:
             self.log.info("Unsigned transaction not generated")
             return None
 
-        self.log.error("About to sign a transaction")
+        self.log.info("About to sign a transaction")
         return await self.sign_transaction(transaction)
 
     async def get_transaction_status(
