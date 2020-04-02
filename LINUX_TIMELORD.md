@@ -7,6 +7,5 @@ source ./activate
 pip install --force --no-binary chiavdf chiavdf==0.12.1
 ```
 
-If the compile fails, it's likely due to a missing dependency. See INSTALL.md to determine
+If the compile fails, it's likely due to a missing dependency. See [INSTALL.md](INSTALL.md) to determine
 how to install dependent packages for your system.
-

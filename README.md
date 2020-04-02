@@ -13,7 +13,7 @@ For testnet most should only install harvesters, farmers, plotter and full nodes
 All data is now stored in the $CHIA_ROOT environment variable. or ~/.chia/VERSION-DIR/ if unset. You can find databases, keys, plots, logs here. You can set $CHIA_ROOT to the .chia directory in your home directory with `export CHIA_ROOT=~/.chia`.
 
 ## Step 1: Install the code
-To install the chia-blockchain node, follow [these install](INSTALL.md) instructions according to your operating system.
+To install chia-blockchain, follow [these install](INSTALL.md) instructions according to your operating system. This only supports 64 bit operating systems.
 
 Remember that once you complete your install you **must be in the Python virtual environment** which you access from the chia-blockchain directory with the command `. ./activate`. Both dots are critical and once executed correctly your cli prompt will look something like `(venv) username@machine:~$` with the (venv) prepended. Use `deactivate` should you want to exit the venv.
 
@@ -52,8 +52,8 @@ chia-start-wallet-gui &
 *Note*
 If you want to run a timelord on Linux, see LINUX_TIMELORD.md.
 
-Timelords execute sequential verifiable delay functions (proofs of time), that get added to
-blocks to make them valid. This requires fast CPUs and a lot of memory as well as completing
+Timelords execute sequential verifiable delay functions (proofs of time or VDFs), that get added to
+blocks to make them valid. This requires fast CPUs and a few cores per VDF as well as completing
 both install steps above.
 ```bash
 chia-start-timelord &
@@ -63,14 +63,14 @@ chia-start-wallet-gui &
 ## Tips
 When running the servers on Mac OS, allow the application to accept incoming connections.
 
-Ubuntu 19.xx, Amazon Linux 2, and CentOS 7.7 or newer are the easiest linux install environments currently.
+Ubuntu 18.04 LTS, 19.xx, Amazon Linux 2, and CentOS 7.7 or newer are the easiest linux install environments currently.
 
 UPnP is enabled by default, to open port 8444 for incoming connections. If this causes issues,
 you can disable it in the configuration. Some routers may require port forwarding, or enabling
 UPnP in the router configuration.
 
-Due to the nature of proof of space lookups by the harvester in the current alpha you should limit
-the number of plots on a physical drive to 50 or less. This limit should significantly increase before beta.
+Due to the nature of proof of space lookups by the harvester in the current release you should limit
+the number of plots on a physical drive to 50 or less. This limit should significantly increase before soon.
 
 You can also run the simulation, which runs all servers and multiple full nodes, locally, at once.
 

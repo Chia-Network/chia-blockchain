@@ -45,9 +45,9 @@ sh install.sh
 #### Install WSL2 + Ubuntu 18.04 LTS
 
 From an Administrator PowerShell
-`Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux`
+`dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart`
 and then
-`Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform`.
+`dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart`.
 This usually requires a reboot. Once that is complete, install Ubuntu 18.04 LTS from the Microsoft Store and run it. Then follow the steps below.
 ```bash
 # add-apt-repository
