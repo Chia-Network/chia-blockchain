@@ -1,5 +1,28 @@
 set -e
 
+find_python() {
+    set +e
+    unset BEST_VERSION
+    for V in 37 3.7 38 3.8 3
+    do
+        which -s python$V
+        if [ x$? == x0 ]
+        then
+            if [ x$BEST_VERSION == x ]
+            then
+                BEST_VERSION=$V
+            fi
+        fi
+    done
+    echo $BEST_VERSION
+    set -e
+}
+
+if [ x$INSTALL_PYTHON_VERSION == x ]; then
+  INSTALL_PYTHON_VERSION=`find_python`
+fi
+
+
 if [ `uname` = "Linux" ] && type apt-get; then
     # Debian/Ubuntu
     sudo apt-get install -y npm python3-dev
