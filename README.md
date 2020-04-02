@@ -1,21 +1,21 @@
 # chia-blockchain
 Please check out the [wiki](https://github.com/Chia-Network/chia-blockchain/wiki) and [FAQ](https://github.com/Chia-Network/chia-blockchain/wiki/FAQ) for information on this project.
 
-Python 3.7 is required. Make sure your default python version is >=3.7 by typing `python3`.
+Python 3.7+ is required. Make sure your default python version is >=3.7 by typing `python3`.
 
 If you are behind a NAT, it can be difficult for peers outside your subnet to reach you. You can enable
 [UPnP](https://www.homenethowto.com/ports-and-nat/upnp-automatic-port-forward/) on your router or add a
 NAT (for IPv4 but not IPv6) and firewall rules to allow TCP port 8444 access to your peer. These methods
 tend to be router make/model specific.
 
-For alpha testnet most should only install harvesters, farmers, plotter and full nodes. Building timelords and VDFs is for sophisticated users in most environments. Chia Network and additional volunteers are running sufficient time lords for testnet consensus.
+For testnet most should only install harvesters, farmers, plotter and full nodes. Building timelords and VDFs is for sophisticated users in most environments. Chia Network and additional volunteers are running sufficient time lords for testnet consensus.
 
-All data is now stored in $CHIA_ROOT or ~/.chia/VERSION-DIR/ if unset. You can find databases, keys, plots, logs here.
+All data is now stored in the $CHIA_ROOT environment variable. or ~/.chia/VERSION-DIR/ if unset. You can find databases, keys, plots, logs here. You can set $CHIA_ROOT to the .chia directory in your home directory with `export CHIA_ROOT=~/.chia`.
 
 ## Step 1: Install the code
 To install the chia-blockchain node, follow [these install](INSTALL.md) instructions according to your operating system.
 
-Remember that once you complete your install you **must be in the Python virtual environment** which you access from the chia-blockchain directory with the command `. ./activate`. Both dots are critical and once executed correctly your cli prompt will look something like `(venv) username@machine:~$` with the (venv) prepended. Use `deactivate` to exit the venv.
+Remember that once you complete your install you **must be in the Python virtual environment** which you access from the chia-blockchain directory with the command `. ./activate`. Both dots are critical and once executed correctly your cli prompt will look something like `(venv) username@machine:~$` with the (venv) prepended. Use `deactivate` should you want to exit the venv.
 
 ## Step 2: Generate keys
 First, create some keys by running the following script:

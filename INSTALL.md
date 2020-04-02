@@ -7,7 +7,7 @@ After installing, follow the remaining instructions in [README.md](README.md) to
 Make sure [brew](https://brew.sh/) is available before starting the setup.
 ```bash
 brew upgrade python
-brew install cmake gmp boost openssl
+brew install npm gmp
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
