@@ -31,6 +31,12 @@ If you want to see std::out log output, modify the logging.std_out variable in .
 chia-start-node &
 chia-start-wallet-gui &
 ```
+If you're using Windows/WSL 2, you should instead run:
+```bash
+chia-start-node &
+chia-websocket-server &
+```
+And then run `chia.exe` from the unzipped `chia-win32-x64` directory in Windows (not Ubuntu/WSL 2.)
 
 ## Step 3b: Run a farmer + full node + wallet
 Instead of running only a full node (as in 4a), you can also run a farmer.
