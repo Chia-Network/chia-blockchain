@@ -61,12 +61,14 @@ sudo apt-get install python3.7-venv python3.7-dev python3-pip git -y
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
-# You will need to download the Windows native Wallet
-# and start chia-websocket-server in WSL2 instead of chia-wallet-gui
-
 sh install.sh
 . ./activate
 ```
+You will need to download the Windows native Wallet and unzip into somewhere convenient in Windows.
+
+[main.js-win32-x64.zip](https://hosted.chia.net/beta-1.0-win64-wallet/main.js-win32-x64.zip)
+
+Instead of `chia-start-wallet-ui &` as explained in the [README.md](README.md) you run `chia-websocket-server &` in Ubuntu/WSL 2 to allow the Wallet to connect to the Full Node running in Ubuntu/WSL 2. Once you've enabled `chia-websocket-server` you can run `chia.exe` from the unzipped `chia-win32-x64` directory.
 
 ### Amazon Linux 2
 
