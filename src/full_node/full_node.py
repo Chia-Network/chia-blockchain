@@ -1293,7 +1293,7 @@ class FullNode:
             spend_bundle_fees = spend_bundle.fees()
             aggregate_sig = spend_bundle.aggregated_signature
 
-        base_fee_reward = calculate_base_fee(target_tip.height)
+        base_fee_reward = calculate_base_fee(target_tip.height + 1)
         full_fee_reward = uint64(int(base_fee_reward + spend_bundle_fees))
         # Create fees coin
         fee_hash = std_hash(std_hash(uint32(target_tip.height + 1)))
