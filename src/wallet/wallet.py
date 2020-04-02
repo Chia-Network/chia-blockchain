@@ -162,7 +162,9 @@ class Wallet:
                 continue
             sum += coinrecord.coin.amount
             used_coins.add(coinrecord.coin)
-            self.log.info(f"Selected coin: {coinrecord.coin.name()}")
+            self.log.info(
+                f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_index}!"
+            )
 
         # This happens when we couldn't use one of the coins because it's already used
         # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
