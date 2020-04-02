@@ -1,0 +1,81 @@
+@media only screen and (max-width: 1434px) {
+  .market-pairs tbody {
+    height: 760px;
+  }
+  .no-fluid .market-pairs tbody {
+    height: 815px;
+  }
+}
+@media only screen and (max-width: 1300px) {
+  .market-pairs tbody {
+    height: 740px;
+  }
+  .no-fluid .market-pairs tbody {
+    height: 755px;
+  }
+}
+@media only screen and (max-width: 1200px) {
+  .markets-capital-item {
+    height: 289px;
+  }
+}
+@media only screen and (max-width: 918px) {
+  .market-history tbody {
+    height: 274px;
+  }
+}
+@media only screen and (max-width: 792px) {
+  .market-pairs tbody {
+    height: 699px;
+  }
+}
+@media only screen and (max-width: 768px) {
+  header button.navbar-toggler i {
+    font-size: 30px;
+    color: #4a4a4a;
+  }
+  header button.navbar-toggler:focus {
+    outline: none;
+  }
+  .navbar-collapse .dropdown.menu-avatar-icon {
+    margin-top: 10px;
+  }
+  .no-fluid .market-pairs {
+    margin-bottom: 15px;
+  }
+  .no-fluid .order-book {
+    margin-top: 15px;
+  }
+  .circle-pulse {
+    left: 27px;
+    right: inherit;
+  }
+  .dropdown-menu::before {
+    right: inherit;
+    left: 5%;
+  }
+  .wallet .nav {
+    margin-bottom: 30px;
+  }
+  .wallet-address img {
+    margin-top: 40px;
+  }
+  #dark header button.navbar-toggler i {
+    color: #c5cbce;
+  }
+  .market-order-item {
+    padding: 5px 5px;
+    overflow: hidden;
+  }
+  .market-order-item li {
+    font-size: 12px;
+  }
+  .markets-capital-item {
+    height: 304px;
+  }
+}
+@media only screen and (max-width: 576px) {
+  .markets-capital-item {
+    height: 91.4%;
+  }
+}

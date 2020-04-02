@@ -1,6 +1,9 @@
 import asyncio
 import signal
 import logging
+from typing import Optional
+
+from src.consensus.constants import constants
 
 try:
     import uvloop
@@ -13,7 +16,7 @@ from src.timelord import Timelord
 from src.types.peer_info import PeerInfo
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli
-from setproctitle import setproctitle
+from src.util.setproctitle import setproctitle
 
 
 async def main():
@@ -23,20 +26,23 @@ async def main():
     log = logging.getLogger(__name__)
     setproctitle("chia_timelord")
 
-    timelord = Timelord(config)
+    timelord = Timelord(config, constants)
     server = ChiaServer(config["port"], timelord, NodeType.TIMELORD)
-    _ = await server.start_server(config["host"], None)
+    _ = await server.start_server(config["host"], None, config)
+
+    timelord_shutdown_task: Optional[asyncio.Task] = None
 
     coro = asyncio.start_server(
         timelord._handle_client,
         config["vdf_server"]["host"],
         config["vdf_server"]["port"],
-        loop=asyncio.get_running_loop()
+        loop=asyncio.get_running_loop(),
     )
 
     def signal_received():
+        nonlocal timelord_shutdown_task
         server.close_all()
-        asyncio.create_task(timelord._shutdown())
+        timelord_shutdown_task = asyncio.create_task(timelord._shutdown())
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
@@ -47,12 +53,17 @@ async def main():
     )
 
     await asyncio.sleep(1)  # Prevents TCP simultaneous connect with full node
-    await server.start_client(full_node_peer, None)
+    await server.start_client(full_node_peer, None, config)
 
     vdf_server = asyncio.ensure_future(coro)
 
     async for msg in timelord._manage_discriminant_queue():
         server.push_message(msg)
+
+    log.info("Closed discriminant queue.")
+    if timelord_shutdown_task is not None:
+        await timelord_shutdown_task
+    log.info("Shutdown timelord.")
 
     await server.await_closed()
     vdf_server.cancel()

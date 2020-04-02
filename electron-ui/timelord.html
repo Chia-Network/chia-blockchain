@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Chia Wallet</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+
+<body id="dark">
+  <header class="dark-bb">
+    <nav class="navbar navbar-expand-lg">
+      <a class="navbar-brand" href="wallet-dark.html?wallet_id=1"><img src="assets/img/chia_logo.svg" alt="logo"></a>
+      <a class="navlink" href="wallet-dark.html?wallet_id=1"><div class="navlink-container">Wallet</div></a>
+      <a class="navlink" href="full_node/full-node.html"><div class="navlink-container">Full Node</div></a>
+      <a class="navlink" href="farmer.html"><div class="navlink-container">Farmer</div></a>
+      <a class="navlink-selected" href="timelord.html"><div class="navlink-container">Timelord</div></a>
+    </nav>
+  </header>
+  <div class="wallet ptb50">
+    <div style="color: white; font-size:140%; margin: 50px;">Coming soon! </br></br>
+        For more information on running a Timelord please see <a href="#" id="link">README.md</a> and <a href="#" id="timelord">LINUX_TIMELORD.md</a>
+      </div>
+  </div>
+  <script>
+    require('./renderer-timelord.js')
+  </script>
+</body>
+
+</html>

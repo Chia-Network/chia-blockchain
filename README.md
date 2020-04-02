@@ -1,263 +1,91 @@
 # chia-blockchain
 Please check out the [wiki](https://github.com/Chia-Network/chia-blockchain/wiki) and [FAQ](https://github.com/Chia-Network/chia-blockchain/wiki/FAQ) for information on this project.
 
-Python 3.7 is required. Make sure your default python version is >=3.7 by typing `python3`.
+Python 3.7+ is required. Make sure your default python version is >=3.7 by typing `python3`.
 
-You will need to enable [UPnP](https://www.homenethowto.com/ports-and-nat/upnp-automatic-port-forward/) on your router or add a NAT (for IPv4 but not IPv6) and firewall rules to allow TCP port 8444 access to your peer. These methods tend to be router make/model specific.
+If you are behind a NAT, it can be difficult for peers outside your subnet to reach you. You can enable
+[UPnP](https://www.homenethowto.com/ports-and-nat/upnp-automatic-port-forward/) on your router or add a
+NAT (for IPv4 but not IPv6) and firewall rules to allow TCP port 8444 access to your peer. These methods
+tend to be router make/model specific.
 
-For alpha testnet most should only install harvesters, farmers, plotter and full nodes. Building timelords and VDFs is for sophisticated users in most environments. Chia Network and additional volunteers are running sufficient time lords for testnet consensus.
+For testnet most should only install harvesters, farmers, plotter and full nodes. Building timelords and VDFs is for sophisticated users in most environments. Chia Network and additional volunteers are running sufficient time lords for testnet consensus.
 
-## Step 1: Install harvester, farmer, plotter, and full node
+All data is now stored in the $CHIA_ROOT environment variable. or ~/.chia/VERSION-DIR/ if unset. You can find databases, keys, plots, logs here. You can set $CHIA_ROOT to the .chia directory in your home directory with `export CHIA_ROOT=~/.chia`.
 
-### Debian/Ubuntu
+## Step 1: Install the code
+To install chia-blockchain, follow [these install](INSTALL.md) instructions according to your operating system. This only supports 64 bit operating systems.
 
-```bash
-sudo apt-get update
-sudo apt-get install build-essential git cmake libgmp3-dev --no-install-recommends
-sudo apt-get install python3-dev python3-venv --no-install-recommends
+Remember that once you complete your install you **must be in the Python virtual environment** which you access from the chia-blockchain directory with the command `. ./activate`. Both dots are critical and once executed correctly your cli prompt will look something like `(venv) username@machine:~$` with the (venv) prepended. Use `deactivate` should you want to exit the venv.
 
-git clone https://github.com/Chia-Network/chia-blockchain.git
-cd chia-blockchain
-
-sh install.sh
-
-. .venv/bin/activate
-```
-### Amazon Linux 2
-
-```bash
-sudo yum update
-sudo yum install gcc-c++ cmake3 wget git openssl openssl-devel
-sudo yum install python3 python3-devel libffi-devel gmp-devel
-
-# CMake - add a symlink for cmake3 - required by blspy
-sudo ln -s /usr/bin/cmake3 /usr/local/bin/cmake
-
-git clone https://github.com/Chia-Network/chia-blockchain.git
-cd chia-blockchain
-
-sh install.sh
-
-. .venv/bin/activate
-```
-### CentOS 7.7
-
-```bash
-sudo yum update
-sudo yum install centos-release-scl-rh epel-release
-sudo yum install devtoolset-8-toolchain cmake3 libffi-devel
-sudo yum install gmp-devel libsqlite3x-devel
-sudo yum install wget git openssl openssl-devel
-
-# CMake - add a symlink for cmake3 - required by blspy
-sudo ln -s /usr/bin/cmake3 /usr/local/bin/cmake
-
-scl enable devtoolset-8 bash
-
-# Install Python 3.7.5 (current rpm's are 3.6.x)
-wget https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tgz
-tar -zxvf Python-3.7.5.tgz; cd Python-3.7.5
-./configure --enable-optimizations; sudo make install; cd ..
-
-git clone https://github.com/Chia-Network/chia-blockchain.git
-cd chia-blockchain
-
-sh install.sh
-
-. .venv/bin/activate
-```
-### RHEL 8.1
-
-```bash
-sudo yum update
-sudo yum install gcc-c++ cmake3 git openssl openssl-devel
-sudo yum install wget make libffi-devel gmp-devel sqlite-devel
-
-# Install Python 3.7.5 (current rpm's are 3.6.x)
-wget https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tgz
-tar -zxvf Python-3.7.5.tgz; cd Python-3.7.5
-./configure --enable-optimizations; sudo make install; cd ..
-
-git clone https://github.com/Chia-Network/chia-blockchain.git
-cd chia-blockchain
-
-sh install.sh
-
-. .venv/bin/activate
-```
-### Windows (WSL + Ubuntu)
-#### Install WSL + Ubuntu 18.04 LTS, upgrade to Ubuntu 19.x
-
-This will require multiple reboots. From an Administrator PowerShell
-`Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux`
-and then
-`Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform`.
-Once that is complete, install Ubuntu 18.04 LTS from the Windows Store.
-```bash
-# Upgrade to 19.x
-sudo nano /etc/update-manager/release-upgrades
-# Change "Prompt=lts" to "Prompt=normal" save and exit
-
-sudo apt-get -y update
-sudo apt-get -y upgrade
-sudo do-release-upgrade
-
-sudo apt-get install -y build-essential cmake python3-dev python3-venv software-properties-common libgmp3-dev --no-install-recommends
-
-git clone https://github.com/Chia-Network/chia-blockchain.git
-cd chia-blockchain
-
-sudo sh install.sh
-
-. .venv/bin/activate
-```
-
-#### Alternate method for Ubuntu 18.04 LTS
-In `./install.sh`:
-Change `python3` to `python3.7`
-Each line that starts with `pip ...` becomes `python3.7 -m pip ...`
-
-```bash
-sudo apt-get -y update
-sudo apt-get install -y build-essential cmake python3-dev python3-venv software-properties-common libgmp3-dev --no-install-recommends
-
-# Install python3.7 with ppa
-sudo add-apt-repository -y ppa:deadsnakes/ppa
-sudo apt-get -y update
-sudo apt-get install -y python3.7 python3.7-venv python3.7-dev
-
-git clone https://github.com/Chia-Network/chia-blockchain.git
-cd chia-blockchain
-
-sudo sh install.sh
-. .venv/bin/activate
-```
-
-### MacOS
-Make sure [brew](https://brew.sh/) is available before starting the setup.
-```bash
-brew upgrade python
-brew install cmake gmp
-
-git clone https://github.com/Chia-Network/chia-blockchain.git
-cd chia-blockchain
-
-sh install.sh
-. .venv/bin/activate
-```
-
-
-## Step 2: Install timelord (optional)
-Note: this step is needed only if you intend to run a timelord or a local simulation.
-These assume you've already successfully installed harvester, farmer, plotting, and full node above. boost 1.66 or newer is required on all platforms.
-### Ubuntu/Debian
-```bash
-cd chia-blockchain
-
-sh install_timelord.sh
-```
-### Amazon Linux 2 and CentOS 7.7
-```bash
-#Only for Amazon Linux 2
-sudo amazon-linux-extras install epel
-
-sudo yum install mpfr-devel
-
-# Install Boost 1.72.0
-wget https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.gz
-tar -zxvf boost_1_72_0.tar.gz
-cd boost_1_72_0
-./bootstrap.sh --prefix=/usr/local
-sudo ./b2 install --prefix=/usr/local --with=all; cd ..
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
-
-cd chia-blockchain
-
-sh install_timelord.sh
-```
-### RHEL 8.1
-```bash
-sudo yum install mpfr-devel boost boost-devel
-
-cd chia-blockchain
-
-sh install_timelord.sh
-```
-### Windows (WSL + Ubuntu)
-#### Install WSL + Ubuntu upgraded to 19.x
-```bash
-cd chia-blockchain
-
-sh install_timelord.sh
-```
-#### Alternate method for Ubuntu 18.04
-```bash
-# Install boost 1.70 with ppa
-sudo add-apt-repository -y ppa:mhier/libboost-latest
-sudo apt-get update
-sudo apt-get install libboost1.70 libboost1.70-dev
-```
-
-### MacOS
-```bash
-brew install boost
-
-cd chia-blockchain
-
-sh install_timelord.sh
-```
-
-## Step 3: Generate keys
+## Step 2: Generate keys
 First, create some keys by running the following script:
 ```bash
-python -m scripts.regenerate_keys
+chia-generate-keys
 ```
 
-
-## Step 4a: Run a full node
+## Step 3a: Run a full node + wallet
 To run a full node on port 8444, and connect to the testnet, run the following command.
-This will also start an ssh server in port 8222 for the UI, which you can connect to
-to see the state of the node. If you want to see std::out log output, modify the logging.std_out
-variable in ./config/config.yaml.
+If you want to see std::out log output, modify the logging.std_out variable in ./config/config.yaml.
 
 ```bash
-./scripts/run_full_node.sh
-ssh -p 8222 localhost
+chia-start-node &
+chia-start-wallet-gui &
 ```
+If you're using Windows/WSL 2, you should instead run:
+```bash
+chia-start-node &
+chia-start-wallet-server &
+```
+And then run `chia.exe` from the unzipped `chia-win32-x64` directory in Windows (not Ubuntu/WSL 2.)
 
-## Step 4b: Run a farmer + full node
+## Step 3b: Run a farmer + full node + wallet
 Instead of running only a full node (as in 4a), you can also run a farmer.
 Farmers are entities in the network who use their hard drive space to try to create
 blocks (like Bitcoin's miners), and earn block rewards. First, you must generate some hard drive plots, which
 can take a long time depending on the [size of the plots](https://github.com/Chia-Network/chia-blockchain/wiki/k-sizes)
-(the k variable). Then, run the farmer + full node with the following script. A full node is also started,
-which you can ssh into to view the node UI (previous ssh command). You can also change the working directory and
+(the k variable). Then, run the farmer + full node with the following script. A full node is also started.
+You can also change the working directory and
 final directory for plotting, with the "-t" and "-d" arguments to the create_plots script.
 ```bash
-python -m scripts.create_plots -k 20 -n 10
-sh ./scripts/run_farming.sh
+chia-create-plots -k 20 -n 10
+chia-start-farmer &
+chia-start-wallet-gui &
 ```
+If you're using Windows/WSL 2, you should instead run:
+```bash
+chia-create-plots -k 20 -n 10
+chia-start-farmer &
+chia-start-wallet-server &
+```
+And then run `chia.exe` from the unzipped `chia-win32-x64` directory in Windows (not Ubuntu/WSL 2.)
 
 
-## Step 4c: Run a timelord + full node
-Timelords execute sequential verifiable delay functions (proofs of time), that get added to
-blocks to make them valid. This requires fast CPUs and a lot of memory as well as completing
+## Step 3c: Run a timelord + full node + wallet
+
+*Note*
+If you want to run a timelord on Linux, see LINUX_TIMELORD.md.
+
+Timelords execute sequential verifiable delay functions (proofs of time or VDFs), that get added to
+blocks to make them valid. This requires fast CPUs and a few cores per VDF as well as completing
 both install steps above.
 ```bash
-sh ./scripts/run_timelord.sh
+chia-start-timelord &
+chia-start-wallet-gui &
 ```
 
 ## Tips
 When running the servers on Mac OS, allow the application to accept incoming connections.
 
-Ubuntu 19.xx, Amazon Linux 2, and CentOS 7.7 or newer are the easiest linux install environments currently.
+Ubuntu 18.04 LTS, 19.xx, Amazon Linux 2, and CentOS 7.7 or newer are the easiest linux install environments currently.
+
+Windows users (and others) can [download Virtualbox](https://www.virtualbox.org/wiki/Downloads) and install [Ubuntu Desktop 19.10](https://ubuntu.com/download/desktop) in a virtual machine. This will allow you to run all of the chia tools and use the Wallet GUI. There are lots of good howtos on the web including [this one on installing Ubuntu 19.10 Desktop](https://techsviewer.com/how-to-install-ubuntu-19-10-on-virtualbox/).
 
 UPnP is enabled by default, to open port 8444 for incoming connections. If this causes issues,
 you can disable it in the configuration. Some routers may require port forwarding, or enabling
 UPnP in the router configuration.
 
-Due to the nature of proof of space lookups by the harvester in the current alpha you should limit
-the number of plots on a physical drive to 50 or less. This limit should significantly increase before beta.
+Due to the nature of proof of space lookups by the harvester in the current release you should limit
+the number of plots on a physical drive to 50 or less. This limit should significantly increase before soon.
 
 You can also run the simulation, which runs all servers and multiple full nodes, locally, at once.
 
@@ -267,8 +95,10 @@ The introducer will only know the local ips of the full nodes, so it cannot broa
 ips to external peers.
 
 ```bash
-sh ./scripts/run_all_simulation.sh
+chia-start-sim
 ```
+
+## uvloop
 
 For increased networking performance, install uvloop:
 ```bash

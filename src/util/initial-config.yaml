@@ -1,0 +1,171 @@
+network_id: testnet  # testnet/mainnet
+# Send a ping to all peers after ping_interval seconds
+ping_interval: 120
+
+# Controls logging of all servers (harvester, farmer, etc..). Each one can be overriden.
+logging: &logging
+  log_stdout: False  # If True, outputs to stdout instead of a file
+  log_filename: "log/debug.log"
+
+harvester:
+  # The harvester server (if run) will run on this host and port
+  host: 127.0.0.1
+  port: 8448
+  farmer_peer:
+    host: 127.0.0.1
+    port: 8447
+  # Location of all the plots, default ./plots, for relative paths in plots.yaml.
+  # plot_root: "/mnt/pos"
+  logging: *logging
+  # new_plot_root is the default location where new plots are created by "chia-create-plots"
+  new_plot_root: plots
+
+farmer:
+  # The farmer server (if run) will run on this host and port
+  host: 127.0.0.1
+  port: 8447
+  # The farmer will attempt to connect to this full node and harvester
+  full_node_peer:
+    host: 127.0.0.1
+    port: 8444
+  harvester_peer:
+    host: 127.0.0.1
+    port: 8448
+  # To send a share to a pool, a block must be faster than this, in seconds
+  pool_share_threshold: 12000
+  # To send to the full node, a block must be faster than this, in seconds
+
+  propagate_threshold: 10000
+  logging: *logging
+
+# Don't run this unless you want to run VDF clients on the local machine.
+timelord_launcher:
+  # The server where the VDF clients will connect to.
+  host: 127.0.0.1
+  port: 8000
+  # Number of VDF client processes to keep alive in the local machine.
+  process_count: 2
+  logging: *logging
+
+
+timelord:
+  # The timelord server (if run) will run on this host and port
+  host: 127.0.0.1
+  port: 8446
+  # How much recursion to use for the wesolowski VDF proof. This increases the size
+  # of the proofs.
+  n_wesolowski: 2
+  # Provides a list of VDF clients expected to connect to this timelord.
+  # For each client, an IP is provided, together with the estimated iterations per second.
+  vdf_clients:
+    ip:
+      - 127.0.0.1
+    ips_estimate:
+      - 100000
+  full_node_peer:
+      host: 127.0.0.1
+      port: 8444
+  # Maximum number of seconds allowed for a client to reconnect to the server.
+  max_connection_time: 60
+  # The ip and port where the TCP clients will connect.
+  vdf_server:
+    host: 127.0.0.1
+    port: 8000
+  logging: *logging
+
+full_node:
+  # The full node server (if run) will run on this host and port
+  host: 127.0.0.1
+  port: 8444
+
+  # Run multiple nodes with different databases by changing the database_path
+  database_path: db/blockchain_v3.db
+  simulator_database_path: sim_db/simulator_blockchain_v3.db
+
+  # If True, starts an RPC server at the following port
+  start_rpc_server: True
+  rpc_port: 8555
+
+  # Use UPnP to attempt to allow other full nodes to reach your node behind a gateway
+  enable_upnp: True
+  # Don't send any more than these number of headers and blocks, in one message
+  max_headers_to_send: 1
+  max_blocks_to_send: 1
+  num_sync_batches: 10
+
+  # If node is more than these blocks behind, will do a sync
+  sync_blocks_behind_threshold: 20
+
+  # How often to connect to introducer if we need to learn more peers
+  introducer_connect_interval: 500
+  # Continue trying to connect to more peers until this number of connections
+  target_peer_count: 10
+  # Only connect to peers who we have heard about in the last recent_peer_threshold seconds
+  recent_peer_threshold: 6000
+
+  connect_to_farmer: False
+  connect_to_timelord: False
+
+  farmer_peer:
+      host: 127.0.0.1
+      port: 8447
+  timelord_peer:
+      host: 127.0.0.1
+      port: 8446
+  introducer_peer:
+      host: introducer.beta.chia.net  # Chia AWS introducer IPv4/IPv6
+      port: 8444
+  wallet_peer:
+    host: 127.0.0.1
+    port: 8449
+  logging: *logging
+
+ui:
+   # The ui node server (if run) will run on this host and port
+  host: 127.0.0.1
+  port: 8222
+
+  # Which port to use to communicate with the full node
+  rpc_port: 8555
+
+  # This SSH key is for the ui SSH server
+  ssh_filename: config/ssh_host_key
+  logging: *logging
+
+introducer:
+  host: 127.0.0.1
+  port: 8445
+  max_peers_to_send: 20
+  # The introducer will only return peers who it has seen in the last
+  # recent_peer_threshold seconds
+  recent_peer_threshold: 6000
+  logging: *logging
+
+wallet:
+  host: 127.0.0.1
+  port: 8449
+  rpc_port: 9256
+
+  # The minimum height that we care about for our transactions. Set to zero
+  # If we are restoring from private key and don't know the height.
+  starting_height: 0
+  num_sync_batches: 50
+
+  full_node_peer:
+    host: 127.0.0.1
+    port: 8444
+
+  testing: False
+  database_path: wallet/db/blockchain_wallet_v4.db
+
+  logging: *logging
+
+  target_peer_count: 5
+  introducer_connect_interval: 60
+  # The introducer will only return peers who it has seen in the last
+  # recent_peer_threshold seconds
+  recent_peer_threshold: 6000
+
+  introducer_peer:
+    host: introducer.beta.chia.net  # Chia AWS introducer IPv4/IPv6
+    port: 8444

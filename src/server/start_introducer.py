@@ -12,7 +12,7 @@ from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli
-from setproctitle import setproctitle
+from src.util.setproctitle import setproctitle
 
 
 async def main():
@@ -25,7 +25,7 @@ async def main():
     introducer = Introducer(config)
     server = ChiaServer(config["port"], introducer, NodeType.INTRODUCER)
     introducer.set_server(server)
-    _ = await server.start_server(config["host"], None)
+    _ = await server.start_server(config["host"], None, config)
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)

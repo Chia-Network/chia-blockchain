@@ -1,32 +1,10 @@
-from decimal import Decimal
-from hashlib import sha256
-from math import log
-
-from src.consensus.pot_iterations import (
-    _expected_plot_size,
-    _quality_to_decimal,
-    calculate_iterations_quality,
-)
+from src.consensus.pot_iterations import calculate_iterations_quality
+from src.consensus.pos_quality import _expected_plot_size
 from src.util.ints import uint8, uint64
+from src.util.hash import std_hash
 
 
 class TestPotIterations:
-    def test_pade_approximation(self):
-        def test_approximation(input_dec, threshold):
-            bytes_input = int(Decimal(input_dec) * pow(2, 256)).to_bytes(32, "big")
-            print(_quality_to_decimal(bytes_input))
-            assert (
-                abs(1 - Decimal(-log(input_dec)) / _quality_to_decimal(bytes_input))
-                < threshold
-            )
-
-        # The approximations become better the closer to 1 the input gets
-        test_approximation(0.7, 0.01)
-        test_approximation(0.9, 0.001)
-        test_approximation(0.99, 0.00001)
-        test_approximation(0.9999, 0.0000001)
-        test_approximation(0.99999999, 0.0000000001)
-
     def test_win_percentage(self):
         """
         Tests that the percentage of blocks won is proportional to the space of each farmer,
@@ -54,16 +32,12 @@ class TestPotIterations:
 
         for b_index in range(total_blocks):
             qualities = [
-                sha256(b_index.to_bytes(32, "big") + bytes(farmer_index)).digest()
+                std_hash(b_index.to_bytes(32, "big") + bytes(farmer_index))
                 for farmer_index in range(len(farmer_ks))
             ]
             iters = [
                 calculate_iterations_quality(
-                    qualities[i],
-                    farmer_ks[i],
-                    uint64(50000000),
-                    uint64(5000),
-                    uint64(10),
+                    qualities[i], farmer_ks[i], uint64(50000000), uint64(5000 * 30),
                 )
                 for i in range(len(qualities))
             ]

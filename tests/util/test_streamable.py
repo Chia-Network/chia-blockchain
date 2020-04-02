@@ -3,10 +3,13 @@ from dataclasses import dataclass
 from typing import List, Optional, Dict, Any
 
 from src.util.ints import uint32
+from src.types.coin import Coin
 from src.types.sized_bytes import bytes32
 from src.types.full_block import FullBlock
 from src.util.streamable import Streamable, streamable
 from tests.block_tools import BlockTools
+from src.protocols.wallet_protocol import RespondRemovals
+from src.util import cbor
 
 
 class TestStreamable(unittest.TestCase):
@@ -35,11 +38,7 @@ class TestStreamable(unittest.TestCase):
             c: bytes
 
         a = TestClass2(uint32(1), uint32(2), b"3")
-        try:
-            bytes(a)
-            assert False
-        except NotImplementedError:
-            pass
+        bytes(a)
 
         @dataclass(frozen=True)
         @streamable
@@ -61,15 +60,13 @@ class TestStreamable(unittest.TestCase):
             "DISCRIMINANT_SIZE_BITS": 16,
             "BLOCK_TIME_TARGET": 10,
             "MIN_BLOCK_TIME": 2,
-            "DIFFICULTY_FACTOR": 3,
             "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
-            "DIFFICULTY_WARP_FACTOR": 4,  # DELAY divides EPOCH in order to warp efficiently.
             "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
         }
         block = bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
 
-        str_block = block.to_json()
-        assert FullBlock.from_json(str_block) == block
+        dict_block = block.to_json_dict()
+        assert FullBlock.from_json_dict(dict_block) == block
 
     def test_recursive_json(self):
         @dataclass(frozen=True)
@@ -91,7 +88,14 @@ class TestStreamable(unittest.TestCase):
         tc2 = TestClass2(
             uint32(5), [[tc1_a], [tc1_b, tc1_c], None], bytes32(bytes([1] * 32))
         )
-        assert TestClass2.from_json(tc2.to_json()) == tc2
+        assert TestClass2.from_json_dict(tc2.to_json_dict()) == tc2
+
+    def test_recursive_types(self):
+        coin: Optional[Coin] = None
+        l1 = [(bytes32([2] * 32), coin)]
+        rr = RespondRemovals(uint32(1), bytes32([1] * 32), l1, None)
+        c = cbor.loads(cbor.dumps(rr))
+        RespondRemovals(c["height"], c["header_hash"], c["coins"], c["proofs"])
 
 
 if __name__ == "__main__":

@@ -52,6 +52,8 @@ pip-delete-this-directory.txt
 .python-version
 .eggs
 .venv
+venv
+activate
 
 # mypy
 .mypy_cache/
@@ -61,3 +63,9 @@ pip-delete-this-directory.txt
 
 # Packaging
 chia-blockchain.tar.gz
+
+# Electron wallet node modules
+src/wallet/electron/node_modules/
+
+# Node modules
+**/node_modules

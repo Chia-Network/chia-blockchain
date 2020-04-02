@@ -1,0 +1,27 @@
+{
+  "name": "chiawallet",
+  "version": "1.0.0",
+  "description": "A minimal Electron and Python Wallet ",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "repository": "https://github.com/chia-networks/",
+  "keywords": [
+    "Chia"
+  ],
+  "author": "Straya Markovic",
+  "license": "MIT",
+  "dependencies": {
+    "dialogs": "2.0.1",
+    "electron-rebuild": "1.10.0",
+    "jquery": "3.4.1",
+    "qrcode": "1.4.4",
+    "ws": "6.2.1",
+    "big.js": "5.2.2"
+  },
+  "devDependencies": {
+    "electron": "^8.2.0",
+    "electron-packager": "^14.2.1"
+  }
+}

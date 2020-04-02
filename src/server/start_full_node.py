@@ -2,51 +2,30 @@ import asyncio
 import logging
 import logging.config
 import signal
-from typing import List, Dict
 
-import miniupnpc
+import aiosqlite
 
 try:
     import uvloop
 except ImportError:
     uvloop = None
 
-from src.blockchain import Blockchain
+from src.full_node.blockchain import Blockchain
 from src.consensus.constants import constants
-from src.store import FullNodeStore
-from src.full_node import FullNode
+from src.full_node.store import FullNodeStore
+from src.full_node.full_node import FullNode
 from src.rpc.rpc_server import start_rpc_server
-from src.server.outbound_message import NodeType
+from src.full_node.mempool_manager import MempoolManager
 from src.server.server import ChiaServer
+from src.server.connection import NodeType
 from src.types.full_block import FullBlock
-from src.types.header_block import SmallHeaderBlock
 from src.types.peer_info import PeerInfo
+from src.full_node.coin_store import CoinStore
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli
-from setproctitle import setproctitle
-
-
-async def load_header_blocks_from_store(
-    store: FullNodeStore,
-) -> Dict[str, SmallHeaderBlock]:
-    seen_blocks: Dict[str, SmallHeaderBlock] = {}
-    tips: List[SmallHeaderBlock] = []
-    for small_header_block in await store.get_small_header_blocks():
-        if not tips or small_header_block.weight > tips[0].weight:
-            tips = [small_header_block]
-        seen_blocks[small_header_block.header_hash] = small_header_block
-
-    header_blocks = {}
-    if len(tips) > 0:
-        curr: SmallHeaderBlock = tips[0]
-        reverse_blocks: List[SmallHeaderBlock] = [curr]
-        while curr.height > 0:
-            curr = seen_blocks[curr.prev_header_hash]
-            reverse_blocks.append(curr)
-
-        for block in reversed(reverse_blocks):
-            header_blocks[block.header_hash] = block
-    return header_blocks
+from src.util.path import mkdir, path_from_root
+from src.util.pip_import import pip_import
+from src.util.setproctitle import setproctitle
 
 
 async def main():
@@ -57,23 +36,30 @@ async def main():
     log = logging.getLogger(__name__)
     server_closed = False
 
+    db_path = path_from_root(config["database_path"])
+    mkdir(db_path.parent)
+
     # Create the store (DB) and full node instance
-    store = await FullNodeStore.create(f"blockchain_{config['database_id']}.db")
+    connection = await aiosqlite.connect(db_path)
+    store = await FullNodeStore.create(connection)
 
     genesis: FullBlock = FullBlock.from_bytes(constants["GENESIS_BLOCK"])
     await store.add_block(genesis)
+    unspent_store = await CoinStore.create(connection)
 
     log.info("Initializing blockchain from disk")
-    small_header_blocks: Dict[
-        str, SmallHeaderBlock
-    ] = await load_header_blocks_from_store(store)
-    blockchain = await Blockchain.create(small_header_blocks)
+    blockchain = await Blockchain.create(unspent_store, store)
+    log.info("Blockchain initialized")
 
-    full_node = FullNode(store, blockchain, config)
+    mempool_manager = MempoolManager(unspent_store)
+    await mempool_manager.new_tips(await blockchain.get_full_tips())
+
+    full_node = FullNode(store, blockchain, config, mempool_manager, unspent_store)
 
     if config["enable_upnp"]:
         log.info(f"Attempting to enable UPnP (open up port {config['port']})")
         try:
+            miniupnpc = pip_import("miniupnpc", "miniupnpc==2.0.2")
             upnp = miniupnpc.UPnP()
             upnp.discoverdelay = 5
             upnp.discover()
@@ -82,13 +68,13 @@ async def main():
                 config["port"], "TCP", upnp.lanaddr, config["port"], "chia", ""
             )
             log.info(f"Port {config['port']} opened with UPnP.")
-        except Exception as e:
-            log.warning(f"UPnP failed: {e}")
+        except Exception:
+            log.exception(f"UPnP failed")
 
     # Starts the full node server (which full nodes can connect to)
     server = ChiaServer(config["port"], full_node, NodeType.FULL_NODE)
     full_node._set_server(server)
-    _ = await server.start_server(config["host"], full_node._on_connect)
+    _ = await server.start_server(config["host"], full_node._on_connect, config)
     rpc_cleanup = None
 
     def master_close_cb():
@@ -101,7 +87,7 @@ async def main():
             server_closed = True
 
     if config["start_rpc_server"]:
-        # Starts the RPC server if -r is provided
+        # Starts the RPC server
         rpc_cleanup = await start_rpc_server(
             full_node, master_close_cb, config["rpc_port"]
         )
@@ -120,14 +106,21 @@ async def main():
             full_node.config["farmer_peer"]["host"],
             full_node.config["farmer_peer"]["port"],
         )
-        _ = await server.start_client(peer_info, None)
+        _ = await server.start_client(peer_info, None, config)
 
     if config["connect_to_timelord"] and not server_closed:
         peer_info = PeerInfo(
             full_node.config["timelord_peer"]["host"],
             full_node.config["timelord_peer"]["port"],
         )
-        _ = await server.start_client(peer_info, None)
+        _ = await server.start_client(peer_info, None, config)
+
+    if not server_closed:
+        peer_info = PeerInfo(
+            full_node.config["wallet_peer"]["host"],
+            full_node.config["wallet_peer"]["port"],
+        )
+        _ = await server.start_client(peer_info, None, config)
 
     # Awaits for server and all connections to close
     await server.await_closed()
@@ -138,8 +131,8 @@ async def main():
         await rpc_cleanup()
     log.info("Closed RPC server.")
 
-    await store.close()
-    log.info("Closed store.")
+    await connection.close()
+    log.info("Closed db connection.")
 
     await asyncio.get_running_loop().shutdown_asyncgens()
     log.info("Node fully closed.")

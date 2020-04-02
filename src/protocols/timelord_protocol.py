@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
-from src.util.ints import uint64
+from src.util.ints import uint64, uint128
 
 
 """
@@ -27,7 +27,7 @@ class ProofOfTimeFinished:
 @cbor_message
 class ChallengeStart:
     challenge_hash: bytes32
-    weight: uint64
+    weight: uint128
 
 
 @dataclass(frozen=True)
