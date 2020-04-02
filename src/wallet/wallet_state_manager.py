@@ -576,12 +576,16 @@ class WalletStateManager:
                         and path_block.removals is not None
                     )
                     for coin in path_block.additions:
-                        is_coinbase = (
-                            True
-                            if bytes32((path_block.height).to_bytes(32, "big"))
+                        is_coinbase = False
+
+                        if (
+                            bytes32((path_block.height).to_bytes(32, "big"))
                             == coin.parent_coin_info
-                            else False
-                        )
+                            or std_hash(std_hash(path_block.height))
+                            == coin.parent_coin_info
+                        ):
+                            is_coinbase = True
+
                         await self.coin_added(coin, path_block.height, is_coinbase)
                     for coin_name in path_block.removals:
                         await self.coin_removed(coin_name, path_block.height)
