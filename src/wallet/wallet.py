@@ -168,6 +168,9 @@ class Wallet:
         # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
         unconfirmed_additions = None
         if sum < amount:
+            raise ValueError(
+                "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
+            )
             unconfirmed_additions = await self.wallet_state_manager.unconfirmed_additions_for_wallet(
                 self.wallet_info.id
             )
