@@ -222,6 +222,9 @@ class FullNode:
                 yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
 
             while not self._shut_down:
+                for connection in self.server.global_connections.get_connections():
+                    if connection.connection_type == NodeType.INTRODUCER:
+                        await self.server.global_connections.close(connection)
                 # The first time connecting to introducer, keep trying to connect
                 if self._num_needed_peers():
                     if not await self.server.start_client(
