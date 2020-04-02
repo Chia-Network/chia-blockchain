@@ -5,10 +5,10 @@ find_python() {
     unset BEST_VERSION
     for V in 37 3.7 38 3.8 3
     do
-        which -s python$V
-        if [ x$? == x0 ]
+        which python$V > /dev/null
+        if [ $? = 0 ]
         then
-            if [ x$BEST_VERSION == x ]
+            if [ x$BEST_VERSION = x ]
             then
                 BEST_VERSION=$V
             fi
@@ -18,7 +18,8 @@ find_python() {
     set -e
 }
 
-if [ x$INSTALL_PYTHON_VERSION == x ]; then
+if [ x$INSTALL_PYTHON_VERSION = x ]
+then
   INSTALL_PYTHON_VERSION=`find_python`
 fi
 
