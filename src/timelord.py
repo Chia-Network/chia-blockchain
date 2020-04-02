@@ -261,7 +261,14 @@ class Timelord:
                         self.done_discriminants.append(challenge_hash)
                 break
 
-            if data.decode() == "STOP":
+            msg = ""
+            try:
+                msg = data.decode()
+            except Exception as e:
+                log.error(f"Exception while decoding data {e}")
+                pass
+
+            if msg == "STOP":
                 log.info(f"Stopped client running on ip {ip}.")
                 async with self.lock:
                     writer.write(b"ACK")
