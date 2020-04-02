@@ -1089,6 +1089,7 @@ class Blockchain:
                 curr.height,
             )
             coinbases_since_fork[curr.header.data.coinbase.name()] = curr.height
+            coinbases_since_fork[curr.header.data.fees_coin.name()] = curr.height
             curr = await self.store.get_block(curr.prev_header_hash)
             assert curr is not None
 
