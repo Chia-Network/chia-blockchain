@@ -391,7 +391,7 @@ class TestWalletSync:
         # Fee and coinbase
         assert len(records) == 2
         assert records[0].spent != records[1].spent
-        assert records[0].coinbase != records[1].coinbase
+        assert records[0].coinbase == records[1].coinbase
         records = await wallet_node.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
             another_puzzlehash
         )
