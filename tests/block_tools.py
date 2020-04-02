@@ -445,8 +445,8 @@ class BlockTools:
             height, reward_puzzlehash, coinbase_reward, pool_sk
         )
 
-        fee_hash = blspy.Util.hash256(coinbase_coin.name())
-        fees_coin = Coin(fee_hash, reward_puzzlehash, uint64(fee_reward))
+        parent_coin_name = std_hash(std_hash(height))
+        fees_coin = Coin(parent_coin_name, reward_puzzlehash, uint64(fee_reward))
 
         # Create filter
         byte_array_tx: List[bytes32] = []

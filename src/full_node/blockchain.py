@@ -633,7 +633,18 @@ class Blockchain:
         if coinbase_reward != block.header.data.coinbase.amount:
             return (Err.INVALID_COINBASE_AMOUNT, None)
 
+        # 13b. The coinbase parent id must be the height
+        if block.header.data.coinbase.parent_coin_info != block.height.to_bytes(
+            32, "big"
+        ):
+            return (Err.INVALID_COINBASE_PARENT, None)
+
+        # 13c. The fees coin parent id must be hash(hash(height))
         fee_base = calculate_base_fee(block.height)
+        if block.header.data.fees_coin.parent_coin_info != std_hash(
+            std_hash(uint32(block.height))
+        ):
+            return (Err.INVALID_FEES_COIN_PARENT, None)
 
         # target reward_fee = 1/8 coinbase reward + tx fees
         if block.transactions_generator is not None:
