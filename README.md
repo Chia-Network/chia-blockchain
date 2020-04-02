@@ -51,6 +51,13 @@ chia-create-plots -k 20 -n 10
 chia-start-farmer &
 chia-start-wallet-gui &
 ```
+If you're using Windows/WSL 2, you should instead run:
+```bash
+chia-create-plots -k 20 -n 10
+chia-start-farmer &
+chia-websocket-server &
+```
+And then run `chia.exe` from the unzipped `chia-win32-x64` directory in Windows (not Ubuntu/WSL 2.)
 
 
 ## Step 3c: Run a timelord + full node + wallet
@@ -70,6 +77,8 @@ chia-start-wallet-gui &
 When running the servers on Mac OS, allow the application to accept incoming connections.
 
 Ubuntu 18.04 LTS, 19.xx, Amazon Linux 2, and CentOS 7.7 or newer are the easiest linux install environments currently.
+
+Windows users (and others) can [download VirtualBox](https://www.virtualbox.org/wiki/Downloads) and install [Ubuntu Desktop 19.10](https://ubuntu.com/download/desktop) in a virtual machine. This will allow you to run all of the chia tools and use the Wallet GUI. There are lots of good howtos on the web including [this one on installing Ubuntu 19.10 Desktop](https://techsviewer.com/how-to-install-ubuntu-19-10-on-virtualbox/).
 
 UPnP is enabled by default, to open port 8444 for incoming connections. If this causes issues,
 you can disable it in the configuration. Some routers may require port forwarding, or enabling
