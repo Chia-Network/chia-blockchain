@@ -67,6 +67,9 @@ class Err(Enum):
     INVALID_POT_CHALLENGE = 43
     INVALID_TRANSACTIONS_GENERATOR_HASH = 44
 
+    INVALID_COINBASE_PARENT = 45
+    INVALID_FEES_COIN_PARENT = 46
+
 
 class ConsensusError(Exception):
     def __init__(self, code: Err, errors: List[Any] = []):

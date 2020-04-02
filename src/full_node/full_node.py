@@ -222,9 +222,7 @@ class FullNode:
                 yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
 
             while not self._shut_down:
-                for (
-                    connection
-                ) in self.server.global_connections.get_connections():
+                for connection in self.server.global_connections.get_connections():
                     if connection.connection_type == NodeType.INTRODUCER:
                         await self.server.global_connections.close(connection)
                 # The first time connecting to introducer, keep trying to connect
@@ -1298,7 +1296,7 @@ class FullNode:
         base_fee_reward = calculate_base_fee(target_tip.height)
         full_fee_reward = uint64(int(base_fee_reward + spend_bundle_fees))
         # Create fees coin
-        fee_hash = std_hash(std_hash(target_tip.height))
+        fee_hash = std_hash(std_hash(uint32(target_tip.height + 1)))
         fees_coin = Coin(fee_hash, request.fees_target_puzzle_hash, full_fee_reward)
 
         # Calculate the cost of transactions
