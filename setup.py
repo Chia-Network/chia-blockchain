@@ -71,6 +71,7 @@ kwargs = dict(
         "scripts/chia-start-sim",
         "scripts/chia-start-timelord",
         "scripts/chia-start-wallet-gui",
+        "scripts/chia-start-wallet-server",
         "scripts/chia-stop-all",
     ],
     entry_points={
