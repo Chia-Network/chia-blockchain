@@ -19,6 +19,12 @@ def is_type_SpecificOptional(f_type) -> bool:
     )
 
 
+def is_type_Tuple(f_type: Type) -> bool:
+    return (
+        hasattr(f_type, "__origin__") and f_type.__origin__ == tuple
+    ) or f_type == tuple
+
+
 def strictdataclass(cls: Any):
     class _Local:
         """
@@ -44,6 +50,19 @@ def strictdataclass(cls: Any):
                 else:
                     inner_type: Type = f_type.__args__[0]  # type: ignore
                     return self.parse_item(item, f_name, inner_type)
+            if is_type_Tuple(f_type):
+                collected_list = []
+                if not is_type_Tuple(type(item)) and not is_type_List(type(item)):
+                    raise ValueError(f"Wrong type for {f_name}, need a tuple.")
+                if len(item) != len(f_type.__args__):
+                    raise ValueError(f"Wrong number of elements in tuple {f_name}.")
+                for i in range(len(item)):
+                    inner_type = f_type.__args__[i]
+                    tuple_item = item[i]
+                    collected_list.append(
+                        self.parse_item(tuple_item, f_name, inner_type)
+                    )
+                return tuple(collected_list)
             if not isinstance(item, f_type):
                 try:
                     item = f_type(item)

@@ -4,9 +4,10 @@ import asyncio
 from typing import Dict, Optional, List
 from src.util.byte_types import hexstr_to_bytes
 from src.types.full_block import FullBlock
-from src.types.header_block import SmallHeaderBlock
+from src.types.header import Header
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint16
+from src.types.coin_record import CoinRecord
 
 
 class RpcClient:
@@ -37,8 +38,8 @@ class RpcClient:
 
     async def get_blockchain_state(self) -> Dict:
         response = await self.fetch("get_blockchain_state", {})
-        response["tips"] = [SmallHeaderBlock.from_json(tip) for tip in response["tips"]]
-        response["lca"] = SmallHeaderBlock.from_json(response["lca"])
+        response["tips"] = [Header.from_json_dict(tip) for tip in response["tips"]]
+        response["lca"] = Header.from_json_dict(response["lca"])
         return response
 
     async def get_block(self, header_hash) -> Optional[FullBlock]:
@@ -48,9 +49,9 @@ class RpcClient:
             if e.message == "Not Found":
                 return None
             raise
-        return FullBlock.from_json(response)
+        return FullBlock.from_json_dict(response)
 
-    async def get_header(self, header_hash) -> Optional[SmallHeaderBlock]:
+    async def get_header(self, header_hash) -> Optional[Header]:
         try:
             response = await self.fetch(
                 "get_header", {"header_hash": header_hash.hex()}
@@ -59,7 +60,7 @@ class RpcClient:
             if e.message == "Not Found":
                 return None
             raise
-        return SmallHeaderBlock.from_json(response)
+        return Header.from_json_dict(response)
 
     async def get_connections(self) -> List[Dict]:
         response = await self.fetch("get_connections", {})
@@ -76,16 +77,21 @@ class RpcClient:
     async def stop_node(self) -> Dict:
         return await self.fetch("stop_node", {})
 
-    async def get_pool_balances(self) -> Dict:
-        response = await self.fetch("get_pool_balances", {})
-        new_response = {}
-        for pk, bal in response.items():
-            new_response[hexstr_to_bytes(pk)] = bal
-        return new_response
+    async def get_unspent_coins(
+        self, puzzle_hash: bytes32, header_hash: Optional[bytes32] = None
+    ) -> List:
+        if header_hash is not None:
+            d = {"puzzle_hash": puzzle_hash.hex(), "header_hash": header_hash.hex()}
+        else:
+            d = {"puzzle_hash": puzzle_hash.hex()}
+        return [
+            CoinRecord.from_json_dict(coin)
+            for coin in await self.fetch("get_unspent_coins", d)
+        ]
 
-    async def get_heaviest_block_seen(self) -> SmallHeaderBlock:
+    async def get_heaviest_block_seen(self) -> Header:
         response = await self.fetch("get_heaviest_block_seen", {})
-        return SmallHeaderBlock.from_json(response)
+        return Header.from_json_dict(response)
 
     def close(self):
         self.closing_task = asyncio.create_task(self.session.close())

@@ -1,12 +1,11 @@
 from dataclasses import dataclass
-
 from blspy import PrependSignature
-
-from src.types.coinbase import CoinbaseInfo
+from src.types.coin import Coin
+from src.types.BLSSignature import BLSSignature
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32, uint64, uint128
 
 
 """
@@ -19,24 +18,24 @@ Protocol between farmer and full node.
 class ProofOfSpaceFinalized:
     challenge_hash: bytes32
     height: uint32
-    weight: uint64
-    quality: bytes32
+    weight: uint128
     difficulty: uint64
 
 
 @dataclass(frozen=True)
 @cbor_message
 class ProofOfSpaceArrived:
-    weight: uint64
-    quality: bytes32
+    previous_challenge_hash: bytes32
+    weight: uint128
+    quality_string: bytes32
 
 
 @dataclass(frozen=True)
 @cbor_message
 class RequestHeaderHash:
     challenge_hash: bytes32
-    coinbase: CoinbaseInfo
-    coinbase_signature: PrependSignature
+    coinbase: Coin
+    coinbase_signature: BLSSignature
     fees_target_puzzle_hash: bytes32
     proof_of_space: ProofOfSpace
 

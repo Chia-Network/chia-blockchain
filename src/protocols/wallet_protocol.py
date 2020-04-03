@@ -1,12 +1,13 @@
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
-from src.types.body import Body
+from src.types.coin import Coin
+from src.types.spend_bundle import SpendBundle
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
-from src.types.transaction import Transaction
 from src.util.cbor_message import cbor_message
-from src.util.ints import uint32
+from src.util.ints import uint32, uint64, uint128
+from src.types.mempool_inclusion_status import MempoolInclusionStatus
 
 
 """
@@ -17,7 +18,49 @@ Protocol between wallet (SPV node) and full node.
 @dataclass(frozen=True)
 @cbor_message
 class SendTransaction:
-    transaction: Transaction
+    transaction: SpendBundle
+
+
+@dataclass(frozen=True)
+@cbor_message
+class TransactionAck:
+    txid: bytes32
+    status: MempoolInclusionStatus
+    error: Optional[str]
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RequestAllProofHashes:
+    pass
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RespondAllProofHashes:
+    hashes: List[Tuple[bytes32, Optional[uint64], Optional[uint64]]]
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RequestAllHeaderHashesAfter:
+    starting_height: uint32
+    previous_challenge_hash: bytes32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RespondAllHeaderHashesAfter:
+    starting_height: uint32
+    previous_challenge_hash: bytes32
+    hashes: List[bytes32]
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RejectAllHeaderHashesAfterRequest:
+    starting_height: uint32
+    previous_challenge_hash: bytes32
 
 
 @dataclass(frozen=True)
@@ -25,42 +68,73 @@ class SendTransaction:
 class NewLCA:
     lca_hash: bytes32
     height: uint32
+    weight: uint128
 
 
 @dataclass(frozen=True)
 @cbor_message
 class RequestHeader:
+    height: uint32
     header_hash: bytes32
 
 
 @dataclass(frozen=True)
 @cbor_message
-class Header:
+class RespondHeader:
     header_block: HeaderBlock
-    bip158_filter: bytes
+    transactions_filter: Optional[bytes]
 
 
 @dataclass(frozen=True)
 @cbor_message
-class RequestAncestors:
+class RejectHeaderRequest:
+    height: uint32
     header_hash: bytes32
-    previous_heights_desired: List[uint32]
 
 
 @dataclass(frozen=True)
 @cbor_message
-class Ancestors:
+class RequestRemovals:
+    height: uint32
     header_hash: bytes32
-    List[Tuple[uint32, bytes32]]
+    coin_names: Optional[List[bytes32]]
 
 
 @dataclass(frozen=True)
 @cbor_message
-class RequestBody:
-    body_hash: bytes32
+class RespondRemovals:
+    height: uint32
+    header_hash: bytes32
+    coins: List[Tuple[bytes32, Optional[Coin]]]
+    proofs: Optional[List[Tuple[bytes32, bytes]]]
 
 
 @dataclass(frozen=True)
 @cbor_message
-class RespondBody:
-    body: Body
+class RejectRemovalsRequest:
+    height: uint32
+    header_hash: bytes32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RequestAdditions:
+    height: uint32
+    header_hash: bytes32
+    puzzle_hashes: Optional[List[bytes32]]
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RespondAdditions:
+    height: uint32
+    header_hash: bytes32
+    coins: List[Tuple[bytes32, List[Coin]]]
+    proofs: Optional[List[Tuple[bytes32, bytes, Optional[bytes]]]]
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RejectAdditionsRequest:
+    height: uint32
+    header_hash: bytes32

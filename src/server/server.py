@@ -1,16 +1,15 @@
 import asyncio
 import concurrent
 import logging
-import os
+import pkg_resources
 import random
+import ssl
 from secrets import token_bytes
-from typing import Any, AsyncGenerator, List, Optional, Tuple
+from typing import Any, AsyncGenerator, List, Optional, Tuple, Dict
 
 from aiter import aiter_forker, iter_to_aiter, join_aiters, map_aiter, push_aiter
 from aiter.server import start_server_aiter
-from yaml import safe_load
 
-from definitions import ROOT_DIR
 from src.protocols.shared_protocol import (
     Handshake,
     HandshakeAck,
@@ -23,59 +22,71 @@ from src.server.outbound_message import Delivery, Message, NodeType, OutboundMes
 from src.types.peer_info import PeerInfo
 from src.types.sized_bytes import bytes32
 from src.util import partial_func
-from src.util.errors import (
-    IncompatibleProtocolVersion,
-    InvalidAck,
-    InvalidHandshake,
-    InvalidProtocolMessage,
-)
+from src.util.config import load_config
+from src.util.errors import Err, ProtocolError
 from src.util.ints import uint16
 from src.util.network import create_node_id
+import traceback
 
-log = logging.getLogger(__name__)
-
-config_filename = os.path.join(ROOT_DIR, "config", "config.yaml")
-config = safe_load(open(config_filename, "r"))
+config = load_config("config.yaml")
 
 
 class ChiaServer:
-    # Keeps track of all connections to and from this node.
-    global_connections: PeerConnections
+    def __init__(self, port: int, api: Any, local_type: NodeType, name: str = None):
+        # Keeps track of all connections to and from this node.
+        self.global_connections: PeerConnections = PeerConnections([])
 
-    # Optional listening server. You can also use this class without starting one.
-    _server: Optional[asyncio.AbstractServer]
-    _host: Optional[str]
+        # Optional listening server. You can also use this class without starting one.
+        self._server: Optional[asyncio.AbstractServer] = None
+        self._host: Optional[str] = None
 
-    # (StreamReader, StreamWriter, NodeType) aiter, gets things from server and clients and
-    # sends them through the pipeline
-    _srwt_aiter: push_aiter
+        # Called for inbound connections after successful handshake
+        self._on_inbound_connect: OnConnectFunc = None
 
-    # Tasks for entire server pipeline
-    _pipeline_task: asyncio.Task
-
-    # Aiter used to broadcase messages
-    _outbound_aiter: push_aiter
-
-    # Called for inbound connections after successful handshake
-    _on_inbound_connect: OnConnectFunc
-
-    def __init__(self, port: int, api: Any, local_type: NodeType):
-        self.global_connections = PeerConnections([])
-        self._server = None
-        self._host = None
-        self._on_inbound_connect = None
         self._port = port  # TCP port to identify our node
         self._api = api  # API module that will be called from the requests
         self._local_type = local_type  # NodeType (farmer, full node, timelord, pool, harvester, wallet)
-        self._srwt_aiter = push_aiter()
-        self._outbound_aiter = push_aiter()
-        self._pipeline_task = self.initialize_pipeline(
+
+        # (StreamReader, StreamWriter, NodeType) aiter, gets things from server and clients and
+        # sends them through the pipeline
+        self._srwt_aiter: push_aiter = push_aiter()
+
+        # Aiter used to broadcase messages
+        self._outbound_aiter: push_aiter = push_aiter()
+
+        # Tasks for entire server pipeline
+        self._pipeline_task: asyncio.Task = self.initialize_pipeline(
             self._srwt_aiter, self._api, self._port
         )
-        self._ping_task = self._initialize_ping_task()
+
+        # Our unique random node id that we will other peers, regenerated on launch
         self._node_id = create_node_id()
 
-    async def start_server(self, host: str, on_connect: OnConnectFunc = None,) -> bool:
+        # Taks list to keep references to tasks, so they don'y get GCd
+        self._tasks: List[asyncio.Task] = [self._initialize_ping_task()]
+        if name:
+            self.log = logging.getLogger(name)
+        else:
+            self.log = logging.getLogger(__name__)
+
+    def loadSSLConfig(self, tipo: str, config: Dict = None):
+        if config is not None:
+            try:
+                return (
+                    config[tipo]["crt"],
+                    config[tipo]["key"],
+                    config[tipo]["pass"],
+                    config[tipo]["ca"],
+                )
+            except Exception:
+                pass
+        dummy_crt = pkg_resources.resource_filename(__name__, "dummy.crt")
+        dummy_key = pkg_resources.resource_filename(__name__, "dummy.key")
+        return dummy_crt, dummy_key, "1234", None
+
+    async def start_server(
+        self, host: str, on_connect: OnConnectFunc = None, config: Dict = None,
+    ) -> bool:
         """
         Launches a listening server on host and port specified, to connect to NodeType nodes. On each
         connection, the on_connect asynchronous generator will be called, and responses will be sent.
@@ -85,27 +96,45 @@ class ChiaServer:
             return False
         self._host = host
 
-        self._server, aiter = await start_server_aiter(
-            self._port, host=None, reuse_address=True
+        ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH)
+        certfile, keyfile, password, cafile = self.loadSSLConfig("server_ssl", config)
+        ssl_context.load_cert_chain(
+            certfile=certfile, keyfile=keyfile, password=password
         )
+        if cafile is None:
+            ssl_context.verify_mode = ssl.CERT_NONE
+        else:
+            ssl_context.load_verify_locations(cafile=cafile)
+            ssl_context.verify_mode = ssl.CERT_REQUIRED
+
+        self._server, aiter = await start_server_aiter(
+            self._port, host=None, reuse_address=True, ssl=ssl_context
+        )
+
         if on_connect is not None:
             self._on_inbound_connect = on_connect
 
         def add_connection_type(
             srw: Tuple[asyncio.StreamReader, asyncio.StreamWriter]
         ) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter, None]:
+            ssl_object = srw[1].get_extra_info(name="ssl_object")
+            peer_cert = ssl_object.getpeercert()
+            self.log.info(f"Client authed as {peer_cert}")
             return (srw[0], srw[1], None)
 
         srwt_aiter = map_aiter(add_connection_type, aiter)
 
         # Push all aiters that come from the server, into the pipeline
-        asyncio.create_task(self._add_to_srwt_aiter(srwt_aiter))
+        self._tasks.append(asyncio.create_task(self._add_to_srwt_aiter(srwt_aiter)))
 
-        log.info(f"Server started on port {self._port}")
+        self.log.info(f"Server started on port {self._port}")
         return True
 
     async def start_client(
-        self, target_node: PeerInfo, on_connect: OnConnectFunc = None,
+        self,
+        target_node: PeerInfo,
+        on_connect: OnConnectFunc = None,
+        config: Dict = None,
     ) -> bool:
         """
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
@@ -119,9 +148,21 @@ class ChiaServer:
                 return False
         if self._pipeline_task.done():
             return False
+
+        ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH)
+        certfile, keyfile, password, cafile = self.loadSSLConfig("client_ssl", config)
+        ssl_context.load_cert_chain(
+            certfile=certfile, keyfile=keyfile, password=password
+        )
+        if cafile is None:
+            ssl_context.verify_mode = ssl.CERT_NONE
+        else:
+            ssl_context.load_verify_locations(cafile=cafile)
+            ssl_context.verify_mode = ssl.CERT_REQUIRED
+
         try:
             reader, writer = await asyncio.open_connection(
-                target_node.host, int(target_node.port)
+                target_node.host, int(target_node.port), ssl=ssl_context
             )
         except (
             ConnectionRefusedError,
@@ -129,14 +170,21 @@ class ChiaServer:
             OSError,
             asyncio.TimeoutError,
         ) as e:
-            log.warning(
+            self.log.warning(
                 f"Could not connect to {target_node}. {type(e)}{str(e)}. Aborting and removing peer."
             )
             self.global_connections.peers.remove(target_node)
             return False
-        asyncio.create_task(
-            self._add_to_srwt_aiter(iter_to_aiter([(reader, writer, on_connect)]))
+        self._tasks.append(
+            asyncio.create_task(
+                self._add_to_srwt_aiter(iter_to_aiter([(reader, writer, on_connect)]))
+            )
         )
+
+        ssl_object = writer.get_extra_info(name="ssl_object")
+        peer_cert = ssl_object.getpeercert()
+        self.log.info(f"Server authed as {peer_cert}")
+
         return True
 
     async def _add_to_srwt_aiter(
@@ -257,11 +305,16 @@ class ChiaServer:
         # length encoding and CBOR serialization
         async def serve_forever():
             async for connection, message in expanded_messages_aiter:
-                log.info(f"-> {message.function} to peer {connection.get_peername()}")
+                if message is None:
+                    self.global_connections.close(connection, True)
+                    continue
+                self.log.info(
+                    f"-> {message.function} to peer {connection.get_peername()}"
+                )
                 try:
                     await connection.send(message)
                 except (RuntimeError, TimeoutError, OSError,) as e:
-                    log.error(
+                    self.log.warning(
                         f"Cannot write to {connection}, already closed. Error {e}."
                     )
                     self.global_connections.close(connection, True)
@@ -282,7 +335,7 @@ class ChiaServer:
         sr, sw, on_connect = swrt
         con = Connection(self._local_type, None, sr, sw, server_port, on_connect)
 
-        log.info(f"Connection with {con.get_peername()} established")
+        self.log.info(f"Connection with {con.get_peername()} established")
         return con
 
     async def connection_to_outbound(
@@ -327,19 +380,17 @@ class ChiaServer:
                 or not inbound_handshake
                 or not inbound_handshake.node_type
             ):
-                raise InvalidHandshake("Invalid handshake")
+                raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             if inbound_handshake.node_id == self._node_id:
-                raise InvalidHandshake(
-                    f"Should not connect to ourselves, aborting handshake."
-                )
+                raise ProtocolError(Err.SELF_CONNECTION)
 
             # Makes sure that we only start one connection with each peer
             connection.node_id = inbound_handshake.node_id
             connection.peer_server_port = int(inbound_handshake.server_port)
             connection.connection_type = inbound_handshake.node_type
             if not self.global_connections.add(connection):
-                raise InvalidHandshake(f"Duplicate connection to {connection}")
+                raise ProtocolError(Err.DUPLICATE_CONNECTION)
 
             # Send Ack message
             await connection.send(Message("handshake_ack", HandshakeAck()))
@@ -347,15 +398,15 @@ class ChiaServer:
             # Read Ack message
             full_message = await connection.read_one_message()
             if full_message.function != "handshake_ack":
-                raise InvalidAck("Invalid ack")
+                raise ProtocolError(Err.INVALID_ACK)
 
             if inbound_handshake.version != protocol_version:
-                raise IncompatibleProtocolVersion(
-                    f"Our node version {protocol_version} is not compatible with peer\
-                        {connection} version {inbound_handshake.version}"
+                raise ProtocolError(
+                    Err.INCOMPATIBLE_PROTOCOL_VERSION,
+                    [protocol_version, inbound_handshake.version],
                 )
 
-            log.info(
+            self.log.info(
                 (
                     f"Handshake with {NodeType(connection.connection_type).name} {connection.get_peername()} "
                     f"{connection.node_id}"
@@ -364,15 +415,8 @@ class ChiaServer:
             )
             # Only yield a connection if the handshake is succesful and the connection is not a duplicate.
             yield connection
-        except (
-            IncompatibleProtocolVersion,
-            InvalidAck,
-            InvalidHandshake,
-            asyncio.IncompleteReadError,
-            OSError,
-            Exception,
-        ) as e:
-            log.warning(f"{e}, handshake not completed. Connection not created.")
+        except (ProtocolError, asyncio.IncompleteReadError, OSError, Exception,) as e:
+            self.log.warning(f"{e}, handshake not completed. Connection not created.")
             # Make sure to close the connection even if it's not in global connections
             connection.close()
             # Remove the conenction from global connections
@@ -392,11 +436,11 @@ class ChiaServer:
                 # Read one message at a time, forever
                 yield (connection, message)
         except asyncio.IncompleteReadError:
-            log.info(
+            self.log.info(
                 f"Received EOF from {connection.get_peername()}, closing connection."
             )
         except ConnectionError:
-            log.warning(
+            self.log.warning(
                 f"Connection error by peer {connection.get_peername()}, closing connection."
             )
         except (
@@ -405,7 +449,7 @@ class ChiaServer:
             TimeoutError,
             asyncio.TimeoutError,
         ) as e:
-            log.error(
+            self.log.error(
                 f"Timeout/OSError {e} in connection with peer {connection.get_peername()}, closing connection."
             )
         finally:
@@ -423,9 +467,11 @@ class ChiaServer:
         try:
             if len(full_message.function) == 0 or full_message.function.startswith("_"):
                 # This prevents remote calling of private methods that start with "_"
-                raise InvalidProtocolMessage(full_message.function)
+                raise ProtocolError(
+                    Err.INVALID_PROTOCOL_MESSAGE, [full_message.function]
+                )
 
-            log.info(
+            self.log.info(
                 f"<- {full_message.function} from peer {connection.get_peername()}"
             )
             if full_message.function == "ping":
@@ -440,23 +486,35 @@ class ChiaServer:
             elif full_message.function == "pong":
                 return
 
-            f = getattr(api, full_message.function)
-            if f is None:
-                raise InvalidProtocolMessage(full_message.function)
+            f_with_peer_name = getattr(
+                api, full_message.function + "_with_peer_name", None
+            )
 
-            result = f(full_message.data)
+            if f_with_peer_name is not None:
+                result = f_with_peer_name(full_message.data, connection.get_peername())
+            else:
+                f = getattr(api, full_message.function, None)
+
+                if f is None:
+                    raise ProtocolError(
+                        Err.INVALID_PROTOCOL_MESSAGE, [full_message.function]
+                    )
+
+                result = f(full_message.data)
+
             if isinstance(result, AsyncGenerator):
                 async for outbound_message in result:
                     yield connection, outbound_message
             else:
                 await result
-        except Exception as e:
-            log.error(f"Error {type(e)} {e}, closing connection {connection}")
+        except Exception:
+            tb = traceback.format_exc()
+            self.log.error(f"Error, closing connection {connection}. {tb}")
             self.global_connections.close(connection)
 
     async def expand_outbound_messages(
         self, pair: Tuple[Connection, OutboundMessage]
-    ) -> AsyncGenerator[Tuple[Connection, Message], None]:
+    ) -> AsyncGenerator[Tuple[Connection, Optional[Message]], None]:
         """
         Expands each of the outbound messages into it's own message.
         """
@@ -490,4 +548,4 @@ class ChiaServer:
                     else:
                         yield (peer, outbound_message.message)
         elif outbound_message.delivery_method == Delivery.CLOSE:
-            self.global_connections.close(connection, True)
+            yield (connection, None)
