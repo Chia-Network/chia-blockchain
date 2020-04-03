@@ -8,7 +8,6 @@ from src.util.config import load_config
 from asyncio import Lock
 from typing import List
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.setproctitle import setproctitle
 
 active_processes: List = []
 stopped = False
@@ -75,7 +74,6 @@ async def spawn_all_processes(config):
 
 def main():
     root_path = DEFAULT_ROOT_PATH
-    setproctitle("chia_timelord_launcher")
     config = load_config(root_path, "config.yaml", "timelord_launcher")
     initialize_logging("Launcher %(name)-23s", config["logging"], root_path)
 

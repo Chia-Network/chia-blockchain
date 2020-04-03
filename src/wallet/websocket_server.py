@@ -30,7 +30,6 @@ from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_node import WalletNode
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.setproctitle import setproctitle
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -382,7 +381,6 @@ async def start_websocket_server():
     else:
         log.info(f"Not Testing")
         wallet_node = await WalletNode.create(config, key_config)
-    setproctitle("chia-wallet")
     handler = WebSocketServer(wallet_node, log)
     wallet_node.wallet_state_manager.set_callback(handler.state_changed_callback)
 

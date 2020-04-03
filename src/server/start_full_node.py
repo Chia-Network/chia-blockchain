@@ -26,14 +26,12 @@ from src.util.config import load_config_cli, load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.path import mkdir, path_from_root
 from src.util.pip_import import pip_import
-from src.util.setproctitle import setproctitle
 
 
 async def async_main():
     root_path = DEFAULT_ROOT_PATH
     config = load_config_cli(root_path, "config.yaml", "full_node")
     net_config = load_config(root_path, "config.yaml")
-    setproctitle("chia_full_node")
     initialize_logging("FullNode %(name)-23s", config["logging"], root_path)
 
     log = logging.getLogger(__name__)

@@ -22,7 +22,6 @@ from src.full_node.coin_store import CoinStore
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli, load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.setproctitle import setproctitle
 from src.util.path import mkdir, path_from_root
 
 
@@ -30,7 +29,6 @@ async def main():
     root_path = DEFAULT_ROOT_PATH
     net_config = load_config(root_path, "config.yaml")
     config = load_config_cli(root_path, "config.yaml", "full_node")
-    setproctitle("chia_full_node")
     initialize_logging("FullNode %(name)-23s", config["logging"], root_path)
 
     log = logging.getLogger(__name__)

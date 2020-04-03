@@ -17,7 +17,6 @@ from src.types.peer_info import PeerInfo
 from src.util.config import load_config_cli, load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.logging import initialize_logging
-from src.util.setproctitle import setproctitle
 
 
 async def async_main():
@@ -26,7 +25,6 @@ async def async_main():
     config = load_config_cli(root_path, "config.yaml", "timelord")
     initialize_logging("Timelord %(name)-23s", config["logging"], root_path)
     log = logging.getLogger(__name__)
-    setproctitle("chia_timelord")
 
     timelord = Timelord(config, constants)
     ping_interval = net_config.get("ping_interval")
