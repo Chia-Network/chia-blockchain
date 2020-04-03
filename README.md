@@ -100,9 +100,14 @@ chia-start-sim
 
 ## uvloop
 
-For increased networking performance, install uvloop:
+For increased networking performance, install uvloop from the chia-blockchain folder:
 ```bash
 pip install -e ".[uvloop]"
+```
+
+If you get **WARNING: pip is being invoked by an old script wrapper...**, use instead:
+```bash
+python3.7 -m pip install -e ".[uvloop]"
 ```
 
 You can also use the [HTTP RPC](https://github.com/Chia-Network/chia-blockchain/wiki/Networking-and-Serialization#rpc) api to access information and control the full node:
