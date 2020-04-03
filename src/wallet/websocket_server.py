@@ -32,7 +32,7 @@ from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.util.setproctitle import setproctitle
 
 # Timeout for response from wallet/full node for sending a transaction
-TIMEOUT = 5
+TIMEOUT = 30
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
