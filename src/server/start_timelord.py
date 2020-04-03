@@ -19,7 +19,7 @@ from src.util.config import load_config_cli
 from src.util.setproctitle import setproctitle
 
 
-async def main():
+async def async_main():
     config = load_config_cli("config.yaml", "timelord")
 
     initialize_logging("Timelord %(name)-23s", config["logging"])
@@ -70,6 +70,11 @@ async def main():
     log.info("Timelord fully closed.")
 
 
-if uvloop is not None:
-    uvloop.install()
-asyncio.run(main())
+def main():
+    if uvloop is not None:
+        uvloop.install()
+    asyncio.run(async_main())
+
+
+if __name__ == '__main__':
+    main()

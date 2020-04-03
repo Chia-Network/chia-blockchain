@@ -78,8 +78,7 @@ async def spawn_all_processes():
     await asyncio.gather(*awaitables)
 
 
-if __name__ == "__main__":
-
+def main():
     def signal_received():
         asyncio.create_task(kill_processes())
 
@@ -93,3 +92,7 @@ if __name__ == "__main__":
     finally:
         log.info("Launcher fully closed.")
         loop.close()
+
+
+if __name__ == "__main__":
+    main()

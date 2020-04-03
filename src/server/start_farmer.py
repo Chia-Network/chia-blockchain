@@ -16,7 +16,7 @@ from src.util.config import load_config, load_config_cli
 from src.util.setproctitle import setproctitle
 
 
-async def main():
+async def async_main():
     config = load_config_cli("config.yaml", "farmer")
     try:
         key_config = load_config("keys.yaml")
@@ -48,6 +48,11 @@ async def main():
     log.info("Farmer fully closed.")
 
 
-if uvloop is not None:
-    uvloop.install()
-asyncio.run(main())
+def main():
+    if uvloop is not None:
+        uvloop.install()
+    asyncio.run(async_main())
+
+
+if __name__ == '__main__':
+    main()

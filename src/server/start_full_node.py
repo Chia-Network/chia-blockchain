@@ -28,7 +28,7 @@ from src.util.pip_import import pip_import
 from src.util.setproctitle import setproctitle
 
 
-async def main():
+async def async_main():
     config = load_config_cli("config.yaml", "full_node")
     setproctitle("chia_full_node")
     initialize_logging("FullNode %(name)-23s", config["logging"])
@@ -138,6 +138,11 @@ async def main():
     log.info("Node fully closed.")
 
 
-if uvloop is not None:
-    uvloop.install()
-asyncio.run(main())
+def main():
+    if uvloop is not None:
+        uvloop.install()
+    asyncio.run(async_main())
+
+
+if __name__ == '__main__':
+    main()

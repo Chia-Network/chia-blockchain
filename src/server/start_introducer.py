@@ -15,7 +15,7 @@ from src.util.config import load_config_cli
 from src.util.setproctitle import setproctitle
 
 
-async def main():
+async def async_main():
     config = load_config_cli("config.yaml", "introducer")
 
     initialize_logging("Introducer %(name)-21s", config["logging"])
@@ -34,6 +34,11 @@ async def main():
     log.info("Introducer fully closed.")
 
 
-if uvloop is not None:
-    uvloop.install()
-asyncio.run(main())
+def main():
+    if uvloop is not None:
+        uvloop.install()
+    asyncio.run(async_main())
+
+
+if __name__ == '__main__':
+    main()
