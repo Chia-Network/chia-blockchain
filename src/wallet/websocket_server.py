@@ -424,4 +424,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        tb = traceback.format_exc()
+        log = logging.getLogger(__name__)
+        log.error(f"Error in wallet. {tb}")
+        raise

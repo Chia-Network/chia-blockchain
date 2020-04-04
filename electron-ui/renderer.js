@@ -493,6 +493,7 @@ async function get_connection_info_response(response) {
 
 function handle_state_changed(data) {
     state = data["state"]
+    console.log("State changed", state)
     if(global_syncing) {
         get_wallet_balance(g_wallet_id)
         get_sync_status()
