@@ -1074,6 +1074,7 @@ class Blockchain:
         removal_counter = collections.Counter(removals)
         for k, v in removal_counter.items():
             if v > 1:
+                log.error(f"DOUBLE SPEND! 1 {k}")
                 return Err.DOUBLE_SPEND
 
         # Check if removals exist and were not previously spend. (unspent_db + diff_store + this_block)
@@ -1119,6 +1120,7 @@ class Blockchain:
                     # (We ignore all coins confirmed after fork)
                     if unspent.spent == 1 and unspent.spent_block_index <= fork_h:
                         # Spend in an ancestor block, so this is a double spend
+                        log.error(f"DOUBLE SPEND! 2 {unspent}")
                         return Err.DOUBLE_SPEND
                     # If it's a coinbase, check that it's not frozen
                     if unspent.coinbase == 1:
@@ -1154,6 +1156,7 @@ class Blockchain:
                 # and coins created after fork (additions_since_fork)>
                 if rem in removals_since_fork:
                     # This coin was spent in the fork
+                    log.error(f"DOUBLE SPEND! 3 {rem}")
                     return Err.DOUBLE_SPEND
 
         # Check fees
