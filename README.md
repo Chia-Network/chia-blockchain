@@ -39,7 +39,7 @@ chia-start-wallet-server &
 And then run `chia.exe` from the unzipped `chia-win32-x64` directory in Windows (not Ubuntu/WSL 2.)
 
 ## Step 3b: Run a farmer + full node + wallet
-Instead of running only a full node (as in 4a), you can also run a farmer.
+Instead of running only a full node (as in 3a), you can also run a farmer.
 Farmers are entities in the network who use their hard drive space to try to create
 blocks (like Bitcoin's miners), and earn block rewards. First, you must generate some hard drive plots, which
 can take a long time depending on the [size of the plots](https://github.com/Chia-Network/chia-blockchain/wiki/k-sizes)
