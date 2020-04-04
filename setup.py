@@ -62,6 +62,7 @@ kwargs = dict(
     ],
     scripts=[
         "scripts/_chia-common",
+        "scripts/_chia-stop-wallet",
         "scripts/chia-drop-db",
         "scripts/chia-start-all",
         "scripts/chia-start-farmer",
