@@ -66,7 +66,7 @@ sh install.sh
 ```
 You will need to download the Windows native Wallet and unzip into somewhere convenient in Windows.
 
-[main.js-win32-x64.zip](https://hosted.chia.net/beta-1.0-win64-wallet/main.js-win32-x64.zip)
+[Download: chia-win32-x64.zip](https://hosted.chia.net/beta-1.0-win64-wallet/chia-win32-x64.zip)
 
 Instead of `chia-start-wallet-ui &` as explained in the [README.md](README.md) you run `chia-start-wallet-server &` in Ubuntu/WSL 2 to allow the Wallet to connect to the Full Node running in Ubuntu/WSL 2. Once you've enabled `chia-start-wallet-server &` you can run `chia.exe` from the unzipped `chia-win32-x64` directory.
 
