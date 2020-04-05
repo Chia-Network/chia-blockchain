@@ -1,5 +1,4 @@
-const host = "ws://127.0.0.1:9256"
-const jquery = require('jquery')
+const { wallet_rpc_host_and_port } = require("./config");
 var QRCode = require('qrcode')
 var canvas = document.getElementById('qr_canvas')
 const Dialogs = require('dialogs')
@@ -88,7 +87,7 @@ function sleep(ms) {
     });
 }
 
-var ws = new WebSocket(host);
+var ws = new WebSocket(wallet_rpc_host_and_port);
 
 function set_callbacks(socket) {
     /*
@@ -148,7 +147,7 @@ async function connect(timeout) {
     Tries to connect to the host after a timeout
     */
     await sleep(timeout);
-    ws = new WebSocket(host);
+    ws = new WebSocket(wallet_rpc_host_and_port);
     set_callbacks(ws);
 }
 

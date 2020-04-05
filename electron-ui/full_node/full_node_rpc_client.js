@@ -1,9 +1,10 @@
 const http = require('http')
+const { full_node_rpc_host, full_node_rpc_port } = require("../config");
 
 class FullNodeRpcClient {
     constructor() {
-        this._host = "127.0.0.1";
-        this._port = 8555;
+        this._host = full_node_rpc_host;
+        this._port = full_node_rpc_port;
     }
 
     async get_blockchain_state() {
