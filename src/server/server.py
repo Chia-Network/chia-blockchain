@@ -38,7 +38,6 @@ class ChiaServer:
 
         # Optional listening server. You can also use this class without starting one.
         self._server: Optional[asyncio.AbstractServer] = None
-        self._host: Optional[str] = None
 
         # Called for inbound connections after successful handshake
         self._on_inbound_connect: OnConnectFunc = None
@@ -85,7 +84,7 @@ class ChiaServer:
         return dummy_crt, dummy_key, "1234", None
 
     async def start_server(
-        self, host: str, on_connect: OnConnectFunc = None, config: Dict = None,
+        self, on_connect: OnConnectFunc = None, config: Dict = None,
     ) -> bool:
         """
         Launches a listening server on host and port specified, to connect to NodeType nodes. On each
@@ -94,7 +93,6 @@ class ChiaServer:
         """
         if self._server is not None or self._pipeline_task.done():
             return False
-        self._host = host
 
         ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH)
         certfile, keyfile, password, cafile = self.loadSSLConfig("server_ssl", config)
@@ -142,7 +140,10 @@ class ChiaServer:
         """
         if self._server is not None:
             if (
-                self._host == target_node.host or target_node.host == "127.0.0.1"
+                target_node.host == "127.0.0.1"
+                or target_node.host == "0.0.0.0"
+                or target_node.host == "::1"
+                or target_node.host == "0:0:0:0:0:0:0:1"
             ) and self._port == target_node.port:
                 self.global_connections.peers.remove(target_node)
                 return False

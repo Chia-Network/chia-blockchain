@@ -88,7 +88,7 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
     server_1 = ChiaServer(
         port, full_node_1, NodeType.FULL_NODE, name="full-node-simulator-server"
     )
-    _ = await server_1.start_server(config["host"], full_node_1._on_connect)
+    _ = await server_1.start_server(full_node_1._on_connect)
     full_node_1._set_server(server_1)
 
     yield (full_node_1, server_1)
@@ -136,7 +136,7 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
         test_constants_copy,
     )
     server_1 = ChiaServer(port, full_node_1, NodeType.FULL_NODE)
-    _ = await server_1.start_server(config["host"], full_node_1._on_connect)
+    _ = await server_1.start_server(full_node_1._on_connect)
     full_node_1._set_server(server_1)
 
     yield (full_node_1, server_1)
@@ -182,7 +182,7 @@ async def setup_harvester(port, dic={}):
 
     harvester = Harvester(config, bt.plot_config)
     server = ChiaServer(port, harvester, NodeType.HARVESTER)
-    _ = await server.start_server(config["host"], None)
+    _ = await server.start_server(None)
 
     yield (harvester, server)
 
@@ -215,7 +215,7 @@ async def setup_farmer(port, dic={}):
 
     farmer = Farmer(config, key_config, test_constants_copy)
     server = ChiaServer(port, farmer, NodeType.FARMER)
-    _ = await server.start_server(config["host"], farmer._on_connect)
+    _ = await server.start_server(farmer._on_connect)
 
     yield (farmer, server)
 
@@ -228,7 +228,7 @@ async def setup_introducer(port, dic={}):
 
     introducer = Introducer(config)
     server = ChiaServer(port, introducer, NodeType.INTRODUCER)
-    _ = await server.start_server(port, None)
+    _ = await server.start_server(None)
 
     yield (introducer, server)
 
@@ -251,7 +251,7 @@ async def setup_timelord(port, dic={}):
         test_constants_copy[k] = dic[k]
     timelord = Timelord(config, test_constants_copy)
     server = ChiaServer(port, timelord, NodeType.TIMELORD)
-    _ = await server.start_server(port, None, config)
+    _ = await server.start_server(None, config)
 
     coro = asyncio.start_server(
         timelord._handle_client,

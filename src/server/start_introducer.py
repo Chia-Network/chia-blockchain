@@ -25,7 +25,7 @@ async def main():
     introducer = Introducer(config)
     server = ChiaServer(config["port"], introducer, NodeType.INTRODUCER)
     introducer.set_server(server)
-    _ = await server.start_server(config["host"], None, config)
+    _ = await server.start_server(None, config)
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)

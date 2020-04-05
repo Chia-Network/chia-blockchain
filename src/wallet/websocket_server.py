@@ -384,7 +384,7 @@ async def start_websocket_server():
     server = ChiaServer(config["port"], wallet_node, NodeType.WALLET)
     wallet_node.set_server(server)
 
-    _ = await server.start_server(config["host"], None, config)
+    _ = await server.start_server(None, config)
     if "full_node_peer" in config:
         full_node_peer = PeerInfo(
             config["full_node_peer"]["host"], config["full_node_peer"]["port"]
@@ -396,7 +396,7 @@ async def start_websocket_server():
 
     log.info("Starting websocket server.")
     websocket_server = await websockets.serve(
-        handler.safe_handle, "localhost", config["rpc_port"]
+        handler.safe_handle, None, config["rpc_port"]
     )
     log.info(f"Started websocket server at port {config['rpc_port']}.")
 

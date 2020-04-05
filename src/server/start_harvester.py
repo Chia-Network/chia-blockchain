@@ -29,7 +29,7 @@ async def main():
 
     harvester = Harvester(config, plot_config)
     server = ChiaServer(config["port"], harvester, NodeType.HARVESTER)
-    _ = await server.start_server(config["host"], None, config)
+    _ = await server.start_server(None, config)
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)

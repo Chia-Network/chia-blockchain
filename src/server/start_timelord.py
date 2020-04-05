@@ -28,7 +28,7 @@ async def main():
 
     timelord = Timelord(config, constants)
     server = ChiaServer(config["port"], timelord, NodeType.TIMELORD)
-    _ = await server.start_server(config["host"], None, config)
+    _ = await server.start_server(None, config)
 
     timelord_shutdown_task: Optional[asyncio.Task] = None
 
