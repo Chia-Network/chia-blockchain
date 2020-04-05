@@ -25,4 +25,4 @@ candle electron-packager-files.wxs chia.wxs
 
 # link the installer
 Write-Host "Linking Windows Installer database"
-light electron-packager-files.wixobj chia.wixobj -b $env:electronpackagerdir -o Chia-$env:version.msi
+light electron-packager-files.wixobj chia.wixobj -b $env:electronpackagerdir -o Chia.msi
