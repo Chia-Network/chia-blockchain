@@ -13,8 +13,9 @@ else
   then
     echo "installing chiavdf from source"
     # Check for development tools
-    if [ `uname` = "Linux" ] && type apt-get; then
-      # Found Ubuntu
+    if [ `uname` = "Linux" ] && type apt-get;
+    then
+      echo "Found Ubuntu/Debian"
       Ubuntu_Build_Requirements=( cmake libgmp-dev libboost-python-dev libbost-system-dev )
       for Packages in "{$Ubuntu_Build_Requirements[@]}"
       do
