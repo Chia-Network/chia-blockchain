@@ -21,7 +21,7 @@ sh install.sh
 Install dependencies for Ubuntu 18.04, Ubuntu 19.x or newer.
 ```bash
 sudo apt-get update
-sudo apt-get install python3-venv git -y
+sudo apt-get install python3.7-venv git -y
 
 # Either checkout the source and install
 git clone https://github.com/Chia-Network/chia-blockchain.git
@@ -52,7 +52,7 @@ dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux 
 # then
 dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all`
 ```
-You will be prompted to reboot. Once that is complete, install Ubuntu 18.04 LTS from the Microsoft Store and run it.
+You will be prompted to reboot. Once that is complete, install Ubuntu 18.04 LTS from the Microsoft Store and run it and complete its initial install steps. You now have linux bash shell that can run linux native software on Windows.
 
 Then follow the steps below.
 ```bash
