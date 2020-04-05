@@ -10,6 +10,8 @@
             InstallerVersion='100' Languages='1033' Compressed='yes' SummaryCodepage='1252' />
         
         <Media Id='1' Cabinet='chia.cab' EmbedCab='yes' DiskPrompt="CD-ROM #1" />
+        <Icon Id="icon.ico" SourceFile="icon.ico"/>
+        <Property Id="ARPPRODUCTICON" Value="icon.ico" />        
         <Property Id='DiskPrompt' Value="Chia Network's Chia Installation [1]" />
 
         <Directory Id='TARGETDIR' Name='SourceDir'>
