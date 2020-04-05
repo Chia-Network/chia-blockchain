@@ -18,27 +18,30 @@ sh install.sh
 
 ### Debian/Ubuntu
 
-On Ubuntu 18.04, you need python 3.7. It's not available in the default
-repository, so you need to add an alternate source. You can skip this step
-if you install in Ubuntu 19.x or higher.
-
-```bash
-# for add-apt-repository
-sudo apt install software-properties-common -y
-sudo add-apt-repository ppa:deadsnakes/ppa -y
-```
-
-Install dependencies for Ubuntu 18.04 from above or Ubuntu 19.x or higher.
+Install dependencies for Ubuntu 18.04, Ubuntu 19.x or newer.
 ```bash
 sudo apt-get update
-sudo apt-get install python3.7-venv python3.7-dev python3-pip git -y
+sudo apt-get install python3.7-venv git -y
 
+python3.7 -m venv venv
+ln -s venv/bin/activate
+. ./activate
+pip install --upgrade pip
+pip install -i https://hosted.chia.net/simple/ miniupnpc==0.1.dev5 setproctitle==1.1.10 cbor2==5.0.1
+deactivate
+
+# Either checkout the source
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sh install.sh
 
 . ./activate
+
+# Or install chia-blockchain as a package
+pip install chia-blockchain==1.0.beta2
+
+. /activate
 ```
 
 ### Windows (WSL)

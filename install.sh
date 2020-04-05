@@ -26,7 +26,7 @@ fi
 
 if [ `uname` = "Linux" ] && type apt-get; then
     # Debian/Ubuntu
-    sudo apt-get install -y npm python3-dev
+    sudo apt-get install -y npm
 fi
 
 # this fancy syntax sets INSTALL_PYTHON_PATH to "python3.7" unless INSTALL_PYTHON_VERSION is defined
