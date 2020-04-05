@@ -48,21 +48,18 @@ From an Administrator PowerShell
 `dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart`
 and then
 `dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart`.
-This usually requires a reboot. Once that is complete, install Ubuntu 18.04 LTS from the Microsoft Store and run it. Then follow the steps below.
+This requires a reboot at this point. Once that is complete, install Ubuntu 18.04 LTS from the Microsoft Store and run it. Then follow the steps below.
 ```bash
-# add-apt-repository
-sudo add-apt-repository ppa:deadsnakes/ppa -y
-
 sudo apt-get -y update
 sudo apt-get -y upgrade
 
-sudo apt-get install python3.7-venv python3.7-dev python3-pip git -y
+sudo apt-get install python3.7-venv python3-pip -y
 
-git clone https://github.com/Chia-Network/chia-blockchain.git
-cd chia-blockchain
-
-sh install.sh
-. ./activate
+python3.7 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install -i https://hosted.chia.net/simple/ miniupnpc==0.1.dev5 setproctitle==1.1.10 cbor2==5.0.1
+pip install chia-blockchain==1.0.beta2
 ```
 You will need to download the Windows native Wallet and unzip into somewhere convenient in Windows.
 
