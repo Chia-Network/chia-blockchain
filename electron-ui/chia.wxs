@@ -30,7 +30,7 @@
                             Description="Chia $(var.version)"
                             Target="[INSTALLDIR]$(var.exename)"
                             WorkingDirectory="INSTALLDIR"
-                            IconIndex="0"/>                    
+                            Icon="icon.ico"/>                    
                         <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
                         <RegistryValue Root='HKCU' 
                             Key='Software\[Manufacturer]\[ProductName]' 
@@ -48,7 +48,7 @@
                         Description="Chia $(var.version)"
                         Target="[INSTALLDIR]$(var.exename)"
                         WorkingDirectory="INSTALLDIR"
-                        IconIndex="0"/>
+                        Icon="icon.ico"/>
                     <RemoveFolder Id="DesktopFolder" On="uninstall"/>
                     <RegistryValue Root='HKCU' 
                         Key='Software\[Manufacturer]\[ProductName]'
