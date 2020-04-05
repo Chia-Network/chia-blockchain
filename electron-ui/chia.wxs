@@ -13,7 +13,7 @@
             Description="Chia Installer $(var.version)"
             Comments='Chia is a registered trademark of the Chia Network'
             Manufacturer='Chia Network'
-            InstallerVersion='100' 
+            InstallerVersion='500' 
             Languages='1033' 
             Compressed='yes' 
             SummaryCodepage='1252' />
