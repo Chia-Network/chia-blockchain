@@ -26,6 +26,7 @@ fi
 
 if [ `uname` = "Linux" ] && type apt-get; then
     # Debian/Ubuntu
+    LINUX=1
     sudo apt-get install -y npm
 fi
 
@@ -41,7 +42,10 @@ fi
 . ./activate
 # pip 20.x+ supports Linux binary wheels
 pip install --upgrade pip
-pip install -i https://hosted.chia.net/simple/ miniupnpc==0.1.dev5 setproctitle==1.1.10 cbor2==5.0.1
+if [ $LINUX ] then
+    # Linux binary wheels
+    pip install -i https://hosted.chia.net/simple/ miniupnpc==0.1.dev5 setproctitle==1.1.10 cbor2==5.0.1
+fi
 pip install -e .
 
 cd ./electron-ui

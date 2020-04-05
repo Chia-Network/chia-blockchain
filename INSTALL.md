@@ -21,16 +21,9 @@ sh install.sh
 Install dependencies for Ubuntu 18.04, Ubuntu 19.x or newer.
 ```bash
 sudo apt-get update
-sudo apt-get install python3.7-venv git -y
+sudo apt-get install python3-venv git -y
 
-python3.7 -m venv venv
-ln -s venv/bin/activate
-. ./activate
-pip install --upgrade pip
-pip install -i https://hosted.chia.net/simple/ miniupnpc==0.1.dev5 setproctitle==1.1.10 cbor2==5.0.1
-deactivate
-
-# Either checkout the source
+# Either checkout the source and install
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
@@ -39,6 +32,12 @@ sh install.sh
 . ./activate
 
 # Or install chia-blockchain as a package
+python3 -m venv venv
+ln -s venv/bin/activate
+. ./activate
+pip install --upgrade pip
+pip install -i https://hosted.chia.net/simple/ miniupnpc==0.1.dev5 setproctitle==1.1.10 cbor2==5.0.1
+
 pip install chia-blockchain==1.0.beta2
 
 . /activate
