@@ -12,10 +12,10 @@ else
   if [ -e venv/bin/python ]
   then
     echo "installing chiavdf from source"
-    # Check for development tools - this takes the shortcut of only checking for CMake
+    # Check for development tools
     if [ `uname` = "Linux" ] && type apt-get; then
       # Found Ubuntu
-      Ubuntu_Build_Requirements = ( cmake libgmp-dev libboost-python-dev libbost-system-dev )
+      Ubuntu_Build_Requirements=( cmake libgmp-dev libboost-python-dev libbost-system-dev )
       for Packages in "{$Ubuntu_Build_Requirements[@]}"
       do
         if ! dpkg -s $Packages >/dev/null 2>&1; then
