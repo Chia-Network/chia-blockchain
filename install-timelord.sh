@@ -11,7 +11,7 @@ else
   then
     echo "installing chiavdf from source"
     #if [ `uname` = "Linux" ] && type apt-get]; then
-    if [ type apt-get]; then
+    if [ `uname` = "Linux" ] && type apt-get; then
       echo "Found Ubuntu"
       if [ ! dpkg -s cmake >/dev/null 2>&1 ]; then
         echo "Cmake dependencies not found. Installing them."
