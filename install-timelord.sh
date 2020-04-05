@@ -13,6 +13,7 @@ else
     if [ `uname` = "Linux" ] && type apt-get]; then
       echo "Found Ubuntu"
       if [ ! dpkg -s cmake >/dev/null 2>&1 ]; then
+        echo "cmake dependencies not found. Installing them."
         sudo apt-get install cmake libgmp-dev libboost-all-dev -y
       fi
     fi
