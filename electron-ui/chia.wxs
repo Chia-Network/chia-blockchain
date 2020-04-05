@@ -1,34 +1,34 @@
 <?xml version='1.0' encoding='windows-1252'?>
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
     <?include "config.wxi"?>
-    <Product Name='Chia' 
+    <Product Name='Chia'
         Manufacturer='Chia Network'
-        Id='*' 
+        Id='*'
         UpgradeCode='9FF22D37-6167-4F05-A0BC-9B5D8BECAC7E'
         Language='1033' 
         Codepage='1252' 
         Version='$(var.version)'>
-        <Package Id='*' 
+        <Package Id='*'
             Keywords='Installer' 
             Description="Chia Installer $(var.version)"
-            Comments='Chia is a registered trademark of the Chia Network' 
+            Comments='Chia is a registered trademark of the Chia Network'
             Manufacturer='Chia Network'
             InstallerVersion='100' 
             Languages='1033' 
             Compressed='yes' 
             SummaryCodepage='1252' />
         <Upgrade Id='9FF22D37-6167-4F05-A0BC-9B5D8BECAC7E'>
-            <UpgradeVersion OnlyDetect='yes' 
+            <UpgradeVersion OnlyDetect='yes'
                 Property='SELFFOUND'
                 Minimum='$(var.version)' 
                 IncludeMinimum='yes'
                 Maximum='$(var.version)' 
                 IncludeMaximum='yes' />
-            <UpgradeVersion OnlyDetect='yes' 
+            <UpgradeVersion OnlyDetect='yes'
                 Property='NEWERFOUND'
                 Minimum='$(var.version)' 
                 IncludeMinimum='no' />
-            <UpgradeVersion OnlyDetect='no' 
+            <UpgradeVersion OnlyDetect='no'
                 Property='PREVIOUSFOUND'
                 Minimum='0.1.0' 
                 IncludeMinimum='yes'
@@ -41,13 +41,21 @@
         <InstallExecuteSequence>
             <Custom Action='AlreadyUpdated' After='FindRelatedProducts'>SELFFOUND</Custom>
             <Custom Action='NoDowngrade' After='FindRelatedProducts'>NEWERFOUND</Custom>
-            <RemoveExistingProducts Before="InstallInitialize" />            
-        </InstallExecuteSequence>        
+            <RemoveExistingProducts Before="InstallInitialize" />
+        </InstallExecuteSequence>
 
         <Media Id='1' Cabinet='chia.cab' EmbedCab='yes' DiskPrompt="CD-ROM #1" />
         <Icon Id="icon.ico" SourceFile="icon.ico"/>
         <Property Id="ARPPRODUCTICON" Value="icon.ico" />        
         <Property Id='DiskPrompt' Value="Chia Network's Chia Installation [1]" />
+        <Property Id='ARPCOMMENTS'>Chia has a new innovative Nakamoto style consensus algorithm that removes the energy demands of Proof of Work from the system.</Property>
+        <Property Id='ARPCONTACT'>hello@chia.net</Property>
+        <Property Id='ARPHELPLINK'>https://keybase.io/team/chia_network.public</Property>
+        <Property Id='ARPURLINFOABOUT'>https://www.chia.net/about/</Property>
+        <Property Id='ARPURLUPDATEINFO'>https://www.chia.net/releases/</Property>
+        <Property Id='MSIFASTINSTALL'>7</Property>
+        
+        <SetProperty Id="ARPNOMODIFY" Value="1" After="InstallValidate" Sequence="execute"/>
 
         <UIRef Id="WixUI_Minimal" />
         <UIRef Id="WixUI_ErrorProgressText" />

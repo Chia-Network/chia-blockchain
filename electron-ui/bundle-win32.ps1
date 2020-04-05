@@ -2,7 +2,7 @@
 $env:Path += ";C:\Program Files (x86)\WiX Toolset v3.11\bin"
 $env:exename = "chia-wallet" # if you update this make sure to update .gitignore
 $env:electronpackagerdir = $env:exename + "-win32-x64"
-$env:version = "0.1.9"
+$env:version = "0.1.10"
 
 # remove any exisitng outputs
 Write-Host "Cleaning any previous outputs"
