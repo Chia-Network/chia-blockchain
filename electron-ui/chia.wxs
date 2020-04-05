@@ -49,12 +49,13 @@
         <Property Id="ARPPRODUCTICON" Value="icon.ico" />        
         <Property Id='DiskPrompt' Value="Chia Network's Chia Installation [1]" />
 
+        <UIRef Id="WixUI_Minimal" />
+        <UIRef Id="WixUI_ErrorProgressText" />
+
         <Directory Id='TARGETDIR' Name='SourceDir'>
             <Directory Id='ProgramFilesFolder' Name='PFiles'>
                 <Directory Id='ChiaNetwork' Name='Chia Network'>
-                    <Directory Id='INSTALLDIR' Name='Chia Wallet'>
-
-                    </Directory>
+                    <Directory Id='INSTALLDIR' Name='Chia Wallet'/>
                 </Directory>
             </Directory>
             <Directory Id="ProgramMenuFolder" Name="Programs">
