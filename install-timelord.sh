@@ -15,10 +15,14 @@ else
     # Check for development tools - this takes the shortcut of only checking for CMake
     if [ `uname` = "Linux" ] && type apt-get; then
       # Found Ubuntu
-      if ! dpkg -s cmake >/dev/null 2>&1; then
-        echo "CMake requirments not found. Installing them."
-        sudo apt-get install cmake libgmp-dev libboost-python-dev libboost-system-dev -y
-      fi
+      Ubuntu_Build_Requirements = ( cmake libgmp-dev libboost-python-dev libbost-system-dev )
+      for Packages in "{$Ubuntu_Build_Requirements[@]}"
+      do
+        if ! dpkg -s $Packages >/dev/null 2>&1; then
+          echo "Installing $Packages."
+          sudo apt-get install $Packages -y
+        fi
+      done
     fi
     echo venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
     venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
