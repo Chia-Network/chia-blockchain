@@ -10,7 +10,7 @@ else
   if [ -e venv/bin/python ]
   then
     echo "installing chiavdf from source"
-    if [ `uname` = "Linux" ] && type apt-get && !type cmake; then
+    if [ `uname` = "Linux" ] && type apt-get && $(dpkg-query -W -f='${Status}' cmake 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
       sudo apt-get install cmake libgmp-dev libboost-all-dev -y
     fi
     echo venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
