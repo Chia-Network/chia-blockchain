@@ -10,10 +10,11 @@ else
   if [ -e venv/bin/python ]
   then
     echo "installing chiavdf from source"
+    # Check for development tools - this takes the shortcut of only checking for CMake
     if [ `uname` = "Linux" ] && type apt-get; then
-      #echo "Found Ubuntu"
+      # Found Ubuntu
       if ! dpkg -s cmake >/dev/null 2>&1; then
-        echo "Cmake requirments not found. Installing them."
+        echo "CMake requirments not found. Installing them."
         sudo apt-get install cmake libgmp-dev libboost-atomic-dev -y
       fi
     fi
