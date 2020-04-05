@@ -11,7 +11,7 @@ else
   then
     echo "installing chiavdf from source"
     if [ `uname` = "Linux" ] && type apt-get; then
-      echo "Found Ubuntu"
+      #echo "Found Ubuntu"
       if ! dpkg -s cmake >/dev/null 2>&1; then
         echo "Cmake requirments not found. Installing them."
         sudo apt-get install cmake libgmp-dev libboost-all-dev -y
