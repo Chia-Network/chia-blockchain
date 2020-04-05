@@ -24,10 +24,17 @@ then
 fi
 
 
-if [ `uname` = "Linux" ] && type apt-get; then
+if [ `uname` = "Linux" ]; then
+  LINUX=1
+  if type apt-get; then
     # Debian/Ubuntu
-    LINUX=1
     sudo apt-get install -y npm
+  elif type yum; then
+    # CentOS or AMZN 2
+    sudo yum install -y python3 git
+    curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
+    sudo yum install -y nodejs
+  fi
 fi
 
 # this fancy syntax sets INSTALL_PYTHON_PATH to "python3.7" unless INSTALL_PYTHON_VERSION is defined
