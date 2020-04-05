@@ -41,6 +41,7 @@ fi
 . ./activate
 # pip 20.x+ supports Linux binary wheels
 pip install --upgrade pip
+pip install -i https://hosted.chia.net/simple/ miniupnpc==0.1.dev5 setproctitle==1.1.10 cbor2==5.0.1
 pip install -e .
 
 cd ./electron-ui
