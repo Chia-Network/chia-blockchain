@@ -32,8 +32,8 @@
                 Property='PREVIOUSFOUND'
                 Minimum='0.1.0' 
                 IncludeMinimum='yes'
-                Maximum='$(var.version)' 
-                IncludeMaximum='no' />                
+                Maximum='$(var.version)'
+                IncludeMaximum='no' />
         </Upgrade>
         <CustomAction Id='AlreadyUpdated' Error='[ProductName] has already been updated to $(var.version) or newer.' />
         <CustomAction Id='NoDowngrade' Error='A later version of [ProductName] is already installed.' />
@@ -54,9 +54,11 @@
         <Property Id='ARPURLINFOABOUT'>https://www.chia.net/about/</Property>
         <Property Id='ARPURLUPDATEINFO'>https://www.chia.net/releases/</Property>
         <Property Id='MSIFASTINSTALL'>7</Property>
-        
+
         <SetProperty Id="ARPNOMODIFY" Value="1" After="InstallValidate" Sequence="execute"/>
 
+        <WixVariable Id="WixUIBannerBmp" Value="banner.bmp" />
+        <WixVariable Id="WixUIDialogBmp" Value="dialog.bmp" />
         <UIRef Id="WixUI_Minimal" />
         <UIRef Id="WixUI_ErrorProgressText" />
 
@@ -69,7 +71,7 @@
             <Directory Id="ProgramMenuFolder" Name="Programs">
                 <Directory Id="ProgramMenuDir" Name="Chia">
                     <Component Id="ProgramMenuDir" Guid="0B8A0D75-657A-4FFC-84E8-8D40B343E7CA">
-                        <Shortcut Id="ProgramMenuShortcut" 
+                        <Shortcut Id="ProgramMenuShortcut"
                             Name="Chia"
                             Description="Chia $(var.version)"
                             Target="[INSTALLDIR]$(var.exename)"
@@ -99,7 +101,7 @@
                         Name='installed' 
                         Type='string' 
                         Value='1' 
-                        KeyPath='yes' />                        
+                        KeyPath='yes' />
                 </Component>
             </Directory>
         </Directory>
@@ -107,7 +109,7 @@
         <Feature Id='Complete' Level='1'>
             <ComponentRef Id='DesktopShortCut' />
             <ComponentRef Id='ProgramMenuDir' />
-            <ComponentGroupRef Id="ChiaFiles" />            
+            <ComponentGroupRef Id="ChiaFiles" />
         </Feature>
     </Product>
 </Wix>
