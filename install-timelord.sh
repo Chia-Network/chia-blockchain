@@ -15,7 +15,7 @@ else
       # Found Ubuntu
       if ! dpkg -s cmake >/dev/null 2>&1; then
         echo "CMake requirments not found. Installing them."
-        sudo apt-get install cmake libgmp-dev libboost-atomic-dev -y
+        sudo apt-get install cmake libgmp-dev libboost-python-dev libboost-system-dev -y
       fi
     fi
     echo venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
