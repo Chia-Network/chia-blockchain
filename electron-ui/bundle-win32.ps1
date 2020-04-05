@@ -1,4 +1,4 @@
-# add wix to path
+# add wix binaries to the path
 $env:Path += ";C:\Program Files (x86)\WiX Toolset v3.11\bin"
 $env:exename = "chia-wallet" # if you update this make sure to update .gitignore
 $env:electronpackagerdir = $env:exename + "-win32-x64"
@@ -18,7 +18,7 @@ electron-packager src $env:exename --platform=win32
 # compile the installer
 Write-Host "Compiling installer"
 
-# this generates package-files.wxs from the contents of the electron packager folder
+# this generates electron-packager-files.wxs from the contents of the electron packager folder
 heat.exe dir $env:electronpackagerdir -cg ChiaFiles -gg -scom -sreg -sfrag -srd -dr INSTALLDIR -out electron-packager-files.wxs
 
 candle electron-packager-files.wxs chia.wxs
