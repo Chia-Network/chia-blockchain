@@ -26,7 +26,7 @@ def mempool_assert_coin_consumed(
     Checks coin consumed conditions
     Returns None if conditions are met, if not returns the reason why it failed
     """
-    bundle_removals = spend_bundle.removals_dict()
+    bundle_removals = spend_bundle.removal_names()
     coin_name = condition.var1
     if coin_name not in bundle_removals:
         return Err.ASSERT_COIN_CONSUMED_FAILED
