@@ -40,7 +40,6 @@ pip install -i https://hosted.chia.net/simple/ miniupnpc==0.1.dev5 setproctitle=
 
 pip install chia-blockchain==1.0.beta2
 
-. /activate
 ```
 
 ### Windows (WSL)
