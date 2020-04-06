@@ -3,7 +3,7 @@ THE_PATH=`python -c 'import pkg_resources; print( pkg_resources.get_distribution
 CHIAVDF_VERSION=`python -c 'from setup import dependencies; t = [_ for _ in dependencies if _.startswith("chiavdf")][0]; print(t)'`
 
 if [ `uname` = "Linux" ] && type apt-get;
-  then UBUNTU_DEBIAN=1
+  then UBUNTU_DEBIAN=true
   echo "Found Ubuntu/Debian $UBUNTU_DEBIAN"
 fi
 
@@ -14,7 +14,7 @@ then
   echo $THE_PATH
   echo "vdf_client already exists, no action taken"
 else
-  if [ -e venv/bin/python  && $UBUNTU_DEBIAN eq 1]
+  if [ -e venv/bin/python  && "$UBUNTU_DEBIAN" = "true"]
   then
     echo "installing chiavdf from source on Ubuntu/Debian"
     # Check for development tools
