@@ -52,7 +52,7 @@ def calculate_cost_of_program(
                     len(cvp_list) * ConditionCost.ASSERT_COIN_CONSUMED.value
                 )
             else:
-                # TODO(straya): do something if we hit this case
+                # We ignore unknown conditions in order to allow for future soft forks
                 pass
 
     # Add raw size of the program
