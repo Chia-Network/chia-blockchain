@@ -4,6 +4,8 @@ CHIAVDF_VERSION=`python -c 'from setup import dependencies; t = [_ for _ in depe
 
 if [ `uname` = "Linux" ] && type apt-get;
   then UBUNTU_DEBIAN=1
+else
+  UBUNTU_DEBIAN=0
 fi
 
 echo "This script assumes it is run from the chia venv - '. ./activate' before running."
