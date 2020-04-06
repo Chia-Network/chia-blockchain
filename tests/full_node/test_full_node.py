@@ -263,16 +263,8 @@ class TestFullNodeProtocol:
 
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
 
-        tip_hash = full_node_1.blockchain.tips[0].header_hash
-        blocks = []
-        while tip_hash != full_node_1.blockchain.genesis.header_hash:
-            bl = await  full_node_1.store.get_block(tip_hash)
-            tip_hash = bl.prev_header_hash
-            blocks.append(bl)
-        blocks.append(full_node_1.blockchain.genesis)
-
-        blocks.reverse()
         blocks = await get_block_path(full_node_1)
+
         blocks_new = bt.get_consecutive_blocks(
             test_constants,
             1,
