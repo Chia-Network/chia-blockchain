@@ -16,7 +16,7 @@ else
     if [ `uname` = "Linux" ] && type apt-get;
     then
       echo "Found Ubuntu/Debian"
-      #BUILD_REQUIREMENTS=(cmake libgmp-dev libboost-python-dev libbost-system-dev)
+      BUILD_REQUIREMENTS=(cmake libgmp-dev libboost-python-dev libbost-system-dev)
       #for packages in "${BUILD_REQUIREMENTS[@]}"; do
         #echo "$packages";
       #done
