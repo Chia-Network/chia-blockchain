@@ -20,7 +20,7 @@ else
     sudo apt-get install cmake libgmp-dev libboost-python-dev libbost-system-dev -y
     echo venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
     venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
-  if [ -e venv/bin/python ]
+  elif [ -e venv/bin/python ]
   then
     echo "installing chiavdf from source"
     # User needs to provide required packages
