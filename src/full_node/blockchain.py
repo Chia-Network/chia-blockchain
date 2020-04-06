@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Tuple, Set
 import asyncio
 import concurrent
 import blspy
+from chiabip158 import PyBIP158
 
 from src.consensus.block_rewards import calculate_block_reward, calculate_base_fee
 from src.consensus.constants import constants as consensus_constants
@@ -1061,7 +1062,20 @@ class Blockchain:
         if root_error:
             return root_error
 
-        # TODO(straya): validate filter
+        # Validate filter
+        byte_array_tx: List[bytes32] = []
+
+        for coin in additions:
+            byte_array_tx.append(bytearray(coin.puzzle_hash))
+        for coin_name in removals:
+            byte_array_tx.append(bytearray(coin_name))
+
+        bip158: PyBIP158 = PyBIP158(byte_array_tx)
+        encoded_filter = bytes(bip158.GetEncoded())
+        filter_hash = std_hash(encoded_filter)
+
+        if filter_hash != block.header.data.filter_hash:
+            return Err.INVALID_TRANSACTIONS_FILTER_HASH
 
         # Watch out for duplicate outputs
         addition_counter = collections.Counter(_.name() for _ in additions)
