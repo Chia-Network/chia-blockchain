@@ -50,12 +50,9 @@ echo "Python version is $INSTALL_PYTHON_VERSION"
 . ./activate
 # pip 20.x+ supports Linux binary wheels
 pip install --upgrade pip
-if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
-  # This remains in case there is a diversion of binary wheels
-  pip install -i https://hosted.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
-else
-  pip install -i https://hosted.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
-fi
+#if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
+# This remains in case there is a diversion of binary wheels
+pip install -i https://hosted.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
 pip install -e .
 
 cd ./electron-ui
