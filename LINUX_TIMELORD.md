@@ -4,8 +4,6 @@ If you want to run a timelord on Linux, you must install the wheel from source (
 ```
 . ./activate
 
-pip install --force --no-binary chiavdf chiavdf==0.12.1
-# or
 sh install-timelord.sh
 ```
 

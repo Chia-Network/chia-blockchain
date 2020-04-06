@@ -23,7 +23,7 @@ then
   INSTALL_PYTHON_VERSION=`find_python`
 fi
 
-
+# Manage npm and other install requirements on an OS specific basis
 if [ `uname` = "Linux" ]; then
   #LINUX=1
   if type apt-get; then
