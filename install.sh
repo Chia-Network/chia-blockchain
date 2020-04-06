@@ -35,6 +35,10 @@ if [ `uname` = "Linux" ]; then
     curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
     sudo yum install -y nodejs
   fi
+elif [ `uname` = "Darwin" ] && type brew; then
+  brew upgrade python npm gmp
+elif [ `uname` = "Darwin" ] && ! type brew; then
+  echo "Installation requires brew on MacOS"
 fi
 
 # this fancy syntax sets INSTALL_PYTHON_PATH to "python3.7" unless INSTALL_PYTHON_VERSION is defined
