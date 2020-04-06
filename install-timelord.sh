@@ -14,7 +14,7 @@ then
   echo $THE_PATH
   echo "vdf_client already exists, no action taken"
 else
-  if [ -e venv/bin/python && "$UBUNTU_DEBIAN" = "true"]
+  if [ -e venv/bin/python ] && test $UBUNTU_DEBIAN
   then
     echo "installing chiavdf from source on Ubuntu/Debian"
     # Check for development tools
