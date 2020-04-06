@@ -36,8 +36,11 @@ if [ `uname` = "Linux" ]; then
     sudo yum install -y nodejs
   fi
 elif [ `uname` = "Darwin" ] && type brew; then
-  echo "Found MacOS and brew"
-  brew upgrade npm gmp
+  if ! brew info gmp >/dev/null 2>&1; then
+    brew install gmp
+  elif ! brew info npm >/dev/null 2>&1; then
+    brew install npm
+  fi
 elif [ `uname` = "Darwin" ] && ! type brew; then
   echo "Installation requires brew on MacOS"
 fi
