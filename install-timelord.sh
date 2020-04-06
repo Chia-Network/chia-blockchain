@@ -16,7 +16,10 @@ else
     if [ `uname` = "Linux" ] && type apt-get;
     then
       echo "Found Ubuntu/Debian"
-      for packages in "${UBUNTU_BUILD_REQUIREMENTS[@]}"; do echo "$packages"; done
+      BUILD_REQUIREMENTS=(cmake libgmp-dev libboost-python-dev libbost-system-dev)
+      for packages in "${BUILD_REQUIREMENTS[@]}"; do
+        echo "$packages";
+      done
         #if ! dpkg -s $Packages >/dev/null 2>&1; then
           #echo "Installing $Packages."
           #sudo apt-get install $Packages -y
