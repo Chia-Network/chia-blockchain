@@ -18,7 +18,7 @@ else
   then
     echo "installing chiavdf from source on Ubuntu/Debian"
     # Install needed development tools
-    sudo apt-get install cmake libgmp-dev libboost-python-dev libbost-system-dev -y
+    sudo apt-get install cmake libgmp-dev libboost-python-dev libboost-system-dev -y
     echo venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
     venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
   elif [ -e venv/bin/python ]
