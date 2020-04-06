@@ -17,15 +17,15 @@ else
     if [ `uname` = "Linux" ] && type apt-get;
     then
       echo "Found Ubuntu/Debian"
-      #for Packages in "{$UBUNTU_BUILD_REQUIREMENTS[@]}"; do
+      for packages in "${UBUNTU_BUILD_REQUIREMENTS[@]}"; do echo "$packages"; done
         #if ! dpkg -s $Packages >/dev/null 2>&1; then
           #echo "Installing $Packages."
           #sudo apt-get install $Packages -y
-        #fi
+        #fi;
       #done
     fi
     echo venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
-    venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
+    #venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
   else
     echo "no venv created yet, please run install.sh"
   fi
