@@ -4,7 +4,7 @@ CHIAVDF_VERSION=`python -c 'from setup import dependencies; t = [_ for _ in depe
 
 if [ `uname` = "Linux" ] && type apt-get;
   then UBUNTU_DEBIAN=1
-  echo "Found Ubuntu/Debian"
+  echo "Found Ubuntu/Debian $UBUNTU_DEBIAN"
 else
   UBUNTU_DEBIAN=0
 fi
@@ -28,7 +28,7 @@ else
     echo "installing chiavdf from source"
     # User needs to provide required packages
     echo venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
-    venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
+    #venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
   else
     echo "no venv created yet, please run install.sh"
   fi
