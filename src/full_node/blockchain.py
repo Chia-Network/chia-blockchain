@@ -1110,7 +1110,7 @@ class Blockchain:
             if rem in additions_dic:
                 # Ephemeral coin
                 rem_coin: Coin = additions_dic[rem]
-                new_unspent: CoinRecord = CoinRecord(rem_coin, block.height, 0, 0, 0)  # type: ignore # noqa
+                new_unspent: CoinRecord = CoinRecord(rem_coin, block.height, uint32(0), False, False)
                 removal_coin_records[new_unspent.name] = new_unspent
             else:
                 assert prev_header is not None
