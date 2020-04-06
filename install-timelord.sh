@@ -1,7 +1,7 @@
 
 THE_PATH=`python -c 'import pkg_resources; print( pkg_resources.get_distribution("chiavdf").location)' 2> /dev/null`/vdf_client
 CHIAVDF_VERSION=`python -c 'from setup import dependencies; t = [_ for _ in dependencies if _.startswith("chiavdf")][0]; print(t)'`
-#UBUNTU_BUILD_REQUIREMENTS=("cmake" "libgmp-dev" "libboost-python-dev" "libbost-system-dev")
+UBUNTU_BUILD_REQUIREMENTS=("cmake" "libgmp-dev" "libboost-python-dev" "libbost-system-dev")
 
 echo "This script assumes it is run from the chia venv - '. ./activate' before running."
 
