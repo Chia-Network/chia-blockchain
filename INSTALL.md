@@ -31,7 +31,7 @@ sh install.sh
 
 . ./activate
 
-# Or install chia-blockchain as a package
+# Or install chia-blockchain as a binary package
 python3.7 -m venv venv
 ln -s venv/bin/activate
 . ./activate
@@ -39,7 +39,6 @@ pip install --upgrade pip
 pip install -i https://hosted.chia.net/simple/ miniupnpc==0.1.dev5 setproctitle==1.1.10 cbor2==5.0.1
 
 pip install chia-blockchain==1.0.beta2
-
 ```
 
 ### Windows (WSL)
@@ -52,17 +51,26 @@ dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all
 ```
 You will be prompted to reboot. Once that is complete, install Ubuntu 18.04 LTS from the Microsoft Store and run it and complete its initial install steps. You now have linux bash shell that can run linux native software on Windows.
 
-Then follow the steps below.
+Then follow the steps below which are the same as the usual Ubuntu instructions above.
 ```bash
-sudo apt-get -y update
-sudo apt-get -y upgrade
+sudo apt-get update
+sudo apt-get install python3.7-venv python3.7-distutils git -y
 
-sudo apt-get install python3.7-venv python3-pip -y
+# Either checkout the source and install
+git clone https://github.com/Chia-Network/chia-blockchain.git
+cd chia-blockchain
 
+sh install.sh
+
+. ./activate
+
+# Or install chia-blockchain as a binary package
 python3.7 -m venv venv
-source venv/bin/activate
+ln -s venv/bin/activate
+. ./activate
 pip install --upgrade pip
 pip install -i https://hosted.chia.net/simple/ miniupnpc==0.1.dev5 setproctitle==1.1.10 cbor2==5.0.1
+
 pip install chia-blockchain==1.0.beta2
 ```
 You will need to download the Windows native Wallet and unzip into somewhere convenient in Windows.
