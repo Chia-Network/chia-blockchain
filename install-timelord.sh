@@ -4,7 +4,7 @@ CHIAVDF_VERSION=`python -c 'from setup import dependencies; t = [_ for _ in depe
 
 if [ `uname` = "Linux" ] && type apt-get;
   then UBUNTU_DEBIAN=true
-  echo "Found Ubuntu/Debian $UBUNTU_DEBIAN"
+  echo "Found Ubuntu/Debian"
 fi
 
 echo "This script assumes it is run from the chia venv - '. ./activate' before running."
@@ -17,7 +17,7 @@ else
   if [ -e venv/bin/python ] && test $UBUNTU_DEBIAN
   then
     echo "installing chiavdf from source on Ubuntu/Debian"
-    # Check for development tools
+    # Install needed development tools
     sudo apt-get install cmake libgmp-dev libboost-python-dev libbost-system-dev -y
     echo venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
     venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
@@ -26,7 +26,7 @@ else
     echo "installing chiavdf from source"
     # User needs to provide required packages
     echo venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
-    #venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
+    venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
   else
     echo "no venv created yet, please run install.sh"
   fi
