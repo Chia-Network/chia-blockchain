@@ -36,11 +36,13 @@ if [ `uname` = "Linux" ]; then
     sudo yum install -y nodejs
   fi
 elif [ `uname` = "Darwin" ] && type brew; then
-  if ! brew info gmp >/dev/null 2>&1; then
-    brew install gmp
-  elif ! brew info npm >/dev/null 2>&1; then
-    brew install npm
-  fi
+  # gmp is only required until blspy gmp issue is fixed
+  # Hacky way to install these if not installed
+  brew list gmp || brew install gmp
+  brew list npm || brew install npm
+  #elif ! brew info npm >/dev/null 2>&1; then
+    #brew install npm
+  #fi
 elif [ `uname` = "Darwin" ] && ! type brew; then
   echo "Installation requires brew on MacOS"
 fi
