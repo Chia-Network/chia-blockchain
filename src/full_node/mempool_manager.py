@@ -1,6 +1,5 @@
 import collections
 import sys
-import traceback
 from typing import Dict, Optional, Tuple, List, Set
 import logging
 

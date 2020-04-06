@@ -1081,7 +1081,7 @@ class Blockchain:
 
         # Get additions and removals since (after) fork_h but not including this block
         additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}
-        removals_since_fork = set()
+        removals_since_fork: Set[bytes32] = set()
         coinbases_since_fork: Dict[bytes32, uint32] = {}
         curr: Optional[FullBlock] = await self.store.get_block(block.prev_header_hash)
         assert curr is not None
@@ -1089,9 +1089,9 @@ class Blockchain:
         while curr.height > fork_h:
             removals_in_curr, additions_in_curr = await curr.tx_removals_and_additions()
             for c_name in removals_in_curr:
-                removals_since_fork[c_name] = curr.header_hash
+                removals_since_fork.add(c_name)
             for c in additions_in_curr:
-                additions_since_fork.add(c.name())
+                additions_since_fork[c.name()] = (c, curr.height)
             additions_since_fork[curr.header.data.coinbase.name()] = (
                 curr.header.data.coinbase,
                 curr.height,

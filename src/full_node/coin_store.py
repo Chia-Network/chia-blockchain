@@ -1,4 +1,3 @@
-import asyncio
 from typing import Dict, Optional, List
 import aiosqlite
 from src.types.full_block import FullBlock
