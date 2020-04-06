@@ -3,20 +3,20 @@ THE_PATH=`python -c 'import pkg_resources; print( pkg_resources.get_distribution
 CHIAVDF_VERSION=`python -c 'from setup import dependencies; t = [_ for _ in dependencies if _.startswith("chiavdf")][0]; print(t)'`
 UBUNTU_BUILD_REQUIREMENTS=(cmake libgmp-dev libboost-python-dev libbost-system-dev)
 
+install_debian_requirements() {
+  for packages in "${UBUNTU_BUILD_REQUIREMENTS[@]}"; do
+    if [ ! dpkg -s $packages >/dev/null 2>&1; then
+      sudo apt-get install $packages -y
+    fi
+  done
+}
+
 if [ `uname` = "Linux" ] && type apt-get;
   then UBUNTU_DEBIAN=1
 fi
 
 echo "This script assumes it is run from the chia venv - '. ./activate' before running."
 
-install_debian_requirements() {
-  for packages in "${UBUNTU_BUILD_REQUIREMENTS[@]}"; do
-    if [ $UBUNTU_DEBIAN && ! dpkg -s $Packages >/dev/null 2>&1;
-    then
-      sudo apt-get install $Packages -y
-    fi
-  done
-}
 
 
 if [ -e $THE_PATH ]
@@ -26,7 +26,7 @@ then
 else
   if [ -e venv/bin/python && $UBUNTU_DEBIAN ]
   then
-    echo "installing chiavdf from source"
+    echo "installing chiavdf from source on Ubuntu/Debian"
     # Check for development tools
     install_debian_requirements
     echo venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
