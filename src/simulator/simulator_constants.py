@@ -1,9 +1,9 @@
 from typing import Dict, Any
 
 # Uncomment to generate new GENESIS_BLOCK
-from tests.block_tools import BlockTools
+#from tests.block_tools import BlockTools
 
-bt = BlockTools()
+#bt = BlockTools()
 
 test_constants: Dict[str, Any] = {
     "DIFFICULTY_STARTING": 5,
@@ -18,8 +18,8 @@ test_constants: Dict[str, Any] = {
     "COINBASE_FREEZE_PERIOD": 0,
 }
 
-test_constants["GENESIS_BLOCK"] = bytes(
-    bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
-)
+#test_constants["GENESIS_BLOCK"] = bytes(
+    #bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
+#)
 
-print(test_constants["GENESIS_BLOCK"])
+#print(test_constants["GENESIS_BLOCK"])

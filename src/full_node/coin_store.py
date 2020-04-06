@@ -30,7 +30,6 @@ class CoinStore:
     """
 
     coin_record_db: aiosqlite.Connection
-    lock: asyncio.Lock
     lca_coin_records: Dict[str, CoinRecord]
     head_diffs: Dict[bytes32, DiffStore]
     cache_size: uint32
@@ -75,8 +74,6 @@ class CoinStore:
         )
 
         await self.coin_record_db.commit()
-        # Lock
-        self.lock = asyncio.Lock()  # external
         self.lca_coin_records = dict()
         self.head_diffs = dict()
         return self

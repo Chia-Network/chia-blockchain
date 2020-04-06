@@ -1,4 +1,6 @@
 import collections
+import sys
+import traceback
 from typing import Dict, Optional, Tuple, List, Set
 import logging
 
@@ -59,28 +61,27 @@ class MempoolManager:
         """
         Returns aggregated spendbundle that can be used for creating new block
         """
-        async with self.unspent_store.lock:
-            if header.header_hash in self.mempools:
-                mempool: Mempool = self.mempools[header.header_hash]
-                cost_sum = 0
-                spend_bundles: List[SpendBundle] = []
-                for dic in mempool.sorted_spends.values():
-                    for item in dic.values():
-                        if (
-                            item.cost + cost_sum
-                            <= self.constants["MAX_BLOCK_COST_CLVM"]
-                        ):
-                            spend_bundles.append(item.spend_bundle)
-                            cost_sum += item.cost
-                        else:
-                            break
-                if len(spend_bundles) > 0:
-                    block_bundle = SpendBundle.aggregate(spend_bundles)
-                    return block_bundle
-                else:
-                    return None
+        if header.header_hash in self.mempools:
+            mempool: Mempool = self.mempools[header.header_hash]
+            cost_sum = 0
+            spend_bundles: List[SpendBundle] = []
+            for dic in mempool.sorted_spends.values():
+                for item in dic.values():
+                    if (
+                        item.cost + cost_sum
+                        <= self.constants["MAX_BLOCK_COST_CLVM"]
+                    ):
+                        spend_bundles.append(item.spend_bundle)
+                        cost_sum += item.cost
+                    else:
+                        break
+            if len(spend_bundles) > 0:
+                block_bundle = SpendBundle.aggregate(spend_bundles)
+                return block_bundle
             else:
                 return None
+        else:
+            return None
 
     def get_filter(self) -> bytes:
         all_transactions: Set[bytes32] = set()
@@ -343,35 +344,38 @@ class MempoolManager:
         For tip that we already have mempool we don't do anything.
         """
         new_pools: Dict[bytes32, Mempool] = {}
+
+        min_mempool_height = sys.maxsize
+        for pool in self.mempools.values():
+            if pool.header.height < min_mempool_height:
+                min_mempool_height = pool.header.height
+
         for tip in new_tips:
             if tip.header_hash in self.mempools:
                 # Nothing to change, we already have mempool for this head
                 new_pools[tip.header_hash] = self.mempools[tip.header_hash]
                 continue
-            if tip.prev_header_hash in self.mempools:
+
+            new_pool = Mempool.create(tip.header, self.mempool_size)
+            if tip.height < min_mempool_height:
                 # Update old mempool
-                new_pool: Mempool = self.mempools[tip.prev_header_hash]
-                await self.update_pool(new_pool, tip)
-            else:
-                # Create mempool for new head
                 if len(self.old_mempools) > 0:
-                    new_pool = Mempool.create(tip.header, self.mempool_size)
+                    log.info(f"Creating new pool: {new_pool.header}")
 
                     # If old spends height is bigger than the new tip height, try adding spends to the pool
                     for height in self.old_mempools.keys():
-                        if height > tip.height:
-                            old_spend_dict: Dict[
-                                bytes32, MempoolItem
-                            ] = self.old_mempools[height]
-                            await self.add_old_spends_to_pool(new_pool, old_spend_dict)
+                        old_spend_dict: Dict[
+                            bytes32, MempoolItem
+                        ] = self.old_mempools[height]
+                        await self.add_old_spends_to_pool(new_pool, old_spend_dict)
 
-                    await self.initialize_pool_from_current_pools(new_pool)
-                else:
-                    new_pool = Mempool.create(tip.header, self.mempool_size)
-                    await self.initialize_pool_from_current_pools(new_pool)
-
+            await self.initialize_pool_from_current_pools(new_pool)
             await self.add_potential_spends_to_pool(new_pool)
             new_pools[new_pool.header.header_hash] = new_pool
+
+        for pool in self.mempools.values():
+            if pool.header.header_hash not in new_pools:
+                await self.add_to_old_mempool_cache(list(pool.spends.values()), pool.header)
 
         self.mempools = new_pools
 
@@ -408,33 +412,6 @@ class MempoolManager:
                 items.append(item)
 
         return items
-
-    async def update_pool(self, pool: Mempool, new_tip: FullBlock):
-        """
-        Called when new tip extends the tip we had mempool for.
-        This function removes removals and additions that happened in block from mempool.
-        """
-        removals, additions = await new_tip.tx_removals_and_additions()
-        additions.append(new_tip.header.data.coinbase)
-        additions.append(new_tip.header.data.fees_coin)
-        pool.header = new_tip.header
-        items: Dict[bytes32, MempoolItem] = {}
-
-        # Remove transactions that were included in new block, and save them in old_mempool cache
-        for rem in removals:
-            if rem in pool.removals:
-                rem_item = pool.removals[rem]
-                items[rem_item.name] = rem_item
-
-        for add_coin in additions:
-            if add_coin.name() in pool.additions:
-                rem_item = pool.additions[add_coin.name()]
-                items[rem_item.name] = rem_item
-
-        for item in items.values():
-            pool.remove_spend(item)
-
-        await self.add_to_old_mempool_cache(list(items.values()), new_tip.header)
 
     async def add_to_old_mempool_cache(self, items: List[MempoolItem], header: Header):
         dic_for_height: Dict[bytes32, MempoolItem]

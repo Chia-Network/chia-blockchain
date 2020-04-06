@@ -866,32 +866,31 @@ class Blockchain:
             self._reconsider_heights(self.lca_block, cur[0])
         self.lca_block = cur[0]
 
-        async with self.unspent_store.lock:
-            if old_lca is None:
-                full: Optional[FullBlock] = await self.store.get_block(
-                    self.lca_block.header_hash
-                )
-                assert full is not None
-                await self.unspent_store.new_lca(full)
-                await self._create_diffs_for_tips(self.lca_block)
-            # If LCA changed update the unspent store
-            elif old_lca.header_hash != self.lca_block.header_hash:
-                # New LCA is lower height but not the a parent of old LCA (Reorg)
-                fork_h = self._find_fork_point_in_chain(old_lca, self.lca_block)
-                # Rollback to fork
-                await self.unspent_store.rollback_lca_to_block(fork_h)
+        if old_lca is None:
+            full: Optional[FullBlock] = await self.store.get_block(
+                self.lca_block.header_hash
+            )
+            assert full is not None
+            await self.unspent_store.new_lca(full)
+            await self._create_diffs_for_tips(self.lca_block)
+        # If LCA changed update the unspent store
+        elif old_lca.header_hash != self.lca_block.header_hash:
+            # New LCA is lower height but not the a parent of old LCA (Reorg)
+            fork_h = self._find_fork_point_in_chain(old_lca, self.lca_block)
+            # Rollback to fork
+            await self.unspent_store.rollback_lca_to_block(fork_h)
 
-                # Add blocks between fork point and new lca
-                fork_hash = self.height_to_hash[fork_h]
-                fork_head = self.headers[fork_hash]
-                await self._from_fork_to_lca(fork_head, self.lca_block)
-                if not self.store.get_sync_mode():
-                    await self.recreate_diff_stores()
-            else:
-                # If LCA has not changed just update the difference
-                self.unspent_store.nuke_diffs()
-                # Create DiffStore
-                await self._create_diffs_for_tips(self.lca_block)
+            # Add blocks between fork point and new lca
+            fork_hash = self.height_to_hash[fork_h]
+            fork_head = self.headers[fork_hash]
+            await self._from_fork_to_lca(fork_head, self.lca_block)
+            if not self.store.get_sync_mode():
+                await self.recreate_diff_stores()
+        else:
+            # If LCA has not changed just update the difference
+            self.unspent_store.nuke_diffs()
+            # Create DiffStore
+            await self._create_diffs_for_tips(self.lca_block)
 
     async def recreate_diff_stores(self):
         # Nuke DiffStore
@@ -1082,16 +1081,17 @@ class Blockchain:
 
         # Get additions and removals since (after) fork_h but not including this block
         additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}
-        removals_since_fork: Set[bytes32] = set()
+        removals_since_fork = set()
         coinbases_since_fork: Dict[bytes32, uint32] = {}
         curr: Optional[FullBlock] = await self.store.get_block(block.prev_header_hash)
         assert curr is not None
+        log.info(f"curr.height is: {curr.height}, fork height is: {fork_h}")
         while curr.height > fork_h:
             removals_in_curr, additions_in_curr = await curr.tx_removals_and_additions()
             for c_name in removals_in_curr:
-                removals_since_fork.add(c_name)
+                removals_since_fork[c_name] = curr.header_hash
             for c in additions_in_curr:
-                additions_since_fork[c.name()] = (c, curr.height)
+                additions_since_fork.add(c.name())
             additions_since_fork[curr.header.data.coinbase.name()] = (
                 curr.header.data.coinbase,
                 curr.height,
@@ -1157,6 +1157,7 @@ class Blockchain:
                 if rem in removals_since_fork:
                     # This coin was spent in the fork
                     log.error(f"DOUBLE SPEND! 3 {rem}")
+                    log.error(f"removals_since_fork: {removals_since_fork}")
                     return Err.DOUBLE_SPEND
 
         # Check fees
