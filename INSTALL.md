@@ -49,7 +49,7 @@ pip install chia-blockchain==1.0.beta2
 From an Administrator PowerShell
 ```
 dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
-dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all`
+dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all
 ```
 You will be prompted to reboot. Once that is complete, install Ubuntu 18.04 LTS from the Microsoft Store and run it and complete its initial install steps. You now have linux bash shell that can run linux native software on Windows.
 
