@@ -3,7 +3,12 @@ import shutil
 
 from pathlib import Path
 
-from src.util.config import config_path_for_filename, initial_config_file, load_config, save_config
+from src.util.config import (
+    config_path_for_filename,
+    create_new_chia_prefs_dir,
+    load_config,
+    save_config,
+)
 from src.util.path import make_path_relative, mkdir, path_from_root
 
 
@@ -37,9 +42,6 @@ def migrate_from(old_dir, new_dir, manifest):
     # for now, we simply leave them where they are
     # and make what may have been relative paths absolute
 
-    old_config = load_config("config.yaml")
-    plot_root = old_config.get_dpath("harvester.plot_root", "plots")
-
     plots_config = load_config("plots.yaml")
     old_plot_paths = plots_config.get_dpath("plots", [])
     if len(old_plot_paths) == 0:
@@ -56,17 +58,23 @@ def migrate_from(old_dir, new_dir, manifest):
     plots_config.set_dpath("plots", new_plot_paths)
     save_config("plots.yaml", new_plot_paths)
     print("\nUpdated plots.yaml to point to where your existing plots are.")
-    print("\nYour plots have not been moved so be careful to deleting old preferences folders.")
+    print(
+        "\nYour plots have not been moved so be careful deleting old preferences folders."
+    )
     print("If you want to move your plot files, you should also modify")
     print(f"{config_path_for_filename('plots.yaml')}")
     return 1
 
 
 def init(args, parser):
-    new_path = path_from_root(".")
-    print(f"migrating to {new_path}")
-    if new_path.is_dir():
-        print(f"{new_path} already exists, no action taken")
+    return chia_init()
+
+
+def chia_init():
+    root_path = path_from_root(".")
+    print(f"migrating to {root_path}")
+    if root_path.is_dir():
+        print(f"{root_path} already exists, no action taken")
         return -1
 
     MANIFEST = [
@@ -82,19 +90,11 @@ def init(args, parser):
     ]
 
     for old_path, manifest in PATH_MANIFEST_LIST:
-        r = migrate_from(old_path, new_path, manifest)
+        r = migrate_from(old_path, root_path, manifest)
         if r:
             break
     else:
-        create_new_template(new_path)
+        create_new_chia_prefs_dir(root_path)
+        print("Please generate your keys with chia-generate-keys")
 
     return 0
-
-
-def create_new_template(path: Path) -> None:
-    filename = "config.yaml"
-    default_config_file_data = initial_config_file(filename)
-    with open(config_path_for_filename(filename), "w") as f:
-        f.write(default_config_file_data)
-    save_config("plots.yaml", {})
-    print("Please generate your keys with chia-generate-keys")

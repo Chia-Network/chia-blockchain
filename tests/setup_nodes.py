@@ -21,7 +21,7 @@ from src.types.full_block import FullBlock
 from src.full_node.coin_store import CoinStore
 from tests.block_tools import BlockTools
 from src.types.BLSSignature import BLSPublicKey
-from src.util.config import load_config
+from src.util.config import create_default_chia_config, load_config
 from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.harvester import Harvester
 from src.farmer import Farmer
@@ -29,6 +29,11 @@ from src.introducer import Introducer
 from src.timelord import Timelord
 from src.server.connection import PeerInfo
 from src.util.ints import uint16, uint32
+from src.util.path import path_from_root
+
+
+tests_root = path_from_root("tests")
+create_default_chia_config(tests_root)
 
 bt = BlockTools()
 
@@ -71,7 +76,7 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
 
     await store_1.add_block(FullBlock.from_bytes(test_constants_copy["GENESIS_BLOCK"]))
 
-    config = load_config("config.yaml", "full_node")
+    config = load_config("config.yaml", "full_node", tests_root)
     if introducer_port is not None:
         config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = introducer_port
@@ -121,7 +126,7 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
 
     await store_1.add_block(FullBlock.from_bytes(test_constants_copy["GENESIS_BLOCK"]))
 
-    config = load_config("config.yaml", "full_node")
+    config = load_config("config.yaml", "full_node", tests_root)
     if introducer_port is not None:
         config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = introducer_port
@@ -148,7 +153,7 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
 
 
 async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
-    config = load_config("config.yaml", "wallet")
+    config = load_config("config.yaml", "wallet", tests_root)
     if "starting_height" in dic:
         config["starting_height"] = dic["starting_height"]
     key_config = {
@@ -177,7 +182,7 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
 
 
 async def setup_harvester(port, dic={}):
-    config = load_config("config.yaml", "harvester")
+    config = load_config("config.yaml", "harvester", tests_root)
 
     harvester = Harvester(config, bt.plot_config)
     server = ChiaServer(port, harvester, NodeType.HARVESTER)
@@ -192,7 +197,7 @@ async def setup_harvester(port, dic={}):
 
 
 async def setup_farmer(port, dic={}):
-    config = load_config("config.yaml", "farmer")
+    config = load_config("config.yaml", "farmer", tests_root)
     pool_sk = bt.pool_sk
     pool_target = create_puzzlehash_for_pk(
         BLSPublicKey(bytes(pool_sk.get_public_key()))
@@ -223,7 +228,7 @@ async def setup_farmer(port, dic={}):
 
 
 async def setup_introducer(port, dic={}):
-    config = load_config("config.yaml", "introducer")
+    config = load_config("config.yaml", "introducer", tests_root)
 
     introducer = Introducer(config)
     server = ChiaServer(port, introducer, NodeType.INTRODUCER)
@@ -244,7 +249,7 @@ async def setup_vdf_clients(port):
 
 
 async def setup_timelord(port, dic={}):
-    config = load_config("config.yaml", "timelord")
+    config = load_config("config.yaml", "timelord", tests_root)
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]

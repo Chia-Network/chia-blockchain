@@ -10,13 +10,23 @@ from src.util.dpath_dict import DPathDict
 
 
 def initial_config_file(filename: Union[str, Path]) -> str:
-    return pkg_resources.resource_string(
-        __name__, f"initial-{filename}"
-    ).decode()
+    return pkg_resources.resource_string(__name__, f"initial-{filename}").decode()
 
 
-def save_config(filename: Union[str, Path], config_data):
-    path = path_from_root("config") / filename
+def create_default_chia_config(root: Path) -> None:
+    filename = "config.yaml"
+    default_config_file_data = initial_config_file(filename)
+    path = config_path_for_filename(filename, root)
+    mkdir(path.parent)
+    with open(path, "w") as f:
+        f.write(default_config_file_data)
+    save_config("plots.yaml", {}, root)
+
+
+def save_config(filename: Union[str, Path], config_data, root: Optional[Path] = None):
+    if root is None:
+        root = path_from_root(".")
+    path = config_path_for_filename(filename, root)
     with open(path, "w") as f:
         yaml.safe_dump(config_data, f)
 
@@ -28,15 +38,21 @@ def represent_DPathDict(dumper, data):
 yaml.add_representer(DPathDict, represent_DPathDict, yaml.SafeDumper)
 
 
-def config_path_for_filename(filename: Union[str, Path]) -> Path:
-    return path_from_root("config") / filename
+def config_path_for_filename(filename: Union[str, Path], root: Path) -> Path:
+    return path_from_root("config", root) / filename
 
 
-def load_config(filename: Union[str, Path], sub_config: Optional[str] = None) -> Dict:
-    path = config_path_for_filename(filename)
+def load_config(
+    filename: Union[str, Path],
+    sub_config: Optional[str] = None,
+    root: Optional[Path] = None,
+) -> Dict:
+    if root is None:
+        root = path_from_root(".")
+    path = config_path_for_filename(filename, root)
     if not path.is_file():
         print(f"can't find {path}")
-        print("** please run `chia init` **")
+        print("** please run `chia init` to migrate or create new config files **")
         # TODO: fix this hack
         sys.exit(-1)
     r = DPathDict.to(yaml.safe_load(open(path, "r")))

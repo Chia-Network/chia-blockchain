@@ -34,7 +34,9 @@ def mkdir(path_str: Union[str, Path]) -> None:
     path.mkdir(parents=True, exist_ok=True)
 
 
-def make_path_relative(path_str: Union[str, Path], root: Path = DEFAULT_ROOT_PATH) -> Path:
+def make_path_relative(
+    path_str: Union[str, Path], root: Path = DEFAULT_ROOT_PATH
+) -> Path:
     """
     Try to make the given path relative, given the default root.
     """
