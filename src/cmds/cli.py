@@ -23,8 +23,7 @@ def create_parser():
 
     for subcommand in SUBCOMMANDS:
         mod = importlib.import_module("src.cmds.%s" % subcommand)
-        f = getattr(mod, "%s_parser" % subcommand)
-        f(subparsers.add_parser(subcommand))
+        mod.make_parser(subparsers.add_parser(subcommand))
 
     parser.set_defaults(function=lambda args, parser: parser.print_help())
     return parser
