@@ -5,7 +5,9 @@ from pathlib import Path
 from src import __version__
 
 DEFAULT_ROOT_PATH = Path(
-    os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/beta-%s" % __version__))
+    os.path.expanduser(
+        os.getenv("CHIA_ROOT", "~/.chia/beta-{version}").format(version=__version__)
+    )
 ).resolve()
 
 
@@ -21,7 +23,7 @@ def path_from_root(
     path = Path(path_str)
     if not path.is_absolute():
         path = root / path
-    return path
+    return path.resolve()
 
 
 def mkdir(path_str: Union[str, Path]) -> None:
@@ -41,4 +43,4 @@ def make_path_relative(path_str: Union[str, Path], root: Path = DEFAULT_ROOT_PAT
         path = path.relative_to(root)
     except ValueError:
         pass
-    return path
+    return path.resolve()
