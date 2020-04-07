@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Tuple, Set
 import asyncio
 import concurrent
 import blspy
+from chiabip158 import PyBIP158
 
 from src.consensus.block_rewards import calculate_block_reward, calculate_base_fee
 from src.consensus.constants import constants as consensus_constants
@@ -866,32 +867,31 @@ class Blockchain:
             self._reconsider_heights(self.lca_block, cur[0])
         self.lca_block = cur[0]
 
-        async with self.unspent_store.lock:
-            if old_lca is None:
-                full: Optional[FullBlock] = await self.store.get_block(
-                    self.lca_block.header_hash
-                )
-                assert full is not None
-                await self.unspent_store.new_lca(full)
-                await self._create_diffs_for_tips(self.lca_block)
-            # If LCA changed update the unspent store
-            elif old_lca.header_hash != self.lca_block.header_hash:
-                # New LCA is lower height but not the a parent of old LCA (Reorg)
-                fork_h = self._find_fork_point_in_chain(old_lca, self.lca_block)
-                # Rollback to fork
-                await self.unspent_store.rollback_lca_to_block(fork_h)
+        if old_lca is None:
+            full: Optional[FullBlock] = await self.store.get_block(
+                self.lca_block.header_hash
+            )
+            assert full is not None
+            await self.unspent_store.new_lca(full)
+            await self._create_diffs_for_tips(self.lca_block)
+        # If LCA changed update the unspent store
+        elif old_lca.header_hash != self.lca_block.header_hash:
+            # New LCA is lower height but not the a parent of old LCA (Reorg)
+            fork_h = self._find_fork_point_in_chain(old_lca, self.lca_block)
+            # Rollback to fork
+            await self.unspent_store.rollback_lca_to_block(fork_h)
 
-                # Add blocks between fork point and new lca
-                fork_hash = self.height_to_hash[fork_h]
-                fork_head = self.headers[fork_hash]
-                await self._from_fork_to_lca(fork_head, self.lca_block)
-                if not self.store.get_sync_mode():
-                    await self.recreate_diff_stores()
-            else:
-                # If LCA has not changed just update the difference
-                self.unspent_store.nuke_diffs()
-                # Create DiffStore
-                await self._create_diffs_for_tips(self.lca_block)
+            # Add blocks between fork point and new lca
+            fork_hash = self.height_to_hash[fork_h]
+            fork_head = self.headers[fork_hash]
+            await self._from_fork_to_lca(fork_head, self.lca_block)
+            if not self.store.get_sync_mode():
+                await self.recreate_diff_stores()
+        else:
+            # If LCA has not changed just update the difference
+            self.unspent_store.nuke_diffs()
+            # Create DiffStore
+            await self._create_diffs_for_tips(self.lca_block)
 
     async def recreate_diff_stores(self):
         # Nuke DiffStore
@@ -1062,7 +1062,20 @@ class Blockchain:
         if root_error:
             return root_error
 
-        # TODO(straya): validate filter
+        # Validate filter
+        byte_array_tx: List[bytes32] = []
+
+        for coin in additions:
+            byte_array_tx.append(bytearray(coin.puzzle_hash))
+        for coin_name in removals:
+            byte_array_tx.append(bytearray(coin_name))
+
+        bip158: PyBIP158 = PyBIP158(byte_array_tx)
+        encoded_filter = bytes(bip158.GetEncoded())
+        filter_hash = std_hash(encoded_filter)
+
+        if filter_hash != block.header.data.filter_hash:
+            return Err.INVALID_TRANSACTIONS_FILTER_HASH
 
         # Watch out for duplicate outputs
         addition_counter = collections.Counter(_.name() for _ in additions)
@@ -1086,6 +1099,7 @@ class Blockchain:
         coinbases_since_fork: Dict[bytes32, uint32] = {}
         curr: Optional[FullBlock] = await self.store.get_block(block.prev_header_hash)
         assert curr is not None
+        log.info(f"curr.height is: {curr.height}, fork height is: {fork_h}")
         while curr.height > fork_h:
             removals_in_curr, additions_in_curr = await curr.tx_removals_and_additions()
             for c_name in removals_in_curr:
@@ -1110,7 +1124,7 @@ class Blockchain:
             if rem in additions_dic:
                 # Ephemeral coin
                 rem_coin: Coin = additions_dic[rem]
-                new_unspent: CoinRecord = CoinRecord(rem_coin, block.height, 0, 0, 0)  # type: ignore # noqa
+                new_unspent: CoinRecord = CoinRecord(rem_coin, block.height, uint32(0), False, False)
                 removal_coin_records[new_unspent.name] = new_unspent
             else:
                 assert prev_header is not None
@@ -1157,6 +1171,7 @@ class Blockchain:
                 if rem in removals_since_fork:
                     # This coin was spent in the fork
                     log.error(f"DOUBLE SPEND! 3 {rem}")
+                    log.error(f"removals_since_fork: {removals_since_fork}")
                     return Err.DOUBLE_SPEND
 
         # Check fees

@@ -8,9 +8,7 @@ from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
 from tests.setup_nodes import (
-    setup_node_simulator_and_two_wallets,
-    setup_node_simulator_and_wallet,
-    setup_three_simulators_and_two_wallets,
+    setup_simulators_and_wallets
 )
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 
@@ -24,19 +22,19 @@ def event_loop():
 class TestTransactions:
     @pytest.fixture(scope="function")
     async def wallet_node(self):
-        async for _ in setup_node_simulator_and_wallet():
+        async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
     @pytest.fixture(scope="function")
     async def two_wallet_nodes(self):
-        async for _ in setup_node_simulator_and_two_wallets(
+        async for _ in setup_simulators_and_wallets(1, 2,
             {"COINBASE_FREEZE_PERIOD": 0}
         ):
             yield _
 
     @pytest.fixture(scope="function")
     async def three_nodes_two_wallets(self):
-        async for _ in setup_three_simulators_and_two_wallets(
+        async for _ in setup_simulators_and_wallets(3, 2,
             {"COINBASE_FREEZE_PERIOD": 0}
         ):
             yield _
@@ -44,8 +42,10 @@ class TestTransactions:
     @pytest.mark.asyncio
     async def test_wallet_coinbase(self, wallet_node):
         num_blocks = 10
-        full_node_1, wallet_node, server_1, server_2 = wallet_node
-        wallet = wallet_node.wallet_state_manager.main_wallet
+        full_nodes, wallets = wallet_node
+        full_node_1, server_1 = full_nodes[0]
+        wallet_node, server_2 = wallets[0]
+        wallet = wallet_node.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)

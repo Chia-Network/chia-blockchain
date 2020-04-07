@@ -8,10 +8,7 @@ from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
 from tests.setup_nodes import (
-    setup_node_simulator_and_two_wallets,
-    setup_node_simulator_and_wallet,
-    setup_three_simulators_and_two_wallets,
-)
+    setup_simulators_and_wallets)
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 
 
@@ -24,26 +21,26 @@ def event_loop():
 class TestWalletSimulator:
     @pytest.fixture(scope="function")
     async def wallet_node(self):
-        async for _ in setup_node_simulator_and_wallet():
+        async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
     @pytest.fixture(scope="function")
     async def two_wallet_nodes(self):
-        async for _ in setup_node_simulator_and_two_wallets(
+        async for _ in setup_simulators_and_wallets(1, 2,
             {"COINBASE_FREEZE_PERIOD": 0}
         ):
             yield _
 
     @pytest.fixture(scope="function")
     async def two_wallet_nodes_five_freeze(self):
-        async for _ in setup_node_simulator_and_two_wallets(
+        async for _ in setup_simulators_and_wallets(1, 2,
             {"COINBASE_FREEZE_PERIOD": 5}
         ):
             yield _
 
     @pytest.fixture(scope="function")
     async def three_sim_two_wallets(self):
-        async for _ in setup_three_simulators_and_two_wallets(
+        async for _ in setup_simulators_and_wallets(3, 2,
             {"COINBASE_FREEZE_PERIOD": 0}
         ):
             yield _
@@ -51,8 +48,10 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_coinbase(self, wallet_node):
         num_blocks = 10
-        full_node_1, wallet_node, server_1, server_2 = wallet_node
-        wallet = wallet_node.wallet_state_manager.main_wallet
+        full_nodes, wallets = wallet_node
+        full_node_1, server_1 = full_nodes[0]
+        wallet_node, server_2 = wallets[0]
+        wallet = wallet_node.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
@@ -71,15 +70,11 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_make_transaction(self, two_wallet_nodes):
         num_blocks = 10
-        (
-            full_node_1,
-            wallet_node,
-            wallet_node_2,
-            server_1,
-            server_2,
-            server_3,
-        ) = two_wallet_nodes
-        wallet = wallet_node.wallet_state_manager.main_wallet
+        full_nodes, wallets = two_wallet_nodes
+        full_node_1, server_1 = full_nodes[0]
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
@@ -134,8 +129,10 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_coinbase_reorg(self, wallet_node):
         num_blocks = 10
-        full_node_1, wallet_node, server_1, server_2 = wallet_node
-        wallet = wallet_node.wallet_state_manager.main_wallet
+        full_nodes, wallets = wallet_node
+        full_node_1, server_1 = full_nodes[0]
+        wallet_node, server_2 = wallets[0]
+        wallet = wallet_node.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
@@ -240,16 +237,12 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_make_transaction_hop(self, two_wallet_nodes_five_freeze):
         num_blocks = 10
-        (
-            full_node_0,
-            wallet_node_0,
-            wallet_node_1,
-            full_node_server,
-            wallet_0_server,
-            wallet_1_server,
-        ) = two_wallet_nodes_five_freeze
-        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-        wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+        full_nodes, wallets = two_wallet_nodes_five_freeze
+        full_node_0, full_node_server = full_nodes[0]
+        wallet_node_0, wallet_0_server = wallets[0]
+        wallet_node_1, wallet_1_server = wallets[1]
+        wallet_0 = wallet_node_0.main_wallet
+        wallet_1 = wallet_node_1.main_wallet
         ph = await wallet_0.get_new_puzzlehash()
 
         await wallet_0_server.start_client(
