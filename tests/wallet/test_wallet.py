@@ -51,7 +51,7 @@ class TestWalletSimulator:
         full_nodes, wallets = wallet_node
         full_node_1, server_1 = full_nodes[0]
         wallet_node, server_2 = wallets[0]
-        wallet = wallet_node.main_wallet
+        wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
@@ -74,7 +74,7 @@ class TestWalletSimulator:
         full_node_1, server_1 = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
-        wallet = wallet_node.main_wallet
+        wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
@@ -132,7 +132,7 @@ class TestWalletSimulator:
         full_nodes, wallets = wallet_node
         full_node_1, server_1 = full_nodes[0]
         wallet_node, server_2 = wallets[0]
-        wallet = wallet_node.main_wallet
+        wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
@@ -241,8 +241,8 @@ class TestWalletSimulator:
         full_node_0, full_node_server = full_nodes[0]
         wallet_node_0, wallet_0_server = wallets[0]
         wallet_node_1, wallet_1_server = wallets[1]
-        wallet_0 = wallet_node_0.main_wallet
-        wallet_1 = wallet_node_1.main_wallet
+        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+        wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
         ph = await wallet_0.get_new_puzzlehash()
 
         await wallet_0_server.start_client(

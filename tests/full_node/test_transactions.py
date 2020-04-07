@@ -45,7 +45,7 @@ class TestTransactions:
         full_nodes, wallets = wallet_node
         full_node_1, server_1 = full_nodes[0]
         wallet_node, server_2 = wallets[0]
-        wallet = wallet_node.main_wallet
+        wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
