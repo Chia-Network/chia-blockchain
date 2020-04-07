@@ -1,7 +1,6 @@
 import argparse
 import importlib
 
-from src.util.config import load_config
 from src import __version__
 
 
@@ -30,9 +29,6 @@ def create_parser():
 
 
 def chia(args, parser):
-    # a hack to generate the config.yaml file if missing
-    load_config("config.yaml")
-
     return args.function(args, parser)
 
 
