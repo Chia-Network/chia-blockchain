@@ -12,7 +12,7 @@ from src.util.byte_types import hexstr_to_bytes
 from src.util.config import str2bool
 
 
-def show_parser(parser):
+def make_parser(parser):
 
     parser.add_argument(
         "-b",
