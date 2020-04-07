@@ -4,6 +4,7 @@ from pathlib import Path
 import pkg_resources
 from typing import Dict, Any, Callable, Optional, Union
 from src.util.path import mkdir, path_from_root
+from src.util.dpath_dict import DPathDict
 
 
 def migrate_config_file(filename: Union[str, Path], path: Path) -> None:
@@ -22,14 +23,21 @@ def save_config(filename: Union[str, Path], config_data):
         yaml.safe_dump(config_data, f)
 
 
+def represent_DPathDict(dumper, data):
+    return dumper.represent_dict(data)
+
+
+yaml.add_representer(DPathDict, represent_DPathDict, yaml.SafeDumper)
+
+
 def load_config(filename: Union[str, Path], sub_config: Optional[str] = None) -> Dict:
     path = path_from_root("config") / filename
     if not path.is_file():
         migrate_config_file(filename, path)
+    r = DPathDict.to(yaml.safe_load(open(path, "r")))
     if sub_config is not None:
-        return yaml.safe_load(open(path, "r"))[sub_config]
-    else:
-        return yaml.safe_load(open(path, "r"))
+        r = r.get_dpath(sub_config)
+    return r
 
 
 def load_config_cli(filename: str, sub_config: Optional[str] = None) -> Dict:
