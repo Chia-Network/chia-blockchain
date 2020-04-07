@@ -18,51 +18,60 @@ sh install.sh
 
 ### Debian/Ubuntu
 
-On Ubuntu 18.04, you need python 3.7. It's not available in the default
-repository, so you need to add an alternate source. You can skip this step
-if you install in Ubuntu 19.x or higher.
-
-```bash
-# for add-apt-repository
-sudo apt install software-properties-common -y
-sudo add-apt-repository ppa:deadsnakes/ppa -y
-```
-
-Install dependencies for Ubuntu 18.04 from above or Ubuntu 19.x or higher.
+Install dependencies for Ubuntu 18.04, Ubuntu 19.x or newer.
 ```bash
 sudo apt-get update
-sudo apt-get install python3.7-venv python3.7-dev python3-pip git -y
+sudo apt-get install python3.7-venv python3.7-distutils git -y
 
+# Either checkout the source and install
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sh install.sh
 
 . ./activate
+
+# Or install chia-blockchain as a binary package
+python3.7 -m venv venv
+ln -s venv/bin/activate
+. ./activate
+pip install --upgrade pip
+pip install -i https://hosted.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
+
+pip install chia-blockchain==1.0.beta2
 ```
 
 ### Windows (WSL)
 #### Install WSL2 + Ubuntu 18.04 LTS
 
 From an Administrator PowerShell
-`dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart`
-and then
-`dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart`.
-This usually requires a reboot. Once that is complete, install Ubuntu 18.04 LTS from the Microsoft Store and run it. Then follow the steps below.
+```
+dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all
+```
+You will be prompted to reboot. Once that is complete, install Ubuntu 18.04 LTS from the Microsoft Store and run it and complete its initial install steps. You now have linux bash shell that can run linux native software on Windows.
+
+Then follow the steps below which are the same as the usual Ubuntu instructions above.
 ```bash
-# add-apt-repository
-sudo add-apt-repository ppa:deadsnakes/ppa -y
+sudo apt-get update
+sudo apt-get install python3.7-venv python3.7-distutils git -y
 
-sudo apt-get -y update
-sudo apt-get -y upgrade
-
-sudo apt-get install python3.7-venv python3.7-dev python3-pip git -y
-
+# Either checkout the source and install
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sh install.sh
+
 . ./activate
+
+# Or install chia-blockchain as a binary package
+python3.7 -m venv venv
+ln -s venv/bin/activate
+. ./activate
+pip install --upgrade pip
+pip install -i https://hosted.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
+
+pip install chia-blockchain==1.0.beta2
 ```
 You will need to download the Windows native Wallet and unzip into somewhere convenient in Windows.
 
