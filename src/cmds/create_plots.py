@@ -112,7 +112,10 @@ def main():
 
         # Dumps the new config to disk.
         save_config(plot_config_filename, plot_config)
-    tmp_dir.rmdir()
+    try:
+        tmp_dir.rmdir()
+    except Exception:
+        print(f"warning: couldn't delete {tmp_dir}")
 
 
 if __name__ == "__main__":

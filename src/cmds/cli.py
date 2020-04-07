@@ -4,7 +4,7 @@ import importlib
 from src import __version__
 
 
-SUBCOMMANDS = ["show", "version"]
+SUBCOMMANDS = ["init", "show", "version"]
 
 
 def create_parser():

@@ -1,20 +1,18 @@
-import yaml
 import argparse
-from pathlib import Path
 import pkg_resources
+import sys
+import yaml
+
+from pathlib import Path
 from typing import Dict, Any, Callable, Optional, Union
 from src.util.path import mkdir, path_from_root
 from src.util.dpath_dict import DPathDict
 
 
-def migrate_config_file(filename: Union[str, Path], path: Path) -> None:
-    filepath = Path(filename)
-    default_config_file = pkg_resources.resource_string(
-        __name__, f"initial-{filepath.parts[-1]}"
+def initial_config_file(filename: Union[str, Path]) -> str:
+    return pkg_resources.resource_string(
+        __name__, f"initial-{filename}"
     ).decode()
-    mkdir(str(path.parent))
-    with open(path, "w") as f:
-        f.write(default_config_file)
 
 
 def save_config(filename: Union[str, Path], config_data):
@@ -30,10 +28,17 @@ def represent_DPathDict(dumper, data):
 yaml.add_representer(DPathDict, represent_DPathDict, yaml.SafeDumper)
 
 
+def config_path_for_filename(filename: Union[str, Path]) -> Path:
+    return path_from_root("config") / filename
+
+
 def load_config(filename: Union[str, Path], sub_config: Optional[str] = None) -> Dict:
-    path = path_from_root("config") / filename
+    path = config_path_for_filename(filename)
     if not path.is_file():
-        migrate_config_file(filename, path)
+        print(f"can't find {path}")
+        print("** please run `chia init` **")
+        # TODO: fix this hack
+        sys.exit(-1)
     r = DPathDict.to(yaml.safe_load(open(path, "r")))
     if sub_config is not None:
         r = r.get_dpath(sub_config)
