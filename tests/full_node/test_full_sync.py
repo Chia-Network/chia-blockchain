@@ -33,9 +33,7 @@ class TestFullSync:
             ):
                 pass
 
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         await asyncio.sleep(2)  # Allow connections to get made
         start = time.time()
@@ -86,9 +84,7 @@ class TestFullSync:
         ):
             pass
 
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await asyncio.sleep(2)  # Allow connections to get made
 
         start = time.time()

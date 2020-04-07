@@ -30,7 +30,7 @@ class WalletTransactionStore:
                 f"CREATE TABLE IF NOT EXISTS transaction_record("
                 f" transaction_record blob,"
                 f" bundle_id text PRIMARY KEY,"
-                f" confirmed_at_index int,"
+                f" confirmed_at_index bigint,"
                 f" created_at_time bigint,"
                 f" to_puzzle_hash text,"
                 f" amount bigint,"
@@ -38,7 +38,7 @@ class WalletTransactionStore:
                 f" incoming int,"
                 f" confirmed int,"
                 f" sent int,"
-                f" wallet_id int)"
+                f" wallet_id bigint)"
             )
         )
 

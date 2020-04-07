@@ -1,12 +1,13 @@
 import time
 from pathlib import Path
 
-from typing import Dict, Optional, List, Set, Tuple, Callable
+from typing import Dict, Optional, List, Set, Tuple, Callable, Any
 import logging
 import asyncio
 
 import aiosqlite
 from chiabip158 import PyBIP158
+from blspy import PublicKey
 
 from src.types.coin import Coin
 from src.types.spend_bundle import SpendBundle
@@ -30,6 +31,11 @@ from src.util.significant_bits import truncate_to_significant_bits
 from src.wallet.wallet_user_store import WalletUserStore
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.util.errors import Err
+from src.wallet.wallet import Wallet
+from src.wallet.rl_wallet.rl_wallet import RLWallet
+from src.types.program import Program
+from src.wallet.derivation_record import DerivationRecord
+from src.wallet.util.wallet_types import WalletType
 
 
 class WalletStateManager:
@@ -64,9 +70,16 @@ class WalletStateManager:
     db_path: Path
     db_connection: aiosqlite.Connection
 
+    main_wallet: Wallet
+    wallets: Dict[uint32, Any]
+
     @staticmethod
     async def create(
-        config: Dict, db_path: Path, constants: Dict, name: str = None,
+        key_config: Dict,
+        config: Dict,
+        db_path: Path,
+        constants: Dict,
+        name: str = None,
     ):
         self = WalletStateManager()
         self.config = config
@@ -93,6 +106,33 @@ class WalletStateManager:
         self.pending_tx_callback = None
         self.difficulty_resets_prev = {}
         self.db_path = db_path
+
+        main_wallet_info = await self.user_store.get_wallet_by_id(1)
+        assert main_wallet_info is not None
+
+        self.main_wallet = await Wallet.create(
+            config, key_config, self, main_wallet_info
+        )
+
+        self.wallets = {}
+        main_wallet = await Wallet.create(config, key_config, self, main_wallet_info)
+        self.wallets[main_wallet_info.id] = main_wallet
+
+        for wallet_info in await self.get_all_wallets():
+            self.log.info(f"wallet_info {wallet_info}")
+            if wallet_info.type == WalletType.STANDARD_WALLET:
+                if wallet_info.id == 1:
+                    continue
+                wallet = await Wallet.create(config, key_config, self, main_wallet_info)
+                self.wallets[wallet_info.id] = wallet
+            elif wallet_info.type == WalletType.RATE_LIMITED:
+                wallet = await RLWallet.create(
+                    config, key_config, self, wallet_info, self.main_wallet,
+                )
+                self.wallets[wallet_info.id] = wallet
+
+        async with self.puzzle_store.lock:
+            await self.create_more_puzzle_hashes()
 
         if len(self.block_records) > 0:
             # Initializes the state based on the DB block records
@@ -135,7 +175,79 @@ class WalletStateManager:
                 ),
                 genesis_hb,
             )
+
         return self
+
+    async def create_more_puzzle_hashes(self):
+        """
+        For all wallets in the user store, generates the first few puzzle hashes so
+        that we can restore the wallet from only the private keys.
+        """
+        for wallet_id in self.wallets.keys():
+            target_wallet = self.wallets[wallet_id]
+            unused: Optional[
+                uint32
+            ] = await self.puzzle_store.get_unused_derivation_path()
+            last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path()
+
+            to_generate = 200
+            start_index = 0
+            derivation_paths: List[DerivationRecord] = []
+
+            if last is None:
+                assert unused is None
+            if unused is not None:
+                assert last is not None
+                start_index = last + 1
+                to_generate -= last - unused
+
+            for index in range(start_index, start_index + to_generate):
+                pubkey: PublicKey = target_wallet.get_public_key(index)
+                puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
+                puzzlehash: bytes32 = puzzle.get_hash()
+                self.log.info(
+                    f"Generating public key at index {index} puzzle hash {puzzlehash.hex()}"
+                )
+                derivation_paths.append(
+                    DerivationRecord(
+                        uint32(index),
+                        puzzlehash,
+                        pubkey,
+                        WalletType.STANDARD_WALLET,
+                        uint32(target_wallet.wallet_info.id),
+                    )
+                )
+
+            await self.puzzle_store.add_derivation_paths(derivation_paths)
+
+    async def get_unused_derivation_record(self, wallet_id: uint32) -> DerivationRecord:
+        """
+        Creates a puzzle hash for the given wallet, and then makes more puzzle hashes
+        for every wallet to ensure we always have more in the database. Never reusue the
+        same public key more than once (for privacy).
+        """
+        async with self.puzzle_store.lock:
+            # If we have no unused public keys, we will create new ones
+            unused: Optional[
+                uint32
+            ] = await self.puzzle_store.get_unused_derivation_path()
+            if unused is None:
+                await self.create_more_puzzle_hashes()
+
+            # Now we must have unused public keys
+            unused = await self.puzzle_store.get_unused_derivation_path()
+            assert unused is not None
+            record: Optional[
+                DerivationRecord
+            ] = await self.puzzle_store.get_derivation_record(unused, wallet_id)
+            assert record is not None
+
+            # Set this key to used so we never use it again
+            await self.puzzle_store.set_used_up_to(record.index)
+
+            # Create more puzzle hashes / keys
+            await self.create_more_puzzle_hashes()
+            return record
 
     def set_callback(self, callback: Callable):
         """
@@ -301,8 +413,6 @@ class WalletStateManager:
         )
         if unconfirmed_record:
             await self.tx_store.set_confirmed(unconfirmed_record.name(), index)
-
-        self.state_changed("coin_removed")
 
     async def coin_added(self, coin: Coin, index: uint32, coinbase: bool):
         """
@@ -536,6 +646,18 @@ class WalletStateManager:
             self.block_records[block.header_hash] = block
             await self.wallet_store.add_block_record(block, False)
 
+            max_puzzle_index = uint32(0)
+            async with self.puzzle_store.lock:
+                for addition in block.additions:
+                    index = await self.puzzle_store.index_for_puzzle_hash(
+                        addition.puzzle_hash
+                    )
+                    assert index is not None
+                    if index > max_puzzle_index:
+                        max_puzzle_index = index
+                await self.puzzle_store.set_used_up_to(max_puzzle_index)
+                await self.create_more_puzzle_hashes()
+
             # Genesis case
             if self.lca is None:
                 assert block.height == 0
@@ -545,6 +667,8 @@ class WalletStateManager:
                     await self.coin_added(coin, block.height, False)
                 for coin_name in block.removals:
                     await self.coin_removed(coin_name, block.height)
+                self.state_changed("coin_added")
+                self.state_changed("coin_removed")
                 self.height_to_hash[uint32(0)] = block.header_hash
                 return ReceiveBlockResult.ADDED_TO_HEAD
 
@@ -589,7 +713,10 @@ class WalletStateManager:
                         await self.coin_added(coin, path_block.height, is_coinbase)
                     for coin_name in path_block.removals:
                         await self.coin_removed(coin_name, path_block.height)
+
                 self.lca = block.header_hash
+                self.state_changed("coin_added")
+                self.state_changed("coin_removed")
                 self.state_changed("new_block")
                 return ReceiveBlockResult.ADDED_TO_HEAD
 
@@ -1132,9 +1259,6 @@ class WalletStateManager:
 
     async def get_all_wallets(self) -> List[WalletInfo]:
         return await self.user_store.get_all_wallets()
-
-    async def get_main_wallet(self):
-        return await self.user_store.get_wallet_by_id(1)
 
     async def get_coin_records_by_spent(self, spent: bool):
         return await self.wallet_store.get_coin_records_by_spent(spent)

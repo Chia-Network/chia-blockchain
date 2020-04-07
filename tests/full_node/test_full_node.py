@@ -78,9 +78,7 @@ class TestFullNodeProtocol:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         _, _, blocks = wallet_blocks
 
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
+        await server_2.start_client(PeerInfo("127.0.0.1", uint16(server_1._port)), None)
         await asyncio.sleep(2)  # Allow connections to get made
 
         new_tip_1 = fnp.NewTip(
@@ -772,9 +770,7 @@ class TestFullNodeProtocol:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         wallet_a, wallet_receiver, blocks = wallet_blocks
 
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await asyncio.sleep(2)  # Allow connections to get made
 
         msgs = [_ async for _ in full_node_1.request_peers(fnp.RequestPeers())]
@@ -787,9 +783,7 @@ class TestWalletProtocol:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         wallet_a, wallet_receiver, blocks = wallet_blocks
 
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         blocks_list = await get_block_path(full_node_1)
 
         blocks_new = bt.get_consecutive_blocks(
@@ -981,9 +975,7 @@ class TestWalletProtocol:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         wallet_a, wallet_receiver, blocks = wallet_blocks
 
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         blocks_list = await get_block_path(full_node_1)
         blocks_new = bt.get_consecutive_blocks(
             test_constants, 5, seed=b"test_request_removals"
@@ -1166,9 +1158,7 @@ class TestWalletProtocol:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         wallet_a, wallet_receiver, blocks = wallet_blocks
 
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         blocks_list = await get_block_path(full_node_1)
         blocks_new = bt.get_consecutive_blocks(
             test_constants, 5, seed=b"test_request_additions"

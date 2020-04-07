@@ -26,7 +26,7 @@ class TransactionRecord(Streamable):
     spend_bundle: Optional[SpendBundle]
     additions: List[Coin]
     removals: List[Coin]
-    wallet_id: uint64
+    wallet_id: uint32
 
     # Represents the list of peers that we sent the transaction to, whether each one
     # included it in the mempool, and what the error message (if any) was

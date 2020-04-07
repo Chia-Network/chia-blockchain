@@ -149,7 +149,7 @@ wallet:
     port: 8444
 
   testing: False
-  database_path: wallet/db/blockchain_wallet_v4.db
+  database_path: wallet/db/blockchain_wallet_v5.db
 
   logging: *logging
 

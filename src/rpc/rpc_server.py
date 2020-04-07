@@ -240,7 +240,7 @@ async def start_rpc_server(
 
     runner = web.AppRunner(app, access_log=None)
     await runner.setup()
-    site = web.TCPSite(runner, None, int(rpc_port))
+    site = web.TCPSite(runner, "localhost", int(rpc_port))
     await site.start()
 
     async def cleanup():

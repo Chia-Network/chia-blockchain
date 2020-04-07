@@ -106,7 +106,6 @@ function set_callbacks(socket) {
 
         if (command == "start_server") {
             get_wallets();
-            get_new_puzzlehash();
             get_transactions();
             get_wallet_balance(g_wallet_id);
             get_height_info();
@@ -266,6 +265,11 @@ copy.addEventListener("click", () => {
 })
 
 async function get_new_puzzlehash() {
+    if (global_syncing) {
+        alert("Cannot create address while syncing.")
+        return;
+    }
+
     /*
     Sends websocket request for new puzzle_hash
     */

@@ -33,7 +33,7 @@ class TestFilter:
         config = load_config("config.yaml", "wallet")
         key_config = {"wallet_sk": sk}
         full_node_1, wallet_node, server_1, server_2 = wallet_and_node
-        wallet = wallet_node.main_wallet
+        wallet = wallet_node.wallet_state_manager.main_wallet
 
         num_blocks = 2
         ph = await wallet.get_new_puzzlehash()

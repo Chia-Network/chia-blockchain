@@ -24,19 +24,16 @@ from src.wallet.puzzles.puzzle_utils import (
     make_assert_coin_consumed_condition,
     make_create_coin_condition,
 )
-from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.wallet_info import WalletInfo
-
-from src.wallet.wallet_state_manager import WalletStateManager
 
 
 class Wallet:
     private_key: ExtendedPrivateKey
     key_config: Dict
     config: Dict
-    wallet_state_manager: WalletStateManager
+    wallet_state_manager: Any
 
     log: logging.Logger
 
@@ -46,7 +43,7 @@ class Wallet:
     async def create(
         config: Dict,
         key_config: Dict,
-        wallet_state_manager: WalletStateManager,
+        wallet_state_manager: Any,
         info: WalletInfo,
         name: str = None,
     ):
@@ -87,17 +84,11 @@ class Wallet:
         return puzzle_for_pk(pubkey)
 
     async def get_new_puzzlehash(self) -> bytes32:
-        index = await self.wallet_state_manager.puzzle_store.get_max_derivation_path()
-        index += 1
-        pubkey: bytes = bytes(self.get_public_key(index))
-        puzzle: Program = self.puzzle_for_pk(pubkey)
-        puzzlehash: bytes32 = puzzle.get_hash()
-
-        await self.wallet_state_manager.puzzle_store.add_derivation_path_of_interest(
-            index, puzzlehash, pubkey, WalletType.STANDARD_WALLET, self.wallet_info.id
-        )
-
-        return puzzlehash
+        return (
+            await self.wallet_state_manager.get_unused_derivation_record(
+                self.wallet_info.id
+            )
+        ).puzzle_hash
 
     def make_solution(self, primaries=None, min_time=0, me=None, consumed=None):
         condition_list = []

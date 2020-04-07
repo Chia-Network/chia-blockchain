@@ -80,7 +80,7 @@ class WebSocketServer:
         """
 
         wallet_id = int(request["wallet_id"])
-        wallet = self.wallet_node.wallets[wallet_id]
+        wallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
         puzzlehash = (await wallet.get_new_puzzlehash()).hex()
 
         data = {
@@ -91,7 +91,7 @@ class WebSocketServer:
 
     async def send_transaction(self, websocket, request, response_api):
         wallet_id = int(request["wallet_id"])
-        wallet = self.wallet_node.wallets[wallet_id]
+        wallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
         try:
             tx = await wallet.generate_signed_transaction_dict(request)
         except BaseException as e:
@@ -173,7 +173,7 @@ class WebSocketServer:
 
     async def get_wallet_balance(self, websocket, request, response_api):
         wallet_id = int(request["wallet_id"])
-        wallet = self.wallet_node.wallets[wallet_id]
+        wallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
         balance = await wallet.get_confirmed_balance()
         pending_balance = await wallet.get_unconfirmed_balance()
 
@@ -217,14 +217,18 @@ class WebSocketServer:
                 rl_admin: RLWallet = await RLWallet.create_rl_admin(
                     config, key_config, wallet_state_manager, main_wallet
                 )
-                self.wallet_node.wallets[rl_admin.wallet_info.id] = rl_admin
+                self.wallet_node.wallet_state_manager.wallets[
+                    rl_admin.wallet_info.id
+                ] = rl_admin
                 response = {"success": True, "type": "rl_wallet"}
                 return await websocket.send(format_response(response_api, response))
             elif request["mode"] == "user":
                 rl_user: RLWallet = await RLWallet.create_rl_user(
                     config, key_config, wallet_state_manager, main_wallet
                 )
-                self.wallet_node.wallets[rl_user.wallet_info.id] = rl_user
+                self.wallet_node.wallet_state_manager.wallets[
+                    rl_user.wallet_info.id
+                ] = rl_user
                 response = {"success": True, "type": "rl_wallet"}
                 return await websocket.send(format_response(response_api, response))
         elif request["wallet_type"] == "cc_wallet":
@@ -238,7 +242,7 @@ class WebSocketServer:
             self.wallet_node.config,
             self.wallet_node.key_config,
             self.wallet_node.wallet_state_manager,
-            self.wallet_node.main_wallet,
+            self.wallet_node.wallet_state_manager.main_wallet,
         )
 
     async def get_wallets(self, websocket, response_api):
@@ -252,7 +256,7 @@ class WebSocketServer:
 
     async def rl_set_admin_info(self, websocket, request, response_api):
         wallet_id = int(request["wallet_id"])
-        wallet: RLWallet = self.wallet_node.wallets[wallet_id]
+        wallet: RLWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
         user_pubkey = request["user_pubkey"]
         limit = uint64(int(request["limit"]))
         interval = uint64(int(request["interval"]))
@@ -266,7 +270,7 @@ class WebSocketServer:
 
     async def rl_set_user_info(self, websocket, request, response_api):
         wallet_id = int(request["wallet_id"])
-        wallet: RLWallet = self.wallet_node.wallets[wallet_id]
+        wallet: RLWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
         admin_pubkey = request["admin_pubkey"]
         limit = uint64(int(request["limit"]))
         interval = uint64(int(request["interval"]))
@@ -396,7 +400,7 @@ async def start_websocket_server():
 
     log.info("Starting websocket server.")
     websocket_server = await websockets.serve(
-        handler.safe_handle, None, config["rpc_port"]
+        handler.safe_handle, "localhost", config["rpc_port"]
     )
     log.info(f"Started websocket server at port {config['rpc_port']}.")
 

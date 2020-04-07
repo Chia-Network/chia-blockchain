@@ -421,14 +421,14 @@ async def setup_full_system(dic={}):
     node2, node2_server = await node_iters[6].__anext__()
 
     await harvester_server.start_client(
-        PeerInfo(farmer_server._host, uint16(farmer_server._port)), None
+        PeerInfo("127.0.0.1", uint16(farmer_server._port)), None
     )
     await farmer_server.start_client(
-        PeerInfo(node1_server._host, uint16(node1_server._port)), None
+        PeerInfo("127.0.0.1", uint16(node1_server._port)), None
     )
 
     await timelord_server.start_client(
-        PeerInfo(node1_server._host, uint16(node1_server._port)), None
+        PeerInfo("127.0.0.1", uint16(node1_server._port)), None
     )
 
     yield (node1, node2)
