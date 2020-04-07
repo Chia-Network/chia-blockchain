@@ -155,7 +155,7 @@ class MempoolManager:
             if v > 1:
                 return None, MempoolInclusionStatus.FAILED, Err.DUPLICATE_OUTPUT
 
-        # Spend might be valid for on pool but not for others
+        # Spend might be valid for one pool but not for other
         added_count = 0
         errors: List[Err] = []
         targets: List[Mempool]
@@ -168,7 +168,13 @@ class MempoolManager:
             targets = [to_pool]
         else:
             targets = list(self.mempools.values())
+
         for pool in targets:
+            # Skip if already added
+            if new_spend.name() in pool.spends:
+                added_count += 1
+                continue
+
             removal_record_dict: Dict[bytes32, CoinRecord] = {}
             removal_coin_dict: Dict[bytes32, Coin] = {}
 

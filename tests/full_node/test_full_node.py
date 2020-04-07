@@ -833,8 +833,14 @@ class TestWalletProtocol:
                 wallet_protocol.SendTransaction(spend_bundle)
             )
         ]
-        assert len(msgs) == 1
-        assert msgs[0].message.data == wallet_protocol.TransactionAck(
+        assert len(msgs) == 2
+        ack_msg = None
+        for msg in msgs:
+            if msg.message.function == "transaction_ack":
+                ack_msg = msg
+
+        assert ack_msg is not None
+        assert ack_msg.message.data == wallet_protocol.TransactionAck(
             spend_bundle.name(), MempoolInclusionStatus.SUCCESS, None
         )
 
