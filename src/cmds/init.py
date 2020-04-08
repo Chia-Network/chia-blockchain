@@ -1,7 +1,6 @@
 import os
 import shutil
 
-from copy import deepcopy
 from pathlib import Path
 
 from src.util.config import (
