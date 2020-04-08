@@ -249,8 +249,8 @@ async def show_async(args, parser):
                 #print (dir(block.header.data.prev_header_hash))
                 #print (dir(args.block_by_header_hash))
                 #print ("ARGV:", args.block_by_header_hash,"<--")
-                prev_block_header_hash = hexstr_to_bytes(block.header.data.prev_header_hash)
-                #prev_block_header = await client.get_block(prev_block_header_hash)
+                prev_block_header_hash = block.header.data.prev_header_hash
+                prev_block_header = await client.get_block(prev_block_header_hash)
                 block_time = struct_time(localtime(block.header.data.timestamp))
                 block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
                 print("Block:")
@@ -261,7 +261,7 @@ async def show_async(args, parser):
                     f"Weight                     {block.header.data.weight}\n"
                     f"Previous Block             0x{block.header.data.prev_header_hash}\n"
                     f"Cost                       {block.header.data.cost}\n"
-                    f"Difficulty                 weight - last block's weight\n"
+                    f"Difficulty                 {block.header.data.weight-prev_block_header.header.data.weight}\n"
                     f"Total VDF Iterations       {block.header.data.total_iters}\n"
                     f"Block VDF Iterations       {block.proof_of_time.number_of_iterations}\n"
                     f"Proof of Space \'k\' Size    {block.proof_of_space.size}\n"
