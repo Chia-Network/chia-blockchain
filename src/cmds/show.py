@@ -10,7 +10,6 @@ from src.types.header_block import HeaderBlock
 from src.rpc.rpc_client import RpcClient
 from src.util.byte_types import hexstr_to_bytes
 from src.util.config import str2bool
-from src.types.sized_bytes import bytes32
 
 
 def show_parser(parser):
@@ -241,14 +240,8 @@ async def show_async(args, parser):
                 print("Block hash", args.block_header_hash, "not found.")
         if args.block_by_header_hash != "":
             block = await client.get_block(hexstr_to_bytes(args.block_by_header_hash))
-            #print(dir(block.to_json_dict))
             # Would like to have a verbose flag for this
-            #print (block)
-            #print (block.proof_of_space.plot_pubkey)
             if block is not None:
-                #print (dir(block.header.data.prev_header_hash))
-                #print (dir(args.block_by_header_hash))
-                #print ("ARGV:", args.block_by_header_hash,"<--")
                 prev_block_header_hash = block.header.data.prev_header_hash
                 prev_block_header = await client.get_block(prev_block_header_hash)
                 block_time = struct_time(localtime(block.header.data.timestamp))
@@ -265,8 +258,8 @@ async def show_async(args, parser):
                     f"Total VDF Iterations       {block.header.data.total_iters}\n"
                     f"Block VDF Iterations       {block.proof_of_time.number_of_iterations}\n"
                     f"Proof of Space \'k\' Size    {block.proof_of_space.size}\n"
-                    #f"Plot Public Key            0x{block.proof_of_space.plot_pubkey}\n"
-                    #f"Pool Public Key            0x{block.proof_of_space.pool_pubkey}\n"
+                    # f"Plot Public Key            0x{block.proof_of_space.plot_pubkey}\n"
+                    # f"Pool Public Key            0x{block.proof_of_space.pool_pubkey}\n"
                     f"Tx Filter Hash             {(block.transactions_filter)}\n"
                     f"Tx Generator Hash          {block.transactions_generator}\n"
                     f"Coinbase Amount            {block.header.data.coinbase.amount/1000000000000}\n"
