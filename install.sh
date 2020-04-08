@@ -35,7 +35,7 @@ if [ `uname` = "Linux" ]; then
     curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
     sudo yum install -y nodejs
   fi
-elif [ `uname` = "Darwin" ] && type brew && ! type npm; then
+elif [ `uname` = "Darwin" ] && type brew; then
   # Install npm if not installed
   brew install npm
 elif [ `uname` = "Darwin" ] && ! type brew; then
