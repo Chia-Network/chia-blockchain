@@ -56,14 +56,18 @@ class FullNodeRpcClient {
                 }
             }
             const req = http.request(options, res => {
+                let collected_data = []
                 if (res.statusCode != 200) {
                     reject(res.statusCode + " " + res.statusMessage);
                     return;
                 }
 
                 res.on('data', d => {
-                    // console.log(d)
-                    resolve(JSON.parse(d));
+                    collected_data = collected_data.concat(d)
+                })
+
+                res.on('end', () => {
+                    resolve(JSON.parse(collected_data))
                 })
             })
 

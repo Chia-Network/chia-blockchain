@@ -267,7 +267,6 @@ class FullNodeView {
             let redisplay_blocks = false;
             if (!this.areEqualSets(tip_hashes, this.state.tip_hashes)) {
                 redisplay_blocks = true;
-                console.log("Redisplaying bloc.. tips", tip_hashes, this.state.tip_hashes);
                 this.state.latest_blocks = await this.get_latest_blocks(blockchain_state.tips);
                 this.state.tip_hashes = tip_hashes;
             }
