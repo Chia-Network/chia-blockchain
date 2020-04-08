@@ -28,6 +28,7 @@ from src.types.full_block import FullBlock
 from src.types.coin import Coin, hash_coin_list
 from src.full_node.blockchain import ReceiveBlockResult
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
+from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.errors import Err
 from src.util.path import path_from_root, mkdir
 
@@ -81,7 +82,7 @@ class WalletNode:
         else:
             self.log = logging.getLogger(__name__)
 
-        path = path_from_root(config["database_path"])
+        path = path_from_root(DEFAULT_ROOT_PATH, config["database_path"])
         mkdir(path.parent)
 
         self.wallet_state_manager = await WalletStateManager.create(

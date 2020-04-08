@@ -5,18 +5,17 @@ from pathlib import Path
 
 import aiosqlite
 import pytest
-from blspy import PrivateKey, PrependSignature
+from blspy import PrivateKey
 
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.store import FullNodeStore
 from src.types.full_block import FullBlock
-from src.types.coin import Coin
 from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
 from src.full_node.coin_store import CoinStore
 from src.util.ints import uint8, uint64
 from src.consensus.constants import constants as consensus_constants
-from tests.block_tools import BlockTools, plot_sks
+from tests.block_tools import BlockTools
 from src.util.errors import Err
 from src.consensus.coinbase import create_coinbase_coin_and_signature
 from src.types.sized_bytes import bytes32

@@ -22,17 +22,22 @@ from src.server.outbound_message import Delivery, Message, NodeType, OutboundMes
 from src.types.peer_info import PeerInfo
 from src.types.sized_bytes import bytes32
 from src.util import partial_func
-from src.util.config import load_config
 from src.util.errors import Err, ProtocolError
 from src.util.ints import uint16
 from src.util.network import create_node_id
 import traceback
 
-config = load_config("config.yaml")
-
 
 class ChiaServer:
-    def __init__(self, port: int, api: Any, local_type: NodeType, name: str = None):
+    def __init__(
+        self,
+        port: int,
+        api: Any,
+        local_type: NodeType,
+        ping_interval: int,
+        network_id: str,
+        name: str = None,
+    ):
         # Keeps track of all connections to and from this node.
         self.global_connections: PeerConnections = PeerConnections([])
 
@@ -46,6 +51,8 @@ class ChiaServer:
         self._api = api  # API module that will be called from the requests
         self._local_type = local_type  # NodeType (farmer, full node, timelord, pool, harvester, wallet)
 
+        self._ping_interval = ping_interval
+        self._network_id = network_id
         # (StreamReader, StreamWriter, NodeType) aiter, gets things from server and clients and
         # sends them through the pipeline
         self._srwt_aiter: push_aiter = push_aiter()
@@ -242,7 +249,7 @@ class ChiaServer:
                 self.push_message(
                     OutboundMessage(NodeType.HARVESTER, msg, Delivery.BROADCAST)
                 )
-                await asyncio.sleep(config["ping_interval"])
+                await asyncio.sleep(self._ping_interval)
 
         return asyncio.create_task(ping())
 
@@ -362,7 +369,7 @@ class ChiaServer:
         outbound_handshake = Message(
             "handshake",
             Handshake(
-                config["network_id"],
+                self._network_id,
                 protocol_version,
                 self._node_id,
                 uint16(self._port),

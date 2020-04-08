@@ -4,7 +4,7 @@ from secrets import token_bytes
 import pytest
 
 from src.protocols import full_node_protocol
-from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
 from tests.setup_nodes import setup_simulators_and_wallets

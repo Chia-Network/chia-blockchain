@@ -7,10 +7,9 @@ from chiapos import DiskProver, Verifier
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.config import load_config
+from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.hash import std_hash
-from src.util.path import path_from_root
 
-chia_root = path_from_root()
 plot_config_filename = "plots.yaml"
 
 
@@ -36,7 +35,7 @@ def main():
         )
         if not Path(plot_filename).exists():
             # Tries relative path
-            full_path: Path = chia_root / plot_filename
+            full_path: Path = DEFAULT_ROOT_PATH / plot_filename
             if not full_path.exists():
                 # Tries absolute path
                 full_path = Path(plot_filename)
