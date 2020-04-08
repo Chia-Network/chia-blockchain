@@ -6,7 +6,7 @@ import pytest
 from src.types.peer_info import PeerInfo
 from src.protocols import full_node_protocol
 from src.util.ints import uint16
-from tests.setup_nodes import setup_two_nodes, setup_node_and_wallet, test_constants, bt
+from tests.setup_nodes import setup_two_nodes, test_constants, bt
 
 
 @pytest.fixture(scope="module")
