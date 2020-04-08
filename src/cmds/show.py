@@ -104,19 +104,18 @@ async def show_async(args, parser):
                 )
             else:
                 print("Current Blockchain Status. Full Node Synced")
-            print("Current least common ancestor ", lca_block.header_hash)
-            # print ("LCA time",time.ctime(lca_block.data.timestamp),"LCA height:",lca_block.height)
+            print("Current least common ancestor:\n    ", lca_block.header_hash)
             lca_time = struct_time(localtime(lca_block.data.timestamp))
+            # Should auto format the align right of LCA height
             print(
-                "LCA time",
+                "     LCA time:",
                 time.strftime("%a %b %d %Y %T %Z", lca_time),
-                "LCA height:",
+                "       LCA height:",
                 lca_block.height,
             )
             print("Heights of tips: " + str([h.height for h in tips]))
             print(f"Current difficulty: {difficulty}")
             print(f"Current VDF iterations per second: {ips:.0f}")
-            # print("LCA data:\n", lca_block.data)
             print("Total iterations since genesis:", total_iters)
             print("")
             heads: List[HeaderBlock] = tips
