@@ -108,8 +108,7 @@ pip install chia-blockchain==1.0.beta3
 ```bash
 sudo yum update -y
 
-# Compiling python 3.7 is required on CentOS 7.7
-# on 8+ just sudo yum install python3.7 
+# Compiling python 3.7 is generally required on CentOS 7.7 and newer
 sudo yum install gcc openssl-devel bzip2-devel libffi libffi-devel -y
 sudo yum install libsqlite3x-devel -y
 
