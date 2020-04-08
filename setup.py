@@ -3,14 +3,14 @@ from setuptools import setup
 
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
-    "blspy==0.1.15",  # Signature library
+    "blspy==0.1.16",  # Signature library
     "cbor2==5.0.1",  # Used for network wire format
     "clvm==0.4",  # contract language
     "PyYAML==5.3",  # Used for config file format
     "aiosqlite==0.11.0",  # asyncio wrapper for sqlite, to store blocks
     "aiohttp==3.6.2",  # HTTP server for full node rpc
     "colorlog==4.1.0",  # Adds color to logs
-    "chiavdf==0.12.2",  # timelord and vdf verification
+    "chiavdf==0.12.3",  # timelord and vdf verification
     "chiabip158==0.12",  # bip158-style wallet filters
     "chiapos==0.12.4",  # proof of space
     "sortedcontainers==2.1.0",  # For maintaining sorted mempools

@@ -22,11 +22,15 @@ jobs:
     - name: Install Mac dependencies
       if: startsWith(matrix.os, 'mac')
       run: |
-        brew update && brew install gmp boost openssl
+        brew update
     - name: Install ubuntu dependencies
       if: startsWith(matrix.os, 'ubuntu')
       run: |
-        sudo apt-get install libboost-all-dev libssl-dev
+        sudo apt-get update
+        sudo apt-get install python3.7-venv python3.7-distutils git -y
+      #sudo apt-get install libboost-all-dev libssl-dev
+
+
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
@@ -48,4 +52,3 @@ jobs:
     - name: Test blockchain code with pytest
       run: |
         ./venv/bin/py.test tests -s -v
-

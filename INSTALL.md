@@ -4,11 +4,9 @@ To install the chia-blockchain node, follow the instructions according to your o
 After installing, follow the remaining instructions in [README.md](README.md) to run the software.
 
 ### MacOS
-Currently Catalina (10.15.x) is required. Make sure [brew](https://brew.sh/) is available before starting the setup.
+Currently Catalina (10.15.x) is required.
+Make sure [brew](https://brew.sh/) is available before starting the setup.
 ```bash
-brew upgrade python
-brew install npm gmp
-
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
