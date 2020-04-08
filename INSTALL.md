@@ -103,7 +103,7 @@ pip install -i https://hosted.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.
 pip install chia-blockchain==1.0.beta3
 ```
 
-### CentOS 7.7 or newer
+### CentOS/RHEL 7.7 or newer
 
 ```bash
 sudo yum update -y
