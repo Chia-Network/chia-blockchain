@@ -12,7 +12,7 @@ elif [ `uname` = "Darwin" ];
   echo "Found MacOS"
 fi
 
-if [ -e $THE_PATH ] && ! $MACOS
+if [ -e $THE_PATH ] && ! test $MACOS
 then
   echo $THE_PATH
   echo "vdf_client already exists, no action taken"

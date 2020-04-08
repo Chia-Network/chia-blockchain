@@ -36,7 +36,7 @@ ln -s venv/bin/activate
 pip install --upgrade pip
 pip install -i https://hosted.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
 
-pip install chia-blockchain==1.0.beta2
+pip install chia-blockchain==1.0.beta3
 ```
 
 ### Windows (WSL)
@@ -69,7 +69,7 @@ ln -s venv/bin/activate
 pip install --upgrade pip
 pip install -i https://hosted.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
 
-pip install chia-blockchain==1.0.beta2
+pip install chia-blockchain==1.0.beta3
 ```
 You will need to download the Windows native Wallet and unzip into somewhere convenient in Windows.
 
@@ -80,15 +80,8 @@ Instead of `chia-start-wallet-ui &` as explained in the [README.md](README.md) y
 ### Amazon Linux 2
 
 ```bash
-sudo yum update
-sudo yum install python3 python3-devel git
-
-# Install npm and node
-curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
-sudo yum install nodejs
-
-# uPnP and setproctitle require compiling
-sudo yum install gcc
+sudo yum update -y
+sudo yum install python3 git -y
 
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
@@ -96,27 +89,50 @@ cd chia-blockchain
 sh install.sh
 
 . ./activate
+
+# Or install chia-blockchain as a binary package
+curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
+sudo yum install -y nodejs
+
+python3.7 -m venv venv
+ln -s venv/bin/activate
+. ./activate
+pip install --upgrade pip
+pip install -i https://hosted.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
+
+pip install chia-blockchain==1.0.beta3
 ```
 
 ### CentOS 7.7 or newer
 
 ```bash
-sudo yum update
-sudo yum install gcc openssl-devel bzip2-devel libffi libffi-devel
-sudo yum install libsqlite3x-devel
+sudo yum update -y
 
-# Install python 3.7
+# Compiling python 3.7 is required on CentOS 7.7
+# on 8+ just sudo yum install python3.7 
+sudo yum install gcc openssl-devel bzip2-devel libffi libffi-devel -y
+sudo yum install libsqlite3x-devel -y
+
 wget https://www.python.org/ftp/python/3.7.7/Python-3.7.7.tgz
 tar -zxvf Python-3.7.7.tgz ; cd Python-3.7.7
 ./configure --enable-optimizations; sudo make install; cd ..
 
-# Install npm and node
-curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
-sudo yum install nodejs
-
+# Download and install the source version
 git clone https://github.com/Chia-Network/chia-blockchain.git
 cd chia-blockchain
 
 sh install.sh
 . ./activate
+
+# Or install from binary wheels
+curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
+sudo yum install -y nodejs
+
+python3.7 -m venv venv
+ln -s venv/bin/activate
+. ./activate
+pip install --upgrade pip
+pip install -i https://hosted.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
+
+pip install chia-blockchain==1.0.beta3
 ```

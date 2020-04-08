@@ -29,9 +29,15 @@ if [ `uname` = "Linux" ]; then
   if type apt-get; then
     # Debian/Ubuntu
     sudo apt-get install -y npm
-  elif type yum; then
-    # CentOS or AMZN 2
+  elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ]; then
+    # AMZN 2
+    echo "Installing on Amazon Linux 2"
     sudo yum install -y python3 git
+    curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
+    sudo yum install -y nodejs
+  elif type yum && [ -f /etc/redhat-release ] || [ -f /etc/centos-release ]; then
+    # CentOS or Redhat
+    echo "Installing on CentOS/Redhat"
     curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
     sudo yum install -y nodejs
   fi
