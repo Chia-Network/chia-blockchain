@@ -31,7 +31,8 @@ async def main():
     timelord = Timelord(config, constants)
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")
-
+    assert ping_interval is not None
+    assert network_id is not None
     server = ChiaServer(
         config["port"], timelord, NodeType.TIMELORD, ping_interval, network_id
     )

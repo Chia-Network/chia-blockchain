@@ -67,7 +67,8 @@ async def main():
     network_id = net_config.get("network_id")
 
     # Starts the full node server (which full nodes can connect to)
-
+    assert ping_interval is not None
+    assert network_id is not None
     server = ChiaServer(
         config["port"], full_node, NodeType.FULL_NODE, ping_interval, network_id
     )

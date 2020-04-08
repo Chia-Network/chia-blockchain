@@ -91,6 +91,8 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
         f"full_node_{port}",
         test_constants_copy,
     )
+    assert ping_interval is not None
+    assert network_id is not None
     server_1 = ChiaServer(
         port,
         full_node_1,
@@ -150,6 +152,8 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
         f"full_node_{port}",
         test_constants_copy,
     )
+    assert ping_interval is not None
+    assert network_id is not None
     server_1 = ChiaServer(
         port, full_node_1, NodeType.FULL_NODE, ping_interval, network_id
     )
@@ -187,6 +191,8 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
     wallet = await WalletNode.create(
         config, key_config, override_constants=test_constants_copy, name="wallet1",
     )
+    assert ping_interval is not None
+    assert network_id is not None
     server = ChiaServer(
         port, wallet, NodeType.WALLET, ping_interval, network_id, "wallet-server"
     )
@@ -209,7 +215,8 @@ async def setup_harvester(port, dic={}):
     net_config = load_config(root_path, "config.yaml")
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")
-
+    assert ping_interval is not None
+    assert network_id is not None
     server = ChiaServer(port, harvester, NodeType.HARVESTER, ping_interval, network_id)
     _ = await server.start_server(None)
 
@@ -247,6 +254,8 @@ async def setup_farmer(port, dic={}):
     network_id = net_config.get("network_id")
 
     farmer = Farmer(config, key_config, test_constants_copy)
+    assert ping_interval is not None
+    assert network_id is not None
     server = ChiaServer(port, farmer, NodeType.FARMER, ping_interval, network_id)
     _ = await server.start_server(farmer._on_connect)
 
@@ -264,6 +273,8 @@ async def setup_introducer(port, dic={}):
     config = load_config(root_path, "config.yaml", "introducer")
 
     introducer = Introducer(config)
+    assert ping_interval is not None
+    assert network_id is not None
     server = ChiaServer(
         port, introducer, NodeType.INTRODUCER, ping_interval, network_id
     )
@@ -294,7 +305,8 @@ async def setup_timelord(port, dic={}):
     net_config = load_config(root_path, "config.yaml")
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")
-
+    assert ping_interval is not None
+    assert network_id is not None
     server = ChiaServer(port, timelord, NodeType.TIMELORD, ping_interval, network_id)
     _ = await server.start_server(None, config)
 

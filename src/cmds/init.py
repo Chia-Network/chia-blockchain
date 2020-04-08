@@ -1,6 +1,7 @@
 import os
 import shutil
 
+from copy import deepcopy
 from pathlib import Path
 
 from src.util.config import (
@@ -50,14 +51,16 @@ def migrate_from(old_root, new_root, manifest):
         return 1
 
     print("\nmigrating plots.yaml")
+
     new_plot_paths = {}
+    plots_config_new = deepcopy(plots_config.get("plots", []))
     for path, values in old_plot_paths.items():
         old_path = path_from_root(old_root, path)
         new_plot_path = make_path_relative(old_path, new_root)
         print(f"rewriting {path}\n as {new_plot_path}")
         new_plot_paths[str(new_plot_path)] = values
-    plots_config["plots"] = new_plot_paths
-    save_config(new_root, "plots.yaml", new_plot_paths)
+    plots_config_new["plots"] = new_plot_paths
+    save_config(new_root, "plots.yaml", plots_config_new)
     print("\nUpdated plots.yaml to point to where your existing plots are.")
     print(
         "\nYour plots have not been moved so be careful deleting old preferences folders."

@@ -39,6 +39,8 @@ async def main():
     )
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")
+    assert ping_interval is not None
+    assert network_id is not None
     server = ChiaServer(
         config["port"], farmer, NodeType.FARMER, ping_interval, network_id
     )

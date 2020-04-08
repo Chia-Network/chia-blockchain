@@ -26,8 +26,10 @@ def main():
 
     print("Checking plots in plots.yaml")
 
+    root_path = DEFAULT_ROOT_PATH
+    plot_config = load_config(root_path, plot_config_filename)
+
     v = Verifier()
-    plot_config = load_config(plot_config_filename)
     for plot_filename, plot_info in plot_config["plots"].items():
         plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(
             PublicKey.from_bytes(bytes.fromhex(plot_info["pool_pk"])),

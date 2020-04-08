@@ -39,7 +39,9 @@ def main():
 
     new_plots_root = path_from_root(
         root_path,
-        load_config("config.yaml").get("harvester", {}).get("new_plot_root", "plots"),
+        load_config(root_path, "config.yaml")
+        .get("harvester", {})
+        .get("new_plot_root", "plots"),
     )
     parser.add_argument(
         "-d",
@@ -55,7 +57,7 @@ def main():
         raise RuntimeError("Keys not generated. Run chia-generate-keys")
 
     # The seed is what will be used to generate a private key for each plot
-    key_config = load_config(key_config_filename)
+    key_config = load_config(root_path, key_config_filename)
     sk_seed: bytes = bytes.fromhex(key_config["sk_seed"])
 
     pool_pk: PublicKey
@@ -104,7 +106,7 @@ def main():
         # Updates the config if necessary.
         plot_config = load_config(root_path, plot_config_filename)
         plot_config_plots_new = deepcopy(plot_config.get("plots", []))
-        relative_path = make_path_relative(full_path)
+        relative_path = make_path_relative(full_path, root_path)
         if relative_path not in plot_config_plots_new:
             plot_config_plots_new[str(relative_path)] = {
                 "sk": bytes(sk).hex(),

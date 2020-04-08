@@ -30,9 +30,12 @@ async def main():
     log = logging.getLogger(__name__)
     setproctitle("chia_harvester")
 
+    print(plot_config)
     harvester = Harvester(config, plot_config)
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")
+    assert ping_interval is not None
+    assert network_id is not None
     server = ChiaServer(
         config["port"], harvester, NodeType.HARVESTER, ping_interval, network_id
     )

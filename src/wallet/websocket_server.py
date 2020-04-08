@@ -390,6 +390,8 @@ async def start_websocket_server():
     net_config = load_config(root_path, "config.yaml")
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")
+    assert ping_interval is not None
+    assert network_id is not None
 
     log.info(f"Starting wallet server on port {config['port']}.")
     server = ChiaServer(
