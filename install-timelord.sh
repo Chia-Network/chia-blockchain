@@ -12,22 +12,22 @@ elif [ `uname` = "Darwin" ];
   echo "Found MacOS"
 fi
 
-if [ -e $THE_PATH ]
+if [ -e $THE_PATH ] && ! $MACOS
 then
   echo $THE_PATH
   echo "vdf_client already exists, no action taken"
 else
   if [ -e venv/bin/python ] && test $UBUNTU_DEBIAN
   then
-    echo "installing chiavdf from source on Ubuntu/Debian"
+    echo "Installing chiavdf from source on Ubuntu/Debian"
     # Install needed development tools
     sudo apt-get install cmake libgmp-dev libboost-python-dev libpython3.7-dev libboost-system-dev -y
     echo venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
     venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
   elif [ -e venv/bin/python ] && test $MACOS
   then
-    echo "installing chiavdf from source on MacOS"
-    brew install cmake gmp boost boost-python3
+    echo "Installing chiavdf requirements for MacOS"
+    brew install boost
   elif [ -e venv/bin/python ]
   then
     echo "installing chiavdf from source"
