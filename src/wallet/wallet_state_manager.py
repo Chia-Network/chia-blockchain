@@ -201,9 +201,12 @@ class WalletStateManager:
                 start_index = last + 1
                 to_generate -= last - unused
 
+            # If the key was replaced (from_zero=True), we should generate the puzzle hashes for the new key
+            end = start_index + to_generate
             if from_zero:
                 start_index = 0
-            for index in range(start_index, start_index + to_generate):
+
+            for index in range(start_index, end):
                 pubkey: PublicKey = target_wallet.get_public_key(index)
                 puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
                 puzzlehash: bytes32 = puzzle.get_hash()

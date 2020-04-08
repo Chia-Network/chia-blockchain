@@ -368,7 +368,6 @@ async def start_websocket_server():
     config = load_config_cli(root_path, "config.yaml", "wallet")
     initialize_logging("Wallet %(name)-25s", config["logging"])
     log = logging.getLogger(__name__)
-    log.info(f"Config : {config}")
 
     try:
         key_config = load_config(DEFAULT_ROOT_PATH, "keys.yaml")
