@@ -65,9 +65,6 @@ class ChiaServer:
             self._srwt_aiter, self._api, self._port
         )
 
-        # Used when simultaneously connecting to another node at the same time, to prevent race
-        self._duplicate_lock: asyncio.Lock = asyncio.Lock()
-
         # Our unique random node id that we will other peers, regenerated on launch
         self._node_id = create_node_id()
 
@@ -401,12 +398,7 @@ class ChiaServer:
             connection.peer_server_port = int(inbound_handshake.server_port)
             connection.connection_type = inbound_handshake.node_type
             if not self.global_connections.add(connection):
-                if connection.node_id > self._node_id:
-                    # The peer has the higher node and, so will close the connection
-                    raise ProtocolError(Err.DUPLICATE_CONNECTION, [False])
-                else:
-                    # We have a higher node and, so we will close the connection
-                    raise ProtocolError(Err.DUPLICATE_CONNECTION, [True])
+                raise ProtocolError(Err.DUPLICATE_CONNECTION, [False])
 
             # Send Ack message
             await connection.send(Message("handshake_ack", HandshakeAck()))
@@ -432,11 +424,6 @@ class ChiaServer:
             # Only yield a connection if the handshake is succesful and the connection is not a duplicate.
             yield connection
         except (ProtocolError, asyncio.IncompleteReadError, OSError, Exception,) as e:
-            if isinstance(e, ProtocolError) and e.code == Err.DUPLICATE_CONNECTION:
-                self.log.warning(e.errors)
-                if not e.errors[0]:
-                    return
-
             self.log.warning(f"{e}, handshake not completed. Connection not created.")
             # Make sure to close the connection even if it's not in global connections
             connection.close()

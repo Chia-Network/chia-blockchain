@@ -49,7 +49,7 @@ async def main():
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
 
     _ = await server.start_server(farmer._on_connect, config)
-    await asyncio.sleep(1)  # Prevents TCP simultaneous connect with harvester
+    await asyncio.sleep(2)  # Prevents TCP simultaneous connect with harvester
     _ = await server.start_client(harvester_peer, None, config)
     _ = await server.start_client(full_node_peer, None, config)
 
