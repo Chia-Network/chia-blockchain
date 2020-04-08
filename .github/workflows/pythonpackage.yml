@@ -42,6 +42,7 @@ jobs:
         sh install-timelord.sh
     - name: Install developer requirements
       run: |
+        brew install boost
         venv/bin/python -m pip install -r requirements-dev.txt
     - name: Lint source with flake8
       run: |

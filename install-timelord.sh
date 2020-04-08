@@ -7,6 +7,9 @@ CHIAVDF_VERSION=`python -c 'from setup import dependencies; t = [_ for _ in depe
 if [ `uname` = "Linux" ] && type apt-get;
   then UBUNTU_DEBIAN=true
   echo "Found Ubuntu/Debian"
+elif [ `uname` = "Darwin" ];
+  then MACOS=true
+  echo "Found MacOS"
 fi
 
 if [ -e $THE_PATH ]
@@ -21,6 +24,10 @@ else
     sudo apt-get install cmake libgmp-dev libboost-python-dev libpython3.7-dev libboost-system-dev -y
     echo venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
     venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
+  elif [ -e venv/bin/python ] && test $MACOS
+  then
+    echo "installing chiavdf from source on MacOS"
+    brew install cmake gmp boost boost-python3
   elif [ -e venv/bin/python ]
   then
     echo "installing chiavdf from source"
