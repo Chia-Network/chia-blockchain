@@ -66,7 +66,7 @@ kwargs = dict(
         "scripts/chia-drop-db",
         "scripts/chia-start-all",
         "scripts/chia-start-farmer",
-        "scripts/chia-start-harvester",
+        "scripts/chia-restart-harvester",
         "scripts/chia-start-introducer",
         "scripts/chia-start-node",
         "scripts/chia-start-sim",
