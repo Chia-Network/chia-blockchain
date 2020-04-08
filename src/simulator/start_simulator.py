@@ -68,7 +68,9 @@ async def main():
 
     # Starts the full node server (which full nodes can connect to)
 
-    server = ChiaServer(config["port"], full_node, NodeType.FULL_NODE, ping_interval, network_id)
+    server = ChiaServer(
+        config["port"], full_node, NodeType.FULL_NODE, ping_interval, network_id
+    )
     full_node._set_server(server)
     _ = await server.start_server(full_node._on_connect, config)
     rpc_cleanup = None

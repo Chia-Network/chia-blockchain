@@ -59,7 +59,9 @@ class Harvester:
         use any plots which don't have one of the pool keys.
         """
         for partial_filename_str, plot_config in self.plot_config["plots"].items():
-            plot_root = path_from_root(DEFAULT_ROOT_PATH, self.config.get("plot_root", "."))
+            plot_root = path_from_root(
+                DEFAULT_ROOT_PATH, self.config.get("plot_root", ".")
+            )
             partial_filename = plot_root / partial_filename_str
             potential_filenames = [
                 partial_filename,

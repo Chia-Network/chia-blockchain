@@ -371,7 +371,7 @@ async def start_websocket_server():
     log.info(f"Config : {config}")
 
     try:
-        key_config = load_config("keys.yaml")
+        key_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     except FileNotFoundError:
         raise RuntimeError("Keys not generated. Run chia-generate-keys")
     if config["testing"] is True:
@@ -392,7 +392,9 @@ async def start_websocket_server():
     network_id = net_config.get("network_id")
 
     log.info(f"Starting wallet server on port {config['port']}.")
-    server = ChiaServer(config["port"], wallet_node, NodeType.WALLET, ping_interval, network_id)
+    server = ChiaServer(
+        config["port"], wallet_node, NodeType.WALLET, ping_interval, network_id
+    )
     wallet_node.set_server(server)
 
     _ = await server.start_server(None, config)

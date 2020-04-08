@@ -32,7 +32,9 @@ async def main():
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")
 
-    server = ChiaServer(config["port"], timelord, NodeType.TIMELORD, ping_interval, network_id)
+    server = ChiaServer(
+        config["port"], timelord, NodeType.TIMELORD, ping_interval, network_id
+    )
     _ = await server.start_server(None, config)
 
     timelord_shutdown_task: Optional[asyncio.Task] = None

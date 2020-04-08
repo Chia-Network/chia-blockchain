@@ -55,7 +55,9 @@ n_wesolowski = uint8(0)
 
 TEST_ROOT_PATH = Path(
     os.path.expanduser(
-        os.getenv("CHIA_ROOT", "~/.chia/beta-{version}-test").format(version=__version__)
+        os.getenv("CHIA_ROOT", "~/.chia/beta-{version}-test").format(
+            version=__version__
+        )
     )
 ).resolve()
 
@@ -65,7 +67,7 @@ class BlockTools:
     Tools to generate blocks for testing.
     """
 
-    def __init__(self, root_path : Path = TEST_ROOT_PATH):
+    def __init__(self, root_path: Path = TEST_ROOT_PATH):
         create_default_chia_config(root_path)
         self.root_path = root_path
         self.plot_config: Dict = {"plots": {}}

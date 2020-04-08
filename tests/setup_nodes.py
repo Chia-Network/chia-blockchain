@@ -92,7 +92,12 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
         test_constants_copy,
     )
     server_1 = ChiaServer(
-        port, full_node_1, NodeType.FULL_NODE, ping_interval, network_id, "full-node-simulator-server",
+        port,
+        full_node_1,
+        NodeType.FULL_NODE,
+        ping_interval,
+        network_id,
+        "full-node-simulator-server",
     )
     _ = await server_1.start_server(full_node_1._on_connect)
     full_node_1._set_server(server_1)
@@ -145,7 +150,9 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
         f"full_node_{port}",
         test_constants_copy,
     )
-    server_1 = ChiaServer(port, full_node_1, NodeType.FULL_NODE, ping_interval, network_id)
+    server_1 = ChiaServer(
+        port, full_node_1, NodeType.FULL_NODE, ping_interval, network_id
+    )
     _ = await server_1.start_server(full_node_1._on_connect)
     full_node_1._set_server(server_1)
 
@@ -180,7 +187,9 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
     wallet = await WalletNode.create(
         config, key_config, override_constants=test_constants_copy, name="wallet1",
     )
-    server = ChiaServer(port, wallet, NodeType.WALLET, ping_interval, network_id, "wallet-server")
+    server = ChiaServer(
+        port, wallet, NodeType.WALLET, ping_interval, network_id, "wallet-server"
+    )
     wallet.set_server(server)
 
     yield (wallet, server)
@@ -255,7 +264,9 @@ async def setup_introducer(port, dic={}):
     config = load_config(root_path, "config.yaml", "introducer")
 
     introducer = Introducer(config)
-    server = ChiaServer(port, introducer, NodeType.INTRODUCER, ping_interval, network_id)
+    server = ChiaServer(
+        port, introducer, NodeType.INTRODUCER, ping_interval, network_id
+    )
     _ = await server.start_server(None)
 
     yield (introducer, server)

@@ -33,7 +33,9 @@ async def main():
     harvester = Harvester(config, plot_config)
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")
-    server = ChiaServer(config["port"], harvester, NodeType.HARVESTER, ping_interval, network_id)
+    server = ChiaServer(
+        config["port"], harvester, NodeType.HARVESTER, ping_interval, network_id
+    )
     _ = await server.start_server(None, config)
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)

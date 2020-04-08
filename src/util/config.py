@@ -29,16 +29,14 @@ def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Pat
     return root_path / "config" / filename
 
 
-def save_config(root_path: Path, filename: Union[str, Path], config_data : Any):
+def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
     path = config_path_for_filename(root_path, filename)
     with open(path, "w") as f:
         yaml.safe_dump(config_data, f)
 
 
 def load_config(
-    root_path: Path,
-    filename: Union[str, Path],
-    sub_config: Optional[str] = None
+    root_path: Path, filename: Union[str, Path], sub_config: Optional[str] = None
 ) -> Dict:
     path = config_path_for_filename(root_path, filename)
     if not path.is_file():

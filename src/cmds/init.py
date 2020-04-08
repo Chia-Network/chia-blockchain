@@ -87,7 +87,8 @@ def chia_init():
     ]
 
     PATH_MANIFEST_LIST = [
-        (Path(os.path.expanduser("~/.chia/beta-%s" % _)), MANIFEST) for _ in ["1.0b2", "1.0b1"]
+        (Path(os.path.expanduser("~/.chia/beta-%s" % _)), MANIFEST)
+        for _ in ["1.0b2", "1.0b1"]
     ]
 
     for old_path, manifest in PATH_MANIFEST_LIST:

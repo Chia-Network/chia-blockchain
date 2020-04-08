@@ -39,7 +39,9 @@ async def main():
     )
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")
-    server = ChiaServer(config["port"], farmer, NodeType.FARMER, ping_interval, network_id)
+    server = ChiaServer(
+        config["port"], farmer, NodeType.FARMER, ping_interval, network_id
+    )
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)

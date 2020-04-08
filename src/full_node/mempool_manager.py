@@ -256,7 +256,9 @@ class MempoolManager:
                 coin_record: CoinRecord = removal_record_dict[npc.coin_name]
                 # Check that the revealed removal puzzles actually match the puzzle hash
                 if npc.puzzle_hash != coin_record.coin.puzzle_hash:
-                    log.warning(f"Mempool rejecting transaction because of wrong puzzle_hash")
+                    log.warning(
+                        f"Mempool rejecting transaction because of wrong puzzle_hash"
+                    )
                     log.warning(f"{npc.puzzle_hash} != {coin_record.coin.puzzle_hash}")
                     return None, MempoolInclusionStatus.FAILED, Err.WRONG_PUZZLE_HASH
 

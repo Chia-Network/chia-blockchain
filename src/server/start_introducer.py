@@ -27,7 +27,9 @@ async def main():
     introducer = Introducer(config)
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")
-    server = ChiaServer(config["port"], introducer, NodeType.INTRODUCER, ping_interval, network_id)
+    server = ChiaServer(
+        config["port"], introducer, NodeType.INTRODUCER, ping_interval, network_id
+    )
     introducer.set_server(server)
     _ = await server.start_server(None, config)
 
