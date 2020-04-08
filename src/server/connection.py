@@ -107,7 +107,7 @@ class PeerConnections:
         self._all_connections.append(connection)
 
         if connection.connection_type == NodeType.FULL_NODE:
-            self.peers.add(connection.get_peer_info())
+            return self.peers.add(connection.get_peer_info())
         return True
 
     def close(self, connection: Connection, keep_peer: bool = False):

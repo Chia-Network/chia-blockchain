@@ -80,4 +80,5 @@ class ConsensusError(Exception):
 class ProtocolError(Exception):
     def __init__(self, code: Err, errors: List[Any] = []):
         super(ProtocolError, self).__init__(f"Error code: {code.name}")
+        self.code = code
         self.errors = errors
