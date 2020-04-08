@@ -14,20 +14,25 @@ from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.timelord import Timelord
 from src.types.peer_info import PeerInfo
+from src.util.config import load_config_cli, load_config
+from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.logging import initialize_logging
-from src.util.config import load_config_cli
 from src.util.setproctitle import setproctitle
 
 
 async def main():
-    config = load_config_cli("config.yaml", "timelord")
-
+    root_path = DEFAULT_ROOT_PATH
+    net_config = load_config(root_path, "config.yaml")
+    config = load_config_cli(root_path, "config.yaml", "timelord")
     initialize_logging("Timelord %(name)-23s", config["logging"])
     log = logging.getLogger(__name__)
     setproctitle("chia_timelord")
 
     timelord = Timelord(config, constants)
-    server = ChiaServer(config["port"], timelord, NodeType.TIMELORD)
+    ping_interval = net_config.get("ping_interval")
+    network_id = net_config.get("network_id")
+
+    server = ChiaServer(config["port"], timelord, NodeType.TIMELORD, ping_interval, network_id)
     _ = await server.start_server(None, config)
 
     timelord_shutdown_task: Optional[asyncio.Task] = None

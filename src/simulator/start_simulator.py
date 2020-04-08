@@ -27,9 +27,11 @@ from src.util.path import mkdir, path_from_root
 
 
 async def main():
-    config = load_config_cli("config.yaml", "full_node")
-    setproctitle("chia_full_node")
+    root_path = DEFAULT_ROOT_PATH
     initialize_logging("FullNode %(name)-23s", config["logging"])
+    net_config = load_config(root_path, "config.yaml")
+    config = load_config_cli(root_path, "config.yaml", "full_node")
+    setproctitle("chia_full_node")
 
     log = logging.getLogger(__name__)
     server_closed = False
@@ -61,8 +63,12 @@ async def main():
         override_constants=test_constants,
     )
 
+    ping_interval = net_config.get("ping_interval")
+    network_id = net_config.get("network_id")
+
     # Starts the full node server (which full nodes can connect to)
-    server = ChiaServer(config["port"], full_node, NodeType.FULL_NODE)
+
+    server = ChiaServer(config["port"], full_node, NodeType.FULL_NODE, ping_interval, network_id)
     full_node._set_server(server)
     _ = await server.start_server(full_node._on_connect, config)
     rpc_cleanup = None

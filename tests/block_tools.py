@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 import random
@@ -10,6 +11,8 @@ from chiavdf import prove
 from chiabip158 import PyBIP158
 
 from chiapos import DiskPlotter, DiskProver
+from src import __version__
+from src.cmds.init import create_default_chia_config
 from src.consensus import block_rewards, pot_iterations
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
@@ -24,7 +27,6 @@ from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
-from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.merkle_set import MerkleSet
 from src.util.ints import uint8, uint32, uint64, uint128, int512
 from src.util.hash import std_hash
@@ -51,12 +53,20 @@ fee_target = std_hash(bytes(wallet_sk.get_public_key()))
 n_wesolowski = uint8(0)
 
 
+TEST_ROOT_PATH = Path(
+    os.path.expanduser(
+        os.getenv("CHIA_ROOT", "~/.chia/beta-{version}-test").format(version=__version__)
+    )
+).resolve()
+
+
 class BlockTools:
     """
     Tools to generate blocks for testing.
     """
 
-    def __init__(self, root_path : Path = DEFAULT_ROOT_PATH / "tests"):
+    def __init__(self, root_path : Path = TEST_ROOT_PATH):
+        create_default_chia_config(root_path)
         self.root_path = root_path
         self.plot_config: Dict = {"plots": {}}
         self.pool_sk = pool_sk

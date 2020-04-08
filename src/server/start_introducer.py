@@ -16,14 +16,17 @@ from src.util.setproctitle import setproctitle
 
 
 async def main():
-    config = load_config_cli("config.yaml", "introducer")
-
+    root_path = DEFAULT_ROOT_PATH
+    net_config = load_config(root_path, "config.yaml")
+    config = load_config_cli(root_path, "config.yaml", "introducer")
     initialize_logging("Introducer %(name)-21s", config["logging"])
     log = logging.getLogger(__name__)
     setproctitle("chia_introducer")
 
     introducer = Introducer(config)
-    server = ChiaServer(config["port"], introducer, NodeType.INTRODUCER)
+    ping_interval = net_config.get("ping_interval")
+    network_id = net_config.get("network_id")
+    server = ChiaServer(config["port"], introducer, NodeType.INTRODUCER, ping_interval, network_id)
     introducer.set_server(server)
     _ = await server.start_server(None, config)
 

@@ -362,7 +362,10 @@ async def start_websocket_server():
     Starts WalletNode, WebSocketServer, and ChiaServer
     """
 
-    config = load_config_cli("config.yaml", "wallet")
+    root_path = DEFAULT_ROOT_PATH
+    net_config = load_config(root_path, "config.yaml")
+
+    config = load_config_cli(root_path, "config.yaml", "wallet")
     initialize_logging("Wallet %(name)-25s", config["logging"])
     log = logging.getLogger(__name__)
     log.info(f"Config : {config}")
@@ -384,8 +387,12 @@ async def start_websocket_server():
     handler = WebSocketServer(wallet_node, log)
     wallet_node.wallet_state_manager.set_callback(handler.state_changed_callback)
 
+    net_config = load_config(root_path, "config.yaml")
+    ping_interval = net_config.get("ping_interval")
+    network_id = net_config.get("network_id")
+
     log.info(f"Starting wallet server on port {config['port']}.")
-    server = ChiaServer(config["port"], wallet_node, NodeType.WALLET)
+    server = ChiaServer(config["port"], wallet_node, NodeType.WALLET, ping_interval, network_id)
     wallet_node.set_server(server)
 
     _ = await server.start_server(None, config)

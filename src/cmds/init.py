@@ -43,7 +43,7 @@ def migrate_from(old_root, new_root, manifest):
     # for now, we simply leave them where they are
     # and make what may have been relative paths absolute
 
-    plots_config = load_config("plots.yaml")
+    plots_config = load_config(new_root, "plots.yaml")
     old_plot_paths = plots_config.get_dpath("plots", [])
     if len(old_plot_paths) == 0:
         print("no plots found, no plots migrated")

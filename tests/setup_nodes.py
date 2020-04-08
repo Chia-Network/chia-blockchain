@@ -20,7 +20,7 @@ from src.types.full_block import FullBlock
 from src.full_node.coin_store import CoinStore
 from tests.block_tools import BlockTools
 from src.types.BLSSignature import BLSPublicKey
-from src.util.config import create_default_chia_config, load_config
+from src.util.config import load_config
 from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.harvester import Harvester
 from src.farmer import Farmer
@@ -33,8 +33,6 @@ from src.util.ints import uint16, uint32
 bt = BlockTools()
 
 root_path = bt.root_path
-
-create_default_chia_config(root_path)
 
 test_constants: Dict[str, Any] = {
     "DIFFICULTY_STARTING": 1,
@@ -75,7 +73,10 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
 
     await store_1.add_block(FullBlock.from_bytes(test_constants_copy["GENESIS_BLOCK"]))
 
-    config = load_config(root_path, "config.yaml", "full_node")
+    config = load_config(root_path, "config.yaml")
+    ping_interval = config.get("ping_interval")
+    network_id = config.get("network_id")
+
     if introducer_port is not None:
         config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = introducer_port
@@ -89,7 +90,7 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
         test_constants_copy,
     )
     server_1 = ChiaServer(
-        port, full_node_1, NodeType.FULL_NODE, name="full-node-simulator-server"
+        port, full_node_1, NodeType.FULL_NODE, ping_interval, network_id, "full-node-simulator-server",
     )
     _ = await server_1.start_server(full_node_1._on_connect)
     full_node_1._set_server(server_1)
@@ -125,7 +126,10 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
 
     await store_1.add_block(FullBlock.from_bytes(test_constants_copy["GENESIS_BLOCK"]))
 
-    config = load_config(root_path, "config.yaml", "full_node")
+    config = load_config(root_path, "config.yaml")
+    ping_interval = config.get("ping_interval")
+    network_id = config.get("network_id")
+    config = config.get("full_node")
     if introducer_port is not None:
         config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = introducer_port
@@ -138,7 +142,7 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
         f"full_node_{port}",
         test_constants_copy,
     )
-    server_1 = ChiaServer(port, full_node_1, NodeType.FULL_NODE)
+    server_1 = ChiaServer(port, full_node_1, NodeType.FULL_NODE, ping_interval, network_id)
     _ = await server_1.start_server(full_node_1._on_connect)
     full_node_1._set_server(server_1)
 
@@ -152,7 +156,10 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
 
 
 async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
-    config = load_config(root_path, "config.yaml", "wallet")
+    config = load_config(root_path, "config.yaml")
+    ping_interval = config.get("ping_interval")
+    network_id = config.get("network_id")
+    config = config.get("wallet")
     if "starting_height" in dic:
         config["starting_height"] = dic["starting_height"]
     key_config = {
@@ -168,7 +175,7 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
     wallet = await WalletNode.create(
         config, key_config, override_constants=test_constants_copy, name="wallet1",
     )
-    server = ChiaServer(port, wallet, NodeType.WALLET, name="wallet-server")
+    server = ChiaServer(port, wallet, NodeType.WALLET, ping_interval, network_id, "wallet-server")
     wallet.set_server(server)
 
     yield (wallet, server)
@@ -181,10 +188,14 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
 
 
 async def setup_harvester(port, dic={}):
-    config = load_config(root_path, "config.yaml", "harvester")
+    config = load_config(root_path, "config.yaml")
+    ping_interval = config.get("ping_interval")
+    network_id = config.get("network_id")
+
+    config = config.get("harvester")
 
     harvester = Harvester(config, bt.plot_config)
-    server = ChiaServer(port, harvester, NodeType.HARVESTER)
+    server = ChiaServer(port, harvester, NodeType.HARVESTER, ping_interval, network_id)
     _ = await server.start_server(None)
 
     yield (harvester, server)
@@ -196,7 +207,11 @@ async def setup_harvester(port, dic={}):
 
 
 async def setup_farmer(port, dic={}):
-    config = load_config(root_path, "config.yaml", "farmer")
+    config = load_config(root_path, "config.yaml")
+    ping_interval = config.get("ping_interval")
+    network_id = config.get("network_id")
+
+    config = config.get("farmer")
     pool_sk = bt.pool_sk
     pool_target = create_puzzlehash_for_pk(
         BLSPublicKey(bytes(pool_sk.get_public_key()))
@@ -217,7 +232,7 @@ async def setup_farmer(port, dic={}):
         test_constants_copy[k] = dic[k]
 
     farmer = Farmer(config, key_config, test_constants_copy)
-    server = ChiaServer(port, farmer, NodeType.FARMER)
+    server = ChiaServer(port, farmer, NodeType.FARMER, ping_interval, network_id)
     _ = await server.start_server(farmer._on_connect)
 
     yield (farmer, server)
@@ -227,10 +242,12 @@ async def setup_farmer(port, dic={}):
 
 
 async def setup_introducer(port, dic={}):
-    config = load_config(root_path, "config.yaml", "introducer")
+    config = load_config(root_path, "config.yaml")
+    ping_interval = config.get("ping_interval")
+    network_id = config.get("network_id")
 
-    introducer = Introducer(config)
-    server = ChiaServer(port, introducer, NodeType.INTRODUCER)
+    introducer = Introducer(config.get("introducer"))
+    server = ChiaServer(port, introducer, NodeType.INTRODUCER, ping_interval, network_id)
     _ = await server.start_server(None)
 
     yield (introducer, server)
@@ -248,12 +265,17 @@ async def setup_vdf_clients(port):
 
 
 async def setup_timelord(port, dic={}):
-    config = load_config(root_path, "config.yaml", "timelord")
+    config = load_config(root_path, "config.yaml")
+    ping_interval = config.get("ping_interval")
+    network_id = config.get("network_id")
+    config = config.get("timelord")
+
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
     timelord = Timelord(config, test_constants_copy)
-    server = ChiaServer(port, timelord, NodeType.TIMELORD)
+
+    server = ChiaServer(port, timelord, NodeType.TIMELORD, ping_interval, network_id)
     _ = await server.start_server(None, config)
 
     coro = asyncio.start_server(
