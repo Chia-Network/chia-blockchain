@@ -1,0 +1,67 @@
+<?xml version='1.0' encoding='windows-1252'?>
+<Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
+    <?include "config.wxi"?>
+    <Product Name='Chia $(var.version)' Manufacturer='Chia Network'
+        Id='9F6ED0A0-AFC9-41BF-9F60-BE53D5D1C01E' 
+        UpgradeCode='9FF22D37-6167-4F05-A0BC-9B5D8BECAC7E'
+        Language='1033' Codepage='1252' Version='$(var.version)'>
+        <Package Id='*' Keywords='Installer' Description="Chia Installer $(var.version)"
+            Comments='Chia is a registered trademark of the Chia Network' Manufacturer='Chia Network'
+            InstallerVersion='100' Languages='1033' Compressed='yes' SummaryCodepage='1252' />
+        
+        <Media Id='1' Cabinet='chia.cab' EmbedCab='yes' DiskPrompt="CD-ROM #1" />
+        <Property Id='DiskPrompt' Value="Chia Network's Chia Installation [1]" />
+
+        <Directory Id='TARGETDIR' Name='SourceDir'>
+            <Directory Id='ProgramFilesFolder' Name='PFiles'>
+                <Directory Id='ChiaNetwork' Name='Chia Network'>
+                    <Directory Id='INSTALLDIR' Name='Chia Wallet'>
+
+                    </Directory>
+                </Directory>
+            </Directory>
+            <Directory Id="ProgramMenuFolder" Name="Programs">
+                <Directory Id="ProgramMenuDir" Name="Chia">
+                    <Component Id="ProgramMenuDir" Guid="0B8A0D75-657A-4FFC-84E8-8D40B343E7CA">
+                        <Shortcut Id="ProgramMenuShortcut" 
+                            Name="Chia"
+                            Description="Chia $(var.version)"
+                            Target="[INSTALLDIR]$(var.exename)"
+                            WorkingDirectory="INSTALLDIR"
+                            IconIndex="0"/>                    
+                        <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
+                        <RegistryValue Root='HKCU' 
+                            Key='Software\[Manufacturer]\[ProductName]' 
+                            Type='string' 
+                            Value='' 
+                            KeyPath='yes' />
+                    </Component>
+                </Directory>
+            </Directory>
+
+            <Directory Id="DesktopFolder" Name="Desktop" >
+                <Component Id="DesktopShortCut" Guid="4281DF51-82FC-471B-A26A-1292DFEE9738">
+                    <Shortcut Id="ApplicationDesktopShortcut" 
+                        Name="Chia"
+                        Description="Chia $(var.version)"
+                        Target="[INSTALLDIR]$(var.exename)"
+                        WorkingDirectory="INSTALLDIR"
+                        IconIndex="0"/>
+                    <RemoveFolder Id="DesktopFolder" On="uninstall"/>
+                    <RegistryValue Root='HKCU' 
+                        Key='Software\[Manufacturer]\[ProductName]'
+                        Name='installed' 
+                        Type='string' 
+                        Value='1' 
+                        KeyPath='yes' />                        
+                </Component>
+            </Directory>
+        </Directory>
+
+        <Feature Id='Complete' Level='1'>
+            <ComponentRef Id='DesktopShortCut' />
+            <ComponentRef Id='ProgramMenuDir' />
+            <ComponentGroupRef Id="ChiaFiles" />            
+        </Feature>
+    </Product>
+</Wix>
