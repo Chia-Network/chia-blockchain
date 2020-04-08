@@ -59,7 +59,7 @@ class Connection:
         return self.writer.get_extra_info("socket")
 
     def get_peer_info(self) -> Optional[PeerInfo]:
-        if not self.peer_server_port or self.connection_type != NodeType.FULL_NODE:
+        if not self.peer_server_port:
             return None
         return PeerInfo(self.peer_host, uint16(self.peer_server_port))
 
@@ -97,14 +97,17 @@ class PeerConnections:
         # Only full node peers are added to `peers`
         self.peers = Peers()
         for c in all_connections:
-            self.peers.add(c.get_peer_info())
+            if c.connection_type == NodeType.FULL_NODE:
+                self.peers.add(c.get_peer_info())
 
     def add(self, connection: Connection) -> bool:
         for c in self._all_connections:
             if c.node_id == connection.node_id:
                 return False
         self._all_connections.append(connection)
-        self.peers.add(connection.get_peer_info())
+
+        if connection.connection_type == NodeType.FULL_NODE:
+            self.peers.add(connection.get_peer_info())
         return True
 
     def close(self, connection: Connection, keep_peer: bool = False):

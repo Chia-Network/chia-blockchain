@@ -53,13 +53,12 @@ def migrate_from(old_root, new_root, manifest):
     print("\nmigrating plots.yaml")
 
     new_plot_paths = {}
-    plots_config_new = deepcopy(plots_config.get("plots", []))
     for path, values in old_plot_paths.items():
         old_path = path_from_root(old_root, path)
         new_plot_path = make_path_relative(old_path, new_root)
         print(f"rewriting {path}\n as {new_plot_path}")
         new_plot_paths[str(new_plot_path)] = values
-    plots_config_new["plots"] = new_plot_paths
+    plots_config_new = {"plots": new_plot_paths}
     save_config(new_root, "plots.yaml", plots_config_new)
     print("\nUpdated plots.yaml to point to where your existing plots are.")
     print(
@@ -85,7 +84,6 @@ def chia_init():
         "config/config.yaml",
         "config/plots.yaml",
         "config/keys.yaml",
-        "wallet/db/blockchain_wallet_v4.db",
         "db/blockchain_v3.db",
     ]
 

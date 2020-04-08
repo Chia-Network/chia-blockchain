@@ -1236,8 +1236,9 @@ class FullNode:
     async def reject_header_block_request(
         self, request: full_node_protocol.RejectHeaderBlockRequest
     ) -> OutboundMessageGenerator:
-        # TODO(mariano): Implement with new sync
         self.log.warning(f"Reject header block request, {request}")
+        if self.store.get_sync_mode():
+            yield OutboundMessage(NodeType.FULL_NODE, Message("", None), Delivery.CLOSE)
         for _ in []:
             yield _
 
@@ -1733,6 +1734,8 @@ class FullNode:
         self, reject: full_node_protocol.RejectBlockRequest
     ) -> OutboundMessageGenerator:
         self.log.warning(f"Rejected block request {reject}")
+        if self.store.get_sync_mode():
+            yield OutboundMessage(NodeType.FULL_NODE, Message("", None), Delivery.CLOSE)
         for _ in []:
             yield _
 
