@@ -371,7 +371,7 @@ async def start_websocket_server():
     log.info(f"Config : {config}")
 
     try:
-        key_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+        key_config = load_config(DEFAULT_ROOT_PATH, "keys.yaml")
     except FileNotFoundError:
         raise RuntimeError("Keys not generated. Run chia-generate-keys")
     if config["testing"] is True:

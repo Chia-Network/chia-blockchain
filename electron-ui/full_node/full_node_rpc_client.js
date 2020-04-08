@@ -62,6 +62,7 @@ class FullNodeRpcClient {
                 }
 
                 res.on('data', d => {
+                    // console.log(d)
                     resolve(JSON.parse(d));
                 })
             })
