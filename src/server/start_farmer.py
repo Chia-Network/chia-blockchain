@@ -44,7 +44,11 @@ async def main():
     _ = await server.start_client(harvester_peer, None, config)
     _ = await server.start_client(full_node_peer, None, config)
 
+    farmer.set_server(server)
+    farmer._start_bg_tasks()
+
     await server.await_closed()
+    farmer._shut_down = True
     log.info("Farmer fully closed.")
 
 
