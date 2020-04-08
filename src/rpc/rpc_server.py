@@ -13,6 +13,7 @@ from src.util.ints import uint16, uint64
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
 from src.util.config import load_config
+from src.util.default_root import DEFAULT_ROOT_PATH
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -145,7 +146,7 @@ class RpcApiHandler:
         port = request_data["port"]
         target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
 
-        config = load_config("config.yaml", "full_node")
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml").get_dpath("full_node")
         if self.full_node.server is None or not (
             await self.full_node.server.start_client(target_node, None, config)
         ):

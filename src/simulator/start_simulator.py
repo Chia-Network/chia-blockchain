@@ -21,6 +21,7 @@ from src.types.full_block import FullBlock
 from src.full_node.coin_store import CoinStore
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli
+from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.setproctitle import setproctitle
 from src.util.path import mkdir, path_from_root
 
@@ -33,7 +34,7 @@ async def main():
     log = logging.getLogger(__name__)
     server_closed = False
 
-    db_path = path_from_root(config["simulator_database_path"])
+    db_path = path_from_root(DEFAULT_ROOT_PATH, config["simulator_database_path"])
     mkdir(db_path.parent)
     connection = await aiosqlite.connect(db_path)
 

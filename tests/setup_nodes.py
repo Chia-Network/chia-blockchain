@@ -1,13 +1,12 @@
-import signal
-from typing import Any, Dict, Optional, Tuple, List
-from pathlib import Path
 import asyncio
+
+from typing import Any, Dict, Tuple, List
+from pathlib import Path
 
 import aiosqlite
 import blspy
 from secrets import token_bytes
 
-from src.consensus.constants import constants
 from src.full_node.blockchain import Blockchain
 from src.full_node.mempool_manager import MempoolManager
 from src.full_node.store import FullNodeStore
@@ -29,13 +28,13 @@ from src.introducer import Introducer
 from src.timelord import Timelord
 from src.server.connection import PeerInfo
 from src.util.ints import uint16, uint32
-from src.util.path import path_from_root
 
-
-tests_root = path_from_root("tests")
-create_default_chia_config(tests_root)
 
 bt = BlockTools()
+
+root_path = bt.root_path
+
+create_default_chia_config(root_path)
 
 test_constants: Dict[str, Any] = {
     "DIFFICULTY_STARTING": 1,
@@ -76,7 +75,7 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
 
     await store_1.add_block(FullBlock.from_bytes(test_constants_copy["GENESIS_BLOCK"]))
 
-    config = load_config("config.yaml", "full_node", tests_root)
+    config = load_config(root_path, "config.yaml", "full_node")
     if introducer_port is not None:
         config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = introducer_port
@@ -126,7 +125,7 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
 
     await store_1.add_block(FullBlock.from_bytes(test_constants_copy["GENESIS_BLOCK"]))
 
-    config = load_config("config.yaml", "full_node", tests_root)
+    config = load_config(root_path, "config.yaml", "full_node")
     if introducer_port is not None:
         config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = introducer_port
@@ -153,7 +152,7 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
 
 
 async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
-    config = load_config("config.yaml", "wallet", tests_root)
+    config = load_config(root_path, "config.yaml", "wallet")
     if "starting_height" in dic:
         config["starting_height"] = dic["starting_height"]
     key_config = {
@@ -162,10 +161,10 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
-    db_path = "test-wallet-db" + token_bytes(32).hex() + ".db"
-    if Path(db_path).exists():
-        Path(db_path).unlink()
-    config["database_path"] = db_path
+    db_path = root_path / ("test-wallet-db%s.db" % token_bytes(32).hex())
+    if db_path.exists():
+        db_path.unlink()
+    config["database_path"] = str(db_path)
     wallet = await WalletNode.create(
         config, key_config, override_constants=test_constants_copy, name="wallet1",
     )
@@ -182,7 +181,7 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
 
 
 async def setup_harvester(port, dic={}):
-    config = load_config("config.yaml", "harvester", tests_root)
+    config = load_config(root_path, "config.yaml", "harvester")
 
     harvester = Harvester(config, bt.plot_config)
     server = ChiaServer(port, harvester, NodeType.HARVESTER)
@@ -197,7 +196,7 @@ async def setup_harvester(port, dic={}):
 
 
 async def setup_farmer(port, dic={}):
-    config = load_config("config.yaml", "farmer", tests_root)
+    config = load_config(root_path, "config.yaml", "farmer")
     pool_sk = bt.pool_sk
     pool_target = create_puzzlehash_for_pk(
         BLSPublicKey(bytes(pool_sk.get_public_key()))
@@ -228,7 +227,7 @@ async def setup_farmer(port, dic={}):
 
 
 async def setup_introducer(port, dic={}):
-    config = load_config("config.yaml", "introducer", tests_root)
+    config = load_config(root_path, "config.yaml", "introducer")
 
     introducer = Introducer(config)
     server = ChiaServer(port, introducer, NodeType.INTRODUCER)
@@ -249,7 +248,7 @@ async def setup_vdf_clients(port):
 
 
 async def setup_timelord(port, dic={}):
-    config = load_config("config.yaml", "timelord", tests_root)
+    config = load_config(root_path, "config.yaml", "timelord")
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]

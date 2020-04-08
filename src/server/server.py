@@ -23,12 +23,13 @@ from src.types.peer_info import PeerInfo
 from src.types.sized_bytes import bytes32
 from src.util import partial_func
 from src.util.config import load_config
+from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.errors import Err, ProtocolError
 from src.util.ints import uint16
 from src.util.network import create_node_id
 import traceback
 
-config = load_config("config.yaml")
+config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
 
 
 class ChiaServer:

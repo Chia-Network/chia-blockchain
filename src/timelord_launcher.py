@@ -7,9 +7,10 @@ from src.util.logging import initialize_logging
 from src.util.config import load_config
 from asyncio import Lock
 from typing import List
+from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.setproctitle import setproctitle
 
-config = load_config("config.yaml", "timelord_launcher")
+config = load_config(DEFAULT_ROOT_PATH, "config.yaml", "timelord_launcher")
 
 active_processes: List = []
 stopped = False

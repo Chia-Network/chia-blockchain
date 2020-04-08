@@ -1,9 +1,10 @@
 import sys
 import time
-from typing import Any, Dict, List, Tuple, Optional
 import random
 
-import blspy
+from pathlib import Path
+from typing import Any, Dict, List, Tuple, Optional
+
 from blspy import PrependSignature, PrivateKey, PublicKey
 from chiavdf import prove
 from chiabip158 import PyBIP158
@@ -23,10 +24,11 @@ from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
+from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.merkle_set import MerkleSet
 from src.util.ints import uint8, uint32, uint64, uint128, int512
 from src.util.hash import std_hash
-from src.util.path import mkdir, path_from_root
+from src.util.path import mkdir
 from src.util.significant_bits import truncate_to_significant_bits
 
 # Can't go much lower than 19, since plots start having no solutions
@@ -54,7 +56,8 @@ class BlockTools:
     Tools to generate blocks for testing.
     """
 
-    def __init__(self):
+    def __init__(self, root_path : Path = DEFAULT_ROOT_PATH / "tests"):
+        self.root_path = root_path
         self.plot_config: Dict = {"plots": {}}
         self.pool_sk = pool_sk
         self.wallet_sk = wallet_sk
@@ -62,7 +65,7 @@ class BlockTools:
         plot_seeds: List[bytes32] = [
             ProofOfSpace.calculate_plot_seed(pool_pk, plot_pk) for plot_pk in plot_pks
         ]
-        self.plot_dir = path_from_root("tests") / "plots"
+        self.plot_dir = self.root_path / "plots"
         mkdir(self.plot_dir)
         self.filenames: List[str] = [
             f"genesis-plots-{k}{std_hash(int.to_bytes(i, 4, 'big')).hex()}.dat"

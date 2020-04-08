@@ -5,28 +5,33 @@ import yaml
 
 from pathlib import Path
 from typing import Dict, Any, Callable, Optional, Union
-from src.util.path import mkdir, path_from_root
 from src.util.dpath_dict import DPathDict
+from src.util.path import mkdir
 
 
 def initial_config_file(filename: Union[str, Path]) -> str:
     return pkg_resources.resource_string(__name__, f"initial-{filename}").decode()
 
 
-def create_default_chia_config(root: Path) -> None:
-    filename = "config.yaml"
-    default_config_file_data = initial_config_file(filename)
-    path = config_path_for_filename(filename, root)
-    mkdir(path.parent)
-    with open(path, "w") as f:
-        f.write(default_config_file_data)
-    save_config("plots.yaml", {}, root)
+def create_default_chia_config(root_path: Path) -> None:
+    for filename in ["config.yaml"]:
+        default_config_file_data = initial_config_file(filename)
+        path = config_path_for_filename(root_path, filename)
+        mkdir(path.parent)
+        with open(path, "w") as f:
+            f.write(default_config_file_data)
+    save_config(root_path, "plots.yaml", {})
 
 
-def save_config(filename: Union[str, Path], config_data, root: Optional[Path] = None):
-    if root is None:
-        root = path_from_root(".")
-    path = config_path_for_filename(filename, root)
+def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Path:
+    path_filename = Path(filename)
+    if path_filename.is_absolute():
+        return path_filename
+    return root_path / "config" / filename
+
+
+def save_config(root_path: Path, filename: Union[str, Path], config_data : Any):
+    path = config_path_for_filename(root_path, filename)
     with open(path, "w") as f:
         yaml.safe_dump(config_data, f)
 
@@ -38,18 +43,12 @@ def represent_DPathDict(dumper, data):
 yaml.add_representer(DPathDict, represent_DPathDict, yaml.SafeDumper)
 
 
-def config_path_for_filename(filename: Union[str, Path], root: Path) -> Path:
-    return path_from_root("config", root) / filename
-
-
 def load_config(
+    root_path: Path,
     filename: Union[str, Path],
-    sub_config: Optional[str] = None,
-    root: Optional[Path] = None,
-) -> Dict:
-    if root is None:
-        root = path_from_root(".")
-    path = config_path_for_filename(filename, root)
+    sub_config: Optional[str] = None
+) -> DPathDict:
+    path = config_path_for_filename(root_path, filename)
     if not path.is_file():
         print(f"can't find {path}")
         print("** please run `chia init` to migrate or create new config files **")
@@ -57,18 +56,18 @@ def load_config(
         sys.exit(-1)
     r = DPathDict.to(yaml.safe_load(open(path, "r")))
     if sub_config is not None:
-        r = r.get_dpath(sub_config)
+        r = DPathDict.to(r.get(sub_config))
     return r
 
 
-def load_config_cli(filename: str, sub_config: Optional[str] = None) -> Dict:
+def load_config_cli(root_path: Path, filename: str, sub_config: Optional[str] = None) -> DPathDict:
     """
     Loads configuration from the specified filename, in the config directory,
     and then overrides any properties using the passed in command line arguments.
     Nested properties in the config file can be used in the command line with ".",
     for example --farmer_peer.host. Does not support lists.
     """
-    config = load_config(filename, sub_config)
+    config = load_config(root_path, filename, sub_config)
 
     flattened_props = flatten_properties(config)
     parser = argparse.ArgumentParser()
