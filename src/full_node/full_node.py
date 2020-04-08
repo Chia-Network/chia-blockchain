@@ -1083,9 +1083,10 @@ class FullNode:
 
         assert prev_full_block is not None
         async with self.store.lock:
-            error_code, iterations_needed = await self.blockchain.validate_unfinished_block(
-                block, prev_full_block
-            )
+            (
+                error_code,
+                iterations_needed,
+            ) = await self.blockchain.validate_unfinished_block(block, prev_full_block)
 
         if error_code is not None:
             raise ConsensusError(error_code)

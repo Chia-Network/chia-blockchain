@@ -178,7 +178,9 @@ class TestFullNodeProtocol:
                 spend_bundles.append(spend_bundle)
 
         # Mempool is full
-        new_transaction = fnp.NewTransaction(token_bytes(32), uint64(1000000), uint64(1))
+        new_transaction = fnp.NewTransaction(
+            token_bytes(32), uint64(1000000), uint64(1)
+        )
         msgs = [x async for x in full_node_1.new_transaction(new_transaction)]
         assert len(msgs) == 0
 

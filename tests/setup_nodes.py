@@ -335,7 +335,9 @@ async def setup_node_and_two_wallets(dic={}):
             pass
 
 
-async def setup_simulators_and_wallets(simulator_count: int, wallet_count: int, dic: Dict):
+async def setup_simulators_and_wallets(
+    simulator_count: int, wallet_count: int, dic: Dict
+):
     simulators: List[Tuple[FullNode, ChiaServer]] = []
     wallets = []
     node_iters = []

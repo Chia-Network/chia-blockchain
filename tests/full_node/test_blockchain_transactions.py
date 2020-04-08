@@ -1143,9 +1143,13 @@ class TestBlockchainTransactions:
             next_block.transactions_generator,
             next_block.transactions_filter,
         )
-        result, removed, error_code = await full_node_1.blockchain.receive_block(bad_block)
+        result, removed, error_code = await full_node_1.blockchain.receive_block(
+            bad_block
+        )
         assert result == ReceiveBlockResult.INVALID_BLOCK
         assert error_code == Err.INVALID_TRANSACTIONS_FILTER_HASH
 
-        result, removed, error_code = await full_node_1.blockchain.receive_block(next_block)
+        result, removed, error_code = await full_node_1.blockchain.receive_block(
+            next_block
+        )
         assert result == ReceiveBlockResult.ADDED_TO_HEAD
