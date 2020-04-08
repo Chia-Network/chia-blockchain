@@ -5,10 +5,7 @@ import pytest
 from blspy import ExtendedPrivateKey
 from chiabip158 import PyBIP158
 
-from tests.setup_nodes import (
-    test_constants,
-    bt,
-    setup_simulators_and_wallets)
+from tests.setup_nodes import test_constants, bt, setup_simulators_and_wallets
 from src.util.config import load_config
 
 

@@ -132,7 +132,7 @@ class WalletStateManager:
                 self.wallets[wallet_info.id] = wallet
 
         async with self.puzzle_store.lock:
-            await self.create_more_puzzle_hashes()
+            await self.create_more_puzzle_hashes(from_zero=True)
 
         if len(self.block_records) > 0:
             # Initializes the state based on the DB block records
@@ -178,7 +178,7 @@ class WalletStateManager:
 
         return self
 
-    async def create_more_puzzle_hashes(self):
+    async def create_more_puzzle_hashes(self, from_zero: bool = False):
         """
         For all wallets in the user store, generates the first few puzzle hashes so
         that we can restore the wallet from only the private keys.
@@ -201,6 +201,8 @@ class WalletStateManager:
                 start_index = last + 1
                 to_generate -= last - unused
 
+            if from_zero:
+                start_index = 0
             for index in range(start_index, start_index + to_generate):
                 pubkey: PublicKey = target_wallet.get_public_key(index)
                 puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
@@ -219,6 +221,8 @@ class WalletStateManager:
                 )
 
             await self.puzzle_store.add_derivation_paths(derivation_paths)
+            if from_zero and unused is not None and unused > 0:
+                await self.puzzle_store.set_used_up_to(uint32(unused - 1))
 
     async def get_unused_derivation_record(self, wallet_id: uint32) -> DerivationRecord:
         """

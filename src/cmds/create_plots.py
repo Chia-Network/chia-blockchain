@@ -84,20 +84,19 @@ def main():
         )
         filename: str = f"plot-{i}-{args.size}-{plot_seed}.dat"
         full_path: Path = args.final_dir / filename
-        if full_path.exists():
+        if not full_path.exists():
+            # Creates the plot. This will take a long time for larger plots.
+            plotter: DiskPlotter = DiskPlotter()
+            plotter.create_plot_disk(
+                str(tmp_dir),
+                str(args.final_dir),
+                filename,
+                args.size,
+                bytes([]),
+                plot_seed,
+            )
+        else:
             print(f"Plot {filename} already exists")
-            continue
-
-        # Creates the plot. This will take a long time for larger plots.
-        plotter: DiskPlotter = DiskPlotter()
-        plotter.create_plot_disk(
-            str(tmp_dir),
-            str(args.final_dir),
-            filename,
-            args.size,
-            bytes([]),
-            plot_seed,
-        )
 
         # Updates the config if necessary.
         plot_config = load_config(plot_config_filename)

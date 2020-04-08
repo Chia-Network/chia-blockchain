@@ -66,10 +66,7 @@ class MempoolManager:
             spend_bundles: List[SpendBundle] = []
             for dic in mempool.sorted_spends.values():
                 for item in dic.values():
-                    if (
-                        item.cost + cost_sum
-                        <= self.constants["MAX_BLOCK_COST_CLVM"]
-                    ):
+                    if item.cost + cost_sum <= self.constants["MAX_BLOCK_COST_CLVM"]:
                         spend_bundles.append(item.spend_bundle)
                         cost_sum += item.cost
                     else:
@@ -181,13 +178,21 @@ class MempoolManager:
             unknown_unspent_error: bool = False
             removal_amount = uint64(0)
             for name in removal_names:
-                removal_record = await self.unspent_store.get_coin_record(name, pool.header)
+                removal_record = await self.unspent_store.get_coin_record(
+                    name, pool.header
+                )
                 if removal_record is None and name not in additions_dict:
                     unknown_unspent_error = True
                     break
                 elif name in additions_dict:
                     removal_coin = additions_dict[name]
-                    removal_record = CoinRecord(removal_coin, uint32(pool.header.height + 1), uint32(0), False, False)
+                    removal_record = CoinRecord(
+                        removal_coin,
+                        uint32(pool.header.height + 1),
+                        uint32(0),
+                        False,
+                        False,
+                    )
 
                 assert removal_record is not None
                 removal_amount = uint64(removal_amount + removal_record.coin.amount)
@@ -385,9 +390,9 @@ class MempoolManager:
 
                     # If old spends height is bigger than the new tip height, try adding spends to the pool
                     for height in self.old_mempools.keys():
-                        old_spend_dict: Dict[
-                            bytes32, MempoolItem
-                        ] = self.old_mempools[height]
+                        old_spend_dict: Dict[bytes32, MempoolItem] = self.old_mempools[
+                            height
+                        ]
                         await self.add_old_spends_to_pool(new_pool, old_spend_dict)
 
             await self.initialize_pool_from_current_pools(new_pool)
@@ -396,7 +401,9 @@ class MempoolManager:
 
         for pool in self.mempools.values():
             if pool.header.header_hash not in new_pools:
-                await self.add_to_old_mempool_cache(list(pool.spends.values()), pool.header)
+                await self.add_to_old_mempool_cache(
+                    list(pool.spends.values()), pool.header
+                )
 
         self.mempools = new_pools
 

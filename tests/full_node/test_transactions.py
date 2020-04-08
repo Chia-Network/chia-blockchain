@@ -7,9 +7,7 @@ from src.protocols import full_node_protocol
 from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
-from tests.setup_nodes import (
-    setup_simulators_and_wallets
-)
+from tests.setup_nodes import setup_simulators_and_wallets
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 
 
@@ -27,15 +25,15 @@ class TestTransactions:
 
     @pytest.fixture(scope="function")
     async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2,
-            {"COINBASE_FREEZE_PERIOD": 0}
+        async for _ in setup_simulators_and_wallets(
+            1, 2, {"COINBASE_FREEZE_PERIOD": 0}
         ):
             yield _
 
     @pytest.fixture(scope="function")
     async def three_nodes_two_wallets(self):
-        async for _ in setup_simulators_and_wallets(3, 2,
-            {"COINBASE_FREEZE_PERIOD": 0}
+        async for _ in setup_simulators_and_wallets(
+            3, 2, {"COINBASE_FREEZE_PERIOD": 0}
         ):
             yield _
 

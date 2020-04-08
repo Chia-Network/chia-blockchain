@@ -5,7 +5,6 @@ import concurrent
 import random
 import logging
 import traceback
-from blspy import ExtendedPrivateKey
 
 from src.full_node.full_node import OutboundMessageGenerator
 from src.types.peer_info import PeerInfo
@@ -34,7 +33,6 @@ from src.util.path import path_from_root, mkdir
 
 
 class WalletNode:
-    private_key: ExtendedPrivateKey
     key_config: Dict
     config: Dict
     constants: Dict
@@ -75,8 +73,6 @@ class WalletNode:
         self = WalletNode()
         self.config = config
         self.key_config = key_config
-        sk_hex = self.key_config["wallet_sk"]
-        self.private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
         self.constants = consensus_constants.copy()
         for key, value in override_constants.items():
             self.constants[key] = value

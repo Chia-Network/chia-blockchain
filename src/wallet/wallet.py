@@ -120,62 +120,66 @@ class Wallet:
 
     async def select_coins(self, amount) -> Optional[Set[Coin]]:
         """ Returns a set of coins that can be used for generating a new transaction. """
-        spendable_am = await self.wallet_state_manager.get_unconfirmed_spendable_for_wallet(
-            self.wallet_info.id
-        )
-
-        if amount > spendable_am:
-            self.log.warning(
-                f"Can't select amount higher than our spendable balance {amount}, spendable {spendable_am}"
-            )
-            return None
-
-        self.log.info(f"About to select coins for amount {amount}")
-        unspent: Set[
-            WalletCoinRecord
-        ] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
-            self.wallet_info.id
-        )
-        sum = 0
-        used_coins: Set = set()
-
-        # Try to use coins from the store, if there isn't enough of "unused"
-        # coins use change coins that are not confirmed yet
-        unconfirmed_removals: Dict[
-            bytes32, Coin
-        ] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
-            self.wallet_info.id
-        )
-        for coinrecord in unspent:
-            if sum >= amount:
-                break
-            if coinrecord.coin.name() in unconfirmed_removals:
-                continue
-            sum += coinrecord.coin.amount
-            used_coins.add(coinrecord.coin)
-            self.log.info(
-                f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_index}!"
-            )
-
-        # This happens when we couldn't use one of the coins because it's already used
-        # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
-        unconfirmed_additions = None
-        if sum < amount:
-            raise ValueError(
-                "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
-            )
-            unconfirmed_additions = await self.wallet_state_manager.unconfirmed_additions_for_wallet(
+        async with self.wallet_state_manager.lock:
+            spendable_am = await self.wallet_state_manager.get_unconfirmed_spendable_for_wallet(
                 self.wallet_info.id
             )
-            for coin in unconfirmed_additions.values():
-                if sum > amount:
-                    break
-                if coin.name() in unconfirmed_removals:
-                    continue
 
-                sum += coin.amount
-                used_coins.add(coin)
-                self.log.info(f"Selected used coin: {coin.name()}")
+            if amount > spendable_am:
+                self.log.warning(
+                    f"Can't select amount higher than our spendable balance {amount}, spendable {spendable_am}"
+                )
+                return None
+
+            self.log.info(f"About to select coins for amount {amount}")
+            unspent: List[WalletCoinRecord] = list(
+                await self.wallet_state_manager.get_spendable_coins_for_wallet(
+                    self.wallet_info.id
+                )
+            )
+            sum = 0
+            used_coins: Set = set()
+
+            # Use older coins first
+            unspent.sort(key=lambda r: r.confirmed_block_index)
+
+            # Try to use coins from the store, if there isn't enough of "unused"
+            # coins use change coins that are not confirmed yet
+            unconfirmed_removals: Dict[
+                bytes32, Coin
+            ] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+                self.wallet_info.id
+            )
+            for coinrecord in unspent:
+                if sum >= amount:
+                    break
+                if coinrecord.coin.name() in unconfirmed_removals:
+                    continue
+                sum += coinrecord.coin.amount
+                used_coins.add(coinrecord.coin)
+                self.log.info(
+                    f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_index}!"
+                )
+
+            # This happens when we couldn't use one of the coins because it's already used
+            # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
+            unconfirmed_additions = None
+            if sum < amount:
+                raise ValueError(
+                    "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
+                )
+                unconfirmed_additions = await self.wallet_state_manager.unconfirmed_additions_for_wallet(
+                    self.wallet_info.id
+                )
+                for coin in unconfirmed_additions.values():
+                    if sum > amount:
+                        break
+                    if coin.name() in unconfirmed_removals:
+                        continue
+
+                    sum += coin.amount
+                    used_coins.add(coin)
+                    self.log.info(f"Selected used coin: {coin.name()}")
 
         if sum >= amount:
             self.log.info(f"Successfully selected coins: {used_coins}")
