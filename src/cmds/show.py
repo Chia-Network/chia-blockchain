@@ -247,11 +247,10 @@ async def show_async(args, parser):
                 prev_block_header = await client.get_block(prev_block_header_hash)
                 block_time = struct_time(localtime(block.header.data.timestamp))
                 block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
-                if block.header.data.aggregated_signature == None:
-                    aggregated_signature=block.header.data.aggregated_signature
+                if block.header.data.aggregated_signature is None:
+                    aggregated_signature = block.header.data.aggregated_signature
                 else:
-                    aggregated_signature=block.header.data.aggregated_signature.sig
-                #print (block.header.data)
+                    aggregated_signature = block.header.data.aggregated_signature.sig
                 print("Block:")
                 print(
                     f"Header Hash                0x{args.block_by_header_hash}\n"
