@@ -1062,3 +1062,23 @@ class WalletNode:
         """
         # TODO(mariano): implement
         self.log.error("Additions request rejected")
+
+    @api_request
+    async def respond_generator(
+            self, response: wallet_protocol.RespondGenerator
+    ):
+        """
+        The full node respond with transaction generator
+        """
+        # TODO (Straya): implement
+        self.log.info("generator received")
+
+    @api_request
+    async def reject_generator(
+            self, response: wallet_protocol.RejectGeneratorRequest
+    ):
+        """
+        The full node rejected our request for generator
+        """
+        # TODO (Straya): implement
+        self.log.info("generator rejected")
