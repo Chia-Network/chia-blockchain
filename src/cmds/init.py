@@ -10,7 +10,7 @@ from src.util.config import (
     save_config,
 )
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.path import make_path_relative, mkdir, path_from_root
+from src.util.path import mkdir, path_from_root
 
 
 def make_parser(parser):
