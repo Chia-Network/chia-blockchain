@@ -1,34 +1,86 @@
 <?xml version='1.0' encoding='windows-1252'?>
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
     <?include "config.wxi"?>
-    <Product Name='Chia $(var.version)' Manufacturer='Chia Network'
-        Id='9F6ED0A0-AFC9-41BF-9F60-BE53D5D1C01E' 
+    <Product Name='Chia'
+        Manufacturer='Chia Network'
+        Id='*'
         UpgradeCode='9FF22D37-6167-4F05-A0BC-9B5D8BECAC7E'
-        Language='1033' Codepage='1252' Version='$(var.version)'>
-        <Package Id='*' Keywords='Installer' Description="Chia Installer $(var.version)"
-            Comments='Chia is a registered trademark of the Chia Network' Manufacturer='Chia Network'
-            InstallerVersion='100' Languages='1033' Compressed='yes' SummaryCodepage='1252' />
-        
-        <Media Id='1' Cabinet='chia.cab' EmbedCab='yes' DiskPrompt="CD-ROM #1" />
-        <Property Id='DiskPrompt' Value="Chia Network's Chia Installation [1]" />
+        Language='1033' 
+        Codepage='1252' 
+        Version='$(var.version)'>
+        <Package Id='*'
+            Keywords='Installer' 
+            Description="Chia Installer $(var.version)"
+            Comments='Chia is a registered trademark of the Chia Network'
+            Manufacturer='Chia Network'
+            InstallerVersion='500' 
+            Languages='1033' 
+            Compressed='yes' 
+            SummaryCodepage='1252' />
 
+        <!-- Media and application properties -->
+        <Media Id='1' Cabinet='chia.cab' EmbedCab='yes' DiskPrompt="CD-ROM #1" />
+        <Icon Id="icon.ico" SourceFile="icon.ico"/>
+        <Property Id="ARPPRODUCTICON" Value="icon.ico" />        
+        <Property Id='DiskPrompt' Value="Chia Network's Chia Installation [1]" />
+        <Property Id='ARPCOMMENTS'>Chia has a new innovative Nakamoto style consensus algorithm that removes the energy demands of Proof of Work from the system.</Property>
+        <Property Id='ARPCONTACT'>hello@chia.net</Property>
+        <Property Id='ARPHELPLINK'>https://keybase.io/team/chia_network.public</Property>
+        <Property Id='ARPURLINFOABOUT'>https://www.chia.net/about/</Property>
+        <Property Id='ARPURLUPDATEINFO'>https://www.chia.net/releases/</Property>
+        <Property Id='MSIFASTINSTALL'>7</Property>
+        <SetProperty Id="ARPNOMODIFY" Value="1" After="InstallValidate" Sequence="execute"/>
+
+        <!-- Upgrade logic -->
+        <Upgrade Id='9FF22D37-6167-4F05-A0BC-9B5D8BECAC7E'>
+            <UpgradeVersion OnlyDetect='yes'
+                Property='SELFFOUND'
+                Minimum='$(var.version)' 
+                IncludeMinimum='yes'
+                Maximum='$(var.version)' 
+                IncludeMaximum='yes' />
+            <UpgradeVersion OnlyDetect='yes'
+                Property='NEWERFOUND'
+                Minimum='$(var.version)' 
+                IncludeMinimum='no' />
+            <UpgradeVersion OnlyDetect='no'
+                Property='PREVIOUSFOUND'
+                Minimum='0.1.0' 
+                IncludeMinimum='yes'
+                Maximum='$(var.version)'
+                IncludeMaximum='no' />
+        </Upgrade>
+        <CustomAction Id='AlreadyUpdated' Error='[ProductName] has already been updated to $(var.version) or newer.' />
+        <CustomAction Id='NoDowngrade' Error='A later version of [ProductName] is already installed.' />
+        <InstallExecuteSequence>
+            <Custom Action='AlreadyUpdated' After='FindRelatedProducts'>SELFFOUND</Custom>
+            <Custom Action='NoDowngrade' After='FindRelatedProducts'>NEWERFOUND</Custom>
+            <RemoveExistingProducts Before="InstallInitialize" />
+        </InstallExecuteSequence>
+
+        <!-- User interface -->
+        <WixVariable Id="WixUIBannerBmp" Value="banner.bmp" />
+        <WixVariable Id="WixUIDialogBmp" Value="dialog.bmp" />
+        <WixVariable Id="WixUILicenseRtf" Value="eula.rtf" />
+        <UIRef Id="WixUI_Minimal" />
+        <UIRef Id="WixUI_ErrorProgressText" />
+        
+        <!-- Files, folders, shortcuts, registry etc -->
         <Directory Id='TARGETDIR' Name='SourceDir'>
             <Directory Id='ProgramFilesFolder' Name='PFiles'>
                 <Directory Id='ChiaNetwork' Name='Chia Network'>
-                    <Directory Id='INSTALLDIR' Name='Chia Wallet'>
-
-                    </Directory>
+                    <Directory Id='INSTALLDIR' Name='Chia Wallet'/>
                 </Directory>
             </Directory>
             <Directory Id="ProgramMenuFolder" Name="Programs">
                 <Directory Id="ProgramMenuDir" Name="Chia">
                     <Component Id="ProgramMenuDir" Guid="0B8A0D75-657A-4FFC-84E8-8D40B343E7CA">
-                        <Shortcut Id="ProgramMenuShortcut" 
+                        <Shortcut Id="ProgramMenuShortcut"
                             Name="Chia"
                             Description="Chia $(var.version)"
                             Target="[INSTALLDIR]$(var.exename)"
                             WorkingDirectory="INSTALLDIR"
-                            IconIndex="0"/>                    
+                            Icon="icon.ico"/>                    
                         <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
                         <RegistryValue Root='HKCU' 
                             Key='Software\[Manufacturer]\[ProductName]' 
@@ -46,22 +98,23 @@
                         Description="Chia $(var.version)"
                         Target="[INSTALLDIR]$(var.exename)"
                         WorkingDirectory="INSTALLDIR"
-                        IconIndex="0"/>
+                        Icon="icon.ico"/>
                     <RemoveFolder Id="DesktopFolder" On="uninstall"/>
                     <RegistryValue Root='HKCU' 
                         Key='Software\[Manufacturer]\[ProductName]'
                         Name='installed' 
                         Type='string' 
                         Value='1' 
-                        KeyPath='yes' />                        
+                        KeyPath='yes' />
                 </Component>
             </Directory>
         </Directory>
 
+        <!-- Included components -->
         <Feature Id='Complete' Level='1'>
             <ComponentRef Id='DesktopShortCut' />
             <ComponentRef Id='ProgramMenuDir' />
-            <ComponentGroupRef Id="ChiaFiles" />            
+            <ComponentGroupRef Id="ChiaFiles" /> <!-- this component group is defined in the heat generated electron-packager-files.wxs file -->
         </Feature>
     </Product>
 </Wix>

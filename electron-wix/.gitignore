@@ -1,0 +1,6 @@
+chia-wallet-win32-x64/
+
+*.wixobj
+*.wixpdb
+*.msi
+electron-packager-files.wxs
