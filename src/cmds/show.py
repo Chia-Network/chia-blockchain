@@ -229,7 +229,6 @@ async def show_async(args, parser):
             print(result_txt)
         if args.block_header_hash != "":
             block_header = await client.get_block(hexstr_to_bytes(args.block_header_hash))
-            # print(dir(block_header))
             if block_header is not None:
                 print("Block header:")
                 print(block_header.header)
@@ -245,7 +244,11 @@ async def show_async(args, parser):
                 prev_block_header = await client.get_block(prev_block_header_hash)
                 block_time = struct_time(localtime(block.header.data.timestamp))
                 block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
-                #print (block)
+                if block.header.data.aggregated_signature == None:
+                    aggregated_signature=block.header.data.aggregated_signature
+                else:
+                    aggregated_signature=block.header.data.aggregated_signature.sig
+                #print (block.header.data)
                 print("Block:")
                 print(
                     f"Header Hash            0x{args.block_by_header_hash}\n"
@@ -267,7 +270,7 @@ async def show_async(args, parser):
                     f"Coinbase Puzzle Hash   0x{block.header.data.coinbase.puzzle_hash}\n"
                     f"Fees Amount            {block.header.data.fees_coin.amount/1000000000000}\n"
                     f"Fees Puzzle Hash       0x{block.header.data.fees_coin.puzzle_hash}\n"
-                    f"Aggregated Signature   {block.header.data.aggregated_signature.sig}\n"
+                    f"Aggregated Signature   {aggregated_signature}"
                 )
             else:
                 print("Block with header hash", args.block_by_header_hash, "not found.")
