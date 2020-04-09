@@ -10,7 +10,7 @@ from src.util.config import (
     save_config,
 )
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.path import make_path_relative, mkdir, path_from_root
+from src.util.path import mkdir, make_path_relative, path_from_root
 
 
 def make_parser(parser):
@@ -44,7 +44,15 @@ def migrate_from(old_root, new_root, manifest):
     # and make what may have been relative paths absolute
 
     plots_config = load_config(new_root, "plots.yaml")
-    old_plot_paths = plots_config.get("plots", [])
+
+    plot_root = (
+        load_config(new_root, "config.yaml").get("harvester", {}).get("plot_root", ".")
+    )
+
+    old_plots_root = path_from_root(old_root, plot_root)
+    new_plots_root = path_from_root(new_root, plot_root)
+
+    old_plot_paths = plots_config.get("plots", {})
     if len(old_plot_paths) == 0:
         print("no plots found, no plots migrated")
         return 1
@@ -53,10 +61,10 @@ def migrate_from(old_root, new_root, manifest):
 
     new_plot_paths = {}
     for path, values in old_plot_paths.items():
-        old_path = path_from_root(old_root, path)
-        new_plot_path = make_path_relative(old_path, new_root)
-        print(f"rewriting {path}\n as {new_plot_path}")
-        new_plot_paths[str(new_plot_path)] = values
+        old_path_full = path_from_root(old_plots_root, path)
+        new_path_relative = make_path_relative(old_path_full, new_plots_root)
+        print(f"rewriting {path}\n as {new_path_relative}")
+        new_plot_paths[str(new_path_relative)] = values
     plots_config_new = {"plots": new_plot_paths}
     save_config(new_root, "plots.yaml", plots_config_new)
     print("\nUpdated plots.yaml to point to where your existing plots are.")
@@ -88,7 +96,7 @@ def chia_init():
 
     PATH_MANIFEST_LIST = [
         (Path(os.path.expanduser("~/.chia/beta-%s" % _)), MANIFEST)
-        for _ in ["1.0b2", "1.0b1"]
+        for _ in ["1.0b3", "1.0b2", "1.0b1"]
     ]
 
     for old_path, manifest in PATH_MANIFEST_LIST:
