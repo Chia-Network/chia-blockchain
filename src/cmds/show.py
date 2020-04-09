@@ -245,27 +245,29 @@ async def show_async(args, parser):
                 prev_block_header = await client.get_block(prev_block_header_hash)
                 block_time = struct_time(localtime(block.header.data.timestamp))
                 block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
+                #print (block)
                 print("Block:")
                 print(
-                    f"Header Hash                0x{args.block_by_header_hash}\n"
-                    f"Timestamp                  {block_time_string}\n"
-                    f"Height                     {block.header.data.height}\n"
-                    f"Weight                     {block.header.data.weight}\n"
-                    f"Previous Block             0x{block.header.data.prev_header_hash}\n"
-                    f"Cost                       {block.header.data.cost}\n"
-                    f"Difficulty                 {block.header.data.weight-prev_block_header.header.data.weight}\n"
-                    f"Total VDF Iterations       {block.header.data.total_iters}\n"
-                    f"Block VDF Iterations       {block.proof_of_time.number_of_iterations}\n"
-                    f"Proof of Space \'k\' Size    {block.proof_of_space.size}\n"
+                    f"Header Hash            0x{args.block_by_header_hash}\n"
+                    f"Timestamp              {block_time_string}\n"
+                    f"Height                 {block.header.data.height}\n"
+                    f"Weight                 {block.header.data.weight}\n"
+                    f"Previous Block         0x{block.header.data.prev_header_hash}\n"
+                    f"Cost                   {block.header.data.cost}\n"
+                    f"Difficulty             {block.header.data.weight-prev_block_header.header.data.weight}\n"
+                    f"Total VDF Iterations   {block.header.data.total_iters}\n"
+                    f"Block VDF Iterations   {block.proof_of_time.number_of_iterations}\n"
+                    f"PoTime Witness Type    {block.proof_of_time.witness_type}\n"
+                    f"PoSpace \'k\' Size       {block.proof_of_space.size}\n"
                     # f"Plot Public Key            0x{block.proof_of_space.plot_pubkey}\n"
                     # f"Pool Public Key            0x{block.proof_of_space.pool_pubkey}\n"
-                    f"Tx Filter Hash             {(block.transactions_filter)}\n"
-                    f"Tx Generator Hash          {block.transactions_generator}\n"
-                    f"Coinbase Amount            {block.header.data.coinbase.amount/1000000000000}\n"
-                    f"Coinbase Puzzle Hash       0x{block.header.data.coinbase.puzzle_hash}\n"
-                    f"Fees Amount                {block.header.data.fees_coin.amount/1000000000000}\n"
-                    f"Fees Puzzle Hash           0x{block.header.data.fees_coin.puzzle_hash}\n"
-                    f"Aggregated Signature       {block.header.data.aggregated_signature}\n"
+                    f"Tx Filter Hash         {b'block.transactions_filter'.hex()}\n"
+                    f"Tx Generator Hash      {block.transactions_generator}\n"
+                    f"Coinbase Amount        {block.header.data.coinbase.amount/1000000000000}\n"
+                    f"Coinbase Puzzle Hash   0x{block.header.data.coinbase.puzzle_hash}\n"
+                    f"Fees Amount            {block.header.data.fees_coin.amount/1000000000000}\n"
+                    f"Fees Puzzle Hash       0x{block.header.data.fees_coin.puzzle_hash}\n"
+                    f"Aggregated Signature   {block.header.data.aggregated_signature.sig}\n"
                 )
             else:
                 print("Block with header hash", args.block_by_header_hash, "not found.")
