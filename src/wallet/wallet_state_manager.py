@@ -190,7 +190,7 @@ class WalletStateManager:
             ] = await self.puzzle_store.get_unused_derivation_path()
             last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path()
 
-            to_generate = 200
+            to_generate = 500
             start_index = 0
             derivation_paths: List[DerivationRecord] = []
 
