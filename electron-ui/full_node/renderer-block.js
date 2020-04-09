@@ -95,4 +95,3 @@ async function render() {
 }
 
 render();
-// console.log("header hash", header_hash);

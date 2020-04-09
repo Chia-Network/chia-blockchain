@@ -1,5 +1,4 @@
-const host = "ws://127.0.0.1:9256"
-const jquery = require('jquery')
+const { wallet_rpc_host_and_port } = require("./config");
 var QRCode = require('qrcode')
 var canvas = document.getElementById('qr_canvas')
 const Dialogs = require('dialogs')
@@ -88,7 +87,7 @@ function sleep(ms) {
     });
 }
 
-var ws = new WebSocket(host);
+var ws = new WebSocket(wallet_rpc_host_and_port);
 
 function set_callbacks(socket) {
     /*
@@ -107,7 +106,6 @@ function set_callbacks(socket) {
 
         if (command == "start_server") {
             get_wallets();
-            get_new_puzzlehash();
             get_transactions();
             get_wallet_balance(g_wallet_id);
             get_height_info();
@@ -148,7 +146,7 @@ async function connect(timeout) {
     Tries to connect to the host after a timeout
     */
     await sleep(timeout);
-    ws = new WebSocket(host);
+    ws = new WebSocket(wallet_rpc_host_and_port);
     set_callbacks(ws);
 }
 
@@ -267,6 +265,11 @@ copy.addEventListener("click", () => {
 })
 
 async function get_new_puzzlehash() {
+    if (global_syncing) {
+        alert("Cannot create address while syncing.")
+        return;
+    }
+
     /*
     Sends websocket request for new puzzle_hash
     */
@@ -493,6 +496,7 @@ async function get_connection_info_response(response) {
 
 function handle_state_changed(data) {
     state = data["state"]
+    console.log("State changed", state)
     if(global_syncing) {
         get_wallet_balance(g_wallet_id)
         get_sync_status()

@@ -35,9 +35,7 @@ class TestNodeLoad:
             ):
                 pass
 
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         await asyncio.sleep(2)  # Allow connections to get made
 
@@ -77,9 +75,7 @@ class TestNodeLoad:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
 
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         await asyncio.sleep(2)  # Allow connections to get made
 

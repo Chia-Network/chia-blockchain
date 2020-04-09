@@ -1,11 +1,10 @@
 import asyncio
 import time
-from typing import Dict, Optional, Tuple, List, Any, AsyncGenerator
+from typing import Dict, Optional, Tuple, List, AsyncGenerator
 import concurrent
 import random
 import logging
 import traceback
-from blspy import ExtendedPrivateKey
 
 from src.full_node.full_node import OutboundMessageGenerator
 from src.types.peer_info import PeerInfo
@@ -21,11 +20,7 @@ from src.server.outbound_message import OutboundMessage, NodeType, Message, Deli
 from src.util.ints import uint32, uint64
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
-from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.transaction_record import TransactionRecord
-from src.wallet.util.wallet_types import WalletType
-from src.wallet.wallet import Wallet
-from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_state_manager import WalletStateManager
 from src.wallet.block_record import BlockRecord
 from src.types.header_block import HeaderBlock
@@ -33,12 +28,12 @@ from src.types.full_block import FullBlock
 from src.types.coin import Coin, hash_coin_list
 from src.full_node.blockchain import ReceiveBlockResult
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
+from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.errors import Err
 from src.util.path import path_from_root, mkdir
 
 
 class WalletNode:
-    private_key: ExtendedPrivateKey
     key_config: Dict
     config: Dict
     constants: Dict
@@ -47,8 +42,6 @@ class WalletNode:
 
     # Maintains the state of the wallet (blockchain and transactions), handles DB connections
     wallet_state_manager: WalletStateManager
-    main_wallet: Wallet
-    wallets: Dict[int, Any]
 
     # Maintains headers recently received. Once the desired removals and additions are downloaded,
     # the data is persisted in the WalletStateManager. These variables are also used to store
@@ -81,8 +74,6 @@ class WalletNode:
         self = WalletNode()
         self.config = config
         self.key_config = key_config
-        sk_hex = self.key_config["wallet_sk"]
-        self.private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
         self.constants = consensus_constants.copy()
         for key, value in override_constants.items():
             self.constants[key] = value
@@ -91,47 +82,13 @@ class WalletNode:
         else:
             self.log = logging.getLogger(__name__)
 
-        path = path_from_root(config["database_path"])
+        path = path_from_root(DEFAULT_ROOT_PATH, config["database_path"])
         mkdir(path.parent)
 
         self.wallet_state_manager = await WalletStateManager.create(
-            config, path, self.constants
+            key_config, config, path, self.constants
         )
         self.wallet_state_manager.set_pending_callback(self.pending_tx_handler)
-
-        main_wallet_info = await self.wallet_state_manager.get_main_wallet()
-        assert main_wallet_info is not None
-
-        self.main_wallet = await Wallet.create(
-            config, key_config, self.wallet_state_manager, main_wallet_info
-        )
-
-        wallets: List[WalletInfo] = await self.wallet_state_manager.get_all_wallets()
-        self.wallets = {}
-        main_wallet = await Wallet.create(
-            config, key_config, self.wallet_state_manager, main_wallet_info
-        )
-        self.main_wallet = main_wallet
-        self.wallets[main_wallet_info.id] = main_wallet
-
-        for wallet_info in wallets:
-            self.log.info(f"wallet_info {wallet_info}")
-            if wallet_info.type == WalletType.STANDARD_WALLET:
-                if wallet_info.id == 1:
-                    continue
-                wallet = await Wallet.create(
-                    config, key_config, self.wallet_state_manager, main_wallet_info
-                )
-                self.wallets[wallet_info.id] = wallet
-            elif wallet_info.type == WalletType.RATE_LIMITED:
-                wallet = await RLWallet.create(
-                    config,
-                    key_config,
-                    self.wallet_state_manager,
-                    wallet_info,
-                    self.main_wallet,
-                )
-                self.wallets[wallet_info.id] = wallet
 
         # Normal operation data
         self.cached_blocks = {}

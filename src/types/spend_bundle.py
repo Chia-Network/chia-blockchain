@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import List
 
 from src.types.coin import Coin
 from src.types.sized_bytes import bytes32
@@ -43,18 +43,18 @@ class SpendBundle(Streamable):
         return items
 
     def removals(self) -> List[Coin]:
+        """ This should be used only by wallet"""
         return [_.coin for _ in self.coin_solutions]
 
-    def removals_dict(self) -> Dict[bytes32, Coin]:
-        result: Dict[bytes32, Coin] = dict()
-        for _ in self.coin_solutions:
-            result[_.coin.name()] = _.coin
-        return result
-
     def fees(self) -> int:
+        """ Unsafe to use for fees validation!!! """
         amount_in = sum(_.amount for _ in self.removals())
         amount_out = sum(_.amount for _ in self.additions())
+
         return amount_in - amount_out
+
+    def removal_names(self) -> List[bytes32]:
+        return [_.coin.name() for _ in self.coin_solutions]
 
     def name(self) -> bytes32:
         return self.get_hash()

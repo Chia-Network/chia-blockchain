@@ -1,0 +1,8 @@
+_kill_servers() {
+  PROCS=`ps -e | grep -E 'chia-wallet' | awk '!/grep/' | awk '{print $1}'`
+  if [ -n "$PROCS" ]; then
+    echo "$PROCS" | xargs -L1 kill -KILL
+  fi
+}
+
+_kill_servers

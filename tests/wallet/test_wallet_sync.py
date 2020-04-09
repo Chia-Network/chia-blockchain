@@ -43,9 +43,7 @@ class TestWalletSync:
             ):
                 pass
 
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         start = time.time()
         found = False
@@ -104,9 +102,7 @@ class TestWalletSync:
             ):
                 pass
 
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         start = time.time()
         found = False
@@ -137,9 +133,7 @@ class TestWalletSync:
             ):
                 pass
 
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         start = time.time()
         while time.time() - start < 60:
             # The second node should eventually catch up to the first one, and have the
@@ -159,7 +153,7 @@ class TestWalletSync:
     @pytest.mark.asyncio
     async def test_short_sync_with_transactions_wallet(self, wallet_node):
         full_node_1, wallet_node, server_1, server_2 = wallet_node
-        wallet_a = wallet_node.main_wallet
+        wallet_a = wallet_node.wallet_state_manager.main_wallet
         wallet_a_dummy = WalletTool()
         wallet_b = WalletTool()
         coinbase_puzzlehash = await wallet_a.get_new_puzzlehash()
@@ -178,9 +172,7 @@ class TestWalletSync:
                 )
             ]
         await asyncio.sleep(2)
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await asyncio.sleep(2)
         assert (
             wallet_node.wallet_state_manager.block_records[
@@ -215,9 +207,7 @@ class TestWalletSync:
                 pass
 
         # Do a short sync from 0 to 14
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         start = time.time()
         broke = False
         while time.time() - start < 60:
@@ -282,9 +272,7 @@ class TestWalletSync:
                 pass
 
         # Do a sync from 0 to 22
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         broke = False
         while time.time() - start < 60:
@@ -359,9 +347,7 @@ class TestWalletSync:
             ):
                 pass
 
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         broke = False
         while time.time() - start < 60:

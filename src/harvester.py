@@ -11,6 +11,7 @@ from src.server.outbound_message import Delivery, Message, NodeType, OutboundMes
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
+from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.ints import uint8
 from src.util.path import path_from_root
 
@@ -58,11 +59,13 @@ class Harvester:
         use any plots which don't have one of the pool keys.
         """
         for partial_filename_str, plot_config in self.plot_config["plots"].items():
-            plot_root = path_from_root(self.config.get("plot_root", "."))
-            partial_filename = path_from_root(partial_filename_str, plot_root)
+            plot_root = path_from_root(
+                DEFAULT_ROOT_PATH, self.config.get("plot_root", ".")
+            )
+            partial_filename = plot_root / partial_filename_str
             potential_filenames = [
                 partial_filename,
-                path_from_root(partial_filename_str, plot_root),
+                path_from_root(plot_root, partial_filename_str),
             ]
             pool_pubkey = PublicKey.from_bytes(bytes.fromhex(plot_config["pool_pk"]))
 

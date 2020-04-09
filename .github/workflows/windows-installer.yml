@@ -1,0 +1,14 @@
+name: Build Windows Installer
+
+on: [push, pull_request]
+
+jobs:
+  upload_source_dist:
+    name: Upload source distribution
+    runs-on: [windows-latest]
+
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 0
+        # we need fetch-depth 0 so setuptools_scm can resolve tags

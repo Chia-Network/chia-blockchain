@@ -12,11 +12,18 @@ from src.util.byte_types import hexstr_to_bytes
 from src.util.config import str2bool
 
 
-def show_parser(parser):
+def make_parser(parser):
 
     parser.add_argument(
-        "-b",
+        "-bh",
         "--block_header_hash",
+        help="Look up a block by block header hash string.",
+        type=str,
+        default="",
+    )
+    parser.add_argument(
+        "-b",
+        "--block_by_header_hash",
         help="Look up a block by block header hash string.",
         type=str,
         default="",
@@ -104,19 +111,18 @@ async def show_async(args, parser):
                 )
             else:
                 print("Current Blockchain Status. Full Node Synced")
-            print("Current least common ancestor ", lca_block.header_hash)
-            # print ("LCA time",time.ctime(lca_block.data.timestamp),"LCA height:",lca_block.height)
+            print("Current least common ancestor:\n    ", lca_block.header_hash)
             lca_time = struct_time(localtime(lca_block.data.timestamp))
+            # Should auto format the align right of LCA height
             print(
-                "LCA time",
+                "     LCA time:",
                 time.strftime("%a %b %d %Y %T %Z", lca_time),
-                "LCA height:",
+                "       LCA height:",
                 lca_block.height,
             )
             print("Heights of tips: " + str([h.height for h in tips]))
             print(f"Current difficulty: {difficulty}")
             print(f"Current VDF iterations per second: {ips:.0f}")
-            # print("LCA data:\n", lca_block.data)
             print("Total iterations since genesis:", total_iters)
             print("")
             heads: List[HeaderBlock] = tips
@@ -221,16 +227,48 @@ async def show_async(args, parser):
                     elif result_txt == "":
                         result_txt = f"NodeID {args.remove_connection}... not found."
             print(result_txt)
-        elif args.block_header_hash != "":
-            block = await client.get_block(hexstr_to_bytes(args.block_header_hash))
-            # print(dir(block))
-            if block is not None:
+        if args.block_header_hash != "":
+            block_header = await client.get_block(hexstr_to_bytes(args.block_header_hash))
+            # print(dir(block_header))
+            if block_header is not None:
                 print("Block header:")
-                print(block.header)
-                block_time = struct_time(localtime(block.header.data.timestamp))
+                print(block_header.header)
+                block_time = struct_time(localtime(block_header.header.data.timestamp))
                 print("Block time:", time.strftime("%a %b %d %Y %T %Z", block_time))
             else:
                 print("Block hash", args.block_header_hash, "not found.")
+        if args.block_by_header_hash != "":
+            block = await client.get_block(hexstr_to_bytes(args.block_by_header_hash))
+            # Would like to have a verbose flag for this
+            if block is not None:
+                prev_block_header_hash = block.header.data.prev_header_hash
+                prev_block_header = await client.get_block(prev_block_header_hash)
+                block_time = struct_time(localtime(block.header.data.timestamp))
+                block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
+                print("Block:")
+                print(
+                    f"Header Hash                0x{args.block_by_header_hash}\n"
+                    f"Timestamp                  {block_time_string}\n"
+                    f"Height                     {block.header.data.height}\n"
+                    f"Weight                     {block.header.data.weight}\n"
+                    f"Previous Block             0x{block.header.data.prev_header_hash}\n"
+                    f"Cost                       {block.header.data.cost}\n"
+                    f"Difficulty                 {block.header.data.weight-prev_block_header.header.data.weight}\n"
+                    f"Total VDF Iterations       {block.header.data.total_iters}\n"
+                    f"Block VDF Iterations       {block.proof_of_time.number_of_iterations}\n"
+                    f"Proof of Space \'k\' Size    {block.proof_of_space.size}\n"
+                    # f"Plot Public Key            0x{block.proof_of_space.plot_pubkey}\n"
+                    # f"Pool Public Key            0x{block.proof_of_space.pool_pubkey}\n"
+                    f"Tx Filter Hash             {(block.transactions_filter)}\n"
+                    f"Tx Generator Hash          {block.transactions_generator}\n"
+                    f"Coinbase Amount            {block.header.data.coinbase.amount/1000000000000}\n"
+                    f"Coinbase Puzzle Hash       0x{block.header.data.coinbase.puzzle_hash}\n"
+                    f"Fees Amount                {block.header.data.fees_coin.amount/1000000000000}\n"
+                    f"Fees Puzzle Hash           0x{block.header.data.fees_coin.puzzle_hash}\n"
+                    f"Aggregated Signature       {block.header.data.aggregated_signature}\n"
+                )
+            else:
+                print("Block with header hash", args.block_by_header_hash, "not found.")
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):

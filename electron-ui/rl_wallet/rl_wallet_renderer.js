@@ -1,5 +1,4 @@
 const host = "ws://127.0.0.1:9256"
-const jquery = require('jquery')
 var QRCode = require('qrcode')
 var canvas = document.getElementById('qr_canvas')
 const Dialogs = require('dialogs')

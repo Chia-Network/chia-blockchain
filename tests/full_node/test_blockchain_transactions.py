@@ -4,8 +4,11 @@ from typing import Optional
 import pytest
 from clvm.casts import int_to_bytes
 
+from src.full_node.blockchain import ReceiveBlockResult
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
+from src.types.header import HeaderData, Header
+from src.types.sized_bytes import bytes32
 from src.util.bundle_tools import best_solution_program
 from src.server.outbound_message import OutboundMessage
 from src.protocols import full_node_protocol
@@ -13,6 +16,7 @@ from src.types.full_block import FullBlock
 from src.types.spend_bundle import SpendBundle
 from src.util.errors import Err
 from src.util.ints import uint64
+from tests.block_tools import BlockTools
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.wallet_tools import WalletTool
 
@@ -1055,3 +1059,97 @@ class TestBlockchainTransactions:
         )
 
         assert error is None
+
+    @pytest.mark.asyncio
+    async def test_invalid_filter(self, two_nodes):
+        num_blocks = 10
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        for block in blocks:
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(block)
+            ):
+                pass
+
+        spent_block = blocks[1]
+
+        spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, spent_block.header.data.coinbase
+        )
+
+        assert spend_bundle is not None
+        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
+            spend_bundle
+        )
+        async for _ in full_node_1.respond_transaction(tx):
+            outbound: OutboundMessage = _
+            # Maybe transaction means that it's accepted in mempool
+            assert outbound.message.function == "new_transaction"
+
+        sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
+        assert sb is spend_bundle
+
+        last_block = blocks[10]
+        next_spendbundle = await full_node_1.mempool_manager.create_bundle_for_tip(
+            last_block.header
+        )
+        assert next_spendbundle is not None
+
+        program = best_solution_program(next_spendbundle)
+        aggsig = next_spendbundle.aggregated_signature
+
+        dic_h = {11: (program, aggsig)}
+        new_blocks = bt.get_consecutive_blocks(
+            test_constants, 1, blocks, 10, b"", coinbase_puzzlehash, dic_h
+        )
+
+        next_block = new_blocks[11]
+
+        bad_header = HeaderData(
+            next_block.header.data.height,
+            next_block.header.data.prev_header_hash,
+            next_block.header.data.timestamp,
+            bytes32(bytes([3] * 32)),
+            next_block.header.data.proof_of_space_hash,
+            next_block.header.data.weight,
+            next_block.header.data.total_iters,
+            next_block.header.data.additions_root,
+            next_block.header.data.removals_root,
+            next_block.header.data.coinbase,
+            next_block.header.data.coinbase_signature,
+            next_block.header.data.fees_coin,
+            next_block.header.data.aggregated_signature,
+            next_block.header.data.cost,
+            next_block.header.data.extension_data,
+            next_block.header.data.generator_hash,
+        )
+        bad_block = FullBlock(
+            next_block.proof_of_space,
+            next_block.proof_of_time,
+            Header(
+                bad_header,
+                BlockTools.get_harvester_signature(
+                    bad_header, next_block.proof_of_space.plot_pubkey
+                ),
+            ),
+            next_block.transactions_generator,
+            next_block.transactions_filter,
+        )
+        result, removed, error_code = await full_node_1.blockchain.receive_block(
+            bad_block
+        )
+        assert result == ReceiveBlockResult.INVALID_BLOCK
+        assert error_code == Err.INVALID_TRANSACTIONS_FILTER_HASH
+
+        result, removed, error_code = await full_node_1.blockchain.receive_block(
+            next_block
+        )
+        assert result == ReceiveBlockResult.ADDED_TO_HEAD

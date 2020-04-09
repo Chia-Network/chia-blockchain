@@ -12,18 +12,23 @@ For testnet most should only install harvesters, farmers, plotter and full nodes
 
 All data is now stored in the $CHIA_ROOT environment variable. or ~/.chia/VERSION-DIR/ if unset. You can find databases, keys, plots, logs here. You can set $CHIA_ROOT to the .chia directory in your home directory with `export CHIA_ROOT=~/.chia`.
 
-## Step 1: Install the code
+## Install the code
 To install chia-blockchain, follow [these install](INSTALL.md) instructions according to your operating system. This only supports 64 bit operating systems.
 
-Remember that once you complete your install you **must be in the Python virtual environment** which you access from the chia-blockchain directory with the command `. ./activate`. Both dots are critical and once executed correctly your cli prompt will look something like `(venv) username@machine:~$` with the (venv) prepended. Use `deactivate` should you want to exit the venv.
+Remember that once you complete your install you **must be in the Python virtual environment** which you access from the chia-blockchain directory with the command `.   ./activate`. (Or . ./venv/bin/activate). Both dots are critical and once executed correctly your cli prompt will look something like `(venv) username@machine:~$` with the (venv) prepended. Use `deactivate` should you want to exit the venv.
 
-## Step 2: Generate keys
+## Migrate or set up configuration files
+```bash
+chia init
+```
+
+## Generate keys
 First, create some keys by running the following script:
 ```bash
 chia-generate-keys
 ```
 
-## Step 3a: Run a full node + wallet
+## Run a full node + wallet
 To run a full node on port 8444, and connect to the testnet, run the following command.
 If you want to see std::out log output, modify the logging.std_out variable in ./config/config.yaml.
 
@@ -38,7 +43,7 @@ chia-start-wallet-server &
 ```
 And then run `chia.exe` from the unzipped `chia-win32-x64` directory in Windows (not Ubuntu/WSL 2.)
 
-## Step 3b: Run a farmer + full node + wallet
+## Run a farmer + full node + wallet
 Instead of running only a full node (as in 3a), you can also run a farmer.
 Farmers are entities in the network who use their hard drive space to try to create
 blocks (like Bitcoin's miners), and earn block rewards. First, you must generate some hard drive plots, which
@@ -60,7 +65,7 @@ chia-start-wallet-server &
 And then run `chia.exe` from the unzipped `chia-win32-x64` directory in Windows (not Ubuntu/WSL 2.)
 
 
-## Step 3c: Run a timelord + full node + wallet
+## Run a timelord + full node + wallet
 
 *Note*
 If you want to run a timelord on Linux, see LINUX_TIMELORD.md.
@@ -85,7 +90,7 @@ you can disable it in the configuration. Some routers may require port forwardin
 UPnP in the router configuration.
 
 Due to the nature of proof of space lookups by the harvester in the current release you should limit
-the number of plots on a physical drive to 50 or less. This limit should significantly increase before soon.
+the number of plots on a physical drive to 50 or less. This limit should significantly increase soon.
 
 You can also run the simulation, which runs all servers and multiple full nodes, locally, at once.
 

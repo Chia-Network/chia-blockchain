@@ -7,16 +7,12 @@ from src.util.logging import initialize_logging
 from src.util.config import load_config
 from asyncio import Lock
 from typing import List
+from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.setproctitle import setproctitle
-
-config = load_config("config.yaml", "timelord_launcher")
 
 active_processes: List = []
 stopped = False
 lock = Lock()
-
-initialize_logging("Launcher %(name)-23s", config["logging"])
-setproctitle("chia_timelord_launcher")
 
 log = logging.getLogger(__name__)
 
@@ -69,16 +65,18 @@ async def spawn_process(host, port, counter):
         await asyncio.sleep(0.1)
 
 
-async def spawn_all_processes():
+async def spawn_all_processes(config):
     await asyncio.sleep(15)
-    host = config["host"]
     port = config["port"]
     process_count = config["process_count"]
-    awaitables = [spawn_process(host, port, i) for i in range(process_count)]
+    awaitables = [spawn_process("127.0.0.1", port, i) for i in range(process_count)]
     await asyncio.gather(*awaitables)
 
 
-if __name__ == "__main__":
+def main():
+    setproctitle("chia_timelord_launcher")
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml", "timelord_launcher")
+    initialize_logging("Launcher %(name)-23s", config["logging"])
 
     def signal_received():
         asyncio.create_task(kill_processes())
@@ -89,7 +87,11 @@ if __name__ == "__main__":
     loop.add_signal_handler(signal.SIGTERM, signal_received)
 
     try:
-        loop.run_until_complete(spawn_all_processes())
+        loop.run_until_complete(spawn_all_processes(config))
     finally:
         log.info("Launcher fully closed.")
         loop.close()
+
+
+if __name__ == "__main__":
+    main()

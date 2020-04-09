@@ -23,10 +23,30 @@ then
   INSTALL_PYTHON_VERSION=`find_python`
 fi
 
-
-if [ `uname` = "Linux" ] && type apt-get; then
+# Manage npm and other install requirements on an OS specific basis
+if [ `uname` = "Linux" ]; then
+  #LINUX=1
+  if type apt-get; then
     # Debian/Ubuntu
-    sudo apt-get install -y npm python3-dev
+    sudo apt-get install -y npm
+  elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ]; then
+    # AMZN 2
+    echo "Installing on Amazon Linux 2"
+    sudo yum install -y python3 git
+    curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
+    sudo yum install -y nodejs
+  elif type yum && [ -f /etc/redhat-release ] || [ -f /etc/centos-release ]; then
+    # CentOS or Redhat
+    echo "Installing on CentOS/Redhat"
+    curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
+    sudo yum install -y nodejs
+  fi
+elif [ `uname` = "Darwin" ] && type brew && ! npm version>/dev/null 2>&1; then
+  # Install npm if not installed
+  brew install npm
+elif [ `uname` = "Darwin" ] && ! type brew; then
+  echo "Installation currently requires brew on MacOS"
+  echo "Instructions here: https://brew.sh/"
 fi
 
 # this fancy syntax sets INSTALL_PYTHON_PATH to "python3.7" unless INSTALL_PYTHON_VERSION is defined
@@ -38,9 +58,13 @@ $INSTALL_PYTHON_PATH -m venv venv
 if [ ! -f "activate" ]; then
     ln -s venv/bin/activate
 fi
+echo "Python version is $INSTALL_PYTHON_VERSION"
 . ./activate
 # pip 20.x+ supports Linux binary wheels
 pip install --upgrade pip
+#if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
+# This remains in case there is a diversion of binary wheels
+pip install -i https://hosted.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
 pip install -e .
 
 cd ./electron-ui

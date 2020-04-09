@@ -22,21 +22,23 @@ from src.types.full_block import FullBlock
 from src.types.peer_info import PeerInfo
 from src.full_node.coin_store import CoinStore
 from src.util.logging import initialize_logging
-from src.util.config import load_config_cli
+from src.util.config import load_config_cli, load_config
+from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.path import mkdir, path_from_root
 from src.util.pip_import import pip_import
 from src.util.setproctitle import setproctitle
 
 
 async def main():
-    config = load_config_cli("config.yaml", "full_node")
+    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "full_node")
+    net_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     setproctitle("chia_full_node")
     initialize_logging("FullNode %(name)-23s", config["logging"])
 
     log = logging.getLogger(__name__)
     server_closed = False
 
-    db_path = path_from_root(config["database_path"])
+    db_path = path_from_root(DEFAULT_ROOT_PATH, config["database_path"])
     mkdir(db_path.parent)
 
     # Create the store (DB) and full node instance
@@ -72,9 +74,15 @@ async def main():
             log.exception(f"UPnP failed")
 
     # Starts the full node server (which full nodes can connect to)
-    server = ChiaServer(config["port"], full_node, NodeType.FULL_NODE)
+    ping_interval = net_config.get("ping_interval")
+    network_id = net_config.get("network_id")
+    assert ping_interval is not None
+    assert network_id is not None
+    server = ChiaServer(
+        config["port"], full_node, NodeType.FULL_NODE, ping_interval, network_id
+    )
     full_node._set_server(server)
-    _ = await server.start_server(config["host"], full_node._on_connect, config)
+    _ = await server.start_server(full_node._on_connect, config)
     rpc_cleanup = None
 
     def master_close_cb():

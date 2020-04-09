@@ -15,7 +15,6 @@
   "dependencies": {
     "dialogs": "2.0.1",
     "electron-rebuild": "1.10.0",
-    "jquery": "3.4.1",
     "qrcode": "1.4.4",
     "ws": "6.2.1",
     "big.js": "5.2.2"

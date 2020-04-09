@@ -582,10 +582,9 @@ class FullNode:
         potential_fut_blocks = (self.store.get_potential_future_blocks()).copy()
         self.store.set_sync_mode(False)
 
-        await self.blockchain.recreate_diff_stores()
-
         async with self.store.lock:
             await self.store.clear_sync_info()
+            await self.blockchain.recreate_diff_stores()
 
         for block in potential_fut_blocks:
             if self._shut_down:
@@ -698,7 +697,7 @@ class FullNode:
         # Ignore if syncing
         if self.store.get_sync_mode():
             return
-        async with self.coin_store.lock:
+        async with self.store.lock:
             cost, status, error = await self.mempool_manager.add_spendbundle(
                 tx.transaction
             )
@@ -1083,9 +1082,11 @@ class FullNode:
         )
 
         assert prev_full_block is not None
-        error_code, iterations_needed = await self.blockchain.validate_unfinished_block(
-            block, prev_full_block
-        )
+        async with self.store.lock:
+            (
+                error_code,
+                iterations_needed,
+            ) = await self.blockchain.validate_unfinished_block(block, prev_full_block)
 
         if error_code is not None:
             raise ConsensusError(error_code)
@@ -1235,8 +1236,9 @@ class FullNode:
     async def reject_header_block_request(
         self, request: full_node_protocol.RejectHeaderBlockRequest
     ) -> OutboundMessageGenerator:
-        # TODO(mariano): Implement with new sync
         self.log.warning(f"Reject header block request, {request}")
+        if self.store.get_sync_mode():
+            yield OutboundMessage(NodeType.FULL_NODE, Message("", None), Delivery.CLOSE)
         for _ in []:
             yield _
 
@@ -1281,9 +1283,10 @@ class FullNode:
 
         assert target_tip is not None
         # Grab best transactions from Mempool for given tip target
-        spend_bundle: Optional[
-            SpendBundle
-        ] = await self.mempool_manager.create_bundle_for_tip(target_tip)
+        async with self.store.lock:
+            spend_bundle: Optional[
+                SpendBundle
+            ] = await self.mempool_manager.create_bundle_for_tip(target_tip)
         spend_bundle_fees = 0
         aggregate_sig: Optional[BLSSignature] = None
         solution_program: Optional[Program] = None
@@ -1731,6 +1734,8 @@ class FullNode:
         self, reject: full_node_protocol.RejectBlockRequest
     ) -> OutboundMessageGenerator:
         self.log.warning(f"Rejected block request {reject}")
+        if self.store.get_sync_mode():
+            yield OutboundMessage(NodeType.FULL_NODE, Message("", None), Delivery.CLOSE)
         for _ in []:
             yield _
 
@@ -1805,7 +1810,7 @@ class FullNode:
             status = MempoolInclusionStatus.FAILED
             error: Optional[Err] = Err.UNKNOWN
         else:
-            async with self.coin_store.lock:
+            async with self.store.lock:
                 cost, status, error = await self.mempool_manager.add_spendbundle(
                     tx.transaction
                 )

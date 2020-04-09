@@ -7,11 +7,7 @@ from src.protocols import full_node_protocol
 from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
-from tests.setup_nodes import (
-    setup_node_simulator_and_two_wallets,
-    setup_node_simulator_and_wallet,
-    setup_three_simulators_and_two_wallets,
-)
+from tests.setup_nodes import setup_simulators_and_wallets
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 
 
@@ -24,40 +20,40 @@ def event_loop():
 class TestWalletSimulator:
     @pytest.fixture(scope="function")
     async def wallet_node(self):
-        async for _ in setup_node_simulator_and_wallet():
+        async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
     @pytest.fixture(scope="function")
     async def two_wallet_nodes(self):
-        async for _ in setup_node_simulator_and_two_wallets(
-            {"COINBASE_FREEZE_PERIOD": 0}
+        async for _ in setup_simulators_and_wallets(
+            1, 2, {"COINBASE_FREEZE_PERIOD": 0}
         ):
             yield _
 
     @pytest.fixture(scope="function")
     async def two_wallet_nodes_five_freeze(self):
-        async for _ in setup_node_simulator_and_two_wallets(
-            {"COINBASE_FREEZE_PERIOD": 5}
+        async for _ in setup_simulators_and_wallets(
+            1, 2, {"COINBASE_FREEZE_PERIOD": 5}
         ):
             yield _
 
     @pytest.fixture(scope="function")
     async def three_sim_two_wallets(self):
-        async for _ in setup_three_simulators_and_two_wallets(
-            {"COINBASE_FREEZE_PERIOD": 0}
+        async for _ in setup_simulators_and_wallets(
+            3, 2, {"COINBASE_FREEZE_PERIOD": 0}
         ):
             yield _
 
     @pytest.mark.asyncio
     async def test_wallet_coinbase(self, wallet_node):
         num_blocks = 10
-        full_node_1, wallet_node, server_1, server_2 = wallet_node
-        wallet = wallet_node.main_wallet
+        full_nodes, wallets = wallet_node
+        full_node_1, server_1 = full_nodes[0]
+        wallet_node, server_2 = wallets[0]
+        wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
@@ -73,20 +69,14 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_make_transaction(self, two_wallet_nodes):
         num_blocks = 10
-        (
-            full_node_1,
-            wallet_node,
-            wallet_node_2,
-            server_1,
-            server_2,
-            server_3,
-        ) = two_wallet_nodes
-        wallet = wallet_node.main_wallet
+        full_nodes, wallets = two_wallet_nodes
+        full_node_1, server_1 = full_nodes[0]
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
@@ -104,7 +94,9 @@ class TestWalletSimulator:
         assert await wallet.get_unconfirmed_balance() == funds
 
         spend_bundle = await wallet.generate_signed_transaction(
-            10, await wallet_node_2.main_wallet.get_new_puzzlehash(), 0
+            10,
+            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            0,
         )
         await wallet.push_transaction(spend_bundle)
 
@@ -136,13 +128,13 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_coinbase_reorg(self, wallet_node):
         num_blocks = 10
-        full_node_1, wallet_node, server_1, server_2 = wallet_node
-        wallet = wallet_node.main_wallet
+        full_nodes, wallets = wallet_node
+        full_node_1, server_1 = full_nodes[0]
+        wallet_node, server_2 = wallets[0]
+        wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
@@ -179,11 +171,11 @@ class TestWalletSimulator:
         full_node_1, server_1 = full_nodes[1]
         full_node_2, server_2 = full_nodes[2]
 
-        ph = await wallet_0.main_wallet.get_new_puzzlehash()
+        ph = await wallet_0.wallet_state_manager.main_wallet.get_new_puzzlehash()
 
         # wallet0 <-> sever0
         await wallet_server_0.start_client(
-            PeerInfo(server_0._host, uint16(server_0._port)), None
+            PeerInfo("localhost", uint16(server_0._port)), None
         )
 
         for i in range(1, num_blocks):
@@ -208,12 +200,15 @@ class TestWalletSimulator:
                 for i in range(1, num_blocks - 2)
             ]
         )
-        assert await wallet_0.main_wallet.get_confirmed_balance() == funds
+        assert (
+            await wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance()
+            == funds
+        )
 
-        spend_bundle = await wallet_0.main_wallet.generate_signed_transaction(
+        spend_bundle = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
             10, token_bytes(), 0
         )
-        await wallet_0.main_wallet.push_transaction(spend_bundle)
+        await wallet_0.wallet_state_manager.main_wallet.push_transaction(spend_bundle)
 
         await asyncio.sleep(1)
 
@@ -222,7 +217,7 @@ class TestWalletSimulator:
 
         # wallet0 <-> sever1
         await wallet_server_0.start_client(
-            PeerInfo(server_1._host, uint16(server_1._port)), wallet_0._on_connect
+            PeerInfo("localhost", uint16(server_1._port)), wallet_0._on_connect
         )
         await asyncio.sleep(1)
 
@@ -231,7 +226,7 @@ class TestWalletSimulator:
 
         # wallet0 <-> sever2
         await wallet_server_0.start_client(
-            PeerInfo(server_2._host, uint16(server_2._port)), wallet_0._on_connect
+            PeerInfo("localhost", uint16(server_2._port)), wallet_0._on_connect
         )
         await asyncio.sleep(1)
 
@@ -241,24 +236,20 @@ class TestWalletSimulator:
     @pytest.mark.asyncio
     async def test_wallet_make_transaction_hop(self, two_wallet_nodes_five_freeze):
         num_blocks = 10
-        (
-            full_node_0,
-            wallet_node_0,
-            wallet_node_1,
-            full_node_server,
-            wallet_0_server,
-            wallet_1_server,
-        ) = two_wallet_nodes_five_freeze
-        wallet_0 = wallet_node_0.main_wallet
-        wallet_1 = wallet_node_1.main_wallet
+        full_nodes, wallets = two_wallet_nodes_five_freeze
+        full_node_0, full_node_server = full_nodes[0]
+        wallet_node_0, wallet_0_server = wallets[0]
+        wallet_node_1, wallet_1_server = wallets[1]
+        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+        wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
         ph = await wallet_0.get_new_puzzlehash()
 
         await wallet_0_server.start_client(
-            PeerInfo(full_node_server._host, uint16(full_node_server._port)), None
+            PeerInfo("localhost", uint16(full_node_server._port)), None
         )
 
         await wallet_1_server.start_client(
-            PeerInfo(full_node_server._host, uint16(full_node_server._port)), None
+            PeerInfo("localhost", uint16(full_node_server._port)), None
         )
 
         for i in range(0, num_blocks):
@@ -277,7 +268,9 @@ class TestWalletSimulator:
         assert await wallet_0.get_unconfirmed_balance() == funds
 
         spend_bundle = await wallet_0.generate_signed_transaction(
-            10, await wallet_node_1.main_wallet.get_new_puzzlehash(), 0
+            10,
+            await wallet_node_1.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            0,
         )
 
         await wallet_0.push_transaction(spend_bundle)

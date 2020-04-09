@@ -4,11 +4,9 @@ from secrets import token_bytes
 from blspy import PrivateKey, ExtendedPrivateKey
 from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.types.BLSSignature import BLSPublicKey
-from src.util.config import load_config, save_config, str2bool
-from src.util.path import mkdir, path_from_root
-
-
-key_config_filename = path_from_root() / "config" / "keys.yaml"
+from src.util.config import config_path_for_filename, load_config, save_config, str2bool
+from src.util.default_root import DEFAULT_ROOT_PATH
+from src.util.path import mkdir
 
 
 def main():
@@ -16,6 +14,8 @@ def main():
     Allows replacing keys of farmer, harvester, and pool, all default to True.
     """
 
+    root_path = DEFAULT_ROOT_PATH
+    keys_yaml = "keys.yaml"
     parser = argparse.ArgumentParser(description="Chia key generator script.")
     parser.add_argument(
         "-a",
@@ -46,6 +46,7 @@ def main():
     )
     args = parser.parse_args()
 
+    key_config_filename = config_path_for_filename(root_path, keys_yaml)
     if key_config_filename.exists():
         # If the file exists, warn the user
         yn = input(
@@ -59,7 +60,7 @@ def main():
         mkdir(key_config_filename.parent)
         open(key_config_filename, "a").close()
 
-    key_config = load_config(key_config_filename)
+    key_config = load_config(root_path, keys_yaml)
     if key_config is None:
         key_config = {}
 
@@ -71,12 +72,12 @@ def main():
         )
         key_config["wallet_sk"] = bytes(wallet_sk).hex()
         key_config["wallet_target"] = wallet_target.hex()
-        save_config(key_config_filename, key_config)
+        save_config(root_path, keys_yaml, key_config)
     if args.harvester:
         # Replaces the harvester's sk seed. Used to generate plot private keys, which are
         # used to sign farmed blocks.
         key_config["sk_seed"] = token_bytes(32).hex()
-        save_config(key_config_filename, key_config)
+        save_config(root_path, keys_yaml, key_config)
     if args.pool:
         # Replaces the pools keys and targes. Only useful if running a pool, or doing
         # solo farming. The pool target allows spending of the coinbase.
@@ -89,7 +90,7 @@ def main():
             pool_target = wallet_target
         key_config["pool_sks"] = [bytes(pool_sk).hex() for pool_sk in pool_sks]
         key_config["pool_target"] = pool_target.hex()
-        save_config(key_config_filename, key_config)
+        save_config(root_path, keys_yaml, key_config)
 
 
 if __name__ == "__main__":

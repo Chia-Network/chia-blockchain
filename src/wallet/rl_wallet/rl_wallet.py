@@ -4,7 +4,7 @@ import logging
 from binascii import hexlify
 from dataclasses import dataclass
 from secrets import token_bytes
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, List, Tuple, Any
 
 import clvm
 import json
@@ -18,7 +18,7 @@ from src.types.coin_solution import CoinSolution
 from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint64
+from src.util.ints import uint64, uint32
 from src.util.streamable import streamable, Streamable
 from src.wallet.rl_wallet.rl_wallet_puzzles import (
     rl_puzzle_for_pk,
@@ -32,7 +32,7 @@ from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet import Wallet
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
-from src.wallet.wallet_state_manager import WalletStateManager
+from src.wallet.derivation_record import DerivationRecord
 
 
 @dataclass(frozen=True)
@@ -53,7 +53,7 @@ class RLWallet:
     key_config: Dict
     config: Dict
     server: Optional[ChiaServer]
-    wallet_state_manager: WalletStateManager
+    wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
     rl_coin_record: WalletCoinRecord
@@ -64,19 +64,21 @@ class RLWallet:
     async def create_rl_admin(
         config: Dict,
         key_config: Dict,
-        wallet_state_manager: WalletStateManager,
+        wallet_state_manager: Any,
         wallet: Wallet,
         name: str = None,
     ):
-        current_max_index = (
-            await wallet_state_manager.puzzle_store.get_max_derivation_path() + 1
-        )
-        my_pubkey_index = current_max_index + 1
+        unused: Optional[
+            uint32
+        ] = await wallet_state_manager.puzzle_store.get_unused_derivation_path()
+        if unused is None:
+            await wallet_state_manager.create_more_puzzle_hashes()
+        unused = await wallet_state_manager.puzzle_store.get_unused_derivation_path()
+        assert unused is not None
+
         sk_hex = key_config["wallet_sk"]
         private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
-        pubkey_bytes: bytes = bytes(
-            private_key.public_child(my_pubkey_index).get_public_key()
-        )
+        pubkey_bytes: bytes = bytes(private_key.public_child(unused).get_public_key())
 
         rl_info = RLInfo("admin", pubkey_bytes, None, None, None, None, None, None)
         info_as_string = json.dumps(rl_info.to_json_dict())
@@ -86,13 +88,19 @@ class RLWallet:
         wallet_info = await wallet_state_manager.user_store.get_last_wallet()
         if wallet_info is None:
             raise
-        await wallet_state_manager.puzzle_store.add_derivation_path_of_interest(
-            my_pubkey_index,
-            token_bytes(),
-            pubkey_bytes,
-            WalletType.RATE_LIMITED,
-            wallet_info.id,
+
+        await wallet_state_manager.puzzle_store.add_derivation_paths(
+            [
+                DerivationRecord(
+                    unused,
+                    token_bytes(),
+                    pubkey_bytes,
+                    WalletType.RATE_LIMITED,
+                    wallet_info.id,
+                )
+            ]
         )
+        await wallet_state_manager.puzzle_store.set_used_up_to(unused)
 
         self = await RLWallet.create(
             config, key_config, wallet_state_manager, wallet_info, wallet, name
@@ -103,46 +111,60 @@ class RLWallet:
     async def create_rl_user(
         config: Dict,
         key_config: Dict,
-        wallet_state_manager: WalletStateManager,
+        wallet_state_manager: Any,
         wallet: Wallet,
         name: str = None,
     ):
-        current_max_index = (
-            await wallet_state_manager.puzzle_store.get_max_derivation_path() + 1
-        )
-        my_pubkey_index = current_max_index + 1
-        sk_hex = key_config["wallet_sk"]
-        private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
-        pubkey_bytes: bytes = bytes(
-            private_key.public_child(my_pubkey_index).get_public_key()
-        )
+        async with wallet_state_manager.puzzle_store.lock:
+            unused: Optional[
+                uint32
+            ] = await wallet_state_manager.puzzle_store.get_unused_derivation_path()
+            if unused is None:
+                await wallet_state_manager.create_more_puzzle_hashes()
+            unused = (
+                await wallet_state_manager.puzzle_store.get_unused_derivation_path()
+            )
+            assert unused is not None
 
-        rl_info = RLInfo("user", None, pubkey_bytes, None, None, None, None, None)
-        info_as_string = json.dumps(rl_info.to_json_dict())
-        await wallet_state_manager.user_store.create_wallet(
-            "RL User", WalletType.RATE_LIMITED, info_as_string
-        )
-        wallet_info = await wallet_state_manager.user_store.get_last_wallet()
-        if wallet_info is None:
-            raise
-        await wallet_state_manager.puzzle_store.add_derivation_path_of_interest(
-            my_pubkey_index,
-            token_bytes(),
-            pubkey_bytes,
-            WalletType.RATE_LIMITED,
-            wallet_info.id,
-        )
+            sk_hex = key_config["wallet_sk"]
+            private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
+            pubkey_bytes: bytes = bytes(
+                private_key.public_child(unused).get_public_key()
+            )
 
-        self = await RLWallet.create(
-            config, key_config, wallet_state_manager, wallet_info, wallet, name
-        )
+            rl_info = RLInfo("user", None, pubkey_bytes, None, None, None, None, None)
+            info_as_string = json.dumps(rl_info.to_json_dict())
+            await wallet_state_manager.user_store.create_wallet(
+                "RL User", WalletType.RATE_LIMITED, info_as_string
+            )
+            wallet_info = await wallet_state_manager.user_store.get_last_wallet()
+            if wallet_info is None:
+                raise
+
+            self = await RLWallet.create(
+                config, key_config, wallet_state_manager, wallet_info, wallet, name
+            )
+
+            await wallet_state_manager.puzzle_store.add_derivation_paths(
+                [
+                    DerivationRecord(
+                        unused,
+                        token_bytes(),
+                        pubkey_bytes,
+                        WalletType.RATE_LIMITED,
+                        wallet_info.id,
+                    )
+                ]
+            )
+            await wallet_state_manager.puzzle_store.set_used_up_to(unused)
+
         return self
 
     @staticmethod
     async def create(
         config: Dict,
         key_config: Dict,
-        wallet_state_manager: WalletStateManager,
+        wallet_state_manager: Any,
         info: WalletInfo,
         wallet: Wallet,
         name: str = None,
@@ -194,13 +216,16 @@ class RLWallet:
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(
             self.rl_info.admin_pubkey.hex()
         )
-        await self.wallet_state_manager.puzzle_store.add_derivation_path_of_interest(
+
+        assert index is not None
+        record = DerivationRecord(
             index,
             rl_puzzle_hash,
             self.rl_info.admin_pubkey,
             WalletType.RATE_LIMITED,
             self.wallet_info.id,
         )
+        await self.wallet_state_manager.puzzle_store.add_derivation_paths([record])
 
         spend_bundle = await self.standard_wallet.generate_signed_transaction(
             amount, rl_puzzle_hash, uint64(0), origin_id, coins
@@ -263,13 +288,15 @@ class RLWallet:
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(
             self.rl_info.user_pubkey.hex()
         )
-        await self.wallet_state_manager.puzzle_store.add_derivation_path_of_interest(
+        assert index is not None
+        record = DerivationRecord(
             index,
             rl_puzzle_hash,
             self.rl_info.user_pubkey,
             WalletType.RATE_LIMITED,
             self.wallet_info.id,
         )
+        await self.wallet_state_manager.puzzle_store.add_derivation_paths([record])
 
         data_str = json.dumps(new_rl_info.to_json_dict())
         new_wallet_info = WalletInfo(

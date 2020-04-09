@@ -45,3 +45,6 @@ class Program(SExp):  # type: ignore # noqa
 
     def get_hash(self) -> bytes32:
         return bytes32(std_hash(bytes(self)))
+
+    def __deepcopy__(self, memo):
+        return type(self).from_bytes(bytes(self))
