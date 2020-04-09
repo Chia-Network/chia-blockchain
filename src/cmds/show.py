@@ -247,6 +247,7 @@ async def show_async(args, parser):
                 prev_block_header = await client.get_block(prev_block_header_hash)
                 block_time = struct_time(localtime(block.header.data.timestamp))
                 block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
+                #print (block)
                 print("Block:")
                 print(
                     f"Header Hash                0x{args.block_by_header_hash}\n"
@@ -261,13 +262,13 @@ async def show_async(args, parser):
                     f"Proof of Space 'k' Size    {block.proof_of_space.size}\n"
                     # f"Plot Public Key            0x{block.proof_of_space.plot_pubkey}\n"
                     # f"Pool Public Key            0x{block.proof_of_space.pool_pubkey}\n"
-                    f"Tx Filter Hash             {(block.transactions_filter)}\n"
-                    f"Tx Generator Hash          {block.transactions_generator}\n"
-                    f"Coinbase Amount            {block.header.data.coinbase.amount/1000000000000}\n"
-                    f"Coinbase Puzzle Hash       0x{block.header.data.coinbase.puzzle_hash}\n"
-                    f"Fees Amount                {block.header.data.fees_coin.amount/1000000000000}\n"
-                    f"Fees Puzzle Hash           0x{block.header.data.fees_coin.puzzle_hash}\n"
-                    f"Aggregated Signature       {block.header.data.aggregated_signature}\n"
+                    f"Tx Filter Hash         {b'block.transactions_filter'.hex()}\n"
+                    f"Tx Generator Hash      {block.transactions_generator}\n"
+                    f"Coinbase Amount        {block.header.data.coinbase.amount/1000000000000}\n"
+                    f"Coinbase Puzzle Hash   0x{block.header.data.coinbase.puzzle_hash}\n"
+                    f"Fees Amount            {block.header.data.fees_coin.amount/1000000000000}\n"
+                    f"Fees Puzzle Hash       0x{block.header.data.fees_coin.puzzle_hash}\n"
+                    f"Aggregated Signature   {block.header.data.aggregated_signature.sig}\n"
                 )
             else:
                 print("Block with header hash", args.block_by_header_hash, "not found.")
