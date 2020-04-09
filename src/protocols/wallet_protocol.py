@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import List, Tuple, Optional
 
 from src.types.coin import Coin
+from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
@@ -136,5 +137,27 @@ class RespondAdditions:
 @dataclass(frozen=True)
 @cbor_message
 class RejectAdditionsRequest:
+    height: uint32
+    header_hash: bytes32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RequestGenerator:
+    height: uint32
+    header_hash: bytes32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RespondGenerator:
+    height: uint32
+    header_hash: bytes32
+    generator: Program
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RejectGeneratorRequest:
     height: uint32
     header_hash: bytes32

@@ -2121,3 +2121,29 @@ class FullNode:
         yield OutboundMessage(
             NodeType.WALLET, Message("respond_additions", response), Delivery.RESPOND,
         )
+
+    @api_request
+    async def request_generator(
+        self, request: wallet_protocol.RequestGenerator
+    ) -> OutboundMessageGenerator:
+        full_block: Optional[FullBlock] = await self.store.get_block(
+            request.header_hash
+        )
+        if full_block is not None:
+            if full_block.transactions_generator is not None:
+                response = wallet_protocol.RespondGenerator(
+                    full_block.height, full_block.header_hash, full_block.transactions_generator
+                )
+                yield OutboundMessage(
+                    NodeType.WALLET,
+                    Message("respond_generator", response),
+                    Delivery.RESPOND,
+                )
+                return
+
+        reject = wallet_protocol.RejectGeneratorRequest(
+            request.height, request.header_hash
+        )
+        yield OutboundMessage(
+            NodeType.WALLET, Message("reject_generator_request", reject), Delivery.RESPOND,
+        )
