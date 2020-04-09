@@ -10,7 +10,7 @@ tend to be router make/model specific.
 
 For testnet most should only install harvesters, farmers, plotter, full nodes, and wallets. Building timelords and VDFs is for sophisticated users in most environments. Chia Network and additional volunteers are running sufficient time lords for testnet consensus.
 
-All data is now stored in a directory structure at the $CHIA_ROOT environment variable. or ~/.chia/VERSION-DIR/ if that variable is not set. You can find databases, keys, plots, logs here. You can set $CHIA_ROOT to the .chia directory in your home directory with `export CHIA_ROOT=~/.chia` and you will have to add it to your .bashrc or .zshrc to have it there across logouts and reboots.
+All configuration and plot data is stored in a directory structure at the $CHIA_ROOT environment variable or at ~/.chia/VERSION-DIR/ if that variable is not set. You can find databases, keys, plots, and logs there. You can set $CHIA_ROOT to the .chia directory in your home directory with `export CHIA_ROOT=~/.chia` and if you add it to your .bashrc or .zshrc to it will remain set across logouts and reboots.
 
 ## Install the code
 To install chia-blockchain, follow [these install](INSTALL.md) instructions according to your operating system. This project only supports 64 bit operating systems.
@@ -29,8 +29,7 @@ chia-generate-keys
 ```
 
 ## Run a full node + wallet
-To run a full node on port 8444, and connect to the testnet, run the following command.
-If you want to see logging to the terminal instead of to a log file, modify the logging.std_out variable in ~/.chia/VERSION/config/config.yaml.
+To run a full node on port 8444, and connect to the testnet, run the following command. Logs are usually at ~/.chia/VERSION/logs/debug.log.
 
 ```bash
 chia-start-node &
@@ -44,25 +43,25 @@ chia-start-wallet-server &
 And then run `Chia` from the Chia Wallet Installer in Windows (not in Ubuntu/WSL 2.)
 
 ## Run a farmer + full node + wallet
-Instead of running only a full node (as above), you can also run a farmer.
+In addition to running a full node, as explained above, you can also run a farmer.
 Farmers are entities in the network who use their drive space to try to create
 blocks (like Bitcoin's miners), and earn block rewards. First, you must generate some drive plots, which
 can take a long time depending on the [size of the plots](https://github.com/Chia-Network/chia-blockchain/wiki/k-sizes)
-(the k variable). Then, run the farmer + full node with the following commands. A full node is also started when you start the farmer.
-You can change the working directory and
-final directory for plotting, with the "-t" and "-d" arguments to the chia-create-plots command.
+(the k variable). To be competitive on the current network you will probably have to have a few k=29 or larger plots. Once you have a few plots, run the farmer + full node with the following commands. A full node is also started when you start the farmer.
+
+You can change the working directory and output directory for plotting, with the "-t" (temp) and "-d" (destination) arguments to the `chia-create-plots` command.
 ```bash
-chia-create-plots -k 27 -n 2
+chia-create-plots -k 29 -n 2
 chia-start-farmer &
 chia-start-wallet-gui &
 ```
 If you're using Windows/WSL 2, you should instead run:
 ```bash
-chia-create-plots -k 20 -n 10
+chia-create-plots -k 29 -n 2
 chia-start-farmer &
 chia-start-wallet-server &
 ```
-And then run `Chia` from the Chia Windows Wallet installer in Windows (not in Ubuntu/WSL 2.)
+Then run `Chia` from the Chia Windows Wallet installer in Windows (not in Ubuntu/WSL 2.)
 
 
 ## Run a timelord + full node + wallet
@@ -71,9 +70,10 @@ And then run `Chia` from the Chia Windows Wallet installer in Windows (not in Ub
 If you want to run a timelord on Linux, see LINUX_TIMELORD.md.
 
 Timelords execute sequential verifiable delay functions (proofs of time or VDFs), that get added to
-blocks to make them valid. This requires fast CPUs and a few cores per VDF as well as completing
-both install steps above.
+blocks to make them valid. This requires fast CPUs and a few cores per VDF as well as completing the install steps above and running the following from the chia-blockchain directory:
 ```bash
+. ./activate
+sh install-timelord.sh
 chia-start-timelord &
 ```
 
