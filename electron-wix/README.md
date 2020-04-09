@@ -1,20 +1,29 @@
-## Bundling the installer
+# Building the installer
 
-Install .NET 3.5.1 (Server Manager)
-Install WiX (https://wixtoolset.org/)
+## Tooling
 
-In PowerShell
+- [Install electron-packager](https://github.com/electron/electron-packager) in CLI mode `npm install electron-packager -g`
+- [Install .NET 3.5.1](https://docs.microsoft.com/en-us/dotnet/framework/install/dotnet-35-windows-10) (Server Manager)
+- [Install WiX](https://wixtoolset.org/)
 
-cd electron-ui
+## Electron
+
+In PowerShell make sure that electron and all dependencies are present:
+
+````PowerShell
+# from the electron-ui folder
 npm install --runtime=electron --target=1.7.6
+````
 
-verify runs with npm start
+Verify that the wallet runs with `npm start`.
 
-cd ../electron-wix
-npm install electron-packager -g
+## Build script
 
-edit version number in bundle-win32.ps1
+Edit the version number in `bundle-win32.ps1`.
 
+````PowerShell
+# from the electron-wix folder
 .\bundle-win32.ps1
+````
 
-MSI will be in electron-wix folder
+MSI will be in the `electron-wix` folder.
