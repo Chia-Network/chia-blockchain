@@ -2,6 +2,6 @@
 
 # Starts an introducer
 
-_run_bg_cmd python -m src.server.start_introducer
+_run_bg_cmd chia_introducer
 
 wait
