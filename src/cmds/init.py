@@ -44,6 +44,14 @@ def migrate_from(old_root, new_root, manifest):
     # and make what may have been relative paths absolute
 
     plots_config = load_config(new_root, "plots.yaml")
+
+    new_plots_root = path_from_root(
+        old_root,
+        load_config(new_root, "config.yaml")
+        .get("harvester", {})
+        .get("new_plot_root", "plots"),
+    )
+
     old_plot_paths = plots_config.get("plots", [])
     if len(old_plot_paths) == 0:
         print("no plots found, no plots migrated")
@@ -53,10 +61,9 @@ def migrate_from(old_root, new_root, manifest):
 
     new_plot_paths = {}
     for path, values in old_plot_paths.items():
-        old_path = path_from_root(old_root, path)
-        new_plot_path = make_path_relative(old_path, new_root)
-        print(f"rewriting {path}\n as {new_plot_path}")
-        new_plot_paths[str(new_plot_path)] = values
+        old_path_full = path_from_root(new_plots_root, path)
+        print(f"rewriting {path}\n as {old_path_full}")
+        new_plot_paths[str(old_path_full)] = values
     plots_config_new = {"plots": new_plot_paths}
     save_config(new_root, "plots.yaml", plots_config_new)
     print("\nUpdated plots.yaml to point to where your existing plots are.")
