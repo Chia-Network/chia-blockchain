@@ -33,4 +33,4 @@ def make_path_relative(path_str: Union[str, Path], root: Path) -> Path:
         path = path.relative_to(root)
     except ValueError:
         pass
-    return path.resolve()
+    return path
