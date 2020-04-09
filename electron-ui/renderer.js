@@ -567,7 +567,7 @@ function get_wallets_response(data) {
         }
 
     }
-    // new_innerHTML += create_wallet_button()
+    new_innerHTML += create_wallet_button()
     wallets_tab.innerHTML = new_innerHTML
 }
 
