@@ -17,7 +17,7 @@ from src.util.logging import initialize_logging
 from src.util.setproctitle import setproctitle
 
 
-async def main():
+async def async_main():
     root_path = DEFAULT_ROOT_PATH
     net_config = load_config(root_path, "config.yaml")
     config = load_config_cli(root_path, "config.yaml", "farmer")
@@ -49,7 +49,7 @@ async def main():
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
 
     _ = await server.start_server(farmer._on_connect, config)
-    await asyncio.sleep(1)  # Prevents TCP simultaneous connect with harvester
+    await asyncio.sleep(2)  # Prevents TCP simultaneous connect with harvester
     _ = await server.start_client(harvester_peer, None, config)
     _ = await server.start_client(full_node_peer, None, config)
 
@@ -61,6 +61,11 @@ async def main():
     log.info("Farmer fully closed.")
 
 
-if uvloop is not None:
-    uvloop.install()
-asyncio.run(main())
+def main():
+    if uvloop is not None:
+        uvloop.install()
+    asyncio.run(async_main())
+
+
+if __name__ == '__main__':
+    main()

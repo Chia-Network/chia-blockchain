@@ -29,12 +29,24 @@ if [ `uname` = "Linux" ]; then
   if type apt-get; then
     # Debian/Ubuntu
     sudo apt-get install -y npm
-  elif type yum; then
-    # CentOS or AMZN 2
+  elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ]; then
+    # AMZN 2
+    echo "Installing on Amazon Linux 2"
     sudo yum install -y python3 git
     curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
     sudo yum install -y nodejs
+  elif type yum && [ -f /etc/redhat-release ] || [ -f /etc/centos-release ]; then
+    # CentOS or Redhat
+    echo "Installing on CentOS/Redhat"
+    curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
+    sudo yum install -y nodejs
   fi
+elif [ `uname` = "Darwin" ] && type brew && ! npm version>/dev/null 2>&1; then
+  # Install npm if not installed
+  brew install npm
+elif [ `uname` = "Darwin" ] && ! type brew; then
+  echo "Installation currently requires brew on MacOS"
+  echo "Instructions here: https://brew.sh/"
 fi
 
 # this fancy syntax sets INSTALL_PYTHON_PATH to "python3.7" unless INSTALL_PYTHON_VERSION is defined

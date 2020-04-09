@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+    <!-- these are set with environment variables in the build script -->
+    <!-- values can be overriden here -->    
+    <?define version="$(env.version)" ?>
+    <?define exename="$(env.exename).exe" ?>
+</Include>

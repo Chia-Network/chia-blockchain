@@ -6,12 +6,12 @@ echo "Note that this simulation will not work if connected to external nodes."
 # Starts a harvester, farmer, timelord, introducer, and 3 full nodes, locally.
 # Please note that the simulation is meant to be run locally and not connected to external nodes.
 
-_run_bg_cmd python -m src.server.start_harvester --logging.log_stdout=True
-_run_bg_cmd python -m src.server.start_timelord --logging.log_stdout=True
-_run_bg_cmd python -m src.timelord_launcher --logging.log_stdout=True
-_run_bg_cmd python -m src.server.start_farmer --logging.log_stdout=True
-_run_bg_cmd python -m src.server.start_introducer --logging.log_stdout=True
-_run_bg_cmd python -m src.server.start_full_node --port=8444 --database_path="simulation_1.db" --connect_to_farmer=True --connect_to_timelord=True --rpc_port=8555 --introducer_peer.host="127.0.0.1" --introducer_peer.port=8445 --logging.log_stdout=True
-_run_bg_cmd python -m src.server.start_full_node --port=8002 --database_path="simulation_2.db" --rpc_port=8556 --introducer_peer.host="127.0.0.1" --introducer_peer.port=8445 --logging.log_stdout=True
+_run_bg_cmd chia_harvester --logging.log_stdout=True
+_run_bg_cmd chia_timelord --logging.log_stdout=True
+_run_bg_cmd chia_timelord_launcher --logging.log_stdout=True
+_run_bg_cmd chia_farmer --logging.log_stdout=True
+_run_bg_cmd chia_introducer --logging.log_stdout=True
+_run_bg_cmd chia_full_node --port=8444 --database_path="simulation_1.db" --connect_to_farmer=True --connect_to_timelord=True --rpc_port=8555 --introducer_peer.host="127.0.0.1" --introducer_peer.port=8445 --logging.log_stdout=True
+_run_bg_cmd chia_full_node --port=8002 --database_path="simulation_2.db" --rpc_port=8556 --introducer_peer.host="127.0.0.1" --introducer_peer.port=8445 --logging.log_stdout=True
 
 wait

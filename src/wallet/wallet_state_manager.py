@@ -190,7 +190,7 @@ class WalletStateManager:
             ] = await self.puzzle_store.get_unused_derivation_path()
             last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path()
 
-            to_generate = 200
+            to_generate = 500
             start_index = 0
             derivation_paths: List[DerivationRecord] = []
 
@@ -201,9 +201,12 @@ class WalletStateManager:
                 start_index = last + 1
                 to_generate -= last - unused
 
+            # If the key was replaced (from_zero=True), we should generate the puzzle hashes for the new key
+            end = start_index + to_generate
             if from_zero:
                 start_index = 0
-            for index in range(start_index, start_index + to_generate):
+
+            for index in range(start_index, end):
                 pubkey: PublicKey = target_wallet.get_public_key(index)
                 puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
                 puzzlehash: bytes32 = puzzle.get_hash()

@@ -107,8 +107,11 @@ def main():
         plot_config = load_config(root_path, plot_config_filename)
         plot_config_plots_new = deepcopy(plot_config.get("plots", []))
         relative_path = make_path_relative(full_path, root_path)
-        if relative_path not in plot_config_plots_new:
-            plot_config_plots_new[str(relative_path)] = {
+        if (
+            relative_path not in plot_config_plots_new
+            and full_path not in plot_config_plots_new
+        ):
+            plot_config_plots_new[str(full_path)] = {
                 "sk": bytes(sk).hex(),
                 "pool_pk": bytes(pool_pk).hex(),
             }

@@ -398,7 +398,7 @@ class ChiaServer:
             connection.peer_server_port = int(inbound_handshake.server_port)
             connection.connection_type = inbound_handshake.node_type
             if not self.global_connections.add(connection):
-                raise ProtocolError(Err.DUPLICATE_CONNECTION)
+                raise ProtocolError(Err.DUPLICATE_CONNECTION, [False])
 
             # Send Ack message
             await connection.send(Message("handshake_ack", HandshakeAck()))

@@ -15,8 +15,15 @@ from src.util.config import str2bool
 def make_parser(parser):
 
     parser.add_argument(
-        "-b",
+        "-bh",
         "--block_header_hash",
+        help="Look up a block by block header hash string.",
+        type=str,
+        default="",
+    )
+    parser.add_argument(
+        "-b",
+        "--block_by_header_hash",
         help="Look up a block by block header hash string.",
         type=str,
         default="",
@@ -220,16 +227,52 @@ async def show_async(args, parser):
                     elif result_txt == "":
                         result_txt = f"NodeID {args.remove_connection}... not found."
             print(result_txt)
-        elif args.block_header_hash != "":
-            block = await client.get_block(hexstr_to_bytes(args.block_header_hash))
-            # print(dir(block))
-            if block is not None:
+        if args.block_header_hash != "":
+            block_header = await client.get_block(hexstr_to_bytes(args.block_header_hash))
+            if block_header is not None:
                 print("Block header:")
-                print(block.header)
-                block_time = struct_time(localtime(block.header.data.timestamp))
+                print(block_header.header)
+                block_time = struct_time(localtime(block_header.header.data.timestamp))
                 print("Block time:", time.strftime("%a %b %d %Y %T %Z", block_time))
             else:
                 print("Block hash", args.block_header_hash, "not found.")
+        if args.block_by_header_hash != "":
+            block = await client.get_block(hexstr_to_bytes(args.block_by_header_hash))
+            # Would like to have a verbose flag for this
+            if block is not None:
+                prev_block_header_hash = block.header.data.prev_header_hash
+                prev_block_header = await client.get_block(prev_block_header_hash)
+                block_time = struct_time(localtime(block.header.data.timestamp))
+                block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
+                if block.header.data.aggregated_signature is None:
+                    aggregated_signature = block.header.data.aggregated_signature
+                else:
+                    aggregated_signature = block.header.data.aggregated_signature.sig
+                print("Block:")
+                print(
+                    f"Header Hash            0x{args.block_by_header_hash}\n"
+                    f"Timestamp              {block_time_string}\n"
+                    f"Height                 {block.header.data.height}\n"
+                    f"Weight                 {block.header.data.weight}\n"
+                    f"Previous Block         0x{block.header.data.prev_header_hash}\n"
+                    f"Cost                   {block.header.data.cost}\n"
+                    f"Difficulty             {block.header.data.weight-prev_block_header.header.data.weight}\n"
+                    f"Total VDF Iterations   {block.header.data.total_iters}\n"
+                    f"Block VDF Iterations   {block.proof_of_time.number_of_iterations}\n"
+                    f"PoTime Witness Type    {block.proof_of_time.witness_type}\n"
+                    f"PoSpace \'k\' Size       {block.proof_of_space.size}\n"
+                    # f"Plot Public Key            0x{block.proof_of_space.plot_pubkey}\n"
+                    # f"Pool Public Key            0x{block.proof_of_space.pool_pubkey}\n"
+                    f"Tx Filter Hash         {b'block.transactions_filter'.hex()}\n"
+                    f"Tx Generator Hash      {block.transactions_generator}\n"
+                    f"Coinbase Amount        {block.header.data.coinbase.amount/1000000000000}\n"
+                    f"Coinbase Puzzle Hash   0x{block.header.data.coinbase.puzzle_hash}\n"
+                    f"Fees Amount            {block.header.data.fees_coin.amount/1000000000000}\n"
+                    f"Fees Puzzle Hash       0x{block.header.data.fees_coin.puzzle_hash}\n"
+                    f"Aggregated Signature   {aggregated_signature}"
+                )
+            else:
+                print("Block with header hash", args.block_by_header_hash, "not found.")
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):

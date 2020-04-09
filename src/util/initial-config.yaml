@@ -30,10 +30,10 @@ farmer:
     host: 127.0.0.1
     port: 8448
   # To send a share to a pool, a block must be faster than this, in seconds
-  pool_share_threshold: 12000
+  pool_share_threshold: 50000
   # To send to the full node, a block must be faster than this, in seconds
 
-  propagate_threshold: 10000
+  propagate_threshold: 50000
   logging: *logging
 
 # Don't run this unless you want to run VDF clients on the local machine.
@@ -86,7 +86,7 @@ full_node:
   # Don't send any more than these number of headers and blocks, in one message
   max_headers_to_send: 1
   max_blocks_to_send: 1
-  num_sync_batches: 10
+  num_sync_batches: 50
 
   # If node is more than these blocks behind, will do a sync
   sync_blocks_behind_threshold: 20

@@ -17,7 +17,7 @@ from src.util.logging import initialize_logging
 from src.util.setproctitle import setproctitle
 
 
-async def main():
+async def async_main():
     root_path = DEFAULT_ROOT_PATH
     net_config = load_config(root_path, "config.yaml")
     config = load_config_cli(root_path, "config.yaml", "harvester")
@@ -30,7 +30,6 @@ async def main():
     log = logging.getLogger(__name__)
     setproctitle("chia_harvester")
 
-    print(plot_config)
     harvester = Harvester(config, plot_config)
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")
@@ -55,6 +54,11 @@ async def main():
     log.info("Harvester fully closed.")
 
 
-if uvloop is not None:
-    uvloop.install()
-asyncio.run(main())
+def main():
+    if uvloop is not None:
+        uvloop.install()
+    asyncio.run(async_main())
+
+
+if __name__ == '__main__':
+    main()
