@@ -49,7 +49,7 @@ def migrate_from(old_root, new_root, manifest):
         old_root,
         load_config(new_root, "config.yaml")
         .get("harvester", {})
-        .get("new_plot_root", "plots"),
+        .get("plot_root", "plots"),
     )
 
     old_plot_paths = plots_config.get("plots", [])
@@ -95,7 +95,7 @@ def chia_init():
 
     PATH_MANIFEST_LIST = [
         (Path(os.path.expanduser("~/.chia/beta-%s" % _)), MANIFEST)
-        for _ in ["1.0b2", "1.0b1"]
+        for _ in ["1.0b3", "1.0b2", "1.0b1"]
     ]
 
     for old_path, manifest in PATH_MANIFEST_LIST:
