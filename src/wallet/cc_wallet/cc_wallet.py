@@ -16,6 +16,7 @@ from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64, uint32
 from src.util.streamable import streamable, Streamable
+from src.wallet.util.json_util import dict_to_json_str
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet import Wallet
 from src.wallet.wallet_coin_record import WalletCoinRecord
@@ -26,12 +27,12 @@ from src.wallet.derivation_record import DerivationRecord
 @dataclass(frozen=True)
 @streamable
 class CCInfo(Streamable):
-    my_cores = Set  # core is stored as a
-    my_coloured_coins = Optional[Dict]  # {coin: (innerpuzzle as Program, core as string)}
-    eve_coloured_coins = Optional[Dict]
-    parent_info = Optional[Dict] # {coin.name(): (parent_coin_info, puzzle_hash, coin.amount)}
-    puzzle_cache = Optional[Dict] # {"innerpuz"+"core": puzzle}
-    my_cc_puzhashes = Optional[Dict] # {cc_puzhash: (innerpuzzle, core)}
+    my_cores: Set  # core is stored as a
+    my_coloured_coins: Optional[Dict]  #  {coin: (innerpuzzle as Program, core as string)}
+    eve_coloured_coins: Optional[Dict]
+    parent_info: Optional[Dict]  # {coin.name(): (parent_coin_info, puzzle_hash, coin.amount)}
+    puzzle_cache: Optional[Dict]  # {"innerpuz"+"core": puzzle}
+    my_cc_puzhashes: Optional[Dict]  # {cc_puzhash: (innerpuzzle, core)}
 
 
 class CCWallet:
@@ -99,3 +100,34 @@ class CCWallet:
         await wallet_state_manager.puzzle_store.set_used_up_to(unused)
 
         return self
+
+    async def coin_added(self, coin: Coin, height: int, header_hash: bytes32):
+        """ Notification from wallet state manager that wallet has been received. """
+        self.log.info(f"CC wallet has been notified that coin was added")
+
+        # TODO (MATT): Pass this info only for headers you want generator for
+        data: Dict[str, Any] = {
+            "data": {
+                "action_data": {
+                    "api_name": "request_generator",
+                    "height": height,
+                    "header_hash": header_hash,
+                }
+            }
+        }
+
+        data_str = dict_to_json_str(data)
+        await self.wallet_state_manager.create_action(
+            self,
+            name="cc_get_generator",
+            wallet_id=self.wallet_info.id,
+            type=self.wallet_info.type,
+            callback="str",
+            done=False,
+            data=data_str,
+        )
+
+    async def generator_received(self, generator: Program, action_id: int):
+        """ Notification that wallet has received a generator it asked for. """
+
+        await self.wallet_state_manager.set_action_done(action_id)
