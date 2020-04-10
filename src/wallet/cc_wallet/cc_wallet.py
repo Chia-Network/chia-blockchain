@@ -42,6 +42,7 @@ class CCInfo(Streamable):
     #TODO: {Matt} convert this into wallet_state_manager.puzzle_store
     #TODO: {Matt} add naming for coloured coins
     #TODO: {Matt} add hooks in WebSocketServer for all UI functions
+    # i am changing this file
     my_cc_puzhashes: Optional[Dict]  # {cc_puzhash: (innerpuzzle, core)}
 
 
