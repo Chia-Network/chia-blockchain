@@ -17,8 +17,10 @@ from src.types.challenge import Challenge
 from src.types.header_block import HeaderBlock
 from src.util.ints import uint32, uint64
 from src.util.hash import std_hash
+from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.block_record import BlockRecord
+from src.wallet.wallet_action_store import WalletActionStore
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_puzzle_store import WalletPuzzleStore
@@ -46,6 +48,7 @@ class WalletStateManager:
     tx_store: WalletTransactionStore
     puzzle_store: WalletPuzzleStore
     user_store: WalletUserStore
+    action_store: WalletActionStore
     # Map from header hash to BlockRecord
     block_records: Dict[bytes32, BlockRecord]
     # Specifies the LCA path
@@ -96,6 +99,7 @@ class WalletStateManager:
         self.tx_store = await WalletTransactionStore.create(self.db_connection)
         self.puzzle_store = await WalletPuzzleStore.create(self.db_connection)
         self.user_store = await WalletUserStore.create(self.db_connection)
+        self.action_store = await WalletActionStore.create(self.db_connection)
         self.lca = None
         self.sync_mode = False
         self.height_to_hash = {}
@@ -478,6 +482,10 @@ class WalletStateManager:
         )
         await self.wallet_store.add_coin_record(coin_record)
         self.state_changed("coin_added")
+        if wallet_type == WalletType.COLORED_COIN:
+            wallet: CCWallet = self.wallets[wallet_id]
+            header_hash: bytes32 = self.height_to_hash[index]
+            await wallet.coin_added(coin, index, header_hash)
 
     async def add_pending_transaction(self, spend_bundle: SpendBundle, wallet_id):
         """
@@ -1286,3 +1294,19 @@ class WalletStateManager:
         valid_index = current_index - coinbase_freeze_period
 
         return await self.wallet_store.get_spendable_for_index(valid_index, wallet_id)
+
+    async def create_action(
+        self,
+        name: str,
+        wallet_id: int,
+        type: WalletType,
+        callback: str,
+        done: bool,
+        data: str,
+    ):
+        await self.action_store.create_action(
+            name, wallet_id, type, callback, done, data
+        )
+
+    async def set_action_done(self, action_id: int):
+        await self.action_store.action_done(action_id)
