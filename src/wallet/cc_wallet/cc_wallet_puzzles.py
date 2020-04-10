@@ -1,10 +1,8 @@
 from clvm_tools import binutils
 import clvm
-from src.types.condition_opcodes import ConditionOpcode
 from src.types.program import Program
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
-from src.types.sized_bytes import bytes32
 
 
 # This is for spending an existing coloured coin
@@ -32,11 +30,13 @@ def cc_make_core(self, originID):
 
     return core
 
-# Make sure that a generated E lock is spent in the spendbundle
+    # Make sure that a generated E lock is spent in the spendbundle
     def create_spend_for_ephemeral(self, parent_of_e, auditor_coin, spend_amount):
-        puzstring = f"(r (r (c (q 0x{auditor_coin.name()}) (c (q {spend_amount}) (q ())))))"
+        puzstring = (
+            f"(r (r (c (q 0x{auditor_coin.name()}) (c (q {spend_amount}) (q ())))))"
+        )
         puzzle = Program(binutils.assemble(puzstring))
-        coin = Coin(parent_of_e, ProgramHash(puzzle), 0)
+        coin = Coin(parent_of_e, puzzle.get_hash(), 0)
         solution = Program(binutils.assemble("()"))
         coinsol = CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
         return coinsol
@@ -45,7 +45,56 @@ def cc_make_core(self, originID):
     def create_spend_for_auditor(self, parent_of_a, auditee):
         puzstring = f"(r (c (q 0x{auditee.name()}) (q ())))"
         puzzle = Program(binutils.assemble(puzstring))
-        coin = Coin(parent_of_a, ProgramHash(puzzle), 0)
+        coin = Coin(parent_of_a, puzzle.get_hash(), 0)
         solution = Program(binutils.assemble("()"))
         coinsol = CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
         return coinsol
+
+    # This is for spending a recieved coloured coin
+    def cc_make_solution(
+        self,
+        core,
+        parent_info,
+        amount,
+        innerpuzreveal,
+        innersol,
+        auditor,
+        auditees=None,
+    ):
+        parent_str = ""
+        # parent_info is a triplet if parent was coloured or an atom if parent was genesis coin or we're a printed 0 val
+        # genesis coin isn't coloured, child of genesis uses originID, all subsequent children use triplets
+        # auditor is (primary_input, innerpuzzlehash, amount)
+        if isinstance(parent_info, tuple):
+            #  (parent primary input, parent inner puzzle hash, parent amount)
+            if parent_info[1][0:2] == "0x":
+                parent_str = f"(0x{parent_info[0]} {parent_info[1]} {parent_info[2]})"
+            else:
+                parent_str = f"(0x{parent_info[0]} 0x{parent_info[1]} {parent_info[2]})"
+        else:
+            parent_str = f"0x{parent_info.hex()}"
+
+        auditor_formatted = "()"
+        if auditor is not None:
+            auditor_formatted = f"(0x{auditor[0]} 0x{auditor[1]} {auditor[2]})"
+
+        aggees = "("
+        if auditees is not None:
+            for auditee in auditees:
+                # spendslist is [] of (coin, parent_info, outputamount, innersol, innerpuzhash=None)
+                # aggees should be (primary_input, innerpuzhash, coin_amount, output_amount)
+                if auditee[0] in self.my_coloured_coins:
+                    aggees = (
+                        aggees
+                        + f"(0x{auditee[0].parent_coin_info} 0x{self.my_coloured_coins[auditee[0]][0].get_hash()} {auditee[0].amount} {auditee[2]})"
+                    )
+                else:
+                    aggees = (
+                        aggees
+                        + f"(0x{auditee[0].parent_coin_info} 0x{auditee[4]} {auditee[0].amount} {auditee[2]})"
+                    )
+
+        aggees = aggees + ")"
+
+        sol = f"(0x{Program(binutils.assemble(core)).get_hash()} {parent_str} {amount} {innerpuzreveal} {innersol} {auditor_formatted} {aggees})"
+        return Program(binutils.assemble(sol))
