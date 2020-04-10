@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import websockets
 
 from src.types.peer_info import PeerInfo
-from src.wallet.util.json_util import obj_to_response, dict_to_json_str
+from src.wallet.util.json_util import dict_to_json_str
 
 try:
     import uvloop

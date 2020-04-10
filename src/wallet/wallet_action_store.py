@@ -1,15 +1,15 @@
-from typing import Optional, List
+from typing import Optional
 
 import aiosqlite
 from src.util.ints import uint32
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_action import WalletAction
-from src.wallet.wallet_info import WalletInfo
 
 
 class WalletActionStore:
     """
-    WalletUserStore keeps track of all user created wallets and necessary smart-contract data
+    WalletActionStore keeps track of all wallet actions that require persistence.
+    Used by Colored coins, Atomic swaps, Rate Limited, and Authorized payee wallets
     """
 
     db_connection: aiosqlite.Connection
@@ -68,9 +68,19 @@ class WalletActionStore:
         if row is None:
             return None
 
-        return WalletAction(row[0], row[1], row[2], WalletType(row[3]), row[4], bool(row[5]), row[6])
+        return WalletAction(
+            row[0], row[1], row[2], WalletType(row[3]), row[4], bool(row[5]), row[6]
+        )
 
-    async def create_action(self, name: str, wallet_id: int, type: WalletType, callback: str, done: bool, data: str):
+    async def create_action(
+        self,
+        name: str,
+        wallet_id: int,
+        type: WalletType,
+        callback: str,
+        done: bool,
+        data: str,
+    ):
         """
         Creates Wallet Action
         """
@@ -90,7 +100,15 @@ class WalletActionStore:
 
         cursor = await self.db_connection.execute(
             "Replace INTO action_queue VALUES(?, ?, ?, ?, ?, ?)",
-            (action.id, action.name, action.wallet_id, action.type.value, action.wallet_callback, True, action.data),
+            (
+                action.id,
+                action.name,
+                action.wallet_id,
+                action.type.value,
+                action.wallet_callback,
+                True,
+                action.data,
+            ),
         )
 
         await cursor.close()
@@ -110,4 +128,6 @@ class WalletActionStore:
         if row is None:
             return None
 
-        return WalletAction(row[0], row[1], row[2], WalletType(row[3]), row[4], bool(row[5]), row[6])
+        return WalletAction(
+            row[0], row[1], row[2], WalletType(row[3]), row[4], bool(row[5]), row[6]
+        )
