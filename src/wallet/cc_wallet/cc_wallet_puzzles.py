@@ -30,26 +30,6 @@ def cc_make_core(self, originID):
 
     return core
 
-    # Make sure that a generated E lock is spent in the spendbundle
-    def create_spend_for_ephemeral(self, parent_of_e, auditor_coin, spend_amount):
-        puzstring = (
-            f"(r (r (c (q 0x{auditor_coin.name()}) (c (q {spend_amount}) (q ())))))"
-        )
-        puzzle = Program(binutils.assemble(puzstring))
-        coin = Coin(parent_of_e, puzzle.get_hash(), 0)
-        solution = Program(binutils.assemble("()"))
-        coinsol = CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
-        return coinsol
-
-    # Make sure that a generated A lock is spent in the spendbundle
-    def create_spend_for_auditor(self, parent_of_a, auditee):
-        puzstring = f"(r (c (q 0x{auditee.name()}) (q ())))"
-        puzzle = Program(binutils.assemble(puzstring))
-        coin = Coin(parent_of_a, puzzle.get_hash(), 0)
-        solution = Program(binutils.assemble("()"))
-        coinsol = CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
-        return coinsol
-
     # This is for spending a recieved coloured coin
     def cc_make_solution(
         self,
