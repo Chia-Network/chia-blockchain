@@ -1,5 +1,4 @@
 import asyncio
-import dataclasses
 import json
 import logging
 import signal
@@ -11,6 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import websockets
 
 from src.types.peer_info import PeerInfo
+from src.wallet.util.json_util import obj_to_response, dict_to_json_str
 
 try:
     import uvloop
@@ -25,8 +25,6 @@ from src.util.config import load_config_cli, load_config
 from src.util.ints import uint64
 from src.util.logging import initialize_logging
 from src.wallet.rl_wallet.rl_wallet import RLWallet
-from src.wallet.cc_wallet.cc_wallet import CCWallet
-from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_node import WalletNode
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -37,36 +35,13 @@ from src.util.setproctitle import setproctitle
 TIMEOUT = 30
 
 
-class EnhancedJSONEncoder(json.JSONEncoder):
-    """
-    Encodes bytes as hex strings with 0x, and converts all dataclasses to json.
-    """
-
-    def default(self, o: Any):
-        if dataclasses.is_dataclass(o):
-            return o.to_json_dict()
-        elif isinstance(o, WalletType):
-            return o.name
-        elif hasattr(type(o), "__bytes__"):
-            return f"0x{bytes(o).hex()}"
-        return super().default(o)
-
-
-def obj_to_response(o: Any) -> str:
-    """
-    Converts a python object into json.
-    """
-    json_str = json.dumps(o, cls=EnhancedJSONEncoder, sort_keys=True)
-    return json_str
-
-
 def format_response(command: str, response_data: Dict[str, Any]):
     """
     Formats the response into standard format used between renderer.js and here
     """
     response = {"command": command, "data": response_data}
 
-    json_str = obj_to_response(response)
+    json_str = dict_to_json_str(response)
     return json_str
 
 
@@ -335,7 +310,7 @@ class WebSocketServer:
                 await self.rl_set_user_info(websocket, data, command)
             else:
                 response = {"error": f"unknown_command {command}"}
-                await websocket.send(obj_to_response(response))
+                await websocket.send(dict_to_json_str(response))
 
     async def notify_ui_that_state_changed(self, state: str):
         data = {
