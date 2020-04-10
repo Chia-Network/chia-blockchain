@@ -251,7 +251,7 @@ async def show_async(args, parser):
                     aggregated_signature = block.header.data.aggregated_signature
                 else:
                     aggregated_signature = block.header.data.aggregated_signature.sig
-                print("Block:")
+                print("Block", block.header.data.height, ":")
                 print(
                     f"Header Hash                0x{args.block_by_header_hash}\n"
                     f"Timestamp                  {block_time_string}\n"
