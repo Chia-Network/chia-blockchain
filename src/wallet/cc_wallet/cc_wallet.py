@@ -37,6 +37,11 @@ class CCInfo(Streamable):
         Dict
     ]  # {coin.name(): (parent_coin_info, puzzle_hash, coin.amount)}
     puzzle_cache: Optional[Dict]  # {"innerpuz"+"core": puzzle}
+
+    #TODO: {Matt} compatibility based on deriving innerpuzzle from derivation record
+    #TODO: {Matt} convert this into wallet_state_manager.puzzle_store
+    #TODO: {Matt} add naming for coloured coins
+    #TODO: {Matt} add hooks in WebSocketServer for all UI functions
     my_cc_puzhashes: Optional[Dict]  # {cc_puzhash: (innerpuzzle, core)}
 
 
@@ -329,3 +334,105 @@ class CCWallet:
             core,
         )
         return spend_bundle
+
+    # Given a list of coloured coins, their parent_info, outputamount, and innersol, create spends
+    def cc_generate_spends_for_coin_list(self, spendslist, sigs=[]):
+        # spendslist is [] of (coin, parent_info, outputamount, innersol)
+        auditor = spendslist[0][0]
+        core = self.cc_info.my_coloured_coins[auditor][1]
+        auditor_info = (
+            auditor.parent_coin_info,
+            self.cc_info.my_coloured_coins[auditor][0].get_hash(),
+            auditor.amount,
+        )
+        list_of_solutions = []
+
+        # first coin becomes the auditor special case
+        spend = spendslist[0]
+        coin = spend[0]
+        innerpuz = binutils.disassemble(self.cc_info.my_coloured_coins[coin][0])
+        innersol = spend[3]
+        parent_info = spend[1]
+        solution = cc_wallet_puzzles.cc_make_solution(
+            core,
+            parent_info,
+            coin.amount,
+            innerpuz,
+            binutils.disassemble(innersol),
+            auditor_info,
+            spendslist,
+        )
+        list_of_solutions.append(
+            CoinSolution(
+                coin,
+                clvm.to_sexp_f(
+                    [
+                        cc_wallet_puzzles.cc_make_puzzle(
+                            self.cc_info.my_coloured_coins[coin][0].get_hash(), core
+                        ),
+                        solution,
+                    ]
+                ),
+            )
+        )
+        list_of_solutions.append(
+            self.create_spend_for_ephemeral(coin, auditor, spend[2])
+        )
+        list_of_solutions.append(self.create_spend_for_auditor(auditor, coin))
+
+        # loop through remaining spends, treating them as aggregatees
+        for spend in spendslist[1:]:
+            coin = spend[0]
+            innerpuz = binutils.disassemble(self.cc_info.my_coloured_coins[coin][0])
+            innersol = spend[3]
+            parent_info = spend[1]
+            solution = cc_wallet_puzzles.cc_make_solution(
+                core,
+                parent_info,
+                coin.amount,
+                innerpuz,
+                binutils.disassemble(innersol),
+                auditor_info,
+                None,
+            )
+            list_of_solutions.append(
+                CoinSolution(
+                    coin,
+                    clvm.to_sexp_f(
+                        [
+                            cc_wallet_puzzles.cc_make_puzzle(
+                                self.cc_info.my_coloured_coins[coin][0].get_hash(), core
+                            ),
+                            solution,
+                        ]
+                    ),
+                )
+            )
+            list_of_solutions.append(
+                self.create_spend_for_ephemeral(coin, auditor, spend[2])
+            )
+            list_of_solutions.append(self.create_spend_for_auditor(auditor, coin))
+
+        aggsig = BLSSignature.aggregate(sigs)
+        spend_bundle = SpendBundle(list_of_solutions, aggsig)
+        return spend_bundle
+
+    # Make sure that a generated E lock is spent in the spendbundle
+    def create_spend_for_ephemeral(self, parent_of_e, auditor_coin, spend_amount):
+        puzstring = (
+            f"(r (r (c (q 0x{auditor_coin.name()}) (c (q {spend_amount}) (q ())))))"
+        )
+        puzzle = Program(binutils.assemble(puzstring))
+        coin = Coin(parent_of_e, puzzle.get_hash(), 0)
+        solution = Program(binutils.assemble("()"))
+        coinsol = CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
+        return coinsol
+
+    # Make sure that a generated A lock is spent in the spendbundle
+    def create_spend_for_auditor(self, parent_of_a, auditee):
+        puzstring = f"(r (c (q 0x{auditee.name()}) (q ())))"
+        puzzle = Program(binutils.assemble(puzstring))
+        coin = Coin(parent_of_a, puzzle.get_hash(), 0)
+        solution = Program(binutils.assemble("()"))
+        coinsol = CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
+        return coinsol
