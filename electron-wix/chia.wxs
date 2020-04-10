@@ -1,27 +1,27 @@
 <?xml version='1.0' encoding='windows-1252'?>
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
     <?include "config.wxi"?>
-    <Product Name='Chia'
+    <Product Name='Chia $(var.version)'
         Manufacturer='Chia Network'
         Id='*'
         UpgradeCode='9FF22D37-6167-4F05-A0BC-9B5D8BECAC7E'
-        Language='1033' 
-        Codepage='1252' 
+        Language='1033'
+        Codepage='1252'
         Version='$(var.version)'>
         <Package Id='*'
-            Keywords='Installer' 
+            Keywords='Chia Network Installer' 
             Description="Chia Installer $(var.version)"
             Comments='Chia is a registered trademark of the Chia Network'
             Manufacturer='Chia Network'
-            InstallerVersion='500' 
-            Languages='1033' 
-            Compressed='yes' 
+            InstallerVersion='500'
+            Languages='1033'
+            Compressed='yes'
             SummaryCodepage='1252' />
 
         <!-- Media and application properties -->
         <Media Id='1' Cabinet='chia.cab' EmbedCab='yes' DiskPrompt="CD-ROM #1" />
         <Icon Id="icon.ico" SourceFile="icon.ico"/>
-        <Property Id="ARPPRODUCTICON" Value="icon.ico" />        
+        <Property Id="ARPPRODUCTICON" Value="icon.ico" />
         <Property Id='DiskPrompt' Value="Chia Network's Chia Installation [1]" />
         <Property Id='ARPCOMMENTS'>Chia has a new innovative Nakamoto style consensus algorithm that removes the energy demands of Proof of Work from the system.</Property>
         <Property Id='ARPCONTACT'>hello@chia.net</Property>
@@ -35,23 +35,23 @@
         <Upgrade Id='9FF22D37-6167-4F05-A0BC-9B5D8BECAC7E'>
             <UpgradeVersion OnlyDetect='yes'
                 Property='SELFFOUND'
-                Minimum='$(var.version)' 
+                Minimum='$(var.version)'
                 IncludeMinimum='yes'
-                Maximum='$(var.version)' 
+                Maximum='$(var.version)'
                 IncludeMaximum='yes' />
             <UpgradeVersion OnlyDetect='yes'
                 Property='NEWERFOUND'
-                Minimum='$(var.version)' 
+                Minimum='$(var.version)'
                 IncludeMinimum='no' />
             <UpgradeVersion OnlyDetect='no'
                 Property='PREVIOUSFOUND'
-                Minimum='0.1.0' 
+                Minimum='0.1.0'
                 IncludeMinimum='yes'
                 Maximum='$(var.version)'
                 IncludeMaximum='no' />
         </Upgrade>
-        <CustomAction Id='AlreadyUpdated' Error='[ProductName] has already been updated to $(var.version) or newer.' />
-        <CustomAction Id='NoDowngrade' Error='A later version of [ProductName] is already installed.' />
+        <CustomAction Id='AlreadyUpdated' Error='Chia has already been updated to $(var.version) or newer.' />
+        <CustomAction Id='NoDowngrade' Error='A later version of Chia is already installed.' />
         <InstallExecuteSequence>
             <Custom Action='AlreadyUpdated' After='FindRelatedProducts'>SELFFOUND</Custom>
             <Custom Action='NoDowngrade' After='FindRelatedProducts'>NEWERFOUND</Custom>
@@ -80,12 +80,12 @@
                             Description="Chia $(var.version)"
                             Target="[INSTALLDIR]$(var.exename)"
                             WorkingDirectory="INSTALLDIR"
-                            Icon="icon.ico"/>                    
+                            Icon="icon.ico"/>
                         <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
-                        <RegistryValue Root='HKCU' 
-                            Key='Software\[Manufacturer]\[ProductName]' 
-                            Type='string' 
-                            Value='' 
+                        <RegistryValue Root='HKCU'
+                            Key='Software\[Manufacturer]\[ProductName]'
+                            Type='string'
+                            Value='[INSTALLDIR]'
                             KeyPath='yes' />
                     </Component>
                 </Directory>
@@ -102,9 +102,9 @@
                     <RemoveFolder Id="DesktopFolder" On="uninstall"/>
                     <RegistryValue Root='HKCU' 
                         Key='Software\[Manufacturer]\[ProductName]'
-                        Name='installed' 
-                        Type='string' 
-                        Value='1' 
+                        Name='Installed'
+                        Type='integer'
+                        Value='1'
                         KeyPath='yes' />
                 </Component>
             </Directory>
