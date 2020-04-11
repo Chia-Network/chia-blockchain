@@ -24,4 +24,4 @@ candle electron-packager-files.wxs chia.wxs
 
 # link the installer
 Write-Host "Linking Windows Installer database"
-light -ext WixUIExtension electron-packager-files.wixobj chia.wixobj -b $env:electronpackagerdir -o Chia-Wallet-$env:version.msi
+light -ext WixUIExtension electron-packager-files.wixobj chia.wixobj -b $env:electronpackagerdir -o $env:exename-$env:version.msi
