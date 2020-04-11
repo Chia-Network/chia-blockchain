@@ -14,17 +14,18 @@ Remove-Item electron-packager-files.wxs -Force -ErrorAction Ignore
 
 # package up the electron stuff and sources
 electron-packager ../electron-ui $env:exename --platform=win32
-if ($? -eq $false) { exit }
+if ($LastExitCode) { exit $LastExitCode }
 
-# compile the installer
-Write-Host "Compiling installer"
 # this generates package-files.wxs from the contents of the electron packager folder
 heat dir $electronpackagerdir -cg ChiaFiles -gg -scom -sreg -sfrag -srd -dr INSTALLDIR -out electron-packager-files.wxs
-if ($? -eq $false) { exit }
+if ($LastExitCode) { exit $LastExitCode }
 
+# compile the installer
 candle electron-packager-files.wxs chia.wxs
-if ($? -eq $false) { exit }
+if ($LastExitCode) { exit $LastExitCode }
 
 # link the installer
-Write-Host "Linking Windows Installer database"
 light -ext WixUIExtension electron-packager-files.wixobj chia.wixobj -b $electronpackagerdir -o $env:exename-$env:version.msi
+if ($LastExitCode) { exit $LastExitCode }
+
+Write-Host "Successfully built $env:exename-$env:version.msi"
