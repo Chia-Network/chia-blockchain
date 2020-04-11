@@ -9,6 +9,7 @@ import datetime
 from src.rpc.rpc_client import RpcClient
 from src.util.byte_types import hexstr_to_bytes
 # from src.util.config import str2bool
+from src.full_node.full_node import FullNode
 
 
 def make_parser(parser):
@@ -23,15 +24,22 @@ def make_parser(parser):
     )
     parser.add_argument(
         "-o",
-        "--old_block",
+        "--old-block",
         help="Older block hash used to calculate estimated total network space.",
         type=str,
         default="",
     )
     parser.add_argument(
         "-n",
-        "--new_block",
+        "--new-block",
         help="Newer block hash used to calculate estimated total network space.",
+        type=str,
+        default="",
+    )
+    parser.add_argument(
+        "-d",
+        "--delta-block-height",
+        help="Compare LCA to a block X blocks older.",
         type=str,
         default="",
     )
@@ -67,6 +75,7 @@ async def netstorge_async(args, parser):
     # add config.yaml check for rpc-port
     # add help on failure/no args
     # add "x blocks back" by block height
+    # self.blockchain.height_to_hash[block.height]
     # print(args)
     try:
         client = await RpcClient.create(args.rpc_port)
@@ -101,11 +110,22 @@ async def netstorge_async(args, parser):
                 network_space_bytes_estimate = weight_div_iters * network_space_constant
                 network_space_terrabytes_estimate = network_space_bytes_estimate / 1024**4
                 print(
-                    f"The elapsed time between blocks was approximately {time_delta}.\n"
+                    f"The elapsed time between blocks is reported as {time_delta}.\n"
                     f"The network has an estimated {network_space_terrabytes_estimate:.2f}TB"
                 )
             else:
                 print("Block with header hash", args.old_block, "not found.")
+        if args.delta_block_height:
+            # Get lca
+            blockchain_state = await client.get_blockchain_state()
+            lca_block_hash = blockchain_state["lca"].header_hash
+            lca_block_height = blockchain_state["lca"].data.height
+            #print (lca_block_hash)
+            print("LCA Block", lca_block_hash, "Height is", lca_block_height)
+            older_block = await client.get_block_by_height(1381)
+            print ("Older block previous hash", older_block.header.data.prev_header_hash)
+            # subtract delta
+            # Call calculate function
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):

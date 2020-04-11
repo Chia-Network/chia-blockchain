@@ -1,5 +1,7 @@
 import dataclasses
 import json
+import logging
+import logging.config
 
 from typing import Any, Callable, List, Optional
 
@@ -91,6 +93,21 @@ class RpcApiHandler:
         header_hash = hexstr_to_bytes(request_data["header_hash"])
 
         block: Optional[FullBlock] = await self.full_node.store.get_block(header_hash)
+        if block is None:
+            raise web.HTTPNotFound()
+        return obj_to_response(block)
+
+    async def get_block_by_height(self, request) -> web.Response:
+        """
+        Retrieves a full block by height.
+        """
+        request_data = await request.json()
+        log.info(f"Checking height in get_block_by_height")
+        if "height" not in request_data:
+            raise web.HTTPBadRequest()
+        header_height = request_data["height"]
+
+        block: Optional[FullBlock] = await self.blockchain.height_to_hash[header_height]
         if block is None:
             raise web.HTTPNotFound()
         return obj_to_response(block)
@@ -238,6 +255,7 @@ async def start_rpc_server(
         [
             web.post("/get_blockchain_state", handler.get_blockchain_state),
             web.post("/get_block", handler.get_block),
+            web.post("/get_block_by_height", handler.get_block_by_height),
             web.post("/get_header", handler.get_header),
             web.post(
                 "/get_unfinished_block_headers", handler.get_unfinished_block_headers
