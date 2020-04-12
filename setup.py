@@ -72,7 +72,6 @@ kwargs = dict(
         "scripts/chia-start-sim",
         "scripts/chia-start-timelord",
         "scripts/chia-start-wallet-gui",
-        "scripts/chia-start-wallet-server",
         "scripts/chia-stop-all",
     ],
     entry_points={
@@ -81,7 +80,15 @@ kwargs = dict(
             "chia-check-plots = src.cmds.check_plots:main",
             "chia-create-plots = src.cmds.create_plots:main",
             "chia-generate-keys = src.cmds.generate_keys:main",
-            "chia-websocket-server = src.wallet.websocket_server:main",
+            "chia-start-wallet-server = src.wallet.websocket_server:main",
+            "chia-wallet = src.wallet.websocket_server:main",
+            "chia_full_node = src.server.start_full_node:main",
+            "chia_harvester = src.server.start_harvester:main",
+            "chia_farmer = src.server.start_farmer:main",
+            "chia_introducer = src.server.start_introducer:main",
+            "chia_timelord = src.server.start_timelord:main",
+            "chia_timelord_launcher = src.timelord_launcher:main",
+            "chia_full_node_simulator = src.simulator.start_simulator:main",
         ]
     },
     package_data={

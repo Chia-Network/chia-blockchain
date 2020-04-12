@@ -5,7 +5,7 @@ _restart_harvester_servers() {
     echo "Shutting down harvesters"
     echo "$PROCS" | xargs -L1 kill
     echo "Restarting harvesters"
-    _run_bg_cmd python -m src.server.start_harvester
+    _run_bg_cmd chia_harvester
   else
     echo "No running harvesters found"
   fi
