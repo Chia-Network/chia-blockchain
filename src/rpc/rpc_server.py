@@ -110,6 +110,18 @@ class RpcApiHandler:
             raise web.HTTPNotFound()
         return obj_to_response(header)
 
+    async def get_unfinished_block_headers(self, request) -> web.Response:
+        request_data = await request.json()
+        if "height" not in request_data:
+            raise web.HTTPBadRequest()
+        height = request_data["height"]
+        response_headers: List[Header] = []
+        for block in (self.full_node.store.get_unfinished_blocks()).values():
+            if block.height == height:
+                response_headers.append(block.header)
+
+        return obj_to_response(response_headers)
+
     async def get_connections(self, request) -> web.Response:
         """
         Retrieves all connections to this full node, including farmers and timelords.
@@ -228,6 +240,9 @@ async def start_rpc_server(
             web.post("/get_blockchain_state", handler.get_blockchain_state),
             web.post("/get_block", handler.get_block),
             web.post("/get_header", handler.get_header),
+            web.post(
+                "/get_unfinished_block_headers", handler.get_unfinished_block_headers
+            ),
             web.post("/get_connections", handler.get_connections),
             web.post("/open_connection", handler.open_connection),
             web.post("/close_connection", handler.close_connection),

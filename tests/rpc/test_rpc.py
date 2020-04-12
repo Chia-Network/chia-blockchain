@@ -29,6 +29,10 @@ class TestRpc:
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
 
         for i in range(1, num_blocks):
+            async for _ in full_node_1.respond_unfinished_block(
+                full_node_protocol.RespondUnfinishedBlock(blocks[i])
+            ):
+                pass
             async for _ in full_node_1.respond_block(
                 full_node_protocol.RespondBlock(blocks[i])
             ):
@@ -53,6 +57,10 @@ class TestRpc:
             block = await client.get_block(state["lca"].header_hash)
             assert block == blocks[7]
             assert (await client.get_block(bytes([1] * 32))) is None
+
+            unf_block_headers = await client.get_unfinished_block_headers(5)
+            assert len(unf_block_headers) == 1
+            assert unf_block_headers[0] == blocks[5].header
 
             header = await client.get_header(state["lca"].header_hash)
             assert header == blocks[7].header
