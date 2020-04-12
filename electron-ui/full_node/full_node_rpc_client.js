@@ -16,6 +16,11 @@ class FullNodeRpcClient {
             "header_hash": header_hash,
         });
     }
+    async get_unfinished_block_headers(height) {
+        return await this.make_request("get_unfinished_block_headers", {
+            "height": height,
+        });
+    }
 
     async get_block(header_hash) {
         return await this.make_request("get_block", {

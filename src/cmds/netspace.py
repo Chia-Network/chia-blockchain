@@ -8,6 +8,7 @@ import datetime
 # from src.types.header_block import HeaderBlock
 from src.rpc.rpc_client import RpcClient
 from src.util.byte_types import hexstr_to_bytes
+
 # from src.util.config import str2bool
 
 
@@ -57,9 +58,16 @@ async def netstorge_async(args, parser):
             block_older = await client.get_block(hexstr_to_bytes(args.old_block))
             block_newer = await client.get_block(hexstr_to_bytes(args.new_block))
             if block_older is not None:
-                block_older_time_string = human_local_time(block_older.header.data.timestamp)
-                block_newer_time_string = human_local_time(block_newer.header.data.timestamp)
-                elapsed_time_seconds = block_newer.header.data.timestamp - block_older.header.data.timestamp
+                block_older_time_string = human_local_time(
+                    block_older.header.data.timestamp
+                )
+                block_newer_time_string = human_local_time(
+                    block_newer.header.data.timestamp
+                )
+                elapsed_time_seconds = (
+                    block_newer.header.data.timestamp
+                    - block_older.header.data.timestamp
+                )
                 time_delta = datetime.timedelta(seconds=elapsed_time_seconds)
                 print("Older Block", block_older.header.data.height, ":")
                 print(
@@ -75,12 +83,19 @@ async def netstorge_async(args, parser):
                     f"Weight                 {block_newer.header.data.weight}\n"
                     f"Total VDF Iterations   {block_newer.header.data.total_iters}\n"
                 )
-                delta_weight = block_newer.header.data.weight - block_older.header.data.weight
-                delta_iters = block_newer.header.data.total_iters - block_older.header.data.total_iters
+                delta_weight = (
+                    block_newer.header.data.weight - block_older.header.data.weight
+                )
+                delta_iters = (
+                    block_newer.header.data.total_iters
+                    - block_older.header.data.total_iters
+                )
                 weight_div_iters = delta_weight / delta_iters
-                network_space_constant = 2**32  # 2^32
+                network_space_constant = 2 ** 32  # 2^32
                 network_space_bytes_estimate = weight_div_iters * network_space_constant
-                network_space_terrabytes_estimate = network_space_bytes_estimate / 1024**4
+                network_space_terrabytes_estimate = (
+                    network_space_bytes_estimate / 1024 ** 4
+                )
                 print(
                     f"The elapsed time between blocks was approximately {time_delta}.\n"
                     f"The network has an estimated {network_space_terrabytes_estimate:.2f}TB"
