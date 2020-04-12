@@ -72,7 +72,7 @@ async function render() {
         block_tbody.appendChild(create_table_row("Cost", block.header.data.cost));
         block_tbody.appendChild(create_table_row("Difficulty", BigInt(diff).toLocaleString()));
         block_tbody.appendChild(create_table_row("Total VDF Iterations", BigInt(block.header.data.total_iters).toLocaleString()));
-        block_tbody.appendChild(create_table_row("Block VDF Iterations", block.proof_of_time.number_of_iterations));
+        block_tbody.appendChild(create_table_row("Block VDF Iterations", BigInt(block.proof_of_time.number_of_iterations).toLocaleString()));
         block_tbody.appendChild(create_table_row("Proof of Space Size", block.proof_of_space.size));
         block_tbody.appendChild(create_table_row("Plot Public Key", block.proof_of_space.plot_pubkey));
         block_tbody.appendChild(create_table_row("Pool Public Key", block.proof_of_space.pool_pubkey));

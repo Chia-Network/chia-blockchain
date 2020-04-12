@@ -37,6 +37,7 @@ class FullNodeView {
         this.state = {
             tip_hashes: new Set(),
             getting_info: false,
+            getting_info_unfinished: false,
             connections: {},
             displayed_connections: new Set(),
             max_height: 0,
@@ -48,11 +49,14 @@ class FullNodeView {
             ips: 0,
             min_iters: 0,
             latest_blocks: [],
+            latest_unfinished_blocks: [],
         }
         this.update_view(true);
         this.initialize_handlers();
         this.get_info();
+        this.get_info_unfinished();
         this.interval = setInterval(() => this.get_info(), 2000);
+        this.interval = setInterval(() => this.get_info_unfinished(), 7000);
     }
 
     initialize_handlers() {
@@ -164,6 +168,54 @@ class FullNodeView {
         return blocks;
     }
 
+    async get_latest_unfinished_blocks(tips, ips) {
+        let num_headers_to_display = 3;
+        let min_height = 9999999999;
+        let max_height = 0;
+         for (let tip of tips) {
+            if (tip.data.height < min_height)  min_height = tip.data.height;
+            if (tip.data.height > max_height)  max_height = tip.data.height;
+        }
+        let headers = [];
+        for (let height=max_height + 1; height >= min_height; height--) {
+            let fetched = await rpc_client.get_unfinished_block_headers(height);
+            for (let fetched_h of fetched) {
+                fetched_h.header_hash = await hash_header(fetched_h);
+                headers.push(fetched_h);
+            }
+            if (headers.length >= num_headers_to_display) {
+                break;
+            }
+        }
+        // Get prev headers to check iterations required for this block
+        let iters_map = {};
+        for (let header of headers) {
+            let prev = await rpc_client.get_header(header.data.prev_header_hash);
+            iters_map[header.header_hash] = BigInt(header.data.total_iters) - BigInt(prev.data.total_iters);
+        }
+        let blocks = [];
+        // Add the expected_finish property to each header
+        for (let i=0; i < headers.length; i++) {
+            let iters = iters_map[headers[i].header_hash];
+            let finish_time = BigInt(headers[i].data.timestamp) + BigInt(iters) / BigInt(ips);
+            blocks.push({
+                "header_hash": headers[i].header_hash,
+                "header": headers[i],
+                "expected_finish": finish_time,
+                "iters": iters,
+            })
+        }
+
+        // Sort by block height, then expected finish time
+        blocks.sort((b1, b2) => {
+            if (b2.header.data.height != b1.header.data.height) {
+                return b2.header.data.height - b1.header.data.height;
+            }
+            return Number(b1.expected_finish - b2.expected_finish);
+        })
+        return blocks.slice(0, num_headers_to_display);
+    }
+
     create_table_cell(text) {
         let cell = document.createElement("td");
         let cellText = document.createTextNode(text);
@@ -211,7 +263,14 @@ class FullNodeView {
         }
         if (redisplay_blocks) {
             latest_blocks_tbody.innerHTML = "";
-            for (let block of this.state.latest_blocks) {
+            let display_blocks = this.state.latest_unfinished_blocks.concat(this.state.latest_blocks);
+            let latest_blocks_hh = this.state.latest_blocks.map((b) => b.header_hash);
+
+            for (let block of display_blocks) {
+                if ("expected_finish" in block && latest_blocks_hh.includes(block.header_hash)) {
+                    // Don't display unfinished blocks that are already in finished blocks list
+                    continue;
+                }
                 let row = document.createElement("tr");
                 let link = document.createElement("a");
                 let action_cell = document.createElement("td");
@@ -227,12 +286,21 @@ class FullNodeView {
                 if (hh === this.state.lca_hash) {
                     height_str += " (LCA)";
                 }
-                link.innerHTML = block.header_hash;
+                link.innerHTML = block.header_hash.substring(0, 5) + "..." + block.header_hash.substring(59);
                 link.style.textDecoration = "underline";
                 action_cell.appendChild(link);
-                row.appendChild(action_cell);
-                row.appendChild(this.create_table_cell(height_str));
-                row.appendChild(this.create_table_cell(unix_to_short_date(block.header.data.timestamp)));
+                if ("expected_finish" in block) {
+                    row.append(this.create_table_cell(link.innerHTML))
+                    row.appendChild(this.create_table_cell(height_str + " (unfinished)"));
+                    row.appendChild(this.create_table_cell(unix_to_short_date(block.header.data.timestamp)));
+                    row.appendChild(this.create_table_cell(unix_to_short_date(block.expected_finish.toString()) + " (" + BigInt(block.iters).toLocaleString() + " iter)"));
+                    row.style.color = "orange";
+                } else {
+                    row.appendChild(action_cell);
+                    row.appendChild(this.create_table_cell(height_str));
+                    row.appendChild(this.create_table_cell(unix_to_short_date(block.header.data.timestamp)));
+                    row.appendChild(this.create_table_cell("Finished"));
+                }
                 latest_blocks_tbody.appendChild(row);
             }
         }
@@ -287,6 +355,36 @@ class FullNodeView {
         }
         this.state.getting_info = false;
     };
+
+    async get_info_unfinished() {
+        if ((max_block_height_textfield === undefined) || (max_block_height_textfield === null)) {
+            // Stop the interval if we changed tabs.
+            this.stop();
+            return;
+        }
+        if (this.state.getting_info_unfinished) {
+            return;
+        }
+        this.state.getting_info_unfinished = true;
+        try {
+            let blockchain_state = await rpc_client.get_blockchain_state();
+            let unfinished_blocks = await this.get_latest_unfinished_blocks(blockchain_state.tips, blockchain_state.ips);
+            let update = false;
+            for (let b of unfinished_blocks) {
+                if (!this.state.latest_unfinished_blocks.map(x => x.header_hash).includes(b.header_hash)) {
+                    update = true;
+                    this.state.latest_unfinished_blocks = unfinished_blocks;
+                    break;
+                }
+            }
+            await this.update_view(update);
+        } catch (error) {
+            console.error("Error getting unfinished info from node", error);
+            this.node_not_connected();
+        }
+        this.state.getting_info_unfinished = false;
+    }
+
 }
 
 if (!(max_block_height_textfield === undefined) && !(max_block_height_textfield === null)) {
