@@ -8,6 +8,7 @@ import datetime
 # from src.types.header_block import HeaderBlock
 from src.rpc.rpc_client import RpcClient
 from src.util.byte_types import hexstr_to_bytes
+from src.util.ints import uint32
 # from src.util.config import str2bool
 from src.full_node.full_node import FullNode
 
@@ -120,9 +121,10 @@ async def netstorge_async(args, parser):
             blockchain_state = await client.get_blockchain_state()
             lca_block_hash = blockchain_state["lca"].header_hash
             lca_block_height = blockchain_state["lca"].data.height
+            older_block_height = lca_block_height - uint32(args.delta_block_height)
             #print (lca_block_hash)
-            print("LCA Block", lca_block_hash, "Height is", lca_block_height)
-            older_block = await client.get_block_by_height(1381)
+            print(f"LCA Block Height is {lca_block_height} - Comparing to {older_block_height}")
+            older_block = await client.get_block_by_height(older_block_height)
             print ("Older block previous hash", older_block.header.data.prev_header_hash)
             # subtract delta
             # Call calculate function

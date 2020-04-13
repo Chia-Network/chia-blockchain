@@ -1,7 +1,5 @@
 import dataclasses
 import json
-import logging
-import logging.config
 
 from typing import Any, Callable, List, Optional
 
@@ -102,12 +100,14 @@ class RpcApiHandler:
         Retrieves a full block by height.
         """
         request_data = await request.json()
-        log.info(f"Checking height in get_block_by_height")
         if "height" not in request_data:
             raise web.HTTPBadRequest()
         header_height = request_data["height"]
 
-        block: Optional[FullBlock] = await self.blockchain.height_to_hash[header_height]
+        block: Optional[bytes32] = await self.full_node.blockchain.height_to_hash.get(
+            header_height, None
+        )
+        print(f"block is {block}")
         if block is None:
             raise web.HTTPNotFound()
         return obj_to_response(block)
