@@ -12,7 +12,7 @@ Remove-Item "$buildDir" -Recurse -Force -ErrorAction Ignore
 New-Item -ItemType Directory -Path "$buildDir"
 
 # package up the electron stuff and sources
-electron-packager ../electron-ui $env:exename --platform=win32
+electron-packager ../electron-ui $env:exename --platform=win32 --icon=icon.ico
 if ($LastExitCode) { exit $LastExitCode }
 
 $tempName = "electron-packager-files"
