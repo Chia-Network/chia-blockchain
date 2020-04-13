@@ -16,7 +16,8 @@
             InstallerVersion='500'
             Languages='1033'
             Compressed='yes'
-            SummaryCodepage='1252' />
+            SummaryCodepage='1252' 
+            InstallScope="$(var.installScope)"/>
 
         <!-- Media and application properties -->
         <Media Id='1' Cabinet='chia.cab' EmbedCab='yes' DiskPrompt="CD-ROM #1" />
@@ -28,7 +29,7 @@
         <Property Id='ARPHELPLINK'>https://keybase.io/team/chia_network.public</Property>
         <Property Id='ARPURLINFOABOUT'>https://www.chia.net/about/</Property>
         <Property Id='ARPURLUPDATEINFO'>https://www.chia.net/releases/</Property>
-        <Property Id='MSIFASTINSTALL'>7</Property>
+        <Property Id='MSIFASTINSTALL'>7</Property>     
         <SetProperty Id="ARPNOMODIFY" Value="1" After="InstallValidate" Sequence="execute"/>
 
         <!-- Upgrade logic -->
@@ -64,12 +65,31 @@
         <WixVariable Id="WixUILicenseRtf" Value="eula.rtf" />
         <UIRef Id="WixUI_Minimal" />
         <UIRef Id="WixUI_ErrorProgressText" />
-        
+
         <!-- Files, folders, shortcuts, registry etc -->
         <Directory Id='TARGETDIR' Name='SourceDir'>
-            <Directory Id='ProgramFilesFolder' Name='PFiles'>
+            <Directory Id='$(var.installRoot)' Name='installRoot'>
                 <Directory Id='ChiaNetwork' Name='Chia Network'>
-                    <Directory Id='INSTALLDIR' Name='Chia Wallet'/>
+                    <Component Id="ManufacturerData" Guid="BE655B40-EA15-46FB-ADA4-6D9DCDAA0C79">
+                        <RegistryValue Root='HKCU'
+                            Key='Software\[Manufacturer]'
+                            Type='integer'
+                            Name="[ProductName]"
+                            Value='1'
+                            KeyPath='yes' />
+                        <RemoveFolder Id='ChiaNetworkDir' On='uninstall' />
+                    </Component>
+                    <Directory Id='INSTALLDIR' Name='Chia Wallet'>
+                        <Component Id="dirINSTALLDIR" Guid="41069240-5836-461F-BF81-614A2C6106A9">
+                            <RemoveFolder Id='INSTALLDIR' On='uninstall' />
+                            <RegistryValue Root='HKCU'
+                                Key='Software\[Manufacturer]\[ProductName]'
+                                Type='string'
+                                Name="Version"
+                                Value='$(var.version)'
+                                KeyPath='yes' />
+                        </Component>
+                    </Directory>
                 </Directory>
             </Directory>
             <Directory Id="ProgramMenuFolder" Name="Programs">
@@ -77,7 +97,7 @@
                     <Component Id="ProgramMenuDir" Guid="0B8A0D75-657A-4FFC-84E8-8D40B343E7CA">
                         <Shortcut Id="ProgramMenuShortcut"
                             Name="Chia"
-                            Description="Chia $(var.version)"
+                            Description="Chia $(var.installScope) $(var.version)"
                             Target="[INSTALLDIR]$(var.exename)"
                             WorkingDirectory="INSTALLDIR"
                             Icon="icon.ico"/>
@@ -95,7 +115,7 @@
                 <Component Id="DesktopShortCut" Guid="4281DF51-82FC-471B-A26A-1292DFEE9738">
                     <Shortcut Id="ApplicationDesktopShortcut" 
                         Name="Chia"
-                        Description="Chia $(var.version)"
+                        Description="Chia $(var.installScope) $(var.version)"
                         Target="[INSTALLDIR]$(var.exename)"
                         WorkingDirectory="INSTALLDIR"
                         Icon="icon.ico"/>
@@ -114,6 +134,8 @@
         <Feature Id='Complete' Level='1'>
             <ComponentRef Id='DesktopShortCut' />
             <ComponentRef Id='ProgramMenuDir' />
+            <ComponentRef Id='dirINSTALLDIR' />
+            <ComponentRef Id='ManufacturerData' />
             <ComponentGroupRef Id="ChiaFiles" /> <!-- this component group is defined in the heat generated electron-packager-files.wxs file -->
         </Feature>
     </Product>
