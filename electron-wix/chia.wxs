@@ -17,7 +17,7 @@
             Languages='1033'
             Compressed='yes'
             SummaryCodepage='1252' 
-            InstallScope="$(var.installScope)"/>
+            InstallScope="perUser"/>
 
         <!-- Media and application properties -->
         <Media Id='1' Cabinet='chia.cab' EmbedCab='yes' DiskPrompt="CD-ROM #1" />
@@ -30,6 +30,8 @@
         <Property Id='ARPURLINFOABOUT'>https://www.chia.net/about/</Property>
         <Property Id='ARPURLUPDATEINFO'>https://www.chia.net/releases/</Property>
         <Property Id='MSIFASTINSTALL'>7</Property>     
+        <Property Id='ALLUSERS' Secure='yes'>2</Property>
+        <Property Id='MSIINSTALLPERUSER' Secure='yes'>1</Property>
         <SetProperty Id="ARPNOMODIFY" Value="1" After="InstallValidate" Sequence="execute"/>
 
         <!-- Upgrade logic -->
@@ -68,8 +70,8 @@
 
         <!-- Files, folders, shortcuts, registry etc -->
         <Directory Id='TARGETDIR' Name='SourceDir'>
-            <Directory Id='$(var.installRoot)' Name='installRoot'>
-                <Directory Id='ChiaNetwork' Name='Chia Network'>
+            <Directory Id='ProgramFilesFolder' Name='installRoot'>
+                <Directory Id='ChiaNetworkDir' Name='Chia Network'>
                     <Component Id="ManufacturerData" Guid="BE655B40-EA15-46FB-ADA4-6D9DCDAA0C79">
                         <RegistryValue Root='HKCU'
                             Key='Software\[Manufacturer]'
@@ -97,7 +99,7 @@
                     <Component Id="ProgramMenuDir" Guid="0B8A0D75-657A-4FFC-84E8-8D40B343E7CA">
                         <Shortcut Id="ProgramMenuShortcut"
                             Name="Chia"
-                            Description="Chia $(var.installScope) $(var.version)"
+                            Description="Chia $(var.version)"
                             Target="[INSTALLDIR]$(var.exename)"
                             WorkingDirectory="INSTALLDIR"
                             Icon="icon.ico"/>
@@ -115,7 +117,7 @@
                 <Component Id="DesktopShortCut" Guid="4281DF51-82FC-471B-A26A-1292DFEE9738">
                     <Shortcut Id="ApplicationDesktopShortcut" 
                         Name="Chia"
-                        Description="Chia $(var.installScope) $(var.version)"
+                        Description="Chia $(var.version)"
                         Target="[INSTALLDIR]$(var.exename)"
                         WorkingDirectory="INSTALLDIR"
                         Icon="icon.ico"/>

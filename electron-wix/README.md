@@ -27,3 +27,12 @@ Edit the version number in `bundle-win32.ps1`.
 ````
 
 MSI will be in the `electron-wix\build` folder.
+
+## Machine-wide installation
+
+By default the installer is per user. In order to install per machine, run the following from an elevated command prompt:
+
+````PowerShell
+# replace the msi name with the current version
+msiexec /i chia-wallet-0.1.4.msi MSIINSTALLPERUSER="" ALLUSERS=1
+````

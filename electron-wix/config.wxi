@@ -4,8 +4,4 @@
     <!-- values can be overriden here -->    
     <?define version="$(env.version)" ?>
     <?define exename="$(env.exename).exe" ?>
-
-    <!-- these two allow the main wix file to switch between perUser and perMachine-->
-    <?define installScope="$(env.installScope)" ?>
-    <?define installRoot="$(env.installRoot)" ?>
 </Include>
