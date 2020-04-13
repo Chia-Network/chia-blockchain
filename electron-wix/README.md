@@ -26,4 +26,4 @@ Edit the version number in `bundle-win32.ps1`.
 .\bundle-win32.ps1
 ````
 
-MSI will be in the `electron-wix` folder.
+MSI will be in the `electron-wix\build` folder.
