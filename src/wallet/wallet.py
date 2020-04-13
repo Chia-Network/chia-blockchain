@@ -386,7 +386,7 @@ class Wallet:
         self, amount: uint64, recipient_innerpuzhash: bytes32
     ) -> SpendBundle:
         # select an uncoloured coin to be the genesis coin for this colour
-        secondary_coins = self.wallet.select_coins(amount)
+        secondary_coins = self.select_coins(amount)
         if secondary_coins is None:
             self.log.info(f"coins is None")
             return None
@@ -419,19 +419,19 @@ class Wallet:
         )
 
         if change > 0:
-            changepuzzlehash = self.wallet.get_new_puzzlehash()
+            changepuzzlehash = self.get_new_puzzlehash()
             primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
-        solution = self.wallet.make_solution(primaries=primaries)
+        solution = self.make_solution(primaries=primaries)
         spends.append((puzzle, CoinSolution(genesisCoin, solution)))
 
         # Create the solutions for the secondary coins
-        solution = self.wallet.make_solution(consumed=[genesisCoin.name()])
+        solution = self.make_solution(consumed=[genesisCoin.name()])
         for coin in secondary_coins:
             pubkey, secretkey = self.get_keys(coin.puzzle_hash)
-            puzzle = self.wallet.puzzle_for_pk(bytes(pubkey))
+            puzzle = self.puzzle_for_pk(bytes(pubkey))
             spends.append((puzzle, CoinSolution(coin, solution)))
 
-        spend_bundle = self.wallet.sign_transaction(spends)
+        spend_bundle = self.sign_transaction(spends)
 
         # automatically do the eve spend
         spend_bundle = spend_bundle.aggregate(

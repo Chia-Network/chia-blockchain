@@ -211,7 +211,7 @@ class WebSocketServer:
                 return await websocket.send(format_response(response_api, response))
         elif request["wallet_type"] == "cc_wallet":
             cc_wallet: CCWallet = await CCWallet.create(
-                config, key_config, wallet_state_manager, main_wallet, request["core"]
+                config, key_config, wallet_state_manager, main_wallet
             )
             self.wallet_node.wallet_state_manager.wallets[
                 cc_wallet.wallet_info.id
@@ -281,6 +281,13 @@ class WebSocketServer:
         response = {"name": name}
         return await websocket.send(format_response(response_api, response))
 
+    async def cc_set_core(self, websocket, request, response_api):
+        wallet_id = int(request["wallet_id"])
+        wallet: CCWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        success = await wallet.set_name(str(request["core"]))
+        response = {"success": success}
+        return await websocket.send(format_response(response_api, response))
+
     async def safe_handle(self, websocket, path):
         try:
             await self.handle_message(websocket, path)
@@ -330,6 +337,12 @@ class WebSocketServer:
                 await self.rl_set_admin_info(websocket, data, command)
             elif command == "rl_set_user_info":
                 await self.rl_set_user_info(websocket, data, command)
+            elif command == "cc_set_name":
+                await self.cc_set_name(websocket, data, command)
+            elif command == "cc_get_name":
+                await self.cc_get_name(websocket, data, command)
+            elif command == "cc_set_core":
+                await self.cc_set_core (websocket, data, command)
             else:
                 response = {"error": f"unknown_command {command}"}
                 await websocket.send(dict_to_json_str(response))

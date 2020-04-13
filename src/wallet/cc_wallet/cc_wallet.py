@@ -61,7 +61,6 @@ class CCWallet:
         key_config: Dict,
         wallet_state_manager: Any,
         wallet: Wallet,
-        core: str,
         name: str = None,
     ):
         unused: Optional[
@@ -86,7 +85,7 @@ class CCWallet:
 
         self.wallet_state_manager = wallet_state_manager
 
-        cc_info = CCInfo(core, dict(), dict(), dict(), dict(), None, dict())
+        cc_info = CCInfo(None, dict(), dict(), dict(), dict(), None, dict())
         info_as_string = json.dumps(cc_info.to_json_dict())
         await wallet_state_manager.user_store.create_wallet(
             "CC Wallet", WalletType.COLOURED_COIN, info_as_string
@@ -115,6 +114,9 @@ class CCWallet:
 
     async def set_name(self, new_name: str):
         self.cc_info.my_colour_name = new_name
+
+    async def set_core(self, core: str):
+        self.cc_info.my_core = core
 
     async def coin_added(self, coin: Coin, height: int, header_hash: bytes32):
         """ Notification from wallet state manager that wallet has been received. """
