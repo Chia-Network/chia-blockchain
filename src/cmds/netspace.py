@@ -8,6 +8,7 @@ import datetime
 # from src.types.header_block import HeaderBlock
 from src.rpc.rpc_client import RpcClient
 from src.util.byte_types import hexstr_to_bytes
+from src.consensus.pot_iterations import calculate_min_iters_from_iterations
 
 # from src.util.config import str2bool
 
@@ -42,6 +43,25 @@ def make_parser(parser):
 def human_local_time(timestamp):
     time_local = struct_time(localtime(timestamp))
     return time.strftime("%a %b %d %Y %T %Z", time_local)
+
+
+async def get_total_miniters(rpc_client, old_block, new_block):
+    """
+    Calculates the sum of min_iters from all blocks starting from old and up to and including
+    new_block.
+    # TODO: compute real min_iters for multiple epochs, using height RPC
+    """
+    old_block_parent = await rpc_client.get_header(old_block.prev_header_hash)
+    new_block_parent = await rpc_client.get_header(new_block.prev_header_hash)
+    old_diff = old_block.weight - old_block_parent.weight
+    new_diff = new_block.weight - new_block_parent.weight
+    mi1 = calculate_min_iters_from_iterations(
+        old_block.proof_of_space, old_diff, old_block.proof_of_time.number_of_iterations
+    )
+    mi2 = calculate_min_iters_from_iterations(
+        new_block.proof_of_space, new_diff, new_block.proof_of_time.number_of_iterations
+    )
+    return (new_block.height - old_block.height) * ((mi2 + mi1) / 2)
 
 
 async def netstorge_async(args, parser):
@@ -90,9 +110,16 @@ async def netstorge_async(args, parser):
                     block_newer.header.data.total_iters
                     - block_older.header.data.total_iters
                 )
+
+                delta_iters -= await get_total_miniters(
+                    client, block_older, block_newer
+                )
                 weight_div_iters = delta_weight / delta_iters
+                tips_adjustment_constant = 0.65
                 network_space_constant = 2 ** 32  # 2^32
-                network_space_bytes_estimate = weight_div_iters * network_space_constant
+                network_space_bytes_estimate = (
+                    weight_div_iters * network_space_constant * tips_adjustment_constant
+                )
                 network_space_terrabytes_estimate = (
                     network_space_bytes_estimate / 1024 ** 4
                 )
