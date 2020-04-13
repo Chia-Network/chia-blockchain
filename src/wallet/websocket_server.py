@@ -25,6 +25,7 @@ from src.util.config import load_config_cli, load_config
 from src.util.ints import uint64
 from src.util.logging import initialize_logging
 from src.wallet.rl_wallet.rl_wallet import RLWallet
+from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_node import WalletNode
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -209,7 +210,14 @@ class WebSocketServer:
                 response = {"success": True, "type": "rl_wallet"}
                 return await websocket.send(format_response(response_api, response))
         elif request["wallet_type"] == "cc_wallet":
-            print("Create me!!")
+            cc_wallet: CCWallet = await CCWallet.create(
+                config, key_config, wallet_state_manager, main_wallet, request["core"]
+            )
+            self.wallet_node.wallet_state_manager.wallets[
+                cc_wallet.wallet_info.id
+            ] = cc_wallet
+            response = {"success": True, "type": "cc_wallet"}
+            return await websocket.send(format_response(response_api, response))
 
         response = {"success": False}
         return await websocket.send(format_response(response_api, response))
@@ -257,6 +265,20 @@ class WebSocketServer:
 
         response = {"success": success}
 
+        return await websocket.send(format_response(response_api, response))
+
+    async def cc_set_name(self, websocket, request, response_api):
+        wallet_id = int(request["wallet_id"])
+        wallet: CCWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        success = await wallet.set_name(str(request["name"]))
+        response = {"success": success}
+        return await websocket.send(format_response(response_api, response))
+
+    async def cc_get_name(self, websocket, request, response_api):
+        wallet_id = int(request["wallet_id"])
+        wallet: CCWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        name: str = await wallet.get_name()
+        response = {"name": name}
         return await websocket.send(format_response(response_api, response))
 
     async def safe_handle(self, websocket, path):

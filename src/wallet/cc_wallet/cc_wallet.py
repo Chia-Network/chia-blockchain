@@ -28,21 +28,18 @@ from src.wallet.cc_wallet import cc_wallet_puzzles
 @dataclass(frozen=True)
 @streamable
 class CCInfo(Streamable):
-    my_cores: Set  # core is stored as a
-    my_coloured_coins: Optional[
-        Dict
-    ]  #  {coin: (innerpuzzle as Program, core as string)}
+    my_core: Optional[str]  # core is stored as the disassembled string
+    my_coloured_coins: Optional[Dict]  #  {coin: innerpuzzle as Program}
     eve_coloured_coins: Optional[Dict]
     parent_info: Optional[
         Dict
     ]  # {coin.name(): (parent_coin_info, puzzle_hash, coin.amount)}
     puzzle_cache: Optional[Dict]  # {"innerpuz"+"core": puzzle}
+    my_colour_name: Optional[str]
 
-    #TODO: {Matt} compatibility based on deriving innerpuzzle from derivation record
-    #TODO: {Matt} convert this into wallet_state_manager.puzzle_store
-    #TODO: {Matt} add naming for coloured coins
-    #TODO: {Matt} add hooks in WebSocketServer for all UI functions
-    # i am changing this file
+    # TODO: {Matt} compatibility based on deriving innerpuzzle from derivation record
+    # TODO: {Matt} convert this into wallet_state_manager.puzzle_store
+    # TODO: {Matt} add hooks in WebSocketServer for all UI functions
     my_cc_puzhashes: Optional[Dict]  # {cc_puzhash: (innerpuzzle, core)}
 
 
@@ -64,6 +61,7 @@ class CCWallet:
         key_config: Dict,
         wallet_state_manager: Any,
         wallet: Wallet,
+        core: str,
         name: str = None,
     ):
         unused: Optional[
@@ -88,7 +86,7 @@ class CCWallet:
 
         self.wallet_state_manager = wallet_state_manager
 
-        cc_info = CCInfo(set(), dict(), dict(), dict(), dict(), dict())
+        cc_info = CCInfo(core, dict(), dict(), dict(), dict(), None, dict())
         info_as_string = json.dumps(cc_info.to_json_dict())
         await wallet_state_manager.user_store.create_wallet(
             "CC Wallet", WalletType.COLOURED_COIN, info_as_string
@@ -112,6 +110,12 @@ class CCWallet:
 
         return self
 
+    async def get_name(self):
+        return self.cc_info.my_colour_name
+
+    async def set_name(self, new_name: str):
+        self.cc_info.my_colour_name = new_name
+
     async def coin_added(self, coin: Coin, height: int, header_hash: bytes32):
         """ Notification from wallet state manager that wallet has been received. """
         self.log.info(f"CC wallet has been notified that coin was added")
@@ -119,11 +123,11 @@ class CCWallet:
         search_for_parent = set()
         self.cc_info.my_coloured_coins[coin] = (
             self.cc_info.my_cc_puzhashes[coin.puzzle_hash][0],
-            self.cc_info.my_cc_puzhashes[coin.puzzle_hash][1],
         )
+
         self.cc_info.parent_info[coin.name()] = (
             coin.parent_coin_info,
-            self.my_coloured_coins[coin][0].get_hash(),
+            self.my_coloured_coins[coin].get_hash(),
             coin.amount,
         )
         if coin.parent_coin_info not in self.cc_info.parent_info:
@@ -157,139 +161,21 @@ class CCWallet:
 
         await self.wallet_state_manager.set_action_done(action_id)
 
-    async def generate_new_coloured_coins(self, amounts: List[uint64],) -> SpendBundle:
-
-        total_amount = sum(amounts)
-        # select an uncoloured coin to be the genesis coin for this colour
-        secondary_coins = self.wallet.select_coins(total_amount)
-        if secondary_coins is None:
-            self.log.info(f"coins is None")
-            return None
-        genesisCoin = secondary_coins.pop()
-
-        # create coloured coin core
-        core = cc_wallet_puzzles.cc_make_core(genesisCoin.name())
-        self.cc_info.cc_add_core(core)
-
-        spends = []
-        change = genesisCoin.amount + sum([x.amount for x in secondary_coins])
-        change = change - total_amount
-        pubkey, secretkey = self.get_keys(genesisCoin.puzzle_hash)
-        puzzle = self.puzzle_for_pk(bytes(pubkey))
-        primaries = []
-        evespendslist = []
-        # Create the solution for the genesis coin
-        for amount in amounts:
-            innerpuz = self.wallet.get_new_puzzle()
-            innerpuzhash = innerpuz.get_hash()
-            newpuzzle = cc_wallet_puzzles.cc_make_puzzle(innerpuzhash, core)
-            newpuzzlehash = newpuzzle.get_hash()
-            self.cc_info.my_cc_puzhashes[newpuzzlehash] = (innerpuz, core)
-            primaries.append({"puzzlehash": newpuzzlehash, "amount": amount})
-            # prepare coins for a second spend so that the parent info is correctly setup
-            evespendslist.append(
-                (
-                    Coin(genesisCoin, newpuzzlehash, amount),
-                    genesisCoin.name(),
-                    amount,
-                    binutils.assemble("((q ()) ())"),
-                )
-            )
-            self.cc_info.eve_coloured_coins[
-                Coin(genesisCoin, newpuzzlehash, amount)
-            ] = (innerpuz, core)
-        if change > 0:
-            changepuzzlehash = self.wallet.get_new_puzzlehash()
-            primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
-        solution = self.wallet.make_solution(primaries=primaries)
-        spends.append((puzzle, CoinSolution(genesisCoin, solution)))
-
-        # Create the solutions for the secondary coins
-        solution = self.wallet.make_solution(consumed=[genesisCoin.name()])
-        for coin in secondary_coins:
-            pubkey, secretkey = self.get_keys(coin.puzzle_hash)
-            puzzle = self.wallet.puzzle_for_pk(bytes(pubkey))
-            spends.append((puzzle, CoinSolution(coin, solution)))
-
-        self.temp_balance -= total_amount
-        spend_bundle = self.wallet.sign_transaction(spends)
-
-        # automatically do the eve spend
-        spend_bundle = spend_bundle.aggregate(
-            [spend_bundle, self.cc_generate_eve_spend(evespendslist)]
+    async def get_new_ccpuzzlehash(self):
+        innerpuzzlehash = self.wallet.get_new_puzzle().get_hash()
+        cc_puzzle = cc_wallet_puzzles.cc_make_puzzle(
+            innerpuzzlehash, self.cc_info.my_core
         )
-        return spend_bundle
 
-    async def cc_generate_eve_spend(self, spendslist, sigs=[]):
-        # spendslist is [] of (coin, parent_info, outputamount, innersol)
-        auditor = spendslist[0][0]
-        core = None
-        if auditor in self.cc_info.my_coloured_coins:
-            innerpuz = binutils.disassemble(self.cc_info.my_coloured_coins[auditor][0])
-            core = self.cc_info.my_coloured_coins[auditor][1]
-        elif auditor in self.cc_info.eve_coloured_coins:
-            innerpuz = binutils.disassemble(self.cc_info.eve_coloured_coins[auditor][0])
-            core = self.cc_info.eve_coloured_coins[auditor][1]
-        list_of_solutions = []
-        for spend in spendslist:
-            coin = spend[0]
-            innersol = spend[3]
-            parent_info = spend[1]
-            if coin in self.cc_info.my_coloured_coins:
-                innerpuz = binutils.disassemble(self.cc_info.my_coloured_coins[coin][0])
-                solution = cc_wallet_puzzles.cc_make_solution(
-                    core,
-                    parent_info,
-                    coin.amount,
-                    innerpuz,
-                    binutils.disassemble(innersol),
-                    None,
-                    None,
-                )
-                list_of_solutions.append(
-                    CoinSolution(
-                        coin,
-                        clvm.to_sexp_f(
-                            [
-                                cc_wallet_puzzles.cc_make_puzzle(
-                                    self.cc_info.my_coloured_coins[coin][0].get_hash(),
-                                    core,
-                                ),
-                                solution,
-                            ]
-                        ),
-                    )
-                )
-            elif coin in self.cc_info.eve_coloured_coins:
-                innerpuz = binutils.disassemble(
-                    self.cc_info.eve_coloured_coins[coin][0]
-                )
-                solution = cc_wallet_puzzles.cc_make_solution(
-                    core,
-                    parent_info,
-                    coin.amount,
-                    innerpuz,
-                    binutils.disassemble(innersol),
-                    None,
-                    None,
-                )
-                list_of_solutions.append(
-                    CoinSolution(
-                        coin,
-                        clvm.to_sexp_f(
-                            [
-                                cc_wallet_puzzles.cc_make_puzzle(
-                                    self.cc_info.eve_coloured_coins[coin][0].get_hash(),
-                                    core,
-                                ),
-                                solution,
-                            ]
-                        ),
-                    )
-                )
-        aggsig = BLSSignature.aggregate(sigs)
-        spend_bundle = SpendBundle(list_of_solutions, aggsig)
-        return spend_bundle
+        derivation_record = await self.wallet_state_manager.puzzle_store.get_derivation_record(
+            await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
+                innerpuzzlehash
+            )
+        )
+
+        assert derivation_record is not None
+        derivation_record[2] = cc_puzzle.get_hash()
+        await self.wallet_state_manager.puzzle_store.add_derivation_paths([record])
 
     # Create a new coin of value 0 with a given colour
     async def cc_create_zero_val_for_core(self, core):
@@ -340,10 +226,10 @@ class CCWallet:
     def cc_generate_spends_for_coin_list(self, spendslist, sigs=[]):
         # spendslist is [] of (coin, parent_info, outputamount, innersol)
         auditor = spendslist[0][0]
-        core = self.cc_info.my_coloured_coins[auditor][1]
+        core = self.cc_info.my_core
         auditor_info = (
             auditor.parent_coin_info,
-            self.cc_info.my_coloured_coins[auditor][0].get_hash(),
+            self.cc_info.my_coloured_coins[auditor].get_hash(),
             auditor.amount,
         )
         list_of_solutions = []
@@ -351,7 +237,7 @@ class CCWallet:
         # first coin becomes the auditor special case
         spend = spendslist[0]
         coin = spend[0]
-        innerpuz = binutils.disassemble(self.cc_info.my_coloured_coins[coin][0])
+        innerpuz = binutils.disassemble(self.cc_info.my_coloured_coins[coin])
         innersol = spend[3]
         parent_info = spend[1]
         solution = cc_wallet_puzzles.cc_make_solution(
@@ -369,7 +255,7 @@ class CCWallet:
                 clvm.to_sexp_f(
                     [
                         cc_wallet_puzzles.cc_make_puzzle(
-                            self.cc_info.my_coloured_coins[coin][0].get_hash(), core
+                            self.cc_info.my_coloured_coins[coin].get_hash(), core
                         ),
                         solution,
                     ]
@@ -384,7 +270,7 @@ class CCWallet:
         # loop through remaining spends, treating them as aggregatees
         for spend in spendslist[1:]:
             coin = spend[0]
-            innerpuz = binutils.disassemble(self.cc_info.my_coloured_coins[coin][0])
+            innerpuz = binutils.disassemble(self.cc_info.my_coloured_coins[coin])
             innersol = spend[3]
             parent_info = spend[1]
             solution = cc_wallet_puzzles.cc_make_solution(
@@ -402,7 +288,7 @@ class CCWallet:
                     clvm.to_sexp_f(
                         [
                             cc_wallet_puzzles.cc_make_puzzle(
-                                self.cc_info.my_coloured_coins[coin][0].get_hash(), core
+                                self.cc_info.my_coloured_coins[coin].get_hash(), core
                             ),
                             solution,
                         ]

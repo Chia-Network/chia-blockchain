@@ -1,6 +1,7 @@
 from typing import Dict, Optional, List, Tuple, Set, Any
 import clvm
 from blspy import ExtendedPrivateKey, PublicKey
+from clvm_tools import binutils
 import logging
 from src.types.BLSSignature import BLSSignature
 from src.types.coin import Coin
@@ -28,6 +29,8 @@ from src.wallet.puzzles.puzzle_utils import (
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.wallet_info import WalletInfo
+from src.wallet.util.wallet_types import WalletType
+from src.wallet.cc_wallet import cc_wallet_puzzles
 
 
 class Wallet:
@@ -378,3 +381,83 @@ class Wallet:
         await self.wallet_state_manager.add_pending_transaction(
             spend_bundle, self.wallet_info.id
         )
+
+    async def generate_new_coloured_coins(
+        self, amount: uint64, recipient_innerpuzhash: bytes32
+    ) -> SpendBundle:
+        # select an uncoloured coin to be the genesis coin for this colour
+        secondary_coins = self.wallet.select_coins(amount)
+        if secondary_coins is None:
+            self.log.info(f"coins is None")
+            return None
+        genesisCoin = secondary_coins.pop()
+
+        # create coloured coin core
+        core = cc_wallet_puzzles.cc_make_core(genesisCoin.name())
+
+        spends = []
+        change = genesisCoin.amount + sum([x.amount for x in secondary_coins])
+        change = change - amount
+        pubkey, secretkey = self.get_keys(genesisCoin.puzzle_hash)
+        puzzle = self.puzzle_for_pk(bytes(pubkey))
+        primaries = []
+        evespendslist = []
+        # Create the solution for the genesis coin
+        innerpuzhash = recipient_innerpuzhash
+        newpuzzle = cc_wallet_puzzles.cc_make_puzzle(innerpuzhash, core)
+        newpuzzlehash = newpuzzle.get_hash()
+        primaries.append({"puzzlehash": newpuzzlehash, "amount": amount})
+        # prepare coins for a second spend so that the parent info is correctly setup
+        evespendslist.append(
+            (
+                Coin(genesisCoin, newpuzzlehash, amount),
+                genesisCoin.name(),
+                amount,
+                binutils.assemble("((q ()) ())"),
+                newpuzzle,
+            )
+        )
+
+        if change > 0:
+            changepuzzlehash = self.wallet.get_new_puzzlehash()
+            primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
+        solution = self.wallet.make_solution(primaries=primaries)
+        spends.append((puzzle, CoinSolution(genesisCoin, solution)))
+
+        # Create the solutions for the secondary coins
+        solution = self.wallet.make_solution(consumed=[genesisCoin.name()])
+        for coin in secondary_coins:
+            pubkey, secretkey = self.get_keys(coin.puzzle_hash)
+            puzzle = self.wallet.puzzle_for_pk(bytes(pubkey))
+            spends.append((puzzle, CoinSolution(coin, solution)))
+
+        spend_bundle = self.wallet.sign_transaction(spends)
+
+        # automatically do the eve spend
+        spend_bundle = spend_bundle.aggregate(
+            [spend_bundle, self.cc_generate_eve_spend(evespendslist)]
+        )
+        return spend_bundle, core
+
+    async def cc_generate_eve_spend(self, evespendslist, sigs=[]):
+        # evespendslist is [] of (coin, parent_info, outputamount, innersol, fullpuzzlereveal)
+        list_of_solutions = []
+        for spend in evespendslist:
+            coin = spend[0]
+            innersol = spend[3]
+            parent_info = spend[1]
+            solution = self.cc_make_solution(
+                "()",
+                parent_info,
+                coin.amount,
+                f"0x{coin.puzzle_hash}",
+                binutils.disassemble(innersol),
+                None,
+                None,
+            )
+            list_of_solutions.append(
+                CoinSolution(coin, clvm.to_sexp_f([spend[4], solution,]),)
+            )
+        aggsig = BLSSignature.aggregate(sigs)
+        spend_bundle = SpendBundle(list_of_solutions, aggsig)
+        return spend_bundle
