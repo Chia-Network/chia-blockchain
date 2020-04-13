@@ -12,7 +12,7 @@ Remove-Item "$buildDir" -Recurse -Force -ErrorAction Ignore
 New-Item -ItemType Directory -Path "$buildDir"
 
 # package up the electron stuff and sources
-electron-packager ../electron-ui $env:exename --platform=win32 --icon=icon.ico
+electron-packager ../electron-ui $env:exename --platform=win32 --arch=x64 --icon=icon.ico --app-version="$env:version" --win32metadata.CompanyName="Chia Network" --win32metadata.ProductName="Chia Wallet" --app-copyright="Chia Network 2020"
 if ($LastExitCode) { exit $LastExitCode }
 
 $tempName = "electron-packager-files"
