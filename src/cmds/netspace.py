@@ -43,6 +43,25 @@ def human_local_time(timestamp):
     return time.strftime("%a %b %d %Y %T %Z", time_local)
 
 
+async def get_total_miniters(rpc_client, old_block, new_block):
+    """
+    Calculates the sum of min_iters from all blocks starting from old and up to and including
+    new_block.
+    # TODO: compute real min_iters for multiple epochs, using height RPC
+    """
+    old_block_parent = await rpc_client.get_header(old_block.prev_header_hash)
+    new_block_parent = await rpc_client.get_header(new_block.prev_header_hash)
+    old_diff = old_block.weight - old_block_parent.weight
+    new_diff = new_block.weight - new_block_parent.weight
+    mi1 = calculate_min_iters_from_iterations(
+        old_block.proof_of_space, old_diff, old_block.proof_of_time.number_of_iterations
+    )
+    mi2 = calculate_min_iters_from_iterations(
+        new_block.proof_of_space, new_diff, new_block.proof_of_time.number_of_iterations
+    )
+    return (new_block.height - old_block.height) * ((mi2 + mi1) / 2)
+
+
 async def netstorge_async(args, parser):
 
     # add config.yaml check for rpc-port
