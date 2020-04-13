@@ -8,12 +8,24 @@ from src.util.config import (
     create_default_chia_config,
     load_config,
     save_config,
+    initial_config_file,
 )
 from src.util.path import mkdir, make_path_relative, path_from_root
+import yaml
+
+from src.ssl.create_ssl import generate_selfsigned_cert
 
 
 def make_parser(parser):
     parser.set_defaults(function=init)
+
+
+def dict_add_new_default(updated, default):
+    for k, v in default.items():
+        if isinstance(v, dict) and k in updated:
+            dict_add_new_default(updated[k], default[k])
+        elif k not in updated:
+            updated[k] = default[k]
 
 
 def migrate_from(old_root, new_root, manifest):
@@ -28,6 +40,7 @@ def migrate_from(old_root, new_root, manifest):
         return 0
     print(f"\n{old_root} found")
     print(f"Copying files from {old_root} to {new_root}\n")
+    not_found = []
     for f in manifest:
         old_path = old_root / f
         new_path = new_root / f
@@ -36,11 +49,20 @@ def migrate_from(old_root, new_root, manifest):
             mkdir(new_path.parent)
             shutil.copy(old_path, new_path)
         else:
+            not_found.append(f)
             print(f"{old_path} not found, skipping")
+    # update config yaml with new keys
+    config = load_config(new_root, "config.yaml")
+    config_str = initial_config_file("config.yaml")
+    default_config = yaml.load(config_str)
+    dict_add_new_default(config, default_config)
 
+    save_config(new_root, "config.yaml", config)
     # migrate plots
     # for now, we simply leave them where they are
     # and make what may have been relative paths absolute
+    if "config/trusted.key" in not_found or "config/trusted.key" in not_found:
+        initialize_ssl(new_root)
 
     plots_config = load_config(new_root, "plots.yaml")
 
@@ -75,6 +97,17 @@ def migrate_from(old_root, new_root, manifest):
     return 1
 
 
+def initialize_ssl(root_path):
+    cert, key = generate_selfsigned_cert()
+    path_crt = config_path_for_filename(root_path, "trusted.crt")
+    path_key = config_path_for_filename(root_path, "trusted.key")
+    breakpoint()
+    with open(path_crt, "w") as f:
+        f.write(cert)
+    with open(path_key, "w") as f:
+        f.write(key)
+
+
 def init(args, parser):
     return chia_init(args)
 
@@ -91,6 +124,8 @@ def chia_init(args):
         "config/plots.yaml",
         "config/keys.yaml",
         "db/blockchain_v3.db",
+        "config/trusted.crt",
+        "config/trusted.key",
     ]
 
     PATH_MANIFEST_LIST = [
@@ -104,6 +139,7 @@ def chia_init(args):
             break
     else:
         create_default_chia_config(root_path)
+        initialize_ssl(root_path)
         print("Please generate your keys with chia-generate-keys")
 
     return 0

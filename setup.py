@@ -16,6 +16,7 @@ dependencies = [
     "sortedcontainers==2.1.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
     "clvm-tools==0.1.1",  # clvm compiler tools
+    "cryptography==2.8",
 ]
 
 upnp_dependencies = [
@@ -60,6 +61,7 @@ kwargs = dict(
         "src.wallet.puzzles",
         "src.wallet.rl_wallet",
         "src.wallet.util",
+        "src.ssl",
     ],
     scripts=[
         "scripts/_chia-common",

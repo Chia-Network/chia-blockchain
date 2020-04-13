@@ -19,6 +19,10 @@ harvester:
   # new_plot_root is the default location where new plots are created by "chia-create-plots"
   new_plot_root: plots
 
+  client_ssl:
+    crt: "trusted.crt"
+    key: "trusted.key"
+
 farmer:
   # The farmer server (if run) will run on this port
   port: 8447
@@ -35,6 +39,14 @@ farmer:
 
   propagate_threshold: 50000
   logging: *logging
+
+  server_ssl:
+    crt: "trusted.crt"
+    key: "trusted.key"
+
+  client_ssl:
+    crt: "trusted.crt"
+    key: "trusted.key"
 
 # Don't run this unless you want to run VDF clients on the local machine.
 timelord_launcher:
