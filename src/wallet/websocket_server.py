@@ -342,7 +342,7 @@ class WebSocketServer:
             elif command == "cc_get_name":
                 await self.cc_get_name(websocket, data, command)
             elif command == "cc_set_core":
-                await self.cc_set_core (websocket, data, command)
+                await self.cc_set_core(websocket, data, command)
             else:
                 response = {"error": f"unknown_command {command}"}
                 await websocket.send(dict_to_json_str(response))
