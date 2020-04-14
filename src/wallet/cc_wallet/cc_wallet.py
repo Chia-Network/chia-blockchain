@@ -44,7 +44,6 @@ class CCInfo(Streamable):
 
 
 class CCWallet:
-    private_key: ExtendedPrivateKey
     key_config: Dict
     config: Dict
     server: Optional[ChiaServer]
@@ -63,20 +62,9 @@ class CCWallet:
         wallet: Wallet,
         name: str = None,
     ):
-        unused: Optional[
-            uint32
-        ] = await wallet_state_manager.puzzle_store.get_unused_derivation_path()
-        if unused is None:
-            await wallet_state_manager.create_more_puzzle_hashes()
-        unused = await wallet_state_manager.puzzle_store.get_unused_derivation_path()
-        assert unused is not None
         self = CCWallet()
         self.config = config
         self.key_config = key_config
-        sk_hex = self.key_config["wallet_sk"]
-        self.private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
-        private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
-        pubkey_bytes: bytes = bytes(private_key.public_child(unused).get_public_key())
 
         if name:
             self.log = logging.getLogger(name)
@@ -87,25 +75,11 @@ class CCWallet:
 
         cc_info = CCInfo(None, dict(), dict(), dict(), dict(), None, dict())
         info_as_string = json.dumps(cc_info.to_json_dict())
-        await wallet_state_manager.user_store.create_wallet(
+        wallet_info = await wallet_state_manager.user_store.create_wallet(
             "CC Wallet", WalletType.COLOURED_COIN, info_as_string
         )
-        wallet_info = await wallet_state_manager.user_store.get_last_wallet()
         if wallet_info is None:
             raise
-
-        await wallet_state_manager.puzzle_store.add_derivation_paths(
-            [
-                DerivationRecord(
-                    unused,
-                    token_bytes(),
-                    pubkey_bytes,
-                    WalletType.COLOURED_COIN,
-                    wallet_info.id,
-                )
-            ]
-        )
-        await wallet_state_manager.puzzle_store.set_used_up_to(unused)
 
         return self
 
