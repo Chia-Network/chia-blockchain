@@ -12,7 +12,7 @@ from chiabip158 import PyBIP158
 
 from chiapos import DiskPlotter, DiskProver
 from src import __version__
-from src.cmds.init import create_default_chia_config
+from src.cmds.init import create_default_chia_config, initialize_ssl
 from src.consensus import block_rewards, pot_iterations
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
@@ -69,6 +69,7 @@ class BlockTools:
 
     def __init__(self, root_path: Path = TEST_ROOT_PATH):
         create_default_chia_config(root_path)
+        initialize_ssl(root_path)
         self.root_path = root_path
         self.plot_config: Dict = {"plots": {}}
         self.pool_sk = pool_sk

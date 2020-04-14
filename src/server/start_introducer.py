@@ -30,7 +30,7 @@ async def async_main():
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
-        config["port"], introducer, NodeType.INTRODUCER, ping_interval, network_id
+        config["port"], introducer, NodeType.INTRODUCER, ping_interval, network_id, DEFAULT_ROOT_PATH
     )
     introducer.set_server(server)
     _ = await server.start_server(None, config)
