@@ -81,9 +81,6 @@ class Wallet:
             self.wallet_info.id
         )
 
-    async def can_generate_puzzle_hash(self, hash: bytes32) -> bool:
-        return await self.wallet_state_manager.puzzle_store.puzzle_hash_exists(hash)
-
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
         return puzzle_for_pk(pubkey)
 
