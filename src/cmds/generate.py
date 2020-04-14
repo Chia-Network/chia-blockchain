@@ -1,22 +1,16 @@
-import argparse
 from secrets import token_bytes
 
 from blspy import PrivateKey, ExtendedPrivateKey
 from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.types.BLSSignature import BLSPublicKey
 from src.util.config import config_path_for_filename, load_config, save_config, str2bool
-from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.path import mkdir
 
 
-def main():
+def make_parser(parser):
     """
     Allows replacing keys of farmer, harvester, and pool, all default to True.
     """
-
-    root_path = DEFAULT_ROOT_PATH
-    keys_yaml = "keys.yaml"
-    parser = argparse.ArgumentParser(description="Chia key generator script.")
     parser.add_argument(
         "-a",
         "--harvester",
@@ -44,9 +38,23 @@ def main():
         default=True,
         help="Regenerate wallet keys",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "keys",
+        help='must the literal "keys"',
+        type=str,
+        nargs=1,
+    )
+    parser.set_defaults(function=generate)
 
+
+def generate(args, parser):
+    root_path = args.root_path
+    keys_yaml = "keys.yaml"
     key_config_filename = config_path_for_filename(root_path, keys_yaml)
+    if args.keys != ["keys"]:
+        parser.print_help()
+        print("\nTry `chia generate keys`")
+        return 1
     if key_config_filename.exists():
         # If the file exists, warn the user
         yn = input(
@@ -54,7 +62,7 @@ def main():
             f" you want to override the keys? Plots might become invalid. (y/n): "
         )
         if not (yn.lower() == "y" or yn.lower() == "yes"):
-            quit()
+            return 1
     else:
         # Create the file if if doesn't exist
         mkdir(key_config_filename.parent)
@@ -91,7 +99,3 @@ def main():
         key_config["pool_sks"] = [bytes(pool_sk).hex() for pool_sk in pool_sks]
         key_config["pool_target"] = pool_target.hex()
         save_config(root_path, keys_yaml, key_config)
-
-
-if __name__ == "__main__":
-    main()

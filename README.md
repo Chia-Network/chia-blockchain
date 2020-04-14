@@ -25,7 +25,7 @@ chia init
 ## Generate keys
 First, create some keys by running the following script if you don't already have keys:
 ```bash
-chia-generate-keys
+chia generate keys
 ```
 
 ## Run a full node + wallet
