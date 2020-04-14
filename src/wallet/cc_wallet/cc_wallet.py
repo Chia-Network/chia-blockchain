@@ -44,9 +44,7 @@ class CCInfo(Streamable):
 
 
 class CCWallet:
-    key_config: Dict
     config: Dict
-    server: Optional[ChiaServer]
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
@@ -55,11 +53,35 @@ class CCWallet:
     standard_wallet: Wallet
 
     @staticmethod
+    async def create_new_cc(
+        config: Dict, wallet_state_manager: Any, wallet: Wallet, name: str = None,
+    ):
+        self = CCWallet()
+        self.config = config
+        self.standard_wallet = wallet
+        if name:
+            self.log = logging.getLogger(name)
+        else:
+            self.log = logging.getLogger(__name__)
+
+        self.wallet_state_manager = wallet_state_manager
+
+        self.cc_info = CCInfo(None, dict(), dict(), dict(), dict(), None, dict())
+        info_as_string = json.dumps(self.cc_info.to_json_dict())
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+            "CC Wallet", WalletType.COLOURED_COIN, info_as_string
+        )
+        if self.wallet_info is None:
+            raise
+
+        return self
+
+    @staticmethod
     async def create(
         config: Dict,
-        key_config: Dict,
         wallet_state_manager: Any,
         wallet: Wallet,
+        wallet_info: WalletInfo,
         name: str = None,
     ):
         self = CCWallet()
@@ -72,15 +94,9 @@ class CCWallet:
             self.log = logging.getLogger(__name__)
 
         self.wallet_state_manager = wallet_state_manager
-
-        cc_info = CCInfo(None, dict(), dict(), dict(), dict(), None, dict())
-        info_as_string = json.dumps(cc_info.to_json_dict())
-        wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "CC Wallet", WalletType.COLOURED_COIN, info_as_string
-        )
-        if wallet_info is None:
-            raise
-
+        self.wallet_info = wallet_info
+        self.standard_wallet = wallet
+        self.cc_info = CCInfo.from_json_dict(json.loads(wallet_info.data))
         return self
 
     async def get_name(self):
