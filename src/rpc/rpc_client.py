@@ -51,14 +51,16 @@ class RpcClient:
             raise
         return FullBlock.from_json_dict(response)
 
-    async def get_block_by_height(self, header_height) -> Optional[FullBlock]:
+    async def get_header_by_height(self, header_height) -> Optional[Header]:
         try:
-            response = await self.fetch("get_block_by_height", {"height": header_height})
+            response = await self.fetch(
+                "get_header_by_height", {"height": header_height}
+            )
         except aiohttp.client_exceptions.ClientResponseError as e:
             if e.message == "Not Found":
                 return None
             raise
-        return FullBlock.from_json_dict(response)
+        return Header.from_json_dict(response)
 
     async def get_header(self, header_hash) -> Optional[Header]:
         try:
