@@ -1,7 +1,9 @@
 import argparse
 import importlib
+import pathlib
 
 from src import __version__
+from src.util.default_root import DEFAULT_ROOT_PATH
 
 
 SUBCOMMANDS = ["init", "show", "version"]
@@ -11,6 +13,14 @@ def create_parser():
     parser = argparse.ArgumentParser(
         description="Manage chia blockchain infrastructure (%s)." % __version__,
         epilog="You can combine -s and -c. Try 'watch -n 10 chia show -s -c' if you have 'watch' installed.",
+    )
+
+    parser.add_argument(
+        "-r",
+        "--root-path",
+        help="Config file root (defaults to %s)." % DEFAULT_ROOT_PATH,
+        type=pathlib.Path,
+        default=DEFAULT_ROOT_PATH,
     )
 
     subparsers = parser.add_subparsers()

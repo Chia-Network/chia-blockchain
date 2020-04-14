@@ -9,7 +9,6 @@ from src.util.config import (
     load_config,
     save_config,
 )
-from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.path import mkdir, make_path_relative, path_from_root
 
 
@@ -77,11 +76,11 @@ def migrate_from(old_root, new_root, manifest):
 
 
 def init(args, parser):
-    return chia_init()
+    return chia_init(args)
 
 
-def chia_init():
-    root_path = DEFAULT_ROOT_PATH
+def chia_init(args):
+    root_path = args.root_path
     print(f"migrating to {root_path}")
     if root_path.is_dir():
         print(f"{root_path} already exists, no action taken")
