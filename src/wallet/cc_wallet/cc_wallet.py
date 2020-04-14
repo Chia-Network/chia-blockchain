@@ -36,7 +36,8 @@ class CCInfo(Streamable):
     ]  # {coin.name(): (parent_coin_info, puzzle_hash, coin.amount)}
     puzzle_cache: Optional[Dict]  # {"innerpuz"+"core": puzzle}
     my_colour_name: Optional[str]
-
+    derivation_todos: Optional[List]
+    # TODO: write tests based on wallet tests
     # TODO: {Matt} compatibility based on deriving innerpuzzle from derivation record
     # TODO: {Matt} convert this into wallet_state_manager.puzzle_store
     # TODO: {Matt} add hooks in WebSocketServer for all UI functions
@@ -44,10 +45,7 @@ class CCInfo(Streamable):
 
 
 class CCWallet:
-    private_key: ExtendedPrivateKey
-    key_config: Dict
     config: Dict
-    server: Optional[ChiaServer]
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
@@ -56,28 +54,12 @@ class CCWallet:
     standard_wallet: Wallet
 
     @staticmethod
-    async def create(
-        config: Dict,
-        key_config: Dict,
-        wallet_state_manager: Any,
-        wallet: Wallet,
-        name: str = None,
+    async def create_new_cc(
+        config: Dict, wallet_state_manager: Any, wallet: Wallet, name: str = None,
     ):
-        unused: Optional[
-            uint32
-        ] = await wallet_state_manager.puzzle_store.get_unused_derivation_path()
-        if unused is None:
-            await wallet_state_manager.create_more_puzzle_hashes()
-        unused = await wallet_state_manager.puzzle_store.get_unused_derivation_path()
-        assert unused is not None
         self = CCWallet()
         self.config = config
-        self.key_config = key_config
-        sk_hex = self.key_config["wallet_sk"]
-        self.private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
-        private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
-        pubkey_bytes: bytes = bytes(private_key.public_child(unused).get_public_key())
-
+        self.standard_wallet = wallet
         if name:
             self.log = logging.getLogger(name)
         else:
@@ -85,28 +67,36 @@ class CCWallet:
 
         self.wallet_state_manager = wallet_state_manager
 
-        cc_info = CCInfo(None, dict(), dict(), dict(), dict(), None, dict())
-        info_as_string = json.dumps(cc_info.to_json_dict())
-        await wallet_state_manager.user_store.create_wallet(
+        self.cc_info = CCInfo(None, dict(), dict(), dict(), dict(), None, [], dict())
+        info_as_string = json.dumps(self.cc_info.to_json_dict())
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "CC Wallet", WalletType.COLOURED_COIN, info_as_string
         )
-        wallet_info = await wallet_state_manager.user_store.get_last_wallet()
-        if wallet_info is None:
+        if self.wallet_info is None:
             raise
 
-        await wallet_state_manager.puzzle_store.add_derivation_paths(
-            [
-                DerivationRecord(
-                    unused,
-                    token_bytes(),
-                    pubkey_bytes,
-                    WalletType.COLOURED_COIN,
-                    wallet_info.id,
-                )
-            ]
-        )
-        await wallet_state_manager.puzzle_store.set_used_up_to(unused)
+        return self
 
+    @staticmethod
+    async def create(
+        config: Dict,
+        wallet_state_manager: Any,
+        wallet: Wallet,
+        wallet_info: WalletInfo,
+        name: str = None,
+    ):
+        self = CCWallet()
+        self.config = config
+
+        if name:
+            self.log = logging.getLogger(name)
+        else:
+            self.log = logging.getLogger(__name__)
+
+        self.wallet_state_manager = wallet_state_manager
+        self.wallet_info = wallet_info
+        self.standard_wallet = wallet
+        self.cc_info = CCInfo.from_json_dict(json.loads(wallet_info.data))
         return self
 
     async def get_name(self):
@@ -117,6 +107,7 @@ class CCWallet:
 
     async def set_core(self, core: str):
         self.cc_info.my_core = core
+        self.update_derivation_todos()
 
     async def coin_added(self, coin: Coin, height: int, header_hash: bytes32):
         """ Notification from wallet state manager that wallet has been received. """
@@ -148,7 +139,7 @@ class CCWallet:
             }
 
             data_str = dict_to_json_str(data)
-            await self.wallet_state_manager.create_action(
+            response = await self.wallet_state_manager.create_action(
                 self,
                 name="cc_get_generator",
                 wallet_id=self.wallet_info.id,
@@ -157,27 +148,54 @@ class CCWallet:
                 done=False,
                 data=data_str,
             )
+        # TODO: actually fetch parent information
 
     async def generator_received(self, generator: Program, action_id: int):
         """ Notification that wallet has received a generator it asked for. """
 
         await self.wallet_state_manager.set_action_done(action_id)
 
-    async def get_new_ccpuzzlehash(self):
-        innerpuzzlehash = self.wallet.get_new_puzzle().get_hash()
-        cc_puzzle = cc_wallet_puzzles.cc_make_puzzle(
-            innerpuzzlehash, self.cc_info.my_core
-        )
+    # Note, if you do this before you have a colour assigned you will need to add the colour
+    async def get_new_innerpuzhash(self):
+        async with self.wallet_state_manager.puzzle_store.lock:
+            max = await self.wallet_state_manager.puzzle_store.get_last_derivation_path()
+            max_pk = self.standard_wallet.get_public_key(max)
+            innerpuzzlehash = self.standard_wallet.puzzle_for_pk(bytes(max_pk)).get_hash()
+            if self.cc_info.my_core is not None:
+                cc_puzzle = cc_wallet_puzzles.cc_make_puzzle(
+                    innerpuzzlehash, self.cc_info.my_core
+                )
+                new_inner_puzzle_record = DerivationRecord(max, innerpuzzlehash.get_hash(), max_pk, WalletType.COLORED_COIN, self.wallet_info.id)
+                new_record = DerivationRecord(max, cc_puzzle.get_hash(), max_pk, WalletType.COLORED_COIN, self.wallet_info.id)
+                await self.wallet_state_manager.puzzle_store.add_derivation_paths([new_inner_puzzle_record, new_record])
+            else:
+                # If we don't have a colour yet, store this record to be updated later
+                self.cc_info.derivation_todos.append(max)
+            return innerpuzzlehash
 
-        derivation_record = await self.wallet_state_manager.puzzle_store.get_derivation_record(
-            await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
-                innerpuzzlehash
+    async def update_derivation_todos(self):
+        for index in self.cc_info.derivation_todos:
+            pk = self.standard_wallet.get_public_key(index)
+            innerpuzzlehash = self.standard_wallet.puzzle_for_pk(bytes(pk)).get_hash()
+            cc_puzzle = cc_wallet_puzzles.cc_make_puzzle(
+                innerpuzzlehash, self.cc_info.my_core
             )
-        )
+            new_inner_puzzle_record = DerivationRecord(index, innerpuzzlehash.get_hash(), pk, WalletType.COLORED_COIN, self.wallet_info.id)
+            new_record = DerivationRecord(index, cc_puzzle.get_hash(), pk, WalletType.COLORED_COIN, self.wallet_info.id)
+            await self.wallet_state_manager.puzzle_store.add_derivation_paths([new_inner_puzzle_record, new_record])
 
-        assert derivation_record is not None
-        derivation_record[2] = cc_puzzle.get_hash()
-        await self.wallet_state_manager.puzzle_store.add_derivation_paths([record])
+    async def get_new_ccpuzzlehash(self):
+        async with self.wallet_state_manager.puzzle_store.lock:
+            max = await self.wallet_state_manager.puzzle_store.get_last_derivation_path()
+            max_pk = self.standard_wallet.get_public_key(max)
+            innerpuzzlehash = self.standard_wallet.puzzle_for_pk(bytes(max_pk)).get_hash()
+
+            cc_puzzle = cc_wallet_puzzles.cc_make_puzzle(
+                innerpuzzlehash, self.cc_info.my_core
+            )
+            new_inner_puzzle_record = DerivationRecord(max, innerpuzzlehash.get_hash(), max_pk, WalletType.COLORED_COIN, self.wallet_info.id)
+            new_record = DerivationRecord(max, cc_puzzle.get_hash(), max_pk, WalletType.COLORED_COIN, self.wallet_info.id)
+            await self.wallet_state_manager.puzzle_store.add_derivation_paths([new_inner_puzzle_record, new_record])
 
     # Create a new coin of value 0 with a given colour
     async def cc_create_zero_val_for_core(self, core):
@@ -325,3 +343,59 @@ class CCWallet:
         solution = Program(binutils.assemble("()"))
         coinsol = CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
         return coinsol
+
+    # Create the spend bundle given a relative amount change (i.e -400 or 1000) and a colour
+    def create_spend_bundle_relative_core(self, cc_amount):
+        # Coloured Coin processing
+
+        # If we're losing value then get coloured coins with at least that much value
+        # If we're gaining value then our amount doesn't matter
+        if cc_amount < 0:
+            cc_spends = self.select_coins(abs(cc_amount))
+        else:
+            cc_spends = self.select_coins(1)
+        if cc_spends is None:
+            return None
+
+        # Calculate output amount given relative difference and sum of actual values
+        spend_value = sum([coin.amount for coin in cc_spends])
+        cc_amount = spend_value + cc_amount
+
+        # Loop through coins and create solution for innerpuzzle
+        list_of_solutions = []
+        output_created = None
+        sigs = []
+        for coin in cc_spends:
+            if output_created is None:
+                newinnerpuzhash = self.get_new_innerpuzhash()
+                innersol = self.make_solution(
+                    primaries=[{"puzzlehash": newinnerpuzhash, "amount": cc_amount}]
+                )
+                output_created = coin
+            else:
+                innersol = self.make_solution(consumed=[output_created.name()])
+            if coin in self.my_coloured_coins:
+                innerpuz = self.my_coloured_coins[coin][0]
+            # Use coin info to create solution and add coin and solution to list of CoinSolutions
+            solution = self.cc_make_solution(
+                self.my_core,
+                self.parent_info[coin.parent_coin_info],
+                coin.amount,
+                binutils.disassemble(innerpuz),
+                binutils.disassemble(innersol),
+                None,
+                None,
+            )
+            list_of_solutions.append(
+                CoinSolution(
+                    coin,
+                    clvm.to_sexp_f(
+                        [self.cc_make_puzzle(innerpuz.get_hash(), core), solution]
+                    ),
+                )
+            )
+            sigs = sigs + self.get_sigs_for_innerpuz_with_innersol(innerpuz, innersol)
+
+        aggsig = BLSSignature.aggregate(sigs)
+
+        return SpendBundle(list_of_solutions, aggsig)

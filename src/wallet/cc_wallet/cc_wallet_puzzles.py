@@ -6,20 +6,15 @@ from src.types.coin_solution import CoinSolution
 
 
 # This is for spending an existing coloured coin
-def cc_make_puzzle(self, innerpuzhash, core):
-    key = f"{innerpuzhash}{core}"
-    # Check if we have made this puzzle before for speedup
-    if key in self.puzzle_cache:
-        return self.puzzle_cache[key]
+def cc_make_puzzle(innerpuzhash, core):
     # Puzzle runs the core, but stores innerpuzhash commitment
     puzstring = f"(r (c (q 0x{innerpuzhash}) ((c (q {core}) (a)))))"
     result = Program(binutils.assemble(puzstring))
-    self.puzzle_cache[key] = result
     return result
 
 
 # Makes a core given a genesisID (aka the "colour")
-def cc_make_core(self, originID):
+def cc_make_core(originID):
     # solution is f"({core} {parent_str} {my_amount} {innerpuzreveal} {innersol} {auditor_info} {aggees})"
     # parent_str is either an atom or list depending on the type of spend
     # auditor is (primary_input, innerpuzzlehash, amount)
@@ -30,51 +25,50 @@ def cc_make_core(self, originID):
 
     return core
 
-    # This is for spending a recieved coloured coin
-    def cc_make_solution(
-        self,
-        core,
-        parent_info,
-        amount,
-        innerpuzreveal,
-        innersol,
-        auditor,
-        auditees=None,
-    ):
-        parent_str = ""
-        # parent_info is a triplet if parent was coloured or an atom if parent was genesis coin or we're a printed 0 val
-        # genesis coin isn't coloured, child of genesis uses originID, all subsequent children use triplets
-        # auditor is (primary_input, innerpuzzlehash, amount)
-        if isinstance(parent_info, tuple):
-            #  (parent primary input, parent inner puzzle hash, parent amount)
-            if parent_info[1][0:2] == "0x":
-                parent_str = f"(0x{parent_info[0]} {parent_info[1]} {parent_info[2]})"
-            else:
-                parent_str = f"(0x{parent_info[0]} 0x{parent_info[1]} {parent_info[2]})"
+# This is for spending a recieved coloured coin
+def cc_make_solution(
+    core,
+    parent_info,
+    amount,
+    innerpuzreveal,
+    innersol,
+    auditor,
+    auditees=None,
+):
+    parent_str = ""
+    # parent_info is a triplet if parent was coloured or an atom if parent was genesis coin or we're a printed 0 val
+    # genesis coin isn't coloured, child of genesis uses originID, all subsequent children use triplets
+    # auditor is (primary_input, innerpuzzlehash, amount)
+    if isinstance(parent_info, tuple):
+        #  (parent primary input, parent inner puzzle hash, parent amount)
+        if parent_info[1][0:2] == "0x":
+            parent_str = f"(0x{parent_info[0]} {parent_info[1]} {parent_info[2]})"
         else:
-            parent_str = f"0x{parent_info.hex()}"
+            parent_str = f"(0x{parent_info[0]} 0x{parent_info[1]} {parent_info[2]})"
+    else:
+        parent_str = f"0x{parent_info.hex()}"
 
-        auditor_formatted = "()"
-        if auditor is not None:
-            auditor_formatted = f"(0x{auditor[0]} 0x{auditor[1]} {auditor[2]})"
+    auditor_formatted = "()"
+    if auditor is not None:
+        auditor_formatted = f"(0x{auditor[0]} 0x{auditor[1]} {auditor[2]})"
 
-        aggees = "("
-        if auditees is not None:
-            for auditee in auditees:
-                # spendslist is [] of (coin, parent_info, outputamount, innersol, innerpuzhash=None)
-                # aggees should be (primary_input, innerpuzhash, coin_amount, output_amount)
-                if auditee[0] in self.my_coloured_coins:
-                    aggees = (
-                        aggees
-                        + f"(0x{auditee[0].parent_coin_info} 0x{self.my_coloured_coins[auditee[0]][0].get_hash()} {auditee[0].amount} {auditee[2]})"
-                    )
-                else:
-                    aggees = (
-                        aggees
-                        + f"(0x{auditee[0].parent_coin_info} 0x{auditee[4]} {auditee[0].amount} {auditee[2]})"
-                    )
+    aggees = "("
+    if auditees is not None:
+        for auditee in auditees:
+            # spendslist is [] of (coin, parent_info, outputamount, innersol, innerpuzhash=None)
+            # aggees should be (primary_input, innerpuzhash, coin_amount, output_amount)
+            if auditee[0] in self.my_coloured_coins:
+                aggees = (
+                    aggees
+                    + f"(0x{auditee[0].parent_coin_info} 0x{self.my_coloured_coins[auditee[0]][0].get_hash()} {auditee[0].amount} {auditee[2]})"
+                )
+            else:
+                aggees = (
+                    aggees
+                    + f"(0x{auditee[0].parent_coin_info} 0x{auditee[4]} {auditee[0].amount} {auditee[2]})"
+                )
 
-        aggees = aggees + ")"
+    aggees = aggees + ")"
 
-        sol = f"(0x{Program(binutils.assemble(core)).get_hash()} {parent_str} {amount} {innerpuzreveal} {innersol} {auditor_formatted} {aggees})"
-        return Program(binutils.assemble(sol))
+    sol = f"(0x{Program(binutils.assemble(core)).get_hash()} {parent_str} {amount} {innerpuzreveal} {innersol} {auditor_formatted} {aggees})"
+    return Program(binutils.assemble(sol))
