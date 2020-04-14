@@ -154,20 +154,17 @@ class CCWallet:
         await self.wallet_state_manager.set_action_done(action_id)
 
     async def get_new_ccpuzzlehash(self):
-        innerpuzzlehash = self.wallet.get_new_puzzle().get_hash()
-        cc_puzzle = cc_wallet_puzzles.cc_make_puzzle(
-            innerpuzzlehash, self.cc_info.my_core
-        )
+        async with self.wallet_state_manager.puzzle_store.lock:
+            max = await self.wallet_state_manager.puzzle_store.get_last_derivation_path()
+            max_pk = self.standard_wallet.get_public_key(max)
+            innerpuzzlehash = self.standard_wallet.puzzle_for_pk(bytes(max_pk)).get_hash()
 
-        derivation_record = await self.wallet_state_manager.puzzle_store.get_derivation_record(
-            await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
-                innerpuzzlehash
+            cc_puzzle = cc_wallet_puzzles.cc_make_puzzle(
+                innerpuzzlehash, self.cc_info.my_core
             )
-        )
-
-        assert derivation_record is not None
-        derivation_record[2] = cc_puzzle.get_hash()
-        await self.wallet_state_manager.puzzle_store.add_derivation_paths([record])
+            new_inner_puzzle_record = DerivationRecord(max, innerpuzzlehash.get_hash(), max_pk, WalletType.COLORED_COIN, self.wallet_info.id)
+            new_record = DerivationRecord(max, cc_puzzle.get_hash(), max_pk, WalletType.COLORED_COIN, self.wallet_info.id)
+            await self.wallet_state_manager.puzzle_store.add_derivation_paths([new_inner_puzzle_record, new_record])
 
     # Create a new coin of value 0 with a given colour
     async def cc_create_zero_val_for_core(self, core):
