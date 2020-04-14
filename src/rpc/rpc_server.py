@@ -108,7 +108,6 @@ class RpcApiHandler:
         header: Optional[Header] = self.full_node.blockchain.headers.get(
             header_hash, None
         )
-        print("Got a header response rpc_server - get_header_by_height")
         if header is None:
             raise web.HTTPNotFound()
         return obj_to_response(header)
