@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+    xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+    <?include "config.wxi"?>    
+    <Fragment>
+        <util:RegistrySearch Variable="walletVersion" 
+            UpgradeCode="$(var.walletUpgradeCode)"
+            Result="version"/>
+        <PackageGroup Id="WalletPackage">
+            <MsiPackage Id="WalletMsiPackage"
+                Compressed="Yes"
+                SourceFile="build\$(var.walletProductName)-$(var.version).msi"
+                InstallCondition="walletVersion < $(var.Version)"/>
+        </PackageGroup>
+    </Fragment>
+</Wix>

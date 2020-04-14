@@ -1,16 +1,16 @@
 <?xml version='1.0' encoding='windows-1252'?>
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
     <?include "config.wxi"?>
-    <Product Name='Chia $(var.version)'
+    <Product Name='Chia Wallet $(var.version)'
         Manufacturer='Chia Network'
         Id='*'
-        UpgradeCode='9FF22D37-6167-4F05-A0BC-9B5D8BECAC7E'
+        UpgradeCode='$(var.walletUpgradeCode)'
         Language='1033'
         Codepage='1252'
         Version='$(var.version)'>
         <Package Id='*'
-            Keywords='Chia Network Installer' 
-            Description="Chia Installer $(var.version)"
+            Keywords='Chia Network Wallet Installer' 
+            Description="Chia Wallet Installer $(var.version)"
             Comments='Chia is a registered trademark of the Chia Network'
             Manufacturer='Chia Network'
             InstallerVersion='500'
@@ -21,8 +21,8 @@
 
         <!-- Media and application properties -->
         <Media Id='1' Cabinet='chia.cab' EmbedCab='yes' DiskPrompt="CD-ROM #1" />
-        <Icon Id="icon.ico" SourceFile="icon.ico"/>
-        <Property Id="ARPPRODUCTICON" Value="icon.ico" />
+        <Icon Id="icon.ico" SourceFile="$(env.resourceDir)\icon.ico"/>
+        <Property Id="ARPPRODUCTICON" Value="$(env.resourceDir)\icon.ico" />
         <Property Id='DiskPrompt' Value="Chia Network's Chia Installation [1]" />
         <Property Id='ARPCOMMENTS'>Chia has a new innovative Nakamoto style consensus algorithm that removes the energy demands of Proof of Work from the system.</Property>
         <Property Id='ARPCONTACT'>hello@chia.net</Property>
@@ -62,9 +62,9 @@
         </InstallExecuteSequence>
 
         <!-- User interface -->
-        <WixVariable Id="WixUIBannerBmp" Value="banner.bmp" />
-        <WixVariable Id="WixUIDialogBmp" Value="dialog.bmp" />
-        <WixVariable Id="WixUILicenseRtf" Value="eula.rtf" />
+        <WixVariable Id="WixUIBannerBmp" Value="$(env.resourceDir)\banner.bmp" />
+        <WixVariable Id="WixUIDialogBmp" Value="$(env.resourceDir)\dialog.bmp" />
+        <WixVariable Id="WixUILicenseRtf" Value="$(env.resourceDir)\eula.rtf" />
         <UIRef Id="WixUI_Minimal" />
         <UIRef Id="WixUI_ErrorProgressText" />
 

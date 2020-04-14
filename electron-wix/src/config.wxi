@@ -4,4 +4,6 @@
     <!-- values can be overriden here -->    
     <?define version="$(env.version)" ?>
     <?define exename="$(env.exename).exe" ?>
+    <?define walletProductName="chia-wallet"?>
+    <?define walletUpgradeCode="9FF22D37-6167-4F05-A0BC-9B5D8BECAC7E" ?>    
 </Include>
