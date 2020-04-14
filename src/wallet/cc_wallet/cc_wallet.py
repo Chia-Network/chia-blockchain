@@ -355,7 +355,7 @@ class CCWallet:
             auditees.append((coin.parent_coin_info, self.cc_info.innerpuzzle_lookup_for_coin[coin], coin.amount, 0))
 
         # first coin becomes the auditor special case
-        innerpuz = binutils.disassemble(self.cc_info.innerpuzzle_lookup_for_coin[auditor])
+        innerpuz = self.cc_info.innerpuzzle_lookup_for_coin[auditor]
         primaries = [{"puzzlehash": puzzle_hash, "amount": amount}]
         if change > 0:
             changepuzzlehash = await self.get_new_innerpuzhash()
@@ -368,7 +368,7 @@ class CCWallet:
             self.cc_info.my_core,
             (parent_info.parent_name, parent_info.inner_puzzle_hash, parent_info.amount),
             auditor.amount,
-            innerpuz,
+            binutils.disassemble(innerpuz),
             binutils.disassemble(innersol),
             auditor_info,
             auditees,
@@ -393,7 +393,7 @@ class CCWallet:
 
         # loop through remaining spends, treating them as aggregatees
         for coin in selected_coins[1:]:
-            innerpuz = binutils.disassemble(self.cc_info.innerpuzzle_lookup_for_coin[coin])
+            innerpuz = self.cc_info.innerpuzzle_lookup_for_coin[coin]
             innersol = self.standard_wallet.make_solution({})
             sigs.append(self.get_sigs_for_innerpuz_with_innersol(innerpuz, innersol))
             parent_info = self.cc_info.parent_info[coin.parent_coin_info]
@@ -401,7 +401,7 @@ class CCWallet:
                 self.cc_info.my_core,
                 (parent_info.parent_name, parent_info.inner_puzzle_hash, parent_info.amount),
                 coin.amount,
-                innerpuz,
+                binutils.disassemble(innerpuz,)
                 binutils.disassemble(innersol),
                 auditor_info,
                 None,
