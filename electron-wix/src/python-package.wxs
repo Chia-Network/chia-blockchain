@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" 
+    xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+    <Fragment>
+        <util:RegistrySearch Variable="python37Installed" 
+            Root="HKCU" 
+            Key="Software\Python\PythonCore\3.7" 
+            Result="Exists" 
+            After="Path" />
+        <util:RegistrySearch Variable="python37Version" 
+            Root="HKCU" 
+            Key="Software\Python\PythonCore\3.7"
+            Value="Version"
+            Result="Value"/>            
+        <PackageGroup Id="PythonPackage">
+            <ExePackage Id="PythonExePackage"
+                SourceFile="[sources]\packages\shared\MyPackage.exe" 
+                DownloadUrl="http://example.com/?mypackage.exe" 
+                InstallCommand="/q /ACTION=Install" 
+                RepairCommand="/q ACTION=Repair /hideconsole" 
+                UninstallCommand="/q ACTION=Uninstall /hideconsole" 
+                InstallCondition="(NOT python37Installed) OR python37Version < 3.7.7"/>
+        </PackageGroup>
+    </Fragment>
+</Wix>
