@@ -86,7 +86,6 @@ class CCWallet:
     ):
         self = CCWallet()
         self.config = config
-        self.key_config = key_config
 
         if name:
             self.log = logging.getLogger(name)
