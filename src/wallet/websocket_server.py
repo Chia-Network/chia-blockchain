@@ -366,7 +366,7 @@ async def start_websocket_server():
     root_path = DEFAULT_ROOT_PATH
 
     config = load_config_cli(root_path, "config.yaml", "wallet")
-    initialize_logging("Wallet %(name)-25s", config["logging"])
+    initialize_logging("Wallet %(name)-25s", config["logging"], root_path)
     log = logging.getLogger(__name__)
 
     try:

@@ -20,7 +20,7 @@ async def async_main():
     root_path = DEFAULT_ROOT_PATH
     net_config = load_config(root_path, "config.yaml")
     config = load_config_cli(root_path, "config.yaml", "introducer")
-    initialize_logging("Introducer %(name)-21s", config["logging"])
+    initialize_logging("Introducer %(name)-21s", config["logging"], root_path)
     log = logging.getLogger(__name__)
     setproctitle("chia_introducer")
 

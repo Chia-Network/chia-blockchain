@@ -24,7 +24,7 @@ async def async_main():
     root_path = DEFAULT_ROOT_PATH
     net_config = load_config(root_path, "config.yaml")
     config = load_config_cli(root_path, "config.yaml", "timelord")
-    initialize_logging("Timelord %(name)-23s", config["logging"])
+    initialize_logging("Timelord %(name)-23s", config["logging"], root_path)
     log = logging.getLogger(__name__)
     setproctitle("chia_timelord")
 
