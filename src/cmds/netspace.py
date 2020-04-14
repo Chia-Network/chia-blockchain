@@ -124,8 +124,8 @@ async def netstorge_async(args, parser):
             older_block_height = lca_block_height - int(args.delta_block_height)
             # print (lca_block_hash)
             print(f"LCA Block Height is {lca_block_height} - Comparing to {older_block_height}")
-            older_block = await client.get_header_by_height(older_block_height)
-            print("Older block previous hash", older_block.header.data.prev_header_hash)
+            older_block_header = await client.get_header_by_height(older_block_height)
+            print("Older block previous hash\n", older_block_header.header.data.total_iters)
             # subtract delta
             # Call calculate function
 
