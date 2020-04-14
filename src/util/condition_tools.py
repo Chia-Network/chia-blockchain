@@ -72,7 +72,7 @@ def conditions_by_opcode(
 
 
 def hash_key_pairs_for_conditions_dict(
-    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]], coin_name: bytes32
+    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]], coin_name: bytes32=None
 ) -> List[BLSSignature.PkMessagePair]:
     pairs: List[BLSSignature.PkMessagePair] = []
     for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
