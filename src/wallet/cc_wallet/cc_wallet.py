@@ -362,7 +362,7 @@ class CCWallet:
             primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
 
         innersol = self.standard_wallet.make_solution(primaries=primaries)
-        sigs.append(self.get_sigs_for_innerpuz_with_innersol(innerpuz, innersol))
+        sigs = sigs + self.get_sigs_for_innerpuz_with_innersol(innerpuz, innersol)
         parent_info = self.cc_info.parent_info[auditor.parent_coin_info]
         solution = cc_wallet_puzzles.cc_make_solution(
             self.cc_info.my_core,
@@ -395,7 +395,7 @@ class CCWallet:
         for coin in selected_coins[1:]:
             innerpuz = self.cc_info.innerpuzzle_lookup_for_coin[coin]
             innersol = self.standard_wallet.make_solution({})
-            sigs.append(self.get_sigs_for_innerpuz_with_innersol(innerpuz, innersol))
+            sigs = sigs + self.get_sigs_for_innerpuz_with_innersol(innerpuz, innersol)
             parent_info = self.cc_info.parent_info[coin.parent_coin_info]
             solution = cc_wallet_puzzles.cc_make_solution(
                 self.cc_info.my_core,
