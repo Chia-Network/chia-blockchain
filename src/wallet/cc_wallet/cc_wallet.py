@@ -374,12 +374,12 @@ class CCWallet:
                 output_created = coin
             else:
                 innersol = self.make_solution(consumed=[output_created.name()])
-            if coin in self.my_coloured_coins:
-                innerpuz = self.my_coloured_coins[coin][0]
+            if coin in self.cc_info.my_coloured_coins:
+                innerpuz = self.cc_info.my_coloured_coins[coin][0]
             # Use coin info to create solution and add coin and solution to list of CoinSolutions
             solution = self.cc_make_solution(
-                self.my_core,
-                self.parent_info[coin.parent_coin_info],
+                self.cc_info.my_core,
+                self.cc_info.parent_info[coin.parent_coin_info],
                 coin.amount,
                 binutils.disassemble(innerpuz),
                 binutils.disassemble(innersol),
@@ -390,7 +390,7 @@ class CCWallet:
                 CoinSolution(
                     coin,
                     clvm.to_sexp_f(
-                        [self.cc_make_puzzle(innerpuz.get_hash(), core), solution]
+                        [cc_wallet_puzzles.cc_make_puzzle(innerpuz.get_hash(), self.my_core), solution]
                     ),
                 )
             )
