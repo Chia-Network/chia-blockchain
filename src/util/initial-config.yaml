@@ -19,7 +19,7 @@ harvester:
   # new_plot_root is the default location where new plots are created by "chia-create-plots"
   new_plot_root: plots
 
-  client_ssl:
+  ssl:
     crt: "trusted.crt"
     key: "trusted.key"
 
@@ -40,13 +40,10 @@ farmer:
   propagate_threshold: 50000
   logging: *logging
 
-  server_ssl:
+  ssl:
     crt: "trusted.crt"
     key: "trusted.key"
 
-  client_ssl:
-    crt: "trusted.crt"
-    key: "trusted.key"
 
 # Don't run this unless you want to run VDF clients on the local machine.
 timelord_launcher:
@@ -80,6 +77,10 @@ timelord:
     host: 127.0.0.1
     port: 8000
   logging: *logging
+
+  ssl:
+    crt: "trusted.crt"
+    key: "trusted.key"
 
 full_node:
   # The full node server (if run) will run on this port
@@ -127,6 +128,10 @@ full_node:
     port: 8449
   logging: *logging
 
+  ssl:
+    crt: "trusted.crt"
+    key: "trusted.key"
+
 ui:
    # The ui node server (if run) will run on this port
   port: 8222
@@ -146,6 +151,10 @@ introducer:
   # recent_peer_threshold seconds
   recent_peer_threshold: 6000
   logging: *logging
+
+  ssl:
+    crt: "trusted.crt"
+    key: "trusted.key"
 
 wallet:
   port: 8449
@@ -174,3 +183,7 @@ wallet:
   introducer_peer:
     host: introducer.beta.chia.net  # Chia AWS introducer IPv4/IPv6
     port: 8444
+
+  ssl:
+    crt: "trusted.crt"
+    key: "trusted.key"

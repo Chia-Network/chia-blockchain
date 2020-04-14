@@ -101,7 +101,6 @@ def initialize_ssl(root_path):
     cert, key = generate_selfsigned_cert()
     path_crt = config_path_for_filename(root_path, "trusted.crt")
     path_key = config_path_for_filename(root_path, "trusted.key")
-    breakpoint()
     with open(path_crt, "w") as f:
         f.write(cert)
     with open(path_key, "w") as f:
