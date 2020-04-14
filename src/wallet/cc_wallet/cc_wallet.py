@@ -116,6 +116,15 @@ class CCWallet:
         self.cc_info.my_core = core
         self.update_derivation_todos()
 
+    def get_genesis_from_puzzle(self, puzzle):
+        return puzzle[-2687:].split(")")[0]
+
+    def get_genesis_from_core(self, core):
+        return core[-2678:].split(")")[0]
+
+    def get_innerpuzzle_from_puzzle(self, puzzle):
+        return puzzle[9:75]
+
     async def coin_added(self, coin: Coin, height: int, header_hash: bytes32):
         """ Notification from wallet state manager that wallet has been received. """
         self.log.info(f"CC wallet has been notified that coin was added")
@@ -203,8 +212,10 @@ class CCWallet:
                 info = await self.wallet_state_manager.puzzle_store.wallet_info_for_puzzle_hash(cvp.var1)
                 if info is None:
                     continue
-                # This coin is ours!
-                # TODO: DO something
+                puzstring = binutils.disassemble(puzzle_program)
+                innerpuzzle = self.get_innerpuzzle_from_puzzle(puzstring)
+                self.cc_info.parent_info[coin_name] = CCParent(coin.parent_coin_info, innerpuzzle, coin.amount)
+
             npc_list.append(npc)
 
         return None, npc_list, uint64(cost_sum)
