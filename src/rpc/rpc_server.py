@@ -9,7 +9,7 @@ from src.full_node.full_node import FullNode
 from src.types.header import Header
 from src.types.full_block import FullBlock
 from src.types.peer_info import PeerInfo
-from src.util.ints import uint16, uint64
+from src.util.ints import uint16, uint32, uint64
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
 
@@ -94,6 +94,23 @@ class RpcApiHandler:
         if block is None:
             raise web.HTTPNotFound()
         return obj_to_response(block)
+
+    async def get_header_by_height(self, request) -> web.Response:
+        """
+        Retrieves a header by height.
+        """
+        request_data = await request.json()
+        if "height" not in request_data:
+            raise web.HTTPBadRequest()
+        header_height = uint32(int(request_data["height"]))
+        header_hash_string: Optional[bytes32] = self.full_node.blockchain.height_to_hash[header_height]
+        header_hash = hexstr_to_bytes(str(header_hash_string))
+        header: Optional[Header] = self.full_node.blockchain.headers.get(
+            header_hash, None
+        )
+        if header is None:
+            raise web.HTTPNotFound()
+        return obj_to_response(header)
 
     async def get_header(self, request) -> web.Response:
         """
@@ -239,6 +256,7 @@ async def start_rpc_server(
         [
             web.post("/get_blockchain_state", handler.get_blockchain_state),
             web.post("/get_block", handler.get_block),
+            web.post("/get_header_by_height", handler.get_header_by_height),
             web.post("/get_header", handler.get_header),
             web.post(
                 "/get_unfinished_block_headers", handler.get_unfinished_block_headers
