@@ -1344,6 +1344,11 @@ tbody.ob-heading {
   border-bottom-left-radius: 5px;
 }
 
+.wallet .field-with-top-border {
+  border-top: 1px solid #2a2e39;
+  padding: 15px;
+}
+
 .wallet .nav-pills,
 .wallet .tab-content {
   -webkit-box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.04);
@@ -2129,4 +2134,46 @@ table td {
   margin-left: 20px !important;
   color: #a2a2a2 !important;
   text-decoration: underline !important;
+}
+
+
+.color-input input {
+  padding: 25px 15px;
+  font-size: 14px;
+}
+
+.header-custom-icon .nav-link {
+  line-height: 0;
+  margin-top: 6px;
+}
+
+.color-input .input-group-prepend button {
+  padding: 13px 20px;
+  border-top-right-radius: 5px !important;
+  border-bottom-right-radius: 5px !important;
+}
+
+.color-input input {
+  border: 1px solid #e0e3eb;
+}
+
+.color-input h4 {
+  margin-bottom: 20px;
+}
+
+.color-input .input-group {
+  padding-top: 30px;
+}
+
+#dark .color-input input,
+#dark .color-input input:focus {
+  border: 1px solid #2a2e39;
+  background: #2a2e39;
+  box-shadow: none;
+  color: #ffffff;
+}
+
+#color-input-label {
+  padding-top: 15px !important;
+  padding-right: 10px !important;
 }

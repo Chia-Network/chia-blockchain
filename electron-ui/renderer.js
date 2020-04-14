@@ -558,6 +558,8 @@ function get_wallets_response(data) {
             href = "wallet-dark.html"
         } else if (type == "RATE_LIMITED") {
             href = "rl_wallet/rl_wallet.html"
+        } else if (type == "COLOURED_COIN") {
+            href = "cc_wallet/cc_wallet.html"
         }
 
         if (id == g_wallet_id) {
