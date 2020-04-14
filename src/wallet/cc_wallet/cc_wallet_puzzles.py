@@ -6,20 +6,15 @@ from src.types.coin_solution import CoinSolution
 
 
 # This is for spending an existing coloured coin
-def cc_make_puzzle(self, innerpuzhash, core):
-    key = f"{innerpuzhash}{core}"
-    # Check if we have made this puzzle before for speedup
-    if key in self.puzzle_cache:
-        return self.puzzle_cache[key]
+def cc_make_puzzle(innerpuzhash, core):
     # Puzzle runs the core, but stores innerpuzhash commitment
     puzstring = f"(r (c (q 0x{innerpuzhash}) ((c (q {core}) (a)))))"
     result = Program(binutils.assemble(puzstring))
-    self.puzzle_cache[key] = result
     return result
 
 
 # Makes a core given a genesisID (aka the "colour")
-def cc_make_core(self, originID):
+def cc_make_core(originID):
     # solution is f"({core} {parent_str} {my_amount} {innerpuzreveal} {innersol} {auditor_info} {aggees})"
     # parent_str is either an atom or list depending on the type of spend
     # auditor is (primary_input, innerpuzzlehash, amount)
@@ -32,7 +27,6 @@ def cc_make_core(self, originID):
 
 # This is for spending a recieved coloured coin
 def cc_make_solution(
-    self,
     core,
     parent_info,
     amount,
