@@ -19,7 +19,6 @@ from src.full_node.mempool_manager import MempoolManager
 from src.server.server import ChiaServer
 from src.server.connection import NodeType
 from src.types.full_block import FullBlock
-from src.types.peer_info import PeerInfo
 from src.full_node.coin_store import CoinStore
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli, load_config
@@ -113,27 +112,6 @@ async def async_main():
     await asyncio.sleep(3)
     log.info(f"Connected to {len(server.global_connections.get_connections())} peers.")
 
-    if config["connect_to_farmer"] and not server_closed:
-        peer_info = PeerInfo(
-            full_node.config["farmer_peer"]["host"],
-            full_node.config["farmer_peer"]["port"],
-        )
-        _ = await server.start_client(peer_info, None, config)
-
-    if config["connect_to_timelord"] and not server_closed:
-        peer_info = PeerInfo(
-            full_node.config["timelord_peer"]["host"],
-            full_node.config["timelord_peer"]["port"],
-        )
-        _ = await server.start_client(peer_info, None, config)
-
-    if not server_closed:
-        peer_info = PeerInfo(
-            full_node.config["wallet_peer"]["host"],
-            full_node.config["wallet_peer"]["port"],
-        )
-        _ = await server.start_client(peer_info, None, config)
-
     # Awaits for server and all connections to close
     await server.await_closed()
     log.info("Closed all node servers.")
@@ -156,5 +134,5 @@ def main():
     asyncio.run(async_main())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

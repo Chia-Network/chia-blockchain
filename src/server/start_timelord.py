@@ -36,7 +36,6 @@ async def async_main():
     server = ChiaServer(
         config["port"], timelord, NodeType.TIMELORD, ping_interval, network_id
     )
-    _ = await server.start_server(None, config)
 
     timelord_shutdown_task: Optional[asyncio.Task] = None
 
@@ -65,6 +64,8 @@ async def async_main():
 
     await asyncio.sleep(1)  # Prevents TCP simultaneous connect with full node
     await server.start_client(full_node_peer, None, config)
+    timelord.set_server(server)
+    timelord._start_bg_tasks()
 
     vdf_server = asyncio.ensure_future(coro)
 
@@ -87,5 +88,5 @@ def main():
     asyncio.run(async_main())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

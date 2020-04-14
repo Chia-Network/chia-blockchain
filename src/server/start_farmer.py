@@ -31,9 +31,6 @@ async def async_main():
 
     farmer = Farmer(config, key_config)
 
-    harvester_peer = PeerInfo(
-        config["harvester_peer"]["host"], config["harvester_peer"]["port"]
-    )
     full_node_peer = PeerInfo(
         config["full_node_peer"]["host"], config["full_node_peer"]["port"]
     )
@@ -52,8 +49,6 @@ async def async_main():
         log.info("signal handlers unsupported")
 
     _ = await server.start_server(farmer._on_connect, config)
-    await asyncio.sleep(2)  # Prevents TCP simultaneous connect with harvester
-    _ = await server.start_client(harvester_peer, None, config)
     _ = await server.start_client(full_node_peer, None, config)
 
     farmer.set_server(server)
@@ -70,5 +65,5 @@ def main():
     asyncio.run(async_main())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

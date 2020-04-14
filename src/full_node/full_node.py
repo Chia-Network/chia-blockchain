@@ -2132,7 +2132,9 @@ class FullNode:
         if full_block is not None:
             if full_block.transactions_generator is not None:
                 response = wallet_protocol.RespondGenerator(
-                    full_block.height, full_block.header_hash, full_block.transactions_generator
+                    full_block.height,
+                    full_block.header_hash,
+                    full_block.transactions_generator,
                 )
                 yield OutboundMessage(
                     NodeType.WALLET,
@@ -2145,5 +2147,7 @@ class FullNode:
             request.height, request.header_hash
         )
         yield OutboundMessage(
-            NodeType.WALLET, Message("reject_generator_request", reject), Delivery.RESPOND,
+            NodeType.WALLET,
+            Message("reject_generator_request", reject),
+            Delivery.RESPOND,
         )

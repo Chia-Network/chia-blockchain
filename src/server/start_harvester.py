@@ -38,7 +38,6 @@ async def async_main():
     server = ChiaServer(
         config["port"], harvester, NodeType.HARVESTER, ping_interval, network_id
     )
-    _ = await server.start_server(None, config)
 
     try:
         asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
@@ -50,7 +49,9 @@ async def async_main():
         harvester.config["farmer_peer"]["host"], harvester.config["farmer_peer"]["port"]
     )
 
-    _ = await server.start_client(peer_info, None, config)
+    _ = await server.start_client(peer_info, None, config, True)
+    harvester.set_server(server)
+    harvester._start_bg_tasks()
     await server.await_closed()
     harvester._shutdown()
     await harvester._await_shutdown()
@@ -63,5 +64,5 @@ def main():
     asyncio.run(async_main())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
