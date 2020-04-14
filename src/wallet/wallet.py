@@ -458,3 +458,45 @@ class Wallet:
         aggsig = BLSSignature.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
         return spend_bundle
+
+    # Create an offer spend bundle for chia given an amount of relative change (i.e -400 or 1000)
+    # This is to be aggregated together with a coloured coin offer to ensure that the trade happens
+    async def create_spend_bundle_relative_chia(self, chia_amount: uint64):
+        list_of_solutions = []
+        utxos = None
+
+        # If we're losing value then get coins with at least that much value
+        # If we're gaining value then our amount doesn't matter
+        if chia_amount < 0:
+            utxos = self.select_coins(abs(chia_amount))
+        else:
+            utxos = [self.select_coins(1)]
+
+        if utxos is None:
+            return None
+
+        # Calculate output amount given sum of utxos
+        spend_value = sum([coin.amount for coin in utxos])
+        chia_amount = spend_value + chia_amount
+
+        # Create coin solutions for each utxo
+        output_created = None
+        sigs = []
+        for coin in utxos:
+            pubkey, secretkey = self.get_keys(coin.puzzle_hash)
+            puzzle = self.puzzle_for_pk(bytes(pubkey))
+            if output_created is None:
+                newpuzhash = self.get_new_puzzlehash()
+                primaries = [{"puzzlehash": newpuzhash, "amount": chia_amount}]
+                solution = self.make_solution(primaries=primaries)
+                output_created = coin
+            else:
+                solution = self.make_solution(consumed=[output_created.name()])
+            list_of_solutions.append(
+                CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
+            )
+            sigs = sigs + self.get_sigs_for_innerpuz_with_innersol(puzzle, solution)
+
+        aggsig = BLSSignature.aggregate(sigs)
+        spend_bundle = SpendBundle(list_of_solutions, aggsig)
+        return spend_bundle
