@@ -4,13 +4,9 @@ import time
 from time import struct_time, localtime
 import datetime
 
-# from src.server.connection import NodeType
-# from src.types.header_block import HeaderBlock
 from src.rpc.rpc_client import RpcClient
 from src.util.byte_types import hexstr_to_bytes
-# from src.util.ints import uint32
-# from src.util.config import str2bool
-# from src.full_node.full_node import FullNode
+from src.consensus.pot_iterations import calculate_min_iters_from_iterations
 
 
 def make_parser(parser):
@@ -53,33 +49,56 @@ def human_local_time(timestamp):
 
 
 async def compare_block_headers(client, oldblock_hash, newblock_hash):
-    block_older = await client.get_header(hexstr_to_bytes(oldblock_hash))
-    block_newer = await client.get_header(hexstr_to_bytes(newblock_hash))
-    if block_older is not None:
-        block_older_time_string = human_local_time(block_older.data.timestamp)
-        block_newer_time_string = human_local_time(block_newer.data.timestamp)
-        elapsed_time_seconds = block_newer.data.timestamp - block_older.data.timestamp
+    block_older_header = await client.get_header(hexstr_to_bytes(oldblock_hash))
+    block_newer_header = await client.get_header(hexstr_to_bytes(newblock_hash))
+    if block_older_header is not None:
+        block_older_time_string = human_local_time(
+            block_older_header.data.timestamp
+        )
+        block_newer_time_string = human_local_time(
+            block_newer_header.data.timestamp
+        )
+        elapsed_time_seconds = (
+            block_newer_header.data.timestamp
+            - block_older_header.data.timestamp
+        )
         time_delta = datetime.timedelta(seconds=elapsed_time_seconds)
-        print("Older Block", block_older.data.height, ":")
+        print("Older Block", block_older_header.data.height, ":")
         print(
             f"Header Hash            0x{oldblock_hash}\n"
             f"Timestamp              {block_older_time_string}\n"
-            f"Weight                 {block_older.data.weight}\n"
-            f"Total VDF Iterations   {block_older.data.total_iters}\n"
+            f"Weight                 {block_older_header.data.weight}\n"
+            f"Total VDF Iterations   {block_older_header.data.total_iters}\n"
         )
-        print("Newer Block", block_newer.data.height, ":")
+        print("Newer Block", block_newer_header.data.height, ":")
         print(
             f"Header Hash            0x{newblock_hash}\n"
             f"Timestamp              {block_newer_time_string}\n"
-            f"Weight                 {block_newer.data.weight}\n"
-            f"Total VDF Iterations   {block_newer.data.total_iters}\n"
+            f"Weight                 {block_newer_header.data.weight}\n"
+            f"Total VDF Iterations   {block_newer_header.data.total_iters}\n"
         )
-        delta_weight = block_newer.data.weight - block_older.data.weight
-        delta_iters = block_newer.data.total_iters - block_older.data.total_iters
+        delta_weight = (
+            block_newer_header.data.weight - block_older_header.data.weight
+        )
+        delta_iters = (
+            block_newer_header.data.total_iters
+            - block_older_header.data.total_iters
+        )
+
+        block_older = await client.get_block(hexstr_to_bytes(oldblock_hash))
+        block_newer = await client.get_block(hexstr_to_bytes(newblock_hash))
+        delta_iters -= await get_total_miniters(
+            client, block_older, block_newer
+        )
         weight_div_iters = delta_weight / delta_iters
-        network_space_constant = 2**32  # 2^32
-        network_space_bytes_estimate = weight_div_iters * network_space_constant
-        network_space_terrabytes_estimate = network_space_bytes_estimate / 1024**4
+        tips_adjustment_constant = 0.65
+        network_space_constant = 2 ** 32  # 2^32
+        network_space_bytes_estimate = (
+            weight_div_iters * network_space_constant * tips_adjustment_constant
+        )
+        network_space_terrabytes_estimate = (
+            network_space_bytes_estimate / 1024**4
+        )
         print(
             f"The elapsed time between blocks is reported as {time_delta}.\n"
             f"The network has an estimated {network_space_terrabytes_estimate:.2f}TB"
@@ -105,6 +124,24 @@ async def get_total_miniters(rpc_client, old_block, new_block):
     )
     return (new_block.height - old_block.height) * ((mi2 + mi1) / 2)
 
+
+async def get_total_miniters(rpc_client, old_block, new_block):
+    """
+    Calculates the sum of min_iters from all blocks starting from old and up to and including
+    new_block.
+    # TODO: compute real min_iters for multiple epochs, using height RPC
+    """
+    old_block_parent = await rpc_client.get_header(old_block.prev_header_hash)
+    new_block_parent = await rpc_client.get_header(new_block.prev_header_hash)
+    old_diff = old_block.weight - old_block_parent.weight
+    new_diff = new_block.weight - new_block_parent.weight
+    mi1 = calculate_min_iters_from_iterations(
+        old_block.proof_of_space, old_diff, old_block.proof_of_time.number_of_iterations
+    )
+    mi2 = calculate_min_iters_from_iterations(
+        new_block.proof_of_space, new_diff, new_block.proof_of_time.number_of_iterations
+    )
+    return (new_block.height - old_block.height) * ((mi2 + mi1) / 2)
 
 async def netstorge_async(args, parser):
 
