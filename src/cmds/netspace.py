@@ -121,16 +121,13 @@ async def netstorge_async(args, parser):
         if args.delta_block_height:
             # Get lca
             blockchain_state = await client.get_blockchain_state()
-            # lca_block_hash = blockchain_state["lca"].header_hash
+            lca_block_hash = str(blockchain_state["lca"].header_hash)
             lca_block_height = blockchain_state["lca"].data.height
             older_block_height = lca_block_height - int(args.delta_block_height)
-            # print (lca_block_hash)
-            print(f"LCA Block Height is {lca_block_height} - Comparing to {older_block_height}")
+            print(f"LCA Block Height is {lca_block_height} - Comparing to {older_block_height}\n")
             older_block_header = await client.get_header_by_height(older_block_height)
-            print("Older block header\n", older_block_header)
-            # await compare_block_headers(client, )
-            # subtract delta
-            # Call calculate function
+            older_block_header_hash = str(older_block_header.get_hash())
+            await compare_block_headers(client, older_block_header_hash, lca_block_hash)
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
