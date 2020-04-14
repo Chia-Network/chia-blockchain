@@ -1,3 +1,5 @@
+from typing import Optional, Tuple, List
+
 from clvm_tools import binutils
 import clvm
 from src.types.program import Program
@@ -6,6 +8,10 @@ from src.types.coin_solution import CoinSolution
 
 
 # This is for spending an existing coloured coin
+from src.types.sized_bytes import bytes32
+from src.util.ints import uint64
+
+
 def cc_make_puzzle(innerpuzhash, core):
     # Puzzle runs the core, but stores innerpuzhash commitment
     puzstring = f"(r (c (q 0x{innerpuzhash}) ((c (q {core}) (a)))))"
@@ -27,12 +33,12 @@ def cc_make_core(originID):
 
 # This is for spending a recieved coloured coin
 def cc_make_solution(
-    core,
-    parent_info,
-    amount,
-    innerpuzreveal,
-    innersol,
-    auditor,
+    core: str,
+    parent_info: List[bytes32],
+    amount: uint64,
+    innerpuzreveal: str,
+    innersol: str,
+    auditor: Optional[List[bytes32]],
     auditees=None,
 ):
     parent_str = ""
