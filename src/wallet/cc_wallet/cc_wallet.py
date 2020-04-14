@@ -11,11 +11,13 @@ from src.types.BLSSignature import BLSSignature
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.condition_opcodes import ConditionOpcode
+from src.types.condition_var_pair import ConditionVarPair
 from src.types.name_puzzle_condition import NPC
 from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
-from src.util.condition_tools import conditions_dict_for_solution
+from src.util.condition_tools import conditions_dict_for_solution, conditions_by_opcode, conditions_for_solution, \
+    hash_key_pairs_for_conditions_dict
 from src.util.errors import Err
 from src.util.ints import uint64, uint32
 from src.util.streamable import streamable, Streamable
@@ -329,9 +331,17 @@ class CCWallet:
 
             return used_coins
 
-    def get_sigs_for_innerpuz_with_innersol(self, innerpuz: Program, innersol: Program):
-
-        return
+    def get_sigs_for(self, innerpuz: Program, innersol: Program):
+        puzzle_hash = innerpuz.get_hash()
+        pubkey, private = self.standard_wallet.get_keys(puzzle_hash)
+        sigs = []
+        code_ = [innerpuz, innersol]
+        sexp = Program.to(code_)
+        error, conditions, cost = conditions_dict_for_solution(sexp)
+        for _ in hash_key_pairs_for_conditions_dict(conditions):
+            signature = private.sign(_.message_hash)
+            sigs.append(signature)
+        return sigs
 
     def cc_spend(self, amount: uint64, puzzle_hash: bytes32) -> Optional[SpendBundle]:
         sigs = []
