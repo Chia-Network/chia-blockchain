@@ -61,18 +61,7 @@ def cc_make_solution(
     aggees = "("
     if auditees is not None:
         for auditee in auditees:
-            # spendslist is [] of (coin, parent_info, outputamount, innersol, innerpuzhash=None)
-            # aggees should be (primary_input, innerpuzhash, coin_amount, output_amount)
-            if auditee[0] in self.my_coloured_coins:
-                aggees = (
-                    aggees
-                    + f"(0x{auditee[0].parent_coin_info} 0x{self.my_coloured_coins[auditee[0]][0].get_hash()} {auditee[0].amount} {auditee[2]})"
-                )
-            else:
-                aggees = (
-                    aggees
-                    + f"(0x{auditee[0].parent_coin_info} 0x{auditee[4]} {auditee[0].amount} {auditee[2]})"
-                )
+            aggees = aggees + f"(0x{auditee[0]} 0x{auditee[1]} {auditee[2]} {auditee[3]})"
 
     aggees = aggees + ")"
 
