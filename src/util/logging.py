@@ -1,14 +1,15 @@
 import logging
 import colorlog
+
+from pathlib import Path
 from typing import Dict
 
-from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.path import mkdir, path_from_root
 
 
-def initialize_logging(prefix: str, logging_config: Dict):
+def initialize_logging(prefix: str, logging_config: Dict, root_path: Path):
     log_path = path_from_root(
-        DEFAULT_ROOT_PATH, logging_config.get("log_filename", "log/debug.log")
+        root_path, logging_config.get("log_filename", "log/debug.log")
     )
     mkdir(str(log_path.parent))
     if logging_config["log_stdout"]:
