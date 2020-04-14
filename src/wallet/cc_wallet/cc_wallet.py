@@ -214,7 +214,7 @@ class CCWallet:
                     continue
                 puzstring = binutils.disassemble(puzzle_program)
                 innerpuzzle = self.get_innerpuzzle_from_puzzle(puzstring)
-                self.cc_info.parent_info[coin_name] = CCParent(coin.parent_coin_info, innerpuzzle, coin.amount)
+                await self.add_parent(coin_name, CCParent(coin.parent_coin_info, innerpuzzle, coin.amount))
 
             npc_list.append(npc)
 
@@ -310,9 +310,45 @@ class CCWallet:
         )
         return spend_bundle
 
-    # Given a list of coloured coins, their parent_info, outputamount, and innersol, create spends
-    def cc_generate_spends_for_coin_list(self, spendslist, sigs=[]):
-        # spendslist is [] of (coin, parent_info, outputamount, innersol)
+    async def select_coins(self, amount: uint64) -> Optional[Set[Coin]]:
+
+        async with self.wallet_state_manager.lock:
+            spendable_am = await self.wallet_state_manager.get_unconfirmed_spendable_for_wallet(
+                self.wallet_info.id
+            )
+
+            if amount > spendable_am:
+                self.log.warning(
+                    f"Can't select amount higher than our spendable balance {amount}, spendable {spendable_am}"
+                )
+                return None
+
+            self.log.info(f"About to select coins for amount {amount}")
+            unspents: List[WalletCoinRecord] = list(
+                await self.wallet_state_manager.get_spendable_coins_for_wallet(
+                    self.wallet_info.id
+                )
+            )
+            sum = 0
+            used_coins: Set = set()
+
+            for unspent in unspents:
+                used_coins.add(unspent.coin)
+                sum += unspent.amount
+                if sum > amount:
+                    break
+
+            self.log.info(f"used these coins: {used_coins}")
+
+            return used_coins
+
+    def cc_generate_spends_for_coin_list(self, amount: uint64, puzzle_hash: bytes32) -> Optional[SpendBundle]:
+
+        selected_coins: Optional[List[Coin]] = await self.select_coins(amount)
+        if selected_coins is None:
+            return None
+
+
         auditor = spendslist[0][0]
         core = self.cc_info.my_core
         auditor_info = (
@@ -468,7 +504,13 @@ class CCWallet:
 
         return SpendBundle(list_of_solutions, aggsig)
 
-    def save_info(self, cc_info: CCInfo):
+    async def add_parent(self, name: bytes32, parent: CCParent):
+        current_dict = self.cc_info.parent_info.copy()
+        current_dict[name] = parent
+        cc_info: CCInfo = CCInfo(self.cc_info.my_core, self.cc_info.my_coloured_coins, current_dict, self.cc_info.my_colour_name)
+        await self.save_info(cc_info)
+
+    async def save_info(self, cc_info: CCInfo):
         self.cc_info = cc_info
         current_info = self.wallet_info
         data_str = json.dumps(cc_info.to_json_dict())
@@ -492,7 +534,7 @@ class CCWallet:
         parent_info[origin_id] = (origin.parent_coin_info, origin.puzzle_hash, origin.amount)
 
         cc_info: CCInfo = CCInfo(bytes(cc_core).hex(), None, None, origin_id.hex())
-        self.save_info(cc_info)
+        await self.save_info(cc_info)
 
         cc_inner = self.get_new_innerpuzhash()
         cc_puzzle = cc_wallet_puzzles.cc_make_puzzle(cc_inner, cc_core)
