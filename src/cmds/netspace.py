@@ -51,6 +51,7 @@ def human_local_time(timestamp):
     time_local = struct_time(localtime(timestamp))
     return time.strftime("%a %b %d %Y %T %Z", time_local)
 
+
 async def compare_block_headers(client, oldblock_hash, newblock_hash):
     block_older = await client.get_header(hexstr_to_bytes(oldblock_hash))
     block_newer = await client.get_header(hexstr_to_bytes(newblock_hash))
