@@ -4,13 +4,9 @@ import time
 from time import struct_time, localtime
 import datetime
 
-# from src.server.connection import NodeType
-# from src.types.header_block import HeaderBlock
 from src.rpc.rpc_client import RpcClient
 from src.util.byte_types import hexstr_to_bytes
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
-
-# from src.util.config import str2bool
 
 
 def make_parser(parser):
@@ -34,6 +30,13 @@ def make_parser(parser):
         "-n",
         "--new_block",
         help="Newer block hash used to calculate estimated total network space.",
+        type=str,
+        default="",
+    )
+    parser.add_argument(
+        "-d",
+        "--delta-block-height",
+        help="Compare LCA to a block X blocks older.",
         type=str,
         default="",
     )
@@ -141,6 +144,69 @@ async def get_total_miniters(rpc_client, old_block, new_block):
     return (new_block.height - old_block.height) * ((mi2 + mi1) / 2)
 
 
+async def compare_block_headers(client, oldblock_hash, newblock_hash):
+    """
+    Calculates the estimated space on the network given two block header hases
+    # TODO: remove grubby hack of getting both blocks for get_total_miniters
+    """
+    block_older_header = await client.get_header(hexstr_to_bytes(oldblock_hash))
+    block_newer_header = await client.get_header(hexstr_to_bytes(newblock_hash))
+    if block_older_header is not None:
+        block_older_time_string = human_local_time(
+            block_older_header.data.timestamp
+        )
+        block_newer_time_string = human_local_time(
+            block_newer_header.data.timestamp
+        )
+        elapsed_time_seconds = (
+            block_newer_header.data.timestamp
+            - block_older_header.data.timestamp
+        )
+        time_delta = datetime.timedelta(seconds=elapsed_time_seconds)
+        print("Older Block", block_older_header.data.height, ":")
+        print(
+            f"Header Hash            0x{oldblock_hash}\n"
+            f"Timestamp              {block_older_time_string}\n"
+            f"Weight                 {block_older_header.data.weight}\n"
+            f"Total VDF Iterations   {block_older_header.data.total_iters}\n"
+        )
+        print("Newer Block", block_newer_header.data.height, ":")
+        print(
+            f"Header Hash            0x{newblock_hash}\n"
+            f"Timestamp              {block_newer_time_string}\n"
+            f"Weight                 {block_newer_header.data.weight}\n"
+            f"Total VDF Iterations   {block_newer_header.data.total_iters}\n"
+        )
+        delta_weight = (
+            block_newer_header.data.weight - block_older_header.data.weight
+        )
+        delta_iters = (
+            block_newer_header.data.total_iters
+            - block_older_header.data.total_iters
+        )
+
+        block_older = await client.get_block(hexstr_to_bytes(oldblock_hash))
+        block_newer = await client.get_block(hexstr_to_bytes(newblock_hash))
+        delta_iters -= await get_total_miniters(
+            client, block_older, block_newer
+        )
+        weight_div_iters = delta_weight / delta_iters
+        tips_adjustment_constant = 0.65
+        network_space_constant = 2 ** 32  # 2^32
+        network_space_bytes_estimate = (
+            weight_div_iters * network_space_constant * tips_adjustment_constant
+        )
+        network_space_terrabytes_estimate = (
+            network_space_bytes_estimate / 1024**4
+        )
+        print(
+            f"The elapsed time between blocks is reported as {time_delta}.\n"
+            f"The network has an estimated {network_space_terrabytes_estimate:.2f}TB"
+        )
+    else:
+        print("Block with header hash", oldblock_hash, "not found.")
+
+
 async def netstorge_async(args, parser):
 
     # add config.yaml check for rpc-port
@@ -152,60 +218,17 @@ async def netstorge_async(args, parser):
 
         # print (args.blocks)
         if args.old_block != "":
-            block_older = await client.get_block(hexstr_to_bytes(args.old_block))
-            block_newer = await client.get_block(hexstr_to_bytes(args.new_block))
-            if block_older is not None:
-                block_older_time_string = human_local_time(
-                    block_older.header.data.timestamp
-                )
-                block_newer_time_string = human_local_time(
-                    block_newer.header.data.timestamp
-                )
-                elapsed_time_seconds = (
-                    block_newer.header.data.timestamp
-                    - block_older.header.data.timestamp
-                )
-                time_delta = datetime.timedelta(seconds=elapsed_time_seconds)
-                print("Older Block", block_older.header.data.height, ":")
-                print(
-                    f"Header Hash            0x{args.old_block}\n"
-                    f"Timestamp              {block_older_time_string}\n"
-                    f"Weight                 {block_older.header.data.weight}\n"
-                    f"Total VDF Iterations   {block_older.header.data.total_iters}\n"
-                )
-                print("Newer Block", block_newer.header.data.height, ":")
-                print(
-                    f"Header Hash            0x{args.new_block}\n"
-                    f"Timestamp              {block_newer_time_string}\n"
-                    f"Weight                 {block_newer.header.data.weight}\n"
-                    f"Total VDF Iterations   {block_newer.header.data.total_iters}\n"
-                )
-                delta_weight = (
-                    block_newer.header.data.weight - block_older.header.data.weight
-                )
-                delta_iters = (
-                    block_newer.header.data.total_iters
-                    - block_older.header.data.total_iters
-                )
-
-                delta_iters -= await get_total_miniters(
-                    client, block_older, block_newer
-                )
-                weight_div_iters = delta_weight / delta_iters
-                tips_adjustment_constant = 0.65
-                network_space_constant = 2 ** 32  # 2^32
-                network_space_bytes_estimate = (
-                    weight_div_iters * network_space_constant * tips_adjustment_constant
-                )
-                network_space_terrabytes_estimate = (
-                    network_space_bytes_estimate / 1024 ** 4
-                )
-                print(
-                    f"The elapsed time between blocks was approximately {time_delta}.\n"
-                    f"The network has an estimated {network_space_terrabytes_estimate:.2f}TB"
-                )
-            else:
-                print("Block with header hash", args.old_block, "not found.")
+            await compare_block_headers(client, args.old_block, args.new_block)
+        if args.delta_block_height:
+            # Get lca
+            blockchain_state = await client.get_blockchain_state()
+            lca_block_hash = str(blockchain_state["lca"].header_hash)
+            lca_block_height = blockchain_state["lca"].data.height
+            older_block_height = lca_block_height - int(args.delta_block_height)
+            print(f"LCA Block Height is {lca_block_height} - Comparing to {older_block_height}\n")
+            older_block_header = await client.get_header_by_height(older_block_height)
+            older_block_header_hash = str(older_block_header.get_hash())
+            await compare_block_headers(client, older_block_header_hash, lca_block_hash)
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
