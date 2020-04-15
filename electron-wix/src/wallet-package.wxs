@@ -3,14 +3,14 @@
     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
     <?include "config.wxi"?>    
     <Fragment>
-        <util:RegistrySearch Variable="walletVersion" 
+        <util:ProductSearch Variable="walletVersion" 
             UpgradeCode="$(var.walletUpgradeCode)"
             Result="version"/>
         <PackageGroup Id="WalletPackage">
             <MsiPackage Id="WalletMsiPackage"
-                Compressed="Yes"
+                Compressed="yes"
                 SourceFile="build\$(var.walletProductName)-$(var.version).msi"
-                InstallCondition="walletVersion < $(var.Version)"/>
+                InstallCondition="walletVersion &lt; v$(var.version)"/>
         </PackageGroup>
     </Fragment>
 </Wix>

@@ -1,17 +1,27 @@
 <?xml version="1.0"?>
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-    <Bundle Id="ChiaSuiteBundle"
-        Condition="VersionNT64 AND VersionNT >= v10.0"
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+    xmlns:bal="http://schemas.microsoft.com/wix/BalExtension"
+    xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+    <?include "config.wxi"?>
+    <Bundle Condition="VersionNT64 AND VersionNT >= v10.0"
         Copyright="Chia Network 2020"
-        DisableModify="Yes"
+        DisableModify="yes"
         HelpUrl="https://keybase.io/team/chia_network.public"
-        IconSourceFile="icon.ico"
+        IconSourceFile="$(env.resourceDir)\icon.ico"
         Manufacturer="Chia Network"
         Name="Chia"
         UpgradeCode="BEC2F30C-D162-4303-928C-A43894D7CE84"
         Version="$(var.version)">
-        <BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.RtfLicense" />
+        <BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.HyperlinkLicense">
+            <bal:WixStandardBootstrapperApplication
+                LogoFile="$(env.resourceDir)\chia_logo.png"
+                LicenseUrl="https://raw.githubusercontent.com/Chia-Network/chia-blockchain/master/LICENSE"/>
+        </BootstrapperApplicationRef>
         <Chain>
+            <PackageGroupRef Id="PythonPackage" />
+            <PackageGroupRef Id="WalletPackage" />
         </Chain>
     </Bundle>
 </Wix>
+
+<!-- LogoFile="$(env.resourceDir)\chia_logo.png" -->
