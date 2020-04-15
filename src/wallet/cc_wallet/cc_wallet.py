@@ -467,7 +467,7 @@ class CCWallet:
         if cc_amount < 0:
             cc_spends = self.select_coins(abs(cc_amount))
         else:
-            cc_spends = self.select_coins(1)
+            cc_spends = self.select_coins(uint64(1))
         if cc_spends is None:
             return None
 
