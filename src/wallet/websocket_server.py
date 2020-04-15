@@ -398,7 +398,6 @@ async def start_websocket_server():
     )
     wallet_node.set_server(server)
 
-    _ = await server.start_server(None, config)
     if "full_node_peer" in config:
         full_node_peer = PeerInfo(
             config["full_node_peer"]["host"], config["full_node_peer"]["port"]
@@ -406,7 +405,7 @@ async def start_websocket_server():
 
         log.info(f"Connecting to full node peer at {full_node_peer}")
         server.global_connections.peers.add(full_node_peer)
-        _ = await server.start_client(full_node_peer, None, config)
+        _ = await server.start_client(full_node_peer, None)
 
     log.info("Starting websocket server.")
     websocket_server = await websockets.serve(
