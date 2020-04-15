@@ -1,18 +1,12 @@
-# add wix to path
-$env:Path += ";${env:ProgramFiles(x86)}\WiX Toolset v3.11\bin"
-$env:exename = "chia-wallet" # if you update this make sure to update .gitignore
-$env:version = "0.1.4"
-$env:resourceDir = ".\resources"
-$electronpackagerdir = $env:exename + "-win32-x64"
-$buildDir = ".\build"
-$sourceDir = ".\src"
-
-
-# remove any exisitng outputs
-Write-Host "Cleaning any previous outputs"
-Remove-Item $electronpackagerdir -Recurse -Force -ErrorAction Ignore
-Remove-Item "$buildDir" -Recurse -Force -ErrorAction Ignore
-New-Item -ItemType Directory -Path "$buildDir"
+# Include required files
+$ScriptDirectory = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
+try {
+    . ("$ScriptDirectory\config.ps1")
+}
+catch {
+    Write-Host "Error while loading supporting PowerShell Scripts" 
+    exit 1
+}
 
 # package up the electron stuff and sources
 electron-packager ../electron-ui $env:exename --platform=win32 --arch=x64 --icon="$env:resourceDir\icon.ico" --app-version="$env:version" --win32metadata.CompanyName="Chia Network" --win32metadata.ProductName="Chia Wallet" --app-copyright="Chia Network 2020"
