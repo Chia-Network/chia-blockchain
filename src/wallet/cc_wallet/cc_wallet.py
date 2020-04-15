@@ -295,18 +295,8 @@ class CCWallet:
                     "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
                 )
 
-            if sum >= amount:
-                self.log.info(f"Successfully selected coins: {used_coins}")
-                return used_coins
-            else:
-                # This shouldn't happen because of: if amount > self.get_unconfirmed_balance_spendable():
-                self.log.error(
-                    f"Wasn't able to select coins for amount: {amount}"
-                    f"unspent: {unspent}"
-                    f"unconfirmed_removals: {unconfirmed_removals}"
-                    f"unconfirmed_additions: {unconfirmed_additions}"
-                )
-                return None
+            self.log.info(f"Successfully selected coins: {used_coins}")
+            return used_coins
 
     def get_sigs_for(self, innerpuz: Program, innersol: Program):
         puzzle_hash = innerpuz.get_hash()
