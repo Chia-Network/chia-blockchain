@@ -34,28 +34,18 @@ from src.wallet.cc_wallet import cc_wallet_puzzles
 
 
 class Wallet:
-    private_key: ExtendedPrivateKey
-    key_config: Dict
-    config: Dict
     wallet_state_manager: Any
-
     log: logging.Logger
-
     wallet_info: WalletInfo
 
     @staticmethod
     async def create(
-        config: Dict,
-        key_config: Dict,
         wallet_state_manager: Any,
         info: WalletInfo,
         name: str = None,
     ):
         self = Wallet()
-        self.config = config
-        self.key_config = key_config
-        sk_hex = self.key_config["wallet_sk"]
-        self.private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
+
         if name:
             self.log = logging.getLogger(name)
         else:
@@ -66,10 +56,6 @@ class Wallet:
         self.wallet_info = info
 
         return self
-
-    def get_public_key(self, index: uint32) -> PublicKey:
-        pubkey = self.private_key.public_child(index).get_public_key()
-        return pubkey
 
     async def get_confirmed_balance(self) -> uint64:
         return await self.wallet_state_manager.get_confirmed_balance_for_wallet(
@@ -119,18 +105,6 @@ class Wallet:
         if fee:
             condition_list.append(make_assert_fee_condition(fee))
         return clvm.to_sexp_f([puzzle_for_conditions(condition_list), []])
-
-    async def get_keys(
-        self, hash: bytes32
-    ) -> Optional[Tuple[PublicKey, ExtendedPrivateKey]]:
-        index_for_puzzlehash = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
-            hash
-        )
-        if index_for_puzzlehash == -1:
-            raise ValueError(f"No key for this puzzlehash {hash})")
-        pubkey = self.private_key.public_child(index_for_puzzlehash).get_public_key()
-        private = self.private_key.private_child(index_for_puzzlehash).get_private_key()
-        return pubkey, private
 
     async def select_coins(self, amount) -> Optional[Set[Coin]]:
         """ Returns a set of coins that can be used for generating a new transaction. """
@@ -236,7 +210,7 @@ class Wallet:
             self.log.info(f"coin from coins {coin}")
             # Get keys for puzzle_hash
             puzzle_hash = coin.puzzle_hash
-            maybe = await self.get_keys(puzzle_hash)
+            maybe = await self.wallet_state_manager.get_keys(puzzle_hash)
             if not maybe:
                 self.log.error(
                     f"Wallet couldn't find keys for puzzle_hash {puzzle_hash}"
