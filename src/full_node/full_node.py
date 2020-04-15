@@ -1777,7 +1777,7 @@ class FullNode:
         tasks = []
         for peer in to_connect:
             tasks.append(
-                asyncio.create_task(self.server.start_client(peer, None, self.config))
+                asyncio.create_task(self.server.start_client(peer, None))
             )
         await asyncio.gather(*tasks)
 

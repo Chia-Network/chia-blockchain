@@ -156,9 +156,8 @@ class RpcApiHandler:
         port = request_data["port"]
         target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
 
-        config = self.full_node.config
         if self.full_node.server is None or not (
-            await self.full_node.server.start_client(target_node, None, config)
+            await self.full_node.server.start_client(target_node, None)
         ):
             raise web.HTTPInternalServerError()
         return obj_to_response("")
