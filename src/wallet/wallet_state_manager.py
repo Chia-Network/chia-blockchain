@@ -7,7 +7,7 @@ import asyncio
 
 import aiosqlite
 from chiabip158 import PyBIP158
-from blspy import PublicKey
+from blspy import PublicKey, ExtendedPrivateKey
 
 from src.types.coin import Coin
 from src.types.spend_bundle import SpendBundle
@@ -75,6 +75,7 @@ class WalletStateManager:
 
     main_wallet: Wallet
     wallets: Dict[uint32, Any]
+    private_key: ExtendedPrivateKey
 
     @staticmethod
     async def create(
@@ -114,13 +115,16 @@ class WalletStateManager:
         main_wallet_info = await self.user_store.get_wallet_by_id(1)
         assert main_wallet_info is not None
 
+        self.key_config = key_config
+        sk_hex = self.key_config["wallet_sk"]
+        self.private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
+
         self.main_wallet = await Wallet.create(
-            config, key_config, self, main_wallet_info
+            self, main_wallet_info
         )
 
         self.wallets = {}
-        main_wallet = await Wallet.create(config, key_config, self, main_wallet_info)
-        self.wallets[main_wallet_info.id] = main_wallet
+        self.wallets[main_wallet_info.id] = self.main_wallet
 
         for wallet_info in await self.get_all_wallets():
             self.log.info(f"wallet_info {wallet_info}")
@@ -181,6 +185,22 @@ class WalletStateManager:
             )
 
         return self
+
+    def get_public_key(self, index: uint32) -> PublicKey:
+        pubkey = self.private_key.public_child(index).get_public_key()
+        return pubkey
+
+    async def get_keys(
+        self, hash: bytes32
+    ) -> Optional[Tuple[PublicKey, ExtendedPrivateKey]]:
+        index_for_puzzlehash = await self.puzzle_store.index_for_puzzle_hash(
+            hash
+        )
+        if index_for_puzzlehash == -1:
+            raise ValueError(f"No key for this puzzlehash {hash})")
+        pubkey = self.private_key.public_child(index_for_puzzlehash).get_public_key()
+        private = self.private_key.private_child(index_for_puzzlehash).get_private_key()
+        return pubkey, private
 
     async def create_more_puzzle_hashes(self, from_zero: bool = False):
         """

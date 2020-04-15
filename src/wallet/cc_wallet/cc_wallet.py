@@ -119,13 +119,13 @@ class CCWallet:
         cc_info: CCInfo = CCInfo(core, self.cc_info.innerpuzzle_lookup_for_coin, self.cc_info.parent_info, self.cc_info.my_colour_name)
         await self.save_info(cc_info)
 
-    def get_genesis_from_puzzle(self, puzzle):
+    def get_genesis_from_puzzle(self, puzzle: str):
         return puzzle[-2687:].split(")")[0]
 
-    def get_genesis_from_core(self, core):
+    def get_genesis_from_core(self, core: str):
         return core[-2678:].split(")")[0]
 
-    def get_innerpuzzle_from_puzzle(self, puzzle):
+    def get_innerpuzzle_from_puzzle(self, puzzle: str):
         return puzzle[9:75]
 
     async def coin_added(self, coin: Coin, height: int, header_hash: bytes32):
@@ -136,7 +136,7 @@ class CCWallet:
 
         self.cc_info.parent_info[coin.name()] = (
             coin.parent_coin_info,
-            self.innerpuzzle_lookup_for_coin[coin].get_hash(),
+            self.cc_info.innerpuzzle_lookup_for_coin[coin].get_hash(),
             coin.amount,
         )
         if coin.parent_coin_info not in self.cc_info.parent_info:
