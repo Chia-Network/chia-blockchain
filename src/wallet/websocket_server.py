@@ -210,14 +210,24 @@ class WebSocketServer:
                 response = {"success": True, "type": "rl_wallet"}
                 return await websocket.send(format_response(response_api, response))
         elif request["wallet_type"] == "cc_wallet":
-            cc_wallet: CCWallet = await CCWallet.create(
-                config, key_config, wallet_state_manager, main_wallet
-            )
-            self.wallet_node.wallet_state_manager.wallets[
-                cc_wallet.wallet_info.id
-            ] = cc_wallet
-            response = {"success": True, "type": "cc_wallet"}
-            return await websocket.send(format_response(response_api, response))
+            if request["mode"] == "new":
+                cc_wallet: CCWallet = await CCWallet.create_new_wallet(
+                    wallet_state_manager, main_wallet, request["amount"]
+                )
+                self.wallet_node.wallet_state_manager.wallets[
+                    cc_wallet.wallet_info.id
+                ] = cc_wallet
+                response = {"success": True, "type": "cc_wallet"}
+                return await websocket.send(format_response(response_api, response))
+            elif request["mode"] == "existing":
+                cc_wallet: CCWallet = await CCWallet.create_wallet_for_cc(
+                    wallet_state_manager, main_wallet, request["colour"]
+                )
+                self.wallet_node.wallet_state_manager.wallets[
+                    cc_wallet.wallet_info.id
+                ] = cc_wallet
+                response = {"success": True, "type": "cc_wallet"}
+                return await websocket.send(format_response(response_api, response))
 
         response = {"success": False}
         return await websocket.send(format_response(response_api, response))
