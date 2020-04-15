@@ -301,6 +301,9 @@ class CCWallet:
 
     # Create a new coin of value 0 with a given colour
     async def generate_zero_val_coin(self) -> Optional[SpendBundle]:
+        if self.cc_info.my_core is None:
+            return
+
         coins = await self.standard_wallet.select_coins(1)
         if coins is None:
             return None
@@ -328,9 +331,9 @@ class CCWallet:
             return None
 
         eve_spend = cc_generate_eve_spend(eve_coin, cc_puzzle)
-
         full_spend = SpendBundle.aggregate([spend_bundle, eve_spend])
-        return full_spend
+        self.standard_wallet.push_transaction(full_spend)
+        return
 
     async def select_coins(self, amount: uint64) -> Optional[Set[Coin]]:
         """ Returns a set of coins that can be used for generating a new transaction. """
