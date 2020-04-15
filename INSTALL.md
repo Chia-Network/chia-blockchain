@@ -34,7 +34,7 @@ python3.7 -m venv venv
 ln -s venv/bin/activate
 . ./activate
 pip install --upgrade pip
-pip install -i https://hosted.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
+pip install -i https://download.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
 
 pip install chia-blockchain==1.0.beta3
 ```
@@ -67,13 +67,13 @@ python3.7 -m venv venv
 ln -s venv/bin/activate
 . ./activate
 pip install --upgrade pip
-pip install -i https://hosted.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
+pip install -i https://download.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
 
 pip install chia-blockchain==1.0.beta3
 ```
 You will need to download the Windows native Wallet and unzip into somewhere convenient in Windows. You may have to choose "More Info" and "Run Anyway" to be able to run the currently unsigned installer. This will place a Chia icon in your Start menu and on your Desktop that starts the Wallet UI.
 
-[Download: Chia-Wallet-Install-0.1.3](https://hosted.chia.net/beta-1.3-win64-wallet/Chia-Wallet-Install-0.1.3.msi)
+[Download: Chia-Wallet-Install-0.1.3](https://download.chia.net/beta-1.3-win64-wallet/Chia-Wallet-Install-0.1.3.msi)
 
 Instead of `chia-start-wallet-ui &` as explained in the [README.md](README.md) you run `chia-start-wallet-server &` in Ubuntu/WSL 2 to allow the Wallet to connect to the Full Node running in Ubuntu/WSL 2. Once you've enabled `chia-start-wallet-server &` you can run "Chia" from the Start menu or your Desktop.
 
@@ -98,7 +98,7 @@ python3.7 -m venv venv
 ln -s venv/bin/activate
 . ./activate
 pip install --upgrade pip
-pip install -i https://hosted.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
+pip install -i https://download.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
 
 pip install chia-blockchain==1.0.beta3
 ```
@@ -131,7 +131,7 @@ python3.7 -m venv venv
 ln -s venv/bin/activate
 . ./activate
 pip install --upgrade pip
-pip install -i https://hosted.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
+pip install -i https://download.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
 
 pip install chia-blockchain==1.0.beta3
 ```
