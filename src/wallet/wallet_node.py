@@ -169,7 +169,7 @@ class WalletNode:
             while not self._shut_down:
                 if self._num_needed_peers():
                     if not await self.server.start_client(
-                        introducer_peerinfo, on_connect, self.config
+                        introducer_peerinfo, on_connect
                     ):
                         await asyncio.sleep(5)
                         continue
@@ -241,7 +241,7 @@ class WalletNode:
         for peer in to_connect:
             tasks.append(
                 asyncio.create_task(
-                    self.server.start_client(peer, self._on_connect, self.config)
+                    self.server.start_client(peer, self._on_connect)
                 )
             )
         await asyncio.gather(*tasks)

@@ -2,8 +2,6 @@ import asyncio
 import concurrent
 import logging
 from pathlib import Path
-
-import pkg_resources
 import random
 import ssl
 from secrets import token_bytes
