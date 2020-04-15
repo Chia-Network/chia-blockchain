@@ -138,8 +138,7 @@ class WalletPuzzleStore:
         Returns the derivation record by index and wallet id.
         """
         cursor = await self.db_connection.execute(
-            "SELECT * FROM derivation_paths WHERE puzzle_hash=?;",
-            (puzzle_hash,),
+            "SELECT * FROM derivation_paths WHERE puzzle_hash=?;", (puzzle_hash,),
         )
         row = await cursor.fetchone()
         await cursor.close()
@@ -161,7 +160,8 @@ class WalletPuzzleStore:
         """
         pass
         cursor = await self.db_connection.execute(
-            "UPDATE derivation_paths SET used=1 WHERE derivation_index<=? and wallet_id=?", (index, wallet_id,),
+            "UPDATE derivation_paths SET used=1 WHERE derivation_index<=? and wallet_id=?",
+            (index, wallet_id,),
         )
         await cursor.close()
         await self.db_connection.commit()
@@ -262,7 +262,9 @@ class WalletPuzzleStore:
 
         return None
 
-    async def get_last_derivation_path_for_wallet(self, wallet_id: int) -> Optional[uint32]:
+    async def get_last_derivation_path_for_wallet(
+        self, wallet_id: int
+    ) -> Optional[uint32]:
         """
         Returns the last derivation path by derivation_index.
         """
@@ -293,7 +295,9 @@ class WalletPuzzleStore:
 
         return None
 
-    async def get_unused_derivation_path_for_wallet(self, wallet_id: int) -> Optional[uint32]:
+    async def get_unused_derivation_path_for_wallet(
+        self, wallet_id: int
+    ) -> Optional[uint32]:
         """
         Returns the first unused derivation path by derivation_index.
         """

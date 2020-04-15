@@ -56,7 +56,9 @@ class WalletUserStore:
         await cursor.close()
         await self.db_connection.commit()
 
-    async def create_wallet(self, name: str, wallet_type: WalletType, data: str) -> WalletInfo:
+    async def create_wallet(
+        self, name: str, wallet_type: WalletType, data: str
+    ) -> WalletInfo:
         cursor = await self.db_connection.execute(
             "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
             (None, name, wallet_type.value, data),
