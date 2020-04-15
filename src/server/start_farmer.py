@@ -39,14 +39,14 @@ async def async_main():
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
-        config["port"], farmer, NodeType.FARMER, ping_interval, network_id, root_path
+        config["port"], farmer, NodeType.FARMER, ping_interval, network_id, root_path, config
     )
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
 
-    _ = await server.start_server(farmer._on_connect, config)
-    _ = await server.start_client(full_node_peer, None, config)
+    _ = await server.start_server(farmer._on_connect)
+    _ = await server.start_client(full_node_peer, None)
 
     farmer.set_server(server)
     farmer._start_bg_tasks()
