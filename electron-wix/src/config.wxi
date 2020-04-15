@@ -2,9 +2,9 @@
 <Include>
     <!-- these are set with environment variables in the build script -->
     <!-- values can be overriden here -->    
-    <?define version="$(env.version)" ?>
-    <?define exename="$(env.exename).exe" ?>
+    <?define version="$(env.version)"?>
+    <?define walletExeName="$(env.walletExeName).exe"?>
     <?define walletProductName="chia-wallet"?>
-    <?define walletUpgradeCode="9FF22D37-6167-4F05-A0BC-9B5D8BECAC7E" ?>    
-    <?define pythonVersion="3.7.7" ?>  
+    <?define walletUpgradeCode="9FF22D37-6167-4F05-A0BC-9B5D8BECAC7E"?>    
+    <?define pythonVersion="3.7.7"?>  
 </Include>

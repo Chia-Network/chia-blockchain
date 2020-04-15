@@ -100,7 +100,7 @@
                         <Shortcut Id="ProgramMenuShortcut"
                             Name="Chia"
                             Description="Chia $(var.version)"
-                            Target="[INSTALLDIR]$(var.exename)"
+                            Target="[INSTALLDIR]$(var.walletExeName)"
                             WorkingDirectory="INSTALLDIR"
                             Icon="icon.ico"/>
                         <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
@@ -118,7 +118,7 @@
                     <Shortcut Id="ApplicationDesktopShortcut" 
                         Name="Chia"
                         Description="Chia $(var.version)"
-                        Target="[INSTALLDIR]$(var.exename)"
+                        Target="[INSTALLDIR]$(var.walletExeName)"
                         WorkingDirectory="INSTALLDIR"
                         Icon="icon.ico"/>
                     <RemoveFolder Id="DesktopFolder" On="uninstall"/>
