@@ -23,5 +23,3 @@
         </Chain>
     </Bundle>
 </Wix>
-
-<!-- LogoFile="$(env.resourceDir)\chia_logo.png" -->

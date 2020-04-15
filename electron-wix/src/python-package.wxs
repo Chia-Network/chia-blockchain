@@ -22,5 +22,3 @@
         </PackageGroup>
     </Fragment>
 </Wix>
-<!--DownloadUrl="https://www.python.org/ftp/python/$(var.pythonVersion)/python-$(var.pythonVersion)-amd64.exe"
-SourceFile="python-$(var.pythonVersion)-amd64.exe"  -->
