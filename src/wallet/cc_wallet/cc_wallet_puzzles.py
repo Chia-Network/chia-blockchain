@@ -2,6 +2,8 @@ from typing import Optional, Tuple, List
 
 from clvm_tools import binutils
 import clvm
+
+from src.types.BLSSignature import BLSSignature
 from src.types.program import Program
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
@@ -9,6 +11,7 @@ from src.types.coin_solution import CoinSolution
 
 # This is for spending an existing coloured coin
 from src.types.sized_bytes import bytes32
+from src.types.spend_bundle import SpendBundle
 from src.util.ints import uint64
 
 
@@ -67,3 +70,58 @@ def cc_make_solution(
 
     sol = f"(0x{Program(binutils.assemble(core)).get_hash()} {parent_str} {amount} {innerpuzreveal} {innersol} {auditor_formatted} {aggees})"
     return Program(binutils.assemble(sol))
+
+
+def get_genesis_from_puzzle(puzzle: str):
+    return puzzle[-2687:].split(")")[0]
+
+
+def get_genesis_from_core(core: str):
+    return core[-2678:].split(")")[0]
+
+
+def get_innerpuzzle_from_puzzle(puzzle: str):
+    return puzzle[9:75]
+
+
+# Make sure that a generated E lock is spent in the spendbundle
+def create_spend_for_ephemeral(parent_of_e, auditor_coin, spend_amount):
+    puzstring = (
+        f"(r (r (c (q 0x{auditor_coin.name()}) (c (q {spend_amount}) (q ())))))"
+    )
+    puzzle = Program(binutils.assemble(puzstring))
+    coin = Coin(parent_of_e, puzzle.get_hash(), 0)
+    solution = Program(binutils.assemble("()"))
+    coinsol = CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
+    return coinsol
+
+
+# Make sure that a generated A lock is spent in the spendbundle
+def create_spend_for_auditor(parent_of_a, auditee):
+    puzstring = f"(r (c (q 0x{auditee.name()}) (q ())))"
+    puzzle = Program(binutils.assemble(puzstring))
+    coin = Coin(parent_of_a, puzzle.get_hash(), 0)
+    solution = Program(binutils.assemble("()"))
+    coinsol = CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
+    return coinsol
+
+
+def cc_generate_eve_spend(coin: Coin, genesis_id: bytes32, full_puzzle: Program):
+    list_of_solutions = []
+
+    innersol = "()"
+    solution = cc_make_solution(
+        "()",
+        genesis_id,
+        coin.amount,
+        f"0x{coin.puzzle_hash}",
+        innersol,
+        None,
+        None,
+    )
+    list_of_solutions.append(
+        CoinSolution(coin, clvm.to_sexp_f([full_puzzle, solution,]),)
+    )
+    aggsig = BLSSignature.aggregate([])
+    spend_bundle = SpendBundle(list_of_solutions, aggsig)
+    return spend_bundle
