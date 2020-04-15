@@ -54,7 +54,6 @@ class CCInfo(Streamable):
 
 
 class CCWallet:
-    config: Dict
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
@@ -88,14 +87,12 @@ class CCWallet:
 
     @staticmethod
     async def create(
-        config: Dict,
         wallet_state_manager: Any,
         wallet: Wallet,
         wallet_info: WalletInfo,
         name: str = None,
     ):
         self = CCWallet()
-        self.config = config
 
         if name:
             self.log = logging.getLogger(name)
@@ -226,81 +223,29 @@ class CCWallet:
         await self.wallet_state_manager.set_action_done(action_id)
 
     # Note, if you do this before you have a colour assigned you will need to add the colour
-    async def get_new_innerpuzhash(self):
-        async with self.wallet_state_manager.puzzle_store.lock:
-            max = await self.wallet_state_manager.puzzle_store.get_last_derivation_path()
-            max_pk = self.standard_wallet.get_public_key(max)
-            innerpuzzlehash = self.standard_wallet.puzzle_for_pk(bytes(max_pk)).get_hash()
+    async def get_new_inner_hash(self) -> bytes32:
+        return self.standard_wallet.get_new_puzzlehash()
 
-            cc_puzzle = cc_wallet_puzzles.cc_make_puzzle(
-                innerpuzzlehash, self.cc_info.my_core
+    async def puzzle_for_pk(self, pubkey) -> Program:
+        inner_puzzle_hash = self.standard_wallet.puzzle_for_pk(bytes(pubkey)).get_hash()
+        cc_puzzle: Program = cc_wallet_puzzles.cc_make_puzzle(
+            inner_puzzle_hash, self.cc_info.my_core
+        )
+        return cc_puzzle
+
+    async def get_new_cc_puzzle_hash(self):
+        return (
+            await self.wallet_state_manager.get_unused_derivation_record(
+                self.wallet_info.id
             )
-            new_inner_puzzle_record = DerivationRecord(max, innerpuzzlehash.get_hash(), max_pk, WalletType.COLORED_COIN, self.wallet_info.id)
-            new_record = DerivationRecord(max, cc_puzzle.get_hash(), max_pk, WalletType.COLORED_COIN, self.wallet_info.id)
-            await self.wallet_state_manager.puzzle_store.add_derivation_paths([new_inner_puzzle_record, new_record])
-
-            return innerpuzzlehash
-
-    async def get_new_ccpuzzlehash(self):
-        async with self.wallet_state_manager.puzzle_store.lock:
-            max = await self.wallet_state_manager.puzzle_store.get_last_derivation_path()
-            max_pk = self.standard_wallet.get_public_key(max)
-            innerpuzzlehash = self.standard_wallet.puzzle_for_pk(bytes(max_pk)).get_hash()
-
-            cc_puzzle = cc_wallet_puzzles.cc_make_puzzle(
-                innerpuzzlehash, self.cc_info.my_core
-            )
-            new_inner_puzzle_record = DerivationRecord(max, innerpuzzlehash.get_hash(), max_pk, WalletType.COLORED_COIN, self.wallet_info.id)
-            new_record = DerivationRecord(max, cc_puzzle.get_hash(), max_pk, WalletType.COLORED_COIN, self.wallet_info.id)
-            await self.wallet_state_manager.puzzle_store.add_derivation_paths([new_inner_puzzle_record, new_record])
+        ).puzzle_hash
 
     # Create a new coin of value 0 with a given colour
     async def cc_create_zero_val_for_core(self, core):
-        innerpuz = self.wallet.get_new_puzzle()
-        newpuzzle = cc_wallet_puzzles.cc_make_puzzle(innerpuz.get_hash(), core)
-        self.cc_info.my_cc_puzhashes[newpuzzle.get_hash()] = (innerpuz, core)
-        coin = self.wallet.select_coins(1).pop()
-        primaries = [{"puzzlehash": newpuzzle.get_hash(), "amount": 0}]
-        # put all of coin's actual value into a new coin
-        changepuzzlehash = self.wallet.get_new_puzzlehash()
-        primaries.append({"puzzlehash": changepuzzlehash, "amount": coin.amount})
 
-        # add change coin into temp_utxo set
-        self.cc_info.temp_utxos.add(Coin(coin, changepuzzlehash, coin.amount))
-        solution = self.wallet.make_solution(primaries=primaries)
-        pubkey, secretkey = self.wallet.get_keys(coin.puzzle_hash)
-        puzzle = self.wallet.puzzle_for_pk(pubkey)
-        spend_bundle = self.sign_transaction([(puzzle, CoinSolution(coin, solution))])
-
-        # Eve spend so that the coin is automatically ready to be spent
-        coin = Coin(coin, newpuzzle.get_hash(), 0)
-        solution = cc_wallet_puzzles.cc_make_solution(
-            core,
-            coin.parent_coin_info,
-            coin.amount,
-            binutils.disassemble(innerpuz),
-            "((q ()) ())",
-            None,
-            None,
-        )
-        eve_spend = SpendBundle(
-            [CoinSolution(coin, clvm.to_sexp_f([newpuzzle, solution]))],
-            BLSSignature.aggregate([]),
-        )
-        spend_bundle = spend_bundle.aggregate([spend_bundle, eve_spend])
-        self.cc_info.parent_info[coin.name()] = (
-            coin.parent_coin_info,
-            coin.puzzle_hash,
-            coin.amount,
-        )
-        self.cc_info.eve_coloured_coins[Coin(coin, coin.puzzle_hash, 0)] = (
-            innerpuz,
-            core,
-        )
-        return spend_bundle
 
     async def select_coins(self, amount: uint64) -> Optional[Set[Coin]]:
-
+        """ Returns a set of coins that can be used for generating a new transaction. """
         async with self.wallet_state_manager.lock:
             spendable_am = await self.wallet_state_manager.get_unconfirmed_spendable_for_wallet(
                 self.wallet_info.id
@@ -313,7 +258,7 @@ class CCWallet:
                 return None
 
             self.log.info(f"About to select coins for amount {amount}")
-            unspents: List[WalletCoinRecord] = list(
+            unspent: List[WalletCoinRecord] = list(
                 await self.wallet_state_manager.get_spendable_coins_for_wallet(
                     self.wallet_info.id
                 )
@@ -321,19 +266,51 @@ class CCWallet:
             sum = 0
             used_coins: Set = set()
 
-            for unspent in unspents:
-                used_coins.add(unspent.coin)
-                sum += unspent.amount
-                if sum > amount:
+            # Use older coins first
+            unspent.sort(key=lambda r: r.confirmed_block_index)
+
+            # Try to use coins from the store, if there isn't enough of "unused"
+            # coins use change coins that are not confirmed yet
+            unconfirmed_removals: Dict[
+                bytes32, Coin
+            ] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+                self.wallet_info.id
+            )
+            for coinrecord in unspent:
+                if sum >= amount:
                     break
+                if coinrecord.coin.name() in unconfirmed_removals:
+                    continue
+                sum += coinrecord.coin.amount
+                used_coins.add(coinrecord.coin)
+                self.log.info(
+                    f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_index}!"
+                )
 
-            self.log.info(f"used these coins: {used_coins}")
+            # This happens when we couldn't use one of the coins because it's already used
+            # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
+            unconfirmed_additions = None
+            if sum < amount:
+                raise ValueError(
+                    "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
+                )
 
-            return used_coins
+            if sum >= amount:
+                self.log.info(f"Successfully selected coins: {used_coins}")
+                return used_coins
+            else:
+                # This shouldn't happen because of: if amount > self.get_unconfirmed_balance_spendable():
+                self.log.error(
+                    f"Wasn't able to select coins for amount: {amount}"
+                    f"unspent: {unspent}"
+                    f"unconfirmed_removals: {unconfirmed_removals}"
+                    f"unconfirmed_additions: {unconfirmed_additions}"
+                )
+                return None
 
     def get_sigs_for(self, innerpuz: Program, innersol: Program):
         puzzle_hash = innerpuz.get_hash()
-        pubkey, private = self.standard_wallet.get_keys(puzzle_hash)
+        pubkey, private = self.wallet_state_manager.get_keys(puzzle_hash)
         sigs = []
         code_ = [innerpuz, innersol]
         sexp = Program.to(code_)
@@ -368,7 +345,7 @@ class CCWallet:
         innerpuz = self.cc_info.innerpuzzle_lookup_for_coin[auditor]
         primaries = [{"puzzlehash": puzzle_hash, "amount": amount}]
         if change > 0:
-            changepuzzlehash = await self.get_new_innerpuzhash()
+            changepuzzlehash = await self.get_new_inner_hash()
             primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
 
         innersol = self.standard_wallet.make_solution(primaries=primaries)
@@ -481,7 +458,7 @@ class CCWallet:
         sigs = []
         for coin in cc_spends:
             if output_created is None:
-                newinnerpuzhash = self.get_new_innerpuzhash()
+                newinnerpuzhash = self.get_new_inner_hash()
                 innersol = self.make_solution(
                     primaries=[{"puzzlehash": newinnerpuzhash, "amount": cc_amount}]
                 )

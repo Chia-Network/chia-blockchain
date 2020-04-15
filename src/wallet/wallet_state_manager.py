@@ -231,7 +231,7 @@ class WalletStateManager:
                 start_index = 0
 
             for index in range(start_index, end):
-                pubkey: PublicKey = target_wallet.get_public_key(index)
+                pubkey: PublicKey = self.get_public_key(uint32(index))
                 puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
                 puzzlehash: bytes32 = puzzle.get_tree_hash()
                 self.log.info(
