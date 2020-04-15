@@ -120,9 +120,7 @@ class WalletStateManager:
         sk_hex = self.key_config["wallet_sk"]
         self.private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
 
-        self.main_wallet = await Wallet.create(
-            self, main_wallet_info
-        )
+        self.main_wallet = await Wallet.create(self, main_wallet_info)
 
         self.wallets = {}
         self.wallets[main_wallet_info.id] = self.main_wallet
@@ -194,16 +192,16 @@ class WalletStateManager:
     async def get_keys(
         self, hash: bytes32
     ) -> Optional[Tuple[PublicKey, ExtendedPrivateKey]]:
-        index_for_puzzlehash = await self.puzzle_store.index_for_puzzle_hash(
-            hash
-        )
+        index_for_puzzlehash = await self.puzzle_store.index_for_puzzle_hash(hash)
         if index_for_puzzlehash == -1:
             raise ValueError(f"No key for this puzzlehash {hash})")
         pubkey = self.private_key.public_child(index_for_puzzlehash).get_public_key()
         private = self.private_key.private_child(index_for_puzzlehash).get_private_key()
         return pubkey, private
 
-    async def create_more_puzzle_hashes(self, from_zero: bool = False, for_wallet: any=None):
+    async def create_more_puzzle_hashes(
+        self, from_zero: bool = False, for_wallet: any = None
+    ):
         """
         For all wallets in the user store, generates the first few puzzle hashes so
         that we can restore the wallet from only the private keys.
@@ -219,7 +217,9 @@ class WalletStateManager:
             unused: Optional[
                 uint32
             ] = await self.puzzle_store.get_unused_derivation_path_for_wallet(wallet_id)
-            last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
+            last: Optional[
+                uint32
+            ] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
 
             to_generate = 50
             start_index = 0
@@ -509,7 +509,7 @@ class WalletStateManager:
         )
         await self.wallet_store.add_coin_record(coin_record)
         self.state_changed("coin_added")
-        if wallet_type == WalletType.COLORED_COIN:
+        if wallet_type == WalletType.COLOURED_COIN:
             wallet: CCWallet = self.wallets[wallet_id]
             header_hash: bytes32 = self.height_to_hash[index]
             await wallet.coin_added(coin, index, header_hash)
@@ -690,7 +690,9 @@ class WalletStateManager:
 
             async with self.puzzle_store.lock:
                 for addition in block.additions:
-                    record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(addition.puzzle_hash.hex())
+                    record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
+                        addition.puzzle_hash.hex()
+                    )
                     index = record.index
                     assert index is not None
                     await self.puzzle_store.set_used_up_to(index, record.wallet_id)

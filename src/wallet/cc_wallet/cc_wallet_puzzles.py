@@ -34,10 +34,16 @@ def cc_make_core(originID):
 
     return core
 
+
+def cc_make_eve_solution(parent_id: bytes32, full_puzzlehash: bytes32, amount: uint64):
+    sol = f"(() 0x{parent_id.hex()} {amount} 0x{full_puzzlehash.hex()} () () ())"
+    return Program(binutils.assemble(sol))
+
+
 # This is for spending a recieved coloured coin
 def cc_make_solution(
     core: str,
-    parent_info: List[bytes32],
+    parent_info: Tuple[bytes32, bytes32, uint64],
     amount: uint64,
     innerpuzreveal: str,
     innersol: str,
@@ -54,8 +60,6 @@ def cc_make_solution(
             parent_str = f"(0x{parent_info[0]} {parent_info[1]} {parent_info[2]})"
         else:
             parent_str = f"(0x{parent_info[0]} 0x{parent_info[1]} {parent_info[2]})"
-    else:
-        parent_str = f"0x{parent_info.hex()}"
 
     auditor_formatted = "()"
     if auditor is not None:
@@ -64,7 +68,9 @@ def cc_make_solution(
     aggees = "("
     if auditees is not None:
         for auditee in auditees:
-            aggees = aggees + f"(0x{auditee[0]} 0x{auditee[1]} {auditee[2]} {auditee[3]})"
+            aggees = (
+                aggees + f"(0x{auditee[0]} 0x{auditee[1]} {auditee[2]} {auditee[3]})"
+            )
 
     aggees = aggees + ")"
 
@@ -86,9 +92,7 @@ def get_innerpuzzle_from_puzzle(puzzle: str):
 
 # Make sure that a generated E lock is spent in the spendbundle
 def create_spend_for_ephemeral(parent_of_e, auditor_coin, spend_amount):
-    puzstring = (
-        f"(r (r (c (q 0x{auditor_coin.name()}) (c (q {spend_amount}) (q ())))))"
-    )
+    puzstring = f"(r (r (c (q 0x{auditor_coin.name()}) (c (q {spend_amount}) (q ())))))"
     puzzle = Program(binutils.assemble(puzstring))
     coin = Coin(parent_of_e, puzzle.get_hash(), 0)
     solution = Program(binutils.assemble("()"))
@@ -106,22 +110,13 @@ def create_spend_for_auditor(parent_of_a, auditee):
     return coinsol
 
 
-def cc_generate_eve_spend(coin: Coin, genesis_id: bytes32, full_puzzle: Program):
-    list_of_solutions = []
-
-    innersol = "()"
-    solution = cc_make_solution(
-        "()",
-        genesis_id,
-        coin.amount,
-        f"0x{coin.puzzle_hash}",
-        innersol,
-        None,
-        None,
+def cc_generate_eve_spend(coin: Coin, full_puzzle: Program):
+    solution = cc_make_eve_solution(
+        coin.parent_coin_info, coin.puzzle_hash, coin.amount
     )
-    list_of_solutions.append(
+    list_of_solutions = [
         CoinSolution(coin, clvm.to_sexp_f([full_puzzle, solution,]),)
-    )
+    ]
     aggsig = BLSSignature.aggregate([])
     spend_bundle = SpendBundle(list_of_solutions, aggsig)
     return spend_bundle
