@@ -258,7 +258,7 @@ class Wallet:
         signatures = []
         for puzzle, solution in spends:
             # Get keys
-            keys = await self.get_keys(solution.coin.puzzle_hash)
+            keys = await self.wallet_state_manager.get_keys(solution.coin.puzzle_hash)
             if not keys:
                 self.log.error(
                     f"Sign transaction failed, No Keys for puzzlehash {solution.coin.puzzle_hash}"
@@ -377,7 +377,7 @@ class Wallet:
         output_created = None
         sigs = []
         for coin in utxos:
-            pubkey, secretkey = self.get_keys(coin.puzzle_hash)
+            pubkey, secretkey = self.wallet_state_manager.get_keys(coin.puzzle_hash)
             puzzle = self.puzzle_for_pk(bytes(pubkey))
             if output_created is None:
                 newpuzhash = self.get_new_puzzlehash()
