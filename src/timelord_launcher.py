@@ -74,9 +74,10 @@ async def spawn_all_processes(config):
 
 
 def main():
+    root_path = DEFAULT_ROOT_PATH
     setproctitle("chia_timelord_launcher")
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml", "timelord_launcher")
-    initialize_logging("Launcher %(name)-23s", config["logging"])
+    config = load_config(root_path, "config.yaml", "timelord_launcher")
+    initialize_logging("Launcher %(name)-23s", config["logging"], root_path)
 
     def signal_received():
         asyncio.create_task(kill_processes())

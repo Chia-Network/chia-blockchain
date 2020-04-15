@@ -366,13 +366,13 @@ async def start_websocket_server():
     root_path = DEFAULT_ROOT_PATH
 
     config = load_config_cli(root_path, "config.yaml", "wallet")
-    initialize_logging("Wallet %(name)-25s", config["logging"])
+    initialize_logging("Wallet %(name)-25s", config["logging"], root_path)
     log = logging.getLogger(__name__)
 
     try:
         key_config = load_config(DEFAULT_ROOT_PATH, "keys.yaml")
     except FileNotFoundError:
-        raise RuntimeError("Keys not generated. Run chia-generate-keys")
+        raise RuntimeError("Keys not generated. Run `chia generate keys`")
     if config["testing"] is True:
         log.info(f"Testing")
         config["database_path"] = "test_db_wallet.db"

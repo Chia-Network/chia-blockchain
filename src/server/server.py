@@ -324,6 +324,7 @@ class ChiaServer:
         async def serve_forever():
             async for connection, message in expanded_messages_aiter:
                 if message is None:
+                    # Does not ban the peer, this is just a graceful close of connection.
                     self.global_connections.close(connection, True)
                     continue
                 self.log.info(
@@ -528,6 +529,7 @@ class ChiaServer:
         except Exception:
             tb = traceback.format_exc()
             self.log.error(f"Error, closing connection {connection}. {tb}")
+            # TODO: Exception means peer gave us invalid information, so ban this peer.
             self.global_connections.close(connection)
 
     async def expand_outbound_messages(
@@ -566,4 +568,5 @@ class ChiaServer:
                     else:
                         yield (peer, outbound_message.message)
         elif outbound_message.delivery_method == Delivery.CLOSE:
+            # Close the connection but don't ban the peer
             yield (connection, None)

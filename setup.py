@@ -81,7 +81,6 @@ kwargs = dict(
             "chia = src.cmds.cli:main",
             "chia-check-plots = src.cmds.check_plots:main",
             "chia-create-plots = src.cmds.create_plots:main",
-            "chia-generate-keys = src.cmds.generate_keys:main",
             "chia-start-wallet-server = src.wallet.websocket_server:main",
             "chia-wallet = src.wallet.websocket_server:main",
             "chia_full_node = src.server.start_full_node:main",

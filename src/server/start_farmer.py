@@ -24,8 +24,8 @@ async def async_main():
     try:
         key_config = load_config(root_path, "keys.yaml")
     except FileNotFoundError:
-        raise RuntimeError("Keys not generated. Run chia-generate-keys")
-    initialize_logging("Farmer %(name)-25s", config["logging"])
+        raise RuntimeError("Keys not generated. Run `chia generate keys`")
+    initialize_logging("Farmer %(name)-25s", config["logging"], root_path)
     log = logging.getLogger(__name__)
     setproctitle("chia_farmer")
 

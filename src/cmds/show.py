@@ -228,7 +228,9 @@ async def show_async(args, parser):
                         result_txt = f"NodeID {args.remove_connection}... not found."
             print(result_txt)
         if args.block_header_hash != "":
-            block_header = await client.get_block(hexstr_to_bytes(args.block_header_hash))
+            block_header = await client.get_block(
+                hexstr_to_bytes(args.block_header_hash)
+            )
             if block_header is not None:
                 print("Block header:")
                 print(block_header.header)
@@ -260,7 +262,7 @@ async def show_async(args, parser):
                     f"Total VDF Iterations   {block.header.data.total_iters}\n"
                     f"Block VDF Iterations   {block.proof_of_time.number_of_iterations}\n"
                     f"PoTime Witness Type    {block.proof_of_time.witness_type}\n"
-                    f"PoSpace \'k\' Size       {block.proof_of_space.size}\n"
+                    f"PoSpace 'k' Size       {block.proof_of_space.size}\n"
                     # f"Plot Public Key            0x{block.proof_of_space.plot_pubkey}\n"
                     # f"Pool Public Key            0x{block.proof_of_space.pool_pubkey}\n"
                     f"Tx Filter Hash         {b'block.transactions_filter'.hex()}\n"

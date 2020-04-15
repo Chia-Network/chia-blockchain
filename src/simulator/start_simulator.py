@@ -31,7 +31,7 @@ async def main():
     net_config = load_config(root_path, "config.yaml")
     config = load_config_cli(root_path, "config.yaml", "full_node")
     setproctitle("chia_full_node")
-    initialize_logging("FullNode %(name)-23s", config["logging"])
+    initialize_logging("FullNode %(name)-23s", config["logging"], root_path)
 
     log = logging.getLogger(__name__)
     server_closed = False
