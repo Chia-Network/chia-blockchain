@@ -118,7 +118,7 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
     server_1.close_all()
     await server_1.await_closed()
     await connection.close()
-    Path(db_name).unlink()
+    db_path.unlink()
 
 
 async def setup_full_node(db_name, port, introducer_port=None, dic={}):
