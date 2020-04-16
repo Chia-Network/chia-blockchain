@@ -44,7 +44,14 @@ class Program(SExp):  # type: ignore # noqa
         return bytes(self).hex()
 
     def get_hash(self) -> bytes32:
-        return bytes32(std_hash(bytes(self)))
+        if self.listp():
+            left = self.to(self.first()).get_hash()
+            right = self.to(self.rest()).get_hash()
+            s = b"\2" + left + right
+        else:
+            atom = self.as_atom()
+            s = b"\1" + atom
+        return bytes32(std_hash(s))
 
     def __deepcopy__(self, memo):
         return type(self).from_bytes(bytes(self))
