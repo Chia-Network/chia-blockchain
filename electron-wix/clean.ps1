@@ -1,3 +1,5 @@
+# This script deletes any intermediate and final build outputs
+
 # Include required files
 $ScriptDirectory = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
 try {

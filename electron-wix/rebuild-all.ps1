@@ -1,10 +1,11 @@
+# this script cleans and builds all of the packages and bundle
 .\clean.ps1
 
-.\make-wallet-msi.ps1
+.\build-wallet-msi.ps1
 if ($LastExitCode) { exit $LastExitCode }
 
-.\make-blockchain-msi.ps1
+.\build-blockchain-msi.ps1
 if ($LastExitCode) { exit $LastExitCode }
 
-.\make-bundle.ps1
+.\build-bundle.ps1
 if ($LastExitCode) { exit $LastExitCode }

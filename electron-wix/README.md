@@ -19,20 +19,21 @@ Verify that the wallet runs with `npm start`.
 
 ## Build script
 
-Edit the version number in `bundle-win32.ps1`.
+Edit the version number in `config.ps1`.
 
 ````PowerShell
 # from the electron-wix folder
-.\bundle-win32.ps1
+.\rebuild-all.ps1
 ````
 
-MSI will be in the `electron-wix\build` folder.
+The various other build scripts can be used to build individual packages. MSI's and the bundle installer executable will be in the `electron-wix\build` folder.
 
 ## Machine-wide installation
 
-By default the installer is per user. In order to install per machine, run the following from an elevated command prompt:
+The bundle intaller executable cannot be used for per-machine installations and by default the MSIs are per user. 
+In order to install per machine, run the following from an elevated command prompt:
 
 ````PowerShell
 # replace the msi name with the current version
-msiexec /i chia-wallet-0.1.4.msi MSIINSTALLPERUSER="" ALLUSERS=1
+msiexec /i <path_to_msi> MSIINSTALLPERUSER="" ALLUSERS=1
 ````

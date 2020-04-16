@@ -1,4 +1,5 @@
 <?xml version='1.0' encoding='windows-1252'?>
+<!-- This MSI defines the blockchain package -->
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
     <?include "config.wxi"?>
     <Product Name='Chia Blockchain $(var.version)'

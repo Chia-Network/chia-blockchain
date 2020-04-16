@@ -1,4 +1,4 @@
-# Include required files
+# This script builds the bundled installation executable
 $ScriptDirectory = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
 try {
     . ("$ScriptDirectory\config.ps1")
