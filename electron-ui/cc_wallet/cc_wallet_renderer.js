@@ -250,7 +250,7 @@ set_name_button.addEventListener('click', () => {
     */
 
     name = document.querySelector("#set_name_input").value
-    console.log("update colored coin wallet name to" + JSON.stringify(name)");
+    console.log("update coloured coin wallet name to" + JSON.stringify(name)");
     data = {
         "wallet_id": g_wallet_id,
         "name": name,

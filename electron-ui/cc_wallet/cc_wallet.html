@@ -97,6 +97,28 @@
                   </div>
                 </li>
               </ul>
+
+              <div class="wallet-address">
+                <div class="row">
+                  <div class="col-md-8">
+                    <h4>Print new colored coin(s)</h4>
+                    <p>Your existing Chia balance must be sufficient for the colored coin value(s) you wish to print. You may always print a 0-value colored coin.</p>
+                    <div class="input-group">
+                      <input type="text" class="form-control" id="puzzle_holder" value="">
+                      <div class="input-group-prepend">
+                        <button class="btn btn-primary" id="copy" >COPY</button>
+                      </div>
+                    </div>
+                    <div class="input-group">
+                    <button class="btn green" style="padding-top:20px;" id="new_address">NEW ADDRESS</button>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <canvas id="qr_canvas" width="300" height="300"></canvas>
+                  </div>
+                </div>
+              </div>
+
               <div class="wallet-address">
                 <p>Receiver Address:</p>
               <div class="input-group" style="padding-top:0px">
