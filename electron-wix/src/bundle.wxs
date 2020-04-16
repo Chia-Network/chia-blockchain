@@ -24,7 +24,8 @@
                 ShowVersion="yes"
                 SuppressOptionsUI="yes"/>
         </BootstrapperApplicationRef>
-        <Chain>
+        <Chain DisableSystemRestore='yes'
+            ParallelCache='yes'>
             <PackageGroupRef Id="BlockchainPackage" />
             <PackageGroupRef Id="WalletPackage" />
         </Chain>
