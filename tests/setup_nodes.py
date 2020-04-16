@@ -431,8 +431,8 @@ async def setup_node_and_wallet(dic={}):
 async def setup_node_and_two_wallets(dic={}):
     node_iters = [
         setup_full_node("blockchain_test.db", 21234, dic=dic),
-        setup_wallet_node(21235, key_seed=b'a', dic=dic),
-        setup_wallet_node(21236, key_seed=b'b', dic=dic),
+        setup_wallet_node(21235, key_seed=b"a", dic=dic),
+        setup_wallet_node(21236, key_seed=b"b", dic=dic),
     ]
 
     full_node, s1 = await node_iters[0].__anext__()
