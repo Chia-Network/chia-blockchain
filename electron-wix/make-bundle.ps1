@@ -9,9 +9,11 @@ catch {
 }
 $packageName = "chia-bundle-$env:version.exe"
 
+Write-Host "Compiling $packageName"
 candle "$sourceDir\bundle.wxs" "$sourceDir\blockchain-package.wxs" "$sourceDir\wallet-package.wxs" -nologo -o "$buildDir\" -ext WixBalExtension -ext WixUtilExtension
 if ($LastExitCode) { exit $LastExitCode }
 
+Write-Host "Building $packageName"
 light "$buildDir\bundle.wixobj" "$buildDir\blockchain-package.wixobj" "$buildDir\wallet-package.wixobj" -nologo -o "$buildDir\$packageName" -ext WixBalExtension -ext WixUtilExtension
 if ($LastExitCode) { exit $LastExitCode }
 
