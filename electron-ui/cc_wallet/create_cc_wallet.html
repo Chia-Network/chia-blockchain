@@ -38,29 +38,36 @@
         <div class="col-md-12 col-lg-8">
           <div class="tab-content">
               <div class="nav flex-column nav-pills" role="tablist" aria-orientation="vertical">
-            <a class="nav-link d-flex justify-content-between align-items-center" id="generate_color" data-toggle="pill" href="#"
-              role="tab" aria-selected="true">
+            <div class="field-with-top-border">
               <div class="d-flex">
                 <img src="../assets/img/circle-cropped.png" alt="btc">
-                <div>
+                <div class="colour-input">
                   <h2>Generate New Color</h2>
                   <p>(Create a new colored coin wallet by generating a new color)</p>
+                  <p id="balance_textfield">Your available balance is 0 CH</p>
+                  <div class="input-group" style="padding-top:10px">
+                    <p id="colour-input-label">Amount for new color coin:</p>
+                  <input type="text" class="form-control"  id="generate_colour_text" value="">
+                  <div class="input-group-prepend">
+                    <button class="btn btn-primary" id="generate_colour" >GO</button>
+                  </div>
+                </div>
                 </div>
               </div>
               <div>
               </div>
-            </a>
+            </div>
             <div class="field-with-top-border">
               <div class="d-flex">
                 <img src="../assets/img/circle-cropped.png" alt="btc">
-                <div class="color-input">
+                <div class="colour-input">
                   <h2>Input Existing Color</h2>
                   <p>(Create a new colored coin wallet using an existing color)</p>
                   <div class="input-group" style="padding-top:10px">
-                    <p id="color-input-label">Color:</p>
-                  <input type="text" class="form-control"  id="input_color_text" value="">
+                    <p id="colour-input-label">Color:</p>
+                  <input type="text" class="form-control"  id="input_colour_text" value="">
                   <div class="input-group-prepend">
-                    <button class="btn btn-primary" id="input_color" >GO</button>
+                    <button class="btn btn-primary" id="input_colour" >GO</button>
                   </div>
                 </div>
                 </div>
