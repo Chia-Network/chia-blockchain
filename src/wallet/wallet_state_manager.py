@@ -249,7 +249,7 @@ class WalletStateManager:
                         uint32(index),
                         puzzlehash,
                         pubkey,
-                        WalletType.STANDARD_WALLET,
+                        target_wallet.wallet_info.type,
                         uint32(target_wallet.wallet_info.id),
                     )
                 )
