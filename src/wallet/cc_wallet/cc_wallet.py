@@ -410,7 +410,9 @@ class CCWallet:
         selected_coins: Optional[List[Coin]] = await self.select_coins(amount)
         if selected_coins is None:
             return None
-        change = sum([x.amount for x in selected_coins]) - amount
+
+        total_amount = sum([x.amount for x in selected_coins])
+        change = total_amount - amount
 
         # first coin becomes the auditor special case
         auditor = selected_coins.pop()
@@ -430,7 +432,7 @@ class CCWallet:
                 auditor.parent_coin_info,
                 inner_puzzle.get_hash(),
                 auditor.amount,
-                amount + change,
+                total_amount,
             )
         ]
         for coin in selected_coins:
@@ -486,12 +488,15 @@ class CCWallet:
                 ),
             )
         list_of_solutions.append(main_coin_solution)
+        # main = SpendBundle([main_coin_solution], ZERO96)
 
-        ephemeral_coin_solution = create_spend_for_ephemeral(auditor, auditor, amount)
+        ephemeral_coin_solution = create_spend_for_ephemeral(auditor, auditor, total_amount)
         list_of_solutions.append(ephemeral_coin_solution)
+        # eph = SpendBundle([ephemeral_coin_solution], ZERO96)
 
         auditor_coin_colution= create_spend_for_auditor(auditor, auditor)
         list_of_solutions.append(auditor_coin_colution)
+        # aud = SpendBundle([auditor_coin_colution], ZERO96)
 
         # loop through remaining spends, treating them as aggregatees
         for coin in selected_coins:
