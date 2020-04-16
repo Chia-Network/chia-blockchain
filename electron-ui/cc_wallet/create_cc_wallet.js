@@ -15,6 +15,7 @@ const path = require('path')
 
 var global_input_colour_continue = false
 var global_balance = 0.0
+var global_creating_wallet = false
 
 
 generate_colour.addEventListener('click', () => {
@@ -29,6 +30,10 @@ input_colour.addEventListener('click', () => {
 function create_wallet_generate_colour() {
     //console.log("create cc wallet by generating a new colour");
 
+    if (global_creating_wallet) {
+        return;
+    }
+
     try {
       amount_value = parseFloat(Number(amount.value));
       mojo_value = chia_formatter(amount_value, 'chia').to('mojo').value()
@@ -42,6 +47,11 @@ function create_wallet_generate_colour() {
         dialogs.alert("Amount may not be greater than your available balance");
         return;
       }
+
+      global_creating_wallet = true;
+      generate_colour.disabled = true;
+      generate_colour.innerHTML = "CREATING...";
+
       data = {
           "wallet_type": "cc_wallet",
           "mode": "new",
@@ -56,7 +66,7 @@ function create_wallet_generate_colour() {
       console.log(json_data)
     } catch (error) {
         dialogs.alert("Error generating a new color").
-        global_input_colour_continue = false;
+        global_creating_wallet = false;
     }
 }
 
@@ -67,14 +77,21 @@ function create_wallet_response(response) {
     console.log("create_wallet_response got called")
    console.log(JSON.stringify(response));
    status = response["success"];
-   if (status === True) {
+   console.log(status)
+   if (status === "true") {
+      console.log("create cc wallet successful")
        go_to_main_wallet();
-   } else if (status === False) {
+   } else if (status === "false") {
        dialogs.alert("Error creating colored coin wallet.", ok => {});
+       global_creating_wallet = false;
    }
 }
 
 function create_wallet_input_colour() {
+    if (global_creating_wallet) {
+        return;
+    }
+
     console.log("create cc wallet by inputing an existing color");
 
     try {
@@ -86,7 +103,7 @@ function create_wallet_input_colour() {
         regexp = /^[0-9a-fA-F]+$/;
         if (!regexp.test(colour))
           {
-            alert("Please enter a 32 byte colour in hexadecimal format!!");
+            alert("Please enter a 32 byte colour in hexadecimal format");
             return;
           }
 
@@ -95,7 +112,9 @@ function create_wallet_input_colour() {
             return;
         }
 
-        global_input_colour_continue = true;
+        global_creating_wallet = true;
+        input_colour.disabled = true;
+        input_colour.innerHTML = "CREATING...";
 
         data = {
           "wallet_type": "cc_wallet",
@@ -112,10 +131,7 @@ function create_wallet_input_colour() {
         ws.send(json_data);
     } catch (error) {
         dialogs.alert("Error creating new wallet using an existing colour").
-        global_input_colour_continue = false;
-    }
-    if (global_input_colour_continue) {
-      go_to_main_wallet();
+        global_creating_wallet = false;
     }
 }
 
