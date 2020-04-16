@@ -138,7 +138,7 @@ class TestWalletSimulator:
         assert cc_wallet.cc_info.my_core == cc_wallet_2.cc_info.my_core
 
         cc_2_hash = await cc_wallet_2.get_new_inner_hash()
-        await cc_wallet.cc_spend(uint64(100), cc_2_hash)
+        await cc_wallet.cc_spend(uint64(60), cc_2_hash)
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
@@ -147,14 +147,14 @@ class TestWalletSimulator:
         confirmed_balance = await cc_wallet.get_confirmed_balance()
         unconfirmed_balance = await cc_wallet.get_unconfirmed_balance()
 
-        assert confirmed_balance == 0
-        assert unconfirmed_balance == 0
+        assert confirmed_balance == 40
+        assert unconfirmed_balance == 40
 
         confirmed_balance = await cc_wallet_2.get_confirmed_balance()
         unconfirmed_balance = await cc_wallet_2.get_unconfirmed_balance()
 
-        assert confirmed_balance == 100
-        assert unconfirmed_balance == 100
+        assert confirmed_balance == 60
+        assert unconfirmed_balance == 60
     """
     @pytest.mark.asyncio
     async def test_generate_zero_val(self, two_wallet_nodes):
