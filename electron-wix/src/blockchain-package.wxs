@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+    xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+    <?include "config.wxi"?>    
+    <Fragment>
+        <util:ProductSearch Variable="blockchainVersion" 
+            UpgradeCode="$(var.blockchainUpgradeCode)"
+            Result="version"/>
+        <PackageGroup Id="BlockchainPackage">
+            <MsiPackage Id="BlockchainMsiPackage"
+                Compressed="yes"
+                SourceFile="build\$(var.blockchainProductName)-$(var.version).msi"
+                InstallCondition="blockchainVersion &lt; v$(var.version)"/>
+        </PackageGroup>
+    </Fragment>
+</Wix>

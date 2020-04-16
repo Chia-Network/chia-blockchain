@@ -18,7 +18,7 @@
                 LicenseUrl="https://raw.githubusercontent.com/Chia-Network/chia-blockchain/master/LICENSE"/>
         </BootstrapperApplicationRef>
         <Chain>
-            <PackageGroupRef Id="PythonPackage" />
+            <PackageGroupRef Id="BlockchainPackage" />
             <PackageGroupRef Id="WalletPackage" />
         </Chain>
     </Bundle>

@@ -1,16 +1,16 @@
 <?xml version='1.0' encoding='windows-1252'?>
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
     <?include "config.wxi"?>
-    <Product Name='Chia Wallet $(var.version)'
+    <Product Name='Chia Blockchain $(var.version)'
         Manufacturer='$(var.Manufacturer)'
         Id='*'
-        UpgradeCode='$(var.walletUpgradeCode)'
+        UpgradeCode='$(var.blockchainUpgradeCode)'
         Language='1033'
         Codepage='1252'
         Version='$(var.version)'>
         <Package Id='*'
-            Keywords='Chia Network Wallet Installer' 
-            Description="Chia Wallet Installer $(var.version)"
+            Keywords='Chia Network Blockchain Installer' 
+            Description="Chia Blockchain Installer $(var.version)"
             Comments='$(var.Comments)'
             Manufacturer='$(var.Manufacturer)'
             InstallerVersion='500'
@@ -20,7 +20,7 @@
             InstallScope="perUser"/>
 
         <!-- Media and application properties -->
-        <Media Id='1' Cabinet='chiaWallet.cab' EmbedCab='yes' DiskPrompt="CD-ROM #1" />
+        <Media Id='1' Cabinet='chiaBlockchain.cab' EmbedCab='yes' DiskPrompt="CD-ROM #1" />
         <Icon Id="icon.ico" SourceFile="$(env.resourceDir)\icon.ico"/>
         <Property Id="ARPPRODUCTICON" Value="icon.ico" />
         <Property Id='DiskPrompt' Value="Chia Network's Chia Installation [1]" />
@@ -35,7 +35,7 @@
         <SetProperty Id="ARPNOMODIFY" Value="1" After="InstallValidate" Sequence="execute"/>
 
         <!-- Upgrade logic -->
-        <Upgrade Id='$(var.walletUpgradeCode)'>
+        <Upgrade Id='$(var.blockchainUpgradeCode)'>
             <UpgradeVersion OnlyDetect='yes'
                 Property='SELFFOUND'
                 Minimum='$(var.version)'
@@ -53,8 +53,8 @@
                 Maximum='$(var.version)'
                 IncludeMaximum='no' />
         </Upgrade>
-        <CustomAction Id='AlreadyUpdated' Error='Chia Wallet has already been updated to $(var.version) or newer.' />
-        <CustomAction Id='NoDowngrade' Error='A later version of Chia Wallet is already installed.' />
+        <CustomAction Id='AlreadyUpdated' Error='Chia Blockchain has already been updated to $(var.version) or newer.' />
+        <CustomAction Id='NoDowngrade' Error='A later version of Chia Blockchain is already installed.' />
         <InstallExecuteSequence>
             <Custom Action='AlreadyUpdated' After='FindRelatedProducts'>SELFFOUND</Custom>
             <Custom Action='NoDowngrade' After='FindRelatedProducts'>NEWERFOUND</Custom>
@@ -72,7 +72,7 @@
         <Directory Id='TARGETDIR' Name='SourceDir'>
             <Directory Id='ProgramFilesFolder' Name='installRoot'>
                 <Directory Id='ChiaNetworkDir' Name='Chia Network'>
-                    <Component Id="ManufacturerData" Guid="BE655B40-EA15-46FB-ADA4-6D9DCDAA0C79">
+                    <Component Id="ManufacturerData" Guid="83770020-87A0-413F-B4D2-A6E496401062">
                         <RegistryValue Root='HKCU'
                             Key='Software\[Manufacturer]'
                             Type='integer'
@@ -81,8 +81,8 @@
                             KeyPath='yes' />
                         <RemoveFolder Id='ChiaNetworkDir' On='uninstall' />
                     </Component>
-                    <Directory Id='INSTALLDIR' Name='Chia Wallet'>
-                        <Component Id="dirINSTALLDIR" Guid="41069240-5836-461F-BF81-614A2C6106A9">
+                    <Directory Id='INSTALLDIR' Name='Chia Blockchain'>
+                        <Component Id="dirINSTALLDIR" Guid="E645FFCF-0742-4AB1-845E-B3EB8B721059">
                             <RemoveFolder Id='INSTALLDIR' On='uninstall' />
                             <RegistryValue Root='HKCU'
                                 Key='Software\[Manufacturer]\[ProductName]'
@@ -90,19 +90,17 @@
                                 Name="Version"
                                 Value='$(var.version)'
                                 KeyPath='yes' />
+                            <RegistryValue Root='HKCU'
+                                Key='Software\[Manufacturer]\[ProductName]'
+                                Type='string'
+                                Value='[INSTALLDIR]'/>
                         </Component>
                     </Directory>
                 </Directory>
             </Directory>
             <Directory Id="ProgramMenuFolder" Name="Programs">
                 <Directory Id="ProgramMenuDir" Name="Chia">
-                    <Component Id="ProgramMenuDir" Guid="0B8A0D75-657A-4FFC-84E8-8D40B343E7CA">
-                        <Shortcut Id="ProgramMenuShortcut"
-                            Name="Chia"
-                            Description="Chia $(var.version)"
-                            Target="[INSTALLDIR]$(var.walletExeName)"
-                            WorkingDirectory="INSTALLDIR"
-                            Icon="icon.ico"/>
+                    <Component Id="ProgramMenuDir" Guid="A16FAB5C-6B3E-4B59-91B0-B254244FBDC9">
                         <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
                         <RegistryValue Root='HKCU'
                             Key='Software\[Manufacturer]\[ProductName]'
@@ -112,33 +110,14 @@
                     </Component>
                 </Directory>
             </Directory>
-
-            <Directory Id="DesktopFolder" Name="Desktop" >
-                <Component Id="DesktopShortCut" Guid="4281DF51-82FC-471B-A26A-1292DFEE9738">
-                    <Shortcut Id="ApplicationDesktopShortcut" 
-                        Name="Chia"
-                        Description="Chia $(var.version)"
-                        Target="[INSTALLDIR]$(var.walletExeName)"
-                        WorkingDirectory="INSTALLDIR"
-                        Icon="icon.ico"/>
-                    <RemoveFolder Id="DesktopFolder" On="uninstall"/>
-                    <RegistryValue Root='HKCU' 
-                        Key='Software\[Manufacturer]\[ProductName]'
-                        Name='Installed'
-                        Type='integer'
-                        Value='1'
-                        KeyPath='yes' />
-                </Component>
-            </Directory>
         </Directory>
 
         <!-- Included components -->
         <Feature Id='Complete' Level='1'>
-            <ComponentRef Id='DesktopShortCut' />
             <ComponentRef Id='ProgramMenuDir' />
             <ComponentRef Id='dirINSTALLDIR' />
             <ComponentRef Id='ManufacturerData' />
-            <ComponentGroupRef Id="ChiaWalletFiles" /> <!-- this component group is defined in the heat generated wxs file -->
+            <ComponentGroupRef Id="ChiaBlockchainFiles" /> <!-- this component group is defined in the heat generated wxs file -->
         </Feature>
     </Product>
 </Wix>
