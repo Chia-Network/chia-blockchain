@@ -9,14 +9,14 @@ catch {
 }
 
 # package up the electron stuff and sources
-electron-packager ../electron-ui $env:walletExeName --platform=win32 --arch=x64 --icon="$env:resourceDir\icon.ico" --app-version="$env:version" --win32metadata.CompanyName="Chia Network" --win32metadata.ProductName="Chia Wallet" --app-copyright="Chia Network 2020"
+electron-packager ../electron-ui $env:walletProductName --platform=win32 --arch=x64 --icon="$env:resourceDir\icon.ico" --app-version="$env:version" --win32metadata.CompanyName="Chia Network" --win32metadata.ProductName="Chia Wallet" --app-copyright="Chia Network 2020"
 if ($LastExitCode) { exit $LastExitCode }
 
 $tempName = "electron-packager-files"
-$msiName = "$env:walletExeName-$env:version.msi"
+$msiName = "$env:walletProductName-$env:version.msi"
 
 # this generates package-files.wxs from the contents of the electron packager folder
-heat dir $electronPackagerDir -cg ChiaFiles -gg -scom -sreg -sfrag -srd -dr INSTALLDIR -out "$buildDir\$tempName.wxs"
+heat dir $electronPackagerDir -cg ChiaWalletFiles -gg -scom -sreg -sfrag -srd -dr INSTALLDIR -out "$buildDir\$tempName.wxs"
 if ($LastExitCode) { exit $LastExitCode }
 
 # compile the installer

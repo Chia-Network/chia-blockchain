@@ -3,5 +3,8 @@
 .\make-wallet-msi.ps1
 if ($LastExitCode) { exit $LastExitCode }
 
+.\make-blockchain-msi.ps1
+if ($LastExitCode) { exit $LastExitCode }
+
 .\make-bundle.ps1
 if ($LastExitCode) { exit $LastExitCode }
