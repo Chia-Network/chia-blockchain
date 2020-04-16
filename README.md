@@ -32,13 +32,13 @@ chia generate keys
 To run a full node on port 8444, and connect to the testnet, run the following command. Logs are usually at ~/.chia/VERSION/logs/debug.log.
 
 ```bash
-chia-start-node &
-chia-start-wallet-gui &
+chia start node &
+chia start wallet-gui &
 ```
 If you're using Windows/WSL 2, you should instead run:
 ```bash
-chia-start-node &
-chia-start-wallet-server &
+chia start node &
+chia start wallet-server &
 ```
 And then run `Chia` from the Chia Wallet Installer in Windows (not in Ubuntu/WSL 2.)
 
@@ -53,14 +53,14 @@ Once you have a few plots, run the farmer + full node with the following command
 You can change the working directory and output directory for plotting, with the "-t" (temp) and "-d" (destination) arguments to the `chia-create-plots` command.
 ```bash
 chia-create-plots -k 29 -n 2
-chia-start-farmer &
-chia-start-wallet-gui &
+chia start farmer &
+chia start wallet-gui &
 ```
 If you're using Windows/WSL 2, you should instead run:
 ```bash
 chia-create-plots -k 29 -n 2
-chia-start-farmer &
-chia-start-wallet-server &
+chia start farmer &
+chia start wallet-server &
 ```
 Then run `Chia` from the Chia Windows Wallet installer in Windows (not in Ubuntu/WSL 2.)
 
@@ -75,7 +75,7 @@ blocks to make them valid. This requires fast CPUs and a few cores per VDF as we
 ```bash
 . ./activate
 sh install-timelord.sh
-chia-start-timelord &
+chia start timelord &
 ```
 
 ## Tips
