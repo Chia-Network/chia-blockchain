@@ -6,7 +6,7 @@ from src import __version__
 from src.util.default_root import DEFAULT_ROOT_PATH
 
 
-SUBCOMMANDS = ["init", "generate", "show", "version", "netspace"]
+SUBCOMMANDS = ["init", "generate", "show", "start", "version", "netspace"]
 
 
 def create_parser():
