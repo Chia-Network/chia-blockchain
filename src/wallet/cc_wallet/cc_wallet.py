@@ -53,7 +53,7 @@ from src.wallet.cc_wallet import cc_wallet_puzzles
 @streamable
 class CCParent(Streamable):
     parent_name: bytes32
-    inner_puzzle_hash: bytes32
+    inner_puzzle_hash: Optional[bytes32]
     amount: uint64
 
 
@@ -171,7 +171,7 @@ class CCWallet:
         colour = cc_wallet_puzzles.get_genesis_from_core(self.cc_info.my_core)
         return colour
 
-    async def coin_added(self, coin: Coin, height: int, header_hash: bytes32):
+    async def coin_added(self, coin: Coin, height: int, header_hash: bytes32, removals: List[Coin]):
         """ Notification from wallet state manager that wallet has been received. """
         self.log.info(f"CC wallet has been notified that coin was added")
 
@@ -189,7 +189,15 @@ class CCWallet:
                 search_for_parent = False
                 break
         # breakpoint()
+
         if search_for_parent:
+            for removed in removals:
+                if removed.name() == coin.parent_coin_info:
+                    parent = CCParent(
+                        removed.parent_coin_info, None, removed.amount
+                    )
+                    await self.add_parent(coin.parent_coin_info, parent)
+
             data: Dict[str, Any] = {
                 "data": {
                     "action_data": {
@@ -457,6 +465,7 @@ class CCWallet:
                 parent_info = ccparent
 
         assert parent_info is not None
+        assert parent_info.inner_puzzle_hash is not None
 
         solution = cc_wallet_puzzles.cc_make_solution(
             self.cc_info.my_core,

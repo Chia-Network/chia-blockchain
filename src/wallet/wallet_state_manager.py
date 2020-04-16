@@ -440,14 +440,18 @@ class WalletStateManager:
                 removals[coin.name()] = coin
         return removals
 
-    async def coin_removed(self, coin_name: bytes32, index: uint32):
+    async def coin_removed(self, coin: Coin, index: uint32):
         """
         Called when coin gets spent
         """
-        await self.wallet_store.set_spent(coin_name, index)
+        record = await self.wallet_store.get_coin_record_by_coin_id(coin.name())
+        if record is None:
+            return
+
+        await self.wallet_store.set_spent(coin.name(), index)
 
         unconfirmed_record = await self.tx_store.unconfirmed_with_removal_coin(
-            coin_name
+            coin.name()
         )
         if unconfirmed_record:
             await self.tx_store.set_confirmed(unconfirmed_record.name(), index)
@@ -512,7 +516,8 @@ class WalletStateManager:
         if wallet_type == WalletType.COLOURED_COIN:
             wallet: CCWallet = self.wallets[wallet_id]
             header_hash: bytes32 = self.height_to_hash[index]
-            await wallet.coin_added(coin, index, header_hash)
+            block: BlockRecord = await self.wallet_store.get_block_record(header_hash)
+            await wallet.coin_added(coin, index, header_hash, block.removals)
 
     async def add_pending_transaction(self, spend_bundle: SpendBundle, wallet_id):
         """
@@ -706,8 +711,8 @@ class WalletStateManager:
                 self.lca = block.header_hash
                 for coin in block.additions:
                     await self.coin_added(coin, block.height, False)
-                for coin_name in block.removals:
-                    await self.coin_removed(coin_name, block.height)
+                for coin in block.removals:
+                    await self.coin_removed(coin, block.height)
                 self.state_changed("coin_added")
                 self.state_changed("coin_removed")
                 self.height_to_hash[uint32(0)] = block.header_hash
@@ -752,8 +757,8 @@ class WalletStateManager:
                             is_coinbase = True
 
                         await self.coin_added(coin, path_block.height, is_coinbase)
-                    for coin_name in path_block.removals:
-                        await self.coin_removed(coin_name, path_block.height)
+                    for coin in path_block.removals:
+                        await self.coin_removed(coin, path_block.height)
 
                 self.lca = block.header_hash
                 self.state_changed("coin_added")
