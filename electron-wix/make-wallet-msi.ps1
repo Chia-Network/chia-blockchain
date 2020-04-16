@@ -22,7 +22,7 @@ if ($LastExitCode) { exit $LastExitCode }
 
 # compile the installer
 Write-Host "Compiling $packageName"
-candle "$buildDir\$tempName.wxs" "$sourceDir\wallet-msi.wxs" -nologo -o "$buildDir\"
+candle "$buildDir\$tempName.wxs" "$sourceDir\wallet-msi.wxs" -arch x64 -nologo -o "$buildDir\"
 if ($LastExitCode) { exit $LastExitCode }
 
 # link the installer
