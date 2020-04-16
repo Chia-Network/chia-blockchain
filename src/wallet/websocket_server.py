@@ -211,15 +211,21 @@ class WebSocketServer:
                 return await websocket.send(format_response(response_api, response))
         elif request["wallet_type"] == "cc_wallet":
             if request["mode"] == "new":
-                cc_wallet: CCWallet = await CCWallet.create_new_cc(
+                cc_wallet: CCWallet = await CCWallet.create_new_wallet(
                     wallet_state_manager, main_wallet, request["amount"]
                 )
+                self.wallet_node.wallet_state_manager.wallets[
+                    cc_wallet.wallet_info.id
+                ] = cc_wallet
                 response = {"success": True, "type": "cc_wallet"}
                 return await websocket.send(format_response(response_api, response))
             elif request["mode"] == "existing":
                 cc_wallet: CCWallet = await CCWallet.create_wallet_for_cc(
                     wallet_state_manager, main_wallet, request["colour"]
                 )
+                self.wallet_node.wallet_state_manager.wallets[
+                    cc_wallet.wallet_info.id
+                ] = cc_wallet
                 response = {"success": True, "type": "cc_wallet"}
                 return await websocket.send(format_response(response_api, response))
 
@@ -389,6 +395,21 @@ class WebSocketServer:
 
         return await websocket.send(format_response(response_api, data))
 
+    async def cc_get_new_innerpuzzlehash(self, websocket, request, response_api):
+
+        wallet_id = int(request["wallet_id"])
+        wallet: CCWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        innerpuz: str = await wallet.get_new_inner_hash()
+        response = {"innerpuz": innerpuz.hex()}
+        return await websocket.send(format_response(response_api, response))
+
+    async def cc_get_colour(self, websocket, request, response_api):
+        wallet_id = int(request["wallet_id"])
+        wallet: CCWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        colour: str = await wallet.get_colour()
+        response = {"colour": colour}
+        return await websocket.send(format_response(response_api, response))
+
     async def safe_handle(self, websocket, path):
         try:
             await self.handle_message(websocket, path)
@@ -446,6 +467,10 @@ class WebSocketServer:
                 await self.cc_generate_zero_val(websocket, data, command)
             elif command == "cc_spend":
                 await self.cc_spend(websocket, data, command)
+            elif command == "cc_get_innerpuzzlehash":
+                await self.cc_get_new_innerpuzzlehash(websocket, data, command)
+            elif command == "cc_get_colour":
+                await self.cc_get_colour(websocket, data, command)
             else:
                 response = {"error": f"unknown_command {command}"}
                 await websocket.send(dict_to_json_str(response))
