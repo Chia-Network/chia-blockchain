@@ -16,15 +16,15 @@ $tempName = "electron-packager-files"
 $packageName = "$env:walletProductName-$env:version.msi"
 
 # this generates package-files.wxs from the contents of the electron packager folder
-heat dir $electronPackagerDir -cg ChiaWalletFiles -gg -scom -sreg -sfrag -srd -dr INSTALLDIR -out "$buildDir\$tempName.wxs"
+heat dir $electronPackagerDir -cg ChiaWalletFiles -nologo -gg -scom -sreg -sfrag -srd -dr INSTALLDIR -out "$buildDir\$tempName.wxs"
 if ($LastExitCode) { exit $LastExitCode }
 
 # compile the installer
-candle "$buildDir\$tempName.wxs" "$sourceDir\wallet-msi.wxs" -o "$buildDir\"
+candle "$buildDir\$tempName.wxs" "$sourceDir\wallet-msi.wxs" -nologo -o "$buildDir\"
 if ($LastExitCode) { exit $LastExitCode }
 
 # link the installer
-light -ext WixUIExtension "$buildDir\$tempName.wixobj" "$buildDir\wallet-msi.wixobj" -b $electronPackagerDir -o "$buildDir\$packageName" -sw1076
+light -ext WixUIExtension "$buildDir\$tempName.wixobj" "$buildDir\wallet-msi.wixobj" -nologo -b $electronPackagerDir -o "$buildDir\$packageName" -sw1076
 if ($LastExitCode) { exit $LastExitCode }
 
 Write-Host "Successfully built $packageName"
