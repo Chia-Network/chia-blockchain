@@ -85,7 +85,7 @@ class WalletActionStore:
         Creates Wallet Action
         """
         cursor = await self.db_connection.execute(
-            "INSERT INTO action_queue VALUES(?, ?, ?, ?, ?, ?)",
+            "INSERT INTO action_queue VALUES(?, ?, ?, ?, ?, ?, ?)",
             (None, name, wallet_id, type.value, callback, done, data),
         )
         await cursor.close()
