@@ -70,7 +70,7 @@
 
         <!-- Files, folders, shortcuts, registry etc -->
         <Directory Id='TARGETDIR' Name='SourceDir'>
-            <Directory Id='ProgramFilesFolder' Name='installRoot'>
+            <Directory Id='ProgramFiles64Folder' Name='installRoot'>
                 <Directory Id='ChiaNetworkDir' Name='Chia Network'>
                     <Component Id="ManufacturerData" Guid="83770020-87A0-413F-B4D2-A6E496401062">
                         <RegistryValue Root='HKCU'
