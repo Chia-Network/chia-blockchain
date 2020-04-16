@@ -64,6 +64,7 @@ function create_wallet_response(response) {
     /*
     Called when response is received for create_wallet_generate_colour request
     */
+    console.log("create_wallet_response got called")
    console.log(JSON.stringify(response));
    status = response["success"];
    if (status === True) {
@@ -82,13 +83,17 @@ function create_wallet_input_colour() {
             colour = colour.substring(2);
         }
 
-        /*
-        needs the correct length below and correct the wording
+        regexp = /^[0-9a-fA-F]+$/;
+        if (!regexp.test(colour))
+          {
+            alert("Please enter a 32 byte colour in hexadecimal format!!");
+            return;
+          }
+
         if (colour.length != 64) {
             alert("Please enter a 32 byte colour in hexadecimal format");
             return;
         }
-        */
 
         global_input_colour_continue = true;
 
