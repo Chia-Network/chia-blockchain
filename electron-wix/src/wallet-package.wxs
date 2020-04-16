@@ -9,6 +9,8 @@
         <PackageGroup Id="WalletPackage">
             <MsiPackage Id="WalletMsiPackage"
                 Compressed="yes"
+                ForcePerMachine="no"
+                Vital="yes"                
                 SourceFile="build\$(var.walletProductName)-$(var.version).msi"
                 InstallCondition="walletVersion &lt; v$(var.version)"/>
         </PackageGroup>

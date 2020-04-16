@@ -9,6 +9,8 @@
         <PackageGroup Id="BlockchainPackage">
             <MsiPackage Id="BlockchainMsiPackage"
                 Compressed="yes"
+                ForcePerMachine="no"
+                Vital="yes"
                 SourceFile="build\$(var.blockchainProductName)-$(var.version).msi"
                 InstallCondition="blockchainVersion &lt; v$(var.version)"/>
         </PackageGroup>

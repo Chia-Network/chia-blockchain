@@ -4,18 +4,25 @@
     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
     <?include "config.wxi"?>
     <Bundle Condition="VersionNT64 AND VersionNT >= v10.0"
-        Copyright="Chia Network 2020"
+        AboutUrl="$(var.ARPURLINFOABOUT)"
+        Compressed="yes"
+        Copyright="$(var.Copyright)"
         DisableModify="yes"
-        HelpUrl="https://keybase.io/team/chia_network.public"
+        HelpUrl="$(var.ARPHELPLINK)"
         IconSourceFile="$(env.resourceDir)\icon.ico"
-        Manufacturer="Chia Network"
-        Name="Chia"
-        UpgradeCode="BEC2F30C-D162-4303-928C-A43894D7CE84"
+        Manufacturer="$(var.Manufacturer)"
+        Name="Chia $(var.version)"
+        UpdateUrl="$(var.ARPURLUPDATEINFO)"
+        UpgradeCode="$(var.bundleUpgradeCode)"
         Version="$(var.version)">
         <BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.HyperlinkLicense">
             <bal:WixStandardBootstrapperApplication
                 LogoFile="$(env.resourceDir)\chia_logo.png"
-                LicenseUrl="https://raw.githubusercontent.com/Chia-Network/chia-blockchain/master/LICENSE"/>
+                LogoSideFile="$(env.resourceDir)\dialog.png"
+                LicenseUrl="https://raw.githubusercontent.com/Chia-Network/chia-blockchain/master/LICENSE"
+                ShowFilesInUse="yes"
+                ShowVersion="yes"
+                SuppressOptionsUI="yes"/>
         </BootstrapperApplicationRef>
         <Chain>
             <PackageGroupRef Id="BlockchainPackage" />

@@ -10,7 +10,7 @@ catch {
 $venvDir = "..\venv"
 
 $tempName = "blockchain-files"
-$msiName = "$env:blockchainProductName-$env:version.msi"
+$packageName = "$env:blockchainProductName-$env:version.msi"
 
 # this generates package-files.wxs from the contents of the electron packager folder
 heat dir $venvDir -cg ChiaBlockchainFiles -gg -scom -sreg -sfrag -srd -dr INSTALLDIR -out "$buildDir\$tempName.wxs"
@@ -21,7 +21,7 @@ candle "$buildDir\$tempName.wxs" "$sourceDir\blockchain-msi.wxs" -o "$buildDir\"
 if ($LastExitCode) { exit $LastExitCode }
 
 # link the installer
-light -ext WixUIExtension "$buildDir\$tempName.wixobj" "$buildDir\blockchain-msi.wixobj" -b $venvDir -o "$buildDir\$msiName"
+light -ext WixUIExtension "$buildDir\$tempName.wixobj" "$buildDir\blockchain-msi.wixobj" -b $venvDir -o "$buildDir\$packageName"
 if ($LastExitCode) { exit $LastExitCode }
 
-Write-Host "Successfully built $msiName"
+Write-Host "Successfully built $packageName"
