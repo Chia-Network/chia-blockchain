@@ -48,7 +48,6 @@ class TestWalletSimulator:
         ):
             yield _
 
-    """
     @pytest.mark.asyncio
     async def test_colour_creation(self, two_wallet_nodes):
         num_blocks = 10
@@ -86,7 +85,7 @@ class TestWalletSimulator:
 
         assert confirmed_balance == 100
         assert unconfirmed_balance == 100
-    """
+
     @pytest.mark.asyncio
     async def test_cc_spend(self, two_wallet_nodes):
         num_blocks = 10
@@ -155,7 +154,8 @@ class TestWalletSimulator:
 
         assert confirmed_balance == 60
         assert unconfirmed_balance == 60
-    """
+
+
     @pytest.mark.asyncio
     async def test_generate_zero_val(self, two_wallet_nodes):
         num_blocks = 10
@@ -164,10 +164,12 @@ class TestWalletSimulator:
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet2 = wallet_node_2.wallet_state_manager.main_wallet
 
         ph = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
@@ -185,6 +187,7 @@ class TestWalletSimulator:
             wallet_node.wallet_state_manager, wallet, uint64(100)
         )
 
+        ph = await wallet2.get_new_puzzlehash()
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
@@ -198,10 +201,12 @@ class TestWalletSimulator:
         colour = cc_wallet_puzzles.get_genesis_from_core(cc_wallet.cc_info.my_core)
 
         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
-            wallet_node_2.wallet_state_manager, colour, uint64(100)
+            wallet_node_2.wallet_state_manager, wallet2, colour
         )
 
-        cc_wallet_2.generate_zero_val_coin()
+        assert cc_wallet.cc_info.my_core == cc_wallet_2.cc_info.my_core
+
+        await cc_wallet_2.generate_zero_val_coin()
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
@@ -211,7 +216,5 @@ class TestWalletSimulator:
                 cc_wallet_2.wallet_info.id
             )
         )
-
         assert len(unspent) == 1
-        assert unspent.copy().pop().amount == 0
-    """
+        assert unspent.pop().coin.amount == 0
