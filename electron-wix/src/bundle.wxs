@@ -1,4 +1,5 @@
 <?xml version="1.0"?>
+<!-- This file defines all pre-requistes and packages that make up the overall bundle -->
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
     xmlns:bal="http://schemas.microsoft.com/wix/BalExtension"
     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">

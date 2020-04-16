@@ -1,4 +1,4 @@
-# sahred configuraiton value used in packaging filesandy
+# shared configuraiton values used in packaging files
 $env:path += ";${env:ProgramFiles(x86)}\WiX Toolset v3.11\bin" # add wix to path
 $env:walletProductName = "chia-wallet"
 $env:blockchainProductName = "chia-blockchain"
