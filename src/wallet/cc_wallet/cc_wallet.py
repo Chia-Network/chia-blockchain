@@ -167,12 +167,6 @@ class CCWallet:
         )
         await self.save_info(cc_info)
 
-    async def set_core(self, core: str):
-        cc_info: CCInfo = CCInfo(
-            core, self.cc_info.parent_info, self.cc_info.my_colour_name,
-        )
-        await self.save_info(cc_info)
-
     async def coin_added(self, coin: Coin, height: int, header_hash: bytes32):
         """ Notification from wallet state manager that wallet has been received. """
         self.log.info(f"CC wallet has been notified that coin was added")

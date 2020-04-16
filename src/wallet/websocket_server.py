@@ -291,13 +291,6 @@ class WebSocketServer:
         response = {"name": name}
         return await websocket.send(format_response(response_api, response))
 
-    async def cc_set_core(self, websocket, request, response_api):
-        wallet_id = int(request["wallet_id"])
-        wallet: CCWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
-        success = await wallet.set_name(str(request["core"]))
-        response = {"success": success}
-        return await websocket.send(format_response(response_api, response))
-
     async def cc_generate_zero_val(self, websocket, request, response_api):
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
@@ -455,8 +448,6 @@ class WebSocketServer:
                 await self.cc_set_name(websocket, data, command)
             elif command == "cc_get_name":
                 await self.cc_get_name(websocket, data, command)
-            elif command == "cc_set_core":
-                await self.cc_set_core(websocket, data, command)
             elif command == "cc_generate_zero_val":
                 await self.cc_generate_zero_val(websocket, data, command)
             elif command == "cc_spend":
