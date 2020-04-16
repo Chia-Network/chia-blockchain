@@ -36,7 +36,7 @@ def cc_make_core(originID):
 
 
 def cc_make_eve_solution(parent_id: bytes32, full_puzzlehash: bytes32, amount: uint64):
-    sol = f"(() 0x{parent_id.hex()} {amount} 0x{full_puzzlehash.hex()} () () ())"
+    sol = f"(() 0x{parent_id} {amount} 0x{full_puzzlehash} () () ())"
     return Program(binutils.assemble(sol))
 
 
@@ -47,7 +47,7 @@ def cc_make_solution(
     amount: uint64,
     innerpuzreveal: str,
     innersol: str,
-    auditor: Optional[List[bytes32]],
+    auditor: Optional[Tuple[bytes32, bytes32, uint64]],
     auditees=None,
 ):
     parent_str = ""
@@ -94,7 +94,7 @@ def get_innerpuzzle_from_puzzle(puzzle: str):
 def create_spend_for_ephemeral(parent_of_e, auditor_coin, spend_amount):
     puzstring = f"(r (r (c (q 0x{auditor_coin.name()}) (c (q {spend_amount}) (q ())))))"
     puzzle = Program(binutils.assemble(puzstring))
-    coin = Coin(parent_of_e, puzzle.get_hash(), 0)
+    coin = Coin(parent_of_e.name(), puzzle.get_hash(), 0)
     solution = Program(binutils.assemble("()"))
     coinsol = CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
     return coinsol
@@ -104,11 +104,10 @@ def create_spend_for_ephemeral(parent_of_e, auditor_coin, spend_amount):
 def create_spend_for_auditor(parent_of_a, auditee):
     puzstring = f"(r (c (q 0x{auditee.name()}) (q ())))"
     puzzle = Program(binutils.assemble(puzstring))
-    coin = Coin(parent_of_a, puzzle.get_hash(), 0)
+    coin = Coin(parent_of_a.name(), puzzle.get_hash(), 0)
     solution = Program(binutils.assemble("()"))
     coinsol = CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
     return coinsol
-
 
 def cc_generate_eve_spend(coin: Coin, full_puzzle: Program):
     solution = cc_make_eve_solution(
