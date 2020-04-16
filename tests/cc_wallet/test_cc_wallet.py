@@ -100,6 +100,8 @@ class TestWalletSimulator:
         ph = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
@@ -144,15 +146,15 @@ class TestWalletSimulator:
         await asyncio.sleep(0.2)
         confirmed_balance = await cc_wallet.get_confirmed_balance()
         unconfirmed_balance = await cc_wallet.get_unconfirmed_balance()
-        breakpoint()
+
         assert confirmed_balance == 0
         assert unconfirmed_balance == 0
 
         confirmed_balance = await cc_wallet_2.get_confirmed_balance()
         unconfirmed_balance = await cc_wallet_2.get_unconfirmed_balance()
 
-        assert confirmed_balance == 40
-        assert unconfirmed_balance == 40
+        assert confirmed_balance == 100
+        assert unconfirmed_balance == 100
     """
     @pytest.mark.asyncio
     async def test_generate_zero_val(self, two_wallet_nodes):
