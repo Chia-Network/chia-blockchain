@@ -298,7 +298,6 @@ class CCWallet:
     async def generate_zero_val_coin(self) -> Optional[SpendBundle]:
         if self.cc_info.my_core is None:
             return
-
         coins = await self.standard_wallet.select_coins(1)
         if coins is None:
             return None
