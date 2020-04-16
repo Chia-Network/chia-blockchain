@@ -327,7 +327,7 @@ class CCWallet:
         eve_spend = cc_generate_eve_spend(eve_coin, cc_puzzle)
         full_spend = SpendBundle.aggregate([spend_bundle, eve_spend])
         await self.standard_wallet.push_transaction(full_spend)
-        return
+        return full_spend
 
     async def select_coins(self, amount: uint64) -> Optional[Set[Coin]]:
         """ Returns a set of coins that can be used for generating a new transaction. """

@@ -298,6 +298,110 @@ class WebSocketServer:
         response = {"success": success}
         return await websocket.send(format_response(response_api, response))
 
+    async def cc_generate_zero_val(self, websocket, request, response_api):
+        wallet_id = int(request["wallet_id"])
+        wallet: CCWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        try:
+            tx = await wallet.generate_zero_val_coin()
+        except BaseException as e:
+            data = {
+                "status": "FAILED",
+                "reason": f"{e}",
+            }
+            return await websocket.send(format_response(response_api, data))
+
+        if tx is None:
+            data = {
+                "status": "FAILED",
+                "reason": "Failed to generate signed transaction",
+            }
+            return await websocket.send(format_response(response_api, data))
+        self.log.error(tx)
+        sent = False
+        start = time.time()
+        while time.time() - start < TIMEOUT:
+            sent_to: List[
+                Tuple[str, MempoolInclusionStatus, Optional[str]]
+            ] = await wallet.get_transaction_status(tx.name())
+
+            if len(sent_to) == 0:
+                await asyncio.sleep(0.1)
+                continue
+            status, err = sent_to[0][1], sent_to[0][2]
+            if status == MempoolInclusionStatus.SUCCESS:
+                data = {"status": "SUCCESS"}
+                sent = True
+                break
+            elif status == MempoolInclusionStatus.PENDING:
+                assert err is not None
+                data = {"status": "PENDING", "reason": err}
+                sent = True
+                break
+            elif status == MempoolInclusionStatus.FAILED:
+                assert err is not None
+                data = {"status": "FAILED", "reason": err}
+                sent = True
+                break
+        if not sent:
+            data = {
+                "status": "FAILED",
+                "reason": "Timed out. Transaction may or may not have been sent.",
+            }
+        return await websocket.send(format_response(response_api, data))
+
+    async def cc_spend(self, websocket, request, response_api):
+        wallet_id = int(request["wallet_id"])
+        wallet: CCWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        try:
+            tx = await wallet.cc_spend(request["amount"], request["innerpuzhash"])
+        except BaseException as e:
+            data = {
+                "status": "FAILED",
+                "reason": f"{e}",
+            }
+            return await websocket.send(format_response(response_api, data))
+
+        if tx is None:
+            data = {
+                "status": "FAILED",
+                "reason": "Failed to generate signed transaction",
+            }
+            return await websocket.send(format_response(response_api, data))
+
+        self.log.error(tx)
+        sent = False
+        start = time.time()
+        while time.time() - start < TIMEOUT:
+            sent_to: List[
+                Tuple[str, MempoolInclusionStatus, Optional[str]]
+            ] = await wallet.get_transaction_status(tx.name())
+
+            if len(sent_to) == 0:
+                await asyncio.sleep(0.1)
+                continue
+            status, err = sent_to[0][1], sent_to[0][2]
+            if status == MempoolInclusionStatus.SUCCESS:
+                data = {"status": "SUCCESS"}
+                sent = True
+                break
+            elif status == MempoolInclusionStatus.PENDING:
+                assert err is not None
+                data = {"status": "PENDING", "reason": err}
+                sent = True
+                break
+            elif status == MempoolInclusionStatus.FAILED:
+                assert err is not None
+                data = {"status": "FAILED", "reason": err}
+                sent = True
+                break
+        if not sent:
+            data = {
+                "status": "FAILED",
+                "reason": "Timed out. Transaction may or may not have been sent.",
+            }
+
+        return await websocket.send(format_response(response_api, data))
+
     async def safe_handle(self, websocket, path):
         try:
             await self.handle_message(websocket, path)
@@ -353,6 +457,10 @@ class WebSocketServer:
                 await self.cc_get_name(websocket, data, command)
             elif command == "cc_set_core":
                 await self.cc_set_core(websocket, data, command)
+            elif command == "cc_generate_zero_val":
+                await self.cc_generate_zero_val(websocket, data, command)
+            elif command == "cc_spend":
+                await self.cc_spend(websocket, data, command)
             else:
                 response = {"error": f"unknown_command {command}"}
                 await websocket.send(dict_to_json_str(response))
