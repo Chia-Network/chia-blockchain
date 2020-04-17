@@ -44,9 +44,8 @@ if [ `uname` = "Linux" ]; then
 elif [ `uname` = "Darwin" ] && type brew && ! npm version>/dev/null 2>&1; then
   # Install npm if not installed
   brew install npm
-elif [ `uname` = "Darwin" ] && ! type brew; then
-  echo "Installation currently requires brew on MacOS"
-  echo "Instructions here: https://brew.sh/"
+elif [ `uname` = "Darwin" ] && ! type brew >/dev/null 2>&1; then
+  echo "Installation currently requires brew on MacOS - https://brew.sh/"
 fi
 
 # this fancy syntax sets INSTALL_PYTHON_PATH to "python3.7" unless INSTALL_PYTHON_VERSION is defined
