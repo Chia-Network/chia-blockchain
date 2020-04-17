@@ -282,7 +282,10 @@ class CCWallet:
             if conditions_dict is None:
                 conditions_dict = {}
 
-            created_output_conditions = conditions_dict[ConditionOpcode.CREATE_COIN]
+            if ConditionOpcode.CREATE_COIN in conditions_dict:
+                created_output_conditions = conditions_dict[conditions_dict]
+            else:
+                continue
             for cvp in created_output_conditions:
                 result = await self.wallet_state_manager.puzzle_store.wallet_info_for_puzzle_hash(
                     cvp.var1
