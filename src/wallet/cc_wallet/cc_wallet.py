@@ -153,7 +153,7 @@ class CCWallet:
         self.wallet_info = wallet_info
         self.standard_wallet = wallet
         json_o = json.loads(wallet_info.data)
-        self.cc_info: CCInfo =self.parse_stored_json(json_o)
+        self.cc_info: CCInfo = self.parse_stored_json(json_o)
 
         return self
 

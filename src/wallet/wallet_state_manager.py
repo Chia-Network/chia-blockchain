@@ -1383,3 +1383,15 @@ class WalletStateManager:
                     callback_str = action.wallet_callback
                     callback = getattr(wallet, callback_str)
                     await callback(height, header_hash, program, action.id)
+
+    async def get_transaction_status(
+        self, tx_id: SpendBundle
+    ) -> List[Tuple[str, MempoolInclusionStatus, Optional[str]]]:
+        tr: Optional[
+            TransactionRecord
+        ] = await self.get_transaction(tx_id)
+        ret_list = []
+        if tr is not None:
+            for (name, ss, err) in tr.sent_to:
+                ret_list.append((name, MempoolInclusionStatus(ss), err))
+        return ret_list
