@@ -64,7 +64,7 @@ echo "Python version is $INSTALL_PYTHON_VERSION"
 pip install --upgrade pip
 #if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
 # This remains in case there is a diversion of binary wheels
-pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.0.1
+pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0.chia
 pip install -e .
 
 cd ./electron-ui
