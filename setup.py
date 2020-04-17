@@ -4,7 +4,7 @@ from setuptools import setup
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
     "blspy==0.1.17",  # Signature library
-    "cbor2==5.1.0.chia",  # Used for network wire format
+    "cbor2==5.1.0",  # Used for network wire format
     "clvm==0.4",  # contract language
     "PyYAML==5.3",  # Used for config file format
     "aiosqlite==0.11.0",  # asyncio wrapper for sqlite, to store blocks
