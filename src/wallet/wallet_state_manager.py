@@ -141,6 +141,11 @@ class WalletStateManager:
                     config, key_config, self, wallet_info, self.main_wallet,
                 )
                 self.wallets[wallet_info.id] = wallet
+            elif wallet_info.type == WalletType.COLOURED_COIN:
+                wallet = await CCWallet.create(
+                    self, self.main_wallet, wallet_info,
+                )
+                self.wallets[wallet_info.id] = wallet
 
         async with self.puzzle_store.lock:
             await self.create_more_puzzle_hashes(from_zero=True)

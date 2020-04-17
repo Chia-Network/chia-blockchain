@@ -214,18 +214,12 @@ class WebSocketServer:
                 cc_wallet: CCWallet = await CCWallet.create_new_cc(
                     wallet_state_manager, main_wallet, request["amount"]
                 )
-                self.wallet_node.wallet_state_manager.wallets[
-                    cc_wallet.wallet_info.id
-                ] = cc_wallet
                 response = {"success": True, "type": "cc_wallet"}
                 return await websocket.send(format_response(response_api, response))
             elif request["mode"] == "existing":
                 cc_wallet: CCWallet = await CCWallet.create_wallet_for_cc(
                     wallet_state_manager, main_wallet, request["colour"]
                 )
-                self.wallet_node.wallet_state_manager.wallets[
-                    cc_wallet.wallet_info.id
-                ] = cc_wallet
                 response = {"success": True, "type": "cc_wallet"}
                 return await websocket.send(format_response(response_api, response))
 
@@ -415,7 +409,8 @@ class WebSocketServer:
             await self.handle_message(websocket, path)
         except (BaseException, websockets.exceptions.ConnectionClosedError) as e:
             if isinstance(e, websockets.exceptions.ConnectionClosedError):
-                self.log.warning("ConnectionClosedError. Closing websocket.")
+                tb = traceback.format_exc()
+                self.log.warning(f"ConnectionClosedError. Closing websocket. {tb}")
                 await websocket.close()
             else:
                 tb = traceback.format_exc()
