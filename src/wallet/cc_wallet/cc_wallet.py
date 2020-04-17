@@ -604,7 +604,7 @@ class CCWallet:
         aggsig = BLSSignature.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
 
-        await self.standard_wallet.push_transaction(spend_bundle)
+        await self.wallet_state_manager.add_pending_transaction(spend_bundle, self.wallet_info.id)
 
         return spend_bundle
 
