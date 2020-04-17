@@ -653,3 +653,60 @@ class CCWallet:
             return True
         else:
             return False
+
+    async def create_spend_bundle_relative_amount(self, cc_amount):
+        # If we're losing value then get coloured coins with at least that much value
+        # If we're gaining value then our amount doesn't matter
+        if cc_amount < 0:
+            cc_spends = self.select_coins(abs(cc_amount))
+        else:
+            cc_spends = self.cc_select_coins(1)
+        if cc_spends is None:
+            return None
+
+        # Calculate output amount given relative difference and sum of actual values
+        spend_value = sum([coin.amount for coin in cc_spends])
+        cc_amount = spend_value + cc_amount
+
+        # Loop through coins and create solution for innerpuzzle
+        list_of_solutions = []
+        output_created = None
+        sigs = []
+        for coin in cc_spends:
+            if output_created is None:
+                newinnerpuzhash = self.get_new_inner_hash()
+                innersol = self.standard_wallet.make_solution(
+                    primaries=[{"puzzlehash": newinnerpuzhash, "amount": cc_amount}]
+                )
+                output_created = coin
+            else:
+                innersol = self.standard_wallet.make_solution()
+            innerpuz: Program = await self.inner_puzzle_for_cc_puzzle(coin.puzzle_hash)
+            # Use coin info to create solution and add coin and solution to list of CoinSolutions
+            solution = cc_wallet_puzzles.cc_make_solution(
+                self.cc_info.my_core,
+                self.parent_info[coin.parent_coin_info],
+                coin.amount,
+                binutils.disassemble(innerpuz),
+                binutils.disassemble(innersol),
+                None,
+                None,
+            )
+            list_of_solutions.append(
+                CoinSolution(
+                    coin,
+                    clvm.to_sexp_f(
+                        [
+                            self.cc_make_puzzle(
+                                innerpuz.get_hash(), self.cc_info.my_core
+                            ),
+                            solution,
+                        ]
+                    ),
+                )
+            )
+            sigs = sigs + self.get_sigs_for_innerpuz_with_innersol(innerpuz, innersol)
+
+        aggsig = BLSSignature.aggregate(sigs)
+
+        return SpendBundle(list_of_solutions, aggsig)
