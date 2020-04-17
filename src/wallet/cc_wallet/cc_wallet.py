@@ -283,7 +283,7 @@ class CCWallet:
                 conditions_dict = {}
 
             if ConditionOpcode.CREATE_COIN in conditions_dict:
-                created_output_conditions = conditions_dict[conditions_dict]
+                created_output_conditions = conditions_dict[ConditionOpcode.CREATE_COIN]
             else:
                 continue
             for cvp in created_output_conditions:
