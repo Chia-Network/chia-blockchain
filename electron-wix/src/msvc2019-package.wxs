@@ -10,7 +10,7 @@
             Result="exists"
             Win64="yes"/>
         <util:RegistrySearch Variable="msvc2019Version"
-            Key="Installer\Dependencies\$(var.msvc2019Id)"
+            Key="Installer\Dependencies\$(var.msvc2019RegistryKey)"
             Root="HKCR"
             Value="Version"
             Result="value"
