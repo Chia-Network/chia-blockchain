@@ -9,11 +9,18 @@ from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
 from src.util.ints import uint32, uint64, uint128
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
-
+from src.util.streamable import Streamable, streamable
 
 """
 Protocol between wallet (SPV node) and full node.
 """
+
+@dataclass(frozen=True)
+@streamable
+class GeneratorResponse(Streamable):
+    height: uint32
+    header_hash: bytes32
+    generator: Optional[Program]
 
 
 @dataclass(frozen=True)
@@ -151,9 +158,7 @@ class RequestGenerator:
 @dataclass(frozen=True)
 @cbor_message
 class RespondGenerator:
-    height: uint32
-    header_hash: bytes32
-    generator: Program
+    generatorResponse: GeneratorResponse
 
 
 @dataclass(frozen=True)

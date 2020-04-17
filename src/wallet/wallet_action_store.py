@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 import aiosqlite
 from src.util.ints import uint32
@@ -99,7 +99,7 @@ class WalletActionStore:
         assert action is not None
 
         cursor = await self.db_connection.execute(
-            "Replace INTO action_queue VALUES(?, ?, ?, ?, ?, ?)",
+            "Replace INTO action_queue VALUES(?, ?, ?, ?, ?, ?, ?)",
             (
                 action.id,
                 action.name,
@@ -114,7 +114,29 @@ class WalletActionStore:
         await cursor.close()
         await self.db_connection.commit()
 
-    async def get_not_executed_action(self,) -> Optional[WalletAction]:
+    async def get_all_pending_actions(self) -> List[WalletAction]:
+        """
+        Returns list of all pending action
+        """
+        result = []
+        cursor = await self.db_connection.execute(
+            "SELECT * from action_queue WHERE done=?", (0,)
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+
+        if rows is None:
+            return result
+
+        for row in rows:
+            action = WalletAction(
+                row[0], row[1], row[2], WalletType(row[3]), row[4], bool(row[5]), row[6]
+            )
+            result.append(action)
+
+        return result
+
+    async def get_action_by_id(self, id) -> Optional[WalletAction]:
         """
         Return a wallet action by id
         """

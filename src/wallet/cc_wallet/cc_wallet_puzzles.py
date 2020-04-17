@@ -49,17 +49,20 @@ def cc_make_solution(
     innersol: str,
     auditor: Optional[Tuple[bytes32, bytes32, uint64]],
     auditees=None,
+    genesis=False,
 ):
     parent_str = ""
     # parent_info is a triplet if parent was coloured or an atom if parent was genesis coin or we're a printed 0 val
     # genesis coin isn't coloured, child of genesis uses originID, all subsequent children use triplets
     # auditor is (primary_input, innerpuzzlehash, amount)
-    if isinstance(parent_info, tuple):
+    if not genesis:
         #  (parent primary input, parent inner puzzle hash, parent amount)
         if parent_info[1][0:2] == "0x":
             parent_str = f"(0x{parent_info[0]} {parent_info[1]} {parent_info[2]})"
         else:
             parent_str = f"(0x{parent_info[0]} 0x{parent_info[1]} {parent_info[2]})"
+    else:
+        parent_str = f"0x{parent_info[0].hex()}"
 
     auditor_formatted = "()"
     if auditor is not None:

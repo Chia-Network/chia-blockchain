@@ -1,3 +1,4 @@
+import json
 import time
 from pathlib import Path
 
@@ -9,6 +10,7 @@ import aiosqlite
 from chiabip158 import PyBIP158
 from blspy import PublicKey, ExtendedPrivateKey
 
+from src.server.outbound_message import OutboundMessage
 from src.types.coin import Coin
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
@@ -21,6 +23,7 @@ from src.util.hash import std_hash
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.block_record import BlockRecord
+from src.wallet.wallet_action import WalletAction
 from src.wallet.wallet_action_store import WalletActionStore
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
@@ -1345,3 +1348,20 @@ class WalletStateManager:
 
     async def set_action_done(self, action_id: int):
         await self.action_store.action_done(action_id)
+
+    async def generator_received(self, height: uint32, header_hash: uint32, program: Program):
+
+        actions: List[WalletAction] = await self.action_store.get_all_pending_actions()
+        for action in actions:
+            data = json.loads(action.data)
+            action_data = data["data"]["action_data"]
+            if action.name == "request_generator":
+                stored_header_hash = bytes32(hexstr_to_bytes(action_data["header_hash"]))
+                stored_height = uint32(action_data["height"])
+                if stored_header_hash == header_hash and stored_height == height:
+                    if action.done:
+                        return
+                    wallet = self.wallets[action.wallet_id]
+                    callback_str = action.wallet_callback
+                    callback = getattr(wallet, callback_str)
+                    await callback(height, header_hash, program, action.id)
