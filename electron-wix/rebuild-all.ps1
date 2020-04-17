@@ -9,3 +9,5 @@ if ($LastExitCode) { exit $LastExitCode }
 
 .\build-bundle.ps1
 if ($LastExitCode) { exit $LastExitCode }
+
+Write-Host "Succesfully built Chia installer for $env:version"
