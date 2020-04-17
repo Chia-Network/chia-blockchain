@@ -45,8 +45,11 @@ async def async_main():
         config["port"], farmer, NodeType.FARMER, ping_interval, network_id
     )
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
+    try:
+        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
+    except NotImplementedError:
+        log.info("signal handlers unsupported")
 
     _ = await server.start_server(farmer._on_connect, config)
     await asyncio.sleep(2)  # Prevents TCP simultaneous connect with harvester

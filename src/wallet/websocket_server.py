@@ -419,8 +419,11 @@ async def start_websocket_server():
         server.close_all()
         wallet_node._shutdown()
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
+    try:
+        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
+    except NotImplementedError:
+        log.info("signal handlers unsupported")
 
     if config["testing"] is False:
         wallet_node._start_bg_tasks()
