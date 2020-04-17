@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import websockets
 
 from src.types.peer_info import PeerInfo
+from src.util.byte_types import hexstr_to_bytes
 from src.wallet.util.json_util import dict_to_json_str
 
 try:
@@ -99,7 +100,7 @@ class WebSocketServer:
         while time.time() - start < TIMEOUT:
             sent_to: List[
                 Tuple[str, MempoolInclusionStatus, Optional[str]]
-            ] = await wallet.get_transaction_status(tx.name())
+            ] = await self.wallet_node.wallet_state_manager.get_transaction_status(tx.name())
 
             if len(sent_to) == 0:
                 await asyncio.sleep(0.1)
@@ -309,7 +310,7 @@ class WebSocketServer:
         while time.time() - start < TIMEOUT:
             sent_to: List[
                 Tuple[str, MempoolInclusionStatus, Optional[str]]
-            ] = await wallet.get_transaction_status(tx.name())
+            ] = await self.wallet_node.wallet_state_manager.get_transaction_status(tx.name())
 
             if len(sent_to) == 0:
                 await asyncio.sleep(0.1)
@@ -339,8 +340,9 @@ class WebSocketServer:
     async def cc_spend(self, websocket, request, response_api):
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        puzzle_hash = hexstr_to_bytes(request["innerpuzhash"])
         try:
-            tx = await wallet.cc_spend(request["amount"], request["innerpuzhash"])
+            tx = await wallet.cc_spend(request["amount"], puzzle_hash)
         except BaseException as e:
             data = {
                 "status": "FAILED",

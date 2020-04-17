@@ -333,18 +333,6 @@ class Wallet:
         self.log.info("About to sign a transaction")
         return await self.sign_transaction(transaction)
 
-    async def get_transaction_status(
-        self, tx_id: SpendBundle
-    ) -> List[Tuple[str, MempoolInclusionStatus, Optional[str]]]:
-        tr: Optional[
-            TransactionRecord
-        ] = await self.wallet_state_manager.get_transaction(tx_id)
-        ret_list = []
-        if tr is not None:
-            for (name, ss, err) in tr.sent_to:
-                ret_list.append((name, MempoolInclusionStatus(ss), err))
-        return ret_list
-
     async def push_transaction(self, spend_bundle: SpendBundle) -> None:
         """ Use this API to send transactions. """
         await self.wallet_state_manager.add_pending_transaction(
