@@ -1,21 +1,32 @@
-const host = "ws://127.0.0.1:9256"
+const { wallet_rpc_host_and_port } = require("../config")
 var QRCode = require('qrcode')
 var canvas = document.getElementById('qr_canvas')
 const Dialogs = require('dialogs')
 const dialogs = Dialogs()
-const WebSocket = require('ws');
-var ws = new WebSocket(host);
-let chia_formatter = require('../chia');
+const WebSocket = require('ws')
+let chia_formatter = require('../chia')
 const electron = require('electron')
+const { get_query_variable } = require("../utils")
 const path = require('path')
-const { get_query_variable } = require("../utils");
 
 // HTML
+let colour_textfield = document.querySelector("#colour_textfield")
+let colour_name_textfield = document.querySelector("#colour_name_textfield")
+let rename_input = document.querySelector("#rename_input")
+let rename = document.querySelector("#rename")
+let receiver_address = document.querySelector("#receiver_puzzle_hash")
+let amount = document.querySelector("#amount_to_send")
+let send = document.querySelector('#send')
+let puzzle_holder = document.querySelector("#puzzle_holder")
+let copy = document.querySelector("#copy")
+let new_address = document.querySelector('#new_address')
+let balance_textfield = document.querySelector('#balance_textfield')
+let pending_textfield = document.querySelector('#pending_textfield')
+let connection_textfield = document.querySelector('#connection_textfield')
 let syncing_textfield = document.querySelector('#syncing_textfield')
 let block_height_textfield = document.querySelector('#block_height_textfield')
-let connection_textfield = document.querySelector('#connection_textfield')
 let wallets_tab = document.querySelector('#wallets_tab')
-let set_name_button = document.querySelector('#set_name_button')
+let table = document.querySelector("#tx_table").getElementsByTagName('tbody')[0]
 
 // UI checkmarks and lock icons
 const green_checkmark = "<i class=\"icon ion-md-checkmark-circle-outline green\"></i>"
@@ -24,6 +35,14 @@ const lock = "<i class=\"icon ion-md-lock\"></i>"
 
 // Global variables
 var global_syncing = true
+var global_sending_transaction = false
+var local_test = electron.remote.getGlobal('sharedObj').local_test;
+var g_wallet_id = get_query_variable("wallet_id")
+var ws = new WebSocket(wallet_rpc_host_and_port);
+var glob_counter = 0
+
+console.log("testing: " + local_test)
+console.log("wallet_id: " + g_wallet_id)
 
 function create_side_wallet(id, href, wallet_name, wallet_description, wallet_amount, active) {
     var balance_id = "balance_wallet_" + id
@@ -48,7 +67,7 @@ function create_side_wallet(id, href, wallet_name, wallet_description, wallet_am
 }
 
 function create_wallet_button() {
-    create_button = `<a class="nav-link d-flex justify-content-between align-items-center" data-toggle="pill" href="../create_wallet.html"
+    create_button = `<a class="nav-link d-flex justify-content-between align-items-center" data-toggle="pill" href="./create_wallet.html"
               role="tab" aria-selected="true">
               <div class="d-flex">
                 <div>
@@ -61,12 +80,6 @@ function create_wallet_button() {
             </a>`
     return create_button
 }
-
-var local_test = get_query_variable("testing")
-var g_wallet_id = get_query_variable("wallet_id")
-
-console.log("testing: " + local_test)
-console.log("wallet_id: " + g_wallet_id)
 
 function sleep(ms) {
     return new Promise((resolve) => {
@@ -90,20 +103,29 @@ function set_callbacks(socket) {
         var data = message["data"];
 
         console.log("Received command: " + command);
-        if (data) {
-            //console.log("Received message data: " + JSON.stringify(data));
-        }
 
         if (command == "start_server") {
             get_wallets();
+            get_colour(g_wallet_id);
+            get_colour_name(g_wallet_id)
+            get_transactions();
+            get_wallet_balance(g_wallet_id);
             get_height_info();
             get_sync_status();
             get_connection_info();
             connection_checker();
         } else if (command == "get_wallet_balance") {
             get_wallet_balance_response(data);
-        } else if (command == "send_transaction") {
-            send_transaction_response(data);
+        } else if (command == "cc_get_colour") {
+            get_colour_response(data);
+        } else if (command == "cc_get_name") {
+            get_colour_name_response(data);
+        } else if (command == "cc_set_name") {
+            set_colour_name_response(data);
+        } else if (command == "cc_get_innerpuzzlehash") {
+            get_innerpuzzlehash_response(data);
+        } else if (command == "cc_spend") {
+            cc_spend_response(data);
         } else if (command == "get_transactions") {
             get_transactions_response(data);
         } else if (command == "state_changed") {
@@ -117,12 +139,11 @@ function set_callbacks(socket) {
         } else if (command == "get_wallets") {
             get_wallets_response(data)
         }
-
     });
 
     socket.on('error', function clear() {
         console.log("Not connected, reconnecting");
-        connect(100);
+        connect(1000);
     });
 }
 
@@ -133,8 +154,282 @@ async function connect(timeout) {
     Tries to connect to the host after a timeout
     */
     await sleep(timeout);
-    ws = new WebSocket(host);
+    ws = new WebSocket(wallet_rpc_host_and_port);
     set_callbacks(ws);
+}
+
+async function get_wallet_balance(id) {
+    /*
+    Sends websocket request to get wallet balance
+    */
+    data = {
+        "wallet_id": id,
+    }
+
+    request = {
+        "command": "get_wallet_balance",
+        "data": data
+    }
+
+    json_data = JSON.stringify(request);
+    ws.send(json_data);
+}
+
+function get_wallet_balance_response(response) {
+    if (response["success"]) {
+        var confirmed = parseInt(response["confirmed_wallet_balance"])
+        var unconfirmed = parseInt(response["unconfirmed_wallet_balance"])
+        var pending = confirmed - unconfirmed
+        var wallet_id = response["wallet_id"]
+
+        chia_confirmed = chia_formatter(confirmed, 'mojo').to('chia').toString()
+        chia_pending = chia_formatter(pending, 'mojo').to('chia').toString()
+
+        wallet_balance_holder = document.querySelector("#" + "balance_wallet_" + wallet_id )
+        wallet_pending_holder = document.querySelector("#" + "pending_wallet_" + wallet_id )
+
+        if (g_wallet_id == wallet_id) {
+            balance_textfield.innerHTML = chia_confirmed + " CH"
+            if (pending > 0) {
+                pending_textfield.innerHTML = lock + " - " + chia_pending + " CH"
+            } else {
+                pending_textfield.innerHTML = lock + " " + chia_pending + " CH"
+            }
+        }
+        if (wallet_balance_holder) {
+            wallet_balance_holder.innerHTML = chia_confirmed.toString() + " CH"
+        }
+        if (wallet_pending_holder) {
+            if (pending > 0) {
+                wallet_pending_holder.innerHTML = lock + " - " + chia_pending + " CH"
+            } else {
+                wallet_pending_holder.innerHTML = lock + " " + chia_pending + " CH"
+            }
+        }
+    }
+}
+
+async function get_height_info() {
+    /*
+    Sends websocket request to blockchain height
+    */
+    data = {
+        "command": "get_height_info",
+    }
+    json_data = JSON.stringify(data);
+    ws.send(json_data);
+}
+
+async function get_sync_status() {
+    /*
+    Sends websocket request to see if wallet is syncing currently
+    */
+    data = {
+        "command": "get_sync_status",
+    }
+    json_data = JSON.stringify(data);
+    ws.send(json_data);
+}
+
+async function connection_checker() {
+    try {
+        await sleep(5000);
+        await get_connection_info()
+        connection_checker()
+    } catch (error) {
+        console.error(error);
+        connection_textfield.innerHTML = "Not Connected";
+        connection_checker()
+    }
+}
+
+async function get_connection_info() {
+    /*
+    Sends websocket request to get list of connections
+    */
+    data = {
+        "command": "get_connection_info",
+    }
+    json_data = JSON.stringify(data);
+    ws.send(json_data);
+}
+
+function get_height_info_response(response) {
+    height = response["height"]
+    block_height_textfield.innerHTML = "" + height;
+}
+
+function get_sync_status_response(response) {
+    syncing = response["syncing"]
+    global_syncing = syncing
+    if (syncing) {
+        syncing_textfield.innerHTML = "Syncing in progress";
+    } else {
+        get_transactions()
+        syncing_textfield.innerHTML = "Synced";
+    }
+}
+
+async function get_connection_info_response(response) {
+    connections = response["connections"]
+    count = connections.length;
+    if (count == 0) {
+        connection_textfield.innerHTML = "Not Connected"
+    } else if (count == 1) {
+        connection_textfield.innerHTML = connections.length + " connection"
+    } else {
+        connection_textfield.innerHTML = connections.length + " connections"
+    }
+}
+
+function handle_state_changed(data) {
+    state = data["state"]
+    console.log("State changed", state)
+    if(global_syncing) {
+        get_wallet_balance(g_wallet_id)
+        get_sync_status()
+        get_height_info()
+        return;
+    }
+
+    if (state == "coin_removed") {
+        get_transactions()
+        get_wallet_balance(g_wallet_id)
+    } else if (state == "coin_added") {
+        get_transactions()
+        get_wallet_balance(g_wallet_id)
+    } else if (state == "pending_transaction") {
+        get_transactions()
+        get_wallet_balance(g_wallet_id)
+    } else if (state == "tx_sent") {
+        get_transactions()
+        get_wallet_balance(g_wallet_id)
+    } else if (state == "balance_changed") {
+        get_wallet_balance(g_wallet_id)
+    } else if (state == "sync_changed") {
+        get_sync_status()
+    } else if (state == "new_block") {
+        get_height_info()
+    } else if (state == "reorg") {
+        get_transactions()
+        get_wallet_balance(g_wallet_id)
+        get_height_info()
+        get_sync_status()
+    }
+}
+
+function get_wallets() {
+    /*
+    Sends websocket request to get list of all wallets available
+    */
+    data = {
+        "command": "get_wallets",
+    }
+    json_data = JSON.stringify(data);
+    ws.send(json_data);
+}
+
+function get_wallets_response(data) {
+    wallets_tab.innerHTML = ""
+    new_innerHTML = ""
+    const wallets = data["wallets"]
+
+    for (var i = 0; i < wallets.length; i++) {
+        var wallet = wallets[i];
+        var type = wallet["type"]
+        var id = wallet["id"]
+        var name = wallet["name"]
+        get_wallet_balance(id)
+        //href, wallet_name, wallet_description, wallet_amount
+        var href = ""
+        if (type == "STANDARD_WALLET") {
+            href = "wallet-dark.html"
+        } else if (type == "RATE_LIMITED") {
+            href = "rl_wallet/rl_wallet.html"
+        } else if (type == "COLOURED_COIN") {
+            href = "cc_wallet/cc_wallet.html"
+        }
+
+        if (id == g_wallet_id) {
+            new_innerHTML += create_side_wallet(id, href, name, type, 0, true)
+        } else {
+            new_innerHTML += create_side_wallet(id, href, name, type, 0, false)
+        }
+
+    }
+    new_innerHTML += create_wallet_button()
+    wallets_tab.innerHTML = new_innerHTML
+}
+
+function get_colour(id) {
+    /*
+    Sends websocket request to get the colour
+    */
+    data = {
+        "wallet_id": id,
+    }
+
+    request = {
+        "command": "cc_get_colour",
+        "data": data
+    }
+    json_data = JSON.stringify(request);
+    ws.send(json_data);
+}
+
+function get_colour_response(response) {
+    colour = response["colour"]
+    colour_textfield.innerHTML = "Colour: " + colour;
+}
+
+function get_colour_name(id) {
+    /*
+    Sends websocket request to get the colour
+    */
+    data = {
+        "wallet_id": id,
+    }
+
+    request = {
+        "command": "cc_get_name",
+        "data": data
+    }
+    json_data = JSON.stringify(request);
+    ws.send(json_data);
+}
+
+function get_colour_name_response(response) {
+    colour_name = response["name"]
+    console.log(colour_name)
+    if (colour_name == "{}") {
+      colour_name_textfield.innerHTML = "Colour nickname: [N/A]";
+    }
+    else {
+      colour_name_textfield.innerHTML = "Local colour nickname: " + colour_name;
+    }
+}
+
+rename.addEventListener('click', () => {
+    /*
+    Sends websocket request to get the colour
+    */
+    new_name = rename_input.value
+    data = {
+        "wallet_id": g_wallet_id,
+        "name": new_name,
+    }
+
+    request = {
+        "command": "cc_set_name",
+        "data": data
+    }
+    json_data = JSON.stringify(request);
+    ws.send(json_data);
+})
+
+function set_colour_name_response(response) {
+    status = response["success"]
+    get_colour_name(g_wallet_id)
 }
 
 send.addEventListener('click', () => {
@@ -176,7 +471,7 @@ send.addEventListener('click', () => {
         }
 
         request = {
-            "command": "send_transaction",
+            "command": "cc_spend",
             "data": data
         }
         json_data = JSON.stringify(request);
@@ -189,9 +484,9 @@ send.addEventListener('click', () => {
     }
 })
 
-function send_transaction_response(response) {
+function cc_spend_response(response) {
     /*
-    Called when response is received for send_transaction request
+    Called when response is received for cc_spend request
     */
    console.log(JSON.stringify(response));
    status = response["status"];
@@ -211,75 +506,130 @@ function send_transaction_response(response) {
     send.innerHTML = "SEND";
 }
 
-
-function get_wallets_response(data) {
-    wallets_tab.innerHTML = ""
-    new_innerHTML = ""
-    const wallets = data["wallets"]
-
-    for (var i = 0; i < wallets.length; i++) {
-        var wallet = wallets[i];
-        var type = wallet["type"]
-        var id = wallet["id"]
-        var name = wallet["name"]
-        get_wallet_balance(id)
-        //href, wallet_name, wallet_description, wallet_amount
-        var href = ""
-        if (type == "STANDARD_WALLET") {
-            href = "wallet-dark.html"
-        } else if (type == "RATE_LIMITED") {
-            href = "rl_wallet/rl_wallet.html"
-        } else if (type == "COLOURED_COIN") {
-            href = "cc_wallet/cc_wallet.html"
-        }
-
-        if (id == g_wallet_id) {
-            new_innerHTML += create_side_wallet(id, href, name, type, 0, true)
-        } else {
-            new_innerHTML += create_side_wallet(id, href, name, type, 0, false)
-        }
-
-    }
-    new_innerHTML += create_wallet_button()
-    wallets_tab.innerHTML = new_innerHTML
-}
-
-set_name_button.addEventListener('click', () => {
+new_address.addEventListener('click', () => {
     /*
-    Called when set name button in ui is pressed.
+    Called when new address button is pressed.
     */
+    get_new_puzzlehash(0);
+})
 
-    name = document.querySelector("#set_name_input").value
-    console.log("update coloured coin wallet name to" + JSON.stringify(name)");
-    data = {
-        "wallet_id": g_wallet_id,
-        "name": name,
+copy.addEventListener("click", () => {
+    /*
+    Called when copy button is pressed
+    */
+    let puzzle_holder = document.querySelector("#puzzle_holder");
+    puzzle_holder.select();
+    /* Copy the text inside the text field */
+    document.execCommand("copy");
+})
+
+async function get_new_puzzlehash() {
+    if (global_syncing) {
+        alert("Cannot create address while syncing.")
+        return;
     }
+
+    /*
+    Sends websocket request for new puzzle_hash
+    */
+    data = {
+    "wallet_id": g_wallet_id,
+    }
+
     request = {
-        "command": "cc_set_name",
+        "command": "cc_get_innerpuzzlehash",
         "data": data
     }
+
     json_data = JSON.stringify(request);
     ws.send(json_data);
 }
 
-function set_name_response(data) {
-    console.log("Data is:" + data)
-    if (data["success"] == true) {
-        reload()
-    } else {
-        dialogs.alert("Failed to set the name.", ok => {
-        })
+function get_innerpuzzlehash_response(response) {
+    /*
+    Called when response is received for get_new_puzzle_hash request
+    */
+    puzzle_holder.value = response["innerpuz"];
+    QRCode.toCanvas(canvas, response["innerpuz"], function (error) {
+    if (error) console.error(error)
+    })
+}
+
+async function get_transactions() {
+    /*
+    Sends websocket request to get transactions
+    */
+
+    data = {
+        "wallet_id": g_wallet_id,
+    }
+
+    request = {
+        "command": "get_transactions",
+        "data": data,
+    }
+
+    json_data = JSON.stringify(request);
+    ws.send(json_data);
+}
+
+function get_transactions_response(response) {
+    /*
+    Called when response is received for get_transactions request
+    */
+    if (global_syncing) {
+        glob_counter++;
+        if ((glob_counter % 10) == 0) {
+
+        } else {
+            return
+        }
+    }
+
+    clean_table()
+
+    for (var i = 0; i < response.txs.length; i++) {
+        var tx = response.txs[i];
+        var row = table.insertRow(0);
+        var cell_type = row.insertCell(0);
+        var cell_to = row.insertCell(1);
+        var cell_date = row.insertCell(2);
+        var cell_status = row.insertCell(3);
+        var cell_amount = row.insertCell(4);
+        var cell_fee = row.insertCell(5);
+        //type of transaction
+        if (tx["incoming"]) {
+            cell_type.innerHTML = "Incoming";
+        } else {
+            cell_type.innerHTML = "Outgoing";
+        }
+        // Receiving puzzle hash
+        cell_to.innerHTML = tx["to_puzzle_hash"];
+
+        // Date
+        var date = new Date(parseInt(tx["created_at_time"]) * 1000);
+        cell_date.innerHTML = "" + date;
+
+        // Confirmation status
+        if (tx["confirmed"]) {
+             index = tx["confirmed_at_index"];
+             cell_status.innerHTML = "Confirmed" + green_checkmark +"</br>" + "Block: " + index;
+        } else {
+             cell_status.innerHTML = "Pending " + red_checkmark;
+        }
+
+        // Amount and Fee
+        var amount = parseInt(tx["amount"])
+        var fee = parseInt(tx["fee_amount"])
+        cell_amount.innerHTML = " " + chia_formatter(amount, 'mojo').to('chia').toString() + " CH"
+        cell_fee.innerHTML = " " + chia_formatter(fee, 'mojo').to('chia').toString() + " CH"
     }
 }
 
-function get_name() {
-    /*
-    Gets the custom CC color name
-    */
-    data = {
-        "command": "cc_get_name",
+function clean_table() {
+    while (table.rows.length > 0) {
+        table.deleteRow(0);
     }
-    json_data = JSON.stringify(data);
-    ws.send(json_data);
 }
+
+clean_table();

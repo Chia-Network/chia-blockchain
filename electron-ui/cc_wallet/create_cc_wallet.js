@@ -4,18 +4,23 @@ const dialogs = Dialogs()
 const WebSocket = require('ws');
 let chia_formatter = require('../chia');
 const electron = require('electron')
+const { get_query_variable } = require("../utils");
+const path = require('path')
 
+// HTML
 let generate_colour = document.querySelector('#generate_colour');
 let amount = document.querySelector('#generate_colour_text');
 let input_colour = document.querySelector('#input_colour');
 let colour = document.querySelector('#input_colour_text')
 let balance_textfield = document.querySelector('#balance_textfield')
-const { get_query_variable } = require("../utils");
-const path = require('path')
 
+// Global variables
 var global_input_colour_continue = false
 var global_balance = 0.0
 var global_creating_wallet = false
+var local_test = electron.remote.getGlobal('sharedObj').local_test;
+var g_wallet_id = get_query_variable("wallet_id")
+var ws = new WebSocket(wallet_rpc_host_and_port);
 
 
 generate_colour.addEventListener('click', () => {
@@ -28,7 +33,6 @@ input_colour.addEventListener('click', () => {
 
 
 function create_wallet_generate_colour() {
-    //console.log("create cc wallet by generating a new colour");
 
     if (global_creating_wallet) {
         return;
@@ -37,12 +41,10 @@ function create_wallet_generate_colour() {
     try {
       amount_value = parseFloat(Number(amount.value));
       mojo_value = chia_formatter(amount_value, 'chia').to('mojo').value()
-      console.log(mojo_value)
       if (isNaN(mojo_value)) {
           dialogs.alert("Please enter a valid numeric amount");
           return;
       }
-      console.log(global_balance)
       if (amount_value > global_balance) {
         dialogs.alert("Amount may not be greater than your available balance");
         return;
@@ -63,9 +65,8 @@ function create_wallet_generate_colour() {
       }
       json_data = JSON.stringify(request);
       ws.send(json_data);
-      console.log(json_data)
     } catch (error) {
-        dialogs.alert("Error generating a new color").
+        dialogs.alert("Error generating a new colour").
         global_creating_wallet = false;
     }
 }
@@ -74,15 +75,11 @@ function create_wallet_response(response) {
     /*
     Called when response is received for create_wallet_generate_colour request
     */
-    console.log("create_wallet_response got called")
-   console.log(JSON.stringify(response));
    status = response["success"];
-   console.log(status)
    if (status === "true") {
-      console.log("create cc wallet successful")
        go_to_main_wallet();
    } else if (status === "false") {
-       dialogs.alert("Error creating colored coin wallet.", ok => {});
+       dialogs.alert("Error creating coloured coin wallet.", ok => {});
        global_creating_wallet = false;
    }
 }
@@ -91,8 +88,6 @@ function create_wallet_input_colour() {
     if (global_creating_wallet) {
         return;
     }
-
-    console.log("create cc wallet by inputing an existing color");
 
     try {
         colour = input_colour_text.value;
@@ -166,9 +161,6 @@ function get_wallet_balance_response(response) {
       }
     }
 
-var local_test = electron.remote.getGlobal('sharedObj').local_test;
-var g_wallet_id = get_query_variable("wallet_id")
-
 console.log("testing: " + local_test)
 console.log("wallet_id: " + g_wallet_id)
 
@@ -178,8 +170,6 @@ function sleep(ms) {
         setTimeout(resolve, ms);
     });
 }
-
-var ws = new WebSocket(wallet_rpc_host_and_port);
 
 function set_callbacks(socket) {
     /*

@@ -48,7 +48,7 @@
             <a class="nav-link d-flex justify-content-between align-items-center active" data-toggle="pill"
               href="#" role="tab" aria-selected="true">
               <div class="d-flex">
-                <img src="..assets/img/circle-cropped.png" alt="btc">
+                <img src="../assets/img/circle-cropped.png" alt="btc">
                 <div>
                   <h2>CH</h2>
                   <p>Chia</p>
@@ -81,7 +81,7 @@
                 <li class="d-flex justify-content-between align-items-center">
                   <div class="d-flex align-items-center">
                     <i class="icon ion-md-cash"></i>
-                    <h2>Total Chia</h2>
+                    <h2>Total Coloured Coin Value</h2>
                   </div>
                   <div>
                     <h3 id="balance_textfield">0 CH</h3>
@@ -98,11 +98,11 @@
                 </li>
               </ul>
 
+              <!--
               <div class="wallet-address">
                 <div class="row">
                   <div class="col-md-8">
-                    <h4>Print new colored coin(s)</h4>
-                    <p>Your existing Chia balance must be sufficient for the colored coin value(s) you wish to print. You may always print a 0-value colored coin.</p>
+                    <h4>Print 0-valued coloured coin(s)</h4>
                     <div class="input-group">
                       <input type="text" class="form-control" id="puzzle_holder" value="">
                       <div class="input-group-prepend">
@@ -118,8 +118,24 @@
                   </div>
                 </div>
               </div>
-
+            -->
+            <div class="wallet-address">
+              <div class="row">
+                <div class="col-md-8">
+                  <h4>Colour Info</h4>
+                  <p id="colour_textfield">Colour: </p>
+                  <p id="colour_name_textfield">Local colour nickname: </p>
+                  <div class="input-group">
+                    <input type="text" class="form-control" id="rename_input" value="">
+                    <div class="input-group-prepend">
+                      <button class="btn btn-primary" id="rename" >RENAME</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
               <div class="wallet-address">
+                <h4>Send Coloured Coins</h4>
                 <p>Receiver Address:</p>
               <div class="input-group" style="padding-top:0px">
               <input type="text" class="form-control"  id="receiver_puzzle_hash" value="">
@@ -130,12 +146,11 @@
               </div>
               </div>
               <button class="btn red" id="send">SEND</button>
-              <button class="btn green" id="farm_block">FARM BLOCK</button>
               <div class="wallet-address">
                 <div class="row">
                   <div class="col-md-8">
                     <h4>Wallet Deposit Address</h4>
-                    <p>Use this address to receive Chia</p>
+                    <p>Use this address to receive Coloured Coins</p>
                     <div class="input-group">
                       <input type="text" class="form-control" id="puzzle_holder" value="">
                       <div class="input-group-prepend">
@@ -178,7 +193,7 @@
     </div>
   </div>
   <script>
-    require('./create_cc_wallet.js')
+    require('./cc_wallet_renderer.js')
   </script>
 </body>
 
