@@ -152,8 +152,31 @@ class CCWallet:
         self.wallet_state_manager = wallet_state_manager
         self.wallet_info = wallet_info
         self.standard_wallet = wallet
-        self.cc_info = CCInfo.from_json_dict(json.loads(wallet_info.data))
+        json_o = json.loads(wallet_info.data)
+        self.cc_info: CCInfo =self.parse_stored_json(json_o)
+
         return self
+
+    def parse_stored_json(self, json_object) -> CCInfo:
+        my_core = json_object["my_core"]
+        parent_info: List[Tuple[bytes32, Optional[CCParent]]]  # {coin.name(): CCParent}
+        my_colour_name = json_object["my_colour_name"]
+        parents = json_object["parent_info"]
+        ccparents: List[Tuple[bytes32, CCParent]] = []
+        for name, ccparent in parents:
+            parent = None
+            if ccparent is not None:
+                parent_name = bytes32(hexstr_to_bytes(ccparent["parent_name"]))
+                inner_hash = bytes32(hexstr_to_bytes(ccparent["inner_puzzle_hash"]))
+                amount = ccparent["amount"]
+                self.log.info(f"{parent_name} {inner_hash} {amount}")
+                parent = CCParent(parent_name,
+                                  inner_hash,
+                                  amount)
+            ccparents.append((hexstr_to_bytes(name), parent))
+
+        cc_info = CCInfo(my_core, ccparents, my_colour_name)
+        return cc_info
 
     async def get_confirmed_balance(self) -> uint64:
         return await self.wallet_state_manager.get_confirmed_balance_for_wallet(
