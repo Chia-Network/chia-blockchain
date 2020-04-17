@@ -363,7 +363,7 @@ class WebSocketServer:
         while time.time() - start < TIMEOUT:
             sent_to: List[
                 Tuple[str, MempoolInclusionStatus, Optional[str]]
-            ] = await wallet.get_transaction_status(tx.name())
+            ] = await self.wallet_node.wallet_state_manager.get_transaction_status(tx.name())
 
             if len(sent_to) == 0:
                 await asyncio.sleep(0.1)
