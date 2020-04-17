@@ -40,8 +40,11 @@ async def async_main():
     )
     _ = await server.start_server(None, config)
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
+    try:
+        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
+    except NotImplementedError:
+        log.info("signal handlers unsupported")
 
     peer_info = PeerInfo(
         harvester.config["farmer_peer"]["host"], harvester.config["farmer_peer"]["port"]

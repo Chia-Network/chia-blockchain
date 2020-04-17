@@ -84,8 +84,11 @@ def main():
 
     loop = asyncio.get_event_loop()
 
-    loop.add_signal_handler(signal.SIGINT, signal_received)
-    loop.add_signal_handler(signal.SIGTERM, signal_received)
+    try:
+        loop.add_signal_handler(signal.SIGINT, signal_received)
+        loop.add_signal_handler(signal.SIGTERM, signal_received)
+    except NotImplementedError:
+        log.info("signal handlers unsupported")
 
     try:
         loop.run_until_complete(spawn_all_processes(config))

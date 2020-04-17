@@ -52,8 +52,11 @@ async def async_main():
         server.close_all()
         timelord_shutdown_task = asyncio.create_task(timelord._shutdown())
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
+    try:
+        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
+    except NotImplementedError:
+        log.info("signal handlers unsupported")
 
     full_node_peer = PeerInfo(
         timelord.config["full_node_peer"]["host"],
