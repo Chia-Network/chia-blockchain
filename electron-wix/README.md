@@ -19,7 +19,8 @@ Verify that the wallet runs with `npm start`.
 
 ## Build script
 
-Edit the version number in `config.ps1`.
+- Edit the version number in `config.ps1`.
+- Make sure any prerequisite executables are downloaded and placed in the `prerequisites` folder. Refer to the [readme.md](./prerequisites/readme.md) there for details.
 
 ````PowerShell
 # from the electron-wix folder

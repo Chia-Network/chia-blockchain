@@ -25,8 +25,9 @@
                 ShowVersion="yes"
                 SuppressOptionsUI="yes"/>
         </BootstrapperApplicationRef>
-        <Chain DisableSystemRestore='yes'
-            ParallelCache='yes'>
+        <Chain ParallelCache='yes'>
+            <PackageGroupRef Id="MSVC2019Package" />
+            <RollbackBoundary />
             <PackageGroupRef Id="BlockchainPackage" />
             <PackageGroupRef Id="WalletPackage" />
         </Chain>

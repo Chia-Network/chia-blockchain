@@ -9,6 +9,7 @@
             Result="version"/>
         <PackageGroup Id="BlockchainPackage">
             <MsiPackage Id="BlockchainMsiPackage"
+                Cache="yes"
                 Compressed="yes"
                 ForcePerMachine="no"
                 Vital="yes"

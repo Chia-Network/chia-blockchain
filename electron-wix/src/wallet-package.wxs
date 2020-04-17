@@ -9,6 +9,7 @@
             Result="version"/>
         <PackageGroup Id="WalletPackage">
             <MsiPackage Id="WalletMsiPackage"
+                Cache="yes"
                 Compressed="yes"
                 ForcePerMachine="no"
                 Vital="yes"
