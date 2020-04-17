@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <!-- This defines the python pre-requisite -->
+<!-- NOT CURRENTLY USED -->
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" 
     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
     <?include "config.wxi"?>
@@ -19,7 +20,7 @@
                 SourceFile="python-$(var.pythonVersion)-amd64.exe"
                 InstallCommand="/quiet"
                 UninstallCommand="/uninstall"
-                InstallCondition="python37Installed = 0 OR python37Version &lt; v$(var.pythonVersion)"/>
+                DetectCondition="python37Installed = 0 OR python37Version &lt; v$(var.pythonVersion)"/>
         </PackageGroup>
     </Fragment>
 </Wix>
