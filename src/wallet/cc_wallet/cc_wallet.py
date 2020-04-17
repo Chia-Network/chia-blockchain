@@ -37,7 +37,10 @@ from src.wallet.cc_wallet.cc_wallet_puzzles import (
     cc_generate_eve_spend,
     create_spend_for_auditor,
     create_spend_for_ephemeral,
-    cc_make_puzzle, get_genesis_from_puzzle, cc_make_core)
+    cc_make_puzzle,
+    get_genesis_from_puzzle,
+    cc_make_core,
+)
 from src.wallet.util.json_util import dict_to_json_str
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet import Wallet
@@ -175,7 +178,9 @@ class CCWallet:
         colour = cc_wallet_puzzles.get_genesis_from_core(self.cc_info.my_core)
         return colour
 
-    async def coin_added(self, coin: Coin, height: int, header_hash: bytes32, removals: List[Coin]):
+    async def coin_added(
+        self, coin: Coin, height: int, header_hash: bytes32, removals: List[Coin]
+    ):
         """ Notification from wallet state manager that wallet has been received. """
         self.log.info(f"CC wallet has been notified that coin was added")
 
@@ -274,23 +279,30 @@ class CCWallet:
 
                 if self.check_is_cc_puzzle(puzzle_program):
                     puzzle_string = binutils.disassemble(puzzle_program)
-                    inner_puzzle_hash = hexstr_to_bytes(get_innerpuzzle_from_puzzle(puzzle_string))
-                    self.log.info(f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle_hash}")
+                    inner_puzzle_hash = hexstr_to_bytes(
+                        get_innerpuzzle_from_puzzle(puzzle_string)
+                    )
+                    self.log.info(
+                        f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle_hash}"
+                    )
                     await self.add_parent(
-                        coin_name, CCParent(coin.parent_coin_info, inner_puzzle_hash, coin.amount)
+                        coin_name,
+                        CCParent(coin.parent_coin_info, inner_puzzle_hash, coin.amount),
                     )
                 else:
-                    await self.add_parent(
-                        coin_name, None
-                    )
+                    await self.add_parent(coin_name, None)
 
                 return True
 
         return False
 
-    async def generator_received(self, height: uint32, header_hash: bytes32, generator: Program, action_id: int):
+    async def generator_received(
+        self, height: uint32, header_hash: bytes32, generator: Program, action_id: int
+    ):
         """ Notification that wallet has received a generator it asked for. """
-        block: BlockRecord = await self.wallet_state_manager.wallet_store.get_block_record(header_hash)
+        block: BlockRecord = await self.wallet_state_manager.wallet_store.get_block_record(
+            header_hash
+        )
         parent_found = await self.get_parent_info(generator, block.removals)
         if parent_found:
             await self.wallet_state_manager.set_action_done(action_id)
@@ -494,7 +506,7 @@ class CCWallet:
             binutils.disassemble(innersol),
             auditor_info,
             auditees,
-            genesis
+            genesis,
         )
 
         main_coin_solution = CoinSolution(

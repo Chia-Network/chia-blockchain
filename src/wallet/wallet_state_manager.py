@@ -1349,14 +1349,18 @@ class WalletStateManager:
     async def set_action_done(self, action_id: int):
         await self.action_store.action_done(action_id)
 
-    async def generator_received(self, height: uint32, header_hash: uint32, program: Program):
+    async def generator_received(
+        self, height: uint32, header_hash: uint32, program: Program
+    ):
 
         actions: List[WalletAction] = await self.action_store.get_all_pending_actions()
         for action in actions:
             data = json.loads(action.data)
             action_data = data["data"]["action_data"]
             if action.name == "request_generator":
-                stored_header_hash = bytes32(hexstr_to_bytes(action_data["header_hash"]))
+                stored_header_hash = bytes32(
+                    hexstr_to_bytes(action_data["header_hash"])
+                )
                 stored_height = uint32(action_data["height"])
                 if stored_header_hash == header_hash and stored_height == height:
                     if action.done:
