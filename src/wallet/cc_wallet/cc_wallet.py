@@ -289,8 +289,8 @@ class CCWallet:
                         coin_name,
                         CCParent(coin.parent_coin_info, inner_puzzle_hash, coin.amount),
                     )
-                else:
-                    await self.add_parent(coin_name, None)
+                #else:
+                    #await self.add_parent(coin_name, None)
 
                 return True
 
@@ -609,7 +609,7 @@ class CCWallet:
 
         origin = coins.copy().pop()
         origin_id = origin.name()
-
+        #self.add_parent(origin_id, origin_id)
         cc_core = cc_wallet_puzzles.cc_make_core(origin_id)
         parent_info = {}
         parent_info[origin_id] = (
