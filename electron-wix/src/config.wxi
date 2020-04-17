@@ -21,6 +21,6 @@
     <?define ARPURLINFOABOUT="https://www.chia.net/about/"?>
     <?define ARPURLUPDATEINFO="https://www.chia.net/releases/"?>
     <?define Comments="Chia is a registered trademark of the Chia Network"?>
-    <?define Copyright="Chia Network 2020"?>    
+    <?define Copyright="Chia Network 2020"?>
     <?define Manufacturer="Chia Network"?>
 </Include>

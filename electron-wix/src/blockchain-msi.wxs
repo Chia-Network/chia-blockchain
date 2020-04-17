@@ -83,6 +83,17 @@
                         <RemoveFolder Id='ChiaNetworkDir' On='uninstall' />
                     </Component>
                     <Directory Id='INSTALLDIR' Name='Chia Blockchain'>
+                        <Directory Id='venvDir' Name='venv'>
+                            <Component Id="dirvenvDir" Guid="5DF86C11-9AAA-4B2A-A9FB-F7555D850E61">
+                                <RemoveFolder Id='venvDir' On='uninstall' />
+                                <RegistryValue Root='HKCU'
+                                    Key='Software\[Manufacturer]\[ProductName]'
+                                    Type='string'
+                                    Name="venvDir"
+                                    Value='venv'
+                                    KeyPath='yes' />
+                            </Component>
+                        </Directory>
                         <Component Id="dirINSTALLDIR" Guid="E645FFCF-0742-4AB1-845E-B3EB8B721059">
                             <RemoveFolder Id='INSTALLDIR' On='uninstall' />
                             <RegistryValue Root='HKCU'
@@ -117,6 +128,7 @@
         <Feature Id='Complete' Level='1'>
             <ComponentRef Id='ProgramMenuDir' />
             <ComponentRef Id='dirINSTALLDIR' />
+            <ComponentRef Id='dirvenvDir' />
             <ComponentRef Id='ManufacturerData' />
             <ComponentGroupRef Id="ChiaBlockchainFiles" /> <!-- this component group is defined in the heat generated wxs file -->
         </Feature>
