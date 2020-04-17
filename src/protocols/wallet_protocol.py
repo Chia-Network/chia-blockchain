@@ -15,6 +15,7 @@ from src.util.streamable import Streamable, streamable
 Protocol between wallet (SPV node) and full node.
 """
 
+
 @dataclass(frozen=True)
 @streamable
 class GeneratorResponse(Streamable):

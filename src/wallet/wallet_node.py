@@ -116,7 +116,9 @@ class WalletNode:
         asyncio.ensure_future(self.resend_queue())
 
     async def action_messages(self) -> List[OutboundMessage]:
-        actions: List[WalletAction] = await self.wallet_state_manager.action_store.get_all_pending_actions()
+        actions: List[
+            WalletAction
+        ] = await self.wallet_state_manager.action_store.get_all_pending_actions()
         result: List[OutboundMessage] = []
         for action in actions:
             data = json.loads(action.data)
@@ -946,7 +948,9 @@ class WalletNode:
         )
         request_all_removals = False
         for coin in additions:
-            record_info: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash.hex())
+            record_info: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+                coin.puzzle_hash.hex()
+            )
             if record_info.wallet_type == WalletType.COLOURED_COIN:
                 request_all_removals = True
                 break
@@ -1013,7 +1017,6 @@ class WalletNode:
         if response.proofs is None:
             # If there are no proofs, it means all removals were returned in the response.
             # we must find the ones relevant to our wallets.
-
 
             # Verify removals root
             removals_merkle_set = MerkleSet()
@@ -1098,8 +1101,12 @@ class WalletNode:
         The full node respond with transaction generator
         """
         wrapper = response.generatorResponse
-        self.log.info(f"generator received {wrapper.header_hash} {wrapper.generator.get_hash()} {wrapper.height}")
-        await self.wallet_state_manager.generator_received(wrapper.height, wrapper.header_hash, wrapper.generator)
+        self.log.info(
+            f"generator received {wrapper.header_hash} {wrapper.generator.get_hash()} {wrapper.height}"
+        )
+        await self.wallet_state_manager.generator_received(
+            wrapper.height, wrapper.header_hash, wrapper.generator
+        )
 
     @api_request
     async def reject_generator(self, response: wallet_protocol.RejectGeneratorRequest):

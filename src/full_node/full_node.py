@@ -2131,9 +2131,11 @@ class FullNode:
         )
         if full_block is not None:
             if full_block.transactions_generator is not None:
-                wrapper = GeneratorResponse(full_block.height,
+                wrapper = GeneratorResponse(
+                    full_block.height,
                     full_block.header_hash,
-                    full_block.transactions_generator)
+                    full_block.transactions_generator,
+                )
                 response = wallet_protocol.RespondGenerator(wrapper)
                 yield OutboundMessage(
                     NodeType.WALLET,
