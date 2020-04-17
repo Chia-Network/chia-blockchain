@@ -154,14 +154,14 @@ class WalletPuzzleStore:
 
         return None
 
-    async def set_used_up_to(self, index: uint32, wallet_id: int) -> None:
+    async def set_used_up_to(self, index: uint32) -> None:
         """
         Sets a derivation path to used so we don't use it again.
         """
         pass
         cursor = await self.db_connection.execute(
-            "UPDATE derivation_paths SET used=1 WHERE derivation_index<=? and wallet_id=?",
-            (index, wallet_id,),
+            "UPDATE derivation_paths SET used=1 WHERE derivation_index<=?",
+            (index,),
         )
         await cursor.close()
         await self.db_connection.commit()

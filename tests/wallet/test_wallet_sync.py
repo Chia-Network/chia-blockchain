@@ -185,7 +185,7 @@ class TestWalletSync:
         dic_h = {}
         prev_coin = blocks[1].header.data.coinbase
         for i in range(11):
-            pk, sk = await wallet_a.get_keys(prev_coin.puzzle_hash)
+            pk, sk = await wallet_a.wallet_state_manager.get_keys(prev_coin.puzzle_hash)
             transaction_unsigned = wallet_a_dummy.generate_unsigned_transaction(
                 1000, puzzle_hashes[i], prev_coin, {}, 0, secretkey=sk
             )
@@ -243,7 +243,7 @@ class TestWalletSync:
         dic_h = {}
         prev_coin = blocks[1].header.data.coinbase
         for i in range(11):
-            pk, sk = await wallet_a.get_keys(prev_coin.puzzle_hash)
+            pk, sk = await wallet_a.wallet_state_manager.get_keys(prev_coin.puzzle_hash)
             transaction_unsigned = wallet_a_dummy.generate_unsigned_transaction(
                 1000, puzzle_hashes[i], prev_coin, {}, 0, secretkey=sk
             )
@@ -308,7 +308,7 @@ class TestWalletSync:
         another_puzzlehash = await wallet_a.get_new_puzzlehash()
 
         dic_h = {}
-        pk, sk = await wallet_a.get_keys(new_coinbase_puzzlehash)
+        pk, sk = await wallet_a.wallet_state_manager.get_keys(new_coinbase_puzzlehash)
         coinbase_coin = create_coinbase_coin(
             25, new_coinbase_puzzlehash, uint64(14000000000000)
         )

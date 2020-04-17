@@ -259,7 +259,7 @@ class WalletStateManager:
 
             await self.puzzle_store.add_derivation_paths(derivation_paths)
             if from_zero and unused is not None and unused > 0:
-                await self.puzzle_store.set_used_up_to(uint32(unused - 1), wallet_id)
+                await self.puzzle_store.set_used_up_to(uint32(unused - 1))
 
     async def get_unused_derivation_record(self, wallet_id: uint32) -> DerivationRecord:
         """
@@ -284,7 +284,7 @@ class WalletStateManager:
             assert record is not None
 
             # Set this key to used so we never use it again
-            await self.puzzle_store.set_used_up_to(record.index, wallet_id)
+            await self.puzzle_store.set_used_up_to(record.index)
 
             # Create more puzzle hashes / keys
             await self.create_more_puzzle_hashes()
@@ -703,7 +703,7 @@ class WalletStateManager:
                     )
                     index = record.index
                     assert index is not None
-                    await self.puzzle_store.set_used_up_to(index, record.wallet_id)
+                    await self.puzzle_store.set_used_up_to(index)
 
                 await self.create_more_puzzle_hashes()
 
