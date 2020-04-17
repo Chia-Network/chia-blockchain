@@ -67,7 +67,7 @@ function create_side_wallet(id, href, wallet_name, wallet_description, wallet_am
 }
 
 function create_wallet_button() {
-    create_button = `<a class="nav-link d-flex justify-content-between align-items-center" data-toggle="pill" href="./create_wallet.html"
+    create_button = `<a class="nav-link d-flex justify-content-between align-items-center" data-toggle="pill" href="../create_wallet.html"
               role="tab" aria-selected="true">
               <div class="d-flex">
                 <div>
@@ -343,11 +343,11 @@ function get_wallets_response(data) {
         //href, wallet_name, wallet_description, wallet_amount
         var href = ""
         if (type == "STANDARD_WALLET") {
-            href = "wallet-dark.html"
+            href = "../wallet-dark.html"
         } else if (type == "RATE_LIMITED") {
-            href = "rl_wallet/rl_wallet.html"
+            href = "../rl_wallet/rl_wallet.html"
         } else if (type == "COLOURED_COIN") {
-            href = "cc_wallet/cc_wallet.html"
+            href = "../cc_wallet/cc_wallet.html"
         }
 
         if (id == g_wallet_id) {
@@ -465,7 +465,7 @@ send.addEventListener('click', () => {
         mojo_amount = chia_formatter(amount_value, 'chia').to('mojo').value()
 
         data = {
-            "puzzle_hash": puzzle_hash,
+            "innerpuzhash": puzzle_hash,
             "amount": mojo_amount,
             "wallet_id": g_wallet_id
         }
