@@ -1,4 +1,5 @@
 import asyncio
+import json
 import time
 from typing import Dict, Optional, Tuple, List, AsyncGenerator
 import concurrent
@@ -8,6 +9,7 @@ import traceback
 
 from src.full_node.full_node import OutboundMessageGenerator
 from src.types.peer_info import PeerInfo
+from src.util.byte_types import hexstr_to_bytes
 from src.util.merkle_set import (
     confirm_included_already_hashed,
     confirm_not_included_already_hashed,
@@ -23,6 +25,7 @@ from src.util.api_decorators import api_request
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.util.wallet_types import WalletType
+from src.wallet.wallet_action import WalletAction
 from src.wallet.wallet_state_manager import WalletStateManager
 from src.wallet.block_record import BlockRecord
 from src.types.header_block import HeaderBlock
@@ -112,12 +115,34 @@ class WalletNode:
     def pending_tx_handler(self):
         asyncio.ensure_future(self.resend_queue())
 
+    async def action_messages(self) -> List[OutboundMessage]:
+        actions: List[WalletAction] = await self.wallet_state_manager.action_store.get_all_pending_actions()
+        result: List[OutboundMessage] = []
+        for action in actions:
+            data = json.loads(action.data)
+            action_data = data["data"]["action_data"]
+            if action.name == "request_generator":
+                header_hash = bytes32(hexstr_to_bytes(action_data["header_hash"]))
+                height = uint32(action_data["height"])
+                msg = Message(
+                    "request_generator",
+                    wallet_protocol.RequestGenerator(height, header_hash),
+                )
+                out_msg = OutboundMessage(NodeType.FULL_NODE, msg, Delivery.BROADCAST)
+                result.append(out_msg)
+
+        return result
+
     async def resend_queue(self):
         if self.server is None:
             return
 
-        messages = await self.messages_to_resend()
-        for msg in messages:
+        transactions = await self.messages_to_resend()
+        for msg in transactions:
+            self.server.push_message(msg)
+
+        action_messages = await self.action_messages()
+        for msg in action_messages:
             self.server.push_message(msg)
 
     async def messages_to_resend(self) -> List[OutboundMessage]:
@@ -922,7 +947,6 @@ class WalletNode:
         request_all_removals = False
         for coin in additions:
             record_info: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash.hex())
-            breakpoint()
             if record_info.wallet_type == WalletType.COLOURED_COIN:
                 request_all_removals = True
                 break
@@ -1073,7 +1097,9 @@ class WalletNode:
         """
         The full node respond with transaction generator
         """
-        self.log.info(f"generator received {response.header_hash} {response.generator} {response.height}")
+        wrapper = response.generatorResponse
+        self.log.info(f"generator received {wrapper.header_hash} {wrapper.generator.get_hash()} {wrapper.height}")
+        await self.wallet_state_manager.generator_received(wrapper.height, wrapper.header_hash, wrapper.generator)
 
     @api_request
     async def reject_generator(self, response: wallet_protocol.RejectGeneratorRequest):

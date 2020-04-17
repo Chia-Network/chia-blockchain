@@ -1,4 +1,6 @@
 import logging
+import string
+
 import clvm
 import json
 from blspy import ExtendedPrivateKey
@@ -17,6 +19,7 @@ from src.types.name_puzzle_condition import NPC
 from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
+from src.util.byte_types import hexstr_to_bytes
 from src.util.condition_tools import (
     conditions_dict_for_solution,
     conditions_by_opcode,
@@ -27,13 +30,14 @@ from src.util.errors import Err
 from src.util.ints import uint64, uint32
 from src.util.streamable import streamable, Streamable
 from src.wallet.BLSPrivateKey import BLSPrivateKey
+from src.wallet.block_record import BlockRecord
 from src.wallet.cc_wallet.cc_wallet_puzzles import (
     cc_make_solution,
     get_innerpuzzle_from_puzzle,
     cc_generate_eve_spend,
     create_spend_for_auditor,
     create_spend_for_ephemeral,
-)
+    cc_make_puzzle, get_genesis_from_puzzle, cc_make_core)
 from src.wallet.util.json_util import dict_to_json_str
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet import Wallet
@@ -41,7 +45,7 @@ from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.cc_wallet import cc_wallet_puzzles
-
+from clvm import run_program
 
 # TODO: write tests based on wallet tests
 # TODO: {Matt} compatibility based on deriving innerpuzzle from derivation record
@@ -61,7 +65,7 @@ class CCParent(Streamable):
 @streamable
 class CCInfo(Streamable):
     my_core: Optional[str]  # core is stored as the disassembled string
-    parent_info: List[Tuple[bytes32, CCParent]]  # {coin.name(): CCParent}
+    parent_info: List[Tuple[bytes32, Optional[CCParent]]]  # {coin.name(): CCParent}
     my_colour_name: Optional[str]
 
 
@@ -181,7 +185,7 @@ class CCWallet:
         future_parent = CCParent(
             coin.parent_coin_info, inner_puzzle.get_hash(), coin.amount
         )
-        self.log.info(f"Adding parent {coin.name()}: {future_parent}")
+
         await self.add_parent(coin.name(), future_parent)
 
         for name, ccparent in self.cc_info.parent_info:
@@ -191,13 +195,6 @@ class CCWallet:
         # breakpoint()
 
         if search_for_parent:
-            for removed in removals:
-                if removed.name() == coin.parent_coin_info:
-                    parent = CCParent(
-                        removed.parent_coin_info, None, removed.amount
-                    )
-                    await self.add_parent(coin.parent_coin_info, parent)
-
             data: Dict[str, Any] = {
                 "data": {
                     "action_data": {
@@ -210,79 +207,93 @@ class CCWallet:
 
             data_str = dict_to_json_str(data)
             await self.wallet_state_manager.create_action(
-                name="cc_get_generator",
+                name="request_generator",
                 wallet_id=self.wallet_info.id,
                 type=self.wallet_info.type,
-                callback="str",
+                callback="generator_received",
                 done=False,
                 data=data_str,
             )
 
     async def get_parent_info(
-        self, block_program: Program,
-    ) -> Tuple[Optional[Err], List[NPC], uint64]:
+        self, block_program: Program, removals: List[Coin]
+    ) -> bool:
 
         """
         Returns an error if it's unable to evaluate, otherwise
         returns a list of NPC (coin_name, solved_puzzle_hash, conditions_dict)
         """
         cost_sum = 0
-        self.log.info(f"Searching for parent info in block program: {block_program   }")
-        breakpoint()
         try:
             cost_run, sexp = run_program(block_program, [])
             cost_sum += cost_run
         except EvalError:
-            return Err.INVALID_COIN_SOLUTION, [], uint64(0)
+            return False
 
-        npc_list = []
         for name_solution in sexp.as_iter():
             _ = name_solution.as_python()
             if len(_) != 2:
-                return Err.INVALID_COIN_SOLUTION, [], uint64(cost_sum)
+                return False
             if not isinstance(_[0], bytes) or len(_[0]) != 32:
-                return Err.INVALID_COIN_SOLUTION, [], uint64(cost_sum)
+                return False
             coin_name = bytes32(_[0])
             if not isinstance(_[1], list) or len(_[1]) != 2:
-                return Err.INVALID_COIN_SOLUTION, [], uint64(cost_sum)
+                return False
             puzzle_solution_program = name_solution.rest().first()
             puzzle_program = puzzle_solution_program.first()
-            puzzle_hash = Program(puzzle_program).get_hash()
             try:
                 error, conditions_dict, cost_run = conditions_dict_for_solution(
                     puzzle_solution_program
                 )
                 cost_sum += cost_run
                 if error:
-                    return error, [], uint64(cost_sum)
+                    return False
             except clvm.EvalError:
-                return Err.INVALID_COIN_SOLUTION, [], uint64(cost_sum)
+
+                return False
             if conditions_dict is None:
                 conditions_dict = {}
-            npc: NPC = NPC(coin_name, puzzle_hash, conditions_dict)
 
             created_output_conditions = conditions_dict[ConditionOpcode.CREATE_COIN]
             for cvp in created_output_conditions:
-                info = await self.wallet_state_manager.puzzle_store.wallet_info_for_puzzle_hash(
+                result = await self.wallet_state_manager.puzzle_store.wallet_info_for_puzzle_hash(
                     cvp.var1
                 )
-                if info is None:
+                if result is None:
                     continue
-                puzstring = binutils.disassemble(puzzle_program)
-                innerpuzzle = get_innerpuzzle_from_puzzle(puzstring)
-                await self.add_parent(
-                    coin_name, CCParent(coin.parent_coin_info, innerpuzzle, coin.amount)
-                )
 
-            npc_list.append(npc)
+                wallet_id, wallet_type = result
+                if wallet_id != self.wallet_info.id:
+                    continue
 
-        return None, npc_list, uint64(cost_sum)
+                coin = None
+                for removed in removals:
+                    if removed.name() == coin_name:
+                        coin = removed
+                        break
 
-    async def generator_received(self, generator: Program, action_id: int):
+                if self.check_is_cc_puzzle(puzzle_program):
+                    puzzle_string = binutils.disassemble(puzzle_program)
+                    inner_puzzle_hash = hexstr_to_bytes(get_innerpuzzle_from_puzzle(puzzle_string))
+                    self.log.info(f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle_hash}")
+                    await self.add_parent(
+                        coin_name, CCParent(coin.parent_coin_info, inner_puzzle_hash, coin.amount)
+                    )
+                else:
+                    await self.add_parent(
+                        coin_name, None
+                    )
+
+                return True
+
+        return False
+
+    async def generator_received(self, height: uint32, header_hash: bytes32, generator: Program, action_id: int):
         """ Notification that wallet has received a generator it asked for. """
-        self.log.info(f"Generator received: {generator}")
-        await self.get_parent_info(generator)
-        await self.wallet_state_manager.set_action_done(action_id)
+        block: BlockRecord = await self.wallet_state_manager.wallet_store.get_block_record(header_hash)
+        parent_found = await self.get_parent_info(generator, block.removals)
+        if parent_found:
+            await self.wallet_state_manager.set_action_done(action_id)
 
     async def get_new_inner_hash(self) -> bytes32:
         return await self.standard_wallet.get_new_puzzlehash()
@@ -460,12 +471,16 @@ class CCWallet:
         sigs = sigs + await self.get_sigs(inner_puzzle, innersol)
         parent_info = None
 
+        genesis = False
         for name, ccparent in self.cc_info.parent_info:
             if name == auditor.parent_coin_info:
                 parent_info = ccparent
+                if parent_info is None:
+                    genesis = True
+                    self.log.info("parent is genesis")
 
-        assert parent_info is not None
-        assert parent_info.inner_puzzle_hash is not None
+        if not genesis:
+            assert parent_info is not None
 
         solution = cc_wallet_puzzles.cc_make_solution(
             self.cc_info.my_core,
@@ -479,6 +494,7 @@ class CCWallet:
             binutils.disassemble(innersol),
             auditor_info,
             auditees,
+            genesis
         )
 
         main_coin_solution = CoinSolution(
@@ -549,11 +565,13 @@ class CCWallet:
 
         aggsig = BLSSignature.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
+
         await self.standard_wallet.push_transaction(spend_bundle)
 
         return spend_bundle
 
-    async def add_parent(self, name: bytes32, parent: CCParent):
+    async def add_parent(self, name: bytes32, parent: Optional[CCParent]):
+        self.log.info(f"Adding parent {name}: {parent}")
         current_list: List[Tuple[bytes32, CCParent]] = self.cc_info.parent_info.copy()
         current_list.append((name, parent))
         cc_info: CCInfo = CCInfo(
@@ -607,3 +625,19 @@ class CCWallet:
 
         full_spend = SpendBundle.aggregate([spend_bundle, eve_spend])
         return full_spend
+
+    # inspect puzzle and check it is a CC puzzle
+    def check_is_cc_puzzle(self, puzzle: Program):
+        puzzle_string = binutils.disassemble(puzzle)
+        if len(puzzle_string) < 4000:
+            return False
+        inner_puzzle = puzzle_string[11:75]
+        if all(c in string.hexdigits for c in inner_puzzle) is not True:
+            return False
+        genesisCoin = get_genesis_from_puzzle(puzzle_string)
+        if all(c in string.hexdigits for c in genesisCoin) is not True:
+            return False
+        if cc_make_puzzle(inner_puzzle, cc_make_core(genesisCoin)) == puzzle:
+            return True
+        else:
+            return False
