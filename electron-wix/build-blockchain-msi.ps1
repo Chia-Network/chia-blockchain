@@ -14,7 +14,7 @@ $packageName = "$env:blockchainProductName-$env:version.msi"
 
 # this generates package-files.wxs from the contents of the electron packager folder
 Write-Host "Creating manifest of python environment files"
-heat dir $venvDir -cg ChiaBlockchainFiles -nologo -gg -scom -sreg -sfrag -srd -dr INSTALLDIR -out "$buildDir\$tempName.wxs"
+heat dir $venvDir -cg ChiaBlockchainFiles -nologo -gg -scom -sreg -sfrag -srd -dr venvDir -out "$buildDir\$tempName.wxs"
 if ($LastExitCode) { exit $LastExitCode }
 
 # compile the installer

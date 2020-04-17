@@ -4,12 +4,12 @@
     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
     <?include "config.wxi"?>
     <Fragment>
-        <util:RegistrySearch Variable="python37Installed" 
-            Root="HKCU" 
-            Key="Software\Python\PythonCore\3.7" 
+        <util:RegistrySearch Variable="python37Installed"
+            Root="HKCU"
+            Key="Software\Python\PythonCore\3.7"
             Result="exists"/>
-        <util:RegistrySearch Variable="python37Version" 
-            Root="HKCU" 
+        <util:RegistrySearch Variable="python37Version"
+            Root="HKCU"
             Key="Software\Python\PythonCore\3.7"
             Value="Version"
             Result="value"/>
