@@ -160,8 +160,7 @@ class WalletPuzzleStore:
         """
         pass
         cursor = await self.db_connection.execute(
-            "UPDATE derivation_paths SET used=1 WHERE derivation_index<=?",
-            (index,),
+            "UPDATE derivation_paths SET used=1 WHERE derivation_index<=?", (index,),
         )
         await cursor.close()
         await self.db_connection.commit()

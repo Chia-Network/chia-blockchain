@@ -121,3 +121,31 @@ def cc_generate_eve_spend(coin: Coin, full_puzzle: Program):
     aggsig = BLSSignature.aggregate([])
     spend_bundle = SpendBundle(list_of_solutions, aggsig)
     return spend_bundle
+
+
+# Returns the relative difference in value between the amount outputted by a puzzle and solution and a coin's amount
+def get_output_discrepancy_for_puzzle_and_solution(self, coin, puzzle, solution):
+    discrepancy = coin.amount - self.get_output_amount_for_puzzle_and_solution(
+        puzzle, solution
+    )
+    return discrepancy
+
+    # Returns the amount of value outputted by a puzzle and solution
+
+
+def get_output_amount_for_puzzle_and_solution(self, puzzle, solution):
+    conditions = clvm.run_program(puzzle, solution)[1]
+    amount = 0
+    while conditions != b"":
+        opcode = conditions.first().first()
+        if opcode == b"3":  # Check if CREATE_COIN
+            amount_str = binutils.disassemble(conditions.first().rest().rest().first())
+            if amount_str == "()":
+                conditions = conditions.rest()
+                continue
+            elif amount_str[0:2] == "0x":  # Check for wonky decompilation
+                amount += int(amount_str, 16)
+            else:
+                amount += int(amount_str, 10)
+        conditions = conditions.rest()
+    return amount
