@@ -3,15 +3,15 @@ from setuptools import setup
 
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
-    "blspy==0.1.16",  # Signature library
-    "cbor2==5.0.1",  # Used for network wire format
+    "blspy==0.1.17",  # Signature library
+    "cbor2==5.1.0.chia",  # Used for network wire format
     "clvm==0.4",  # contract language
     "PyYAML==5.3",  # Used for config file format
     "aiosqlite==0.11.0",  # asyncio wrapper for sqlite, to store blocks
     "aiohttp==3.6.2",  # HTTP server for full node rpc
     "colorlog==4.1.0",  # Adds color to logs
-    "chiavdf==0.12.3",  # timelord and vdf verification
-    "chiabip158==0.12",  # bip158-style wallet filters
+    "chiavdf==0.12.4",  # timelord and vdf verification
+    "chiabip158==0.13",  # bip158-style wallet filters
     "chiapos==0.12.4",  # proof of space
     "sortedcontainers==2.1.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 upnp_dependencies = [
-    "miniupnpc==2.0.2",  # Allows users to open ports on their router
+    "miniupnpc==2.1",  # Allows users to open ports on their router
 ]
 dev_dependencies = [
     "pytest",
