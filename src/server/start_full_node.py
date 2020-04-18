@@ -62,7 +62,7 @@ async def async_main():
     if config["enable_upnp"]:
         log.info(f"Attempting to enable UPnP (open up port {config['port']})")
         try:
-            miniupnpc = pip_import("miniupnpc", "miniupnpc==2.0.2")
+            miniupnpc = pip_import("miniupnpc", "miniupnpc==2.1")
             upnp = miniupnpc.UPnP()
             upnp.discoverdelay = 5
             upnp.discover()
