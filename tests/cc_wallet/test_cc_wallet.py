@@ -87,7 +87,7 @@ class TestWalletSimulator:
         assert confirmed_balance == 100
         assert unconfirmed_balance == 100
     """
-    """
+
     @pytest.mark.asyncio
     async def test_cc_spend(self, two_wallet_nodes):
         num_blocks = 10
@@ -169,8 +169,9 @@ class TestWalletSimulator:
 
         assert confirmed_balance == 55
         assert unconfirmed_balance == 55
-    """
 
+
+    """
     @pytest.mark.asyncio
     async def test_get_wallet_for_colour(self, two_wallet_nodes):
         num_blocks = 10
@@ -209,7 +210,7 @@ class TestWalletSimulator:
             == cc_wallet
         )
 
-    """
+    
     @pytest.mark.asyncio
     async def test_generate_zero_val(self, two_wallet_nodes):
         num_blocks = 10
