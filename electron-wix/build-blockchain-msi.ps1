@@ -4,7 +4,8 @@ try {
     . ("$ScriptDirectory\config.ps1")
 }
 catch {
-    Write-Host "Error while loading supporting PowerShell Scripts" 
+    Write-Host "Error while loading supporting PowerShell Scripts"
+    Write-Host $_    
     exit 1
 }
 $venvDir = "..\venv"
@@ -26,5 +27,12 @@ if ($LastExitCode) { exit $LastExitCode }
 Write-Host "Building $packageName"
 light -ext WixUIExtension "$buildDir\$tempName.wixobj" "$buildDir\blockchain-msi.wixobj" -nologo -b $venvDir -o "$buildDir\$packageName"
 if ($LastExitCode) { exit $LastExitCode }
+
+# if a signing cert is specified, sign the package
+if (Test-Path $pfxPath -PathType leaf) {
+    Write-Host "Signing $packageName"
+    signtool sign /f $pfxPath /p $CERT_PASSWORD /t $timeURL /v "$buildDir\$packageName"
+    if ($LastExitCode) { exit $LastExitCode }
+}
 
 Write-Host "Successfully built $packageName"

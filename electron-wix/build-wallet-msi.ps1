@@ -5,11 +5,14 @@ try {
 }
 catch {
     Write-Host "Error while loading supporting PowerShell Scripts" 
+    Write-Host $_
     exit 1
 }
 
 # package up the electron stuff and sources
-electron-packager ../electron-ui $env:walletProductName --platform=win32 --arch=x64 --icon="$env:resourceDir\icon.ico" --app-version="$env:version" --win32metadata.CompanyName="Chia Network" --win32metadata.ProductName="Chia Wallet" --app-copyright="Chia Network 2020"
+electron-packager ../electron-ui $env:walletProductName --platform=win32 --arch=x64 --icon="$env:resourceDir\icon.ico" `
+            --app-version="$env:version" --win32metadata.CompanyName="Chia Network" --win32metadata.ProductName="Chia Wallet" `
+            --app-copyright="Chia Network 2020"
 if ($LastExitCode) { exit $LastExitCode }
 
 $tempName = "electron-packager-files"
@@ -29,5 +32,12 @@ if ($LastExitCode) { exit $LastExitCode }
 Write-Host "Building $packageName"
 light -ext WixUIExtension "$buildDir\$tempName.wixobj" "$buildDir\wallet-msi.wixobj" -nologo -b $electronPackagerDir -o "$buildDir\$packageName" -sw1076
 if ($LastExitCode) { exit $LastExitCode }
+
+# if a signing cert is specified, sign the package
+if (Test-Path $pfxPath -PathType leaf) {
+    Write-Host "Signing $packageName"
+    signtool sign /f $pfxPath /p $CERT_PASSWORD /t $timeURL /v "$buildDir\$packageName"
+    if ($LastExitCode) { exit $LastExitCode }
+}
 
 Write-Host "Successfully built $packageName"
