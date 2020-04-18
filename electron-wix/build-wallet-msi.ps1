@@ -33,11 +33,6 @@ Write-Host "Building $packageName"
 light -ext WixUIExtension "$buildDir\$tempName.wixobj" "$buildDir\wallet-msi.wixobj" -nologo -b $electronPackagerDir -o "$buildDir\$packageName" -sw1076
 if ($LastExitCode) { exit $LastExitCode }
 
-# if a signing cert is specified, sign the package
-if (Test-Path $pfxPath -PathType leaf) {
-    Write-Host "Signing $packageName"
-    signtool sign /f $pfxPath /p $CERT_PASSWORD /t $timeURL /v "$buildDir\$packageName"
-    if ($LastExitCode) { exit $LastExitCode }
-}
+Sign-Item "$buildDir\$packageName"
 
 Write-Host "Successfully built $packageName"
