@@ -25,10 +25,15 @@ else
     echo venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
     venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
     ln -s venv/lib/python3.7/site-packages/vdf_bench
-  elif [ -e venv/bin/python ] && test $MACOS && ! brew info boost>/dev/null 2>&1
+  elif [ -e venv/bin/python ] && test $MACOS && brew info boost | grep -q 'Not installed'
   then
     echo "Installing chiavdf requirements for MacOS"
     brew install boost
+    echo "installing chiavdf from source for MacOS"
+    # User needs to provide required packages
+    echo venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
+    venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
+    ln -s venv/lib/python3.7/site-packages/vdf_bench
   elif [ -e venv/bin/python ]
   then
     echo "installing chiavdf from source"
