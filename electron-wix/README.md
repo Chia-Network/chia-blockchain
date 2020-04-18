@@ -19,6 +19,17 @@ Verify that the wallet runs with `npm start`.
 
 ## Build script
 
+### Signing
+
+In order to sign the installation packages during the build:
+
+- Install `signtool` from the [windows 10 SDK](https://developer.microsoft.com/en-US/windows/downloads/windows-10-sdk/) and set the path to `$signtool` in `config.ps1`.
+- Also in `config.ps1`, update `$pfxPath` with the location of a code signing certificate to use.
+
+(If the certificate isn't found signing will be skipped)
+
+### Building
+
 - Edit the version number in `config.ps1`.
 - Make sure any prerequisite executables are downloaded and placed in the `prerequisites` folder. Refer to the [readme.md](./prerequisites/readme.md) there for details.
 
@@ -31,8 +42,7 @@ The various other build scripts can be used to build individual packages. MSI's 
 
 ## Machine-wide installation
 
-The bundle intaller executable cannot be used for per-machine installations and by default the MSIs are per user. 
-In order to install per machine, run the following from an elevated command prompt:
+The bundle intaller executable cannot be used for per-machine installations and by default the MSIs are per user. In order to install per machine, run the following from an elevated command prompt:
 
 ````PowerShell
 # replace the msi name with the current version

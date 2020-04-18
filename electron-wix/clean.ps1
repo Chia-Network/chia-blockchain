@@ -1,12 +1,11 @@
 # This script deletes any intermediate and final build outputs
-
-# Include required files
 $ScriptDirectory = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
 try {
     . ("$ScriptDirectory\config.ps1")
 }
 catch {
     Write-Host "Error while loading supporting PowerShell Scripts" 
+    Write-Host $_    
     exit 1
 }
 
