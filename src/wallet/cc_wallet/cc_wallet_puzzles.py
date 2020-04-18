@@ -55,6 +55,7 @@ def cc_make_solution(
     # parent_info is a triplet if parent was coloured or an atom if parent was genesis coin or we're a printed 0 val
     # genesis coin isn't coloured, child of genesis uses originID, all subsequent children use triplets
     # auditor is (primary_input, innerpuzzlehash, amount)
+    # aggees should be (primary_input, innerpuzhash, coin_amount, output_amount)
     if not genesis:
         #  (parent primary input, parent inner puzzle hash, parent amount)
         if parent_info[1][0:2] == "0x":
