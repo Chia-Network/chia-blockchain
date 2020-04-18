@@ -24,25 +24,25 @@ Verify that the wallet runs with `npm start`.
 In order to sign the installation packages during the build:
 
 - Install `signtool` from the [windows 10 SDK](https://developer.microsoft.com/en-US/windows/downloads/windows-10-sdk/) and set the path to `$signtool` in `config.ps1`.
-- Also in `config.ps1`, update `$pfxPath` with the location of a code signing certificate to use.
+- Also in `config.ps1`, update the `Sign-Item` function with signing certificate specifics.
 
-(If the certificate isn't found signing will be skipped)
+(If a signing certificate isn't found signing will be skipped)
 
 ### Building
 
 - Edit the version number in `config.ps1`.
-- Make sure any prerequisite executables are downloaded and placed in the `prerequisites` folder. Refer to the [readme.md](./prerequisites/readme.md) there for details.
+- Make sure any prerequisite executables are downloaded and placed in the `prerequisites` folder. Refer to pre-reqs [readme.md](./prerequisites/readme.md) there for details.
 
 ````PowerShell
 # from the electron-wix folder
 .\rebuild-all.ps1
 ````
 
-The various other build scripts can be used to build individual packages. MSI's and the bundle installer executable will be in the `electron-wix\build` folder.
+The various other build scripts can be used to build individual packages. MSI's and the full installer executable will be in the `electron-wix\build` folder.
 
 ## Machine-wide installation
 
-The bundle intaller executable cannot be used for per-machine installations and by default the MSIs are per user. In order to install per machine, run the following from an elevated command prompt:
+The intaller executable cannot be used for per-machine installations and by default the MSIs are per user. In order to install per machine, run the following from an elevated command prompt:
 
 ````PowerShell
 # replace the msi name with the current version
