@@ -31,7 +31,7 @@ In order to sign the installation packages during the build:
 ### Building
 
 - Edit the version number in `config.ps1`.
-- Make sure any prerequisite executables are downloaded and placed in the `prerequisites` folder. Refer to pre-reqs [readme.md](./prerequisites/readme.md) there for details.
+- Make sure all prerequisite executables are downloaded and placed in the `prerequisites` folder. Refer to pre-reqs [readme.md](./prerequisites/readme.md) for details.
 
 ````PowerShell
 # from the electron-wix folder
