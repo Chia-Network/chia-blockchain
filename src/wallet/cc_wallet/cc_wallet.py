@@ -207,7 +207,7 @@ class CCWallet:
                 data=data_str,
             )
 
-    async def get_parent_info(
+    async def search_for_parent_info(
         self, block_program: Program, removals: List[Coin]
     ) -> bool:
 
@@ -293,7 +293,7 @@ class CCWallet:
         block: BlockRecord = await self.wallet_state_manager.wallet_store.get_block_record(
             header_hash
         )
-        parent_found = await self.get_parent_info(generator, block.removals)
+        parent_found = await self.search_for_parent_info(generator, block.removals)
         if parent_found:
             await self.wallet_state_manager.set_action_done(action_id)
 
@@ -422,6 +422,14 @@ class CCWallet:
         inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(bytes(record.pubkey))
         return inner_puzzle
 
+    async def get_parent_for_coin(self, coin) -> CCParent:
+        parent_info = None
+        for name, ccparent in self.cc_info.parent_info:
+            if name == coin.parent_coin_info:
+                parent_info = ccparent
+
+        return parent_info
+
     async def cc_spend(
         self, amount: uint64, to_address: bytes32
     ) -> Optional[SpendBundle]:
@@ -471,18 +479,7 @@ class CCWallet:
 
         innersol = self.standard_wallet.make_solution(primaries=primaries)
         sigs = sigs + await self.get_sigs(inner_puzzle, innersol)
-        parent_info = None
-
-        genesis = False
-        for name, ccparent in self.cc_info.parent_info:
-            if name == auditor.parent_coin_info:
-                parent_info = ccparent
-                if parent_info is None:
-                    genesis = True
-                    self.log.info("parent is genesis")
-
-        if not genesis:
-            assert parent_info is not None
+        parent_info = await self.get_parent_for_coin(auditor)
 
         solution = cc_wallet_puzzles.cc_make_solution(
             self.cc_info.my_core,
@@ -496,7 +493,7 @@ class CCWallet:
             binutils.disassemble(innersol),
             auditor_info,
             auditees,
-            genesis,
+            False,
         )
 
         main_coin_solution = CoinSolution(
@@ -529,11 +526,7 @@ class CCWallet:
                 coin.puzzle_hash
             )
             innersol = self.standard_wallet.make_solution()
-            parent_info = None
-            for name, ccparent in self.cc_info.parent_info:
-                if name == auditor.parent_coin_info:
-                    parent_info = ccparent
-            assert parent_info is not None
+            parent_info = await self.get_parent_for_coin(coin)
             sigs = sigs + await self.get_sigs(coin_inner_puzzle, innersol)
 
             solution = cc_wallet_puzzles.cc_make_solution(
@@ -695,7 +688,7 @@ class CCWallet:
                     ),
                 )
             )
-            sigs = sigs + self.get_sigs_for_innerpuz_with_innersol(innerpuz, innersol)
+            sigs = sigs + self.get_sigs(innerpuz, innersol)
 
         aggsig = BLSSignature.aggregate(sigs)
 
