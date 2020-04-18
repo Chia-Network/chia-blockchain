@@ -31,6 +31,7 @@ from src.util.ints import uint64, uint32
 from src.util.streamable import streamable, Streamable
 from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.block_record import BlockRecord
+from src.wallet.cc_wallet.cc_info import CCInfo
 from src.wallet.cc_wallet.cc_wallet_puzzles import (
     cc_make_solution,
     get_innerpuzzle_from_puzzle,
@@ -41,6 +42,7 @@ from src.wallet.cc_wallet.cc_wallet_puzzles import (
     get_genesis_from_puzzle,
     cc_make_core,
 )
+from src.wallet.cc_wallet.ccparent import CCParent
 from src.wallet.util.json_util import dict_to_json_str
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet import Wallet
@@ -54,22 +56,6 @@ from clvm import run_program
 # TODO: {Matt} compatibility based on deriving innerpuzzle from derivation record
 # TODO: {Matt} convert this into wallet_state_manager.puzzle_store
 # TODO: {Matt} add hooks in WebSocketServer for all UI functions
-
-
-@dataclass(frozen=True)
-@streamable
-class CCParent(Streamable):
-    parent_name: bytes32
-    inner_puzzle_hash: Optional[bytes32]
-    amount: uint64
-
-
-@dataclass(frozen=True)
-@streamable
-class CCInfo(Streamable):
-    my_core: Optional[str]  # core is stored as the disassembled string
-    parent_info: List[Tuple[bytes32, Optional[CCParent]]]  # {coin.name(): CCParent}
-    my_colour_name: Optional[str]
 
 
 class CCWallet:
@@ -94,7 +80,7 @@ class CCWallet:
         self.wallet_state_manager = wallet_state_manager
 
         self.cc_info = CCInfo(None, [], None)
-        info_as_string = json.dumps(self.cc_info.to_json_dict())
+        info_as_string = bytes(self.cc_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "CC Wallet", WalletType.COLOURED_COIN, info_as_string
         )
@@ -125,7 +111,7 @@ class CCWallet:
         self.wallet_state_manager = wallet_state_manager
 
         self.cc_info = CCInfo(cc_wallet_puzzles.cc_make_core(colour), [], colour)
-        info_as_string = json.dumps(self.cc_info.to_json_dict())
+        info_as_string = bytes(self.cc_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "CC Wallet", WalletType.COLOURED_COIN, info_as_string
         )
@@ -152,31 +138,9 @@ class CCWallet:
         self.wallet_state_manager = wallet_state_manager
         self.wallet_info = wallet_info
         self.standard_wallet = wallet
-        json_o = json.loads(wallet_info.data)
-        self.cc_info: CCInfo = self.parse_stored_json(json_o)
+        self.cc_info = CCInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
 
         return self
-
-    def parse_stored_json(self, json_object) -> CCInfo:
-        my_core = json_object["my_core"]
-        parent_info: List[Tuple[bytes32, Optional[CCParent]]]  # {coin.name(): CCParent}
-        my_colour_name = json_object["my_colour_name"]
-        parents = json_object["parent_info"]
-        ccparents: List[Tuple[bytes32, CCParent]] = []
-        for name, ccparent in parents:
-            parent = None
-            if ccparent is not None:
-                parent_name = bytes32(hexstr_to_bytes(ccparent["parent_name"]))
-                inner_hash = bytes32(hexstr_to_bytes(ccparent["inner_puzzle_hash"]))
-                amount = ccparent["amount"]
-                self.log.info(f"{parent_name} {inner_hash} {amount}")
-                parent = CCParent(parent_name,
-                                  inner_hash,
-                                  amount)
-            ccparents.append((hexstr_to_bytes(name), parent))
-
-        cc_info = CCInfo(my_core, ccparents, my_colour_name)
-        return cc_info
 
     async def get_confirmed_balance(self) -> uint64:
         return await self.wallet_state_manager.get_confirmed_balance_for_wallet(
@@ -620,7 +584,7 @@ class CCWallet:
     async def save_info(self, cc_info: CCInfo):
         self.cc_info = cc_info
         current_info = self.wallet_info
-        data_str = dict_to_json_str(cc_info.to_json_dict())
+        data_str = bytes(cc_info).hex()
         wallet_info = WalletInfo(
             current_info.id, current_info.name, current_info.type, data_str
         )
