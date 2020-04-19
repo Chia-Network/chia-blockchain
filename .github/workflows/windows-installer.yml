@@ -29,10 +29,11 @@ jobs:
       run: |
         dir ${{ github.workspace }}\electron-wix\build
         pip install setuptools setuptools_scm
-        python -m setup.py --version
-        python -c "import sys; print(sys.version)"
+        python -m ${{ github.workspace }}\setup.py --version
+      #python -c "import sys; print(sys.version)"
 
     - name: Install python requirements
+    working-directory: ${{ github.workspace }}\electron-wix
       run: |
         python -m venv venv
         . .\venv\Scripts\Activate.ps1
