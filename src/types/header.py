@@ -28,7 +28,7 @@ class HeaderData(Streamable):
     aggregated_signature: Optional[BLSSignature]
     cost: uint64
     extension_data: bytes32
-    generator_hash: bytes32
+    generator_hash: bytes32  # This needs to be a tree hash
 
 
 @dataclass(frozen=True)

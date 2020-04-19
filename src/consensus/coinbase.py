@@ -8,7 +8,7 @@ from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 
 
 def create_puzzlehash_for_pk(pub_key: BLSPublicKey) -> bytes32:
-    return puzzle_for_pk(pub_key).get_hash()
+    return puzzle_for_pk(pub_key).get_tree_hash()
 
 
 def signature_for_coinbase(coin: Coin, pool_private_key: blspy.PrivateKey):
