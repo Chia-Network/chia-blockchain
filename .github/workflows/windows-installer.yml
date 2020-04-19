@@ -23,10 +23,6 @@ jobs:
         #dotnet-version: '3.5.100' # SDK Version to use.
     #- run: dotnet build <my project>
 
-    - name: See working directory
-      working-directory: ${{ github.workspace }}
-      run: dir .
-
     - name: npm install
       working-directory: ${{ github.workspace }}\electron-ui
       run: |
@@ -34,7 +30,11 @@ jobs:
 
     - name: curl Visual C++ 2019 redistributable
       working-directory: ${{ github.workspace }}\electron-wix\prerequisites\
-      run: curl --remote-name https://aka.ms/vs/16/release/vc_redist.x64.exe
+      run: curl --remote-name --show-error --fail https://aka.ms/vs/16/release/vc_redist.x64.exe
+
+    - name: curl Python 3.7.7 redistributable
+      working-directory: ${{ github.workspace }}\electron-wix\prerequisites\
+      run: curl --remote-name --show-error --fail https://www.python.org/ftp/python/3.7.7/python-3.7.7-embed-amd64.zip
 
     - name: Build Windows installer
       env:

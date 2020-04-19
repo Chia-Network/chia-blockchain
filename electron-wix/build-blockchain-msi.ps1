@@ -1,11 +1,12 @@
 # This script builds the blockchain MSI package
+Write-Host "Starting to build $packageName"
 $ScriptDirectory = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
 try {
     . ("$ScriptDirectory\config.ps1")
 }
 catch {
     Write-Host "Error while loading supporting PowerShell Scripts"
-    Write-Host $_    
+    Write-Host $_
     exit 1
 }
 $venvDir = "..\venv"
