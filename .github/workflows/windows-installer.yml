@@ -14,9 +14,9 @@ jobs:
         # we need fetch-depth 0 so setuptools_scm can resolve tags
 
     - uses: actions/setup-python@v1
-      name: Install Python 3.7.7
+      name: Install Python 3.7
       with:
-        python-version: '3.7.7'
+        python-version: '3.7'
 
     - name: Build source distribution of chia-blockchain
       run: |
