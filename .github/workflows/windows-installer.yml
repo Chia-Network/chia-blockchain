@@ -28,12 +28,13 @@ jobs:
     - name: View version info
       run: |
         dir ${{ github.workspace }}\electron-wix\build
+        pip install setuptools setuptools_scm
         python -m setup.py --version
         python -c "import sys; print(sys.version)"
 
     - name: Install python requirements
       run: |
-        $pythonLocation\python3 -m venv venv
+        python -m venv venv
         . .\venv\Scripts\Activate.ps1
         pip install --upgrade pip
         pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
