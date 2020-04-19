@@ -36,6 +36,7 @@ kwargs = dict(
     author="Mariano Sorgente",
     author_email="mariano@chia.net",
     description="Chia proof of space plotting, proving, and verifying (wraps C++)",
+    url="http://chia.net/",
     license="Apache License",
     python_requires=">=3.7, <4",
     keywords="chia blockchain node",
