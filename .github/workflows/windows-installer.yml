@@ -14,21 +14,30 @@ jobs:
         # we need fetch-depth 0 so setuptools_scm can resolve tags
 
     - uses: actions/setup-python@v1
-      name: Install Python 3.7
+      name: Install Python 3.7.7
       with:
-        python-version: '3.7'
+        python-version: '3.7.7'
 
     - name: Build source distribution of chia-blockchain
       run: |
         pip install pep517
         python -m pep517.build --source --out-dir ${{ github.workspace }}\electron-wix\build .
+        echo "::set-env name=scm_version::$GITHUB_REF"
+        python -c "import sys; print(sys.version)"
+
+    - name: View version info
+      run: |
+        dir ${{ github.workspace }}\electron-wix\build
+        python -m setup.py --version
+        python -c "import sys; print(sys.version)"
 
     - name: Install python requirements
       run: |
-        python3 -m venv venv
+        $pythonLocation\python3 -m venv venv
         . .\venv\Scripts\Activate.ps1
+        pip install --upgrade pip
         pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
-        pip install .
+      #pip install .
 
 
     - name: Install electron-packager
