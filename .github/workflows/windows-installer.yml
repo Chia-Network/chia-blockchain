@@ -18,11 +18,11 @@ jobs:
       with:
         python-version: '3.7'
 
-    - name: Build source distribution of chia-blockchain
-      run: |
-        pip install pep517
-        python -m pep517.build --source --out-dir ${{ github.workspace }}\electron-wix\build .
-        echo "::set-env name=scm_version::$GITHUB_REF"
+    #- name: Build source distribution of chia-blockchain
+      #run: |
+        #pip install pep517
+        #python -m pep517.build --source --out-dir ${{ github.workspace }}\electron-wix\build .
+        #echo "::set-env name=scm_version::$GITHUB_REF"
 
     - name: View version info
       run: |
@@ -31,13 +31,13 @@ jobs:
         python ${{ github.workspace }}\setup.py --fullname
 
     - name: Install python requirements
-      working-directory: ${{ github.workspace }}\electron-wix
       run: |
-        python -m venv venv
-        . .\venv\Scripts\Activate.ps1
         pip install --upgrade pip
-        pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
-      #pip install .
+        pip instsall pep517 wheel
+        pip install --only-binary -i https://download.chia.net/simple/ \
+          miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
+        pip wheel --use-pep517 --prefer-binary\
+          --wheel-dir=${{ github.workspace }}\electron-wix\build ${{ github.workspace }}\.
 
     - name: Install electron-packager
       run: |
