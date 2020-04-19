@@ -651,7 +651,7 @@ class Blockchain:
         if block.transactions_generator is not None:
             # 14. Make sure transactions generator hash is valid (or all 0 if not present)
             if (
-                std_hash(block.transactions_generator)
+                block.transactions_generator.get_tree_hash()
                 != block.header.data.generator_hash
             ):
                 return (Err.INVALID_TRANSACTIONS_GENERATOR_HASH, None)
