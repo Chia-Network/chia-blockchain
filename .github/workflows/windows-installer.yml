@@ -12,3 +12,36 @@ jobs:
       with:
         fetch-depth: 0
         # we need fetch-depth 0 so setuptools_scm can resolve tags
+
+    - name: Install electron-packager
+      run: |
+        npm install electron-packager -g
+
+    - name: Install .NET 3.5.1
+      run: |
+      # npm install electron-packager -g
+
+    - name: npm install
+      run: |
+        cd $GITHUB_WORKSPACE/electron-ui
+        pwd
+        npm install --runtime=electron --target=1.7.6
+
+    - name: wget Visual C++ 2019 redistributable
+      uses: wei/wget@v1
+      with:
+        args: -P $GITHUB_WORKSPACE/electron-wix/prerequisites/ https://aka.ms/vs/16/release/vc_redist.x64.exe
+
+    - name: Build Windows installer
+      env:
+        version: 0.1.5 # Need to get this from setuptools_scm
+      run: |
+        cd $GITHUB_WORKSPACE/electron-wix
+        pwd
+        .\rebuild-all.ps1
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v1
+      with:
+        name: dist
+        path: $GITHUB_WORKSPACE/electron-wix/build
