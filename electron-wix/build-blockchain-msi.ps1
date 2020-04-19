@@ -21,6 +21,15 @@ Copy-Item ".\blockchain\install.ps1" "$blockchainDir" -Force
 Copy-Item ".\blockchain\readme.txt" "$blockchainDir" -Force
 Copy-Item ".\blockchain\*.whl" "$blockchainDir\wheels" -Force
 
+# generate the script that will isntall all the wheels on the target machine
+$text = ""
+Get-ChildItem "$blockchainDir\wheels" -Filter *.whl | 
+Foreach-Object {
+    $text += "pip install .\wheels\$_`n"
+}
+New-Item "$blockchainDir\wheels.ps1" -Force
+Set-Content "$blockchainDir\wheels.ps1" $text
+
 # this generates package-files.wxs from the contents of the electron packager folder
 Write-Host "Creating manifest of python environment files"
 heat dir $blockchainDir -cg ChiaBlockchainFiles -nologo -gg -scom -sreg -sfrag -srd -dr INSTALLDIR -out "$buildDir\$tempName.wxs"
