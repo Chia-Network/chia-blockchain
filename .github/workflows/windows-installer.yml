@@ -33,7 +33,7 @@ jobs:
       #python -c "import sys; print(sys.version)"
 
     - name: Install python requirements
-    working-directory: ${{ github.workspace }}\electron-wix
+      working-directory: ${{ github.workspace }}\electron-wix
       run: |
         python -m venv venv
         . .\venv\Scripts\Activate.ps1
