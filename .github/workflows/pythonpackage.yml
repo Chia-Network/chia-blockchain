@@ -1,7 +1,7 @@
 name: Python package
 
 
-on: []
+on: [tag]
 #on: [push]
 
 jobs:
