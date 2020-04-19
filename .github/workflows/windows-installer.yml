@@ -33,7 +33,6 @@ jobs:
     - name: Install python requirements
       run: |
         pip install pep517 wheel
-        pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
         pip wheel --use-pep517 --prefer-binary --wheel-dir=${{ github.workspace }}\electron-wix\build ${{ github.workspace }}\.
 
     - name: Install electron-packager
@@ -58,6 +57,12 @@ jobs:
     - name: curl Python 3.7.7 redistributable
       working-directory: ${{ github.workspace }}\electron-wix\prerequisites\
       run: curl --remote-name --show-error --fail https://www.python.org/ftp/python/3.7.7/python-3.7.7-embed-amd64.zip
+
+    - name: curl miniupnpc and setproctitle # cbor2 gets wheel'd above
+      working-directory: ${{ github.workspace }}\electron-wix\build
+      run: |
+        curl --remote-name --show-error --fail https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl
+        curl --remote-name --show-error --fail https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
 
     #- name: Build Windows installer
       #env:
