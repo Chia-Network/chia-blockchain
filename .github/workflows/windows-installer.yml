@@ -24,7 +24,7 @@ jobs:
     #- run: dotnet build <my project>
 
     - name: See working directory
-      working-directory: $GITHUB_WORKSPACE
+      working-directory: ${{ github.workspace }}
       run: ls -la
 
     - name: npm install
