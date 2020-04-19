@@ -3,8 +3,8 @@ name: Build Windows Installer
 on: [push, pull_request]
 
 jobs:
-  upload_source_dist:
-    name: Upload source distribution
+  build:
+    name: Build Windows .msi
     runs-on: [windows-latest]
 
     steps:
@@ -18,27 +18,29 @@ jobs:
         npm install electron-packager -g
 
     #- name: Install .NET 3.5.1
-      #run: |
-      # npm install electron-packager -g
+      #uses: actions/setup-dotnet@v1 # https://github.com/actions/setup-dotnet
+      #with:
+        #dotnet-version: '3.5.100' # SDK Version to use.
+    #- run: dotnet build <my project>
 
     - name: See working directory
-        working-directory: ${{ github.workspace }}
+        working-directory: $GITHUB_WORKSPACE
         run: ls -la
 
     - name: npm install
-      working-directory: ${{ github.workspace }}/electron-ui
+      working-directory: $GITHUB_WORKSPACE/electron-ui
       run: |
         npm install --runtime=electron --target=1.7.6
 
     - name: wget Visual C++ 2019 redistributable
       uses: wei/wget@v1
       with:
-        args: -P ${{ github.workspace }}/electron-wix/prerequisites/ https://aka.ms/vs/16/release/vc_redist.x64.exe
+        args: -P $GITHUB_WORKSPACE/electron-wix/prerequisites/ https://aka.ms/vs/16/release/vc_redist.x64.exe
 
     - name: Build Windows installer
       env:
         version: 0.1.5 # Need to get this from setuptools_scm
-      working-directory: ${{ github.workspace }}/electron-wix
+      working-directory: $GITHUB_WORKSPACE/electron-wix
       run: |
         .\rebuild-all.ps1
 
@@ -46,4 +48,4 @@ jobs:
       uses: actions/upload-artifact@v1
       with:
         name: dist
-        path: ${{ github.workspace }}/electron-wix/build
+        path: $GITHUB_WORKSPACE/electron-wix/build
