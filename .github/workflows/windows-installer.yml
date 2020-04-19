@@ -28,8 +28,8 @@ jobs:
     - name: View version info
       run: |
         dir ${{ github.workspace }}\electron-wix\build
-        pip install setuptools setuptools_scm
-        python -m ${{ github.workspace }}\setup.py --version
+        pip install setuptools_scm
+        python ${{ github.workspace }}\setup.py --version
       #python -c "import sys; print(sys.version)"
 
     - name: Install python requirements
