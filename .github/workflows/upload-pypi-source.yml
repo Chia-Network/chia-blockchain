@@ -1,6 +1,6 @@
 name: Build
 
-on: [tag]
+on: [delete]
 #on: [push, pull_request]
 
 jobs:
