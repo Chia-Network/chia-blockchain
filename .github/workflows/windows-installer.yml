@@ -23,14 +23,12 @@ jobs:
         pip install pep517
         python -m pep517.build --source --out-dir ${{ github.workspace }}\electron-wix\build .
         echo "::set-env name=scm_version::$GITHUB_REF"
-        python -c "import sys; print(sys.version)"
 
     - name: View version info
       run: |
         dir ${{ github.workspace }}\electron-wix\build
         pip install setuptools_scm
-        python ${{ github.workspace }}\setup.py --version
-      #python -c "import sys; print(sys.version)"
+        python ${{ github.workspace }}\setup.py --fullname
 
     - name: Install python requirements
       working-directory: ${{ github.workspace }}\electron-wix
@@ -40,7 +38,6 @@ jobs:
         pip install --upgrade pip
         pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
       #pip install .
-
 
     - name: Install electron-packager
       run: |
