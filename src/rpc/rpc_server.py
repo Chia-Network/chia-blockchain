@@ -103,7 +103,9 @@ class RpcApiHandler:
         if "height" not in request_data:
             raise web.HTTPBadRequest()
         header_height = uint32(int(request_data["height"]))
-        header_hash: Optional[bytes32] = self.full_node.blockchain.height_to_hash.get(header_height, None)
+        header_hash: Optional[bytes32] = self.full_node.blockchain.height_to_hash.get(
+            header_height, None
+        )
         if header_hash is None:
             raise web.HTTPNotFound()
         header: Header = self.full_node.blockchain.headers[header_hash]

@@ -64,6 +64,9 @@ activate
 # Packaging
 chia-blockchain.tar.gz
 
+# Timelord utilities
+vdf_bench
+
 # Electron wallet node modules
 src/wallet/electron/node_modules/
 

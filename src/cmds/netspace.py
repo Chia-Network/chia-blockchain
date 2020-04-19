@@ -75,15 +75,10 @@ async def compare_block_headers(client, oldblock_hash, newblock_hash):
     block_older_header = await client.get_header(hexstr_to_bytes(oldblock_hash))
     block_newer_header = await client.get_header(hexstr_to_bytes(newblock_hash))
     if block_older_header is not None:
-        block_older_time_string = human_local_time(
-            block_older_header.data.timestamp
-        )
-        block_newer_time_string = human_local_time(
-            block_newer_header.data.timestamp
-        )
+        block_older_time_string = human_local_time(block_older_header.data.timestamp)
+        block_newer_time_string = human_local_time(block_newer_header.data.timestamp)
         elapsed_time_seconds = (
-            block_newer_header.data.timestamp
-            - block_older_header.data.timestamp
+            block_newer_header.data.timestamp - block_older_header.data.timestamp
         )
         time_delta = datetime.timedelta(seconds=elapsed_time_seconds)
         print("Older Block", block_older_header.data.height, ":")
@@ -100,28 +95,21 @@ async def compare_block_headers(client, oldblock_hash, newblock_hash):
             f"Weight                 {block_newer_header.data.weight}\n"
             f"Total VDF Iterations   {block_newer_header.data.total_iters}\n"
         )
-        delta_weight = (
-            block_newer_header.data.weight - block_older_header.data.weight
-        )
+        delta_weight = block_newer_header.data.weight - block_older_header.data.weight
         delta_iters = (
-            block_newer_header.data.total_iters
-            - block_older_header.data.total_iters
+            block_newer_header.data.total_iters - block_older_header.data.total_iters
         )
 
         block_older = await client.get_block(hexstr_to_bytes(oldblock_hash))
         block_newer = await client.get_block(hexstr_to_bytes(newblock_hash))
-        delta_iters -= await get_total_miniters(
-            client, block_older, block_newer
-        )
+        delta_iters -= await get_total_miniters(client, block_older, block_newer)
         weight_div_iters = delta_weight / delta_iters
         tips_adjustment_constant = 0.65
         network_space_constant = 2 ** 32  # 2^32
         network_space_bytes_estimate = (
             weight_div_iters * network_space_constant * tips_adjustment_constant
         )
-        network_space_terrabytes_estimate = (
-            network_space_bytes_estimate / 1024**4
-        )
+        network_space_terrabytes_estimate = network_space_bytes_estimate / 1024 ** 4
         print(
             f"The elapsed time between blocks is reported as {time_delta}.\n"
             f"The network has an estimated {network_space_terrabytes_estimate:.2f}TB"
@@ -148,7 +136,9 @@ async def netstorge_async(args, parser):
             lca_block_hash = str(blockchain_state["lca"].header_hash)
             lca_block_height = blockchain_state["lca"].data.height
             older_block_height = lca_block_height - int(args.delta_block_height)
-            print(f"LCA Block Height is {lca_block_height} - Comparing to {older_block_height}\n")
+            print(
+                f"LCA Block Height is {lca_block_height} - Comparing to {older_block_height}\n"
+            )
             older_block_header = await client.get_header_by_height(older_block_height)
             older_block_header_hash = str(older_block_header.get_hash())
             await compare_block_headers(client, older_block_header_hash, lca_block_hash)

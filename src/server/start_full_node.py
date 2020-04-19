@@ -62,7 +62,7 @@ async def async_main():
     if config["enable_upnp"]:
         log.info(f"Attempting to enable UPnP (open up port {config['port']})")
         try:
-            miniupnpc = pip_import("miniupnpc", "miniupnpc==2.0.2")
+            miniupnpc = pip_import("miniupnpc", "miniupnpc==2.1")
             upnp = miniupnpc.UPnP()
             upnp.discoverdelay = 5
             upnp.discover()
@@ -101,8 +101,11 @@ async def async_main():
             full_node, master_close_cb, config["rpc_port"]
         )
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
+    try:
+        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
+    except NotImplementedError:
+        log.info("signal handlers unsupported")
 
     full_node._start_bg_tasks()
 
