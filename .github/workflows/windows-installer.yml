@@ -24,8 +24,8 @@ jobs:
     #- run: dotnet build <my project>
 
     - name: See working directory
-        working-directory: $GITHUB_WORKSPACE
-        run: ls -la
+      working-directory: $GITHUB_WORKSPACE
+      run: ls -la
 
     - name: npm install
       working-directory: $GITHUB_WORKSPACE/electron-ui
