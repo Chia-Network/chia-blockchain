@@ -25,9 +25,11 @@
                 ShowVersion="yes"
                 SuppressOptionsUI="yes"/>
         </BootstrapperApplicationRef>
-        <Chain ParallelCache='yes'>
+        <Chain>
+            <PackageGroupRef Id="PythonPackage" />
             <PackageGroupRef Id="MSVC2019Package" />
             <RollbackBoundary />
+
             <PackageGroupRef Id="BlockchainPackage" />
             <PackageGroupRef Id="WalletPackage" />
         </Chain>
