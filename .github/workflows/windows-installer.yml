@@ -25,7 +25,7 @@ jobs:
 
     - name: See working directory
       working-directory: ${{ github.workspace }}
-      run: ls -la
+      run: dir .
 
     - name: npm install
       working-directory: $GITHUB_WORKSPACE/electron-ui
