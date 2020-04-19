@@ -32,10 +32,9 @@ jobs:
       run: |
         npm install --runtime=electron --target=1.7.6
 
-    - name: wget Visual C++ 2019 redistributable
-      uses: wei/wget@v1
-      with:
-        args: -P $GITHUB_WORKSPACE\electron-wix\prerequisites\ https://aka.ms/vs/16/release/vc_redist.x64.exe
+    - name: curl Visual C++ 2019 redistributable
+      working-directory: ${{ github.workspace }}\electron-wix\prerequisites\
+      run: curl --remote-name https://aka.ms/vs/16/release/vc_redist.x64.exe
 
     - name: Build Windows installer
       env:
