@@ -68,6 +68,7 @@ class RpcClient:
                 "get_header", {"header_hash": header_hash.hex()}
             )
         except aiohttp.client_exceptions.ClientResponseError as e:
+            print(e.message)
             if e.message == "Not Found":
                 return None
             raise

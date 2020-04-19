@@ -26,7 +26,7 @@ async def async_main():
     except FileNotFoundError:
         raise RuntimeError("Plots not generated. Run chia-create-plots")
 
-    initialize_logging("Harvester %(name)-22s", config["logging"])
+    initialize_logging("Harvester %(name)-22s", config["logging"], root_path)
     log = logging.getLogger(__name__)
     setproctitle("chia_harvester")
 

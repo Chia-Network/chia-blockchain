@@ -62,8 +62,13 @@ class TestRpc:
             assert len(unf_block_headers) == 1
             assert unf_block_headers[0] == blocks[5].header
 
+
             header = await client.get_header(state["lca"].header_hash)
             assert header == blocks[7].header
+
+            assert (await client.get_header_by_height(7)) == blocks[7].header
+
+            assert (await client.get_header_by_heigt(100)) is None
 
             coins = await client.get_unspent_coins(
                 blocks[-1].header.data.coinbase.puzzle_hash, blocks[-1].header_hash

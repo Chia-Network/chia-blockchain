@@ -30,15 +30,16 @@ from src.util.setproctitle import setproctitle
 
 
 async def async_main():
-    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "full_node")
-    net_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    root_path = DEFAULT_ROOT_PATH
+    config = load_config_cli(root_path, "config.yaml", "full_node")
+    net_config = load_config(root_path, "config.yaml")
     setproctitle("chia_full_node")
-    initialize_logging("FullNode %(name)-23s", config["logging"])
+    initialize_logging("FullNode %(name)-23s", config["logging"], root_path)
 
     log = logging.getLogger(__name__)
     server_closed = False
 
-    db_path = path_from_root(DEFAULT_ROOT_PATH, config["database_path"])
+    db_path = path_from_root(root_path, config["database_path"])
     mkdir(db_path.parent)
 
     # Create the store (DB) and full node instance

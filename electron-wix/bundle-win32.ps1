@@ -1,27 +1,33 @@
 # add wix to path
 $env:Path += ";${env:ProgramFiles(x86)}\WiX Toolset v3.11\bin"
 $env:exename = "chia-wallet" # if you update this make sure to update .gitignore
-$env:electronpackagerdir = $env:exename + "-win32-x64"
-$env:version = "0.1.5"
+$env:version = "0.1.4"
+$electronpackagerdir = $env:exename + "-win32-x64"
+$buildDir = ".\build"
 
 # remove any exisitng outputs
 Write-Host "Cleaning any previous outputs"
-Remove-Item $env:electronpackagerdir -Recurse -Force -ErrorAction Ignore
-Remove-Item *.wixobj -Force -ErrorAction Ignore
-Remove-Item *.wixpdb -Force -ErrorAction Ignore
-Remove-Item *.msi -Force -ErrorAction Ignore
-Remove-Item electron-packager-files.wxs -Force -ErrorAction Ignore
+Remove-Item $electronpackagerdir -Recurse -Force -ErrorAction Ignore
+Remove-Item "$buildDir" -Recurse -Force -ErrorAction Ignore
+New-Item -ItemType Directory -Path "$buildDir"
 
 # package up the electron stuff and sources
-electron-packager ../electron-ui $env:exename --platform=win32
+electron-packager ../electron-ui $env:exename --platform=win32 --arch=x64 --icon=icon.ico --app-version="$env:version" --win32metadata.CompanyName="Chia Network" --win32metadata.ProductName="Chia Wallet" --app-copyright="Chia Network 2020"
+if ($LastExitCode) { exit $LastExitCode }
 
-# compile the installer
-Write-Host "Compiling installer"
+$tempName = "electron-packager-files"
+$msiName = "$env:exename-$env:version.msi"
 
 # this generates package-files.wxs from the contents of the electron packager folder
-heat.exe dir $env:electronpackagerdir -cg ChiaFiles -gg -scom -sreg -sfrag -srd -dr INSTALLDIR -out electron-packager-files.wxs
-candle electron-packager-files.wxs chia.wxs
+heat dir $electronpackagerdir -cg ChiaFiles -gg -scom -sreg -sfrag -srd -dr INSTALLDIR -out "$buildDir\$tempName.wxs"
+if ($LastExitCode) { exit $LastExitCode }
+
+# compile the installer
+candle "$buildDir\$tempName.wxs" chia.wxs -o "$buildDir\"
+if ($LastExitCode) { exit $LastExitCode }
 
 # link the installer
-Write-Host "Linking Windows Installer database"
-light -ext WixUIExtension electron-packager-files.wixobj chia.wixobj -b $env:electronpackagerdir -o Chia.msi
+light -ext WixUIExtension "$buildDir\$tempName.wixobj" "$buildDir\chia.wixobj" -b $electronpackagerdir -o "$buildDir\$msiName"
+if ($LastExitCode) { exit $LastExitCode }
+
+Write-Host "Successfully built $msiName"

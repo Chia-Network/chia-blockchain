@@ -107,14 +107,22 @@ class Blockchain:
             else:
                 raise RuntimeError(f"Invalid genesis block {self.genesis}")
 
+        start = time.time()
         headers_input: Dict[str, Header] = await self._load_headers_from_store()
+        log.info(f"Read from disk in {time.time() - start}")
+        start = time.time()
 
         assert self.lca_block is not None
         if len(headers_input) > 0:
             self.headers = headers_input
-            for _, header in self.headers.items():
+            sorted_headers = sorted(self.headers.items(), key=lambda b: b[1].height)
+            assert
+            for _, header in sorted_headers:
+                start_0 = time.time()
                 self.height_to_hash[header.height] = header.header_hash
-                await self._reconsider_heads(header, False)
+                self.tips = [header]
+                self.lca_block = header
+                log.info(f"Added block {header.height} in {time.time() - start_0}")
             assert (
                 self.headers[self.height_to_hash[uint32(0)]].get_hash()
                 == self.genesis.header_hash
@@ -124,6 +132,7 @@ class Blockchain:
                 self.headers[self.height_to_hash[uint32(1)]].prev_header_hash
                 == self.genesis.header_hash
             )
+        log.info(f"Added to chain in {time.time() - start}")
         return self
 
     async def _load_headers_from_store(self) -> Dict[str, Header]:
@@ -135,7 +144,7 @@ class Blockchain:
         tips: List[Header] = []
         for header in await self.store.get_headers():
             if not tips or header.weight > tips[0].weight:
-                tips = [header]
+                tips = [header
             seen_blocks[header.header_hash] = header
 
         headers = {}
