@@ -30,8 +30,12 @@
             <PackageGroupRef Id="MSVC2019Package" />
             <RollbackBoundary />
 
-            <PackageGroupRef Id="BlockchainPackage" />
             <PackageGroupRef Id="WalletPackage" />
+            <PackageGroupRef Id="BlockchainPackage" />
         </Chain>
     </Bundle>
 </Wix>
+
+<!--            LaunchArguments="[#readme.txt]"
+                LaunchTarget="notepad.exe"
+                LaunchWorkingFolder="[INSTALLDIR]" -->

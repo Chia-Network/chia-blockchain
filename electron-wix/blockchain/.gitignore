@@ -1,4 +1,4 @@
 *
 !.gitignore
-!readme.md
+!readme.*
 !install.ps1
