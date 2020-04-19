@@ -24,12 +24,11 @@ jobs:
     #- run: dotnet build <my project>
 
     - name: See working directory
-      #working-directory: ${{ github.workspace }}
-      working-directory: $GITHUB_WORKSPACE
+      working-directory: ${{ github.workspace }}
       run: dir .
 
     - name: npm install
-      working-directory: $GITHUB_WORKSPACE\electron-ui
+      working-directory: ${{ github.workspace }}\electron-ui
       run: |
         npm install --runtime=electron --target=1.7.6
 
@@ -41,7 +40,7 @@ jobs:
     - name: Build Windows installer
       env:
         version: 0.1.5 # Need to get this from setuptools_scm
-      working-directory: $GITHUB_WORKSPACE\electron-wix
+      working-directory: ${{ github.workspace }}\electron-wix
       run: |
         .\rebuild-all.ps1
 
@@ -49,4 +48,4 @@ jobs:
       uses: actions/upload-artifact@v1
       with:
         name: dist
-        path: $GITHUB_WORKSPACE\electron-wix/build
+        path: ${{ github.workspace }}\electron-wix/build
