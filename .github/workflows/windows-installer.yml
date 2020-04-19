@@ -34,11 +34,8 @@ jobs:
       run: |
         pip install --upgrade pip
         pip instsall pep517 wheel
-        pip install --only-binary -i https://download.chia.net/simple/ \
-          miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
-        pip wheel --use-pep517 --prefer-binary\
-          --wheel-dir=${{ github.workspace }}\electron-wix\build ${{ github.workspace }}\.
-        dir ${{ github.workspace }}\electron-wix\build
+        pip install --only-binary -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
+        pip wheel --use-pep517 --prefer-binary --wheel-dir=${{ github.workspace }}\electron-wix\build ${{ github.workspace }}\.
 
     - name: Install electron-packager
       run: |
