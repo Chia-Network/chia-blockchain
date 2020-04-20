@@ -18,18 +18,6 @@ jobs:
       with:
         python-version: '3.7'
 
-    #- name: Build source distribution of chia-blockchain
-      #run: |
-        #pip install pep517
-        #python -m pep517.build --source --out-dir ${{ github.workspace }}\electron-wix\build .
-        #echo "::set-env name=scm_version::$GITHUB_REF"
-
-    #- name: View version info
-      #run: |
-        #dir ${{ github.workspace }}\electron-wix\build
-        #pip install setuptools_scm
-        #python ${{ github.workspace }}\setup.py --fullname
-
     - name: curl miniupnpc and setproctitle
       working-directory: ${{ github.workspace }}\electron-wix\blockchain
       run: |
@@ -63,7 +51,7 @@ jobs:
 
     - name: Build Windows installer with Wix
       env:
-        version: 0.1.7 # Need to get this from setuptools_scm
+        version: 0.1.8 # TODO Need to create this from setuptools_scm for Windows
       working-directory: ${{ github.workspace }}\electron-wix
       run: |
         .\rebuild-all.ps1
