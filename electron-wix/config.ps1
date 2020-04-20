@@ -1,11 +1,12 @@
 # shared variables
 $env:walletProductName = "chia-wallet"
 $env:blockchainProductName = "chia-blockchain"
-$env:version = "0.1.6" # all packages share the same version
+$env:version = "0.1.5" # all packages share the same version
 $env:resourceDir = ".\resources" # bitmaps, icons etc
 $env:prereqDir = ".\prerequisites" # location for any pre-req installers
 
 $buildDir = ".\build" # where temp and final build output go
+$finalDir = ".\final" # where temp and final build output go
 $sourceDir = ".\src" # the location of wxs files etc
 $electronPackagerDir = $env:walletProductName + "-win32-x64" # the folder that electron-packager creates
 
@@ -19,7 +20,7 @@ function Sign-Item {
     Param ($packageName)
 
     $timeURL = "http://timestamp.comodoca.com/authenticode"
-    $pfxPath = "$env:HOMEPATH\selfsigncert.pfx"
+    $pfxPath = "$env:HOMEDRIVE\$env:HOMEPATH\selfsigncert.pfx"
     $CERT_PASSWORD = "my_password"
 
     # if a signing cert is specified, sign the package
