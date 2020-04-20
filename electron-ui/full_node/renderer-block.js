@@ -56,13 +56,14 @@ async function render() {
     try {
         const block = await rpc_client.get_block(header_hash);
 
+        let diff;
         if (block.header.data.height > 0) {
             block_title.innerHTML = "Block " + block.header.data.height + " in the Chia blockchain";
             const prev_header = await rpc_client.get_header(block.header.data.prev_header_hash);
-            const diff = block.header.data.weight - prev_header.data.weight;
+            diff = block.header.data.weight - prev_header.data.weight;
         } else {
             block_title.innerHTML = "Block " + block.header.data.height + " (genesis block) in the Chia blockchain";
-            const diff = block.header.data.weight;
+            diff = block.header.data.weight;
         }
 
         // TODO: don't use float here
