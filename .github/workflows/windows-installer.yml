@@ -46,7 +46,7 @@ jobs:
 
     - name: curl Visual C++ 2019 redistributable # Windows has curl natively
       working-directory: ${{ github.workspace }}\electron-wix\prerequisites\
-      run: curl -vO --show-error --fail https://aka.ms/vs/16/release/vc_redist.x64.exe
+      run: curl -vOL --show-error --fail https://aka.ms/vs/16/release/vc_redist.x64.exe
 
     - name: curl Python 3.7.6 Installer
       working-directory: ${{ github.workspace }}\electron-wix\prerequisites\
