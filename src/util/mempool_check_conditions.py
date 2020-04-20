@@ -117,7 +117,7 @@ def get_name_puzzle_conditions(
             return Err.INVALID_COIN_SOLUTION, [], uint64(cost_sum)
         puzzle_solution_program = name_solution.rest().first()
         puzzle_program = puzzle_solution_program.first()
-        puzzle_hash = Program(puzzle_program).get_hash()
+        puzzle_hash = Program(puzzle_program).get_tree_hash()
         try:
             error, conditions_dict, cost_run = conditions_dict_for_solution(
                 puzzle_solution_program
