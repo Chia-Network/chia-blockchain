@@ -28,6 +28,7 @@ if [ `uname` = "Linux" ]; then
   #LINUX=1
   if type apt-get; then
     # Debian/Ubuntu
+    sudo apt-get upradge -y
     sudo apt-get install -y npm
   elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ]; then
     # AMZN 2
