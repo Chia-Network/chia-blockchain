@@ -142,9 +142,7 @@ class WalletStateManager:
                 )
                 self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.COLOURED_COIN:
-                wallet = await CCWallet.create(
-                    self, self.main_wallet, wallet_info,
-                )
+                wallet = await CCWallet.create(self, self.main_wallet, wallet_info,)
                 self.wallets[wallet_info.id] = wallet
 
         async with self.puzzle_store.lock:
@@ -1387,9 +1385,7 @@ class WalletStateManager:
     async def get_transaction_status(
         self, tx_id: SpendBundle
     ) -> List[Tuple[str, MempoolInclusionStatus, Optional[str]]]:
-        tr: Optional[
-            TransactionRecord
-        ] = await self.get_transaction(tx_id)
+        tr: Optional[TransactionRecord] = await self.get_transaction(tx_id)
         ret_list = []
         if tr is not None:
             for (name, ss, err) in tr.sent_to:

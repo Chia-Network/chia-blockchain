@@ -53,6 +53,5 @@ class Program(SExp):  # type: ignore # noqa
             s = b"\1" + atom
         return bytes32(std_hash(s))
 
-
     def __deepcopy__(self, memo):
         return type(self).from_bytes(bytes(self))

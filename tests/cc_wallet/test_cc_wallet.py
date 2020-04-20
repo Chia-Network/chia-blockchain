@@ -170,7 +170,6 @@ class TestWalletSimulator:
         assert confirmed_balance == 55
         assert unconfirmed_balance == 55
 
-
     """
     @pytest.mark.asyncio
     async def test_get_wallet_for_colour(self, two_wallet_nodes):

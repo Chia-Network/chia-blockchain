@@ -279,8 +279,8 @@ class CCWallet:
                         coin_name,
                         CCParent(coin.parent_coin_info, inner_puzzle_hash, coin.amount),
                     )
-                #else:
-                    #await self.add_parent(coin_name, None)
+                # else:
+                    # await self.add_parent(coin_name, None)
 
                 return True
 
@@ -561,7 +561,9 @@ class CCWallet:
         aggsig = BLSSignature.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
 
-        await self.wallet_state_manager.add_pending_transaction(spend_bundle, self.wallet_info.id)
+        await self.wallet_state_manager.add_pending_transaction(
+            spend_bundle, self.wallet_info.id
+        )
 
         return spend_bundle
 
@@ -592,7 +594,7 @@ class CCWallet:
 
         origin = coins.copy().pop()
         origin_id = origin.name()
-        #self.add_parent(origin_id, origin_id)
+        # self.add_parent(origin_id, origin_id)
         cc_core = cc_wallet_puzzles.cc_make_core(origin_id)
         parent_info = {}
         parent_info[origin_id] = (
