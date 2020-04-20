@@ -74,5 +74,5 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v1
       with:
-        name: dist
-        path: ${{ github.workspace }}\electron-wix\build
+        name: Windows-Installers
+        path: ${{ github.workspace }}\electron-wix\build\final
