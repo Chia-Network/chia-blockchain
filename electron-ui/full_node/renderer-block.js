@@ -56,9 +56,14 @@ async function render() {
     try {
         const block = await rpc_client.get_block(header_hash);
 
-        block_title.innerHTML = "Block " + block.header.data.height + " in the Chia blockchain";
-        const prev_header = await rpc_client.get_header(block.header.data.prev_header_hash);
-        let diff = block.header.data.weight - prev_header.data.weight;
+        if (block.header.data.height > 0) {
+            block_title.innerHTML = "Block " + block.header.data.height + " in the Chia blockchain";
+            const prev_header = await rpc_client.get_header(block.header.data.prev_header_hash);
+            const diff = block.header.data.weight - prev_header.data.weight;
+        } else {
+            block_title.innerHTML = "Block " + block.header.data.height + " (genesis block) in the Chia blockchain";
+            const diff = block.header.data.weight;
+        }
 
         // TODO: don't use float here
         let chia_cb = chia_formatter(parseFloat(BigInt(block.header.data.coinbase.amount)), 'mojo').to('chia').toString();
@@ -72,8 +77,13 @@ async function render() {
         block_tbody.appendChild(create_table_row("Cost", block.header.data.cost));
         block_tbody.appendChild(create_table_row("Difficulty", BigInt(diff).toLocaleString()));
         block_tbody.appendChild(create_table_row("Total VDF Iterations", BigInt(block.header.data.total_iters).toLocaleString()));
-        block_tbody.appendChild(create_table_row("Block VDF Iterations", BigInt(block.proof_of_time.number_of_iterations).toLocaleString()));
-        block_tbody.appendChild(create_table_row("Proof of Space Size", block.proof_of_space.size));
+        if (block.header.data.height > 0) {
+            block_tbody.appendChild(create_table_row("Block VDF Iterations", BigInt(block.proof_of_time.number_of_iterations).toLocaleString()));
+            block_tbody.appendChild(create_table_row("Proof of Space Size", block.proof_of_space.size));
+        } else {
+            block_tbody.appendChild(create_table_row("Block VDF Iterations", "No proof of time for genesis block"));
+            block_tbody.appendChild(create_table_row("Proof of Space Size", "No proof of space for genesis block"));
+        }
         block_tbody.appendChild(create_table_row("Plot Public Key", block.proof_of_space.plot_pubkey));
         block_tbody.appendChild(create_table_row("Pool Public Key", block.proof_of_space.pool_pubkey));
         block_tbody.appendChild(create_table_row("Transactions Filter Hash", block.header.data.filter_hash));

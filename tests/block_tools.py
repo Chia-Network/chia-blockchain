@@ -193,10 +193,7 @@ class BlockTools:
                     timestamp1 = block1.header.data.timestamp
                 else:
                     block1 = block_list[0]
-                    timestamp1 = (
-                        block1.header.data.timestamp
-                        - test_constants["BLOCK_TIME_TARGET"]
-                    )
+                    timestamp1 = block1.header.data.timestamp
                     iters1 = uint64(0)
                 timestamp2 = block_list[height2].header.data.timestamp
                 timestamp3 = block_list[height3].header.data.timestamp
@@ -339,8 +336,8 @@ class BlockTools:
         test_constants: Dict[str, Any] = constants.copy()
         for key, value in input_constants.items():
             test_constants[key] = value
-        assert prev_block.proof_of_time is not None
         if update_difficulty:
+            assert prev_block.proof_of_time is not None
             challenge = Challenge(
                 prev_block.proof_of_space.challenge_hash,
                 std_hash(
@@ -350,12 +347,14 @@ class BlockTools:
                 difficulty,
             )
         else:
+            pot_hash = b""
+            if prev_block.height > 0:
+                assert prev_block.proof_of_time is not None
+                pot_hash = prev_block.proof_of_time.output.get_hash()
+
             challenge = Challenge(
                 prev_block.proof_of_space.challenge_hash,
-                std_hash(
-                    prev_block.proof_of_space.get_hash()
-                    + prev_block.proof_of_time.output.get_hash()
-                ),
+                std_hash(prev_block.proof_of_space.get_hash() + pot_hash),
                 None,
             )
 
@@ -403,6 +402,8 @@ class BlockTools:
         plot_pk = None
         plot_sk = None
         qualities: List[bytes] = []
+        proof_of_space: ProofOfSpace
+        proof_of_time: Optional[ProofOfTime]
         for i in range(num_plots * 3):
             # Allow passing in seed, to create reorgs and different chains
             random.seed(seed + i.to_bytes(4, "big"))
@@ -418,33 +419,39 @@ class BlockTools:
         assert prover
         assert plot_pk
         assert plot_sk
-        if len(qualities) == 0:
-            raise RuntimeError("No proofs for this challenge")
 
-        proof_xs: bytes = prover.get_full_proof(challenge_hash, 0)
-        proof_of_space: ProofOfSpace = ProofOfSpace(
-            challenge_hash, pool_pk, plot_pk, k, proof_xs
-        )
-        number_iters: uint64 = pot_iterations.calculate_iterations(
-            proof_of_space, difficulty, min_iters
-        )
-        int_size = (test_constants["DISCRIMINANT_SIZE_BITS"] + 16) >> 4
+        if not genesis:
+            if len(qualities) == 0:
+                raise RuntimeError("No proofs for this challenge")
 
-        result = prove(
-            challenge_hash, test_constants["DISCRIMINANT_SIZE_BITS"], number_iters
-        )
+            proof_xs: bytes = prover.get_full_proof(challenge_hash, 0)
+            proof_of_space = ProofOfSpace(challenge_hash, pool_pk, plot_pk, k, proof_xs)
+            number_iters: uint64 = pot_iterations.calculate_iterations(
+                proof_of_space, difficulty, min_iters
+            )
+            int_size = (test_constants["DISCRIMINANT_SIZE_BITS"] + 16) >> 4
 
-        output = ClassgroupElement(
-            int512(int.from_bytes(result[0:int_size], "big", signed=True,)),
-            int512(
-                int.from_bytes(result[int_size : 2 * int_size], "big", signed=True,)
-            ),
-        )
-        proof_bytes = result[2 * int_size : 4 * int_size]
+            result = prove(
+                challenge_hash, test_constants["DISCRIMINANT_SIZE_BITS"], number_iters
+            )
 
-        proof_of_time = ProofOfTime(
-            challenge_hash, number_iters, output, n_wesolowski, proof_bytes,
-        )
+            output = ClassgroupElement(
+                int512(int.from_bytes(result[0:int_size], "big", signed=True,)),
+                int512(
+                    int.from_bytes(result[int_size : 2 * int_size], "big", signed=True,)
+                ),
+            )
+            proof_bytes = result[2 * int_size : 4 * int_size]
+
+            proof_of_time = ProofOfTime(
+                challenge_hash, number_iters, output, n_wesolowski, proof_bytes,
+            )
+        else:
+            proof_of_space = ProofOfSpace(
+                challenge_hash, pool_pk, plot_pk, uint8(0), b""
+            )
+            number_iters = uint64(0)
+            proof_of_time = None
 
         if not reward_puzzlehash:
             reward_puzzlehash = fee_target
@@ -545,3 +552,4 @@ class BlockTools:
 if __name__ == "__main__":
     bt = BlockTools()
     print(bytes(bt.create_genesis_block({}, bytes([1] * 32), b"0")))
+    print(bt.create_genesis_block({}, bytes([1] * 32), b"0"))

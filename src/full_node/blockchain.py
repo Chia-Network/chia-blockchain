@@ -201,7 +201,7 @@ class Blockchain:
         return header_hash in self.headers
 
     def get_challenge(self, block: FullBlock) -> Optional[Challenge]:
-        if block.proof_of_time is None:
+        if block.proof_of_time is None and block.height > 0:
             return None
         if block.header_hash not in self.headers:
             return None
@@ -215,11 +215,16 @@ class Blockchain:
             new_difficulty = self.get_next_difficulty(block.header_hash)
         else:
             new_difficulty = None
+
+        if block.height == 0:
+            pot_hash = b""
+        else:
+            assert block.proof_of_time is not None
+            pot_hash = block.proof_of_time.output.get_hash()
+
         return Challenge(
             prev_challenge_hash,
-            std_hash(
-                block.proof_of_space.get_hash() + block.proof_of_time.output.get_hash()
-            ),
+            std_hash(block.proof_of_space.get_hash() + pot_hash),
             new_difficulty,
         )
 
@@ -356,9 +361,9 @@ class Blockchain:
             timestamp1 = block1.data.timestamp  # i - 512 - 1
         else:
             # In the case of height == -1, there is no timestamp here, so assume the genesis block
-            # took constants["BLOCK_TIME_TARGET"] seconds to mine.
+            # took 0 seconds to mine.
             genesis = self.headers[self.height_to_hash[uint32(0)]]
-            timestamp1 = genesis.data.timestamp - self.constants["BLOCK_TIME_TARGET"]
+            timestamp1 = genesis.data.timestamp
         timestamp2 = block2.data.timestamp  # i - 2048 + 512 - 1
         timestamp3 = block3.data.timestamp  # i - 512 - 1
 
@@ -561,6 +566,7 @@ class Blockchain:
         if not pre_validated:
             # 1. The hash of the proof of space must match header_data.proof_of_space_hash
             if block.proof_of_space.get_hash() != block.header.data.proof_of_space_hash:
+                print("Proof of space is", block.proof_of_space)
                 return (Err.INVALID_POSPACE_HASH, None)
 
             # 2. The coinbase signature must be valid, according the the pool public key
@@ -629,18 +635,17 @@ class Blockchain:
             if challenge_hash != block.proof_of_space.challenge_hash:
                 return (Err.INVALID_POSPACE_CHALLENGE, None)
         else:
-            # 9. If genesis, the challenge hash in the proof of time must be the same as in the proof of space
-            assert block.proof_of_time is not None
-            challenge_hash = block.proof_of_time.challenge_hash
+            # 9. If genesis, the proof of time must be None
+            assert block.proof_of_time is None
 
-            if challenge_hash != block.proof_of_space.challenge_hash:
-                return (Err.INVALID_POSPACE_CHALLENGE, None)
-
-        # 10. The proof of space must be valid on the challenge
-        if pos_quality_string is None:
-            pos_quality_string = block.proof_of_space.verify_and_get_quality_string()
-            if not pos_quality_string:
-                return (Err.INVALID_POSPACE, None)
+        # 10. The proof of space must be valid on the challenge (except in genesis block)
+        if prev_full_block is not None:
+            if pos_quality_string is None:
+                pos_quality_string = (
+                    block.proof_of_space.verify_and_get_quality_string()
+                )
+                if not pos_quality_string:
+                    return (Err.INVALID_POSPACE, None)
 
         if prev_full_block is not None:
             # 11. If not genesis, the height on the previous block must be one less than on this block
@@ -705,14 +710,15 @@ class Blockchain:
             difficulty = uint64(self.constants["DIFFICULTY_STARTING"])
             min_iters = uint64(self.constants["MIN_ITERS_STARTING"])
 
-        number_of_iters: uint64 = calculate_iterations_quality(
-            pos_quality_string, block.proof_of_space.size, difficulty, min_iters,
-        )
-
         assert count_significant_bits(difficulty) <= self.constants["SIGNIFICANT_BITS"]
         assert count_significant_bits(min_iters) <= self.constants["SIGNIFICANT_BITS"]
 
+        number_of_iters: uint64
         if prev_full_block is not None:
+            number_of_iters = calculate_iterations_quality(
+                pos_quality_string, block.proof_of_space.size, difficulty, min_iters,
+            )
+
             # 17. If not genesis, the total weight must be the parent weight + difficulty
             if block.weight != prev_full_block.weight + difficulty:
                 return (Err.INVALID_WEIGHT, None)
@@ -724,12 +730,13 @@ class Blockchain:
             ):
                 return (Err.INVALID_TOTAL_ITERS, None)
         else:
+            number_of_iters = uint64(0)
             # 19. If genesis, the total weight must be starting difficulty
             if block.weight != difficulty:
                 return (Err.INVALID_WEIGHT, None)
 
-            # 20. If genesis, the total iters must be number iters
-            if block.header.data.total_iters != number_of_iters:
+            # 20. If genesis, the total iters must be 0
+            if block.header.data.total_iters != 0:
                 return (Err.INVALID_TOTAL_ITERS, None)
 
         return (None, number_of_iters)
@@ -762,27 +769,32 @@ class Blockchain:
 
         assert number_of_iters is not None
 
-        if block.proof_of_time is None:
-            return Err.BLOCK_IS_NOT_FINISHED
-
-        # 1. The number of iterations (based on quality, pos, difficulty, ips) must be the same as in the PoT
-        if number_of_iters != block.proof_of_time.number_of_iterations:
-            return Err.INVALID_NUM_ITERATIONS
-
-        # 2. the PoT must be valid, on a discriminant of size 1024, and the challenge_hash
-        if not pre_validated:
-            if not block.proof_of_time.is_valid(
-                self.constants["DISCRIMINANT_SIZE_BITS"]
-            ):
-                return Err.INVALID_POT
-        # 3. If not genesis, the challenge_hash in the proof of time must match the challenge on the previous block
         if not genesis:
             assert prev_full_block is not None
+            if block.proof_of_time is None:
+                return Err.BLOCK_IS_NOT_FINISHED
+
+            # 1. The number of iterations (based on quality, pos, difficulty, ips) must be the same as in the PoT
+            if number_of_iters != block.proof_of_time.number_of_iterations:
+                return Err.INVALID_NUM_ITERATIONS
+
+            # 2. the PoT must be valid, on a discriminant of size 1024, and the challenge_hash
+            if not pre_validated:
+                print("PoT", block.proof_of_time)
+                if not block.proof_of_time.is_valid(
+                    self.constants["DISCRIMINANT_SIZE_BITS"]
+                ):
+                    return Err.INVALID_POT
+            # 3. The challenge_hash in the proof of time must match the challenge on the previous block
             prev_challenge: Optional[Challenge] = self.get_challenge(prev_full_block)
             assert prev_challenge is not None
 
             if block.proof_of_time.challenge_hash != prev_challenge.get_hash():
                 return Err.INVALID_POT_CHALLENGE
+        else:
+            # 4. If genesis, there must be no proof of time
+            if block.proof_of_time is not None:
+                return Err.GENESIS_POT
         return None
 
     async def pre_validate_blocks(

@@ -70,6 +70,8 @@ class Err(Enum):
     INVALID_COINBASE_PARENT = 45
     INVALID_FEES_COIN_PARENT = 46
 
+    GENESIS_POT = 47
+
 
 class ConsensusError(Exception):
     def __init__(self, code: Err, errors: List[Any] = []):

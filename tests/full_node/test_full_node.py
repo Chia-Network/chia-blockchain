@@ -893,9 +893,13 @@ class TestWalletProtocol:
                 assert hashes[i][2] is not None
             else:
                 assert hashes[i][2] is None
+
+            if i > 0:
+                pot_hash = blocks_list[i].proof_of_time.output.get_hash()
+            else:
+                pot_hash = b""
             assert hashes[i][0] == std_hash(
-                blocks_list[i].proof_of_space.get_hash()
-                + blocks_list[i].proof_of_time.output.get_hash()
+                blocks_list[i].proof_of_space.get_hash() + pot_hash
             )
 
     @pytest.mark.asyncio

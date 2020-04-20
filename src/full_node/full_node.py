@@ -144,6 +144,7 @@ class FullNode:
             assert tip is not None
             challenge = self.blockchain.get_challenge(tip)
             assert challenge is not None
+            self.log.error(f"Challenge {challenge} hash {challenge.get_hash()}")
             challenge_requests.append(
                 timelord_protocol.ChallengeStart(challenge.get_hash(), tip.weight)
             )
@@ -898,7 +899,7 @@ class FullNode:
         for block in blocks:
             assert block.proof_of_time is not None
             if (
-                block.proof_of_time.witness_type == 1
+                block.proof_of_time.witness_type == 0
                 and block.proof_of_time.challenge_hash
                 == request_compact_proof_of_time.challenge_hash
                 and block.proof_of_time.number_of_iterations

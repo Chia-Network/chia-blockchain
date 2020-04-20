@@ -138,15 +138,18 @@ class FullNodeStore:
         await self.db.commit()
 
     async def add_block(self, block: FullBlock) -> None:
-        assert block.proof_of_time is not None
+        pot_hash = b""
+        if block.height > 0:
+            # No proof of time for the genesis block
+            assert block.proof_of_time is not None
+            pot_hash = block.proof_of_time.output.get_hash()
+        proof_hash = std_hash(block.proof_of_space.get_hash() + pot_hash)
         cursor_1 = await self.db.execute(
             "INSERT OR REPLACE INTO blocks VALUES(?, ?, ?)",
             (block.height, block.header_hash.hex(), bytes(block)),
         )
         await cursor_1.close()
-        proof_hash = std_hash(
-            block.proof_of_space.get_hash() + block.proof_of_time.output.get_hash()
-        )
+
         cursor_2 = await self.db.execute(
             ("INSERT OR REPLACE INTO headers VALUES(?, ?, ?, ?)"),
             (

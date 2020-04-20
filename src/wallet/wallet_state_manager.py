@@ -12,10 +12,10 @@ from blspy import PublicKey
 from src.types.coin import Coin
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
+from src.util.ints import uint8, uint32, uint64, int512
 from src.types.full_block import FullBlock
 from src.types.challenge import Challenge
 from src.types.header_block import HeaderBlock
-from src.util.ints import uint32, uint64
 from src.util.hash import std_hash
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.block_record import BlockRecord
@@ -30,6 +30,8 @@ from src.consensus.pot_iterations import calculate_iterations_quality
 from src.util.significant_bits import truncate_to_significant_bits
 from src.wallet.wallet_user_store import WalletUserStore
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
+from src.types.proof_of_time import ProofOfTime
+from src.types.classgroup import ClassgroupElement
 from src.util.errors import Err
 from src.wallet.wallet import Wallet
 from src.wallet.rl_wallet.rl_wallet import RLWallet
@@ -150,17 +152,18 @@ class WalletStateManager:
             # Loads the genesis block if there are no blocks
             genesis_challenge = Challenge(
                 genesis.proof_of_space.challenge_hash,
-                std_hash(
-                    genesis.proof_of_space.get_hash()
-                    + genesis.proof_of_time.output.get_hash()
-                ),
+                std_hash(genesis.proof_of_space.get_hash() + b""),
                 None,
             )
+            empty_pot = ProofOfTime(
+                bytes([0] * 32),
+                uint64(0),
+                ClassgroupElement(int512(0), int512(0)),
+                uint8(0),
+                b"",
+            )
             genesis_hb = HeaderBlock(
-                genesis.proof_of_space,
-                genesis.proof_of_time,
-                genesis_challenge,
-                genesis.header,
+                genesis.proof_of_space, empty_pot, genesis_challenge, genesis.header,
             )
             await self.receive_block(
                 BlockRecord(
@@ -170,7 +173,7 @@ class WalletStateManager:
                     genesis.weight,
                     [],
                     [],
-                    genesis_hb.header.data.total_iters,
+                    uint64(0),
                     genesis_challenge.get_hash(),
                 ),
                 genesis_hb,
@@ -791,12 +794,8 @@ class WalletStateManager:
         Fully validates a header block. This requires the ancestors to be present in the blockchain.
         This method also validates that the header block is consistent with the block record.
         """
+
         # POS challenge hash == POT challenge hash == Challenge prev challenge hash
-        if (
-            header_block.proof_of_space.challenge_hash
-            != header_block.proof_of_time.challenge_hash
-        ):
-            return False
         if (
             header_block.proof_of_space.challenge_hash
             != header_block.challenge.prev_challenge_hash
@@ -804,7 +803,14 @@ class WalletStateManager:
             return False
 
         if br.height > 0:
+            if (
+                header_block.proof_of_space.challenge_hash
+                != header_block.proof_of_time.challenge_hash
+            ):
+                return False
+
             prev_br = self.block_records[br.prev_header_hash]
+
             # If prev header block, check prev header block hash matches
             if prev_br.new_challenge_hash is not None:
                 if (
@@ -814,11 +820,12 @@ class WalletStateManager:
                     return False
 
         # Validate PoS and get quality
-        quality_str: Optional[
-            bytes32
-        ] = header_block.proof_of_space.verify_and_get_quality_string()
-        if quality_str is None:
-            return False
+        if br.height > 0:
+            quality_str: Optional[
+                bytes32
+            ] = header_block.proof_of_space.verify_and_get_quality_string()
+            if quality_str is None:
+                return False
 
         difficulty: uint64
         min_iters: uint64 = self.get_min_iters(br)
@@ -874,27 +881,31 @@ class WalletStateManager:
             if difficulty < min_diff or difficulty > max_diff:
                 return False
 
-        number_of_iters: uint64 = calculate_iterations_quality(
-            quality_str, header_block.proof_of_space.size, difficulty, min_iters,
-        )
+        if br.height > 0:
+            number_of_iters: uint64 = calculate_iterations_quality(
+                quality_str, header_block.proof_of_space.size, difficulty, min_iters,
+            )
 
-        if header_block.proof_of_time is None:
-            return False
+            if header_block.proof_of_time is None:
+                return False
 
-        if number_of_iters != header_block.proof_of_time.number_of_iterations:
-            return False
+            if number_of_iters != header_block.proof_of_time.number_of_iterations:
+                return False
 
-        # Check PoT
-        if not header_block.proof_of_time.is_valid(
-            self.constants["DISCRIMINANT_SIZE_BITS"]
-        ):
-            return False
+            # Check PoT
+            if not header_block.proof_of_time.is_valid(
+                self.constants["DISCRIMINANT_SIZE_BITS"]
+            ):
+                return False
 
-        # Validate challenge
-        proofs_hash = std_hash(
-            header_block.proof_of_space.get_hash()
-            + header_block.proof_of_time.output.get_hash()
-        )
+            # Validate challenge
+            proofs_hash = std_hash(
+                header_block.proof_of_space.get_hash()
+                + header_block.proof_of_time.output.get_hash()
+            )
+        else:
+            proofs_hash = std_hash(header_block.proof_of_space.get_hash() + b"")
+
         if proofs_hash != header_block.challenge.proofs_hash:
             return False
         # Note that we are not validating the work difficulty reset (since we don't know the
@@ -921,7 +932,7 @@ class WalletStateManager:
         else:
             if br.weight != difficulty:
                 return False
-            if br.total_iters != number_of_iters:
+            if br.total_iters != uint64(0):
                 return False
 
         # Check that block is not far in the future
@@ -987,20 +998,29 @@ class WalletStateManager:
         """
 
         for height in heights:
+            assert height > 0
             prev_height = uint32(height - 1)
             # Get previous header block
             prev_hh = potential_header_hashes[prev_height]
             _, prev_header_block, _ = cached_blocks[prev_hh]
 
             # Validate proof hash of previous header block
-            if (
-                std_hash(
-                    prev_header_block.proof_of_space.get_hash()
-                    + prev_header_block.proof_of_time.output.get_hash()
-                )
-                != all_proof_hashes[prev_height][0]
-            ):
-                return False
+            if prev_header_block.height > 0:
+                if (
+                    std_hash(
+                        prev_header_block.proof_of_space.get_hash()
+                        + prev_header_block.proof_of_time.output.get_hash()
+                    )
+                    != all_proof_hashes[prev_height][0]
+                ):
+                    return False
+            else:
+                # Genesis block has no proof of time
+                if (
+                    std_hash(prev_header_block.proof_of_space.get_hash() + b"")
+                    != all_proof_hashes[prev_height][0]
+                ):
+                    return False
 
             # Calculate challenge hash (with difficulty)
             if (
