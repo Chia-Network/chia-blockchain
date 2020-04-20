@@ -28,7 +28,7 @@ if [ `uname` = "Linux" ]; then
   #LINUX=1
   if type apt-get; then
     # Debian/Ubuntu
-    sudo apt-get install -y npm nodejs node-gyp nodejs-dev
+    sudo apt-get install -y npm nodejs nodejs-dev node-gyp libssl1.0-dev # Brutul work around for Github ci
   elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ]; then
     # AMZN 2
     echo "Installing on Amazon Linux 2"
