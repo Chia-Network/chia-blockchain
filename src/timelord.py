@@ -64,7 +64,6 @@ class Timelord:
 
         async def connection_check():
             while not self._is_shutdown:
-                await asyncio.sleep(30)
                 if self.server is not None:
                     full_node_retry = True
 
@@ -78,6 +77,7 @@ class Timelord:
                             full_node_peer, None, auth=True
                         ):
                             await asyncio.sleep(1)
+                await asyncio.sleep(30)
 
         self.reconnect_task = asyncio.create_task(connection_check())
 
