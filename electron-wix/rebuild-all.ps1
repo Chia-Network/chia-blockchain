@@ -27,4 +27,3 @@ Write-Host "Succesfully built Chia installer for $env:version"
 New-Item -ItemType Directory -Path "$finalDir"
 Copy-Item "$buildDir\*.msi" "$finalDir\" -Force
 Copy-Item "$buildDir\*.exe" "$finalDir\" -Force
-Copy-Item "$buildDir\blockchain\wheels.ps1" "$finalDir\" -Force
