@@ -22,7 +22,7 @@ Copy-Item ".\blockchain\*.whl" "$blockchainDir\wheels" -Force
 
 # generate the script that will install all the wheels on the target machine
 $text = ""
-Get-ChildItem "$blockchainDir\wheels" -Filter chia-blockchain-*-py3-none-any.whl |
+Get-ChildItem "$blockchainDir\wheels" -Filter chia_blockchain-*-py3-none-any.whl |
 Foreach-Object {
     $name = $_.Name
     $text += "pip install --find-links .\wheels\ .\wheels\$name`n"
