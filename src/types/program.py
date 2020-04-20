@@ -51,16 +51,6 @@ class Program(SExp):  # type: ignore # noqa
         else:
             atom = self.as_atom()
             s = b"\1" + atom
-        return bytes32(std_hash(bytes(s)))
-
-    def get_tree_hash(self) -> bytes32:
-        if self.listp():
-            left = self.to(self.first()).get_tree_hash()
-            right = self.to(self.rest()).get_tree_hash()
-            s = b"\2" + left + right
-        else:
-            atom = self.as_atom()
-            s = b"\1" + atom
         return bytes32(std_hash(s))
 
     def __deepcopy__(self, memo):
