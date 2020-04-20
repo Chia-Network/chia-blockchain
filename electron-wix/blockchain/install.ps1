@@ -8,4 +8,4 @@ python -m pip install --upgrade pip
 
 pip install .\wheels\miniupnpc-2.1-cp37-cp37m-win_amd64.whl
 pip install .\wheels\setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
-pip install --find-links .\wheels\ .\wheels\chia_blockchain-1.0b4.dev134-py3-none-any.whl
+pip install --find-links .\wheels\ .\wheels\chia_blockchain-*-py3-none-any.whl
