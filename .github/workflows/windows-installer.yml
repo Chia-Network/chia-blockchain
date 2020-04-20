@@ -38,11 +38,11 @@ jobs:
 
     - name: Create all core wheels for chia-blockchain
       run: |
-        pip install pep517 wheel setuptools
+        pip install pep517 wheel
         pip install miniupnpc-2.1-cp37-cp37m-win_amd64.whl
         pip install setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
         pip install cbor2-5.1.0-cp37-cp37m-win_amd64.whl
-        pip wheel --use-pep517 --only-binary cbor2 -i https://download.chia.net/simple/ -f ${{ github.workspace }} --wheel-dir=${{ github.workspace }}\electron-wix\blockchain ${{ github.workspace }}\.
+        pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ -f ${{ github.workspace }} --wheel-dir=${{ github.workspace }}\electron-wix\blockchain ${{ github.workspace }}\.
         dir ${{ github.workspace }}\electron-wix\blockchain
 
     - name: Install electron-packager
