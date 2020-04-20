@@ -121,7 +121,7 @@ full_node:
       host: 127.0.0.1
       port: 8446
   introducer_peer:
-      host: introducer.beta.chia.net  # Chia AWS introducer IPv4/IPv6
+      host: introducer1.beta.chia.net  # Chia AWS introducer IPv4/IPv6
       port: 8444
   wallet_peer:
     host: 127.0.0.1
@@ -181,7 +181,7 @@ wallet:
   recent_peer_threshold: 6000
 
   introducer_peer:
-    host: introducer.beta.chia.net  # Chia AWS introducer IPv4/IPv6
+    host: introducer1.beta.chia.net  # Chia AWS introducer IPv4/IPv6
     port: 8444
 
   ssl:
