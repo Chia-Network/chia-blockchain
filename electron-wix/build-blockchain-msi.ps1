@@ -1,5 +1,4 @@
 # This script builds the blockchain MSI package
-Write-Host "Starting to build $packageName"
 $ScriptDirectory = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
 try {
     . ("$ScriptDirectory\config.ps1")
@@ -23,9 +22,10 @@ Copy-Item ".\blockchain\*.whl" "$blockchainDir\wheels" -Force
 
 # generate the script that will isntall all the wheels on the target machine
 $text = ""
-Get-ChildItem "$blockchainDir\wheels" -Filter *.whl | 
+Get-ChildItem "$blockchainDir\wheels" -Filter *.whl |
 Foreach-Object {
-    $text += "pip install .\wheels\$_`n"
+    $name = $_.Name
+    $text += "pip install .\wheels\$name`n"
 }
 New-Item "$blockchainDir\wheels.ps1" -Force
 Set-Content "$blockchainDir\wheels.ps1" $text
