@@ -39,7 +39,7 @@ if [ `uname` = "Linux" ]; then
     # CentOS or Redhat
     echo "Installing on CentOS/Redhat"
     curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
-    sudo yum install -y nodejs
+    sudo yum install -y nodejs npm
   fi
 elif [ `uname` = "Darwin" ] && type brew && ! npm version>/dev/null 2>&1; then
   # Install npm if not installed
