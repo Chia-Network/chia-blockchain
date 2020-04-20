@@ -2,33 +2,22 @@ import logging
 import string
 
 import clvm
-import json
-from blspy import ExtendedPrivateKey
-from dataclasses import dataclass
-from secrets import token_bytes
 from typing import Dict, Optional, List, Any, Set, Tuple
 from clvm_tools import binutils
-from src.server.server import ChiaServer
 from clvm.EvalError import EvalError
-from src.types.BLSSignature import BLSSignature, ZERO96
+from src.types.BLSSignature import BLSSignature
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.condition_var_pair import ConditionVarPair
-from src.types.name_puzzle_condition import NPC
 from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
 from src.util.condition_tools import (
     conditions_dict_for_solution,
-    conditions_by_opcode,
-    conditions_for_solution,
     hash_key_pairs_for_conditions_dict,
 )
-from src.util.errors import Err
 from src.util.ints import uint64, uint32
-from src.util.streamable import streamable, Streamable
 from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.block_record import BlockRecord
 from src.wallet.cc_wallet.cc_info import CCInfo
