@@ -8,7 +8,7 @@ from src.consensus.constants import constants as consensus_constants
 
 bt = BlockTools()
 test_constants: Dict[str, Any] = consensus_constants.copy()
-test_constants.update({"DIFFICULTY_STARTING": 500, "MIN_ITERS_STARTING": 2 ** 17})
+test_constants.update({"DIFFICULTY_STARTING": 500, "MIN_ITERS_STARTING": 2 ** 15})
 
 test_constants["GENESIS_BLOCK"] = bytes(
     bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
@@ -31,7 +31,7 @@ class TestSimulation:
     async def test_simulation_1(self, simulation):
         node1, node2 = simulation
         start = time.time()
-        while time.time() - start < 300:
+        while time.time() - start < 500:
             if max([h.height for h in node1.blockchain.get_current_tips()]) > 10:
                 return
             await asyncio.sleep(1)
