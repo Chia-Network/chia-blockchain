@@ -4,6 +4,7 @@ import logging
 import signal
 import time
 import traceback
+import clvm
 
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -37,6 +38,7 @@ from clvm_tools import binutils
 from src.types.spend_bundle import SpendBundle
 from src.types.program import Program
 from src.types.BLSSignature import BLSSignature
+from src.types.coin_solution import CoinSolution
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -105,7 +107,9 @@ class WebSocketServer:
         while time.time() - start < TIMEOUT:
             sent_to: List[
                 Tuple[str, MempoolInclusionStatus, Optional[str]]
-            ] = await self.wallet_node.wallet_state_manager.get_transaction_status(tx.name())
+            ] = await self.wallet_node.wallet_state_manager.get_transaction_status(
+                tx.name()
+            )
 
             if len(sent_to) == 0:
                 await asyncio.sleep(0.1)
@@ -315,7 +319,9 @@ class WebSocketServer:
         while time.time() - start < TIMEOUT:
             sent_to: List[
                 Tuple[str, MempoolInclusionStatus, Optional[str]]
-            ] = await self.wallet_node.wallet_state_manager.get_transaction_status(tx.name())
+            ] = await self.wallet_node.wallet_state_manager.get_transaction_status(
+                tx.name()
+            )
 
             if len(sent_to) == 0:
                 await asyncio.sleep(0.1)
@@ -368,7 +374,9 @@ class WebSocketServer:
         while time.time() - start < TIMEOUT:
             sent_to: List[
                 Tuple[str, MempoolInclusionStatus, Optional[str]]
-            ] = await self.wallet_node.wallet_state_manager.get_transaction_status(tx.name())
+            ] = await self.wallet_node.wallet_state_manager.get_transaction_status(
+                tx.name()
+            )
 
             if len(sent_to) == 0:
                 await asyncio.sleep(0.1)
@@ -412,14 +420,18 @@ class WebSocketServer:
         return await websocket.send(format_response(response_api, response))
 
     async def create_offer(self, websocket, request, response_api):
-        #request["colours"] = {"1234abcd": 100, "fadeddab": -50, None: 20}
+        # request["colours"] = {"1234abcd": 100, "fadeddab": -50, None: 20}
         spend_bundle = None
         for colour in request["colours"].keys():
             amount = request["colours"][colour]
             if colour is None:
-                self.wallet_node.wallet_state_manager.main_wallet.create_spend_bundle_relative_chia(amount)
+                self.wallet_node.wallet_state_manager.main_wallet.create_spend_bundle_relative_chia(
+                    amount
+                )
             else:
-                wallet: CCWallet = self.wallet_node.wallet_state_manager.get_wallet_for_colour(colour)
+                wallet: CCWallet = self.wallet_node.wallet_state_manager.get_wallet_for_colour(
+                    colour
+                )
                 if spend_bundle is None:
                     spend_bundle = wallet.create_spend_bundle_relative_amount(amount)
                     if spend_bundle is None:
@@ -437,20 +449,36 @@ class WebSocketServer:
 
     async def get_discrepancies_for_offer(self, websocket, request, response_api):
         cc_discrepancies = dict()
+        wallets = dict()
+        f = open(request["filename"], "r")
+        trade_offer_hex = f.read()
+        f.close()
+        trade_offer = SpendBundle.from_bytes(bytes.fromhex(trade_offer_hex))
         for coinsol in trade_offer.coin_solutions:
             puzzle = coinsol.solution.first()
             solution = coinsol.solution.rest().first()
 
             # work out the deficits between coin amount and expected output for each
             if self.check_is_cc_puzzle(puzzle):
+                colour = cc_wallet_puzzles.get_genesis_from_puzzle(
+                    binutils.disassemble(puzzle)
+                )
+                if colour not in wallets:
+                    wallets[
+                        colour
+                    ] = self.wallet_node.wallet_state_manager.get_wallet_for_colour(
+                        colour
+                    )
                 parent_info = binutils.disassemble(solution.rest().first()).split(" ")
                 if len(parent_info) > 1:
-                    colour = self.get_genesis_from_puzzle(binutils.disassemble(puzzle))
+                    colour = wallets[colour].get_genesis_from_puzzle(
+                        binutils.disassemble(puzzle)
+                    )
                     # get puzzle and solution
                     innerpuzzlereveal = solution.rest().rest().rest().first()
                     innersol = solution.rest().rest().rest().rest().first()
                     # Get output amounts by running innerpuzzle and solution
-                    out_amount = self.get_output_amount_for_puzzle_and_solution(
+                    out_amount = cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
                         innerpuzzlereveal, innersol
                     )
                     # add discrepancy to dict of discrepancies
@@ -462,20 +490,19 @@ class WebSocketServer:
                 if None in cc_discrepancies:
                     cc_discrepancies[None] += (
                         coinsol.coin.amount
-                        - self.get_output_amount_for_puzzle_and_solution(
+                        - cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
                             puzzle, solution
                         )
                     )
                 else:
                     cc_discrepancies[None] = (
                         coinsol.coin.amount
-                        - self.get_output_amount_for_puzzle_and_solution(
+                        - cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
                             puzzle, solution
                         )
                     )
 
         return cc_discrepancies
-
 
     async def respond_to_offer(self, websocket, request, response_api):
         f = open(request["filename"], "r")
@@ -501,9 +528,15 @@ class WebSocketServer:
                 parent_info = binutils.disassemble(solution.rest().first()).split(" ")
                 if len(parent_info) > 1:
                     # Calculate output amounts
-                    colour = cc_wallet_puzzles.get_genesis_from_puzzle(binutils.disassemble(puzzle))
+                    colour = cc_wallet_puzzles.get_genesis_from_puzzle(
+                        binutils.disassemble(puzzle)
+                    )
                     if colour not in wallets:
-                        wallets[colour] = self.wallet_node.wallet_state_manager.get_wallet_for_colour(colour)
+                        wallets[
+                            colour
+                        ] = self.wallet_node.wallet_state_manager.get_wallet_for_colour(
+                            colour
+                        )
                     innerpuzzlereveal = solution.rest().rest().rest().first()
                     innersol = solution.rest().rest().rest().rest().first()
                     out_amount = cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
@@ -534,12 +567,14 @@ class WebSocketServer:
                             )
                         )
                     else:
-                        auditees[colour] = [(
-                            parent_info,
-                            Program(innerpuzzlereveal).get_hash(),
-                            coinsol.coin.amount,
-                            out_amount
-                        )]
+                        auditees[colour] = [
+                            (
+                                parent_info,
+                                Program(innerpuzzlereveal).get_hash(),
+                                coinsol.coin.amount,
+                                out_amount,
+                            )
+                        ]
                 # else:  # Eve spend - currently don't support 0 generation as its not the recipients problem
                 #     coinsols.append(coinsol)
             else:  # standard chia coin
@@ -555,7 +590,9 @@ class WebSocketServer:
 
         chia_spend_bundle = None
         if chia_discrepancy is not None:
-            chia_spend_bundle = self.wallet_node.wallet_state_manager.main_wallet.create_spend_bundle_relative_chia(chia_discrepancy)
+            chia_spend_bundle = self.wallet_node.wallet_state_manager.main_wallet.create_spend_bundle_relative_chia(
+                chia_discrepancy
+            )
 
         # create coloured coin
         for colour in cc_discrepancies.keys():
@@ -580,7 +617,9 @@ class WebSocketServer:
                 if auditor is None:
                     auditor = coloured_coin
                     if auditor_innerpuz is None:
-                        auditor_innerpuz = wallets[colour].get_innerpuzzle_from_puzzle(auditor.puzzle_hash)
+                        auditor_innerpuz = wallets[colour].get_innerpuzzle_from_puzzle(
+                            auditor.puzzle_hash
+                        )
                     auditor_info = (
                         auditor.parent_coin_info,
                         auditor_innerpuz.get_hash(),
@@ -591,15 +630,22 @@ class WebSocketServer:
 
                 # complete the non-auditor CoinSolutions
                 else:
-                    innersol = self.wallet_node.main_wallet.make_solution(consumed=[auditor.name()])
+                    innersol = self.wallet_node.main_wallet.make_solution(
+                        consumed=[auditor.name()]
+                    )
                     sig = wallets[colour].get_sigs_for_innerpuz_with_innersol(
-                        wallets[colour].get_innerpuzzle_from_puzzle(coloured_coin.puzzle_hash), innersol
+                        wallets[colour].get_innerpuzzle_from_puzzle(
+                            coloured_coin.puzzle_hash
+                        ),
+                        innersol,
                     )
                     aggsig = BLSSignature.aggregate(
                         [BLSSignature.aggregate(sig), aggsig]
                     )
                     # auditees should be (primary_input, innerpuzhash, coin_amount, output_amount)
-                    innerpuz = wallets[colour].get_innerpuzzle_from_puzzle(coloured_coin.puzzle_hash)
+                    innerpuz = wallets[colour].get_innerpuzzle_from_puzzle(
+                        coloured_coin.puzzle_hash
+                    )
                     auditees[colour].append(
                         (
                             coloured_coin.parent_coin_info,
@@ -628,8 +674,7 @@ class WebSocketServer:
                             clvm.to_sexp_f(
                                 [
                                     cc_wallet_puzzles.cc_make_puzzle(
-                                        innerpuz.get_hash(),
-                                        core,
+                                        innerpuz.get_hash(), core,
                                     ),
                                     solution,
                                 ]
@@ -637,10 +682,14 @@ class WebSocketServer:
                         )
                     )
                     coinsols.append(
-                        cc_wallet_puzzles.create_spend_for_ephemeral(coloured_coin, auditor, 0)
+                        cc_wallet_puzzles.create_spend_for_ephemeral(
+                            coloured_coin, auditor, 0
+                        )
                     )
                     coinsols.append(
-                        cc_wallet_puzzles.create_spend_for_auditor(auditor, coloured_coin)
+                        cc_wallet_puzzles.create_spend_for_auditor(
+                            auditor, coloured_coin
+                        )
                     )
 
             # Tweak the offer's solution to include the new auditor
@@ -660,7 +709,9 @@ class WebSocketServer:
                         cc_coinsol.coin, auditor, cc_coinsol_out[1]
                     )
                 )
-                coinsols.append(cc_wallet_puzzles.create_spend_for_auditor(auditor, cc_coinsol.coin))
+                coinsols.append(
+                    cc_wallet_puzzles.create_spend_for_auditor(auditor, cc_coinsol.coin)
+                )
 
             # Finish the auditor CoinSolution with new information
             newinnerpuzhash = wallets[colour].get_new_inner_hash()
@@ -695,7 +746,9 @@ class WebSocketServer:
                     auditor,
                     clvm.to_sexp_f(
                         [
-                            cc_wallet_puzzles.cc_make_puzzle(auditor_innerpuz.get_hash(), core),
+                            cc_wallet_puzzles.cc_make_puzzle(
+                                auditor_innerpuz.get_hash(), core
+                            ),
                             solution,
                         ]
                     ),
@@ -707,17 +760,21 @@ class WebSocketServer:
             coinsols.append(self.create_spend_for_auditor(auditor, auditor))
 
         # Combine all CoinSolutions into a spend bundle
-        solution_list = CoinSolutionList(coinsols)
         if spend_bundle is None:
-            spend_bundle = SpendBundle(solution_list, aggsig)
+            spend_bundle = SpendBundle(coinsols, aggsig)
         else:
             spend_bundle = SpendBundle.aggregate(
-                [spend_bundle, SpendBundle(solution_list, aggsig)]
+                [spend_bundle, SpendBundle(coinsols, aggsig)]
             )
+
         if chia_spend_bundle is not None:
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_spend_bundle])
-        return spend_bundle
 
+        await self.wallet_state_manager.add_pending_transaction(
+            spend_bundle,
+            self.wallet_node.wallet_state_manager.main_wallet.wallet_info.id,
+        )
+        return
 
     async def safe_handle(self, websocket, path):
         try:
@@ -783,6 +840,10 @@ class WebSocketServer:
                 await self.cc_get_colour(websocket, data, command)
             elif command == "create_offer":
                 await self.create_offer(websocket, data, command)
+            elif command == "get_discrepancies_for_offer":
+                await self.get_discrepancies_for_offer(websocket, data, command)
+            elif command == "respond_to_offer":
+                await self.respond_to_offer(websocket, data, command)
             else:
                 response = {"error": f"unknown_command {command}"}
                 await websocket.send(dict_to_json_str(response))
