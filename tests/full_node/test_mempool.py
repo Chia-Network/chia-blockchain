@@ -696,11 +696,7 @@ class TestMempool:
             ):
                 pass
 
-        cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_FEE,
-            int_to_bytes(10),
-            None,
-        )
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None,)
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
@@ -751,11 +747,7 @@ class TestMempool:
             ):
                 pass
 
-        cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_FEE,
-            int_to_bytes(10),
-            None,
-        )
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None,)
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
@@ -808,15 +800,11 @@ class TestMempool:
 
         for b in blocks:
             async for _ in full_node_1.respond_block(
-                    full_node_protocol.RespondBlock(b)
+                full_node_protocol.RespondBlock(b)
             ):
                 pass
 
-        cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_FEE,
-            int_to_bytes(10),
-            None,
-        )
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None,)
         dic = {cvp.opcode: [cvp]}
 
         fee = 9
@@ -825,7 +813,9 @@ class TestMempool:
         )
 
         wallet_2_coinbase = wallet_2_block.header.data.coinbase
-        steal_fee_spendbundle = wallet_receiver.generate_signed_transaction(wallet_2_coinbase.amount + fee, receiver_puzzlehash, wallet_2_coinbase)
+        steal_fee_spendbundle = wallet_receiver.generate_signed_transaction(
+            wallet_2_coinbase.amount + fee, receiver_puzzlehash, wallet_2_coinbase
+        )
 
         assert spend_bundle1 is not None
         assert steal_fee_spendbundle is not None
