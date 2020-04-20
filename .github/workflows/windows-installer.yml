@@ -33,7 +33,7 @@ jobs:
     - name: Install python requirements
       run: |
         pip install pep517 wheel
-        pip wheel --use-pep517 --prefer-binary --wheel-dir=${{ github.workspace }}\electron-wix\build ${{ github.workspace }}\.
+        pip wheel --use-pep517 --prefer-binary --wheel-dir=${{ github.workspace }}\electron-wix\blockchain ${{ github.workspace }}\.
 
     - name: Install electron-packager
       run: |
@@ -54,22 +54,22 @@ jobs:
       working-directory: ${{ github.workspace }}\electron-wix\prerequisites\
       run: curl --remote-name --show-error --fail https://aka.ms/vs/16/release/vc_redist.x64.exe
 
-    - name: curl Python 3.7.7 redistributable
+    - name: curl Python 3.7.6 Installer
       working-directory: ${{ github.workspace }}\electron-wix\prerequisites\
-      run: curl --remote-name --show-error --fail https://www.python.org/ftp/python/3.7.7/python-3.7.7-embed-amd64.zip
+      run: curl --remote-name --show-error --fail https://www.python.org/ftp/python/3.7.6/python-3.7.6-amd64.exe
 
     - name: curl miniupnpc and setproctitle # cbor2 gets wheel'd above
-      working-directory: ${{ github.workspace }}\electron-wix\build
+      working-directory: ${{ github.workspace }}\electron-wix\blockchain
       run: |
         curl --remote-name --show-error --fail https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl
         curl --remote-name --show-error --fail https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
 
-    #- name: Build Windows installer
-      #env:
-        #version: 0.1.5 # Need to get this from setuptools_scm
-      #working-directory: ${{ github.workspace }}\electron-wix
-      #run: |
-        #.\rebuild-all.ps1
+    - name: Build Windows installer with Wix
+      env:
+        version: 0.1.5 # Need to get this from setuptools_scm
+      working-directory: ${{ github.workspace }}\electron-wix
+      run: |
+        .\rebuild-all.ps1
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v1
