@@ -34,9 +34,8 @@ async def async_main():
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
-        config["port"], timelord, NodeType.TIMELORD, ping_interval, network_id
+        config["port"], timelord, NodeType.TIMELORD, ping_interval, network_id, DEFAULT_ROOT_PATH, config
     )
-    _ = await server.start_server(None, config)
 
     timelord_shutdown_task: Optional[asyncio.Task] = None
 
@@ -64,7 +63,9 @@ async def async_main():
     )
 
     await asyncio.sleep(1)  # Prevents TCP simultaneous connect with full node
-    await server.start_client(full_node_peer, None, config)
+    await server.start_client(full_node_peer, None)
+    timelord.set_server(server)
+    timelord._start_bg_tasks()
 
     vdf_server = asyncio.ensure_future(coro)
 

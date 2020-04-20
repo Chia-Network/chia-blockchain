@@ -228,7 +228,7 @@ class FullNode:
                 # The first time connecting to introducer, keep trying to connect
                 if self._num_needed_peers():
                     if not await self.server.start_client(
-                        introducer_peerinfo, on_connect, self.config
+                        introducer_peerinfo, on_connect
                     ):
                         await asyncio.sleep(5)
                         continue
@@ -1778,7 +1778,7 @@ class FullNode:
         tasks = []
         for peer in to_connect:
             tasks.append(
-                asyncio.create_task(self.server.start_client(peer, None, self.config))
+                asyncio.create_task(self.server.start_client(peer, None))
             )
         await asyncio.gather(*tasks)
 
