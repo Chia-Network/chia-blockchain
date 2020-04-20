@@ -28,7 +28,7 @@ from src.wallet.puzzles.puzzle_utils import (
     make_assert_block_age_exceeds_condition,
     make_assert_aggsig_condition,
     make_assert_time_exceeds_condition,
-)
+    make_assert_fee_condition)
 
 
 class WalletTool:
@@ -125,6 +125,8 @@ class WalletTool:
                     ret.append(make_assert_block_index_exceeds_condition(cvp.var1))
                 if cvp.opcode == ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
                     ret.append(make_assert_block_age_exceeds_condition(cvp.var1))
+                if cvp.opcode == ConditionOpcode.ASSERT_FEE:
+                    ret.append(make_assert_fee_condition(cvp.var1))
 
         return clvm.to_sexp_f([puzzle_for_conditions(ret), []])
 

@@ -4,8 +4,11 @@ from typing import Dict, Optional, Tuple, List, Set
 import logging
 
 from chiabip158 import PyBIP158
+from clvm.casts import int_from_bytes
 
 from src.consensus.constants import constants as consensus_constants
+from src.types.condition_opcodes import ConditionOpcode
+from src.types.condition_var_pair import ConditionVarPair
 from src.util.bundle_tools import best_solution_program
 from src.types.full_block import FullBlock
 from src.types.coin import Coin
@@ -207,6 +210,17 @@ class MempoolManager:
                 return None, MempoolInclusionStatus.FAILED, Err.MINTING_COIN
 
             fees = removal_amount - addition_amount
+            assert_fee_sum: uint64 = uint64(0)
+
+            for npc in npc_list:
+                if ConditionOpcode.ASSERT_FEE in npc.condition_dict:
+                    fee_list: List[ConditionVarPair] = npc.condition_dict[ConditionOpcode.ASSERT_FEE]
+                    for cvp in fee_list:
+                        fee = int_from_bytes(cvp.var1)
+                        assert_fee_sum = assert_fee_sum + fee
+
+            if fees < assert_fee_sum:
+                return None, MempoolInclusionStatus.FAILED, Err.ASSERT_FEE_CONDITION_FAILED
 
             if cost == 0:
                 return None, MempoolInclusionStatus.FAILED, Err.UNKNOWN

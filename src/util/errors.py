@@ -69,6 +69,7 @@ class Err(Enum):
 
     INVALID_COINBASE_PARENT = 45
     INVALID_FEES_COIN_PARENT = 46
+    ASSERT_FEE_CONDITION_FAILED = 47
 
 
 class ConsensusError(Exception):

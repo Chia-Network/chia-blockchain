@@ -321,3 +321,67 @@ class TestWalletSimulator:
         assert confirmed_balance == new_funds - 5
         assert unconfirmed_balance == new_funds - 5
         assert wallet_2_confirmed_balance == 5
+
+    @pytest.mark.asyncio
+    async def test_wallet_make_transaction_with_fee(self, two_wallet_nodes):
+        num_blocks = 10
+        full_nodes, wallets = two_wallet_nodes
+        full_node_1, server_1 = full_nodes[0]
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+
+        for i in range(0, num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+
+        funds = sum(
+            [
+                calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
+                for i in range(0, num_blocks - 2)
+            ]
+        )
+
+        await asyncio.sleep(2)
+
+        assert await wallet.get_confirmed_balance() == funds
+        assert await wallet.get_unconfirmed_balance() == funds
+        tx_amount = 32000000000000
+        tx_fee = 10
+        spend_bundle = await wallet.generate_signed_transaction(
+            tx_amount,
+            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            tx_fee,
+        )
+
+        fees = spend_bundle.fees()
+        assert fees == tx_fee
+
+        await wallet.push_transaction(spend_bundle)
+
+        await asyncio.sleep(2)
+        confirmed_balance = await wallet.get_confirmed_balance()
+        unconfirmed_balance = await wallet.get_unconfirmed_balance()
+
+        assert confirmed_balance == funds
+        assert unconfirmed_balance == funds - tx_amount - tx_fee
+
+        for i in range(0, num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+
+        await asyncio.sleep(2)
+
+        new_funds = sum(
+            [
+                calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
+                for i in range(0, num_blocks)
+            ]
+        )
+
+        confirmed_balance = await wallet.get_confirmed_balance()
+        unconfirmed_balance = await wallet.get_unconfirmed_balance()
+
+        assert confirmed_balance == new_funds - tx_amount - tx_fee
+        assert unconfirmed_balance == new_funds - tx_amount - tx_fee

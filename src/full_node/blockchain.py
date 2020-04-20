@@ -8,6 +8,7 @@ import asyncio
 import concurrent
 import blspy
 from chiabip158 import PyBIP158
+from clvm.casts import int_from_bytes
 
 from src.consensus.block_rewards import calculate_block_reward, calculate_base_fee
 from src.consensus.constants import constants as consensus_constants
@@ -16,6 +17,8 @@ from src.consensus.pot_iterations import (
     calculate_iterations_quality,
 )
 from src.full_node.store import FullNodeStore
+from src.types.condition_opcodes import ConditionOpcode
+from src.types.condition_var_pair import ConditionVarPair
 
 from src.types.full_block import FullBlock, additions_for_npc
 from src.types.coin import Coin, hash_coin_list
@@ -1189,6 +1192,17 @@ class Blockchain:
             return Err.MINTING_COIN
 
         fees = removed - added
+        assert_fee_sum: uint64 = uint64(0)
+
+        for npc in npc_list:
+            if ConditionOpcode.ASSERT_FEE in npc.condition_dict:
+                fee_list: List[ConditionVarPair] = npc.condition_dict[ConditionOpcode.ASSERT_FEE]
+                for cvp in fee_list:
+                    fee = int_from_bytes(cvp.var1)
+                    assert_fee_sum = assert_fee_sum + fee
+
+        if fees < assert_fee_sum:
+            return Err.ASSERT_FEE_CONDITION_FAILED
 
         # Check coinbase reward
         if fees + fee_base != block.header.data.fees_coin.amount:
