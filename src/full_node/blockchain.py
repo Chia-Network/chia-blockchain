@@ -780,7 +780,6 @@ class Blockchain:
 
             # 2. the PoT must be valid, on a discriminant of size 1024, and the challenge_hash
             if not pre_validated:
-                print("PoT", block.proof_of_time)
                 if not block.proof_of_time.is_valid(
                     self.constants["DISCRIMINANT_SIZE_BITS"]
                 ):
