@@ -41,7 +41,7 @@ jobs:
         pip install pep517 wheel
         pip install miniupnpc-2.1-cp37-cp37m-win_amd64.whl
         pip install setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
-        pip install cbor2-5.1.0.chia-cp37-cp37m-win_amd64.whl
+        pip install cbor2-5.1.0-cp37-cp37m-win_amd64.whl
         pip wheel --use-pep517 --prefer-binary --wheel-dir=${{ github.workspace }}\electron-wix\blockchain ${{ github.workspace }}\.
         dir ${{ github.workspace }}\electron-wix\blockchain
 
