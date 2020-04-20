@@ -1,2 +1,8 @@
-To complete the install, open powershell, and navigate to `~\AppData\Local\Programs\Chia Network\Chia Blockchain\`
-Execute the `install.ps1` located in that folder.
+To complete the install:
+
+First open an admin powershell prompt and run:
+    Set-ExecutionPolicy Unrestricted
+
+Then open a non-admin powershell session and change directory to "~\AppData\Local\Programs\Chia Network\Chia Blockchain\"
+
+Run the install.ps1 script located in that folder.
