@@ -9,7 +9,7 @@ from src.types.BLSSignature import BLSSignature
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.program import Program
+from src.types.program import Program, SExp
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
@@ -54,12 +54,18 @@ class CCWallet:
     cc_coin_record: WalletCoinRecord
     cc_info: CCInfo
     standard_wallet: Wallet
+    base_puzzle_program: Program
+    base_inner_puzzle_hash: bytes32
+    sexp_cache: Dict[str, SExp]
 
     @staticmethod
     async def create_new_cc(
         wallet_state_manager: Any, wallet: Wallet, amount: uint64, name: str = None,
     ):
         self = CCWallet()
+        self.base_puzzle_program = None
+        self.base_inner_puzzle_hash = None
+        self.sexp_cache = None
         self.standard_wallet = wallet
         if name:
             self.log = logging.getLogger(name)
@@ -82,7 +88,6 @@ class CCWallet:
 
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         await self.standard_wallet.push_transaction(spend_bundle)
-
         return self
 
     @staticmethod
@@ -91,6 +96,9 @@ class CCWallet:
     ):
 
         self = CCWallet()
+        self.base_puzzle_program = None
+        self.base_inner_puzzle_hash = None
+        self.sexp_cache = None
         self.standard_wallet = wallet
         if name:
             self.log = logging.getLogger(name)
@@ -128,7 +136,9 @@ class CCWallet:
         self.wallet_info = wallet_info
         self.standard_wallet = wallet
         self.cc_info = CCInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
-
+        self.base_puzzle_program = None
+        self.base_inner_puzzle_hash = None
+        self.sexp_cache = None
         return self
 
     async def get_confirmed_balance(self) -> uint64:
@@ -289,11 +299,67 @@ class CCWallet:
     async def get_new_inner_hash(self) -> bytes32:
         return await self.standard_wallet.get_new_puzzlehash()
 
+    def do_replace(self, sexp, magic, magic_replacement):
+        """ Generic way to replace anything inside a SEXP, not used currentyl """
+        if sexp.listp():
+            return self.do_replace(sexp.first(), magic, magic_replacement).cons(self.do_replace(sexp.rest(), magic, magic_replacement))
+        if sexp.as_atom() == magic:
+            return sexp.to(magic_replacement)
+        return sexp
+
+    def specific_replace(self, sexp, magic, magic_replacement):
+        """binutil.assemble is slow, using this hack to swap inner_puzzle_hash. """
+        if self.sexp_cache is None:
+            self.sexp_cache = {}
+            n1 = sexp.first()
+            n2 = sexp.rest().rest()
+            n3 = sexp.rest().first().first()
+            n4 = sexp.rest().first().rest().first().first()
+            sexp_to_replace = sexp.rest().first().rest().first().rest().first()
+            n5 = sexp.rest().first().rest().first().rest().rest()
+            n6 = sexp.rest().first().rest().rest()
+            self.sexp_cache["n1"] = n1
+            self.sexp_cache["n2"] = n2
+            self.sexp_cache["n3"] = n3
+            self.sexp_cache["n4"] = n4
+            self.sexp_cache["sexp_to_replace"] = sexp_to_replace
+            self.sexp_cache["n5"] = n5
+            self.sexp_cache["n6"] = n6
+        else:
+            n1 = self.sexp_cache["n1"]
+            n2 = self.sexp_cache["n2"]
+            n3 = self.sexp_cache["n3"]
+            n4 = self.sexp_cache["n4"]
+            sexp_to_replace = self.sexp_cache["sexp_to_replace"]
+            n5 = self.sexp_cache["n5"]
+            n6 = self.sexp_cache["n6"]
+
+        replaced = sexp_to_replace.to(magic_replacement)
+
+        step0 = replaced.cons(n5)
+        step1 = n4.cons(step0)
+        step2 = step1.cons(n6)
+        step3 = n3.cons(step2)
+        step5 = step3.cons(n2)
+        result = n1.cons(step5)
+
+        return result
+
+    def fast_cc_puzzle(self, inner_puzzle_hash) -> Program:
+        new_sexp = self.specific_replace(self.base_puzzle_program, self.base_inner_puzzle_hash, inner_puzzle_hash)
+        program = Program(new_sexp)
+        return program
+
     def puzzle_for_pk(self, pubkey) -> Program:
         inner_puzzle_hash = self.standard_wallet.puzzle_for_pk(bytes(pubkey)).get_tree_hash()
-        cc_puzzle: Program = cc_wallet_puzzles.cc_make_puzzle(
-            inner_puzzle_hash, self.cc_info.my_core
-        )
+        if self.base_puzzle_program is None:
+            cc_puzzle: Program = cc_wallet_puzzles.cc_make_puzzle(
+                inner_puzzle_hash, self.cc_info.my_core
+            )
+            self.base_puzzle_program = cc_puzzle
+            self.base_inner_puzzle_hash = inner_puzzle_hash
+        else:
+            cc_puzzle: Program = self.fast_cc_puzzle(inner_puzzle_hash)
         return cc_puzzle
 
     async def get_new_cc_puzzle_hash(self):
