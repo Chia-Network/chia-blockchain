@@ -28,7 +28,7 @@ if [ `uname` = "Linux" ]; then
   #LINUX=1
   if type apt-get; then
     # Debian/Ubuntu
-    sudo apt-get install -y nodejs
+    sudo apt-get install -y nodejs npm
   elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ]; then
     # AMZN 2
     echo "Installing on Amazon Linux 2"
@@ -39,7 +39,7 @@ if [ `uname` = "Linux" ]; then
     # CentOS or Redhat
     echo "Installing on CentOS/Redhat"
     curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
-    sudo yum install -y nodejs npm
+    sudo yum install -y nodejs
   fi
 elif [ `uname` = "Darwin" ] && type brew && ! npm version>/dev/null 2>&1; then
   # Install npm if not installed
