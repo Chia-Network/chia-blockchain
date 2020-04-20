@@ -20,7 +20,7 @@ Copy-Item ".\blockchain\install.ps1" "$blockchainDir" -Force
 Copy-Item ".\blockchain\readme.txt" "$blockchainDir" -Force
 Copy-Item ".\blockchain\*.whl" "$blockchainDir\wheels" -Force
 
-# generate the script that will isntall all the wheels on the target machine
+# generate the script that will install all the wheels on the target machine
 $text = ""
 Get-ChildItem "$blockchainDir\wheels" -Filter *.whl |
 Foreach-Object {

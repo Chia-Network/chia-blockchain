@@ -31,11 +31,10 @@ jobs:
         #python ${{ github.workspace }}\setup.py --fullname
 
     - name: curl miniupnpc and setproctitle
+      working-directory: ${{ github.workspace }}\electron-wix\blockchain
       run: |
         curl -OL --show-error --fail https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl
         curl -OL --show-error --fail https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
-      #curl -OL --show-error --fail https://download.chia.net/simple/cbor2/cbor2-5.1.0-cp37-cp37m-win_amd64.whl
-      #pip install cbor2-5.1.0-cp37-cp37m-win_amd64.whl
 
     - name: Create and collect all wheels for chia-blockchain
       run: |
@@ -61,12 +60,6 @@ jobs:
     - name: curl Python 3.7.6 Installer
       working-directory: ${{ github.workspace }}\electron-wix\prerequisites\
       run: curl -OL --show-error --fail https://www.python.org/ftp/python/3.7.6/python-3.7.6-amd64.exe
-
-    #- name: Install .NET 3.5.1
-      #uses: actions/setup-dotnet@v1 # https://github.com/actions/setup-dotnet
-      #with:
-        #dotnet-version: '3.5.100' # SDK Version to use.
-    #- run: dotnet build <my project>
 
     - name: Build Windows installer with Wix
       env:

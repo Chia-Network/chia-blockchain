@@ -4,6 +4,6 @@ Start-Process "$env:HOMEDRIVE$env:HOMEPATH\AppData\Local\Programs\Python\Python3
 
 . .\venv\Scripts\activate.ps1
 
-pip3 install --upgrade pip
+pip3 install --user --upgrade pip
 
 .\wheels.ps1
