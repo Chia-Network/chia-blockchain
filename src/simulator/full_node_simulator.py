@@ -18,6 +18,7 @@ from src.types.spend_bundle import SpendBundle
 from src.types.header import Header
 from src.full_node.coin_store import CoinStore
 from src.util.api_decorators import api_request
+from src.util.ints import uint64
 from tests.block_tools import BlockTools
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
@@ -149,10 +150,11 @@ class FullNodeSimulator(FullNode):
         ] = await self.mempool_manager.create_bundle_for_tip(top_tip)
 
         dict_h = {}
-
+        fees = 0
         if bundle is not None:
             program = best_solution_program(bundle)
             dict_h[top_tip.height + 1] = (program, bundle.aggregated_signature)
+            fees = bundle.fees()
 
         more_blocks = bt.get_consecutive_blocks(
             self.constants,
@@ -162,6 +164,7 @@ class FullNodeSimulator(FullNode):
             reward_puzzlehash=request.puzzle_hash,
             transaction_data_at_height=dict_h,
             seed=token_bytes(),
+            fees=uint64(fees),
         )
         new_lca = more_blocks[-1]
 
