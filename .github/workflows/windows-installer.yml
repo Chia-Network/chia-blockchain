@@ -34,7 +34,7 @@ jobs:
       run: |
         curl -OL --show-error --fail https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl
         curl -OL --show-error --fail https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
-        curl -OL --show-error --fail https://download.chia.net/simple/cbor2/cbor2-5.1.0.chia-cp37-cp37m-win_amd64.whl
+        curl -OL --show-error --fail https://download.chia.net/simple/cbor2/cbor2-5.1.0-cp37-cp37m-win_amd64.whl
 
     - name: Create all core wheels for chia-blockchain
       run: |
