@@ -4,6 +4,8 @@ Start-Process "$env:HOMEDRIVE$env:HOMEPATH\AppData\Local\Programs\Python\Python3
 
 . .\venv\Scripts\activate.ps1
 
-pip3 install --user --upgrade pip
+python -m pip install --upgrade pip
 
-.\wheels.ps1
+pip install .\wheels\miniupnpc-2.1-cp37-cp37m-win_amd64.whl
+pip install .\wheels\setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
+pip install --find-links .\wheels\ .\wheels\chia_blockchain-1.0b4.dev134-py3-none-any.whl
