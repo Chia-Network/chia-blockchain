@@ -47,7 +47,8 @@ In addition to running a full node, as explained above, you can also run a farme
 Farmers are entities in the network who use their drive space to try to create
 blocks (like Bitcoin's miners), and earn block rewards. First, you must generate some drive plots, which
 can take a long time depending on the [size of the plots](https://github.com/Chia-Network/chia-blockchain/wiki/k-sizes)
-(the k variable). To be competitive on the current network you will probably have to have a few k=29 or larger plots. Once you have a few plots, run the farmer + full node with the following commands. A full node is also started when you start the farmer.
+(the k variable). To be competitive on the current network you will probably have to have a few k=29 or larger plots but a k=29 plot currently takes about 4.5 hours to plot on an [M.2 PCIe NVMe SSD](https://en.wikipedia.org/wiki/M.2).
+Once you have a few plots, run the farmer + full node with the following commands. A full node is also started when you start the farmer.
 
 You can change the working directory and output directory for plotting, with the "-t" (temp) and "-d" (destination) arguments to the `chia-create-plots` command.
 ```bash

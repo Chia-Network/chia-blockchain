@@ -39,10 +39,7 @@ def make_parser(parser):
         help="Regenerate wallet keys",
     )
     parser.add_argument(
-        "keys",
-        help='must the literal "keys"',
-        type=str,
-        nargs=1,
+        "keys", help='must the literal "keys"', type=str, nargs=1,
     )
     parser.set_defaults(function=generate)
 

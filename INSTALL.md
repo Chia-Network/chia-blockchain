@@ -19,6 +19,7 @@ sh install.sh
 Install dependencies for Ubuntu 18.04, Ubuntu 19.x or newer.
 ```bash
 sudo apt-get update
+sudo apt-get upgrade
 sudo apt-get install python3.7-venv python3.7-distutils git -y
 
 # Either checkout the source and install
@@ -34,7 +35,7 @@ python3.7 -m venv venv
 ln -s venv/bin/activate
 . ./activate
 pip install --upgrade pip
-pip install -i https://download.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
+pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
 
 pip install chia-blockchain==1.0.beta3
 ```
@@ -52,6 +53,7 @@ You will be prompted to reboot. Once that is complete, install Ubuntu 18.04 LTS 
 Then follow the steps below which are the same as the usual Ubuntu instructions above.
 ```bash
 sudo apt-get update
+sudo apt-get upgrade
 sudo apt-get install python3.7-venv python3.7-distutils git -y
 
 # Either checkout the source and install
@@ -67,7 +69,7 @@ python3.7 -m venv venv
 ln -s venv/bin/activate
 . ./activate
 pip install --upgrade pip
-pip install -i https://download.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
+pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
 
 pip install chia-blockchain==1.0.beta3
 ```
@@ -98,7 +100,7 @@ python3.7 -m venv venv
 ln -s venv/bin/activate
 . ./activate
 pip install --upgrade pip
-pip install -i https://download.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
+pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
 
 pip install chia-blockchain==1.0.beta3
 ```
@@ -131,7 +133,7 @@ python3.7 -m venv venv
 ln -s venv/bin/activate
 . ./activate
 pip install --upgrade pip
-pip install -i https://download.chia.net/simple/ miniupnpc==2.0.2 setproctitle==1.1.10 cbor2==5.0.1
+pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
 
 pip install chia-blockchain==1.0.beta3
 ```
