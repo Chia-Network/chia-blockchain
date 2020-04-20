@@ -30,10 +30,20 @@ jobs:
         #pip install setuptools_scm
         #python ${{ github.workspace }}\setup.py --fullname
 
+    - name: curl miniupnpc and setproctitle
+      run: |
+        curl -OL --show-error --fail https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl
+        curl -OL --show-error --fail https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
+        curl -OL --show-error --fail https://download.chia.net/simple/cbor2/cbor2-5.1.0.chia-cp37-cp37m-win_amd64.whl
+
     - name: Create all core wheels for chia-blockchain
       run: |
         pip install pep517 wheel
+        pip install miniupnpc-2.1-cp37-cp37m-win_amd64.whl
+        pip install setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
+        pip install cbor2-5.1.0.chia-cp37-cp37m-win_amd64.whl
         pip wheel --use-pep517 --prefer-binary --wheel-dir=${{ github.workspace }}\electron-wix\blockchain ${{ github.workspace }}\.
+        dir ${{ github.workspace }}\electron-wix\blockchain
 
     - name: Install electron-packager
       run: |
@@ -51,12 +61,6 @@ jobs:
     - name: curl Python 3.7.6 Installer
       working-directory: ${{ github.workspace }}\electron-wix\prerequisites\
       run: curl -OL --show-error --fail https://www.python.org/ftp/python/3.7.6/python-3.7.6-amd64.exe
-
-    - name: curl miniupnpc and setproctitle # cbor2 gets wheel'd above
-      working-directory: ${{ github.workspace }}\electron-wix\blockchain
-      run: |
-        curl -OL --show-error --fail https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl
-        curl -OL --show-error --fail https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
 
     #- name: Install .NET 3.5.1
       #uses: actions/setup-dotnet@v1 # https://github.com/actions/setup-dotnet
