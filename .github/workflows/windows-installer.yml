@@ -37,7 +37,7 @@ jobs:
       #curl -OL --show-error --fail https://download.chia.net/simple/cbor2/cbor2-5.1.0-cp37-cp37m-win_amd64.whl
       #pip install cbor2-5.1.0-cp37-cp37m-win_amd64.whl
 
-    - name: Create all core wheels for chia-blockchain
+    - name: Create and collect all wheels for chia-blockchain
       run: |
         pip install pep517 wheel
         pip install miniupnpc-2.1-cp37-cp37m-win_amd64.whl

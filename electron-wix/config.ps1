@@ -1,7 +1,7 @@
 # shared variables
 $env:walletProductName = "chia-wallet"
 $env:blockchainProductName = "chia-blockchain"
-$env:version = "0.1.5" # all packages share the same version
+# $env:version = "0.1.5" # all packages share the same version
 $env:resourceDir = ".\resources" # bitmaps, icons etc
 $env:prereqDir = ".\prerequisites" # location for any pre-req installers
 

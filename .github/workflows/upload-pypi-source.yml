@@ -1,7 +1,6 @@
 name: Build
 
-on: [pull_request]
-#on: [push, pull_request]
+on: [push, pull_request]
 
 jobs:
   upload_source_dist:

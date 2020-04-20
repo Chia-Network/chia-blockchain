@@ -3,7 +3,7 @@
 ## Tooling
 
 - [Install electron-packager](https://github.com/electron/electron-packager) in CLI mode `npm install electron-packager -g`
-- [Install .NET 3.5.1](https://docs.microsoft.com/en-us/dotnet/framework/install/dotnet-35-windows-10) (Server Manager)
+- [Install .NET 3.5.1](https://docs.microsoft.com/en-us/dotnet/framework/install/dotnet-35-windows-10) (Server Manager) - Not required on Github windows-latest runner.
 - [Install WiX](https://wixtoolset.org/)
 
 ## Electron
