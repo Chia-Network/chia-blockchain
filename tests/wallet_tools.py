@@ -28,7 +28,8 @@ from src.wallet.puzzles.puzzle_utils import (
     make_assert_block_age_exceeds_condition,
     make_assert_aggsig_condition,
     make_assert_time_exceeds_condition,
-    make_assert_fee_condition)
+    make_assert_fee_condition,
+)
 
 
 class WalletTool:

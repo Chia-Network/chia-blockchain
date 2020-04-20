@@ -1180,9 +1180,7 @@ class TestBlockchainTransactions:
         block1 = blocks[1]
 
         # This condition requires fee to be 10 mojo
-        cvp_fee = ConditionVarPair(
-            ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None
-        )
+        cvp_fee = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None)
         block1_dic = {cvp_fee.opcode: [cvp_fee]}
         # This spendbundle has 9 mojo as fee
         invalid_spend_bundle = wallet_a.generate_signed_transaction(
@@ -1208,9 +1206,7 @@ class TestBlockchainTransactions:
         assert error is Err.ASSERT_FEE_CONDITION_FAILED
 
         # This condition requires fee to be 10 mojo
-        cvp_fee = ConditionVarPair(
-            ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None
-        )
+        cvp_fee = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None)
         condition_dict = {cvp_fee.opcode: [cvp_fee]}
         valid_spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, block1.header.data.coinbase, condition_dict, 10

@@ -23,7 +23,8 @@ from src.wallet.puzzles.puzzle_utils import (
     make_assert_time_exceeds_condition,
     make_assert_coin_consumed_condition,
     make_create_coin_condition,
-    make_assert_fee_condition)
+    make_assert_fee_condition,
+)
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.wallet_info import WalletInfo
@@ -90,7 +91,9 @@ class Wallet:
             )
         ).puzzle_hash
 
-    def make_solution(self, primaries=None, min_time=0, me=None, consumed=None, fee=None):
+    def make_solution(
+        self, primaries=None, min_time=0, me=None, consumed=None, fee=None
+    ):
         condition_list = []
         if primaries:
             for primary in primaries:

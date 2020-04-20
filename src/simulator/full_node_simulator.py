@@ -164,7 +164,7 @@ class FullNodeSimulator(FullNode):
             reward_puzzlehash=request.puzzle_hash,
             transaction_data_at_height=dict_h,
             seed=token_bytes(),
-            fees=uint64(fees)
+            fees=uint64(fees),
         )
         new_lca = more_blocks[-1]
 
