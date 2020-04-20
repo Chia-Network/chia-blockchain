@@ -28,7 +28,6 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install python3.7-venv python3.7-distutils git -y
-        sudo apt install -f
 
     - name: Run install script
       env:
