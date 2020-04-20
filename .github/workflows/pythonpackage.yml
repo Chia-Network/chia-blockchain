@@ -1,4 +1,4 @@
-name: Python package
+name: Build Ubuntu and MacOS
 
 
 on: [push]
