@@ -46,17 +46,17 @@ jobs:
 
     - name: curl Visual C++ 2019 redistributable # Windows has curl natively
       working-directory: ${{ github.workspace }}\electron-wix\prerequisites\
-      run: curl -vOL --show-error --fail https://aka.ms/vs/16/release/vc_redist.x64.exe
+      run: curl -OL --show-error --fail https://aka.ms/vs/16/release/vc_redist.x64.exe
 
     - name: curl Python 3.7.6 Installer
       working-directory: ${{ github.workspace }}\electron-wix\prerequisites\
-      run: curl --remote-name --show-error --fail https://www.python.org/ftp/python/3.7.6/python-3.7.6-amd64.exe
+      run: curl -OL --show-error --fail https://www.python.org/ftp/python/3.7.6/python-3.7.6-amd64.exe
 
     - name: curl miniupnpc and setproctitle # cbor2 gets wheel'd above
       working-directory: ${{ github.workspace }}\electron-wix\blockchain
       run: |
-        curl --remote-name --show-error --fail https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl
-        curl --remote-name --show-error --fail https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
+        curl -OL --show-error --fail https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl
+        curl -OL --show-error --fail https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
 
     #- name: Install .NET 3.5.1
       #uses: actions/setup-dotnet@v1 # https://github.com/actions/setup-dotnet
@@ -66,7 +66,7 @@ jobs:
 
     - name: Build Windows installer with Wix
       env:
-        version: 0.1.5 # Need to get this from setuptools_scm
+        version: 0.1.7 # Need to get this from setuptools_scm
       working-directory: ${{ github.workspace }}\electron-wix
       run: |
         .\rebuild-all.ps1
@@ -75,4 +75,4 @@ jobs:
       uses: actions/upload-artifact@v1
       with:
         name: Windows-Installers
-        path: ${{ github.workspace }}\electron-wix\build\final
+        path: ${{ github.workspace }}\electron-wix\final
