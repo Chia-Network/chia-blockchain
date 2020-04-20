@@ -24,6 +24,7 @@ from src.wallet.puzzles.puzzle_utils import (
     make_assert_time_exceeds_condition,
     make_assert_coin_consumed_condition,
     make_create_coin_condition,
+    make_assert_fee_condition,
 )
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.transaction_record import TransactionRecord
@@ -83,7 +84,9 @@ class Wallet:
             )
         ).puzzle_hash
 
-    def make_solution(self, primaries=None, min_time=0, me=None, consumed=None):
+    def make_solution(
+        self, primaries=None, min_time=0, me=None, consumed=None, fee=None
+    ):
         condition_list = []
         if primaries:
             for primary in primaries:
@@ -97,6 +100,8 @@ class Wallet:
             condition_list.append(make_assert_time_exceeds_condition(min_time))
         if me:
             condition_list.append(make_assert_my_coin_id_condition(me["id"]))
+        if fee:
+            condition_list.append(make_assert_fee_condition(fee))
         return clvm.to_sexp_f([puzzle_for_conditions(condition_list), []])
 
     async def select_coins(self, amount) -> Optional[Set[Coin]]:
@@ -221,7 +226,10 @@ class Wallet:
                     changepuzzlehash = await self.get_new_puzzlehash()
                     primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
 
-                solution = self.make_solution(primaries=primaries)
+                if fee > 0:
+                    solution = self.make_solution(primaries=primaries, fee=fee)
+                else:
+                    solution = self.make_solution(primaries=primaries)
                 output_created = True
             elif output_created is False and origin_id == coin.name():
                 primaries = [{"puzzlehash": newpuzzlehash, "amount": amount}]
@@ -229,11 +237,13 @@ class Wallet:
                     changepuzzlehash = await self.get_new_puzzlehash()
                     primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
 
-                solution = self.make_solution(primaries=primaries)
+                if fee > 0:
+                    solution = self.make_solution(primaries=primaries, fee=fee)
+                else:
+                    solution = self.make_solution(primaries=primaries)
                 output_created = True
             else:
-                # TODO coin consumed condition should be removed
-                solution = self.make_solution(consumed=[coin.name()])
+                solution = self.make_solution()
 
             spends.append((puzzle, CoinSolution(coin, solution)))
 

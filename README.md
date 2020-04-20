@@ -25,20 +25,20 @@ chia init
 ## Generate keys
 First, create some keys by running the following script if you don't already have keys:
 ```bash
-chia-generate-keys
+chia generate keys
 ```
 
 ## Run a full node + wallet
 To run a full node on port 8444, and connect to the testnet, run the following command. Logs are usually at ~/.chia/VERSION/logs/debug.log.
 
 ```bash
-chia-start-node &
-chia-start-wallet-gui &
+chia start node &
+chia start wallet-gui &
 ```
 If you're using Windows/WSL 2, you should instead run:
 ```bash
-chia-start-node &
-chia-start-wallet-server &
+chia start node &
+chia start wallet-server &
 ```
 And then run `Chia` from the Chia Wallet Installer in Windows (not in Ubuntu/WSL 2.)
 
@@ -47,19 +47,20 @@ In addition to running a full node, as explained above, you can also run a farme
 Farmers are entities in the network who use their drive space to try to create
 blocks (like Bitcoin's miners), and earn block rewards. First, you must generate some drive plots, which
 can take a long time depending on the [size of the plots](https://github.com/Chia-Network/chia-blockchain/wiki/k-sizes)
-(the k variable). To be competitive on the current network you will probably have to have a few k=29 or larger plots. Once you have a few plots, run the farmer + full node with the following commands. A full node is also started when you start the farmer.
+(the k variable). To be competitive on the current network you will probably have to have a few k=29 or larger plots but a k=29 plot currently takes about 4.5 hours to plot on an [M.2 PCIe NVMe SSD](https://en.wikipedia.org/wiki/M.2).
+Once you have a few plots, run the farmer + full node with the following commands. A full node is also started when you start the farmer.
 
 You can change the working directory and output directory for plotting, with the "-t" (temp) and "-d" (destination) arguments to the `chia-create-plots` command.
 ```bash
 chia-create-plots -k 29 -n 2
-chia-start-farmer &
-chia-start-wallet-gui &
+chia start farmer &
+chia start wallet-gui &
 ```
 If you're using Windows/WSL 2, you should instead run:
 ```bash
 chia-create-plots -k 29 -n 2
-chia-start-farmer &
-chia-start-wallet-server &
+chia start farmer &
+chia start wallet-server &
 ```
 Then run `Chia` from the Chia Windows Wallet installer in Windows (not in Ubuntu/WSL 2.)
 
@@ -74,7 +75,7 @@ blocks to make them valid. This requires fast CPUs and a few cores per VDF as we
 ```bash
 . ./activate
 sh install-timelord.sh
-chia-start-timelord &
+chia start timelord &
 ```
 
 ## Tips

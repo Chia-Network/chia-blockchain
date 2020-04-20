@@ -229,7 +229,7 @@ class FullNode:
                 # The first time connecting to introducer, keep trying to connect
                 if self._num_needed_peers():
                     if not await self.server.start_client(
-                        introducer_peerinfo, on_connect, self.config
+                        introducer_peerinfo, on_connect
                     ):
                         await asyncio.sleep(5)
                         continue
@@ -254,6 +254,7 @@ class FullNode:
         self.log.info("Waiting to receive tips from peers.")
         self.store.set_waiting_for_tips(True)
         # TODO: better way to tell that we have finished receiving tips
+        # TODO: fix DOS issue. Attacker can request syncing to an invalid blockchain
         await asyncio.sleep(5)
         highest_weight: uint128 = uint128(0)
         tip_block: FullBlock
@@ -1370,7 +1371,7 @@ class FullNode:
         removal_root = removal_merkle_set.get_root()
 
         generator_hash = (
-            solution_program.get_hash()
+            solution_program.get_tree_hash()
             if solution_program is not None
             else bytes32([0] * 32)
         )
@@ -1778,7 +1779,7 @@ class FullNode:
         tasks = []
         for peer in to_connect:
             tasks.append(
-                asyncio.create_task(self.server.start_client(peer, None, self.config))
+                asyncio.create_task(self.server.start_client(peer, None))
             )
         await asyncio.gather(*tasks)
 

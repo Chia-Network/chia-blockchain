@@ -878,13 +878,13 @@ async def start_websocket_server():
     root_path = DEFAULT_ROOT_PATH
 
     config = load_config_cli(root_path, "config.yaml", "wallet")
-    initialize_logging("Wallet %(name)-25s", config["logging"])
+    initialize_logging("Wallet %(name)-25s", config["logging"], root_path)
     log = logging.getLogger(__name__)
 
     try:
         key_config = load_config(DEFAULT_ROOT_PATH, "keys.yaml")
     except FileNotFoundError:
-        raise RuntimeError("Keys not generated. Run chia-generate-keys")
+        raise RuntimeError("Keys not generated. Run `chia generate keys`")
     if config["testing"] is True:
         log.info(f"Testing")
         config["database_path"] = "test_db_wallet.db"
@@ -910,7 +910,6 @@ async def start_websocket_server():
     )
     wallet_node.set_server(server)
 
-    _ = await server.start_server(None, config)
     if "full_node_peer" in config:
         full_node_peer = PeerInfo(
             config["full_node_peer"]["host"], config["full_node_peer"]["port"]
@@ -918,7 +917,7 @@ async def start_websocket_server():
 
         log.info(f"Connecting to full node peer at {full_node_peer}")
         server.global_connections.peers.add(full_node_peer)
-        _ = await server.start_client(full_node_peer, None, config)
+        _ = await server.start_client(full_node_peer, None)
 
     log.info("Starting websocket server.")
     websocket_server = await websockets.serve(
@@ -931,8 +930,11 @@ async def start_websocket_server():
         server.close_all()
         wallet_node._shutdown()
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
+    try:
+        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
+    except NotImplementedError:
+        log.info("signal handlers unsupported")
 
     if config["testing"] is False:
         wallet_node._start_bg_tasks()

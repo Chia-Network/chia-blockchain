@@ -8,6 +8,7 @@ from blspy import PrependSignature, PrivateKey, PublicKey, Util
 from chiapos import DiskProver
 from src.protocols import harvester_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
+from src.types.peer_info import PeerInfo
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
@@ -30,6 +31,7 @@ class Harvester:
         self.challenge_hashes: Dict[bytes32, Tuple[bytes32, Path, uint8]] = {}
         self._plot_notification_task = asyncio.create_task(self._plot_notification())
         self._is_shutdown: bool = False
+        self.server = None
 
     async def _plot_notification(self):
         """
@@ -42,6 +44,37 @@ class Harvester:
                     log.info(f"Farming plot {filename} of size {prover.get_size()}")
             await asyncio.sleep(1)
             counter += 1
+
+    def set_server(self, server):
+        self.server = server
+
+    def _start_bg_tasks(self):
+        """
+        Start a background task that checks connection and reconnects periodically to the farmer.
+        """
+
+        farmer_peer = PeerInfo(
+            self.config["farmer_peer"]["host"], self.config["farmer_peer"]["port"]
+        )
+
+        async def connection_check():
+            while not self._is_shutdown:
+                await asyncio.sleep(30)
+                if self.server is not None:
+                    farmer_retry = True
+
+                    for connection in self.server.global_connections.get_connections():
+                        if connection.get_peer_info() == farmer_peer:
+                            farmer_retry = False
+
+                    if farmer_retry:
+                        log.info(f"Reconnecting to full_node {farmer_retry}")
+                        if not await self.server.start_client(
+                            farmer_peer, None, self.config, True
+                        ):
+                            await asyncio.sleep(1)
+
+        self.reconnect_task = asyncio.create_task(connection_check())
 
     def _shutdown(self):
         self._is_shutdown = True

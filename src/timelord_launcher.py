@@ -74,17 +74,21 @@ async def spawn_all_processes(config):
 
 
 def main():
+    root_path = DEFAULT_ROOT_PATH
     setproctitle("chia_timelord_launcher")
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml", "timelord_launcher")
-    initialize_logging("Launcher %(name)-23s", config["logging"])
+    config = load_config(root_path, "config.yaml", "timelord_launcher")
+    initialize_logging("Launcher %(name)-23s", config["logging"], root_path)
 
     def signal_received():
         asyncio.create_task(kill_processes())
 
     loop = asyncio.get_event_loop()
 
-    loop.add_signal_handler(signal.SIGINT, signal_received)
-    loop.add_signal_handler(signal.SIGTERM, signal_received)
+    try:
+        loop.add_signal_handler(signal.SIGINT, signal_received)
+        loop.add_signal_handler(signal.SIGTERM, signal_received)
+    except NotImplementedError:
+        log.info("signal handlers unsupported")
 
     try:
         loop.run_until_complete(spawn_all_processes(config))

@@ -26,7 +26,7 @@ async def async_main():
     except FileNotFoundError:
         raise RuntimeError("Plots not generated. Run chia-create-plots")
 
-    initialize_logging("Harvester %(name)-22s", config["logging"])
+    initialize_logging("Harvester %(name)-22s", config["logging"], root_path)
     log = logging.getLogger(__name__)
     setproctitle("chia_harvester")
 
@@ -36,18 +36,22 @@ async def async_main():
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
-        config["port"], harvester, NodeType.HARVESTER, ping_interval, network_id
+        config["port"], harvester, NodeType.HARVESTER, ping_interval, network_id, DEFAULT_ROOT_PATH, config
     )
-    _ = await server.start_server(None, config)
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
+    try:
+        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
+    except NotImplementedError:
+        log.info("signal handlers unsupported")
 
     peer_info = PeerInfo(
         harvester.config["farmer_peer"]["host"], harvester.config["farmer_peer"]["port"]
     )
 
-    _ = await server.start_client(peer_info, None, config)
+    _ = await server.start_client(peer_info, None, True)
+    harvester.set_server(server)
+    harvester._start_bg_tasks()
     await server.await_closed()
     harvester._shutdown()
     await harvester._await_shutdown()

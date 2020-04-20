@@ -24,7 +24,7 @@ async def async_main():
     root_path = DEFAULT_ROOT_PATH
     net_config = load_config(root_path, "config.yaml")
     config = load_config_cli(root_path, "config.yaml", "timelord")
-    initialize_logging("Timelord %(name)-23s", config["logging"])
+    initialize_logging("Timelord %(name)-23s", config["logging"], root_path)
     log = logging.getLogger(__name__)
     setproctitle("chia_timelord")
 
@@ -34,9 +34,8 @@ async def async_main():
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
-        config["port"], timelord, NodeType.TIMELORD, ping_interval, network_id
+        config["port"], timelord, NodeType.TIMELORD, ping_interval, network_id, DEFAULT_ROOT_PATH, config
     )
-    _ = await server.start_server(None, config)
 
     timelord_shutdown_task: Optional[asyncio.Task] = None
 
@@ -52,8 +51,11 @@ async def async_main():
         server.close_all()
         timelord_shutdown_task = asyncio.create_task(timelord._shutdown())
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
+    try:
+        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
+    except NotImplementedError:
+        log.info("signal handlers unsupported")
 
     full_node_peer = PeerInfo(
         timelord.config["full_node_peer"]["host"],
@@ -61,7 +63,9 @@ async def async_main():
     )
 
     await asyncio.sleep(1)  # Prevents TCP simultaneous connect with full node
-    await server.start_client(full_node_peer, None, config)
+    await server.start_client(full_node_peer, None)
+    timelord.set_server(server)
+    timelord._start_bg_tasks()
 
     vdf_server = asyncio.ensure_future(coro)
 
