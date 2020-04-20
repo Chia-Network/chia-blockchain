@@ -6,7 +6,9 @@ import datetime
 
 from src.rpc.rpc_client import RpcClient
 from src.util.byte_types import hexstr_to_bytes
+from src.util.ints import uint64
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
+from src.consensus.constants import constants
 
 
 def make_parser(parser):
@@ -128,20 +130,30 @@ async def get_total_miniters(rpc_client, old_block, new_block):
 async def get_total_miniters(rpc_client, old_block, new_block):
     """
     Calculates the sum of min_iters from all blocks starting from old and up to and including
-    new_block.
-    # TODO: compute real min_iters for multiple epochs, using height RPC
+    new_block, but not including old_block.
     """
     old_block_parent = await rpc_client.get_header(old_block.prev_header_hash)
-    new_block_parent = await rpc_client.get_header(new_block.prev_header_hash)
     old_diff = old_block.weight - old_block_parent.weight
-    new_diff = new_block.weight - new_block_parent.weight
-    mi1 = calculate_min_iters_from_iterations(
+    curr_mi = calculate_min_iters_from_iterations(
         old_block.proof_of_space, old_diff, old_block.proof_of_time.number_of_iterations
     )
-    mi2 = calculate_min_iters_from_iterations(
-        new_block.proof_of_space, new_diff, new_block.proof_of_time.number_of_iterations
-    )
-    return (new_block.height - old_block.height) * ((mi2 + mi1) / 2)
+    # We do not count the min iters in the old block, since it's not included in the range
+    total_mi: uint64 = uint64(0)
+    for curr_h in range(old_block.height + 1, new_block.height + 1):
+        if (curr_h % constants["DIFFICULTY_EPOCH"]) == constants["DIFFICULTY_DELAY"]:
+            curr_b_header = await rpc_client.get_header_by_height(curr_h)
+            curr_b_block = await rpc_client.get_block(curr_b_header.header_hash)
+            curr_parent = await rpc_client.get_header(curr_b_block.prev_header_hash)
+            curr_diff = curr_b_block.weight - curr_parent.weight
+            curr_mi = calculate_min_iters_from_iterations(
+                curr_b_block.proof_of_space,
+                curr_diff,
+                curr_b_block.proof_of_time.number_of_iterations,
+            )
+        total_mi = uint64(total_mi + curr_mi)
+
+    print("Min iters:", total_mi)
+    return total_mi
 
 
 async def compare_block_headers(client, oldblock_hash, newblock_hash):

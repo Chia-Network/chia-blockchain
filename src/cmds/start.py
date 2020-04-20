@@ -41,7 +41,7 @@ def start(args, parser):
     except KeyboardInterrupt:
         for process in processes:
             process.kill()
-    print("finished")
+    print("Chia start script finished killing servers.")
     for process in processes:
         process.wait()
     return 0

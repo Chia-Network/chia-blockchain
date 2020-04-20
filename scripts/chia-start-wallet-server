@@ -1,6 +1,0 @@
-. _chia-stop-wallet
-
-# Starts a wallet server
-_run_bg_cmd chia-wallet
-
-wait
