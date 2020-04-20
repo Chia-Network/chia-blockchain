@@ -24,7 +24,8 @@ Copy-Item ".\blockchain\*.whl" "$blockchainDir\wheels" -Force
 $text = ""
 Get-ChildItem "$blockchainDir\wheels" -Filter *.whl | 
 Foreach-Object {
-    $text += "pip install .\wheels\$_`n"
+    $name = $_.Name
+    $text += "pip install .\wheels\$name`n"
 }
 New-Item "$blockchainDir\wheels.ps1" -Force
 Set-Content "$blockchainDir\wheels.ps1" $text
