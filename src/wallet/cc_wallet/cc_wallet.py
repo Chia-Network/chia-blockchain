@@ -164,7 +164,7 @@ class CCWallet:
 
         inner_puzzle = await self.inner_puzzle_for_cc_puzzle(coin.puzzle_hash)
         future_parent = CCParent(
-            coin.parent_coin_info, inner_puzzle.get_hash(), coin.amount
+            coin.parent_coin_info, inner_puzzle.get_tree_hash(), coin.amount
         )
 
         await self.add_parent(coin.name(), future_parent)
@@ -290,7 +290,7 @@ class CCWallet:
         return await self.standard_wallet.get_new_puzzlehash()
 
     def puzzle_for_pk(self, pubkey) -> Program:
-        inner_puzzle_hash = self.standard_wallet.puzzle_for_pk(bytes(pubkey)).get_hash()
+        inner_puzzle_hash = self.standard_wallet.puzzle_for_pk(bytes(pubkey)).get_tree_hash()
         cc_puzzle: Program = cc_wallet_puzzles.cc_make_puzzle(
             inner_puzzle_hash, self.cc_info.my_core
         )
@@ -323,7 +323,7 @@ class CCWallet:
 
         cc_inner = await self.get_new_inner_hash()
         cc_puzzle = cc_wallet_puzzles.cc_make_puzzle(cc_inner, self.cc_info.my_core)
-        cc_puzzle_hash = cc_puzzle.get_hash()
+        cc_puzzle_hash = cc_puzzle.get_tree_hash()
 
         spend_bundle = await self.standard_wallet.generate_signed_transaction(
             0, cc_puzzle_hash, uint64(0), origin_id, coins
@@ -392,7 +392,7 @@ class CCWallet:
             return used_coins
 
     async def get_sigs(self, innerpuz: Program, innersol: Program):
-        puzzle_hash = innerpuz.get_hash()
+        puzzle_hash = innerpuz.get_tree_hash()
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
         private = BLSPrivateKey(private)
         sigs = []
@@ -439,7 +439,7 @@ class CCWallet:
 
         auditor_info = (
             auditor.parent_coin_info,
-            inner_puzzle.get_hash(),
+            inner_puzzle.get_tree_hash(),
             auditor.amount,
         )
         list_of_solutions = []
@@ -448,7 +448,7 @@ class CCWallet:
         auditees = [
             (
                 auditor.parent_coin_info,
-                inner_puzzle.get_hash(),
+                inner_puzzle.get_tree_hash(),
                 auditor.amount,
                 total_amount,
             )
@@ -490,7 +490,7 @@ class CCWallet:
             clvm.to_sexp_f(
                 [
                     cc_wallet_puzzles.cc_make_puzzle(
-                        inner_puzzle.get_hash(), self.cc_info.my_core,
+                        inner_puzzle.get_tree_hash(), self.cc_info.my_core,
                     ),
                     solution,
                 ]
@@ -537,7 +537,7 @@ class CCWallet:
                     clvm.to_sexp_f(
                         [
                             cc_wallet_puzzles.cc_make_puzzle(
-                                coin_inner_puzzle.get_hash(), self.cc_info.my_core,
+                                coin_inner_puzzle.get_tree_hash(), self.cc_info.my_core,
                             ),
                             solution,
                         ]
@@ -597,7 +597,7 @@ class CCWallet:
 
         cc_inner = await self.get_new_inner_hash()
         cc_puzzle = cc_wallet_puzzles.cc_make_puzzle(cc_inner, cc_core)
-        cc_puzzle_hash = cc_puzzle.get_hash()
+        cc_puzzle_hash = cc_puzzle.get_tree_hash()
 
         spend_bundle = await self.standard_wallet.generate_signed_transaction(
             amount, cc_puzzle_hash, uint64(0), origin_id, coins
@@ -672,7 +672,7 @@ class CCWallet:
                     clvm.to_sexp_f(
                         [
                             self.cc_make_puzzle(
-                                innerpuz.get_hash(), self.cc_info.my_core
+                                innerpuz.get_tree_hash(), self.cc_info.my_core
                             ),
                             solution,
                         ]

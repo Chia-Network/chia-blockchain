@@ -1102,7 +1102,7 @@ class WalletNode:
         """
         wrapper = response.generatorResponse
         self.log.info(
-            f"generator received {wrapper.header_hash} {wrapper.generator.get_hash()} {wrapper.height}"
+            f"generator received {wrapper.header_hash} {wrapper.generator.get_tree_hash()} {wrapper.height}"
         )
         await self.wallet_state_manager.generator_received(
             wrapper.height, wrapper.header_hash, wrapper.generator

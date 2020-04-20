@@ -10,7 +10,6 @@ import aiosqlite
 from chiabip158 import PyBIP158
 from blspy import PublicKey, ExtendedPrivateKey
 
-from src.server.outbound_message import OutboundMessage
 from src.types.coin import Coin
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
@@ -451,6 +450,7 @@ class WalletStateManager:
         """
         Called when coin gets spent
         """
+        # Only remove our coins
         record = await self.wallet_store.get_coin_record_by_coin_id(coin.name())
         if record is None:
             return
@@ -1216,6 +1216,9 @@ class WalletStateManager:
             for addition in reorg_block.additions:
                 unspent_coin_names.add(addition.name())
             for removal in reorg_block.removals:
+                record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(removal.puzzle_hash)
+                if record is None:
+                    continue
                 unspent_coin_names.remove(removal)
 
         if new_block.additions is not None:
