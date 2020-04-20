@@ -75,7 +75,7 @@ class Timelord:
                     if full_node_retry:
                         log.info(f"Reconnecting to full_node {full_node_retry}")
                         if not await self.server.start_client(
-                            full_node_peer, None, self.config, True
+                            full_node_peer, None, auth=True
                         ):
                             await asyncio.sleep(1)
 

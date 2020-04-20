@@ -68,9 +68,9 @@ class Harvester:
                             farmer_retry = False
 
                     if farmer_retry:
-                        log.info(f"Reconnecting to full_node {farmer_retry}")
+                        log.info(f"Reconnecting to farmer {farmer_retry}")
                         if not await self.server.start_client(
-                            farmer_peer, None, self.config, True
+                            farmer_peer, None, auth=True
                         ):
                             await asyncio.sleep(1)
 
@@ -126,6 +126,8 @@ class Harvester:
                     break
             if not found and not failed_to_open:
                 log.warning(f"Plot at {potential_filenames} does not exist.")
+        if len(self.provers) == 0:
+            log.warning("Not farming any plots on this harvester. Check your configuration.")
 
     @api_request
     async def new_challenge(self, new_challenge: harvester_protocol.NewChallenge):

@@ -144,7 +144,6 @@ class FullNode:
             assert tip is not None
             challenge = self.blockchain.get_challenge(tip)
             assert challenge is not None
-            self.log.error(f"Challenge {challenge} hash {challenge.get_hash()}")
             challenge_requests.append(
                 timelord_protocol.ChallengeStart(challenge.get_hash(), tip.weight)
             )
@@ -1778,9 +1777,7 @@ class FullNode:
         self.log.info(f"Trying to connect to peers: {to_connect}")
         tasks = []
         for peer in to_connect:
-            tasks.append(
-                asyncio.create_task(self.server.start_client(peer, None))
-            )
+            tasks.append(asyncio.create_task(self.server.start_client(peer, None)))
         await asyncio.gather(*tasks)
 
     @api_request

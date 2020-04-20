@@ -39,7 +39,13 @@ async def async_main():
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
-        config["port"], farmer, NodeType.FARMER, ping_interval, network_id, root_path, config
+        config["port"],
+        farmer,
+        NodeType.FARMER,
+        ping_interval,
+        network_id,
+        root_path,
+        config,
     )
 
     try:
@@ -49,7 +55,9 @@ async def async_main():
         log.info("signal handlers unsupported")
 
     _ = await server.start_server(farmer._on_connect)
-    _ = await server.start_client(full_node_peer, None)
+
+    await asyncio.sleep(2)  # Allows full node to startup
+    _ = await server.start_client(full_node_peer, None, auth=True)
 
     farmer.set_server(server)
     farmer._start_bg_tasks()

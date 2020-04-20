@@ -36,7 +36,13 @@ async def async_main():
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
-        config["port"], harvester, NodeType.HARVESTER, ping_interval, network_id, DEFAULT_ROOT_PATH, config
+        config["port"],
+        harvester,
+        NodeType.HARVESTER,
+        ping_interval,
+        network_id,
+        DEFAULT_ROOT_PATH,
+        config,
     )
 
     try:
@@ -49,7 +55,8 @@ async def async_main():
         harvester.config["farmer_peer"]["host"], harvester.config["farmer_peer"]["port"]
     )
 
-    _ = await server.start_client(peer_info, None, True)
+    await asyncio.sleep(1)  # Allows farmer to startup
+    _ = await server.start_client(peer_info, None, auth=True)
     harvester.set_server(server)
     harvester._start_bg_tasks()
     await server.await_closed()

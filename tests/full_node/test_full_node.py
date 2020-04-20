@@ -534,9 +534,10 @@ class TestFullNodeProtocol:
 
         # Highest height should propagate
         # Slow block should delay prop
+        # This test can fail due to variability, when genesis block is changed
         start = time.time()
         propagation_messages = [
-            x async for x in full_node_1.respond_unfinished_block(get_cand(30))
+            x async for x in full_node_1.respond_unfinished_block(get_cand(40))
         ]
         assert len(propagation_messages) == 2
         assert isinstance(
@@ -547,7 +548,7 @@ class TestFullNodeProtocol:
 
         # Already seen
         assert (
-            len([x async for x in full_node_1.respond_unfinished_block(get_cand(30))])
+            len([x async for x in full_node_1.respond_unfinished_block(get_cand(40))])
             == 0
         )
 
