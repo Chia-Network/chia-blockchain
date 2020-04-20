@@ -39,12 +39,6 @@ jobs:
       run: |
         npm install electron-packager -g
 
-    #- name: Install .NET 3.5.1
-      #uses: actions/setup-dotnet@v1 # https://github.com/actions/setup-dotnet
-      #with:
-        #dotnet-version: '3.5.100' # SDK Version to use.
-    #- run: dotnet build <my project>
-
     - name: npm install
       working-directory: ${{ github.workspace }}\electron-ui
       run: |
@@ -52,7 +46,7 @@ jobs:
 
     - name: curl Visual C++ 2019 redistributable # Windows has curl natively
       working-directory: ${{ github.workspace }}\electron-wix\prerequisites\
-      run: curl --remote-name --show-error --fail https://aka.ms/vs/16/release/vc_redist.x64.exe
+      run: curl -vO --show-error --fail https://aka.ms/vs/16/release/vc_redist.x64.exe
 
     - name: curl Python 3.7.6 Installer
       working-directory: ${{ github.workspace }}\electron-wix\prerequisites\
@@ -63,6 +57,12 @@ jobs:
       run: |
         curl --remote-name --show-error --fail https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl
         curl --remote-name --show-error --fail https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
+
+    #- name: Install .NET 3.5.1
+      #uses: actions/setup-dotnet@v1 # https://github.com/actions/setup-dotnet
+      #with:
+        #dotnet-version: '3.5.100' # SDK Version to use.
+    #- run: dotnet build <my project>
 
     - name: Build Windows installer with Wix
       env:
