@@ -28,7 +28,7 @@ if [ `uname` = "Linux" ]; then
   #LINUX=1
   if type apt-get; then
     # Debian/Ubuntu
-    sudo apt-get install -y npm
+    sudo apt-get install -y nodejs
   elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ]; then
     # AMZN 2
     echo "Installing on Amazon Linux 2"
@@ -76,4 +76,4 @@ echo "https://keybase.io/team/chia_network.public"
 echo ""
 echo "Return to the README.md to start running the Chia blockchain"
 echo "https://github.com/Chia-Network/chia-blockchain/blob/master/README.md"
-echo "Type '. ./activate' to use Chia"
+echo "Type '. ./activate' and then 'chia init' to get started using Chia"

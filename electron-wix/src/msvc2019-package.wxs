@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<!-- This defines the MS VC 2019 redistributable pre-requisite -->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" 
+    xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+    <?include "config.wxi"?>
+    <Fragment>
+        <util:RegistrySearch Variable="msvc2019Installed"
+            Root="HKCR"
+            Key="Installer\Dependencies\$(var.msvc2019RegistryKey)"
+            Result="exists"
+            Win64="yes"/>
+        <util:RegistrySearch Variable="msvc2019Version"
+            Key="Installer\Dependencies\$(var.msvc2019RegistryKey)"
+            Root="HKCR"
+            Value="Version"
+            Result="value"
+            Win64="yes"/>
+        <PackageGroup Id="MSVC2019Package">
+            <ExePackage Id="MSVC2019ExePackage"
+                Cache="yes"
+                Compressed="yes"
+                Description="Visual C++ 2019"
+                DetectCondition="msvc2019Installed = 1 AND msvc2019Version >= v$(var.msvc2019Version)"
+                InstallCommand="/install /norestart /quiet"
+                Name="vc_redist.x64.exe"
+                PerMachine="yes"
+                Permanent="yes"
+                RepairCommand="/repair"
+                SourceFile="$(env.prereqDir)\vc_redist.x64.exe"
+                Vital="yes"/>
+        </PackageGroup>
+    </Fragment>
+</Wix>

@@ -45,3 +45,4 @@ else
     echo "no venv created yet, please run install.sh"
   fi
 fi
+echo "To see how fast your timelord is likely to be try './vdf_bench squareasm 250000' for an ips estimate"

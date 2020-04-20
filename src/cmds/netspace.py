@@ -6,7 +6,9 @@ import datetime
 
 from src.rpc.rpc_client import RpcClient
 from src.util.byte_types import hexstr_to_bytes
+from src.util.ints import uint64
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
+from src.consensus.constants import constants
 
 
 def make_parser(parser):
@@ -51,20 +53,30 @@ def human_local_time(timestamp):
 async def get_total_miniters(rpc_client, old_block, new_block):
     """
     Calculates the sum of min_iters from all blocks starting from old and up to and including
-    new_block.
-    # TODO: compute real min_iters for multiple epochs, using height RPC
+    new_block, but not including old_block.
     """
     old_block_parent = await rpc_client.get_header(old_block.prev_header_hash)
-    new_block_parent = await rpc_client.get_header(new_block.prev_header_hash)
     old_diff = old_block.weight - old_block_parent.weight
-    new_diff = new_block.weight - new_block_parent.weight
-    mi1 = calculate_min_iters_from_iterations(
+    curr_mi = calculate_min_iters_from_iterations(
         old_block.proof_of_space, old_diff, old_block.proof_of_time.number_of_iterations
     )
-    mi2 = calculate_min_iters_from_iterations(
-        new_block.proof_of_space, new_diff, new_block.proof_of_time.number_of_iterations
-    )
-    return (new_block.height - old_block.height) * ((mi2 + mi1) / 2)
+    # We do not count the min iters in the old block, since it's not included in the range
+    total_mi: uint64 = uint64(0)
+    for curr_h in range(old_block.height + 1, new_block.height + 1):
+        if (curr_h % constants["DIFFICULTY_EPOCH"]) == constants["DIFFICULTY_DELAY"]:
+            curr_b_header = await rpc_client.get_header_by_height(curr_h)
+            curr_b_block = await rpc_client.get_block(curr_b_header.header_hash)
+            curr_parent = await rpc_client.get_header(curr_b_block.prev_header_hash)
+            curr_diff = curr_b_block.weight - curr_parent.weight
+            curr_mi = calculate_min_iters_from_iterations(
+                curr_b_block.proof_of_space,
+                curr_diff,
+                curr_b_block.proof_of_time.number_of_iterations,
+            )
+        total_mi = uint64(total_mi + curr_mi)
+
+    print("Min iters:", total_mi)
+    return total_mi
 
 
 async def compare_block_headers(client, oldblock_hash, newblock_hash):
@@ -75,15 +87,10 @@ async def compare_block_headers(client, oldblock_hash, newblock_hash):
     block_older_header = await client.get_header(hexstr_to_bytes(oldblock_hash))
     block_newer_header = await client.get_header(hexstr_to_bytes(newblock_hash))
     if block_older_header is not None:
-        block_older_time_string = human_local_time(
-            block_older_header.data.timestamp
-        )
-        block_newer_time_string = human_local_time(
-            block_newer_header.data.timestamp
-        )
+        block_older_time_string = human_local_time(block_older_header.data.timestamp)
+        block_newer_time_string = human_local_time(block_newer_header.data.timestamp)
         elapsed_time_seconds = (
-            block_newer_header.data.timestamp
-            - block_older_header.data.timestamp
+            block_newer_header.data.timestamp - block_older_header.data.timestamp
         )
         time_delta = datetime.timedelta(seconds=elapsed_time_seconds)
         print("Older Block", block_older_header.data.height, ":")
@@ -100,28 +107,21 @@ async def compare_block_headers(client, oldblock_hash, newblock_hash):
             f"Weight                 {block_newer_header.data.weight}\n"
             f"Total VDF Iterations   {block_newer_header.data.total_iters}\n"
         )
-        delta_weight = (
-            block_newer_header.data.weight - block_older_header.data.weight
-        )
+        delta_weight = block_newer_header.data.weight - block_older_header.data.weight
         delta_iters = (
-            block_newer_header.data.total_iters
-            - block_older_header.data.total_iters
+            block_newer_header.data.total_iters - block_older_header.data.total_iters
         )
 
         block_older = await client.get_block(hexstr_to_bytes(oldblock_hash))
         block_newer = await client.get_block(hexstr_to_bytes(newblock_hash))
-        delta_iters -= await get_total_miniters(
-            client, block_older, block_newer
-        )
+        delta_iters -= await get_total_miniters(client, block_older, block_newer)
         weight_div_iters = delta_weight / delta_iters
         tips_adjustment_constant = 0.65
         network_space_constant = 2 ** 32  # 2^32
         network_space_bytes_estimate = (
             weight_div_iters * network_space_constant * tips_adjustment_constant
         )
-        network_space_terrabytes_estimate = (
-            network_space_bytes_estimate / 1024**4
-        )
+        network_space_terrabytes_estimate = network_space_bytes_estimate / 1024 ** 4
         print(
             f"The elapsed time between blocks is reported as {time_delta}.\n"
             f"The network has an estimated {network_space_terrabytes_estimate:.2f}TB"
@@ -148,7 +148,9 @@ async def netstorge_async(args, parser):
             lca_block_hash = str(blockchain_state["lca"].header_hash)
             lca_block_height = blockchain_state["lca"].data.height
             older_block_height = lca_block_height - int(args.delta_block_height)
-            print(f"LCA Block Height is {lca_block_height} - Comparing to {older_block_height}\n")
+            print(
+                f"LCA Block Height is {lca_block_height} - Comparing to {older_block_height}\n"
+            )
             older_block_header = await client.get_header_by_height(older_block_height)
             older_block_header_hash = str(older_block_header.get_hash())
             await compare_block_headers(client, older_block_header_hash, lca_block_hash)

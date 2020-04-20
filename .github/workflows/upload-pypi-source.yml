@@ -1,4 +1,4 @@
-name: Build
+name: Upload source distribution to PyPI
 
 on: [push, pull_request]
 

@@ -133,13 +133,9 @@ class Farmer:
 
     def _start_bg_tasks(self):
         """
-        Start a background task that checks connection and reconnects periodically to the full_node and
-        harvester.
+        Start a background task that checks connection and reconnects periodically to the full_node.
         """
 
-        harvester_peer = PeerInfo(
-            self.config["harvester_peer"]["host"], self.config["harvester_peer"]["port"]
-        )
         full_node_peer = PeerInfo(
             self.config["full_node_peer"]["host"], self.config["full_node_peer"]["port"]
         )
@@ -149,24 +145,15 @@ class Farmer:
                 await asyncio.sleep(30)
                 if self.server is not None:
                     full_node_retry = True
-                    harvester_retry = True
 
                     for connection in self.server.global_connections.get_connections():
                         if connection.get_peer_info() == full_node_peer:
                             full_node_retry = False
-                        if connection.get_peer_info() == harvester_peer:
-                            harvester_retry = False
 
                     if full_node_retry:
                         log.info(f"Reconnecting to full_node {full_node_peer}")
                         if not await self.server.start_client(
                             full_node_peer, None, self.config
-                        ):
-                            await asyncio.sleep(1)
-                    if harvester_retry:
-                        log.info(f"Reconnecting to harvester {harvester_peer}")
-                        if not await self.server.start_client(
-                            harvester_peer, None, self.config
                         ):
                             await asyncio.sleep(1)
 
