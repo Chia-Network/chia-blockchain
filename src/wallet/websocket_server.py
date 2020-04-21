@@ -423,6 +423,20 @@ class WebSocketServer:
             "wallet_id": wallet_id}
         return await websocket.send(format_response(response_api, response))
 
+    async def get_wallet_summaries(self, websocket, request, response_api):
+        response = {}
+        for wallet_id in self.wallet_node.wallet_state_manager.wallets:
+            wallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+            balance = wallet.get_confirmed_balance()
+            type = wallet.wallet_info.type.name
+            if type == WalletType.COLOURED_COIN:
+                name = wallet.cc_info.my_colour_name
+                colour = wallet.get_colour()
+                response[wallet_id] = {"type": type, "balance": balance, "name": name, "colour": colour}
+            else:
+                response[wallet_id = {"type": type, "balance": balance}
+        return await websocket.send(format_response(response_api, response))
+
     async def create_offer_for_ids(self, websocket, request, response_api):
         # request["ids"] = {1: 100, 2: -50, 4: 20}
         spend_bundle = None
@@ -868,6 +882,8 @@ class WebSocketServer:
                 await self.get_discrepancies_for_offer(websocket, data, command)
             elif command == "respond_to_offer":
                 await self.respond_to_offer(websocket, data, command)
+            elif command == "get_wallet_summaries":
+                await self.get_wallet_summaries(websocket, data, command)
             else:
                 response = {"error": f"unknown_command {command}"}
                 await websocket.send(dict_to_json_str(response))

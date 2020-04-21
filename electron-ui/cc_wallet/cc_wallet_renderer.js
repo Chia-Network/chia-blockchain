@@ -153,6 +153,8 @@ function set_callbacks(socket) {
             get_discrepancies_for_offer_response(data)
         } else if (command == "create_offer_for_ids") {
             create_offer_for_ids_response(data)
+        } else if (command == "get_wallet_summaries") {
+            get_wallet_summaries_response(data)
         }
     });
 
@@ -381,6 +383,11 @@ function get_wallets_response(data) {
     new_innerHTML += create_wallet_button()
     wallets_tab.innerHTML = new_innerHTML
     offers_list.innerHTML = offers_new_innerHTML
+}
+
+function get_wallet_summaries_response(data){
+  // {id: {"type": type, "balance": balance, "name": name, "colour": colour}}
+  // {id: {"type": type, "balance": balance}}
 }
 
 function get_colour(id) {
