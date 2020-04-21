@@ -118,7 +118,7 @@ class WalletActionStore:
         """
         Returns list of all pending action
         """
-        result = []
+        result: List[WalletAction] = []
         cursor = await self.db_connection.execute(
             "SELECT * from action_queue WHERE done=?", (0,)
         )

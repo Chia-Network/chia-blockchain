@@ -133,7 +133,7 @@ class WalletStateManager:
             if wallet_info.type == WalletType.STANDARD_WALLET:
                 if wallet_info.id == 1:
                     continue
-                wallet = await Wallet.create(config, key_config, self, main_wallet_info)
+                wallet = await Wallet.create(config, wallet_info)
                 self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.RATE_LIMITED:
                 wallet = await RLWallet.create(
@@ -206,7 +206,7 @@ class WalletStateManager:
         return pubkey, private
 
     async def create_more_puzzle_hashes(
-        self, from_zero: bool = False, for_wallet: any = None
+        self, from_zero: bool = False, for_wallet: Any = None
     ):
         """
         For all wallets in the user store, generates the first few puzzle hashes so
@@ -214,7 +214,7 @@ class WalletStateManager:
         """
 
         if for_wallet is None:
-            targets = self.wallets.keys()
+            targets = list(self.wallets.keys())
         else:
             targets = [for_wallet]
 
@@ -524,6 +524,7 @@ class WalletStateManager:
             wallet: CCWallet = self.wallets[wallet_id]
             header_hash: bytes32 = self.height_to_hash[index]
             block: BlockRecord = await self.wallet_store.get_block_record(header_hash)
+            assert block.removals is not None
             await wallet.coin_added(coin, index, header_hash, block.removals)
 
     async def add_pending_transaction(self, spend_bundle: SpendBundle, wallet_id):
@@ -705,8 +706,9 @@ class WalletStateManager:
                     record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
                         addition.puzzle_hash.hex()
                     )
+                    if record is None:
+                        continue
                     index = record.index
-                    assert index is not None
                     await self.puzzle_store.set_used_up_to(index)
 
                 await self.create_more_puzzle_hashes()
@@ -740,9 +742,9 @@ class WalletStateManager:
                 while True:
                     if tip_hash == fork_hash or tip_hash == self.genesis.header_hash:
                         break
-                    record = self.block_records[tip_hash]
-                    blocks_to_add.append(record)
-                    tip_hash = record.prev_header_hash
+                    block_record: BlockRecord = self.block_records[tip_hash]
+                    blocks_to_add.append(block_record)
+                    tip_hash = block_record.prev_header_hash
                 blocks_to_add.reverse()
 
                 for path_block in blocks_to_add:
@@ -1216,7 +1218,9 @@ class WalletStateManager:
             for addition in reorg_block.additions:
                 unspent_coin_names.add(addition.name())
             for removal in reorg_block.removals:
-                record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(removal.puzzle_hash)
+                record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
+                    removal.puzzle_hash
+                )
                 if record is None:
                     continue
                 unspent_coin_names.remove(removal)
@@ -1324,8 +1328,8 @@ class WalletStateManager:
                     return wallet
         return None
 
-    async def add_new_wallet(self, wallet: any, id: int):
-        self.wallets[id] = wallet
+    async def add_new_wallet(self, wallet: Any, id: int):
+        self.wallets[uint32(id)] = wallet
         await self.create_more_puzzle_hashes(for_wallet=id)
 
     async def get_coin_records_by_spent(self, spent: bool):
@@ -1380,10 +1384,11 @@ class WalletStateManager:
                 if stored_header_hash == header_hash and stored_height == height:
                     if action.done:
                         return
-                    wallet = self.wallets[action.wallet_id]
+                    wallet = self.wallets[uint32(action.wallet_id)]
                     callback_str = action.wallet_callback
-                    callback = getattr(wallet, callback_str)
-                    await callback(height, header_hash, program, action.id)
+                    if callback_str is not None:
+                        callback = getattr(wallet, callback_str)
+                        await callback(height, header_hash, program, action.id)
 
     async def get_transaction_status(
         self, tx_id: SpendBundle

@@ -93,9 +93,7 @@ class ChiaServer:
 
         return None, None
 
-    async def start_server(
-        self, on_connect: OnConnectFunc = None
-    ) -> bool:
+    async def start_server(self, on_connect: OnConnectFunc = None) -> bool:
         """
         Launches a listening server on host and port specified, to connect to NodeType nodes. On each
         connection, the on_connect asynchronous generator will be called, and responses will be sent.
@@ -108,9 +106,7 @@ class ChiaServer:
         private_cert, private_key = self.loadSSLConfig(
             "ssl", self.root_path, self.config
         )
-        ssl_context.load_cert_chain(
-            certfile=private_cert, keyfile=private_key
-        )
+        ssl_context.load_cert_chain(certfile=private_cert, keyfile=private_key)
         ssl_context.load_verify_locations(private_cert)
 
         if (

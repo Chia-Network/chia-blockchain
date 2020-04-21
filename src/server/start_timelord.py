@@ -34,7 +34,13 @@ async def async_main():
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
-        config["port"], timelord, NodeType.TIMELORD, ping_interval, network_id, DEFAULT_ROOT_PATH, config
+        config["port"],
+        timelord,
+        NodeType.TIMELORD,
+        ping_interval,
+        network_id,
+        DEFAULT_ROOT_PATH,
+        config,
     )
 
     timelord_shutdown_task: Optional[asyncio.Task] = None

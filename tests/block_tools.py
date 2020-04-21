@@ -506,7 +506,9 @@ class BlockTools:
         removal_root = removal_merkle_set.get_root()
 
         generator_hash = (
-            transactions.get_tree_hash() if transactions is not None else bytes32([0] * 32)
+            transactions.get_tree_hash()
+            if transactions is not None
+            else bytes32([0] * 32)
         )
         filter_hash = std_hash(encoded) if encoded is not None else bytes32([0] * 32)
 

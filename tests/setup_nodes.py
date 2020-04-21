@@ -162,7 +162,13 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     assert ping_interval is not None
     assert network_id is not None
     server_1 = ChiaServer(
-        port, full_node_1, NodeType.FULL_NODE, ping_interval, network_id, root_path, config
+        port,
+        full_node_1,
+        NodeType.FULL_NODE,
+        ping_interval,
+        network_id,
+        root_path,
+        config,
     )
     _ = await server_1.start_server(full_node_1._on_connect)
     full_node_1._set_server(server_1)
@@ -201,7 +207,14 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
-        port, wallet, NodeType.WALLET, ping_interval, network_id, root_path, config, "wallet-server",
+        port,
+        wallet,
+        NodeType.WALLET,
+        ping_interval,
+        network_id,
+        root_path,
+        config,
+        "wallet-server",
     )
     wallet.set_server(server)
 
@@ -224,7 +237,16 @@ async def setup_harvester(port, dic={}):
     network_id = net_config.get("network_id")
     assert ping_interval is not None
     assert network_id is not None
-    server = ChiaServer(port, harvester, NodeType.HARVESTER, ping_interval, network_id, root_path, config, f"harvester_server_{port}")
+    server = ChiaServer(
+        port,
+        harvester,
+        NodeType.HARVESTER,
+        ping_interval,
+        network_id,
+        root_path,
+        config,
+        f"harvester_server_{port}",
+    )
 
     yield (harvester, server)
 
@@ -262,7 +284,16 @@ async def setup_farmer(port, dic={}):
     farmer = Farmer(config, key_config, test_constants_copy)
     assert ping_interval is not None
     assert network_id is not None
-    server = ChiaServer(port, farmer, NodeType.FARMER, ping_interval, network_id, root_path, config, f"farmer_server_{port}")
+    server = ChiaServer(
+        port,
+        farmer,
+        NodeType.FARMER,
+        ping_interval,
+        network_id,
+        root_path,
+        config,
+        f"farmer_server_{port}",
+    )
     _ = await server.start_server(farmer._on_connect)
 
     yield (farmer, server)
@@ -282,7 +313,13 @@ async def setup_introducer(port, dic={}):
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
-        port, introducer, NodeType.INTRODUCER, ping_interval, network_id, bt.root_path, config
+        port,
+        introducer,
+        NodeType.INTRODUCER,
+        ping_interval,
+        network_id,
+        bt.root_path,
+        config,
     )
     _ = await server.start_server(None)
 
@@ -313,7 +350,15 @@ async def setup_timelord(port, dic={}):
     network_id = net_config.get("network_id")
     assert ping_interval is not None
     assert network_id is not None
-    server = ChiaServer(port, timelord, NodeType.TIMELORD, ping_interval, network_id, bt.root_path, config)
+    server = ChiaServer(
+        port,
+        timelord,
+        NodeType.TIMELORD,
+        ping_interval,
+        network_id,
+        bt.root_path,
+        config,
+    )
 
     coro = asyncio.start_server(
         timelord._handle_client,
@@ -450,9 +495,7 @@ async def setup_full_system(dic={}):
     await harvester_server.start_client(
         PeerInfo("127.0.0.1", uint16(farmer_server._port)), auth=True
     )
-    await farmer_server.start_client(
-        PeerInfo("127.0.0.1", uint16(node1_server._port))
-    )
+    await farmer_server.start_client(PeerInfo("127.0.0.1", uint16(node1_server._port)))
 
     await timelord_server.start_client(
         PeerInfo("127.0.0.1", uint16(node1_server._port))

@@ -1778,9 +1778,7 @@ class FullNode:
         self.log.info(f"Trying to connect to peers: {to_connect}")
         tasks = []
         for peer in to_connect:
-            tasks.append(
-                asyncio.create_task(self.server.start_client(peer, None))
-            )
+            tasks.append(asyncio.create_task(self.server.start_client(peer, None)))
         await asyncio.gather(*tasks)
 
     @api_request

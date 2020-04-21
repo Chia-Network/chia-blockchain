@@ -224,13 +224,13 @@ class WebSocketServer:
                 cc_wallet: CCWallet = await CCWallet.create_new_cc(
                     wallet_state_manager, main_wallet, request["amount"]
                 )
-                response = {"success": True, "type": "cc_wallet"}
+                response = {"success": True, "type": cc_wallet.wallet_info.type.name}
                 return await websocket.send(format_response(response_api, response))
             elif request["mode"] == "existing":
                 cc_wallet: CCWallet = await CCWallet.create_wallet_for_cc(
                     wallet_state_manager, main_wallet, request["colour"]
                 )
-                response = {"success": True, "type": "cc_wallet"}
+                response = {"success": True, "type": cc_wallet.wallet_info.type.name}
                 return await websocket.send(format_response(response_api, response))
 
         response = {"success": False}
@@ -561,7 +561,7 @@ class WebSocketServer:
                         auditees[colour].append(
                             (
                                 parent_info,
-                                Program(innerpuzzlereveal).get_hash(),
+                                Program(innerpuzzlereveal).get_tree_hash(),
                                 coinsol.coin.amount,
                                 out_amount,
                             )
@@ -570,7 +570,7 @@ class WebSocketServer:
                         auditees[colour] = [
                             (
                                 parent_info,
-                                Program(innerpuzzlereveal).get_hash(),
+                                Program(innerpuzzlereveal).get_tree_hash(),
                                 coinsol.coin.amount,
                                 out_amount,
                             )
@@ -622,10 +622,11 @@ class WebSocketServer:
                         )
                     auditor_info = (
                         auditor.parent_coin_info,
-                        auditor_innerpuz.get_hash(),
+                        auditor_innerpuz.get_tree_hash(),
                         auditor.amount,
                     )
-                    auditor_formatted = f"(0x{auditor.parent_coin_info} 0x{auditor_innerpuz.get_hash()} {auditor.amount})"
+                    inner_hash = auditor_innerpuz.get_tree_hash()
+                    auditor_formatted = f"(0x{auditor.parent_coin_info} 0x{inner_hash} {auditor.amount})"
                     core = cc_wallet_puzzles.cc_make_core(colour)
 
                 # complete the non-auditor CoinSolutions
@@ -674,7 +675,7 @@ class WebSocketServer:
                             clvm.to_sexp_f(
                                 [
                                     cc_wallet_puzzles.cc_make_puzzle(
-                                        innerpuz.get_hash(), core,
+                                        innerpuz.get_tree_hash(), core,
                                     ),
                                     solution,
                                 ]
@@ -747,7 +748,7 @@ class WebSocketServer:
                     clvm.to_sexp_f(
                         [
                             cc_wallet_puzzles.cc_make_puzzle(
-                                auditor_innerpuz.get_hash(), core
+                                auditor_innerpuz.get_tree_hash(), core
                             ),
                             solution,
                         ]
