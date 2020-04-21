@@ -12,6 +12,7 @@ import websockets
 
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
+from src.wallet.cc_wallet.cc_wallet_puzzles import create_spend_for_auditor, create_spend_for_ephemeral
 from src.wallet.util.json_util import dict_to_json_str
 
 try:
@@ -600,6 +601,8 @@ class WebSocketServer:
             coloured_coin = None
             auditor = None
             auditor_innerpuz = None
+            auditor_info = None
+            auditor_formatted = None
 
             if cc_discrepancies[colour] < 0:
                 my_cc_spends = await wallets[colour].select_coins(
@@ -632,7 +635,7 @@ class WebSocketServer:
 
                 # complete the non-auditor CoinSolutions
                 else:
-                    innersol = self.wallet_node.main_wallet.make_solution(
+                    innersol = self.wallet_node.wallet_state_manager.main_wallet.make_solution(
                         consumed=[auditor.name()]
                     )
                     sig = await wallets[colour].get_sigs_for_innerpuz_with_innersol(
@@ -720,7 +723,7 @@ class WebSocketServer:
             outputamount = (
                 sum([c.amount for c in my_cc_spends]) + cc_discrepancies[colour]
             )
-            innersol = self.wallet_node.main_wallet.make_solution(
+            innersol = self.wallet_node.wallet_state_manager.main_wallet.make_solution(
                 primaries=[{"puzzlehash": newinnerpuzhash, "amount": outputamount}]
             )
             parent_info = wallets[colour].get_parent_for_coin(auditor.parent_coin_info)
@@ -757,9 +760,9 @@ class WebSocketServer:
                 )
             )
             coinsols.append(
-                self.create_spend_for_ephemeral(auditor, auditor, outputamount)
+                create_spend_for_ephemeral(auditor, auditor, outputamount)
             )
-            coinsols.append(self.create_spend_for_auditor(auditor, auditor))
+            coinsols.append(create_spend_for_auditor(auditor, auditor))
 
         # Combine all CoinSolutions into a spend bundle
         if spend_bundle is None:
@@ -772,7 +775,7 @@ class WebSocketServer:
         if chia_spend_bundle is not None:
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_spend_bundle])
 
-        await self.wallet_state_manager.add_pending_transaction(
+        await self.wallet_node.wallet_state_manager.add_pending_transaction(
             spend_bundle,
             self.wallet_node.wallet_state_manager.main_wallet.wallet_info.id,
         )
