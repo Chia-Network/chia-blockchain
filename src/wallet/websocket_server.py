@@ -27,6 +27,7 @@ from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.util.config import load_config_cli, load_config
 from src.util.ints import uint64
 from src.util.logging import initialize_logging
+from src.wallet.util.wallet_types import WalletType
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.wallet import Wallet
@@ -434,7 +435,7 @@ class WebSocketServer:
                 colour = await wallet.get_colour()
                 response[wallet_id] = {"type": type, "balance": balance, "name": name, "colour": colour}
             else:
-                response[wallet_id = {"type": type, "balance": balance}
+                response[wallet_id] = {"type": type, "balance": balance}
         return await websocket.send(format_response(response_api, response))
 
     async def create_offer_for_ids(self, websocket, request, response_api):
