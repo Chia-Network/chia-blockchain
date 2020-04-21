@@ -429,7 +429,7 @@ class WebSocketServer:
         for wallet_id in self.wallet_node.wallet_state_manager.wallets:
             wallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
             balance = await wallet.get_confirmed_balance()
-            type = wallet.wallet_info.type.name
+            type = wallet.wallet_info.type
             if type == WalletType.COLOURED_COIN:
                 name = wallet.cc_info.my_colour_name
                 colour = await wallet.get_colour()
