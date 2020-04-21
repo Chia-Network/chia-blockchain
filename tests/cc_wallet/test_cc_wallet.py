@@ -48,7 +48,7 @@ class TestWalletSimulator:
         ):
             yield _
 
-    """
+
     @pytest.mark.asyncio
     async def test_colour_creation(self, two_wallet_nodes):
         num_blocks = 10
@@ -86,7 +86,6 @@ class TestWalletSimulator:
 
         assert confirmed_balance == 100
         assert unconfirmed_balance == 100
-    """
 
     @pytest.mark.asyncio
     async def test_cc_spend(self, two_wallet_nodes):
@@ -170,7 +169,6 @@ class TestWalletSimulator:
         assert confirmed_balance == 55
         assert unconfirmed_balance == 55
 
-    """
     @pytest.mark.asyncio
     async def test_get_wallet_for_colour(self, two_wallet_nodes):
         num_blocks = 10
@@ -272,4 +270,3 @@ class TestWalletSimulator:
         )
         assert len(unspent) == 1
         assert unspent.pop().coin.amount == 0
-    """

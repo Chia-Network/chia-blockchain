@@ -154,7 +154,7 @@ def get_output_amount_for_puzzle_and_solution(self, puzzle, solution):
 
 
 # inspect puzzle and check it is a CC puzzle
-def check_is_cc_puzzle(self, puzzle: Program):
+def check_is_cc_puzzle(puzzle: Program):
     puzzle_string = binutils.disassemble(puzzle)
     if len(puzzle_string) < 4000:
         return False
