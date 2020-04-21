@@ -166,6 +166,30 @@
                   </div>
                 </div>
               </div>
+              <div class="wallet-address">
+                <h4>Create Trade Offer</h4>
+                <p>Trade Partner Address:</p>
+              <div class="input-group" style="padding-top:0px">
+              <input type="text" class="form-control"  id="offer_receiver_puzzle_hash" value="">
+              </div>/
+                <div class="input-group" id="offers_list" style="padding-top:0px; padding-bottom:15px;">
+                </div>
+              </div>
+              <button class="btn red" id="offer_send">SEND</button>
+              <div class="wallet-address">
+                <div class="row">
+                  <div class="col-md-8">
+                    <h4>Print 0-Value Coloured Coin</h4>
+                    <p>Click the button to create/print a new 0-value coin of this wallet's colour.</p>
+                    <div class="input-group">
+                    <button class="btn green" style="padding-top:20px;" id="print_zero">PRINT</button>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <canvas id="qr_canvas" width="300" height="300"></canvas>
+                  </div>
+                </div>
+              </div>
               <div class="wallet-history">
                 <table class="table">
                   <thead>

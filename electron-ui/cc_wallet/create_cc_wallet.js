@@ -15,7 +15,6 @@ let colour = document.querySelector('#input_colour_text')
 let balance_textfield = document.querySelector('#balance_textfield')
 
 // Global variables
-var global_input_colour_continue = false
 var global_balance = 0.0
 var global_creating_wallet = false
 var local_test = electron.remote.getGlobal('sharedObj').local_test;
