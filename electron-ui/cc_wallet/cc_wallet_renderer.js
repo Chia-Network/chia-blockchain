@@ -20,8 +20,8 @@ let send = document.querySelector('#send')
 let puzzle_holder = document.querySelector("#puzzle_holder")
 let copy = document.querySelector("#copy")
 let new_address = document.querySelector('#new_address')
-let offer_receiver_address = document.querySelector("#offer_receiver_puzzle_hash")
-let offer_send = document.querySelector('#offer_send')
+let offer_file_path = document.querySelector("#offer_file_path")
+let offer_create = document.querySelector('#offer_create')
 let print_zero = document.querySelector('#print_zero')
 let balance_textfield = document.querySelector('#balance_textfield')
 let pending_textfield = document.querySelector('#pending_textfield')
@@ -579,14 +579,14 @@ function offer_input(id, wallet_name, wallet_type) {
   const template = `<div class="input-group" style="padding-top:0px; padding-bottom:15px;">
   <p id="${wallet_name_id}">${wallet_name}</p>
   <div class="input-group" style="padding-top:0px">
-  <input type="text" class="form-control"  id="${offer_balance_id}" value="">
+  <input type="number" class="form-control"  id="${offer_balance_id}" value="">
   </div>/`
   return template
 }
 
-offer_send.addEventListener('click', () => {
+offer_create.addEventListener('click', () => {
     /*
-    Called when offer_send button in ui is pressed.
+    Called when offer_create button in ui is pressed.
     */
 
     if (global_syncing) {
@@ -599,16 +599,11 @@ offer_send.addEventListener('click', () => {
 
     try {
       offers = {}
-      puzzle_hash = offer_receiver_address.value;
-      if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
-          puzzle_hash = puzzle_hash.substring(2);
-      }
-      if (puzzle_hash.length != 64) {
-          alert("Please enter a 32 byte puzzle hash in hexadecimal format");
-          return;
-      }
+      //filename = "~/Documents/";
+      filename = ""
+      filename = filename.concat(offer_file_path.value);
       for (var i = 0; i < offer_counter; i++) {
-        offer_amount = document.querySelector("#" + "offer_balance_wallet_" + (i+1) )
+        offer_amount = document.querySelector("#" + "offer_balance_wallet_" + (i+1));
         amount_value = parseFloat(Number(offer_amount.value));
         if (isNaN(amount_value)) {
           alert("Please enter a valid numeric amount");
@@ -619,23 +614,25 @@ offer_send.addEventListener('click', () => {
         mojo_amount = chia_formatter(amount_value, 'chia').to('mojo').value()
       }
 
-      offer_send.disabled = true;
-      offer_send.innerHTML = "SENDING...";
+      offer_create.disabled = true;
+      offer_create.innerHTML = "CREATING...";
       data = {
-          "colours": offers
+          "ids": offers,
+          "filename": filename
       }
 
       request = {
-          "command": "create_offer",
+          "command": "create_offer_for_ids",
           "data": data
       }
       json_data = JSON.stringify(request);
+      alert(json_data);
       ws.send(json_data);
     } catch (error) {
-        alert("Error sending the transaction").
+        alert("Error creating the offer").
         global_sending_offer = false;
-        offer_send.disabled = false;
-        offer_send.innerHTML = "SEND";
+        offer_create.disabled = false;
+        offer_create.innerHTML = "CREATE OFFER";
     }
 })
 

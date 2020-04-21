@@ -9,6 +9,7 @@ from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.condition_tools import (
     conditions_for_solution,
+    conditions_dict_for_solution,
     conditions_by_opcode,
     hash_key_pairs_for_conditions_dict,
 )
@@ -332,3 +333,62 @@ class Wallet:
         await self.wallet_state_manager.add_pending_transaction(
             spend_bundle, self.wallet_info.id
         )
+
+    # This is also defined in CCWallet as get_sigs()
+    # I think this should be a the default way the wallet gets signatures in sign_transaction()
+    async def get_sigs_for_innerpuz_with_innersol(self, innerpuz: Program, innersol: Program) -> List[BLSSignature]:
+        puzzle_hash = innerpuz.get_tree_hash()
+        pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
+        private = BLSPrivateKey(private)
+        sigs: List[BLSSignature] = []
+        code_ = [innerpuz, innersol]
+        sexp = Program.to(code_)
+        error, conditions, cost = conditions_dict_for_solution(sexp)
+        if conditions is not None:
+            for _ in hash_key_pairs_for_conditions_dict(conditions):
+                signature = private.sign(_.message_hash)
+                sigs.append(signature)
+        return sigs
+
+        # Create an offer spend bundle for chia given an amount of relative change (i.e -400 or 1000)
+    # This is to be aggregated together with a coloured coin offer to ensure that the trade happens
+    async def create_spend_bundle_relative_chia(self, chia_amount: uint64):
+        list_of_solutions = []
+        utxos = None
+
+        # If we're losing value then get coins with at least that much value
+        # If we're gaining value then our amount doesn't matter
+        if chia_amount < 0:
+            utxos = await self.select_coins(abs(chia_amount))
+        else:
+            utxos = await self.select_coins(1)
+
+        if utxos is None:
+            return None
+
+        # Calculate output amount given sum of utxos
+        spend_value = sum([coin.amount for coin in utxos])
+        chia_amount = spend_value + chia_amount
+
+        # Create coin solutions for each utxo
+        output_created = None
+        sigs = []
+        for coin in utxos:
+            pubkey, secretkey = await self.wallet_state_manager.get_keys(coin.puzzle_hash)
+            puzzle = self.puzzle_for_pk(bytes(pubkey))
+            if output_created is None:
+                newpuzhash = await self.get_new_puzzlehash()
+                primaries = [{"puzzlehash": newpuzhash, "amount": chia_amount}]
+                solution = self.make_solution(primaries=primaries)
+                output_created = coin
+            else:
+                solution = self.make_solution(consumed=[output_created.name()])
+            list_of_solutions.append(
+                CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
+            )
+            new_sigs = await self.get_sigs_for_innerpuz_with_innersol(puzzle, solution)
+            sigs = sigs + new_sigs
+
+        aggsig = BLSSignature.aggregate(sigs)
+        spend_bundle = SpendBundle(list_of_solutions, aggsig)
+        return spend_bundle
