@@ -10,7 +10,6 @@ except ImportError:
 from src.harvester import Harvester
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
-from src.types.peer_info import PeerInfo
 from src.util.config import load_config, load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.logging import initialize_logging
@@ -36,7 +35,13 @@ async def async_main():
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
-        config["port"], harvester, NodeType.HARVESTER, ping_interval, network_id, DEFAULT_ROOT_PATH, config
+        config["port"],
+        harvester,
+        NodeType.HARVESTER,
+        ping_interval,
+        network_id,
+        DEFAULT_ROOT_PATH,
+        config,
     )
 
     try:
@@ -45,11 +50,6 @@ async def async_main():
     except NotImplementedError:
         log.info("signal handlers unsupported")
 
-    peer_info = PeerInfo(
-        harvester.config["farmer_peer"]["host"], harvester.config["farmer_peer"]["port"]
-    )
-
-    _ = await server.start_client(peer_info, None, True)
     harvester.set_server(server)
     harvester._start_bg_tasks()
     await server.await_closed()

@@ -13,7 +13,6 @@ except ImportError:
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.timelord import Timelord
-from src.types.peer_info import PeerInfo
 from src.util.config import load_config_cli, load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.logging import initialize_logging
@@ -34,7 +33,13 @@ async def async_main():
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
-        config["port"], timelord, NodeType.TIMELORD, ping_interval, network_id, DEFAULT_ROOT_PATH, config
+        config["port"],
+        timelord,
+        NodeType.TIMELORD,
+        ping_interval,
+        network_id,
+        DEFAULT_ROOT_PATH,
+        config,
     )
 
     timelord_shutdown_task: Optional[asyncio.Task] = None
@@ -57,13 +62,8 @@ async def async_main():
     except NotImplementedError:
         log.info("signal handlers unsupported")
 
-    full_node_peer = PeerInfo(
-        timelord.config["full_node_peer"]["host"],
-        timelord.config["full_node_peer"]["port"],
-    )
+    await asyncio.sleep(10)  # Allows full node to startup
 
-    await asyncio.sleep(1)  # Prevents TCP simultaneous connect with full node
-    await server.start_client(full_node_peer, None)
     timelord.set_server(server)
     timelord._start_bg_tasks()
 

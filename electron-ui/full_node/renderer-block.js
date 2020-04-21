@@ -57,8 +57,13 @@ async function render() {
         const block = await rpc_client.get_block(header_hash);
 
         block_title.innerHTML = "Block " + block.header.data.height + " in the Chia blockchain";
-        const prev_header = await rpc_client.get_header(block.header.data.prev_header_hash);
-        let diff = block.header.data.weight - prev_header.data.weight;
+        let diff = 0;
+        if (block.header.data.height == 0) {
+            diff = block.header.data.weight;
+        } else {
+            const prev_header = await rpc_client.get_header(block.header.data.prev_header_hash);
+            diff = block.header.data.weight - prev_header.data.weight;
+        }
 
         // TODO: don't use float here
         let chia_cb = chia_formatter(parseFloat(BigInt(block.header.data.coinbase.amount)), 'mojo').to('chia').toString();

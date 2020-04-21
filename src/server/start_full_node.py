@@ -79,7 +79,13 @@ async def async_main():
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
-        config["port"], full_node, NodeType.FULL_NODE, ping_interval, network_id, DEFAULT_ROOT_PATH, config
+        config["port"],
+        full_node,
+        NodeType.FULL_NODE,
+        ping_interval,
+        network_id,
+        DEFAULT_ROOT_PATH,
+        config,
     )
     full_node._set_server(server)
     _ = await server.start_server(full_node._on_connect)
@@ -107,10 +113,6 @@ async def async_main():
         log.info("signal handlers unsupported")
 
     full_node._start_bg_tasks()
-
-    log.info("Waiting to connect to some peers...")
-    await asyncio.sleep(3)
-    log.info(f"Connected to {len(server.global_connections.get_connections())} peers.")
 
     # Awaits for server and all connections to close
     await server.await_closed()
