@@ -486,19 +486,19 @@ class WebSocketServer:
             solution = coinsol.solution.rest().first()
 
             # work out the deficits between coin amount and expected output for each
-            if self.check_is_cc_puzzle(puzzle):
+            if cc_wallet_puzzles.check_is_cc_puzzle(puzzle):
                 colour = cc_wallet_puzzles.get_genesis_from_puzzle(
                     binutils.disassemble(puzzle)
                 )
                 if colour not in wallets:
                     wallets[
                         colour
-                    ] = self.wallet_node.wallet_state_manager.get_wallet_for_colour(
+                    ] = await self.wallet_node.wallet_state_manager.get_wallet_for_colour(
                         colour
                     )
                 parent_info = binutils.disassemble(solution.rest().first()).split(" ")
                 if len(parent_info) > 1:
-                    colour = wallets[colour].get_genesis_from_puzzle(
+                    colour = cc_wallet_puzzles.get_genesis_from_puzzle(
                         binutils.disassemble(puzzle)
                     )
                     # get puzzle and solution
@@ -551,7 +551,7 @@ class WebSocketServer:
             solution = coinsol.solution.rest().first()
 
             # work out the deficits between coin amount and expected output for each
-            if self.check_is_cc_puzzle(puzzle):
+            if cc_wallet_puzzles.check_is_cc_puzzle(puzzle):
                 parent_info = binutils.disassemble(solution.rest().first()).split(" ")
                 if len(parent_info) > 1:
                     # Calculate output amounts
@@ -561,7 +561,7 @@ class WebSocketServer:
                     if colour not in wallets:
                         wallets[
                             colour
-                        ] = self.wallet_node.wallet_state_manager.get_wallet_for_colour(
+                        ] = await self.wallet_node.wallet_state_manager.get_wallet_for_colour(
                             colour
                         )
                     innerpuzzlereveal = solution.rest().rest().rest().first()
@@ -617,7 +617,7 @@ class WebSocketServer:
 
         chia_spend_bundle = None
         if chia_discrepancy is not None:
-            chia_spend_bundle = self.wallet_node.wallet_state_manager.main_wallet.create_spend_bundle_relative_chia(
+            chia_spend_bundle = await self.wallet_node.wallet_state_manager.main_wallet.create_spend_bundle_relative_chia(
                 chia_discrepancy
             )
 
@@ -628,11 +628,11 @@ class WebSocketServer:
             auditor_innerpuz = None
 
             if cc_discrepancies[colour] < 0:
-                my_cc_spends = wallets[colour].select_coins(
+                my_cc_spends = await wallets[colour].select_coins(
                     abs(cc_discrepancies[colour])
                 )
             else:
-                my_cc_spends = wallets[colour].select_coins(1)
+                my_cc_spends = await wallets[colour].select_coins(1)
 
             # TODO: if unable to select coins, autogenerate a zero value coin
 
@@ -644,7 +644,7 @@ class WebSocketServer:
                 if auditor is None:
                     auditor = coloured_coin
                     if auditor_innerpuz is None:
-                        auditor_innerpuz = wallets[colour].get_innerpuzzle_from_puzzle(
+                        auditor_innerpuz = await wallets[colour].get_innerpuzzle_from_puzzle(
                             auditor.puzzle_hash
                         )
                     auditor_info = (
@@ -661,7 +661,7 @@ class WebSocketServer:
                     innersol = self.wallet_node.main_wallet.make_solution(
                         consumed=[auditor.name()]
                     )
-                    sig = wallets[colour].get_sigs_for_innerpuz_with_innersol(
+                    sig = await wallets[colour].get_sigs_for_innerpuz_with_innersol(
                         wallets[colour].get_innerpuzzle_from_puzzle(
                             coloured_coin.puzzle_hash
                         ),

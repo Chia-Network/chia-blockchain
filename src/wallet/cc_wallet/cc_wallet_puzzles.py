@@ -2,7 +2,7 @@ from typing import Optional, Tuple
 
 from clvm_tools import binutils
 import clvm
-
+import string
 from src.types.BLSSignature import BLSSignature
 from src.types.program import Program
 from src.types.coin import Coin
@@ -151,3 +151,20 @@ def get_output_amount_for_puzzle_and_solution(self, puzzle, solution):
                 amount += int(amount_str, 10)
         conditions = conditions.rest()
     return amount
+
+
+# inspect puzzle and check it is a CC puzzle
+def check_is_cc_puzzle(self, puzzle: Program):
+    puzzle_string = binutils.disassemble(puzzle)
+    if len(puzzle_string) < 4000:
+        return False
+    inner_puzzle = puzzle_string[11:75]
+    if all(c in string.hexdigits for c in inner_puzzle) is not True:
+        return False
+    genesisCoin = get_genesis_from_puzzle(puzzle_string)
+    if all(c in string.hexdigits for c in genesisCoin) is not True:
+        return False
+    if cc_make_puzzle(inner_puzzle, cc_make_core(genesisCoin)) == puzzle:
+        return True
+    else:
+        return False

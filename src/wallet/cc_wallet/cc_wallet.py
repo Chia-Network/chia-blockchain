@@ -266,7 +266,7 @@ class CCWallet:
                         break
 
                 if coin is not None:
-                    if self.check_is_cc_puzzle(puzzle_program):
+                    if cc_wallet_puzzles.check_is_cc_puzzle(puzzle_program):
                         puzzle_string = binutils.disassemble(puzzle_program)
                         inner_puzzle_hash = hexstr_to_bytes(
                             get_innerpuzzle_from_puzzle(puzzle_string)
@@ -687,22 +687,6 @@ class CCWallet:
 
         full_spend = SpendBundle.aggregate([spend_bundle, eve_spend])
         return full_spend
-
-    # inspect puzzle and check it is a CC puzzle
-    def check_is_cc_puzzle(self, puzzle: Program):
-        puzzle_string = binutils.disassemble(puzzle)
-        if len(puzzle_string) < 4000:
-            return False
-        inner_puzzle = puzzle_string[11:75]
-        if all(c in string.hexdigits for c in inner_puzzle) is not True:
-            return False
-        genesisCoin = get_genesis_from_puzzle(puzzle_string)
-        if all(c in string.hexdigits for c in genesisCoin) is not True:
-            return False
-        if cc_make_puzzle(inner_puzzle, cc_make_core(genesisCoin)) == puzzle:
-            return True
-        else:
-            return False
 
     async def create_spend_bundle_relative_amount(self, cc_amount):
         # If we're losing value then get coloured coins with at least that much value
