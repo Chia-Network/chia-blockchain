@@ -13,4 +13,5 @@ catch {
 Write-Host "Cleaning any previous outputs"
 Remove-Item $electronpackagerdir -Recurse -Force -ErrorAction Ignore
 Remove-Item "$buildDir" -Recurse -Force -ErrorAction Ignore
-New-Item -ItemType Directory -Path "$buildDir"
+Remove-Item "$finalDir" -Recurse -Force -ErrorAction Ignore
+

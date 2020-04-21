@@ -142,7 +142,6 @@ class Farmer:
 
         async def connection_check():
             while not self._shut_down:
-                await asyncio.sleep(30)
                 if self.server is not None:
                     full_node_retry = True
 
@@ -153,9 +152,10 @@ class Farmer:
                     if full_node_retry:
                         log.info(f"Reconnecting to full_node {full_node_peer}")
                         if not await self.server.start_client(
-                            full_node_peer, None, self.config
+                            full_node_peer, None, auth=False
                         ):
                             await asyncio.sleep(1)
+                await asyncio.sleep(30)
 
         self.reconnect_task = asyncio.create_task(connection_check())
 
