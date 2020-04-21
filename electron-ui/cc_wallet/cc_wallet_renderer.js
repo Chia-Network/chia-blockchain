@@ -118,6 +118,7 @@ function set_callbacks(socket) {
             get_wallets();
             get_colour_name(g_wallet_id)
             get_transactions();
+            get_wallet_summaries();
             get_wallet_balance(g_wallet_id);
             get_height_info();
             get_sync_status();
@@ -173,6 +174,29 @@ async function connect(timeout) {
     await sleep(timeout);
     ws = new WebSocket(wallet_rpc_host_and_port);
     set_callbacks(ws);
+}
+
+async function get_wallet_summaries() {
+  /*
+  Sends websocket request to get wallet summaries
+  */
+  data = {
+      "info": "123",
+  }
+
+  request = {
+      "command": "get_wallet_summaries",
+      "data": data
+  }
+
+  json_data = JSON.stringify(request);
+  ws.send(json_data);
+}
+
+function get_wallet_summaries_response(data){
+  // {id: {"type": type, "balance": balance, "name": name, "colour": colour}}
+  // {id: {"type": type, "balance": balance}}
+  console.log(data)
 }
 
 async function get_wallet_balance(id) {
@@ -383,11 +407,6 @@ function get_wallets_response(data) {
     new_innerHTML += create_wallet_button()
     wallets_tab.innerHTML = new_innerHTML
     offers_list.innerHTML = offers_new_innerHTML
-}
-
-function get_wallet_summaries_response(data){
-  // {id: {"type": type, "balance": balance, "name": name, "colour": colour}}
-  // {id: {"type": type, "balance": balance}}
 }
 
 function get_colour(id) {
@@ -665,8 +684,11 @@ function create_offer_for_ids_response(response) {
    status = response["success"];
    if (status === true) {
        dialogs.alert("Offer accepted succesfully into the mempool.", ok => {});
-       receiver_address.value = "";
-       amount.value = "";
+       for (var i = 0; i < offer_counter; i++) {
+         offer_balance_id_clear = document.querySelector("#" + "offer_balance_wallet_" + (i+1));
+         offer_balance_id_clear.value = "";
+       offer_counter = 0
+       }
    } else if (status === false) {
        dialogs.alert("Offer failed. Reason: " + response["reason"], ok => {});
    }
@@ -680,15 +702,19 @@ offer_view.addEventListener('click', () => {
     Called when offer_view button in ui is pressed.
     */
 
+    go_to_view_offer();
+
     if (global_syncing) {
         dialogs.alert("Can't view offers while syncing.", ok => {});
         return
     }
 
-    receive_offer_file_path.value
+    offer_file = receive_offer_file_path.value
+    offer_view.disabled = true;
+    offer_view.innerHTML = "REQUESTING...";
 
     data = {
-        "filename": receive_offer_file_path,
+        "filename": offer_file,
     }
 
     request = {
@@ -699,7 +725,46 @@ offer_view.addEventListener('click', () => {
     json_data = JSON.stringify(request);
     ws.send(json_data);
 
-  })
+})
+
+function get_discrepancies_for_offer_response(response) {
+    /*
+    Called when response is received for create_offer_for_ids request
+    */
+   status = response["success"];
+   if (status === true) {
+     offer_view.disabled = false;
+     offer_view.innerHTML = "VIEW OFFER";
+   } else if (status === false) {
+       dialogs.alert("Offer failed. Reason: " + response["error"], ok => {});
+       offer_view.disabled = false;
+       offer_view.innerHTML = "VIEW OFFER";
+   }
+}
+
+function go_to_view_offer(){
+    //remote.getCurrentWindow().loadURL('../wallet-dark.html')
+
+    newWindow = electron.remote.getCurrentWindow()
+
+    query = "?testing="+local_test + "&wallet_id=1"
+    newWindow.loadURL(require('url').format({
+    pathname: path.join(__dirname, "./view_offer.html"),
+    protocol: 'file:',
+    slashes: true
+    }) + query
+    )
+
+    //newWindow.loadURL("./view_offer.html");
+
+    newWindow.once('ready-to-show', function (){
+        newWindow.show();
+    });
+
+    newWindow.on('closed', function() {
+        newWindow = null;
+    });
+}
 
 print_zero.addEventListener('click', () => {
     /*
