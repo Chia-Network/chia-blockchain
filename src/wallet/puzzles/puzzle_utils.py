@@ -27,3 +27,7 @@ def make_assert_block_age_exceeds_condition(block_index):
 
 def make_assert_time_exceeds_condition(time):
     return [ConditionOpcode.ASSERT_TIME_EXCEEDS, time]
+
+
+def make_assert_fee_condition(fee):
+    return [ConditionOpcode.ASSERT_FEE, fee]

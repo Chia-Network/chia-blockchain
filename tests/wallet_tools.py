@@ -28,6 +28,7 @@ from src.wallet.puzzles.puzzle_utils import (
     make_assert_block_age_exceeds_condition,
     make_assert_aggsig_condition,
     make_assert_time_exceeds_condition,
+    make_assert_fee_condition,
 )
 
 
@@ -62,7 +63,7 @@ class WalletTool:
                 lambda child: hash
                 == puzzle_for_pk(
                     bytes(self.extended_secret_key.public_child(child).get_public_key())
-                ).get_hash(),
+                ).get_tree_hash(),
                 reversed(range(self.next_address)),
             )
         )
@@ -76,7 +77,7 @@ class WalletTool:
         else:
             for child in range(self.next_address):
                 pubkey = self.extended_secret_key.public_child(child).get_public_key()
-                if puzzle_hash == puzzle_for_pk(bytes(pubkey)).get_hash():
+                if puzzle_hash == puzzle_for_pk(bytes(pubkey)).get_tree_hash():
                     return (
                         pubkey,
                         self.extended_secret_key.private_child(child).get_private_key(),
@@ -89,12 +90,12 @@ class WalletTool:
         pubkey_a = self.get_next_public_key()
         pubkey = bytes(pubkey_a)
         puzzle = puzzle_for_pk(pubkey)
-        self.puzzle_pk_cache[puzzle.get_hash()] = self.next_address - 1
+        self.puzzle_pk_cache[puzzle.get_tree_hash()] = self.next_address - 1
         return puzzle
 
     def get_new_puzzlehash(self):
         puzzle = self.get_new_puzzle()
-        puzzlehash = puzzle.get_hash()
+        puzzlehash = puzzle.get_tree_hash()
         return puzzlehash
 
     def sign(self, value, pubkey):
@@ -125,6 +126,8 @@ class WalletTool:
                     ret.append(make_assert_block_index_exceeds_condition(cvp.var1))
                 if cvp.opcode == ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
                     ret.append(make_assert_block_age_exceeds_condition(cvp.var1))
+                if cvp.opcode == ConditionOpcode.ASSERT_FEE:
+                    ret.append(make_assert_fee_condition(cvp.var1))
 
         return clvm.to_sexp_f([puzzle_for_conditions(ret), []])
 

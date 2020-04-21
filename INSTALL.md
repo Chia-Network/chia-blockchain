@@ -19,6 +19,7 @@ sh install.sh
 Install dependencies for Ubuntu 18.04, Ubuntu 19.x or newer.
 ```bash
 sudo apt-get update
+sudo apt-get upgrade
 sudo apt-get install python3.7-venv python3.7-distutils git -y
 
 # Either checkout the source and install
@@ -52,6 +53,7 @@ You will be prompted to reboot. Once that is complete, install Ubuntu 18.04 LTS 
 Then follow the steps below which are the same as the usual Ubuntu instructions above.
 ```bash
 sudo apt-get update
+sudo apt-get upgrade
 sudo apt-get install python3.7-venv python3.7-distutils git -y
 
 # Either checkout the source and install

@@ -31,7 +31,7 @@ def parse_sexp_to_condition(
     try:
         opcode = ConditionOpcode(items[0])
     except ValueError:
-        return Err.INVALID_CONDITION, None
+        opcode = ConditionOpcode.UNKNOWN
     if len(items) == 3:
         return None, ConditionVarPair(opcode, items[1], items[2])
     return None, ConditionVarPair(opcode, items[1], None)

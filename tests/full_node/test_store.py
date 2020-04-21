@@ -8,6 +8,8 @@ import random
 import aiosqlite
 import pytest
 from src.full_node.store import FullNodeStore
+from src.full_node.coin_store import CoinStore
+from src.full_node.blockchain import Blockchain
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
@@ -147,6 +149,19 @@ class TestStore:
             assert db.seen_unfinished_block(h_hash_1)
             db.clear_seen_unfinished_blocks()
             assert not db.seen_unfinished_block(h_hash_1)
+
+            # Test LCA
+            assert (await db.get_lca()) is None
+
+            unspent_store = await CoinStore.create(connection)
+            b: Blockchain = await Blockchain.create(unspent_store, db, test_constants)
+
+            assert (await db.get_lca()) == blocks[-3].header_hash
+            assert b.lca_block.header_hash == (await db.get_lca())
+
+            b_2: Blockchain = await Blockchain.create(unspent_store, db, test_constants)
+            assert (await db.get_lca()) == blocks[-3].header_hash
+            assert b_2.lca_block.header_hash == (await db.get_lca())
 
         except Exception:
             await connection.close()
