@@ -20,12 +20,16 @@ let send = document.querySelector('#send')
 let puzzle_holder = document.querySelector("#puzzle_holder")
 let copy = document.querySelector("#copy")
 let new_address = document.querySelector('#new_address')
+let offer_receiver_address = document.querySelector("#offer_receiver_puzzle_hash")
+let offer_send = document.querySelector('#offer_send')
+let print_zero = document.querySelector('#print_zero')
 let balance_textfield = document.querySelector('#balance_textfield')
 let pending_textfield = document.querySelector('#pending_textfield')
 let connection_textfield = document.querySelector('#connection_textfield')
 let syncing_textfield = document.querySelector('#syncing_textfield')
 let block_height_textfield = document.querySelector('#block_height_textfield')
 let wallets_tab = document.querySelector('#wallets_tab')
+let offers_list = document.querySelector('#offers_list')
 let table = document.querySelector("#tx_table").getElementsByTagName('tbody')[0]
 
 // UI checkmarks and lock icons
@@ -36,8 +40,11 @@ const lock = "<i class=\"icon ion-md-lock\"></i>"
 // Global variables
 var global_syncing = true
 var global_sending_transaction = false
+var global_sending_offer = false
 var local_test = electron.remote.getGlobal('sharedObj').local_test;
 var g_wallet_id = get_query_variable("wallet_id")
+var wallets_details = {}
+var offer_counter = 0
 var ws = new WebSocket(wallet_rpc_host_and_port);
 var glob_counter = 0
 
@@ -106,7 +113,6 @@ function set_callbacks(socket) {
 
         if (command == "start_server") {
             get_wallets();
-            get_colour(g_wallet_id);
             get_colour_name(g_wallet_id)
             get_transactions();
             get_wallet_balance(g_wallet_id);
@@ -138,6 +144,8 @@ function set_callbacks(socket) {
             get_sync_status_response(data)
         } else if (command == "get_wallets") {
             get_wallets_response(data)
+        } else if (command == "cc_generate_zero_val") {
+            print_zero_response(data)
         }
     });
 
@@ -187,6 +195,8 @@ function get_wallet_balance_response(response) {
 
         wallet_balance_holder = document.querySelector("#" + "balance_wallet_" + wallet_id )
         wallet_pending_holder = document.querySelector("#" + "pending_wallet_" + wallet_id )
+
+        wallets_details[wallet_id] = {"balance": parseFloat(Number(chia_confirmed))}
 
         if (g_wallet_id == wallet_id) {
             balance_textfield.innerHTML = chia_confirmed + " CH"
@@ -332,8 +342,9 @@ function get_wallets() {
 function get_wallets_response(data) {
     wallets_tab.innerHTML = ""
     new_innerHTML = ""
+    offers_list.innerHTML = ""
+    offers_new_innerHTML = ""
     const wallets = data["wallets"]
-
     for (var i = 0; i < wallets.length; i++) {
         var wallet = wallets[i];
         var type = wallet["type"]
@@ -344,10 +355,13 @@ function get_wallets_response(data) {
         var href = ""
         if (type == "STANDARD_WALLET") {
             href = "../wallet-dark.html"
+            offers_new_innerHTML += offer_input(id, name, type)
         } else if (type == "RATE_LIMITED") {
             href = "../rl_wallet/rl_wallet.html"
         } else if (type == "COLOURED_COIN") {
             href = "../cc_wallet/cc_wallet.html"
+            offers_new_innerHTML += offer_input(id, name, type)
+            get_colour(id)
         }
 
         if (id == g_wallet_id) {
@@ -359,6 +373,7 @@ function get_wallets_response(data) {
     }
     new_innerHTML += create_wallet_button()
     wallets_tab.innerHTML = new_innerHTML
+    offers_list.innerHTML = offers_new_innerHTML
 }
 
 function get_colour(id) {
@@ -378,8 +393,12 @@ function get_colour(id) {
 }
 
 function get_colour_response(response) {
+    wallet_id = response["wallet_id"]
     colour = response["colour"]
-    colour_textfield.innerHTML = "Colour: " + colour;
+    wallets_details[2]["colour"] = colour
+    if (wallet_id == g_wallet_id) {
+      colour_textfield.innerHTML = "Colour: " + colour;
+    }
 }
 
 function get_colour_name(id) {
@@ -400,7 +419,6 @@ function get_colour_name(id) {
 
 function get_colour_name_response(response) {
     colour_name = response["name"]
-    console.log(colour_name)
     if (colour_name == "{}") {
       colour_name_textfield.innerHTML = "Colour nickname: [N/A]";
     }
@@ -488,7 +506,6 @@ function cc_spend_response(response) {
     /*
     Called when response is received for cc_spend request
     */
-   console.log(JSON.stringify(response));
    status = response["status"];
    if (status === "SUCCESS") {
        dialogs.alert("Transaction accepted succesfully into the mempool.", ok => {});
@@ -553,6 +570,108 @@ function get_innerpuzzlehash_response(response) {
     QRCode.toCanvas(canvas, response["innerpuz"], function (error) {
     if (error) console.error(error)
     })
+}
+
+function offer_input(id, wallet_name, wallet_type) {
+  offer_counter++;
+  var offer_balance_id = "offer_balance_wallet_" + id
+  var wallet_name_id = "wallet_name_" + id
+  const template = `<div class="input-group" style="padding-top:0px; padding-bottom:15px;">
+  <p id="${wallet_name_id}">${wallet_name}</p>
+  <div class="input-group" style="padding-top:0px">
+  <input type="text" class="form-control"  id="${offer_balance_id}" value="">
+  </div>/`
+  return template
+}
+
+offer_send.addEventListener('click', () => {
+    /*
+    Called when offer_send button in ui is pressed.
+    */
+
+    if (global_syncing) {
+        dialogs.alert("Can't send transactions while syncing.", ok => {});
+        return
+    }
+    if (global_sending_offer) {
+        return;
+    }
+
+    try {
+      offers = {}
+      puzzle_hash = offer_receiver_address.value;
+      if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
+          puzzle_hash = puzzle_hash.substring(2);
+      }
+      if (puzzle_hash.length != 64) {
+          alert("Please enter a 32 byte puzzle hash in hexadecimal format");
+          return;
+      }
+      for (var i = 0; i < offer_counter; i++) {
+        offer_amount = document.querySelector("#" + "offer_balance_wallet_" + (i+1) )
+        amount_value = parseFloat(Number(offer_amount.value));
+        if (isNaN(amount_value)) {
+          alert("Please enter a valid numeric amount");
+          return;
+        }
+        offers[(i+1)] = amount_value
+        global_sending_offer = true;
+        mojo_amount = chia_formatter(amount_value, 'chia').to('mojo').value()
+      }
+
+      offer_send.disabled = true;
+      offer_send.innerHTML = "SENDING...";
+      data = {
+          "colours": offers
+      }
+
+      request = {
+          "command": "create_offer",
+          "data": data
+      }
+      json_data = JSON.stringify(request);
+      ws.send(json_data);
+    } catch (error) {
+        alert("Error sending the transaction").
+        global_sending_offer = false;
+        offer_send.disabled = false;
+        offer_send.innerHTML = "SEND";
+    }
+})
+
+print_zero.addEventListener('click', () => {
+    /*
+    Called when print_zero button in ui is pressed.
+    */
+    print_zero.disabled = true;
+    print_zero.innerHTML = "PRINTING...";
+    data = {
+        "wallet_id": g_wallet_id
+    }
+    request = {
+        "command": "cc_generate_zero_val",
+        "data": data
+    }
+    json_data = JSON.stringify(request);
+    ws.send(json_data);
+  })
+
+function print_zero_response(response) {
+    /*
+    Called when response is received for print_zero request
+    */
+    status = response["status"];
+    if (status === "SUCCESS") {
+      dialogs.alert("Transaction accepted succesfully into the mempool.", ok => {});
+      print_zero.disabled = false;
+      print_zero.innerHTML = "PRINT";
+    } else if (status === "PENDING") {
+      dialogs.alert("Transaction is pending acceptance into the mempool. Reason: " + response["reason"], ok => {});
+    } else if (status === "FAILED") {
+      dialogs.alert("Transaction failed. Reason: " + response["reason"], ok => {});
+    }
+    print_zero.disabled = false;
+    print_zero.innerHTML = "PRINT";
 }
 
 async function get_transactions() {
