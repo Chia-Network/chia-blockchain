@@ -422,56 +422,30 @@ class WebSocketServer:
             "wallet_id": wallet_id}
         return await websocket.send(format_response(response_api, response))
 
-    async def create_offer_for_colours(self, websocket, request, response_api):
-        # request["colours"] = {"1234abcd": 100, "fadeddab": -50, None: 20}
-        spend_bundle = None
-        for colour in request["colours"].keys():
-            amount = request["colours"][colour]
-            if colour is None:
-                self.wallet_node.wallet_state_manager.main_wallet.create_spend_bundle_relative_chia(
-                    amount
-                )
-            else:
-                wallet: CCWallet = self.wallet_node.wallet_state_manager.get_wallet_for_colour(
-                    colour
-                )
-                if spend_bundle is None:
-                    spend_bundle = wallet.create_spend_bundle_relative_amount(amount)
-                    if spend_bundle is None:
-                        return None
-                else:
-                    new_bundle = wallet.create_spend_bundle_relative_amount(amount)
-                    if new_bundle is None:
-                        return None
-                    spend_bundle = spend_bundle.aggregate([spend_bundle, new_bundle])
-
-        f = open(request["filename"], "w")
-        f.write(bytes(spend_bundle).hex())
-        f.close()
-        response = {"success": "SUCCESS"}
-        return await websocket.send(format_response(response_api, response))
-
     async def create_offer_for_ids(self, websocket, request, response_api):
         # request["ids"] = {1: 100, 2: -50, 4: 20}
         spend_bundle = None
-        for id in request["ids"].keys():
-            amount = request["ids"][id]
-            wallet_id = int(id)
-            wallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
-            if isinstance(wallet, CCWallet):
-                new_spend_bundle = await wallet.create_spend_bundle_relative_amount(amount)
-            elif isinstance(wallet, Wallet):
-                new_spend_bundle = await wallet.create_spend_bundle_relative_chia(
-                    amount
-                )
-            if spend_bundle is None:
-                spend_bundle = new_spend_bundle
-            else:
-                spend_bundle = SpendBundle.aggregate([spend_bundle, new_spend_bundle])
-        f = open(request["filename"], "w")
-        f.write(bytes(spend_bundle).hex())
-        f.close()
-        response = {"success": "SUCCESS"}
+        try:
+            for id in request["ids"].keys():
+                amount = request["ids"][id]
+                wallet_id = int(id)
+                wallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+                if isinstance(wallet, CCWallet):
+                    new_spend_bundle = await wallet.create_spend_bundle_relative_amount(amount)
+                elif isinstance(wallet, Wallet):
+                    new_spend_bundle = await wallet.create_spend_bundle_relative_chia(
+                        amount
+                    )
+                if spend_bundle is None:
+                    spend_bundle = new_spend_bundle
+                else:
+                    spend_bundle = SpendBundle.aggregate([spend_bundle, new_spend_bundle])
+            f = open(request["filename"], "w")
+            f.write(bytes(spend_bundle).hex())
+            f.close()
+            response = {"success": True}
+        except Exception:
+            response = {"success": False}
         return await websocket.send(format_response(response_api, response))
 
     async def get_discrepancies_for_offer(self, websocket, request, response_api):

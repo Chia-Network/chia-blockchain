@@ -146,6 +146,10 @@ function set_callbacks(socket) {
             get_wallets_response(data)
         } else if (command == "cc_generate_zero_val") {
             print_zero_response(data)
+        } else if (command == "get_discrepancies_for_offer") {
+            get_discrepancies_for_offer_response(data)
+        } else if (command == "create_offer_for_ids") {
+            create_offer_for_ids_response(data)
         }
     });
 
@@ -570,6 +574,14 @@ function get_innerpuzzlehash_response(response) {
     QRCode.toCanvas(canvas, response["innerpuz"], function (error) {
     if (error) console.error(error)
     })
+}
+
+function get_discrepancies_for_offer_response(response) {
+  
+}
+
+function create_offer_for_ids_response(response) {
+
 }
 
 function offer_input(id, wallet_name, wallet_type) {
