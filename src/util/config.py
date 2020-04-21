@@ -19,7 +19,9 @@ def create_default_chia_config(root_path: Path) -> None:
         mkdir(path.parent)
         with open(path, "w") as f:
             f.write(default_config_file_data)
-    save_config(root_path, "plots.yaml", {"plots": {}})
+    plot_yaml_path: Path = root_path / "config" / "plots.yaml"
+    if not plot_yaml_path.exists():
+        save_config(root_path, "plots.yaml", {"plots": {}})
 
 
 def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Path:

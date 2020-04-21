@@ -150,7 +150,7 @@ class FullNodeView {
         }
         for (let tip of tips) {
             let curr = tip;
-            while (curr.data.height > Math.max(0, (max_height - NUM_LATEST_BLOCKS))){
+            while (curr.data.height >= Math.max(0, (max_height - NUM_LATEST_BLOCKS))){
                 const hh = await hash_header(curr);
                 if (hashes.has(hh)) {
                     break;
@@ -160,6 +160,7 @@ class FullNodeView {
                     "header": curr,
                 });
                 hashes.add(hh);
+                if (curr.data.height == 0) break;
                 let prev_header = await rpc_client.get_header(curr.data.prev_header_hash);
                 curr = prev_header;
             }

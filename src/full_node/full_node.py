@@ -897,7 +897,7 @@ class FullNode:
         for block in blocks:
             assert block.proof_of_time is not None
             if (
-                block.proof_of_time.witness_type == 1
+                block.proof_of_time.witness_type == 0
                 and block.proof_of_time.challenge_hash
                 == request_compact_proof_of_time.challenge_hash
                 and block.proof_of_time.number_of_iterations
@@ -1776,9 +1776,7 @@ class FullNode:
         self.log.info(f"Trying to connect to peers: {to_connect}")
         tasks = []
         for peer in to_connect:
-            tasks.append(
-                asyncio.create_task(self.server.start_client(peer, None))
-            )
+            tasks.append(asyncio.create_task(self.server.start_client(peer, None)))
         await asyncio.gather(*tasks)
 
     @api_request

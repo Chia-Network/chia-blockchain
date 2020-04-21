@@ -240,9 +240,7 @@ class WalletNode:
         tasks = []
         for peer in to_connect:
             tasks.append(
-                asyncio.create_task(
-                    self.server.start_client(peer, self._on_connect)
-                )
+                asyncio.create_task(self.server.start_client(peer, self._on_connect))
             )
         await asyncio.gather(*tasks)
 

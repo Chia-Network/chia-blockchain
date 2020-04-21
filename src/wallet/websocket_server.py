@@ -394,7 +394,13 @@ async def start_websocket_server():
 
     log.info(f"Starting wallet server on port {config['port']}.")
     server = ChiaServer(
-        config["port"], wallet_node, NodeType.WALLET, ping_interval, network_id
+        config["port"],
+        wallet_node,
+        NodeType.WALLET,
+        ping_interval,
+        network_id,
+        DEFAULT_ROOT_PATH,
+        config,
     )
     wallet_node.set_server(server)
 
