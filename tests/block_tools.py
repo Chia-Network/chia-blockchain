@@ -329,7 +329,11 @@ class BlockTools:
         return block_list
 
     def create_genesis_block(
-        self, input_constants: Dict, challenge_hash=bytes([0] * 32), seed: bytes = b""
+        self,
+        input_constants: Dict,
+        challenge_hash=bytes([0] * 32),
+        seed: bytes = b"",
+        reward_puzzlehash: Optional[bytes32] = None,
     ) -> FullBlock:
         """
         Creates the genesis block with the specified details.
@@ -350,6 +354,7 @@ class BlockTools:
             uint64(test_constants["MIN_ITERS_STARTING"]),
             seed,
             True,
+            reward_puzzlehash,
         )
 
     def create_next_block(
@@ -494,7 +499,7 @@ class BlockTools:
         number_iters: uint64 = pot_iterations.calculate_iterations(
             proof_of_space, difficulty, min_iters
         )
-        print("Doing iters", number_iters)
+        # print("Doing iters", number_iters)
         int_size = (test_constants["DISCRIMINANT_SIZE_BITS"] + 16) >> 4
 
         result = prove(
@@ -613,4 +618,15 @@ class BlockTools:
 # Run by doing python -m tests.block_tools
 if __name__ == "__main__":
     bt = BlockTools(real_plots=True)
-    print(bytes(bt.create_genesis_block({}, bytes([1] * 32), b"0")))
+    print(
+        bytes(
+            bt.create_genesis_block(
+                {},
+                bytes([1] * 32),
+                b"0",
+                bytes.fromhex(
+                    "28312557aa71341a143a87d4b78416efdd049ec8e98e77ddf88bdab94a186fb6"
+                ),
+            )
+        )
+    )
