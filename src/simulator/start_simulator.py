@@ -76,9 +76,10 @@ async def main():
         ping_interval,
         network_id,
         DEFAULT_ROOT_PATH,
+        config
     )
     full_node._set_server(server)
-    _ = await server.start_server(full_node._on_connect, config)
+    _ = await server.start_server(full_node._on_connect)
     rpc_cleanup = None
 
     def master_close_cb():
