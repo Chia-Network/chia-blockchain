@@ -126,8 +126,8 @@ def cc_generate_eve_spend(coin: Coin, full_puzzle: Program):
 
 
 # Returns the relative difference in value between the amount outputted by a puzzle and solution and a coin's amount
-def get_output_discrepancy_for_puzzle_and_solution(self, coin, puzzle, solution):
-    discrepancy = coin.amount - self.get_output_amount_for_puzzle_and_solution(
+def get_output_discrepancy_for_puzzle_and_solution(coin, puzzle, solution):
+    discrepancy = coin.amount - get_output_amount_for_puzzle_and_solution(
         puzzle, solution
     )
     return discrepancy
@@ -135,7 +135,7 @@ def get_output_discrepancy_for_puzzle_and_solution(self, coin, puzzle, solution)
     # Returns the amount of value outputted by a puzzle and solution
 
 
-def get_output_amount_for_puzzle_and_solution(self, puzzle, solution):
+def get_output_amount_for_puzzle_and_solution(puzzle, solution):
     conditions = clvm.run_program(puzzle, solution)[1]
     amount = 0
     while conditions != b"":

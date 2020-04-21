@@ -352,7 +352,7 @@ class Wallet:
 
         # Create an offer spend bundle for chia given an amount of relative change (i.e -400 or 1000)
     # This is to be aggregated together with a coloured coin offer to ensure that the trade happens
-    async def create_spend_bundle_relative_chia(self, chia_amount: uint64):
+    async def create_spend_bundle_relative_chia(self, chia_amount: int):
         list_of_solutions = []
         utxos = None
 
