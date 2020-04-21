@@ -948,10 +948,11 @@ class WalletNode:
         )
         request_all_removals = False
         for coin in additions:
-            record_info: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+            puzzle_store = self.wallet_state_manager.puzzle_store
+            record_info: Optional[DerivationRecord] = await puzzle_store.get_derivation_record_for_puzzle_hash(
                 coin.puzzle_hash.hex()
             )
-            if record_info.wallet_type == WalletType.COLOURED_COIN:
+            if record_info is not None and record_info.wallet_type == WalletType.COLOURED_COIN:
                 request_all_removals = True
                 break
 
@@ -1101,12 +1102,13 @@ class WalletNode:
         The full node respond with transaction generator
         """
         wrapper = response.generatorResponse
-        self.log.info(
-            f"generator received {wrapper.header_hash} {wrapper.generator.get_tree_hash()} {wrapper.height}"
-        )
-        await self.wallet_state_manager.generator_received(
-            wrapper.height, wrapper.header_hash, wrapper.generator
-        )
+        if wrapper.generator is not None:
+            self.log.info(
+                f"generator received {wrapper.header_hash} {wrapper.generator.get_tree_hash()} {wrapper.height}"
+            )
+            await self.wallet_state_manager.generator_received(
+                wrapper.height, wrapper.header_hash, wrapper.generator
+            )
 
     @api_request
     async def reject_generator(self, response: wallet_protocol.RejectGeneratorRequest):

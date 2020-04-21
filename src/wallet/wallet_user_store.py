@@ -58,7 +58,7 @@ class WalletUserStore:
 
     async def create_wallet(
         self, name: str, wallet_type: WalletType, data: str
-    ) -> WalletInfo:
+    ) -> Optional[WalletInfo]:
         cursor = await self.db_connection.execute(
             "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
             (None, name, wallet_type.value, data),
