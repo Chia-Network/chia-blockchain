@@ -1137,7 +1137,7 @@ class TestBlockchainTransactions:
             next_block.proof_of_time,
             Header(
                 bad_header,
-                BlockTools.get_harvester_signature(
+                bt.get_harvester_signature(
                     bad_header, next_block.proof_of_space.plot_pubkey
                 ),
             ),

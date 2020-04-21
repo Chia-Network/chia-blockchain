@@ -154,7 +154,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                BlockTools.get_harvester_signature(
+                bt.get_harvester_signature(
                     new_header_data, blocks[9].proof_of_space.plot_pubkey
                 ),
             ),
@@ -189,7 +189,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                BlockTools.get_harvester_signature(
+                bt.get_harvester_signature(
                     new_header_data, blocks[9].proof_of_space.plot_pubkey
                 ),
             ),
@@ -227,7 +227,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                BlockTools.get_harvester_signature(
+                bt.get_harvester_signature(
                     new_header_data, blocks[9].proof_of_space.plot_pubkey
                 ),
             ),
@@ -294,7 +294,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                BlockTools.get_harvester_signature(
+                bt.get_harvester_signature(
                     new_header_data, blocks[9].proof_of_space.plot_pubkey
                 ),
             ),
@@ -343,7 +343,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                BlockTools.get_harvester_signature(
+                bt.get_harvester_signature(
                     new_header_data, blocks[9].proof_of_space.plot_pubkey
                 ),
             ),
@@ -382,7 +382,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                BlockTools.get_harvester_signature(
+                bt.get_harvester_signature(
                     new_header_data, blocks[9].proof_of_space.plot_pubkey
                 ),
             ),
@@ -401,7 +401,9 @@ class TestBlockValidation:
             blocks[9].header.data.height,
             blocks[9].header.data.coinbase.puzzle_hash,
             uint64(9991),
-            bt.pool_sk,
+            PrivateKey.from_bytes(
+                bytes.fromhex(list(bt.plot_config["plots"].values())[0]["pool_sk"])
+            ),
         )
         new_header_data = HeaderData(
             blocks[9].header.data.height,
@@ -428,7 +430,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                BlockTools.get_harvester_signature(
+                bt.get_harvester_signature(
                     new_header_data, blocks[9].proof_of_space.plot_pubkey
                 ),
             ),
@@ -447,7 +449,9 @@ class TestBlockValidation:
             blocks[9].header.data.height,
             blocks[9].header.data.coinbase.puzzle_hash,
             uint64(9991),
-            bt.pool_sk,
+            PrivateKey.from_bytes(
+                bytes.fromhex(list(bt.plot_config["plots"].values())[0]["pool_sk"])
+            ),
         )
         new_header_data = HeaderData(
             blocks[9].header.data.height,
@@ -474,7 +478,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                BlockTools.get_harvester_signature(
+                bt.get_harvester_signature(
                     new_header_data, blocks[9].proof_of_space.plot_pubkey
                 ),
             ),

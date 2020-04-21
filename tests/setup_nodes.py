@@ -253,7 +253,9 @@ async def setup_harvester(port, dic={}):
 
 async def setup_farmer(port, dic={}):
     config = load_config(root_path, "config.yaml", "farmer")
-    pool_sk = bt.pool_sk
+    pool_sk = blspy.PrivateKey.from_bytes(
+        bytes.fromhex(list(bt.plot_config["plots"].values())[0]["pool_sk"])
+    )
     pool_target = create_puzzlehash_for_pk(
         BLSPublicKey(bytes(pool_sk.get_public_key()))
     )
