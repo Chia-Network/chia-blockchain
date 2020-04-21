@@ -626,7 +626,6 @@ offer_create.addEventListener('click', () => {
           "data": data
       }
       json_data = JSON.stringify(request);
-      alert(json_data);
       ws.send(json_data);
     } catch (error) {
         alert("Error creating the offer").

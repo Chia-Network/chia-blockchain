@@ -528,8 +528,8 @@ class WebSocketServer:
                             puzzle, solution
                         )
                     )
-
-        return cc_discrepancies
+        response = {"discrepancies": cc_discrepancies}
+        return await websocket.send(format_response(response_api, response))
 
     async def respond_to_offer(self, websocket, request, response_api):
         f = open(request["filename"], "r")
