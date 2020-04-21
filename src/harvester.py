@@ -1,7 +1,7 @@
 import logging
 import asyncio
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, List
 
 from blspy import PrependSignature, PrivateKey, PublicKey, Util
 
@@ -17,6 +17,46 @@ from src.util.ints import uint8
 from src.util.path import path_from_root
 
 log = logging.getLogger(__name__)
+
+
+def load_plots(
+    config_file: Dict, plot_config_file: Dict, pool_pubkeys: List[PublicKey]
+) -> Dict[Path, DiskProver]:
+    provers: Dict[Path, DiskProver] = {}
+    for partial_filename_str, plot_config in plot_config_file["plots"].items():
+        plot_root = path_from_root(DEFAULT_ROOT_PATH, config_file.get("plot_root", "."))
+        partial_filename = plot_root / partial_filename_str
+        potential_filenames = [
+            partial_filename,
+            path_from_root(plot_root, partial_filename_str),
+        ]
+        pool_pubkey = PublicKey.from_bytes(bytes.fromhex(plot_config["pool_pk"]))
+
+        # Only use plots that correct pools associated with them
+        if pool_pubkey not in pool_pubkeys:
+            log.warning(
+                f"Plot {partial_filename} has a pool key that is not in the farmer's pool_pk list."
+            )
+            continue
+
+        found = False
+        failed_to_open = False
+        for filename in potential_filenames:
+            if filename.exists():
+                try:
+                    provers[partial_filename_str] = DiskProver(str(filename))
+                except ValueError:
+                    log.error(f"Failed to open file {filename}.")
+                    failed_to_open = True
+                    break
+                log.info(
+                    f"Farming plot {filename} of size {provers[partial_filename_str].get_size()}"
+                )
+                found = True
+                break
+        if not found and not failed_to_open:
+            log.warning(f"Plot at {potential_filenames} does not exist.")
+    return provers
 
 
 class Harvester:
@@ -97,41 +137,9 @@ class Harvester:
         which must be put into the plots, before the plotting process begins. We cannot
         use any plots which don't have one of the pool keys.
         """
-        for partial_filename_str, plot_config in self.plot_config["plots"].items():
-            plot_root = path_from_root(
-                DEFAULT_ROOT_PATH, self.config.get("plot_root", ".")
-            )
-            partial_filename = plot_root / partial_filename_str
-            potential_filenames = [
-                partial_filename,
-                path_from_root(plot_root, partial_filename_str),
-            ]
-            pool_pubkey = PublicKey.from_bytes(bytes.fromhex(plot_config["pool_pk"]))
-
-            # Only use plots that correct pools associated with them
-            if pool_pubkey not in harvester_handshake.pool_pubkeys:
-                log.warning(
-                    f"Plot {partial_filename} has a pool key that is not in the farmer's pool_pk list."
-                )
-                continue
-
-            found = False
-            failed_to_open = False
-            for filename in potential_filenames:
-                if filename.exists():
-                    try:
-                        self.provers[partial_filename_str] = DiskProver(str(filename))
-                    except ValueError:
-                        log.error(f"Failed to open file {filename}.")
-                        failed_to_open = True
-                        break
-                    log.info(
-                        f"Farming plot {filename} of size {self.provers[partial_filename_str].get_size()}"
-                    )
-                    found = True
-                    break
-            if not found and not failed_to_open:
-                log.warning(f"Plot at {potential_filenames} does not exist.")
+        self.provers = load_plots(
+            self.config, self.plot_config, harvester_handshake.pool_pubkeys
+        )
         if len(self.provers) == 0:
             log.warning(
                 "Not farming any plots on this harvester. Check your configuration."

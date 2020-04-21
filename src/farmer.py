@@ -339,7 +339,7 @@ class Farmer:
             ]
 
             coinbase_reward = uint64(
-                calculate_block_reward(proof_of_space_finalized.height)
+                calculate_block_reward(uint32(proof_of_space_finalized.height + 1))
             )
 
             coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
