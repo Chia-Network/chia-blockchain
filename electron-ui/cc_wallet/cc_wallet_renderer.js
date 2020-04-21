@@ -656,11 +656,11 @@ function create_offer_for_ids_response(response) {
     Called when response is received for create_offer_for_ids request
     */
    status = response["success"];
-   if (status === True) {
+   if (status === true) {
        dialogs.alert("Offer accepted succesfully into the mempool.", ok => {});
        receiver_address.value = "";
        amount.value = "";
-   } else if (status === False) {
+   } else if (status === false) {
        dialogs.alert("Offer failed. Reason: " + response["reason"], ok => {});
    }
     global_sending_offer = false;
