@@ -708,9 +708,9 @@ class CCWallet:
         # If we're losing value then get coloured coins with at least that much value
         # If we're gaining value then our amount doesn't matter
         if cc_amount < 0:
-            cc_spends = self.select_coins(abs(cc_amount))
+            cc_spends = await self.select_coins(abs(cc_amount))
         else:
-            cc_spends = self.cc_select_coins(1)
+            cc_spends = await self.cc_select_coins(1)
         if cc_spends is None:
             return None
 
@@ -724,7 +724,7 @@ class CCWallet:
         sigs = []
         for coin in cc_spends:
             if output_created is None:
-                newinnerpuzhash = self.get_new_inner_hash()
+                newinnerpuzhash = await self.get_new_inner_hash()
                 innersol = self.standard_wallet.make_solution(
                     primaries=[{"puzzlehash": newinnerpuzhash, "amount": cc_amount}]
                 )
@@ -732,10 +732,18 @@ class CCWallet:
             else:
                 innersol = self.standard_wallet.make_solution()
             innerpuz: Program = await self.inner_puzzle_for_cc_puzzle(coin.puzzle_hash)
+
+            parent_info = await self.get_parent_for_coin(coin)
+            assert parent_info is not None
+
             # Use coin info to create solution and add coin and solution to list of CoinSolutions
             solution = cc_wallet_puzzles.cc_make_solution(
                 self.cc_info.my_core,
-                self.parent_info[coin.parent_coin_info],
+                (
+                    parent_info.parent_name,
+                    parent_info.inner_puzzle_hash,
+                    parent_info.amount,
+                ),
                 coin.amount,
                 binutils.disassemble(innerpuz),
                 binutils.disassemble(innersol),
@@ -747,7 +755,7 @@ class CCWallet:
                     coin,
                     clvm.to_sexp_f(
                         [
-                            self.cc_make_puzzle(
+                            cc_wallet_puzzles.cc_make_puzzle(
                                 innerpuz.get_tree_hash(), self.cc_info.my_core
                             ),
                             solution,
@@ -755,11 +763,11 @@ class CCWallet:
                     ),
                 )
             )
-            sigs = sigs + self.get_sigs(innerpuz, innersol)
+            sigs = sigs + await self.get_sigs(innerpuz, innersol)
 
         aggsig = BLSSignature.aggregate(sigs)
-
-        return SpendBundle(list_of_solutions, aggsig)
+        spend_bundle = SpendBundle(list_of_solutions, aggsig)
+        return spend_bundle
 
     # Create an offer spend bundle for chia given an amount of relative change (i.e -400 or 1000)
     # This is to be aggregated together with a coloured coin offer to ensure that the trade happens
