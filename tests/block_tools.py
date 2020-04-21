@@ -622,7 +622,7 @@ if __name__ == "__main__":
         bytes(
             bt.create_genesis_block(
                 {},
-                bytes([1] * 32),
+                bytes([12] * 32),
                 b"0",
                 bytes.fromhex(
                     "28312557aa71341a143a87d4b78416efdd049ec8e98e77ddf88bdab94a186fb6"
