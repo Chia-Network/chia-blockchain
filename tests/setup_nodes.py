@@ -476,9 +476,9 @@ async def setup_simulators_and_wallets(
 async def setup_full_system(dic={}):
     node_iters = [
         setup_introducer(21233),
-        setup_harvester(21234),
-        setup_farmer(21235),
-        setup_timelord(21236),
+        setup_harvester(21234, dic),
+        setup_farmer(21235, dic),
+        setup_timelord(21236, dic),
         setup_vdf_clients(8000),
         setup_full_node("blockchain_test.db", 21237, 21233, dic),
         setup_full_node("blockchain_test_2.db", 21238, 21233, dic),

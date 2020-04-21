@@ -11,12 +11,14 @@ catch {
 $packageName = "chia-$env:version.exe"
 
 Write-Host "Compiling $packageName"
-candle "$sourceDir\bundle.wxs" "$sourceDir\msvc2019-package.wxs" "$sourceDir\blockchain-package.wxs" "$sourceDir\wallet-package.wxs" `
+candle "$sourceDir\bundle.wxs" "$sourceDir\python-package.wxs" "$sourceDir\msvc2019-package.wxs" `
+            "$sourceDir\blockchain-package.wxs" "$sourceDir\wallet-package.wxs" `
             -nologo -o "$buildDir\" -ext WixBalExtension -ext WixUtilExtension
 if ($LastExitCode) { exit $LastExitCode }
 
 Write-Host "Building $packageName"
-light "$buildDir\bundle.wixobj" "$buildDir\msvc2019-package.wixobj" "$buildDir\blockchain-package.wixobj" "$buildDir\wallet-package.wixobj" `
+light "$buildDir\bundle.wixobj" "$buildDir\python-package.wixobj" "$buildDir\msvc2019-package.wixobj" `
+            "$buildDir\blockchain-package.wixobj" "$buildDir\wallet-package.wixobj" `
             -nologo -o "$buildDir\$packageName" -sw1133 -ext WixBalExtension -ext WixUtilExtension
 if ($LastExitCode) { exit $LastExitCode }
 

@@ -114,10 +114,6 @@ async def async_main():
 
     full_node._start_bg_tasks()
 
-    log.info("Waiting to connect to some peers...")
-    await asyncio.sleep(3)
-    log.info(f"Connected to {len(server.global_connections.get_connections())} peers.")
-
     # Awaits for server and all connections to close
     await server.await_closed()
     log.info("Closed all node servers.")

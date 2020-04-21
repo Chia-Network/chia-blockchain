@@ -13,7 +13,7 @@
 
     <?define bundleUpgradeCode="BEC2F30C-D162-4303-928C-A43894D7CE84"?>
 
-    <?define pythonVersion="3.7.7"?>
+    <?define pythonVersion="3.7.6"?>
     <?define msvc2019Version="14.25.28508"?>
     <?define msvc2019RegistryKey="VC,redist.x64,amd64,14.25,bundle"?>
 

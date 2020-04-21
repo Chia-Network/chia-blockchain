@@ -1194,7 +1194,14 @@ class TestBlockchainTransactions:
         # Create another block that includes our transaction
         dic_h = {11: (program, aggsig)}
         invalid_new_blocks = bt.get_consecutive_blocks(
-            test_constants, 1, blocks, 10, b"", coinbase_puzzlehash, dic_h, fees=9
+            test_constants,
+            1,
+            blocks,
+            10,
+            b"",
+            coinbase_puzzlehash,
+            dic_h,
+            fees=uint64(9),
         )
 
         # Try to validate that block at index 11
@@ -1218,7 +1225,14 @@ class TestBlockchainTransactions:
 
         dic_h = {11: (valid_program, aggsig)}
         valid_new_blocks = bt.get_consecutive_blocks(
-            test_constants, 1, blocks[:11], 10, b"", coinbase_puzzlehash, dic_h, fees=10
+            test_constants,
+            1,
+            blocks[:11],
+            10,
+            b"",
+            coinbase_puzzlehash,
+            dic_h,
+            fees=uint64(10),
         )
 
         next_block = valid_new_blocks[11]
