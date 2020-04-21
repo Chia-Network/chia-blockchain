@@ -22,6 +22,8 @@ let copy = document.querySelector("#copy")
 let new_address = document.querySelector('#new_address')
 let create_offer_file_path = document.querySelector("#create_offer_file_path")
 let offer_create = document.querySelector('#offer_create')
+let receive_offer_file_path = document.querySelector("#receive_offer_file_path")
+let offer_view = document.querySelector('#offer_view')
 let print_zero = document.querySelector('#print_zero')
 let balance_textfield = document.querySelector('#balance_textfield')
 let pending_textfield = document.querySelector('#pending_textfield')
@@ -41,6 +43,7 @@ const lock = "<i class=\"icon ion-md-lock\"></i>"
 var global_syncing = true
 var global_sending_transaction = false
 var global_sending_offer = false
+var global_creating_offer = false
 var local_test = electron.remote.getGlobal('sharedObj').local_test;
 var g_wallet_id = get_query_variable("wallet_id")
 var wallets_details = {}
@@ -577,7 +580,7 @@ function get_innerpuzzlehash_response(response) {
 }
 
 function get_discrepancies_for_offer_response(response) {
-  
+
 }
 
 function create_offer_for_ids_response(response) {
@@ -588,7 +591,7 @@ function offer_input(id, wallet_name, wallet_type) {
   offer_counter++;
   var offer_balance_id = "offer_balance_wallet_" + id
   var wallet_name_id = "wallet_name_" + id
-  const template = `<div class="input-group" style="padding-top:0px; padding-bottom:15px;">
+  const template = `<div class="input-group" style="padding-top:0px; padding-top:15px;">
   <p id="${wallet_name_id}">${wallet_name}</p>
   <div class="input-group" style="padding-top:0px">
   <input type="number" class="form-control"  id="${offer_balance_id}" value="">
@@ -602,7 +605,7 @@ offer_create.addEventListener('click', () => {
     */
 
     if (global_syncing) {
-        dialogs.alert("Can't send transactions while syncing.", ok => {});
+        dialogs.alert("Can't create offers while syncing.", ok => {});
         return
     }
     if (global_sending_offer) {
@@ -638,6 +641,7 @@ offer_create.addEventListener('click', () => {
           "data": data
       }
       json_data = JSON.stringify(request);
+      console.log(json_data)
       ws.send(json_data);
     } catch (error) {
         alert("Error creating the offer").
@@ -646,6 +650,49 @@ offer_create.addEventListener('click', () => {
         offer_create.innerHTML = "CREATE OFFER";
     }
 })
+
+function create_offer_for_ids_response(response) {
+    /*
+    Called when response is received for create_offer_for_ids request
+    */
+   status = response["success"];
+   if (status === True) {
+       dialogs.alert("Offer accepted succesfully into the mempool.", ok => {});
+       receiver_address.value = "";
+       amount.value = "";
+   } else if (status === False) {
+       dialogs.alert("Offer failed. Reason: " + response["reason"], ok => {});
+   }
+    global_sending_offer = false;
+    offer_create.disabled = false;
+    offer_create.innerHTML = "CREATE OFFER";
+}
+
+offer_view.addEventListener('click', () => {
+    /*
+    Called when offer_view button in ui is pressed.
+    */
+
+    if (global_syncing) {
+        dialogs.alert("Can't view offers while syncing.", ok => {});
+        return
+    }
+
+    receive_offer_file_path.value
+
+    data = {
+        "filename": receive_offer_file_path,
+    }
+
+    request = {
+        "command": "get_discrepancies_for_offer",
+        "data": data,
+    }
+
+    json_data = JSON.stringify(request);
+    ws.send(json_data);
+
+  })
 
 print_zero.addEventListener('click', () => {
     /*
