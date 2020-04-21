@@ -227,7 +227,10 @@ class WalletStateManager:
                 uint32
             ] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
 
-            to_generate = 50
+            if target_wallet.wallet_info.type == WalletType.COLOURED_COIN:
+                to_generate = 100
+            else:
+                to_generate = 500
             start_index = 0
             derivation_paths: List[DerivationRecord] = []
 
