@@ -516,6 +516,7 @@ class WebSocketServer:
         return await websocket.send(format_response(response_api, response))
 
     async def respond_to_offer(self, websocket, request, response_api):
+        response = {"success": False}
         try:
             f = open(request["filename"], "r")
             trade_offer_hex = f.read()
