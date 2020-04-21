@@ -694,7 +694,7 @@ class CCWallet:
         if cc_amount < 0:
             cc_spends = await self.select_coins(abs(cc_amount))
         else:
-            cc_spends = await self.cc_select_coins(1)
+            cc_spends = await self.select_coins(1)
         if cc_spends is None:
             return None
 
