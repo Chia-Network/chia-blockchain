@@ -84,7 +84,7 @@ class TestWalletSimulator:
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(0, num_blocks - 2)
+                for i in range(1, num_blocks - 1)
             ]
         )
 
@@ -115,7 +115,7 @@ class TestWalletSimulator:
         new_funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(0, (2 * num_blocks) - 2)
+                for i in range(1, (2 * num_blocks) - 1)
             ]
         )
 
@@ -258,7 +258,7 @@ class TestWalletSimulator:
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(0, num_blocks - 2)
+                for i in range(1, num_blocks - 1)
             ]
         )
 
@@ -291,7 +291,7 @@ class TestWalletSimulator:
         new_funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(0, num_blocks)
+                for i in range(1, num_blocks + 1)
             ]
         )
 
@@ -340,7 +340,7 @@ class TestWalletSimulator:
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(0, num_blocks - 2)
+                for i in range(1, num_blocks - 1)
             ]
         )
 
@@ -376,7 +376,7 @@ class TestWalletSimulator:
         new_funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(0, num_blocks)
+                for i in range(1, num_blocks + 1)
             ]
         )
 
