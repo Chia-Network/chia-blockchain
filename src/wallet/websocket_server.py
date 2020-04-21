@@ -450,60 +450,69 @@ class WebSocketServer:
         return await websocket.send(format_response(response_api, response))
 
     async def get_discrepancies_for_offer(self, websocket, request, response_api):
-        cc_discrepancies = dict()
-        wallets = dict()
-        f = open(request["filename"], "r")
-        trade_offer_hex = f.read()
-        f.close()
-        trade_offer = SpendBundle.from_bytes(bytes.fromhex(trade_offer_hex))
-        for coinsol in trade_offer.coin_solutions:
-            puzzle = coinsol.solution.first()
-            solution = coinsol.solution.rest().first()
+        try:
+            cc_discrepancies = dict()
+            wallets = dict()
+            f = open(request["filename"], "r")
+            trade_offer_hex = f.read()
+            f.close()
+            trade_offer = SpendBundle.from_bytes(bytes.fromhex(trade_offer_hex))
+            for coinsol in trade_offer.coin_solutions:
+                puzzle = coinsol.solution.first()
+                solution = coinsol.solution.rest().first()
 
-            # work out the deficits between coin amount and expected output for each
-            if cc_wallet_puzzles.check_is_cc_puzzle(puzzle):
-                colour = cc_wallet_puzzles.get_genesis_from_puzzle(
-                    binutils.disassemble(puzzle)
-                )
-                if colour not in wallets:
-                    wallets[
-                        colour
-                    ] = await self.wallet_node.wallet_state_manager.get_wallet_for_colour(
-                        colour
-                    )
-                parent_info = binutils.disassemble(solution.rest().first()).split(" ")
-                if len(parent_info) > 1:
+                # work out the deficits between coin amount and expected output for each
+                if cc_wallet_puzzles.check_is_cc_puzzle(puzzle):
                     colour = cc_wallet_puzzles.get_genesis_from_puzzle(
                         binutils.disassemble(puzzle)
                     )
-                    # get puzzle and solution
-                    innerpuzzlereveal = solution.rest().rest().rest().first()
-                    innersol = solution.rest().rest().rest().rest().first()
-                    # Get output amounts by running innerpuzzle and solution
-                    out_amount = cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
-                        innerpuzzlereveal, innersol
-                    )
-                    # add discrepancy to dict of discrepancies
-                    if colour in cc_discrepancies:
-                        cc_discrepancies[colour] += coinsol.coin.amount - out_amount
+                    if colour not in wallets:
+                        wallets[
+                            colour
+                        ] = await self.wallet_node.wallet_state_manager.get_wallet_for_colour(
+                            colour
+                        )
+                    parent_info = binutils.disassemble(solution.rest().first()).split(" ")
+                    if len(parent_info) > 1:
+                        colour = cc_wallet_puzzles.get_genesis_from_puzzle(
+                            binutils.disassemble(puzzle)
+                        )
+                        # get puzzle and solution
+                        innerpuzzlereveal = solution.rest().rest().rest().first()
+                        innersol = solution.rest().rest().rest().rest().first()
+                        # Get output amounts by running innerpuzzle and solution
+                        out_amount = cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
+                            innerpuzzlereveal, innersol
+                        )
+                        # add discrepancy to dict of discrepancies
+                        if colour in cc_discrepancies:
+                            cc_discrepancies[colour] += coinsol.coin.amount - out_amount
+                        else:
+                            cc_discrepancies[colour] = coinsol.coin.amount - out_amount
+                else:  # standard chia coin
+                    if None in cc_discrepancies:
+                        cc_discrepancies[None] += (
+                            coinsol.coin.amount
+                            - cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
+                                puzzle, solution
+                            )
+                        )
                     else:
-                        cc_discrepancies[colour] = coinsol.coin.amount - out_amount
-            else:  # standard chia coin
-                if None in cc_discrepancies:
-                    cc_discrepancies[None] += (
-                        coinsol.coin.amount
-                        - cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
-                            puzzle, solution
+                        cc_discrepancies[None] = (
+                            coinsol.coin.amount
+                            - cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
+                                puzzle, solution
+                            )
                         )
-                    )
-                else:
-                    cc_discrepancies[None] = (
-                        coinsol.coin.amount
-                        - cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
-                            puzzle, solution
-                        )
-                    )
-        response = {"discrepancies": cc_discrepancies}
+            response = {
+                "success": True,
+                "discrepancies": cc_discrepancies
+            }
+        except Exception as e:
+            response = {
+                "success": False,
+                "error": e
+            }
         return await websocket.send(format_response(response_api, response))
 
     async def respond_to_offer(self, websocket, request, response_api):
