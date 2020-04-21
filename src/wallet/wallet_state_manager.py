@@ -145,7 +145,9 @@ class WalletStateManager:
                 self.wallets[wallet_info.id] = wallet
 
         async with self.puzzle_store.lock:
-            await self.create_more_puzzle_hashes(from_zero=True)
+            index = await self.puzzle_store.get_last_derivation_path()
+            if index is None or index < 100:
+                await self.create_more_puzzle_hashes(from_zero=True)
 
         if len(self.block_records) > 0:
             # Initializes the state based on the DB block records
