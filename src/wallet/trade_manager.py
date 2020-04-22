@@ -81,6 +81,7 @@ class TradeManager:
         self, filename
     ) -> Tuple[bool, Optional[Dict], Optional[Exception]]:
         try:
+            self.log.info(f"trade offer: {filename}")
             cc_discrepancies: Dict[bytes32, int] = dict()
             wallets: Dict[bytes32, Any] = dict()
             f = open(filename, "r")
@@ -123,14 +124,14 @@ class TradeManager:
                             cc_discrepancies[colour] = coinsol.coin.amount - out_amount
                 else:  # standard chia coin
                     if None in cc_discrepancies:
-                        cc_discrepancies[None] += (
+                        cc_discrepancies["chia"] += (
                             coinsol.coin.amount
                             - cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
                                 puzzle, solution
                             )
                         )
                     else:
-                        cc_discrepancies[None] = (
+                        cc_discrepancies["chia"] = (
                             coinsol.coin.amount
                             - cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
                                 puzzle, solution

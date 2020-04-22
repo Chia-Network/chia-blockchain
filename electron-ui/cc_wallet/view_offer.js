@@ -209,7 +209,8 @@ function get_discrepancies_for_offer_response(response) {
      if (status === "true") {
        view_offer.disabled = false;
        view_offer.innerHTML = "VIEW OFFER";
-       offer_dict = response["discrepencies"]
+       offer_dict = response["discrepancies"]
+       console.log(offer_dict)
        display_offer(offer_dict)
      } else if (status === "false") {
          dialogs.alert("Error viewing offer. Reason: " + response["error"], ok => {});
@@ -247,7 +248,7 @@ accept_offer.addEventListener('click', () => {
     */
 
     accept_offer.disabled = true;
-    decline.offer.disabled = true;
+    decline_offer.disabled = true;
     accept_offer.innerHTML = "ACCEPTING...";
     data = {
         "filename": offer_file_holder,
@@ -268,7 +269,7 @@ function respond_to_offer_response(response) {
      */
      status = response["success"];
      if (status === "true") {
-       respond_to_offer.innerHTML = "PRINT";
+       //respond_to_offer.innerHTML = "PRINT";
        trade_offer_holder.innerHTML = `<div class="d-flex" style="padding-top:0px; padding-top:15px;">
        <p>Offer successfully accepted.</p>
        </div>/`
