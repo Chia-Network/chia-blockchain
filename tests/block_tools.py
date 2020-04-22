@@ -529,7 +529,7 @@ class BlockTools:
         fee_reward = uint64(block_rewards.calculate_base_fee(height) + fees)
 
         coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
-            height, reward_puzzlehash, coinbase_reward, pool_sk
+            height, reward_puzzlehash, coinbase_reward, selected_pool_sk
         )
 
         parent_coin_name = std_hash(std_hash(height))
@@ -602,7 +602,9 @@ class BlockTools:
             generator_hash,
         )
 
-        header_hash_sig: PrependSignature = plot_sk.sign_prepend(header_data.get_hash())
+        header_hash_sig: PrependSignature = selected_plot_sk.sign_prepend(
+            header_data.get_hash()
+        )
 
         header: Header = Header(header_data, header_hash_sig)
 
@@ -622,7 +624,7 @@ if __name__ == "__main__":
         bytes(
             bt.create_genesis_block(
                 {},
-                bytes([12] * 32),
+                bytes([2] * 32),
                 b"0",
                 bytes.fromhex(
                     "a4259182b4d8e0af21331fc5be2681f953400b6726fa4095e3b91ae8f005a836"

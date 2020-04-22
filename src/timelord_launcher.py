@@ -50,7 +50,6 @@ async def spawn_process(host, port, counter):
         except Exception as e:
             log.warning(f"Exception while spawning process {counter}: {(e)}")
             continue
-        log.info(f"Launched vdf client number {counter}.")
         async with lock:
             active_processes.append(proc)
         stdout, stderr = await proc.communicate()
