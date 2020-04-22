@@ -10,14 +10,14 @@
         Codepage='1252'
         Version='$(var.version)'>
         <Package Id='*'
-            Keywords='Chia Network Wallet Installer' 
+            Keywords='Chia Network Wallet Installer'
             Description="Chia Wallet Installer $(var.version)"
             Comments='$(var.Comments)'
             Manufacturer='$(var.Manufacturer)'
             InstallerVersion='500'
             Languages='1033'
             Compressed='yes'
-            SummaryCodepage='1252' 
+            SummaryCodepage='1252'
             InstallScope="perUser"/>
 
         <!-- Media and application properties -->
@@ -30,7 +30,7 @@
         <Property Id='ARPHELPLINK'>$(var.ARPHELPLINK)</Property>
         <Property Id='ARPURLINFOABOUT'>$(var.ARPURLINFOABOUT)</Property>
         <Property Id='ARPURLUPDATEINFO'>$(var.ARPURLUPDATEINFO)</Property>
-        <Property Id='MSIFASTINSTALL'>7</Property>     
+        <Property Id='MSIFASTINSTALL'>7</Property>
         <Property Id='ALLUSERS' Secure='yes'>2</Property>
         <Property Id='MSIINSTALLPERUSER' Secure='yes'>1</Property>
         <SetProperty Id="ARPNOMODIFY" Value="1" After="InstallValidate" Sequence="execute"/>
@@ -99,7 +99,7 @@
                 <Directory Id="ProgramMenuDir" Name="Chia">
                     <Component Id="ProgramMenuDir" Guid="0B8A0D75-657A-4FFC-84E8-8D40B343E7CA">
                         <Shortcut Id="ProgramMenuShortcut"
-                            Name="Chia"
+                            Name="Chia Wallet"
                             Description="Chia $(var.version)"
                             Target="[INSTALLDIR]$(var.walletExeName)"
                             WorkingDirectory="INSTALLDIR"
@@ -116,14 +116,14 @@
 
             <Directory Id="DesktopFolder" Name="Desktop" >
                 <Component Id="DesktopShortCut" Guid="4281DF51-82FC-471B-A26A-1292DFEE9738">
-                    <Shortcut Id="ApplicationDesktopShortcut" 
-                        Name="Chia"
+                    <Shortcut Id="ApplicationDesktopShortcut"
+                        Name="Chia Wallet"
                         Description="Chia $(var.version)"
                         Target="[INSTALLDIR]$(var.walletExeName)"
                         WorkingDirectory="INSTALLDIR"
                         Icon="icon.ico"/>
                     <RemoveFolder Id="DesktopFolder" On="uninstall"/>
-                    <RegistryValue Root='HKCU' 
+                    <RegistryValue Root='HKCU'
                         Key='Software\[Manufacturer]\[ProductName]'
                         Name='Installed'
                         Type='integer'
