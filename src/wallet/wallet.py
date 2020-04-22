@@ -99,9 +99,12 @@ class Wallet:
             condition_list.append(make_assert_fee_condition(fee))
         return clvm.to_sexp_f([puzzle_for_conditions(condition_list), []])
 
-    async def select_coins(self, amount) -> Optional[Set[Coin]]:
+    async def select_coins(self, amount, exclude: List[Coin] = None) -> Optional[Set[Coin]]:
         """ Returns a set of coins that can be used for generating a new transaction. """
         async with self.wallet_state_manager.lock:
+            if exclude is None:
+                exclude = []
+
             spendable_am = await self.wallet_state_manager.get_unconfirmed_spendable_for_wallet(
                 self.wallet_info.id
             )
@@ -135,6 +138,8 @@ class Wallet:
                 if sum >= amount:
                     break
                 if coinrecord.coin.name() in unconfirmed_removals:
+                    continue
+                if coinrecord.coin in exclude:
                     continue
                 sum += coinrecord.coin.amount
                 used_coins.add(coinrecord.coin)
