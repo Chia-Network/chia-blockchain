@@ -99,7 +99,9 @@ class Wallet:
             condition_list.append(make_assert_fee_condition(fee))
         return clvm.to_sexp_f([puzzle_for_conditions(condition_list), []])
 
-    async def select_coins(self, amount, exclude: List[Coin] = None) -> Optional[Set[Coin]]:
+    async def select_coins(
+        self, amount, exclude: List[Coin] = None
+    ) -> Optional[Set[Coin]]:
         """ Returns a set of coins that can be used for generating a new transaction. """
         async with self.wallet_state_manager.lock:
             if exclude is None:
@@ -341,7 +343,9 @@ class Wallet:
 
     # This is also defined in CCWallet as get_sigs()
     # I think this should be a the default way the wallet gets signatures in sign_transaction()
-    async def get_sigs_for_innerpuz_with_innersol(self, innerpuz: Program, innersol: Program) -> List[BLSSignature]:
+    async def get_sigs_for_innerpuz_with_innersol(
+        self, innerpuz: Program, innersol: Program
+    ) -> List[BLSSignature]:
         puzzle_hash = innerpuz.get_tree_hash()
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
         private = BLSPrivateKey(private)
@@ -356,6 +360,7 @@ class Wallet:
         return sigs
 
         # Create an offer spend bundle for chia given an amount of relative change (i.e -400 or 1000)
+
     # This is to be aggregated together with a coloured coin offer to ensure that the trade happens
     async def create_spend_bundle_relative_chia(self, chia_amount: int):
         list_of_solutions = []
@@ -377,9 +382,11 @@ class Wallet:
 
         # Create coin solutions for each utxo
         output_created = None
-        sigs = []
+        sigs: List[BLSSignature] = []
         for coin in utxos:
-            pubkey, secretkey = await self.wallet_state_manager.get_keys(coin.puzzle_hash)
+            pubkey, secretkey = await self.wallet_state_manager.get_keys(
+                coin.puzzle_hash
+            )
             puzzle = self.puzzle_for_pk(bytes(pubkey))
             if output_created is None:
                 newpuzhash = await self.get_new_puzzlehash()

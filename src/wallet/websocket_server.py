@@ -4,7 +4,6 @@ import logging
 import signal
 import time
 import traceback
-import clvm
 
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -12,7 +11,6 @@ import websockets
 
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
-from src.wallet.cc_wallet.cc_wallet_puzzles import create_spend_for_auditor, create_spend_for_ephemeral
 from src.wallet.trade_manager import TradeManager
 from src.wallet.util.json_util import dict_to_json_str
 
@@ -31,18 +29,11 @@ from src.util.logging import initialize_logging
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.cc_wallet.cc_wallet import CCWallet
-from src.wallet.wallet import Wallet
-from src.wallet.cc_wallet import cc_wallet_puzzles
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_node import WalletNode
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.setproctitle import setproctitle
-from clvm_tools import binutils
-from src.types.spend_bundle import SpendBundle
-from src.types.program import Program
-from src.types.BLSSignature import BLSSignature
-from src.types.coin_solution import CoinSolution
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -421,9 +412,7 @@ class WebSocketServer:
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
         colour: str = await wallet.get_colour()
-        response = {
-            "colour": colour,
-            "wallet_id": wallet_id}
+        response = {"colour": colour, "wallet_id": wallet_id}
         return await websocket.send(format_response(response_api, response))
 
     async def get_wallet_summaries(self, websocket, request, response_api):
@@ -442,18 +431,16 @@ class WebSocketServer:
 
     async def get_discrepancies_for_offer(self, websocket, request, response_api):
         file_name = request["filename"]
-        success, discrepancies, error = await self.trade_manager.get_discrepancies_for_offer(file_name)
+        (
+            success,
+            discrepancies,
+            error,
+        ) = await self.trade_manager.get_discrepancies_for_offer(file_name)
 
         if success:
-            response = {
-                "success": True,
-                "discrepancies": discrepancies
-            }
+            response = {"success": True, "discrepancies": discrepancies}
         else:
-            response = {
-                "success": False,
-                "error": error
-            }
+            response = {"success": False, "error": error}
 
         return await websocket.send(format_response(response_api, response))
 
@@ -605,7 +592,13 @@ async def start_websocket_server():
 
     log.info(f"Starting wallet server on port {config['port']}.")
     server = ChiaServer(
-        config["port"], wallet_node, NodeType.WALLET, ping_interval, network_id, DEFAULT_ROOT_PATH, config
+        config["port"],
+        wallet_node,
+        NodeType.WALLET,
+        ping_interval,
+        network_id,
+        DEFAULT_ROOT_PATH,
+        config,
     )
     wallet_node.set_server(server)
 

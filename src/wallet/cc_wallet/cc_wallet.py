@@ -1,5 +1,4 @@
 import logging
-import string
 
 import clvm
 from typing import Dict, Optional, List, Any, Set
@@ -26,9 +25,6 @@ from src.wallet.cc_wallet.cc_wallet_puzzles import (
     cc_generate_eve_spend,
     create_spend_for_auditor,
     create_spend_for_ephemeral,
-    cc_make_puzzle,
-    get_genesis_from_puzzle,
-    cc_make_core,
 )
 from src.wallet.cc_wallet.ccparent import CCParent
 from src.wallet.util.json_util import dict_to_json_str
@@ -277,7 +273,9 @@ class CCWallet:
 
                         await self.add_parent(
                             coin_name,
-                            CCParent(coin.parent_coin_info, inner_puzzle_hash, coin.amount),
+                            CCParent(
+                                coin.parent_coin_info, inner_puzzle_hash, coin.amount
+                            ),
                         )
 
                 return True
@@ -376,7 +374,9 @@ class CCWallet:
         ).puzzle_hash
 
     # Create a new coin of value 0 with a given colour
-    async def generate_zero_val_coin(self, send = True, exclude: List[Coin] = None) -> Optional[SpendBundle]:
+    async def generate_zero_val_coin(
+        self, send=True, exclude: List[Coin] = None
+    ) -> Optional[SpendBundle]:
         if self.cc_info.my_core is None:
             return None
         if exclude is None:
@@ -410,9 +410,7 @@ class CCWallet:
         eve_spend = cc_generate_eve_spend(eve_coin, cc_puzzle)
         full_spend = SpendBundle.aggregate([spend_bundle, eve_spend])
 
-        future_parent = CCParent(
-            eve_coin.parent_coin_info, cc_inner, eve_coin.amount
-        )
+        future_parent = CCParent(eve_coin.parent_coin_info, cc_inner, eve_coin.amount)
         eve_parent = CCParent(
             origin.parent_coin_info, origin.puzzle_hash, origin.amount
         )
@@ -477,7 +475,9 @@ class CCWallet:
             self.log.info(f"Successfully selected coins: {used_coins}")
             return used_coins
 
-    async def get_sigs(self, innerpuz: Program, innersol: Program) -> List[BLSSignature]:
+    async def get_sigs(
+        self, innerpuz: Program, innersol: Program
+    ) -> List[BLSSignature]:
         puzzle_hash = innerpuz.get_tree_hash()
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
         private = BLSPrivateKey(private)
@@ -600,9 +600,7 @@ class CCWallet:
 
         # loop through remaining spends, treating them as aggregatees
         for coin in selected_coins:
-            coin_inner_puzzle = await self.inner_puzzle_for_cc_puzzle(
-                coin.puzzle_hash
-            )
+            coin_inner_puzzle = await self.inner_puzzle_for_cc_puzzle(coin.puzzle_hash)
             innersol = self.standard_wallet.make_solution()
             parent_info = await self.get_parent_for_coin(coin)
             assert parent_info is not None

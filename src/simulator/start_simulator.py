@@ -76,7 +76,7 @@ async def main():
         ping_interval,
         network_id,
         DEFAULT_ROOT_PATH,
-        config
+        config,
     )
     full_node._set_server(server)
     _ = await server.start_server(full_node._on_connect)
