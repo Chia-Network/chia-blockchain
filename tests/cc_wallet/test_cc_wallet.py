@@ -64,7 +64,7 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(5)
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
@@ -81,7 +81,7 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(5)
         confirmed_balance = await cc_wallet.get_confirmed_balance()
         unconfirmed_balance = await cc_wallet.get_unconfirmed_balance()
 
@@ -106,7 +106,7 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(5)
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
@@ -185,7 +185,7 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(5)
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
@@ -226,7 +226,7 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(5)
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
@@ -244,7 +244,7 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(5)
         confirmed_balance = await cc_wallet.get_confirmed_balance()
         unconfirmed_balance = await cc_wallet.get_unconfirmed_balance()
 
@@ -291,7 +291,7 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(5)
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
