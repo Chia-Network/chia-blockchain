@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!-- This defines the python pre-requisite -->
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" 
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
     <?include "config.wxi"?>
     <Fragment>
@@ -16,12 +16,12 @@
         <PackageGroup Id="PythonPackage">
             <ExePackage Id="PythonExePackage"
                 Cache="yes"
-                Compressed="yes"            
-                Description="Python 3.7.7"
+                Compressed="yes"
+                Description="Python 3.7.6"
                 DetectCondition="python37Installed = 1 AND python37Version >= v$(var.pythonVersion)"
                 InstallCommand="/quiet"
                 PerMachine="no"
-                Permanent="yes"              
+                Permanent="yes"
                 SourceFile="$(env.prereqDir)\python-$(var.pythonVersion)-amd64.exe"
                 Vital="yes"/>
         </PackageGroup>
