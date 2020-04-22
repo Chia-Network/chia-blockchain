@@ -499,7 +499,7 @@ class BlockTools:
         number_iters: uint64 = pot_iterations.calculate_iterations(
             proof_of_space, difficulty, min_iters
         )
-        print("Doing iters", number_iters)
+        # print("Doing iters", number_iters)
         int_size = (test_constants["DISCRIMINANT_SIZE_BITS"] + 16) >> 4
 
         result = prove(
@@ -624,7 +624,7 @@ if __name__ == "__main__":
         bytes(
             bt.create_genesis_block(
                 {},
-                bytes([3] * 32),
+                bytes([2] * 32),
                 b"0",
                 bytes.fromhex(
                     "a4259182b4d8e0af21331fc5be2681f953400b6726fa4095e3b91ae8f005a836"
