@@ -376,10 +376,12 @@ class CCWallet:
         ).puzzle_hash
 
     # Create a new coin of value 0 with a given colour
-    async def generate_zero_val_coin(self) -> Optional[SpendBundle]:
+    async def generate_zero_val_coin(self, send = True, exclude: List[Coin] = None) -> Optional[SpendBundle]:
         if self.cc_info.my_core is None:
             return None
-        coins = await self.standard_wallet.select_coins(1)
+        if exclude is None:
+            exclude = []
+        coins = await self.standard_wallet.select_coins(1, exclude)
         if coins is None:
             return None
 
@@ -407,7 +409,19 @@ class CCWallet:
 
         eve_spend = cc_generate_eve_spend(eve_coin, cc_puzzle)
         full_spend = SpendBundle.aggregate([spend_bundle, eve_spend])
-        await self.standard_wallet.push_transaction(full_spend)
+
+        future_parent = CCParent(
+            eve_coin.parent_coin_info, cc_inner, eve_coin.amount
+        )
+        eve_parent = CCParent(
+            origin.parent_coin_info, origin.puzzle_hash, origin.amount
+        )
+
+        await self.add_parent(eve_coin.name(), future_parent)
+        await self.add_parent(eve_coin.parent_coin_info, eve_parent)
+
+        if send:
+            await self.standard_wallet.push_transaction(full_spend)
         return full_spend
 
     async def select_coins(self, amount: uint64) -> Optional[Set[Coin]]:
