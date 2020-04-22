@@ -50,7 +50,6 @@ class TestWalletSimulator:
         ):
             yield _
 
-    """
     @pytest.mark.asyncio
     async def test_colour_creation(self, two_wallet_nodes):
         num_blocks = 10
@@ -272,7 +271,6 @@ class TestWalletSimulator:
         )
         assert len(unspent) == 1
         assert unspent.pop().coin.amount == 0
-        """
 
     @pytest.mark.asyncio
     async def test_cc_trade(self, two_wallet_nodes):
@@ -364,7 +362,7 @@ class TestWalletSimulator:
         for i in range(0, 4):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
-        await asyncio.sleep(5)
+        await asyncio.sleep(10)
         cc_2_confirmed_balance = await cc_wallet_2.get_confirmed_balance()
         cc_2_unconfirmed_balance = await cc_wallet_2.get_confirmed_balance()
         assert cc_2_confirmed_balance == 30
