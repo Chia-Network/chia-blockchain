@@ -447,7 +447,10 @@ class WebSocketServer:
     async def create_offer_for_ids(self, websocket, request, response_api):
         offer = request["ids"]
         file_name = request["filename"]
-        success = await self.trade_manager.create_offer_for_ids(offer, file_name)
+        success, spend_bundle = await self.trade_manager.create_offer_for_ids(offer, file_name)
+        if success:
+            self.trade_manager.write_offer_to_disk(file_name, spend_bundle)
+
         response = {"success": success}
         return await websocket.send(format_response(response_api, response))
 
@@ -580,7 +583,7 @@ async def start_websocket_server():
         log.info(f"Not Testing")
         wallet_node = await WalletNode.create(config, key_config)
     setproctitle("chia-wallet")
-    trade_manager = TradeManager.create(wallet_node.wallet_state_manager)
+    trade_manager = await TradeManager.create(wallet_node.wallet_state_manager)
     handler = WebSocketServer(wallet_node, log, trade_manager)
     wallet_node.wallet_state_manager.set_callback(handler.state_changed_callback)
 
