@@ -19,7 +19,7 @@ var local_test = electron.remote.getGlobal('sharedObj').local_test;
 var wallets_details = {}
 var offer_file_holder = "Test Offer"
 var ws = new WebSocket(wallet_rpc_host_and_port);
-var test_response = {"success": true, "discrepencies": {"12345": 20, "67890": -10, None: 5}}
+var test_response = {"success": true, "discrepancies": {"12345": 20, "67890": -10, None: 5}}
 
 accept_offer.disabled = true;
 decline_offer.disabled = true;
