@@ -16,11 +16,11 @@
         UpdateUrl="$(var.ARPURLUPDATEINFO)"
         UpgradeCode="$(var.bundleUpgradeCode)"
         Version="$(var.version)">
-        <BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.HyperlinkLicense">
+        <BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.RtfLicense">
             <bal:WixStandardBootstrapperApplication
                 LogoFile="$(env.resourceDir)\chia_logo.png"
                 LogoSideFile="$(env.resourceDir)\dialog.png"
-                LicenseUrl="https://raw.githubusercontent.com/Chia-Network/chia-blockchain/master/LICENSE"
+                LicenseFile="$(env.resourceDir)\eula.rtf"
                 ShowFilesInUse="yes"
                 ShowVersion="yes"
                 SuppressOptionsUI="yes"/>
