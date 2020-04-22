@@ -1,6 +1,9 @@
 import os
 import shutil
 
+from blspy import ExtendedPrivateKey
+from src.types.BLSSignature import BLSPublicKey
+from src.consensus.coinbase import create_puzzlehash_for_pk
 from pathlib import Path
 
 from src.util.config import (
@@ -92,7 +95,24 @@ def migrate_from(old_root, new_root, manifest):
     print(
         "\nYour plots have not been moved so be careful deleting old preferences folders."
     )
-    print("If you want to move your plot files, you should also modify")
+
+    print("\nmigrating keys.yaml")
+    keys_config = load_config(new_root, "keys.yaml")
+
+    wallet_sk = ExtendedPrivateKey.from_bytes(bytes.fromhex(keys_config["wallet_sk"]))
+    wallet_target = create_puzzlehash_for_pk(
+        BLSPublicKey(bytes(wallet_sk.public_child(0).get_public_key()))
+    )
+    if (
+        wallet_target.hex() != keys_config["wallet_target"]
+        or wallet_target.hex() != keys_config["pool_target"]
+    ):
+        keys_config["wallet_target"] = wallet_target.hex()
+        keys_config["pool_target"] = wallet_target.hex()
+        print(f"updating wallet target and pool target to {wallet_target.hex()}")
+        save_config(new_root, "keys.yaml", keys_config)
+
+    print("\nIf you want to move your plot files, you should also modify")
     print(f"{config_path_for_filename(new_root, 'plots.yaml')}")
     return 1
 
@@ -122,7 +142,6 @@ def chia_init(args):
         "config/config.yaml",
         "config/plots.yaml",
         "config/keys.yaml",
-        "db/blockchain_v3.db",
         "config/trusted.crt",
         "config/trusted.key",
     ]

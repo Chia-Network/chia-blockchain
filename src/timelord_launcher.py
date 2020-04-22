@@ -41,6 +41,7 @@ async def spawn_process(host, port, counter):
         try:
             dirname = path_to_vdf_client.parent
             basename = path_to_vdf_client.name
+            log.warning(f"Running {basename} {host} {port} {counter}")
             proc = await asyncio.create_subprocess_shell(
                 f"{basename} {host} {port} {counter}",
                 stdout=asyncio.subprocess.PIPE,
@@ -50,16 +51,23 @@ async def spawn_process(host, port, counter):
         except Exception as e:
             log.warning(f"Exception while spawning process {counter}: {(e)}")
             continue
-        log.info(f"Launched vdf client number {counter}.")
+        log.info(f"Launched vdf client number {counter}. {host} {port}")
         async with lock:
+            log.warning("Got lock1")
             active_processes.append(proc)
-        stdout, stderr = await proc.communicate()
+        log.warning(f"WAITING FOR COMS")
+        try:
+            stdout, stderr = await proc.communicate()
+        except Exception as e:
+            log.error(f"EXCPETION {e} {type(e)}")
+        log.warning(f"GOT COMS")
         if stdout:
             log.info(f"Stdout:\n{stdout.decode().rstrip()}")
         if stderr:
             log.info(f"Stderr:\n{stderr.decode().rstrip()}")
         log.info(f"Process number {counter} ended.")
         async with lock:
+            log.warning("Got lock2")
             if proc in active_processes:
                 active_processes.remove(proc)
         await asyncio.sleep(0.1)
