@@ -27,7 +27,6 @@ async def kill_processes():
 
 
 def find_vdf_client():
-
     p = pathlib.Path(pkg_resources.get_distribution("chiavdf").location) / "vdf_client"
     if p.is_file():
         return p
@@ -42,7 +41,6 @@ async def spawn_process(host, port, counter):
         try:
             dirname = path_to_vdf_client.parent
             basename = path_to_vdf_client.name
-            log.warning(f"Running {basename} {host} {port} {counter}")
             proc = await asyncio.create_subprocess_shell(
                 f"{basename} {host} {port} {counter}",
                 stdout=asyncio.subprocess.PIPE,
@@ -61,7 +59,6 @@ async def spawn_process(host, port, counter):
             log.info(f"Stderr:\n{stderr.decode().rstrip()}")
         log.info(f"Process number {counter} ended.")
         async with lock:
-            log.warning("Got lock2")
             if proc in active_processes:
                 active_processes.remove(proc)
         await asyncio.sleep(0.1)
