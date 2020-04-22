@@ -22,7 +22,6 @@ let copy = document.querySelector("#copy")
 let new_address = document.querySelector('#new_address')
 let create_offer_file_path = document.querySelector("#create_offer_file_path")
 let offer_create = document.querySelector('#offer_create')
-let receive_offer_file_path = document.querySelector("#receive_offer_file_path")
 let offer_view = document.querySelector('#offer_view')
 let print_zero = document.querySelector('#print_zero')
 let balance_textfield = document.querySelector('#balance_textfield')
@@ -176,10 +175,11 @@ async function connect(timeout) {
     set_callbacks(ws);
 }
 
-async function get_wallet_summaries() {
+function get_wallet_summaries() {
   /*
   Sends websocket request to get wallet summaries
   */
+  wallets_details = {}
   data = {
       "info": "123",
   }
@@ -196,7 +196,8 @@ async function get_wallet_summaries() {
 function get_wallet_summaries_response(data){
   // {id: {"type": type, "balance": balance, "name": name, "colour": colour}}
   // {id: {"type": type, "balance": balance}}
-  console.log(data)
+  wallets_details = data
+  offer_input()
 }
 
 async function get_wallet_balance(id) {
@@ -228,8 +229,6 @@ function get_wallet_balance_response(response) {
 
         wallet_balance_holder = document.querySelector("#" + "balance_wallet_" + wallet_id )
         wallet_pending_holder = document.querySelector("#" + "pending_wallet_" + wallet_id )
-
-        wallets_details[wallet_id] = {"balance": parseFloat(Number(chia_confirmed))}
 
         if (g_wallet_id == wallet_id) {
             balance_textfield.innerHTML = chia_confirmed + " CH"
@@ -330,6 +329,7 @@ function handle_state_changed(data) {
     console.log("State changed", state)
     if(global_syncing) {
         get_wallet_balance(g_wallet_id)
+        get_wallet_summaries()
         get_sync_status()
         get_height_info()
         return;
@@ -338,17 +338,22 @@ function handle_state_changed(data) {
     if (state == "coin_removed") {
         get_transactions()
         get_wallet_balance(g_wallet_id)
+        get_wallet_summaries()
     } else if (state == "coin_added") {
         get_transactions()
         get_wallet_balance(g_wallet_id)
+        get_wallet_summaries()
     } else if (state == "pending_transaction") {
         get_transactions()
         get_wallet_balance(g_wallet_id)
+        get_wallet_summaries()
     } else if (state == "tx_sent") {
         get_transactions()
         get_wallet_balance(g_wallet_id)
+        get_wallet_summaries()
     } else if (state == "balance_changed") {
         get_wallet_balance(g_wallet_id)
+        get_wallet_summaries()
     } else if (state == "sync_changed") {
         get_sync_status()
     } else if (state == "new_block") {
@@ -356,6 +361,7 @@ function handle_state_changed(data) {
     } else if (state == "reorg") {
         get_transactions()
         get_wallet_balance(g_wallet_id)
+        get_wallet_summaries()
         get_height_info()
         get_sync_status()
     }
@@ -375,8 +381,6 @@ function get_wallets() {
 function get_wallets_response(data) {
     wallets_tab.innerHTML = ""
     new_innerHTML = ""
-    offers_list.innerHTML = ""
-    offers_new_innerHTML = ""
     const wallets = data["wallets"]
     for (var i = 0; i < wallets.length; i++) {
         var wallet = wallets[i];
@@ -388,13 +392,10 @@ function get_wallets_response(data) {
         var href = ""
         if (type == "STANDARD_WALLET") {
             href = "../wallet-dark.html"
-            offers_new_innerHTML += offer_input(id, name, type)
         } else if (type == "RATE_LIMITED") {
             href = "../rl_wallet/rl_wallet.html"
         } else if (type == "COLOURED_COIN") {
             href = "../cc_wallet/cc_wallet.html"
-            offers_new_innerHTML += offer_input(id, name, type)
-            get_colour(id)
         }
 
         if (id == g_wallet_id) {
@@ -406,7 +407,6 @@ function get_wallets_response(data) {
     }
     new_innerHTML += create_wallet_button()
     wallets_tab.innerHTML = new_innerHTML
-    offers_list.innerHTML = offers_new_innerHTML
 }
 
 function get_colour(id) {
@@ -428,7 +428,6 @@ function get_colour(id) {
 function get_colour_response(response) {
     wallet_id = response["wallet_id"]
     colour = response["colour"]
-    wallets_details[2]["colour"] = colour
     if (wallet_id == g_wallet_id) {
       colour_textfield.innerHTML = "Colour: " + colour;
     }
@@ -605,24 +604,45 @@ function get_innerpuzzlehash_response(response) {
     })
 }
 
-function get_discrepancies_for_offer_response(response) {
-
-}
-
-function create_offer_for_ids_response(response) {
-
-}
-
-function offer_input(id, wallet_name, wallet_type) {
-  offer_counter++;
-  var offer_balance_id = "offer_balance_wallet_" + id
-  var wallet_name_id = "wallet_name_" + id
-  const template = `<div class="input-group" style="padding-top:0px; padding-top:15px;">
-  <p id="${wallet_name_id}">${wallet_name}</p>
-  <div class="input-group" style="padding-top:0px">
-  <input type="number" class="form-control"  id="${offer_balance_id}" value="">
-  </div>/`
-  return template
+function offer_input() {
+  offers_list.innerHTML = ""
+  offers_new_innerHTML = ""
+  console.log(wallets_details)
+  for (wallet in wallets_details) {
+    if (wallets_details[wallet]["type"] == "STANDARD_WALLET") {
+      wallet_id = wallet
+      wallet_type = wallets_details[wallet]["type"]
+      wallet_name = "Standard Wallet"
+      offer_balance_id = "offer_balance_wallet_" + wallet_id
+      wallet_name_id = "wallet_name_" + wallet_id
+      wallet_type_id = "wallet_type_" + wallet_id
+      const template = `<div class="input-group" style="padding-top:0px; padding-top:15px;">
+      <p id="${wallet_name_id}">Wallet: ${wallet_name}</p>
+      <div class="input-group" style="padding-top:0px">
+      <input type="number" class="form-control"  id="${offer_balance_id}" value="">
+      </div>/`
+      offers_new_innerHTML += template
+    }
+    else if (wallets_details[wallet]["type"] == "COLOURED_COIN") {
+      wallet_id = wallet
+      wallet_type = wallets_details[wallet]["type"]
+      wallet_name = wallets_details[wallet]["name"]
+      offer_balance_id = "offer_balance_wallet_" + wallet_id
+      wallet_name_id = "wallet_name_" + wallet_id
+      wallet_type_id = "wallet_type_" + wallet_id
+      wallet_colour_id = "wallet_colour_" + wallet_id
+      const template = `<div class="input-group" style="padding-top:0px; padding-top:15px;">
+      <p id="${wallet_name_id}">Wallet: ${wallet_name}</p>
+      <div class="input-group" style="padding-top:0px">
+      <input type="number" class="form-control"  id="${offer_balance_id}" value="">
+      </div>/`
+      offers_new_innerHTML += template
+    }
+    else {
+      continue
+    }
+    offers_list.innerHTML = offers_new_innerHTML
+  }
 }
 
 offer_create.addEventListener('click', () => {
@@ -643,18 +663,19 @@ offer_create.addEventListener('click', () => {
       //filename = "~/Documents/";
       filename = ""
       filename = filename.concat(create_offer_file_path.value);
-      for (var i = 0; i < offer_counter; i++) {
-        offer_amount = document.querySelector("#" + "offer_balance_wallet_" + (i+1));
-        amount_value = parseFloat(Number(offer_amount.value));
-        if (isNaN(amount_value)) {
-          alert("Please enter a valid numeric amount");
-          return;
+      for (wallet in wallets_details) {
+        if (wallets_details[wallet]["type"] == "STANDARD_WALLET" || wallets_details[wallet]["type"] == "COLOURED_COIN") {
+          wallet_id = wallet
+          offer_amount = document.querySelector("#" + "offer_balance_wallet_" + (wallet));
+          amount_value = parseFloat(Number(offer_amount.value));
+          if (isNaN(amount_value)) {
+            alert("Please enter a valid numeric amount");
+            return;
+          }
+          offers[wallet] = amount_value
+          global_sending_offer = true;
         }
-        offers[(i+1)] = amount_value
-        global_sending_offer = true;
-        mojo_amount = chia_formatter(amount_value, 'chia').to('mojo').value()
       }
-
       offer_create.disabled = true;
       offer_create.innerHTML = "CREATING...";
       data = {
@@ -674,7 +695,7 @@ offer_create.addEventListener('click', () => {
         global_sending_offer = false;
         offer_create.disabled = false;
         offer_create.innerHTML = "CREATE OFFER";
-    }
+      }
 })
 
 function create_offer_for_ids_response(response) {
@@ -702,49 +723,6 @@ offer_view.addEventListener('click', () => {
     Called when offer_view button in ui is pressed.
     */
 
-    go_to_view_offer();
-
-    if (global_syncing) {
-        dialogs.alert("Can't view offers while syncing.", ok => {});
-        return
-    }
-
-    offer_file = receive_offer_file_path.value
-    offer_view.disabled = true;
-    offer_view.innerHTML = "REQUESTING...";
-
-    data = {
-        "filename": offer_file,
-    }
-
-    request = {
-        "command": "get_discrepancies_for_offer",
-        "data": data,
-    }
-
-    json_data = JSON.stringify(request);
-    ws.send(json_data);
-
-})
-
-function get_discrepancies_for_offer_response(response) {
-    /*
-    Called when response is received for create_offer_for_ids request
-    */
-   status = response["success"];
-   if (status === true) {
-     offer_view.disabled = false;
-     offer_view.innerHTML = "VIEW OFFER";
-   } else if (status === false) {
-       dialogs.alert("Offer failed. Reason: " + response["error"], ok => {});
-       offer_view.disabled = false;
-       offer_view.innerHTML = "VIEW OFFER";
-   }
-}
-
-function go_to_view_offer(){
-    //remote.getCurrentWindow().loadURL('../wallet-dark.html')
-
     newWindow = electron.remote.getCurrentWindow()
 
     query = "?testing="+local_test + "&wallet_id=1"
@@ -764,7 +742,7 @@ function go_to_view_offer(){
     newWindow.on('closed', function() {
         newWindow = null;
     });
-}
+})
 
 print_zero.addEventListener('click', () => {
     /*
