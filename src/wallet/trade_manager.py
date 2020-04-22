@@ -366,7 +366,7 @@ class TradeManager:
             # Finish the auditor CoinSolution with new information
             newinnerpuzhash = await wallets[colour].get_new_inner_hash()
             outputamount = (
-                sum([c.amount for c in my_cc_spends]) + cc_discrepancies[colour]
+                sum([c.amount for c in my_cc_spends]) + cc_discrepancies[colour] + auditor.amount
             )
             innersol = self.wallet_state_manager.main_wallet.make_solution(
                 primaries=[{"puzzlehash": newinnerpuzhash, "amount": outputamount}]
