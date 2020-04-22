@@ -668,7 +668,7 @@ offer_create.addEventListener('click', () => {
         if (wallets_details[wallet]["type"] == "STANDARD_WALLET" || wallets_details[wallet]["type"] == "COLOURED_COIN") {
           wallet_id = wallet
           offer_amount = document.querySelector("#" + "offer_balance_wallet_" + (wallet));
-          if (offer_amount == "") or (offer_amount == 0){
+          if (offer_amount == "" || offer_amount == 0){
             continue
           }
           amount_value = parseFloat(Number(offer_amount.value));
