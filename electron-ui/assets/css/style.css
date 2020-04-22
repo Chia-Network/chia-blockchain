@@ -1835,7 +1835,8 @@ tbody.ob-heading {
 
 #dark .wallet .nav-pills a,
 #dark .wallet-address,
-#dark .wallet-history {
+#dark .wallet-history,
+#dark .cc-offer {
   border-top: 1px solid #2a2e39;
 }
 
@@ -1869,6 +1870,15 @@ tbody.ob-heading {
 
 #dark .wallet-address input,
 #dark .wallet-address input:focus {
+  border: 1px solid #2a2e39;
+  background: #2a2e39;
+  -webkit-box-shadow: none;
+          box-shadow: none;
+  color: #ffffff;
+}
+
+#dark .cc-offer input,
+#dark .cc-offer input:focus {
   border: 1px solid #2a2e39;
   background: #2a2e39;
   -webkit-box-shadow: none;
@@ -1961,6 +1971,10 @@ tbody.ob-heading {
   }
 
   .wallet-address img {
+    margin-top: 40px;
+  }
+
+  .cc-offer img {
     margin-top: 40px;
   }
 
@@ -2181,4 +2195,34 @@ table td {
 #colour-input-label {
   padding-top: 15px !important;
   padding-right: 10px !important;
+}
+
+
+.cc-offer {
+  border-top: 1px solid #e0e3eb;
+  padding-top: 25px;
+  margin-top: 35px;
+}
+
+.cc-offer input {
+  padding: 25px 15px;
+  font-size: 14px;
+}
+
+.cc-offer .input-group-prepend button {
+  padding: 13px 20px;
+  border-top-right-radius: 5px !important;
+  border-bottom-right-radius: 5px !important;
+}
+
+.cc-offer input {
+  border: 1px solid #e0e3eb;
+}
+
+.cc-offer h4 {
+  margin-bottom: 20px;
+}
+
+.cc-offer .input-group {
+  padding-top: 30px;
 }

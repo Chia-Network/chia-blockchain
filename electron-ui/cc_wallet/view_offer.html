@@ -26,33 +26,42 @@
         <div class="col-md-12 col-lg-4">
           <div class="nav flex-column nav-pills status" role="tablist" aria-orientation="vertical">
              <a class="nav-link d-flex justify-content-between align-items-center" data-toggle="pill"
-              href="../create_wallet.html" role="tab" aria-selected="true">
+              href="../wallet-dark.html?wallet_id=1" role="tab" aria-selected="true">
               <div class="d-flex">
                 <div>
-                  <h2>Back</h2>
+                  <h2>Back to wallets</h2>
                 </div>
               </div>
             </a>
           </div>
         </div>
         <div class="col-md-12 col-lg-8">
-          <h2>Trade Offer: </h2>
           <div class="tab-content">
-            <div class="nav flex-column nav-pills" role="tablist" aria-orientation="vertical">
-              <div class="field-with-top-border">
-                <div class="d-flex">
-                  
-                </div>
-              </div>
+            <h4>Receive Trade Offer</h4>
+            <p>Enter a filename to review a pending trade offer.</p>
+            <div class="cc-offer">
+              <p>Filename for offer:</p>
+                <div class="input-group" style="padding-top:0px">
+                  <input type="text" class="form-control"  id="receive_offer_file_path" value="">
+                </div>/
             </div>
+            <button class="btn green" id="view_offer">VIEW OFFER</button>
+            <div class="cc-offer" id="trade_offer_holder">
+              <p>Enter a filename above.</p>
+            </div>
+            <div class="d-flex" style="padding-top:0px; padding-top:15px;">
+              <button class="btn green" id="accept_offer">ACCEPT OFFER</button>
+              <button class="btn red" id="decline_offer">DECLINE OFFER</button>
+            </div>
+          </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-  <script>
-    require('./view_offer.js')
-  </script>
+<script>
+  require('./view_offer.js')
+</script>
 </body>
 
 </html>
