@@ -115,6 +115,7 @@ function set_callbacks(socket) {
 
         if (command == "start_server") {
             get_wallets();
+            get_colour(g_wallet_id)
             get_colour_name(g_wallet_id)
             get_transactions();
             get_wallet_summaries();
