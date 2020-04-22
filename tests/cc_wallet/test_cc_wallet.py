@@ -340,7 +340,9 @@ class TestWalletSimulator:
             file_path.unlink()
 
         offer_dict = {1: 10, 2: -30}
-        success, spend_bundle = await trade_manager_1.create_offer_for_ids(offer_dict, file)
+        success, spend_bundle = await trade_manager_1.create_offer_for_ids(
+            offer_dict, file
+        )
 
         assert success is True
         assert spend_bundle is not None

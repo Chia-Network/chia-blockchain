@@ -86,8 +86,12 @@ def hash_key_pairs_for_conditions_dict(
     if coin_name is not None:
         for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG_ME, []):
             aggsigme_blspubkey: BLSPublicKey = BLSPublicKey(cvp.var1)
-            aggsigme_message: bytes32 = bytes32(blspy.Util.hash256(cvp.var2 + coin_name))
-            pairs.append(BLSSignature.PkMessagePair(aggsigme_blspubkey, aggsigme_message))
+            aggsigme_message: bytes32 = bytes32(
+                blspy.Util.hash256(cvp.var2 + coin_name)
+            )
+            pairs.append(
+                BLSSignature.PkMessagePair(aggsigme_blspubkey, aggsigme_message)
+            )
     return pairs
 
 

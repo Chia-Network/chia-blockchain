@@ -949,10 +949,15 @@ class WalletNode:
         request_all_removals = False
         for coin in additions:
             puzzle_store = self.wallet_state_manager.puzzle_store
-            record_info: Optional[DerivationRecord] = await puzzle_store.get_derivation_record_for_puzzle_hash(
+            record_info: Optional[
+                DerivationRecord
+            ] = await puzzle_store.get_derivation_record_for_puzzle_hash(
                 coin.puzzle_hash.hex()
             )
-            if record_info is not None and record_info.wallet_type == WalletType.COLOURED_COIN:
+            if (
+                record_info is not None
+                and record_info.wallet_type == WalletType.COLOURED_COIN
+            ):
                 request_all_removals = True
                 break
 

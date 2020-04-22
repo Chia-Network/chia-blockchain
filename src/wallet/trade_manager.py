@@ -1,19 +1,20 @@
-from pathlib import Path
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, Tuple, List, Any
 import logging
 
 import clvm
 
-from src.types.BLSSignature import BLSSignature, ZERO96
-from src.types.coin import Coin
+from src.types.BLSSignature import BLSSignature
 from src.types.coin_solution import CoinSolution
 from src.types.program import Program
+from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
-from src.util.byte_types import hexstr_to_bytes
+from src.util.ints import uint32
 from src.wallet.cc_wallet import cc_wallet_puzzles
 from src.wallet.cc_wallet.cc_wallet import CCWallet
-from src.wallet.cc_wallet.cc_wallet_puzzles import create_spend_for_auditor, create_spend_for_ephemeral, \
-    get_innerpuzzle_from_puzzle
+from src.wallet.cc_wallet.cc_wallet_puzzles import (
+    create_spend_for_auditor,
+    create_spend_for_ephemeral,
+)
 from src.wallet.wallet import Wallet
 from src.wallet.wallet_state_manager import WalletStateManager
 from clvm_tools import binutils
@@ -25,7 +26,7 @@ class TradeManager:
 
     @staticmethod
     async def create(
-            wallet_state_manager: WalletStateManager, name: str = None,
+        wallet_state_manager: WalletStateManager, name: str = None,
     ):
         self = TradeManager()
         if name:
@@ -37,7 +38,9 @@ class TradeManager:
 
         return self
 
-    async def create_offer_for_ids(self, offer: Dict[int, int], file_path: str) -> Tuple[bool, Optional[SpendBundle]]:
+    async def create_offer_for_ids(
+        self, offer: Dict[int, int], file_path: str
+    ) -> Tuple[bool, Optional[SpendBundle]]:
         """
         Offer is dictionary of wallet ids and amount
         """
@@ -45,10 +48,12 @@ class TradeManager:
         try:
             for id in offer.keys():
                 amount = offer[id]
-                wallet_id = int(id)
+                wallet_id = uint32(int(id))
                 wallet = self.wallet_state_manager.wallets[wallet_id]
                 if isinstance(wallet, CCWallet):
-                    new_spend_bundle = await wallet.create_spend_bundle_relative_amount(amount)
+                    new_spend_bundle = await wallet.create_spend_bundle_relative_amount(
+                        amount
+                    )
                 elif isinstance(wallet, Wallet):
                     new_spend_bundle = await wallet.create_spend_bundle_relative_chia(
                         amount
@@ -59,10 +64,12 @@ class TradeManager:
                 if spend_bundle is None:
                     spend_bundle = new_spend_bundle
                 else:
-                    spend_bundle = SpendBundle.aggregate([spend_bundle, new_spend_bundle])
+                    spend_bundle = SpendBundle.aggregate(
+                        [spend_bundle, new_spend_bundle]
+                    )
 
             return True, spend_bundle
-        except Exception as e:
+        except Exception:
             return False, None
 
     def write_offer_to_disk(self, file_name, offer: SpendBundle):
@@ -70,10 +77,12 @@ class TradeManager:
         f.write(bytes(offer).hex())
         f.close()
 
-    async def get_discrepancies_for_offer(self, filename) -> Tuple[bool, Optional[Dict], Optional[Exception]]:
+    async def get_discrepancies_for_offer(
+        self, filename
+    ) -> Tuple[bool, Optional[Dict], Optional[Exception]]:
         try:
-            cc_discrepancies = dict()
-            wallets = dict()
+            cc_discrepancies: Dict[bytes32, int] = dict()
+            wallets: Dict[bytes32, Any] = dict()
             f = open(filename, "r")
             trade_offer_hex = f.read()
             f.close()
@@ -93,7 +102,9 @@ class TradeManager:
                         ] = await self.wallet_state_manager.get_wallet_for_colour(
                             colour
                         )
-                    parent_info = binutils.disassemble(solution.rest().first()).split(" ")
+                    parent_info = binutils.disassemble(solution.rest().first()).split(
+                        " "
+                    )
                     if len(parent_info) > 1:
                         colour = cc_wallet_puzzles.get_genesis_from_puzzle(
                             binutils.disassemble(puzzle)
@@ -130,7 +141,9 @@ class TradeManager:
             return False, None, e
 
     async def get_inner_puzzle_for_puzzle_hash(self, puzzle_hash) -> Optional[Program]:
-        info = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzzle_hash.hex())
+        info = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+            puzzle_hash.hex()
+        )
         assert info is not None
         puzzle = self.wallet_state_manager.main_wallet.puzzle_for_pk(bytes(info.pubkey))
         return puzzle
@@ -142,12 +155,13 @@ class TradeManager:
         trade_offer = SpendBundle.from_bytes(bytes.fromhex(trade_offer_hex))
 
         coinsols = []  # [] of CoinSolutions
-        cc_coinsol_outamounts = dict()
-        auditees = dict()  # used for generating auditor solution, key is colour
+        cc_coinsol_outamounts: Dict[bytes32, List[Tuple[Any, int]]] = dict()
+        # Used for generating auditor solution, key is colour
+        auditees: Dict[bytes32, List[Tuple[bytes32, bytes32, Any, int]]] = dict()
         aggsig = trade_offer.aggregated_signature
-        cc_discrepancies = dict()
+        cc_discrepancies: Dict[bytes32, int] = dict()
         chia_discrepancy = None
-        wallets = dict()  # colour to wallet dict
+        wallets: Dict[bytes32, Any] = dict()  # colour to wallet dict
 
         for coinsol in trade_offer.coin_solutions:
             puzzle = coinsol.solution.first()
@@ -231,7 +245,9 @@ class TradeManager:
                     to_exclude = []
                 else:
                     to_exclude = chia_spend_bundle.removals()
-                zero_spend_bundle: SpendBundle = await wallets[colour].generate_zero_val_coin(False, to_exclude)
+                zero_spend_bundle: SpendBundle = await wallets[
+                    colour
+                ].generate_zero_val_coin(False, to_exclude)
                 zero_spend_list.append(zero_spend_bundle)
 
                 additions = zero_spend_bundle.additions()
@@ -245,7 +261,10 @@ class TradeManager:
                 return False
 
             auditor = my_cc_spends.pop()
-            auditor_inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(auditor.puzzle_hash)
+            auditor_inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(
+                auditor.puzzle_hash
+            )
+            assert auditor_inner_puzzle is not None
             inner_hash = auditor_inner_puzzle.get_tree_hash()
 
             auditor_info = (
@@ -253,7 +272,9 @@ class TradeManager:
                 inner_hash,
                 auditor.amount,
             )
-            auditor_formatted = f"(0x{auditor.parent_coin_info} 0x{inner_hash} {auditor.amount})"
+            auditor_formatted = (
+                f"(0x{auditor.parent_coin_info} 0x{inner_hash} {auditor.amount})"
+            )
             core = cc_wallet_puzzles.cc_make_core(colour)
             parent_info = await wallets[colour].get_parent_for_coin(auditor)
 
@@ -267,13 +288,11 @@ class TradeManager:
                     ),
                     inner_solution,
                 )
-                aggsig = BLSSignature.aggregate(
-                    [BLSSignature.aggregate(sig), aggsig]
-                )
+                aggsig = BLSSignature.aggregate([BLSSignature.aggregate(sig), aggsig])
                 inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(
                     coloured_coin.puzzle_hash
                 )
-
+                assert inner_puzzle is not None
                 # auditees should be (primary_input, innerpuzhash, coin_amount, output_amount)
                 auditees[colour].append(
                     (
@@ -298,16 +317,16 @@ class TradeManager:
                     None,
                 )
                 coin_spend = CoinSolution(
-                        coloured_coin,
-                        clvm.to_sexp_f(
-                            [
-                                cc_wallet_puzzles.cc_make_puzzle(
-                                    inner_puzzle.get_tree_hash(), core,
-                                ),
-                                solution,
-                            ]
-                        ),
-                    )
+                    coloured_coin,
+                    clvm.to_sexp_f(
+                        [
+                            cc_wallet_puzzles.cc_make_puzzle(
+                                inner_puzzle.get_tree_hash(), core,
+                            ),
+                            solution,
+                        ]
+                    ),
+                )
                 coinsols.append(coin_spend)
 
                 ephemeral = cc_wallet_puzzles.create_spend_for_ephemeral(
@@ -316,8 +335,8 @@ class TradeManager:
                 coinsols.append(ephemeral)
 
                 auditor = cc_wallet_puzzles.create_spend_for_auditor(
-                        auditor, coloured_coin
-                    )
+                    auditor, coloured_coin
+                )
                 coinsols.append(auditor)
 
             # Tweak the offer's solution to include the new auditor
@@ -334,11 +353,13 @@ class TradeManager:
                 coinsols.append(new_coinsol)
 
                 eph = cc_wallet_puzzles.create_spend_for_ephemeral(
-                        cc_coinsol.coin, auditor, cc_coinsol_out[1]
-                    )
+                    cc_coinsol.coin, auditor, cc_coinsol_out[1]
+                )
                 coinsols.append(eph)
 
-                aud = cc_wallet_puzzles.create_spend_for_auditor(auditor, cc_coinsol.coin)
+                aud = cc_wallet_puzzles.create_spend_for_auditor(
+                    auditor, cc_coinsol.coin
+                )
                 coinsols.append(aud)
 
             # Finish the auditor CoinSolution with new information
@@ -406,8 +427,7 @@ class TradeManager:
             spend_bundle = SpendBundle.aggregate(zero_spend_list)
 
         await self.wallet_state_manager.add_pending_transaction(
-            spend_bundle,
-            self.wallet_state_manager.main_wallet.wallet_info.id
+            spend_bundle, self.wallet_state_manager.main_wallet.wallet_info.id
         )
 
         return True
