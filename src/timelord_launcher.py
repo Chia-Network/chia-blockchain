@@ -27,6 +27,7 @@ async def kill_processes():
 
 
 def find_vdf_client():
+
     p = pathlib.Path(pkg_resources.get_distribution("chiavdf").location) / "vdf_client"
     if p.is_file():
         return p
@@ -51,16 +52,9 @@ async def spawn_process(host, port, counter):
         except Exception as e:
             log.warning(f"Exception while spawning process {counter}: {(e)}")
             continue
-        log.info(f"Launched vdf client number {counter}. {host} {port}")
         async with lock:
-            log.warning("Got lock1")
             active_processes.append(proc)
-        log.warning(f"WAITING FOR COMS")
-        try:
-            stdout, stderr = await proc.communicate()
-        except Exception as e:
-            log.error(f"EXCPETION {e} {type(e)}")
-        log.warning(f"GOT COMS")
+        stdout, stderr = await proc.communicate()
         if stdout:
             log.info(f"Stdout:\n{stdout.decode().rstrip()}")
         if stderr:
