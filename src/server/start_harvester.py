@@ -51,6 +51,7 @@ async def async_main():
         log.info("signal handlers unsupported")
 
     harvester.set_server(server)
+    await asyncio.sleep(1)
     harvester._start_bg_tasks()
     await server.await_closed()
     harvester._shutdown()
