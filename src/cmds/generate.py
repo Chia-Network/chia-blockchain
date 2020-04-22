@@ -30,6 +30,15 @@ def make_parser(parser):
         help="Regenerate pool keys",
     )
     parser.add_argument(
+        "-t",
+        "--pooltarget",
+        type=str2bool,
+        nargs="?",
+        const=True,
+        default=True,
+        help="Regenerate pool target",
+    )
+    parser.add_argument(
         "-w",
         "--wallet",
         type=str2bool,
@@ -39,10 +48,7 @@ def make_parser(parser):
         help="Regenerate wallet keys",
     )
     parser.add_argument(
-        "keys",
-        help='must the literal "keys"',
-        type=str,
-        nargs=1,
+        "keys", help='must the literal "keys"', type=str, nargs=1,
     )
     parser.set_defaults(function=generate)
 
@@ -98,4 +104,9 @@ def generate(args, parser):
             pool_target = wallet_target
         key_config["pool_sks"] = [bytes(pool_sk).hex() for pool_sk in pool_sks]
         key_config["pool_target"] = pool_target.hex()
+        save_config(root_path, keys_yaml, key_config)
+    if args.pooltarget:
+        # Compute a new pool target and save it to the config
+        assert "wallet_target" in key_config
+        key_config["pool_target"] = key_config["wallet_target"]
         save_config(root_path, keys_yaml, key_config)

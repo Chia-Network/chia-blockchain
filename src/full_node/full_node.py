@@ -253,6 +253,7 @@ class FullNode:
         self.log.info("Waiting to receive tips from peers.")
         self.store.set_waiting_for_tips(True)
         # TODO: better way to tell that we have finished receiving tips
+        # TODO: fix DOS issue. Attacker can request syncing to an invalid blockchain
         await asyncio.sleep(5)
         highest_weight: uint128 = uint128(0)
         tip_block: FullBlock

@@ -1,5 +1,6 @@
 import os
 import subprocess
+from typing import List
 
 
 SCRIPTS_FOR_SERVICE = {
@@ -18,10 +19,7 @@ SCRIPTS_FOR_SERVICE["wallet-server"] = SCRIPTS_FOR_SERVICE["wallet"][1:]
 def make_parser(parser):
 
     parser.add_argument(
-        "service",
-        choices=SCRIPTS_FOR_SERVICE.keys(),
-        type=str,
-        nargs="+",
+        "service", choices=SCRIPTS_FOR_SERVICE.keys(), type=str, nargs="+",
     )
     parser.set_defaults(function=start)
 
@@ -31,7 +29,7 @@ def start(args, parser):
         parser.print_help()
         return 1
 
-    processes = []
+    processes: List = []
     for service in args.service:
         processes.extend(start_service(args.root_path, service))
 
@@ -57,7 +55,7 @@ def start_service(root_path, service):
     # and we need to pass on the possibly altered CHIA_ROOT
     os.environ["CHIA_ROOT"] = str(root_path)
 
-    for script in SCRIPTS_FOR_SERVICE.get(service):
+    for script in SCRIPTS_FOR_SERVICE[service]:
         process = subprocess.Popen(script.split())
         processes.append(process)
     return processes

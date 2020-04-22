@@ -117,6 +117,7 @@ class FullNodeView {
         connected_to_node_textfield.style.color = "red";
         this.state.connections = {};
         this.state.latest_blocks = [];
+        this.state.latest_unfinished_blocks = [];
         create_conn_button.disabled = true;
         stop_node_button.disabled = true;
         search_button.disabled = true;

@@ -1062,9 +1062,7 @@ class WalletNode:
         self.log.error("Additions request rejected")
 
     @api_request
-    async def respond_generator(
-            self, response: wallet_protocol.RespondGenerator
-    ):
+    async def respond_generator(self, response: wallet_protocol.RespondGenerator):
         """
         The full node respond with transaction generator
         """
@@ -1072,9 +1070,7 @@ class WalletNode:
         self.log.info("generator received")
 
     @api_request
-    async def reject_generator(
-            self, response: wallet_protocol.RejectGeneratorRequest
-    ):
+    async def reject_generator(self, response: wallet_protocol.RejectGeneratorRequest):
         """
         The full node rejected our request for generator
         """

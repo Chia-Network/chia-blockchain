@@ -83,9 +83,6 @@ class ChiaServer:
 
     def loadSSLConfig(self, tipo: str, path: Path, config: Dict):
         if config is not None:
-
-    def loadSSLConfig(self, tipo: str, path: Path, config: Dict):
-        if config is not None:
             try:
                 return (
                     config_path_for_filename(path, config[tipo]["crt"]),
