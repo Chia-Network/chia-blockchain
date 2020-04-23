@@ -88,6 +88,7 @@ class TestWalletSimulator:
         assert confirmed_balance == 100
         assert unconfirmed_balance == 100
     """
+    """
     @pytest.mark.asyncio
     async def test_cc_spend(self, two_wallet_nodes):
         num_blocks = 10
@@ -169,6 +170,7 @@ class TestWalletSimulator:
 
         assert confirmed_balance == 55
         assert unconfirmed_balance == 55
+    """
     """
     @pytest.mark.asyncio
     async def test_get_wallet_for_colour(self, two_wallet_nodes):
@@ -272,7 +274,7 @@ class TestWalletSimulator:
         assert len(unspent) == 1
         assert unspent.pop().coin.amount == 0
     """
-    """
+
     @pytest.mark.asyncio
     async def test_cc_trade(self, two_wallet_nodes):
         num_blocks = 10
@@ -332,7 +334,7 @@ class TestWalletSimulator:
         trade_manager_1 = await TradeManager.create(wallet_node.wallet_state_manager)
         trade_manager_2 = await TradeManager.create(wallet_node_2.wallet_state_manager)
 
-        file = "test_offer_file"
+        file = "test_offer_file.offer"
         file_path = Path(file)
 
         if file_path.exists():
@@ -340,7 +342,7 @@ class TestWalletSimulator:
 
         offer_dict = {1: 10, 2: -30}
         success, spend_bundle = await trade_manager_1.create_offer_for_ids(
-            offer_dict, file
+            offer_dict
         )
 
         assert success is True
@@ -353,7 +355,7 @@ class TestWalletSimulator:
         assert success is True
         assert offer is not None
 
-        assert offer[None] == -10
+        assert offer["chia"] == -10
         assert offer[cc_colour] == 30
 
         success = await trade_manager_2.respond_to_offer(file)
@@ -368,4 +370,3 @@ class TestWalletSimulator:
         cc_2_unconfirmed_balance = await cc_wallet_2.get_confirmed_balance()
         assert cc_2_confirmed_balance == 30
         assert cc_2_unconfirmed_balance == 30
-    """
