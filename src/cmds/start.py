@@ -2,8 +2,9 @@ import os
 import subprocess
 from typing import List
 
+from src.util.path import mkdir
 
-SCRIPTS_FOR_SERVICE = {
+SERVICES_FOR_GROUP = {
     "all": "chia_harvester chia_timelord chia_timelord_launcher chia_farmer chia_full_node".split(),
     "node": "chia_full_node".split(),
     "farmer": "chia_harvester chia_farmer chia_full_node".split(),
@@ -12,50 +13,60 @@ SCRIPTS_FOR_SERVICE = {
     "introducer": "chia_introducer".split(),
 }
 
-SCRIPTS_FOR_SERVICE["wallet-gui"] = SCRIPTS_FOR_SERVICE["wallet"][:1]
-SCRIPTS_FOR_SERVICE["wallet-server"] = SCRIPTS_FOR_SERVICE["wallet"][1:]
+SERVICES_FOR_GROUP["wallet-gui"] = SERVICES_FOR_GROUP["wallet"][:1]
+SERVICES_FOR_GROUP["wallet-server"] = SERVICES_FOR_GROUP["wallet"][1:]
 
 
 def make_parser(parser):
 
     parser.add_argument(
-        "service", choices=SCRIPTS_FOR_SERVICE.keys(), type=str, nargs="+",
+        "group", choices=SERVICES_FOR_GROUP.keys(), type=str, nargs="+",
     )
     parser.set_defaults(function=start)
 
 
 def start(args, parser):
-    if len(args.service) == 0:
-        parser.print_help()
-        return 1
-
     processes: List = []
-    for service in args.service:
-        processes.extend(start_service(args.root_path, service))
+    for group in args.group:
+        for service in SERVICES_FOR_GROUP[group]:
+            processes.append(start_service(args.root_path, service))
 
     try:
-        for process in processes:
+        for process, pid_path in processes:
             process.wait()
     except KeyboardInterrupt:
-        for process in processes:
+        for process, pid_path in processes:
             process.kill()
     print("Chia start script finished killing servers.")
-    for process in processes:
+    for process, pid_path in processes:
         process.wait()
+        try:
+            pid_path_killed = pid_path.with_suffix(".pid-killed")
+            os.rename(pid_path, pid_path_killed)
+        except Exception:
+            pass
     return 0
+
+
+def pid_path_for_service(root_path, service):
+    return root_path / "run" / f"{service}.pid"
 
 
 def start_service(root_path, service):
     # set up CHIA_ROOT
     # invoke correct script
     # save away PID
-    processes = []
 
-    # we need PATH to find commands in the virtual env
-    # and we need to pass on the possibly altered CHIA_ROOT
+    # we need to pass on the possibly altered CHIA_ROOT
     os.environ["CHIA_ROOT"] = str(root_path)
 
-    for script in SCRIPTS_FOR_SERVICE[service]:
-        process = subprocess.Popen(script.split())
-        processes.append(process)
-    return processes
+    process = subprocess.Popen(service, shell=True)
+    pid_path = pid_path_for_service(root_path, service)
+    try:
+        mkdir(pid_path.parent)
+        with open(pid_path, "w") as f:
+            f.write(f"{process.pid}\n")
+        print(f"wrote pid to {pid_path}")
+    except Exception:
+        print(f"can't write PID file for {process} at {pid_path}")
+    return process, pid_path
