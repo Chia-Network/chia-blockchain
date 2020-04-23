@@ -9,7 +9,7 @@ const electron = require('electron')
 var offer_file_holder = ""
 var offer_file_path = ""
 
-
+const { dialog } = require('electron').remote
 // HTML
 let top_link = document.querySelector('#top_link')
 let send = document.querySelector('#send')
@@ -31,6 +31,7 @@ let view_offer_parent = document.querySelector('#view_offer_parent')
 let drag_parent = document.querySelector('#drag_parent')
 let cancel_offer = document.querySelector('#cancel_offer')
 let add_to_offer = document.querySelector('#add_to_offer')
+let save_offer = document.querySelector('#save_offer')
 let offer_items = document.querySelector('#offer_items')
 
 // UI checkmarks and lock icons
@@ -169,6 +170,8 @@ function set_callbacks(socket) {
             get_discrepancies_for_offer_response(data)
         } else if (command == "get_wallet_summaries") {
             get_wallet_summaries_response(data)
+        } else if (command == "create_offer_for_ids") {
+            create_offer_for_ids_response(data)
         }
     });
 
@@ -594,9 +597,9 @@ function display_current_offer(){
         var amount = dict[key]
         var title = ""
         if (amount > 0) {
-            title = "Buy"
-        } else {
             title = "Sell"
+        } else {
+            title = "Buy"
         }
         mojo_abs = Math.abs(amount)
         chia_amount = "Amount: " + chia_formatter(mojo_abs, 'mojo').to('chia').toString() + "    "
@@ -656,7 +659,7 @@ add_to_offer.addEventListener('click', () => {
         return
     }
 
-    converted_amount = side == 1 ? mojo_amount : - mojo_amount
+    converted_amount = side == 1 ? - mojo_amount : mojo_amount
     offer_dictionary[coin] = converted_amount
     console.log(side)
     console.log(coin)
@@ -696,4 +699,50 @@ function get_wallet_summaries_response(data){
   select_option = create_select_options(wallets_details)
   select_menu.innerHTML = select_option
   set_drop_down()
+}
+
+
+save_offer.addEventListener('click', async () => {
+  const dialogOptions = {};
+  try {
+    const result = await dialog.showSaveDialog(dialogOptions);
+    const { filePath } = result;
+    console.log("saving to: " + filePath)
+      offers = offer_dictionary
+      console.log(offers)
+      save_offer.disabled = true;
+      save_offer.innerHTML = "CREATING...";
+      data = {
+          "ids": offers,
+          "filename": filePath
+      }
+
+      request = {
+          "command": "create_offer_for_ids",
+          "data": data
+      }
+      json_data = JSON.stringify(request);
+      console.log(json_data)
+      ws.send(json_data);
+
+    } catch (e) {
+        console.log("save failed")
+        dialogs.alert("Offer failed. Reason: " + response["reason"], ok => {});
+        save_offer.disabled = false;
+        save_offer.innerHTML = "Save";
+    }
+});
+
+function create_offer_for_ids_response(response) {
+    /*
+    Called when response is received for create_offer_for_ids request
+    */
+   status = response["success"];
+   if (status === true) {
+       dialogs.alert("Offer accepted succesfully into the mempool.", ok => {});
+   } else if (status === false) {
+       dialogs.alert("Offer failed. Reason: " + response["reason"], ok => {});
+   }
+    save_offer.disabled = false;
+    save_offer.innerHTML = "Save";
 }

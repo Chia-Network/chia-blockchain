@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Dict, Optional, Tuple, List, Any
 import logging
 
@@ -72,8 +73,8 @@ class TradeManager:
         except Exception:
             return False, None
 
-    def write_offer_to_disk(self, file_name, offer: SpendBundle):
-        f = open(file_name, "w")
+    def write_offer_to_disk(self, file_path: Path, offer: SpendBundle):
+        f = open(file_path, "w")
         f.write(bytes(offer).hex())
         f.close()
 
@@ -236,6 +237,7 @@ class TradeManager:
 
         zero_spend_list: List[SpendBundle] = []
         # create coloured coin
+        self.log.info(cc_discrepancies)
         for colour in cc_discrepancies.keys():
             if cc_discrepancies[colour] < 0:
                 my_cc_spends = await wallets[colour].select_coins(
