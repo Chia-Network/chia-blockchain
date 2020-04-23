@@ -61,7 +61,8 @@ class TradeManager:
                     )
                 else:
                     return False, None
-
+                if new_spend_bundle.removals() == [] or new_spend_bundle is None:
+                    return False, None
                 if spend_bundle is None:
                     spend_bundle = new_spend_bundle
                 else:
