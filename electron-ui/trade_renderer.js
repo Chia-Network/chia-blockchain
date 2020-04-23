@@ -39,6 +39,8 @@ const lock = "<i class=\"icon ion-md-lock\"></i>"
 var global_syncing = true
 var global_sending_transaction = false
 
+var offer_dictionary = {}
+
 function create_side_wallet(id, href, wallet_name, wallet_description, wallet_amount, active) {
     var balance_id = "balance_wallet_" + id
     var pending_id = "pending_wallet_" + id
@@ -77,14 +79,14 @@ function create_wallet_button() {
 }
 
 function create_select_options(options) {
-  buy = `<div class="custom-select-s" style="width:45%;float:left;">
+  buy = `<div class="custom-select-s" style="width:49%;float:left;">
   <select>
     <option value="0">Select Buy or Sell</option>
     <option value="1">Buy</option>
     <option value="2">Sell</option>
   </select>
 </div>`
-  select = `<div class="custom-select-s" style="width:45%;margin-left:50%">
+  select = `<div class="custom-select-s" style="width:49%;margin-left:50%">
   <select>
   <option value="0">Select Coin</option>
     `

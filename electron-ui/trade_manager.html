@@ -91,16 +91,23 @@
         </div>
         <div class="col-md-12 col-lg-8">
           <div class="tab-content">
-
             <div class="tab-pane fade show active" role="tabpanel">
               <h2 class="wallet-title">Create Trade Offer</h2>
-              <div class="wallet-address">
-                  <div id="select_menu"></div>
-              <input type="text" class="form-control"  style="margin-top:10px; margin-bottom:15px;" id="amount" placeholder="amount" value="">
-              </div>
+              <div class="wallet-address" style="margin-top:25px">
+                  <div id="offer_items">
 
+                  </div>
+                  <div id="select_menu"></div>
+              <input type="text" class="form-control"  style="width:68%;float:left;margin-top:35px; margin-bottom:15px;" id="amount" placeholder="amount" value="">
+
+                <button class="btn green" style="width:25%;float:right;margin-top:35px;" id="add_to_offer">Add</button>
               </div>
-              <button class="btn red" id="send">ADD</button>
+                <div style="margin-top:120px;">
+
+                    <button class="btn blue" style="margin-right:2%;width:49%;margin-right:0" id="save_offer">Save</button>
+                    <button class="btn red" style="margin-right:0%;width:49%;margin-left:0" id="cancel_offer">Cancel</button>
+                </div>
+            </div>
 
               <div class="wallet-address" id="drag_parent">
                 <div class="row">
