@@ -463,7 +463,6 @@ class TestWalletSimulator:
         assert error is None
         assert success is True
         assert offer is not None
-        breakpoint()
         assert offer["chia"] == 1000
         assert offer[red] == 30
         assert offer[blue] == -50
