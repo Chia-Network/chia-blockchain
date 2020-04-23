@@ -150,11 +150,7 @@ function set_callbacks(socket) {
             get_wallets_response(data)
         } else if (command == "cc_generate_zero_val") {
             print_zero_response(data)
-        } else if (command == "get_discrepancies_for_offer") {
-            get_discrepancies_for_offer_response(data)
-        } else if (command == "create_offer_for_ids") {
-            create_offer_for_ids_response(data)
-        } else if (command == "get_wallet_summaries") {
+        }else if (command == "get_wallet_summaries") {
             get_wallet_summaries_response(data)
         }
     });
@@ -198,7 +194,6 @@ function get_wallet_summaries_response(data){
   // {id: {"type": type, "balance": balance, "name": name, "colour": colour}}
   // {id: {"type": type, "balance": balance}}
   wallets_details = data
-  offer_input()
 }
 
 async function get_wallet_balance(id) {
@@ -603,184 +598,6 @@ function get_innerpuzzlehash_response(response) {
     QRCode.toCanvas(canvas, response["innerpuz"], function (error) {
     if (error) console.error(error)
     })
-}
-
-function offer_input() {
-  offers_list.innerHTML = ""
-  offers_new_innerHTML = ""
-  console.log(wallets_details)
-  for (wallet in wallets_details) {
-    if (wallets_details[wallet]["type"] == "STANDARD_WALLET") {
-      wallet_id = wallet
-      wallet_type = wallets_details[wallet]["type"]
-      wallet_name = "Standard Wallet"
-      offer_balance_id = "offer_balance_wallet_" + wallet_id
-      wallet_name_id = "wallet_name_" + wallet_id
-      wallet_type_id = "wallet_type_" + wallet_id
-      const template = `<div class="input-group" style="padding-top:0px; padding-top:15px;">
-      <p id="${wallet_name_id}">Wallet: ${wallet_name}</p>
-      <div class="input-group" style="padding-top:0px">
-      <input type="number" class="form-control"  id="${offer_balance_id}" value="">
-      </div>/`
-      offers_new_innerHTML += template
-    }
-    else if (wallets_details[wallet]["type"] == "COLOURED_COIN") {
-      wallet_id = wallet
-      wallet_type = wallets_details[wallet]["type"]
-      wallet_name = wallets_details[wallet]["name"]
-      offer_balance_id = "offer_balance_wallet_" + wallet_id
-      wallet_name_id = "wallet_name_" + wallet_id
-      wallet_type_id = "wallet_type_" + wallet_id
-      wallet_colour_id = "wallet_colour_" + wallet_id
-      const template = `<div class="input-group" style="padding-top:0px; padding-top:15px;">
-      <p id="${wallet_name_id}">Wallet: ${wallet_name}</p>
-      <div class="input-group" style="padding-top:0px">
-      <input type="number" class="form-control"  id="${offer_balance_id}" value="">
-      </div>/`
-      offers_new_innerHTML += template
-    }
-    else {
-      continue
-    }
-    offers_list.innerHTML = offers_new_innerHTML
-  }
-}
-
-offer_create.addEventListener('click', () => {
-    /*
-    Called when offer_create button in ui is pressed.
-    */
-
-    if (global_syncing) {
-        dialogs.alert("Can't create offers while syncing.", ok => {});
-        return
-    }
-    if (global_sending_offer) {
-        return;
-    }
-
-    try {
-      offers = {}
-      //filename = "~/Documents/";
-      filename = ""
-      filename = filename.concat(create_offer_file_path.value);
-      for (wallet in wallets_details) {
-        if (wallets_details[wallet]["type"] == "STANDARD_WALLET" || wallets_details[wallet]["type"] == "COLOURED_COIN") {
-          wallet_id = wallet
-          offer_amount = document.querySelector("#" + "offer_balance_wallet_" + (wallet));
-          if (offer_amount == "" || offer_amount == 0){
-            continue
-          }
-          amount_value = parseFloat(Number(offer_amount.value));
-          if (isNaN(amount_value)) {
-            alert("Please enter a valid numeric amount");
-            return;
-          }
-          offers[wallet] = amount_value
-          global_sending_offer = true;
-        }
-      }
-      offer_create.disabled = true;
-      offer_create.innerHTML = "CREATING...";
-      data = {
-          "ids": offers,
-          "filename": filename
-      }
-
-      request = {
-          "command": "create_offer_for_ids",
-          "data": data
-      }
-      json_data = JSON.stringify(request);
-      console.log(json_data)
-      ws.send(json_data);
-    } catch (error) {
-        alert("Error creating the offer").
-        global_sending_offer = false;
-        offer_create.disabled = false;
-        offer_create.innerHTML = "CREATE OFFER";
-      }
-})
-
-function create_offer_for_ids_response(response) {
-    /*
-    Called when response is received for create_offer_for_ids request
-    */
-   status = response["success"];
-   if (status === true) {
-       dialogs.alert("Offer accepted succesfully into the mempool.", ok => {});
-       for (var i = 0; i < offer_counter; i++) {
-         offer_balance_id_clear = document.querySelector("#" + "offer_balance_wallet_" + (i+1));
-         offer_balance_id_clear.value = "";
-       offer_counter = 0
-       }
-   } else if (status === false) {
-       dialogs.alert("Offer failed. Reason: " + response["reason"], ok => {});
-   }
-    global_sending_offer = false;
-    offer_create.disabled = false;
-    offer_create.innerHTML = "CREATE OFFER";
-}
-
-offer_view.addEventListener('click', () => {
-    /*
-    Called when offer_view button in ui is pressed.
-    */
-
-    newWindow = electron.remote.getCurrentWindow()
-
-    query = "?testing="+local_test + "&wallet_id=1"
-    newWindow.loadURL(require('url').format({
-    pathname: path.join(__dirname, "./view_offer.html"),
-    protocol: 'file:',
-    slashes: true
-    }) + query
-    )
-
-    //newWindow.loadURL("./view_offer.html");
-
-    newWindow.once('ready-to-show', function (){
-        newWindow.show();
-    });
-
-    newWindow.on('closed', function() {
-        newWindow = null;
-    });
-})
-
-print_zero.addEventListener('click', () => {
-    /*
-    Called when print_zero button in ui is pressed.
-    */
-    print_zero.disabled = true;
-    print_zero.innerHTML = "PRINTING...";
-    data = {
-        "wallet_id": g_wallet_id
-    }
-    request = {
-        "command": "cc_generate_zero_val",
-        "data": data
-    }
-    json_data = JSON.stringify(request);
-    ws.send(json_data);
-  })
-
-function print_zero_response(response) {
-    /*
-    Called when response is received for print_zero request
-    */
-    status = response["status"];
-    if (status === "SUCCESS") {
-      dialogs.alert("Transaction accepted succesfully into the mempool.", ok => {});
-      print_zero.disabled = false;
-      print_zero.innerHTML = "PRINT";
-    } else if (status === "PENDING") {
-      dialogs.alert("Transaction is pending acceptance into the mempool. Reason: " + response["reason"], ok => {});
-    } else if (status === "FAILED") {
-      dialogs.alert("Transaction failed. Reason: " + response["reason"], ok => {});
-    }
-    print_zero.disabled = false;
-    print_zero.innerHTML = "PRINT";
 }
 
 async function get_transactions() {
