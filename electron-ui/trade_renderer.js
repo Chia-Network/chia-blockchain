@@ -29,6 +29,9 @@ let accept_offer = document.querySelector('#accept_offer')
 let decline_offer = document.querySelector('#decline_offer')
 let view_offer_parent = document.querySelector('#view_offer_parent')
 let drag_parent = document.querySelector('#drag_parent')
+let cancel_offer = document.querySelector('#cancel_offer')
+let add_to_offer = document.querySelector('#add_to_offer')
+let offer_items = document.querySelector('#offer_items')
 
 // UI checkmarks and lock icons
 const green_checkmark = "<i class=\"icon ion-md-checkmark-circle-outline green\"></i>"
@@ -38,8 +41,9 @@ const lock = "<i class=\"icon ion-md-lock\"></i>"
 // Global variables
 var global_syncing = true
 var global_sending_transaction = false
-
+var global_wallets = {}
 var offer_dictionary = {}
+var wallets_details = {}
 
 function create_side_wallet(id, href, wallet_name, wallet_description, wallet_amount, active) {
     var balance_id = "balance_wallet_" + id
@@ -78,22 +82,31 @@ function create_wallet_button() {
     return create_button
 }
 
-function create_select_options(options) {
+function create_select_options(wallet_summeries) {
   buy = `<div class="custom-select-s" style="width:49%;float:left;">
-  <select>
+  <select id="side_selection">
     <option value="0">Select Buy or Sell</option>
     <option value="1">Buy</option>
     <option value="2">Sell</option>
   </select>
 </div>`
   select = `<div class="custom-select-s" style="width:49%;margin-left:50%">
-  <select>
+  <select id="coin_selection">
   <option value="0">Select Coin</option>
     `
-  for (var i = 0; i < options.length; i++) {
-    wallet_id = options[i]["id"];
-    wallet_name = options[i]["name"]
-    select += `<option value="${wallet_id}">${wallet_name}</option>`
+    console.log(wallet_summeries)
+  for (key in wallet_summeries) {
+    wallet = wallet_summeries[key]
+    console.log(wallet)
+    if (wallet["type"] == "STANDARD_WALLET") {
+        wallet_id = key;
+        wallet_name = "Chia"
+        select += `<option value="${wallet_id}">${wallet_name}</option>`
+    } else {
+        wallet_id = key;
+        wallet_name = wallet["name"]
+        select += `<option class="wrap" value="${wallet_id}">${wallet_name}</option>`
+    }
   }
   select += `</select>
     </div>`
@@ -132,6 +145,7 @@ function set_callbacks(socket) {
         var data = message["data"];
 
         if (command == "start_server") {
+            get_wallet_summaries()
             get_wallets();
             get_height_info();
             get_sync_status();
@@ -153,6 +167,8 @@ function set_callbacks(socket) {
             get_wallets_response(data)
         } else if (command == "get_discrepancies_for_offer") {
             get_discrepancies_for_offer_response(data)
+        } else if (command == "get_wallet_summaries") {
+            get_wallet_summaries_response(data)
         }
     });
 
@@ -172,81 +188,6 @@ async function connect(timeout) {
     ws = new WebSocket(wallet_rpc_host_and_port);
     set_callbacks(ws);
 }
-
-send.addEventListener('click', () => {
-    /*
-    Called when send button in ui is pressed.
-    */
-
-    if (global_syncing) {
-        dialogs.alert("Can't send transactions while syncing.", ok => {});
-        return
-    }
-    if (global_sending_transaction) {
-        return;
-    }
-
-    try {
-        puzzle_hash = receiver_address.value;
-        if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
-            puzzle_hash = puzzle_hash.substring(2);
-        }
-        if (puzzle_hash.length != 64) {
-            alert("Please enter a 32 byte puzzle hash in hexadecimal format");
-            return;
-        }
-        amount_value = parseFloat(Number(amount.value));
-        if (isNaN(amount_value)) {
-            alert("Please enter a valid numeric amount");
-            return;
-        }
-        global_sending_transaction = true;
-        send.disabled = true;
-        send.innerHTML = "SENDING...";
-        mojo_amount = chia_formatter(amount_value, 'chia').to('mojo').value()
-
-        data = {
-            "puzzle_hash": puzzle_hash,
-            "amount": mojo_amount,
-            "wallet_id": g_wallet_id
-        }
-
-        request = {
-            "command": "send_transaction",
-            "data": data
-        }
-        json_data = JSON.stringify(request);
-        ws.send(json_data);
-    } catch (error) {
-        alert("Error sending the transaction").
-        global_sending_transaction = false;
-        send.disabled = false;
-        send.innerHTML = "SEND";
-    }
-})
-
-function send_transaction_response(response) {
-    /*
-    Called when response is received for send_transaction request
-    */
-   console.log(JSON.stringify(response));
-   status = response["status"];
-   if (status === "SUCCESS") {
-       dialogs.alert("Transaction accepted succesfully into the mempool.", ok => {});
-       receiver_address.value = "";
-       amount.value = "";
-   } else if (status === "PENDING") {
-       dialogs.alert("Transaction is pending acceptance into the mempool. Reason: " + response["reason"], ok => {});
-       receiver_address.value = "";
-       amount.value = "";
-   } else if (status === "FAILED") {
-       dialogs.alert("Transaction failed. Reason: " + response["reason"], ok => {});
-   }
-    global_sending_transaction = false;
-    send.disabled = false;
-    send.innerHTML = "SEND";
-}
-
 
 async function get_wallet_balance(id) {
     /*
@@ -434,9 +375,7 @@ function get_wallets_response(data) {
     }
     new_innerHTML += create_wallet_button()
     wallets_tab.innerHTML = new_innerHTML
-    select_option = create_select_options(wallets)
-    select_menu.innerHTML = select_option
-    set_drop_down()
+    global_wallets = wallets
 }
 
 function set_drop_down() {
@@ -463,6 +402,8 @@ for (i = 0; i < x.length; i++) {
         and the selected item:*/
         var y, i, k, s, h;
         s = this.parentNode.parentNode.getElementsByTagName("select")[0];
+        console.log("s" + s.innerHTML)
+        console.log("s" + s.id)
         h = this.parentNode.previousSibling;
         for (i = 0; i < s.length; i++) {
           if (s.options[i].innerHTML == this.innerHTML) {
@@ -641,6 +582,118 @@ accept_offer.addEventListener('click', () => {
 
     json_data = JSON.stringify(request);
     ws.send(json_data);
+});
+
+function display_current_offer(){
+
+    dict = offer_dictionary
+    template = `<div style="width: 100%; display: table;">`
+    for (var key in dict) {
+        console.log(key, dict[key]);
+        var key = key
+        var amount = dict[key]
+        var title = ""
+        if (amount > 0) {
+            title = "Buy"
+        } else {
+            title = "Sell"
+        }
+        mojo_abs = Math.abs(amount)
+        chia_amount = "Amount: " + chia_formatter(mojo_abs, 'mojo').to('chia').toString() + "    "
+        wallet = wallets_details[key]
+        name = ""
+        if (wallet["type"] == "STANDARD_WALLET") {
+            name = "Chia"
+        } else {
+            name = wallet["name"]
+            if (name.length > 16) {
+                name = name.slice(0, 16);
+            }
+        }
+
+        template += `<div style="display: table-row">
+                        <div style="padding-left:20px;width: 250px; display: table-cell;"><h2>${title}</h2></div>
+                        <div style="padding-left:100px;display: table-cell;"><h2>${chia_amount}</h2></div>
+                        <div style="text-align: right;padding-right:15px;display: table-cell;"> <h2>${name}</h2> </div>
+                     </div>`
+    }
+
+    template += `</div>`
+
+    offer_items.innerHTML = template
+}
+
+cancel_offer.addEventListener('click', () => {
+    /*
+    Called when cancel button in ui is pressed.
+    */
+    offer_dictionary = {}
+    display_current_offer();
+
+});
+
+add_to_offer.addEventListener('click', () => {
+    /*
+    Called when add button in ui is pressed.
+    */
+    side =  document.querySelector('#side_selection').value
+    coin =  document.querySelector('#coin_selection').value
+    amount =  document.querySelector('#amount')
+    amount_value = parseFloat(Number(amount.value));
+    if (isNaN(amount_value) || amount_value == 0) {
+        dialogs.alert("Please enter valid amount", ok => {});
+        return;
+    }
+
+    mojo_amount = chia_formatter(amount_value, 'chia').to('mojo').value()
+
+    if (side == 0) {
+        dialogs.alert("Please select Buy or Sell.", ok => {});
+        return
+    }
+    if (coin == 0) {
+        dialogs.alert("Please select type of coin.", ok => {});
+        return
+    }
+
+    converted_amount = side == 1 ? mojo_amount : - mojo_amount
+    offer_dictionary[coin] = converted_amount
+    console.log(side)
+    console.log(coin)
+    console.log(converted_amount)
+    amount.value = ""
+    select_option = create_select_options(wallets_details)
+    select_menu.innerHTML = select_option
+    display_current_offer()
+    set_drop_down()
 })
 
 
+function get_wallet_summaries() {
+  /*
+  Sends websocket request to get wallet summaries
+  */
+  wallets_details = {}
+  data = {
+      "info": "123",
+  }
+
+  request = {
+      "command": "get_wallet_summaries",
+      "data": data
+  }
+
+  json_data = JSON.stringify(request);
+  ws.send(json_data);
+}
+
+
+function get_wallet_summaries_response(data){
+  // {id: {"type": type, "balance": balance, "name": name, "colour": colour}}
+  // {id: {"type": type, "balance": balance}}
+  wallets_details = data
+  console.log(data)
+  select_option = create_select_options(wallets_details)
+  select_menu.innerHTML = select_option
+  set_drop_down()
+}
