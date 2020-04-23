@@ -425,7 +425,12 @@ class WebSocketServer:
             if type == WalletType.COLOURED_COIN:
                 name = wallet.cc_info.my_colour_name
                 colour = await wallet.get_colour()
-                response[wallet_id] = {"type": type, "balance": balance, "name": name, "colour": colour}
+                response[wallet_id] = {
+                    "type": type,
+                    "balance": balance,
+                    "name": name,
+                    "colour": colour,
+                }
             else:
                 response[wallet_id] = {"type": type, "balance": balance}
         return await websocket.send(format_response(response_api, response))

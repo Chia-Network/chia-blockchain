@@ -336,9 +336,7 @@ class TestWalletSimulator:
             file_path.unlink()
 
         offer_dict = {1: 10, 2: -30}
-        success, spend_bundle = await trade_manager_1.create_offer_for_ids(
-            offer_dict
-        )
+        success, spend_bundle = await trade_manager_1.create_offer_for_ids(offer_dict)
 
         assert success is True
         assert spend_bundle is not None
@@ -432,7 +430,9 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        blue_wallet: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node.wallet_state_manager, wallet, blue)
+        blue_wallet: CCWallet = await CCWallet.create_wallet_for_cc(
+            wallet_node.wallet_state_manager, wallet, blue
+        )
 
         assert blue_wallet.cc_info.my_core == blue_wallet_2.cc_info.my_core
 
@@ -451,9 +451,7 @@ class TestWalletSimulator:
 
         offer_dict = {1: -1000, 2: -30, 3: 50}
 
-        success, spend_bundle = await trade_manager_1.create_offer_for_ids(
-            offer_dict
-        )
+        success, spend_bundle = await trade_manager_1.create_offer_for_ids(offer_dict)
 
         assert success is True
         assert spend_bundle is not None
