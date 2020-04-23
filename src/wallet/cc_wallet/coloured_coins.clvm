@@ -1,0 +1,293 @@
+(mod (corehash
+      parent_info
+      my_amount
+      puzzle_reveal
+      solution
+      (auditor_parent auditor_innerpuz auditor_amount)
+      aggees)
+
+  ; C0: a colored coin input that is special and runs extra logic
+  ; C1... CN (red): other coloured coin inputs that do NOT run the extra logic
+  ; A0... AN (yellow): ephemeral coin children of C0 corresponding to A0... AN
+  ; E0... EN (blue): ephemeral coin created by corresponding C_k which create new red coins
+
+  ; 51 = CREATE_COIN
+  ; 52 = ASSERT_CONSUMED
+  ; 53 = ASSERT_MY_ID
+
+  (defmacro and ARGS
+      (if ARGS
+          (qq (if (unquote (f ARGS))
+                  (unquote (c and (r ARGS)))
+                  ()))
+          1))
+
+  (defmacro not (ARGS)
+      (qq (if (unquote ARGS) 0 1)))
+
+  ; takes a lisp tree and returns the hash of it,
+  ; but allows for escape character 97 so i precomputed hash value can be used
+  (defun sha256tree0 (TREE)
+    (if (l TREE)
+        (if (and (not (l (f TREE))) (= (f TREE) 97))
+            (f (r TREE))
+            (sha256 2 (sha256tree0 (f TREE)) (sha256tree0 (r TREE)))
+        )
+        (sha256 1 TREE)))
+
+  ; takes a lisp tree and returns the hash of it
+  (defun sha256tree1 (TREE)
+        (if (l TREE)
+            (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+            (sha256 1 TREE)))
+
+  ; take a puzzle program and a solution and returns the result of running the program with the solution
+  (defmacro create_outputs (puzreveal solution)
+      (qq ((c (unquote puzreveal) (unquote solution)))))
+
+  ; takes a hash of the innerpuzzle and a hash of the core and creates a hash of the full puzzle
+  ; using the sha256tree with escape
+  (defun create_fullpuzhash (innerpuzzlehash corehash)
+    (sha256tree0 (qq (r (c (q (unquote innerpuzzlehash))
+                           ((c (q (97 (unquote corehash)))
+                               (a))))))))
+
+  ; replaces one of the generated create coin conditions with a coloured coin
+  ; which uses the created puzzlehash as the inner puzzlehash
+  (defmacro new_create_coin (innerpuzzlehash corehash amount)
+    (qq (list 51
+              (create_fullpuzhash (unquote innerpuzzlehash) (unquote corehash))
+              (unquote amount))))
+
+  ; creates the puzzle for the lock which lets the auditor confirm how much value we are outputting
+  (defmacro create_e_puz (auditor_ID output_sum)
+    (qq (list (q #r)
+              (list (q #r)
+                    (list (q #c)
+                          (list (q #q)
+                                (unquote auditor_ID))
+                          (list (q #c)
+                                (list (q #q)
+                                      (unquote output_sum))
+                                (list #q ())))))))
+
+  ; creates the coin for the lock which lets the auditor confirm how much value we are outputting
+  (defmacro create_e_coin (auditor_ID output_sum)
+    ; build the condition that creates the ephemeral accounting coin
+    (qq (list 51
+              (sha256tree1 (create_e_puz (unquote auditor_ID)
+                                         (unquote output_sum)))
+              0)))
+
+  ; creates the puzzle for the lock which lets the us confirm the auditor is including us
+  (defmacro create_a_puz_for_cn (my_ID)
+    (qq (list (q #r)
+              (list (q #c)
+                    (list (q #q)
+                          (unquote my_ID))
+                    (list #q ())))))
+
+  ; creates the coin for the lock which lets us confirm the auditor is including us
+  (defmacro consume_a (my_ID auditor_ID)
+    ; we need to ensure that the  coin is consumed
+    (qq (list (q 52)
+              (sha256 (unquote auditor_ID)
+                      (sha256tree1 (create_a_puz_for_cn (unquote my_ID)))
+                      (q 0)))))
+
+  ; assembles information from the solution to create the auditor's full ID
+  (defmacro create_auditor_ID ((auditor_parent auditor_innerpuz auditor_amount) corehash)
+    (qq (sha256 (unquote auditor_parent)
+                (create_fullpuzhash (unquote auditor_innerpuz)
+                                    (unquote corehash))
+                (unquote auditor_amount))))
+
+  ; assembles information from the solution to create our own full ID including asserting our parent is a coloured coin
+  (defmacro create_my_ID ((parent_parent parent_innerpuz parent_amount) my_innerpuz my_amount corehash)
+    (qq (sha256 (sha256 (unquote parent_parent)
+                        (create_fullpuzhash (unquote parent_innerpuz)
+                                            (unquote corehash))
+                        (unquote parent_amount))
+                (create_fullpuzhash (unquote my_innerpuz)
+                                    (unquote corehash))
+                (unquote my_amount))))
+
+  ; asserts that the information in the solution about ourselves is correct, and that our parent is a coloured coin
+  (defmacro assert_my_id (my_ID)
+    (qq (list (q 53) (unquote my_ID))))
+
+  ; this macro adds some conditions to the returned output of the normal case
+  (defmacro create_e_consume_a_assert_me (my_ID auditor_ID running_sum my_output)
+    (qq (c (assert_my_id (unquote my_ID))
+           (c (consume_a (unquote my_ID)
+                         (unquote auditor_ID))
+              (c (create_e_coin (unquote auditor_ID)
+                                (unquote running_sum))
+                 (unquote my_output))))))
+
+  ; this function loops through the created outputs from running the puzzle reveal with the solution and replaces the
+  ; CREATE_COIN conditions with a create coloured coin it then adds the locks and assertions about itself at the end
+  (defun normal_case_everybody (loop my_output corehash running_sum my_ID auditor_ID)
+    (if loop
+      (if (= (f (f loop)) (q 51))
+        (normal_case_everybody (r loop)
+                               (c (new_create_coin (f (r (f loop)))
+                                                   corehash
+                                                   (f (r (r (f loop)))))
+                                  my_output)
+                               corehash
+                               (+ (f (r (r (f loop))))
+                                  running_sum)
+                               my_ID
+                               auditor_ID)
+        (normal_case_everybody (r loop)
+                               (c (f loop)
+                                  my_output)
+                               corehash
+                               running_sum
+                               my_ID
+                               auditor_ID))
+      (create_e_consume_a_assert_me my_ID auditor_ID running_sum my_output)))
+
+  ; this macro takes a list of auditees and returns the ID of the first one from the list
+  (defmacro get_first_aggee_ID (aggees corehash)
+    (qq (sha256 (f (f (unquote aggees)))
+                (create_fullpuzhash (f (r (f (unquote aggees))))
+                                    (unquote corehash))
+                (f (r (r (f (unquote aggees))))))))
+
+  ; this will create the lock which lets coins know that the auditor is including them
+  (defmacro create_a (aggee_ID)
+    (qq (list (q 51)
+              (sha256tree1 (list (q #r)
+                                 (list (q #c)
+                                       (list (q #q)
+                                             (unquote aggee_ID))
+                                       (list #q ()))))
+              (q 0))))
+
+  ; this will consume the lock which lets the auditor know how much each coin is outputting
+  (defmacro consume_e (aggee_ID my_ID spend_amount)
+    (qq (list (q 52)
+              (sha256 (unquote aggee_ID)
+                      (sha256tree1 (list (q #r)
+                                         (list (q #r)
+                                               (list (q #c)
+                                                     (list (q #q)
+                                                           (unquote my_ID))
+                                                     (list (q #c)
+                                                           (list (q #q)
+                                                                 (unquote spend_amount))
+                                                           (list #q ()))))))
+                      (q 0)))))
+
+  ; this adds the conditions related to the locks to the output of the auditor case
+  (defun create_a_and_consume_e (aggee_ID my_ID spend_amount output)
+    (c (consume_e aggee_ID my_ID spend_amount)
+       (c (create_a aggee_ID)
+          output)))
+
+  ; this loops through a list of coins to be audited and creates the relevant conditions for each
+  ; it also compares the total value of coins being spent with total output amount of the transaction,
+  ; and if they aren't equal it will fail
+  (defun consume_es_generate_as (aggee_list my_ID corehash output running_actual running_e)
+    (if (l aggee_list)
+      (consume_es_generate_as (r aggee_list)
+                              my_ID
+                              corehash
+                              (create_a_and_consume_e (get_first_aggee_ID aggee_list corehash)
+                                                      my_ID
+                                                      (f (r (r (r (f aggee_list)))))
+                                                      output)
+                              (+ (f (r (r (f aggee_list)))) running_actual)
+                              (+ (f (r (r (r (f aggee_list))))) running_e))
+      (if (= running_actual running_e)
+        output
+        (x))))
+
+  ; this checks if our coin is the auditor and if so runs the auditor code, otherwise outputs the standard output
+  (defun normal_case_aggee_checker (corehash my_ID aggees normal_output)
+    (if aggees
+      (consume_es_generate_as aggees my_ID corehash normal_output () ())
+      normal_output))
+
+  ; this calculates the standard output and passes it to the auditor route checker
+  (defun normal_case (loop my_output corehash running_sum my_ID auditor_ID aggees)
+      (normal_case_aggee_checker corehash
+                                 my_ID
+                                 aggees
+                                 (normal_case_everybody loop my_output corehash running_sum my_ID auditor_ID)))
+
+  ; this returns a conditions which asserts that our parent is the actual parent to stop us lying about our heritage
+  (defmacro assert_my_parent_is_origin (parent_ID my_fullpuzhash my_amount)
+    (qq (list 53
+              (sha256 (unquote parent_ID)
+                      (unquote my_fullpuzhash)
+                      (unquote my_amount)))))
+
+  ; this returns a conditions which allows us to have any parent but asserts our value must be 0 if so
+  (defmacro assert_my_value_is_zero (parent_ID my_fullpuzhash)
+    (qq (list 53
+              (sha256 (unquote parent_ID)
+                      (unquote my_fullpuzhash)
+                      0))))
+
+  ; this will create a new coin which has the same puzzlehash as us
+  (defmacro create_child_with_my_puzzle (my_fullpuzhash my_amount)
+      (qq (list 51 (unquote my_fullpuzhash) (unquote my_amount))))
+
+  ; this will check if our immediate parent is the genesis coin or not, and call the relevant assert depending
+  (defun eve_case_parent_check (parent_ID my_fullpuzhash my_amount)
+    (if (= parent_ID (q "REPLACE_ME_WITH_GENESIS_ID"))
+      (assert_my_parent_is_origin parent_ID my_fullpuzhash my_amount)
+      (assert_my_value_is_zero parent_ID my_fullpuzhash)))
+
+  ; this adds the create child with my puzzle to the result of the parent check
+  (defmacro eve_case (parent_ID my_fullpuzhash my_amount)
+    (qq (list (create_child_with_my_puzzle (unquote my_fullpuzhash)
+                                           (unquote my_amount))
+              (eve_case_parent_check (unquote parent_ID)
+                                     (unquote my_fullpuzhash)
+                                     (unquote my_amount)))))
+
+  ; this is the final program
+  ; it checks if our parent is a coloured coin, and then calls the normal case if so, otherwise it calls the eve case
+  ; in eve case puzzlereveal is just actually just your full puzzlehash
+  (if (l parent_info)
+      (normal_case (create_outputs puzzle_reveal
+                                   solution)
+                   ()
+                   corehash
+                   0
+                   (create_my_ID ((f parent_info) (f (r parent_info)) (f (r (r parent_info))))
+                                 (sha256tree1 puzzle_reveal)
+                                 my_amount
+                                 corehash)
+                   (create_auditor_ID (auditor_parent auditor_innerpuz
+                                                      auditor_amount)
+                                      corehash)
+                   aggees)
+      (eve_case parent_info puzzle_reveal my_amount))
+
+  ;HERE BE TESTS
+
+
+  ;(create_my_ID ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) (sha256tree1 puzzle_reveal) my_amount corehash)
+  ;(create_auditor_ID (auditor_parent auditor_innerpuz auditor_amount) corehash)
+  ;(create_e_coin ((f (f ARGS)) (f (r (f ARGS))) (f (r (r (f ARGS))))) (f (r ARGS)) 100)
+  ;(create_a_puz_cn ((f (f ARGS)) (f (r (f ARGS))) (f (r (r (f ARGS))))) (f (r ARGS)) (f (r (r ARGS))) (f (r (r (r ARGS)))))
+  ;(create_e_consume_a_assert_me (create_my_ID (parent_parent parent_innerpuz parent_amount) my_innerpuz my_amount corehash) (create_auditor_ID (auditor_parent auditor_innerpuz auditor_amount) corehash) (q 100))
+  ;(create_outputs puzzle_reveal solution)
+
+  ;(eve_case_parent_check parent_info (sha256tree1 (create_fullpuz (sha256tree1 puzzle_reveal) corehash)) my_amount)
+  ;(eve_case parent_info (sha256tree1 (create_fullpuz (sha256tree1 puzzle_reveal) corehash)) my_amount)
+
+  ;(get_first_aggee_ID aggees corehash)
+  ;(consume_e (get_first_aggee_ID aggees corehash) (create_my_ID ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) (sha256tree1 puzzle_reveal) my_amount corehash) (f (r (r (r (f aggees))))))
+  ;(create_a_and_consume_e (sha256 (f (f aggees)) (sha256tree1 (create_fullpuz (f (r (f aggees))) corehash)) (f (r (r (f aggees))))) (create_my_ID ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) (sha256tree1 puzzle_reveal) my_amount corehash) (f (r (r (r (f aggees))))))
+  ;(consume_es_generate_as aggees (create_my_ID ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) (sha256tree1 puzzle_reveal) my_amount corehash) corehash () () ())
+  ;(normal_case_aggee_checker (create_outputs puzzle_reveal solution) () corehash 0 (create_my_ID ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) (sha256tree1 puzzle_reveal) my_amount corehash) (create_auditor_ID (auditor_parent auditor_innerpuz auditor_amount) corehash) aggees)
+
+  ;(normal_case_everybody (create_outputs puzzle_reveal solution) () corehash 0 (create_my_ID ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) (sha256tree1 puzzle_reveal) my_amount corehash) (create_auditor_ID (auditor_parent auditor_innerpuz auditor_amount) corehash))
+  ;(normal_case (create_outputs puzzle_reveal solution) () corehash 0 (create_my_ID ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) (sha256tree1 puzzle_reveal) my_amount corehash) (create_auditor_ID (auditor_parent auditor_innerpuz auditor_amount) corehash) aggees)
+)
