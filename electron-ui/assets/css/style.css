@@ -1410,6 +1410,20 @@ tbody.ob-heading {
           box-shadow: 0px 0px 15px 0px #26de81ad;
 }
 
+.wallet .tab-content button.blue {
+  background: #007bff;
+  color: #ffffff;
+  -webkit-box-shadow: 0px 0px 15px 0px #007bffad;
+          box-shadow: 0px 0px 15px 0px #007bffad;
+}
+
+.wallet .tab-content button.cool {
+  background: #00000000;
+  color: #ffffff;
+  -webkit-box-shadow: 0px 0px 15px 0px #007bffad;
+          box-shadow: 0px 0px 15px 0px #007bffad;
+}
+
 .wallet .tab-content button.red {
   background: #ff231f;
   -webkit-box-shadow: 0px 0px 15px 0px #ff231fad;
@@ -2239,7 +2253,7 @@ table td {
 }
 
 .select-selected {
-  background-color: #007bff;
+  background-color: rgb(42, 46, 57);;
 }
 
 /*style the arrow inside the select element:*/
@@ -2274,7 +2288,7 @@ table td {
 /*style items (options):*/
 .select-items {
   position: absolute;
-  background-color: #007bff;
+  background-color: rgb(42, 46, 57);
   top: 100%;
   left: 0;
   right: 0;
