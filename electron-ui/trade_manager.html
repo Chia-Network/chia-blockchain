@@ -97,23 +97,32 @@
               <div class="wallet-address">
                   <div id="select_menu"></div>
               <input type="text" class="form-control"  style="margin-top:10px; margin-bottom:15px;" id="amount" placeholder="amount" value="">
-              </div>/
+              </div>
 
               </div>
               <button class="btn red" id="send">ADD</button>
-              <div class="wallet-address">
+
+              <div class="wallet-address" id="drag_parent">
                 <div class="row">
                   <div id="drag-drop" class="col-md-12 col-lg-12" style="height:350px;width:100%">
                     <h2>Open Offer File</h2>
                       <div style="text-align: center;background-color:rgb(25, 29, 40);height:280px;margin-top:30px;padding-bottom:30px; width:100%;padding-left:30px;padding-right:30px;">
-                          <p style="padding-top:120px">Drag & Drop offer file</p>
+                          <p id="drag-status" style="padding-top:120px">Drag & Drop offer file</p>
                       </div>
                   </div>
-
                 </div>
               </div>
+
+              <div class="wallet-address hidden_area" id="view_offer_parent">
+                  <div id="view_offer">
+                  </div>
+                  <button class="btn red" id="accept_offer">Accept</button>
+                  <button class="btn green" id="decline_offer">Decline</button>
+              </div>
+
             </div>
           </div>
+
         </div>
       </div>
     </div>

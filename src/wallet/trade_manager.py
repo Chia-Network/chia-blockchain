@@ -39,7 +39,7 @@ class TradeManager:
         return self
 
     async def create_offer_for_ids(
-        self, offer: Dict[int, int], file_path: str
+        self, offer: Dict[int, int]
     ) -> Tuple[bool, Optional[SpendBundle]]:
         """
         Offer is dictionary of wallet ids and amount
@@ -78,13 +78,13 @@ class TradeManager:
         f.close()
 
     async def get_discrepancies_for_offer(
-        self, filename
+        self, file_path
     ) -> Tuple[bool, Optional[Dict], Optional[Exception]]:
         try:
-            self.log.info(f"trade offer: {filename}")
+            self.log.info(f"trade offer: {file_path}")
             cc_discrepancies: Dict[bytes32, int] = dict()
             wallets: Dict[bytes32, Any] = dict()
-            f = open(filename, "r")
+            f = open(file_path, "r")
             trade_offer_hex = f.read()
             f.close()
             trade_offer = SpendBundle.from_bytes(bytes.fromhex(trade_offer_hex))

@@ -6,6 +6,9 @@ const dialogs = Dialogs()
 const WebSocket = require('ws');
 let chia_formatter = require('./chia');
 const electron = require('electron')
+var offer_file_holder = ""
+var offer_file_path = ""
+
 
 // HTML
 let top_link = document.querySelector('#top_link')
@@ -22,6 +25,10 @@ let standard_wallet_balance = document.querySelector('#standard_wallet_balance')
 let wallets_tab = document.querySelector('#wallets_tab')
 const { get_query_variable } = require("./utils");
 let select_menu = document.querySelector("#select_menu")
+let accept_offer = document.querySelector('#accept_offer')
+let decline_offer = document.querySelector('#decline_offer')
+let view_offer_parent = document.querySelector('#view_offer_parent')
+let drag_parent = document.querySelector('#drag_parent')
 
 // UI checkmarks and lock icons
 const green_checkmark = "<i class=\"icon ion-md-checkmark-circle-outline green\"></i>"
@@ -142,6 +149,8 @@ function set_callbacks(socket) {
             get_sync_status_response(data)
         } else if (command == "get_wallets") {
             get_wallets_response(data)
+        } else if (command == "get_discrepancies_for_offer") {
+            get_discrepancies_for_offer_response(data)
         }
     });
 
@@ -503,6 +512,7 @@ function closeAllSelect(elmnt) {
 /*if the user clicks anywhere outside the select box,
 then close all select boxes:*/
 document.addEventListener("click", closeAllSelect);
+let drag_status = document.querySelector('#drag-status')
 
 
 function create_drag() {
@@ -527,7 +537,108 @@ function create_drag() {
             console.log('File(s) you dragged here: ', f.path)
         }
 
+        if (global_syncing) {
+            dialogs.alert("Can't view offers while syncing.", ok => {});
+            return
+        }
+
+        offer_file_path =  e.dataTransfer.files[0].path
+        offer_file_holder = offer_file_path.replace(/^.*[\\\/]/, '')
+        console.log(offer_file_path)
+        drag_status.innerHTML = "Parsing Offer...";
+
+        data = {
+            "filename": offer_file_path,
+        }
+
+        request = {
+            "command": "get_discrepancies_for_offer",
+            "data": data,
+        }
+
+        json_data = JSON.stringify(request);
+        ws.send(json_data);
+
         return false;
     };
 }
 create_drag()
+
+function get_discrepancies_for_offer_response(response) {
+     /*
+     Called when response is received for create_offer_for_ids request
+     */
+     status = response["success"];
+     if (status === "true") {
+       drag_status.innerHTML = "Drag & Drop offer file";
+       offer_dict = response["discrepancies"]
+       console.log(offer_dict)
+       display_offer(offer_dict)
+     } else if (status === "false") {
+         dialogs.alert("Error viewing offer. Reason: " + response["error"], ok => {});
+         drag_status.innerHTML = "Drag & Drop offer file";
+     }
+}
+
+trade_offer_holder =  document.querySelector('#view_offer')
+
+function display_offer(dict) {
+  view_offer_parent.classList.remove("hidden_area");
+  drag_parent.classList.add("hidden_area");
+
+  trade_offer_holder.innerHTML = ""
+  trade_offer_holder_new_innerHTML = `<div class="d-flex" style="padding-top:0px; padding-top:15px; padding-bottom:20px;">
+  <h4>${offer_file_holder}</h4>
+  </div>`
+  for (colour in dict) {
+    offer_item_colour = colour
+    offer_item_amount = dict[colour]
+    offer_item_colour_id = "offer_item_colour_" + offer_item_colour
+    offer_item_amount_id = "offer_item_amount_" + offer_item_colour
+    const template = `<div class="d-flex" style="padding-top:0px; padding-top:15px;">
+    <p id="${offer_item_colour_id}">Colour: ${offer_item_colour}</p>
+    </div>
+    <div class="input-group" style="padding-top:0px">
+    <p id="${offer_item_amount_id}">Amount: ${offer_item_amount}</p>
+    </div>/`
+
+    trade_offer_holder_new_innerHTML += template
+  }
+  accept_offer.disabled = false;
+  decline_offer.disabled = false;
+  trade_offer_holder.innerHTML = trade_offer_holder_new_innerHTML
+}
+
+
+decline_offer.addEventListener('click', () => {
+    /*
+    Called when decline_offer button in ui is pressed.
+    */
+    view_offer_parent.classList.add("hidden_area");
+    drag_parent.classList.remove("hidden_area");
+
+    go_to_main_wallet();
+})
+
+accept_offer.addEventListener('click', () => {
+    /*
+    Called when accept_offer button in ui is pressed.
+    */
+
+    accept_offer.disabled = true;
+    decline_offer.disabled = true;
+    accept_offer.innerHTML = "ACCEPTING...";
+    data = {
+        "filename": offer_file_path,
+    }
+
+    request = {
+        "command": "respond_to_offer",
+        "data": data,
+    }
+
+    json_data = JSON.stringify(request);
+    ws.send(json_data);
+})
+
+

@@ -4,6 +4,7 @@ import logging
 import signal
 import time
 import traceback
+from pathlib import Path
 
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -431,11 +432,12 @@ class WebSocketServer:
 
     async def get_discrepancies_for_offer(self, websocket, request, response_api):
         file_name = request["filename"]
+        file_path = Path(file_name)
         (
             success,
             discrepancies,
             error,
-        ) = await self.trade_manager.get_discrepancies_for_offer(file_name)
+        ) = await self.trade_manager.get_discrepancies_for_offer(file_path)
 
         if success:
             response = {"success": True, "discrepancies": discrepancies}
@@ -447,7 +449,7 @@ class WebSocketServer:
     async def create_offer_for_ids(self, websocket, request, response_api):
         offer = request["ids"]
         file_name = request["filename"]
-        success, spend_bundle = await self.trade_manager.create_offer_for_ids(offer, file_name)
+        success, spend_bundle = await self.trade_manager.create_offer_for_ids(offer)
         if success:
             self.trade_manager.write_offer_to_disk(file_name, spend_bundle)
 
