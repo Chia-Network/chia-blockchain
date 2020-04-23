@@ -137,7 +137,7 @@ class Wallet:
                 self.wallet_info.id
             )
             for coinrecord in unspent:
-                if sum >= amount:
+                if sum >= amount and len(used_coins) > 0:
                     break
                 if coinrecord.coin.name() in unconfirmed_removals:
                     continue
@@ -371,7 +371,7 @@ class Wallet:
         if chia_amount < 0:
             utxos = await self.select_coins(abs(chia_amount))
         else:
-            utxos = await self.select_coins(1)
+            utxos = await self.select_coins(0)
 
         if utxos is None:
             return None

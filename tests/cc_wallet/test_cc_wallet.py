@@ -49,7 +49,7 @@ class TestWalletSimulator:
             3, 2, {"COINBASE_FREEZE_PERIOD": 0}
         ):
             yield _
-    """
+
     @pytest.mark.asyncio
     async def test_colour_creation(self, two_wallet_nodes):
         num_blocks = 10
@@ -87,8 +87,7 @@ class TestWalletSimulator:
 
         assert confirmed_balance == 100
         assert unconfirmed_balance == 100
-    """
-    """
+
     @pytest.mark.asyncio
     async def test_cc_spend(self, two_wallet_nodes):
         num_blocks = 10
@@ -170,8 +169,7 @@ class TestWalletSimulator:
 
         assert confirmed_balance == 55
         assert unconfirmed_balance == 55
-    """
-    """
+
     @pytest.mark.asyncio
     async def test_get_wallet_for_colour(self, two_wallet_nodes):
         num_blocks = 10
@@ -209,8 +207,7 @@ class TestWalletSimulator:
             await wallet_node.wallet_state_manager.get_wallet_for_colour(colour)
             == cc_wallet
         )
-    """
-    """
+
     @pytest.mark.asyncio
     async def test_generate_zero_val(self, two_wallet_nodes):
         num_blocks = 10
@@ -273,7 +270,6 @@ class TestWalletSimulator:
         )
         assert len(unspent) == 1
         assert unspent.pop().coin.amount == 0
-    """
 
     @pytest.mark.asyncio
     async def test_cc_trade(self, two_wallet_nodes):
@@ -307,7 +303,6 @@ class TestWalletSimulator:
         cc_wallet: CCWallet = await CCWallet.create_new_cc(
             wallet_node.wallet_state_manager, wallet, uint64(100)
         )
-        cc_colour = cc_wallet.cc_info.my_colour_name
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
@@ -356,7 +351,7 @@ class TestWalletSimulator:
         assert offer is not None
 
         assert offer["chia"] == -10
-        assert offer[cc_colour] == 30
+        assert offer[colour] == 30
 
         success = await trade_manager_2.respond_to_offer(file)
 

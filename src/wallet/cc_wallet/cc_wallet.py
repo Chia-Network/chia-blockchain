@@ -381,7 +381,7 @@ class CCWallet:
             return None
         if exclude is None:
             exclude = []
-        coins = await self.standard_wallet.select_coins(1, exclude)
+        coins = await self.standard_wallet.select_coins(0, exclude)
         if coins is None:
             return None
 
@@ -455,7 +455,7 @@ class CCWallet:
                 self.wallet_info.id
             )
             for coinrecord in unspent:
-                if sum >= amount:
+                if sum >= amount and len(used_coins) > 0:
                     break
                 if coinrecord.coin.name() in unconfirmed_removals:
                     continue
@@ -706,7 +706,7 @@ class CCWallet:
         if cc_amount < 0:
             cc_spends = await self.select_coins(abs(cc_amount))
         else:
-            cc_spends = await self.select_coins(1)
+            cc_spends = await self.select_coins(0)
         if cc_spends is None:
             return None
 
