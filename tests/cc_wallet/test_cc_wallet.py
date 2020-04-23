@@ -345,7 +345,6 @@ class TestWalletSimulator:
 
         success, offer, error = await trade_manager_2.get_discrepancies_for_offer(file_path)
 
-        breakpoint()
         assert error is None
         assert success is True
         assert offer is not None
@@ -547,9 +546,9 @@ class TestWalletSimulator:
 
         assert success is True
         assert spend_bundle is not None
-        trade_manager_1.write_offer_to_disk(file, spend_bundle)
+        trade_manager_1.write_offer_to_disk(file_path, spend_bundle)
 
-        success, offer, error = await trade_manager_2.get_discrepancies_for_offer(file)
+        success, offer, error = await trade_manager_2.get_discrepancies_for_offer(file_path)
         assert error is None
         assert success is True
         assert offer is not None
@@ -557,7 +556,7 @@ class TestWalletSimulator:
         assert offer[red] == 30
         assert offer[blue] == -50
 
-        success = await trade_manager_2.respond_to_offer(file)
+        success = await trade_manager_2.respond_to_offer(file_path)
 
         assert success is True
         for i in range(0, 4):
