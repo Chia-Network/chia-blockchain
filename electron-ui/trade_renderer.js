@@ -597,9 +597,9 @@ function display_current_offer(){
         var amount = dict[key]
         var title = ""
         if (amount > 0) {
-            title = "Sell"
-        } else {
             title = "Buy"
+        } else {
+            title = "Sell"
         }
         mojo_abs = Math.abs(amount)
         chia_amount = "Amount: " + chia_formatter(mojo_abs, 'mojo').to('chia').toString() + "    "
@@ -659,7 +659,7 @@ add_to_offer.addEventListener('click', () => {
         return
     }
 
-    converted_amount = side == 1 ? - mojo_amount : mojo_amount
+    converted_amount = side == 1 ? mojo_amount : - mojo_amount
     offer_dictionary[coin] = converted_amount
     console.log(side)
     console.log(coin)
