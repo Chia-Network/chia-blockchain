@@ -20,6 +20,7 @@ from src.protocols import (
     timelord_protocol,
     wallet_protocol,
 )
+from src.protocols.wallet_protocol import GeneratorResponse
 from src.types.mempool_item import MempoolItem
 from src.util.merkle_set import MerkleSet
 from src.util.bundle_tools import best_solution_program
@@ -2130,11 +2131,12 @@ class FullNode:
         )
         if full_block is not None:
             if full_block.transactions_generator is not None:
-                response = wallet_protocol.RespondGenerator(
+                wrapper = GeneratorResponse(
                     full_block.height,
                     full_block.header_hash,
                     full_block.transactions_generator,
                 )
+                response = wallet_protocol.RespondGenerator(wrapper)
                 yield OutboundMessage(
                     NodeType.WALLET,
                     Message("respond_generator", response),

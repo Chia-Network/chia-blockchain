@@ -56,5 +56,20 @@ class SpendBundle(Streamable):
     def removal_names(self) -> List[bytes32]:
         return [_.coin.name() for _ in self.coin_solutions]
 
+    def addition_names(self) -> List[bytes32]:
+        return [_.name() for _ in self.additions()]
+
     def name(self) -> bytes32:
         return self.get_hash()
+
+    def not_ephemeral_spends(self):
+        all_removals = self.removals()
+        all_additions = self.additions()
+        result: List[Coin] = []
+
+        for rem in all_removals:
+            if rem in all_additions:
+                continue
+            result.append(rem)
+
+        return result

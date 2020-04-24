@@ -59,6 +59,10 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
         test_constants_copy[k] = dic[k]
 
     db_path = Path(db_name)
+    db_path = root_path / f"{db_name}"
+    if db_path.exists():
+        db_path.unlink()
+
     connection = await aiosqlite.connect(db_path)
     store_1 = await FullNodeStore.create(connection)
     await store_1._clear_database()
@@ -78,6 +82,7 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
     network_id = net_config.get("network_id")
 
     config = load_config(root_path, "config.yaml", "full_node")
+    config["database_path"] = str(db_path)
 
     if introducer_port is not None:
         config["introducer_peer"]["host"] = "127.0.0.1"
@@ -113,7 +118,7 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
     server_1.close_all()
     await server_1.await_closed()
     await connection.close()
-    Path(db_name).unlink()
+    db_path.unlink()
 
 
 async def setup_full_node(db_name, port, introducer_port=None, dic={}):
@@ -187,7 +192,7 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
-    db_path = root_path / ("test-wallet-db%s.db" % token_bytes(32).hex())
+    db_path = root_path / f"test-wallet-db-{port}.db"
     if db_path.exists():
         db_path.unlink()
     config["database_path"] = str(db_path)
@@ -426,8 +431,8 @@ async def setup_node_and_wallet(dic={}):
 async def setup_node_and_two_wallets(dic={}):
     node_iters = [
         setup_full_node("blockchain_test.db", 21234, dic=dic),
-        setup_wallet_node(21235, key_seed=b"Test node 1", dic=dic),
-        setup_wallet_node(21236, key_seed=b"Test node 2", dic=dic),
+        setup_wallet_node(21235, key_seed=b"a", dic=dic),
+        setup_wallet_node(21236, key_seed=b"b", dic=dic),
     ]
 
     full_node, s1 = await node_iters[0].__anext__()

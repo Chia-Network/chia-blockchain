@@ -92,87 +92,50 @@
         <div class="col-md-12 col-lg-8">
           <div class="tab-content">
             <div class="tab-pane fade show active" role="tabpanel">
-              <h2 class="wallet-title">Balances</h2>
-              <ul>
-                <li class="d-flex justify-content-between align-items-center">
-                  <div class="d-flex align-items-center">
-                    <i class="icon ion-md-cash"></i>
-                    <h2>Total Chia</h2>
-                  </div>
-                  <div>
-                    <h3 id="balance_textfield">0 CH</h3>
-                  </div>
-                </li>
-                <li class="d-flex justify-content-between align-items-center">
-                  <div class="d-flex align-items-center">
-                    <i class="icon ion-md-checkmark"></i>
-                    <h2>Pending Transactions</h2>
-                  </div>
-                  <div>
-                    <h3 id="pending_textfield">0 CH</h3>
-                  </div>
-                </li>
-              </ul>
-              <div class="wallet-address">
-                <p>Receiver Address:</p>
-              <div class="input-group" style="padding-top:0px">
-              <input type="text" class="form-control"  id="receiver_puzzle_hash" value="">
-              </div>/
-                <p>Amount:</p>
-                <div class="input-group" style="padding-top:0px; padding-bottom:15px;">
-                <input type="text" class="form-control" id="amount_to_send" value="">
+              <h2 class="wallet-title">Create Trade Offer</h2>
+              <div class="wallet-address" style="margin-top:25px">
+                  <div id="offer_items" style="margin-bottom:30px">
+
+                    </div>
+                  <div id="select_menu"></div>
+              <input type="text" class="form-control"  style="width:68%;float:left;margin-top:35px; margin-bottom:15px;" id="amount" placeholder="amount" value="">
+
+                <button class="btn green" style="width:25%;float:right;margin-top:35px;" id="add_to_offer">Add</button>
               </div>
-              </div>
-              <button class="btn red" id="send">SEND</button>
-              <button class="btn green" id="farm_block">FARM BLOCK</button>
-              <div class="wallet-address">
+                <div style="margin-top:120px;">
+
+                    <button class="btn blue" style="margin-right:2%;width:49%;margin-right:0" id="save_offer">Save</button>
+                    <button class="btn red" style="margin-right:0%;width:49%;margin-left:0" id="cancel_offer">Cancel</button>
+                </div>
+            </div>
+
+              <div class="wallet-address" id="drag_parent">
                 <div class="row">
-                  <div class="col-md-8">
-                    <h4>Wallet Deposit Address</h4>
-                    <p>Use this address to receive Chia</p>
-                    <div class="input-group">
-                      <input type="text" class="form-control" id="puzzle_holder" value="">
-                      <div class="input-group-prepend">
-                        <button class="btn btn-primary" id="copy" >COPY</button>
+                  <div id="drag-drop" class="col-md-12 col-lg-12" style="height:350px;width:100%">
+                    <h2>Open Offer File</h2>
+                      <div style="text-align: center;background-color:rgb(25, 29, 40);height:280px;margin-top:30px;padding-bottom:30px; width:100%;padding-left:30px;padding-right:30px;">
+                          <p id="drag-status" style="padding-top:120px">Drag & Drop offer file</p>
                       </div>
-                    </div>
-                    <div class="input-group">
-                    <button class="btn green" style="padding-top:20px;" id="new_address">NEW ADDRESS</button>
-                    </div>
-                  </div>
-                  <div class="col-md-4">
-                    <canvas id="qr_canvas" width="300" height="300"></canvas>
                   </div>
                 </div>
               </div>
-              <div class="wallet-history">
-                <table class="table">
-                  <thead>
-                    <tr>
-                      <th>Type</th>
-                      <th>To</th>
-                      <th>Date</th>
-                      <th>Status</th>
-                      <th>Amount</th>
-                      <th>Fee</th>
-                    </tr>
-                  </thead>
-                </table>
-                <div id="table_container">
-                <table class="table" id="tx_table">
-                  <tbody>
-                  </tbody>
-                </table>
+
+              <div class="wallet-address hidden_area" id="view_offer_parent">
+                  <div id="view_offer">
                   </div>
+                  <button class="btn red" id="accept_offer">Accept</button>
+                  <button class="btn green" id="decline_offer">Decline</button>
               </div>
+
             </div>
           </div>
+
         </div>
       </div>
     </div>
   </div>
   <script>
-    require('./renderer.js')
+    require('./trade_renderer.js')
   </script>
 </body>
 
