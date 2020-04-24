@@ -73,7 +73,7 @@ kwargs = dict(
     ],
     entry_points={
         "console_scripts": [
-            "chia = src.cmds.cli:main",
+            "chia = src.cmds.chia:main",
             "chia-check-plots = src.cmds.check_plots:main",
             "chia-create-plots = src.cmds.create_plots:main",
             "chia-wallet = src.wallet.websocket_server:main",
