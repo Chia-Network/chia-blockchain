@@ -737,7 +737,7 @@ function create_offer_for_ids_response(response) {
    status = response["success"]
 
    if (status == "true") {
-       dialogs.alert("Offer accepted successfully created.", ok => {});
+       dialogs.alert("Offer successfully created.", ok => {});
    } else {
        dialogs.alert("Offer failed. Reason: " + response["reason"], ok => {});
    }
