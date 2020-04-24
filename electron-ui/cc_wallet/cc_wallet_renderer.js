@@ -206,8 +206,8 @@ function get_wallet_summaries_response(data){
       } else if (name=="COLOURED_COIN") {
         name = "CC Wallet"
         type = wallet["name"]
-        if (type.length > 20) {
-          type = type.substring(0,20);
+        if (type.length > 18) {
+          type = type.substring(0,18);
           type = type.concat("...")
         }
       }

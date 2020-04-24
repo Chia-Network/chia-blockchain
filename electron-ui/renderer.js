@@ -608,7 +608,6 @@ function get_wallet_summaries() {
 function get_wallet_summaries_response(data){
   // {id: {"type": type, "balance": balance, "name": name, "colour": colour}}
   // {id: {"type": type, "balance": balance}}
-  console.log("reveived get_wallet_summaries")
   var new_innerHTML = ""
   for (var i in data) {
       var wallet = data[i];
@@ -621,8 +620,8 @@ function get_wallet_summaries_response(data){
       } else if (name=="COLOURED_COIN") {
         name = "CC Wallet"
         type = wallet["name"]
-        if (type.length > 20) {
-          type = type.substring(0,20);
+        if (type.length > 18) {
+          type = type.substring(0,18);
           type = type.concat("...")
         }
       }
