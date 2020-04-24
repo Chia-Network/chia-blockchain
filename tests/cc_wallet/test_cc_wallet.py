@@ -343,7 +343,9 @@ class TestWalletSimulator:
         assert spend_bundle is not None
         trade_manager_1.write_offer_to_disk(file_path, spend_bundle)
 
-        success, offer, error = await trade_manager_2.get_discrepancies_for_offer(file_path)
+        success, offer, error = await trade_manager_2.get_discrepancies_for_offer(
+            file_path
+        )
 
         assert error is None
         assert success is True
@@ -548,7 +550,9 @@ class TestWalletSimulator:
         assert spend_bundle is not None
         trade_manager_1.write_offer_to_disk(file_path, spend_bundle)
 
-        success, offer, error = await trade_manager_2.get_discrepancies_for_offer(file_path)
+        success, offer, error = await trade_manager_2.get_discrepancies_for_offer(
+            file_path
+        )
         assert error is None
         assert success is True
         assert offer is not None
@@ -655,7 +659,9 @@ class TestWalletSimulator:
         assert spend_bundle is not None
         trade_manager_2.write_offer_to_disk(file_path, spend_bundle)
 
-        success, offer, error = await trade_manager_1.get_discrepancies_for_offer(file_path)
+        success, offer, error = await trade_manager_1.get_discrepancies_for_offer(
+            file_path
+        )
 
         assert error is None
         assert success is True

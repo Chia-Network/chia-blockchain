@@ -56,17 +56,23 @@ class TradeManager:
                     balance = await wallet.get_confirmed_balance()
                     if balance == 0:
                         if spend_bundle is None:
-                            to_exclude = []
+                            to_exclude: List[Coin] = []
                         else:
                             to_exclude = spend_bundle.removals()
-                        zero_spend_bundle: SpendBundle = await wallet.generate_zero_val_coin(False, to_exclude)
+                        zero_spend_bundle: Optional[SpendBundle] = await wallet.generate_zero_val_coin(
+                            False, to_exclude
+                        )
 
                         if zero_spend_bundle is None:
-                            raise ValueError("Failed to generate offer. Zero value coin not created.")
+                            raise ValueError(
+                                "Failed to generate offer. Zero value coin not created."
+                            )
                         if spend_bundle is None:
                             spend_bundle = zero_spend_bundle
                         else:
-                            spend_bundle = SpendBundle.aggregate([spend_bundle, zero_spend_bundle])
+                            spend_bundle = SpendBundle.aggregate(
+                                [spend_bundle, zero_spend_bundle]
+                            )
 
                         additions = zero_spend_bundle.additions()
                         removals = zero_spend_bundle.removals()
@@ -145,8 +151,8 @@ class TradeManager:
                 else:  # standard chia coin
                     coin_amount = coinsol.coin.amount
                     out_amount = cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
-                            puzzle, solution
-                        )
+                        puzzle, solution
+                    )
                     diff = coin_amount - out_amount
                     if "chia" in cc_discrepancies:
                         cc_discrepancies["chia"] = cc_discrepancies["chia"] + diff
@@ -167,7 +173,7 @@ class TradeManager:
 
     async def maybe_create_wallets_for_offer(self, file_path: Path) -> bool:
         success, result, error = await self.get_discrepancies_for_offer(file_path)
-        if not success:
+        if not success or result is None:
             return False
 
         for key, value in result.items():

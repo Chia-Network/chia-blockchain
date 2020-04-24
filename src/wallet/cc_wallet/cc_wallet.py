@@ -154,13 +154,17 @@ class CCWallet:
 
     async def get_unconfirmed_balance(self) -> uint64:
         confirmed = await self.get_confirmed_balance()
-        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.wallet_info.id)
+        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            self.wallet_info.id
+        )
         addition_amount = 0
         removal_amount = 0
 
         for record in unconfirmed_tx:
             for coin in record.additions:
-                if await self.wallet_state_manager.puzzle_store.puzzle_hash_exists(coin.puzzle_hash):
+                if await self.wallet_state_manager.puzzle_store.puzzle_hash_exists(
+                    coin.puzzle_hash
+                ):
                     addition_amount += coin.amount
             for coin in record.removals:
                 removal_amount += coin.amount
@@ -734,7 +738,9 @@ class CCWallet:
         full_spend = SpendBundle.aggregate([spend_bundle, eve_spend])
         return full_spend
 
-    async def create_spend_bundle_relative_amount(self, cc_amount, zero_coin: Coin = None):
+    async def create_spend_bundle_relative_amount(
+        self, cc_amount, zero_coin: Coin = None
+    ):
         # If we're losing value then get coloured coins with at least that much value
         # If we're gaining value then our amount doesn't matter
         if cc_amount < 0:
@@ -755,7 +761,7 @@ class CCWallet:
         # Loop through coins and create solution for innerpuzzle
         list_of_solutions = []
         output_created = None
-        sigs = []
+        sigs: List[BLSSignature] = []
         for coin in cc_spends:
             if output_created is None:
                 newinnerpuzhash = await self.get_new_inner_hash()
@@ -769,7 +775,7 @@ class CCWallet:
 
             parent_info = await self.get_parent_for_coin(coin)
             assert parent_info is not None
-
+            assert self.cc_info.my_core is not None
             # Use coin info to create solution and add coin and solution to list of CoinSolutions
             solution = cc_wallet_puzzles.cc_make_solution(
                 self.cc_info.my_core,
