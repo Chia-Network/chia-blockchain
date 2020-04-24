@@ -34,3 +34,6 @@ And then click on the "Chia Wallet" icon on the Desktop or in the Start Menu.
 For more usage information try:
 The chia-blockchain README.md - https://github.com/Chia-Network/chia-blockchain/blob/master/README.md
 The chia-blockchain repo wiki - https://github.com/Chia-Network/chia-blockchain/wiki
+
+For assistance join us on Keybase in the #testnet chat channel
+    https://keybase.io/team/chia_network.public
