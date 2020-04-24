@@ -518,7 +518,8 @@ class WalletStateManager:
                     wallet_id=wallet_id,
                     sent_to=[],
                 )
-                await self.tx_store.add_transaction_record(tx_record)
+                if coin.amount > 0:
+                    await self.tx_store.add_transaction_record(tx_record)
 
         coin_record: WalletCoinRecord = WalletCoinRecord(
             coin, index, uint32(0), False, coinbase, wallet_type, wallet_id
