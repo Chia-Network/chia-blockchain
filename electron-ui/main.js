@@ -6,7 +6,7 @@ const WebSocket = require('ws');
 const ipcMain = require('electron').ipcMain;
 
 // Whether to enter test mode. Uses the full node simulator and test constants.
-var local_test = true;
+var local_test = false;
 
 // Only takes effect if local_test is false. Connects to a local introducer.
 var local_introducer = false;

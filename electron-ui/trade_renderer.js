@@ -121,9 +121,6 @@ function create_select_options(wallet_summeries) {
 
 var local_test = electron.remote.getGlobal('sharedObj').local_test;
 
-if (local_test == false) {
-    farm_button.style.visibility="hidden"
-}
 
 function sleep(ms) {
     return new Promise((resolve) => {
