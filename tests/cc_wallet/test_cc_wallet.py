@@ -150,8 +150,8 @@ class TestWalletSimulator:
         await self.time_out_assert(15, cc_wallet.get_confirmed_balance, 40)
         await self.time_out_assert(15, cc_wallet.get_unconfirmed_balance, 40)
 
-        await self.time_out_assert(15, cc_wallet_2.get_confirmed_balance, 60)
-        await self.time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 60)
+        await self.time_out_assert(30, cc_wallet_2.get_confirmed_balance, 60)
+        await self.time_out_assert(30, cc_wallet_2.get_unconfirmed_balance, 60)
 
         cc_hash = await cc_wallet.get_new_inner_hash()
         await cc_wallet_2.cc_spend(uint64(15), cc_hash)

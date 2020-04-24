@@ -545,7 +545,7 @@ function display_offer(dict) {
     <p id="${offer_item_colour_id}">Colour: ${offer_item_colour}</p>
     </div>
     <div class="input-group" style="padding-top:0px">
-    <p id="${offer_item_amount_id}">Amount: ${offer_item_amount}</p>
+    <p id="${offer_item_amount_id}">Amount: ${chia_formatter(offer_item_amount, 'mojo').to('chia').toString()}</p>
     </div>/`
 
     trade_offer_holder_new_innerHTML += template
