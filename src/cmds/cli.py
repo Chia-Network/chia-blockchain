@@ -12,7 +12,7 @@ SUBCOMMANDS = ["init", "generate", "show", "start", "stop", "version", "netspace
 def create_parser():
     parser = argparse.ArgumentParser(
         description="Manage chia blockchain infrastructure (%s)." % __version__,
-        epilog="You can combine -s and -c. Try 'watch -n 10 chia show -s -c' if you have 'watch' installed.",
+        epilog="Try 'chia start node' or 'chat netspace -d 48'.",
     )
 
     parser.add_argument(
