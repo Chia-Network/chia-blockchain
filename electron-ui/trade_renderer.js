@@ -313,28 +313,26 @@ function handle_state_changed(data) {
     state = data["state"]
     console.log("State changed", state)
     if(global_syncing) {
-        get_wallet_balance(g_wallet_id)
+        get_wallets()
         get_sync_status()
         get_height_info()
         return;
     }
 
     if (state == "coin_removed") {
-        get_wallet_balance(g_wallet_id)
     } else if (state == "coin_added") {
-        get_wallet_balance(g_wallet_id)
+        get_wallets()
     } else if (state == "pending_transaction") {
-        get_wallet_balance(g_wallet_id)
+        get_wallets()
     } else if (state == "tx_sent") {
-        get_wallet_balance(g_wallet_id)
+        get_wallets()
     } else if (state == "balance_changed") {
-        get_wallet_balance(g_wallet_id)
+        get_wallets()
     } else if (state == "sync_changed") {
         get_sync_status()
     } else if (state == "new_block") {
         get_height_info()
     } else if (state == "reorg") {
-        get_wallet_balance(g_wallet_id)
         get_height_info()
         get_sync_status()
     }
@@ -571,8 +569,8 @@ accept_offer.addEventListener('click', () => {
     Called when accept_offer button in ui is pressed.
     */
 
-    accept_offer.disabled = true;
-    decline_offer.disabled = true;
+    accept_offer.disabled = false;
+    decline_offer.disabled = false;
     accept_offer.innerHTML = "ACCEPTING...";
     data = {
         "filename": offer_file_path,

@@ -462,8 +462,8 @@ class WebSocketServer:
         return await websocket.send(format_response(response_api, response))
 
     async def respond_to_offer(self, websocket, request, response_api):
-        file_name = request["filename"]
-        success = await self.trade_manager.respond_to_offer(file_name)
+        file_path = Path(request["filename"])
+        success = await self.trade_manager.respond_to_offer(file_path)
         response = {"success": success}
         return await websocket.send(format_response(response_api, response))
 

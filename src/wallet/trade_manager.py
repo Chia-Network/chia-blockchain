@@ -165,7 +165,29 @@ class TradeManager:
         puzzle = self.wallet_state_manager.main_wallet.puzzle_for_pk(bytes(info.pubkey))
         return puzzle
 
+    async def maybe_create_wallets_for_offer(self, file_path: Path) -> bool:
+        success, result, error = await self.get_discrepancies_for_offer(file_path)
+        if not success:
+            return False
+
+        for key, value in result.items():
+            wsm: WalletStateManager = self.wallet_state_manager
+            wallet: Wallet = wsm.main_wallet
+            if key == "chia":
+                continue
+            self.log.info(f"value is {key}")
+            exists = await wsm.get_wallet_for_colour(key)
+            if exists is not None:
+                continue
+
+            await CCWallet.create_wallet_for_cc(wsm, wallet, key)
+
+        return True
+
     async def respond_to_offer(self, file_path: Path) -> bool:
+        has_wallets = await self.maybe_create_wallets_for_offer(file_path)
+        if not has_wallets:
+            return False
         trade_offer_hex = file_path.read_text()
         trade_offer = SpendBundle.from_bytes(bytes.fromhex(trade_offer_hex))
 
