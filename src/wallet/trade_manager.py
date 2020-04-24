@@ -5,6 +5,7 @@ import logging
 import clvm
 
 from src.types.BLSSignature import BLSSignature
+from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
@@ -52,13 +53,50 @@ class TradeManager:
                 wallet_id = uint32(int(id))
                 wallet = self.wallet_state_manager.wallets[wallet_id]
                 if isinstance(wallet, CCWallet):
-                    new_spend_bundle = await wallet.create_spend_bundle_relative_amount(
-                        amount
-                    )
+                    balance = await wallet.get_confirmed_balance()
+                    if balance == 0:
+                        if spend_bundle is None:
+                            to_exclude: List[Coin] = []
+                        else:
+                            to_exclude = spend_bundle.removals()
+                        zero_spend_bundle: Optional[SpendBundle] = await wallet.generate_zero_val_coin(
+                            False, to_exclude
+                        )
+
+                        if zero_spend_bundle is None:
+                            raise ValueError(
+                                "Failed to generate offer. Zero value coin not created."
+                            )
+                        if spend_bundle is None:
+                            spend_bundle = zero_spend_bundle
+                        else:
+                            spend_bundle = SpendBundle.aggregate(
+                                [spend_bundle, zero_spend_bundle]
+                            )
+
+                        additions = zero_spend_bundle.additions()
+                        removals = zero_spend_bundle.removals()
+                        zero_val_coin: Optional[Coin] = None
+                        for add in additions:
+                            if add not in removals and add.amount == 0:
+                                zero_val_coin = add
+
+                        new_spend_bundle = await wallet.create_spend_bundle_relative_amount(
+                            amount, zero_val_coin
+                        )
+                    else:
+                        new_spend_bundle = await wallet.create_spend_bundle_relative_amount(
+                            amount
+                        )
                 elif isinstance(wallet, Wallet):
+                    if spend_bundle is None:
+                        to_exclude = []
+                    else:
+                        to_exclude = spend_bundle.removals()
                     new_spend_bundle = await wallet.create_spend_bundle_relative_chia(
-                        amount
+                        amount, to_exclude
                     )
+                    self.log.info("1")
                 else:
                     return False, None
                 if new_spend_bundle.removals() == [] or new_spend_bundle is None:
@@ -83,7 +121,6 @@ class TradeManager:
         try:
             self.log.info(f"trade offer: {file_path}")
             cc_discrepancies: Dict[bytes32, int] = dict()
-            wallets: Dict[bytes32, Any] = dict()
             trade_offer_hex = file_path.read_text()
             trade_offer = SpendBundle.from_bytes(bytes.fromhex(trade_offer_hex))
             for coinsol in trade_offer.coin_solutions:
@@ -92,15 +129,6 @@ class TradeManager:
 
                 # work out the deficits between coin amount and expected output for each
                 if cc_wallet_puzzles.check_is_cc_puzzle(puzzle):
-                    colour = cc_wallet_puzzles.get_genesis_from_puzzle(
-                        binutils.disassemble(puzzle)
-                    )
-                    if colour not in wallets:
-                        wallets[
-                            colour
-                        ] = await self.wallet_state_manager.get_wallet_for_colour(
-                            colour
-                        )
                     parent_info = binutils.disassemble(solution.rest().first()).split(
                         " "
                     )
@@ -121,20 +149,16 @@ class TradeManager:
                         else:
                             cc_discrepancies[colour] = coinsol.coin.amount - out_amount
                 else:  # standard chia coin
-                    if None in cc_discrepancies:
-                        cc_discrepancies["chia"] += (
-                            coinsol.coin.amount
-                            - cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
-                                puzzle, solution
-                            )
-                        )
+                    coin_amount = coinsol.coin.amount
+                    out_amount = cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
+                        puzzle, solution
+                    )
+                    diff = coin_amount - out_amount
+                    if "chia" in cc_discrepancies:
+                        cc_discrepancies["chia"] = cc_discrepancies["chia"] + diff
                     else:
-                        cc_discrepancies["chia"] = (
-                            coinsol.coin.amount
-                            - cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
-                                puzzle, solution
-                            )
-                        )
+                        cc_discrepancies["chia"] = diff
+
             return True, cc_discrepancies, None
         except Exception as e:
             return False, None, e
@@ -147,7 +171,29 @@ class TradeManager:
         puzzle = self.wallet_state_manager.main_wallet.puzzle_for_pk(bytes(info.pubkey))
         return puzzle
 
+    async def maybe_create_wallets_for_offer(self, file_path: Path) -> bool:
+        success, result, error = await self.get_discrepancies_for_offer(file_path)
+        if not success or result is None:
+            return False
+
+        for key, value in result.items():
+            wsm: WalletStateManager = self.wallet_state_manager
+            wallet: Wallet = wsm.main_wallet
+            if key == "chia":
+                continue
+            self.log.info(f"value is {key}")
+            exists = await wsm.get_wallet_for_colour(key)
+            if exists is not None:
+                continue
+
+            await CCWallet.create_wallet_for_cc(wsm, wallet, key)
+
+        return True
+
     async def respond_to_offer(self, file_path: Path) -> bool:
+        has_wallets = await self.maybe_create_wallets_for_offer(file_path)
+        if not has_wallets:
+            return False
         trade_offer_hex = file_path.read_text()
         trade_offer = SpendBundle.from_bytes(bytes.fromhex(trade_offer_hex))
 
@@ -167,6 +213,7 @@ class TradeManager:
             # work out the deficits between coin amount and expected output for each
             if cc_wallet_puzzles.check_is_cc_puzzle(puzzle):
                 parent_info = binutils.disassemble(solution.rest().first()).split(" ")
+
                 if len(parent_info) > 1:
                     # Calculate output amounts
                     colour = cc_wallet_puzzles.get_genesis_from_puzzle(
@@ -183,6 +230,7 @@ class TradeManager:
                     out_amount = cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
                         innerpuzzlereveal, innersol
                     )
+
                     if colour in cc_discrepancies:
                         cc_discrepancies[colour] += coinsol.coin.amount - out_amount
                     else:
@@ -212,6 +260,8 @@ class TradeManager:
                                 out_amount,
                             )
                         ]
+                else:
+                    coinsols.append(coinsol)
             else:
                 # standard chia coin
                 if chia_discrepancy is None:
@@ -227,7 +277,7 @@ class TradeManager:
         chia_spend_bundle: Optional[SpendBundle] = None
         if chia_discrepancy is not None:
             chia_spend_bundle = await self.wallet_state_manager.main_wallet.create_spend_bundle_relative_chia(
-                chia_discrepancy
+                chia_discrepancy, []
             )
 
         zero_spend_list: List[SpendBundle] = []

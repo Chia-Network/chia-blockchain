@@ -106,6 +106,9 @@ function create_select_options(wallet_summeries) {
     } else {
         wallet_id = key;
         wallet_name = wallet["name"]
+        if (wallet_name.length > 32) {
+            wallet_name = wallet_name.slice(0, 32) + "...";
+        }
         select += `<option class="wrap" value="${wallet_id}">${wallet_name}</option>`
     }
   }
@@ -118,9 +121,6 @@ function create_select_options(wallet_summeries) {
 
 var local_test = electron.remote.getGlobal('sharedObj').local_test;
 
-if (local_test == false) {
-    farm_button.style.visibility="hidden"
-}
 
 function sleep(ms) {
     return new Promise((resolve) => {
@@ -172,6 +172,8 @@ function set_callbacks(socket) {
             get_wallet_summaries_response(data)
         } else if (command == "create_offer_for_ids") {
             create_offer_for_ids_response(data)
+        } else if (command == "respond_to_offer") {
+            respond_to_offer_response(data)
         }
     });
 
@@ -313,28 +315,26 @@ function handle_state_changed(data) {
     state = data["state"]
     console.log("State changed", state)
     if(global_syncing) {
-        get_wallet_balance(g_wallet_id)
+        get_wallets()
         get_sync_status()
         get_height_info()
         return;
     }
 
     if (state == "coin_removed") {
-        get_wallet_balance(g_wallet_id)
     } else if (state == "coin_added") {
-        get_wallet_balance(g_wallet_id)
+        get_wallets()
     } else if (state == "pending_transaction") {
-        get_wallet_balance(g_wallet_id)
+        get_wallets()
     } else if (state == "tx_sent") {
-        get_wallet_balance(g_wallet_id)
+        get_wallets()
     } else if (state == "balance_changed") {
-        get_wallet_balance(g_wallet_id)
+        get_wallets()
     } else if (state == "sync_changed") {
         get_sync_status()
     } else if (state == "new_block") {
         get_height_info()
     } else if (state == "reorg") {
-        get_wallet_balance(g_wallet_id)
         get_height_info()
         get_sync_status()
     }
@@ -545,7 +545,7 @@ function display_offer(dict) {
     <p id="${offer_item_colour_id}">Colour: ${offer_item_colour}</p>
     </div>
     <div class="input-group" style="padding-top:0px">
-    <p id="${offer_item_amount_id}">Amount: ${offer_item_amount}</p>
+    <p id="${offer_item_amount_id}">Amount: ${chia_formatter(offer_item_amount, 'mojo').to('chia').toString()}</p>
     </div>/`
 
     trade_offer_holder_new_innerHTML += template
@@ -562,8 +562,6 @@ decline_offer.addEventListener('click', () => {
     */
     view_offer_parent.classList.add("hidden_area");
     drag_parent.classList.remove("hidden_area");
-
-    go_to_main_wallet();
 })
 
 accept_offer.addEventListener('click', () => {
@@ -571,8 +569,8 @@ accept_offer.addEventListener('click', () => {
     Called when accept_offer button in ui is pressed.
     */
 
-    accept_offer.disabled = true;
-    decline_offer.disabled = true;
+    accept_offer.disabled = false;
+    decline_offer.disabled = false;
     accept_offer.innerHTML = "ACCEPTING...";
     data = {
         "filename": offer_file_path,
@@ -693,7 +691,6 @@ function get_wallet_summaries() {
 
 function get_wallet_summaries_response(data){
   // {id: {"type": type, "balance": balance, "name": name, "colour": colour}}
-  // {id: {"type": type, "balance": balance}}
   wallets_details = data
   console.log(data)
   select_option = create_select_options(wallets_details)
@@ -737,12 +734,29 @@ function create_offer_for_ids_response(response) {
     /*
     Called when response is received for create_offer_for_ids request
     */
-   status = response["success"];
-   if (status === true) {
-       dialogs.alert("Offer accepted succesfully into the mempool.", ok => {});
-   } else if (status === false) {
+   status = response["success"]
+
+   if (status == "true") {
+       dialogs.alert("Offer successfully created.", ok => {});
+   } else {
        dialogs.alert("Offer failed. Reason: " + response["reason"], ok => {});
    }
     save_offer.disabled = false;
     save_offer.innerHTML = "Save";
+}
+
+function respond_to_offer_response(response) {
+    /*
+    Called when response is received for create_offer_for_ids request
+    */
+   status = JSON.parse(response["success"]);
+   if (status == "true") {
+       dialogs.alert("Offer accepted successfully into the mempool.", ok => {});
+   } else {
+       dialogs.alert("Offer failed. Reason: " + response["reason"], ok => {});
+   }
+    accept_offer.disabled = false;
+    accept_offer.innerHTML = "Accept";
+    view_offer_parent.classList.add("hidden_area");
+    drag_parent.classList.remove("hidden_area");
 }
