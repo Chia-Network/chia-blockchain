@@ -734,13 +734,17 @@ class CCWallet:
         full_spend = SpendBundle.aggregate([spend_bundle, eve_spend])
         return full_spend
 
-    async def create_spend_bundle_relative_amount(self, cc_amount):
+    async def create_spend_bundle_relative_amount(self, cc_amount, zero_coin: Coin = None):
         # If we're losing value then get coloured coins with at least that much value
         # If we're gaining value then our amount doesn't matter
         if cc_amount < 0:
             cc_spends = await self.select_coins(abs(cc_amount))
         else:
-            cc_spends = await self.select_coins(0)
+            if zero_coin is None:
+                return None
+            cc_spends = set()
+            cc_spends.add(zero_coin)
+
         if cc_spends is None:
             return None
 
