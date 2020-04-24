@@ -106,6 +106,9 @@ function create_select_options(wallet_summeries) {
     } else {
         wallet_id = key;
         wallet_name = wallet["name"]
+        if (wallet_name.length > 32) {
+            wallet_name = wallet_name.slice(0, 32) + "...";
+        }
         select += `<option class="wrap" value="${wallet_id}">${wallet_name}</option>`
     }
   }
@@ -172,6 +175,8 @@ function set_callbacks(socket) {
             get_wallet_summaries_response(data)
         } else if (command == "create_offer_for_ids") {
             create_offer_for_ids_response(data)
+        } else if (command == "respond_to_offer") {
+            respond_to_offer_response(data)
         }
     });
 
@@ -560,8 +565,6 @@ decline_offer.addEventListener('click', () => {
     */
     view_offer_parent.classList.add("hidden_area");
     drag_parent.classList.remove("hidden_area");
-
-    go_to_main_wallet();
 })
 
 accept_offer.addEventListener('click', () => {
@@ -691,7 +694,6 @@ function get_wallet_summaries() {
 
 function get_wallet_summaries_response(data){
   // {id: {"type": type, "balance": balance, "name": name, "colour": colour}}
-  // {id: {"type": type, "balance": balance}}
   wallets_details = data
   console.log(data)
   select_option = create_select_options(wallets_details)
@@ -735,12 +737,29 @@ function create_offer_for_ids_response(response) {
     /*
     Called when response is received for create_offer_for_ids request
     */
-   status = response["success"];
-   if (status === true) {
-       dialogs.alert("Offer accepted succesfully into the mempool.", ok => {});
-   } else if (status === false) {
+   status = response["success"]
+
+   if (status == "true") {
+       dialogs.alert("Offer accepted successfully created.", ok => {});
+   } else {
        dialogs.alert("Offer failed. Reason: " + response["reason"], ok => {});
    }
     save_offer.disabled = false;
     save_offer.innerHTML = "Save";
+}
+
+function respond_to_offer_response(response) {
+    /*
+    Called when response is received for create_offer_for_ids request
+    */
+   status = JSON.parse(response["success"]);
+   if (status == "true") {
+       dialogs.alert("Offer accepted successfully into the mempool.", ok => {});
+   } else {
+       dialogs.alert("Offer failed. Reason: " + response["reason"], ok => {});
+   }
+    accept_offer.disabled = false;
+    accept_offer.innerHTML = "Accept";
+    view_offer_parent.classList.add("hidden_area");
+    drag_parent.classList.remove("hidden_area");
 }
