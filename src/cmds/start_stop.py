@@ -67,7 +67,10 @@ def stop_service(root_path, service):
         with open(pid_path) as f:
             pid = int(f.readline())
         print(f"sending signal to pid {pid:>5} for {service}")
-        os.kill(pid, kill_signal)
+        try:
+            os.kill(pid, kill_signal)
+        except Exception:
+            print(f"can't kill {pid} for {service}, is it running?")
     except Exception:
         print(f"can't open PID file {pid_path} for {service}, is it running?")
         return 1
