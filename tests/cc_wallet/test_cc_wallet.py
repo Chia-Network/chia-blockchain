@@ -1,4 +1,5 @@
 import asyncio
+import time
 from pathlib import Path
 from secrets import token_bytes
 
@@ -50,6 +51,18 @@ class TestWalletSimulator:
         ):
             yield _
 
+    async def time_out_assert(self, timeout: int, function, value, arg=None):
+        start = time.time()
+        while time.time() - start < timeout:
+            if arg is None:
+                function_result = await function()
+            else:
+                function_result = await function(arg)
+            if value == function_result:
+                return
+            await asyncio.sleep(1)
+        assert False
+
     @pytest.mark.asyncio
     async def test_colour_creation(self, two_wallet_nodes):
         num_blocks = 10
@@ -64,7 +77,6 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(5)
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
@@ -72,7 +84,7 @@ class TestWalletSimulator:
             ]
         )
 
-        assert await wallet.get_confirmed_balance() == funds
+        await self.time_out_assert(15, wallet.get_confirmed_balance, funds)
 
         cc_wallet: CCWallet = await CCWallet.create_new_cc(
             wallet_node.wallet_state_manager, wallet, uint64(100)
@@ -81,12 +93,8 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(5)
-        confirmed_balance = await cc_wallet.get_confirmed_balance()
-        unconfirmed_balance = await cc_wallet.get_unconfirmed_balance()
-
-        assert confirmed_balance == 100
-        assert unconfirmed_balance == 100
+        await self.time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
+        await self.time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
     @pytest.mark.asyncio
     async def test_cc_spend(self, two_wallet_nodes):
@@ -106,7 +114,6 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(5)
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
@@ -114,7 +121,7 @@ class TestWalletSimulator:
             ]
         )
 
-        assert await wallet.get_confirmed_balance() == funds
+        await self.time_out_assert(15, wallet.get_confirmed_balance, funds)
 
         cc_wallet: CCWallet = await CCWallet.create_new_cc(
             wallet_node.wallet_state_manager, wallet, uint64(100)
@@ -123,12 +130,8 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(5)
-        confirmed_balance = await cc_wallet.get_confirmed_balance()
-        unconfirmed_balance = await cc_wallet.get_unconfirmed_balance()
-
-        assert confirmed_balance == 100
-        assert unconfirmed_balance == 100
+        await self.time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
+        await self.time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
         colour = cc_wallet_puzzles.get_genesis_from_core(cc_wallet.cc_info.my_core)
 
@@ -144,18 +147,11 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(5)
-        confirmed_balance = await cc_wallet.get_confirmed_balance()
-        unconfirmed_balance = await cc_wallet.get_unconfirmed_balance()
+        await self.time_out_assert(15, cc_wallet.get_confirmed_balance, 40)
+        await self.time_out_assert(15, cc_wallet.get_unconfirmed_balance, 40)
 
-        assert confirmed_balance == 40
-        assert unconfirmed_balance == 40
-
-        confirmed_balance = await cc_wallet_2.get_confirmed_balance()
-        unconfirmed_balance = await cc_wallet_2.get_unconfirmed_balance()
-
-        assert confirmed_balance == 60
-        assert unconfirmed_balance == 60
+        await self.time_out_assert(15, cc_wallet_2.get_confirmed_balance, 60)
+        await self.time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 60)
 
         cc_hash = await cc_wallet.get_new_inner_hash()
         await cc_wallet_2.cc_spend(uint64(15), cc_hash)
@@ -163,12 +159,8 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(5)
-        confirmed_balance = await cc_wallet.get_confirmed_balance()
-        unconfirmed_balance = await cc_wallet.get_unconfirmed_balance()
-
-        assert confirmed_balance == 55
-        assert unconfirmed_balance == 55
+        await self.time_out_assert(15, cc_wallet.get_confirmed_balance, 55)
+        await self.time_out_assert(15, cc_wallet.get_unconfirmed_balance, 55)
 
     @pytest.mark.asyncio
     async def test_get_wallet_for_colour(self, two_wallet_nodes):
@@ -185,7 +177,6 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(5)
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
@@ -193,7 +184,7 @@ class TestWalletSimulator:
             ]
         )
 
-        assert await wallet.get_confirmed_balance() == funds
+        await self.time_out_assert(15, wallet.get_confirmed_balance, funds)
 
         cc_wallet: CCWallet = await CCWallet.create_new_cc(
             wallet_node.wallet_state_manager, wallet, uint64(100)
@@ -225,15 +216,13 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(5)
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
                 for i in range(1, num_blocks - 2)
             ]
         )
-
-        assert await wallet.get_confirmed_balance() == funds
+        await self.time_out_assert(15, wallet.get_confirmed_balance, funds)
 
         cc_wallet: CCWallet = await CCWallet.create_new_cc(
             wallet_node.wallet_state_manager, wallet, uint64(100)
@@ -243,12 +232,9 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(5)
-        confirmed_balance = await cc_wallet.get_confirmed_balance()
-        unconfirmed_balance = await cc_wallet.get_unconfirmed_balance()
 
-        assert confirmed_balance == 100
-        assert unconfirmed_balance == 100
+        await self.time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
+        await self.time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
         colour = cc_wallet_puzzles.get_genesis_from_core(cc_wallet.cc_info.my_core)
 
@@ -290,7 +276,6 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(5)
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
@@ -298,7 +283,7 @@ class TestWalletSimulator:
             ]
         )
 
-        assert await wallet.get_confirmed_balance() == funds
+        await self.time_out_assert(15, wallet.get_confirmed_balance, funds)
 
         cc_wallet: CCWallet = await CCWallet.create_new_cc(
             wallet_node.wallet_state_manager, wallet, uint64(100)
@@ -307,12 +292,8 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(3)
-        confirmed_balance = await cc_wallet.get_confirmed_balance()
-        unconfirmed_balance = await cc_wallet.get_unconfirmed_balance()
-
-        assert confirmed_balance == 100
-        assert unconfirmed_balance == 100
+        await self.time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
+        await self.time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
         colour = cc_wallet_puzzles.get_genesis_from_core(cc_wallet.cc_info.my_core)
 
@@ -361,11 +342,8 @@ class TestWalletSimulator:
         for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
-        await asyncio.sleep(10)
-        cc_2_confirmed_balance = await cc_wallet_2.get_confirmed_balance()
-        cc_2_unconfirmed_balance = await cc_wallet_2.get_confirmed_balance()
-        assert cc_2_confirmed_balance == 30
-        assert cc_2_unconfirmed_balance == 30
+        await self.time_out_assert(15, cc_wallet_2.get_confirmed_balance, 30)
+        await self.time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 30)
 
     @pytest.mark.asyncio
     async def test_cc_spend_uncoloured(self, two_wallet_nodes):
@@ -385,7 +363,6 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(5)
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
@@ -393,7 +370,7 @@ class TestWalletSimulator:
             ]
         )
 
-        assert await wallet.get_confirmed_balance() == funds
+        await self.time_out_assert(15, wallet.get_confirmed_balance, funds)
 
         cc_wallet: CCWallet = await CCWallet.create_new_cc(
             wallet_node.wallet_state_manager, wallet, uint64(100)
@@ -402,12 +379,8 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(1)
-        confirmed_balance = await cc_wallet.get_confirmed_balance()
-        unconfirmed_balance = await cc_wallet.get_unconfirmed_balance()
-
-        assert confirmed_balance == 100
-        assert unconfirmed_balance == 100
+        await self.time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
+        await self.time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
         colour = cc_wallet_puzzles.get_genesis_from_core(cc_wallet.cc_info.my_core)
 
@@ -423,18 +396,12 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(5)
-        confirmed_balance = await cc_wallet.get_confirmed_balance()
-        unconfirmed_balance = await cc_wallet.get_unconfirmed_balance()
 
-        assert confirmed_balance == 40
-        assert unconfirmed_balance == 40
+        await self.time_out_assert(15, cc_wallet.get_confirmed_balance, 40)
+        await self.time_out_assert(15, cc_wallet.get_unconfirmed_balance, 40)
 
-        confirmed_balance = await cc_wallet_2.get_confirmed_balance()
-        unconfirmed_balance = await cc_wallet_2.get_unconfirmed_balance()
-
-        assert confirmed_balance == 60
-        assert unconfirmed_balance == 60
+        await self.time_out_assert(15, cc_wallet_2.get_confirmed_balance, 60)
+        await self.time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 60)
 
         cc2_ph = await cc_wallet_2.get_new_cc_puzzle_hash()
         spend_bundle = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(
@@ -445,17 +412,12 @@ class TestWalletSimulator:
         for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
-        await asyncio.sleep(3)
 
         id = cc_wallet_2.wallet_info.id
         wsm = cc_wallet_2.wallet_state_manager
-        confirmed_balance_wsm = await wsm.get_confirmed_balance_for_wallet(id)
-        confirmed_balance = await cc_wallet_2.get_confirmed_balance()
-        unconfirmed_balance = await cc_wallet_2.get_unconfirmed_balance()
-
-        assert confirmed_balance == 60
-        assert unconfirmed_balance == 60
-        assert confirmed_balance_wsm == 70
+        await self.time_out_assert(15, wsm.get_confirmed_balance_for_wallet, 70, id)
+        await self.time_out_assert(15, cc_wallet_2.get_confirmed_balance, 60)
+        await self.time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 60)
 
     @pytest.mark.asyncio
     async def test_cc_trade_with_multiple_colours(self, two_wallet_nodes):
@@ -476,7 +438,6 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(5)
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
@@ -484,7 +445,7 @@ class TestWalletSimulator:
             ]
         )
 
-        assert await wallet.get_confirmed_balance() == funds
+        await self.time_out_assert(15, wallet.get_confirmed_balance, funds)
 
         red_wallet: CCWallet = await CCWallet.create_new_cc(
             wallet_node.wallet_state_manager, wallet, uint64(100)
@@ -493,12 +454,8 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(1)
-        confirmed_balance = await red_wallet.get_confirmed_balance()
-        unconfirmed_balance = await red_wallet.get_unconfirmed_balance()
-
-        assert confirmed_balance == 100
-        assert unconfirmed_balance == 100
+        await self.time_out_assert(15, red_wallet.get_confirmed_balance, 100)
+        await self.time_out_assert(15, red_wallet.get_unconfirmed_balance, 100)
 
         red = cc_wallet_puzzles.get_genesis_from_core(red_wallet.cc_info.my_core)
 
@@ -566,26 +523,17 @@ class TestWalletSimulator:
         for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
-        await asyncio.sleep(10)
-        cc_2_confirmed_balance = await red_wallet_2.get_confirmed_balance()
-        cc_2_unconfirmed_balance = await red_wallet_2.get_confirmed_balance()
-        assert cc_2_confirmed_balance == 30
-        assert cc_2_unconfirmed_balance == 30
+        await self.time_out_assert(15, red_wallet_2.get_confirmed_balance, 30)
+        await self.time_out_assert(15, red_wallet_2.get_unconfirmed_balance, 30)
 
-        cc_2_confirmed_balance = await blue_wallet_2.get_confirmed_balance()
-        cc_2_unconfirmed_balance = await blue_wallet_2.get_confirmed_balance()
-        assert cc_2_confirmed_balance == 100
-        assert cc_2_unconfirmed_balance == 100
+        await self.time_out_assert(15, blue_wallet_2.get_confirmed_balance, 100)
+        await self.time_out_assert(15, blue_wallet_2.get_unconfirmed_balance, 100)
 
-        cc_2_confirmed_balance = await blue_wallet.get_confirmed_balance()
-        cc_2_unconfirmed_balance = await blue_wallet.get_confirmed_balance()
-        assert cc_2_confirmed_balance == 50
-        assert cc_2_unconfirmed_balance == 50
+        await self.time_out_assert(15, blue_wallet.get_confirmed_balance, 50)
+        await self.time_out_assert(15, blue_wallet.get_unconfirmed_balance, 50)
 
-        cc_2_confirmed_balance = await red_wallet.get_confirmed_balance()
-        cc_2_unconfirmed_balance = await red_wallet.get_confirmed_balance()
-        assert cc_2_confirmed_balance == 70
-        assert cc_2_unconfirmed_balance == 70
+        await self.time_out_assert(15, red_wallet.get_confirmed_balance, 70)
+        await self.time_out_assert(15, red_wallet.get_unconfirmed_balance, 70)
 
     @pytest.mark.asyncio
     async def test_create_offer_with_zero_val(self, two_wallet_nodes):
@@ -606,7 +554,6 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(5)
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
@@ -614,7 +561,7 @@ class TestWalletSimulator:
             ]
         )
 
-        assert await wallet.get_confirmed_balance() == funds
+        await self.time_out_assert(15, wallet.get_confirmed_balance, funds)
 
         cc_wallet: CCWallet = await CCWallet.create_new_cc(
             wallet_node.wallet_state_manager, wallet, uint64(100)
@@ -623,12 +570,10 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(1)
-        confirmed_balance = await cc_wallet.get_confirmed_balance()
-        unconfirmed_balance = await cc_wallet.get_unconfirmed_balance()
 
-        assert confirmed_balance == 100
-        assert unconfirmed_balance == 100
+        await self.time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
+        await self.time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
+
 
         colour = cc_wallet_puzzles.get_genesis_from_core(cc_wallet.cc_info.my_core)
 
@@ -677,9 +622,6 @@ class TestWalletSimulator:
         for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
-        await asyncio.sleep(5)
-        cc_2_confirmed_balance = await cc_wallet_2.get_confirmed_balance()
-        cc_2_unconfirmed_balance = await cc_wallet_2.get_confirmed_balance()
 
-        assert cc_2_confirmed_balance == 30
-        assert cc_2_unconfirmed_balance == 30
+        await self.time_out_assert(15, cc_wallet_2.get_confirmed_balance, 30)
+        await self.time_out_assert(15, cc_wallet_2.get_confirmed_balance, 30)
