@@ -3,16 +3,16 @@ from setuptools import setup
 
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
-    "blspy==0.1.18",  # Signature library
+    "blspy==0.1.19",  # Signature library
     "cbor2==5.1.0",  # Used for network wire format
     "clvm==0.4",  # contract language
     "PyYAML==5.3",  # Used for config file format
     "aiosqlite==0.11.0",  # asyncio wrapper for sqlite, to store blocks
     "aiohttp==3.6.2",  # HTTP server for full node rpc
     "colorlog==4.1.0",  # Adds color to logs
-    "chiavdf==0.12.7",  # timelord and vdf verification
-    "chiabip158==0.13",  # bip158-style wallet filters
-    "chiapos==0.12.6",  # proof of space
+    "chiavdf==0.12.8",  # timelord and vdf verification
+    "chiabip158==0.14",  # bip158-style wallet filters
+    "chiapos==0.12.7",  # proof of space
     "sortedcontainers==2.1.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
     "clvm-tools==0.1.1",  # clvm compiler tools
