@@ -568,6 +568,7 @@ function get_wallets_response(data) {
         var name = wallet["name"]
         get_wallet_balance(id)
         //href, wallet_name, wallet_description, wallet_amount
+        console.log("type is " + type)
         var href = ""
         if (type == "STANDARD_WALLET") {
             href = "wallet-dark.html"
@@ -614,26 +615,24 @@ function get_wallet_summaries_response(data){
       var type = wallet["type"]
       var id = i
       var name = wallet["type"]
-      if (type=="STANDARD_WALLET"){
-        name = "Chia Wallet"
-        type = "Chia"
-      } else if (name=="COLOURED_COIN") {
-        name = "CC Wallet"
-        type = wallet["name"]
-        if (type.length > 18) {
-          type = type.substring(0,18);
-          type = type.concat("...")
-        }
-      }
+
       get_wallet_balance(id)
       //href, wallet_name, wallet_description, wallet_amount
       var href = ""
       if (type == "STANDARD_WALLET") {
-          href = "../wallet-dark.html"
+          href = "./wallet-dark.html"
+          name = "Chia Wallet"
+          type = "Chia"
       } else if (type == "RATE_LIMITED") {
-          href = "../rl_wallet/rl_wallet.html"
+          href = "rl_wallet/rl_wallet.html"
       } else if (type == "COLOURED_COIN") {
-          href = "../cc_wallet/cc_wallet.html"
+          href = "cc_wallet/cc_wallet.html"
+          name = "CC Wallet"
+          type = wallet["name"]
+          if (type.length > 18) {
+            type = type.substring(0,18);
+            type = type.concat("...")
+          }
       }
 
       if (id == g_wallet_id) {
