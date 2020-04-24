@@ -24,6 +24,7 @@ let block_height_textfield = document.querySelector('#block_height_textfield')
 let standard_wallet_balance = document.querySelector('#standard_wallet_balance')
 let wallets_tab = document.querySelector('#wallets_tab')
 const { get_query_variable } = require("./utils");
+var g_wallets = {}
 
 // UI checkmarks and lock icons
 const green_checkmark = "<i class=\"icon ion-md-checkmark-circle-outline green\"></i>"
@@ -510,6 +511,7 @@ function handle_state_changed(data) {
     } else if (state == "coin_added") {
         get_transactions()
         get_wallet_balance(g_wallet_id)
+        update_balance_for_all_wallets()
     } else if (state == "pending_transaction") {
         get_transactions()
         get_wallet_balance(g_wallet_id)
@@ -518,6 +520,7 @@ function handle_state_changed(data) {
         get_wallet_balance(g_wallet_id)
     } else if (state == "balance_changed") {
         get_wallet_balance(g_wallet_id)
+        update_balance_for_all_wallets()
     } else if (state == "sync_changed") {
         get_sync_status()
     } else if (state == "new_block") {
@@ -527,6 +530,15 @@ function handle_state_changed(data) {
         get_wallet_balance(g_wallet_id)
         get_height_info()
         get_sync_status()
+        update_balance_for_all_wallets()
+    }
+}
+
+function update_balance_for_all_wallets() {
+    for (var i = 0; i < g_wallets.length; i++) {
+        var wallet = g_wallets[i];
+        var id = wallet["id"]
+        get_wallet_balance(id)
     }
 }
 
@@ -542,9 +554,9 @@ function get_wallets() {
 }
 
 function get_wallets_response(data) {
-    wallets_tab.innerHTML = ""
     new_innerHTML = ""
     const wallets = data["wallets"]
+    g_wallets = wallets
 
     for (var i = 0; i < wallets.length; i++) {
         var wallet = wallets[i];
