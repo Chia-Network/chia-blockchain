@@ -75,20 +75,16 @@ class TradeManager:
             return False, None
 
     def write_offer_to_disk(self, file_path: Path, offer: SpendBundle):
-        f = open(file_path, "w")
-        f.write(bytes(offer).hex())
-        f.close()
+        file_path.write_text(bytes(offer).hex())
 
     async def get_discrepancies_for_offer(
-        self, file_path
+        self, file_path: Path
     ) -> Tuple[bool, Optional[Dict], Optional[Exception]]:
         try:
             self.log.info(f"trade offer: {file_path}")
             cc_discrepancies: Dict[bytes32, int] = dict()
             wallets: Dict[bytes32, Any] = dict()
-            f = open(file_path, "r")
-            trade_offer_hex = f.read()
-            f.close()
+            trade_offer_hex = file_path.read_text()
             trade_offer = SpendBundle.from_bytes(bytes.fromhex(trade_offer_hex))
             for coinsol in trade_offer.coin_solutions:
                 puzzle = coinsol.solution.first()
@@ -151,10 +147,8 @@ class TradeManager:
         puzzle = self.wallet_state_manager.main_wallet.puzzle_for_pk(bytes(info.pubkey))
         return puzzle
 
-    async def respond_to_offer(self, filename) -> bool:
-        f = open(filename, "r")
-        trade_offer_hex = f.read()
-        f.close()
+    async def respond_to_offer(self, file_path: Path) -> bool:
+        trade_offer_hex = file_path.read_text()
         trade_offer = SpendBundle.from_bytes(bytes.fromhex(trade_offer_hex))
 
         coinsols = []  # [] of CoinSolutions

@@ -137,14 +137,37 @@ class CCWallet:
         return self
 
     async def get_confirmed_balance(self) -> uint64:
-        return await self.wallet_state_manager.get_confirmed_balance_for_wallet(
-            self.wallet_info.id
+        record_list: Set[
+            WalletCoinRecord
+        ] = await self.wallet_state_manager.wallet_store.get_coin_records_by_spent_and_wallet(
+            False, self.wallet_info.id
         )
 
+        amount: uint64 = uint64(0)
+        for record in record_list:
+            parent = await self.get_parent_for_coin(record.coin)
+            if parent is not None:
+                amount = uint64(amount + record.coin.amount)
+
+        self.log.info(f"Confirmed balance for cc wallet is {amount}")
+        return uint64(amount)
+
     async def get_unconfirmed_balance(self) -> uint64:
-        return await self.wallet_state_manager.get_unconfirmed_balance(
-            self.wallet_info.id
-        )
+        confirmed = await self.get_confirmed_balance()
+        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.wallet_info.id)
+        addition_amount = 0
+        removal_amount = 0
+
+        for record in unconfirmed_tx:
+            for coin in record.additions:
+                if await self.wallet_state_manager.puzzle_store.puzzle_hash_exists(coin.puzzle_hash):
+                    addition_amount += coin.amount
+            for coin in record.removals:
+                removal_amount += coin.amount
+        result = confirmed - removal_amount + addition_amount
+
+        self.log.info(f"Unconfirmed balance for cc wallet is {result}")
+        return uint64(result)
 
     async def get_name(self):
         return self.cc_info.my_colour_name
@@ -422,12 +445,26 @@ class CCWallet:
             await self.standard_wallet.push_transaction(full_spend)
         return full_spend
 
+    async def get_cc_spendable_coins(self) -> List[WalletCoinRecord]:
+        result: List[WalletCoinRecord] = []
+
+        record_list: Set[
+            WalletCoinRecord
+        ] = await self.wallet_state_manager.wallet_store.get_coin_records_by_spent_and_wallet(
+            False, self.wallet_info.id
+        )
+
+        for record in record_list:
+            parent = await self.get_parent_for_coin(record.coin)
+            if parent is not None:
+                result.append(record)
+
+        return result
+
     async def select_coins(self, amount: uint64) -> Optional[Set[Coin]]:
         """ Returns a set of coins that can be used for generating a new transaction. """
         async with self.wallet_state_manager.lock:
-            spendable_am = await self.wallet_state_manager.get_unconfirmed_spendable_for_wallet(
-                self.wallet_info.id
-            )
+            spendable_am = await self.get_confirmed_balance()
 
             if amount > spendable_am:
                 self.log.warning(
@@ -436,11 +473,8 @@ class CCWallet:
                 return None
 
             self.log.info(f"About to select coins for amount {amount}")
-            unspent: List[WalletCoinRecord] = list(
-                await self.wallet_state_manager.get_spendable_coins_for_wallet(
-                    self.wallet_info.id
-                )
-            )
+            unspent: List[WalletCoinRecord] = await self.get_cc_spendable_coins()
+
             sum = 0
             used_coins: Set = set()
 
