@@ -106,7 +106,8 @@ function set_callbacks(socket) {
         var data = message["data"];
 
         if (command == "start_server") {
-            get_wallets();
+            //get_wallets();
+            get_wallet_summaries();
             get_transactions();
             get_wallet_balance(g_wallet_id);
             get_height_info();
@@ -131,6 +132,8 @@ function set_callbacks(socket) {
             get_sync_status_response(data)
         } else if (command == "get_wallets") {
             get_wallets_response(data)
+        } else if (command == "get_wallet_summaries") {
+            get_wallet_summaries_response(data)
         }
     });
 
@@ -583,6 +586,66 @@ function get_wallets_response(data) {
     }
     new_innerHTML += create_wallet_button()
     wallets_tab.innerHTML = new_innerHTML
+}
+
+function get_wallet_summaries() {
+  /*
+  Sends websocket request to get wallet summaries
+  */
+  data = {
+      "info": "123",
+  }
+
+  request = {
+      "command": "get_wallet_summaries",
+      "data": data
+  }
+
+  json_data = JSON.stringify(request);
+  ws.send(json_data);
+}
+
+function get_wallet_summaries_response(data){
+  // {id: {"type": type, "balance": balance, "name": name, "colour": colour}}
+  // {id: {"type": type, "balance": balance}}
+  console.log("reveived get_wallet_summaries")
+  var new_innerHTML = ""
+  for (var i in data) {
+      var wallet = data[i];
+      var type = wallet["type"]
+      var id = i
+      var name = wallet["type"]
+      if (type=="STANDARD_WALLET"){
+        name = "Chia Wallet"
+        type = "Chia"
+      } else if (name=="COLOURED_COIN") {
+        name = "CC Wallet"
+        type = wallet["name"]
+        if (type.length > 20) {
+          type = type.substring(0,20);
+          type = type.concat("...")
+        }
+      }
+      get_wallet_balance(id)
+      //href, wallet_name, wallet_description, wallet_amount
+      var href = ""
+      if (type == "STANDARD_WALLET") {
+          href = "../wallet-dark.html"
+      } else if (type == "RATE_LIMITED") {
+          href = "../rl_wallet/rl_wallet.html"
+      } else if (type == "COLOURED_COIN") {
+          href = "../cc_wallet/cc_wallet.html"
+      }
+
+      if (id == g_wallet_id) {
+          new_innerHTML += create_side_wallet(id, href, name, type, 0, true)
+      } else {
+          new_innerHTML += create_side_wallet(id, href, name, type, 0, false)
+      }
+
+  }
+  new_innerHTML += create_wallet_button()
+  wallets_tab.innerHTML = new_innerHTML
 }
 
 function clean_table() {

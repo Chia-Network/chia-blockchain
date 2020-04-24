@@ -114,7 +114,6 @@ function set_callbacks(socket) {
         console.log("Received command: " + command);
 
         if (command == "start_server") {
-            get_wallets();
             get_colour(g_wallet_id)
             get_colour_name(g_wallet_id)
             get_transactions();
@@ -194,6 +193,44 @@ function get_wallet_summaries_response(data){
   // {id: {"type": type, "balance": balance, "name": name, "colour": colour}}
   // {id: {"type": type, "balance": balance}}
   wallets_details = data
+  wallets_tab.innerHTML = ""
+  var new_innerHTML = ""
+  for (var i in data) {
+      var wallet = data[i];
+      var type = wallet["type"]
+      var id = i
+      var name = wallet["type"]
+      if (type=="STANDARD_WALLET"){
+        name = "Chia Wallet"
+        type = "Chia"
+      } else if (name=="COLOURED_COIN") {
+        name = "CC Wallet"
+        type = wallet["name"]
+        if (type.length > 20) {
+          type = type.substring(0,20);
+          type = type.concat("...")
+        }
+      }
+      get_wallet_balance(id)
+      //href, wallet_name, wallet_description, wallet_amount
+      var href = ""
+      if (type == "STANDARD_WALLET") {
+          href = "../wallet-dark.html"
+      } else if (type == "RATE_LIMITED") {
+          href = "../rl_wallet/rl_wallet.html"
+      } else if (type == "COLOURED_COIN") {
+          href = "../cc_wallet/cc_wallet.html"
+      }
+
+      if (id == g_wallet_id) {
+          new_innerHTML += create_side_wallet(id, href, name, type, 0, true)
+      } else {
+          new_innerHTML += create_side_wallet(id, href, name, type, 0, false)
+      }
+
+  }
+  new_innerHTML += create_wallet_button()
+  wallets_tab.innerHTML = new_innerHTML
 }
 
 async function get_wallet_balance(id) {
@@ -361,48 +398,6 @@ function handle_state_changed(data) {
         get_height_info()
         get_sync_status()
     }
-}
-
-function get_wallets() {
-    /*
-    Sends websocket request to get list of all wallets available
-    */
-    data = {
-        "command": "get_wallets",
-    }
-    json_data = JSON.stringify(data);
-    ws.send(json_data);
-}
-
-function get_wallets_response(data) {
-    wallets_tab.innerHTML = ""
-    new_innerHTML = ""
-    const wallets = data["wallets"]
-    for (var i = 0; i < wallets.length; i++) {
-        var wallet = wallets[i];
-        var type = wallet["type"]
-        var id = wallet["id"]
-        var name = wallet["name"]
-        get_wallet_balance(id)
-        //href, wallet_name, wallet_description, wallet_amount
-        var href = ""
-        if (type == "STANDARD_WALLET") {
-            href = "../wallet-dark.html"
-        } else if (type == "RATE_LIMITED") {
-            href = "../rl_wallet/rl_wallet.html"
-        } else if (type == "COLOURED_COIN") {
-            href = "../cc_wallet/cc_wallet.html"
-        }
-
-        if (id == g_wallet_id) {
-            new_innerHTML += create_side_wallet(id, href, name, type, 0, true)
-        } else {
-            new_innerHTML += create_side_wallet(id, href, name, type, 0, false)
-        }
-
-    }
-    new_innerHTML += create_wallet_button()
-    wallets_tab.innerHTML = new_innerHTML
 }
 
 function get_colour(id) {
