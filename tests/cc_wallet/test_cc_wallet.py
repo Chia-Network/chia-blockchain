@@ -123,7 +123,7 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(1)
+        await asyncio.sleep(5)
         confirmed_balance = await cc_wallet.get_confirmed_balance()
         unconfirmed_balance = await cc_wallet.get_unconfirmed_balance()
 
@@ -307,7 +307,7 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         confirmed_balance = await cc_wallet.get_confirmed_balance()
         unconfirmed_balance = await cc_wallet.get_unconfirmed_balance()
 
@@ -358,7 +358,7 @@ class TestWalletSimulator:
 
         assert success is True
 
-        for i in range(0, 4):
+        for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
         await asyncio.sleep(10)
@@ -442,7 +442,7 @@ class TestWalletSimulator:
         )
         await wallet.wallet_state_manager.main_wallet.push_transaction(spend_bundle)
 
-        for i in range(0, 4):
+        for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
         await asyncio.sleep(3)
@@ -563,7 +563,7 @@ class TestWalletSimulator:
         success = await trade_manager_2.respond_to_offer(file_path)
 
         assert success is True
-        for i in range(0, 4):
+        for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
         await asyncio.sleep(10)
@@ -674,7 +674,7 @@ class TestWalletSimulator:
 
         assert success is True
 
-        for i in range(0, 4):
+        for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
         await asyncio.sleep(5)
