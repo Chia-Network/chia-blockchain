@@ -2253,7 +2253,7 @@ table td {
 }
 
 .select-selected {
-  background-color: rgb(42, 46, 57);;
+  background-color: rgb(35, 40, 52);
 }
 
 /*style the arrow inside the select element:*/
@@ -2278,17 +2278,18 @@ table td {
 .select-items div,.select-selected {
   color: #ffffff;
   padding: 8px 16px;
-  border: 1px solid transparent;
+  border: 2px solid transparent;
   border-color: transparent transparent rgba(0, 0, 0, 0.1) transparent;
   cursor: pointer;
   user-select: none;
   border-radius: 2px;
+  height: 45px;
 }
 
 /*style items (options):*/
 .select-items {
   position: absolute;
-  background-color: rgb(42, 46, 57);
+  background-color: rgb(35, 40, 52);
   top: 100%;
   left: 0;
   right: 0;
