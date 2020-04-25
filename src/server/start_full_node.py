@@ -2,6 +2,7 @@ import asyncio
 import logging
 import logging.config
 import signal
+import miniupnpc
 
 import aiosqlite
 
@@ -61,7 +62,6 @@ async def async_main():
     if config["enable_upnp"]:
         log.info(f"Attempting to enable UPnP (open up port {config['port']})")
         try:
-            #miniupnpc = pip_import("miniupnpc", "miniupnpc==2.1") Causing problems on windows
             upnp = miniupnpc.UPnP()
             upnp.discoverdelay = 5
             upnp.discover()
