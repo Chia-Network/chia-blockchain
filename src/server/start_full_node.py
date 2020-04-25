@@ -25,7 +25,6 @@ from src.util.logging import initialize_logging
 from src.util.config import load_config_cli, load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.path import mkdir, path_from_root
-from src.util.pip_import import pip_import
 from src.util.setproctitle import setproctitle
 
 
