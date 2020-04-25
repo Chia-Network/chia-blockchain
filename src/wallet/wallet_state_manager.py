@@ -1146,7 +1146,7 @@ class WalletStateManager:
         # Get all unspent coins
         my_coin_records_lca: Set[
             WalletCoinRecord
-        ] = await self.wallet_store.get_coin_records_by_spent(False, uint32(fork_h + 1))
+        ] = await self.wallet_store.get_unspent_coins_at_height(uint32(fork_h))
 
         # Filter coins up to and including fork point
         unspent_coin_names: Set[bytes32] = set()
@@ -1266,9 +1266,6 @@ class WalletStateManager:
 
     async def get_all_wallets(self) -> List[WalletInfo]:
         return await self.user_store.get_all_wallets()
-
-    async def get_coin_records_by_spent(self, spent: bool):
-        return await self.wallet_store.get_coin_records_by_spent(spent)
 
     async def get_spendable_coins_for_wallet(
         self, wallet_id: int

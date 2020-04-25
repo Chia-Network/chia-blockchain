@@ -87,6 +87,7 @@ def generate(args, parser):
         key_config["wallet_sk"] = bytes(wallet_sk).hex()
         key_config["wallet_target"] = wallet_target.hex()
         save_config(root_path, keys_yaml, key_config)
+        print("WALLET TARGET:", wallet_target.hex())
     if args.harvester:
         # Replaces the harvester's sk seed. Used to generate plot private keys, which are
         # used to sign farmed blocks.
@@ -109,4 +110,6 @@ def generate(args, parser):
         # Compute a new pool target and save it to the config
         assert "wallet_target" in key_config
         key_config["pool_target"] = key_config["wallet_target"]
+        print("POOL TARGET:", key_config["pool_target"])
+        print("Root path", root_path)
         save_config(root_path, keys_yaml, key_config)

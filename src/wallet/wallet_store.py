@@ -143,19 +143,22 @@ class WalletStore:
             )
         return None
 
-    async def get_coin_records_by_spent(
-        self, spent: bool, spend_before_height: Optional[uint32] = None
+    async def get_unspent_coins_at_height(
+        self, height: Optional[uint32] = None
     ) -> Set[WalletCoinRecord]:
         """ Returns set of CoinRecords that have not been spent yet. """
         coins = set()
-        if spend_before_height:
+        if height is not None:
+            cursor_test = await self.db_connection.execute(
+                "SELECT * from coin_record",
+            )
             cursor = await self.db_connection.execute(
-                "SELECT * from coin_record WHERE spent=? OR spent_index>=?",
-                (int(spent), spend_before_height),
+                "SELECT * from coin_record WHERE (spent=? OR spent_index>?) AND confirmed_index<=?",
+                (0, height, height),
             )
         else:
             cursor = await self.db_connection.execute(
-                "SELECT * from coin_record WHERE spent=?", (int(spent),)
+                "SELECT * from coin_record WHERE spent=?", (0,)
             )
         rows = await cursor.fetchall()
         await cursor.close()
@@ -243,7 +246,7 @@ class WalletStore:
         result: Dict[bytes32, Coin] = {}
         unspent_coin_records: Set[
             WalletCoinRecord
-        ] = await self.get_coin_records_by_spent(False)
+        ] = await self.get_unspent_coins_at_height()
 
         for record in unspent_coin_records:
             result[record.name()] = record.coin

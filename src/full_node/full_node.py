@@ -222,6 +222,7 @@ class FullNode:
                 yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
 
             while not self._shut_down:
+                # If we are still connected to introducer, disconnect
                 for connection in self.server.global_connections.get_connections():
                     if connection.connection_type == NodeType.INTRODUCER:
                         self.server.global_connections.close(connection)

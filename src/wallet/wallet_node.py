@@ -167,6 +167,10 @@ class WalletNode:
                 yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
 
             while not self._shut_down:
+                for connection in self.server.global_connections.get_connections():
+                    # If we are still connected to introducer, disconnect
+                    if connection.connection_type == NodeType.INTRODUCER:
+                        self.server.global_connections.close(connection)
                 if self._num_needed_peers():
                     if not await self.server.start_client(
                         introducer_peerinfo, on_connect
