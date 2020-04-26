@@ -60,6 +60,7 @@ kwargs = dict(
         "src.wallet",
         "src.wallet.puzzles",
         "src.wallet.rl_wallet",
+        "src.wallet.cc_wallet",
         "src.wallet.util",
         "src.ssl",
     ],
