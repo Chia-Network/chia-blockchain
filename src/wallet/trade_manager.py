@@ -59,9 +59,9 @@ class TradeManager:
                             to_exclude: List[Coin] = []
                         else:
                             to_exclude = spend_bundle.removals()
-                        zero_spend_bundle: Optional[SpendBundle] = await wallet.generate_zero_val_coin(
-                            False, to_exclude
-                        )
+                        zero_spend_bundle: Optional[
+                            SpendBundle
+                        ] = await wallet.generate_zero_val_coin(False, to_exclude)
 
                         if zero_spend_bundle is None:
                             raise ValueError(
@@ -290,7 +290,7 @@ class TradeManager:
                 )
             else:
                 if chia_spend_bundle is None:
-                    to_exclude = []
+                    to_exclude: List = []
                 else:
                     to_exclude = chia_spend_bundle.removals()
                 zero_spend_bundle: SpendBundle = await wallets[

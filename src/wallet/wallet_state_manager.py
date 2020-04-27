@@ -207,48 +207,41 @@ class WalletStateManager:
         private = self.private_key.private_child(index_for_puzzlehash).get_private_key()
         return pubkey, private
 
-    async def create_more_puzzle_hashes(
-        self, from_zero: bool = False, for_wallet: Any = None
-    ):
+    async def create_more_puzzle_hashes(self, from_zero: bool = False):
         """
         For all wallets in the user store, generates the first few puzzle hashes so
         that we can restore the wallet from only the private keys.
         """
+        targets = list(self.wallets.keys())
 
-        if for_wallet is None:
-            targets = list(self.wallets.keys())
-        else:
-            targets = [for_wallet]
+        unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path()
+        if unused is None:
+            # This handles the case where the database has entries but they have all been used
+            unused = await self.puzzle_store.get_last_derivation_path()
+            if unused is None:
+                # This handles the case where the database is empty
+                unused = uint32(0)
+
+        to_generate = 100
 
         for wallet_id in targets:
             target_wallet = self.wallets[wallet_id]
-            unused: Optional[
-                uint32
-            ] = await self.puzzle_store.get_unused_derivation_path_for_wallet(wallet_id)
+
             last: Optional[
                 uint32
             ] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
 
-            if target_wallet.wallet_info.type == WalletType.COLOURED_COIN:
-                to_generate = 100
-            else:
-                to_generate = 500
             start_index = 0
             derivation_paths: List[DerivationRecord] = []
 
-            if last is None:
-                assert unused is None
-            if unused is not None:
-                assert last is not None
+            if last is not None:
                 start_index = last + 1
-                to_generate -= last - unused
 
             # If the key was replaced (from_zero=True), we should generate the puzzle hashes for the new key
-            end = start_index + to_generate
             if from_zero:
                 start_index = 0
 
-            for index in range(start_index, end):
+            for index in range(start_index, unused + to_generate):
                 pubkey: PublicKey = self.get_public_key(uint32(index))
                 puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
                 puzzlehash: bytes32 = puzzle.get_tree_hash()
@@ -266,8 +259,8 @@ class WalletStateManager:
                 )
 
             await self.puzzle_store.add_derivation_paths(derivation_paths)
-            if from_zero and unused is not None and unused > 0:
-                await self.puzzle_store.set_used_up_to(uint32(unused - 1))
+        if unused > 0:
+            await self.puzzle_store.set_used_up_to(uint32(unused - 1))
 
     async def get_unused_derivation_record(self, wallet_id: uint32) -> DerivationRecord:
         """
@@ -279,9 +272,9 @@ class WalletStateManager:
             # If we have no unused public keys, we will create new ones
             unused: Optional[
                 uint32
-            ] = await self.puzzle_store.get_unused_derivation_path_for_wallet(wallet_id)
+            ] = await self.puzzle_store.get_unused_derivation_path()
             if unused is None:
-                await self.create_more_puzzle_hashes(for_wallet=wallet_id)
+                await self.create_more_puzzle_hashes()
 
             # Now we must have unused public keys
             unused = await self.puzzle_store.get_unused_derivation_path()
@@ -1336,7 +1329,7 @@ class WalletStateManager:
 
     async def add_new_wallet(self, wallet: Any, id: int):
         self.wallets[uint32(id)] = wallet
-        await self.create_more_puzzle_hashes(for_wallet=id)
+        await self.create_more_puzzle_hashes()
 
     async def get_coin_records_by_spent(self, spent: bool):
         return await self.wallet_store.get_coin_records_by_spent(spent)
