@@ -3,7 +3,7 @@ from setuptools import setup
 
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
-    "blspy==0.1.20",  # Signature library
+    "blspy==0.1.21",  # Signature library
     "cbor2==5.1.0",  # Used for network wire format
     "clvm==0.4",  # contract language
     "PyYAML==5.3",  # Used for config file format
@@ -60,6 +60,7 @@ kwargs = dict(
         "src.wallet",
         "src.wallet.puzzles",
         "src.wallet.rl_wallet",
+        "src.wallet.cc_wallet",
         "src.wallet.util",
         "src.ssl",
     ],
