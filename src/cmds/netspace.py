@@ -144,6 +144,7 @@ async def netstorge_async(args, parser):
         # print (args.blocks)
         if args.old_block != "":
             await compare_block_headers(client, args.old_block, args.new_block)
+            args.delta_block_height = ""  # grubby hack to work around default arg
         if args.delta_block_height:
             # Get lca
             blockchain_state = await client.get_blockchain_state()

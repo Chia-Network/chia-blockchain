@@ -36,7 +36,7 @@ is available from the repository
 Ubuntu 18.04 LTS, 19.xx, Amazon Linux 2, and CentOS 7.7 or newer are the
 easiest linux install environments.
 
-UPnP is enabled by default, to open port 8444 for incoming connections.
+UPnP is enabled by default to open port 8444 for incoming connections.
 If this causes issues, you can disable it in config.yaml.
 Some routers may require port forwarding, or enabling UPnP
 in the router's configuration.
@@ -47,13 +47,16 @@ This limit will significantly increase soon.
 
 # uvloop
 
-For potentially increased networking performance, install uvloop:
+For potentially increased networking performance on non Windows platforms,
+install uvloop:
 ```bash
 pip install -e ".[uvloop]"
 ```
 
+# RPC Interface
+
 You can also use the
-[HTTP RPC](https://github.com/Chia-Network/chia-blockchain/wiki/Networking-and-Serialization#rpc)
+[HTTP JSON-RPC](https://github.com/Chia-Network/chia-blockchain/wiki/Networking-and-Serialization#rpc)
 api to access information and control the full node:
 
 ```bash
