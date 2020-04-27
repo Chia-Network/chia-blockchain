@@ -28,10 +28,6 @@ jobs:
       run: |
         pip install pep517 wheel
         pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ -f ${{ github.workspace }} --wheel-dir=${{ github.workspace }}\electron-wix\blockchain ${{ github.workspace }}\.
-        New-Item -ItemType Directory -Path ${{ github.workspace }}\electron-wix\final
-        Compress-Archive -Path ${{ github.workspace }}\electron-wix\blockchain\* -DestinationPath ${{ github.workspace }}\electron-wix\final\windows-wheels.zip -Force
-        Write-Host "windows-wheels.zip added to Artifacts"
-        dir ${{ github.workspace }}\electron-wix\final
 
     - name: Install electron-packager
       run: |
