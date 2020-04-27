@@ -72,3 +72,6 @@ src/wallet/electron/node_modules/
 
 # Node modules
 **/node_modules
+
+# Offer Files
+*.offer

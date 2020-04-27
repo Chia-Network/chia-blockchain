@@ -1,4 +1,5 @@
 import asyncio
+import json
 import time
 from typing import Dict, Optional, Tuple, List, AsyncGenerator
 import concurrent
@@ -8,6 +9,7 @@ import traceback
 
 from src.full_node.full_node import OutboundMessageGenerator
 from src.types.peer_info import PeerInfo
+from src.util.byte_types import hexstr_to_bytes
 from src.util.merkle_set import (
     confirm_included_already_hashed,
     confirm_not_included_already_hashed,
@@ -20,7 +22,10 @@ from src.server.outbound_message import OutboundMessage, NodeType, Message, Deli
 from src.util.ints import uint32, uint64
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
+from src.wallet.derivation_record import DerivationRecord
 from src.wallet.transaction_record import TransactionRecord
+from src.wallet.util.wallet_types import WalletType
+from src.wallet.wallet_action import WalletAction
 from src.wallet.wallet_state_manager import WalletStateManager
 from src.wallet.block_record import BlockRecord
 from src.types.header_block import HeaderBlock
@@ -110,12 +115,36 @@ class WalletNode:
     def pending_tx_handler(self):
         asyncio.ensure_future(self.resend_queue())
 
+    async def action_messages(self) -> List[OutboundMessage]:
+        actions: List[
+            WalletAction
+        ] = await self.wallet_state_manager.action_store.get_all_pending_actions()
+        result: List[OutboundMessage] = []
+        for action in actions:
+            data = json.loads(action.data)
+            action_data = data["data"]["action_data"]
+            if action.name == "request_generator":
+                header_hash = bytes32(hexstr_to_bytes(action_data["header_hash"]))
+                height = uint32(action_data["height"])
+                msg = Message(
+                    "request_generator",
+                    wallet_protocol.RequestGenerator(height, header_hash),
+                )
+                out_msg = OutboundMessage(NodeType.FULL_NODE, msg, Delivery.BROADCAST)
+                result.append(out_msg)
+
+        return result
+
     async def resend_queue(self):
         if self.server is None:
             return
 
-        messages = await self.messages_to_resend()
-        for msg in messages:
+        transactions = await self.messages_to_resend()
+        for msg in transactions:
+            self.server.push_message(msg)
+
+        action_messages = await self.action_messages()
+        for msg in action_messages:
             self.server.push_message(msg)
 
     async def messages_to_resend(self) -> List[OutboundMessage]:
@@ -921,10 +950,30 @@ class WalletNode:
         (_, removals,) = await self.wallet_state_manager.get_filter_additions_removals(
             new_br, transaction_filter
         )
-        if len(removals) > 0:
-            request_r = wallet_protocol.RequestRemovals(
-                header_block.height, header_block.header_hash, removals
+        request_all_removals = False
+        for coin in additions:
+            puzzle_store = self.wallet_state_manager.puzzle_store
+            record_info: Optional[
+                DerivationRecord
+            ] = await puzzle_store.get_derivation_record_for_puzzle_hash(
+                coin.puzzle_hash.hex()
             )
+            if (
+                record_info is not None
+                and record_info.wallet_type == WalletType.COLOURED_COIN
+            ):
+                request_all_removals = True
+                break
+
+        if len(removals) > 0 or request_all_removals:
+            if request_all_removals:
+                request_r = wallet_protocol.RequestRemovals(
+                    header_block.height, header_block.header_hash, None
+                )
+            else:
+                request_r = wallet_protocol.RequestRemovals(
+                    header_block.height, header_block.header_hash, removals
+                )
             yield OutboundMessage(
                 NodeType.FULL_NODE,
                 Message("request_removals", request_r),
@@ -970,25 +1019,18 @@ class WalletNode:
         ]
         assert response.height == block_record.height
 
-        removals: List[bytes32]
+        all_coins: List[Coin] = []
+        for coin_name, coin in response.coins:
+            if coin is not None:
+                all_coins.append(coin)
+
         if response.proofs is None:
             # If there are no proofs, it means all removals were returned in the response.
             # we must find the ones relevant to our wallets.
-            all_coins: List[Coin] = []
-            for coin_name, coin in response.coins:
-                if coin is not None:
-                    all_coins.append(coin)
-            # TODO: get relevant removals for this fork (we may not be in lca chain)
-            removals = [
-                c.name()
-                for c in await self.wallet_state_manager.get_relevant_removals(
-                    all_coins
-                )
-            ]
 
             # Verify removals root
             removals_merkle_set = MerkleSet()
-            for coin in removals:
+            for coin in all_coins:
                 if coin is not None:
                     removals_merkle_set.add_already_hashed(coin.name())
             removals_root = removals_merkle_set.get_root()
@@ -997,7 +1039,6 @@ class WalletNode:
         else:
             # This means the full node has responded only with the relevant removals
             # for our wallet. Each merkle proof must be verified.
-            removals = []
             assert len(response.coins) == len(response.proofs)
             for i in range(len(response.coins)):
                 # Coins are in the same order as proofs
@@ -1018,7 +1059,6 @@ class WalletNode:
                         coin.name(),
                         response.proofs[i][1],
                     )
-                    removals.append(response.coins[i][0])
 
         new_br = BlockRecord(
             block_record.header_hash,
@@ -1026,7 +1066,7 @@ class WalletNode:
             block_record.height,
             block_record.weight,
             block_record.additions,
-            removals,
+            all_coins,
             block_record.total_iters,
             header_block.challenge.get_hash(),
         )
@@ -1070,8 +1110,14 @@ class WalletNode:
         """
         The full node respond with transaction generator
         """
-        # TODO (Straya): implement
-        self.log.info("generator received")
+        wrapper = response.generatorResponse
+        if wrapper.generator is not None:
+            self.log.info(
+                f"generator received {wrapper.header_hash} {wrapper.generator.get_tree_hash()} {wrapper.height}"
+            )
+            await self.wallet_state_manager.generator_received(
+                wrapper.height, wrapper.header_hash, wrapper.generator
+            )
 
     @api_request
     async def reject_generator(self, response: wallet_protocol.RejectGeneratorRequest):

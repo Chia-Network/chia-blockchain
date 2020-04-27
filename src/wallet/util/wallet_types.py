@@ -9,5 +9,5 @@ class WalletType(Enum):
     AUTHORIZED_PAYEE = 3
     MULTI_SIG = 4
     CUSTODY = 5
-    COLORED_COIN = 6
+    COLOURED_COIN = 6
     RECOVERABLE = 7

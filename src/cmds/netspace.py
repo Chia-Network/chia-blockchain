@@ -14,33 +14,33 @@ from src.consensus.constants import constants
 def make_parser(parser):
 
     parser.add_argument(
-        "-p",
-        "--rpc-port",
-        help=f"Set the port where the Full Node is hosting the RPC interface. See the rpc_port "
-        f"under full_node in config.yaml. Defaults to 8555",
-        type=int,
-        default=8555,
+        "-d",
+        "--delta-block-height",
+        help="Compare LCA to a block X blocks older. Defaults to 24 blocks",
+        type=str,
+        default="24",
     )
     parser.add_argument(
         "-o",
         "--old_block",
-        help="Older block hash used to calculate estimated total network space.",
+        help="Older block hash used to calculate estimated total network space. Requires -n [NEWER_BLOCK] also.",
         type=str,
         default="",
     )
     parser.add_argument(
         "-n",
         "--new_block",
-        help="Newer block hash used to calculate estimated total network space.",
+        help="Newer block hash used to calculate estimated total network space. Requires -o [OLDER_BLOCK] also.",
         type=str,
         default="",
     )
     parser.add_argument(
-        "-d",
-        "--delta-block-height",
-        help="Compare LCA to a block X blocks older.",
-        type=str,
-        default="",
+        "-p",
+        "--rpc-port",
+        help=f"Set the port where the Full Node is hosting the RPC interface. See the rpc_port "
+        f"under full_node in config.yaml. Defaults to 8555",
+        type=int,
+        default=8555,
     )
     parser.set_defaults(function=netspace)
 
@@ -75,7 +75,7 @@ async def get_total_miniters(rpc_client, old_block, new_block):
             )
         total_mi = uint64(total_mi + curr_mi)
 
-    print("Min iters:", total_mi)
+    print("Minimum iterations:", total_mi)
     return total_mi
 
 
@@ -93,19 +93,21 @@ async def compare_block_headers(client, oldblock_hash, newblock_hash):
             block_newer_header.data.timestamp - block_older_header.data.timestamp
         )
         time_delta = datetime.timedelta(seconds=elapsed_time_seconds)
-        print("Older Block", block_older_header.data.height, ":")
         print(
-            f"Header Hash            0x{oldblock_hash}\n"
-            f"Timestamp              {block_older_time_string}\n"
-            f"Weight                 {block_older_header.data.weight}\n"
-            f"Total VDF Iterations   {block_older_header.data.total_iters}\n"
+            f"Older Block: {block_older_header.data.height}\n"
+            f"Header Hash: 0x{oldblock_hash}\n"
+            f"Timestamp:   {block_older_time_string}\n"
+            f"Weight:      {block_older_header.data.weight}\n"
+            f"Total VDF\n"
+            f"Iterations:  {block_older_header.data.total_iters}\n"
         )
-        print("Newer Block", block_newer_header.data.height, ":")
         print(
-            f"Header Hash            0x{newblock_hash}\n"
-            f"Timestamp              {block_newer_time_string}\n"
-            f"Weight                 {block_newer_header.data.weight}\n"
-            f"Total VDF Iterations   {block_newer_header.data.total_iters}\n"
+            f"Newer Block: {block_newer_header.data.height}\n"
+            f"Header Hash: 0x{newblock_hash}\n"
+            f"Timestamp:   {block_newer_time_string}\n"
+            f"Weight:      {block_newer_header.data.weight}\n"
+            f"Total VDF\n"
+            f"Iterations:  {block_newer_header.data.total_iters}\n"
         )
         delta_weight = block_newer_header.data.weight - block_older_header.data.weight
         delta_iters = (
@@ -149,7 +151,7 @@ async def netstorge_async(args, parser):
             lca_block_height = blockchain_state["lca"].data.height
             older_block_height = lca_block_height - int(args.delta_block_height)
             print(
-                f"LCA Block Height is {lca_block_height} - Comparing to {older_block_height}\n"
+                f"LCA Block Height is {lca_block_height} - Calculating from block {older_block_height}\n"
             )
             older_block_header = await client.get_header_by_height(older_block_height)
             older_block_header_hash = str(older_block_header.get_hash())

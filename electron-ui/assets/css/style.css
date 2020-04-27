@@ -1344,6 +1344,11 @@ tbody.ob-heading {
   border-bottom-left-radius: 5px;
 }
 
+.wallet .field-with-top-border {
+  border-top: 1px solid #2a2e39;
+  padding: 15px;
+}
+
 .wallet .nav-pills,
 .wallet .tab-content {
   -webkit-box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.04);
@@ -1403,6 +1408,20 @@ tbody.ob-heading {
   color: #ffffff;
   -webkit-box-shadow: 0px 0px 15px 0px #26de81ad;
           box-shadow: 0px 0px 15px 0px #26de81ad;
+}
+
+.wallet .tab-content button.blue {
+  background: #007bff;
+  color: #ffffff;
+  -webkit-box-shadow: 0px 0px 15px 0px #007bffad;
+          box-shadow: 0px 0px 15px 0px #007bffad;
+}
+
+.wallet .tab-content button.cool {
+  background: #00000000;
+  color: #ffffff;
+  -webkit-box-shadow: 0px 0px 15px 0px #007bffad;
+          box-shadow: 0px 0px 15px 0px #007bffad;
 }
 
 .wallet .tab-content button.red {
@@ -1830,7 +1849,8 @@ tbody.ob-heading {
 
 #dark .wallet .nav-pills a,
 #dark .wallet-address,
-#dark .wallet-history {
+#dark .wallet-history,
+#dark .cc-offer {
   border-top: 1px solid #2a2e39;
 }
 
@@ -1864,6 +1884,15 @@ tbody.ob-heading {
 
 #dark .wallet-address input,
 #dark .wallet-address input:focus {
+  border: 1px solid #2a2e39;
+  background: #2a2e39;
+  -webkit-box-shadow: none;
+          box-shadow: none;
+  color: #ffffff;
+}
+
+#dark .cc-offer input,
+#dark .cc-offer input:focus {
   border: 1px solid #2a2e39;
   background: #2a2e39;
   -webkit-box-shadow: none;
@@ -1956,6 +1985,10 @@ tbody.ob-heading {
   }
 
   .wallet-address img {
+    margin-top: 40px;
+  }
+
+  .cc-offer img {
     margin-top: 40px;
   }
 
@@ -2129,4 +2162,154 @@ table td {
   margin-left: 20px !important;
   color: #a2a2a2 !important;
   text-decoration: underline !important;
+}
+
+
+.colour-input input {
+  padding: 25px 15px;
+  font-size: 14px;
+}
+
+.header-custom-icon .nav-link {
+  line-height: 0;
+  margin-top: 6px;
+}
+
+.colour-input .input-group-prepend button {
+  padding: 13px 20px;
+  border-top-right-radius: 5px !important;
+  border-bottom-right-radius: 5px !important;
+}
+
+.colour-input .input-group-go button {
+  padding: 13px 20px;
+  margin-top: 10px;
+}
+
+.colour-input input {
+  border: 1px solid #e0e3eb;
+}
+
+.colour-input h4 {
+  margin-bottom: 20px;
+}
+
+.colour-input .input-group {
+  padding-top: 30px;
+}
+
+#dark .colour-input input,
+#dark .colour-input input:focus {
+  border: 1px solid #2a2e39;
+  background: #2a2e39;
+  box-shadow: none;
+  color: #ffffff;
+}
+
+#colour-input-label {
+  padding-top: 15px !important;
+  padding-right: 10px !important;
+}
+
+
+.cc-offer {
+  border-top: 1px solid #e0e3eb;
+  padding-top: 25px;
+  margin-top: 35px;
+}
+
+.cc-offer input {
+  padding: 25px 15px;
+  font-size: 14px;
+}
+
+.cc-offer .input-group-prepend button {
+  padding: 13px 20px;
+  border-top-right-radius: 5px !important;
+  border-bottom-right-radius: 5px !important;
+}
+
+.cc-offer input {
+  border: 1px solid #e0e3eb;
+}
+
+.cc-offer h4 {
+  margin-bottom: 20px;
+}
+
+.cc-offer .input-group {
+  padding-top: 30px;
+}
+
+/*the container must be positioned relative:*/
+.custom-select-s {
+  position: relative;
+  font-family: Arial;
+  border-radius: 2px;
+}
+
+.custom-select-s select {
+  display: none; /*hide original SELECT element:*/
+}
+
+.select-selected {
+  background-color: rgb(35, 40, 52);
+}
+
+/*style the arrow inside the select element:*/
+.select-selected:after {
+  position: absolute;
+  content: "";
+  top: 14px;
+  right: 10px;
+  width: 0;
+  height: 0;
+  border: 6px solid transparent;
+  border-color: #fff transparent transparent transparent;
+}
+
+/*point the arrow upwards when the select box is open (active):*/
+.select-selected.select-arrow-active:after {
+  border-color: transparent transparent #fff transparent;
+  top: 7px;
+}
+
+/*style the items (options), including the selected item:*/
+.select-items div,.select-selected {
+  color: #ffffff;
+  padding: 8px 16px;
+  border: 2px solid transparent;
+  border-color: transparent transparent rgba(0, 0, 0, 0.1) transparent;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 2px;
+  height: 45px;
+}
+
+/*style items (options):*/
+.select-items {
+  position: absolute;
+  background-color: rgb(35, 40, 52);
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 99;
+  border-radius: 2px;
+}
+
+/*hide the items when the select box is closed:*/
+.select-hide {
+  display: none;
+}
+
+.select-items div:hover, .same-as-selected {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.wrap {
+   white-space: pre-wrap;      /* CSS3 */
+   white-space: -moz-pre-wrap; /* Firefox */
+   white-space: -pre-wrap;     /* Opera <7 */
+   white-space: -o-pre-wrap;   /* Opera 7 */
+   word-wrap: break-word;      /* IE */
 }

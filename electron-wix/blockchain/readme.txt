@@ -20,12 +20,20 @@ You can start a node or a farmer as follows:
 or
     Start-Job -Name chia-farmer -ScriptBlock { chia start farmer }
 
-To watch the logs try:
-    Get-Content ~\.\.chia\beta-1.0b4.dev62\log\debug.log -Wait
+To watch the logs try this (your version - beta-1.0b4 here - may be different):
+    Get-Content ~\.\.chia\beta-1.0b4\log\debug.log -Wait
 
 To create one k=26 proof of space plots:
     chia-create-plots -k 26 -n 1
 
+To use the Chia Wallet UI you will need to run:
+     Start-Job -Name chia-wallet-server -ScriptBlock { chia start wallet-server }
+
+And then click on the "Chia Wallet" icon on the Desktop or in the Start Menu.
+
 For more usage information try:
 The chia-blockchain README.md - https://github.com/Chia-Network/chia-blockchain/blob/master/README.md
 The chia-blockchain repo wiki - https://github.com/Chia-Network/chia-blockchain/wiki
+
+For assistance join us on Keybase in the #testnet chat channel
+    https://keybase.io/team/chia_network.public

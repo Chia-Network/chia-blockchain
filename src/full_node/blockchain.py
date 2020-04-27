@@ -698,6 +698,7 @@ class Blockchain:
             if root_error:
                 return (root_error, None)
             if block.header.data.aggregated_signature is not None:
+                log.error("1")
                 return (Err.BAD_AGGREGATE_SIGNATURE, None)
 
         difficulty: uint64
@@ -1256,8 +1257,10 @@ class Blockchain:
 
         # Verify aggregated signature
         if not block.header.data.aggregated_signature:
+            log.error("2")
             return Err.BAD_AGGREGATE_SIGNATURE
         if not block.header.data.aggregated_signature.validate(hash_key_pairs):
+            log.error("3")
             return Err.BAD_AGGREGATE_SIGNATURE
 
         return None

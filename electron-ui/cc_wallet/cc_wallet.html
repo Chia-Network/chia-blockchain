@@ -7,17 +7,17 @@
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>Chia Wallet</title>
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'">
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 
 <body id="dark">
   <header class="dark-bb">
     <nav class="navbar navbar-expand-lg">
-      <a class="navbar-brand" href="wallet-dark.html?wallet_id=1"><img src="assets/img/chia_logo.svg" alt="logo"></a>
-      <a class="navlink-selected" href="wallet-dark.html?wallet_id=1"><div class="navlink-container">Wallet</div></a>
-      <a class="navlink" href="full_node/full-node.html"><div class="navlink-container">Full Node</div></a>
-      <a class="navlink" href="farmer.html"><div class="navlink-container">Farmer</div></a>
-      <a class="navlink" href="timelord.html"><div class="navlink-container">Timelord</div></a>
+      <a class="navbar-brand" href="../wallet-dark.html?wallet_id=1"><img src="../assets/img/chia_logo.svg" alt="logo"></a>
+      <a class="navlink-selected" href="../wallet-dark.html?wallet_id=1"><div class="navlink-container">Wallet</div></a>
+      <a class="navlink" href="../full_node/full-node.html"><div class="navlink-container">Full Node</div></a>
+      <a class="navlink" href="../farmer.html"><div class="navlink-container">Farmer</div></a>
+      <a class="navlink" href="../timelord.html"><div class="navlink-container">Timelord</div></a>
     </nav>
   </header>
   <div class="wallet ptb50">
@@ -48,7 +48,7 @@
             <a class="nav-link d-flex justify-content-between align-items-center active" data-toggle="pill"
               href="#" role="tab" aria-selected="true">
               <div class="d-flex">
-                <img src="assets/img/circle-cropped.png">
+                <img src="../assets/img/circle-cropped.png" alt="btc">
                 <div>
                   <h2>CH</h2>
                   <p>Chia</p>
@@ -59,7 +59,7 @@
                 <p class="text-right" id="pending_wallet_id_1"><i class="icon ion-md-lock"></i> 0.00</p>
               </div>
             </a>
-            <a class="nav-link d-flex justify-content-between align-items-center" data-toggle="pill" href="./create_wallet.html"
+            <a class="nav-link d-flex justify-content-between align-items-center" data-toggle="pill" href="../create_wallet.html"
               role="tab" aria-selected="true">
               <div class="d-flex">
                 <div>
@@ -74,7 +74,7 @@
 
           <div class="nav flex-column nav-pills" style="margin-top:60px" role="tablist" id="trade_tab" aria-orientation="vertical">
             <a class="nav-link d-flex justify-content-between align-items-center" data-toggle="pill"
-              href="./trade_manager.html" role="tab" aria-selected="true">
+              href="../trade_manager.html" role="tab" aria-selected="true">
               <div class="d-flex ">
                 <div  style="width:20px;height:30px;margin-right:5px;">
                   <i class="icon ion-md-swap"></i>
@@ -91,13 +91,13 @@
         </div>
         <div class="col-md-12 col-lg-8">
           <div class="tab-content">
-            <div class="tab-pane fade show active" role="tabpanel">
+            <div class="tab-pane fade show active" id="coinBTC" role="tabpanel">
               <h2 class="wallet-title">Balances</h2>
               <ul>
                 <li class="d-flex justify-content-between align-items-center">
                   <div class="d-flex align-items-center">
                     <i class="icon ion-md-cash"></i>
-                    <h2>Total Chia</h2>
+                    <h2>Total Coloured Coin Value</h2>
                   </div>
                   <div>
                     <h3 id="balance_textfield">0 CH</h3>
@@ -113,23 +113,12 @@
                   </div>
                 </li>
               </ul>
-              <div class="wallet-address">
-                <p>Receiver Address:</p>
-              <div class="input-group" style="padding-top:0px">
-              <input type="text" class="form-control"  id="receiver_puzzle_hash" value="">
-              </div>/
-                <p>Amount:</p>
-                <div class="input-group" style="padding-top:0px; padding-bottom:15px;">
-                <input type="text" class="form-control" id="amount_to_send" value="">
-              </div>
-              </div>
-              <button class="btn red" id="send">SEND</button>
-              <button class="btn green" id="farm_block">FARM BLOCK</button>
+
+              <!--
               <div class="wallet-address">
                 <div class="row">
                   <div class="col-md-8">
-                    <h4>Wallet Deposit Address</h4>
-                    <p>Use this address to receive Chia</p>
+                    <h4>Print 0-valued coloured coin(s)</h4>
                     <div class="input-group">
                       <input type="text" class="form-control" id="puzzle_holder" value="">
                       <div class="input-group-prepend">
@@ -145,7 +134,56 @@
                   </div>
                 </div>
               </div>
-              <div class="wallet-history">
+            -->
+            <div class="wallet-address">
+              <div class="row">
+                <div class="col-md-8">
+                  <h4>Colour Info</h4>
+                  <p id="colour_textfield">Colour: </p>
+                  <p id="colour_name_textfield">Local colour nickname: </p>
+                  <div class="input-group">
+                    <input type="text" class="form-control" id="rename_input" value="">
+                    <div class="input-group-prepend">
+                      <button class="btn btn-primary" id="rename" >RENAME</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+              <div class="wallet-address">
+                <h4>Send Coloured Coins</h4>
+                <p>Receiver Address:</p>
+              <div class="input-group" style="padding-top:0px">
+              <input type="text" class="form-control"  id="receiver_puzzle_hash" value="">
+              </div>/
+                <p>Amount:</p>
+                <div class="input-group" style="padding-top:0px; padding-bottom:15px;">
+                <input type="text" class="form-control" id="amount_to_send" value="">
+              </div>
+              </div>
+              <button class="btn red" id="send">SEND</button>
+              <div class="wallet-address">
+                <div class="row">
+                  <div class="col-md-8">
+                    <h4>Wallet Deposit Address</h4>
+                    <p>Use this address to receive Coloured Coins.</p>
+                    <div class="input-group">
+                      <input type="text" class="form-control" id="puzzle_holder" value="">
+                      <div class="input-group-prepend">
+                        <button class="btn btn-primary" id="copy" >COPY</button>
+                      </div>
+                    </div>
+                    <div class="input-group">
+                    <button class="btn green" style="padding-top:15px;" id="new_address">NEW ADDRESS</button>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <canvas id="qr_canvas" width="300" height="300"></canvas>
+                  </div>
+                </div>
+              </div>
+              <div class="wallet-address">
+                <div class="wallet-history">
                 <table class="table">
                   <thead>
                     <tr>
@@ -172,7 +210,7 @@
     </div>
   </div>
   <script>
-    require('./renderer.js')
+    require('./cc_wallet_renderer.js')
   </script>
 </body>
 

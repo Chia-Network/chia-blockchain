@@ -370,7 +370,7 @@ class WalletStore:
         )
         row = await cursor.fetchone()
         await cursor.close()
-        return BlockRecord.from_bytes(row[1])
+        return BlockRecord.from_bytes(row[3])
 
     async def add_block_to_path(self, header_hash: bytes32) -> None:
         cursor = await self.db_connection.execute(

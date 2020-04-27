@@ -57,7 +57,7 @@ def migrate_from(old_root, new_root, manifest):
     # update config yaml with new keys
     config = load_config(new_root, "config.yaml")
     config_str = initial_config_file("config.yaml")
-    default_config = yaml.load(config_str)
+    default_config = yaml.safe_load(config_str)
     dict_add_new_default(config, default_config)
 
     save_config(new_root, "config.yaml", config)
