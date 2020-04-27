@@ -30,4 +30,4 @@ Copy-Item "$buildDir\*.exe" "$finalDir\" -Force
 Copy-Item ".\blockchain\*.whl" "$blockchainDir\wheels" -Force
 dir ".\blockchain\*.whl"
 # Put a .zip of windows-wheels in Artifacts
-# Compress-Archive -Path "$blockchainDir\wheels\" -DestinationPath "$finalDir\windows-wheels.zip" -Force
+Compress-Archive -Path ".\blockchain" -DestinationPath "$finalDir\windows-wheels.zip" -Force
