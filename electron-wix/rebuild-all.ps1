@@ -22,7 +22,7 @@ if ($LastExitCode) { exit $LastExitCode }
 .\build-bundle.ps1
 if ($LastExitCode) { exit $LastExitCode }
 
-Write-Host "Succesfully built Chia installer for $env:version"
+Write-Host "Successfully built Chia installer for $env:version"
 
 New-Item -ItemType Directory -Path "$finalDir"
 Copy-Item "$buildDir\*.msi" "$finalDir\" -Force

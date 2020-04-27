@@ -28,6 +28,9 @@ jobs:
       run: |
         pip install pep517 wheel
         pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ -f ${{ github.workspace }} --wheel-dir=${{ github.workspace }}\electron-wix\blockchain ${{ github.workspace }}\.
+        mkdir ${{ github.workspace }}\electron-wix\final
+        cd ${{ github.workspace }}\electron-wix\blockchain
+        Compress-Archive -Path wheels\ -DestinationPath ${{ github.workspace }}\electron-wix\final\windows-wheels.zip
 
     - name: Install electron-packager
       run: |
