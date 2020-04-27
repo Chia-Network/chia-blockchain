@@ -214,30 +214,30 @@ class WalletStateManager:
         """
         targets = list(self.wallets.keys())
 
+        unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path()
+        if unused is None:
+            unused = uint32(0)
+
+        to_generate = 100
+
         for wallet_id in targets:
             target_wallet = self.wallets[wallet_id]
-            unused: Optional[
-                uint32
-            ] = await self.puzzle_store.get_unused_derivation_path()
-            last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path()
 
-            to_generate = 100
+            last: Optional[
+                uint32
+            ] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
+
             start_index = 0
             derivation_paths: List[DerivationRecord] = []
 
-            if last is None:
-                assert unused is None
-            if unused is not None:
-                assert last is not None
+            if last is not None:
                 start_index = last + 1
-                to_generate -= last - unused
 
             # If the key was replaced (from_zero=True), we should generate the puzzle hashes for the new key
-            end = start_index + to_generate
             if from_zero:
                 start_index = 0
 
-            for index in range(start_index, end):
+            for index in range(start_index, unused + to_generate):
                 pubkey: PublicKey = self.get_public_key(uint32(index))
                 puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
                 puzzlehash: bytes32 = puzzle.get_tree_hash()
@@ -255,8 +255,8 @@ class WalletStateManager:
                 )
 
             await self.puzzle_store.add_derivation_paths(derivation_paths)
-            if from_zero and unused is not None and unused > 0:
-                await self.puzzle_store.set_used_up_to(uint32(unused - 1))
+        if unused > 0:
+            await self.puzzle_store.set_used_up_to(uint32(unused - 1))
 
     async def get_unused_derivation_record(self, wallet_id: uint32) -> DerivationRecord:
         """
