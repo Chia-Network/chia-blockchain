@@ -261,47 +261,12 @@ class WalletPuzzleStore:
 
         return None
 
-    async def get_last_derivation_path_for_wallet(
-        self, wallet_id: int
-    ) -> Optional[uint32]:
-        """
-        Returns the last derivation path by derivation_index.
-        """
-
-        cursor = await self.db_connection.execute(
-            f"SELECT MAX(derivation_index) FROM derivation_paths WHERE wallet_id={wallet_id};"
-        )
-        row = await cursor.fetchone()
-        await cursor.close()
-
-        if row is not None and row[0] is not None:
-            return uint32(row[0])
-
-        return None
-
     async def get_unused_derivation_path(self) -> Optional[uint32]:
         """
         Returns the first unused derivation path by derivation_index.
         """
         cursor = await self.db_connection.execute(
             "SELECT MIN(derivation_index) FROM derivation_paths WHERE used=0;"
-        )
-        row = await cursor.fetchone()
-        await cursor.close()
-
-        if row is not None and row[0] is not None:
-            return uint32(row[0])
-
-        return None
-
-    async def get_unused_derivation_path_for_wallet(
-        self, wallet_id: int
-    ) -> Optional[uint32]:
-        """
-        Returns the first unused derivation path by derivation_index.
-        """
-        cursor = await self.db_connection.execute(
-            f"SELECT MIN(derivation_index) FROM derivation_paths WHERE used=0 and wallet_id={wallet_id};"
         )
         row = await cursor.fetchone()
         await cursor.close()

@@ -99,7 +99,7 @@ def get_innerpuzzle_from_puzzle(puzzle: str):
 def create_spend_for_ephemeral(parent_of_e, auditor_coin, spend_amount):
     puzstring = f"(r (r (c (q 0x{auditor_coin.name()}) (c (q {spend_amount}) (q ())))))"
     puzzle = Program(binutils.assemble(puzstring))
-    coin = Coin(parent_of_e.name(), puzzle.get_tree_hash(), 0)
+    coin = Coin(parent_of_e.name(), puzzle.get_tree_hash(), uint64(0))
     solution = Program(binutils.assemble("()"))
     coinsol = CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
     return coinsol
@@ -109,7 +109,7 @@ def create_spend_for_ephemeral(parent_of_e, auditor_coin, spend_amount):
 def create_spend_for_auditor(parent_of_a, auditee):
     puzstring = f"(r (c (q 0x{auditee.name()}) (q ())))"
     puzzle = Program(binutils.assemble(puzstring))
-    coin = Coin(parent_of_a.name(), puzzle.get_tree_hash(), 0)
+    coin = Coin(parent_of_a.name(), puzzle.get_tree_hash(), uint64(0))
     solution = Program(binutils.assemble("()"))
     coinsol = CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
     return coinsol
@@ -119,7 +119,7 @@ def cc_generate_eve_spend(coin: Coin, full_puzzle: Program):
     solution = cc_make_eve_solution(
         coin.parent_coin_info, coin.puzzle_hash, coin.amount
     )
-    list_of_solutions = [CoinSolution(coin, clvm.to_sexp_f([full_puzzle, solution, ]), )]
+    list_of_solutions = [CoinSolution(coin, clvm.to_sexp_f([full_puzzle, solution]),)]
     aggsig = BLSSignature.aggregate([])
     spend_bundle = SpendBundle(list_of_solutions, aggsig)
     return spend_bundle

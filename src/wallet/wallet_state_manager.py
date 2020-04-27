@@ -207,32 +207,21 @@ class WalletStateManager:
         private = self.private_key.private_child(index_for_puzzlehash).get_private_key()
         return pubkey, private
 
-    async def create_more_puzzle_hashes(
-        self, from_zero: bool = False, for_wallet: Any = None
-    ):
+    async def create_more_puzzle_hashes(self, from_zero: bool = False):
         """
         For all wallets in the user store, generates the first few puzzle hashes so
         that we can restore the wallet from only the private keys.
         """
-
-        if for_wallet is None:
-            targets = list(self.wallets.keys())
-        else:
-            targets = [for_wallet]
+        targets = list(self.wallets.keys())
 
         for wallet_id in targets:
             target_wallet = self.wallets[wallet_id]
             unused: Optional[
                 uint32
-            ] = await self.puzzle_store.get_unused_derivation_path_for_wallet(wallet_id)
-            last: Optional[
-                uint32
-            ] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
+            ] = await self.puzzle_store.get_unused_derivation_path()
+            last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path()
 
-            if target_wallet.wallet_info.type == WalletType.COLOURED_COIN:
-                to_generate = 100
-            else:
-                to_generate = 500
+            to_generate = 100
             start_index = 0
             derivation_paths: List[DerivationRecord] = []
 
@@ -279,9 +268,9 @@ class WalletStateManager:
             # If we have no unused public keys, we will create new ones
             unused: Optional[
                 uint32
-            ] = await self.puzzle_store.get_unused_derivation_path_for_wallet(wallet_id)
+            ] = await self.puzzle_store.get_unused_derivation_path()
             if unused is None:
-                await self.create_more_puzzle_hashes(for_wallet=wallet_id)
+                await self.create_more_puzzle_hashes()
 
             # Now we must have unused public keys
             unused = await self.puzzle_store.get_unused_derivation_path()
@@ -1336,7 +1325,7 @@ class WalletStateManager:
 
     async def add_new_wallet(self, wallet: Any, id: int):
         self.wallets[uint32(id)] = wallet
-        await self.create_more_puzzle_hashes(for_wallet=id)
+        await self.create_more_puzzle_hashes()
 
     async def get_coin_records_by_spent(self, spent: bool):
         return await self.wallet_store.get_coin_records_by_spent(spent)

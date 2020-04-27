@@ -26,6 +26,7 @@ from src.simulator.simulator_constants import test_constants
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.util.config import load_config_cli, load_config
 from src.util.ints import uint64
+from src.types.sized_bytes import bytes32
 from src.util.logging import initialize_logging
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.rl_wallet.rl_wallet import RLWallet
@@ -224,7 +225,7 @@ class WebSocketServer:
                 response = {"success": True, "type": cc_wallet.wallet_info.type.name}
                 return await websocket.send(format_response(response_api, response))
             elif request["mode"] == "existing":
-                cc_wallet: CCWallet = await CCWallet.create_wallet_for_cc(
+                cc_wallet = await CCWallet.create_wallet_for_cc(
                     wallet_state_manager, main_wallet, request["colour"]
                 )
                 response = {"success": True, "type": cc_wallet.wallet_info.type.name}
@@ -405,7 +406,7 @@ class WebSocketServer:
 
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
-        innerpuz: str = await wallet.get_new_inner_hash()
+        innerpuz: bytes32 = await wallet.get_new_inner_hash()
         response = {"innerpuz": innerpuz.hex()}
         return await websocket.send(format_response(response_api, response))
 
