@@ -216,7 +216,11 @@ class WalletStateManager:
 
         unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path()
         if unused is None:
-            unused = uint32(0)
+            # This handles the case where the database has entries but they have all been used
+            unused = await self.puzzle_store.get_last_derivation_path()
+            if unused is None:
+                # This handles the case where the database is empty
+                unused = uint32(0)
 
         to_generate = 100
 
