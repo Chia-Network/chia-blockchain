@@ -27,26 +27,6 @@ bt = BlockTools()
 
 
 class FullNodeSimulator(FullNode):
-    def __init__(
-        self,
-        store: FullNodeStore,
-        blockchain: Blockchain,
-        config: Dict,
-        mempool_manager: MempoolManager,
-        coin_store: CoinStore,
-        name: str = None,
-        override_constants=None,
-    ):
-        super().__init__(
-            store,
-            blockchain,
-            config,
-            mempool_manager,
-            coin_store,
-            name,
-            override_constants,
-        )
-
     def _set_server(self, server: ChiaServer):
         super()._set_server(server)
 
@@ -128,7 +108,7 @@ class FullNodeSimulator(FullNode):
             if tip_hash == self.blockchain.genesis.header_hash:
                 current_blocks.append(self.blockchain.genesis)
                 break
-            full = await self.store.get_block(tip_hash)
+            full = await self.block_store.get_block(tip_hash)
             if full is None:
                 break
             current_blocks.append(full)

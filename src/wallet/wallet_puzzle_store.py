@@ -58,7 +58,7 @@ class WalletPuzzleStore:
         )
 
         await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS wallet_ud on derivation_paths(wallet_id)"
+            "CREATE INDEX IF NOT EXISTS wallet_id on derivation_paths(wallet_id)"
         )
 
         await self.db_connection.execute(

@@ -46,20 +46,16 @@ async def main():
 
     genesis: FullBlock = FullBlock.from_bytes(test_constants["GENESIS_BLOCK"])
     await store.add_block(genesis)
-    unspent_store = await CoinStore.create(connection)
+    coin_store = await CoinStore.create(connection)
 
     log.info("Initializing blockchain from disk")
-    blockchain = await Blockchain.create(unspent_store, store, test_constants)
+    blockchain = await Blockchain.create(coin_store, store, test_constants)
 
-    mempool_manager = MempoolManager(unspent_store, test_constants)
+    mempool_manager = MempoolManager(coin_store, test_constants)
     await mempool_manager.new_tips(await blockchain.get_full_tips())
 
-    full_node = FullNodeSimulator(
-        store,
-        blockchain,
+    full_node = await FullNodeSimulator.create(
         config,
-        mempool_manager,
-        unspent_store,
         override_constants=test_constants,
     )
 
@@ -119,7 +115,7 @@ async def main():
     await store.close()
     log.info("Closed store.")
 
-    await unspent_store.close()
+    await coin_store.close()
     log.info("Closed unspent store.")
 
     await asyncio.get_running_loop().shutdown_asyncgens()

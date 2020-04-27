@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 
 
 class MempoolManager:
-    def __init__(self, unspent_store: CoinStore, override_constants: Dict = {}):
+    def __init__(self, coin_store: CoinStore, override_constants: Dict = {}):
         # Allow passing in custom overrides
         self.constants: Dict = consensus_constants.copy()
         for key, value in override_constants.items():
@@ -47,7 +47,7 @@ class MempoolManager:
 
         # old_mempools will contain transactions that were removed in the last 10 blocks
         self.old_mempools: SortedDict[uint32, Dict[bytes32, MempoolItem]] = SortedDict()
-        self.unspent_store = unspent_store
+        self.coin_store = coin_store
 
         tx_per_sec = self.constants["TX_PER_SEC"]
         sec_per_block = self.constants["BLOCK_TIME_TARGET"]
@@ -181,7 +181,7 @@ class MempoolManager:
             unknown_unspent_error: bool = False
             removal_amount = uint64(0)
             for name in removal_names:
-                removal_record = await self.unspent_store.get_coin_record(
+                removal_record = await self.coin_store.get_coin_record(
                     name, pool.header
                 )
                 if removal_record is None and name not in additions_dict:
