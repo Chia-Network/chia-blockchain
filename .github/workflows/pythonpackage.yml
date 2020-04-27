@@ -1,7 +1,8 @@
 name: Build Ubuntu and MacOS
 
 
-on: [push]
+#on: [push]
+on: [release]
 
 jobs:
   build:

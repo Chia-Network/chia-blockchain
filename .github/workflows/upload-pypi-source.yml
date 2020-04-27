@@ -1,6 +1,7 @@
 name: Upload source distribution to PyPI
 
-on: [push, pull_request]
+#on: [push, pull_request]
+on: [release]
 
 jobs:
   upload_source_dist:
