@@ -22,8 +22,12 @@ if ($LastExitCode) { exit $LastExitCode }
 .\build-bundle.ps1
 if ($LastExitCode) { exit $LastExitCode }
 
-Write-Host "Succesfully built Chia installer for $env:version"
+Write-Host "Successfully built Chia installer for $env:version"
 
 New-Item -ItemType Directory -Path "$finalDir"
 Copy-Item "$buildDir\*.msi" "$finalDir\" -Force
 Copy-Item "$buildDir\*.exe" "$finalDir\" -Force
+Copy-Item ".\blockchain\*.whl" "$blockchainDir\wheels" -Force
+dir ".\blockchain\*.whl"
+# Put a .zip of windows-wheels in Artifacts
+Compress-Archive -Path ".\blockchain" -DestinationPath "$finalDir\windows-wheels.zip" -Force
