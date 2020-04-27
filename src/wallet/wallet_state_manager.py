@@ -394,9 +394,7 @@ class WalletStateManager:
         """
         record_list: Set[
             WalletCoinRecord
-        ] = await self.wallet_store.get_coin_records_by_spent_and_wallet(
-            False, wallet_id
-        )
+        ] = await self.wallet_store.get_unspent_coins_for_wallet(wallet_id)
         amount: uint64 = uint64(0)
 
         for record in record_list:
@@ -529,7 +527,10 @@ class WalletStateManager:
         if wallet_type == WalletType.COLOURED_COIN:
             wallet: CCWallet = self.wallets[wallet_id]
             header_hash: bytes32 = self.height_to_hash[index]
-            block: BlockRecord = await self.wallet_store.get_block_record(header_hash)
+            block: Optional[BlockRecord] = await self.wallet_store.get_block_record(
+                header_hash
+            )
+            assert block is not None
             assert block.removals is not None
             await wallet.coin_added(coin, index, header_hash, block.removals)
 
@@ -1274,7 +1275,10 @@ class WalletStateManager:
         """ Returns a list of our unspent coins that are in the passed list. """
 
         result: List[Coin] = []
-        my_coins: Dict[bytes32, Coin] = await self.wallet_store.get_unspent_coins()
+        wallet_coin_records = await self.wallet_store.get_unspent_coins_at_height()
+        my_coins: Dict[bytes32, Coin] = {
+            r.coin.name(): r.coin for r in list(wallet_coin_records)
+        }
 
         for coin in removals:
             if coin.name() in my_coins:

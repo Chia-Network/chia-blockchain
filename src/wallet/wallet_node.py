@@ -93,7 +93,7 @@ class WalletNode:
         self.wallet_state_manager = await WalletStateManager.create(
             key_config, config, path, self.constants
         )
-        self.wallet_state_manager.set_pending_callback(self.pending_tx_handler)
+        self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
 
         # Normal operation data
         self.cached_blocks = {}
@@ -112,10 +112,10 @@ class WalletNode:
 
         return self
 
-    def pending_tx_handler(self):
-        asyncio.ensure_future(self.resend_queue())
+    def _pending_tx_handler(self):
+        asyncio.ensure_future(self._resend_queue())
 
-    async def action_messages(self) -> List[OutboundMessage]:
+    async def _action_messages(self) -> List[OutboundMessage]:
         actions: List[
             WalletAction
         ] = await self.wallet_state_manager.action_store.get_all_pending_actions()
@@ -135,19 +135,17 @@ class WalletNode:
 
         return result
 
-    async def resend_queue(self):
+    async def _resend_queue(self):
         if self.server is None:
             return
 
-        transactions = await self.messages_to_resend()
-        for msg in transactions:
+        for msg in await self._messages_to_resend():
             self.server.push_message(msg)
 
-        action_messages = await self.action_messages()
-        for msg in action_messages:
+        for msg in await self._action_messages():
             self.server.push_message(msg)
 
-    async def messages_to_resend(self) -> List[OutboundMessage]:
+    async def _messages_to_resend(self) -> List[OutboundMessage]:
         messages: List[OutboundMessage] = []
 
         records: List[
@@ -173,7 +171,7 @@ class WalletNode:
         self.server = server
 
     async def _on_connect(self) -> AsyncGenerator[OutboundMessage, None]:
-        messages = await self.messages_to_resend()
+        messages = await self._messages_to_resend()
 
         for msg in messages:
             yield msg
@@ -743,7 +741,7 @@ class WalletNode:
             )
 
         # Try sending queued up transaction when new LCA arrives
-        await self.resend_queue()
+        await self._resend_queue()
 
     @api_request
     async def respond_header(self, response: wallet_protocol.RespondHeader):

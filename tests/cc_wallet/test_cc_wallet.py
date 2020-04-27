@@ -233,7 +233,6 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-
         await self.time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await self.time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
@@ -400,7 +399,6 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-
         await self.time_out_assert(15, cc_wallet.get_confirmed_balance, 40)
         await self.time_out_assert(15, cc_wallet.get_unconfirmed_balance, 40)
 
@@ -415,7 +413,6 @@ class TestWalletSimulator:
 
         for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
-
 
         id = cc_wallet_2.wallet_info.id
         wsm = cc_wallet_2.wallet_state_manager
@@ -576,10 +573,8 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-
         await self.time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
         await self.time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
-
 
         assert cc_wallet.cc_info.my_core is not None
         colour = cc_wallet_puzzles.get_genesis_from_core(cc_wallet.cc_info.my_core)
@@ -628,7 +623,6 @@ class TestWalletSimulator:
 
         for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
-
 
         await self.time_out_assert(15, cc_wallet_2.get_confirmed_balance, 30)
         await self.time_out_assert(15, cc_wallet_2.get_confirmed_balance, 30)
