@@ -169,6 +169,12 @@ send.addEventListener('click', () => {
 
     try {
         puzzle_hash = receiver_address.value;
+        if (puzzle_hash.includes("colour")){
+          dialogs.alert("Error: Cannot send chia to coloured address. Please enter a chia address.")
+          return
+        } else if (puzzle_hash.substring(0, 12) == "chia_addr://") {
+          puzzle_hash = puzzle_hash.substring(12)
+        }
         if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
             puzzle_hash = puzzle_hash.substring(2);
         }
@@ -215,7 +221,13 @@ farm_button.addEventListener('click', () => {
         dialogs.alert("Specify puzzle_hash for coinbase reward", ok => {
         })
         return
+    } else if (puzzle_hash.includes("colour")){
+      dialogs.alert("Please enter a chia address for coinbase reward.")
+      return
+    } else if (puzzle_hash.substring(0, 12) == "chia_addr://") {
+      puzzle_hash = puzzle_hash.substring(12)
     }
+
     data = {
         "puzzle_hash": puzzle_hash,
         "wallet_id": g_wallet_id,
@@ -295,7 +307,9 @@ function get_new_puzzlehash_response(response) {
     Called when response is received for get_new_puzzle_hash request
     */
     let puzzle_holder = document.querySelector("#puzzle_holder");
-    puzzle_holder.value = response["puzzlehash"];
+    puzzle_hash = "chia_addr://"
+    puzzle_hash = puzzle_hash.concat(response["puzzlehash"]);
+    puzzle_holder.value = puzzle_hash
     QRCode.toCanvas(canvas, response["puzzlehash"], function (error) {
     if (error) console.error(error)
     })

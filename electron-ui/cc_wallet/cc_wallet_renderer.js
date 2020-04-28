@@ -419,7 +419,7 @@ function get_colour_response(response) {
     wallet_id = response["wallet_id"]
     colour = response["colour"]
     if (wallet_id == g_wallet_id) {
-      colour_textfield.innerHTML = "Colour: " + colour;
+      colour_textfield.innerHTML = "Colour: colour_desc://" + colour;
     }
 }
 
@@ -487,6 +487,13 @@ send.addEventListener('click', () => {
 
     try {
         puzzle_hash = receiver_address.value;
+        if (puzzle_hash.includes("chia_addr") || puzzle_hash.includes("colour_desc")){
+          alert("Error: recipient address is not a coloured wallet address. Please enter a coloured wallet address")
+          return
+        }
+        if (puzzle_hash.substring(0,14) == "colour_addr://"){
+          puzzle_hash = puzzle_hash.substring(14)
+        }
         if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
             puzzle_hash = puzzle_hash.substring(2);
         }
@@ -588,7 +595,8 @@ function get_innerpuzzlehash_response(response) {
     /*
     Called when response is received for get_new_puzzle_hash request
     */
-    puzzle_holder.value = response["innerpuz"];
+    puzzle_hash = "colour_addr://"
+    puzzle_holder.value = puzzle_hash.concat(response["innerpuz"]);
     QRCode.toCanvas(canvas, response["innerpuz"], function (error) {
     if (error) console.error(error)
     })
