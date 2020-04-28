@@ -228,7 +228,8 @@ class TradeManager:
                         ] = await self.wallet_state_manager.get_wallet_for_colour(
                             colour
                         )
-                    unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(wallets[colour].wallet_info.id)
+                    unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(
+                        wallets[colour].wallet_info.id)
                     if coinsol.coin in [record.coin for record in unspent]:
                         return False, "can't respond to own offer"
                     innerpuzzlereveal = solution.rest().rest().rest().first()
