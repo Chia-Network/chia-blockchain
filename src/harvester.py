@@ -2,7 +2,6 @@ import logging
 import asyncio
 from pathlib import Path
 from typing import Dict, Optional, Tuple, List
-import random
 
 from blspy import PrependSignature, PrivateKey, PublicKey, Util
 
@@ -180,7 +179,6 @@ class Harvester:
                         f"Retry-Error using prover object on {filename}. Giving up."
                     )
                     quality_strings = None
-            await asyncio.sleep(random.randint(1, 6))
             if quality_strings is not None:
                 for index, quality_str in enumerate(quality_strings):
                     self.challenge_hashes[quality_str] = (
