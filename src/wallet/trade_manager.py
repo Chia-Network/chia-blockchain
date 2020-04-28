@@ -99,7 +99,6 @@ class TradeManager:
                     new_spend_bundle = await wallet.create_spend_bundle_relative_chia(
                         amount, to_exclude
                     )
-                    self.log.info("1")
                 else:
                     return False, None
                 if new_spend_bundle.removals() == [] or new_spend_bundle is None:
