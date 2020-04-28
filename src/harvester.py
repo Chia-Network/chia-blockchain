@@ -158,8 +158,8 @@ class Harvester:
             raise ValueError(
                 f"Invalid challenge size {challenge_size}, 32 was expected"
             )
-        all_responses = []
-        for filename, prover in self.provers.items():
+
+        async def lookup_challenge(filename: Path, prover: DiskProver):
             try:
                 quality_strings = prover.get_qualities_for_challenge(
                     new_challenge.challenge_hash
@@ -186,13 +186,15 @@ class Harvester:
                     response: harvester_protocol.ChallengeResponse = harvester_protocol.ChallengeResponse(
                         new_challenge.challenge_hash, quality_str, prover.get_size()
                     )
-                    all_responses.append(response)
-        for response in all_responses:
-            yield OutboundMessage(
-                NodeType.FARMER,
-                Message("challenge_response", response),
-                Delivery.RESPOND,
-            )
+                    yield response
+
+        for filename, prover in self.provers.items():
+            async for response in lookup_challenge(filename, prover):
+                yield OutboundMessage(
+                    NodeType.FARMER,
+                    Message("challenge_response", response),
+                    Delivery.RESPOND,
+                )
 
     @api_request
     async def request_proof_of_space(
