@@ -228,6 +228,9 @@ class TradeManager:
                         ] = await self.wallet_state_manager.get_wallet_for_colour(
                             colour
                         )
+                    unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(wallets[colour].wallet_info.id)
+                    if coinsol.coin in [record.coin for record in unspent]:
+                        return False, "can't respond to own offer"
                     innerpuzzlereveal = solution.rest().rest().rest().first()
                     innersol = solution.rest().rest().rest().rest().first()
                     out_amount = cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
@@ -267,6 +270,9 @@ class TradeManager:
                     coinsols.append(coinsol)
             else:
                 # standard chia coin
+                unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(1)
+                if coinsol.coin in [record.coin for record in unspent]:
+                    return False, "can't respond to own offer"
                 if chia_discrepancy is None:
                     chia_discrepancy = cc_wallet_puzzles.get_output_discrepancy_for_puzzle_and_solution(
                         coinsol.coin, puzzle, solution
@@ -309,7 +315,7 @@ class TradeManager:
                         my_cc_spends.add(add)
 
             if my_cc_spends == set() or my_cc_spends is None:
-                return False
+                return False, "insufficient funds"
 
             auditor = my_cc_spends.pop()
             auditor_inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(
@@ -570,4 +576,4 @@ class TradeManager:
         for tx in my_tx_records:
             await self.wallet_state_manager.add_transaction(tx)
 
-        return True
+        return True, None

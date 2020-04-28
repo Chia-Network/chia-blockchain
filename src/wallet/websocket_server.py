@@ -464,8 +464,11 @@ class WebSocketServer:
 
     async def respond_to_offer(self, websocket, request, response_api):
         file_path = Path(request["filename"])
-        success = await self.trade_manager.respond_to_offer(file_path)
-        response = {"success": success}
+        success, reason = await self.trade_manager.respond_to_offer(file_path)
+        if success:
+            response = {"success": success}
+        else:
+            response = {"success": success, "reason": reason}
         return await websocket.send(format_response(response_api, response))
 
     async def safe_handle(self, websocket, path):
