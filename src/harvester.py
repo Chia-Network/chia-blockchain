@@ -2,6 +2,7 @@ import logging
 import asyncio
 from pathlib import Path
 from typing import Dict, Optional, Tuple, List
+import concurrent
 
 from blspy import PrependSignature, PrivateKey, PublicKey, Util
 
@@ -159,10 +160,12 @@ class Harvester:
                 f"Invalid challenge size {challenge_size}, 32 was expected"
             )
 
-        async def lookup_challenge(
-            filename: Path, prover: DiskProver
-        ) -> List[harvester_protocol.ChallengeResponse]:
-            all_responses: List[harvester_protocol.ChallengeResponse] = []
+        loop = asyncio.get_running_loop()
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=50)
+
+        def blocking_lookup(filename: Path, prover: DiskProver) -> Optional[List]:
+            # Uses the DiskProver object to lookup qualities. This is a blocking call,
+            # so it should be run in a threadpool.
             try:
                 quality_strings = prover.get_qualities_for_challenge(
                     new_challenge.challenge_hash
@@ -179,6 +182,16 @@ class Harvester:
                         f"Retry-Error using prover object on {filename}. Giving up."
                     )
                     quality_strings = None
+            return quality_strings
+
+        async def lookup_challenge(
+            filename: Path, prover: DiskProver
+        ) -> List[harvester_protocol.ChallengeResponse]:
+            # Exectures a DiskProverLookup in a threadpool, and returns responses
+            all_responses: List[harvester_protocol.ChallengeResponse] = []
+            quality_strings = await loop.run_in_executor(
+                executor, blocking_lookup, filename, prover
+            )
             if quality_strings is not None:
                 for index, quality_str in enumerate(quality_strings):
                     self.challenge_hashes[quality_str] = (
@@ -205,6 +218,7 @@ class Harvester:
                     Message("challenge_response", response),
                     Delivery.RESPOND,
                 )
+        executor.shutdown(wait=False)
 
     @api_request
     async def request_proof_of_space(
