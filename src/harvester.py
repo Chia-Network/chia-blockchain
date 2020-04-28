@@ -2,6 +2,7 @@ import logging
 import asyncio
 from pathlib import Path
 from typing import Dict, Optional, Tuple, List
+import random
 
 from blspy import PrependSignature, PrivateKey, PublicKey, Util
 
@@ -159,7 +160,10 @@ class Harvester:
                 f"Invalid challenge size {challenge_size}, 32 was expected"
             )
 
-        async def lookup_challenge(filename: Path, prover: DiskProver):
+        async def lookup_challenge(
+            filename: Path, prover: DiskProver
+        ) -> List[harvester_protocol.ChallengeResponse]:
+            all_responses: List[harvester_protocol.ChallengeResponse] = []
             try:
                 quality_strings = prover.get_qualities_for_challenge(
                     new_challenge.challenge_hash
@@ -176,6 +180,7 @@ class Harvester:
                         f"Retry-Error using prover object on {filename}. Giving up."
                     )
                     quality_strings = None
+            await asyncio.sleep(random.randint(1, 6))
             if quality_strings is not None:
                 for index, quality_str in enumerate(quality_strings):
                     self.challenge_hashes[quality_str] = (
@@ -186,10 +191,17 @@ class Harvester:
                     response: harvester_protocol.ChallengeResponse = harvester_protocol.ChallengeResponse(
                         new_challenge.challenge_hash, quality_str, prover.get_size()
                     )
-                    yield response
+                    all_responses.append(response)
+            return all_responses
 
-        for filename, prover in self.provers.items():
-            async for response in lookup_challenge(filename, prover):
+        awaitables = [
+            lookup_challenge(filename, prover)
+            for filename, prover in self.provers.items()
+        ]
+
+        # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
+        for sublist_awaitable in asyncio.as_completed(awaitables):
+            for response in await sublist_awaitable:
                 yield OutboundMessage(
                     NodeType.FARMER,
                     Message("challenge_response", response),
