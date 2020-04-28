@@ -469,8 +469,6 @@ class TradeManager:
 
             cs_aud = create_spend_for_auditor(auditor, auditor)
             coinsols.append(cs_aud)
-            colour_spend = SpendBundle([cs, cs_eph, cs_aud], aggsig)
-            wallet = wallets[colour]
 
         spend_bundle = SpendBundle(coinsols, aggsig)
         my_tx_records = []
@@ -528,9 +526,9 @@ class TradeManager:
                     incoming=False,
                     confirmed=False,
                     sent=uint32(10),
-                    spend_bundle=chia_spend_bundle,
-                    additions=chia_spend_bundle.additions(),
-                    removals=chia_spend_bundle.removals(),
+                    spend_bundle=spend_bundle,
+                    additions=spend_bundle.additions(),
+                    removals=spend_bundle.removals(),
                     wallet_id=wallet.wallet_info.id,
                     sent_to=[],
                 )
@@ -544,9 +542,9 @@ class TradeManager:
                     incoming=True,
                     confirmed=False,
                     sent=uint32(10),
-                    spend_bundle=chia_spend_bundle,
-                    additions=chia_spend_bundle.additions(),
-                    removals=chia_spend_bundle.removals(),
+                    spend_bundle=spend_bundle,
+                    additions=spend_bundle.additions(),
+                    removals=spend_bundle.removals(),
                     wallet_id=wallet.wallet_info.id,
                     sent_to=[],
                 )
