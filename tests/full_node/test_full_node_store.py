@@ -7,8 +7,7 @@ import random
 
 import aiosqlite
 import pytest
-from src.full_node.store import FullNodeStore
-from src.full_node.coin_store import CoinStore
+from src.full_node.full_node_store import FullNodeStore
 from src.full_node.blockchain import Blockchain
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
@@ -22,6 +21,7 @@ test_constants: Dict[str, Any] = {
     "DISCRIMINANT_SIZE_BITS": 16,
     "BLOCK_TIME_TARGET": 10,
     "MIN_BLOCK_TIME": 2,
+    "MIN_ITERS_STARTING": 100,
     "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
     "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
 }
@@ -36,7 +36,7 @@ def event_loop():
     yield loop
 
 
-class TestStore:
+class TestFullNodeStore:
     @pytest.mark.asyncio
     async def test_basic_store(self):
         assert sqlite3.threadsafety == 1
@@ -60,36 +60,10 @@ class TestStore:
         db = await FullNodeStore.create(connection)
         db_2 = await FullNodeStore.create(connection_2)
         try:
-            await db._clear_database()
-
-            genesis = FullBlock.from_bytes(test_constants["GENESIS_BLOCK"])
-
-            # Save/get block
-            for block in blocks:
-                await db.add_block(block)
-                assert block == await db.get_block(block.header_hash)
-
-            await db.add_block(blocks_alt[2])
-            assert len(await db.get_blocks_at([1, 2])) == 3
-
-            # Get headers (added alt block also, so +1)
-            assert len(await db.get_headers()) == len(blocks) + 1
-
             # Save/get sync
             for sync_mode in (False, True):
                 db.set_sync_mode(sync_mode)
                 assert sync_mode == db.get_sync_mode()
-
-            # clear sync info
-            await db.clear_sync_info()
-
-            # add/get potential tip, get potential tips num
-            db.add_potential_tip(blocks[6])
-            assert blocks[6] == db.get_potential_tip(blocks[6].header_hash)
-
-            # Add potential block
-            await db.add_potential_block(genesis)
-            assert genesis == await db.get_potential_block(uint32(0))
 
             # Add/get candidate block
             assert db.get_candidate_block(0) is None
@@ -120,15 +94,15 @@ class TestStore:
                 key = (block.header_hash, uint64(1000))
 
                 # Different database should have different data
-                db_2.add_unfinished_block(key, block)
+                await db_2.add_unfinished_block(key, block)
 
-                assert db.get_unfinished_block(key) is None
-                db.add_unfinished_block(key, block)
-                assert db.get_unfinished_block(key) == block
-                assert len(db.get_unfinished_blocks()) == i
+                assert await db.get_unfinished_block(key) is None
+                await db.add_unfinished_block(key, block)
+                assert await db.get_unfinished_block(key) == block
+                assert len(await db.get_unfinished_blocks()) == i
                 i += 1
-            db.clear_unfinished_blocks_below(uint32(5))
-            assert len(db.get_unfinished_blocks()) == 5
+            await db.clear_unfinished_blocks_below(uint32(5))
+            assert len(await db.get_unfinished_blocks()) == 5
 
             # Set/get unf block leader
             assert db.get_unfinished_block_leader() == (0, (1 << 64) - 1)
@@ -147,21 +121,8 @@ class TestStore:
             h_hash_1 = bytes32(token_bytes(32))
             assert not db.seen_unfinished_block(h_hash_1)
             assert db.seen_unfinished_block(h_hash_1)
-            db.clear_seen_unfinished_blocks()
+            await db.clear_seen_unfinished_blocks()
             assert not db.seen_unfinished_block(h_hash_1)
-
-            # Test LCA
-            assert (await db.get_lca()) is None
-
-            unspent_store = await CoinStore.create(connection)
-            b: Blockchain = await Blockchain.create(unspent_store, db, test_constants)
-
-            assert (await db.get_lca()) == blocks[-3].header_hash
-            assert b.lca_block.header_hash == (await db.get_lca())
-
-            b_2: Blockchain = await Blockchain.create(unspent_store, db, test_constants)
-            assert (await db.get_lca()) == blocks[-3].header_hash
-            assert b_2.lca_block.header_hash == (await db.get_lca())
 
         except Exception:
             await connection.close()
@@ -181,37 +142,3 @@ class TestStore:
         db_filename.unlink()
         db_filename_2.unlink()
         db_filename_3.unlink()
-
-    @pytest.mark.asyncio
-    async def test_deadlock(self):
-        blocks = bt.get_consecutive_blocks(test_constants, 10, [], 9, b"0")
-        db_filename = Path("blockchain_test.db")
-
-        if db_filename.exists():
-            db_filename.unlink()
-
-        connection = await aiosqlite.connect(db_filename)
-        db = await FullNodeStore.create(connection)
-        tasks = []
-
-        for i in range(10000):
-            rand_i = random.randint(0, 10)
-            if random.random() < 0.5:
-                tasks.append(asyncio.create_task(db.add_block(blocks[rand_i])))
-            if random.random() < 0.5:
-                tasks.append(
-                    asyncio.create_task(db.add_potential_block(blocks[rand_i]))
-                )
-            if random.random() < 0.5:
-                tasks.append(
-                    asyncio.create_task(db.get_block(blocks[rand_i].header_hash))
-                )
-            if random.random() < 0.5:
-                tasks.append(
-                    asyncio.create_task(
-                        db.get_potential_block(blocks[rand_i].header_hash)
-                    )
-                )
-        await asyncio.gather(*tasks)
-        await connection.close()
-        db_filename.unlink()

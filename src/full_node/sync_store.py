@@ -3,14 +3,10 @@ import logging
 import aiosqlite
 from typing import Dict, List, Optional, Tuple
 
-from src.types.program import Program
 from src.types.full_block import FullBlock
-from src.types.header import HeaderData, Header
 from src.types.header_block import HeaderBlock
-from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
-from src.util.hash import std_hash
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32
 
 log = logging.getLogger(__name__)
 
@@ -57,11 +53,6 @@ class SyncStore:
         self.potential_blocks_received = {}
         self.potential_future_blocks = []
         return self
-
-    async def _clear_database(self):
-        async with self.lock:
-            await self.db.execute("DELETE FROM potential_blocks")
-            await self.db.commit()
 
     async def add_potential_block(self, block: FullBlock) -> None:
         cursor = await self.db.execute(

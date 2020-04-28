@@ -10,7 +10,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import websockets
 
-from src.types.sized_bytes import bytes32
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
 from src.wallet.trade_manager import TradeManager

@@ -6,8 +6,8 @@ import aiosqlite
 import pytest
 
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
-from src.full_node.store import FullNodeStore
 from src.full_node.coin_store import CoinStore
+from src.full_node.block_store import BlockStore
 from tests.block_tools import BlockTools
 from src.consensus.constants import constants as consensus_constants
 
@@ -36,15 +36,16 @@ def event_loop():
     yield loop
 
 
-class TestUnspent:
+class TestCoinStore:
     @pytest.mark.asyncio
-    async def test_basic_unspent_store(self):
+    async def test_basic_coin_store(self):
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
         db_path = Path("fndb_test.db")
+        if db_path.exists():
+            db_path.unlink()
         connection = await aiosqlite.connect(db_path)
         db = await CoinStore.create(connection)
-        await db._clear_database()
 
         # Save/get block
         for block in blocks:
@@ -62,9 +63,10 @@ class TestUnspent:
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
         db_path = Path("fndb_test.db")
+        if db_path.exists():
+            db_path.unlink()
         connection = await aiosqlite.connect(db_path)
         db = await CoinStore.create(connection)
-        await db._clear_database()
 
         # Save/get block
         for block in blocks:
@@ -89,9 +91,10 @@ class TestUnspent:
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
         db_path = Path("fndb_test.db")
+        if db_path.exists():
+            db_path.unlink()
         connection = await aiosqlite.connect(db_path)
         db = await CoinStore.create(connection)
-        await db._clear_database()
 
         # Save/get block
         for block in blocks:
@@ -128,11 +131,12 @@ class TestUnspent:
     async def test_basic_reorg(self):
         blocks = bt.get_consecutive_blocks(test_constants, 100, [], 9)
         db_path = Path("blockchain_test.db")
+        if db_path.exists():
+            db_path.unlink()
         connection = await aiosqlite.connect(db_path)
-        unspent_store = await CoinStore.create(connection)
-        store = await FullNodeStore.create(connection)
-        await store._clear_database()
-        b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
+        coin_store = await CoinStore.create(connection)
+        store = await BlockStore.create(connection)
+        b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
         try:
 
             for i in range(1, len(blocks)):
@@ -140,10 +144,10 @@ class TestUnspent:
             assert b.get_current_tips()[0].height == 100
 
             for c, block in enumerate(blocks):
-                unspent = await unspent_store.get_coin_record(
+                unspent = await coin_store.get_coin_record(
                     block.header.data.coinbase.name(), block.header
                 )
-                unspent_fee = await unspent_store.get_coin_record(
+                unspent_fee = await coin_store.get_coin_record(
                     block.header.data.fees_coin.name(), block.header
                 )
                 assert unspent.spent == 0
@@ -166,7 +170,7 @@ class TestUnspent:
                     assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
                 elif reorg_block.height >= 100:
                     assert result == ReceiveBlockResult.ADDED_TO_HEAD
-                    unspent = await unspent_store.get_coin_record(
+                    unspent = await coin_store.get_coin_record(
                         reorg_block.header.data.coinbase.name(), reorg_block.header
                     )
                     assert unspent.name == reorg_block.header.data.coinbase.name()
@@ -188,21 +192,22 @@ class TestUnspent:
         num_blocks = 20
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 9)
         db_path = Path("blockchain_test.db")
+        if db_path.exists():
+            db_path.unlink()
         connection = await aiosqlite.connect(db_path)
-        unspent_store = await CoinStore.create(connection)
-        store = await FullNodeStore.create(connection)
-        await store._clear_database()
-        b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
+        coin_store = await CoinStore.create(connection)
+        store = await BlockStore.create(connection)
+        b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
         try:
             for i in range(1, len(blocks)):
                 await b.receive_block(blocks[i])
             assert b.get_current_tips()[0].height == num_blocks
-            unspent = await unspent_store.get_coin_record(
+            unspent = await coin_store.get_coin_record(
                 blocks[1].header.data.coinbase.name(), blocks[-1].header
             )
             unspent_puzzle_hash = unspent.coin.puzzle_hash
 
-            coins = await unspent_store.get_coin_records_by_puzzle_hash(
+            coins = await coin_store.get_coin_records_by_puzzle_hash(
                 unspent_puzzle_hash, blocks[-1].header
             )
             assert len(coins) == (num_blocks + 1) * 2

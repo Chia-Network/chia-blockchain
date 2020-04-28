@@ -90,7 +90,9 @@ class RpcApiHandler:
             raise web.HTTPBadRequest()
         header_hash = hexstr_to_bytes(request_data["header_hash"])
 
-        block: Optional[FullBlock] = await self.full_node.block_store.get_block(header_hash)
+        block: Optional[FullBlock] = await self.full_node.block_store.get_block(
+            header_hash
+        )
         if block is None:
             raise web.HTTPNotFound()
         return obj_to_response(block)
@@ -132,7 +134,9 @@ class RpcApiHandler:
             raise web.HTTPBadRequest()
         height = request_data["height"]
         response_headers: List[Header] = []
-        for block in (self.full_node.full_node_store.get_unfinished_blocks()).values():
+        for block in (
+            await self.full_node.full_node_store.get_unfinished_blocks()
+        ).values():
             if block.height == height:
                 response_headers.append(block.header)
 

@@ -22,6 +22,7 @@ test_constants: Dict[str, Any] = {
     "DISCRIMINANT_SIZE_BITS": 16,
     "BLOCK_TIME_TARGET": 10,
     "MIN_BLOCK_TIME": 2,
+    "MIN_ITERS_STARTING": 100,
     "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
     "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
 }
@@ -59,9 +60,8 @@ class TestBlockStore:
 
         db = await BlockStore.create(connection)
         db_2 = await BlockStore.create(connection_2)
+        db_3 = await BlockStore.create(connection_3)
         try:
-            await db._clear_database()
-
             genesis = FullBlock.from_bytes(test_constants["GENESIS_BLOCK"])
 
             # Save/get block
@@ -77,16 +77,27 @@ class TestBlockStore:
 
             # Test LCA
             assert (await db.get_lca()) is None
+            await db.set_lca(blocks[-3].header_hash)
+            assert (await db.get_lca()) == blocks[-3].header
+            await db.set_tips([blocks[-2].header_hash, blocks[-1].header_hash])
+            assert (await db.get_tips()) == [blocks[-2].header, blocks[-1].header]
 
-            unspent_store = await CoinStore.create(connection)
-            b: Blockchain = await Blockchain.create(unspent_store, db, test_constants)
+            coin_store: CoinStore = await CoinStore.create(connection_3)
+            b: Blockchain = await Blockchain.create(coin_store, db_3, test_constants)
 
-            assert (await db.get_lca()) == blocks[-3].header_hash
-            assert b.lca_block.header_hash == (await db.get_lca())
+            assert b.lca_block == genesis.header
+            assert b.tips == [genesis.header]
 
-            b_2: Blockchain = await Blockchain.create(unspent_store, db, test_constants)
-            assert (await db.get_lca()) == blocks[-3].header_hash
-            assert b_2.lca_block.header_hash == (await db.get_lca())
+            for block in blocks:
+                await b.receive_block(block)
+
+            assert b.lca_block == blocks[-3].header
+            assert set(b.tips) == set(
+                [blocks[-3].header, blocks[-2].header, blocks[-1].header]
+            )
+            left = sorted(b.tips, key=lambda t: t.height)
+            right = sorted((await db_3.get_tips()), key=lambda t: t.height)
+            assert left == right
 
         except Exception:
             await connection.close()
@@ -94,6 +105,7 @@ class TestBlockStore:
             await connection_3.close()
             db_filename.unlink()
             db_filename_2.unlink()
+            db_filename_3.unlink()
             raise
 
         await connection.close()
@@ -102,3 +114,27 @@ class TestBlockStore:
         db_filename.unlink()
         db_filename_2.unlink()
         db_filename_3.unlink()
+
+    # @pytest.mark.asyncio
+    # async def test_deadlock(self):
+    #     blocks = bt.get_consecutive_blocks(test_constants, 10, [], 9, b"0")
+    #     db_filename = Path("blockchain_test.db")
+
+    #     if db_filename.exists():
+    #         db_filename.unlink()
+
+    #     connection = await aiosqlite.connect(db_filename)
+    #     db = await BlockStore.create(connection)
+    #     tasks = []
+
+    #     for i in range(10000):
+    #         rand_i = random.randint(0, 10)
+    #         if random.random() < 0.5:
+    #             tasks.append(asyncio.create_task(db.add_block(blocks[rand_i])))
+    #         if random.random() < 0.5:
+    #             tasks.append(
+    #                 asyncio.create_task(db.get_block(blocks[rand_i].header_hash))
+    #             )
+    #     await asyncio.gather(*tasks)
+    #     await connection.close()
+    #     db_filename.unlink()

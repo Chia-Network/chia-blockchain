@@ -2,7 +2,6 @@ import asyncio
 import logging
 import logging.config
 import signal
-import aiosqlite
 from src.simulator.full_node_simulator import FullNodeSimulator
 from src.simulator.simulator_constants import test_constants
 
@@ -11,14 +10,9 @@ try:
 except ImportError:
     uvloop = None
 
-from src.full_node.blockchain import Blockchain
-from src.full_node.store import FullNodeStore
 from src.rpc.rpc_server import start_rpc_server
-from src.full_node.mempool_manager import MempoolManager
 from src.server.server import ChiaServer
 from src.server.connection import NodeType
-from src.types.full_block import FullBlock
-from src.full_node.coin_store import CoinStore
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli, load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
@@ -38,25 +32,10 @@ async def main():
 
     db_path = path_from_root(DEFAULT_ROOT_PATH, config["simulator_database_path"])
     mkdir(db_path.parent)
-    connection = await aiosqlite.connect(db_path)
-
-    # Create the store (DB) and full node instance
-    store = await FullNodeStore.create(connection)
-    await store._clear_database()
-
-    genesis: FullBlock = FullBlock.from_bytes(test_constants["GENESIS_BLOCK"])
-    await store.add_block(genesis)
-    coin_store = await CoinStore.create(connection)
-
-    log.info("Initializing blockchain from disk")
-    blockchain = await Blockchain.create(coin_store, store, test_constants)
-
-    mempool_manager = MempoolManager(coin_store, test_constants)
-    await mempool_manager.new_tips(await blockchain.get_full_tips())
+    db_path.unlink()
 
     full_node = await FullNodeSimulator.create(
-        config,
-        override_constants=test_constants,
+        config, override_constants=test_constants,
     )
 
     ping_interval = net_config.get("ping_interval")
@@ -78,12 +57,12 @@ async def main():
     _ = await server.start_server(full_node._on_connect)
     rpc_cleanup = None
 
-    def master_close_cb():
+    async def master_close_cb():
         nonlocal server_closed
         if not server_closed:
             # Called by the UI, when node is closed, or when a signal is sent
             log.info("Closing all connections, and server...")
-            full_node._shutdown()
+            await full_node._shutdown()
             server.close_all()
             server_closed = True
 
@@ -111,12 +90,6 @@ async def main():
     if rpc_cleanup is not None:
         await rpc_cleanup()
     log.info("Closed RPC server.")
-
-    await store.close()
-    log.info("Closed store.")
-
-    await coin_store.close()
-    log.info("Closed unspent store.")
 
     await asyncio.get_running_loop().shutdown_asyncgens()
     log.info("Node fully closed.")

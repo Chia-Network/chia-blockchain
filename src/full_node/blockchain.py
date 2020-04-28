@@ -101,83 +101,63 @@ class Blockchain:
         self.tips = []
         self.height_to_hash = {}
         self.headers = {}
-
         self.coin_store = coin_store
         self.block_store = block_store
-
         self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
         self.coinbase_freeze = self.constants["COINBASE_FREEZE_PERIOD"]
-        result, removed, error_code = await self.receive_block(self.genesis, sync_mode=False)
-        if result != ReceiveBlockResult.ADDED_TO_HEAD:
-            if error_code is not None:
-                raise ConsensusError(error_code)
-            else:
-                raise RuntimeError(f"Invalid genesis block {self.genesis}")
-
-        start = time.time()
-        headers_input, lca_hash = await self._load_headers_from_store()
-        log.info(f"Read from disk in {time.time() - start}")
-        start = time.time()
-
-        assert self.lca_block is not None
-        if len(headers_input) > 0:
-            self.headers = headers_input
-            sorted_headers = sorted(self.headers.items(), key=lambda b: b[1].height)
-            if lca_hash is not None:
-                # Add all blocks up to the LCA, and set the tip to the LCA
-                assert sorted_headers[-1][0] == lca_hash
-                for _, header in sorted_headers:
-                    self.height_to_hash[header.height] = header.header_hash
-                    self.tips = [header]
-                    self.lca_block = header
-                await self._reconsider_heads(self.lca_block, False, False)
-            else:
-                for _, header in sorted_headers:
-                    # Reconsider every single header, since we don't have LCA on disk
-                    self.height_to_hash[header.height] = header.header_hash
-                    await self._reconsider_heads(header, False, False)
-            assert (
-                self.headers[self.height_to_hash[uint32(0)]].get_hash()
-                == self.genesis.header_hash
-            )
-        if len(headers_input) > 1:
-            assert (
-                self.headers[self.height_to_hash[uint32(1)]].prev_header_hash
-                == self.genesis.header_hash
-            )
-        log.info(f"Added to chain in {time.time() - start}")
+        await self._load_chain_from_store()
         return self
 
-    async def _load_headers_from_store(
-        self,
-    ) -> Tuple[Dict[str, Header], Optional[bytes32]]:
+    async def _load_chain_from_store(self,) -> None:
         """
-        Loads headers from disk, into a list of Headers, that can be used
-        to initialize the Blockchain class.
+        Initializes the state of the Blockchain class from the database. Sets the LCA, tips,
+        headers, height_to_hash, and block_store DiffStores.
         """
-        lca_hash: Optional[bytes32] = await self.block_store.get_lca()
-        seen_blocks: Dict[str, Header] = {}
-        tips: List[Header] = []
-        for header in await self.block_store.get_headers():
-            if lca_hash is not None:
-                if header.header_hash == lca_hash:
-                    tips = [header]
-            else:
-                if len(tips) == 0 or header.weight > tips[0].weight:
-                    tips = [header]
-            seen_blocks[header.header_hash] = header
+        lca_db: Optional[Header] = await self.block_store.get_lca()
+        tips_db: List[Header] = await self.block_store.get_tips()
+        headers_db: Dict[bytes32, Header] = await self.block_store.get_headers()
 
-        headers = {}
-        if len(tips) > 0:
-            curr: Header = tips[0]
-            reverse_blocks: List[Header] = [curr]
-            while curr.height > 0:
-                curr = seen_blocks[curr.prev_header_hash]
-                reverse_blocks.append(curr)
+        assert (lca_db is None) == (len(tips_db) == 0) == (len(headers_db) == 0)
+        if lca_db is None:
+            result, removed, error_code = await self.receive_block(
+                self.genesis, sync_mode=False
+            )
+            if result != ReceiveBlockResult.ADDED_TO_HEAD:
+                if error_code is not None:
+                    raise ConsensusError(error_code)
+                else:
+                    raise RuntimeError(f"Invalid genesis block {self.genesis}")
+            return
 
-            for block in reversed(reverse_blocks):
-                headers[block.header_hash] = block
-        return headers, lca_hash
+        # Set the state (lca block and tips)
+        self.lca_block = lca_db
+        self.tips = tips_db
+
+        # Find the common ancestor of the tips, and add intermediate blocks to headers
+        cur: List[Header] = self.tips[:]
+        while any(b.header_hash != cur[0].header_hash for b in cur):
+            heights = [b.height for b in cur]
+            i = heights.index(max(heights))
+            self.headers[cur[i].header_hash] = cur[i]
+            cur[i] = headers_db[cur[i].prev_header_hash]
+
+        # Consistency check, tips should have an LCA equal to the DB LCA
+        assert cur[0] == self.lca_block
+
+        # Sets the header for remaining blocks, and height_to_hash dict
+        cur_b: Header = self.lca_block
+        while True:
+            self.headers[cur_b.header_hash] = cur_b
+            self.height_to_hash[cur_b.height] = cur_b.header_hash
+            if cur_b.height == 0:
+                break
+            cur_b = headers_db[cur_b.prev_header_hash]
+
+        # Asserts that the DB genesis block is correct
+        assert cur_b == self.genesis.header
+
+        # Adds the blocks to the db between LCA and tip
+        await self.recreate_diff_stores()
 
     def get_current_tips(self) -> List[Header]:
         """
@@ -873,6 +853,7 @@ class Blockchain:
                 self.tips.sort(key=lambda b: b.weight, reverse=True)
                 # This will loop only once
                 removed = self.tips.pop()
+            await self.block_store.set_tips([t.header_hash for t in self.tips])
             await self._reconsider_lca(genesis, sync_mode)
             return True, removed
         return False, None
@@ -897,6 +878,8 @@ class Blockchain:
         else:
             self._reconsider_heights(self.lca_block, cur[0])
         self.lca_block = cur[0]
+        if not genesis:
+            await self.block_store.set_lca(self.lca_block.header_hash)
 
         if old_lca is None:
             full: Optional[FullBlock] = await self.block_store.get_block(
@@ -905,8 +888,6 @@ class Blockchain:
             assert full is not None
             await self.coin_store.new_lca(full)
             await self._create_diffs_for_tips(self.lca_block)
-            if not genesis:
-                await self.block_store.set_lca(self.lca_block.header_hash)
         # If LCA changed update the unspent store
         elif old_lca.header_hash != self.lca_block.header_hash:
             # New LCA is lower height but not the a parent of old LCA (Reorg)
@@ -920,8 +901,6 @@ class Blockchain:
             await self._from_fork_to_lca(fork_head, self.lca_block)
             if not sync_mode:
                 await self.recreate_diff_stores()
-            if not genesis:
-                await self.block_store.set_lca(self.lca_block.header_hash)
         else:
             # If LCA has not changed just update the difference
             self.coin_store.nuke_diffs()
@@ -1132,7 +1111,9 @@ class Blockchain:
         additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}
         removals_since_fork: Set[bytes32] = set()
         coinbases_since_fork: Dict[bytes32, uint32] = {}
-        curr: Optional[FullBlock] = await self.block_store.get_block(block.prev_header_hash)
+        curr: Optional[FullBlock] = await self.block_store.get_block(
+            block.prev_header_hash
+        )
         assert curr is not None
         log.info(f"curr.height is: {curr.height}, fork height is: {fork_h}")
         while curr.height > fork_h:

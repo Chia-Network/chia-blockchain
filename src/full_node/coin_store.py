@@ -77,11 +77,6 @@ class CoinStore:
         self.head_diffs = dict()
         return self
 
-    async def _clear_database(self):
-        cursor = await self.coin_record_db.execute("DELETE FROM coin_record")
-        await cursor.close()
-        await self.coin_record_db.commit()
-
     async def add_lcas(self, blocks: List[FullBlock]):
         for block in blocks:
             await self.new_lca(block)

@@ -9,7 +9,6 @@ from secrets import token_bytes
 
 from src.full_node.blockchain import Blockchain
 from src.full_node.mempool_manager import MempoolManager
-from src.full_node.store import FullNodeStore
 from src.full_node.full_node import FullNode
 from src.server.connection import NodeType
 from src.server.server import ChiaServer
@@ -58,7 +57,6 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
 
-    db_path = Path(db_name)
     db_path = root_path / f"{db_name}"
     if db_path.exists():
         db_path.unlink()
@@ -74,10 +72,9 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
         config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = introducer_port
     full_node_1 = await FullNodeSimulator.create(
-        config,
-        f"full_node_{port}",
-        test_constants_copy,
+        config, f"full_node_{port}", test_constants_copy,
     )
+    print("fULL NODE IS", full_node_1)
     assert ping_interval is not None
     assert network_id is not None
     server_1 = ChiaServer(
@@ -108,7 +105,9 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
 
-    Path(db_name).unlink()
+    db_path = root_path / f"{db_name}"
+    if db_path.exists():
+        db_path.unlink()
 
     net_config = load_config(root_path, "config.yaml")
     ping_interval = net_config.get("ping_interval")
@@ -120,9 +119,7 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
         config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = introducer_port
     full_node_1 = await FullNode.create(
-        config,
-        f"full_node_{port}",
-        test_constants_copy,
+        config, f"full_node_{port}", test_constants_copy,
     )
     assert ping_interval is not None
     assert network_id is not None
@@ -141,10 +138,11 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     yield (full_node_1, server_1)
 
     # TEARDOWN
-    full_node_1._shutdown()
+    await full_node_1._shutdown()
     server_1.close_all()
-    await connection.close()
-    Path(db_name).unlink()
+    db_path = root_path / f"{db_name}"
+    if db_path.exists():
+        db_path.unlink()
 
 
 async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
