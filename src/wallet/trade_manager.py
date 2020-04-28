@@ -193,10 +193,10 @@ class TradeManager:
 
         return True
 
-    async def respond_to_offer(self, file_path: Path) -> bool:
+    async def respond_to_offer(self, file_path: Path) -> Tuple[bool, Optional[str]]:
         has_wallets = await self.maybe_create_wallets_for_offer(file_path)
         if not has_wallets:
-            return False
+            return False, "Unknown Error"
         trade_offer_hex = file_path.read_text()
         trade_offer = SpendBundle.from_bytes(bytes.fromhex(trade_offer_hex))
 

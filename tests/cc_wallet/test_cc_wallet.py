@@ -337,7 +337,7 @@ class TestWalletSimulator:
         assert offer["chia"] == -10
         assert offer[colour] == 30
 
-        success = await trade_manager_2.respond_to_offer(file_path)
+        success, reason = await trade_manager_2.respond_to_offer(file_path)
 
         assert success is True
 
@@ -520,7 +520,7 @@ class TestWalletSimulator:
         assert offer[red] == 30
         assert offer[blue] == -50
 
-        success = await trade_manager_2.respond_to_offer(file_path)
+        success, reason = await trade_manager_2.respond_to_offer(file_path)
 
         assert success is True
         for i in range(0, num_blocks):
@@ -617,7 +617,7 @@ class TestWalletSimulator:
         assert offer["chia"] == 10
         assert offer[colour] == -30
 
-        success = await trade_manager_1.respond_to_offer(file_path)
+        success, reason = await trade_manager_1.respond_to_offer(file_path)
 
         assert success is True
 
