@@ -46,7 +46,6 @@ from src.util.api_decorators import api_request
 from src.util.ints import uint32, uint64, uint128
 from src.util.errors import Err, ConsensusError
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
-from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.path import mkdir, path_from_root
 from src.full_node.block_store import BlockStore
 from src.full_node.full_node_store import FullNodeStore
