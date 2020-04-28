@@ -87,6 +87,8 @@ class TestBlockStore:
 
             assert b.lca_block == genesis.header
             assert b.tips == [genesis.header]
+            assert await db_3.get_lca() == genesis.header
+            assert await db_3.get_tips() == [genesis.header]
 
             for block in blocks:
                 await b.receive_block(block)

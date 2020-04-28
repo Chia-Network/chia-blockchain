@@ -878,8 +878,7 @@ class Blockchain:
         else:
             self._reconsider_heights(self.lca_block, cur[0])
         self.lca_block = cur[0]
-        if not genesis:
-            await self.block_store.set_lca(self.lca_block.header_hash)
+        await self.block_store.set_lca(self.lca_block.header_hash)
 
         if old_lca is None:
             full: Optional[FullBlock] = await self.block_store.get_block(
@@ -1243,10 +1242,8 @@ class Blockchain:
 
         # Verify aggregated signature
         if not block.header.data.aggregated_signature:
-            log.error("2")
             return Err.BAD_AGGREGATE_SIGNATURE
         if not block.header.data.aggregated_signature.validate(hash_key_pairs):
-            log.error("3")
             return Err.BAD_AGGREGATE_SIGNATURE
 
         return None
