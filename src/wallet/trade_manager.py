@@ -469,15 +469,88 @@ class TradeManager:
 
             cs_aud = create_spend_for_auditor(auditor, auditor)
             coinsols.append(cs_aud)
+            colour_spend = SpendBundle([cs, cs_eph, cs_aud], aggsig)
+            wallet = wallets[colour]
 
         spend_bundle = SpendBundle(coinsols, aggsig)
-
-        if chia_spend_bundle is not None:
-            spend_bundle = SpendBundle.aggregate([spend_bundle, chia_spend_bundle])
+        my_tx_records = []
 
         if zero_spend_list is not None:
             zero_spend_list.append(spend_bundle)
             spend_bundle = SpendBundle.aggregate(zero_spend_list)
+
+        # Add transaction history hor this trade
+        if chia_spend_bundle is not None:
+            spend_bundle = SpendBundle.aggregate([spend_bundle, chia_spend_bundle])
+            if chia_discrepancy < 0:
+                tx_record = TransactionRecord(
+                    confirmed_at_index=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    to_puzzle_hash=token_bytes(),
+                    amount=uint64(abs(chia_discrepancy)),
+                    fee_amount=uint64(0),
+                    incoming=False,
+                    confirmed=False,
+                    sent=uint32(10),
+                    spend_bundle=chia_spend_bundle,
+                    additions=chia_spend_bundle.additions(),
+                    removals=chia_spend_bundle.removals(),
+                    wallet_id=uint32(1),
+                    sent_to=[],
+                )
+            else:
+                tx_record = TransactionRecord(
+                    confirmed_at_index=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    to_puzzle_hash=token_bytes(),
+                    amount=uint64(abs(chia_discrepancy)),
+                    fee_amount=uint64(0),
+                    incoming=True,
+                    confirmed=False,
+                    sent=uint32(10),
+                    spend_bundle=chia_spend_bundle,
+                    additions=chia_spend_bundle.additions(),
+                    removals=chia_spend_bundle.removals(),
+                    wallet_id=uint32(1),
+                    sent_to=[],
+                )
+            my_tx_records.append(tx_record)
+
+        for colour, amount in cc_discrepancies.items():
+            wallet = wallets[colour]
+            if chia_discrepancy > 0:
+                tx_record = TransactionRecord(
+                    confirmed_at_index=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    to_puzzle_hash=token_bytes(),
+                    amount=uint64(abs(amount)),
+                    fee_amount=uint64(0),
+                    incoming=False,
+                    confirmed=False,
+                    sent=uint32(10),
+                    spend_bundle=chia_spend_bundle,
+                    additions=chia_spend_bundle.additions(),
+                    removals=chia_spend_bundle.removals(),
+                    wallet_id=wallet.wallet_info.id,
+                    sent_to=[],
+                )
+            else:
+                tx_record = TransactionRecord(
+                    confirmed_at_index=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    to_puzzle_hash=token_bytes(),
+                    amount=uint64(abs(amount)),
+                    fee_amount=uint64(0),
+                    incoming=True,
+                    confirmed=False,
+                    sent=uint32(10),
+                    spend_bundle=chia_spend_bundle,
+                    additions=chia_spend_bundle.additions(),
+                    removals=chia_spend_bundle.removals(),
+                    wallet_id=wallet.wallet_info.id,
+                    sent_to=[],
+                )
+            my_tx_records.append(tx_record)
 
         tx_record = TransactionRecord(
             confirmed_at_index=uint32(0),
@@ -491,10 +564,12 @@ class TradeManager:
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            wallet_id=uint32(1),
+            wallet_id=uint32(0),
             sent_to=[],
         )
 
         await self.wallet_state_manager.add_pending_transaction(tx_record)
+        for tx in my_tx_records:
+            await self.wallet_state_manager.add_transaction(tx)
 
         return True
