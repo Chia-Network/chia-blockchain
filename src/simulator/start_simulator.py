@@ -57,12 +57,11 @@ async def main():
     _ = await server.start_server(full_node._on_connect)
     rpc_cleanup = None
 
-    async def master_close_cb():
+    def master_close_cb():
         nonlocal server_closed
         if not server_closed:
             # Called by the UI, when node is closed, or when a signal is sent
             log.info("Closing all connections, and server...")
-            await full_node._shutdown()
             server.close_all()
             server_closed = True
 
@@ -78,13 +77,12 @@ async def main():
     except NotImplementedError:
         log.info("signal handlers unsupported")
 
-    log.info("Waiting to connect to some peers...")
-    await asyncio.sleep(3)
-    log.info(f"Connected to {len(server.global_connections.get_connections())} peers.")
-
     # Awaits for server and all connections to close
     await server.await_closed()
     log.info("Closed all node servers.")
+
+    # Stops the full node and closes DBs
+    await full_node._shutdown()
 
     # Waits for the rpc server to close
     if rpc_cleanup is not None:

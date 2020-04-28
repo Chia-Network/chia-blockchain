@@ -123,7 +123,7 @@ class BlockStore:
         cursor = await self.db.execute("SELECT header_hash, header from headers")
         rows = await cursor.fetchall()
         await cursor.close()
-        return {row[0]: Header.from_bytes(row[1]) for row in rows}
+        return {bytes.fromhex(row[0]): Header.from_bytes(row[1]) for row in rows}
 
     async def get_proof_hashes(self) -> Dict[bytes32, bytes32]:
         cursor = await self.db.execute("SELECT header_hash, proof_hash from headers")

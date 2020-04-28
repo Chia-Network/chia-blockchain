@@ -63,12 +63,11 @@ async def async_main():
     _ = await server.start_server(full_node._on_connect)
     rpc_cleanup = None
 
-    async def master_close_cb():
+    def master_close_cb():
         nonlocal server_closed
         if not server_closed:
             # Called by the UI, when node is closed, or when a signal is sent
             log.info("Closing all connections, and server...")
-            await full_node._shutdown()
             server.close_all()
             server_closed = True
 
@@ -89,6 +88,9 @@ async def async_main():
     # Awaits for server and all connections to close
     await server.await_closed()
     log.info("Closed all node servers.")
+
+    # Stops the full node and closes DBs
+    await full_node._shutdown()
 
     # Waits for the rpc server to close
     if rpc_cleanup is not None:
