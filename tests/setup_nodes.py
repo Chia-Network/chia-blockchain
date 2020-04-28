@@ -74,7 +74,6 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
     full_node_1 = await FullNodeSimulator.create(
         config, f"full_node_{port}", test_constants_copy,
     )
-    print("fULL NODE IS", full_node_1)
     assert ping_interval is not None
     assert network_id is not None
     server_1 = ChiaServer(
@@ -93,9 +92,9 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
     yield (full_node_1, server_1)
 
     # TEARDOWN
-    await full_node_1._shutdown()
     server_1.close_all()
     await server_1.await_closed()
+    await full_node_1._shutdown()
     db_path.unlink()
 
 
@@ -138,8 +137,9 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     yield (full_node_1, server_1)
 
     # TEARDOWN
-    await full_node_1._shutdown()
     server_1.close_all()
+    await server_1.await_closed()
+    await full_node_1._shutdown()
     db_path = root_path / f"{db_name}"
     if db_path.exists():
         db_path.unlink()

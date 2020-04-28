@@ -37,6 +37,8 @@ class BlockStore:
         await self.db.execute(
             "CREATE INDEX IF NOT EXISTS header_height on headers(height)"
         )
+
+        # is_lca and is_tip index to quickly find tips and lca
         await self.db.execute("CREATE INDEX IF NOT EXISTS lca on headers(is_lca)")
         await self.db.execute("CREATE INDEX IF NOT EXISTS lca on headers(is_tip)")
         await self.db.commit()
