@@ -21,9 +21,9 @@ def main():
     key_config_filename = config_path_for_filename(root_path, "keys.yaml")
 
     parser = argparse.ArgumentParser(description="Chia plotting script.")
-    parser.add_argument("-k", "--size", help="Plot size", type=int, default=20)
+    parser.add_argument("-k", "--size", help="Plot size", type=int, default=26)
     parser.add_argument(
-        "-n", "--num_plots", help="Number of plots", type=int, default=10
+        "-n", "--num_plots", help="Number of plots", type=int, default=1
     )
     parser.add_argument("-i", "--index", help="First plot index", type=int, default=0)
     parser.add_argument(

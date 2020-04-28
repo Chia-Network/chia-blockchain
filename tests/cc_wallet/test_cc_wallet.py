@@ -133,7 +133,11 @@ class TestWalletSimulator:
         await self.time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await self.time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
+<<<<<<< HEAD
         assert cc_wallet.cc_info.my_core is not None
+=======
+        assert cc_wallet.cc_info.my_core
+>>>>>>> efc3113afac720de5e9da011cff5d96cdc96cf1c
         colour = cc_wallet_puzzles.get_genesis_from_core(cc_wallet.cc_info.my_core)
 
         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
@@ -236,7 +240,11 @@ class TestWalletSimulator:
         await self.time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await self.time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
+<<<<<<< HEAD
         assert cc_wallet.cc_info.my_core is not None
+=======
+        assert cc_wallet.cc_info.my_core
+>>>>>>> efc3113afac720de5e9da011cff5d96cdc96cf1c
         colour = cc_wallet_puzzles.get_genesis_from_core(cc_wallet.cc_info.my_core)
 
         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
@@ -296,7 +304,11 @@ class TestWalletSimulator:
         await self.time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await self.time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
+<<<<<<< HEAD
         assert cc_wallet.cc_info.my_core is not None
+=======
+        assert cc_wallet.cc_info.my_core
+>>>>>>> efc3113afac720de5e9da011cff5d96cdc96cf1c
         colour = cc_wallet_puzzles.get_genesis_from_core(cc_wallet.cc_info.my_core)
 
         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
@@ -384,7 +396,11 @@ class TestWalletSimulator:
         await self.time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await self.time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
+<<<<<<< HEAD
         assert cc_wallet.cc_info.my_core is not None
+=======
+        assert cc_wallet.cc_info.my_core
+>>>>>>> efc3113afac720de5e9da011cff5d96cdc96cf1c
         colour = cc_wallet_puzzles.get_genesis_from_core(cc_wallet.cc_info.my_core)
 
         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
@@ -458,7 +474,11 @@ class TestWalletSimulator:
         await self.time_out_assert(15, red_wallet.get_confirmed_balance, 100)
         await self.time_out_assert(15, red_wallet.get_unconfirmed_balance, 100)
 
+<<<<<<< HEAD
         assert red_wallet.cc_info.my_core is not None
+=======
+        assert red_wallet.cc_info.my_core
+>>>>>>> efc3113afac720de5e9da011cff5d96cdc96cf1c
         red = cc_wallet_puzzles.get_genesis_from_core(red_wallet.cc_info.my_core)
 
         await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
@@ -471,7 +491,11 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
+<<<<<<< HEAD
         assert blue_wallet_2.cc_info.my_core is not None
+=======
+        assert blue_wallet_2.cc_info.my_core
+>>>>>>> efc3113afac720de5e9da011cff5d96cdc96cf1c
         blue = cc_wallet_puzzles.get_genesis_from_core(blue_wallet_2.cc_info.my_core)
 
         red_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
@@ -576,7 +600,11 @@ class TestWalletSimulator:
         await self.time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
         await self.time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
 
+<<<<<<< HEAD
         assert cc_wallet.cc_info.my_core is not None
+=======
+        assert cc_wallet.cc_info.my_core
+>>>>>>> efc3113afac720de5e9da011cff5d96cdc96cf1c
         colour = cc_wallet_puzzles.get_genesis_from_core(cc_wallet.cc_info.my_core)
 
         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
