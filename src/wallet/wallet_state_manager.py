@@ -403,17 +403,15 @@ class WalletStateManager:
         transactions.
         """
         confirmed = await self.get_confirmed_balance_for_wallet(wallet_id)
-        unconfirmed_tx = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
-        addition_amount = 0
+        unconfirmed_tx: List[TransactionRecord] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         removal_amount = 0
 
         for record in unconfirmed_tx:
-            for coin in record.additions:
-                if await self.puzzle_store.puzzle_hash_exists(coin.puzzle_hash):
-                    addition_amount += coin.amount
-            for coin in record.removals:
-                removal_amount += coin.amount
-        result = confirmed - removal_amount + addition_amount
+
+            removal_amount += record.amount
+            removal_amount += record.fee_amount
+
+        result = confirmed - removal_amount
         return uint64(result)
 
     async def unconfirmed_additions_for_wallet(
@@ -455,11 +453,11 @@ class WalletStateManager:
 
         await self.wallet_store.set_spent(coin.name(), index)
 
-        unconfirmed_record = await self.tx_store.unconfirmed_with_removal_coin(
+        unconfirmed_record: List[TransactionRecord] = await self.tx_store.unconfirmed_with_removal_coin(
             coin.name()
         )
-        if unconfirmed_record:
-            await self.tx_store.set_confirmed(unconfirmed_record.name(), index)
+        for unconfirmed in unconfirmed_record:
+            await self.tx_store.set_confirmed(unconfirmed.name(), index)
 
     async def coin_added(self, coin: Coin, index: uint32, coinbase: bool):
         """
@@ -491,9 +489,10 @@ class WalletStateManager:
                 coin.name()
             )
 
-            if unconfirmed_record:
+            if len(unconfirmed_record) > 0:
                 # This is the change from this transaction
-                await self.tx_store.set_confirmed(unconfirmed_record.name(), index)
+                for record in unconfirmed_record:
+                    await self.tx_store.set_confirmed(record.name(), index)
             else:
                 now = uint64(int(time.time()))
                 tx_record = TransactionRecord(
@@ -526,58 +525,21 @@ class WalletStateManager:
             assert block.removals is not None
             await wallet.coin_added(coin, index, header_hash, block.removals)
 
-    async def add_pending_transaction(self, spend_bundle: SpendBundle, wallet_id):
+    async def add_pending_transaction(self, tx_record: TransactionRecord):
         """
-        Called from wallet_node before new transaction is sent to the full_node
+        Called from wallet before new transaction is sent to the full_node
         """
-        now = uint64(int(time.time()))
-        add_list: List[Coin] = []
-        rem_list: List[Coin] = []
-        total_removed = 0
-        total_added = 0
-        outgoing_amount = 0
 
-        for add in spend_bundle.additions():
-            total_added += add.amount
-            add_list.append(add)
-        for rem in spend_bundle.removals():
-            total_removed += rem.amount
-            rem_list.append(rem)
-
-        fee_amount = total_removed - total_added
-
-        # Figure out if we are sending to ourself or someone else.
-        to_puzzle_hash: Optional[bytes32] = None
-        for add in add_list:
-            if not await self.puzzle_store.puzzle_hash_exists(add.puzzle_hash):
-                to_puzzle_hash = add.puzzle_hash
-                outgoing_amount += add.amount
-                break
-
-        # If there is no addition for outside puzzlehash we are sending tx to ourself
-        if to_puzzle_hash is None:
-            to_puzzle_hash = add_list[0].puzzle_hash
-            outgoing_amount += total_added
-
-        tx_record = TransactionRecord(
-            confirmed_at_index=uint32(0),
-            created_at_time=now,
-            to_puzzle_hash=to_puzzle_hash,
-            amount=uint64(outgoing_amount),
-            fee_amount=uint64(fee_amount),
-            incoming=False,
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=add_list,
-            removals=rem_list,
-            wallet_id=wallet_id,
-            sent_to=[],
-        )
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
         await self.tx_store.add_transaction_record(tx_record)
         self.state_changed("pending_transaction")
         self.tx_pending_changed()
+
+    async def add_transaction(self, tx_record: TransactionRecord):
+        """
+        Called from wallet to add transaction that is not being set to full_node
+        """
+        await self.tx_store.add_transaction_record(tx_record)
 
     async def remove_from_queue(
         self,
@@ -1390,7 +1352,7 @@ class WalletStateManager:
                         await callback(height, header_hash, program, action.id)
 
     async def get_transaction_status(
-        self, tx_id: SpendBundle
+        self, tx_id: bytes32
     ) -> List[Tuple[str, MempoolInclusionStatus, Optional[str]]]:
         tr: Optional[TransactionRecord] = await self.get_transaction(tx_id)
         ret_list = []

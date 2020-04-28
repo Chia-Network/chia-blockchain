@@ -1,4 +1,6 @@
+import time
 from pathlib import Path
+from secrets import token_bytes
 from typing import Dict, Optional, Tuple, List, Any
 import logging
 
@@ -10,13 +12,14 @@ from src.types.coin_solution import CoinSolution
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
-from src.util.ints import uint32
+from src.util.ints import uint32, uint64
 from src.wallet.cc_wallet import cc_wallet_puzzles
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.cc_wallet.cc_wallet_puzzles import (
     create_spend_for_auditor,
     create_spend_for_ephemeral,
 )
+from src.wallet.transaction_record import TransactionRecord
 from src.wallet.wallet import Wallet
 from src.wallet.wallet_state_manager import WalletStateManager
 from clvm_tools import binutils
@@ -476,8 +479,22 @@ class TradeManager:
             zero_spend_list.append(spend_bundle)
             spend_bundle = SpendBundle.aggregate(zero_spend_list)
 
-        await self.wallet_state_manager.add_pending_transaction(
-            spend_bundle, self.wallet_state_manager.main_wallet.wallet_info.id
+        tx_record = TransactionRecord(
+            confirmed_at_index=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=token_bytes(),
+            amount=uint64(0),
+            fee_amount=uint64(0),
+            incoming=False,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=spend_bundle.additions(),
+            removals=spend_bundle.removals(),
+            wallet_id=uint32(1),
+            sent_to=[],
         )
+
+        await self.wallet_state_manager.add_pending_transaction(tx_record)
 
         return True

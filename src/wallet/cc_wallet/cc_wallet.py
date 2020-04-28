@@ -1,4 +1,5 @@
 import logging
+import time
 
 import clvm
 from typing import Dict, Optional, List, Any, Set
@@ -27,6 +28,7 @@ from src.wallet.cc_wallet.cc_wallet_puzzles import (
     create_spend_for_ephemeral,
 )
 from src.wallet.cc_wallet.ccparent import CCParent
+from src.wallet.transaction_record import TransactionRecord
 from src.wallet.util.json_util import dict_to_json_str
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet import Wallet
@@ -75,14 +77,62 @@ class CCWallet:
             "CC Wallet", WalletType.COLOURED_COIN, info_as_string
         )
         if self.wallet_info is None:
-            raise
+            raise ValueError("Internal Error")
 
         spend_bundle = await self.generate_new_coloured_coin(amount)
         if spend_bundle is None:
-            raise
+            raise ValueError("Internal Error, unable to generate new coloured coin")
 
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
-        await self.standard_wallet.push_transaction(spend_bundle)
+
+        # Change and actual coloured coin
+        non_ephemeral_spends: List[Coin] = spend_bundle.not_ephemeral_additions()
+        cc_coin = None
+        puzzle_store = self.wallet_state_manager.puzzle_store
+
+        for c in non_ephemeral_spends:
+            info = await puzzle_store.wallet_info_for_puzzle_hash(c.puzzle_hash)
+            if info is None:
+                raise ValueError("Internal Error")
+            id, wallet_type = info
+            if id == self.wallet_info.id:
+                cc_coin = c
+
+        if cc_coin is None:
+            raise ValueError("Internal Error, unable to generate new coloured coin")
+
+        regular_record = TransactionRecord(
+            confirmed_at_index=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=cc_coin.puzzle_hash,
+            amount=uint64(cc_coin.amount),
+            fee_amount=uint64(0),
+            incoming=False,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=spend_bundle.additions(),
+            removals=spend_bundle.removals(),
+            wallet_id=self.wallet_state_manager.main_wallet.wallet_info.id,
+            sent_to=[],
+        )
+        cc_record = TransactionRecord(
+            confirmed_at_index=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=cc_coin.puzzle_hash,
+            amount=uint64(cc_coin.amount),
+            fee_amount=uint64(0),
+            incoming=True,
+            confirmed=False,
+            sent=uint32(10),
+            spend_bundle=None,
+            additions=spend_bundle.additions(),
+            removals=spend_bundle.removals(),
+            wallet_id=self.wallet_info.id,
+            sent_to=[],
+        )
+        await self.standard_wallet.push_transaction(regular_record)
+        await self.standard_wallet.push_transaction(cc_record)
         return self
 
     @staticmethod
@@ -154,20 +204,18 @@ class CCWallet:
 
     async def get_unconfirmed_balance(self) -> uint64:
         confirmed = await self.get_confirmed_balance()
-        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+        unconfirmed_tx: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             self.wallet_info.id
         )
         addition_amount = 0
         removal_amount = 0
 
         for record in unconfirmed_tx:
-            for coin in record.additions:
-                if await self.wallet_state_manager.puzzle_store.puzzle_hash_exists(
-                    coin.puzzle_hash
-                ):
-                    addition_amount += coin.amount
-            for coin in record.removals:
-                removal_amount += coin.amount
+            if record.incoming:
+                addition_amount += record.amount
+            else:
+                removal_amount += record.amount
+
         result = confirmed - removal_amount + addition_amount
 
         self.log.info(f"Unconfirmed balance for cc wallet is {result}")
@@ -426,16 +474,16 @@ class CCWallet:
         cc_puzzle = cc_wallet_puzzles.cc_make_puzzle(cc_inner, self.cc_info.my_core)
         cc_puzzle_hash = cc_puzzle.get_tree_hash()
 
-        spend_bundle = await self.standard_wallet.generate_signed_transaction(
+        tx = await self.standard_wallet.generate_signed_transaction(
             uint64(0), cc_puzzle_hash, uint64(0), origin_id, coins
         )
         self.log.warning(f"cc_puzzle_hash is {cc_puzzle_hash}")
         eve_coin = Coin(origin_id, cc_puzzle_hash, uint64(0))
-        if spend_bundle is None:
+        if tx is None or tx.spend_bundle is None:
             return None
 
         eve_spend = cc_generate_eve_spend(eve_coin, cc_puzzle)
-        full_spend = SpendBundle.aggregate([spend_bundle, eve_spend])
+        full_spend = SpendBundle.aggregate([tx.spend_bundle, eve_spend])
 
         future_parent = CCParent(eve_coin.parent_coin_info, cc_inner, eve_coin.amount)
         eve_parent = CCParent(
@@ -446,7 +494,39 @@ class CCWallet:
         await self.add_parent(eve_coin.parent_coin_info, eve_parent)
 
         if send:
-            await self.standard_wallet.push_transaction(full_spend)
+            regular_record = TransactionRecord(
+                confirmed_at_index=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=cc_puzzle_hash,
+                amount=uint64(0),
+                fee_amount=uint64(0),
+                incoming=False,
+                confirmed=False,
+                sent=uint32(10),
+                spend_bundle=full_spend,
+                additions=full_spend.additions(),
+                removals=full_spend.removals(),
+                wallet_id=uint32(1),
+                sent_to=[],
+            )
+            cc_record = TransactionRecord(
+                confirmed_at_index=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=cc_puzzle_hash,
+                amount=uint64(0),
+                fee_amount=uint64(0),
+                incoming=True,
+                confirmed=False,
+                sent=uint32(0),
+                spend_bundle=full_spend,
+                additions=full_spend.additions(),
+                removals=full_spend.removals(),
+                wallet_id=self.wallet_info.id,
+                sent_to=[],
+            )
+            await self.wallet_state_manager.add_transaction(regular_record)
+            await self.wallet_state_manager.add_pending_transaction(cc_record)
+
         return full_spend
 
     async def get_cc_spendable_coins(self) -> List[WalletCoinRecord]:
@@ -676,8 +756,23 @@ class CCWallet:
         aggsig = BLSSignature.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
 
+        tx_record = TransactionRecord(
+            confirmed_at_index=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=to_address,
+            amount=uint64(amount),
+            fee_amount=uint64(0),
+            incoming=False,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=spend_bundle.additions(),
+            removals=spend_bundle.removals(),
+            wallet_id=self.wallet_info.id,
+            sent_to=[],
+        )
         await self.wallet_state_manager.add_pending_transaction(
-            spend_bundle, self.wallet_info.id
+            tx_record
         )
 
         return spend_bundle
@@ -725,17 +820,17 @@ class CCWallet:
         cc_puzzle = cc_wallet_puzzles.cc_make_puzzle(cc_inner, cc_core)
         cc_puzzle_hash = cc_puzzle.get_tree_hash()
 
-        spend_bundle = await self.standard_wallet.generate_signed_transaction(
+        tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
             amount, cc_puzzle_hash, uint64(0), origin_id, coins
         )
         self.log.warning(f"cc_puzzle_hash is {cc_puzzle_hash}")
         eve_coin = Coin(origin_id, cc_puzzle_hash, amount)
-        if spend_bundle is None:
+        if tx_record is None or tx_record.spend_bundle is None:
             return None
 
         eve_spend = cc_generate_eve_spend(eve_coin, cc_puzzle)
 
-        full_spend = SpendBundle.aggregate([spend_bundle, eve_spend])
+        full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend])
         return full_spend
 
     async def create_spend_bundle_relative_amount(
