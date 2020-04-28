@@ -1,22 +1,13 @@
 import asyncio
 
 from typing import Any, Dict, Tuple, List
-from pathlib import Path
-
-import aiosqlite
 import blspy
-from secrets import token_bytes
-
-from src.full_node.blockchain import Blockchain
-from src.full_node.mempool_manager import MempoolManager
 from src.full_node.full_node import FullNode
 from src.server.connection import NodeType
 from src.server.server import ChiaServer
 from src.simulator.full_node_simulator import FullNodeSimulator
 from src.timelord_launcher import spawn_process, kill_processes
 from src.wallet.wallet_node import WalletNode
-from src.types.full_block import FullBlock
-from src.full_node.coin_store import CoinStore
 from tests.block_tools import BlockTools
 from src.types.BLSSignature import BLSPublicKey
 from src.util.config import load_config
@@ -72,7 +63,10 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
         config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = introducer_port
     full_node_1 = await FullNodeSimulator.create(
-        config, f"full_node_{port}", test_constants_copy,
+        config=config,
+        name=f"full_node_{port}",
+        root_path=root_path,
+        override_constants=test_constants_copy,
     )
     assert ping_interval is not None
     assert network_id is not None
@@ -117,8 +111,12 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     if introducer_port is not None:
         config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = introducer_port
+
     full_node_1 = await FullNode.create(
-        config, f"full_node_{port}", test_constants_copy,
+        config=config,
+        root_path=root_path,
+        name=f"full_node_{port}",
+        override_constants=test_constants_copy,
     )
     assert ping_interval is not None
     assert network_id is not None

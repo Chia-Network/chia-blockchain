@@ -30,12 +30,12 @@ async def main():
     log = logging.getLogger(__name__)
     server_closed = False
 
-    db_path = path_from_root(DEFAULT_ROOT_PATH, config["simulator_database_path"])
+    db_path = path_from_root(root_path, config["simulator_database_path"])
     mkdir(db_path.parent)
     db_path.unlink()
 
     full_node = await FullNodeSimulator.create(
-        config, override_constants=test_constants,
+        config, root_path=root_path, override_constants=test_constants,
     )
 
     ping_interval = net_config.get("ping_interval")

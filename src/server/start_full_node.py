@@ -29,7 +29,7 @@ async def async_main():
     log = logging.getLogger(__name__)
     server_closed = False
 
-    full_node = await FullNode.create(config)
+    full_node = await FullNode.create(config, root_path=root_path)
 
     if config["enable_upnp"]:
         log.info(f"Attempting to enable UPnP (open up port {config['port']})")

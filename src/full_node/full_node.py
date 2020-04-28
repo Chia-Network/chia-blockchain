@@ -3,6 +3,7 @@ import concurrent
 import logging
 import time
 from asyncio import Event
+from pathlib import Path
 from typing import AsyncGenerator, List, Optional, Tuple, Dict, Type
 import aiosqlite
 
@@ -70,7 +71,11 @@ class FullNode:
 
     @classmethod
     async def create(
-        cls: Type, config: Dict, name: str = None, override_constants={},
+        cls: Type,
+        config: Dict,
+        root_path: Path,
+        name: str = None,
+        override_constants={},
     ):
         self = cls()
 
@@ -85,7 +90,6 @@ class FullNode:
         else:
             self.log = logging.getLogger(__name__)
 
-        root_path = DEFAULT_ROOT_PATH
         db_path = path_from_root(root_path, config["database_path"])
         mkdir(db_path.parent)
 
