@@ -200,7 +200,9 @@ class CCWallet:
 
     async def get_unconfirmed_balance(self) -> uint64:
         confirmed = await self.get_confirmed_balance()
-        unconfirmed_tx: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+        unconfirmed_tx: List[
+            TransactionRecord
+        ] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             self.wallet_info.id
         )
         addition_amount = 0
@@ -734,9 +736,7 @@ class CCWallet:
             wallet_id=self.wallet_info.id,
             sent_to=[],
         )
-        await self.wallet_state_manager.add_pending_transaction(
-            tx_record
-        )
+        await self.wallet_state_manager.add_pending_transaction(tx_record)
 
         return spend_bundle
 
@@ -783,7 +783,9 @@ class CCWallet:
         cc_puzzle = cc_wallet_puzzles.cc_make_puzzle(cc_inner, cc_core)
         cc_puzzle_hash = cc_puzzle.get_tree_hash()
 
-        tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
+        tx_record: Optional[
+            TransactionRecord
+        ] = await self.standard_wallet.generate_signed_transaction(
             amount, cc_puzzle_hash, uint64(0), origin_id, coins
         )
         self.log.warning(f"cc_puzzle_hash is {cc_puzzle_hash}")

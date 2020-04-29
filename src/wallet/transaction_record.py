@@ -36,4 +36,8 @@ class TransactionRecord(Streamable):
     def name(self) -> bytes32:
         if self.spend_bundle:
             return self.spend_bundle.name()
-        return std_hash(bytes(self.to_puzzle_hash) + bytes(self.created_at_time) + bytes(self.amount))
+        return std_hash(
+            bytes(self.to_puzzle_hash)
+            + bytes(self.created_at_time)
+            + bytes(self.amount)
+        )
