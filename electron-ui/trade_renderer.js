@@ -147,7 +147,7 @@ function set_callbacks(socket) {
 
         if (command == "start_server") {
             get_wallet_summaries()
-            get_wallets();
+            //get_wallets();
             get_height_info();
             get_sync_status();
             get_connection_info();
@@ -316,7 +316,7 @@ function handle_state_changed(data) {
     state = data["state"]
     console.log("State changed", state)
     if(global_syncing) {
-        get_wallets()
+        get_wallet_summaries()
         get_sync_status()
         get_height_info()
         return;
@@ -324,13 +324,13 @@ function handle_state_changed(data) {
 
     if (state == "coin_removed") {
     } else if (state == "coin_added") {
-        get_wallets()
+        get_wallet_summaries()
     } else if (state == "pending_transaction") {
-        get_wallets()
+        get_wallet_summaries()
     } else if (state == "tx_sent") {
-        get_wallets()
+        get_wallet_summaries()
     } else if (state == "balance_changed") {
-        get_wallets()
+        get_wallet_summaries()
     } else if (state == "sync_changed") {
         get_sync_status()
     } else if (state == "new_block") {
@@ -697,6 +697,35 @@ function get_wallet_summaries_response(data){
   select_option = create_select_options(wallets_details)
   select_menu.innerHTML = select_option
   set_drop_down()
+  var new_innerHTML = ""
+  for (var i in data) {
+      var wallet = data[i];
+      var type = wallet["type"]
+      var id = i
+      var name = wallet["type"]
+
+      get_wallet_balance(id)
+      //href, wallet_name, wallet_description, wallet_amount
+      var href = ""
+      if (type == "STANDARD_WALLET") {
+          href = "./wallet-dark.html"
+          name = "Chia Wallet"
+          type = "Chia"
+      } else if (type == "RATE_LIMITED") {
+          href = "rl_wallet/rl_wallet.html"
+      } else if (type == "COLOURED_COIN") {
+          href = "cc_wallet/cc_wallet.html"
+          name = "CC Wallet"
+          type = wallet["name"]
+          if (type.length > 18) {
+            type = type.substring(0,18);
+            type = type.concat("...")
+          }
+      }
+      new_innerHTML += create_side_wallet(id, href, name, type, 0, false)
+  }
+  new_innerHTML += create_wallet_button()
+  wallets_tab.innerHTML = new_innerHTML
 }
 
 

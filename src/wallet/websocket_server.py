@@ -455,11 +455,15 @@ class WebSocketServer:
     async def create_offer_for_ids(self, websocket, request, response_api):
         offer = request["ids"]
         file_name = request["filename"]
-        success, spend_bundle = await self.trade_manager.create_offer_for_ids(offer)
+        success, spend_bundle, error = await self.trade_manager.create_offer_for_ids(
+            offer
+        )
         if success:
             self.trade_manager.write_offer_to_disk(Path(file_name), spend_bundle)
+            response = {"success": success}
+        else:
+            response = {"success": success, "reason": error}
 
-        response = {"success": success}
         return await websocket.send(format_response(response_api, response))
 
     async def respond_to_offer(self, websocket, request, response_api):

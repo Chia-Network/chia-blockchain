@@ -45,7 +45,7 @@ class TradeManager:
 
     async def create_offer_for_ids(
         self, offer: Dict[int, int]
-    ) -> Tuple[bool, Optional[SpendBundle]]:
+    ) -> Tuple[bool, Optional[SpendBundle], Optional[str]]:
         """
         Offer is dictionary of wallet ids and amount
         """
@@ -57,7 +57,9 @@ class TradeManager:
                 wallet = self.wallet_state_manager.wallets[wallet_id]
                 if isinstance(wallet, CCWallet):
                     balance = await wallet.get_confirmed_balance()
-                    if balance == 0:
+                    if balance < abs(amount) and amount < 0:
+                        raise Exception(f"insufficient funds in wallet {wallet_id}")
+                    if balance == 0 and amount > 0:
                         if spend_bundle is None:
                             to_exclude: List[Coin] = []
                         else:
@@ -67,7 +69,7 @@ class TradeManager:
                         ] = await wallet.generate_zero_val_coin(False, to_exclude)
 
                         if zero_spend_bundle is None:
-                            raise ValueError(
+                            raise Exception(
                                 "Failed to generate offer. Zero value coin not created."
                             )
                         if spend_bundle is None:
@@ -100,9 +102,9 @@ class TradeManager:
                         amount, to_exclude
                     )
                 else:
-                    return False, None
+                    return False, None, "unssuported wallet type"
                 if new_spend_bundle.removals() == [] or new_spend_bundle is None:
-                    return False, None
+                    raise Exception(f"Wallet {id} was unable to create offer.")
                 if spend_bundle is None:
                     spend_bundle = new_spend_bundle
                 else:
@@ -110,12 +112,13 @@ class TradeManager:
                         [spend_bundle, new_spend_bundle]
                     )
 
-            return True, spend_bundle
-        except Exception:
-            return False, None
+            return True, spend_bundle, None
+        except Exception as e:
+            return False, None, str(e)
 
     def write_offer_to_disk(self, file_path: Path, offer: SpendBundle):
-        file_path.write_text(bytes(offer).hex())
+        if offer is not None:
+            file_path.write_text(bytes(offer).hex())
 
     async def get_discrepancies_for_offer(
         self, file_path: Path
@@ -228,7 +231,8 @@ class TradeManager:
                             colour
                         )
                     unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(
-                        wallets[colour].wallet_info.id)
+                        wallets[colour].wallet_info.id
+                    )
                     if coinsol.coin in [record.coin for record in unspent]:
                         return False, "can't respond to own offer"
                     innerpuzzlereveal = solution.rest().rest().rest().first()
@@ -270,7 +274,9 @@ class TradeManager:
                     coinsols.append(coinsol)
             else:
                 # standard chia coin
-                unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(1)
+                unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(
+                    1
+                )
                 if coinsol.coin in [record.coin for record in unspent]:
                     return False, "can't respond to own offer"
                 if chia_discrepancy is None:

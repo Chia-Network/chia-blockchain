@@ -403,7 +403,9 @@ class WalletStateManager:
         transactions.
         """
         confirmed = await self.get_confirmed_balance_for_wallet(wallet_id)
-        unconfirmed_tx: List[TransactionRecord] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
+        unconfirmed_tx: List[
+            TransactionRecord
+        ] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         removal_amount = 0
 
         for record in unconfirmed_tx:
@@ -453,9 +455,9 @@ class WalletStateManager:
 
         await self.wallet_store.set_spent(coin.name(), index)
 
-        unconfirmed_record: List[TransactionRecord] = await self.tx_store.unconfirmed_with_removal_coin(
-            coin.name()
-        )
+        unconfirmed_record: List[
+            TransactionRecord
+        ] = await self.tx_store.unconfirmed_with_removal_coin(coin.name())
         for unconfirmed in unconfirmed_record:
             await self.tx_store.set_confirmed(unconfirmed.name(), index)
 
