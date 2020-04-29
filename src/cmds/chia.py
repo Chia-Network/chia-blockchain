@@ -1,6 +1,6 @@
-import argparse
 import importlib
 import pathlib
+from argparse import Namespace, ArgumentParser
 
 from src import __version__
 from src.util.default_root import DEFAULT_ROOT_PATH
@@ -9,8 +9,8 @@ from src.util.default_root import DEFAULT_ROOT_PATH
 SUBCOMMANDS = ["init", "generate", "show", "start", "stop", "version", "netspace"]
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(
+def create_parser() -> ArgumentParser:
+    parser: ArgumentParser = ArgumentParser(
         description="Manage chia blockchain infrastructure (%s)." % __version__,
         epilog="Try 'chia start node', 'chat netspace -d 48', or 'chia show -s'.",
     )
@@ -38,7 +38,7 @@ def create_parser():
     return parser
 
 
-def chia(args, parser):
+def chia(args: Namespace, parser: ArgumentParser):
     return args.function(args, parser)
 
 

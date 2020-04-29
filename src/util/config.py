@@ -99,11 +99,11 @@ def unflatten_properties(config: Dict):
 
 
 def add_property(d: Dict, partial_key: str, value: Any):
-    key_1, key_2 = partial_key.split(".")
+    key_1, key_2 = partial_key.split(".", maxsplit=1)
     if key_1 not in d:
         d[key_1] = {}
     if "." in key_2:
-        add_property(d, key_2, value)
+        add_property(d[key_1], key_2, value)
     else:
         d[key_1][key_2] = value
 
