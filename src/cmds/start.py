@@ -20,7 +20,13 @@ def make_parser(parser):
         "-r",
         "--restart",
         action="store_true",
-        help="Force restart of running processes",
+        help="Restart of running processes",
+    )
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Restart even if process seems to be running and it can't be stopped",
     )
     parser.set_defaults(function=start)
 
@@ -30,10 +36,10 @@ def start(args, parser):
     processes: List = []
     for service in services_for_groups(args.group):
         if pid_path_for_service(args.root_path, service).is_file():
-            if args.restart:
+            if args.restart or args.force:
                 print("restarting")
                 stop_service(args.root_path, service)
-                while pid_path_for_service(args.root_path, service).is_file():
+                while pid_path_for_service(args.root_path, service).is_file() and not args.force:
                     # try to avoid race condition
                     # this is pretty hacky
                     time.sleep(1)
