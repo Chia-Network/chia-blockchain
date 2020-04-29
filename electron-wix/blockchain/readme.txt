@@ -31,17 +31,15 @@ To use the Chia Wallet UI you will need to run:
 
 And then click on the "Chia Wallet" icon on the Desktop or in the Start Menu.
 
-To stop a service, from the venv try for example:
-    chia stop farmer
-Or
-    chia stop all
+To stop a service started with Start-Job, run 'Get-Job' and then 'Stop Job ID'
+where ID is the listed job number.
 
 After install, you can enter the venv in the "Chia Blockchain" directory with:
     .\venv\Scrips\Activate.ps1
 
 For more usage information try:
-The chia-blockchain README.md - https://github.com/Chia-Network/chia-blockchain/blob/master/README.md
-The chia-blockchain repo wiki - https://github.com/Chia-Network/chia-blockchain/wiki
+Quick Start Guide - https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide
+Repository wiki - https://github.com/Chia-Network/chia-blockchain/wiki
 
 For assistance join us on Keybase in the #testnet chat channel
     https://keybase.io/team/chia_network.public
