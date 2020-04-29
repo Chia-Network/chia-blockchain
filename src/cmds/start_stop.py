@@ -9,16 +9,15 @@ SERVICES_FOR_GROUP = {
     "node": "chia_full_node".split(),
     "farmer": "chia_harvester chia_farmer chia_full_node".split(),
     "timelord": "chia_timelord chia_timelord_launcher chia_full_node".split(),
-    "wallet": ["npm run --prefix ./electron-ui start", "chia-wallet"],
+    "wallet": ["npm run --prefix ./electron-ui start"],
+    "wallet-server": "chia-wallet".split(),
     "introducer": "chia_introducer".split(),
 }
 
-SERVICES_FOR_GROUP["wallet-gui"] = SERVICES_FOR_GROUP["wallet"][:1]
-SERVICES_FOR_GROUP["wallet-server"] = SERVICES_FOR_GROUP["wallet"][1:]
-
 
 def pid_path_for_service(root_path, service):
-    return root_path / "run" / f"{service}.pid"
+    pid_name = service.replace(" ", "-").replace("/", "-")
+    return root_path / "run" / f"{pid_name}.pid"
 
 
 def all_groups():
