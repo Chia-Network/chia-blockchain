@@ -29,13 +29,6 @@ def make_parser(parser: ArgumentParser):
 def dict_add_new_default(
     updated: Dict, default: Dict, do_not_migrate_keys: Dict[str, Any]
 ):
-    print(
-        "Calling with ",
-        updated.keys(),
-        "and",
-        default.keys(),
-        do_not_migrate_keys.keys(),
-    )
     for k, v in default.items():
         if isinstance(v, dict) and k in updated:
             dict_add_new_default(updated[k], default[k], do_not_migrate_keys.get(k, {}))
@@ -73,7 +66,6 @@ def migrate_from(
     config_str: str = initial_config_file("config.yaml")
     default_config: Dict = yaml.safe_load(config_str)
     flattened_keys = unflatten_properties({k: "" for k in do_not_migrate_keys})
-    print("FLATTENED", flattened_keys)
     dict_add_new_default(config, default_config, flattened_keys)
 
     save_config(new_root, "config.yaml", config)
