@@ -57,7 +57,9 @@ class TradeManager:
                 wallet = self.wallet_state_manager.wallets[wallet_id]
                 if isinstance(wallet, CCWallet):
                     balance = await wallet.get_confirmed_balance()
-                    if balance == 0:
+                    if balance < abs(amount) and amount < 0:
+                        raise Exception(f"insufficient funds in wallet {wallet_id}")
+                    if balance == 0 and amount > 0:
                         if spend_bundle is None:
                             to_exclude: List[Coin] = []
                         else:
@@ -67,9 +69,7 @@ class TradeManager:
                         ] = await wallet.generate_zero_val_coin(False, to_exclude)
 
                         if zero_spend_bundle is None:
-                            raise ValueError(
-                                "Failed to generate offer. Zero value coin not created."
-                            )
+                            raise Exception("Failed to generate offer. Zero value coin not created.")
                         if spend_bundle is None:
                             spend_bundle = zero_spend_bundle
                         else:
@@ -102,7 +102,7 @@ class TradeManager:
                 else:
                     return False, None
                 if new_spend_bundle.removals() == [] or new_spend_bundle is None:
-                    return False, None
+                    raise Exception(f"Wallet {id} was unable to create offer.")
                 if spend_bundle is None:
                     spend_bundle = new_spend_bundle
                 else:
@@ -111,11 +111,12 @@ class TradeManager:
                     )
 
             return True, spend_bundle
-        except Exception:
-            return False, None
+        except Exception as e:
+            return False, str(e)
 
     def write_offer_to_disk(self, file_path: Path, offer: SpendBundle):
-        file_path.write_text(bytes(offer).hex())
+        if offer is not None:
+            file_path.write_text(bytes(offer).hex())
 
     async def get_discrepancies_for_offer(
         self, file_path: Path
