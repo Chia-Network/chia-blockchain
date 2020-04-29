@@ -846,7 +846,7 @@ class TestMempool:
         assert mempool_bundle is None
 
     @pytest.mark.asyncio
-    async def test_double_spend(self, two_nodes):
+    async def test_double_spend_same_bundle(self, two_nodes):
         num_blocks = 2
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
