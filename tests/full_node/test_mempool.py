@@ -844,3 +844,47 @@ class TestMempool:
         )
 
         assert mempool_bundle is None
+
+    @pytest.mark.asyncio
+    async def test_double_spend_same_bundle(self, two_nodes):
+        num_blocks = 2
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        block = blocks[1]
+        async for _ in full_node_1.respond_block(
+            full_node_protocol.RespondBlock(block)
+        ):
+            pass
+
+        spend_bundle1 = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.header.data.coinbase
+        )
+
+        assert spend_bundle1 is not None
+
+        other_receiver = WalletTool()
+        spend_bundle2 = wallet_a.generate_signed_transaction(
+            1000, other_receiver.get_new_puzzlehash(), block.header.data.coinbase
+        )
+
+        assert spend_bundle2 is not None
+
+        spend_bundle_combined = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
+
+        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
+            spend_bundle_combined
+        )
+        messages = []
+        async for outbound in full_node_1.respond_transaction(tx):
+            messages.append(outbound)
+
+        sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle_combined.name())
+        assert sb is None

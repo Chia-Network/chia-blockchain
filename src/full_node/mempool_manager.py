@@ -155,6 +155,12 @@ class MempoolManager:
             if v > 1:
                 return None, MempoolInclusionStatus.FAILED, Err.DUPLICATE_OUTPUT
 
+        # Check for duplicate inputs
+        removal_counter = collections.Counter(name for name in removal_names)
+        for k, v in removal_counter.items():
+            if v > 1:
+                return None, MempoolInclusionStatus.FAILED, Err.DOUBLE_SPEND
+
         # Spend might be valid for one pool but not for other
         added_count = 0
         errors: List[Err] = []
@@ -333,16 +339,10 @@ class MempoolManager:
         This function checks for double spends, unknown spends and conflicting transactions in mempool.
         Returns Error (if any), dictionary of Unspents, list of coins with conflict errors (if any any).
         """
-        removals_counter: Dict[bytes32, int] = {}
         conflicts: List[Coin] = []
+
         for record in removals.values():
             removal = record.coin
-            # 0. Checks for double spend inside same spend_bundle
-            if not removal.name() in removals_counter:
-                removals_counter[removal.name()] = 1
-            else:
-                return Err.DOUBLE_SPEND, []
-
             # 1. Checks if it's been spent already
             if record.spent == 1:
                 return Err.DOUBLE_SPEND, []
