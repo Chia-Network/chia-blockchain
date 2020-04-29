@@ -90,6 +90,9 @@ function create_wallet_input_colour() {
 
     try {
         colour = input_colour_text.value;
+        if (colour.substring(0,14) == "colour_desc://"){
+          colour = colour.substring(14)
+        }
         if (colour.startsWith("0x") || colour.startsWith("0X")) {
             colour = colour.substring(2);
         }

@@ -220,6 +220,7 @@ function get_wallet_balance_response(response) {
 
         chia_confirmed = chia_formatter(confirmed, 'mojo').to('chia').toString()
         chia_pending = chia_formatter(pending, 'mojo').to('chia').toString()
+        chia_pending_abs = chia_formatter(Math.abs(pending), 'mojo').to('chia').toString()
 
         wallet_balance_holder = document.querySelector("#" + "balance_wallet_" + wallet_id )
         wallet_pending_holder = document.querySelector("#" + "pending_wallet_" + wallet_id )
@@ -231,7 +232,7 @@ function get_wallet_balance_response(response) {
             if (pending > 0) {
                 wallet_pending_holder.innerHTML = lock + " - " + chia_pending + " CH"
             } else {
-                wallet_pending_holder.innerHTML = lock + " " + chia_pending + " CH"
+                wallet_pending_holder.innerHTML = lock + " " + chia_pending_abs + " CH"
             }
         }
     }

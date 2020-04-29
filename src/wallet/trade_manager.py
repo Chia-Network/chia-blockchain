@@ -1,4 +1,6 @@
+import time
 from pathlib import Path
+from secrets import token_bytes
 from typing import Dict, Optional, Tuple, List, Any
 import logging
 
@@ -10,13 +12,14 @@ from src.types.coin_solution import CoinSolution
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
-from src.util.ints import uint32
+from src.util.ints import uint32, uint64
 from src.wallet.cc_wallet import cc_wallet_puzzles
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.cc_wallet.cc_wallet_puzzles import (
     create_spend_for_auditor,
     create_spend_for_ephemeral,
 )
+from src.wallet.transaction_record import TransactionRecord
 from src.wallet.wallet import Wallet
 from src.wallet.wallet_state_manager import WalletStateManager
 from clvm_tools import binutils
@@ -96,7 +99,6 @@ class TradeManager:
                     new_spend_bundle = await wallet.create_spend_bundle_relative_chia(
                         amount, to_exclude
                     )
-                    self.log.info("1")
                 else:
                     return False, None
                 if new_spend_bundle.removals() == [] or new_spend_bundle is None:
@@ -190,10 +192,10 @@ class TradeManager:
 
         return True
 
-    async def respond_to_offer(self, file_path: Path) -> bool:
+    async def respond_to_offer(self, file_path: Path) -> Tuple[bool, Optional[str]]:
         has_wallets = await self.maybe_create_wallets_for_offer(file_path)
         if not has_wallets:
-            return False
+            return False, "Unknown Error"
         trade_offer_hex = file_path.read_text()
         trade_offer = SpendBundle.from_bytes(bytes.fromhex(trade_offer_hex))
 
@@ -225,6 +227,10 @@ class TradeManager:
                         ] = await self.wallet_state_manager.get_wallet_for_colour(
                             colour
                         )
+                    unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(
+                        wallets[colour].wallet_info.id)
+                    if coinsol.coin in [record.coin for record in unspent]:
+                        return False, "can't respond to own offer"
                     innerpuzzlereveal = solution.rest().rest().rest().first()
                     innersol = solution.rest().rest().rest().rest().first()
                     out_amount = cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
@@ -264,6 +270,9 @@ class TradeManager:
                     coinsols.append(coinsol)
             else:
                 # standard chia coin
+                unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(1)
+                if coinsol.coin in [record.coin for record in unspent]:
+                    return False, "can't respond to own offer"
                 if chia_discrepancy is None:
                     chia_discrepancy = cc_wallet_puzzles.get_output_discrepancy_for_puzzle_and_solution(
                         coinsol.coin, puzzle, solution
@@ -306,7 +315,7 @@ class TradeManager:
                         my_cc_spends.add(add)
 
             if my_cc_spends == set() or my_cc_spends is None:
-                return False
+                return False, "insufficient funds"
 
             auditor = my_cc_spends.pop()
             auditor_inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(
@@ -468,16 +477,103 @@ class TradeManager:
             coinsols.append(cs_aud)
 
         spend_bundle = SpendBundle(coinsols, aggsig)
-
-        if chia_spend_bundle is not None:
-            spend_bundle = SpendBundle.aggregate([spend_bundle, chia_spend_bundle])
+        my_tx_records = []
 
         if zero_spend_list is not None:
             zero_spend_list.append(spend_bundle)
             spend_bundle = SpendBundle.aggregate(zero_spend_list)
 
-        await self.wallet_state_manager.add_pending_transaction(
-            spend_bundle, self.wallet_state_manager.main_wallet.wallet_info.id
+        # Add transaction history hor this trade
+        if chia_spend_bundle is not None:
+            spend_bundle = SpendBundle.aggregate([spend_bundle, chia_spend_bundle])
+            if chia_discrepancy < 0:
+                tx_record = TransactionRecord(
+                    confirmed_at_index=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    to_puzzle_hash=token_bytes(),
+                    amount=uint64(abs(chia_discrepancy)),
+                    fee_amount=uint64(0),
+                    incoming=False,
+                    confirmed=False,
+                    sent=uint32(10),
+                    spend_bundle=chia_spend_bundle,
+                    additions=chia_spend_bundle.additions(),
+                    removals=chia_spend_bundle.removals(),
+                    wallet_id=uint32(1),
+                    sent_to=[],
+                )
+            else:
+                tx_record = TransactionRecord(
+                    confirmed_at_index=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    to_puzzle_hash=token_bytes(),
+                    amount=uint64(abs(chia_discrepancy)),
+                    fee_amount=uint64(0),
+                    incoming=True,
+                    confirmed=False,
+                    sent=uint32(10),
+                    spend_bundle=chia_spend_bundle,
+                    additions=chia_spend_bundle.additions(),
+                    removals=chia_spend_bundle.removals(),
+                    wallet_id=uint32(1),
+                    sent_to=[],
+                )
+            my_tx_records.append(tx_record)
+
+        for colour, amount in cc_discrepancies.items():
+            wallet = wallets[colour]
+            if chia_discrepancy > 0:
+                tx_record = TransactionRecord(
+                    confirmed_at_index=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    to_puzzle_hash=token_bytes(),
+                    amount=uint64(abs(amount)),
+                    fee_amount=uint64(0),
+                    incoming=False,
+                    confirmed=False,
+                    sent=uint32(10),
+                    spend_bundle=spend_bundle,
+                    additions=spend_bundle.additions(),
+                    removals=spend_bundle.removals(),
+                    wallet_id=wallet.wallet_info.id,
+                    sent_to=[],
+                )
+            else:
+                tx_record = TransactionRecord(
+                    confirmed_at_index=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    to_puzzle_hash=token_bytes(),
+                    amount=uint64(abs(amount)),
+                    fee_amount=uint64(0),
+                    incoming=True,
+                    confirmed=False,
+                    sent=uint32(10),
+                    spend_bundle=spend_bundle,
+                    additions=spend_bundle.additions(),
+                    removals=spend_bundle.removals(),
+                    wallet_id=wallet.wallet_info.id,
+                    sent_to=[],
+                )
+            my_tx_records.append(tx_record)
+
+        tx_record = TransactionRecord(
+            confirmed_at_index=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=token_bytes(),
+            amount=uint64(0),
+            fee_amount=uint64(0),
+            incoming=False,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=spend_bundle.additions(),
+            removals=spend_bundle.removals(),
+            wallet_id=uint32(0),
+            sent_to=[],
         )
 
-        return True
+        await self.wallet_state_manager.add_pending_transaction(tx_record)
+        for tx in my_tx_records:
+            await self.wallet_state_manager.add_transaction(tx)
+
+        return True, None

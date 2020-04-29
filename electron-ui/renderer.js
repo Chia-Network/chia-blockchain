@@ -169,6 +169,12 @@ send.addEventListener('click', () => {
 
     try {
         puzzle_hash = receiver_address.value;
+        if (puzzle_hash.includes("colour")){
+          dialogs.alert("Error: Cannot send chia to coloured address. Please enter a chia address.")
+          return
+        } else if (puzzle_hash.substring(0, 12) == "chia_addr://") {
+          puzzle_hash = puzzle_hash.substring(12)
+        }
         if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
             puzzle_hash = puzzle_hash.substring(2);
         }
@@ -215,7 +221,13 @@ farm_button.addEventListener('click', () => {
         dialogs.alert("Specify puzzle_hash for coinbase reward", ok => {
         })
         return
+    } else if (puzzle_hash.includes("colour")){
+      dialogs.alert("Please enter a chia address for coinbase reward.")
+      return
+    } else if (puzzle_hash.substring(0, 12) == "chia_addr://") {
+      puzzle_hash = puzzle_hash.substring(12)
     }
+
     data = {
         "puzzle_hash": puzzle_hash,
         "wallet_id": g_wallet_id,
@@ -295,7 +307,9 @@ function get_new_puzzlehash_response(response) {
     Called when response is received for get_new_puzzle_hash request
     */
     let puzzle_holder = document.querySelector("#puzzle_holder");
-    puzzle_holder.value = response["puzzlehash"];
+    puzzle_hash = "chia_addr://"
+    puzzle_hash = puzzle_hash.concat(response["puzzlehash"]);
+    puzzle_holder.value = puzzle_hash
     QRCode.toCanvas(canvas, response["puzzlehash"], function (error) {
     if (error) console.error(error)
     })
@@ -323,10 +337,12 @@ function get_wallet_balance_response(response) {
         var confirmed = parseInt(response["confirmed_wallet_balance"])
         var unconfirmed = parseInt(response["unconfirmed_wallet_balance"])
         var pending = confirmed - unconfirmed
-        var wallet_id = response["wallet_id"]
 
+        var wallet_id = response["wallet_id"]
+        console.log("wallet_id = " + wallet_id + "confirmed: " + confirmed + "unconfirmed: " + unconfirmed )
         chia_confirmed = chia_formatter(confirmed, 'mojo').to('chia').toString()
         chia_pending = chia_formatter(pending, 'mojo').to('chia').toString()
+        chia_pending_abs = chia_formatter(Math.abs(pending), 'mojo').to('chia').toString()
 
         wallet_balance_holder = document.querySelector("#" + "balance_wallet_" + wallet_id )
         wallet_pending_holder = document.querySelector("#" + "pending_wallet_" + wallet_id )
@@ -336,7 +352,7 @@ function get_wallet_balance_response(response) {
             if (pending > 0) {
                 pending_textfield.innerHTML = lock + " - " + chia_pending + " CH"
             } else {
-                pending_textfield.innerHTML = lock + " " + chia_pending + " CH"
+                pending_textfield.innerHTML = lock + " " + chia_pending_abs + " CH"
             }
         }
         if (wallet_balance_holder) {
@@ -346,7 +362,7 @@ function get_wallet_balance_response(response) {
             if (pending > 0) {
                 wallet_pending_holder.innerHTML = lock + " - " + chia_pending + " CH"
             } else {
-                wallet_pending_holder.innerHTML = lock + " " + chia_pending + " CH"
+                wallet_pending_holder.innerHTML = lock + " " + chia_pending_abs + " CH"
             }
         }
     }

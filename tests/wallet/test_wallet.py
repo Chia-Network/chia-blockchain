@@ -93,12 +93,12 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == funds
         assert await wallet.get_unconfirmed_balance() == funds
 
-        spend_bundle = await wallet.generate_signed_transaction(
+        tx = await wallet.generate_signed_transaction(
             10,
             await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
             0,
         )
-        await wallet.push_transaction(spend_bundle)
+        await wallet.push_transaction(tx)
 
         await asyncio.sleep(2)
         confirmed_balance = await wallet.get_confirmed_balance()
@@ -205,14 +205,14 @@ class TestWalletSimulator:
             == funds
         )
 
-        spend_bundle = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
+        tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
             10, token_bytes(), 0
         )
-        await wallet_0.wallet_state_manager.main_wallet.push_transaction(spend_bundle)
+        await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
         await asyncio.sleep(1)
 
-        bundle0 = full_node_0.mempool_manager.get_spendbundle(spend_bundle.name())
+        bundle0 = full_node_0.mempool_manager.get_spendbundle(tx.name())
         assert bundle0 is not None
 
         # wallet0 <-> sever1
@@ -221,7 +221,7 @@ class TestWalletSimulator:
         )
         await asyncio.sleep(1)
 
-        bundle1 = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
+        bundle1 = full_node_1.mempool_manager.get_spendbundle(tx.name())
         assert bundle1 is not None
 
         # wallet0 <-> sever2
@@ -230,7 +230,7 @@ class TestWalletSimulator:
         )
         await asyncio.sleep(1)
 
-        bundle2 = full_node_2.mempool_manager.get_spendbundle(spend_bundle.name())
+        bundle2 = full_node_2.mempool_manager.get_spendbundle(tx.name())
         assert bundle2 is not None
 
     @pytest.mark.asyncio
@@ -267,13 +267,13 @@ class TestWalletSimulator:
         assert await wallet_0.get_confirmed_balance() == funds
         assert await wallet_0.get_unconfirmed_balance() == funds
 
-        spend_bundle = await wallet_0.generate_signed_transaction(
+        tx = await wallet_0.generate_signed_transaction(
             10,
             await wallet_node_1.wallet_state_manager.main_wallet.get_new_puzzlehash(),
             0,
         )
 
-        await wallet_0.push_transaction(spend_bundle)
+        await wallet_0.push_transaction(tx)
 
         await asyncio.sleep(1)
         # Full node height 11, wallet height 9
@@ -304,10 +304,10 @@ class TestWalletSimulator:
         assert unconfirmed_balance == new_funds - 10
         assert wallet_2_confirmed_balance == 10
 
-        spend_bundle = await wallet_1.generate_signed_transaction(
+        tx = await wallet_1.generate_signed_transaction(
             5, await wallet_0.get_new_puzzlehash(), 0
         )
-        await wallet_1.push_transaction(spend_bundle)
+        await wallet_1.push_transaction(tx)
 
         for i in range(0, 7):
             await full_node_0.farm_new_block(FarmNewBlockProtocol(token_bytes()))
@@ -350,16 +350,16 @@ class TestWalletSimulator:
         assert await wallet.get_unconfirmed_balance() == funds
         tx_amount = 32000000000000
         tx_fee = 10
-        spend_bundle = await wallet.generate_signed_transaction(
+        tx = await wallet.generate_signed_transaction(
             tx_amount,
             await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
             tx_fee,
         )
 
-        fees = spend_bundle.fees()
+        fees = tx.spend_bundle.fees()
         assert fees == tx_fee
 
-        await wallet.push_transaction(spend_bundle)
+        await wallet.push_transaction(tx)
 
         await asyncio.sleep(2)
         confirmed_balance = await wallet.get_confirmed_balance()

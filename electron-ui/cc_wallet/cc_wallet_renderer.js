@@ -252,10 +252,12 @@ function get_wallet_balance_response(response) {
         var confirmed = parseInt(response["confirmed_wallet_balance"])
         var unconfirmed = parseInt(response["unconfirmed_wallet_balance"])
         var pending = confirmed - unconfirmed
-        var wallet_id = response["wallet_id"]
 
+        var wallet_id = response["wallet_id"]
+        console.log("wallet_id = " + wallet_id + "confirmed: " + confirmed + "unconfirmed: " + unconfirmed )
         chia_confirmed = chia_formatter(confirmed, 'mojo').to('chia').toString()
         chia_pending = chia_formatter(pending, 'mojo').to('chia').toString()
+        chia_pending_abs = chia_formatter(Math.abs(pending), 'mojo').to('chia').toString()
 
         wallet_balance_holder = document.querySelector("#" + "balance_wallet_" + wallet_id )
         wallet_pending_holder = document.querySelector("#" + "pending_wallet_" + wallet_id )
@@ -265,7 +267,7 @@ function get_wallet_balance_response(response) {
             if (pending > 0) {
                 pending_textfield.innerHTML = lock + " - " + chia_pending + " CH"
             } else {
-                pending_textfield.innerHTML = lock + " " + chia_pending + " CH"
+                pending_textfield.innerHTML = lock + " " + chia_pending_abs + " CH"
             }
         }
         if (wallet_balance_holder) {
@@ -275,7 +277,7 @@ function get_wallet_balance_response(response) {
             if (pending > 0) {
                 wallet_pending_holder.innerHTML = lock + " - " + chia_pending + " CH"
             } else {
-                wallet_pending_holder.innerHTML = lock + " " + chia_pending + " CH"
+                wallet_pending_holder.innerHTML = lock + " " + chia_pending_abs + " CH"
             }
         }
     }
@@ -417,7 +419,7 @@ function get_colour_response(response) {
     wallet_id = response["wallet_id"]
     colour = response["colour"]
     if (wallet_id == g_wallet_id) {
-      colour_textfield.innerHTML = "Colour: " + colour;
+      colour_textfield.innerHTML = "Colour: colour_desc://" + colour;
     }
 }
 
@@ -485,6 +487,13 @@ send.addEventListener('click', () => {
 
     try {
         puzzle_hash = receiver_address.value;
+        if (puzzle_hash.includes("chia_addr") || puzzle_hash.includes("colour_desc")){
+          alert("Error: recipient address is not a coloured wallet address. Please enter a coloured wallet address")
+          return
+        }
+        if (puzzle_hash.substring(0,14) == "colour_addr://"){
+          puzzle_hash = puzzle_hash.substring(14)
+        }
         if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
             puzzle_hash = puzzle_hash.substring(2);
         }
@@ -586,7 +595,8 @@ function get_innerpuzzlehash_response(response) {
     /*
     Called when response is received for get_new_puzzle_hash request
     */
-    puzzle_holder.value = response["innerpuz"];
+    puzzle_hash = "colour_addr://"
+    puzzle_holder.value = puzzle_hash.concat(response["innerpuz"]);
     QRCode.toCanvas(canvas, response["innerpuz"], function (error) {
     if (error) console.error(error)
     })

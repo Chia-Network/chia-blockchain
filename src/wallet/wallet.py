@@ -1,3 +1,4 @@
+import time
 from typing import Dict, Optional, List, Tuple, Set, Any
 import clvm
 import logging
@@ -13,7 +14,7 @@ from src.util.condition_tools import (
     conditions_by_opcode,
     hash_key_pairs_for_conditions_dict,
 )
-from src.util.ints import uint64
+from src.util.ints import uint64, uint32
 from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.puzzles.p2_conditions import puzzle_for_conditions
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
@@ -24,6 +25,7 @@ from src.wallet.puzzles.puzzle_utils import (
     make_create_coin_condition,
     make_assert_fee_condition,
 )
+from src.wallet.transaction_record import TransactionRecord
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
 
@@ -299,7 +301,7 @@ class Wallet:
 
     async def generate_signed_transaction_dict(
         self, data: Dict[str, Any]
-    ) -> Optional[SpendBundle]:
+    ) -> Optional[TransactionRecord]:
         """ Use this to generate transaction. """
         # Check that both are integers
         if not isinstance(data["amount"], int) or not isinstance(data["amount"], int):
@@ -322,7 +324,7 @@ class Wallet:
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
-    ) -> Optional[SpendBundle]:
+    ) -> Optional[TransactionRecord]:
         """ Use this to generate transaction. """
 
         transaction = await self.generate_unsigned_transaction(
@@ -333,13 +335,40 @@ class Wallet:
             return None
 
         self.log.info("About to sign a transaction")
-        return await self.sign_transaction(transaction)
+        spend_bundle: Optional[SpendBundle] = await self.sign_transaction(transaction)
+        if spend_bundle is None:
+            return None
 
-    async def push_transaction(self, spend_bundle: SpendBundle) -> None:
-        """ Use this API to send transactions. """
-        await self.wallet_state_manager.add_pending_transaction(
-            spend_bundle, self.wallet_info.id
+        now = uint64(int(time.time()))
+        add_list: List[Coin] = []
+        rem_list: List[Coin] = []
+
+        for add in spend_bundle.additions():
+            add_list.append(add)
+        for rem in spend_bundle.removals():
+            rem_list.append(rem)
+
+        tx_record = TransactionRecord(
+            confirmed_at_index=uint32(0),
+            created_at_time=now,
+            to_puzzle_hash=puzzle_hash,
+            amount=uint64(amount),
+            fee_amount=uint64(fee),
+            incoming=False,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=add_list,
+            removals=rem_list,
+            wallet_id=self.wallet_info.id,
+            sent_to=[],
         )
+
+        return tx_record
+
+    async def push_transaction(self, tx: TransactionRecord) -> None:
+        """ Use this API to send transactions. """
+        await self.wallet_state_manager.add_pending_transaction(tx)
 
     # This is also defined in CCWallet as get_sigs()
     # I think this should be a the default way the wallet gets signatures in sign_transaction()

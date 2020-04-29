@@ -73,3 +73,15 @@ class SpendBundle(Streamable):
             result.append(rem)
 
         return result
+
+    def not_ephemeral_additions(self):
+        all_removals = self.removals()
+        all_additions = self.additions()
+        result: List[Coin] = []
+
+        for add in all_additions:
+            if add in all_removals:
+                continue
+            result.append(add)
+
+        return result
