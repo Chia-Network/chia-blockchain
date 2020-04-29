@@ -161,7 +161,7 @@ class Harvester:
             )
 
         loop = asyncio.get_running_loop()
-        executor = concurrent.futures.ThreadPoolExecutor(max_workers=50)
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
 
         def blocking_lookup(filename: Path, prover: DiskProver) -> Optional[List]:
             # Uses the DiskProver object to lookup qualities. This is a blocking call,

@@ -2,7 +2,7 @@ import os
 import shutil
 
 from argparse import Namespace, ArgumentParser
-from typing import List, Tuple, Dict, Optional, Any
+from typing import List, Tuple, Dict, Any
 from blspy import ExtendedPrivateKey
 from src.types.BLSSignature import BLSPublicKey
 from src.consensus.coinbase import create_puzzlehash_for_pk
@@ -31,9 +31,12 @@ def dict_add_new_default(
 ):
     for k, v in default.items():
         if isinstance(v, dict) and k in updated:
+            # If there is an intermediate key with empty string value, do not migrate all decendants
+            if do_not_migrate_keys.get(k, None) == "":
+                do_not_migrate_keys[k] = v
             dict_add_new_default(updated[k], default[k], do_not_migrate_keys.get(k, {}))
         elif k not in updated or k in do_not_migrate_keys:
-            updated[k] = default[k]
+            updated[k] = v
 
 
 def migrate_from(
@@ -149,8 +152,8 @@ def chia_init(args: Namespace):
 
     # These are the config keys that will not be migrated, and instead the default is used
     DO_NOT_MIGRATE_KEYS: List[str] = [
-        "full_node.introducer_peer.host",
-        "wallet.introducer_peer.host",
+        "full_node.introducer_peer",
+        "wallet.introducer_peer",
     ]
 
     # These are the files that will be migrated
