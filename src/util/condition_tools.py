@@ -31,7 +31,7 @@ def parse_sexp_to_condition(
     try:
         opcode = ConditionOpcode(items[0])
     except ValueError:
-        return Err.INVALID_CONDITION, None
+        opcode = ConditionOpcode.UNKNOWN
     if len(items) == 3:
         return None, ConditionVarPair(opcode, items[1], items[2])
     return None, ConditionVarPair(opcode, items[1], None)
@@ -72,19 +72,26 @@ def conditions_by_opcode(
 
 
 def hash_key_pairs_for_conditions_dict(
-    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]], coin_name: bytes32
+    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
+    coin_name: bytes32 = None,
 ) -> List[BLSSignature.PkMessagePair]:
     pairs: List[BLSSignature.PkMessagePair] = []
-    for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
-        # TODO: check types
-        # assert len(_) == 3
-        blspubkey: BLSPublicKey = BLSPublicKey(cvp.var1)
-        message: bytes32 = bytes32(blspy.Util.hash256(cvp.var2))
-        pairs.append(BLSSignature.PkMessagePair(blspubkey, message))
-    for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG_ME, []):
-        aggsigme_blspubkey: BLSPublicKey = BLSPublicKey(cvp.var1)
-        aggsigme_message: bytes32 = bytes32(blspy.Util.hash256(cvp.var2 + coin_name))
-        pairs.append(BLSSignature.PkMessagePair(aggsigme_blspubkey, aggsigme_message))
+    if coin_name is None:
+        for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
+            # TODO: check types
+            # assert len(_) == 3
+            blspubkey: BLSPublicKey = BLSPublicKey(cvp.var1)
+            message: bytes32 = bytes32(blspy.Util.hash256(cvp.var2))
+            pairs.append(BLSSignature.PkMessagePair(blspubkey, message))
+    if coin_name is not None:
+        for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG_ME, []):
+            aggsigme_blspubkey: BLSPublicKey = BLSPublicKey(cvp.var1)
+            aggsigme_message: bytes32 = bytes32(
+                blspy.Util.hash256(cvp.var2 + coin_name)
+            )
+            pairs.append(
+                BLSSignature.PkMessagePair(aggsigme_blspubkey, aggsigme_message)
+            )
     return pairs
 
 

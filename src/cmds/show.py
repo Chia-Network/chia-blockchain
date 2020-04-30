@@ -15,20 +15,6 @@ from src.util.config import str2bool
 def make_parser(parser):
 
     parser.add_argument(
-        "-bh",
-        "--block_header_hash",
-        help="Look up a block by block header hash string.",
-        type=str,
-        default="",
-    )
-    parser.add_argument(
-        "-b",
-        "--block_by_header_hash",
-        help="Look up a block by block header hash string.",
-        type=str,
-        default="",
-    )
-    parser.add_argument(
         "-s",
         "--state",
         help="Show the current state of the blockchain.",
@@ -37,6 +23,7 @@ def make_parser(parser):
         const=True,
         default=False,
     )
+
     parser.add_argument(
         "-c",
         "--connections",
@@ -48,21 +35,19 @@ def make_parser(parser):
     )
 
     parser.add_argument(
-        "-p",
-        "--rpc-port",
-        help=f"Set the port where the Full Node is hosting the RPC interface. See the rpc_port "
-        f"under full_node in config.yaml. Defaults to 8555",
-        type=int,
-        default=8555,
+        "-b",
+        "--block-by-header-hash",
+        help="Look up a block by block header hash.",
+        type=str,
+        default="",
     )
 
     parser.add_argument(
-        "-e",
-        "--exit-node",
-        help="Shut down the running Full Node",
-        nargs="?",
-        const=True,
-        default=False,
+        "-bh",
+        "--block-header-hash-by-height",
+        help="Look up a block header hash by block height.",
+        type=str,
+        default="",
     )
 
     parser.add_argument(
@@ -80,18 +65,33 @@ def make_parser(parser):
         type=str,
         default="",
     )
+
+    parser.add_argument(
+        "-e",
+        "--exit-node",
+        help="Shut down the running Full Node",
+        nargs="?",
+        const=True,
+        default=False,
+    )
+
+    parser.add_argument(
+        "-p",
+        "--rpc-port",
+        help=f"Set the port where the Full Node is hosting the RPC interface. See the rpc_port "
+        f"under full_node in config.yaml. Defaults to 8555",
+        type=int,
+        default=8555,
+    )
     parser.set_defaults(function=show)
 
 
 async def show_async(args, parser):
 
-    # print(args)
+    # TODO read configuration for rpc_port instead of assuming default
     try:
         client = await RpcClient.create(args.rpc_port)
 
-        # print (dir(client))
-        # TODO: Add other rpc calls
-        # TODO: pretty print response
         if args.state:
             blockchain_state = await client.get_blockchain_state()
             lca_block = blockchain_state["lca"]
@@ -157,7 +157,7 @@ async def show_async(args, parser):
                     )
                 else:
                     print("", latest_blocks_labels[i])
-            # if called together with other arguments, leave a blank line
+            # if called together with connections, leave a blank line
             if args.connections:
                 print("")
         if args.connections:
@@ -182,7 +182,7 @@ async def show_async(args, parser):
                     f"{mb_down:7.1f}|{mb_up:<7.1f}"
                 )
                 print(con_str)
-            # if called together with other arguments, leave a blank line
+            # if called together with state, leave a blank line
             if args.state:
                 print("")
         if args.exit_node:
@@ -227,16 +227,17 @@ async def show_async(args, parser):
                     elif result_txt == "":
                         result_txt = f"NodeID {args.remove_connection}... not found."
             print(result_txt)
-        if args.block_header_hash != "":
-            block_header = await client.get_block(hexstr_to_bytes(args.block_header_hash))
-            # print(dir(block_header))
+        if args.block_header_hash_by_height != "":
+            block_header = await client.get_header_by_height(
+                args.block_header_hash_by_height
+            )
             if block_header is not None:
-                print("Block header:")
-                print(block_header.header)
-                block_time = struct_time(localtime(block_header.header.data.timestamp))
-                print("Block time:", time.strftime("%a %b %d %Y %T %Z", block_time))
+                block_header_string = str(block_header.get_hash())
+                print(
+                    f"Header hash of block {args.block_header_hash_by_height}: {block_header_string}"
+                )
             else:
-                print("Block hash", args.block_header_hash, "not found.")
+                print("Block height", args.block_header_hash_by_height, "not found.")
         if args.block_by_header_hash != "":
             block = await client.get_block(hexstr_to_bytes(args.block_by_header_hash))
             # Would like to have a verbose flag for this
@@ -245,27 +246,32 @@ async def show_async(args, parser):
                 prev_block_header = await client.get_block(prev_block_header_hash)
                 block_time = struct_time(localtime(block.header.data.timestamp))
                 block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
-                print("Block:")
+                if block.header.data.aggregated_signature is None:
+                    aggregated_signature = block.header.data.aggregated_signature
+                else:
+                    aggregated_signature = block.header.data.aggregated_signature.sig
+                print("Block", block.header.data.height, ":")
                 print(
-                    f"Header Hash                0x{args.block_by_header_hash}\n"
-                    f"Timestamp                  {block_time_string}\n"
-                    f"Height                     {block.header.data.height}\n"
-                    f"Weight                     {block.header.data.weight}\n"
-                    f"Previous Block             0x{block.header.data.prev_header_hash}\n"
-                    f"Cost                       {block.header.data.cost}\n"
-                    f"Difficulty                 {block.header.data.weight-prev_block_header.header.data.weight}\n"
-                    f"Total VDF Iterations       {block.header.data.total_iters}\n"
-                    f"Block VDF Iterations       {block.proof_of_time.number_of_iterations}\n"
-                    f"Proof of Space \'k\' Size    {block.proof_of_space.size}\n"
+                    f"Header Hash            0x{args.block_by_header_hash}\n"
+                    f"Timestamp              {block_time_string}\n"
+                    f"Height                 {block.header.data.height}\n"
+                    f"Weight                 {block.header.data.weight}\n"
+                    f"Previous Block         0x{block.header.data.prev_header_hash}\n"
+                    f"Cost                   {block.header.data.cost}\n"
+                    f"Difficulty             {block.header.data.weight-prev_block_header.header.data.weight}\n"
+                    f"Total VDF Iterations   {block.header.data.total_iters}\n"
+                    f"Block VDF Iterations   {block.proof_of_time.number_of_iterations}\n"
+                    f"PoTime Witness Type    {block.proof_of_time.witness_type}\n"
+                    f"PoSpace 'k' Size       {block.proof_of_space.size}\n"
                     # f"Plot Public Key            0x{block.proof_of_space.plot_pubkey}\n"
                     # f"Pool Public Key            0x{block.proof_of_space.pool_pubkey}\n"
-                    f"Tx Filter Hash             {(block.transactions_filter)}\n"
-                    f"Tx Generator Hash          {block.transactions_generator}\n"
-                    f"Coinbase Amount            {block.header.data.coinbase.amount/1000000000000}\n"
-                    f"Coinbase Puzzle Hash       0x{block.header.data.coinbase.puzzle_hash}\n"
-                    f"Fees Amount                {block.header.data.fees_coin.amount/1000000000000}\n"
-                    f"Fees Puzzle Hash           0x{block.header.data.fees_coin.puzzle_hash}\n"
-                    f"Aggregated Signature       {block.header.data.aggregated_signature}\n"
+                    f"Tx Filter Hash         {b'block.transactions_filter'.hex()}\n"
+                    f"Tx Generator Hash      {block.transactions_generator}\n"
+                    f"Coinbase Amount        {block.header.data.coinbase.amount/1000000000000}\n"
+                    f"Coinbase Puzzle Hash   0x{block.header.data.coinbase.puzzle_hash}\n"
+                    f"Fees Amount            {block.header.data.fees_coin.amount/1000000000000}\n"
+                    f"Fees Puzzle Hash       0x{block.header.data.fees_coin.puzzle_hash}\n"
+                    f"Aggregated Signature   {aggregated_signature}"
                 )
             else:
                 print("Block with header hash", args.block_by_header_hash, "not found.")

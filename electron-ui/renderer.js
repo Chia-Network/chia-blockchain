@@ -24,6 +24,7 @@ let block_height_textfield = document.querySelector('#block_height_textfield')
 let standard_wallet_balance = document.querySelector('#standard_wallet_balance')
 let wallets_tab = document.querySelector('#wallets_tab')
 const { get_query_variable } = require("./utils");
+var g_wallets = {}
 
 // UI checkmarks and lock icons
 const green_checkmark = "<i class=\"icon ion-md-checkmark-circle-outline green\"></i>"
@@ -105,7 +106,8 @@ function set_callbacks(socket) {
         var data = message["data"];
 
         if (command == "start_server") {
-            get_wallets();
+            //get_wallets();
+            get_wallet_summaries();
             get_transactions();
             get_wallet_balance(g_wallet_id);
             get_height_info();
@@ -130,6 +132,8 @@ function set_callbacks(socket) {
             get_sync_status_response(data)
         } else if (command == "get_wallets") {
             get_wallets_response(data)
+        } else if (command == "get_wallet_summaries") {
+            get_wallet_summaries_response(data)
         }
     });
 
@@ -165,6 +169,12 @@ send.addEventListener('click', () => {
 
     try {
         puzzle_hash = receiver_address.value;
+        if (puzzle_hash.includes("colour")){
+          dialogs.alert("Error: Cannot send chia to coloured address. Please enter a chia address.")
+          return
+        } else if (puzzle_hash.substring(0, 12) == "chia_addr://") {
+          puzzle_hash = puzzle_hash.substring(12)
+        }
         if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
             puzzle_hash = puzzle_hash.substring(2);
         }
@@ -211,7 +221,13 @@ farm_button.addEventListener('click', () => {
         dialogs.alert("Specify puzzle_hash for coinbase reward", ok => {
         })
         return
+    } else if (puzzle_hash.includes("colour")){
+      dialogs.alert("Please enter a chia address for coinbase reward.")
+      return
+    } else if (puzzle_hash.substring(0, 12) == "chia_addr://") {
+      puzzle_hash = puzzle_hash.substring(12)
     }
+
     data = {
         "puzzle_hash": puzzle_hash,
         "wallet_id": g_wallet_id,
@@ -291,7 +307,9 @@ function get_new_puzzlehash_response(response) {
     Called when response is received for get_new_puzzle_hash request
     */
     let puzzle_holder = document.querySelector("#puzzle_holder");
-    puzzle_holder.value = response["puzzlehash"];
+    puzzle_hash = "chia_addr://"
+    puzzle_hash = puzzle_hash.concat(response["puzzlehash"]);
+    puzzle_holder.value = puzzle_hash
     QRCode.toCanvas(canvas, response["puzzlehash"], function (error) {
     if (error) console.error(error)
     })
@@ -319,10 +337,12 @@ function get_wallet_balance_response(response) {
         var confirmed = parseInt(response["confirmed_wallet_balance"])
         var unconfirmed = parseInt(response["unconfirmed_wallet_balance"])
         var pending = confirmed - unconfirmed
-        var wallet_id = response["wallet_id"]
 
+        var wallet_id = response["wallet_id"]
+        console.log("wallet_id = " + wallet_id + "confirmed: " + confirmed + "unconfirmed: " + unconfirmed )
         chia_confirmed = chia_formatter(confirmed, 'mojo').to('chia').toString()
         chia_pending = chia_formatter(pending, 'mojo').to('chia').toString()
+        chia_pending_abs = chia_formatter(Math.abs(pending), 'mojo').to('chia').toString()
 
         wallet_balance_holder = document.querySelector("#" + "balance_wallet_" + wallet_id )
         wallet_pending_holder = document.querySelector("#" + "pending_wallet_" + wallet_id )
@@ -332,7 +352,7 @@ function get_wallet_balance_response(response) {
             if (pending > 0) {
                 pending_textfield.innerHTML = lock + " - " + chia_pending + " CH"
             } else {
-                pending_textfield.innerHTML = lock + " " + chia_pending + " CH"
+                pending_textfield.innerHTML = lock + " " + chia_pending_abs + " CH"
             }
         }
         if (wallet_balance_holder) {
@@ -342,7 +362,7 @@ function get_wallet_balance_response(response) {
             if (pending > 0) {
                 wallet_pending_holder.innerHTML = lock + " - " + chia_pending + " CH"
             } else {
-                wallet_pending_holder.innerHTML = lock + " " + chia_pending + " CH"
+                wallet_pending_holder.innerHTML = lock + " " + chia_pending_abs + " CH"
             }
         }
     }
@@ -510,6 +530,7 @@ function handle_state_changed(data) {
     } else if (state == "coin_added") {
         get_transactions()
         get_wallet_balance(g_wallet_id)
+        update_balance_for_all_wallets()
     } else if (state == "pending_transaction") {
         get_transactions()
         get_wallet_balance(g_wallet_id)
@@ -518,6 +539,7 @@ function handle_state_changed(data) {
         get_wallet_balance(g_wallet_id)
     } else if (state == "balance_changed") {
         get_wallet_balance(g_wallet_id)
+        update_balance_for_all_wallets()
     } else if (state == "sync_changed") {
         get_sync_status()
     } else if (state == "new_block") {
@@ -527,6 +549,15 @@ function handle_state_changed(data) {
         get_wallet_balance(g_wallet_id)
         get_height_info()
         get_sync_status()
+        update_balance_for_all_wallets()
+    }
+}
+
+function update_balance_for_all_wallets() {
+    for (var i = 0; i < g_wallets.length; i++) {
+        var wallet = g_wallets[i];
+        var id = wallet["id"]
+        get_wallet_balance(id)
     }
 }
 
@@ -542,9 +573,9 @@ function get_wallets() {
 }
 
 function get_wallets_response(data) {
-    wallets_tab.innerHTML = ""
     new_innerHTML = ""
     const wallets = data["wallets"]
+    g_wallets = wallets
 
     for (var i = 0; i < wallets.length; i++) {
         var wallet = wallets[i];
@@ -553,11 +584,14 @@ function get_wallets_response(data) {
         var name = wallet["name"]
         get_wallet_balance(id)
         //href, wallet_name, wallet_description, wallet_amount
+        console.log("type is " + type)
         var href = ""
         if (type == "STANDARD_WALLET") {
             href = "wallet-dark.html"
         } else if (type == "RATE_LIMITED") {
             href = "rl_wallet/rl_wallet.html"
+        } else if (type == "COLOURED_COIN") {
+            href = "cc_wallet/cc_wallet.html"
         }
 
         if (id == g_wallet_id) {
@@ -567,8 +601,65 @@ function get_wallets_response(data) {
         }
 
     }
-    // new_innerHTML += create_wallet_button()
+    new_innerHTML += create_wallet_button()
     wallets_tab.innerHTML = new_innerHTML
+}
+
+function get_wallet_summaries() {
+  /*
+  Sends websocket request to get wallet summaries
+  */
+  data = {
+      "info": "123",
+  }
+
+  request = {
+      "command": "get_wallet_summaries",
+      "data": data
+  }
+
+  json_data = JSON.stringify(request);
+  ws.send(json_data);
+}
+
+function get_wallet_summaries_response(data){
+  // {id: {"type": type, "balance": balance, "name": name, "colour": colour}}
+  // {id: {"type": type, "balance": balance}}
+  var new_innerHTML = ""
+  for (var i in data) {
+      var wallet = data[i];
+      var type = wallet["type"]
+      var id = i
+      var name = wallet["type"]
+
+      get_wallet_balance(id)
+      //href, wallet_name, wallet_description, wallet_amount
+      var href = ""
+      if (type == "STANDARD_WALLET") {
+          href = "./wallet-dark.html"
+          name = "Chia Wallet"
+          type = "Chia"
+      } else if (type == "RATE_LIMITED") {
+          href = "rl_wallet/rl_wallet.html"
+      } else if (type == "COLOURED_COIN") {
+          href = "cc_wallet/cc_wallet.html"
+          name = "CC Wallet"
+          type = wallet["name"]
+          if (type.length > 18) {
+            type = type.substring(0,18);
+            type = type.concat("...")
+          }
+      }
+
+      if (id == g_wallet_id) {
+          new_innerHTML += create_side_wallet(id, href, name, type, 0, true)
+      } else {
+          new_innerHTML += create_side_wallet(id, href, name, type, 0, false)
+      }
+
+  }
+  new_innerHTML += create_wallet_button()
+  wallets_tab.innerHTML = new_innerHTML
 }
 
 function clean_table() {

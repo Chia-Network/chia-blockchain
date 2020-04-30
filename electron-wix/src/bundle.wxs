@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<!-- This file defines all pre-requistes and packages that make up the overall bundle -->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+    xmlns:bal="http://schemas.microsoft.com/wix/BalExtension"
+    xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+    <?include "config.wxi"?>
+    <Bundle Condition="VersionNT64 AND VersionNT >= v10.0"
+        AboutUrl="$(var.ARPURLINFOABOUT)"
+        Compressed="yes"
+        Copyright="$(var.Copyright)"
+        DisableModify="yes"
+        HelpUrl="$(var.ARPHELPLINK)"
+        IconSourceFile="$(env.resourceDir)\icon.ico"
+        Manufacturer="$(var.Manufacturer)"
+        Name="Chia $(var.version)"
+        UpdateUrl="$(var.ARPURLUPDATEINFO)"
+        UpgradeCode="$(var.bundleUpgradeCode)"
+        Version="$(var.version)">
+        <BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.RtfLicense">
+            <bal:WixStandardBootstrapperApplication
+                LogoFile="$(env.resourceDir)\chia_logo.png"
+                LogoSideFile="$(env.resourceDir)\dialog.png"
+                LicenseFile="$(env.resourceDir)\eula.rtf"
+                ShowFilesInUse="yes"
+                ShowVersion="yes"
+                SuppressOptionsUI="yes"/>
+        </BootstrapperApplicationRef>
+        <Chain>
+            <PackageGroupRef Id="PythonPackage" />
+            <PackageGroupRef Id="MSVC2019Package" />
+            <RollbackBoundary />
+
+            <PackageGroupRef Id="WalletPackage" />
+            <PackageGroupRef Id="BlockchainPackage" />
+        </Chain>
+    </Bundle>
+</Wix>
+
+<!--            LaunchArguments="[#readme.txt]"
+                LaunchTarget="notepad.exe"
+                LaunchWorkingFolder="[INSTALLDIR]" -->

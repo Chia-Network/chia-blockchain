@@ -21,9 +21,9 @@ def main():
     key_config_filename = config_path_for_filename(root_path, "keys.yaml")
 
     parser = argparse.ArgumentParser(description="Chia plotting script.")
-    parser.add_argument("-k", "--size", help="Plot size", type=int, default=20)
+    parser.add_argument("-k", "--size", help="Plot size", type=int, default=26)
     parser.add_argument(
-        "-n", "--num_plots", help="Number of plots", type=int, default=10
+        "-n", "--num_plots", help="Number of plots", type=int, default=1
     )
     parser.add_argument("-i", "--index", help="First plot index", type=int, default=0)
     parser.add_argument(
@@ -54,7 +54,7 @@ def main():
     # We need the keys file, to access pool keys (if the exist), and the sk_seed.
     args = parser.parse_args()
     if not key_config_filename.exists():
-        raise RuntimeError("Keys not generated. Run chia-generate-keys")
+        raise RuntimeError("Keys not generated. Run `chia generate keys`")
 
     # The seed is what will be used to generate a private key for each plot
     key_config = load_config(root_path, key_config_filename)

@@ -9,7 +9,7 @@ from src.full_node.full_node import FullNode
 from src.types.header import Header
 from src.types.full_block import FullBlock
 from src.types.peer_info import PeerInfo
-from src.util.ints import uint16, uint64
+from src.util.ints import uint16, uint32, uint64
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
 
@@ -95,6 +95,22 @@ class RpcApiHandler:
             raise web.HTTPNotFound()
         return obj_to_response(block)
 
+    async def get_header_by_height(self, request) -> web.Response:
+        """
+        Retrieves a header by height.
+        """
+        request_data = await request.json()
+        if "height" not in request_data:
+            raise web.HTTPBadRequest()
+        header_height = uint32(int(request_data["height"]))
+        header_hash: Optional[bytes32] = self.full_node.blockchain.height_to_hash.get(
+            header_height, None
+        )
+        if header_hash is None:
+            raise web.HTTPNotFound()
+        header: Header = self.full_node.blockchain.headers[header_hash]
+        return obj_to_response(header)
+
     async def get_header(self, request) -> web.Response:
         """
         Retrieves a Header.
@@ -109,6 +125,18 @@ class RpcApiHandler:
         if header is None:
             raise web.HTTPNotFound()
         return obj_to_response(header)
+
+    async def get_unfinished_block_headers(self, request) -> web.Response:
+        request_data = await request.json()
+        if "height" not in request_data:
+            raise web.HTTPBadRequest()
+        height = request_data["height"]
+        response_headers: List[Header] = []
+        for block in (self.full_node.store.get_unfinished_blocks()).values():
+            if block.height == height:
+                response_headers.append(block.header)
+
+        return obj_to_response(response_headers)
 
     async def get_connections(self, request) -> web.Response:
         """
@@ -144,9 +172,8 @@ class RpcApiHandler:
         port = request_data["port"]
         target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
 
-        config = self.full_node.config
         if self.full_node.server is None or not (
-            await self.full_node.server.start_client(target_node, None, config)
+            await self.full_node.server.start_client(target_node, None)
         ):
             raise web.HTTPInternalServerError()
         return obj_to_response("")
@@ -227,7 +254,11 @@ async def start_rpc_server(
         [
             web.post("/get_blockchain_state", handler.get_blockchain_state),
             web.post("/get_block", handler.get_block),
+            web.post("/get_header_by_height", handler.get_header_by_height),
             web.post("/get_header", handler.get_header),
+            web.post(
+                "/get_unfinished_block_headers", handler.get_unfinished_block_headers
+            ),
             web.post("/get_connections", handler.get_connections),
             web.post("/open_connection", handler.open_connection),
             web.post("/close_connection", handler.close_connection),

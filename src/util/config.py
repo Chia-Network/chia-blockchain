@@ -19,7 +19,9 @@ def create_default_chia_config(root_path: Path) -> None:
         mkdir(path.parent)
         with open(path, "w") as f:
             f.write(default_config_file_data)
-    save_config(root_path, "plots.yaml", {"plots": {}})
+    plot_yaml_path: Path = root_path / "config" / "plots.yaml"
+    if not plot_yaml_path.exists():
+        save_config(root_path, "plots.yaml", {"plots": {}})
 
 
 def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Path:
@@ -97,11 +99,11 @@ def unflatten_properties(config: Dict):
 
 
 def add_property(d: Dict, partial_key: str, value: Any):
-    key_1, key_2 = partial_key.split(".")
+    key_1, key_2 = partial_key.split(".", maxsplit=1)
     if key_1 not in d:
         d[key_1] = {}
     if "." in key_2:
-        add_property(d, key_2, value)
+        add_property(d[key_1], key_2, value)
     else:
         d[key_1][key_2] = value
 

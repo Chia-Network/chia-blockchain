@@ -16,11 +16,11 @@ from src.util.logging import initialize_logging
 from src.util.setproctitle import setproctitle
 
 
-async def main():
+async def async_main():
     root_path = DEFAULT_ROOT_PATH
     net_config = load_config(root_path, "config.yaml")
     config = load_config_cli(root_path, "config.yaml", "introducer")
-    initialize_logging("Introducer %(name)-21s", config["logging"])
+    initialize_logging("Introducer %(name)-21s", config["logging"], root_path)
     log = logging.getLogger(__name__)
     setproctitle("chia_introducer")
 
@@ -30,18 +30,32 @@ async def main():
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
-        config["port"], introducer, NodeType.INTRODUCER, ping_interval, network_id
+        config["port"],
+        introducer,
+        NodeType.INTRODUCER,
+        ping_interval,
+        network_id,
+        DEFAULT_ROOT_PATH,
+        config,
     )
     introducer.set_server(server)
-    _ = await server.start_server(None, config)
+    _ = await server.start_server(None)
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
+    try:
+        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
+    except NotImplementedError:
+        log.info("signal handlers unsupported")
 
     await server.await_closed()
     log.info("Introducer fully closed.")
 
 
-if uvloop is not None:
-    uvloop.install()
-asyncio.run(main())
+def main():
+    if uvloop is not None:
+        uvloop.install()
+    asyncio.run(async_main())
+
+
+if __name__ == "__main__":
+    main()

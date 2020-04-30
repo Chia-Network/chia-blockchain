@@ -77,6 +77,11 @@ class FullNodeStore:
             "text PRIMARY KEY, proof_hash text, header blob)"
         )
 
+        # LCA
+        await self.db.execute(
+            "CREATE TABLE IF NOT EXISTS lca(header_hash text PRIMARY KEY)"
+        )
+
         # Height index so we can look up in order of height for sync purposes
         await self.db.execute(
             "CREATE INDEX IF NOT EXISTS block_height on blocks(height)"
@@ -115,6 +120,22 @@ class FullNodeStore:
             await self.db.execute("DELETE FROM potential_blocks")
             await self.db.execute("DELETE FROM headers")
             await self.db.commit()
+
+    async def get_lca(self) -> Optional[bytes32]:
+        cursor = await self.db.execute("SELECT * from lca")
+        row = await cursor.fetchone()
+        await cursor.close()
+        if row is not None:
+            return bytes32(bytes.fromhex(row[0]))
+        return None
+
+    async def set_lca(self, header_hash: bytes32) -> None:
+        await self.db.execute("DELETE FROM lca")
+        cursor_1 = await self.db.execute(
+            "INSERT OR REPLACE INTO lca VALUES(?)", (header_hash.hex(),)
+        )
+        await cursor_1.close()
+        await self.db.commit()
 
     async def add_block(self, block: FullBlock) -> None:
         assert block.proof_of_time is not None

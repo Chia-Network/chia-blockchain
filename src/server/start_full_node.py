@@ -2,6 +2,7 @@ import asyncio
 import logging
 import logging.config
 import signal
+import miniupnpc
 
 import aiosqlite
 
@@ -19,26 +20,25 @@ from src.full_node.mempool_manager import MempoolManager
 from src.server.server import ChiaServer
 from src.server.connection import NodeType
 from src.types.full_block import FullBlock
-from src.types.peer_info import PeerInfo
 from src.full_node.coin_store import CoinStore
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli, load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.path import mkdir, path_from_root
-from src.util.pip_import import pip_import
 from src.util.setproctitle import setproctitle
 
 
-async def main():
-    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "full_node")
-    net_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+async def async_main():
+    root_path = DEFAULT_ROOT_PATH
+    config = load_config_cli(root_path, "config.yaml", "full_node")
+    net_config = load_config(root_path, "config.yaml")
     setproctitle("chia_full_node")
-    initialize_logging("FullNode %(name)-23s", config["logging"])
+    initialize_logging("FullNode %(name)-23s", config["logging"], root_path)
 
     log = logging.getLogger(__name__)
     server_closed = False
 
-    db_path = path_from_root(DEFAULT_ROOT_PATH, config["database_path"])
+    db_path = path_from_root(root_path, config["database_path"])
     mkdir(db_path.parent)
 
     # Create the store (DB) and full node instance
@@ -61,7 +61,6 @@ async def main():
     if config["enable_upnp"]:
         log.info(f"Attempting to enable UPnP (open up port {config['port']})")
         try:
-            miniupnpc = pip_import("miniupnpc", "miniupnpc==2.0.2")
             upnp = miniupnpc.UPnP()
             upnp.discoverdelay = 5
             upnp.discover()
@@ -79,10 +78,16 @@ async def main():
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
-        config["port"], full_node, NodeType.FULL_NODE, ping_interval, network_id
+        config["port"],
+        full_node,
+        NodeType.FULL_NODE,
+        ping_interval,
+        network_id,
+        DEFAULT_ROOT_PATH,
+        config,
     )
     full_node._set_server(server)
-    _ = await server.start_server(full_node._on_connect, config)
+    _ = await server.start_server(full_node._on_connect)
     rpc_cleanup = None
 
     def master_close_cb():
@@ -100,35 +105,13 @@ async def main():
             full_node, master_close_cb, config["rpc_port"]
         )
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
+    try:
+        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
+    except NotImplementedError:
+        log.info("signal handlers unsupported")
 
     full_node._start_bg_tasks()
-
-    log.info("Waiting to connect to some peers...")
-    await asyncio.sleep(3)
-    log.info(f"Connected to {len(server.global_connections.get_connections())} peers.")
-
-    if config["connect_to_farmer"] and not server_closed:
-        peer_info = PeerInfo(
-            full_node.config["farmer_peer"]["host"],
-            full_node.config["farmer_peer"]["port"],
-        )
-        _ = await server.start_client(peer_info, None, config)
-
-    if config["connect_to_timelord"] and not server_closed:
-        peer_info = PeerInfo(
-            full_node.config["timelord_peer"]["host"],
-            full_node.config["timelord_peer"]["port"],
-        )
-        _ = await server.start_client(peer_info, None, config)
-
-    if not server_closed:
-        peer_info = PeerInfo(
-            full_node.config["wallet_peer"]["host"],
-            full_node.config["wallet_peer"]["port"],
-        )
-        _ = await server.start_client(peer_info, None, config)
 
     # Awaits for server and all connections to close
     await server.await_closed()
@@ -146,6 +129,11 @@ async def main():
     log.info("Node fully closed.")
 
 
-if uvloop is not None:
-    uvloop.install()
-asyncio.run(main())
+def main():
+    if uvloop is not None:
+        uvloop.install()
+    asyncio.run(async_main())
+
+
+if __name__ == "__main__":
+    main()

@@ -133,42 +133,29 @@ class Farmer:
 
     def _start_bg_tasks(self):
         """
-        Start a background task that checks connection and reconnects periodically to the full_node and
-        harvester.
+        Start a background task that checks connection and reconnects periodically to the full_node.
         """
 
-        harvester_peer = PeerInfo(
-            self.config["harvester_peer"]["host"], self.config["harvester_peer"]["port"]
-        )
         full_node_peer = PeerInfo(
             self.config["full_node_peer"]["host"], self.config["full_node_peer"]["port"]
         )
 
         async def connection_check():
             while not self._shut_down:
-                await asyncio.sleep(30)
                 if self.server is not None:
                     full_node_retry = True
-                    harvester_retry = True
 
                     for connection in self.server.global_connections.get_connections():
                         if connection.get_peer_info() == full_node_peer:
                             full_node_retry = False
-                        if connection.get_peer_info() == harvester_peer:
-                            harvester_retry = False
 
                     if full_node_retry:
                         log.info(f"Reconnecting to full_node {full_node_peer}")
                         if not await self.server.start_client(
-                            full_node_peer, None, self.config
+                            full_node_peer, None, auth=False
                         ):
                             await asyncio.sleep(1)
-                    if harvester_retry:
-                        log.info(f"Reconnecting to harvester {harvester_peer}")
-                        if not await self.server.start_client(
-                            harvester_peer, None, self.config
-                        ):
-                            await asyncio.sleep(1)
+                await asyncio.sleep(30)
 
         self.reconnect_task = asyncio.create_task(connection_check())
 
@@ -352,7 +339,7 @@ class Farmer:
             ]
 
             coinbase_reward = uint64(
-                calculate_block_reward(proof_of_space_finalized.height)
+                calculate_block_reward(uint32(proof_of_space_finalized.height + 1))
             )
 
             coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(

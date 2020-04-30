@@ -12,7 +12,7 @@ from chiabip158 import PyBIP158
 
 from chiapos import DiskPlotter, DiskProver
 from src import __version__
-from src.cmds.init import create_default_chia_config
+from src.cmds.init import create_default_chia_config, initialize_ssl
 from src.consensus import block_rewards, pot_iterations
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
@@ -32,25 +32,8 @@ from src.util.ints import uint8, uint32, uint64, uint128, int512
 from src.util.hash import std_hash
 from src.util.path import mkdir
 from src.util.significant_bits import truncate_to_significant_bits
-
-# Can't go much lower than 19, since plots start having no solutions
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
-
-k: uint8 = uint8(19)
-# Uses many plots for testing, in order to guarantee proofs of space at every height
-num_plots = 40
-# Use the empty string as the seed for the private key
-pool_sk: PrivateKey = PrivateKey.from_seed(b"")
-pool_pk: PublicKey = pool_sk.get_public_key()
-plot_sks: List[PrivateKey] = [
-    PrivateKey.from_seed(pn.to_bytes(4, "big")) for pn in range(num_plots)
-]
-plot_pks: List[PublicKey] = [sk.get_public_key() for sk in plot_sks]
-
-wallet_sk: PrivateKey = PrivateKey.from_seed(b"coinbase")
-coinbase_target = std_hash(bytes(wallet_sk.get_public_key()))
-fee_target = std_hash(bytes(wallet_sk.get_public_key()))
-n_wesolowski = uint8(0)
+from src.util.config import load_config, load_config_cli
 
 
 TEST_ROOT_PATH = Path(
@@ -67,56 +50,106 @@ class BlockTools:
     Tools to generate blocks for testing.
     """
 
-    def __init__(self, root_path: Path = TEST_ROOT_PATH):
+    def __init__(
+        self, root_path: Path = TEST_ROOT_PATH, real_plots: bool = False,
+    ):
         create_default_chia_config(root_path)
+        initialize_ssl(root_path)
         self.root_path = root_path
-        self.plot_config: Dict = {"plots": {}}
-        self.pool_sk = pool_sk
-        self.wallet_sk = wallet_sk
+        self.wallet_sk: PrivateKey = PrivateKey.from_seed(b"coinbase")
+        self.coinbase_target = std_hash(bytes(self.wallet_sk.get_public_key()))
+        self.fee_target = std_hash(bytes(self.wallet_sk.get_public_key()))
+        self.n_wesolowski = uint8(0)
 
-        plot_seeds: List[bytes32] = [
-            ProofOfSpace.calculate_plot_seed(pool_pk, plot_pk) for plot_pk in plot_pks
-        ]
-        self.plot_dir = self.root_path / "plots"
-        mkdir(self.plot_dir)
-        self.filenames: List[str] = [
-            f"genesis-plots-{k}{std_hash(int.to_bytes(i, 4, 'big')).hex()}.dat"
-            for i in range(num_plots)
-        ]
-        done_filenames = set()
-        temp_dir = self.plot_dir / "plot.tmp"
-        mkdir(temp_dir)
-        try:
-            for pn, filename in enumerate(self.filenames):
-                if not (self.plot_dir / filename).exists():
-                    plotter = DiskPlotter()
-                    plotter.create_plot_disk(
-                        str(self.plot_dir),
-                        str(self.plot_dir),
-                        filename,
-                        k,
-                        b"genesis",
-                        plot_seeds[pn],
-                    )
-                    done_filenames.add(filename)
-                self.plot_config["plots"][str(self.plot_dir / filename)] = {
-                    "pool_pk": bytes(pool_pk).hex(),
-                    "sk": bytes(plot_sks[pn]).hex(),
-                }
-        except KeyboardInterrupt:
-            for filename in self.filenames:
-                if (
-                    filename not in done_filenames
-                    and (self.plot_dir / filename).exists()
-                ):
-                    (self.plot_dir / filename).unlink()
-            sys.exit(1)
+        if not real_plots:
+            # No real plots supplied, so we will use the small test plots
+            self.use_any_pos = True
+            self.plot_config: Dict = {"plots": {}}
+            # Can't go much lower than 19, since plots start having no solutions
+            k: uint8 = uint8(19)
+            # Uses many plots for testing, in order to guarantee proofs of space at every height
+            num_plots = 40
+            # Use the empty string as the seed for the private key
+            pool_sk: PrivateKey = PrivateKey.from_seed(b"")
+            pool_pk: PublicKey = pool_sk.get_public_key()
+            plot_sks: List[PrivateKey] = [
+                PrivateKey.from_seed(pn.to_bytes(4, "big")) for pn in range(num_plots)
+            ]
+            plot_pks: List[PublicKey] = [sk.get_public_key() for sk in plot_sks]
 
-    @staticmethod
-    def get_harvester_signature(header_data: HeaderData, plot_pk: PublicKey):
-        for i, pk in enumerate(plot_pks):
-            if pk == plot_pk:
-                return plot_sks[i].sign_prepend(header_data.get_hash())
+            plot_seeds: List[bytes32] = [
+                ProofOfSpace.calculate_plot_seed(pool_pk, plot_pk)
+                for plot_pk in plot_pks
+            ]
+            plot_dir = root_path / "plots"
+            mkdir(plot_dir)
+            filenames: List[str] = [
+                f"genesis-plots-{k}{std_hash(int.to_bytes(i, 4, 'big')).hex()}.dat"
+                for i in range(num_plots)
+            ]
+            done_filenames = set()
+            temp_dir = plot_dir / "plot.tmp"
+            mkdir(temp_dir)
+            try:
+                for pn, filename in enumerate(filenames):
+                    if not (plot_dir / filename).exists():
+                        plotter = DiskPlotter()
+                        plotter.create_plot_disk(
+                            str(plot_dir),
+                            str(plot_dir),
+                            filename,
+                            k,
+                            b"genesis",
+                            plot_seeds[pn],
+                        )
+                        done_filenames.add(filename)
+                    self.plot_config["plots"][str(plot_dir / filename)] = {
+                        "pool_pk": bytes(pool_pk).hex(),
+                        "sk": bytes(plot_sks[pn]).hex(),
+                        "pool_sk": bytes(pool_sk).hex(),
+                    }
+            except KeyboardInterrupt:
+                for filename in filenames:
+                    if (
+                        filename not in done_filenames
+                        and (plot_dir / filename).exists()
+                    ):
+                        (plot_dir / filename).unlink()
+                sys.exit(1)
+        else:
+            # Real plots supplied, so we will use these instead of the test plots
+            config = load_config_cli(root_path, "config.yaml", "harvester")
+            try:
+                key_config = load_config(root_path, "keys.yaml")
+            except FileNotFoundError:
+                raise RuntimeError("Keys not generated. Run `chia generate keys`")
+            try:
+                plot_config = load_config(root_path, "plots.yaml")
+            except FileNotFoundError:
+                raise RuntimeError("Plots not generated. Run chia-create-plots")
+
+            pool_sks: List[PrivateKey] = [
+                PrivateKey.from_bytes(bytes.fromhex(ce))
+                for ce in key_config["pool_sks"]
+            ]
+
+            for key, value in plot_config["plots"].items():
+                for pool_sk in pool_sks:
+                    if bytes(pool_sk.get_public_key()).hex() == value["pool_pk"]:
+                        plot_config["plots"][key]["pool_sk"] = bytes(pool_sk).hex()
+
+            self.plot_config = plot_config
+            self.use_any_pos = False
+
+    def get_harvester_signature(self, header_data: HeaderData, plot_pk: PublicKey):
+        for value_dict in self.plot_config["plots"].values():
+            if (
+                PrivateKey.from_bytes(bytes.fromhex(value_dict["sk"])).get_public_key()
+                == plot_pk
+            ):
+                return PrivateKey.from_bytes(
+                    bytes.fromhex(value_dict["sk"])
+                ).sign_prepend(header_data.get_hash())
 
     def get_consecutive_blocks(
         self,
@@ -296,7 +329,11 @@ class BlockTools:
         return block_list
 
     def create_genesis_block(
-        self, input_constants: Dict, challenge_hash=bytes([0] * 32), seed: bytes = b""
+        self,
+        input_constants: Dict,
+        challenge_hash=bytes([0] * 32),
+        seed: bytes = b"",
+        reward_puzzlehash: Optional[bytes32] = None,
     ) -> FullBlock:
         """
         Creates the genesis block with the specified details.
@@ -317,6 +354,7 @@ class BlockTools:
             uint64(test_constants["MIN_ITERS_STARTING"]),
             seed,
             True,
+            reward_puzzlehash,
         )
 
     def create_next_block(
@@ -399,35 +437,69 @@ class BlockTools:
         Creates a block with the specified details. Uses the stored plots to create a proof of space,
         and also evaluates the VDF for the proof of time.
         """
-        prover = None
-        plot_pk = None
-        plot_sk = None
-        qualities: List[bytes] = []
-        for i in range(num_plots * 3):
-            # Allow passing in seed, to create reorgs and different chains
-            random.seed(seed + i.to_bytes(4, "big"))
-            seeded_pn = random.randint(0, num_plots - 1)
-            filename = self.filenames[seeded_pn]
-            plot_pk = plot_pks[seeded_pn]
-            plot_sk = plot_sks[seeded_pn]
-            prover = DiskProver(str(self.plot_dir / filename))
-            qualities = prover.get_qualities_for_challenge(challenge_hash)
-            if len(qualities) > 0:
-                break
+        selected_prover = None
+        selected_plot_sk = None
+        selected_pool_sk = None
+        selected_proof_index = 0
+        plots = list(self.plot_config["plots"].items())
+        selected_quality: Optional[bytes] = None
+        best_quality = 0
+        if self.use_any_pos:
+            for i in range(len(plots) * 3):
+                # Allow passing in seed, to create reorgs and different chains
+                random.seed(seed + i.to_bytes(4, "big"))
+                seeded_pn = random.randint(0, len(plots) - 1)
+                pool_sk = PrivateKey.from_bytes(
+                    bytes.fromhex(plots[seeded_pn][1]["pool_sk"])
+                )
+                plot_sk = PrivateKey.from_bytes(
+                    bytes.fromhex(plots[seeded_pn][1]["sk"])
+                )
+                prover = DiskProver(plots[seeded_pn][0])
+                qualities = prover.get_qualities_for_challenge(challenge_hash)
+                if len(qualities) > 0:
+                    if self.use_any_pos:
+                        selected_quality = qualities[0]
+                        selected_prover = prover
+                        selected_pool_sk = pool_sk
+                        selected_plot_sk = plot_sk
+                        break
+        else:
+            for i in range(len(plots)):
+                pool_sk = PrivateKey.from_bytes(bytes.fromhex(plots[i][1]["pool_sk"]))
+                plot_sk = PrivateKey.from_bytes(bytes.fromhex(plots[i][1]["sk"]))
+                prover = DiskProver(plots[i][0])
+                qualities = prover.get_qualities_for_challenge(challenge_hash)
+                j = 0
+                for quality in qualities:
+                    qual_int = int.from_bytes(quality, "big", signed=False)
+                    if qual_int > best_quality:
+                        best_quality = qual_int
+                        selected_quality = quality
+                        selected_prover = prover
+                        selected_pool_sk = pool_sk
+                        selected_plot_sk = plot_sk
+                        selected_proof_index = j
+                    j += 1
 
-        assert prover
-        assert plot_pk
-        assert plot_sk
-        if len(qualities) == 0:
+        assert selected_prover
+        assert selected_pool_sk
+        assert selected_plot_sk
+        pool_pk = selected_pool_sk.get_public_key()
+        plot_pk = selected_plot_sk.get_public_key()
+        if selected_quality is None:
             raise RuntimeError("No proofs for this challenge")
 
-        proof_xs: bytes = prover.get_full_proof(challenge_hash, 0)
+        proof_xs: bytes = selected_prover.get_full_proof(
+            challenge_hash, selected_proof_index
+        )
         proof_of_space: ProofOfSpace = ProofOfSpace(
-            challenge_hash, pool_pk, plot_pk, k, proof_xs
+            challenge_hash, pool_pk, plot_pk, selected_prover.get_size(), proof_xs
         )
         number_iters: uint64 = pot_iterations.calculate_iterations(
             proof_of_space, difficulty, min_iters
         )
+        # print("Doing iters", number_iters)
         int_size = (test_constants["DISCRIMINANT_SIZE_BITS"] + 16) >> 4
 
         result = prove(
@@ -443,11 +515,11 @@ class BlockTools:
         proof_bytes = result[2 * int_size : 4 * int_size]
 
         proof_of_time = ProofOfTime(
-            challenge_hash, number_iters, output, n_wesolowski, proof_bytes,
+            challenge_hash, number_iters, output, self.n_wesolowski, proof_bytes,
         )
 
         if not reward_puzzlehash:
-            reward_puzzlehash = fee_target
+            reward_puzzlehash = self.fee_target
 
         # Use the extension data to create different blocks based on header hash
         extension_data: bytes32 = bytes32([random.randint(0, 255) for _ in range(32)])
@@ -457,7 +529,7 @@ class BlockTools:
         fee_reward = uint64(block_rewards.calculate_base_fee(height) + fees)
 
         coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
-            height, reward_puzzlehash, coinbase_reward, pool_sk
+            height, reward_puzzlehash, coinbase_reward, selected_pool_sk
         )
 
         parent_coin_name = std_hash(std_hash(height))
@@ -505,7 +577,9 @@ class BlockTools:
         removal_root = removal_merkle_set.get_root()
 
         generator_hash = (
-            transactions.get_hash() if transactions is not None else bytes32([0] * 32)
+            transactions.get_tree_hash()
+            if transactions is not None
+            else bytes32([0] * 32)
         )
         filter_hash = std_hash(encoded) if encoded is not None else bytes32([0] * 32)
 
@@ -528,7 +602,9 @@ class BlockTools:
             generator_hash,
         )
 
-        header_hash_sig: PrependSignature = plot_sk.sign_prepend(header_data.get_hash())
+        header_hash_sig: PrependSignature = selected_plot_sk.sign_prepend(
+            header_data.get_hash()
+        )
 
         header: Header = Header(header_data, header_hash_sig)
 
@@ -543,5 +619,16 @@ class BlockTools:
 # This might take a while, using the python VDF implementation.
 # Run by doing python -m tests.block_tools
 if __name__ == "__main__":
-    bt = BlockTools()
-    print(bytes(bt.create_genesis_block({}, bytes([1] * 32), b"0")))
+    bt = BlockTools(real_plots=True)
+    print(
+        bytes(
+            bt.create_genesis_block(
+                {},
+                bytes([2] * 32),
+                b"0",
+                bytes.fromhex(
+                    "a4259182b4d8e0af21331fc5be2681f953400b6726fa4095e3b91ae8f005a836"
+                ),
+            )
+        )
+    )

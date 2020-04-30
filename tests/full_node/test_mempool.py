@@ -1,7 +1,9 @@
 import asyncio
 from time import time
+from typing import List
 
 import pytest
+from clvm.casts import int_to_bytes
 
 from src.server.outbound_message import OutboundMessage
 from src.protocols import full_node_protocol
@@ -672,3 +674,217 @@ class TestMempool:
         )
 
         assert mempool_bundle is None
+
+    @pytest.mark.asyncio
+    async def test_assert_fee_condition(self, two_nodes):
+        num_blocks = 2
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        block = blocks[1]
+
+        for b in blocks:
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(b)
+            ):
+                pass
+
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None,)
+        dic = {cvp.opcode: [cvp]}
+
+        spend_bundle1 = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.header.data.coinbase, dic, 10
+        )
+
+        assert spend_bundle1 is not None
+
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
+            spend_bundle1
+        )
+
+        outbound_messages: List[OutboundMessage] = []
+        async for outbound in full_node_1.respond_transaction(tx1):
+            outbound_messages.append(outbound)
+
+        new_transaction = False
+        for msg in outbound_messages:
+            if msg.message.function == "new_transaction":
+                new_transaction = True
+
+        assert new_transaction == True
+
+        mempool_bundle = full_node_1.mempool_manager.get_spendbundle(
+            spend_bundle1.name()
+        )
+
+        assert mempool_bundle is not None
+
+    @pytest.mark.asyncio
+    async def test_assert_fee_condition_wrong_fee(self, two_nodes):
+        num_blocks = 2
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        block = blocks[1]
+
+        for b in blocks:
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(b)
+            ):
+                pass
+
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None,)
+        dic = {cvp.opcode: [cvp]}
+
+        spend_bundle1 = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.header.data.coinbase, dic, 9
+        )
+
+        assert spend_bundle1 is not None
+
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
+            spend_bundle1
+        )
+
+        outbound_messages: List[OutboundMessage] = []
+        async for outbound in full_node_1.respond_transaction(tx1):
+            outbound_messages.append(outbound)
+
+        new_transaction = False
+        for msg in outbound_messages:
+            if msg.message.function == "new_transaction":
+                new_transaction = True
+
+        assert new_transaction == False
+
+        mempool_bundle = full_node_1.mempool_manager.get_spendbundle(
+            spend_bundle1.name()
+        )
+
+        assert mempool_bundle is None
+
+    @pytest.mark.asyncio
+    async def test_stealing_fee(self, two_nodes):
+        num_blocks = 2
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
+
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, blocks, 10, b"", receiver_puzzlehash
+        )
+
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        block = blocks[1]
+        wallet_2_block = blocks[3]
+
+        for b in blocks:
+            async for _ in full_node_1.respond_block(
+                full_node_protocol.RespondBlock(b)
+            ):
+                pass
+
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None,)
+        dic = {cvp.opcode: [cvp]}
+
+        fee = 9
+        spend_bundle1 = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.header.data.coinbase, dic, fee
+        )
+
+        wallet_2_coinbase = wallet_2_block.header.data.coinbase
+        steal_fee_spendbundle = wallet_receiver.generate_signed_transaction(
+            wallet_2_coinbase.amount + fee, receiver_puzzlehash, wallet_2_coinbase
+        )
+
+        assert spend_bundle1 is not None
+        assert steal_fee_spendbundle is not None
+
+        combined = SpendBundle.aggregate([spend_bundle1, steal_fee_spendbundle])
+
+        assert combined.fees() == 0
+
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
+            spend_bundle1
+        )
+
+        outbound_messages: List[OutboundMessage] = []
+        async for outbound in full_node_1.respond_transaction(tx1):
+            outbound_messages.append(outbound)
+
+        new_transaction = False
+        for msg in outbound_messages:
+            if msg.message.function == "new_transaction":
+                new_transaction = True
+
+        assert new_transaction == False
+
+        mempool_bundle = full_node_1.mempool_manager.get_spendbundle(
+            spend_bundle1.name()
+        )
+
+        assert mempool_bundle is None
+
+    @pytest.mark.asyncio
+    async def test_double_spend_same_bundle(self, two_nodes):
+        num_blocks = 2
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        block = blocks[1]
+        async for _ in full_node_1.respond_block(
+            full_node_protocol.RespondBlock(block)
+        ):
+            pass
+
+        spend_bundle1 = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, block.header.data.coinbase
+        )
+
+        assert spend_bundle1 is not None
+
+        other_receiver = WalletTool()
+        spend_bundle2 = wallet_a.generate_signed_transaction(
+            1000, other_receiver.get_new_puzzlehash(), block.header.data.coinbase
+        )
+
+        assert spend_bundle2 is not None
+
+        spend_bundle_combined = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
+
+        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
+            spend_bundle_combined
+        )
+        messages = []
+        async for outbound in full_node_1.respond_transaction(tx):
+            messages.append(outbound)
+
+        sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle_combined.name())
+        assert sb is None

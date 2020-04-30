@@ -100,20 +100,20 @@ class TestTransactions:
             == funds
         )
 
-        spend_bundle = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
+        tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
             10, ph1, 0
         )
-        await wallet_0.wallet_state_manager.main_wallet.push_transaction(spend_bundle)
+        await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
         await asyncio.sleep(3)
 
-        bundle0 = full_node_0.mempool_manager.get_spendbundle(spend_bundle.name())
-        bundle1 = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
-        bundle2 = full_node_2.mempool_manager.get_spendbundle(spend_bundle.name())
+        bundle0 = full_node_0.mempool_manager.get_spendbundle(tx.name())
+        bundle1 = full_node_1.mempool_manager.get_spendbundle(tx.name())
+        bundle2 = full_node_2.mempool_manager.get_spendbundle(tx.name())
 
-        assert spend_bundle == bundle0
-        assert spend_bundle == bundle1
-        assert spend_bundle == bundle2
+        assert tx.spend_bundle == bundle0
+        assert tx.spend_bundle == bundle1
+        assert tx.spend_bundle == bundle2
 
         # Farm another block
         for i in range(1, 8):
@@ -178,19 +178,19 @@ class TestTransactions:
             == funds
         )
 
-        spend_bundle = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
+        tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
             10, token_bytes(), 0
         )
-        await wallet_0.wallet_state_manager.main_wallet.push_transaction(spend_bundle)
+        await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
         await asyncio.sleep(2)
 
-        bundle0 = full_node_0.mempool_manager.get_spendbundle(spend_bundle.name())
-        bundle1 = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
-        bundle2 = full_node_2.mempool_manager.get_spendbundle(spend_bundle.name())
+        bundle0 = full_node_0.mempool_manager.get_spendbundle(tx.name())
+        bundle1 = full_node_1.mempool_manager.get_spendbundle(tx.name())
+        bundle2 = full_node_2.mempool_manager.get_spendbundle(tx.name())
 
-        assert spend_bundle == bundle0
-        assert spend_bundle == bundle1
+        assert tx.spend_bundle == bundle0
+        assert tx.spend_bundle == bundle1
         assert None is bundle2
 
         # make a final connection.
@@ -200,10 +200,10 @@ class TestTransactions:
 
         await asyncio.sleep(2)
 
-        bundle0 = full_node_0.mempool_manager.get_spendbundle(spend_bundle.name())
-        bundle1 = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
-        bundle2 = full_node_2.mempool_manager.get_spendbundle(spend_bundle.name())
+        bundle0 = full_node_0.mempool_manager.get_spendbundle(tx.name())
+        bundle1 = full_node_1.mempool_manager.get_spendbundle(tx.name())
+        bundle2 = full_node_2.mempool_manager.get_spendbundle(tx.name())
 
-        assert spend_bundle == bundle0
-        assert spend_bundle == bundle1
-        assert spend_bundle == bundle2
+        assert tx.spend_bundle == bundle0
+        assert tx.spend_bundle == bundle1
+        assert tx.spend_bundle == bundle2

@@ -48,7 +48,7 @@
             <a class="nav-link d-flex justify-content-between align-items-center active" data-toggle="pill"
               href="#" role="tab" aria-selected="true">
               <div class="d-flex">
-                <img src="assets/img/circle-cropped.png" alt="btc">
+                <img src="assets/img/circle-cropped.png">
                 <div>
                   <h2>CH</h2>
                   <p>Chia</p>
@@ -59,12 +59,39 @@
                 <p class="text-right" id="pending_wallet_id_1"><i class="icon ion-md-lock"></i> 0.00</p>
               </div>
             </a>
+            <a class="nav-link d-flex justify-content-between align-items-center" data-toggle="pill" href="./create_wallet.html"
+              role="tab" aria-selected="true">
+              <div class="d-flex">
+                <div>
+                  <h2> + Create New Wallet</h2>
+                </div>
+              </div>
+              <div>
+                <p class="text-right"><i class="icon ion-md-plus"></i></p>
+              </div>
+            </a>
+          </div>
+
+          <div class="nav flex-column nav-pills" style="margin-top:60px" role="tablist" id="trade_tab" aria-orientation="vertical">
+            <a class="nav-link d-flex justify-content-between align-items-center" data-toggle="pill"
+              href="./trade_manager.html" role="tab" aria-selected="true">
+              <div class="d-flex ">
+                <div  style="width:20px;height:30px;margin-right:5px;">
+                  <i class="icon ion-md-swap"></i>
+                </div>
+                <div>
+                  <h2>Trade Manager</h2>
+                </div>
+              </div>
+              <div>
+              </div>
+            </a>
           </div>
 
         </div>
         <div class="col-md-12 col-lg-8">
           <div class="tab-content">
-            <div class="tab-pane fade show active" id="coinBTC" role="tabpanel">
+            <div class="tab-pane fade show active" role="tabpanel">
               <h2 class="wallet-title">Balances</h2>
               <ul>
                 <li class="d-flex justify-content-between align-items-center">
@@ -87,7 +114,7 @@
                 </li>
               </ul>
               <div class="wallet-address">
-                <p>Receiver Address:</p>
+                <p>Recipient Address:</p>
               <div class="input-group" style="padding-top:0px">
               <input type="text" class="form-control"  id="receiver_puzzle_hash" value="">
               </div>/

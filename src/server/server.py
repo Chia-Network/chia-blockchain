@@ -1,7 +1,7 @@
 import asyncio
 import concurrent
 import logging
-import pkg_resources
+from pathlib import Path
 import random
 import ssl
 from secrets import token_bytes
@@ -22,6 +22,7 @@ from src.server.outbound_message import Delivery, Message, NodeType, OutboundMes
 from src.types.peer_info import PeerInfo
 from src.types.sized_bytes import bytes32
 from src.util import partial_func
+from src.util.config import config_path_for_filename
 from src.util.errors import Err, ProtocolError
 from src.util.ints import uint16
 from src.util.network import create_node_id
@@ -36,6 +37,8 @@ class ChiaServer:
         local_type: NodeType,
         ping_interval: int,
         network_id: str,
+        root_path: Path,
+        config: Dict,
         name: str = None,
     ):
         # Keeps track of all connections to and from this node.
@@ -75,24 +78,22 @@ class ChiaServer:
         else:
             self.log = logging.getLogger(__name__)
 
-    def loadSSLConfig(self, tipo: str, config: Dict = None):
+        self.root_path = root_path
+        self.config = config
+
+    def loadSSLConfig(self, tipo: str, path: Path, config: Dict):
         if config is not None:
             try:
                 return (
-                    config[tipo]["crt"],
-                    config[tipo]["key"],
-                    config[tipo]["pass"],
-                    config[tipo]["ca"],
+                    config_path_for_filename(path, config[tipo]["crt"]),
+                    config_path_for_filename(path, config[tipo]["key"]),
                 )
             except Exception:
                 pass
-        dummy_crt = pkg_resources.resource_filename(__name__, "dummy.crt")
-        dummy_key = pkg_resources.resource_filename(__name__, "dummy.key")
-        return dummy_crt, dummy_key, "1234", None
 
-    async def start_server(
-        self, on_connect: OnConnectFunc = None, config: Dict = None,
-    ) -> bool:
+        return None, None
+
+    async def start_server(self, on_connect: OnConnectFunc = None) -> bool:
         """
         Launches a listening server on host and port specified, to connect to NodeType nodes. On each
         connection, the on_connect asynchronous generator will be called, and responses will be sent.
@@ -102,14 +103,18 @@ class ChiaServer:
             return False
 
         ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH)
-        certfile, keyfile, password, cafile = self.loadSSLConfig("server_ssl", config)
-        ssl_context.load_cert_chain(
-            certfile=certfile, keyfile=keyfile, password=password
+        private_cert, private_key = self.loadSSLConfig(
+            "ssl", self.root_path, self.config
         )
-        if cafile is None:
+        ssl_context.load_cert_chain(certfile=private_cert, keyfile=private_key)
+        ssl_context.load_verify_locations(private_cert)
+
+        if (
+            self._local_type == NodeType.FULL_NODE
+            or self._local_type == NodeType.INTRODUCER
+        ):
             ssl_context.verify_mode = ssl.CERT_NONE
         else:
-            ssl_context.load_verify_locations(cafile=cafile)
             ssl_context.verify_mode = ssl.CERT_REQUIRED
 
         self._server, aiter = await start_server_aiter(
@@ -139,7 +144,7 @@ class ChiaServer:
         self,
         target_node: PeerInfo,
         on_connect: OnConnectFunc = None,
-        config: Dict = None,
+        auth: bool = False,
     ) -> bool:
         """
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
@@ -158,15 +163,16 @@ class ChiaServer:
             return False
 
         ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH)
-        certfile, keyfile, password, cafile = self.loadSSLConfig("client_ssl", config)
-        ssl_context.load_cert_chain(
-            certfile=certfile, keyfile=keyfile, password=password
+        private_cert, private_key = self.loadSSLConfig(
+            "ssl", self.root_path, self.config
         )
-        if cafile is None:
+
+        ssl_context.load_cert_chain(certfile=private_cert, keyfile=private_key)
+        if not auth:
             ssl_context.verify_mode = ssl.CERT_NONE
         else:
-            ssl_context.load_verify_locations(cafile=cafile)
             ssl_context.verify_mode = ssl.CERT_REQUIRED
+            ssl_context.load_verify_locations(private_cert)
 
         try:
             reader, writer = await asyncio.open_connection(
@@ -314,6 +320,7 @@ class ChiaServer:
         async def serve_forever():
             async for connection, message in expanded_messages_aiter:
                 if message is None:
+                    # Does not ban the peer, this is just a graceful close of connection.
                     self.global_connections.close(connection, True)
                     continue
                 self.log.info(
@@ -518,6 +525,7 @@ class ChiaServer:
         except Exception:
             tb = traceback.format_exc()
             self.log.error(f"Error, closing connection {connection}. {tb}")
+            # TODO: Exception means peer gave us invalid information, so ban this peer.
             self.global_connections.close(connection)
 
     async def expand_outbound_messages(
@@ -556,4 +564,5 @@ class ChiaServer:
                     else:
                         yield (peer, outbound_message.message)
         elif outbound_message.delivery_method == Delivery.CLOSE:
+            # Close the connection but don't ban the peer
             yield (connection, None)

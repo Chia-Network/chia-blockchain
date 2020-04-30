@@ -59,6 +59,10 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
         test_constants_copy[k] = dic[k]
 
     db_path = Path(db_name)
+    db_path = root_path / f"{db_name}"
+    if db_path.exists():
+        db_path.unlink()
+
     connection = await aiosqlite.connect(db_path)
     store_1 = await FullNodeStore.create(connection)
     await store_1._clear_database()
@@ -78,6 +82,7 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
     network_id = net_config.get("network_id")
 
     config = load_config(root_path, "config.yaml", "full_node")
+    config["database_path"] = str(db_path)
 
     if introducer_port is not None:
         config["introducer_peer"]["host"] = "127.0.0.1"
@@ -99,6 +104,8 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
         NodeType.FULL_NODE,
         ping_interval,
         network_id,
+        bt.root_path,
+        config,
         "full-node-simulator-server",
     )
     _ = await server_1.start_server(full_node_1._on_connect)
@@ -111,7 +118,7 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
     server_1.close_all()
     await server_1.await_closed()
     await connection.close()
-    Path(db_name).unlink()
+    db_path.unlink()
 
 
 async def setup_full_node(db_name, port, introducer_port=None, dic={}):
@@ -155,7 +162,13 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     assert ping_interval is not None
     assert network_id is not None
     server_1 = ChiaServer(
-        port, full_node_1, NodeType.FULL_NODE, ping_interval, network_id
+        port,
+        full_node_1,
+        NodeType.FULL_NODE,
+        ping_interval,
+        network_id,
+        root_path,
+        config,
     )
     _ = await server_1.start_server(full_node_1._on_connect)
     full_node_1._set_server(server_1)
@@ -179,7 +192,7 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
-    db_path = root_path / ("test-wallet-db%s.db" % token_bytes(32).hex())
+    db_path = root_path / f"test-wallet-db-{port}.db"
     if db_path.exists():
         db_path.unlink()
     config["database_path"] = str(db_path)
@@ -194,7 +207,14 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
-        port, wallet, NodeType.WALLET, ping_interval, network_id, "wallet-server"
+        port,
+        wallet,
+        NodeType.WALLET,
+        ping_interval,
+        network_id,
+        root_path,
+        config,
+        "wallet-server",
     )
     wallet.set_server(server)
 
@@ -217,8 +237,16 @@ async def setup_harvester(port, dic={}):
     network_id = net_config.get("network_id")
     assert ping_interval is not None
     assert network_id is not None
-    server = ChiaServer(port, harvester, NodeType.HARVESTER, ping_interval, network_id)
-    _ = await server.start_server(None)
+    server = ChiaServer(
+        port,
+        harvester,
+        NodeType.HARVESTER,
+        ping_interval,
+        network_id,
+        root_path,
+        config,
+        f"harvester_server_{port}",
+    )
 
     yield (harvester, server)
 
@@ -230,7 +258,9 @@ async def setup_harvester(port, dic={}):
 
 async def setup_farmer(port, dic={}):
     config = load_config(root_path, "config.yaml", "farmer")
-    pool_sk = bt.pool_sk
+    pool_sk = blspy.PrivateKey.from_bytes(
+        bytes.fromhex(list(bt.plot_config["plots"].values())[0]["pool_sk"])
+    )
     pool_target = create_puzzlehash_for_pk(
         BLSPublicKey(bytes(pool_sk.get_public_key()))
     )
@@ -256,7 +286,16 @@ async def setup_farmer(port, dic={}):
     farmer = Farmer(config, key_config, test_constants_copy)
     assert ping_interval is not None
     assert network_id is not None
-    server = ChiaServer(port, farmer, NodeType.FARMER, ping_interval, network_id)
+    server = ChiaServer(
+        port,
+        farmer,
+        NodeType.FARMER,
+        ping_interval,
+        network_id,
+        root_path,
+        config,
+        f"farmer_server_{port}",
+    )
     _ = await server.start_server(farmer._on_connect)
 
     yield (farmer, server)
@@ -276,7 +315,13 @@ async def setup_introducer(port, dic={}):
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
-        port, introducer, NodeType.INTRODUCER, ping_interval, network_id
+        port,
+        introducer,
+        NodeType.INTRODUCER,
+        ping_interval,
+        network_id,
+        bt.root_path,
+        config,
     )
     _ = await server.start_server(None)
 
@@ -307,8 +352,15 @@ async def setup_timelord(port, dic={}):
     network_id = net_config.get("network_id")
     assert ping_interval is not None
     assert network_id is not None
-    server = ChiaServer(port, timelord, NodeType.TIMELORD, ping_interval, network_id)
-    _ = await server.start_server(None, config)
+    server = ChiaServer(
+        port,
+        timelord,
+        NodeType.TIMELORD,
+        ping_interval,
+        network_id,
+        bt.root_path,
+        config,
+    )
 
     coro = asyncio.start_server(
         timelord._handle_client,
@@ -318,6 +370,9 @@ async def setup_timelord(port, dic={}):
     )
 
     vdf_server = asyncio.ensure_future(coro)
+
+    timelord.set_server(server)
+    timelord._start_bg_tasks()
 
     async def run_timelord():
         async for msg in timelord._manage_discriminant_queue():
@@ -376,8 +431,8 @@ async def setup_node_and_wallet(dic={}):
 async def setup_node_and_two_wallets(dic={}):
     node_iters = [
         setup_full_node("blockchain_test.db", 21234, dic=dic),
-        setup_wallet_node(21235, key_seed=b"Test node 1", dic=dic),
-        setup_wallet_node(21236, key_seed=b"Test node 2", dic=dic),
+        setup_wallet_node(21235, key_seed=b"a", dic=dic),
+        setup_wallet_node(21236, key_seed=b"b", dic=dic),
     ]
 
     full_node, s1 = await node_iters[0].__anext__()
@@ -426,9 +481,9 @@ async def setup_simulators_and_wallets(
 async def setup_full_system(dic={}):
     node_iters = [
         setup_introducer(21233),
-        setup_harvester(21234),
-        setup_farmer(21235),
-        setup_timelord(21236),
+        setup_harvester(21234, dic),
+        setup_farmer(21235, dic),
+        setup_timelord(21236, dic),
         setup_vdf_clients(8000),
         setup_full_node("blockchain_test.db", 21237, 21233, dic),
         setup_full_node("blockchain_test_2.db", 21238, 21233, dic),
@@ -443,14 +498,12 @@ async def setup_full_system(dic={}):
     node2, node2_server = await node_iters[6].__anext__()
 
     await harvester_server.start_client(
-        PeerInfo("127.0.0.1", uint16(farmer_server._port)), None
+        PeerInfo("127.0.0.1", uint16(farmer_server._port)), auth=True
     )
-    await farmer_server.start_client(
-        PeerInfo("127.0.0.1", uint16(node1_server._port)), None
-    )
+    await farmer_server.start_client(PeerInfo("127.0.0.1", uint16(node1_server._port)))
 
     await timelord_server.start_client(
-        PeerInfo("127.0.0.1", uint16(node1_server._port)), None
+        PeerInfo("127.0.0.1", uint16(node1_server._port))
     )
 
     yield (node1, node2)

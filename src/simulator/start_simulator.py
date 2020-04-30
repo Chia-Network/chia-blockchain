@@ -31,7 +31,7 @@ async def main():
     net_config = load_config(root_path, "config.yaml")
     config = load_config_cli(root_path, "config.yaml", "full_node")
     setproctitle("chia_full_node")
-    initialize_logging("FullNode %(name)-23s", config["logging"])
+    initialize_logging("FullNode %(name)-23s", config["logging"], root_path)
 
     log = logging.getLogger(__name__)
     server_closed = False
@@ -70,10 +70,16 @@ async def main():
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
-        config["port"], full_node, NodeType.FULL_NODE, ping_interval, network_id
+        config["port"],
+        full_node,
+        NodeType.FULL_NODE,
+        ping_interval,
+        network_id,
+        DEFAULT_ROOT_PATH,
+        config,
     )
     full_node._set_server(server)
-    _ = await server.start_server(full_node._on_connect, config)
+    _ = await server.start_server(full_node._on_connect)
     rpc_cleanup = None
 
     def master_close_cb():
@@ -91,8 +97,11 @@ async def main():
             full_node, master_close_cb, config["rpc_port"]
         )
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
+    try:
+        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
+    except NotImplementedError:
+        log.info("signal handlers unsupported")
 
     log.info("Waiting to connect to some peers...")
     await asyncio.sleep(3)

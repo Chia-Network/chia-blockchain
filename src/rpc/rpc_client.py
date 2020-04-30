@@ -6,7 +6,7 @@ from src.util.byte_types import hexstr_to_bytes
 from src.types.full_block import FullBlock
 from src.types.header import Header
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint16
+from src.util.ints import uint16, uint32
 from src.types.coin_record import CoinRecord
 
 
@@ -51,6 +51,17 @@ class RpcClient:
             raise
         return FullBlock.from_json_dict(response)
 
+    async def get_header_by_height(self, header_height) -> Optional[Header]:
+        try:
+            response = await self.fetch(
+                "get_header_by_height", {"height": header_height}
+            )
+        except aiohttp.client_exceptions.ClientResponseError as e:
+            if e.message == "Not Found":
+                return None
+            raise
+        return Header.from_json_dict(response)
+
     async def get_header(self, header_hash) -> Optional[Header]:
         try:
             response = await self.fetch(
@@ -61,6 +72,10 @@ class RpcClient:
                 return None
             raise
         return Header.from_json_dict(response)
+
+    async def get_unfinished_block_headers(self, height: uint32) -> List[Header]:
+        response = await self.fetch("get_unfinished_block_headers", {"height": height})
+        return [Header.from_json_dict(r) for r in response]
 
     async def get_connections(self) -> List[Dict]:
         response = await self.fetch("get_connections", {})

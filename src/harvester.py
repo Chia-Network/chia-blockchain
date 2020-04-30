@@ -1,13 +1,15 @@
 import logging
 import asyncio
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, List
+import concurrent
 
 from blspy import PrependSignature, PrivateKey, PublicKey, Util
 
 from chiapos import DiskProver
 from src.protocols import harvester_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
+from src.types.peer_info import PeerInfo
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
@@ -16,6 +18,46 @@ from src.util.ints import uint8
 from src.util.path import path_from_root
 
 log = logging.getLogger(__name__)
+
+
+def load_plots(
+    config_file: Dict, plot_config_file: Dict, pool_pubkeys: List[PublicKey]
+) -> Dict[Path, DiskProver]:
+    provers: Dict[Path, DiskProver] = {}
+    for partial_filename_str, plot_config in plot_config_file["plots"].items():
+        plot_root = path_from_root(DEFAULT_ROOT_PATH, config_file.get("plot_root", "."))
+        partial_filename = plot_root / partial_filename_str
+        potential_filenames = [
+            partial_filename,
+            path_from_root(plot_root, partial_filename_str),
+        ]
+        pool_pubkey = PublicKey.from_bytes(bytes.fromhex(plot_config["pool_pk"]))
+
+        # Only use plots that correct pools associated with them
+        if pool_pubkey not in pool_pubkeys:
+            log.warning(
+                f"Plot {partial_filename} has a pool key that is not in the farmer's pool_pk list."
+            )
+            continue
+
+        found = False
+        failed_to_open = False
+        for filename in potential_filenames:
+            if filename.exists():
+                try:
+                    provers[partial_filename_str] = DiskProver(str(filename))
+                except ValueError:
+                    log.error(f"Failed to open file {filename}.")
+                    failed_to_open = True
+                    break
+                log.info(
+                    f"Farming plot {filename} of size {provers[partial_filename_str].get_size()}"
+                )
+                found = True
+                break
+        if not found and not failed_to_open:
+            log.warning(f"Plot at {potential_filenames} does not exist.")
+    return provers
 
 
 class Harvester:
@@ -30,6 +72,7 @@ class Harvester:
         self.challenge_hashes: Dict[bytes32, Tuple[bytes32, Path, uint8]] = {}
         self._plot_notification_task = asyncio.create_task(self._plot_notification())
         self._is_shutdown: bool = False
+        self.server = None
 
     async def _plot_notification(self):
         """
@@ -38,10 +81,47 @@ class Harvester:
         counter = 1
         while not self._is_shutdown:
             if counter % 600 == 0:
+                found = False
                 for filename, prover in self.provers.items():
                     log.info(f"Farming plot {filename} of size {prover.get_size()}")
+                    found = True
+                if not found:
+                    log.warning(
+                        "Not farming any plots on this harvester. Check your configuration."
+                    )
             await asyncio.sleep(1)
             counter += 1
+
+    def set_server(self, server):
+        self.server = server
+
+    def _start_bg_tasks(self):
+        """
+        Start a background task that checks connection and reconnects periodically to the farmer.
+        """
+
+        farmer_peer = PeerInfo(
+            self.config["farmer_peer"]["host"], self.config["farmer_peer"]["port"]
+        )
+
+        async def connection_check():
+            while not self._is_shutdown:
+                if self.server is not None:
+                    farmer_retry = True
+
+                    for connection in self.server.global_connections.get_connections():
+                        if connection.get_peer_info() == farmer_peer:
+                            farmer_retry = False
+
+                    if farmer_retry:
+                        log.info(f"Reconnecting to farmer {farmer_retry}")
+                        if not await self.server.start_client(
+                            farmer_peer, None, auth=True
+                        ):
+                            await asyncio.sleep(1)
+                await asyncio.sleep(30)
+
+        self.reconnect_task = asyncio.create_task(connection_check())
 
     def _shutdown(self):
         self._is_shutdown = True
@@ -58,41 +138,13 @@ class Harvester:
         which must be put into the plots, before the plotting process begins. We cannot
         use any plots which don't have one of the pool keys.
         """
-        for partial_filename_str, plot_config in self.plot_config["plots"].items():
-            plot_root = path_from_root(
-                DEFAULT_ROOT_PATH, self.config.get("plot_root", ".")
+        self.provers = load_plots(
+            self.config, self.plot_config, harvester_handshake.pool_pubkeys
+        )
+        if len(self.provers) == 0:
+            log.warning(
+                "Not farming any plots on this harvester. Check your configuration."
             )
-            partial_filename = plot_root / partial_filename_str
-            potential_filenames = [
-                partial_filename,
-                path_from_root(plot_root, partial_filename_str),
-            ]
-            pool_pubkey = PublicKey.from_bytes(bytes.fromhex(plot_config["pool_pk"]))
-
-            # Only use plots that correct pools associated with them
-            if pool_pubkey not in harvester_handshake.pool_pubkeys:
-                log.warning(
-                    f"Plot {partial_filename} has a pool key that is not in the farmer's pool_pk list."
-                )
-                continue
-
-            found = False
-            failed_to_open = False
-            for filename in potential_filenames:
-                if filename.exists():
-                    try:
-                        self.provers[partial_filename_str] = DiskProver(str(filename))
-                    except ValueError:
-                        log.error(f"Failed to open file {filename}.")
-                        failed_to_open = True
-                        break
-                    log.info(
-                        f"Farming plot {filename} of size {self.provers[partial_filename_str].get_size()}"
-                    )
-                    found = True
-                    break
-            if not found and not failed_to_open:
-                log.warning(f"Plot at {potential_filenames} does not exist.")
 
     @api_request
     async def new_challenge(self, new_challenge: harvester_protocol.NewChallenge):
@@ -107,8 +159,13 @@ class Harvester:
             raise ValueError(
                 f"Invalid challenge size {challenge_size}, 32 was expected"
             )
-        all_responses = []
-        for filename, prover in self.provers.items():
+
+        loop = asyncio.get_running_loop()
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+
+        def blocking_lookup(filename: Path, prover: DiskProver) -> Optional[List]:
+            # Uses the DiskProver object to lookup qualities. This is a blocking call,
+            # so it should be run in a threadpool.
             try:
                 quality_strings = prover.get_qualities_for_challenge(
                     new_challenge.challenge_hash
@@ -125,6 +182,16 @@ class Harvester:
                         f"Retry-Error using prover object on {filename}. Giving up."
                     )
                     quality_strings = None
+            return quality_strings
+
+        async def lookup_challenge(
+            filename: Path, prover: DiskProver
+        ) -> List[harvester_protocol.ChallengeResponse]:
+            # Exectures a DiskProverLookup in a threadpool, and returns responses
+            all_responses: List[harvester_protocol.ChallengeResponse] = []
+            quality_strings = await loop.run_in_executor(
+                executor, blocking_lookup, filename, prover
+            )
             if quality_strings is not None:
                 for index, quality_str in enumerate(quality_strings):
                     self.challenge_hashes[quality_str] = (
@@ -136,12 +203,22 @@ class Harvester:
                         new_challenge.challenge_hash, quality_str, prover.get_size()
                     )
                     all_responses.append(response)
-        for response in all_responses:
-            yield OutboundMessage(
-                NodeType.FARMER,
-                Message("challenge_response", response),
-                Delivery.RESPOND,
-            )
+            return all_responses
+
+        awaitables = [
+            lookup_challenge(filename, prover)
+            for filename, prover in self.provers.items()
+        ]
+
+        # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
+        for sublist_awaitable in asyncio.as_completed(awaitables):
+            for response in await sublist_awaitable:
+                yield OutboundMessage(
+                    NodeType.FARMER,
+                    Message("challenge_response", response),
+                    Delivery.RESPOND,
+                )
+        executor.shutdown(wait=False)
 
     @api_request
     async def request_proof_of_space(

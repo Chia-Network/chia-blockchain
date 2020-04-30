@@ -20,6 +20,7 @@ from src.protocols import (
     timelord_protocol,
     wallet_protocol,
 )
+from src.protocols.wallet_protocol import GeneratorResponse
 from src.types.mempool_item import MempoolItem
 from src.util.merkle_set import MerkleSet
 from src.util.bundle_tools import best_solution_program
@@ -228,7 +229,7 @@ class FullNode:
                 # The first time connecting to introducer, keep trying to connect
                 if self._num_needed_peers():
                     if not await self.server.start_client(
-                        introducer_peerinfo, on_connect, self.config
+                        introducer_peerinfo, on_connect
                     ):
                         await asyncio.sleep(5)
                         continue
@@ -253,6 +254,7 @@ class FullNode:
         self.log.info("Waiting to receive tips from peers.")
         self.store.set_waiting_for_tips(True)
         # TODO: better way to tell that we have finished receiving tips
+        # TODO: fix DOS issue. Attacker can request syncing to an invalid blockchain
         await asyncio.sleep(5)
         highest_weight: uint128 = uint128(0)
         tip_block: FullBlock
@@ -897,7 +899,7 @@ class FullNode:
         for block in blocks:
             assert block.proof_of_time is not None
             if (
-                block.proof_of_time.witness_type == 1
+                block.proof_of_time.witness_type == 0
                 and block.proof_of_time.challenge_hash
                 == request_compact_proof_of_time.challenge_hash
                 and block.proof_of_time.number_of_iterations
@@ -1369,7 +1371,7 @@ class FullNode:
         removal_root = removal_merkle_set.get_root()
 
         generator_hash = (
-            solution_program.get_hash()
+            solution_program.get_tree_hash()
             if solution_program is not None
             else bytes32([0] * 32)
         )
@@ -1776,9 +1778,7 @@ class FullNode:
         self.log.info(f"Trying to connect to peers: {to_connect}")
         tasks = []
         for peer in to_connect:
-            tasks.append(
-                asyncio.create_task(self.server.start_client(peer, None, self.config))
-            )
+            tasks.append(asyncio.create_task(self.server.start_client(peer, None)))
         await asyncio.gather(*tasks)
 
     @api_request
@@ -2120,4 +2120,35 @@ class FullNode:
 
         yield OutboundMessage(
             NodeType.WALLET, Message("respond_additions", response), Delivery.RESPOND,
+        )
+
+    @api_request
+    async def request_generator(
+        self, request: wallet_protocol.RequestGenerator
+    ) -> OutboundMessageGenerator:
+        full_block: Optional[FullBlock] = await self.store.get_block(
+            request.header_hash
+        )
+        if full_block is not None:
+            if full_block.transactions_generator is not None:
+                wrapper = GeneratorResponse(
+                    full_block.height,
+                    full_block.header_hash,
+                    full_block.transactions_generator,
+                )
+                response = wallet_protocol.RespondGenerator(wrapper)
+                yield OutboundMessage(
+                    NodeType.WALLET,
+                    Message("respond_generator", response),
+                    Delivery.RESPOND,
+                )
+                return
+
+        reject = wallet_protocol.RejectGeneratorRequest(
+            request.height, request.header_hash
+        )
+        yield OutboundMessage(
+            NodeType.WALLET,
+            Message("reject_generator_request", reject),
+            Delivery.RESPOND,
         )
