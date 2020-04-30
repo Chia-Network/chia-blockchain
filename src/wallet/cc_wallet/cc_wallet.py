@@ -423,7 +423,7 @@ class CCWallet:
         if exclude is None:
             exclude = []
         coins = await self.standard_wallet.select_coins(0, exclude)
-        if coins is None:
+        if coins == set():
             return None
 
         origin = coins.copy().pop()
