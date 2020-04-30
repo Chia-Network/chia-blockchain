@@ -49,7 +49,7 @@ jobs:
 
     - name: Build Windows installer with Wix
       env:
-        version: 0.1.10 # TODO Need to create this from setuptools_scm for Windows
+        version: 0.1.11 # TODO Need to create this from setuptools_scm for Windows
       working-directory: ${{ github.workspace }}\electron-wix
       run: |
         .\rebuild-all.ps1
