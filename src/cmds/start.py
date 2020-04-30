@@ -17,10 +17,7 @@ def make_parser(parser):
         "group", choices=all_groups(), type=str, nargs="+",
     )
     parser.add_argument(
-        "-r",
-        "--restart",
-        action="store_true",
-        help="Restart of running processes",
+        "-r", "--restart", action="store_true", help="Restart of running processes",
     )
     parser.add_argument(
         "-f",
@@ -39,7 +36,10 @@ def start(args, parser):
             if args.restart or args.force:
                 print("restarting")
                 stop_service(args.root_path, service)
-                while pid_path_for_service(args.root_path, service).is_file() and not args.force:
+                while (
+                    pid_path_for_service(args.root_path, service).is_file()
+                    and not args.force
+                ):
                     # try to avoid race condition
                     # this is pretty hacky
                     time.sleep(1)
