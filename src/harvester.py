@@ -84,7 +84,7 @@ class Harvester:
         self._plot_notification_task = asyncio.create_task(self._plot_notification())
         self._is_shutdown = False
         self.server = None
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=20)
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
         return self
 
     async def _plot_notification(self):
