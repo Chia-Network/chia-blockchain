@@ -34,7 +34,7 @@ from src.util.errors import Err, ConsensusError
 async def get_block_path(full_node: FullNode):
     blocks_list = [(await full_node.blockchain.get_full_tips())[0]]
     while blocks_list[0].height != 0:
-        b = await full_node.store.get_block(blocks_list[0].prev_header_hash)
+        b = await full_node.block_store.get_block(blocks_list[0].prev_header_hash)
         assert b is not None
         blocks_list.insert(0, b)
     return blocks_list
@@ -703,12 +703,12 @@ class TestFullNodeProtocol:
         )
 
         # In sync mode
-        full_node_1.store.set_sync_mode(True)
+        full_node_1.full_node_store.set_sync_mode(True)
         msgs = [
             _ async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks_new[-5]))
         ]
         assert len(msgs) == 0
-        full_node_1.store.set_sync_mode(False)
+        full_node_1.full_node_store.set_sync_mode(False)
 
         # If invalid, do nothing
         block_invalid = FullBlock(

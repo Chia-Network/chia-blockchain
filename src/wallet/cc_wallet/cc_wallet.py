@@ -185,8 +185,8 @@ class CCWallet:
     async def get_confirmed_balance(self) -> uint64:
         record_list: Set[
             WalletCoinRecord
-        ] = await self.wallet_state_manager.wallet_store.get_coin_records_by_spent_and_wallet(
-            False, self.wallet_info.id
+        ] = await self.wallet_state_manager.wallet_store.get_unspent_coins_for_wallet(
+            self.wallet_info.id
         )
 
         amount: uint64 = uint64(0)
@@ -359,9 +359,10 @@ class CCWallet:
         self, height: uint32, header_hash: bytes32, generator: Program, action_id: int
     ):
         """ Notification that wallet has received a generator it asked for. """
-        block: BlockRecord = await self.wallet_state_manager.wallet_store.get_block_record(
-            header_hash
-        )
+        block: Optional[
+            BlockRecord
+        ] = await self.wallet_state_manager.wallet_store.get_block_record(header_hash)
+        assert block is not None
         if block.removals is not None:
             parent_found = await self.search_for_parent_info(generator, block.removals)
             if parent_found:
@@ -499,8 +500,8 @@ class CCWallet:
 
         record_list: Set[
             WalletCoinRecord
-        ] = await self.wallet_state_manager.wallet_store.get_coin_records_by_spent_and_wallet(
-            False, self.wallet_info.id
+        ] = await self.wallet_state_manager.wallet_store.get_unspent_coins_for_wallet(
+            self.wallet_info.id
         )
 
         for record in record_list:

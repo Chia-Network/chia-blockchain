@@ -16,7 +16,7 @@ from src.consensus.pot_iterations import (
     calculate_min_iters_from_iterations,
     calculate_iterations_quality,
 )
-from src.full_node.store import FullNodeStore
+from src.full_node.block_store import BlockStore
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 
@@ -75,15 +75,18 @@ class Blockchain:
     # Genesis block
     genesis: FullBlock
     # Unspent Store
-    unspent_store: CoinStore
+    coin_store: CoinStore
     # Store
-    store: FullNodeStore
+    block_store: BlockStore
     # Coinbase freeze period
     coinbase_freeze: uint32
 
+    # Lock to prevent simultaneous reads and writes
+    lock: asyncio.Lock
+
     @staticmethod
     async def create(
-        unspent_store: CoinStore, store: FullNodeStore, override_constants: Dict = {},
+        coin_store: CoinStore, block_store: BlockStore, override_constants: Dict = {},
     ):
         """
         Initializes a blockchain with the header blocks from disk, assuming they have all been
@@ -91,89 +94,70 @@ class Blockchain:
         in the consensus constants config.
         """
         self = Blockchain()
+        self.lock = asyncio.Lock()  # External lock handled by full node
         self.constants = consensus_constants.copy()
         for key, value in override_constants.items():
             self.constants[key] = value
         self.tips = []
         self.height_to_hash = {}
         self.headers = {}
-
-        self.unspent_store = unspent_store
-        self.store = store
-
+        self.coin_store = coin_store
+        self.block_store = block_store
         self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
         self.coinbase_freeze = self.constants["COINBASE_FREEZE_PERIOD"]
-        result, removed, error_code = await self.receive_block(self.genesis)
-        if result != ReceiveBlockResult.ADDED_TO_HEAD:
-            if error_code is not None:
-                raise ConsensusError(error_code)
-            else:
-                raise RuntimeError(f"Invalid genesis block {self.genesis}")
-
-        start = time.time()
-        headers_input, lca_hash = await self._load_headers_from_store()
-        log.info(f"Read from disk in {time.time() - start}")
-        start = time.time()
-
-        assert self.lca_block is not None
-        if len(headers_input) > 0:
-            self.headers = headers_input
-            sorted_headers = sorted(self.headers.items(), key=lambda b: b[1].height)
-            if lca_hash is not None:
-                # Add all blocks up to the LCA, and set the tip to the LCA
-                assert sorted_headers[-1][0] == lca_hash
-                for _, header in sorted_headers:
-                    self.height_to_hash[header.height] = header.header_hash
-                    self.tips = [header]
-                    self.lca_block = header
-                await self._reconsider_heads(self.lca_block, False)
-            else:
-                for _, header in sorted_headers:
-                    # Reconsider every single header, since we don't have LCA on disk
-                    self.height_to_hash[header.height] = header.header_hash
-                    await self._reconsider_heads(header, False)
-            assert (
-                self.headers[self.height_to_hash[uint32(0)]].get_hash()
-                == self.genesis.header_hash
-            )
-        if len(headers_input) > 1:
-            assert (
-                self.headers[self.height_to_hash[uint32(1)]].prev_header_hash
-                == self.genesis.header_hash
-            )
-        log.info(f"Added to chain in {time.time() - start}")
+        await self._load_chain_from_store()
         return self
 
-    async def _load_headers_from_store(
-        self,
-    ) -> Tuple[Dict[str, Header], Optional[bytes32]]:
+    async def _load_chain_from_store(self,) -> None:
         """
-        Loads headers from disk, into a list of Headers, that can be used
-        to initialize the Blockchain class.
+        Initializes the state of the Blockchain class from the database. Sets the LCA, tips,
+        headers, height_to_hash, and block_store DiffStores.
         """
-        lca_hash: Optional[bytes32] = await self.store.get_lca()
-        seen_blocks: Dict[str, Header] = {}
-        tips: List[Header] = []
-        for header in await self.store.get_headers():
-            if lca_hash is not None:
-                if header.header_hash == lca_hash:
-                    tips = [header]
-            else:
-                if len(tips) == 0 or header.weight > tips[0].weight:
-                    tips = [header]
-            seen_blocks[header.header_hash] = header
+        lca_db: Optional[Header] = await self.block_store.get_lca()
+        tips_db: List[Header] = await self.block_store.get_tips()
+        headers_db: Dict[bytes32, Header] = await self.block_store.get_headers()
 
-        headers = {}
-        if len(tips) > 0:
-            curr: Header = tips[0]
-            reverse_blocks: List[Header] = [curr]
-            while curr.height > 0:
-                curr = seen_blocks[curr.prev_header_hash]
-                reverse_blocks.append(curr)
+        assert (lca_db is None) == (len(tips_db) == 0) == (len(headers_db) == 0)
+        if lca_db is None:
+            result, removed, error_code = await self.receive_block(
+                self.genesis, sync_mode=False
+            )
+            if result != ReceiveBlockResult.ADDED_TO_HEAD:
+                if error_code is not None:
+                    raise ConsensusError(error_code)
+                else:
+                    raise RuntimeError(f"Invalid genesis block {self.genesis}")
+            return
 
-            for block in reversed(reverse_blocks):
-                headers[block.header_hash] = block
-        return headers, lca_hash
+        # Set the state (lca block and tips)
+        self.lca_block = lca_db
+        self.tips = tips_db
+
+        # Find the common ancestor of the tips, and add intermediate blocks to headers
+        cur: List[Header] = self.tips[:]
+        while any(b.header_hash != cur[0].header_hash for b in cur):
+            heights = [b.height for b in cur]
+            i = heights.index(max(heights))
+            self.headers[cur[i].header_hash] = cur[i]
+            cur[i] = headers_db[cur[i].prev_header_hash]
+
+        # Consistency check, tips should have an LCA equal to the DB LCA
+        assert cur[0] == self.lca_block
+
+        # Sets the header for remaining blocks, and height_to_hash dict
+        cur_b: Header = self.lca_block
+        while True:
+            self.headers[cur_b.header_hash] = cur_b
+            self.height_to_hash[cur_b.height] = cur_b.header_hash
+            if cur_b.height == 0:
+                break
+            cur_b = headers_db[cur_b.prev_header_hash]
+
+        # Asserts that the DB genesis block is correct
+        assert cur_b == self.genesis.header
+
+        # Adds the blocks to the db between LCA and tip
+        await self.recreate_diff_stores()
 
     def get_current_tips(self) -> List[Header]:
         """
@@ -185,7 +169,7 @@ class Blockchain:
         """ Return list of FullBlocks that are tips"""
         result: List[FullBlock] = []
         for tip in self.tips:
-            block = await self.store.get_block(tip.header_hash)
+            block = await self.block_store.get_block(tip.header_hash)
             if not block:
                 continue
             result.append(block)
@@ -515,6 +499,7 @@ class Blockchain:
         block: FullBlock,
         pre_validated: bool = False,
         pos_quality_string: bytes32 = None,
+        sync_mode: bool = False,
     ) -> Tuple[ReceiveBlockResult, Optional[Header], Optional[Err]]:
         """
         Adds a new block into the blockchain, if it's valid and connected to the current
@@ -541,8 +526,8 @@ class Blockchain:
         self.headers[block.header_hash] = block.header
 
         # Always immediately add the block to the database, after updating blockchain state
-        await self.store.add_block(block)
-        res, header = await self._reconsider_heads(block.header, genesis)
+        await self.block_store.add_block(block)
+        res, header = await self._reconsider_heads(block.header, genesis, sync_mode)
         if res:
             return ReceiveBlockResult.ADDED_TO_HEAD, header, None
         else:
@@ -698,6 +683,7 @@ class Blockchain:
             if root_error:
                 return (root_error, None)
             if block.header.data.aggregated_signature is not None:
+                log.error("1")
                 return (Err.BAD_AGGREGATE_SIGNATURE, None)
 
         difficulty: uint64
@@ -750,7 +736,7 @@ class Blockchain:
         """
         prev_full_block: Optional[FullBlock]
         if not genesis:
-            prev_full_block = await self.store.get_block(block.prev_header_hash)
+            prev_full_block = await self.block_store.get_block(block.prev_header_hash)
             if prev_full_block is None:
                 return Err.DOES_NOT_EXTEND
         else:
@@ -854,7 +840,7 @@ class Blockchain:
         return True, bytes(pos_quality_string)
 
     async def _reconsider_heads(
-        self, block: Header, genesis: bool
+        self, block: Header, genesis: bool, sync_mode: bool
     ) -> Tuple[bool, Optional[Header]]:
         """
         When a new block is added, this is called, to check if the new block is heavier
@@ -867,11 +853,12 @@ class Blockchain:
                 self.tips.sort(key=lambda b: b.weight, reverse=True)
                 # This will loop only once
                 removed = self.tips.pop()
-            await self._reconsider_lca(genesis)
+            await self.block_store.set_tips([t.header_hash for t in self.tips])
+            await self._reconsider_lca(genesis, sync_mode)
             return True, removed
         return False, None
 
-    async def _reconsider_lca(self, genesis: bool):
+    async def _reconsider_lca(self, genesis: bool, sync_mode: bool):
         """
         Update the least common ancestor of the heads. This is useful, since we can just assume
         there is one block per height before the LCA (and use the height_to_hash dict).
@@ -891,40 +878,37 @@ class Blockchain:
         else:
             self._reconsider_heights(self.lca_block, cur[0])
         self.lca_block = cur[0]
+        await self.block_store.set_lca(self.lca_block.header_hash)
 
         if old_lca is None:
-            full: Optional[FullBlock] = await self.store.get_block(
+            full: Optional[FullBlock] = await self.block_store.get_block(
                 self.lca_block.header_hash
             )
             assert full is not None
-            await self.unspent_store.new_lca(full)
+            await self.coin_store.new_lca(full)
             await self._create_diffs_for_tips(self.lca_block)
-            if not genesis:
-                await self.store.set_lca(self.lca_block.header_hash)
         # If LCA changed update the unspent store
         elif old_lca.header_hash != self.lca_block.header_hash:
             # New LCA is lower height but not the a parent of old LCA (Reorg)
             fork_h = self._find_fork_point_in_chain(old_lca, self.lca_block)
             # Rollback to fork
-            await self.unspent_store.rollback_lca_to_block(fork_h)
+            await self.coin_store.rollback_lca_to_block(fork_h)
 
             # Add blocks between fork point and new lca
             fork_hash = self.height_to_hash[fork_h]
             fork_head = self.headers[fork_hash]
             await self._from_fork_to_lca(fork_head, self.lca_block)
-            if not self.store.get_sync_mode():
+            if not sync_mode:
                 await self.recreate_diff_stores()
-            if not genesis:
-                await self.store.set_lca(self.lca_block.header_hash)
         else:
             # If LCA has not changed just update the difference
-            self.unspent_store.nuke_diffs()
+            self.coin_store.nuke_diffs()
             # Create DiffStore
             await self._create_diffs_for_tips(self.lca_block)
 
     async def recreate_diff_stores(self):
         # Nuke DiffStore
-        self.unspent_store.nuke_diffs()
+        self.coin_store.nuke_diffs()
         # Create DiffStore
         await self._create_diffs_for_tips(self.lca_block)
 
@@ -980,7 +964,7 @@ class Blockchain:
         while True:
             if tip_hash == target.header_hash:
                 break
-            full = await self.store.get_block(tip_hash)
+            full = await self.block_store.get_block(tip_hash)
             if full is None:
                 return
             blocks.append(full)
@@ -988,23 +972,23 @@ class Blockchain:
         if len(blocks) == 0:
             return
         blocks.reverse()
-        await self.unspent_store.new_heads(blocks)
+        await self.coin_store.new_heads(blocks)
 
     async def _from_fork_to_lca(self, fork_point: Header, lca: Header):
-        """ Selects blocks between fork_point and LCA, and then adds them to unspent_store. """
+        """ Selects blocks between fork_point and LCA, and then adds them to coin_store. """
         blocks: List[FullBlock] = []
         tip_hash: bytes32 = lca.header_hash
         while True:
             if tip_hash == fork_point.header_hash:
                 break
-            full = await self.store.get_block(tip_hash)
+            full = await self.block_store.get_block(tip_hash)
             if not full:
                 return
             blocks.append(full)
             tip_hash = full.prev_header_hash
         blocks.reverse()
 
-        await self.unspent_store.add_lcas(blocks)
+        await self.coin_store.add_lcas(blocks)
 
     def _validate_merkle_root(
         self,
@@ -1126,7 +1110,9 @@ class Blockchain:
         additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}
         removals_since_fork: Set[bytes32] = set()
         coinbases_since_fork: Dict[bytes32, uint32] = {}
-        curr: Optional[FullBlock] = await self.store.get_block(block.prev_header_hash)
+        curr: Optional[FullBlock] = await self.block_store.get_block(
+            block.prev_header_hash
+        )
         assert curr is not None
         log.info(f"curr.height is: {curr.height}, fork height is: {fork_h}")
         while curr.height > fork_h:
@@ -1145,7 +1131,7 @@ class Blockchain:
             )
             coinbases_since_fork[curr.header.data.coinbase.name()] = curr.height
             coinbases_since_fork[curr.header.data.fees_coin.name()] = curr.height
-            curr = await self.store.get_block(curr.prev_header_hash)
+            curr = await self.block_store.get_block(curr.prev_header_hash)
             assert curr is not None
 
         removal_coin_records: Dict[bytes32, CoinRecord] = {}
@@ -1159,7 +1145,7 @@ class Blockchain:
                 removal_coin_records[new_unspent.name] = new_unspent
             else:
                 assert prev_header is not None
-                unspent = await self.unspent_store.get_coin_record(rem, prev_header)
+                unspent = await self.coin_store.get_coin_record(rem, prev_header)
                 if unspent is not None and unspent.confirmed_block_index <= fork_h:
                     # Spending something in the current chain, confirmed before fork
                     # (We ignore all coins confirmed after fork)
