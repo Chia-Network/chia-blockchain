@@ -494,7 +494,7 @@ send.addEventListener('click', () => {
         if (puzzle_hash.substring(0,14) == "colour_addr://"){
           colour_id = puzzle_hash.substring(14,78)
           puzzle_hash = puzzle_hash.substring(79)
-          if (colour_id != wallets_details[g_wallet_id]["colour"]){
+          if (colour_id != colour_textfield.innerHTML.split("://")[1]){
             alert("Error the entered address appears to be for a different colour.")
             return
           }
@@ -600,7 +600,7 @@ function get_innerpuzzlehash_response(response) {
     /*
     Called when response is received for get_new_puzzle_hash request
     */
-    colour = wallets_details[g_wallet_id]["colour"]
+    colour = colour_textfield.innerHTML.split("://")[1]
     puzzle_hash = "colour_addr://"
     puzzle_hash = puzzle_hash.concat(colour)
     puzzle_hash = puzzle_hash.concat(":")
