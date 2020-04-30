@@ -29,7 +29,7 @@ async def async_main():
     log = logging.getLogger(__name__)
     setproctitle("chia_harvester")
 
-    harvester = Harvester(config, plot_config)
+    harvester = await Harvester.create(config, plot_config)
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")
     assert ping_interval is not None

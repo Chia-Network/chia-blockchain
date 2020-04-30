@@ -57,7 +57,7 @@ class Farmer:
             [sk.get_public_key() for sk in pool_sks]
         )
         yield OutboundMessage(
-            NodeType.HARVESTER, Message("harvester_handshake", msg), Delivery.BROADCAST
+            NodeType.HARVESTER, Message("harvester_handshake", msg), Delivery.RESPOND
         )
 
     def set_server(self, server):

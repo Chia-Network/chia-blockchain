@@ -89,6 +89,20 @@ def main():
         )
         filename: str = f"plot-{i}-{args.size}-{plot_seed}.dat"
         full_path: Path = args.final_dir / filename
+
+        plot_config = load_config(root_path, plot_config_filename)
+        plot_config_plots_new = deepcopy(plot_config.get("plots", []))
+        filenames = [Path(k).name for k in plot_config_plots_new.keys()]
+        relative_path = make_path_relative(full_path, root_path)
+        already_in_config = (
+            relative_path in plot_config_plots_new
+            or full_path in plot_config_plots_new
+            or full_path.name in filenames
+        )
+        if already_in_config:
+            print(f"Plot {filename} already exists (in config)")
+            continue
+
         if not full_path.exists():
             # Creates the plot. This will take a long time for larger plots.
             plotter: DiskPlotter = DiskPlotter()
@@ -104,17 +118,10 @@ def main():
             print(f"Plot {filename} already exists")
 
         # Updates the config if necessary.
-        plot_config = load_config(root_path, plot_config_filename)
-        plot_config_plots_new = deepcopy(plot_config.get("plots", []))
-        relative_path = make_path_relative(full_path, root_path)
-        if (
-            relative_path not in plot_config_plots_new
-            and full_path not in plot_config_plots_new
-        ):
-            plot_config_plots_new[str(full_path)] = {
-                "sk": bytes(sk).hex(),
-                "pool_pk": bytes(pool_pk).hex(),
-            }
+        plot_config_plots_new[str(full_path)] = {
+            "sk": bytes(sk).hex(),
+            "pool_pk": bytes(pool_pk).hex(),
+        }
         plot_config["plots"].update(plot_config_plots_new)
 
         # Dumps the new config to disk.
