@@ -120,7 +120,7 @@
               </div>/
                 <p>Amount:</p>
                 <div class="input-group" style="padding-top:0px; padding-bottom:15px;">
-                <input type="text" class="form-control" id="amount_to_send" value="">
+                <input type="number" class="form-control" id="amount_to_send" value="">
               </div>
               </div>
               <button class="btn red" id="send">SEND</button>
@@ -131,7 +131,7 @@
                     <h4>Wallet Deposit Address</h4>
                     <p>Use this address to receive Chia</p>
                     <div class="input-group">
-                      <input type="text" class="form-control" id="puzzle_holder" value="">
+                      <input type="text" class="form-control" readonly onclick="this.select();" id="puzzle_holder" value="">
                       <div class="input-group-prepend">
                         <button class="btn btn-primary" id="copy" >COPY</button>
                       </div>

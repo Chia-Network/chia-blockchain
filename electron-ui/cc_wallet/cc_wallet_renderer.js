@@ -497,7 +497,12 @@ send.addEventListener('click', () => {
           return
         }
         if (puzzle_hash.substring(0,14) == "colour_addr://"){
-          puzzle_hash = puzzle_hash.substring(14)
+          colour_id = puzzle_hash.substring(14,78)
+          puzzle_hash = puzzle_hash.substring(79)
+          if (colour_id != colour_textfield.innerHTML.split("://")[1]){
+            alert("Error the entered address appears to be for a different colour.")
+            return
+          }
         }
         if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
             puzzle_hash = puzzle_hash.substring(2);
@@ -600,7 +605,10 @@ function get_innerpuzzlehash_response(response) {
     /*
     Called when response is received for get_new_puzzle_hash request
     */
+    colour = colour_textfield.innerHTML.split("://")[1]
     puzzle_hash = "colour_addr://"
+    puzzle_hash = puzzle_hash.concat(colour)
+    puzzle_hash = puzzle_hash.concat(":")
     puzzle_holder.value = puzzle_hash.concat(response["innerpuz"]);
     QRCode.toCanvas(canvas, response["innerpuz"], function (error) {
     if (error) console.error(error)
