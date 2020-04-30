@@ -312,7 +312,10 @@ class TradeManager:
                     colour
                 ].generate_zero_val_coin(False, to_exclude)
                 if zero_spend_bundle is None:
-                    return False, "unable to generate zero value coin, check you have chia available"
+                    return (
+                        False,
+                        "unable to generate zero value coin, check you have chia available",
+                    )
                 zero_spend_list.append(zero_spend_bundle)
 
                 additions = zero_spend_bundle.additions()

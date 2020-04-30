@@ -320,7 +320,9 @@ class TestWalletSimulator:
 
         offer_dict = {1: 10, 2: -30}
 
-        success, spend_bundle, error = await trade_manager_1.create_offer_for_ids(offer_dict)
+        success, spend_bundle, error = await trade_manager_1.create_offer_for_ids(
+            offer_dict
+        )
 
         assert success is True
         assert spend_bundle is not None
@@ -504,7 +506,9 @@ class TestWalletSimulator:
 
         offer_dict = {1: -1000, 2: -30, 3: 50}
 
-        success, spend_bundle, error = await trade_manager_1.create_offer_for_ids(offer_dict)
+        success, spend_bundle, error = await trade_manager_1.create_offer_for_ids(
+            offer_dict
+        )
 
         assert success is True
         assert spend_bundle is not None
@@ -600,7 +604,9 @@ class TestWalletSimulator:
 
         offer_dict = {1: -10, 2: 30}
 
-        success, spend_bundle, error = await trade_manager_2.create_offer_for_ids(offer_dict)
+        success, spend_bundle, error = await trade_manager_2.create_offer_for_ids(
+            offer_dict
+        )
 
         assert success is True
         assert spend_bundle is not None
