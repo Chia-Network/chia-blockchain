@@ -1,5 +1,6 @@
 try:
     import setproctitle as pysetproctitle
+
     no_setproctitle = False
 except Exception:
     no_setproctitle = True

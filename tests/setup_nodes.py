@@ -191,7 +191,7 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
 async def setup_harvester(port, dic={}):
     config = load_config(root_path, "config.yaml", "harvester")
 
-    harvester = Harvester(config, bt.plot_config)
+    harvester = await Harvester.create(config, bt.plot_config)
 
     net_config = load_config(root_path, "config.yaml")
     ping_interval = net_config.get("ping_interval")

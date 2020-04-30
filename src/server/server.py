@@ -255,6 +255,9 @@ class ChiaServer:
                 self.push_message(
                     OutboundMessage(NodeType.HARVESTER, msg, Delivery.BROADCAST)
                 )
+                self.push_message(
+                    OutboundMessage(NodeType.WALLET, msg, Delivery.BROADCAST)
+                )
                 await asyncio.sleep(self._ping_interval)
 
         return asyncio.create_task(ping())
