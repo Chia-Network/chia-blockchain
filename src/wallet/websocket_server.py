@@ -494,6 +494,7 @@ class WebSocketServer:
 
         async for message in websocket:
             decoded = json.loads(message)
+            self.log.info(f"decoded: {decoded}")
             command = decoded["command"]
             data = None
             if "data" in decoded:

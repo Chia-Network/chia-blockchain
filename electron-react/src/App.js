@@ -1,21 +1,14 @@
-import React, { Component } from 'react';
-import logo from './logo.svg';
-import './assets/css/App.css';
+import React from 'react';
+import { Switch, Route } from 'react-router-dom';
+import { connect } from 'react-redux';
+import Entrance from './pages/Entrance';
 
-class App extends Component {
-  render() {
-    return (
-      <div className="App">
-        <div className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <h2>Welcome to React/Electron s</h2>
-        </div>
-        <p className="App-intro">
-          Hello Electron!
-        </p>
-      </div>
-    );
-  }
-}
+const App = () => (
+  <React.Fragment>
+    <Switch>
+      <Route exact path="/" component={Entrance} />
+    </Switch>
+  </React.Fragment>
+);
 
-export default App;
+export default connect()(App);

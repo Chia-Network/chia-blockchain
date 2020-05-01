@@ -54,9 +54,9 @@ const createPyProc = () => {
     additional_args = ["--testing", local_test]
   }
   if (guessPackaged()) {
-    pyProc = require('child_process').execFile(script, additional_args)
+    //pyProc = require('child_process').execFile(script, additional_args)
   } else {
-    pyProc = require('child_process').spawn('python', [script].concat(additional_args))
+    //pyProc = require('child_process').spawn('python', [script].concat(additional_args))
   }
     if (pyProc != null) {
         pyProc.stdout.setEncoding('utf8');
@@ -109,7 +109,7 @@ const createWindow = () => {
     },})
 
   var startUrl = process.env.ELECTRON_START_URL || url.format({
-        pathname: path.join(__dirname, '/../build/wallet-dark.html'),
+        pathname: path.join(__dirname, '/../build/index.html'),
         protocol: 'file:',
         slashes: true
     });
@@ -122,7 +122,7 @@ const createWindow = () => {
         mainWindow.show();
   });
 
-  if (local_test) {
+  if (!local_test) {
     mainWindow.webContents.openDevTools()
   }
 

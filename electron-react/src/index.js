@@ -1,9 +1,22 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
+import { BrowserRouter as Router, Route } from 'react-router-dom';
+import { Provider } from 'react-redux';
 import App from './App';
-import './index.css';
-
-ReactDOM.render(
-  <App />,
-  document.getElementById('root')
+import ErrorBoundary from './Error';
+import './assets/css/App.css';
+import store from './modules/store';
+import WebSocketConnection from './hocs/WebsocketConnection'
+const Root = ({ store }) => (
+  <Router>
+    <ErrorBoundary>
+      <Provider store={store}>
+      <WebSocketConnection host={"ws://127.0.0.1:9256/"}>
+        <Route path="/" component={App} />
+        </WebSocketConnection>
+      </Provider>
+    </ErrorBoundary>
+  </Router>
 );
+
+ReactDOM.render(<Root store={store} />, document.getElementById('root'));
