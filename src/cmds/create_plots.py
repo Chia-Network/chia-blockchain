@@ -129,7 +129,7 @@ def main():
     try:
         tmp_dir.rmdir()
     except Exception:
-        print(f"warning: couldn't delete {tmp_dir}")
+        print(f"warning: did not remove temporary folder {tmp_dir}, it may not be empty.")
 
 
 if __name__ == "__main__":
