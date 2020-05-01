@@ -1,9 +1,10 @@
 {
-  "name": "electron-with-create-react-app",
+  "name": "chia-wallet",
   "version": "0.1.0",
   "private": true,
   "devDependencies": {},
   "dependencies": {
+    "@material-ui/core": "^4.9.12",
     "electron": "^8.2.4",
     "foreman": "^3.0.1",
     "react": "^16.13.1",
