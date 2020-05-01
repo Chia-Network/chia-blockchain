@@ -20,7 +20,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Chia plot checking script.")
     parser.add_argument(
-        "-n", "--num", help="Number of challenges", type=int, default=1000
+        "-n", "--num", help="Number of challenges", type=int, default=100
     )
     args = parser.parse_args()
 
@@ -35,18 +35,22 @@ def main():
             PublicKey.from_bytes(bytes.fromhex(plot_info["pool_pk"])),
             PrivateKey.from_bytes(bytes.fromhex(plot_info["sk"])).get_public_key(),
         )
-        if not Path(plot_filename).exists():
-            # Tries relative path
-            full_path: Path = DEFAULT_ROOT_PATH / plot_filename
-            if not full_path.exists():
-                # Tries absolute path
-                full_path = Path(plot_filename)
+        try:
+            if not Path(plot_filename).exists():
+                # Tries relative path
+                full_path: Path = DEFAULT_ROOT_PATH / plot_filename
                 if not full_path.exists():
-                    print(f"Plot file {full_path} not found.")
-                    continue
-            pr = DiskProver(str(full_path))
-        else:
-            pr = DiskProver(plot_filename)
+                    # Tries absolute path
+                    full_path = Path(plot_filename)
+                    if not full_path.exists():
+                        print(f"Plot file {full_path} not found.")
+                        continue
+                pr = DiskProver(str(full_path))
+            else:
+                pr = DiskProver(plot_filename)
+        except BaseException as e:
+            print(f"Invalid plot {plot_filename} {e}")
+            continue
         total_proofs = 0
         try:
             for i in range(args.num):

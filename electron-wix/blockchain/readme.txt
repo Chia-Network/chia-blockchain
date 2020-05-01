@@ -31,7 +31,7 @@ To use the Chia Wallet UI you will need to run:
 
 And then click on the "Chia Wallet" icon on the Desktop or in the Start Menu.
 
-To stop a service started with Start-Job, run 'Get-Job' and then 'Stop Job ID'
+To stop a service started with Start-Job, run 'Get-Job' and then 'Stop-Job ID'
 where ID is the listed job number.
 
 After install, you can enter the venv in the "Chia Blockchain" directory with:

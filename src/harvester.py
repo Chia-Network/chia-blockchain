@@ -47,7 +47,7 @@ def load_plots(
             if filename.exists():
                 try:
                     provers[partial_filename_str] = DiskProver(str(filename))
-                except ValueError as e:
+                except Exception as e:
                     log.error(f"Failed to open file {filename}. {e}")
                     failed_to_open = True
                     break
