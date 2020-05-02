@@ -11,7 +11,6 @@
   background-color: #222;
   height: 150px;
   padding: 20px;
-  color: white;
 }
 
 .App-intro {
@@ -21,4 +20,12 @@
 @keyframes App-logo-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+html, body, #wrapper-id, #root, #app, #app>div, #provider-wrap {
+  height: 100%;
+  margin: 0px;
+  padding: 0;
+  top: 0px;
+  overflow: hidden; 
 }
