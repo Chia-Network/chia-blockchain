@@ -177,6 +177,6 @@ def chia_init(args: Namespace):
     else:
         create_default_chia_config(root_path)
         initialize_ssl(root_path)
-        print("Please generate your keys with chia generate keys")
+        print("Please generate your keys with 'chia generate keys'")
 
     return 0
