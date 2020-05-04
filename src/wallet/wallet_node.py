@@ -74,7 +74,7 @@ class WalletNode:
 
     @staticmethod
     async def create(
-        config: Dict, key_config: Dict, name: str = None, override_constants: Dict = {},
+        config: Dict, keychain: Keychain, name: str = None, override_constants: Dict = {},
     ):
         self = WalletNode()
         self.config = config
@@ -91,7 +91,7 @@ class WalletNode:
         mkdir(path.parent)
 
         self.wallet_state_manager = await WalletStateManager.create(
-            key_config, config, path, self.constants
+            keychain, config, path, self.constants
         )
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
 

@@ -5,6 +5,10 @@ from typing import List, Optional
 import keyring
 import pkg_resources
 from bitstring import BitArray
+from blspy import ExtendedPrivateKey, PrivateKey
+from src.consensus.coinbase import create_puzzlehash_for_pk
+
+from src.types.BLSSignature import BLSPublicKey
 
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
@@ -73,36 +77,63 @@ def seed_from_mnemonic(mnemonic: List[str]):
 
 class Keychain:
     testing: bool
+    user: str
 
     @staticmethod
-    def create(testing: bool):
+    def create(user: str = "user", testing: bool = False):
         self = Keychain()
         self.testing = testing
+        self.user = user
         return self
 
     def get_service(self):
         if self.testing:
-            return "chia-test"
+            return f"chia-{self.user}-test"
         else:
-            return "chia"
+            return f"chia-{self.user}"
 
     def get_wallet_user(self):
         if self.testing:
-            return "wallet-test"
+            return f"wallet-{self.user}-test"
         else:
-            return "wallet"
+            return f"wallet-{self.user}"
 
     def get_harvester_user(self):
         if self.testing:
-            return "harvester-test"
+            return f"harvester-{self.user}-test"
         else:
-            return "harvester"
+            return f"harvester-{self.user}"
 
     def get_pool_user(self):
         if self.testing:
-            return "pool-test"
+            return f"pool-{self.user}-test"
         else:
-            return "pool"
+            return f"pool-{self.user}"
+
+    def get_pool_user_raw(self, index: int):
+        """ This should be used to store whole key, not entropy"""
+        if self.testing:
+            return f"pool-{self.user}-test-raw-{index}"
+        else:
+            return f"pool-{self.user}-raw-{index}"
+
+    def get_pool_target_user(self):
+        if self.testing:
+            return f"pool-{self.user}-target-test"
+        else:
+            return f"pool-{self.user}-target"
+
+    def get_wallet_target_user(self):
+        if self.testing:
+            return f"wallet-{self.user}-target-test"
+        else:
+            return f"wallet-{self.user}-target"
+
+    def get_plot_user(self):
+        if self.testing:
+            return f"plot-{self.user}-test"
+        else:
+            return f"plot-{self.user}"
 
     def set_wallet_seed(self, seed: bytes):
         keyring.set_password(self.get_service(), self.get_wallet_user(), seed.hex())
@@ -115,6 +146,14 @@ class Keychain:
         if seed is None:
             return None
         return hexstr_to_bytes(seed)
+
+    def get_wallet_key(self) -> Optional[ExtendedPrivateKey]:
+        wallet_seed = self.get_wallet_seed()
+        if wallet_seed is None:
+            return None
+
+        wallet_sk = ExtendedPrivateKey.from_seed(wallet_seed)
+        return wallet_sk
 
     def delete_all_keys(self):
         keyring.delete_password(self.get_service(), self.get_wallet_user())
@@ -147,5 +186,81 @@ class Keychain:
         default_pool = std_hash(std_hash(wallet_seed))
         return default_pool
 
+    def get_pool_keys(self) -> List[PrivateKey]:
+        raw_keys = self.get_pool_keys_raw()
+        if len(raw_keys) == 2:
+            return raw_keys
+        pool_seed = self.get_pool_seed()
+        if pool_seed is None:
+            return []
+        key_one = PrivateKey.from_seed(pool_seed)
+        key_two = PrivateKey.from_seed(std_hash(pool_seed))
+        return [key_one, key_two]
+
     def set_pool_seed(self, seed):
         keyring.set_password(self.get_service(), self.get_pool_user(), seed.hex())
+
+    def get_wallet_target(self) -> Optional[bytes32]:
+        stored = self.get_stored_entropy(self.get_wallet_target_user())
+        if stored is not None:
+            return hexstr_to_bytes(stored)
+
+        wallet_seed = self.get_wallet_seed()
+        if wallet_seed is None:
+            return None
+
+        wallet_sk = ExtendedPrivateKey.from_seed(wallet_seed)
+        wallet_pk = wallet_sk.public_child(0).get_public_key()
+        wallet_target = create_puzzlehash_for_pk(
+            BLSPublicKey(bytes(wallet_pk))
+        )
+        return wallet_target
+
+    def get_pool_target(self) -> Optional[bytes32]:
+        stored = self.get_stored_entropy(self.get_pool_target_user())
+        if stored is not None:
+            return hexstr_to_bytes(stored)
+
+        wallet_seed = self.get_wallet_seed()
+        if wallet_seed is None:
+            return None
+
+        wallet_sk = ExtendedPrivateKey.from_seed(wallet_seed)
+        wallet_pk = wallet_sk.public_child(0).get_public_key()
+        wallet_target = create_puzzlehash_for_pk(
+            BLSPublicKey(bytes(wallet_pk))
+        )
+        return wallet_target
+
+    def set_pool_target(self, target: bytes32):
+        keyring.set_password(self.get_service(), self.get_pool_target_user(), target.hex())
+
+    def set_wallet_target(self, target: bytes32):
+        keyring.set_password(self.get_service(), self.get_wallet_target_user(), target.hex())
+
+    def set_pool_key_raw(self, key_0: bytes, key_1: bytes):
+        keyring.set_password(self.get_service(), self.get_pool_user_raw(0), key_0.hex())
+        keyring.set_password(self.get_service(), self.get_pool_user_raw(0), key_1.hex())
+
+    def get_pool_keys_raw(self) -> List[PrivateKey]:
+        raw_0 = keyring.get_password(self.get_service, self.get_pool_user_raw(0))
+        raw_1 = keyring.get_password(self.get_service, self.get_pool_user_raw(1))
+
+        if raw_0 is None or raw_1 is None:
+            return []
+        else:
+            key_0 = PrivateKey.from_bytes(hexstr_to_bytes(raw_0))
+            key_1 = PrivateKey.from_bytes(hexstr_to_bytes(raw_1))
+            return [key_0, key_1]
+
+    def get_plot_seed(self):
+        stored = self.get_stored_entropy(self.get_plot_user())
+        if stored is not None:
+            return stored
+
+        wallet_seed = self.get_wallet_seed()
+        if wallet_seed is None:
+            return None
+
+        default_pool = std_hash(std_hash(std_hash(wallet_seed)))
+        return default_pool

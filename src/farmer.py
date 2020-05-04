@@ -3,6 +3,7 @@ import logging
 from typing import Any, Dict, List, Set
 
 from blspy import PrivateKey, Util
+from src.util.keychain import Keychain
 
 from src.consensus.block_rewards import calculate_block_reward
 from src.consensus.constants import constants as consensus_constants
@@ -25,9 +26,8 @@ HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 
 
 class Farmer:
-    def __init__(self, farmer_config: Dict, key_config: Dict, override_constants={}):
+    def __init__(self, farmer_config: Dict, keychain: Keychain, override_constants={}):
         self.config = farmer_config
-        self.key_config = key_config
         self.harvester_responses_header_hash: Dict[bytes32, bytes32] = {}
         self.harvester_responses_challenge: Dict[bytes32, bytes32] = {}
         self.harvester_responses_proofs: Dict[bytes32, ProofOfSpace] = {}
@@ -44,17 +44,20 @@ class Farmer:
         self.constants = consensus_constants.copy()
         self.server = None
         self._shut_down = False
+        self.keychain = keychain
+        self.wallet_target = self.keychain.get_wallet_target()
+        self.pool_target = self.keychain.get_pool_target()
+        self.pool_keys = self.keychain.get_pool_keys()
+        assert self.wallet_target is not None
+        assert self.pool_target is not None
+        assert len(self.pool_keys) == 2
         for key, value in override_constants.items():
             self.constants[key] = value
 
     async def _on_connect(self):
         # Sends a handshake to the harvester
-        pool_sks: List[PrivateKey] = [
-            PrivateKey.from_bytes(bytes.fromhex(ce))
-            for ce in self.key_config["pool_sks"]
-        ]
         msg = harvester_protocol.HarvesterHandshake(
-            [sk.get_public_key() for sk in pool_sks]
+            [sk.get_public_key() for sk in self.pool_keys]
         )
         yield OutboundMessage(
             NodeType.HARVESTER, Message("harvester_handshake", msg), Delivery.RESPOND
@@ -168,11 +171,7 @@ class Farmer:
         and request a pool partial, a header signature, or both, if the proof is good enough.
         """
 
-        pool_sks: List[PrivateKey] = [
-            PrivateKey.from_bytes(bytes.fromhex(ce))
-            for ce in self.key_config["pool_sks"]
-        ]
-        if response.proof.pool_pubkey not in [sk.get_public_key() for sk in pool_sks]:
+        if response.proof.pool_pubkey not in [sk.get_public_key() for sk in self.pool_keys]:
             raise RuntimeError("Pool pubkey not in list of approved keys")
 
         challenge_hash: bytes32 = self.harvester_responses_challenge[
@@ -210,7 +209,7 @@ class Farmer:
         if estimate_secs < self.config["pool_share_threshold"]:
             request1 = harvester_protocol.RequestPartialProof(
                 response.quality_string,
-                bytes.fromhex(self.key_config["wallet_target"]),
+                self.wallet_target,
             )
             yield OutboundMessage(
                 NodeType.HARVESTER,
@@ -229,7 +228,7 @@ class Farmer:
                 challenge_hash,
                 coinbase,
                 signature,
-                bytes.fromhex(self.key_config["wallet_target"]),
+                self.wallet_target,
                 response.proof,
             )
 
@@ -279,7 +278,7 @@ class Farmer:
         share, to tell the pool where to pay the farmer.
         """
 
-        farmer_target = bytes.fromhex(self.key_config["wallet_target"])
+        farmer_target = self.wallet_target
         plot_pubkey = self.harvester_responses_proofs[
             response.quality_string
         ].plot_pubkey
@@ -333,10 +332,7 @@ class Farmer:
 
             # TODO: ask the pool for this information
 
-            pool_sks: List[PrivateKey] = [
-                PrivateKey.from_bytes(bytes.fromhex(ce))  # type: ignore # noqa
-                for ce in self.key_config["pool_sks"]
-            ]
+            pool_sks = self.pool_keys
 
             coinbase_reward = uint64(
                 calculate_block_reward(uint32(proof_of_space_finalized.height + 1))
@@ -344,7 +340,7 @@ class Farmer:
 
             coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
                 proof_of_space_finalized.height + 1,
-                bytes.fromhex(self.key_config["pool_target"]),
+                self.pool_target,
                 coinbase_reward,
                 pool_sks[0],
             )

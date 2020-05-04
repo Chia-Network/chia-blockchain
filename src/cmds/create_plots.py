@@ -9,6 +9,7 @@ from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.config import config_path_for_filename, load_config, save_config
 from src.util.default_root import DEFAULT_ROOT_PATH
+from src.util.keychain import Keychain
 from src.util.path import make_path_relative, mkdir, path_from_root
 
 
@@ -57,8 +58,8 @@ def main():
         raise RuntimeError("Keys not generated. Run `chia generate keys`")
 
     # The seed is what will be used to generate a private key for each plot
-    key_config = load_config(root_path, key_config_filename)
-    sk_seed: bytes = bytes.fromhex(key_config["sk_seed"])
+    keychain = Keychain.create()
+    sk_seed: bytes = keychain.get_plot_seed()
 
     pool_pk: PublicKey
     if len(args.pool_pub_key) > 0:
@@ -66,7 +67,7 @@ def main():
         pool_pk = PublicKey.from_bytes(bytes.fromhex(args.pool_pub_key))
     else:
         # Use the pool public key from the config, useful for solo farming
-        pool_sk = PrivateKey.from_bytes(bytes.fromhex(key_config["pool_sks"][0]))
+        pool_sk = keychain.get_pool_keys()[0]
         pool_pk = pool_sk.get_public_key()
 
     print(

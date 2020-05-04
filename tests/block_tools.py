@@ -27,6 +27,7 @@ from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
+from src.util.keychain import Keychain
 from src.util.merkle_set import MerkleSet
 from src.util.ints import uint8, uint32, uint64, uint128, int512
 from src.util.hash import std_hash
@@ -70,8 +71,13 @@ class BlockTools:
             # Uses many plots for testing, in order to guarantee proofs of space at every height
             num_plots = 40
             # Use the empty string as the seed for the private key
-            pool_sk: PrivateKey = PrivateKey.from_seed(b"")
+
+            self.keychain = Keychain.create("testing", True)
+            self.keychain.set_wallet_seed(b"")
+            self.keychain.set_pool_seed(b"")
+            pool_sk: PrivateKey = self.keychain.get_pool_keys()[0]
             pool_pk: PublicKey = pool_sk.get_public_key()
+
             plot_sks: List[PrivateKey] = [
                 PrivateKey.from_seed(pn.to_bytes(4, "big")) for pn in range(num_plots)
             ]
@@ -117,21 +123,15 @@ class BlockTools:
                         (plot_dir / filename).unlink()
                 sys.exit(1)
         else:
-            # Real plots supplied, so we will use these instead of the test plots
-            config = load_config_cli(root_path, "config.yaml", "harvester")
-            try:
-                key_config = load_config(root_path, "keys.yaml")
-            except FileNotFoundError:
-                raise RuntimeError("Keys not generated. Run `chia generate keys`")
             try:
                 plot_config = load_config(root_path, "plots.yaml")
             except FileNotFoundError:
                 raise RuntimeError("Plots not generated. Run chia-create-plots")
 
-            pool_sks: List[PrivateKey] = [
-                PrivateKey.from_bytes(bytes.fromhex(ce))
-                for ce in key_config["pool_sks"]
-            ]
+            keychain = Keychain.create(False)
+            pool_sks: List[PrivateKey] = keychain.get_pool_keys()
+            if len(pool_sks) != 2:
+                raise RuntimeError("Keys not generated. Run `chia generate keys`")
 
             for key, value in plot_config["plots"].items():
                 for pool_sk in pool_sks:
