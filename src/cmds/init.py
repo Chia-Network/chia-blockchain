@@ -39,6 +39,24 @@ def dict_add_new_default(
             updated[k] = v
 
 
+def check_keys(new_root):
+    print("\nchecking keys.yaml")
+    keys_config = load_config(new_root, "keys.yaml")
+
+    wallet_sk = ExtendedPrivateKey.from_bytes(bytes.fromhex(keys_config["wallet_sk"]))
+    wallet_target = create_puzzlehash_for_pk(
+        BLSPublicKey(bytes(wallet_sk.public_child(0).get_public_key()))
+    )
+    if (
+        wallet_target.hex() != keys_config["wallet_target"]
+        or wallet_target.hex() != keys_config["pool_target"]
+    ):
+        keys_config["wallet_target"] = wallet_target.hex()
+        keys_config["pool_target"] = wallet_target.hex()
+        print(f"updating wallet target and pool target to {wallet_target.hex()}")
+        save_config(new_root, "keys.yaml", keys_config)
+
+
 def migrate_from(
     old_root: Path, new_root: Path, manifest: List[str], do_not_migrate_keys: List[str]
 ):
@@ -108,21 +126,7 @@ def migrate_from(
         "\nYour plots have not been moved so be careful deleting old preferences folders."
     )
 
-    print("\nmigrating keys.yaml")
-    keys_config = load_config(new_root, "keys.yaml")
-
-    wallet_sk = ExtendedPrivateKey.from_bytes(bytes.fromhex(keys_config["wallet_sk"]))
-    wallet_target = create_puzzlehash_for_pk(
-        BLSPublicKey(bytes(wallet_sk.public_child(0).get_public_key()))
-    )
-    if (
-        wallet_target.hex() != keys_config["wallet_target"]
-        or wallet_target.hex() != keys_config["pool_target"]
-    ):
-        keys_config["wallet_target"] = wallet_target.hex()
-        keys_config["pool_target"] = wallet_target.hex()
-        print(f"updating wallet target and pool target to {wallet_target.hex()}")
-        save_config(new_root, "keys.yaml", keys_config)
+    check_keys(new_root)
 
     print("\nIf you want to move your plot files, you should also modify")
     print(f"{config_path_for_filename(new_root, 'plots.yaml')}")
@@ -145,9 +149,17 @@ def init(args: Namespace, parser: ArgumentParser):
 
 def chia_init(args: Namespace):
     root_path: Path = args.root_path
+
+    if os.environ.get("CHIA_ROOT", None) is not None:
+        print(
+            f"warning, your CHIA_ROOT is set to {os.environ['CHIA_ROOT']}. "
+            f"Please unset the environment variable and run chia init again."
+        )
+
     print(f"migrating to {root_path}")
     if root_path.is_dir():
-        print(f"{root_path} already exists, no action taken")
+        check_keys(root_path)
+        print(f"{root_path} already exists, no migration action taken")
         return -1
 
     # These are the config keys that will not be migrated, and instead the default is used
@@ -167,7 +179,7 @@ def chia_init(args: Namespace):
 
     PATH_MANIFEST_LIST: List[Tuple[Path, List[str]]] = [
         (Path(os.path.expanduser("~/.chia/beta-%s" % _)), MANIFEST)
-        for _ in ["1.0b3", "1.0b2", "1.0b1"]
+        for _ in ["1.0b5.dev0", "1.0b4", "1.0b3", "1.0b2", "1.0b1"]
     ]
 
     for old_path, manifest in PATH_MANIFEST_LIST:
