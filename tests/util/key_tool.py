@@ -7,7 +7,7 @@ from src.util.condition_tools import (
 from src.wallet.BLSPrivateKey import BLSPrivateKey
 
 
-class Keychain(dict):
+class KeyTool(dict):
     @classmethod
     def __new__(cls, *args):
         return dict.__new__(*args)
