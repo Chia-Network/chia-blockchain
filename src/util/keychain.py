@@ -177,7 +177,7 @@ class Keychain:
     def get_pool_seed(self) -> Optional[bytes32]:
         stored = self.get_stored_entropy(self.get_pool_user())
         if stored is not None:
-            return stored
+            return hexstr_to_bytes(stored)
 
         wallet_seed = self.get_wallet_seed()
         if wallet_seed is None:
@@ -243,8 +243,8 @@ class Keychain:
         keyring.set_password(self.get_service(), self.get_pool_user_raw(0), key_1.hex())
 
     def get_pool_keys_raw(self) -> List[PrivateKey]:
-        raw_0 = keyring.get_password(self.get_service, self.get_pool_user_raw(0))
-        raw_1 = keyring.get_password(self.get_service, self.get_pool_user_raw(1))
+        raw_0 = keyring.get_password(self.get_service(), self.get_pool_user_raw(0))
+        raw_1 = keyring.get_password(self.get_service(), self.get_pool_user_raw(1))
 
         if raw_0 is None or raw_1 is None:
             return []
