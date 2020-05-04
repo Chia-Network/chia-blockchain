@@ -566,6 +566,28 @@ class ChiaServer:
                             yield (peer, outbound_message.message)
                     else:
                         yield (peer, outbound_message.message)
+
+        elif outbound_message.delivery_method == Delivery.SPECIFIC:
+            # Send to a specific peer, by node_id, assuming the NodeType matches.
+            if outbound_message.specific_peer_node_id is None:
+                return
+            for peer in self.global_connections.get_connections():
+                if (
+                    peer.connection_type == outbound_message.peer_type
+                    and peer.node_id == outbound_message.specific_peer_node_id
+                ):
+                    yield (peer, outbound_message.message)
+
         elif outbound_message.delivery_method == Delivery.CLOSE:
-            # Close the connection but don't ban the peer
-            yield (connection, None)
+            if outbound_message.specific_peer_node_id is None:
+                # Close the connection but don't ban the peer
+                if connection.connection_type == outbound_message.peer_type:
+                    yield (connection, None)
+            else:
+                for peer in self.global_connections.get_connections():
+                    # Close the connection with the specific peer
+                    if (
+                        peer.connection_type == outbound_message.peer_type
+                        and peer.node_id == outbound_message.specific_peer_node_id
+                    ):
+                        yield (peer, outbound_message.message)

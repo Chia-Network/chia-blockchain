@@ -13,6 +13,8 @@ log = logging.getLogger(__name__)
 
 class SyncStore:
     db: aiosqlite.Connection
+    # Whether or not we are syncing
+    sync_mode: bool
     # Whether we are waiting for tips (at the start of sync) or already syncing
     waiting_for_tips: bool
     # Potential new tips that we have received from others.
@@ -53,6 +55,12 @@ class SyncStore:
         self.potential_blocks_received = {}
         self.potential_future_blocks = []
         return self
+
+    def set_sync_mode(self, sync_mode: bool) -> None:
+        self.sync_mode = sync_mode
+
+    def get_sync_mode(self) -> bool:
+        return self.sync_mode
 
     async def add_potential_block(self, block: FullBlock) -> None:
         cursor = await self.db.execute(

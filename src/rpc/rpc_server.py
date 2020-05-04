@@ -53,7 +53,7 @@ class RpcApiHandler:
         """
         tips: List[Header] = self.full_node.blockchain.get_current_tips()
         lca: Header = self.full_node.blockchain.lca_block
-        sync_mode: bool = self.full_node.full_node_store.get_sync_mode()
+        sync_mode: bool = self.full_node.sync_store.get_sync_mode()
         difficulty: uint64 = self.full_node.blockchain.get_next_difficulty(
             lca.header_hash
         )
@@ -236,7 +236,7 @@ class RpcApiHandler:
         tip_weights = [tip.weight for tip in tips]
         i = tip_weights.index(max(tip_weights))
         max_tip: Header = tips[i]
-        if self.full_node.full_node_store.get_sync_mode():
+        if self.full_node.sync_store.get_sync_mode():
             potential_tips = self.full_node.sync_store.get_potential_tips_tuples()
             for _, pot_block in potential_tips:
                 if pot_block.weight > max_tip.weight:
