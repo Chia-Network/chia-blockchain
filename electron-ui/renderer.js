@@ -25,6 +25,7 @@ let standard_wallet_balance = document.querySelector('#standard_wallet_balance')
 let wallets_tab = document.querySelector('#wallets_tab')
 const { get_query_variable } = require("./utils");
 var g_wallets = {}
+var wallets_details = {}
 
 // UI checkmarks and lock icons
 const green_checkmark = "<i class=\"icon ion-md-checkmark-circle-outline green\"></i>"
@@ -346,23 +347,28 @@ function get_wallet_balance_response(response) {
 
         wallet_balance_holder = document.querySelector("#" + "balance_wallet_" + wallet_id )
         wallet_pending_holder = document.querySelector("#" + "pending_wallet_" + wallet_id )
-
+        var denomination = " XCH"
+        if (wallets_details[wallet_id]["type"] == "COLOURED_COIN"){
+          denomination = " CC"
+        } else if (wallets_details[wallet_id]["type"] == "STANDARD_WALLET"){
+          denomination = " XCH"
+        }
         if (g_wallet_id == wallet_id) {
-            balance_textfield.innerHTML = chia_confirmed + " CH"
+            balance_textfield.innerHTML = chia_confirmed + denomination
             if (pending > 0) {
-                pending_textfield.innerHTML = lock + " - " + chia_pending + " CH"
+                pending_textfield.innerHTML = lock + " - " + chia_pending + denomination
             } else {
-                pending_textfield.innerHTML = lock + " " + chia_pending_abs + " CH"
+                pending_textfield.innerHTML = lock + " " + chia_pending_abs + denomination
             }
         }
         if (wallet_balance_holder) {
-            wallet_balance_holder.innerHTML = chia_confirmed.toString() + " CH"
+            wallet_balance_holder.innerHTML = chia_confirmed.toString() + denomination
         }
         if (wallet_pending_holder) {
             if (pending > 0) {
-                wallet_pending_holder.innerHTML = lock + " - " + chia_pending + " CH"
+                wallet_pending_holder.innerHTML = lock + " - " + chia_pending + denomination
             } else {
-                wallet_pending_holder.innerHTML = lock + " " + chia_pending_abs + " CH"
+                wallet_pending_holder.innerHTML = lock + " " + chia_pending_abs + denomination
             }
         }
     }
@@ -625,6 +631,7 @@ function get_wallet_summaries() {
 function get_wallet_summaries_response(data){
   // {id: {"type": type, "balance": balance, "name": name, "colour": colour}}
   // {id: {"type": type, "balance": balance}}
+  wallets_details = data
   var new_innerHTML = ""
   for (var i in data) {
       var wallet = data[i];
