@@ -153,7 +153,7 @@ def chia_init(args: Namespace):
     if os.environ.get("CHIA_ROOT", None) is not None:
         print(
             f"warning, your CHIA_ROOT is set to {os.environ['CHIA_ROOT']}. "
-            f"Please unset the environment variable and run chia init again"
+            f"Please unset the environment variable and run chia init again\n"
             f"or manually migrate config.yaml, plots.yaml and keys.yaml."
         )
 
