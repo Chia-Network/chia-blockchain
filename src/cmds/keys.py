@@ -26,7 +26,7 @@ def make_parser(parser):
     parser.set_defaults(function=handler)
 
 
-keychain: Keychain = Keychain.create(False)
+keychain: Keychain = Keychain.create()
 
 
 def generate():

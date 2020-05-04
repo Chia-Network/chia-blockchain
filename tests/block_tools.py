@@ -128,7 +128,7 @@ class BlockTools:
             except FileNotFoundError:
                 raise RuntimeError("Plots not generated. Run chia-create-plots")
 
-            keychain = Keychain.create(False)
+            keychain = Keychain.create("testing", False)
             pool_sks: List[PrivateKey] = keychain.get_pool_keys()
             if len(pool_sks) != 2:
                 raise RuntimeError("Keys not generated. Run `chia generate keys`")

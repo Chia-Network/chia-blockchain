@@ -22,15 +22,12 @@ async def async_main():
     root_path = DEFAULT_ROOT_PATH
     net_config = load_config(root_path, "config.yaml")
     config = load_config_cli(root_path, "config.yaml", "farmer")
-    try:
-        key_config = load_config(root_path, "keys.yaml")
-    except FileNotFoundError:
-        raise RuntimeError("Keys not generated. Run `chia generate keys`")
+
     initialize_logging("Farmer %(name)-25s", config["logging"], root_path)
     log = logging.getLogger(__name__)
     setproctitle("chia_farmer")
 
-    keychain = Keychain.create(False)
+    keychain = Keychain.create()
 
     farmer = Farmer(config, keychain)
 

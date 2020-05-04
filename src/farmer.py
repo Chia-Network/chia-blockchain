@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Any, Dict, List, Set
 
-from blspy import PrivateKey, Util
+from blspy import Util
 from src.util.keychain import Keychain
 
 from src.consensus.block_rewards import calculate_block_reward
