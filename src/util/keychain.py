@@ -21,7 +21,7 @@ def bip39_word_list() -> str:
     return pkg_resources.resource_string("src.util.bip39", f"english.txt").decode()
 
 
-def generate_mnemonic()-> List[str]:
+def generate_mnemonic() -> List[str]:
     seed_bytes = token_bytes(32)
     mnemonic = bytes_to_mnemonic(seed_bytes)
     return mnemonic
@@ -38,7 +38,7 @@ def bytes_to_mnemonic(seed_bytes: bytes):
     bitarray = BitArray(bytes_for_mnemonic)
     mnemonics = []
 
-    for i in range(0,24):
+    for i in range(0, 24):
         start = i * 11
         end = start + 11
         bits = bitarray[start:end]

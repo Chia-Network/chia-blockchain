@@ -1,7 +1,9 @@
-import keyring
-from src.util.byte_types import hexstr_to_bytes
-from src.util.config import str2bool
-from src.util.keychain import generate_mnemonic, bytes_to_mnemonic, Keychain, seed_from_mnemonic
+from src.util.keychain import (
+    generate_mnemonic,
+    bytes_to_mnemonic,
+    Keychain,
+    seed_from_mnemonic,
+)
 
 
 def make_parser(parser):
@@ -19,7 +21,7 @@ def make_parser(parser):
     )
 
     parser.add_argument(
-        "command", help='', type=str, nargs=1,
+        "command", help="", type=str, nargs=1,
     )
     parser.set_defaults(function=handler)
 
@@ -55,10 +57,11 @@ def set_key(args, key_type):
         print(e)
         return
 
+
 def mnemonic_to_string(mnemonic):
     mnemonics_string = ""
 
-    for i in range(0,24):
+    for i in range(0, 24):
         mnemonics_string += f"{i + 1}) {mnemonic[i]}, "
         if (i + 1) % 6 == 0:
             mnemonics_string += "\n"
@@ -82,8 +85,15 @@ def show_mnemonics(key):
 
 
 def handler(args, parser):
-    command_list = ["generate", "set_wallet_key", "set_harvester_key", "set_pool_key",
-                    "show_wallet_key", "show_harvester_key", "show_pool_key"]
+    command_list = [
+        "generate",
+        "set_wallet_key",
+        "set_harvester_key",
+        "set_pool_key",
+        "show_wallet_key",
+        "show_harvester_key",
+        "show_pool_key",
+    ]
 
     command = args.command[0]
     if command not in command_list:
