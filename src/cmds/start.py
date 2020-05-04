@@ -34,6 +34,7 @@ def start(args, parser):
     for service in services_for_groups(args.group):
         if pid_path_for_service(args.root_path, service).is_file():
             if args.restart or args.force:
+                args.force=args.restart # Grubby hack to workaround can't restart
                 print("restarting")
                 stop_service(args.root_path, service)
                 while (

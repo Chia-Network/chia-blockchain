@@ -67,7 +67,7 @@ def migrate_from(
         print(f"same as new path, exiting")
         return 1
     if not old_root.is_dir():
-        print(f"{old_root} not found")
+        print(f"{old_root} not found - this is ok if you did not install this version.")
         return 0
     print(f"\n{old_root} found")
     print(f"Copying files from {old_root} to {new_root}\n")
@@ -153,7 +153,8 @@ def chia_init(args: Namespace):
     if os.environ.get("CHIA_ROOT", None) is not None:
         print(
             f"warning, your CHIA_ROOT is set to {os.environ['CHIA_ROOT']}. "
-            f"Please unset the environment variable and run chia init again."
+            f"Please unset the environment variable and run chia init again"
+            f"or manually migrate config.yaml, plots.yaml and keys.yaml."
         )
 
     print(f"migrating to {root_path}")
