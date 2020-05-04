@@ -189,7 +189,10 @@ class Timelord:
                     new_avg_ips = int((prev_avg_ips * trials + ips) / (trials + 1))
                     self.avg_ips[ip] = (new_avg_ips, trials + 1)
                     log.info(f"New estimate: {new_avg_ips}")
-                self.pending_iters[challenge_hash].remove(iterations_needed)
+                if iterations_needed in self.pending_iters[challenge_hash]:
+                    self.pending_iters[challenge_hash].remove(iterations_needed)
+                else:
+                    log.warning("Finished PoT for an unknown iteration.")
             else:
                 log.info(
                     f"Finished PoT chall:{challenge_hash[:10].hex()}.. {iterations_needed}"
