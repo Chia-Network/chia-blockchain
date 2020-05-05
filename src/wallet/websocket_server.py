@@ -41,6 +41,7 @@ from src.util.setproctitle import setproctitle
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
 
+log = logging.getLogger(__name__)
 
 def format_response(command: str, response_data: Dict[str, Any]):
     """
@@ -56,7 +57,7 @@ class WebSocketServer:
     def __init__(self, keychain: Keychain, root_path: Path):
         self.config = load_config_cli(root_path, "config.yaml", "wallet")
         initialize_logging("Wallet %(name)-25s", self.config["logging"], root_path)
-        self.log = logging.getLogger(__name__)
+        self.log = log
         self.keychain = keychain
         self.websocket = None
         self.root_path = root_path
@@ -64,10 +65,12 @@ class WebSocketServer:
         self.trade_manager: Optional[TradeManager] = None
 
 
-    def start(self):
+    async def start(self):
+        self.log.info("Starting Websocket Server")
         self.websocket_server = await websockets.serve(
             self.safe_handle, "localhost", self.config["rpc_port"]
         )
+        self.log.info("Starting Websocket Server")
 
         def master_close_cb():
             self.stop()
@@ -80,13 +83,16 @@ class WebSocketServer:
 
         private_key = self.keychain.get_wallet_key()
         if private_key is not None:
-            self.start_wallet()
-
+            await self.start_wallet()
+        self.log.info("Waiting webSocketServer closure")
         await self.websocket_server.wait_closed()
+        self.log.info("webSocketServer closed")
 
-    def start_wallet(self) -> bool:
+
+    async def start_wallet(self) -> bool:
         private_key = self.keychain.get_wallet_key()
         if private_key is None:
+            self.log.info("No keys")
             return False
 
         if self.config["testing"] is True:
@@ -124,7 +130,7 @@ class WebSocketServer:
                 self.config["full_node_peer"]["host"], self.config["full_node_peer"]["port"]
             )
 
-            log.info(f"Connecting to full node peer at {full_node_peer}")
+            self.log.info(f"Connecting to full node peer at {full_node_peer}")
             server.global_connections.peers.add(full_node_peer)
             _ = await server.start_client(full_node_peer, None)
 
@@ -575,7 +581,7 @@ class WebSocketServer:
         seed = seed_from_mnemonic(mnemonic)
         self.keychain.set_wallet_seed(seed)
         k_seed = self.keychain.get_wallet_seed()
-        self.start_wallet()
+        await self.start_wallet()
 
         if k_seed == seed:
             response = {"success": True}
@@ -669,6 +675,8 @@ class WebSocketServer:
                 await self.get_wallet_summaries(websocket, data, command)
             elif command == "logged_in":
                 await self.logged_in(websocket, command)
+            elif command == "generate_mnemonic":
+                await self.generate_mnemonic(websocket, command)
             else:
                 response = {"error": f"unknown_command {command}"}
                 await websocket.send(dict_to_json_str(response))
@@ -702,9 +710,9 @@ async def start_websocket_server():
 
 
     setproctitle("chia-wallet")
-    keychain = Keychain.create()
+    keychain = Keychain.create(testing=False)
     websocket_server = WebSocketServer(keychain, DEFAULT_ROOT_PATH)
-
+    await websocket_server.start()
     log.info("Wallet fully closed")
 
 
