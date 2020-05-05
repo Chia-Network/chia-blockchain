@@ -261,23 +261,28 @@ function get_wallet_balance_response(response) {
 
         wallet_balance_holder = document.querySelector("#" + "balance_wallet_" + wallet_id )
         wallet_pending_holder = document.querySelector("#" + "pending_wallet_" + wallet_id )
-
+        var denomination = " XCH"
+        if (wallets_details[wallet_id]["type"] == "COLOURED_COIN"){
+          denomination = " CC"
+        } else if (wallets_details[wallet_id]["type"] == "STANDARD_WALLET"){
+          denomination = " XCH"
+        }
         if (g_wallet_id == wallet_id) {
-            balance_textfield.innerHTML = chia_confirmed + " CH"
+            balance_textfield.innerHTML = chia_confirmed + denomination
             if (pending > 0) {
-                pending_textfield.innerHTML = lock + " - " + chia_pending + " CH"
+                pending_textfield.innerHTML = lock + " - " + chia_pending + denomination
             } else {
-                pending_textfield.innerHTML = lock + " " + chia_pending_abs + " CH"
+                pending_textfield.innerHTML = lock + " " + chia_pending_abs + denomination
             }
         }
         if (wallet_balance_holder) {
-            wallet_balance_holder.innerHTML = chia_confirmed.toString() + " CH"
+            wallet_balance_holder.innerHTML = chia_confirmed.toString() + denomination
         }
         if (wallet_pending_holder) {
             if (pending > 0) {
-                wallet_pending_holder.innerHTML = lock + " - " + chia_pending + " CH"
+                wallet_pending_holder.innerHTML = lock + " - " + chia_pending + denomination
             } else {
-                wallet_pending_holder.innerHTML = lock + " " + chia_pending_abs + " CH"
+                wallet_pending_holder.innerHTML = lock + " " + chia_pending_abs + denomination
             }
         }
     }
@@ -492,7 +497,12 @@ send.addEventListener('click', () => {
           return
         }
         if (puzzle_hash.substring(0,14) == "colour_addr://"){
-          puzzle_hash = puzzle_hash.substring(14)
+          colour_id = puzzle_hash.substring(14,78)
+          puzzle_hash = puzzle_hash.substring(79)
+          if (colour_id != wallets_details[g_wallet_id]["colour"]){
+            alert("Error the entered address appears to be for a different colour.")
+            return
+          }
         }
         if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
             puzzle_hash = puzzle_hash.substring(2);
@@ -595,7 +605,10 @@ function get_innerpuzzlehash_response(response) {
     /*
     Called when response is received for get_new_puzzle_hash request
     */
+    colour = wallets_details[g_wallet_id]["colour"]
     puzzle_hash = "colour_addr://"
+    puzzle_hash = puzzle_hash.concat(colour)
+    puzzle_hash = puzzle_hash.concat(":")
     puzzle_holder.value = puzzle_hash.concat(response["innerpuz"]);
     QRCode.toCanvas(canvas, response["innerpuz"], function (error) {
     if (error) console.error(error)

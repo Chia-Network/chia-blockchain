@@ -74,7 +74,7 @@ def main():
         f"{args.index + args.num_plots - 1}, of size {args.size}, sk_seed {sk_seed.hex()} ppk {pool_pk}"
     )
 
-    tmp_dir = args.final_dir / args.tmp_dir
+    tmp_dir = args.tmp_dir
     mkdir(tmp_dir)
     mkdir(args.final_dir)
     for i in range(args.index, args.index + args.num_plots):
@@ -129,7 +129,9 @@ def main():
     try:
         tmp_dir.rmdir()
     except Exception:
-        print(f"warning: couldn't delete {tmp_dir}")
+        print(
+            f"warning: did not remove temporary folder {tmp_dir}, it may not be empty."
+        )
 
 
 if __name__ == "__main__":

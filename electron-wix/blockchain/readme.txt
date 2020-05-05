@@ -35,7 +35,7 @@ To stop a service started with Start-Job, run 'Get-Job' and then 'Stop-Job ID'
 where ID is the listed job number.
 
 After install, you can enter the venv in the "Chia Blockchain" directory with:
-    .\venv\Scrips\Activate.ps1
+    .\venv\Scripts\Activate.ps1
 
 For more usage information try:
 Quick Start Guide - https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide
