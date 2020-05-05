@@ -65,6 +65,7 @@ class FullNode:
     coin_store: CoinStore
     mempool_manager: MempoolManager
     connection: aiosqlite.Connection
+    sync_peers_handler: Optional[SyncPeersHandler]
     blockchain: Blockchain
     config: Dict
     server: Optional[ChiaServer]
@@ -86,6 +87,7 @@ class FullNode:
         self.server = None
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants.copy()
+        self.sync_peers_handler = None
         for key, value in override_constants.items():
             self.constants[key] = value
         if name:
@@ -294,6 +296,7 @@ class FullNode:
         """
         self.log.info("Starting to perform sync with peers.")
         self.log.info("Waiting to receive tips from peers.")
+        self.sync_peers_handler = None
         self.sync_store.set_waiting_for_tips(True)
         # TODO: better way to tell that we have finished receiving tips
         # TODO: fix DOS issue. Attacker can request syncing to an invalid blockchain
@@ -494,9 +497,6 @@ class FullNode:
             self.sync_store, peers, fork_point_height, self.blockchain
         )
 
-        async for msg in self.sync_peers_handler._add_to_request_sets():
-            yield msg  # Send the initial requests for blocks
-
         while not self.sync_peers_handler.done():
             # Periodically checks for done, timeouts, shutdowns, new peers or disconnected peers.
             if self._shut_down:
@@ -514,13 +514,16 @@ class FullNode:
             ]
             for node_id in cur_peers:
                 if node_id not in peers:
-                    async for msg in self.sync_peers_handler.new_node_connected(node_id):
-                        yield msg  # Sends some requests to each new peer
+                    self.sync_peers_handler.new_node_connected(node_id)
             for node_id in peers:
                 if node_id not in cur_peers:
                     # Disconnected peer, removes requests that are being sent to it
                     self.sync_peers_handler.node_disconnected(node_id)
-            await asyncio.sleep(10)
+
+            async for msg in self.sync_peers_handler._add_to_request_sets():
+                yield msg  # Send more requests if we can
+
+            await asyncio.sleep(2)
 
         # Awaits for all blocks to be processed, a timeout to happen, or the node to shutdown
         await block_processor_task
@@ -1514,8 +1517,9 @@ class FullNode:
                 return
 
             # This is a block we asked for during sync
-            async for req in self.sync_peers_handler.new_block(respond_block.block):
-                yield req
+            if self.sync_peers_handler is not None:
+                async for req in self.sync_peers_handler.new_block(respond_block.block):
+                    yield req
             return
 
         # Adds the block to seen, and check if it's seen before (which means header is in memory)

@@ -35,13 +35,21 @@ class SyncBlocksProcessor:
         self._shut_down = True
 
     async def process(self) -> None:
+        header_hashes = self.sync_store.get_potential_hashes()
+
+        # TODO: run this in a new process so it doesn't have to share CPU time with other things
         for batch_start_height in range(
-            self.fork_height, self.tip_height + 1, self.BATCH_SIZE
+            self.fork_height + 1, self.tip_height + 1, self.BATCH_SIZE
         ):
             total_time_slept = 0
             batch_end_height = min(
                 batch_start_height + self.BATCH_SIZE - 1, self.tip_height
             )
+            for height in range(batch_start_height, batch_end_height + 1):
+                # If we have already added this block to the chain, skip it
+                if header_hashes[height] in self.blockchain.headers:
+                    batch_start_height = height + 1
+
             while True:
                 if self._shut_down:
                     return
@@ -101,10 +109,9 @@ class SyncBlocksProcessor:
                         if error_code is not None:
                             raise ConsensusError(error_code, block.header_hash)
                         raise RuntimeError(f"Invalid block {block.header_hash}")
-
                 assert (
                     max([h.height for h in self.blockchain.get_current_tips()])
-                    >= height
+                    >= block.height
                 )
 
             log.info(

@@ -36,9 +36,9 @@ class SyncPeersHandler:
         self.header_hashes = self.sync_store.get_potential_hashes()
         self.fully_validated_up_to = fork_height
         # Only request this height greater than our current validation
-        self.MAX_GAP = 200
+        self.MAX_GAP = 100
         # Only request this many simultaneous blocks per peer
-        self.MAX_REQUESTS_PER_PEER = 5
+        self.MAX_REQUESTS_PER_PEER = 10
         # If a response for a block request is not received by this timeout, the connection
         # is closed.
         self.BLOCK_RESPONSE_TIMEOUT = 60
@@ -61,6 +61,7 @@ class SyncPeersHandler:
                 if current_time - time_requested > self.BLOCK_RESPONSE_TIMEOUT:
                     remove_node_ids.append(node_id)
         for rnid in remove_node_ids:
+            log.warning(f"Timeout receiving block, removed {node_id}, popping")
             self.current_outbound_sets.pop(node_id, None)
             yield OutboundMessage(
                 NodeType.FULL_NODE, Message("", None), Delivery.CLOSE, rnid
@@ -136,7 +137,7 @@ class SyncPeersHandler:
             request_sync = full_node_protocol.RequestBlock(
                 height, self.header_hashes[height]
             )
-            log.info(f"Yielding request for {height}")
+            log.warning(f"Yeilding {height}")
             yield OutboundMessage(
                 NodeType.FULL_NODE,
                 Message("request_block", request_sync),
@@ -145,12 +146,13 @@ class SyncPeersHandler:
             )
 
     async def new_block(self, block: FullBlock) -> OutboundMessageGenerator:
-        header_hash: bytes32 = block.get_hash()
-        # This block is wrong, so ignore
+        log.info(f"Got block {block.height}")
+        header_hash: bytes32 = block.header_hash
         if (
             block.height >= len(self.header_hashes)
             or self.header_hashes[block.height] != header_hash
         ):
+            # This block is wrong, so ignore
             log.info(
                 f"Received header hash that is not in sync path {header_hash} at height {block.height}"
             )
@@ -163,6 +165,7 @@ class SyncPeersHandler:
 
         assert block.height in self.sync_store.potential_blocks_received
 
+        log.info(f"Setting {block.height} to set")
         self.sync_store.get_potential_blocks_received(block.height).set()
 
         # remove block from request set
@@ -180,11 +183,9 @@ class SyncPeersHandler:
         self.current_outbound_sets.pop(node_id, None)
         yield OutboundMessage(NodeType.FULL_NODE, Message("", None), Delivery.CLOSE)
 
-    async def new_node_connected(self, node_id: bytes32) -> OutboundMessageGenerator:
+    def new_node_connected(self, node_id: bytes32):
         self.current_outbound_sets[node_id] = {}
-        # add to request sets
-        async for msg in self._add_to_request_sets():
-            yield msg
 
     def node_disconnected(self, node_id: bytes32):
+        log.warning(f"Node {node_id} disconnected")
         self.current_outbound_sets.pop(node_id, None)
