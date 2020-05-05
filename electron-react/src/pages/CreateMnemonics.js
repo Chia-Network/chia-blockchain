@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Component }  from 'react';
 import Avatar from '@material-ui/core/Avatar';
 import Button from '@material-ui/core/Button';
 import CssBaseline from '@material-ui/core/CssBaseline';
@@ -13,7 +13,10 @@ import Typography from '@material-ui/core/Typography';
 import { withStyles, makeStyles } from '@material-ui/styles';
 import Container from '@material-ui/core/Container';
 import Paper from '@material-ui/core/Paper';
-
+import ArrowBackIosIcon from '@material-ui/icons/ArrowBackIos';
+import { connect, useSelector, useDispatch } from 'react-redux';
+import { genereate_mnemonics } from '../modules/message';
+import { withRouter } from 'react-router-dom'
 
 function Copyright() {
   return (
@@ -113,100 +116,42 @@ const useStyles = makeStyles((theme) => ({
   }
 }));
 
-export default function CreateMnemonics() {
+class MnemonicLabel extends Component {
+  render() {
+    return (
+      <Grid item xs={2}>
+        <CssTextField
+        variant="outlined"
+        margin="normal"
+        disabled
+        fullWidth
+        color="primary" 
+        id="email"
+        label={this.props.index}
+        name="email"
+        autoComplete="email"
+        autoFocus
+        defaultValue={this.props.word}
+        />
+      </Grid>
+    )
+  }
+}
+const CreateMnemonics = () => {
+  var get_mnemonics = genereate_mnemonics()
+  const dispatch = useDispatch();
+  dispatch(get_mnemonics)
+  console.log("something")
+  const words = useSelector(state => state.wallet_state.mnemonic)
   const classes = useStyles();
-  
   return (
     <div className={classes.root}>
-    <Container className={classes.grid} component="mnemonic" maxWidth="lg">
+    <Container className={classes.grid} maxWidth="lg">
         <Typography className={classes.title} component="h1" variant="h5">
           Write Down These Words
         </Typography>
     <Grid container spacing={3}>
-        <Grid item xs={2}>
-        <CssTextField
-            variant="outlined"
-            margin="normal"
-            disabled
-            fullWidth
-            color="primary" 
-            id="email"
-            label="1"
-            name="email"
-            autoComplete="email"
-            autoFocus
-            defaultValue="Banana" 
-          />
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
-        <Grid item xs={2}>
-          <Paper className={classes.grid_item}>xs=3</Paper>
-        </Grid>
+        {words.map((word, i) => <MnemonicLabel word={word} index={i+1} />)}
       </Grid>
     </Container>
     <Container component="main" maxWidth="xs" >
@@ -226,3 +171,5 @@ export default function CreateMnemonics() {
     </div>
   );
 }
+
+export default withRouter(connect()(CreateMnemonics));

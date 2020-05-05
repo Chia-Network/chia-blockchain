@@ -1,4 +1,4 @@
-export const newMessage = msg => ({ type: 'NEW_MESSAGE'});
+export const newMessage = msg => ({ type: 'OUTGOING_MESSAGE'});
 
 
 export const format_message = (command, data) => {
@@ -19,5 +19,23 @@ export const send_transaction = (wallet_id, amount, fee, puzzle_hash) => {
   var action = newMessage()
   action.command = "send_transaction"
   action.data = {"wallet_id": wallet_id, "amount": amount, "fee": fee, "puzzle_hash": puzzle_hash}
+  return action
+}
+
+export const genereate_mnemonics = () => {
+  var action = newMessage()
+  action.command = "generate_mnemonic"
+  action.data = {"data": "dummy"}
+  return action
+}
+
+
+export const incomingMessage = msg => ({ type: 'INCOMING_MESSAGE'});
+
+
+export const mnemonic_received = (data) => {
+  var action = incomingMessage()
+  action.command = "generate_mnemonic"
+  action.data = data
   return action
 }

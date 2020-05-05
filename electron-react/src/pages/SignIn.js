@@ -5,7 +5,6 @@ import CssBaseline from '@material-ui/core/CssBaseline';
 import TextField from '@material-ui/core/TextField';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
-import Link from '@material-ui/core/Link';
 import Grid from '@material-ui/core/Grid';
 import Box from '@material-ui/core/Box';
 import LockOutlinedIcon from '@material-ui/icons/LockOutlined';
@@ -14,7 +13,10 @@ import { withStyles, makeStyles } from '@material-ui/core/styles';
 import Container from '@material-ui/core/Container';
 import { useTheme } from '@material-ui/core/styles';
 import logo from '../assets/img/chia_logo.svg'; // Tell webpack this JS file uses this image
-
+import { withRouter } from 'react-router-dom'
+import { connect, useSelector, useDispatch } from 'react-redux';
+import Link from '@material-ui/core/Link';
+import { Link as RouterLink } from 'react-router-dom';
 
 function Copyright() {
   return (
@@ -97,7 +99,7 @@ const useStyles = makeStyles((theme) => ({
   }
 }));
 
-export default function SignIn() {
+const SignIn = () => {
   const classes = useStyles();
   
   return (
@@ -107,7 +109,7 @@ export default function SignIn() {
       <div className={classes.paper}>
       <img className ={classes.logo} src={logo} alt="Logo" />;
       <div>
-        <Link href="/Mnemonics">
+        <Link component={RouterLink} to="/Mnemonics">
             <Button
                 type="submit"
                 fullWidth
@@ -118,7 +120,7 @@ export default function SignIn() {
                 Enter Mnemonics
             </Button>
           </Link>
-          <Link href="/CreateMnemonics">
+          <Link component={RouterLink} to="/CreateMnemonics">
             <Button
                 type="submit"
                 fullWidth
@@ -145,3 +147,5 @@ export default function SignIn() {
     </div>
   );
 }
+
+export default withRouter(connect()(SignIn));

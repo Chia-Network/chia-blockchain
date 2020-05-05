@@ -9,7 +9,7 @@ const websocketInitialState = { connected: false };
 export const websocketReducer = (state = { ...websocketInitialState }, action) => {
   switch (action.type) {
     case 'WS_CONNECTED':
-      console.log("connected")
+      console.log("connected now!")
       return { ...state, host: action.host, connected: true};
     default:
       return state;

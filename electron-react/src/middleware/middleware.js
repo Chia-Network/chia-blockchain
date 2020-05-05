@@ -1,5 +1,5 @@
 import * as actions from '../modules/websocket';
-import { newMessage, format_message, get_balance_for_wallet } from '../modules/message';
+import { newMessage, format_message, get_balance_for_wallet, incomingMessage, mnemonic_received } from '../modules/message';
 
 const socketMiddleware = () => {
   let socket = null;
@@ -8,8 +8,7 @@ const socketMiddleware = () => {
     store.dispatch(actions.wsConnected(event.target.url));
     var action = format_message("start_server", "{wallet_id: 1}")
     store.dispatch(action);
-    var get_balance = get_balance_for_wallet(1)
-    store.dispatch(get_balance)
+    console.log("Start Server")
   };
 
   const onClose = store => () => {
@@ -19,10 +18,14 @@ const socketMiddleware = () => {
   const onMessage = store => (event) => {
     const payload = JSON.parse(event.data);
     console.log(payload)
-    switch (payload.type) {
+    switch (payload.command) {
       case 'balance':
         store.dispatch(newMessage(payload.msg));
         break;
+      case 'generate_mnemonic':
+        console.log("generate mnemonic received")
+        console.log(payload)
+        store.dispatch(mnemonic_received(payload.data))
       default:
         console.log(payload);
         break;
@@ -51,8 +54,14 @@ const socketMiddleware = () => {
         }
         socket = null;
         break;
-      case 'NEW_MESSAGE':
-        socket.send(JSON.stringify({ command: action.command, data: action.data }));
+      case 'OUTGOING_MESSAGE':
+        if (socket != null) {
+          console.log("socket" + socket)
+          console.log("Action command" + action.command + " data" + action.data)
+          socket.send(JSON.stringify({ command: action.command, data: action.data }));
+        } else {
+          console.log("Socket not connected")
+        }
         break;
       default:
         return next(action);
