@@ -12,6 +12,7 @@ import websockets
 
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
+from src.util.keychain import Keychain, seed_from_mnemonic, generate_mnemonic
 from src.wallet.trade_manager import TradeManager
 from src.wallet.util.json_util import dict_to_json_str
 
@@ -52,11 +53,96 @@ def format_response(command: str, response_data: Dict[str, Any]):
 
 
 class WebSocketServer:
-    def __init__(self, wallet_node: WalletNode, log, trade_manager: TradeManager):
-        self.wallet_node: WalletNode = wallet_node
+    def __init__(self, keychain: Keychain, root_path: Path):
+        self.config = load_config_cli(root_path, "config.yaml", "wallet")
+        initialize_logging("Wallet %(name)-25s", self.config["logging"], root_path)
+        self.log = logging.getLogger(__name__)
+        self.keychain = keychain
         self.websocket = None
-        self.log = log
-        self.trade_manager = trade_manager
+        self.root_path = root_path
+        self.wallet_node: Optional[WalletNode] = None
+        self.trade_manager: Optional[TradeManager] = None
+
+
+    def start(self):
+        self.websocket_server = await websockets.serve(
+            self.safe_handle, "localhost", self.config["rpc_port"]
+        )
+
+        def master_close_cb():
+            self.stop()
+
+        try:
+            asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
+            asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
+        except NotImplementedError:
+            self.log.info("Not implemented")
+
+        private_key = self.keychain.get_wallet_key()
+        if private_key is not None:
+            self.start_wallet()
+
+        await self.websocket_server.wait_closed()
+
+    def start_wallet(self) -> bool:
+        private_key = self.keychain.get_wallet_key()
+        if private_key is None:
+            return False
+
+        if self.config["testing"] is True:
+            log.info(f"Websocket server in testing mode")
+            self.config["database_path"] = "test_db_wallet.db"
+            wallet_node = await WalletNode.create(
+                self.config, self.keychain, override_constants=test_constants
+            )
+        else:
+            log.info(f"Not Testing")
+            wallet_node = await WalletNode.create(self.config, self.keychain)
+
+        self.trade_manager = await TradeManager.create(wallet_node.wallet_state_manager)
+        wallet_node.wallet_state_manager.set_callback(self.state_changed_callback)
+
+        net_config = load_config(self.root_path, "config.yaml")
+        ping_interval = self.config.get("ping_interval")
+        network_id = net_config.get("network_id")
+        assert ping_interval is not None
+        assert network_id is not None
+
+        server = ChiaServer(
+            self.config["port"],
+            wallet_node,
+            NodeType.WALLET,
+            ping_interval,
+            network_id,
+            DEFAULT_ROOT_PATH,
+            self.config,
+        )
+        wallet_node.set_server(server)
+
+        if "full_node_peer" in self.config:
+            full_node_peer = PeerInfo(
+                self.config["full_node_peer"]["host"], self.config["full_node_peer"]["port"]
+            )
+
+            log.info(f"Connecting to full node peer at {full_node_peer}")
+            server.global_connections.peers.add(full_node_peer)
+            _ = await server.start_client(full_node_peer, None)
+
+
+        if self.config["testing"] is False:
+            wallet_node._start_bg_tasks()
+
+        await server.await_closed()
+        await wallet_node.wallet_state_manager.close_all_stores()
+
+        return True
+
+    def stop(self):
+        self.websocket_server.close()
+        if self.server is not None:
+            self.server.close_all()
+        if self.wallet_node is not None:
+            self.wallet_node._shutdown()
 
     async def get_next_puzzle_hash(self, websocket, request, response_api):
         """
@@ -475,6 +561,39 @@ class WebSocketServer:
             response = {"success": success, "reason": reason}
         return await websocket.send(format_response(response_api, response))
 
+    async def logged_in(self, websocket, response_api):
+        private_key = self.keychain.get_wallet_key()
+        if private_key is None:
+            response = {"logged_in": False}
+        else:
+            response = {"logged_in": True}
+
+        return await websocket.send(format_response(response_api, response))
+
+    async def log_in(self, websocket, request, response_api):
+        mnemonic = request["mnemonic"]
+        seed = seed_from_mnemonic(mnemonic)
+        self.keychain.set_wallet_seed(seed)
+        k_seed = self.keychain.get_wallet_seed()
+        self.start_wallet()
+
+        if k_seed == seed:
+            response = {"success": True}
+        else:
+            response = {"success": False}
+
+        return await websocket.send(format_response(response_api, response))
+
+    async def log_out(self, websocket, response_api):
+        self.keychain.delete_all_keys()
+        response = {"success": True}
+        return await websocket.send(format_response(response_api, response))
+
+    async def generate_mnemonic(self, websocket, response_api):
+        mnemonic = generate_mnemonic()
+        response = {"success": True, "mnemonic": mnemonic}
+        return await websocket.send(format_response(response_api, response))
+
     async def safe_handle(self, websocket, path):
         try:
             await self.handle_message(websocket, path)
@@ -548,6 +667,8 @@ class WebSocketServer:
                 await self.respond_to_offer(websocket, data, command)
             elif command == "get_wallet_summaries":
                 await self.get_wallet_summaries(websocket, data, command)
+            elif command == "logged_in":
+                await self.logged_in(websocket, command)
             else:
                 response = {"error": f"unknown_command {command}"}
                 await websocket.send(dict_to_json_str(response))
@@ -579,80 +700,11 @@ async def start_websocket_server():
     Starts WalletNode, WebSocketServer, and ChiaServer
     """
 
-    root_path = DEFAULT_ROOT_PATH
 
-    config = load_config_cli(root_path, "config.yaml", "wallet")
-    initialize_logging("Wallet %(name)-25s", config["logging"], root_path)
-    log = logging.getLogger(__name__)
-
-    try:
-        key_config = load_config(DEFAULT_ROOT_PATH, "keys.yaml")
-    except FileNotFoundError:
-        raise RuntimeError("Keys not generated. Run `chia generate keys`")
-    if config["testing"] is True:
-        log.info(f"Testing")
-        config["database_path"] = "test_db_wallet.db"
-        wallet_node = await WalletNode.create(
-            config, key_config, override_constants=test_constants
-        )
-    else:
-        log.info(f"Not Testing")
-        wallet_node = await WalletNode.create(config, key_config)
     setproctitle("chia-wallet")
-    trade_manager = await TradeManager.create(wallet_node.wallet_state_manager)
-    handler = WebSocketServer(wallet_node, log, trade_manager)
-    wallet_node.wallet_state_manager.set_callback(handler.state_changed_callback)
+    keychain = Keychain.create()
+    websocket_server = WebSocketServer(keychain, DEFAULT_ROOT_PATH)
 
-    net_config = load_config(root_path, "config.yaml")
-    ping_interval = net_config.get("ping_interval")
-    network_id = net_config.get("network_id")
-    assert ping_interval is not None
-    assert network_id is not None
-
-    log.info(f"Starting wallet server on port {config['port']}.")
-    server = ChiaServer(
-        config["port"],
-        wallet_node,
-        NodeType.WALLET,
-        ping_interval,
-        network_id,
-        DEFAULT_ROOT_PATH,
-        config,
-    )
-    wallet_node.set_server(server)
-
-    if "full_node_peer" in config:
-        full_node_peer = PeerInfo(
-            config["full_node_peer"]["host"], config["full_node_peer"]["port"]
-        )
-
-        log.info(f"Connecting to full node peer at {full_node_peer}")
-        server.global_connections.peers.add(full_node_peer)
-        _ = await server.start_client(full_node_peer, None)
-
-    log.info("Starting websocket server.")
-    websocket_server = await websockets.serve(
-        handler.safe_handle, "localhost", config["rpc_port"]
-    )
-    log.info(f"Started websocket server at port {config['rpc_port']}.")
-
-    def master_close_cb():
-        websocket_server.close()
-        server.close_all()
-        wallet_node._shutdown()
-
-    try:
-        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
-        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
-    except NotImplementedError:
-        log.info("signal handlers unsupported")
-
-    if config["testing"] is False:
-        wallet_node._start_bg_tasks()
-
-    await server.await_closed()
-    await websocket_server.wait_closed()
-    await wallet_node.wallet_state_manager.close_all_stores()
     log.info("Wallet fully closed")
 
 

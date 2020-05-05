@@ -155,11 +155,6 @@ class Keychain:
         wallet_sk = ExtendedPrivateKey.from_seed(wallet_seed)
         return wallet_sk
 
-    def delete_all_keys(self):
-        keyring.delete_password(self.get_service(), self.get_wallet_user())
-        keyring.delete_password(self.get_service(), self.get_pool_user())
-        keyring.delete_password(self.get_service(), self.get_harvester_user())
-
     def get_harvester_seed(self) -> Optional[bytes32]:
         stored = self.get_stored_entropy(self.get_harvester_user())
         if stored is not None:
@@ -265,7 +260,7 @@ class Keychain:
         default_pool = std_hash(std_hash(std_hash(wallet_seed)))
         return default_pool
 
-    def delete_keys(self):
+    def delete_all_keys(self):
         keyring.delete_password(self.get_service(), self.get_wallet_user())
         keyring.delete_password(self.get_service(), self.get_wallet_target_user())
         keyring.delete_password(self.get_service(), self.get_pool_user_raw(0))

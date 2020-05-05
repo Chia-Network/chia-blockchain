@@ -19,6 +19,7 @@ from src.types.header_block import HeaderBlock
 from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint32, uint64
 from src.util.hash import std_hash
+from src.util.keychain import Keychain
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.cc_wallet import cc_wallet_puzzles
 from src.wallet.transaction_record import TransactionRecord
@@ -38,7 +39,6 @@ from src.wallet.wallet_user_store import WalletUserStore
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.util.errors import Err
 from src.wallet.wallet import Wallet
-from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.types.program import Program
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.util.wallet_types import WalletType
@@ -46,7 +46,6 @@ from src.wallet.util.wallet_types import WalletType
 
 class WalletStateManager:
     constants: Dict
-    key_config: Dict
     config: Dict
     wallet_store: WalletStore
     tx_store: WalletTransactionStore
@@ -83,7 +82,7 @@ class WalletStateManager:
 
     @staticmethod
     async def create(
-        key_config: Dict,
+        keychain: Keychain,
         config: Dict,
         db_path: Path,
         constants: Dict,
@@ -119,9 +118,8 @@ class WalletStateManager:
         main_wallet_info = await self.user_store.get_wallet_by_id(1)
         assert main_wallet_info is not None
 
-        self.key_config = key_config
-        sk_hex = self.key_config["wallet_sk"]
-        self.private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
+        self.keychain = keychain
+        self.private_key = self.keychain.get_wallet_key()
 
         self.main_wallet = await Wallet.create(self, main_wallet_info)
 
@@ -134,11 +132,6 @@ class WalletStateManager:
                 if wallet_info.id == 1:
                     continue
                 wallet = await Wallet.create(config, wallet_info)
-                self.wallets[wallet_info.id] = wallet
-            elif wallet_info.type == WalletType.RATE_LIMITED:
-                wallet = await RLWallet.create(
-                    config, key_config, self, wallet_info, self.main_wallet,
-                )
                 self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.COLOURED_COIN:
                 wallet = await CCWallet.create(self, self.main_wallet, wallet_info,)
