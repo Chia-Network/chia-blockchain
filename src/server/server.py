@@ -412,6 +412,10 @@ class ChiaServer:
             connection.node_id = inbound_handshake.node_id
             connection.peer_server_port = int(inbound_handshake.server_port)
             connection.connection_type = inbound_handshake.node_type
+
+            if self._srwt_aiter.is_stopped():
+                raise Exception("No longer accepting handshakes, closing.")
+
             if not self.global_connections.add(connection):
                 raise ProtocolError(Err.DUPLICATE_CONNECTION, [False])
 

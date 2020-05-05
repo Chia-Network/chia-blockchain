@@ -29,7 +29,6 @@ def make_parser(parser):
 
 
 def start(args, parser):
-
     processes: List = []
     for service in services_for_groups(args.group):
         if pid_path_for_service(args.root_path, service).is_file():
