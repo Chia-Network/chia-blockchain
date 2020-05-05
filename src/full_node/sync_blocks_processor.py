@@ -86,7 +86,9 @@ class SyncBlocksProcessor:
                 blocks.append(b)
 
             validation_start_time = time.time()
-            prevalidate_results = await self.blockchain.pre_validate_blocks(blocks)
+            prevalidate_results = await self.blockchain.pre_validate_blocks_multiprocessing(
+                blocks
+            )
 
             for index, block in enumerate(blocks):
                 assert block is not None

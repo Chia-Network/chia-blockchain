@@ -61,11 +61,12 @@ class SyncPeersHandler:
                 if current_time - time_requested > self.BLOCK_RESPONSE_TIMEOUT:
                     remove_node_ids.append(node_id)
         for rnid in remove_node_ids:
-            log.warning(f"Timeout receiving block, removed {node_id}, popping")
-            self.current_outbound_sets.pop(node_id, None)
-            yield OutboundMessage(
-                NodeType.FULL_NODE, Message("", None), Delivery.CLOSE, rnid
-            )
+            if rnid in self.current_outbound_sets:
+                log.warning(f"Timeout receiving block, closing the connection")
+                self.current_outbound_sets.pop(rnid, None)
+                yield OutboundMessage(
+                    NodeType.FULL_NODE, Message("", None), Delivery.CLOSE, rnid
+                )
 
     async def _add_to_request_sets(self) -> OutboundMessageGenerator:
         """
@@ -122,7 +123,9 @@ class SyncPeersHandler:
         outbound_sets_list.sort(key=lambda x: len(x[1]))
         index = 0
         for height in to_send:
-            # Find a the next peer with an empty slot
+            # Find a the next peer with an empty slot. There must be an empty slot: to_send
+            # includes up to free_slots things, and current_outbound sets cannot change since there is
+            # no await from when free_slots is computed (and thus no context switch).
             while (
                 len(outbound_sets_list[index % len(outbound_sets_list)][1])
                 == self.MAX_REQUESTS_PER_PEER
@@ -137,7 +140,6 @@ class SyncPeersHandler:
             request_sync = full_node_protocol.RequestBlock(
                 height, self.header_hashes[height]
             )
-            log.warning(f"Yeilding {height}")
             yield OutboundMessage(
                 NodeType.FULL_NODE,
                 Message("request_block", request_sync),
@@ -146,7 +148,6 @@ class SyncPeersHandler:
             )
 
     async def new_block(self, block: FullBlock) -> OutboundMessageGenerator:
-        log.info(f"Got block {block.height}")
         header_hash: bytes32 = block.header_hash
         if (
             block.height >= len(self.header_hashes)
@@ -165,7 +166,6 @@ class SyncPeersHandler:
 
         assert block.height in self.sync_store.potential_blocks_received
 
-        log.info(f"Setting {block.height} to set")
         self.sync_store.get_potential_blocks_received(block.height).set()
 
         # remove block from request set

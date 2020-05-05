@@ -84,6 +84,8 @@ class Blockchain:
     # Lock to prevent simultaneous reads and writes
     lock: asyncio.Lock
 
+    _is_shutdown: bool
+
     @staticmethod
     async def create(
         coin_store: CoinStore, block_store: BlockStore, override_constants: Dict = {},
@@ -106,7 +108,16 @@ class Blockchain:
         self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
         self.coinbase_freeze = self.constants["COINBASE_FREEZE_PERIOD"]
         await self._load_chain_from_store()
+        cpu_count = multiprocessing.cpu_count()
+        self.pool = concurrent.futures.ProcessPoolExecutor(
+            max_workers=max(cpu_count - 1, 1)
+        )
+        self._is_shutdown = False
         return self
+
+    def shut_down(self):
+        self._is_shutdown = True
+        self.pool.shutdown(wait=True)
 
     async def _load_chain_from_store(self,) -> None:
         """
@@ -774,32 +785,21 @@ class Blockchain:
                 return Err.INVALID_POT_CHALLENGE
         return None
 
-    async def pre_validate_blocks(
-        self, blocks: List[FullBlock]
-    ) -> List[Tuple[bool, Optional[bytes32]]]:
-
-        results = []
-        for block in blocks:
-            val, pos = self.pre_validate_block_multi(bytes(block))
-            if pos is not None:
-                pos = bytes32(pos)
-            results.append((val, pos))
-
-        return results
-
     async def pre_validate_blocks_multiprocessing(
         self, blocks: List[FullBlock]
     ) -> List[Tuple[bool, Optional[bytes32]]]:
         futures = []
 
-        cpu_count = multiprocessing.cpu_count()
         # Pool of workers to validate blocks concurrently
-        pool = concurrent.futures.ProcessPoolExecutor(max_workers=max(cpu_count - 1, 1))
-
         for block in blocks:
+            if self._is_shutdown:
+                return [(False, None) for block in blocks]
             futures.append(
                 asyncio.get_running_loop().run_in_executor(
-                    pool, self.pre_validate_block_multi, bytes(block)
+                    self.pool,
+                    Blockchain._pre_validate_block_multi,
+                    self.constants,
+                    bytes(block),
                 )
             )
         results = await asyncio.gather(*futures)
@@ -808,10 +808,10 @@ class Blockchain:
             if pos is not None:
                 pos = bytes32(pos)
             results[i] = val, pos
-        pool.shutdown(wait=True)
         return results
 
-    def pre_validate_block_multi(self, data) -> Tuple[bool, Optional[bytes]]:
+    @staticmethod
+    def _pre_validate_block_multi(constants: Dict, data: bytes):
         """
             Validates all parts of FullBlock that don't need to be serially checked
         """
@@ -821,7 +821,7 @@ class Blockchain:
             return False, None
 
         # 4. Check PoT
-        if not block.proof_of_time.is_valid(self.constants["DISCRIMINANT_SIZE_BITS"]):
+        if not block.proof_of_time.is_valid(constants["DISCRIMINANT_SIZE_BITS"]):
             return False, None
 
         # 9. Check harvester signature of header data is valid based on harvester key

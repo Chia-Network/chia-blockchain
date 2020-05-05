@@ -181,10 +181,12 @@ class TestCoinStore:
             assert b.get_current_tips()[0].height == 119
         except Exception as e:
             await connection.close()
+            b.shut_down()
             Path("blockchain_test.db").unlink()
             raise e
 
         await connection.close()
+        b.shut_down()
         Path("blockchain_test.db").unlink()
 
     @pytest.mark.asyncio
@@ -213,8 +215,10 @@ class TestCoinStore:
             assert len(coins) == (num_blocks + 1) * 2
         except Exception as e:
             await connection.close()
+            b.shut_down()
             Path("blockchain_test.db").unlink()
             raise e
 
         await connection.close()
+        b.shut_down()
         Path("blockchain_test.db").unlink()

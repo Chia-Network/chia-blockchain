@@ -64,6 +64,7 @@ class TestGenesisBlock:
         assert bc1.get_next_min_iters(bc1.genesis) > 0
 
         await connection.close()
+        bc1.shut_down()
 
 
 class TestBlockValidation:
@@ -86,6 +87,7 @@ class TestBlockValidation:
         yield (blocks, b)
 
         await connection.close()
+        b.shut_down()
 
     @pytest.mark.asyncio
     async def test_prev_pointer(self, initial_blockchain):
@@ -558,6 +560,7 @@ class TestReorgs:
         assert b.get_current_tips()[0].height == 119
 
         await connection.close()
+        b.shut_down()
 
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self):
@@ -602,6 +605,7 @@ class TestReorgs:
         assert result == ReceiveBlockResult.ADDED_TO_HEAD
 
         await connection.close()
+        b.shut_down()
 
     @pytest.mark.asyncio
     async def test_lca(self):
@@ -631,6 +635,7 @@ class TestReorgs:
         assert b.lca_block.header_hash == blocks[0].header_hash
 
         await connection.close()
+        b.shut_down()
 
     @pytest.mark.asyncio
     async def test_find_fork_point(self):
@@ -674,6 +679,7 @@ class TestReorgs:
         )
         assert b.lca_block.data == blocks[4].header.data
         await connection.close()
+        b.shut_down()
 
     @pytest.mark.asyncio
     async def test_get_header_hashes(self):
@@ -693,3 +699,4 @@ class TestReorgs:
         assert header_hashes == [block.header_hash for block in blocks]
 
         await connection.close()
+        b.shut_down()

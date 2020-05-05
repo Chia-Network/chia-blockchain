@@ -280,8 +280,11 @@ class FullNode:
 
         self.introducer_task = asyncio.create_task(introducer_client())
 
-    async def _shutdown(self):
+    def _close(self):
         self._shut_down = True
+        self.blockchain.shut_down()
+
+    async def _await_closed(self):
         await self.connection.close()
 
     async def _sync(self) -> OutboundMessageGenerator:
@@ -300,7 +303,7 @@ class FullNode:
         self.sync_store.set_waiting_for_tips(True)
         # TODO: better way to tell that we have finished receiving tips
         # TODO: fix DOS issue. Attacker can request syncing to an invalid blockchain
-        await asyncio.sleep(5)
+        await asyncio.sleep(2)
         highest_weight: uint128 = uint128(0)
         tip_block: FullBlock
         tip_height = 0
@@ -314,6 +317,9 @@ class FullNode:
             Tuple[bytes32, FullBlock]
         ] = self.sync_store.get_potential_tips_tuples()
         self.log.info(f"Have collected {len(potential_tips)} potential tips")
+        if self._shut_down:
+            return
+
         for header_hash, potential_tip_block in potential_tips:
             if potential_tip_block.proof_of_time is None:
                 raise ValueError(
@@ -519,6 +525,7 @@ class FullNode:
                 if node_id not in cur_peers:
                     # Disconnected peer, removes requests that are being sent to it
                     self.sync_peers_handler.node_disconnected(node_id)
+            peers = cur_peers
 
             async for msg in self.sync_peers_handler._add_to_request_sets():
                 yield msg  # Send more requests if we can
@@ -1527,7 +1534,7 @@ class FullNode:
         if self.blockchain.contains_block(header_hash):
             return
 
-        prevalidate_block = await self.blockchain.pre_validate_blocks(
+        prevalidate_block = await self.blockchain.pre_validate_blocks_multiprocessing(
             [respond_block.block]
         )
         val, pos = prevalidate_block[0]
@@ -1762,10 +1769,8 @@ class FullNode:
             return
 
         self.log.info(f"Trying to connect to peers: {to_connect}")
-        tasks = []
         for peer in to_connect:
-            tasks.append(asyncio.create_task(self.server.start_client(peer, None)))
-        await asyncio.gather(*tasks)
+            asyncio.create_task(self.server.start_client(peer, None))
 
     @api_request
     async def request_mempool_transactions(

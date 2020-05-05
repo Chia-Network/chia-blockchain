@@ -39,7 +39,7 @@ class TestRpc:
                 pass
 
         def stop_node_cb():
-            full_node_1._shutdown()
+            full_node_1._close()
             server_1.close_all()
 
         rpc_cleanup = await start_rpc_server(full_node_1, stop_node_cb, test_rpc_port)

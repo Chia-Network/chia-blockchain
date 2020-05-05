@@ -326,6 +326,11 @@ class ChiaServer:
                     # Does not ban the peer, this is just a graceful close of connection.
                     self.global_connections.close(connection, True)
                     continue
+                if connection.is_closing():
+                    self.log.info(
+                        f"Closing, so will not send {message.function} to peer {connection.get_peername()}"
+                    )
+                    continue
                 self.log.info(
                     f"-> {message.function} to peer {connection.get_peername()}"
                 )
@@ -461,12 +466,18 @@ class ChiaServer:
             self.log.warning(
                 f"Connection error by peer {connection.get_peername()}, closing connection."
             )
+        except ssl.SSLError as e:
+            self.log.warning(
+                f"SSLError {e} in connection with peer {connection.get_peername()}."
+            )
         except (
             concurrent.futures._base.CancelledError,
             OSError,
             TimeoutError,
             asyncio.TimeoutError,
         ) as e:
+            tb = traceback.format_exc()
+            self.log.error(tb)
             self.log.error(
                 f"Timeout/OSError {e} in connection with peer {connection.get_peername()}, closing connection."
             )

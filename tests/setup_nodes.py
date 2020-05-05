@@ -88,7 +88,8 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
     # TEARDOWN
     server_1.close_all()
     await server_1.await_closed()
-    await full_node_1._shutdown()
+    full_node_1._close()
+    await full_node_1._await_closed()
     db_path.unlink()
 
 
