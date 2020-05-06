@@ -11,6 +11,9 @@ import { connect, useSelector } from 'react-redux';
 import { withRouter } from 'react-router-dom'
 import CssTextField from '../components/cssTextField'
 import myStyle from './style'
+import { useStore , useDispatch} from 'react-redux'
+import {mnemonic_word_added} from '../modules/mnemonic_input'
+import { log_in } from '../modules/message';
 
 const MnemonicField = (props) => {
     return (
@@ -22,20 +25,31 @@ const MnemonicField = (props) => {
         color="primary" 
         id={props.id}
         label={props.index}
-        name="email"
-        autoComplete="email"
         autoFocus={props.autofocus}
         defaultValue=""
+        onChange={props.onChange}
         />
       </Grid>
     )
 }
 
 const Iterator = (props) => {
+    const store = useStore()
+    const dispatch = useDispatch()
+
+    function handleTextFieldChange(e) {
+        console.log(e.target)
+        console.log(store)
+        var id = e.target.id + ""
+        var clean_id = id.replace("id_", "");
+        var int_val = parseInt(clean_id) - 1
+        var data = {"word": e.target.value, "id": int_val}
+        dispatch(mnemonic_word_added(data))
+    }
     var indents = [];
     for (var i = 0; i < 24; i++) {
-    var focus = i === 0
-    indents.push(<MnemonicField key={i} autofocus ={focus} id={"id_"+(i+1)} index={i+1} />);
+      var focus = i === 0
+      indents.push(<MnemonicField onChange={handleTextFieldChange} key={i} autofocus={focus} id={"id_"+(i+1)} index={i+1} />);
     }
     return indents;
 }
@@ -43,6 +57,14 @@ const Iterator = (props) => {
 const UIPart = (props) => {
     function goBack(){
         props.props.history.goBack();
+    }
+    const store = useStore()
+    const dispatch = useDispatch()
+
+    function enterMnemonic(){
+        var state = store.getState()
+        var mnemonic = state.mnemonic_state.mnemonic_input
+        dispatch(log_in(mnemonic))
     }
 
     const words = useSelector(state => state.wallet_state.mnemonic)
@@ -66,6 +88,7 @@ const UIPart = (props) => {
         <CssBaseline />
         <div className={classes.paper}>
             <Button
+              onClick={enterMnemonic} 
               type="submit"
               fullWidth
               variant="contained"

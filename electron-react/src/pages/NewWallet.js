@@ -65,6 +65,7 @@ const UIPart = (props) => {
         <CssBaseline />
         <div className={classes.paper}>
             <Button
+              onClick={goBack}
               type="submit"
               fullWidth
               variant="contained"
