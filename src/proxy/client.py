@@ -3,7 +3,7 @@ import weakref
 
 from aiter import map_aiter
 
-from chiasim.utils.cbor_messages import reader_to_cbor_stream, xform_to_cbor_message
+from .messages import reader_to_cbor_stream, xform_to_cbor_message
 
 
 class RemoteError(Exception):

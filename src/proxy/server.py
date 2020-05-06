@@ -1,12 +1,28 @@
 import functools
 import logging
 
-from aiter import map_aiter
+from aiter import join_aiters, map_aiter
 
 from .messages import reader_to_cbor_stream, xform_to_cbor_message
-from ..utils.event_stream import rws_to_event_aiter
 
 log = logging.getLogger(__name__)
+
+
+def _message_stream_to_event_stream(event_template, message_stream):
+    """
+    This tweaks each message from message_stream by wrapping it with a dictionary
+    populated with the given template, putting the message is at the top
+    level under "message".
+    """
+
+    template = dict(event_template)
+
+    def adaptor(message):
+        event = dict(template)
+        event.update(message=message)
+        return event
+
+    return map_aiter(adaptor, message_stream)
 
 
 def _transform_args(kwarg_transformers, message):
@@ -14,14 +30,14 @@ def _transform_args(kwarg_transformers, message):
     Transform keys of message as specified by kwarg_transformers and return
     a new message where keys are transformed.
     """
-    assert message == dict
+    assert isinstance(message, dict)
     new_message = dict(message)
     for k, v in kwarg_transformers.items():
         new_message[k] = v(message[k])
     return new_message
 
 
-def _make_response_map_for_api(api):
+def _make_response_map_for_root_object(root_object):
     """
     This is intended to be used with map_aiter. It takes a message, parses it,
     invokes "do_XXX" on the given API, then packs up the response and sends it
@@ -33,7 +49,7 @@ def _make_response_map_for_api(api):
             # {"c": "command"}
             c = message.get("c")
             nonce = message.get("n")
-            f = getattr(api, "do_%s" % c, None)
+            f = getattr(root_object, c, None)
             if f:
                 args = message.get("q", {})
                 r = await f(**args)
@@ -58,6 +74,26 @@ def _make_response_map_for_api(api):
     return response_writer_for_event
 
 
+def rws_to_event_aiter(rws_aiter, reader_to_message_stream):
+    """
+    This accepts an aiter of (reader, writer, server) and turns it into an aiter of
+    (event, writer, server) where the `event` came from a remote corresponding to `writer`.
+    """
+
+    def rws_to_reader_event_template_adaptor(rws):
+        return rws, rws["reader"]
+
+    def reader_event_template_to_event_stream_adaptor(rws_reader):
+        rws, reader = rws_reader
+        return _message_stream_to_event_stream(rws, reader_to_message_stream(reader))
+
+    def adaptor(rws):
+        return reader_event_template_to_event_stream_adaptor(
+            rws_to_reader_event_template_adaptor(rws))
+
+    return join_aiters(map_aiter(adaptor, rws_aiter))
+
+
 def api_request(**kwarg_transformers):
     """
     This decorator will transform the arguments for the given keywords by the corresponding
@@ -75,9 +111,9 @@ def api_request(**kwarg_transformers):
     return inner
 
 
-async def api_server(rws_aiter, api, workers=1):
+async def api_server(rws_aiter, root_object, worker_count=1):
     """
-    An rws_aiter is an aiter which streams a (StreamReader, StreamWriter, SocketServer) tuples.
+    An rws_aiter is an aiter which streams a (StreamReader, StreamWriter) tuples.
     For a given rws_aiter, create a task which fetches messages from the StreamReader, parses them,
     and turns them into api calls on api.
 
@@ -86,9 +122,9 @@ async def api_server(rws_aiter, api, workers=1):
     """
     event_aiter = rws_to_event_aiter(rws_aiter, reader_to_cbor_stream)
 
-    response_writer_for_event = _make_response_map_for_api(api)
+    response_writer_for_event = _make_response_map_for_root_object(root_object)
 
-    response_writer_aiter = map_aiter(response_writer_for_event, event_aiter, workers=workers)
+    response_writer_aiter = map_aiter(response_writer_for_event, event_aiter, worker_count=worker_count)
 
     def to_cbor(response_writer_pair):
         response, writer = response_writer_pair
@@ -96,11 +132,11 @@ async def api_server(rws_aiter, api, workers=1):
             msg = xform_to_cbor_message(response)
         except Exception as ex:
             msg = xform_to_cbor_message("problem streaming message: %s" % ex)
-        return writer, msg
+        return msg, writer
 
     cbor_msg_aiter = map_aiter(to_cbor, response_writer_aiter)
 
-    async for writer, cbor_msg in cbor_msg_aiter:
+    async for cbor_msg, writer in cbor_msg_aiter:
         writer.write(cbor_msg)
 
 
