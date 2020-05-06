@@ -1,7 +1,7 @@
 
 export const wordChanged = msg => ({ type: 'MNEMONIC_TYPING'});
 //const initial_state = { mnemonic_input: new Array('24') };
-const initial_state = { mnemonic_input: ['small', 'seed', 'inner', 'curtain', 'vanish', 'beyond', 'racoon', 'effor', 'grab', 'laugh', 'flower', 'gospel', 'host', 'exist', 'east', 'valid', 'human', 'dismiss', 'nuclear', 'intact', 'cigar', 'earn', 'cousin', 'lounge']}
+const initial_state = { mnemonic_input: ['small', 'seed', 'inner', 'curtain', 'vanish', 'beyond', 'raccoon', 'effort', 'grab', 'laugh', 'flower', 'gospel', 'host', 'exist', 'east', 'valid', 'human', 'dismiss', 'nuclear', 'intact', 'cigar', 'earn', 'cousin', 'lounge']}
 export const mnemonic_word_added = (data) => {
   var action = wordChanged()
   action.data = data
