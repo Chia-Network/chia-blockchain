@@ -98,32 +98,32 @@ class WebSocketServer:
         if self.config["testing"] is True:
             log.info(f"Websocket server in testing mode")
             self.config["database_path"] = "test_db_wallet.db"
-            wallet_node = await WalletNode.create(
+            self.wallet_node = await WalletNode.create(
                 self.config, self.keychain, override_constants=test_constants
             )
         else:
             log.info(f"Not Testing")
-            wallet_node = await WalletNode.create(self.config, self.keychain)
+            self.wallet_node = await WalletNode.create(self.config, self.keychain)
 
-        self.trade_manager = await TradeManager.create(wallet_node.wallet_state_manager)
-        wallet_node.wallet_state_manager.set_callback(self.state_changed_callback)
+        self.trade_manager = await TradeManager.create(self.wallet_node.wallet_state_manager)
+        self.wallet_node.wallet_state_manager.set_callback(self.state_changed_callback)
 
         net_config = load_config(self.root_path, "config.yaml")
-        ping_interval = self.config.get("ping_interval")
+        ping_interval = net_config.get("ping_interval")
         network_id = net_config.get("network_id")
         assert ping_interval is not None
         assert network_id is not None
 
         server = ChiaServer(
             self.config["port"],
-            wallet_node,
+            self.wallet_node,
             NodeType.WALLET,
             ping_interval,
             network_id,
             DEFAULT_ROOT_PATH,
             self.config,
         )
-        wallet_node.set_server(server)
+        self.wallet_node.set_server(server)
 
         if "full_node_peer" in self.config:
             full_node_peer = PeerInfo(
@@ -136,17 +136,17 @@ class WebSocketServer:
 
 
         if self.config["testing"] is False:
-            wallet_node._start_bg_tasks()
+            self.wallet_node._start_bg_tasks()
 
         await server.await_closed()
-        await wallet_node.wallet_state_manager.close_all_stores()
+        await self.wallet_node.wallet_state_manager.close_all_stores()
 
         return True
 
     def stop(self):
         self.websocket_server.close()
-        if self.server is not None:
-            self.server.close_all()
+        if self.wallet_node is not None:
+            self.wallet_node.server.close_all()
         if self.wallet_node is not None:
             self.wallet_node._shutdown()
 
