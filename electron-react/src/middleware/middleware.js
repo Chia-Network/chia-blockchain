@@ -1,8 +1,9 @@
 import * as actions from '../modules/websocket';
-import { newMessage, format_message, get_balance_for_wallet, incomingMessage, mnemonic_received } from '../modules/message';
+import { newMessage, format_message, mnemonic_received } from '../modules/message';
 
 const socketMiddleware = () => {
   let socket = null;
+  let connected = false
 
   const onOpen = store => (event) => {
     store.dispatch(actions.wsConnected(event.target.url));
@@ -26,6 +27,7 @@ const socketMiddleware = () => {
         console.log("generate mnemonic received")
         console.log(payload)
         store.dispatch(mnemonic_received(payload.data))
+        break;
       default:
         console.log(payload);
         break;
@@ -46,7 +48,7 @@ const socketMiddleware = () => {
         socket.onmessage = onMessage(store);
         socket.onclose = onClose(store);
         socket.onopen = onOpen(store);
-
+        connected = true
         break;
       case 'WS_DISCONNECT':
         if (socket !== null) {
@@ -55,7 +57,7 @@ const socketMiddleware = () => {
         socket = null;
         break;
       case 'OUTGOING_MESSAGE':
-        if (socket != null) {
+        if (connected) {
           console.log("socket" + socket)
           console.log("Action command" + action.command + " data" + action.data)
           socket.send(JSON.stringify({ command: action.command, data: action.data }));

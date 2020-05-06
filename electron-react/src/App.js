@@ -1,13 +1,12 @@
 import React from 'react';
 import { Switch, Route } from 'react-router-dom';
 import { connect } from 'react-redux';
-import Entrance from './pages/Entrance';
 import SignIn from './pages/SignIn';
-import CreateMnemonics from './pages/CreateMnemonics'
-import Mnemonics from './pages/Mnemonics'
+import NewWallet from './pages/NewWallet'
+import OldWallet from './pages/OldWallet'
+
 import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles';
-import purple from '@material-ui/core/colors/purple';
-import green from '@material-ui/core/colors/green';
+const defaultTheme = createMuiTheme();
 
 const theme = createMuiTheme({
   palette: {
@@ -18,6 +17,57 @@ const theme = createMuiTheme({
     background: 'linear-gradient(45deg, #142229 30%, #112240 90%)',
     height:'100%',
   },
+  app_root: {
+    background: 'linear-gradient(45deg, #142229 30%, #112240 90%)',
+    height:'100%',
+    },
+  paper: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  avatar: {
+    marginTop: defaultTheme.spacing(8),
+    backgroundColor: defaultTheme.palette.secondary.main,
+  },
+  form: {
+    width: '100%', // Fix IE 11 issue.
+    marginTop: defaultTheme.spacing(5),
+  },
+  textField: {
+      borderColor: "#ffffff"
+  },
+  submit: {
+    marginTop: defaultTheme.spacing(8),
+    marginBottom: defaultTheme.spacing(3),
+  },
+  grid: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    paddingTop: defaultTheme.spacing(5),
+  },
+  grid_item: {
+    paddingTop: 10,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    backgroundColor: "#444444",
+    color: "#ffffff",
+    height: 50,
+    verticalAlign: 'middle',
+  },
+  title: {
+    color: '#ffffff',
+    marginTop: defaultTheme.spacing(4),
+    marginBottom: defaultTheme.spacing(8),
+  },
+  navigator: {
+    color: '#ffffff',
+    marginTop: defaultTheme.spacing(4),
+    marginLeft: defaultTheme.spacing(4),
+    fontSize: 35,
+  }
 });
 
 const App = () => (
@@ -25,8 +75,8 @@ const App = () => (
     <Switch>
     <ThemeProvider theme={theme}>
       <Route exact path="/" component={SignIn} />
-      <Route exact path="/CreateMnemonics" component={CreateMnemonics} />
-      <Route exact path="/Mnemonics" component={Mnemonics} />
+      <Route exact path="/CreateMnemonics" component={NewWallet} />
+      <Route exact path="/Mnemonics" component={OldWallet} />
     </ThemeProvider>
     </Switch>
   </React.Fragment>
