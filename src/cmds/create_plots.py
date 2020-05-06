@@ -32,11 +32,17 @@ def main():
     parser.add_argument(
         "-t",
         "--tmp_dir",
-        help="Temporary directory for plotting files (relative to final directory)",
+        help="Temporary directory for plotting files",
         type=Path,
-        default=Path("./plots.tmp"),
+        default=Path("."),
     )
-
+    parser.add_argument(
+        "-2",
+        "--tmp2_dir",
+        help="Second temporary directory for plotting files",
+        type=Path,
+        default=Path("."),
+    )
     new_plots_root = path_from_root(
         root_path,
         load_config(root_path, "config.yaml")
@@ -74,8 +80,8 @@ def main():
         f"{args.index + args.num_plots - 1}, of size {args.size}, sk_seed {sk_seed.hex()} ppk {pool_pk}"
     )
 
-    tmp_dir = args.final_dir / args.tmp_dir
-    mkdir(tmp_dir)
+    mkdir(args.tmp_dir)
+    mkdir(args.tmp2_dir)
     mkdir(args.final_dir)
     for i in range(args.index, args.index + args.num_plots):
         # Generate a sk based on the seed, plot size (k), and index
@@ -89,11 +95,26 @@ def main():
         )
         filename: str = f"plot-{i}-{args.size}-{plot_seed}.dat"
         full_path: Path = args.final_dir / filename
+
+        plot_config = load_config(root_path, plot_config_filename)
+        plot_config_plots_new = deepcopy(plot_config.get("plots", []))
+        filenames = [Path(k).name for k in plot_config_plots_new.keys()]
+        relative_path = make_path_relative(full_path, root_path)
+        already_in_config = (
+            relative_path in plot_config_plots_new
+            or full_path in plot_config_plots_new
+            or full_path.name in filenames
+        )
+        if already_in_config:
+            print(f"Plot {filename} already exists (in config)")
+            continue
+
         if not full_path.exists():
             # Creates the plot. This will take a long time for larger plots.
             plotter: DiskPlotter = DiskPlotter()
             plotter.create_plot_disk(
-                str(tmp_dir),
+                str(args.tmp_dir),
+                str(args.tmp2_dir),
                 str(args.final_dir),
                 filename,
                 args.size,
@@ -104,25 +125,26 @@ def main():
             print(f"Plot {filename} already exists")
 
         # Updates the config if necessary.
-        plot_config = load_config(root_path, plot_config_filename)
-        plot_config_plots_new = deepcopy(plot_config.get("plots", []))
-        relative_path = make_path_relative(full_path, root_path)
-        if (
-            relative_path not in plot_config_plots_new
-            and full_path not in plot_config_plots_new
-        ):
-            plot_config_plots_new[str(full_path)] = {
-                "sk": bytes(sk).hex(),
-                "pool_pk": bytes(pool_pk).hex(),
-            }
+        plot_config_plots_new[str(full_path)] = {
+            "sk": bytes(sk).hex(),
+            "pool_pk": bytes(pool_pk).hex(),
+        }
         plot_config["plots"].update(plot_config_plots_new)
 
         # Dumps the new config to disk.
         save_config(root_path, plot_config_filename, plot_config)
     try:
-        tmp_dir.rmdir()
+        args.tmp_dir.rmdir()
     except Exception:
-        print(f"warning: couldn't delete {tmp_dir}")
+        print(
+            f"warning: did not remove primary temporary folder {args.tmp_dir}, it may not be empty."
+        )
+    try:
+        args.tmp2_dir.rmdir()
+    except Exception:
+        print(
+            f"warning: did not remove secondary temporary folder {args.tmp2_dir}, it may not be empty."
+        )
 
 
 if __name__ == "__main__":

@@ -8,17 +8,18 @@ import pytest
 from blspy import PrivateKey
 
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
-from src.full_node.store import FullNodeStore
 from src.types.full_block import FullBlock
 from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
-from src.full_node.coin_store import CoinStore
 from src.util.ints import uint8, uint64
 from src.consensus.constants import constants as consensus_constants
 from tests.block_tools import BlockTools
 from src.util.errors import Err
 from src.consensus.coinbase import create_coinbase_coin_and_signature
 from src.types.sized_bytes import bytes32
+from src.full_node.block_store import BlockStore
+from src.full_node.coin_store import CoinStore
+
 
 bt = BlockTools()
 test_constants: Dict[str, Any] = consensus_constants.copy()
@@ -48,11 +49,12 @@ class TestGenesisBlock:
     @pytest.mark.asyncio
     async def test_basic_blockchain(self):
         db_path = Path("blockchain_test.db")
+        if db_path.exists():
+            db_path.unlink()
         connection = await aiosqlite.connect(db_path)
-        unspent_store = await CoinStore.create(connection)
-        store = await FullNodeStore.create(connection)
-        await store._clear_database()
-        bc1 = await Blockchain.create(unspent_store, store, test_constants)
+        coin_store = await CoinStore.create(connection)
+        store = await BlockStore.create(connection)
+        bc1 = await Blockchain.create(coin_store, store, test_constants)
         assert len(bc1.get_current_tips()) == 1
         genesis_block = bc1.get_current_tips()[0]
         assert genesis_block.height == 0
@@ -72,11 +74,12 @@ class TestBlockValidation:
         """
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 10)
         db_path = Path("blockchain_test.db")
+        if db_path.exists():
+            db_path.unlink()
         connection = await aiosqlite.connect(db_path)
-        store = await FullNodeStore.create(connection)
-        await store._clear_database()
-        unspent_store = await CoinStore.create(connection)
-        b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
+        store = await BlockStore.create(connection)
+        coin_store = await CoinStore.create(connection)
+        b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
         for i in range(1, 9):
             result, removed, error_code = await b.receive_block(blocks[i])
             assert result == ReceiveBlockResult.ADDED_TO_HEAD
@@ -495,11 +498,12 @@ class TestBlockValidation:
         # Make it 5x faster than target time
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 2)
         db_path = Path("blockchain_test.db")
+        if db_path.exists():
+            db_path.unlink()
         connection = await aiosqlite.connect(db_path)
-        unspent_store = await CoinStore.create(connection)
-        store = await FullNodeStore.create(connection)
-        await store._clear_database()
-        b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
+        coin_store = await CoinStore.create(connection)
+        store = await BlockStore.create(connection)
+        b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
         for i in range(1, num_blocks):
             result, removed, error_code = await b.receive_block(blocks[i])
             assert result == ReceiveBlockResult.ADDED_TO_HEAD
@@ -527,11 +531,12 @@ class TestReorgs:
     async def test_basic_reorg(self):
         blocks = bt.get_consecutive_blocks(test_constants, 100, [], 9)
         db_path = Path("blockchain_test.db")
+        if db_path.exists():
+            db_path.unlink()
         connection = await aiosqlite.connect(db_path)
-        unspent_store = await CoinStore.create(connection)
-        store = await FullNodeStore.create(connection)
-        await store._clear_database()
-        b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
+        coin_store = await CoinStore.create(connection)
+        store = await BlockStore.create(connection)
+        b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
 
         for i in range(1, len(blocks)):
             await b.receive_block(blocks[i])
@@ -558,11 +563,12 @@ class TestReorgs:
     async def test_reorg_from_genesis(self):
         blocks = bt.get_consecutive_blocks(test_constants, 20, [], 9, b"0")
         db_path = Path("blockchain_test.db")
+        if db_path.exists():
+            db_path.unlink()
         connection = await aiosqlite.connect(db_path)
-        unspent_store = await CoinStore.create(connection)
-        store = await FullNodeStore.create(connection)
-        await store._clear_database()
-        b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
+        coin_store = await CoinStore.create(connection)
+        store = await BlockStore.create(connection)
+        b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
         for i in range(1, len(blocks)):
             await b.receive_block(blocks[i])
         assert b.get_current_tips()[0].height == 20
@@ -601,11 +607,12 @@ class TestReorgs:
     async def test_lca(self):
         blocks = bt.get_consecutive_blocks(test_constants, 5, [], 9, b"0")
         db_path = Path("blockchain_test.db")
+        if db_path.exists():
+            db_path.unlink()
         connection = await aiosqlite.connect(db_path)
-        unspent_store = await CoinStore.create(connection)
-        store = await FullNodeStore.create(connection)
-        await store._clear_database()
-        b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
+        coin_store = await CoinStore.create(connection)
+        store = await BlockStore.create(connection)
+        b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
         for i in range(1, len(blocks)):
             await b.receive_block(blocks[i])
 
@@ -634,11 +641,12 @@ class TestReorgs:
         blocks_reorg = bt.get_consecutive_blocks(test_constants, 3, blocks[:9], 9, b"9")
 
         db_path = Path("blockchain_test.db")
+        if db_path.exists():
+            db_path.unlink()
         connection = await aiosqlite.connect(db_path)
-        unspent_store = await CoinStore.create(connection)
-        store = await FullNodeStore.create(connection)
-        await store._clear_database()
-        b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
+        coin_store = await CoinStore.create(connection)
+        store = await BlockStore.create(connection)
+        b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
         for i in range(1, len(blocks)):
             await b.receive_block(blocks[i])
 
@@ -671,11 +679,12 @@ class TestReorgs:
     async def test_get_header_hashes(self):
         blocks = bt.get_consecutive_blocks(test_constants, 5, [], 9, b"0")
         db_path = Path("blockchain_test.db")
+        if db_path.exists():
+            db_path.unlink()
         connection = await aiosqlite.connect(db_path)
-        unspent_store = await CoinStore.create(connection)
-        store = await FullNodeStore.create(connection)
-        await store._clear_database()
-        b: Blockchain = await Blockchain.create(unspent_store, store, test_constants)
+        coin_store = await CoinStore.create(connection)
+        store = await BlockStore.create(connection)
+        b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
 
         for i in range(1, len(blocks)):
             await b.receive_block(blocks[i])

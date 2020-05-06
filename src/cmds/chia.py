@@ -12,7 +12,7 @@ SUBCOMMANDS = ["init", "generate", "show", "start", "stop", "version", "netspace
 def create_parser() -> ArgumentParser:
     parser: ArgumentParser = ArgumentParser(
         description="Manage chia blockchain infrastructure (%s)." % __version__,
-        epilog="Try 'chia start node', 'chat netspace -d 48', or 'chia show -s'.",
+        epilog="Try 'chia start node', 'chia netspace -d 48', or 'chia show -s'.",
     )
 
     parser.add_argument(

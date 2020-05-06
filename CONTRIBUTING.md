@@ -40,9 +40,7 @@ Mypy is very useful for ensuring objects are of the correct type, so try to alwa
 6. Preferences > Settings > mypy > Targets: set to ./src and ./tests
 
 ### Submit changes
-To submit changes, please make a pull request to the appropriate development branch.
-For example, after the 1.2 release, the 1.3 branch is used for development, etc.
-The master branch is updated with the latest releases only.
+To submit changes, please make a pull request to the `dev` development branch.
 
 ### Copyright
 By contributing to this repository, you agree to license your work under the Apache License Version 2.0, or the MIT License, or release your work to the public domain. Any work contributed where you are not the original author must contain its license header with the original author(s) and be in the public domain, or licensed under the Apache License Version 2.0 or the MIT License.

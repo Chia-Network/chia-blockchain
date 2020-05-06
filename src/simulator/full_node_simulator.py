@@ -1,22 +1,18 @@
 from secrets import token_bytes
 
 from src.full_node.full_node import FullNode
-from typing import AsyncGenerator, List, Dict, Optional
-from src.full_node.blockchain import Blockchain
-from src.full_node.store import FullNodeStore
+from typing import AsyncGenerator, List, Optional
 from src.protocols import (
     full_node_protocol,
     wallet_protocol,
 )
 from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from src.util.bundle_tools import best_solution_program
-from src.full_node.mempool_manager import MempoolManager
 from src.server.outbound_message import OutboundMessage
 from src.server.server import ChiaServer
 from src.types.full_block import FullBlock
 from src.types.spend_bundle import SpendBundle
 from src.types.header import Header
-from src.full_node.coin_store import CoinStore
 from src.util.api_decorators import api_request
 from src.util.ints import uint64
 from tests.block_tools import BlockTools
@@ -27,26 +23,6 @@ bt = BlockTools()
 
 
 class FullNodeSimulator(FullNode):
-    def __init__(
-        self,
-        store: FullNodeStore,
-        blockchain: Blockchain,
-        config: Dict,
-        mempool_manager: MempoolManager,
-        coin_store: CoinStore,
-        name: str = None,
-        override_constants=None,
-    ):
-        super().__init__(
-            store,
-            blockchain,
-            config,
-            mempool_manager,
-            coin_store,
-            name,
-            override_constants,
-        )
-
     def _set_server(self, server: ChiaServer):
         super()._set_server(server)
 
@@ -128,7 +104,7 @@ class FullNodeSimulator(FullNode):
             if tip_hash == self.blockchain.genesis.header_hash:
                 current_blocks.append(self.blockchain.genesis)
                 break
-            full = await self.store.get_block(tip_hash)
+            full = await self.block_store.get_block(tip_hash)
             if full is None:
                 break
             current_blocks.append(full)

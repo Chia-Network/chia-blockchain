@@ -7,7 +7,6 @@ import random
 import pytest
 import aiosqlite
 from blspy import PrivateKey
-from src.full_node.store import FullNodeStore
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64

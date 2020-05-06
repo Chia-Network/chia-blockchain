@@ -53,11 +53,11 @@ class RpcApiHandler:
         """
         tips: List[Header] = self.full_node.blockchain.get_current_tips()
         lca: Header = self.full_node.blockchain.lca_block
-        sync_mode: bool = self.full_node.store.get_sync_mode()
+        sync_mode: bool = self.full_node.full_node_store.get_sync_mode()
         difficulty: uint64 = self.full_node.blockchain.get_next_difficulty(
             lca.header_hash
         )
-        lca_block = await self.full_node.store.get_block(lca.header_hash)
+        lca_block = await self.full_node.block_store.get_block(lca.header_hash)
         if lca_block is None:
             raise web.HTTPNotFound()
         min_iters: uint64 = self.full_node.blockchain.get_next_min_iters(lca_block)
@@ -90,7 +90,9 @@ class RpcApiHandler:
             raise web.HTTPBadRequest()
         header_hash = hexstr_to_bytes(request_data["header_hash"])
 
-        block: Optional[FullBlock] = await self.full_node.store.get_block(header_hash)
+        block: Optional[FullBlock] = await self.full_node.block_store.get_block(
+            header_hash
+        )
         if block is None:
             raise web.HTTPNotFound()
         return obj_to_response(block)
@@ -132,7 +134,9 @@ class RpcApiHandler:
             raise web.HTTPBadRequest()
         height = request_data["height"]
         response_headers: List[Header] = []
-        for block in (self.full_node.store.get_unfinished_blocks()).values():
+        for block in (
+            await self.full_node.full_node_store.get_unfinished_blocks()
+        ).values():
             if block.height == height:
                 response_headers.append(block.header)
 
@@ -218,7 +222,7 @@ class RpcApiHandler:
         else:
             header = None
 
-        coin_records = await self.full_node.blockchain.unspent_store.get_coin_records_by_puzzle_hash(
+        coin_records = await self.full_node.blockchain.coin_store.get_coin_records_by_puzzle_hash(
             puzzle_hash, header
         )
 
@@ -232,8 +236,8 @@ class RpcApiHandler:
         tip_weights = [tip.weight for tip in tips]
         i = tip_weights.index(max(tip_weights))
         max_tip: Header = tips[i]
-        if self.full_node.store.get_sync_mode():
-            potential_tips = self.full_node.store.get_potential_tips_tuples()
+        if self.full_node.full_node_store.get_sync_mode():
+            potential_tips = self.full_node.sync_store.get_potential_tips_tuples()
             for _, pot_block in potential_tips:
                 if pot_block.weight > max_tip.weight:
                     max_tip = pot_block.header

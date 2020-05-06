@@ -8,7 +8,7 @@ from src.consensus.constants import constants as consensus_constants
 
 bt = BlockTools()
 test_constants: Dict[str, Any] = consensus_constants.copy()
-test_constants.update({"DIFFICULTY_STARTING": 500, "MIN_ITERS_STARTING": 2 ** 15})
+test_constants.update({"DIFFICULTY_STARTING": 500, "MIN_ITERS_STARTING": 500})
 
 test_constants["GENESIS_BLOCK"] = bytes(
     bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")

@@ -4,27 +4,18 @@ import logging.config
 import signal
 import miniupnpc
 
-import aiosqlite
-
 try:
     import uvloop
 except ImportError:
     uvloop = None
 
-from src.full_node.blockchain import Blockchain
-from src.consensus.constants import constants
-from src.full_node.store import FullNodeStore
 from src.full_node.full_node import FullNode
 from src.rpc.rpc_server import start_rpc_server
-from src.full_node.mempool_manager import MempoolManager
 from src.server.server import ChiaServer
 from src.server.connection import NodeType
-from src.types.full_block import FullBlock
-from src.full_node.coin_store import CoinStore
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli, load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.path import mkdir, path_from_root
 from src.util.setproctitle import setproctitle
 
 
@@ -38,25 +29,7 @@ async def async_main():
     log = logging.getLogger(__name__)
     server_closed = False
 
-    db_path = path_from_root(root_path, config["database_path"])
-    mkdir(db_path.parent)
-
-    # Create the store (DB) and full node instance
-    connection = await aiosqlite.connect(db_path)
-    store = await FullNodeStore.create(connection)
-
-    genesis: FullBlock = FullBlock.from_bytes(constants["GENESIS_BLOCK"])
-    await store.add_block(genesis)
-    unspent_store = await CoinStore.create(connection)
-
-    log.info("Initializing blockchain from disk")
-    blockchain = await Blockchain.create(unspent_store, store)
-    log.info("Blockchain initialized")
-
-    mempool_manager = MempoolManager(unspent_store)
-    await mempool_manager.new_tips(await blockchain.get_full_tips())
-
-    full_node = FullNode(store, blockchain, config, mempool_manager, unspent_store)
+    full_node = await FullNode.create(config, root_path=root_path)
 
     if config["enable_upnp"]:
         log.info(f"Attempting to enable UPnP (open up port {config['port']})")
@@ -95,7 +68,6 @@ async def async_main():
         if not server_closed:
             # Called by the UI, when node is closed, or when a signal is sent
             log.info("Closing all connections, and server...")
-            full_node._shutdown()
             server.close_all()
             server_closed = True
 
@@ -117,13 +89,13 @@ async def async_main():
     await server.await_closed()
     log.info("Closed all node servers.")
 
+    # Stops the full node and closes DBs
+    await full_node._shutdown()
+
     # Waits for the rpc server to close
     if rpc_cleanup is not None:
         await rpc_cleanup()
     log.info("Closed RPC server.")
-
-    await connection.close()
-    log.info("Closed db connection.")
 
     await asyncio.get_running_loop().shutdown_asyncgens()
     log.info("Node fully closed.")

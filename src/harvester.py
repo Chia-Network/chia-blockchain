@@ -2,6 +2,7 @@ import logging
 import asyncio
 from pathlib import Path
 from typing import Dict, Optional, Tuple, List
+import time
 import concurrent
 
 from blspy import PrependSignature, PrivateKey, PublicKey, Util
@@ -46,12 +47,12 @@ def load_plots(
             if filename.exists():
                 try:
                     provers[partial_filename_str] = DiskProver(str(filename))
-                except ValueError:
-                    log.error(f"Failed to open file {filename}.")
+                except ValueError as e:
+                    log.error(f"Failed to open file {filename}. {e}")
                     failed_to_open = True
                     break
                 log.info(
-                    f"Farming plot {filename} of size {provers[partial_filename_str].get_size()}"
+                    f"Loaded plot {filename} of size {provers[partial_filename_str].get_size()}"
                 )
                 found = True
                 break
@@ -61,18 +62,30 @@ def load_plots(
 
 
 class Harvester:
-    def __init__(self, config: Dict, plot_config: Dict):
-        self.config: Dict = config
-        self.plot_config: Dict = plot_config
+    config: Dict
+    plot_config: Dict
+    provers: Dict[Path, DiskProver]
+    challenge_hashes: Dict[bytes32, Tuple[bytes32, Path, uint8]]
+    _plot_notification_task: asyncio.Task
+    _is_shutdown: bool
+    executor: concurrent.futures.ThreadPoolExecutor
+
+    @staticmethod
+    async def create(config: Dict, plot_config: Dict):
+        self = Harvester()
+        self.config = config
+        self.plot_config = plot_config
 
         # From filename to prover
-        self.provers: Dict[Path, DiskProver] = {}
+        self.provers = {}
 
         # From quality string to (challenge_hash, filename, index)
-        self.challenge_hashes: Dict[bytes32, Tuple[bytes32, Path, uint8]] = {}
+        self.challenge_hashes = {}
         self._plot_notification_task = asyncio.create_task(self._plot_notification())
-        self._is_shutdown: bool = False
+        self._is_shutdown = False
         self.server = None
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
+        return self
 
     async def _plot_notification(self):
         """
@@ -125,6 +138,7 @@ class Harvester:
 
     def _shutdown(self):
         self._is_shutdown = True
+        self.executor.shutdown(wait=True)
 
     async def _await_shutdown(self):
         await self._plot_notification_task
@@ -153,7 +167,7 @@ class Harvester:
         for any proofs of space that are are found in the plots. If proofs are found, a
         ChallengeResponse message is sent for each of the proofs found.
         """
-
+        start = time.time()
         challenge_size = len(new_challenge.challenge_hash)
         if challenge_size != 32:
             raise ValueError(
@@ -161,7 +175,6 @@ class Harvester:
             )
 
         loop = asyncio.get_running_loop()
-        executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
 
         def blocking_lookup(filename: Path, prover: DiskProver) -> Optional[List]:
             # Uses the DiskProver object to lookup qualities. This is a blocking call,
@@ -173,8 +186,8 @@ class Harvester:
             except RuntimeError:
                 log.error("Error using prover object. Reinitializing prover object.")
                 try:
-                    self.provers[filename] = DiskProver(str(filename))
-                    quality_strings = prover.get_qualities_for_challenge(
+                    self.prover = DiskProver(str(filename))
+                    quality_strings = self.prover.get_qualities_for_challenge(
                         new_challenge.challenge_hash
                     )
                 except RuntimeError:
@@ -190,7 +203,7 @@ class Harvester:
             # Exectures a DiskProverLookup in a threadpool, and returns responses
             all_responses: List[harvester_protocol.ChallengeResponse] = []
             quality_strings = await loop.run_in_executor(
-                executor, blocking_lookup, filename, prover
+                self.executor, blocking_lookup, filename, prover
             )
             if quality_strings is not None:
                 for index, quality_str in enumerate(quality_strings):
@@ -218,7 +231,9 @@ class Harvester:
                     Message("challenge_response", response),
                     Delivery.RESPOND,
                 )
-        executor.shutdown(wait=False)
+        log.info(
+            f"Time taken to lookup qualities in {len(self.provers)} plots: {time.time() - start}"
+        )
 
     @api_request
     async def request_proof_of_space(

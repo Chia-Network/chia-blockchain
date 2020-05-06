@@ -1,23 +1,13 @@
 import asyncio
 
 from typing import Any, Dict, Tuple, List
-from pathlib import Path
-
-import aiosqlite
 import blspy
-from secrets import token_bytes
-
-from src.full_node.blockchain import Blockchain
-from src.full_node.mempool_manager import MempoolManager
-from src.full_node.store import FullNodeStore
 from src.full_node.full_node import FullNode
 from src.server.connection import NodeType
 from src.server.server import ChiaServer
 from src.simulator.full_node_simulator import FullNodeSimulator
 from src.timelord_launcher import spawn_process, kill_processes
 from src.wallet.wallet_node import WalletNode
-from src.types.full_block import FullBlock
-from src.full_node.coin_store import CoinStore
 from tests.block_tools import BlockTools
 from src.types.BLSSignature import BLSPublicKey
 from src.util.config import load_config
@@ -58,24 +48,9 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
 
-    db_path = Path(db_name)
     db_path = root_path / f"{db_name}"
     if db_path.exists():
         db_path.unlink()
-
-    connection = await aiosqlite.connect(db_path)
-    store_1 = await FullNodeStore.create(connection)
-    await store_1._clear_database()
-    unspent_store_1 = await CoinStore.create(connection)
-    await unspent_store_1._clear_database()
-    mempool_1 = MempoolManager(unspent_store_1, test_constants_copy)
-
-    b_1: Blockchain = await Blockchain.create(
-        unspent_store_1, store_1, test_constants_copy
-    )
-    await mempool_1.new_tips(await b_1.get_full_tips())
-
-    await store_1.add_block(FullBlock.from_bytes(test_constants_copy["GENESIS_BLOCK"]))
 
     net_config = load_config(root_path, "config.yaml")
     ping_interval = net_config.get("ping_interval")
@@ -87,14 +62,11 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
     if introducer_port is not None:
         config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = introducer_port
-    full_node_1 = FullNodeSimulator(
-        store_1,
-        b_1,
-        config,
-        mempool_1,
-        unspent_store_1,
-        f"full_node_{port}",
-        test_constants_copy,
+    full_node_1 = await FullNodeSimulator.create(
+        config=config,
+        name=f"full_node_{port}",
+        root_path=root_path,
+        override_constants=test_constants_copy,
     )
     assert ping_interval is not None
     assert network_id is not None
@@ -114,10 +86,9 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
     yield (full_node_1, server_1)
 
     # TEARDOWN
-    full_node_1._shutdown()
     server_1.close_all()
     await server_1.await_closed()
-    await connection.close()
+    await full_node_1._shutdown()
     db_path.unlink()
 
 
@@ -127,37 +98,25 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
 
-    db_path = Path(db_name)
-    connection = await aiosqlite.connect(db_path)
-    store_1 = await FullNodeStore.create(connection)
-    await store_1._clear_database()
-    unspent_store_1 = await CoinStore.create(connection)
-    await unspent_store_1._clear_database()
-    mempool_1 = MempoolManager(unspent_store_1, test_constants_copy)
-
-    b_1: Blockchain = await Blockchain.create(
-        unspent_store_1, store_1, test_constants_copy
-    )
-    await mempool_1.new_tips(await b_1.get_full_tips())
-
-    await store_1.add_block(FullBlock.from_bytes(test_constants_copy["GENESIS_BLOCK"]))
+    db_path = root_path / f"{db_name}"
+    if db_path.exists():
+        db_path.unlink()
 
     net_config = load_config(root_path, "config.yaml")
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")
 
     config = load_config(root_path, "config.yaml", "full_node")
+    config["database_path"] = db_name
     if introducer_port is not None:
         config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = introducer_port
-    full_node_1 = FullNode(
-        store_1,
-        b_1,
-        config,
-        mempool_1,
-        unspent_store_1,
-        f"full_node_{port}",
-        test_constants_copy,
+
+    full_node_1 = await FullNode.create(
+        config=config,
+        root_path=root_path,
+        name=f"full_node_{port}",
+        override_constants=test_constants_copy,
     )
     assert ping_interval is not None
     assert network_id is not None
@@ -176,10 +135,12 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     yield (full_node_1, server_1)
 
     # TEARDOWN
-    full_node_1._shutdown()
     server_1.close_all()
-    await connection.close()
-    Path(db_name).unlink()
+    await server_1.await_closed()
+    await full_node_1._shutdown()
+    db_path = root_path / f"{db_name}"
+    if db_path.exists():
+        db_path.unlink()
 
 
 async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
@@ -230,7 +191,7 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
 async def setup_harvester(port, dic={}):
     config = load_config(root_path, "config.yaml", "harvester")
 
-    harvester = Harvester(config, bt.plot_config)
+    harvester = await Harvester.create(config, bt.plot_config)
 
     net_config = load_config(root_path, "config.yaml")
     ping_interval = net_config.get("ping_interval")
