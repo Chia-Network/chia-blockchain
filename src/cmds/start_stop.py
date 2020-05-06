@@ -3,6 +3,7 @@ import signal
 import subprocess
 
 from src.util.path import mkdir
+from pathlib import Path
 
 SERVICES_FOR_GROUP = {
     "all": "chia_harvester chia_timelord chia_timelord_launcher chia_farmer chia_full_node".split(),
@@ -10,7 +11,7 @@ SERVICES_FOR_GROUP = {
     "harvester": "chia_harvester".split(),
     "farmer": "chia_harvester chia_farmer chia_full_node".split(),
     "timelord": "chia_timelord chia_timelord_launcher chia_full_node".split(),
-    "wallet": ["npm run --prefix ./electron-ui start"],
+    "wallet": [f"npm run --prefix {str(Path(__file__).parent.parent.parent / 'electron-ui')} start"],
     "wallet-server": "chia-wallet".split(),
     "introducer": "chia_introducer".split(),
 }
