@@ -16,6 +16,10 @@ const socketMiddleware = () => {
     store.dispatch(actions.wsDisconnected());
   };
 
+  const onError = store => () => {
+    console.log("error")
+  };
+
   const onMessage = store => (event) => {
     const payload = JSON.parse(event.data);
     console.log(payload)
