@@ -29,6 +29,12 @@ export const genereate_mnemonics = () => {
   return action
 }
 
+export const log_in = (mnemonic) => {
+  var action = newMessage()
+  action.command = "log_in"
+  action.data = {"mnemonic": mnemonic}
+  return action
+}
 
 export const incomingMessage = msg => ({ type: 'INCOMING_MESSAGE'});
 
