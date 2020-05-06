@@ -32,11 +32,17 @@ def main():
     parser.add_argument(
         "-t",
         "--tmp_dir",
-        help="Temporary directory for plotting files (relative to final directory)",
+        help="Temporary directory for plotting files",
         type=Path,
-        default=Path("./plots.tmp"),
+        default=Path("."),
     )
-
+    parser.add_argument(
+        "-2",
+        "--tmp2_dir",
+        help="Second temporary directory for plotting files",
+        type=Path,
+        default=Path("."),
+    )
     new_plots_root = path_from_root(
         root_path,
         load_config(root_path, "config.yaml")
@@ -74,8 +80,8 @@ def main():
         f"{args.index + args.num_plots - 1}, of size {args.size}, sk_seed {sk_seed.hex()} ppk {pool_pk}"
     )
 
-    tmp_dir = args.tmp_dir
-    mkdir(tmp_dir)
+    mkdir(args.tmp_dir)
+    mkdir(args.tmp2_dir)
     mkdir(args.final_dir)
     for i in range(args.index, args.index + args.num_plots):
         # Generate a sk based on the seed, plot size (k), and index
@@ -107,7 +113,8 @@ def main():
             # Creates the plot. This will take a long time for larger plots.
             plotter: DiskPlotter = DiskPlotter()
             plotter.create_plot_disk(
-                str(tmp_dir),
+                str(args.tmp_dir),
+                str(args.tmp2_dir),
                 str(args.final_dir),
                 filename,
                 args.size,
@@ -127,10 +134,16 @@ def main():
         # Dumps the new config to disk.
         save_config(root_path, plot_config_filename, plot_config)
     try:
-        tmp_dir.rmdir()
+        args.tmp_dir.rmdir()
     except Exception:
         print(
-            f"warning: did not remove temporary folder {tmp_dir}, it may not be empty."
+            f"warning: did not remove primary temporary folder {args.tmp_dir}, it may not be empty."
+        )
+    try:
+        args.tmp2_dir.rmdir()
+    except Exception:
+        print(
+            f"warning: did not remove secondary temporary folder {args.tmp2_dir}, it may not be empty."
         )
 
 
