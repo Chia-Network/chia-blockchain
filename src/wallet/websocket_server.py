@@ -578,7 +578,9 @@ class WebSocketServer:
 
     async def log_in(self, websocket, request, response_api):
         mnemonic = request["mnemonic"]
+        self.log.info(f"Mnemonic {mnemonic}")
         seed = seed_from_mnemonic(mnemonic)
+        self.log.info(f"Seed {seed}")
         self.keychain.set_wallet_seed(seed)
         k_seed = self.keychain.get_wallet_seed()
         await self.start_wallet()
@@ -601,85 +603,94 @@ class WebSocketServer:
         return await websocket.send(format_response(response_api, response))
 
     async def safe_handle(self, websocket, path):
-        try:
-            await self.handle_message(websocket, path)
-        except (BaseException, websockets.exceptions.ConnectionClosedError) as e:
-            if isinstance(e, websockets.exceptions.ConnectionClosedError):
-                tb = traceback.format_exc()
-                self.log.warning(f"ConnectionClosedError. Closing websocket. {tb}")
-                await websocket.close()
-            else:
-                tb = traceback.format_exc()
-                self.log.error(f"Error while handling message: {tb}")
+        async for message in websocket:
+            command = None
+            try:
+                decoded = json.loads(message)
+                command = decoded["command"]
+                await self.handle_message(websocket, message, path)
+            except (BaseException, websockets.exceptions.ConnectionClosedError) as e:
+                if isinstance(e, websockets.exceptions.ConnectionClosedError):
+                    tb = traceback.format_exc()
+                    self.log.warning(f"ConnectionClosedError. Closing websocket. {tb}")
+                    await websocket.close()
+                else:
+                    tb = traceback.format_exc()
+                    self.log.error(f"Error while handling message: {tb}")
+                    error = {"success": False, "error": f"{e}" }
+                    if command is None:
+                        command = "UnknownCommand"
+                    await websocket.send(format_response(command, error))
 
-    async def handle_message(self, websocket, path):
+    async def handle_message(self, websocket, message, path):
         """
         This function gets called when new message is received via websocket.
         """
 
-        async for message in websocket:
-            decoded = json.loads(message)
-            self.log.info(f"decoded: {decoded}")
-            command = decoded["command"]
-            data = None
-            if "data" in decoded:
-                data = decoded["data"]
-            if command == "start_server":
-                self.websocket = websocket
-                await self.server_ready(websocket, command)
-            elif command == "get_wallet_balance":
-                await self.get_wallet_balance(websocket, data, command)
-            elif command == "send_transaction":
-                await self.send_transaction(websocket, data, command)
-            elif command == "get_next_puzzle_hash":
-                await self.get_next_puzzle_hash(websocket, data, command)
-            elif command == "get_transactions":
-                await self.get_transactions(websocket, data, command)
-            elif command == "farm_block":
-                await self.farm_block(websocket, data, command)
-            elif command == "get_sync_status":
-                await self.get_sync_status(websocket, command)
-            elif command == "get_height_info":
-                await self.get_height_info(websocket, command)
-            elif command == "get_connection_info":
-                await self.get_connection_info(websocket, command)
-            elif command == "create_new_wallet":
-                await self.create_new_wallet(websocket, data, command)
-            elif command == "get_wallets":
-                await self.get_wallets(websocket, command)
-            elif command == "rl_set_admin_info":
-                await self.rl_set_admin_info(websocket, data, command)
-            elif command == "rl_set_user_info":
-                await self.rl_set_user_info(websocket, data, command)
-            elif command == "cc_set_name":
-                await self.cc_set_name(websocket, data, command)
-            elif command == "cc_get_name":
-                await self.cc_get_name(websocket, data, command)
-            elif command == "cc_generate_zero_val":
-                await self.cc_generate_zero_val(websocket, data, command)
-            elif command == "cc_spend":
-                await self.cc_spend(websocket, data, command)
-            elif command == "cc_get_innerpuzzlehash":
-                await self.cc_get_new_innerpuzzlehash(websocket, data, command)
-            elif command == "cc_get_colour":
-                await self.cc_get_colour(websocket, data, command)
-            elif command == "create_offer":
-                await self.create_offer_for_colours(websocket, data, command)
-            elif command == "create_offer_for_ids":
-                await self.create_offer_for_ids(websocket, data, command)
-            elif command == "get_discrepancies_for_offer":
-                await self.get_discrepancies_for_offer(websocket, data, command)
-            elif command == "respond_to_offer":
-                await self.respond_to_offer(websocket, data, command)
-            elif command == "get_wallet_summaries":
-                await self.get_wallet_summaries(websocket, data, command)
-            elif command == "logged_in":
-                await self.logged_in(websocket, command)
-            elif command == "generate_mnemonic":
-                await self.generate_mnemonic(websocket, command)
-            else:
-                response = {"error": f"unknown_command {command}"}
-                await websocket.send(dict_to_json_str(response))
+        decoded = json.loads(message)
+        self.log.info(f"decoded: {decoded}")
+        command = decoded["command"]
+        data = None
+        if "data" in decoded:
+            data = decoded["data"]
+        if command == "start_server":
+            self.websocket = websocket
+            await self.server_ready(websocket, command)
+        elif command == "get_wallet_balance":
+            await self.get_wallet_balance(websocket, data, command)
+        elif command == "send_transaction":
+            await self.send_transaction(websocket, data, command)
+        elif command == "get_next_puzzle_hash":
+            await self.get_next_puzzle_hash(websocket, data, command)
+        elif command == "get_transactions":
+            await self.get_transactions(websocket, data, command)
+        elif command == "farm_block":
+            await self.farm_block(websocket, data, command)
+        elif command == "get_sync_status":
+            await self.get_sync_status(websocket, command)
+        elif command == "get_height_info":
+            await self.get_height_info(websocket, command)
+        elif command == "get_connection_info":
+            await self.get_connection_info(websocket, command)
+        elif command == "create_new_wallet":
+            await self.create_new_wallet(websocket, data, command)
+        elif command == "get_wallets":
+            await self.get_wallets(websocket, command)
+        elif command == "rl_set_admin_info":
+            await self.rl_set_admin_info(websocket, data, command)
+        elif command == "rl_set_user_info":
+            await self.rl_set_user_info(websocket, data, command)
+        elif command == "cc_set_name":
+            await self.cc_set_name(websocket, data, command)
+        elif command == "cc_get_name":
+            await self.cc_get_name(websocket, data, command)
+        elif command == "cc_generate_zero_val":
+            await self.cc_generate_zero_val(websocket, data, command)
+        elif command == "cc_spend":
+            await self.cc_spend(websocket, data, command)
+        elif command == "cc_get_innerpuzzlehash":
+            await self.cc_get_new_innerpuzzlehash(websocket, data, command)
+        elif command == "cc_get_colour":
+            await self.cc_get_colour(websocket, data, command)
+        elif command == "create_offer":
+            await self.create_offer_for_colours(websocket, data, command)
+        elif command == "create_offer_for_ids":
+            await self.create_offer_for_ids(websocket, data, command)
+        elif command == "get_discrepancies_for_offer":
+            await self.get_discrepancies_for_offer(websocket, data, command)
+        elif command == "respond_to_offer":
+            await self.respond_to_offer(websocket, data, command)
+        elif command == "get_wallet_summaries":
+            await self.get_wallet_summaries(websocket, data, command)
+        elif command == "logged_in":
+            await self.logged_in(websocket, command)
+        elif command == "generate_mnemonic":
+            await self.generate_mnemonic(websocket, command)
+        elif command == "log_in":
+            await self.log_in(websocket, data, command)
+        else:
+            response = {"error": f"unknown_command {command}"}
+            await websocket.send(dict_to_json_str(response))
 
     async def notify_ui_that_state_changed(self, state: str):
         data = {
