@@ -260,12 +260,19 @@ class Keychain:
         default_pool = std_hash(std_hash(std_hash(wallet_seed)))
         return default_pool
 
+
+    def safe_delete(self, service: str, user: str):
+        try:
+            keyring.delete_password(service, user)
+        except BaseException:
+            pass
+
     def delete_all_keys(self):
-        keyring.delete_password(self.get_service(), self.get_wallet_user())
-        keyring.delete_password(self.get_service(), self.get_wallet_target_user())
-        keyring.delete_password(self.get_service(), self.get_pool_user_raw(0))
-        keyring.delete_password(self.get_service(), self.get_pool_user_raw(1))
-        keyring.delete_password(self.get_service(), self.get_pool_user())
-        keyring.delete_password(self.get_service(), self.get_pool_target_user())
-        keyring.delete_password(self.get_service(), self.get_harvester_user())
-        keyring.delete_password(self.get_service(), self.get_plot_user())
+        self.safe_delete(self.get_service(), self.get_wallet_user())
+        self.safe_delete(self.get_service(), self.get_wallet_target_user())
+        self.safe_delete(self.get_service(), self.get_pool_user_raw(0))
+        self.safe_delete(self.get_service(), self.get_pool_user_raw(1))
+        self.safe_delete(self.get_service(), self.get_pool_user())
+        self.safe_delete(self.get_service(), self.get_pool_target_user())
+        self.safe_delete(self.get_service(), self.get_harvester_user())
+        self.safe_delete(self.get_service(), self.get_plot_user())

@@ -77,8 +77,11 @@ def show_mnemonics(key):
     elif key == "pool":
         entropy = keychain.get_pool_seed()
     else:
-        raise ValueError("Wrong type of key")
-
+        print("Wrong key type")
+        return
+    if entropy is None:
+        print(f"No key for {key}")
+        return
     mnemonic = bytes_to_mnemonic(entropy)
     mnemonic_string = mnemonic_to_string(mnemonic)
     print(mnemonic_string)
@@ -93,6 +96,7 @@ def handler(args, parser):
         "show_wallet_key",
         "show_harvester_key",
         "show_pool_key",
+        "delete",
     ]
 
     command = args.command[0]
@@ -114,3 +118,5 @@ def handler(args, parser):
         show_mnemonics("harvester")
     elif command == "show_pool_key":
         show_mnemonics("pool")
+    elif command == "delete":
+        keychain.delete_all_keys()
