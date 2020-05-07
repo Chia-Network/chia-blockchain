@@ -1,5 +1,6 @@
 import * as actions from '../modules/websocket';
-import { newMessage, format_message, mnemonic_received } from '../modules/message';
+import { format_message, incomingMessage } from '../modules/message';
+import { handle_message} from './middleware_api'
 
 const socketMiddleware = () => {
   let socket = null;
@@ -16,26 +17,9 @@ const socketMiddleware = () => {
     store.dispatch(actions.wsDisconnected());
   };
 
-  const onError = store => () => {
-    console.log("error")
-  };
-
   const onMessage = store => (event) => {
     const payload = JSON.parse(event.data);
-    console.log(payload)
-    switch (payload.command) {
-      case 'balance':
-        store.dispatch(newMessage(payload.msg));
-        break;
-      case 'generate_mnemonic':
-        console.log("generate mnemonic received")
-        console.log(payload)
-        store.dispatch(mnemonic_received(payload.data))
-        break;
-      default:
-        console.log(payload);
-        break;
-    }
+    handle_message(store, payload)
   };
 
   return store => next => (action) => {

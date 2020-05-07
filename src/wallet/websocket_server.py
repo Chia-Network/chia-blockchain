@@ -73,7 +73,7 @@ class WebSocketServer:
         self.log.info("Starting Websocket Server")
 
         def master_close_cb():
-            self.stop()
+            asyncio.ensure_future(self.stop())
 
         try:
             asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
@@ -134,20 +134,16 @@ class WebSocketServer:
             server.global_connections.peers.add(full_node_peer)
             _ = await server.start_client(full_node_peer, None)
 
-
         if self.config["testing"] is False:
             self.wallet_node._start_bg_tasks()
 
-        await server.await_closed()
-        await self.wallet_node.wallet_state_manager.close_all_stores()
-
         return True
 
-    def stop(self):
+    async def stop(self):
         self.websocket_server.close()
         if self.wallet_node is not None:
             self.wallet_node.server.close_all()
-        if self.wallet_node is not None:
+            await self.wallet_node.wallet_state_manager.close_all_stores()
             self.wallet_node._shutdown()
 
     async def get_next_puzzle_hash(self, websocket, request, response_api):
@@ -578,11 +574,13 @@ class WebSocketServer:
 
     async def log_in(self, websocket, request, response_api):
         mnemonic = request["mnemonic"]
+        self.keychain.delete_all_keys()
         self.log.info(f"Mnemonic {mnemonic}")
         seed = seed_from_mnemonic(mnemonic)
         self.log.info(f"Seed {seed}")
         self.keychain.set_wallet_seed(seed)
         k_seed = self.keychain.get_wallet_seed()
+
         await self.start_wallet()
 
         if k_seed == seed:
@@ -688,6 +686,8 @@ class WebSocketServer:
             await self.generate_mnemonic(websocket, command)
         elif command == "log_in":
             await self.log_in(websocket, data, command)
+        elif command == "log_out":
+            await self.log_out(websocket, command)
         else:
             response = {"error": f"unknown_command {command}"}
             await websocket.send(dict_to_json_str(response))

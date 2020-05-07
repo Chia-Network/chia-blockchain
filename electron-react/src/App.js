@@ -4,6 +4,7 @@ import { connect } from 'react-redux';
 import SignIn from './pages/SignIn';
 import NewWallet from './pages/NewWallet'
 import OldWallet from './pages/OldWallet'
+import Wallet from './pages/Wallet'
 
 import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles';
 const defaultTheme = createMuiTheme();
@@ -70,16 +71,19 @@ const theme = createMuiTheme({
   }
 });
 
-const App = () => (
-  <React.Fragment>
-    <Switch>
-    <ThemeProvider theme={theme}>
-      <Route exact path="/" component={SignIn} />
-      <Route exact path="/CreateMnemonics" component={NewWallet} />
-      <Route exact path="/Mnemonics" component={OldWallet} />
-    </ThemeProvider>
-    </Switch>
-  </React.Fragment>
-);
+const App = () => {
+  return (
+    <React.Fragment>
+      <Switch>
+      <ThemeProvider theme={theme}>
+        <Route exact path="/" component={SignIn} />
+        <Route exact path="/CreateMnemonics" component={NewWallet} />
+        <Route exact path="/Mnemonics" component={OldWallet} />
+        <Route exact path="/wallet" component={Wallet} />
+      </ThemeProvider>
+      </Switch>
+    </React.Fragment>
+  )
+}
 
 export default connect()(App);

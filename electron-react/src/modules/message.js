@@ -25,7 +25,7 @@ export const send_transaction = (wallet_id, amount, fee, puzzle_hash) => {
 export const genereate_mnemonics = () => {
   var action = newMessage()
   action.command = "generate_mnemonic"
-  action.data = {"data": "dummy"}
+  action.data = {}
   return action
 }
 
@@ -36,12 +36,12 @@ export const log_in = (mnemonic) => {
   return action
 }
 
-export const incomingMessage = msg => ({ type: 'INCOMING_MESSAGE'});
-
-
-export const mnemonic_received = (data) => {
-  var action = incomingMessage()
-  action.command = "generate_mnemonic"
-  action.data = data
+export const log_out = () => {
+  var action = newMessage()
+  action.command = "log_out"
+  action.data = {}
   return action
 }
+
+export const incomingMessage = (command, data) => ({ type: 'INCOMING_MESSAGE', command, data});
+

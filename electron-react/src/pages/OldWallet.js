@@ -8,7 +8,7 @@ import { withTheme } from '@material-ui/styles';
 import Container from '@material-ui/core/Container';
 import ArrowBackIosIcon from '@material-ui/icons/ArrowBackIos';
 import { connect, useSelector } from 'react-redux';
-import { withRouter } from 'react-router-dom'
+import { withRouter, Redirect } from 'react-router-dom'
 import CssTextField from '../components/cssTextField'
 import myStyle from './style'
 import { useStore , useDispatch} from 'react-redux'
@@ -66,9 +66,13 @@ const UIPart = (props) => {
         var mnemonic = state.mnemonic_state.mnemonic_input
         dispatch(log_in(mnemonic))
     }
-
+    const logged_in = useSelector(state => state.wallet_state.logged_in)
     const words = useSelector(state => state.wallet_state.mnemonic)
     const classes = myStyle();
+    if (logged_in) {
+        console.log("Redirecting to wallet")
+        return (<Redirect to="/wallet" />)
+    } 
     return(
       <div className={classes.root}>
       <Link onClick={goBack} href="#" variant="">

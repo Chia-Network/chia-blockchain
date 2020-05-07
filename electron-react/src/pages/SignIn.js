@@ -5,8 +5,8 @@ import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
 import Container from '@material-ui/core/Container';
 import logo from '../assets/img/chia_logo.svg'; // Tell webpack this JS file uses this image
-import { withRouter } from 'react-router-dom'
-import { connect } from 'react-redux';
+import { withRouter, Redirect } from 'react-router-dom'
+import { connect, useSelector } from 'react-redux';
 import Link from '@material-ui/core/Link';
 import { Link as RouterLink } from 'react-router-dom';
 
@@ -50,7 +50,11 @@ const useStyles = makeStyles((theme) => ({
 
 const SignIn = () => {
   const classes = useStyles();
-  
+  const logged_in = useSelector(state => state.wallet_state.logged_in)
+  if (logged_in) {
+      console.log("Redirecting to wallet")
+      return (<Redirect to="/wallet" />)
+  }
   return (
     <div className={classes.root}>
     <Container className={classes.main} component="main" maxWidth="xs" >

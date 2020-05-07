@@ -43,8 +43,15 @@ const UIPart = (props) => {
     function goBack(){
         props.props.history.goBack();
     }
-
+    const logged_in = useSelector(state => state.wallet_state.logged_in)
     const words = useSelector(state => state.wallet_state.mnemonic)
+    if (logged_in) {
+        console.log("Pusing wallet")
+        props.props.history.push("/wallet")
+        return
+    } else {
+        console.log("Not logged in")
+    }
     const classes = myStyle();
     return(
       <div className={classes.root}>
