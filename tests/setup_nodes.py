@@ -129,6 +129,7 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
         network_id,
         root_path,
         config,
+        f"full_node_server_{port}",
     )
     _ = await server_1.start_server(full_node_1._on_connect)
     full_node_1._set_server(server_1)
@@ -136,10 +137,17 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     yield (full_node_1, server_1)
 
     # TEARDOWN
+    print("TEARING DOWN")
     server_1.close_all()
+    print("TEARING DOWN2")
     await server_1.await_closed()
-    await full_node_1._shutdown()
+    print("TEARING DOWN3")
+    full_node_1._close()
+    print("TEARING DOWN4")
+    await full_node_1._await_closed()
+    print("TEARING DOWN5")
     db_path = root_path / f"{db_name}"
+    print("TEARING DOWN6")
     if db_path.exists():
         db_path.unlink()
 
@@ -210,12 +218,19 @@ async def setup_harvester(port, dic={}):
         f"harvester_server_{port}",
     )
 
+    harvester.set_server(server)
     yield (harvester, server)
+    print("harvester tear 1")
 
-    harvester._shutdown()
     server.close_all()
-    await harvester._await_shutdown()
+    print("harvester tear 2")
     await server.await_closed()
+    print("harvester tear 3")
+    harvester._shutdown()
+    print("harvester tear 4")
+    print(server.global_connections.get_connections())
+    await harvester._await_shutdown()
+    print("harvester tear 5")
 
 
 async def setup_farmer(port, dic={}):
@@ -284,6 +299,7 @@ async def setup_introducer(port, dic={}):
         network_id,
         bt.root_path,
         config,
+        f"introducer_server_{port}"
     )
     _ = await server.start_server(None)
 
@@ -322,6 +338,7 @@ async def setup_timelord(port, dic={}):
         network_id,
         bt.root_path,
         config,
+        f"timelord_server_{port}"
     )
 
     coro = asyncio.start_server(
@@ -459,6 +476,7 @@ async def setup_full_system(dic={}):
     node1, node1_server = await node_iters[5].__anext__()
     node2, node2_server = await node_iters[6].__anext__()
 
+
     await harvester_server.start_client(
         PeerInfo("127.0.0.1", uint16(farmer_server._port)), auth=True
     )
@@ -469,10 +487,12 @@ async def setup_full_system(dic={}):
     )
 
     yield (node1, node2)
+    print("STARTING TEARDOWN")
 
     for node_iter in node_iters:
-
+        print(f"  TEARDOWN {node_iter}")
         try:
             await node_iter.__anext__()
         except StopAsyncIteration:
             pass
+    print("DONE")

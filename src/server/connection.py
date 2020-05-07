@@ -124,6 +124,7 @@ class PeerConnections:
 
     def close_all_connections(self):
         for connection in self._all_connections:
+            print(f"closing connection {connection}")
             connection.close()
         self._all_connections = []
         self.peers = Peers()

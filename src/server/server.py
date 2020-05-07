@@ -218,7 +218,9 @@ class ChiaServer:
         """
         Await until the pipeline is done, after which the server and all clients are closed.
         """
+        print("AWAIT CLOSED START")
         await self._pipeline_task
+        print("AWAIT CLOSED END")
 
     def push_message(self, message: OutboundMessage):
         """
@@ -231,7 +233,9 @@ class ChiaServer:
         """
         Starts closing all the clients and servers, by stopping the server and stopping the aiters.
         """
+        print("closing all connections")
         self.global_connections.close_all_connections()
+        print("closed all connections")
         if self._server is not None:
             self._server.close()
         if not self._outbound_aiter.is_stopped():
@@ -242,6 +246,7 @@ class ChiaServer:
     def _initialize_ping_task(self):
         async def ping():
             while not self._pipeline_task.done():
+                print("pinging")
                 msg = Message("ping", Ping(bytes32(token_bytes(32))))
                 self.push_message(
                     OutboundMessage(NodeType.FARMER, msg, Delivery.BROADCAST)
@@ -322,6 +327,7 @@ class ChiaServer:
         # length encoding and CBOR serialization
         async def serve_forever():
             async for connection, message in expanded_messages_aiter:
+                print("Looping", connection, message)
                 if message is None:
                     # Does not ban the peer, this is just a graceful close of connection.
                     self.global_connections.close(connection, True)
@@ -335,12 +341,15 @@ class ChiaServer:
                     f"-> {message.function} to peer {connection.get_peername()}"
                 )
                 try:
+                    self.log.error("waiting for writer")
                     await connection.send(message)
+                    self.log.error("not waiting for write")
                 except (RuntimeError, TimeoutError, OSError,) as e:
                     self.log.warning(
                         f"Cannot write to {connection}, already closed. Error {e}."
                     )
                     self.global_connections.close(connection, True)
+            print("Done looping")
 
         # We will return a task for this, so user of start_chia_server or start_chia_client can wait until
         # the server is closed.
@@ -459,7 +468,9 @@ class ChiaServer:
         """
         try:
             while not connection.reader.at_eof():
+                self.log.error("waiting for read")
                 message = await connection.read_one_message()
+                self.log.error("not waiting for read")
                 # Read one message at a time, forever
                 yield (connection, message)
         except asyncio.IncompleteReadError:
@@ -487,8 +498,9 @@ class ChiaServer:
             )
         finally:
             # Removes the connection from the global list, so we don't try to send things to it
+            print("actually closing it now")
             self.global_connections.close(connection, True)
-
+            print("should be closed")
     async def handle_message(
         self, pair: Tuple[Connection, Message], api: Any
     ) -> AsyncGenerator[Tuple[Connection, OutboundMessage], None]:
