@@ -53,7 +53,7 @@ const SignIn = () => {
   const logged_in = useSelector(state => state.wallet_state.logged_in)
   if (logged_in) {
       console.log("Redirecting to wallet")
-      return (<Redirect to="/wallet" />)
+      return (<Redirect to="/dashboard" />)
   }
   return (
     <div className={classes.root}>

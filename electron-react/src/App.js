@@ -5,6 +5,7 @@ import SignIn from './pages/SignIn';
 import NewWallet from './pages/NewWallet'
 import OldWallet from './pages/OldWallet'
 import Wallet from './pages/Wallet'
+import Dashboard from './pages/Dashboard'
 
 import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles';
 const defaultTheme = createMuiTheme();
@@ -80,6 +81,7 @@ const App = () => {
         <Route exact path="/CreateMnemonics" component={NewWallet} />
         <Route exact path="/Mnemonics" component={OldWallet} />
         <Route exact path="/wallet" component={Wallet} />
+        <Route exact path="/dashboard" component={Dashboard} />
       </ThemeProvider>
       </Switch>
     </React.Fragment>
