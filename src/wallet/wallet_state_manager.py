@@ -337,7 +337,17 @@ class WalletStateManager:
         for record in spendable:
             amount = uint64(amount + record.coin.amount)
 
-        return uint64(amount)
+        unconfirmed_tx: List[TransactionRecord] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
+        removal_amount = 0
+
+        for txrecord in unconfirmed_tx:
+            for coin in txrecord.removals:
+                if await self.does_coin_belong_to_wallet(coin, wallet_id):
+                    removal_amount += coin.amount
+
+        result = amount - removal_amount
+
+        return uint64(result)
 
     async def does_coin_belong_to_wallet(self, coin: Coin, wallet_id: int) -> bool:
         """

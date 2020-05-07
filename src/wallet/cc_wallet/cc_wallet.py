@@ -495,6 +495,40 @@ class CCWallet:
 
         return full_spend
 
+    async def get_spendable_balance(self) -> uint64:
+        coins = await self.get_cc_spendable_coins()
+        amount = 0
+        for record in coins:
+            amount += record.coin.amount
+
+        unconfirmed_removals: Dict[
+            bytes32, Coin
+        ] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+            self.wallet_info.id
+        )
+        removal_amount = 0
+        for name, coin in unconfirmed_removals.items():
+            if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.wallet_info.id):
+                removal_amount += coin.amount
+
+        result = amount - removal_amount
+
+        return uint64(result)
+
+    async def get_pending_tx_balance(self) -> uint64:
+
+        unconfirmed_removals: Dict[
+            bytes32, Coin
+        ] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+            self.wallet_info.id
+        )
+        addition_amount = 0
+        for name, coin in unconfirmed_removals.items():
+            if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.wallet_info.id):
+                addition_amount += coin.amount
+
+        return uint64(addition_amount)
+
     async def get_cc_spendable_coins(self) -> List[WalletCoinRecord]:
         result: List[WalletCoinRecord] = []
 

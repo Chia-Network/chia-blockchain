@@ -266,12 +266,21 @@ class WebSocketServer:
         wallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
         balance = await wallet.get_confirmed_balance()
         pending_balance = await wallet.get_unconfirmed_balance()
+        spendable_balance = await wallet.get_spendable_balance()
+        pending_tx_balance = await wallet.get_pending_tx_balance()
+        if wallet.wallet_info.type == WalletType.COLOURED_COIN:
+            frozen_balance = 0
+        else:
+            frozen_balance = await wallet.get_frozen_amount()
 
         response = {
             "wallet_id": wallet_id,
             "success": True,
             "confirmed_wallet_balance": balance,
             "unconfirmed_wallet_balance": pending_balance,
+            "spendable_balance": spendable_balance,
+            "frozen_balance": frozen_balance,
+            "pending_tx_balance": pending_tx_balance
         }
 
         await websocket.send(format_response(response_api, response))
