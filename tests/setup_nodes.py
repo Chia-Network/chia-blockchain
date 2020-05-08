@@ -43,8 +43,11 @@ test_constants["GENESIS_BLOCK"] = bytes(
 
 
 async def _teardown_nodes(node_aiters: List) -> None:
+    print("tearing down", node_aiters)
     awaitables = [node_iter.__anext__() for node_iter in node_aiters]
+    print("awaitables", awaitables)
     for sublist_awaitable in asyncio.as_completed(awaitables):
+        print("trying", sublist_awaitable)
         try:
             await sublist_awaitable
         except StopAsyncIteration:
@@ -96,6 +99,7 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
 
     # TEARDOWN
     server_1.close_all()
+    full_node_1._close()
     await server_1.await_closed()
     await full_node_1._await_closed()
     db_path.unlink()
