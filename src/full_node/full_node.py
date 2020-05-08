@@ -1560,7 +1560,9 @@ class FullNode:
             raise ConsensusError(error_code, header_hash)
 
         elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
-            self.log.warning(f"Disconnected block {header_hash}")
+            self.log.info(
+                f"Disconnected block {header_hash} at height {respond_block.block.height}"
+            )
             tip_height = min(
                 [head.height for head in self.blockchain.get_current_tips()]
             )

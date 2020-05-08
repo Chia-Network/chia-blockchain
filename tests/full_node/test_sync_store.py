@@ -56,6 +56,10 @@ class TestStore:
         db = await SyncStore.create(connection)
         db_2 = await SyncStore.create(connection_2)
         try:
+            # Save/get sync
+            for sync_mode in (False, True):
+                db.set_sync_mode(sync_mode)
+                assert sync_mode == db.get_sync_mode()
             genesis = FullBlock.from_bytes(test_constants["GENESIS_BLOCK"])
 
             # clear sync info

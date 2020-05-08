@@ -1241,6 +1241,7 @@ class Blockchain:
             )
 
         # Verify aggregated signature
+        # TODO: move this to pre_validate_blocks_multiprocessing so we can sync faster
         if not block.header.data.aggregated_signature:
             return Err.BAD_AGGREGATE_SIGNATURE
         if not block.header.data.aggregated_signature.validate(hash_key_pairs):
