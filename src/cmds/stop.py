@@ -7,12 +7,11 @@ from src.daemon.client import connect_to_daemon_and_validate
 
 def make_parser(parser):
 
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument(
+    parser.add_argument(
         "-d", "--daemon", action="store_true", help="Stop daemon",
     )
-    group.add_argument(
-        "group", choices=all_groups(), type=str, nargs="*", default=[],
+    parser.add_argument(
+        "group", choices=all_groups(), type=str, nargs="+", default=None,
     )
 
     parser.set_defaults(function=stop)
