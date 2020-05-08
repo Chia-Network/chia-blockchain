@@ -1,9 +1,13 @@
 import asyncio
-import fcntl
 import logging
 import os
 import subprocess
 import sys
+
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
 
 
 from aiter import map_aiter, server
@@ -155,33 +159,46 @@ class Daemon:
         return "pong"
 
 
+def singleton(lockfile, text="semaphore"):
+    """
+    Open a lockfile exclusively.
+    """
+    try:
+        if fcntl:
+            f = open(lockfile, "w")
+            fcntl.lockf(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        else:
+            fd = os.open(lockfile, os.O_CREAT | os.O_EXCL | os.O_RDWR)
+            f = open(fd, "w")
+        f.write(text)
+        return f
+    except IOError:
+        return None
+    return f
+
+
 async def async_run_daemon(root_path):
     config = load_config(root_path, "config.yaml")
     initialize_logging("daemon %(name)-25s", config["logging"], root_path)
 
-    lockfile = daemon_launch_lock_path(root_path)
-    with open(lockfile, "w") as f:
-        f.write("this file is a semaphore to indicate that `chia daemon` is launching")
+    lockfile = singleton(daemon_launch_lock_path(root_path))
+    if lockfile is None:
+        print("daemon: already launching")
+        return 2
 
-        try:
-            fcntl.lockf(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            print("daemon: already launching")
-            return 2
+    connection = await connect_to_daemon_and_validate(root_path)
+    if connection is not None:
+        print("daemon: already running")
+        return 1
 
-        connection = await connect_to_daemon_and_validate(root_path)
-        if connection is not None:
-            print("daemon: already running")
-            return 1
+    use_unix_socket = should_use_unix_socket()
+    listen_socket, aiter, where = await _server_aiter_for_start_daemon(root_path, use_unix_socket)
 
-        use_unix_socket = should_use_unix_socket()
-        listen_socket, aiter, where = await _server_aiter_for_start_daemon(root_path, use_unix_socket)
+    rws_aiter = map_aiter(
+        lambda rw: dict(reader=rw[0], writer=rw[1], server=listen_socket), aiter
+    )
 
-        rws_aiter = map_aiter(
-            lambda rw: dict(reader=rw[0], writer=rw[1], server=listen_socket), aiter
-        )
-
-        daemon = Daemon(root_path, listen_socket)
+    daemon = Daemon(root_path, listen_socket)
 
     print(f"daemon: listening on {where}", flush=True)
 
