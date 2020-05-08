@@ -797,7 +797,7 @@ class Blockchain:
             futures.append(
                 asyncio.get_running_loop().run_in_executor(
                     self.pool,
-                    Blockchain._pre_validate_block_multi,
+                    Blockchain._pre_validate_block,
                     self.constants,
                     bytes(block),
                 )
@@ -811,7 +811,7 @@ class Blockchain:
         return results
 
     @staticmethod
-    def _pre_validate_block_multi(constants: Dict, data: bytes):
+    def _pre_validate_block(constants: Dict, data: bytes):
         """
             Validates all parts of FullBlock that don't need to be serially checked
         """

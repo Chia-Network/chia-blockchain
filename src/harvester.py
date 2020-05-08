@@ -119,26 +119,28 @@ class Harvester:
             self.config["farmer_peer"]["host"], self.config["farmer_peer"]["port"]
         )
 
-        # async def connection_check():
-        #     while not self._is_shutdown:
-        #         counter = 0
-        #         while not self._is_shutdown and counter % 30 == 0:
-        #             if self.server is not None:
-        #                 farmer_retry = True
+        async def connection_check():
+            while not self._is_shutdown:
+                counter = 0
+                while not self._is_shutdown and counter % 30 == 0:
+                    if self.server is not None:
+                        farmer_retry = True
 
-        #                 for connection in self.server.global_connections.get_connections():
-        #                     if connection.get_peer_info() == farmer_peer:
-        #                         farmer_retry = False
+                        for (
+                            connection
+                        ) in self.server.global_connections.get_connections():
+                            if connection.get_peer_info() == farmer_peer:
+                                farmer_retry = False
 
-        #                 if farmer_retry:
-        #                     log.info(f"Reconnecting to farmer {farmer_retry}")
-        #                     if not await self.server.start_client(
-        #                         farmer_peer, None, auth=True
-        #                     ):
-        #                         await asyncio.sleep(1)
-        #             await asyncio.sleep(1)
+                        if farmer_retry:
+                            log.info(f"Reconnecting to farmer {farmer_retry}")
+                            if not await self.server.start_client(
+                                farmer_peer, None, auth=True
+                            ):
+                                await asyncio.sleep(1)
+                    await asyncio.sleep(1)
 
-        # self._reconnect_task = asyncio.create_task(connection_check())
+        self._reconnect_task = asyncio.create_task(connection_check())
 
     def _shutdown(self):
         self._is_shutdown = True
@@ -173,7 +175,6 @@ class Harvester:
         for any proofs of space that are are found in the plots. If proofs are found, a
         ChallengeResponse message is sent for each of the proofs found.
         """
-        log.error("XXXXXXXXXXXXXXXXXXXXX START NEWCHALLANGE")
         start = time.time()
         challenge_size = len(new_challenge.challenge_hash)
         if challenge_size != 32:
@@ -241,7 +242,6 @@ class Harvester:
         log.info(
             f"Time taken to lookup qualities in {len(self.provers)} plots: {time.time() - start}"
         )
-        log.error("XXXXXXXXXXXXXXXXXXXXX END NEWCHALLANGE")
 
     @api_request
     async def request_proof_of_space(
