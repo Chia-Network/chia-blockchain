@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 
 
 def load_plots(
-    config_file: Dict, plot_config_file: Dict, pool_pubkeys: List[PublicKey]
+    config_file: Dict, plot_config_file: Dict, pool_pubkeys: Optional[List[PublicKey]]
 ) -> Dict[Path, DiskProver]:
     provers: Dict[Path, DiskProver] = {}
     for partial_filename_str, plot_config in plot_config_file["plots"].items():
@@ -35,7 +35,7 @@ def load_plots(
         pool_pubkey = PublicKey.from_bytes(bytes.fromhex(plot_config["pool_pk"]))
 
         # Only use plots that correct pools associated with them
-        if pool_pubkey not in pool_pubkeys:
+        if pool_pubkeys is not None and pool_pubkey not in pool_pubkeys:
             log.warning(
                 f"Plot {partial_filename} has a pool key that is not in the farmer's pool_pk list."
             )
