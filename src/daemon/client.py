@@ -1,6 +1,4 @@
 import asyncio
-import os
-import subprocess
 
 
 from src.proxy.client import request_response_proxy
@@ -42,24 +40,3 @@ async def connect_to_daemon_and_validate(root_path):
     except Exception as ex:
         pass
     return None
-
-
-def launch_start_daemon(root_path):
-    os.environ["CHIA_ROOT"] = str(root_path)
-    # TODO: use startupinfo=subprocess.DETACHED_PROCESS on windows
-    process = subprocess.Popen("chia daemon".split(), shell=False)
-    return process
-
-
-async def create_start_daemon_connection(root_path):
-    connection = await connect_to_daemon_and_validate(root_path)
-    if connection is None:
-        # launch a daemon
-        process = launch_start_daemon(root_path)
-        # give the daemon a chance to start up
-        # TODO: fix this gross hack
-        await asyncio.sleep(5)
-        connection = await connect_to_daemon_and_validate(root_path)
-    if connection:
-        return connection
-    raise RuntimeError("can't connect to `chia daemon`, launching it now, try again")

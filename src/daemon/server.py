@@ -157,6 +157,8 @@ async def async_run_daemon(root_path):
 
     daemon = Daemon(root_path, listen_socket)
 
+    print("daemon: listening", flush=True)
+
     return await api_server(rws_aiter, daemon)
 
 

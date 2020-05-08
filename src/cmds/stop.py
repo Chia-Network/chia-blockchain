@@ -2,19 +2,50 @@ import asyncio
 
 from .service_groups import all_groups, services_for_groups
 
-from src.daemon.client import create_start_daemon_connection
+from src.daemon.client import connect_to_daemon_and_validate
 
 
 def make_parser(parser):
 
-    parser.add_argument(
-        "group", choices=all_groups(), type=str, nargs="+",
+    group = parser.add_mutually_exclusive_group()
+
+    group.add_argument(
+        "-a", "--all", action="store_true", help="Stop all processes",
     )
+
+    group.add_argument(
+        "-d", "--daemon", action="store_true", help="Stop daemon",
+    )
+
+    group.add_argument(
+        "group", choices=all_groups(), type=str, nargs="?",
+    )
+
     parser.set_defaults(function=stop)
 
 
+async def stop_daemon(daemon):
+    service = "daemon"
+    print(f"{service}: ", end="", flush=True)
+    if daemon is None:
+        print("not running")
+        return
+    r = await daemon.exit()
+    print(r)
+
+
 async def async_stop(args, parser):
-    daemon = await create_start_daemon_connection(args.root_path)
+    daemon = await connect_to_daemon_and_validate(args.root_path)
+    if daemon is None:
+        print("couldn't connect to chia daemon")
+        return 1
+
+    if args.daemon or args.all:
+        # for now, stopping all will just stop the daemon
+        # TODO: make it stop the services individually
+        r = await daemon.exit()
+        print(f"daemon: {r}")
+        return 0
 
     return_val = 0
 
