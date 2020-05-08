@@ -57,5 +57,13 @@ export const get_puzzle_hash = (wallet_id) => {
   return action
 }
 
+export const farm_block = (puzzle_hash) => {
+  var action = newMessage()
+  action.command = "farm_block"
+  action.data = {puzzle_hash: puzzle_hash}
+  return action
+}
+
+
 export const incomingMessage = (command, data) => ({ type: 'INCOMING_MESSAGE', command, data});
 

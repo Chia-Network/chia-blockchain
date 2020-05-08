@@ -23,12 +23,15 @@ import Button from '@material-ui/core/Button';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
+
 import TableContainer from '@material-ui/core/TableContainer';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
-import { get_puzzle_hash } from '../modules/message';
-
+import { get_puzzle_hash, send_transaction, farm_block } from '../modules/message';
+import { rosybrown } from 'color-name';
 const drawerWidth = 240;
+
+  
 
 const useStyles = makeStyles((theme) => ({
     root: {
@@ -151,10 +154,28 @@ const useStyles = makeStyles((theme) => ({
     walletContainer: {
         marginBottom: theme.spacing(5)
     }, 
-    table: {
-        minWidth: 650,
-        maxHeight: 400,
+    table_root: {
+        width: '100%',
+        height: 600,
+        overflowY: 'scroll',
+      },
+      table: {
+          height: '100%',
+          overflowY: 'scroll',
+      },
+      tableBody: {
+        height: '100%',
+        overflowY: 'scroll',
     },
+      row: {
+        width: 700,
+      },
+      cell_short: {
+        fontSize: "14px",
+        width: 50,
+        overflowWrap: 'break-word'     /* Renamed property in CSS3 draft spec */
+      }
+
 }));
 
 const BalanceCard = (props) => {
@@ -213,6 +234,26 @@ const BalanceCard = (props) => {
 const SendCard = (props) => {
     var id = props.wallet_id
     const classes = useStyles();
+    var address_input = null
+    var amount_input = null
+    var fee_input = null
+    const dispatch = useDispatch()
+
+    function farm() {
+        var address = address_input.value
+        if (address != "") {
+            dispatch(farm_block(address))
+        }
+    }
+
+    function send() {
+        var address = address_input.value
+        var amount = amount_input.value
+        if (address != "" && amount != "") {
+            dispatch(send_transaction(id, amount, 0, address))
+        }
+    }
+
     return (
         <Paper className={classes.paper, classes.sendCard}>
             <Grid container spacing={0}>
@@ -227,7 +268,7 @@ const SendCard = (props) => {
                     <div className={classes.cardSubSection} >
                         <Box display="flex">
                             <Box flexGrow={1} >
-                                <TextField fullWidth id="outlined-basic" label="Address" variant="outlined" />
+                                <TextField fullWidth id="outlined-basic" inputRef={(input) => { address_input = input; }} label="Address" variant="outlined" />
                             </Box>
                             <Box>
 
@@ -239,7 +280,7 @@ const SendCard = (props) => {
                     <div className={classes.cardSubSection} >
                         <Box display="flex">
                             <Box flexGrow={1} >
-                                <TextField fullWidth id="outlined-basic" label="Amount" variant="outlined" />
+                                <TextField fullWidth id="outlined-basic" inputRef={(input) => { amount_input = input; }}  label="Amount" variant="outlined" />
                             </Box>
                         </Box>
                     </div>
@@ -248,9 +289,12 @@ const SendCard = (props) => {
                     <div className={classes.cardSubSection} >
                         <Box display="flex">
                             <Box flexGrow={1} >
+                                <Button onClick={farm} className={classes.sendButton} variant="contained" color="primary">
+                                    Farm
+                                </Button>
                             </Box>
                             <Box>
-                                <Button className={classes.sendButton} variant="contained" color="primary">
+                                <Button onClick={send} className={classes.sendButton} variant="contained" color="primary">
                                     Send
                                 </Button>
                             </Box>
@@ -272,12 +316,12 @@ const HistoryCard = (props) => {
                 <Grid item xs={12}>
                     <div className={classes.cardTitle} >
                         <Typography component="h6" variant="h6">
-                            Transaction History
+                            History
                         </Typography>
                     </div>
                 </Grid>
                 <Grid item xs={12}>
-                    <TransactionTable wallet_id={id}></TransactionTable>
+                    <TransactionTable wallet_id={id}> </TransactionTable>
                 </Grid>
             </Grid>
         </Paper>
@@ -289,35 +333,32 @@ const TransactionTable = (props) => {
     var id = props.wallet_id
     const transactions = useSelector(state => state.wallet_state.wallets[id].transactions)
     return (
-        <TableContainer className={classes.table}  component={Paper}>
-        <Table stickyHeader className={classes.table} aria-label="simple table">
-          <TableHead>
-            <TableRow>
-              <TableCell >Type</TableCell>
-              <TableCell >To</TableCell>
-              <TableCell >Date</TableCell>
-              <TableCell >Status</TableCell>
-              <TableCell >Amount</TableCell>
-              <TableCell >Fee</TableCell>
+        <Paper className={classes.table_root}>
+        <Table stickyHeader className={classes.table}>
+          <TableHead className={classes.head}>
+            <TableRow className={classes.row}>
+            <TableCell className={classes.cell_short}>Type</TableCell>
+            <TableCell className={classes.cell_short}>To</TableCell>
+            <TableCell className={classes.cell_short}>Date</TableCell>
+            <TableCell className={classes.cell_short}>Status</TableCell>
+            <TableCell className={classes.cell_short}>Amount</TableCell>
+            <TableCell className={classes.cell_short}>Fee</TableCell>
             </TableRow>
           </TableHead>
-          <TableBody>
+          <TableBody className={classes.tableBody}>
             {transactions.map((tx) => (
-              <TableRow key={tx}>
-                <TableCell component="th" scope="row">
-                  {tx}
-                </TableCell>
-                <TableCell >{tx}</TableCell>
-                <TableCell >{tx}</TableCell>
-                <TableCell >{tx}</TableCell>
-                <TableCell >{tx}</TableCell>
-                <TableCell >{tx}</TableCell>
-
+              <TableRow className={classes.row}>
+                <TableCell className={classes.cell_short}>{tx.type}</TableCell>
+                <TableCell style={{maxWidth:"150px"}} className={classes.cell_short}>{tx.to_puzzle_hash}</TableCell>
+                <TableCell className={classes.cell_short}>{tx.created_at_time}</TableCell>
+                <TableCell className={classes.cell_short}>{tx.confirmed}</TableCell>
+                <TableCell className={classes.cell_short}>{tx.amount}</TableCell>
+                <TableCell className={classes.cell_short}>{tx.fee_amount}</TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
-      </TableContainer>
+      </Paper>
     )
 }
 

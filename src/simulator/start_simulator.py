@@ -32,7 +32,8 @@ async def main():
 
     db_path = path_from_root(root_path, config["simulator_database_path"])
     mkdir(db_path.parent)
-    db_path.unlink()
+    if db_path.exists():
+        db_path.unlink()
 
     full_node = await FullNodeSimulator.create(
         config, root_path=root_path, override_constants=test_constants,
