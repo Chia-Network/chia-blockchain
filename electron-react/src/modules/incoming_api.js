@@ -5,7 +5,8 @@ export const Wallet = (id, name, type, data) => ({
   data: data,
   balance_total: 1,
   balance_pending: 1,
-  transactions: []
+  transactions: [],
+  puzzle_hash: ""
 })
 
 export const Transaction = (confirmed_at_index, created_at_time, to_puzzle_hash, amount,
@@ -30,7 +31,7 @@ const initial_state = {
   mnemonic: [],
   logged_in: false,
   wallets: [,initial_wallet],
-  presenting_wallet: 1
+  presenting_wallet: 1,
 };
 
 
@@ -90,6 +91,15 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         var wallets = state.wallets
         var wallet = wallets[parseInt(id)]
         wallet.transactions = transactions
+        return {...state}
+      } 
+      else if (action.command === "get_next_puzzle_hash") {
+        var id = action.data.wallet_id
+        var puzzle_hash = action.data.puzzle_hash
+        var wallets = state.wallets
+        var wallet = wallets[parseInt(id)]
+        console.log("wallet_id here: " + id)
+        wallet.puzzle_hash = puzzle_hash
         return {...state}
       }
       return state

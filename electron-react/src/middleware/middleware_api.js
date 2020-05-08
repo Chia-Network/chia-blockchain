@@ -1,4 +1,6 @@
-import { format_message, incomingMessage, get_balance_for_wallet, get_transactions } from '../modules/message';
+import { format_message, incomingMessage } from '../modules/message';
+import { get_balance_for_wallet, get_transactions } from '../modules/message';
+import { get_puzzle_hash } from '../modules/message';
 
 
 
@@ -16,6 +18,7 @@ export const handle_message = (store, payload) => {
         wallets.map((wallet) =>  {
             store.dispatch(get_balance_for_wallet(wallet.id))
             store.dispatch(get_transactions(wallet.id))
+            store.dispatch(get_puzzle_hash(wallet.id))
         })
     }
     console.log(payload)

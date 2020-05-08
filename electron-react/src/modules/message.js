@@ -50,5 +50,12 @@ export const get_transactions = (wallet_id) => {
   return action
 }
 
+export const get_puzzle_hash = (wallet_id) => {
+  var action = newMessage()
+  action.command = "get_next_puzzle_hash"
+  action.data = {wallet_id: wallet_id}
+  return action
+}
+
 export const incomingMessage = (command, data) => ({ type: 'INCOMING_MESSAGE', command, data});
 

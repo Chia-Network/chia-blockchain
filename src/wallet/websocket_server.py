@@ -153,10 +153,11 @@ class WebSocketServer:
 
         wallet_id = int(request["wallet_id"])
         wallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
-        puzzlehash = (await wallet.get_new_puzzlehash()).hex()
+        puzzle_hash = (await wallet.get_new_puzzlehash()).hex()
 
         data = {
-            "puzzlehash": puzzlehash,
+            "wallet_id": wallet_id,
+            "puzzle_hash": puzzle_hash,
         }
 
         await websocket.send(format_response(response_api, data))

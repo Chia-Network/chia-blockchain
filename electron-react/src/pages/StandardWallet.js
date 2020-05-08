@@ -26,6 +26,7 @@ import TableCell from '@material-ui/core/TableCell';
 import TableContainer from '@material-ui/core/TableContainer';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
+import { get_puzzle_hash } from '../modules/message';
 
 const drawerWidth = 240;
 
@@ -322,7 +323,19 @@ const TransactionTable = (props) => {
 
 const AddressCard = (props) => {
     var id = props.wallet_id
+    const puzzle_hash = useSelector(state => state.wallet_state.wallets[id].puzzle_hash)
     const classes = useStyles();
+    const dispatch = useDispatch()
+
+    function newAddress() {
+        console.log("Dispatch for id: " + id)
+        dispatch(get_puzzle_hash(id))
+    }
+
+    function copy() {
+        navigator.clipboard.writeText(puzzle_hash)
+    }
+ 
     return (
         <Paper className={classes.paper, classes.sendCard}>
             <Grid container spacing={0}>
@@ -337,10 +350,10 @@ const AddressCard = (props) => {
                     <div className={classes.cardSubSection} >
                         <Box display="flex">
                             <Box flexGrow={1} >
-                                <TextField fullWidth id="outlined-basic" label="Address" variant="outlined" />
+                                <TextField disabled fullWidth id="outlined-basic" label="Address" value={puzzle_hash} variant="outlined" />
                             </Box>
                             <Box>
-                                <Button className={classes.copyButton} variant="contained" color="secondary" disableElevation>
+                                <Button onClick={copy} className={classes.copyButton} variant="contained" color="secondary" disableElevation>
                                     Copy
                                 </Button>
                             </Box>
@@ -353,7 +366,7 @@ const AddressCard = (props) => {
                             <Box flexGrow={1} >
                             </Box>
                             <Box>
-                                <Button className={classes.sendButton} variant="contained" color="primary">
+                                <Button onClick={newAddress} className={classes.sendButton} variant="contained" color="primary">
                                     New Address
                                 </Button>
                             </Box>
