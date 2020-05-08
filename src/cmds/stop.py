@@ -49,7 +49,7 @@ async def async_stop(args, parser):
 
     return_val = 0
 
-    for service in services_for_groups(args.group):
+    for service in services_for_groups([args.group]):
         print(f"{service}: ", end="", flush=True)
         if not await daemon.is_running(service_name=service):
             print("not running")
