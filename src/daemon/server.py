@@ -77,11 +77,9 @@ def start_service(root_path, service):
         mkdir(pid_path.parent)
         with open(pid_path, "w") as f:
             f.write(f"{process.pid}\n")
-        print(f"wrote pid to {pid_path}")
     except Exception:
-        print(f"can't write PID file for {process} at {pid_path}")
+        pass
     return process, pid_path
-    return 0
 
 
 class Daemon:
@@ -92,12 +90,12 @@ class Daemon:
 
     async def start_service(self, service_name):
         if service_name in self._services:
-            return "already_running"
+            return "already running"
         process, pid_path = start_service(self._root_path, service_name)
         self._services[service_name] = process
-        return "did_start"
+        return "started"
 
-    async def stop_service(self, service_name, delay_before_kill=30):
+    async def stop_service(self, service_name, delay_before_kill=15):
         process = self._services.get(service_name)
         if process is None:
             return "not_running"

@@ -26,18 +26,18 @@ async def async_start(args, parser):
     daemon = await create_start_daemon_connection(args.root_path)
 
     for service in services_for_groups(args.group):
+        print(f"{service}: ", end="", flush=True)
         if await daemon.is_running(service_name=service):
             if args.restart:
-                print(f"stopping {service}")
                 await daemon.stop_service(service_name=service)
+                print(f"stopped\n{service}: ", end="", flush=True)
             else:
                 print(
-                    f"{service} seems to already be running, use `-r` to force restart"
+                    f"already running, use `-r` to force restart"
                 )
                 continue
         msg = await daemon.start_service(service_name=service)
-        print(f"{service}: {msg}")
-    print("chia start complete")
+        print(f"{msg}")
 
 
 def start(args, parser):
