@@ -1,28 +1,12 @@
 import functools
 import logging
 
-from aiter import join_aiters, map_aiter
+from aiter import map_aiter
+from aiter.event_stream import rws_to_event_aiter
 
 from .messages import reader_to_cbor_stream, xform_to_cbor_message
 
 log = logging.getLogger(__name__)
-
-
-def _message_stream_to_event_stream(event_template, message_stream):
-    """
-    This tweaks each message from message_stream by wrapping it with a dictionary
-    populated with the given template, putting the message is at the top
-    level under "message".
-    """
-
-    template = dict(event_template)
-
-    def adaptor(message):
-        event = dict(template)
-        event.update(message=message)
-        return event
-
-    return map_aiter(adaptor, message_stream)
 
 
 def _transform_args(kwarg_transformers, message):
@@ -72,26 +56,6 @@ def _make_response_map_for_root_object(root_object):
         return response, event["writer"]
 
     return response_writer_for_event
-
-
-def rws_to_event_aiter(rws_aiter, reader_to_message_stream):
-    """
-    This accepts an aiter of (reader, writer, server) and turns it into an aiter of
-    (event, writer, server) where the `event` came from a remote corresponding to `writer`.
-    """
-
-    def rws_to_reader_event_template_adaptor(rws):
-        return rws, rws["reader"]
-
-    def reader_event_template_to_event_stream_adaptor(rws_reader):
-        rws, reader = rws_reader
-        return _message_stream_to_event_stream(rws, reader_to_message_stream(reader))
-
-    def adaptor(rws):
-        return reader_event_template_to_event_stream_adaptor(
-            rws_to_reader_event_template_adaptor(rws))
-
-    return join_aiters(map_aiter(adaptor, rws_aiter))
 
 
 def api_request(**kwarg_transformers):

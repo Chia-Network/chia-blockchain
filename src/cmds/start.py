@@ -1,14 +1,8 @@
-import os
-import time
-from typing import List
+import asyncio
 
-from .start_stop import (
-    all_groups,
-    pid_path_for_service,
-    services_for_groups,
-    start_service,
-    stop_service,
-)
+from .service_groups import all_groups, services_for_groups
+
+from src.daemon.client import create_start_daemon_connection
 
 
 def make_parser(parser):
@@ -28,42 +22,23 @@ def make_parser(parser):
     parser.set_defaults(function=start)
 
 
-def start(args, parser):
+async def async_start(args, parser):
+    daemon = await create_start_daemon_connection(args.root_path)
 
-    processes: List = []
     for service in services_for_groups(args.group):
-        if pid_path_for_service(args.root_path, service).is_file():
-            if args.restart or args.force:
-                print("restarting")
-                stop_service(args.root_path, service)
-                while (
-                    pid_path_for_service(args.root_path, service).is_file()
-                    and not args.force
-                ):
-                    # try to avoid race condition
-                    # this is pretty hacky
-                    time.sleep(1)
+        if await daemon.is_running(service_name=service):
+            if args.restart:
+                print(f"stopping {service}")
+                await daemon.stop_service(service_name=service)
             else:
                 print(
                     f"{service} seems to already be running, use `-r` to force restart"
                 )
                 continue
-        process = start_service(args.root_path, service)
-        processes.append(process)
+        msg = await daemon.start_service(service_name=service)
+        print(f"{service}: {msg}")
+    print("chia start complete")
 
-    try:
-        for process, pid_path in processes:
-            process.wait()
-    except KeyboardInterrupt:
-        for process, pid_path in processes:
-            process.kill()
-    for process, pid_path in processes:
-        try:
-            process.wait()
-            pid_path_killed = pid_path.with_suffix(".pid-killed")
-            os.rename(pid_path, pid_path_killed)
-        except Exception:
-            pass
-    if len(processes) > 0:
-        print("chia start complete")
-    return 0
+
+def start(args, parser):
+    return asyncio.get_event_loop().run_until_complete(async_start(args, parser))
