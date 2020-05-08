@@ -1,4 +1,5 @@
 import asyncio
+import fcntl
 import logging
 import os
 import subprocess
@@ -12,50 +13,57 @@ from src.util.config import load_config
 from src.util.logging import initialize_logging
 from src.util.path import mkdir
 
+from .client import (
+    connect_to_daemon_and_validate,
+    socket_server_path,
+    should_use_unix_socket,
+)
 
 log = logging.getLogger(__name__)
 
 
-def socket_server_path(root_path):
-    return root_path / "run" / "start-daemon.socket"
+def daemon_launch_lock_path(root_path):
+    return root_path / "run" / "start-daemon.launching"
 
 
-def socket_server_info_path(root_path):
-    return root_path / "run" / "start-daemon.socket.info"
-
-
-async def server_aiter_for_start_daemon(root_path):
-    try:
-        # for now, don't use unix sockets
-        raise ValueError()
-        socket_path = socket_server_path(root_path)
-        s, aiter = await server.start_unix_server_aiter(path=socket_path)
-        log.info("listening on %s", socket_path)
-        return s, aiter, socket_path
-    except Exception as ex:
-        pass
-
-    # TODO: make this configurable
-    socket_server_port = 60191
-    while socket_server_port < 65535:
+async def _listen_on_some_socket(port, max_port=65536):
+    """
+    Return a socket that we are listening on in the given port range
+    """
+    while port < max_port:
         try:
-            s, aiter = await server.start_server_aiter(port=socket_server_port)
-            log.info("listening on port %s", socket_server_port)
-            break
+            s, aiter = await server.start_server_aiter(port=port)
+            log.info("listening on port %s", port)
+            return s, aiter, port
         except Exception as ex:
-            pass
-    else:
-        raise RuntimeError("can't listen on socket")
+            port += 1
+    raise RuntimeError("can't listen on socket")
 
+
+async def _server_aiter_for_start_daemon(root_path, use_unix_socket):
+    path = socket_server_path(root_path)
+    mkdir(path.parent)
     try:
-        path = socket_server_info_path(root_path)
-        mkdir(path.parent)
-        with open(path, "w") as f:
-            f.write(f"{socket_server_port}\n")
-    except Exception as ex:
-        raise RuntimeError(f"can't write to {path}")
+        if use_unix_socket:
+            if not path.is_socket():
+                path.unlink()
+            s, aiter = await server.start_unix_server_aiter(path=path)
+            log.info("listening on %s", path)
+            where = path
+        else:
+            s, aiter, socket_server_port = await _listen_on_some_socket(60191, 62000)
+            try:
+                with open(path, "w") as f:
+                    f.write(f"{socket_server_port}\n")
+                where = socket_server_port
+            except Exception as ex:
+                raise RuntimeError(f"can't write to {path}")
 
-    return s, aiter, path
+        return s, aiter, where
+
+    except Exception as ex:
+        log.exception("can't create a listen socket for chia daemon")
+        raise
 
 
 def pid_path_for_service(root_path, service):
@@ -151,13 +159,31 @@ async def async_run_daemon(root_path):
     config = load_config(root_path, "config.yaml")
     initialize_logging("daemon %(name)-25s", config["logging"], root_path)
 
-    listen_socket, aiter, path = await server_aiter_for_start_daemon(root_path)
+    lockfile = daemon_launch_lock_path(root_path)
+    with open(lockfile, "w") as f:
+        f.write("this file is a semaphore to indicate that `chia daemon` is launching")
 
-    rws_aiter = map_aiter(lambda rw: dict(reader=rw[0], writer=rw[1], server=listen_socket), aiter)
+        try:
+            fcntl.lockf(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            print("daemon: already launching")
+            return 2
 
-    daemon = Daemon(root_path, listen_socket)
+        connection = await connect_to_daemon_and_validate(root_path)
+        if connection is not None:
+            print("daemon: already running")
+            return 1
 
-    print("daemon: listening", flush=True)
+        use_unix_socket = should_use_unix_socket()
+        listen_socket, aiter, where = await _server_aiter_for_start_daemon(root_path, use_unix_socket)
+
+        rws_aiter = map_aiter(
+            lambda rw: dict(reader=rw[0], writer=rw[1], server=listen_socket), aiter
+        )
+
+        daemon = Daemon(root_path, listen_socket)
+
+    print(f"daemon: listening on {where}", flush=True)
 
     return await api_server(rws_aiter, daemon)
 
