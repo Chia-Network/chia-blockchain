@@ -8,17 +8,11 @@ from src.daemon.client import connect_to_daemon_and_validate
 def make_parser(parser):
 
     group = parser.add_mutually_exclusive_group()
-
-    group.add_argument(
-        "-a", "--all", action="store_true", help="Stop all processes",
-    )
-
     group.add_argument(
         "-d", "--daemon", action="store_true", help="Stop daemon",
     )
-
     group.add_argument(
-        "group", choices=all_groups(), type=str, nargs="?",
+        "group", choices=all_groups(), type=str, nargs="*", default=[],
     )
 
     parser.set_defaults(function=stop)
@@ -40,16 +34,14 @@ async def async_stop(args, parser):
         print("couldn't connect to chia daemon")
         return 1
 
-    if args.daemon or args.all:
-        # for now, stopping all will just stop the daemon
-        # TODO: make it stop the services individually
+    if args.daemon:
         r = await daemon.exit()
         print(f"daemon: {r}")
         return 0
 
     return_val = 0
 
-    for service in services_for_groups([args.group]):
+    for service in services_for_groups(args.group):
         print(f"{service}: ", end="", flush=True)
         if not await daemon.is_running(service_name=service):
             print("not running")
