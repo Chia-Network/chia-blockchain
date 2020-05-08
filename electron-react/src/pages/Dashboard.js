@@ -22,7 +22,7 @@ import { mainListItems, secondaryListItems } from './listItems';
 import Chart from './Chart';
 import Deposits from './Deposits';
 import Orders from './Orders';
-import Wallet from './Wallet'
+import Wallets from './Wallets'
 
 function Copyright() {
   return (
@@ -37,7 +37,7 @@ function Copyright() {
   );
 }
 
-const drawerWidth = 240;
+const drawerWidth = 200;
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -179,7 +179,7 @@ export default function Dashboard() {
       <main className={classes.content}>
         <div className={classes.appBarSpacer} />
         <Container maxWidth="lg" className={classes.container}>
-        <Wallet></Wallet>
+        <Wallets></Wallets>
         </Container>
       </main>
     </div>

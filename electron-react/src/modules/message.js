@@ -8,10 +8,10 @@ export const format_message = (command, data) => {
   return action
 }
 
-export const get_balance_for_wallet = (wallet_id) => {
+export const get_balance_for_wallet = (id) => {
   var action = newMessage()
   action.command = "get_wallet_balance"
-  action.data = {"wallet_id": wallet_id}
+  action.data = {"wallet_id": id}
   return action
 }
 
@@ -40,6 +40,13 @@ export const log_out = () => {
   var action = newMessage()
   action.command = "log_out"
   action.data = {}
+  return action
+}
+
+export const get_transactions = (wallet_id) => {
+  var action = newMessage()
+  action.command = "get_transactions"
+  action.data = {wallet_id: wallet_id}
   return action
 }
 

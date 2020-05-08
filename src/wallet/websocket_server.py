@@ -233,7 +233,7 @@ class WebSocketServer:
             wallet_id
         )
 
-        response = {"success": True, "txs": transactions}
+        response = {"success": True, "txs": transactions, "wallet_id": wallet_id}
         await websocket.send(format_response(response_api, response))
 
     async def farm_block(self, websocket, request, response_api):

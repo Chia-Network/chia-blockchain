@@ -4,7 +4,7 @@ import { connect } from 'react-redux';
 import SignIn from './pages/SignIn';
 import NewWallet from './pages/NewWallet'
 import OldWallet from './pages/OldWallet'
-import Wallet from './pages/Wallet'
+import Wallets from './pages/Wallets'
 import Dashboard from './pages/Dashboard'
 
 import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles';
@@ -80,7 +80,7 @@ const App = () => {
         <Route exact path="/" component={SignIn} />
         <Route exact path="/CreateMnemonics" component={NewWallet} />
         <Route exact path="/Mnemonics" component={OldWallet} />
-        <Route exact path="/wallet" component={Wallet} />
+        <Route exact path="/wallet" component={Wallets} />
         <Route exact path="/dashboard" component={Dashboard} />
       </ThemeProvider>
       </Switch>

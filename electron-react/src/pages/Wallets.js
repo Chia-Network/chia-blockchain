@@ -1,35 +1,25 @@
 import React from 'react';
-import Button from '@material-ui/core/Button';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
 import Container from '@material-ui/core/Container';
-import logo from '../assets/img/chia_logo.svg'; // Tell webpack this JS file uses this image
 import { withRouter, Redirect } from 'react-router-dom'
 import { connect, useDispatch, useSelector } from 'react-redux';
-import Link from '@material-ui/core/Link';
 import { log_out } from '../modules/message';
 import clsx from 'clsx';
 import Drawer from '@material-ui/core/Drawer';
-import Box from '@material-ui/core/Box';
-import AppBar from '@material-ui/core/AppBar';
-import Toolbar from '@material-ui/core/Toolbar';
 import List from '@material-ui/core/List';
 import Typography from '@material-ui/core/Typography';
 import Divider from '@material-ui/core/Divider';
-import IconButton from '@material-ui/core/IconButton';
-import Badge from '@material-ui/core/Badge';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemIcon from '@material-ui/core/ListItemIcon';
+import ListItemText from '@material-ui/core/ListItemText';
+import ListSubheader from '@material-ui/core/ListSubheader';
+import DashboardIcon from '@material-ui/icons/Dashboard';
 import Paper from '@material-ui/core/Paper';
-import MenuIcon from '@material-ui/icons/Menu';
-import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
-import NotificationsIcon from '@material-ui/icons/Notifications';
-import { mainListItems, secondaryListItems } from './listItems';
-import Chart from './Chart';
-import Deposits from './Deposits';
-import Orders from './Orders';
+import StandardWallet from './StandardWallet';
 
-
-const drawerWidth = 240;
+const drawerWidth = 160;
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -94,11 +84,12 @@ const useStyles = makeStyles((theme) => ({
   content: {
     flexGrow: 1,
     height: '100vh',
-    overflow: 'auto',
+    overflowX: 'hidden',
   },
   container: {
     paddingTop: theme.spacing(0),
     paddingBottom: theme.spacing(0),
+    paddingRight: theme.spacing(0),
   },
   paper: {
     padding: theme.spacing(0),
@@ -119,13 +110,32 @@ const useStyles = makeStyles((theme) => ({
       duration: theme.transitions.duration.enteringScreen,
     }),
   },
+  balancePaper: {
+    height: 200,
+    marginTop: theme.spacing(2),
+  }
 }));
 
+const WalletList = (props) => {
+  return  props.wallets.map((wallet, i) =>  
+  <ListItem button>
+  <ListItemText primary={wallet.name} />
+  </ListItem>
+  )
+}
 
-const Wallet = () => {
+const CreateWallet = () => {  return(
+  <ListItem button>
+  <ListItemText primary="Add Wallet" />
+  </ListItem>)
+}
+
+const Wallets = () => {
   const classes = useStyles();
   const dispatch = useDispatch()
   const logged_in = useSelector(state => state.wallet_state.logged_in)
+  const wallets = useSelector(state => state.wallet_state.wallets)
+  const presenting_wallet_id = useSelector(state => state.wallet_state.presenting_wallet)
 
 
   const [open, setOpen] = React.useState(true);
@@ -154,14 +164,20 @@ const Wallet = () => {
       open={open}
     >
       <Divider />
-      <List>{mainListItems}</List>
+      <List>
+        <WalletList wallets={wallets}></WalletList>
+        <CreateWallet></CreateWallet>
+      </List>
     </Drawer>
     <main className={classes.content}>
-      <div className={classes.appBarSpacer} />
       <Container maxWidth="lg" className={classes.container}>
         <Grid container spacing={3}>
           {/* Chart */}
-
+          <Grid item xs={12}>
+            <StandardWallet wallet_id={presenting_wallet_id}></StandardWallet>
+          </Grid>
+          <Grid item xs={12}>
+          </Grid>
         </Grid>
       </Container>
     </main>
@@ -169,4 +185,4 @@ const Wallet = () => {
   );
 }
 
-export default withRouter(connect()(Wallet));
+export default withRouter(connect()(Wallets));
