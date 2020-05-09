@@ -32,6 +32,11 @@ const initial_state = {
   logged_in: false,
   wallets: [, initial_wallet],
   presenting_wallet: 1,
+  status: {
+    connections: [],
+    connection_count: 0,
+    syncing: false,
+  },
 };
 
 
@@ -88,12 +93,14 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         }
       }
       else if (action.command === "get_transactions") {
-        var id = action.data.wallet_id
-        var transactions = action.data.txs
-        var wallets = state.wallets
-        var wallet = wallets[parseInt(id)]
-        wallet.transactions = transactions
-        return { ...state }
+        if (action.data.success) {
+          var id = action.data.wallet_id
+          var transactions = action.data.txs
+          var wallets = state.wallets
+          var wallet = wallets[parseInt(id)]
+          wallet.transactions = transactions.reverse()
+          return { ...state }
+        }
       }
       else if (action.command === "get_next_puzzle_hash") {
         var id = action.data.wallet_id
@@ -102,6 +109,20 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         var wallet = wallets[parseInt(id)]
         console.log("wallet_id here: " + id)
         wallet.puzzle_hash = puzzle_hash
+        return { ...state }
+      } else if (action.command == "get_connection_info") {
+        const connections = action.data.connections
+        state.status["connections"] = connections
+        state.status["connection_count"] = connections.length
+        return { ...state }
+      } else if (action.command === "get_height_info") {
+        const height = action.data.height
+        state.status["height"] = height
+        return { ...state }
+      } else if (action.command === "get_sync_status") {
+        console.log("command get_sync_status")
+        const syncing = action.data.syncing
+        state.status["syncing"] = syncing
         return { ...state }
       }
       return state

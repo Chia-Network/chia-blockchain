@@ -18,8 +18,9 @@ import ListSubheader from '@material-ui/core/ListSubheader';
 import DashboardIcon from '@material-ui/icons/Dashboard';
 import Paper from '@material-ui/core/Paper';
 import StandardWallet from './StandardWallet';
+import Box from '@material-ui/core/Box';
 
-const drawerWidth = 160;
+const drawerWidth = 180;
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -117,17 +118,58 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const WalletList = (props) => {
-  return  props.wallets.map((wallet, i) =>  
-  <ListItem button>
-  <ListItemText primary={wallet.name} />
-  </ListItem>
+  return props.wallets.map((wallet, i) =>
+    <ListItem button>
+      <ListItemText primary={wallet.name} />
+    </ListItem>
   )
 }
 
-const CreateWallet = () => {  return(
-  <ListItem button>
-  <ListItemText primary="Add Wallet" />
-  </ListItem>)
+const CreateWallet = () => {
+  return (
+    <ListItem button>
+      <ListItemText primary="Add Wallet" />
+    </ListItem>)
+}
+
+const StatusCard = () => {
+  const syncing = useSelector(state => state.wallet_state.status.syncing)
+  const height = useSelector(state => state.wallet_state.status.height)
+  const connection_count = useSelector(state => state.wallet_state.status.connection_count)
+
+  return (
+    <div style={{ margin: 16 }}>
+      <Typography component="subtitle1" variant="subtitle1" color="secondary">
+        Status
+      </Typography>
+      <div style={{marginLeft: 8}}>
+      <Box display="flex">
+        <Box flexGrow={1} >
+          status:
+        </Box>
+        <Box>
+          {syncing ? "syncing" : "synced"}
+        </Box>
+      </Box>
+      <Box display="flex">
+        <Box flexGrow={1} >
+          height:
+        </Box>
+        <Box>
+          {height}
+        </Box>
+      </Box>
+      <Box display="flex">
+        <Box flexGrow={1} >
+          connections:
+        </Box>
+        <Box>
+          {connection_count}
+        </Box>
+      </Box>
+      </div>
+    </div>
+  )
 }
 
 const Wallets = () => {
@@ -146,42 +188,45 @@ const Wallets = () => {
     setOpen(false);
   };
   const fixedHeightPaper = clsx(classes.paper, classes.fixedHeight);
-  function log_out_click(){
+  function log_out_click() {
     dispatch(log_out())
   }
   if (!logged_in) {
     console.log("Redirecting to start")
     return (<Redirect to="/" />)
-}
+  }
   return (
     <div className={classes.root}>
-    <CssBaseline />
-    <Drawer
-      variant="permanent"
-      classes={{
-        paper: clsx(classes.drawerPaper, !open && classes.drawerPaperClose),
-      }}
-      open={open}
-    >
-      <Divider />
-      <List>
-        <WalletList wallets={wallets}></WalletList>
-        <CreateWallet></CreateWallet>
-      </List>
-    </Drawer>
-    <main className={classes.content}>
-      <Container maxWidth="lg" className={classes.container}>
-        <Grid container spacing={3}>
-          {/* Chart */}
-          <Grid item xs={12}>
-            <StandardWallet wallet_id={presenting_wallet_id}></StandardWallet>
+      <CssBaseline />
+      <Drawer
+        variant="permanent"
+        classes={{
+          paper: clsx(classes.drawerPaper, !open && classes.drawerPaperClose),
+        }}
+        open={open}
+      >
+        <Divider />
+        <StatusCard></StatusCard>
+        <Divider />
+        <List>
+          <WalletList wallets={wallets}></WalletList>
+          <Divider />
+          <CreateWallet></CreateWallet>
+        </List>
+      </Drawer>
+      <main className={classes.content}>
+        <Container maxWidth="lg" className={classes.container}>
+          <Grid container spacing={3}>
+            {/* Chart */}
+            <Grid item xs={12}>
+              <StandardWallet wallet_id={presenting_wallet_id}></StandardWallet>
+            </Grid>
+            <Grid item xs={12}>
+            </Grid>
           </Grid>
-          <Grid item xs={12}>
-          </Grid>
-        </Grid>
-      </Container>
-    </main>
-  </div>
+        </Container>
+      </main>
+    </div>
   );
 }
 

@@ -296,13 +296,13 @@ class WalletStateManager:
         """
         self.pending_tx_callback = callback
 
-    def state_changed(self, state: str):
+    def state_changed(self, state: str, wallet_id: int = None):
         """
         Calls the callback if it's present.
         """
         if self.state_changed_callback is None:
             return
-        self.state_changed_callback(state)
+        self.state_changed_callback(state, wallet_id)
 
     def tx_pending_changed(self):
         """
@@ -452,6 +452,8 @@ class WalletStateManager:
         for unconfirmed in unconfirmed_record:
             await self.tx_store.set_confirmed(unconfirmed.name(), index)
 
+        self.state_changed("coin_removed", record.wallet_id)
+
     async def coin_added(self, coin: Coin, index: uint32, coinbase: bool):
         """
         Adding coin to the db
@@ -510,7 +512,7 @@ class WalletStateManager:
             coin, index, uint32(0), False, coinbase, wallet_type, wallet_id
         )
         await self.wallet_store.add_coin_record(coin_record)
-        self.state_changed("coin_added")
+
         if wallet_type == WalletType.COLOURED_COIN:
             wallet: CCWallet = self.wallets[wallet_id]
             header_hash: bytes32 = self.height_to_hash[index]
@@ -521,6 +523,9 @@ class WalletStateManager:
             assert block.removals is not None
             await wallet.coin_added(coin, index, header_hash, block.removals)
 
+        self.log.info(f"Doing state changed for wallet id {wallet_id}")
+        self.state_changed("coin_added", wallet_id)
+
     async def add_pending_transaction(self, tx_record: TransactionRecord):
         """
         Called from wallet before new transaction is sent to the full_node
@@ -528,14 +533,15 @@ class WalletStateManager:
 
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
         await self.tx_store.add_transaction_record(tx_record)
-        self.state_changed("pending_transaction")
         self.tx_pending_changed()
+        self.state_changed("pending_transaction", tx_record.wallet_id)
 
     async def add_transaction(self, tx_record: TransactionRecord):
         """
         Called from wallet to add transaction that is not being set to full_node
         """
         await self.tx_store.add_transaction_record(tx_record)
+        self.state_changed("pending_transaction", tx_record.wallet_id)
 
     async def remove_from_queue(
         self,
@@ -679,8 +685,6 @@ class WalletStateManager:
                     await self.coin_added(coin, block.height, False)
                 for coin in block.removals:
                     await self.coin_removed(coin, block.height)
-                self.state_changed("coin_added")
-                self.state_changed("coin_removed")
                 self.height_to_hash[uint32(0)] = block.header_hash
                 return ReceiveBlockResult.ADDED_TO_HEAD
 
@@ -727,8 +731,6 @@ class WalletStateManager:
                         await self.coin_removed(coin, path_block.height)
 
                 self.lca = block.header_hash
-                self.state_changed("coin_added")
-                self.state_changed("coin_removed")
                 self.state_changed("new_block")
                 return ReceiveBlockResult.ADDED_TO_HEAD
 

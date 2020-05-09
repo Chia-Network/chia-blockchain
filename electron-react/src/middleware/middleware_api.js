@@ -1,6 +1,8 @@
-import { format_message, incomingMessage } from '../modules/message';
-import { get_balance_for_wallet, get_transactions } from '../modules/message';
-import { get_puzzle_hash } from '../modules/message';
+import {
+    get_puzzle_hash, format_message,
+    incomingMessage, get_balance_for_wallet, get_transactions,
+    get_height_info, get_sync_status, get_connection_info
+} from '../modules/message';
 
 
 
@@ -11,6 +13,9 @@ export const handle_message = (store, payload) => {
         console.log("fetch state")
         store.dispatch(format_message("logged_in", {}))
         store.dispatch(format_message("get_wallets", {}))
+        store.dispatch(get_height_info())
+        store.dispatch(get_sync_status())
+        store.dispatch(get_connection_info())
     }
     else if (payload.command == "log_in") {
         if (payload.data.success) {
@@ -26,12 +31,25 @@ export const handle_message = (store, payload) => {
         if (payload.data.success) {
             const wallets = payload.data.wallets
             console.log(wallets)
-            wallets.map((wallet) =>  {
+            wallets.map((wallet) => {
                 store.dispatch(get_balance_for_wallet(wallet.id))
                 store.dispatch(get_transactions(wallet.id))
                 store.dispatch(get_puzzle_hash(wallet.id))
             })
         }
+    } else if (payload.command == "state_changed") {
+        console.log(payload.data.state)
+        console.log(payload)
+        const state = payload.data.state 
+        if (state === "coin_added" || state === "coin_removed") {
+            var wallet_id = payload.data.wallet_id
+            console.log("WLID " + wallet_id)
+            store.dispatch(get_balance_for_wallet(wallet_id))
+            store.dispatch(get_transactions(wallet_id))
+        } else if (state === "sync_changed") {
+            store.dispatch(get_sync_status())
+        } else if (state === "new_block") {
+            store.dispatch(get_height_info())
+        }
     }
-    console.log(payload)
 }

@@ -710,10 +710,14 @@ class WebSocketServer:
             response = {"error": f"unknown_command {command}"}
             await websocket.send(dict_to_json_str(response))
 
-    async def notify_ui_that_state_changed(self, state: str):
+    async def notify_ui_that_state_changed(self, state: str, wallet_id):
         data = {
             "state": state,
         }
+        self.log.info(f"Wallet notify id is: {wallet_id}")
+        if wallet_id is not None:
+            data["wallet_id"] = wallet_id
+
         if self.websocket is not None:
             try:
                 await self.websocket.send(format_response("state_changed", data))
@@ -726,10 +730,10 @@ class WebSocketServer:
                 finally:
                     self.websocket = None
 
-    def state_changed_callback(self, state: str):
+    def state_changed_callback(self, state: str, wallet_id: int = None):
         if self.websocket is None:
             return
-        asyncio.create_task(self.notify_ui_that_state_changed(state))
+        asyncio.create_task(self.notify_ui_that_state_changed(state, wallet_id))
 
 
 async def start_websocket_server():

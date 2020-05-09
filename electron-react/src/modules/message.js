@@ -64,6 +64,26 @@ export const farm_block = (puzzle_hash) => {
   return action
 }
 
+export const get_height_info = () => {
+  var action = newMessage()
+  action.command = "get_height_info"
+  action.data = {}
+  return action
+}
+
+export const get_sync_status = () => {
+  var action = newMessage()
+  action.command = "get_sync_status"
+  action.data = {}
+  return action
+}
+
+export const get_connection_info = () => {
+  var action = newMessage()
+  action.command = "get_connection_info"
+  action.data = {}
+  return action
+}
 
 export const incomingMessage = (command, data) => ({ type: 'INCOMING_MESSAGE', command, data});
 
