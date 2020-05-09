@@ -5,7 +5,8 @@ from src.util.path import mkdir
 
 
 def should_use_unix_socket():
-    return False
+    import socket
+    return hasattr(socket, "AF_UNIX")
 
 
 def socket_server_path(root_path):

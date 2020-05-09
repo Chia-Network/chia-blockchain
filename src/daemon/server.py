@@ -181,15 +181,15 @@ async def async_run_daemon(root_path):
     config = load_config(root_path, "config.yaml")
     initialize_logging("daemon %(name)-25s", config["logging"], root_path)
 
-    lockfile = singleton(daemon_launch_lock_path(root_path))
-    if lockfile is None:
-        print("daemon: already launching")
-        return 2
-
     connection = await connect_to_daemon_and_validate(root_path)
     if connection is not None:
         print("daemon: already running")
         return 1
+
+    lockfile = singleton(daemon_launch_lock_path(root_path))
+    if lockfile is None:
+        print("daemon: already launching")
+        return 2
 
     use_unix_socket = should_use_unix_socket()
     listen_socket, aiter, where = await _server_aiter_for_start_daemon(root_path, use_unix_socket)
