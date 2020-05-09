@@ -12,7 +12,17 @@ export const handle_message = (store, payload) => {
         store.dispatch(format_message("logged_in", {}))
         store.dispatch(format_message("get_wallets", {}))
     }
-    if (payload.command == "get_wallets") {
+    else if (payload.command == "log_in") {
+        if (payload.data.success) {
+            store.dispatch(format_message("get_wallets", {}))
+        }
+    }
+    else if (payload.command == "logged_in") {
+        if (payload.data.logged_in) {
+            store.dispatch(format_message("get_wallets", {}))
+        }
+    }
+    else if (payload.command == "get_wallets") {
         const wallets = payload.data.wallets
         console.log(wallets)
         wallets.map((wallet) =>  {

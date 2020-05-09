@@ -13,6 +13,7 @@ import websockets
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
 from src.util.keychain import Keychain, seed_from_mnemonic, generate_mnemonic
+from src.util.path import path_from_root
 from src.wallet.trade_manager import TradeManager
 from src.wallet.util.json_util import dict_to_json_str
 
@@ -63,13 +64,11 @@ class WebSocketServer:
         self.root_path = root_path
         self.wallet_node: Optional[WalletNode] = None
         self.trade_manager: Optional[TradeManager] = None
+        if self.config["testing"] is True:
+            self.config["database_path"] = "test_db_wallet.db"
 
 
     async def start(self):
-        self.log.info("Starting Websocket Server")
-        self.websocket_server = await websockets.serve(
-            self.safe_handle, "localhost", self.config["rpc_port"]
-        )
         self.log.info("Starting Websocket Server")
 
         def master_close_cb():
@@ -84,6 +83,10 @@ class WebSocketServer:
         private_key = self.keychain.get_wallet_key()
         if private_key is not None:
             await self.start_wallet()
+
+        self.websocket_server = await websockets.serve(
+            self.safe_handle, "localhost", self.config["rpc_port"]
+        )
         self.log.info("Waiting webSocketServer closure")
         await self.websocket_server.wait_closed()
         self.log.info("webSocketServer closed")
@@ -97,7 +100,6 @@ class WebSocketServer:
 
         if self.config["testing"] is True:
             log.info(f"Websocket server in testing mode")
-            self.config["database_path"] = "test_db_wallet.db"
             self.wallet_node = await WalletNode.create(
                 self.config, self.keychain, override_constants=test_constants
             )
@@ -574,8 +576,9 @@ class WebSocketServer:
         return await websocket.send(format_response(response_api, response))
 
     async def log_in(self, websocket, request, response_api):
+        await self.stop_wallet()
+        await self.clean_all_state()
         mnemonic = request["mnemonic"]
-        self.keychain.delete_all_keys()
         self.log.info(f"Mnemonic {mnemonic}")
         seed = seed_from_mnemonic(mnemonic)
         self.log.info(f"Seed {seed}")
@@ -591,8 +594,22 @@ class WebSocketServer:
 
         return await websocket.send(format_response(response_api, response))
 
-    async def log_out(self, websocket, response_api):
+    async def clean_all_state(self):
         self.keychain.delete_all_keys()
+        path = path_from_root(DEFAULT_ROOT_PATH, self.config["database_path"])
+        if path.exists():
+            path.unlink()
+
+    async def stop_wallet(self):
+        if self.wallet_node is not None:
+            if self.wallet_node.server is not None:
+                self.wallet_node.server.close_all()
+            await self.wallet_node.wallet_state_manager.close_all_stores()
+            self.wallet_node = None
+
+    async def log_out(self, websocket, response_api):
+        await self.stop_wallet()
+        await self.clean_all_state()
         response = {"success": True}
         return await websocket.send(format_response(response_api, response))
 
