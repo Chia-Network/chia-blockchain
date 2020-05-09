@@ -912,7 +912,7 @@ class FullNode:
         )
         for block in blocks:
             assert block.proof_of_time is not None
-            if block.proof_of_time.witness_type == 1:
+            if block.proof_of_time.witness_type == 0:
                 return
 
         yield OutboundMessage(
@@ -976,28 +976,32 @@ class FullNode:
         A proof of time, received by a peer full node. If we have the rest of the block,
         we can complete it. Otherwise, we just verify and propagate the proof.
         """
-        height: Optional[uint32] = self.full_node_store.get_proof_of_time_heights(
-            (
-                respond_compact_proof_of_time.proof.challenge_hash,
-                respond_compact_proof_of_time.proof.number_of_iterations,
-            )
+        height: Optional[uint32] = None
+        pot_tuple = (
+            respond_compact_proof_of_time.proof.challenge_hash,
+            respond_compact_proof_of_time.proof.number_of_iterations,
         )
+        if pot_tuple in self.blockchain.pot_to_chain_height:
+            height = self.blockchain.pot_to_chain_height[pot_tuple]
         if height is None:
+            self.log.info("No block for compact proof of time.")
+            return
+        if not respond_compact_proof_of_time.proof.is_valid(
+            self.constants["DISCRIMINANT_SIZE_BITS"]
+        ):
+            self.log.info("Invalid compact proof of time.")
             return
 
         blocks: List[FullBlock] = await self.block_store.get_blocks_at([height])
         for block in blocks:
             assert block.proof_of_time is not None
             if (
-                block.proof_of_time.witness_type != 1
+                block.proof_of_time.witness_type != 0
                 and block.proof_of_time.challenge_hash
                 == respond_compact_proof_of_time.proof.challenge_hash
                 and block.proof_of_time.number_of_iterations
                 == respond_compact_proof_of_time.proof.number_of_iterations
             ):
-                assert respond_compact_proof_of_time.proof.is_valid(
-                    self.constants["DISCRIMINANT_SIZE_BITS"]
-                )
                 block_new = FullBlock(
                     block.proof_of_space,
                     respond_compact_proof_of_time.proof,
@@ -1006,6 +1010,7 @@ class FullNode:
                     block.transactions_filter,
                 )
                 await self.block_store.add_block(block_new)
+                self.log.info(f"Stored compact block at height {block.height}.")
                 yield OutboundMessage(
                     NodeType.FULL_NODE,
                     Message(
@@ -1522,6 +1527,15 @@ class FullNode:
         A proof of time, received by a peer timelord. We can use this to complete a block,
         and call the block routine (which handles propagation and verification of blocks).
         """
+        if request.proof.witness_type == 0:
+            compact_request = full_node_protocol.RespondCompactProofOfTime(
+                request.proof
+            )
+            async for msg in self.respond_compact_proof_of_time(
+                compact_request
+            ):
+                yield msg
+
         dict_key = (
             request.proof.challenge_hash,
             request.proof.number_of_iterations,
@@ -1531,9 +1545,10 @@ class FullNode:
             FullBlock
         ] = await self.full_node_store.get_unfinished_block(dict_key)
         if not unfinished_block_obj:
-            self.log.warning(
-                f"Received a proof of time that we cannot use to complete a block {dict_key}"
-            )
+            if request.proof.witness_type > 0:
+                self.log.warning(
+                    f"Received a proof of time that we cannot use to complete a block {dict_key}"
+                )
             return
 
         new_full_block: FullBlock = FullBlock(
