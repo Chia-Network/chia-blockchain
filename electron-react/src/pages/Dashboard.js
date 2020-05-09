@@ -22,7 +22,13 @@ import { mainListItems, secondaryListItems } from './listItems';
 import Chart from './Chart';
 import Deposits from './Deposits';
 import Orders from './Orders';
-import Wallets from './Wallets'
+import Wallets from './Wallets';
+import {SideBar} from './sidebar';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  presentWallet, presentNode,
+  presentFarmer, presentTimelord,
+} from '../modules/presenter'
 
 function Copyright() {
   return (
@@ -129,6 +135,31 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+
+const ComopnentSwitch = () => {
+  const toPresent = useSelector(state => state.presenter.main_menu)
+  if (toPresent === presentWallet) {
+    return(
+      <Wallets></Wallets>
+    )
+  } else if (toPresent == presentNode) {
+    return (
+      <div>Node</div>
+    )
+  } else if (toPresent == presentFarmer) {
+    return (
+      <div>Farmer</div>
+    )
+  } else if (toPresent == presentTimelord) {
+    return (
+      <div>Timelord</div>
+    )
+  }
+  return (
+    <div></div>
+  )
+}
+
 export default function Dashboard() {
   const classes = useStyles();
   const [open, setOpen] = React.useState(true);
@@ -172,14 +203,12 @@ export default function Dashboard() {
           </IconButton>
         </div>
         <Divider />
-        <List>{mainListItems}</List>
-        <Divider />
-        <List>{secondaryListItems}</List>
+        <SideBar></SideBar>
       </Drawer>
       <main className={classes.content}>
         <div className={classes.appBarSpacer} />
         <Container maxWidth="lg" className={classes.container}>
-        <Wallets></Wallets>
+        <ComopnentSwitch></ComopnentSwitch>
         </Container>
       </main>
     </div>

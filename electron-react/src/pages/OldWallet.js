@@ -71,7 +71,7 @@ const UIPart = (props) => {
     const classes = myStyle();
     if (logged_in) {
         console.log("Redirecting to wallet")
-        return (<Redirect to="/wallet" />)
+        return (<Redirect to="/dashboard" />)
     } 
     return(
       <div className={classes.root}>

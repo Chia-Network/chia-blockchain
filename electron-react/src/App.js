@@ -80,7 +80,6 @@ const App = () => {
         <Route exact path="/" component={SignIn} />
         <Route exact path="/CreateMnemonics" component={NewWallet} />
         <Route exact path="/Mnemonics" component={OldWallet} />
-        <Route exact path="/wallet" component={Wallets} />
         <Route exact path="/dashboard" component={Dashboard} />
       </ThemeProvider>
       </Switch>
