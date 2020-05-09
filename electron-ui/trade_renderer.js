@@ -224,15 +224,20 @@ function get_wallet_balance_response(response) {
 
         wallet_balance_holder = document.querySelector("#" + "balance_wallet_" + wallet_id )
         wallet_pending_holder = document.querySelector("#" + "pending_wallet_" + wallet_id )
-
+        var denomination = " XCH"
+        if (wallets_details[wallet_id]["type"] == "COLOURED_COIN"){
+          denomination = " CC"
+        } else if (wallets_details[wallet_id]["type"] == "STANDARD_WALLET"){
+          denomination = " XCH"
+        }
         if (wallet_balance_holder) {
-            wallet_balance_holder.innerHTML = chia_confirmed.toString() + " CH"
+            wallet_balance_holder.innerHTML = chia_confirmed.toString() + denomination
         }
         if (wallet_pending_holder) {
             if (pending > 0) {
-                wallet_pending_holder.innerHTML = lock + " - " + chia_pending + " CH"
+                wallet_pending_holder.innerHTML = lock + " - " + chia_pending + denomination
             } else {
-                wallet_pending_holder.innerHTML = lock + " " + chia_pending_abs + " CH"
+                wallet_pending_holder.innerHTML = lock + " " + chia_pending_abs + denomination
             }
         }
     }
