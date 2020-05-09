@@ -156,7 +156,7 @@ const useStyles = makeStyles((theme) => ({
     }, 
     table_root: {
         width: '100%',
-        height: 600,
+        maxHeight: 600,
         overflowY: 'scroll',
       },
       table: {
@@ -332,6 +332,11 @@ const TransactionTable = (props) => {
     const classes = useStyles();
     var id = props.wallet_id
     const transactions = useSelector(state => state.wallet_state.wallets[id].transactions)
+    
+    if (transactions.length == 0) {
+        return (<div style={{margin:'30px'}}>No previous transactions</div>)
+    } 
+
     return (
         <Paper className={classes.table_root}>
         <Table stickyHeader className={classes.table}>

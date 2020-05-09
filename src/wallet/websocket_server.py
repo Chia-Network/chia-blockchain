@@ -338,7 +338,7 @@ class WebSocketServer:
             WalletInfo
         ] = await self.wallet_node.wallet_state_manager.get_all_wallets()
 
-        response = {"wallets": wallets}
+        response = {"wallets": wallets, "success": True}
 
         return await websocket.send(format_response(response_api, response))
 

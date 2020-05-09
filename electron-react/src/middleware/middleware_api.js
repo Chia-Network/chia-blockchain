@@ -23,13 +23,15 @@ export const handle_message = (store, payload) => {
         }
     }
     else if (payload.command == "get_wallets") {
-        const wallets = payload.data.wallets
-        console.log(wallets)
-        wallets.map((wallet) =>  {
-            store.dispatch(get_balance_for_wallet(wallet.id))
-            store.dispatch(get_transactions(wallet.id))
-            store.dispatch(get_puzzle_hash(wallet.id))
-        })
+        if (payload.data.success) {
+            const wallets = payload.data.wallets
+            console.log(wallets)
+            wallets.map((wallet) =>  {
+                store.dispatch(get_balance_for_wallet(wallet.id))
+                store.dispatch(get_transactions(wallet.id))
+                store.dispatch(get_puzzle_hash(wallet.id))
+            })
+        }
     }
     console.log(payload)
 }

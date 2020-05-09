@@ -7,13 +7,12 @@ import Typography from '@material-ui/core/Typography';
 import { withTheme } from '@material-ui/styles';
 import Container from '@material-ui/core/Container';
 import ArrowBackIosIcon from '@material-ui/icons/ArrowBackIos';
-import { connect, useSelector } from 'react-redux';
+import { connect, useSelector, useDispatch } from 'react-redux';
 import { genereate_mnemonics } from '../modules/message';
-import { withRouter } from 'react-router-dom'
+import { withRouter, Redirect} from 'react-router-dom'
 import CssTextField from '../components/cssTextField'
 import myStyle from './style'
-
-
+import { log_in } from '../modules/message';
 
 const MnemonicField = (props) => {
     return (
@@ -40,19 +39,22 @@ const Iterator = (props) => {
 }
 
 const UIPart = (props) => {
-    function goBack(){
-        props.props.history.goBack();
-    }
     const logged_in = useSelector(state => state.wallet_state.logged_in)
     const words = useSelector(state => state.wallet_state.mnemonic)
-    if (logged_in) {
-        console.log("Pusing wallet")
-        props.props.history.push("/wallet")
-        return
-    } else {
-        console.log("Not logged in")
-    }
+    const dispatch = useDispatch()
     const classes = myStyle();
+
+    function goBack() {
+      props.props.history.goBack();
+    }
+
+    function next() {
+      dispatch(log_in(words))
+    }
+
+    if (logged_in) {
+      return (<Redirect to="/dashboard" />)
+    } 
     return(
       <div className={classes.root}>
       <Link onClick={goBack} href="#" variant="">
@@ -72,7 +74,7 @@ const UIPart = (props) => {
         <CssBaseline />
         <div className={classes.paper}>
             <Button
-              onClick={goBack}
+              onClick={next}
               type="submit"
               fullWidth
               variant="contained"
