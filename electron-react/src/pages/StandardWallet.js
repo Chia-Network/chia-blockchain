@@ -29,10 +29,11 @@ import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import { get_puzzle_hash, send_transaction, farm_block } from '../modules/message';
 import { rosybrown } from 'color-name';
+import {chia_formatter} from '../util/chia'
+import  { unix_to_short_date }  from "../util/utils";
+
 const drawerWidth = 240;
-
   
-
 const useStyles = makeStyles((theme) => ({
     root: {
         display: 'flex',
@@ -178,6 +179,8 @@ const useStyles = makeStyles((theme) => ({
 
 }));
 
+
+
 const BalanceCard = (props) => {
     var id = props.wallet_id
     const balance = useSelector(state => state.wallet_state.wallets[id].balance_total)
@@ -204,7 +207,7 @@ const BalanceCard = (props) => {
                             </Box>
                             <Box>
                                 <Typography alignRight component="subtitle1" variant="subtitle1">
-                                    {balance} XCH
+                                    {chia_formatter(balance, 'mojo').to('chia').value()} XCH
                                 </Typography>
                             </Box>
                         </Box>
@@ -220,7 +223,7 @@ const BalanceCard = (props) => {
                             </Box>
                             <Box>
                                 <Typography alignRight component="subtitle1" variant="subtitle1">
-                                    {balance_pending} XCH
+                                {chia_formatter(balance_pending, 'mojo').to('chia').value()} XCH
                                 </Typography>
                             </Box>
                         </Box>
@@ -336,6 +339,20 @@ const TransactionTable = (props) => {
     if (transactions.length == 0) {
         return (<div style={{margin:'30px'}}>No previous transactions</div>)
     } 
+    const mojo_to_chia = (mojo) => {
+        return chia_formatter(parseInt(mojo), 'mojo').to('chia').value()
+    }
+
+    const incoming_string = (incoming) => {
+        if (incoming) {
+            return "Incoming"
+        } else {
+            return "Outgoing"
+        }
+    }
+    const confirmed_to_string = (confirmed) => {
+        return confirmed ? "Confirmed" : "Pending"
+    }
 
     return (
         <Paper className={classes.table_root}>
@@ -353,12 +370,12 @@ const TransactionTable = (props) => {
           <TableBody className={classes.tableBody}>
             {transactions.map((tx) => (
               <TableRow className={classes.row}>
-                <TableCell className={classes.cell_short}>{tx.type}</TableCell>
+                <TableCell className={classes.cell_short}>{incoming_string(tx.incoming)}</TableCell>
                 <TableCell style={{maxWidth:"150px"}} className={classes.cell_short}>{tx.to_puzzle_hash}</TableCell>
-                <TableCell className={classes.cell_short}>{tx.created_at_time}</TableCell>
-                <TableCell className={classes.cell_short}>{tx.confirmed}</TableCell>
-                <TableCell className={classes.cell_short}>{tx.amount}</TableCell>
-                <TableCell className={classes.cell_short}>{tx.fee_amount}</TableCell>
+                <TableCell className={classes.cell_short}>{unix_to_short_date(tx.created_at_time)}</TableCell>
+                <TableCell className={classes.cell_short}>{confirmed_to_string(tx.confirmed)}</TableCell>
+                <TableCell className={classes.cell_short}>{mojo_to_chia(tx.amount)}</TableCell>
+                <TableCell className={classes.cell_short}>{mojo_to_chia(tx.fee_amount)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

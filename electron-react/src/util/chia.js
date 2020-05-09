@@ -66,7 +66,7 @@ class Chia {
   }
 }
 
-const chia_formatter = (value, unit) => new Chia(value, unit);
+export const chia_formatter = (value, unit) => new Chia(value, unit);
 
 chia_formatter.convert = convert;
 chia_formatter.setDisplay = units.setDisplay;
@@ -75,5 +75,3 @@ chia_formatter.getUnit = units.getUnit;
 chia_formatter.setFiat = (currency, rate, display = null) => {
   units.setUnit(currency, 1 / rate, display);
 };
-
-module.exports = chia_formatter
