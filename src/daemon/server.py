@@ -168,6 +168,8 @@ def singleton(lockfile, text="semaphore"):
             f = open(lockfile, "w")
             fcntl.lockf(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
         else:
+            if lockfile.exists():
+                lockfile.unlink()
             fd = os.open(lockfile, os.O_CREAT | os.O_EXCL | os.O_RDWR)
             f = open(fd, "w")
         f.write(text)
