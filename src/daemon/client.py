@@ -18,9 +18,7 @@ async def client_rw_for_start_daemon(root_path, use_unix_socket):
     mkdir(path.parent)
     try:
         if use_unix_socket:
-            if path.is_socket():
-                r, w = await asyncio.open_unix_connection(path)
-            return None
+            r, w = await asyncio.open_unix_connection(path)
         else:
             with open(path) as f:
                 port = int(f.readline())
