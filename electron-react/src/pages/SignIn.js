@@ -13,7 +13,7 @@ import { Link as RouterLink } from 'react-router-dom';
 
 const useStyles = makeStyles((theme) => ({
   root: {
-    background: 'linear-gradient(45deg, #142229 30%, #112240 90%)',
+    background: 'linear-gradient(45deg, #181818 30%, #333333 90%)',
     height:'100%',
     },
   paper: {

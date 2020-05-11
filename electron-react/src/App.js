@@ -16,7 +16,7 @@ const theme = createMuiTheme({
     secondary: { main: '#000000', contrastText: '#ffffff' }
   },
   root: {
-    background: 'linear-gradient(45deg, #142229 30%, #112240 90%)',
+    background: 'linear-gradient(45deg, #333333 30%, #333333 90%)',
     height: '100%',
   },
   app_root: {

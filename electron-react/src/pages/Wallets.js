@@ -202,7 +202,7 @@ const CreateWallet = () => {
     </ListItem>)
 }
 
-const StatusCard = () => {
+export const StatusCard = () => {
   const syncing = useSelector(state => state.wallet_state.status.syncing)
   const height = useSelector(state => state.wallet_state.status.height)
   const connection_count = useSelector(state => state.wallet_state.status.connection_count)

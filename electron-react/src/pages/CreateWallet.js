@@ -15,6 +15,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import ArrowBackIosIcon from '@material-ui/icons/ArrowBackIos';
 import {CreateNewCCWallet} from './createNewColouredCoin'
 import {CreateExistingCCWallet} from './createExistingColouredCoin'
+import InvertColorsIcon from '@material-ui/icons/InvertColors';
 
 export const useStyles = makeStyles((theme) => ({
     root: {
@@ -80,7 +81,7 @@ export const MainWalletList = () => {
             <List>
                 <ListItem button onClick={select_option}>
                     <ListItemIcon>
-                        <DashboardIcon />
+                        <InvertColorsIcon />
                     </ListItemIcon>
                     <ListItemText primary="Coloured Coin" />
                 </ListItem>
@@ -124,13 +125,13 @@ export const CCListItems = () => {
             <List>
                 <ListItem button onClick={select_option_new}>
                     <ListItemIcon>
-                        <DashboardIcon />
+                        <InvertColorsIcon />
                     </ListItemIcon>
                     <ListItemText primary="Create new coloured coin" />
                 </ListItem>
                 <ListItem button onClick={select_option_existing}>
                     <ListItemIcon>
-                        <DashboardIcon />
+                        <InvertColorsIcon />
                     </ListItemIcon>
                     <ListItemText primary="Create wallet for existing colour" />
                 </ListItem>

@@ -13,24 +13,32 @@ import { log_out } from '../modules/message';
 import { useDispatch, useSelector } from 'react-redux';
 import List from '@material-ui/core/List';
 import Divider from '@material-ui/core/Divider';
-
+import AccountBalanceWalletIcon from '@material-ui/icons/AccountBalanceWallet';
+import AccountTreeIcon from '@material-ui/icons/AccountTree';
+import DonutLargeIcon from '@material-ui/icons/DonutLarge';
+import UpdateIcon from '@material-ui/icons/Update';
+import LockIcon from '@material-ui/icons/Lock';
 
 const menuItems = [
     {
         label: "Wallet",
-        present: presentWallet
+        present: presentWallet,
+        icon: <AccountBalanceWalletIcon></AccountBalanceWalletIcon>
     },
     {
         label: "Node",
-        present: presentNode
+        present: presentNode,
+        icon: <AccountTreeIcon></AccountTreeIcon>
     },
     {
         label: "Farmer",
-        present: presentFarmer
+        present: presentFarmer,
+        icon: <DonutLargeIcon></DonutLargeIcon>
     },
     {
         label: "Timelord",
-        present: presentTimelord
+        present: presentTimelord,
+        icon: <UpdateIcon></UpdateIcon>
     },
 ]
 
@@ -46,7 +54,7 @@ const MenuItem= (menuItem) => {
     return (
         <ListItem button onClick={presentMe}>
             <ListItemIcon>
-                <DashboardIcon />
+                {item.icon}
             </ListItemIcon>
             <ListItemText primary={item.label} />
         </ListItem>
@@ -72,7 +80,7 @@ export const SideBar = () => {
                 <div>
                     <ListItem button onClick={logOut}>
                         <ListItemIcon>
-                            <AssignmentIcon />
+                            <LockIcon />
                         </ListItemIcon>
                         <ListItemText primary="Log Out" />
                     </ListItem>

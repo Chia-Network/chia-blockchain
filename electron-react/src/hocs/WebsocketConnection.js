@@ -1,5 +1,5 @@
-import { Component, useEffect } from 'react';
-import { connect, useDispatch } from 'react-redux';
+import { useEffect } from 'react';
+import { useDispatch } from 'react-redux';
 import { wsConnect } from '../modules/websocket';
 
 const WebSocketConnection = (props) => {

@@ -31,6 +31,7 @@ import { get_puzzle_hash, send_transaction, farm_block } from '../modules/messag
 import { rosybrown } from 'color-name';
 import {mojo_to_chia_string, chia_to_mojo} from '../util/chia'
 import  { unix_to_short_date }  from "../util/utils";
+import {StatusCard} from './Wallets'
 
 const drawerWidth = 240;
   
