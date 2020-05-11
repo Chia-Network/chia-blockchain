@@ -40,7 +40,6 @@ def dict_add_new_default(
 
 
 def check_keys(new_root):
-    print("\nchecking keys.yaml")
     keys_config = load_config(new_root, "keys.yaml")
 
     wallet_sk = ExtendedPrivateKey.from_bytes(bytes.fromhex(keys_config["wallet_sk"]))
@@ -126,6 +125,7 @@ def migrate_from(
         "\nYour plots have not been moved so be careful deleting old preferences folders."
     )
 
+    print("\nchecking keys.yaml")
     check_keys(new_root)
 
     print("\nIf you want to move your plot files, you should also modify")
