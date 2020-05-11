@@ -19,6 +19,8 @@ import DashboardIcon from '@material-ui/icons/Dashboard';
 import Paper from '@material-ui/core/Paper';
 import StandardWallet from './StandardWallet';
 import Box from '@material-ui/core/Box';
+import { changeWalletMenu, createWallet, standardWallet, tradeManager, CCWallet} from '../modules/walletMenu';
+import { CreateWalletView } from './CreateWallet';
 
 const drawerWidth = 180;
 
@@ -117,17 +119,68 @@ const useStyles = makeStyles((theme) => ({
   }
 }));
 
-const WalletList = (props) => {
-  return props.wallets.map((wallet, i) =>
-    <ListItem button>
-      <ListItemText primary={wallet.name} />
+const WalletItem = (props) => {
+  const dispatch = useDispatch()
+  const wallet = props.wallet
+  console.log(wallet)
+
+  function presentWallet() {
+      console.log(wallet)
+      if (wallet.type === "STANDARD_WALLET") {
+        dispatch(changeWalletMenu(standardWallet, wallet.id))
+      } else if (wallet.type == "COLOURED_COIN") {
+        dispatch(changeWalletMenu(CCWallet, wallet.id))
+      }
+  }
+
+  return (
+    <ListItem button onClick={presentWallet}>
+        <ListItemText primary={wallet.name} />
     </ListItem>
   )
 }
 
-const CreateWallet = () => {
+const WalletList = (props) => {
+  return props.wallets.map((wallet) =>
+    <WalletItem wallet={wallet}></WalletItem>
+  )
+}
+
+const WalletViewSwitch = () => {
+  const toPresent = useSelector(state => state.wallet_menu.view)
+  const id = useSelector(state => state.wallet_menu.id)
+
+  if (toPresent === standardWallet) {
+    return(
+      <StandardWallet wallet_id={id} ></StandardWallet>
+    )
+  } else if (toPresent == createWallet) {
+    return (
+      <CreateWalletView></CreateWalletView>
+    )
+  } else if (toPresent == tradeManager) {
+    return (
+      <div>Trade Manager</div>
+    )
+  } else if (toPresent == CCWallet) {
+    return (
+      <div>CC WAllet</div>
+    )
+  }
   return (
-    <ListItem button>
+    <div></div>
+  )
+}
+
+const CreateWallet = () => {
+  const dispatch = useDispatch()
+
+  function presentCreateWallet() {
+      dispatch(changeWalletMenu(createWallet))
+  }
+
+  return (
+    <ListItem button onClick={presentCreateWallet}>
       <ListItemText primary="Add Wallet" />
     </ListItem>)
 }
@@ -177,8 +230,6 @@ const Wallets = () => {
   const dispatch = useDispatch()
   const logged_in = useSelector(state => state.wallet_state.logged_in)
   const wallets = useSelector(state => state.wallet_state.wallets)
-  const presenting_wallet_id = useSelector(state => state.wallet_state.presenting_wallet)
-
 
   const [open, setOpen] = React.useState(true);
   const handleDrawerOpen = () => {
@@ -219,7 +270,7 @@ const Wallets = () => {
           <Grid container spacing={3}>
             {/* Chart */}
             <Grid item xs={12}>
-              <StandardWallet wallet_id={presenting_wallet_id}></StandardWallet>
+              <WalletViewSwitch></WalletViewSwitch>
             </Grid>
             <Grid item xs={12}>
             </Grid>

@@ -75,3 +75,15 @@ chia_formatter.getUnit = units.getUnit;
 chia_formatter.setFiat = (currency, rate, display = null) => {
   units.setUnit(currency, 1 / rate, display);
 };
+
+export const mojo_to_chia = (mojo) => {
+  return chia_formatter(parseInt(mojo), 'mojo').to('chia').value()
+}
+
+export const chia_to_mojo = (chia) => {
+  return chia_formatter(parseFloat(Number(chia)), 'chia').to('mojo').value()
+}
+
+export const mojo_to_chia_string = (mojo) => {
+  return chia_formatter(mojo, 'mojo').to('chia').toString()
+}

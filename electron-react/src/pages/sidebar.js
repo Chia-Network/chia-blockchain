@@ -7,8 +7,8 @@ import AssignmentIcon from '@material-ui/icons/Assignment';
 import {
     presentWallet, presentNode,
     presentFarmer, presentTimelord,
-    changeView
-} from '../modules/presenter'
+    changeMainMenu
+} from '../modules/mainMenu'
 import { log_out } from '../modules/message';
 import { useDispatch, useSelector } from 'react-redux';
 import List from '@material-ui/core/List';
@@ -40,7 +40,7 @@ const MenuItem= (menuItem) => {
     const item = menuItem
 
     function presentMe() {
-        dispatch(changeView("main_menu", item.present))
+        dispatch(changeMainMenu(item.present))
     }
 
     return (

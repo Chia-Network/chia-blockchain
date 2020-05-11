@@ -4,6 +4,7 @@ import {
     get_height_info, get_sync_status, get_connection_info
 } from '../modules/message';
 
+import {createState} from '../modules/createWalletReducer'
 
 
 
@@ -50,6 +51,16 @@ export const handle_message = (store, payload) => {
             store.dispatch(get_sync_status())
         } else if (state === "new_block") {
             store.dispatch(get_height_info())
+        } else if (state === 'pending_transaction"') {
+            var wallet_id = payload.data.wallet_id
+            store.dispatch(get_balance_for_wallet(wallet_id))
+            store.dispatch(get_transactions(wallet_id))
         }
-    }
+    } else if (payload.command === "create_new_wallet") {
+        if (payload.data.success) {
+            store.dispatch(format_message("get_wallets", {}))
+        }
+        store.dispatch(createState(true, false))
+    } 
+    console.log(payload)
 }

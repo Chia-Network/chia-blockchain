@@ -25,7 +25,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   presentWallet, presentNode,
   presentFarmer, presentTimelord,
-} from '../modules/presenter'
+} from '../modules/mainMenu'
 
 function Copyright() {
   return (
@@ -134,7 +134,7 @@ const useStyles = makeStyles((theme) => ({
 
 
 const ComopnentSwitch = () => {
-  const toPresent = useSelector(state => state.presenter.main_menu)
+  const toPresent = useSelector(state => state.main_menu.view)
   if (toPresent === presentWallet) {
     return(
       <Wallets></Wallets>

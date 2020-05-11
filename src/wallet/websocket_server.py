@@ -155,7 +155,11 @@ class WebSocketServer:
 
         wallet_id = int(request["wallet_id"])
         wallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
-        puzzle_hash = (await wallet.get_new_puzzlehash()).hex()
+
+        if wallet.wallet_info.type == WalletType.STANDARD_WALLET:
+            puzzle_hash = (await wallet.get_new_puzzlehash()).hex()
+        elif wallet.wallet_info.type == WalletType.COLOURED_COIN:
+            puzzle_hash: bytes32 = await wallet.get_new_inner_hash()
 
         data = {
             "wallet_id": wallet_id,
@@ -288,27 +292,9 @@ class WebSocketServer:
         await websocket.send(format_response(response_api, response))
 
     async def create_new_wallet(self, websocket, request, response_api):
-        config, key_config, wallet_state_manager, main_wallet = self.get_wallet_config()
-        if request["wallet_type"] == "rl_wallet":
-            if request["mode"] == "admin":
-                rl_admin: RLWallet = await RLWallet.create_rl_admin(
-                    config, key_config, wallet_state_manager, main_wallet
-                )
-                self.wallet_node.wallet_state_manager.wallets[
-                    rl_admin.wallet_info.id
-                ] = rl_admin
-                response = {"success": True, "type": "rl_wallet"}
-                return await websocket.send(format_response(response_api, response))
-            elif request["mode"] == "user":
-                rl_user: RLWallet = await RLWallet.create_rl_user(
-                    config, key_config, wallet_state_manager, main_wallet
-                )
-                self.wallet_node.wallet_state_manager.wallets[
-                    rl_user.wallet_info.id
-                ] = rl_user
-                response = {"success": True, "type": "rl_wallet"}
-                return await websocket.send(format_response(response_api, response))
-        elif request["wallet_type"] == "cc_wallet":
+        config, wallet_state_manager, main_wallet = self.get_wallet_config()
+
+        if request["wallet_type"] == "cc_wallet":
             if request["mode"] == "new":
                 cc_wallet: CCWallet = await CCWallet.create_new_cc(
                     wallet_state_manager, main_wallet, request["amount"]
@@ -328,7 +314,6 @@ class WebSocketServer:
     def get_wallet_config(self):
         return (
             self.wallet_node.config,
-            self.wallet_node.key_config,
             self.wallet_node.wallet_state_manager,
             self.wallet_node.wallet_state_manager.main_wallet,
         )

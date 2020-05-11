@@ -25,13 +25,12 @@ export const Transaction = (confirmed_at_index, created_at_time, to_puzzle_hash,
     wallet_id: wallet_id
   })
 
-export const initial_wallet = Wallet(1, "Chia Wallet", "Standard Wallet", "")
+export const initial_wallet = Wallet(1, "Chia Wallet", "STANDARD_WALLET", "")
 
 const initial_state = {
   mnemonic: [],
   logged_in: false,
   wallets: [, initial_wallet],
-  presenting_wallet: 1,
   status: {
     connections: [],
     connection_count: 0,

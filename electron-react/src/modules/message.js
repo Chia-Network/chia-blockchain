@@ -85,5 +85,27 @@ export const get_connection_info = () => {
   return action
 }
 
+export const create_coloured_coin = (amount) => {
+  var action = newMessage()
+  action.command = "create_new_wallet"
+  action.data = {
+    wallet_type: "cc_wallet",
+    mode: "new",
+    amount: amount
+  }
+  return action
+}
+
+export const create_cc_for_colour = (colour) => {
+  var action = newMessage()
+  action.command = "create_new_wallet"
+  action.data = {
+    wallet_type: "cc_wallet",
+    mode: "existing",
+    colour: colour
+  }
+  return action
+}
+
 export const incomingMessage = (command, data) => ({ type: 'INCOMING_MESSAGE', command, data});
 
