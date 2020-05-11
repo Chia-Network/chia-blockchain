@@ -120,13 +120,18 @@ class Daemon:
     async def start_service(self, service_name):
         if not validate_service(service_name):
             yield "unknown service"
+            return
 
         if service_name in self._services:
             yield "already running"
             return
-        process, pid_path = start_service(self._root_path, service_name)
-        self._services[service_name] = process
-        yield "started"
+        try:
+            process, pid_path = start_service(self._root_path, service_name)
+            self._services[service_name] = process
+            yield "started"
+        except (subprocess.SubprocessError, IOError):
+            log.exception(f"problem starting {service_name}")
+            yield "start failed"
 
     async def stop_service(self, service_name, delay_before_kill=15):
         process = self._services.get(service_name)
@@ -167,7 +172,10 @@ class Daemon:
     async def exit(self):
         jobs = []
         for k in self._services.keys():
-            jobs.append(self.stop_service(k))
+            async def stop_one(k):
+                async for _ in self.stop_service(k):
+                    pass
+            jobs.append(stop_one(k))
         if jobs:
             done, pending = await asyncio.wait(jobs)
         self._services.clear()
@@ -217,6 +225,8 @@ async def async_run_daemon(root_path):
 
     use_unix_socket = should_use_unix_socket()
     listen_socket, aiter, where = await _server_aiter_for_start_daemon(root_path, use_unix_socket)
+
+    lockfile.close()
 
     rws_aiter = map_aiter(
         lambda rw: dict(reader=rw[0], writer=rw[1], server=listen_socket), aiter
