@@ -28,12 +28,16 @@ log = logging.getLogger(__name__)
 
 
 def daemon_launch_lock_path(root_path):
+    """
+    A path to a file that is lock when a daemon is launching but not yet started.
+    This prevents multiple instances from launching.
+    """
     return root_path / "run" / "start-daemon.launching"
 
 
 async def _listen_on_some_socket(port, max_port=65536):
     """
-    Return a socket that we are listening on in the given port range
+    Return a listening TCP socket in the given port range
     """
     while port < max_port:
         try:
@@ -46,6 +50,12 @@ async def _listen_on_some_socket(port, max_port=65536):
 
 
 async def _server_aiter_for_start_daemon(root_path, use_unix_socket):
+    """
+    Return a triple of (s, aiter, where) where:
+        s is the listen socket
+        aiter is an aiter of accepted sockets
+        where is the port number for a TCP socket or the path for a unix socket
+    """
     path = socket_server_path(root_path)
     mkdir(path.parent)
     try:
@@ -72,11 +82,17 @@ async def _server_aiter_for_start_daemon(root_path, use_unix_socket):
 
 
 def pid_path_for_service(root_path, service):
+    """
+    Generate a path for a PID file for the given service name.
+    """
     pid_name = service.replace(" ", "-").replace("/", "-")
     return root_path / "run" / f"{pid_name}.pid"
 
 
 def start_service(root_path, service):
+    """
+    Launch a child process.
+    """
     # set up CHIA_ROOT
     # invoke correct script
     # save away PID
