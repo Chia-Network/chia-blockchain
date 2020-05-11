@@ -359,14 +359,14 @@ class WebSocketServer:
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
         success = await wallet.set_name(str(request["name"]))
-        response = {"success": success}
+        response = {"wallet_id": wallet_id, "success": success}
         return await websocket.send(format_response(response_api, response))
 
     async def cc_get_name(self, websocket, request, response_api):
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
         name: str = await wallet.get_name()
-        response = {"name": name}
+        response = {"wallet_id": wallet_id,"name": name}
         return await websocket.send(format_response(response_api, response))
 
     async def cc_generate_zero_val(self, websocket, request, response_api):
@@ -477,14 +477,6 @@ class WebSocketServer:
             }
 
         return await websocket.send(format_response(response_api, data))
-
-    async def cc_get_new_innerpuzzlehash(self, websocket, request, response_api):
-
-        wallet_id = int(request["wallet_id"])
-        wallet: CCWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
-        innerpuz: bytes32 = await wallet.get_new_inner_hash()
-        response = {"innerpuz": innerpuz.hex()}
-        return await websocket.send(format_response(response_api, response))
 
     async def cc_get_colour(self, websocket, request, response_api):
         wallet_id = int(request["wallet_id"])
@@ -669,8 +661,6 @@ class WebSocketServer:
             await self.cc_generate_zero_val(websocket, data, command)
         elif command == "cc_spend":
             await self.cc_spend(websocket, data, command)
-        elif command == "cc_get_innerpuzzlehash":
-            await self.cc_get_new_innerpuzzlehash(websocket, data, command)
         elif command == "cc_get_colour":
             await self.cc_get_colour(websocket, data, command)
         elif command == "create_offer":

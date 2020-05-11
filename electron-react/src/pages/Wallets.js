@@ -21,6 +21,7 @@ import StandardWallet from './StandardWallet';
 import Box from '@material-ui/core/Box';
 import { changeWalletMenu, createWallet, standardWallet, tradeManager, CCWallet} from '../modules/walletMenu';
 import { CreateWalletView } from './CreateWallet';
+import ColouredWallet from './ColouredWallet';
 
 const drawerWidth = 180;
 
@@ -140,8 +141,10 @@ const WalletItem = (props) => {
   )
 }
 
-const WalletList = (props) => {
-  return props.wallets.map((wallet) =>
+const WalletList = () => {
+  const wallets = useSelector(state => state.wallet_state.wallets)
+
+  return wallets.map((wallet) =>
     <WalletItem wallet={wallet}></WalletItem>
   )
 }
@@ -164,7 +167,7 @@ const WalletViewSwitch = () => {
     )
   } else if (toPresent == CCWallet) {
     return (
-      <div>CC WAllet</div>
+      <ColouredWallet wallet_id={id}>  </ColouredWallet>
     )
   }
   return (
@@ -229,7 +232,6 @@ const Wallets = () => {
   const classes = useStyles();
   const dispatch = useDispatch()
   const logged_in = useSelector(state => state.wallet_state.logged_in)
-  const wallets = useSelector(state => state.wallet_state.wallets)
 
   const [open, setOpen] = React.useState(true);
   const handleDrawerOpen = () => {
@@ -260,7 +262,7 @@ const Wallets = () => {
         <StatusCard></StatusCard>
         <Divider />
         <List>
-          <WalletList wallets={wallets}></WalletList>
+          <WalletList></WalletList>
           <Divider />
           <CreateWallet></CreateWallet>
         </List>

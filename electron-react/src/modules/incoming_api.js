@@ -6,7 +6,8 @@ export const Wallet = (id, name, type, data) => ({
   balance_total: 1,
   balance_pending: 1,
   transactions: [],
-  puzzle_hash: ""
+  puzzle_hash: "",
+  colour: ""
 })
 
 export const Transaction = (confirmed_at_index, created_at_time, to_puzzle_hash, amount,
@@ -123,6 +124,20 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         const syncing = action.data.syncing
         state.status["syncing"] = syncing
         return { ...state }
+      } else if (action.command === "cc_get_colour") {
+        const id = action.data.wallet_id
+        const colour = action.data.colour
+        var wallets = state.wallets
+        var wallet = wallets[parseInt(id)]
+        wallet.colour = colour
+        return state
+      } else if (action.command === "cc_get_name") {
+        const id = action.data.wallet_id
+        const name = action.data.name
+        var wallets = state.wallets
+        var wallet = wallets[parseInt(id)]
+        wallet.name = name
+        return state
       }
       return state
       break;

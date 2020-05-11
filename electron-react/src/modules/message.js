@@ -107,5 +107,19 @@ export const create_cc_for_colour = (colour) => {
   return action
 }
 
+export const get_colour_info = (wallet_id) => {
+  var action = newMessage()
+  action.command = "cc_get_colour"
+  action.data = {wallet_id: wallet_id}
+  return action
+}
+
+export const get_colour_name = (wallet_id) => {
+  var action = newMessage()
+  action.command = "cc_get_name"
+  action.data = {wallet_id: wallet_id}
+  return action
+}
+
 export const incomingMessage = (command, data) => ({ type: 'INCOMING_MESSAGE', command, data});
 
