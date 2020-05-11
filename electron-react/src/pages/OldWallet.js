@@ -75,7 +75,7 @@ const UIPart = (props) => {
     } 
     return(
       <div className={classes.root}>
-      <Link onClick={goBack} href="#" variant="">
+      <Link onClick={goBack} href="#">
         <ArrowBackIosIcon className={classes.navigator}> </ArrowBackIosIcon>
       </Link>
       <div className={classes.grid_wrap}>

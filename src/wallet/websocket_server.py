@@ -358,8 +358,8 @@ class WebSocketServer:
     async def cc_set_name(self, websocket, request, response_api):
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
-        success = await wallet.set_name(str(request["name"]))
-        response = {"wallet_id": wallet_id, "success": success}
+        await wallet.set_name(str(request["name"]))
+        response = {"wallet_id": wallet_id, "success": True}
         return await websocket.send(format_response(response_api, response))
 
     async def cc_get_name(self, websocket, request, response_api):

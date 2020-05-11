@@ -121,5 +121,19 @@ export const get_colour_name = (wallet_id) => {
   return action
 }
 
+export const rename_cc_wallet = (wallet_id, name) => {
+  var action = newMessage()
+  action.command = "cc_set_name"
+  action.data = {wallet_id: wallet_id, name: name}
+  return action
+}
+
+export const cc_spend = (wallet_id, puzzle_hash, amount) => {
+  var action = newMessage()
+  action.command = "cc_spend"
+  action.data = {wallet_id: wallet_id, innerpuzhash: puzzle_hash, amount: amount,}
+  return action
+}
+
 export const incomingMessage = (command, data) => ({ type: 'INCOMING_MESSAGE', command, data});
 

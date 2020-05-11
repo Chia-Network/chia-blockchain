@@ -27,7 +27,7 @@ import TableCell from '@material-ui/core/TableCell';
 import TableContainer from '@material-ui/core/TableContainer';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
-import { get_puzzle_hash, send_transaction, farm_block } from '../modules/message';
+import { get_puzzle_hash, cc_spend, farm_block, rename_cc_wallet } from '../modules/message';
 import {mojo_to_chia_string, chia_to_mojo} from '../util/chia'
 import  { unix_to_short_date }  from "../util/utils";
 
@@ -186,20 +186,20 @@ const useStyles = makeStyles((theme) => ({
 
 const ColourCard = (props) => {
     var id = props.wallet_id
-    console.log("OYYYYY")
-
+    console.log("AAAAAAAAA")
     console.log(id)
-    const wallet = useSelector(state => state.wallet_state.wallets[id])
 
-    console.log(wallet)
-
+    const dispatch = useDispatch()
     const colour = useSelector(state => state.wallet_state.wallets[id].colour)
     const name = useSelector(state => state.wallet_state.wallets[id].name)
+    console.log(name)
+
+    var name_input = null
 
     function rename() {
-
+        dispatch(rename_cc_wallet(id, name_input.value))
     }
-
+    
     const classes = useStyles();
     return (
         <Paper className={classes.paper, classes.colourCard}>
@@ -231,7 +231,7 @@ const ColourCard = (props) => {
                     <div className={classes.cardSubSection} >
                         <Box display="flex">
                             <Box flexGrow={1} >
-                                <TextField fullWidth id="outlined-basic" label="Nickname" value={name} variant="outlined" />
+                                <TextField fullWidth id="outlined-basic" label="Nickname" inputRef={(input) => { name_input = input; }} defaultValue={name} key={name} variant="outlined" />
                             </Box>
                             <Box>
                                 <Button onClick={rename} className={classes.copyButton} variant="contained" color="secondary" disableElevation>
@@ -318,7 +318,7 @@ const SendCard = (props) => {
         var address = address_input.value
         var amount = chia_to_mojo(amount_input.value)
         if (address != "" && amount != "") {
-            dispatch(send_transaction(id, amount, 0, address))
+            dispatch(cc_spend(id, address, amount))
         }
     }
 
@@ -506,11 +506,12 @@ const AddressCard = (props) => {
 
 const ColouredWallet = (props) => {
     const classes = useStyles();
-    var id = props.wallet_id
+    const id = useSelector(state => state.wallet_menu.id)
+    const name = useSelector(state => state.wallet_state.wallets[id].name)
 
     return (
         <Grid className={classes.walletContainer} item xs={12}>
-            <ColourCard wallet_id={id}></ColourCard>
+            <ColourCard wallet_id={id} name={name}></ColourCard>
             <BalanceCard wallet_id={id}></BalanceCard>
             <SendCard wallet_id={id}></SendCard>
             <AddressCard wallet_id={id}></AddressCard>

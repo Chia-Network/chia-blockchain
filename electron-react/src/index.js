@@ -9,11 +9,11 @@ import WebSocketConnection from './hocs/WebsocketConnection'
 
 const Root = ({ store }) => (
   <Provider store={store}>
-    <Router>
-      <WebSocketConnection host={"ws://127.0.0.1:9256/"}>
+    <WebSocketConnection host={"ws://127.0.0.1:9256/"}>
+      <Router>
         <Route path="/" component={App} />
-        </WebSocketConnection>
-    </Router>
+      </Router>
+    </WebSocketConnection>
   </Provider>
 
 );

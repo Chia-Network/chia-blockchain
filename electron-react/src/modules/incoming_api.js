@@ -89,7 +89,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           var unconfirmed_balance = action.data.unconfirmed_wallet_balance
           wallet.balance_total = balance
           wallet.balance_pending = unconfirmed_balance
-          return { ...state }
+          return state
         }
       }
       else if (action.command === "get_transactions") {
@@ -99,7 +99,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           var wallets = state.wallets
           var wallet = wallets[parseInt(id)]
           wallet.transactions = transactions.reverse()
-          return { ...state }
+          return state
         }
       }
       else if (action.command === "get_next_puzzle_hash") {
@@ -111,19 +111,24 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         wallet.puzzle_hash = puzzle_hash
         return { ...state }
       } else if (action.command == "get_connection_info") {
-        const connections = action.data.connections
-        state.status["connections"] = connections
-        state.status["connection_count"] = connections.length
-        return { ...state }
+        console.log(action)
+        if (action.data.success) {
+          const connections = action.data.connections
+          state.status["connections"] = connections
+          state.status["connection_count"] = connections.length
+          return state
+        }
       } else if (action.command === "get_height_info") {
         const height = action.data.height
         state.status["height"] = height
         return { ...state }
       } else if (action.command === "get_sync_status") {
         console.log("command get_sync_status")
-        const syncing = action.data.syncing
-        state.status["syncing"] = syncing
-        return { ...state }
+        if (action.data.success) {
+          const syncing = action.data.syncing
+          state.status["syncing"] = syncing
+          return state
+        }
       } else if (action.command === "cc_get_colour") {
         const id = action.data.wallet_id
         const colour = action.data.colour

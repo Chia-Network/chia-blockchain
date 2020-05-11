@@ -85,5 +85,5 @@ export const chia_to_mojo = (chia) => {
 }
 
 export const mojo_to_chia_string = (mojo) => {
-  return chia_formatter(mojo, 'mojo').to('chia').toString()
+  return chia_formatter(Number(mojo), 'mojo').to('chia').toString()
 }

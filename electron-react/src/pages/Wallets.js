@@ -122,8 +122,22 @@ const useStyles = makeStyles((theme) => ({
 
 const WalletItem = (props) => {
   const dispatch = useDispatch()
-  const wallet = props.wallet
-  console.log(wallet)
+  const id = props.wallet_id
+
+  const wallet = useSelector(state => state.wallet_state.wallets[id])
+  var name = useSelector(state => state.wallet_state.wallets[id].name)
+
+  var mainLabel = ""
+  if (wallet.type === "STANDARD_WALLET") {
+    var mainLabel = "Chia Wallet"
+    name = "Chia"
+  } else if (wallet.type == "COLOURED_COIN") {
+    var mainLabel = "CC Wallet"
+    if (name.length > 18) {
+      name = name.substring(0,18);
+      name = name.concat("...")
+    }
+  }
 
   function presentWallet() {
       console.log(wallet)
@@ -136,7 +150,7 @@ const WalletItem = (props) => {
 
   return (
     <ListItem button onClick={presentWallet}>
-        <ListItemText primary={wallet.name} />
+        <ListItemText primary={mainLabel} secondary={name}/>
     </ListItem>
   )
 }
@@ -145,7 +159,7 @@ const WalletList = () => {
   const wallets = useSelector(state => state.wallet_state.wallets)
 
   return wallets.map((wallet) =>
-    <WalletItem wallet={wallet}></WalletItem>
+    <WalletItem wallet_id={wallet.id}></WalletItem>
   )
 }
 
