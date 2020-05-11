@@ -102,15 +102,17 @@ class Daemon:
 
     async def start_service(self, service_name):
         if service_name in self._services:
-            return "already running"
+            yield "already running"
+            return
         process, pid_path = start_service(self._root_path, service_name)
         self._services[service_name] = process
-        return "started"
+        yield "started"
 
     async def stop_service(self, service_name, delay_before_kill=15):
         process = self._services.get(service_name)
         if process is None:
-            return "not_running"
+            yield "not_running"
+            return
         del self._services[service_name]
         pid_path = pid_path_for_service(self._root_path, service_name)
 
@@ -136,11 +138,11 @@ class Daemon:
         except Exception:
             pass
 
-        return "is_stopped"
+        yield "is_stopped"
 
     async def is_running(self, service_name):
         process = self._services.get(service_name)
-        return process is not None and process.poll() is None
+        yield process is not None and process.poll() is None
 
     async def exit(self):
         jobs = []
@@ -153,10 +155,10 @@ class Daemon:
         # TODO: fix this hack
         asyncio.get_event_loop().call_later(5, lambda *args: sys.exit(0))
         log.info("chia daemon exiting in 5 seconds")
-        return "exiting"
+        yield "exiting"
 
     async def ping(self):
-        return "pong"
+        yield "pong"
 
 
 def singleton(lockfile, text="semaphore"):

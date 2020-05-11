@@ -1,7 +1,7 @@
 import functools
 import logging
 
-from aiter import map_aiter
+from aiter import iter_to_aiter, join_aiters, map_aiter
 from aiter.event_stream import rws_to_event_aiter
 
 from .messages import reader_to_cbor_stream, xform_to_cbor_message
@@ -28,32 +28,37 @@ def _make_response_map_for_root_object(root_object):
     back to the remote.
     """
 
-    async def response_for_message(message):
+    async def responses_for_message(message):
         try:
             # {"c": "command"}
             c = message.get("c")
             nonce = message.get("n")
             f = getattr(root_object, c, None)
-            if f:
-                args = message.get("q", {})
-                r = await f(**args)
-                log.debug("handled %s message" % c)
-                d = dict(r=r)
-            else:
+            if not f:
                 d = dict(e="Missing or invalid command: %s" % c)
                 log.error("failure in %s message" % c)
+                return
         except Exception as ex:
             log.exception("failure in %s message" % c)
             d = dict(e="exception: %s" % ex)
-        if nonce is None:
-            return None
-        d["n"] = nonce
-        return d
+
+        args = message.get("q", {})
+        try:
+            log.debug("handling %s message" % c)
+            async for r in f(**args):
+                if nonce is not None:
+                    d = dict(r=r)
+                    d["n"] = nonce
+                    yield d
+            log.debug("handling %s message complete" % c)
+        except Exception as ex:
+            log.exception("failure in %s message" % c)
+            d = dict(e="exception: %s" % ex)
 
     async def response_writer_for_event(event):
         message = event["message"]
-        response = await response_for_message(message)
-        return response, event["writer"]
+        async for response in responses_for_message(message):
+            yield response, event["writer"]
 
     return response_writer_for_event
 
@@ -98,7 +103,7 @@ async def api_server(rws_aiter, root_object, worker_count=1):
             msg = xform_to_cbor_message("problem streaming message: %s" % ex)
         return msg, writer
 
-    cbor_msg_aiter = map_aiter(to_cbor, response_writer_aiter)
+    cbor_msg_aiter = map_aiter(to_cbor, join_aiters(response_writer_aiter))
 
     async for cbor_msg, writer in cbor_msg_aiter:
         writer.write(cbor_msg)
