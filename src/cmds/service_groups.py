@@ -21,3 +21,7 @@ def services_for_groups(groups):
     for group in groups:
         for service in SERVICES_FOR_GROUP[group]:
             yield service
+
+
+def validate_service(service):
+    return any(service in _ for _ in SERVICES_FOR_GROUP.values())

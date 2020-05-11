@@ -12,6 +12,7 @@ except ImportError:
 
 from aiter import map_aiter, server
 
+from src.cmds.service_groups import validate_service
 from src.proxy.server import api_server
 from src.util.config import load_config
 from src.util.logging import initialize_logging
@@ -101,6 +102,9 @@ class Daemon:
         self._services = dict()
 
     async def start_service(self, service_name):
+        if not validate_service(service_name):
+            yield "unknown service"
+
         if service_name in self._services:
             yield "already running"
             return
@@ -111,7 +115,7 @@ class Daemon:
     async def stop_service(self, service_name, delay_before_kill=15):
         process = self._services.get(service_name)
         if process is None:
-            yield "not_running"
+            yield False
             return
         del self._services[service_name]
         pid_path = pid_path_for_service(self._root_path, service_name)
@@ -138,7 +142,7 @@ class Daemon:
         except Exception:
             pass
 
-        yield "is_stopped"
+        yield True
 
     async def is_running(self, service_name):
         process = self._services.get(service_name)
