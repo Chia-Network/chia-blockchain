@@ -12,11 +12,11 @@ except ImportError:
 
 from aiter import map_aiter, server
 
-from src.cmds.service_groups import validate_service
 from src.proxy.server import api_server
 from src.util.config import load_config
 from src.util.logging import initialize_logging
 from src.util.path import mkdir
+from src.util.service_groups import validate_service
 
 from .client import (
     connect_to_daemon_and_validate,

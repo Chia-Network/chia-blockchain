@@ -1,8 +1,7 @@
 import asyncio
 
-from .service_groups import all_groups, services_for_groups
-
 from src.daemon.client import connect_to_daemon_and_validate
+from src.util.service_groups import all_groups, services_for_groups
 
 
 def make_parser(parser):
