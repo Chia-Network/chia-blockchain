@@ -1,17 +1,19 @@
-import { Component } from 'react';
-import { connect } from 'react-redux';
+import { Component, useEffect } from 'react';
+import { connect, useDispatch } from 'react-redux';
 import { wsConnect } from '../modules/websocket';
 
-class WebSocketConnection extends Component {
-  componentDidMount() {
-    const { dispatch, host } = this.props;
-      dispatch(wsConnect(host))
-  }
+const WebSocketConnection = (props) => {
 
-  render() {
-    return this.props.children;
-  }
+  const dispatch = useDispatch()
+
+  useEffect(() => {
+    const { host } = props;
+    dispatch(wsConnect(host))
+
+  }, []);
+
+
+  return props.children;
 }
 
-
-export default connect()(WebSocketConnection);
+export default WebSocketConnection;
