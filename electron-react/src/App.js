@@ -17,12 +17,12 @@ const theme = createMuiTheme({
   },
   root: {
     background: 'linear-gradient(45deg, #142229 30%, #112240 90%)',
-    height:'100%',
+    height: '100%',
   },
   app_root: {
     background: 'linear-gradient(45deg, #142229 30%, #112240 90%)',
-    height:'100%',
-    },
+    height: '100%',
+  },
   paper: {
     display: 'flex',
     flexDirection: 'column',
@@ -33,11 +33,11 @@ const theme = createMuiTheme({
     backgroundColor: defaultTheme.palette.secondary.main,
   },
   form: {
-    width: '100%', // Fix IE 11 issue.
+    width: '100%',
     marginTop: defaultTheme.spacing(5),
   },
   textField: {
-      borderColor: "#ffffff"
+    borderColor: "#ffffff"
   },
   submit: {
     marginTop: defaultTheme.spacing(8),
@@ -75,14 +75,14 @@ const theme = createMuiTheme({
 const App = () => {
   return (
     <React.Fragment>
-      <Switch>
       <ThemeProvider theme={theme}>
-        <Route exact path="/" component={SignIn} />
-        <Route exact path="/CreateMnemonics" component={NewWallet} />
-        <Route exact path="/Mnemonics" component={OldWallet} />
-        <Route exact path="/dashboard" component={Dashboard} />
+        <Switch>
+          <Route exact path="/" component={SignIn} />
+          <Route exact path="/CreateMnemonics" component={NewWallet} />
+          <Route exact path="/Mnemonics" component={OldWallet} />
+          <Route exact path="/dashboard" component={Dashboard} />
+        </Switch>
       </ThemeProvider>
-      </Switch>
     </React.Fragment>
   )
 }
