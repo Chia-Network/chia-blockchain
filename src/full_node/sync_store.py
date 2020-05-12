@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import aiosqlite
 from typing import Dict, List, Optional, Tuple
 
 from src.types.full_block import FullBlock
@@ -12,7 +11,6 @@ log = logging.getLogger(__name__)
 
 
 class SyncStore:
-    db: aiosqlite.Connection
     # Whether or not we are syncing
     sync_mode: bool
     # Whether we are waiting for tips (at the start of sync) or already syncing
@@ -23,6 +21,8 @@ class SyncStore:
     potential_hashes: List[bytes32]
     # Header blocks received from other peers during sync
     potential_headers: Dict[uint32, HeaderBlock]
+    # Blocks received from other peers during sync
+    potential_blocks: Dict[uint32, FullBlock]
     # Event to signal when header hashes are received
     potential_hashes_received: Optional[asyncio.Event]
     # Event to signal when headers are received at each height
@@ -33,23 +33,15 @@ class SyncStore:
     potential_future_blocks: List[FullBlock]
 
     @classmethod
-    async def create(cls, connection):
+    async def create(cls):
         self = cls()
-
-        # All full blocks which have been added to the blockchain. Header_hash -> block
-        self.db = connection
-        # Blocks received from other peers during sync, cleared after sync
-        await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS potential_blocks(height bigint PRIMARY KEY, block blob)"
-        )
-
-        await self.db.commit()
 
         self.sync_mode = False
         self.waiting_for_tips = True
         self.potential_tips = {}
         self.potential_hashes = []
         self.potential_headers = {}
+        self.potential_blocks = {}
         self.potential_hashes_received = None
         self.potential_headers_received = {}
         self.potential_blocks_received = {}
@@ -62,24 +54,6 @@ class SyncStore:
     def get_sync_mode(self) -> bool:
         return self.sync_mode
 
-    async def add_potential_block(self, block: FullBlock) -> None:
-        cursor = await self.db.execute(
-            "INSERT OR REPLACE INTO potential_blocks VALUES(?, ?)",
-            (block.height, bytes(block)),
-        )
-        await cursor.close()
-        await self.db.commit()
-
-    async def get_potential_block(self, height: uint32) -> Optional[FullBlock]:
-        cursor = await self.db.execute(
-            "SELECT * from potential_blocks WHERE height=?", (height,)
-        )
-        row = await cursor.fetchone()
-        await cursor.close()
-        if row is not None:
-            return FullBlock.from_bytes(row[1])
-        return None
-
     def set_waiting_for_tips(self, waiting_for_tips: bool) -> None:
         self.waiting_for_tips = waiting_for_tips
 
@@ -89,8 +63,7 @@ class SyncStore:
     async def clear_sync_info(self):
         self.potential_tips.clear()
         self.potential_headers.clear()
-        cursor = await self.db.execute("DELETE FROM potential_blocks")
-        await cursor.close()
+        self.potential_blocks.clear()
         self.potential_blocks_received.clear()
         self.potential_future_blocks.clear()
         self.waiting_for_tips = True
@@ -103,12 +76,6 @@ class SyncStore:
 
     def get_potential_tip(self, header_hash: bytes32) -> Optional[FullBlock]:
         return self.potential_tips.get(header_hash, None)
-
-    def add_potential_header(self, block: HeaderBlock) -> None:
-        self.potential_headers[block.height] = block
-
-    def get_potential_header(self, height: uint32) -> Optional[HeaderBlock]:
-        return self.potential_headers.get(height, None)
 
     def clear_potential_headers(self) -> None:
         self.potential_headers.clear()
@@ -130,12 +97,6 @@ class SyncStore:
 
     def get_potential_headers_received(self, height: uint32) -> asyncio.Event:
         return self.potential_headers_received[height]
-
-    def set_potential_blocks_received(self, height: uint32, event: asyncio.Event):
-        self.potential_blocks_received[height] = event
-
-    def get_potential_blocks_received(self, height: uint32) -> asyncio.Event:
-        return self.potential_blocks_received[height]
 
     def add_potential_future_block(self, block: FullBlock):
         self.potential_future_blocks.append(block)
