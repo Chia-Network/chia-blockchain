@@ -1,7 +1,7 @@
 import functools
 import logging
 
-from aiter import iter_to_aiter, join_aiters, map_aiter
+from aiter import join_aiters, map_aiter
 from aiter.event_stream import rws_to_event_aiter
 
 from .messages import reader_to_cbor_stream, xform_to_cbor_message

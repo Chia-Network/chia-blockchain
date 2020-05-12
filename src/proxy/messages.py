@@ -2,8 +2,6 @@ import asyncio
 import logging
 import struct
 
-from aiter import map_aiter, join_aiters
-
 import cbor2
 
 log = logging.getLogger(__name__)
