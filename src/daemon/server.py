@@ -35,13 +35,13 @@ def daemon_launch_lock_path(root_path):
     return root_path / "run" / "start-daemon.launching"
 
 
-async def _listen_on_some_socket(port, max_port=65536):
+async def _listen_on_some_socket(port, max_port=65536, **kwargs):
     """
     Return a listening TCP socket in the given port range
     """
     while port < max_port:
         try:
-            s, aiter = await server.start_server_aiter(port=port)
+            s, aiter = await server.start_server_aiter(port=port, **kwargs)
             log.info("listening on port %s", port)
             return s, aiter, port
         except Exception as ex:
@@ -66,8 +66,10 @@ async def _server_aiter_for_start_daemon(root_path, use_unix_socket):
             log.info("listening on %s", path)
             where = path
         else:
-            s, aiter, socket_server_port = await _listen_on_some_socket(60191, 62000)
+            s, aiter, socket_server_port = await _listen_on_some_socket(60191, host="127.0.0.1")
             try:
+                if path.exists():
+                    path.unlink()
                 with open(path, "w") as f:
                     f.write(f"{socket_server_port}\n")
                 where = socket_server_port
