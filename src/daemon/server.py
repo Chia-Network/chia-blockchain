@@ -159,6 +159,8 @@ class Daemon:
         log.info("process %s returned %d", process, r)
         try:
             pid_path_killed = pid_path.with_suffix(".pid-killed")
+            if pid_path_killed.exists():
+                pid_path_killed.unlink()
             os.rename(pid_path, pid_path_killed)
         except Exception:
             pass
