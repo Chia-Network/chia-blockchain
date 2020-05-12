@@ -18,7 +18,6 @@ import Link from '@material-ui/core/Link';
 import MenuIcon from '@material-ui/icons/Menu';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import NotificationsIcon from '@material-ui/icons/Notifications';
-import { mainListItems, secondaryListItems } from './listItems';
 import Wallets from './Wallets';
 import {SideBar} from './sidebar';
 import { useDispatch, useSelector } from 'react-redux';
@@ -26,19 +25,7 @@ import {
   presentWallet, presentNode,
   presentFarmer, presentTimelord,
 } from '../modules/mainMenu'
-
-function Copyright() {
-  return (
-    <Typography variant="body2" color="textSecondary" align="center">
-      {'Copyright © '}
-      <Link color="inherit" href="https://material-ui.com/">
-        Your Website
-      </Link>{' '}
-      {new Date().getFullYear()}
-      {'.'}
-    </Typography>
-  );
-}
+import { ModalDialog } from './ModalDialog';
 
 const drawerWidth = 200;
 
@@ -135,6 +122,7 @@ const useStyles = makeStyles((theme) => ({
 
 const ComopnentSwitch = () => {
   const toPresent = useSelector(state => state.main_menu.view)
+
   if (toPresent === presentWallet) {
     return(
       <Wallets></Wallets>
@@ -170,6 +158,7 @@ export default function Dashboard() {
 
   return (
     <div className={classes.root}>
+      <ModalDialog></ModalDialog>
       <CssBaseline />
       <AppBar position="absolute" className={clsx(classes.appBar, open && classes.appBarShift)}>
         <Toolbar className={classes.toolbar}>

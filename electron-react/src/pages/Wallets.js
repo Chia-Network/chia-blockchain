@@ -12,16 +12,13 @@ import List from '@material-ui/core/List';
 import Typography from '@material-ui/core/Typography';
 import Divider from '@material-ui/core/Divider';
 import ListItem from '@material-ui/core/ListItem';
-import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
-import ListSubheader from '@material-ui/core/ListSubheader';
-import DashboardIcon from '@material-ui/icons/Dashboard';
-import Paper from '@material-ui/core/Paper';
 import StandardWallet from './StandardWallet';
 import Box from '@material-ui/core/Box';
 import { changeWalletMenu, createWallet, standardWallet, tradeManager, CCWallet} from '../modules/walletMenu';
 import { CreateWalletView } from './CreateWallet';
 import ColouredWallet from './ColouredWallet';
+import { TradeManger } from './TradeManager';
 
 const drawerWidth = 180;
 
@@ -29,31 +26,6 @@ const useStyles = makeStyles((theme) => ({
   root: {
     display: 'flex',
     paddingLeft: '0px'
-  },
-  toolbar: {
-    paddingRight: 24, // keep right padding when drawer closed
-  },
-  toolbarIcon: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    padding: '0 8px',
-    ...theme.mixins.toolbar,
-  },
-  appBar: {
-    zIndex: theme.zIndex.drawer + 1,
-    transition: theme.transitions.create(['width', 'margin'], {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen,
-    }),
-  },
-  appBarShift: {
-    marginLeft: drawerWidth,
-    width: `calc(100% - ${drawerWidth}px)`,
-    transition: theme.transitions.create(['width', 'margin'], {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
   },
   menuButton: {
     marginRight: 36,
@@ -84,10 +56,9 @@ const useStyles = makeStyles((theme) => ({
       width: theme.spacing(9),
     },
   },
-  appBarSpacer: theme.mixins.toolbar,
   content: {
     flexGrow: 1,
-    height: '100vh',
+    height: 'calc(100vh - 64px)',
     overflowX: 'hidden',
   },
   container: {
@@ -117,6 +88,11 @@ const useStyles = makeStyles((theme) => ({
   balancePaper: {
     height: 200,
     marginTop: theme.spacing(2),
+  }, 
+  bottomOptions: {
+    position: 'absolute',
+    bottom: 0,
+    width: '100%'
   }
 }));
 
@@ -177,7 +153,7 @@ const WalletViewSwitch = () => {
     )
   } else if (toPresent == tradeManager) {
     return (
-      <div>Trade Manager</div>
+      <TradeManger></TradeManger>
     )
   } else if (toPresent == CCWallet) {
     return (
@@ -191,15 +167,28 @@ const WalletViewSwitch = () => {
 
 const CreateWallet = () => {
   const dispatch = useDispatch()
+  const classes = useStyles();
 
   function presentCreateWallet() {
       dispatch(changeWalletMenu(createWallet))
   }
 
+  function presentTrade() {
+    dispatch(changeWalletMenu(tradeManager))
+  }
+
   return (
+    <div className={classes.bottomOptions}>
+    <Divider></Divider>
     <ListItem button onClick={presentCreateWallet}>
       <ListItemText primary="Add Wallet" />
-    </ListItem>)
+    </ListItem>
+    <Divider></Divider>
+    <ListItem button onClick={presentTrade}>
+    <ListItemText primary="Trade" />
+    </ListItem>
+    </div>
+  )
 }
 
 export const StatusCard = () => {
@@ -278,8 +267,9 @@ const Wallets = () => {
         <List>
           <WalletList></WalletList>
           <Divider />
-          <CreateWallet></CreateWallet>
         </List>
+        <CreateWallet></CreateWallet>
+
       </Drawer>
       <main className={classes.content}>
         <Container maxWidth="lg" className={classes.container}>

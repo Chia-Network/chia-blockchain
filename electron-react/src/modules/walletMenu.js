@@ -7,7 +7,7 @@ export const CCWallet = "CC_WALLET"
   export const changeWalletMenu = (item, id) => ({ type: 'WALLET_MENU', item: item, id: id});
   
   const initial_state = { 
-    view: standardWallet,
+    view: tradeManager,
     id: 1,
   };
   

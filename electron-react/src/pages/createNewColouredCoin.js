@@ -81,7 +81,6 @@ export const CreateNewCCWallet = () => {
                     <Button onClick={create} className={custom.send} variant="contained" color="primary">
                         Create
                     </Button>
-                    
                 </Box>
             </Box>
             </div>

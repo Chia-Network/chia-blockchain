@@ -135,5 +135,17 @@ export const cc_spend = (wallet_id, puzzle_hash, amount) => {
   return action
 }
 
+export const create_trade_offer = (trades, filepath) => {
+  var action = newMessage()
+  action.command = "create_offer_for_ids"
+  const data = {
+    ids: trades,
+    filename: filepath
+  }
+  action.data = data
+  debugger
+  return action
+}
+
 export const incomingMessage = (command, data) => ({ type: 'INCOMING_MESSAGE', command, data});
 
