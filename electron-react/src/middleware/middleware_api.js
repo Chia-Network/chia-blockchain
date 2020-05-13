@@ -6,6 +6,8 @@ import {
 } from '../modules/message';
 
 import {createState} from '../modules/createWalletReducer'
+import { offerParsed, resetTrades } from '../modules/TradeReducer';
+import { openDialog } from '../modules/dialogReducer';
 
 
 
@@ -71,6 +73,21 @@ export const handle_message = (store, payload) => {
             const wallet_id = payload.data.wallet_id
             store.dispatch(get_colour_name(wallet_id))
         }
+    } else if (payload.command === "get_discrepancies_for_offer") {
+        if (payload.data.success) {
+            store.dispatch(offerParsed(payload.data.discrepancies))
+        }
+    } else if (payload.command === "respond_to_offer") {
+        if (payload.data.success) {
+            store.dispatch(openDialog("Success!", "Offer accepted"))
+        } 
+        store.dispatch(resetTrades())
     }
+    if (payload.data.success == false) {
+        if (payload.data.reason) {
+            store.dispatch(openDialog("Error?", payload.data.reason))
+        }
+    }
+
     console.log(payload)
 }

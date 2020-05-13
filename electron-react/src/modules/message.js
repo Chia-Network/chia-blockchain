@@ -143,7 +143,21 @@ export const create_trade_offer = (trades, filepath) => {
     filename: filepath
   }
   action.data = data
-  debugger
+  return action
+}
+
+export const parse_trade_offer = (filepath) => {
+  var action = newMessage()
+  action.command = "get_discrepancies_for_offer"
+  const data = {filename: filepath}
+  action.data = data
+  return action
+}
+
+export const accept_trade_offer = (filepath) => {
+  var action = newMessage()
+  action.command = "respond_to_offer"
+  action.data = {filename: filepath}
   return action
 }
 

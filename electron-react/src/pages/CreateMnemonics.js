@@ -1,27 +1,31 @@
-import React, { Component }  from 'react';
-import Button from '@material-ui/core/Button';
-import CssBaseline from '@material-ui/core/CssBaseline';
-import TextField from '@material-ui/core/TextField';
-import Link from '@material-ui/core/Link';
-import Grid from '@material-ui/core/Grid';
-import Typography from '@material-ui/core/Typography';
-import { withTheme, useTheme, withStyles, makeStyles } from '@material-ui/styles';
-import Container from '@material-ui/core/Container';
-import ArrowBackIosIcon from '@material-ui/icons/ArrowBackIos';
-import { connect, useSelector, useDispatch } from 'react-redux';
-import { genereate_mnemonics } from '../modules/message';
-import { withRouter } from 'react-router-dom'
-
+import React, { Component } from "react";
+import Button from "@material-ui/core/Button";
+import CssBaseline from "@material-ui/core/CssBaseline";
+import TextField from "@material-ui/core/TextField";
+import Link from "@material-ui/core/Link";
+import Grid from "@material-ui/core/Grid";
+import Typography from "@material-ui/core/Typography";
+import {
+  withTheme,
+  useTheme,
+  withStyles,
+  makeStyles
+} from "@material-ui/styles";
+import Container from "@material-ui/core/Container";
+import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
+import { connect, useSelector, useDispatch } from "react-redux";
+import { genereate_mnemonics } from "../modules/message";
+import { withRouter } from "react-router-dom";
 
 function Copyright() {
   return (
     <Typography variant="body2" color="textSecondary" align="center">
-      {'Copyright © '}
+      {"Copyright © "}
       <Link color="inherit" href="https://chia.net">
         Your Website
-      </Link>{' '}
+      </Link>{" "}
       {new Date().getFullYear()}
-      {'.'}
+      {"."}
     </Typography>
   );
 }
@@ -29,7 +33,7 @@ const CssTextField = withStyles({
   root: {
     "& MuiFormLabel-root": {
       color: "#e3f2fd"
-      },
+    },
     "& label.Mui-focused": {
       color: "#e3f2fd"
     },
@@ -56,64 +60,64 @@ const CssTextField = withStyles({
         borderColor: "#e3f2fd"
       }
     },
-    "color": "#ffffff",
+    color: "#ffffff",
     "& .MuiOutlinedInput-input": {
-        color: "#ffffff"
+      color: "#ffffff"
     }
   }
 })(TextField);
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles(theme => ({
   root: {
-    background: 'linear-gradient(45deg, #142229 30%, #112240 90%)',
-    height:'100%',
-    },
+    background: "linear-gradient(45deg, #142229 30%, #112240 90%)",
+    height: "100%"
+  },
   paper: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center"
   },
   avatar: {
     marginTop: theme.spacing(8),
-    backgroundColor: theme.palette.secondary.main,
+    backgroundColor: theme.palette.secondary.main
   },
   form: {
-    width: '100%', // Fix IE 11 issue.
-    marginTop: theme.spacing(5),
+    width: "100%", // Fix IE 11 issue.
+    marginTop: theme.spacing(5)
   },
   textField: {
-      borderColor: "#ffffff"
+    borderColor: "#ffffff"
   },
   submit: {
     marginTop: theme.spacing(8),
-    marginBottom: theme.spacing(3),
+    marginBottom: theme.spacing(3)
   },
   grid: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    paddingTop: theme.spacing(5),
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    paddingTop: theme.spacing(5)
   },
   grid_item: {
     paddingTop: 10,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
     backgroundColor: "#444444",
     color: "#ffffff",
     height: 50,
-    verticalAlign: 'middle',
+    verticalAlign: "middle"
   },
   title: {
-    color: '#ffffff',
+    color: "#ffffff",
     marginTop: theme.spacing(4),
-    marginBottom: theme.spacing(8),
+    marginBottom: theme.spacing(8)
   },
   navigator: {
-    color: '#ffffff',
+    color: "#ffffff",
     marginTop: theme.spacing(4),
     marginLeft: theme.spacing(4),
-    fontSize: 35,
+    fontSize: 35
   }
 }));
 
@@ -122,20 +126,20 @@ class MnemonicLabel extends Component {
     return (
       <Grid item xs={2}>
         <CssTextField
-        variant="outlined"
-        margin="normal"
-        disabled
-        fullWidth
-        color="primary" 
-        id="email"
-        label={this.props.index}
-        name="email"
-        autoComplete="email"
-        autoFocus
-        defaultValue={this.props.word}
+          variant="outlined"
+          margin="normal"
+          disabled
+          fullWidth
+          color="primary"
+          id="email"
+          label={this.props.index}
+          name="email"
+          autoComplete="email"
+          autoFocus
+          defaultValue={this.props.word}
         />
       </Grid>
-    )
+    );
   }
 }
 
@@ -144,43 +148,44 @@ class MnemonicGrid extends Component {
     return (
       <Grid item xs={2}>
         <CssTextField
-        variant="outlined"
-        margin="normal"
-        disabled
-        fullWidth
-        color="primary" 
-        id="email"
-        label={this.props.index}
-        name="email"
-        autoComplete="email"
-        autoFocus
-        defaultValue={this.props.word}
+          variant="outlined"
+          margin="normal"
+          disabled
+          fullWidth
+          color="primary"
+          id="email"
+          label={this.props.index}
+          name="email"
+          autoComplete="email"
+          autoFocus
+          defaultValue={this.props.word}
         />
       </Grid>
-    )
+    );
   }
 }
 
-
 const UIPart = () => {
-  const words = useSelector(state => state.wallet_state.mnemonic)
+  const words = useSelector(state => state.wallet_state.mnemonic);
   const classes = useStyles();
   const theme = useTheme();
-  return(
+  return (
     <div className={classes.root}>
-    <ArrowBackIosIcon className={classes.navigator}> </ArrowBackIosIcon>
-    <Container className={classes.grid} maxWidth="lg">
+      <ArrowBackIosIcon className={classes.navigator}> </ArrowBackIosIcon>
+      <Container className={classes.grid} maxWidth="lg">
         <Typography className={classes.title} component="h1" variant="h5">
           Write Down These Words
         </Typography>
-    <Grid container spacing={3}>
-      {words}
-      {words.map((word, i) => <MnemonicLabel word={word} index={i+1} />)}
-      </Grid>
-    </Container>
-    <Container component="main" maxWidth="xs" >
-      <CssBaseline />
-      <div className={classes.paper}>
+        <Grid container spacing={3}>
+          {words}
+          {words.map((word, i) => (
+            <MnemonicLabel word={word} index={i + 1} />
+          ))}
+        </Grid>
+      </Container>
+      <Container component="main" maxWidth="xs">
+        <CssBaseline />
+        <div className={classes.paper}>
           <Button
             type="submit"
             fullWidth
@@ -190,22 +195,20 @@ const UIPart = () => {
           >
             Next
           </Button>
-      </div>
-    </Container>
+        </div>
+      </Container>
     </div>
-  )
-}
+  );
+};
 
 const CreateMnemonics = () => {
-  console.log("Get Mnemonic")
-  var get_mnemonics = genereate_mnemonics()
+  console.log("Get Mnemonic");
+  var get_mnemonics = genereate_mnemonics();
   const dispatch = useDispatch();
-  dispatch(get_mnemonics)
+  dispatch(get_mnemonics);
 
-  return (
-    UIPart()
-  );
-}
+  return UIPart();
+};
 
 const mapStateToProps = state => {
   return {

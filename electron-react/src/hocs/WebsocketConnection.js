@@ -1,19 +1,16 @@
-import { useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { wsConnect } from '../modules/websocket';
+import { useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { wsConnect } from "../modules/websocket";
 
-const WebSocketConnection = (props) => {
-
-  const dispatch = useDispatch()
+const WebSocketConnection = props => {
+  const dispatch = useDispatch();
 
   useEffect(() => {
     const { host } = props;
-    dispatch(wsConnect(host))
-
+    dispatch(wsConnect(host));
   }, []);
 
-
   return props.children;
-}
+};
 
 export default WebSocketConnection;

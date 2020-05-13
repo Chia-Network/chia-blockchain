@@ -1,25 +1,25 @@
 const units = {
   chia: 1,
-  mojo: 1 / 1E12,
+  mojo: 1 / 1e12
 };
 
 const aliases = {
-  chia: ['ch', 'chia', 'Chia'],
-  mojo: ['mj', 'mojo'],
+  chia: ["ch", "chia", "Chia"],
+  mojo: ["mj", "mojo"]
 };
 
 const display = {
   chia: {
-    format: '{amount} CH',
+    format: "{amount} CH",
     fractionDigits: 12
   },
   mojo: {
-    format: '{amount} MJ',
+    format: "{amount} MJ",
     fractionDigits: 0
-  },
+  }
 };
 
-const getUnitNameByAlias = (unitName) => {
+const getUnitNameByAlias = unitName => {
   const name = unitName.toLowerCase();
 
   const alias = Object.keys(aliases).find(key => aliases[key].includes(name));
@@ -31,7 +31,7 @@ const getUnitNameByAlias = (unitName) => {
   return alias;
 };
 
-const getUnitName = (unitName) => {
+const getUnitName = unitName => {
   const name = unitName.toLowerCase();
 
   const unit = units[name];
@@ -51,13 +51,13 @@ const getDisplay = unit => display[getUnitName(unit)];
 
 const setUnit = (unit, value, displayOptions = null) => {
   units[unit.toLowerCase()] = value;
-  display[unit.toLowerCase()] = displayOptions !== null ? displayOptions : { format: `{amount} ${unit}` };
+  display[unit.toLowerCase()] =
+    displayOptions !== null ? displayOptions : { format: `{amount} ${unit}` };
 };
-
 
 module.exports = {
   getUnit: getUnit,
   setUnit: setUnit,
   getDisplay: getDisplay,
   setDisplay: setDisplay
-}
+};
