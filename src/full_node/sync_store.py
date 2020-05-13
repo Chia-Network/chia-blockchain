@@ -3,7 +3,6 @@ import logging
 from typing import Dict, List, Optional, Tuple
 
 from src.types.full_block import FullBlock
-from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32
 
@@ -19,14 +18,10 @@ class SyncStore:
     potential_tips: Dict[bytes32, FullBlock]
     # List of all header hashes up to the tip, download up front
     potential_hashes: List[bytes32]
-    # Header blocks received from other peers during sync
-    potential_headers: Dict[uint32, HeaderBlock]
     # Blocks received from other peers during sync
     potential_blocks: Dict[uint32, FullBlock]
     # Event to signal when header hashes are received
     potential_hashes_received: Optional[asyncio.Event]
-    # Event to signal when headers are received at each height
-    potential_headers_received: Dict[uint32, asyncio.Event]
     # Event to signal when blocks are received at each height
     potential_blocks_received: Dict[uint32, asyncio.Event]
     # Blocks that we have finalized during sync, queue them up for adding after sync is done
@@ -40,10 +35,8 @@ class SyncStore:
         self.waiting_for_tips = True
         self.potential_tips = {}
         self.potential_hashes = []
-        self.potential_headers = {}
         self.potential_blocks = {}
         self.potential_hashes_received = None
-        self.potential_headers_received = {}
         self.potential_blocks_received = {}
         self.potential_future_blocks = []
         return self
@@ -62,7 +55,6 @@ class SyncStore:
 
     async def clear_sync_info(self):
         self.potential_tips.clear()
-        self.potential_headers.clear()
         self.potential_blocks.clear()
         self.potential_blocks_received.clear()
         self.potential_future_blocks.clear()
@@ -77,9 +69,6 @@ class SyncStore:
     def get_potential_tip(self, header_hash: bytes32) -> Optional[FullBlock]:
         return self.potential_tips.get(header_hash, None)
 
-    def clear_potential_headers(self) -> None:
-        self.potential_headers.clear()
-
     def set_potential_hashes(self, potential_hashes: List[bytes32]) -> None:
         self.potential_hashes = potential_hashes
 
@@ -91,12 +80,6 @@ class SyncStore:
 
     def get_potential_hashes_received(self) -> Optional[asyncio.Event]:
         return self.potential_hashes_received
-
-    def set_potential_headers_received(self, height: uint32, event: asyncio.Event):
-        self.potential_headers_received[height] = event
-
-    def get_potential_headers_received(self, height: uint32) -> asyncio.Event:
-        return self.potential_headers_received[height]
 
     def add_potential_future_block(self, block: FullBlock):
         self.potential_future_blocks.append(block)

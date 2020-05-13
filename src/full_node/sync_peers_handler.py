@@ -57,8 +57,8 @@ class SyncPeersHandler:
         for node_id in peers:
             self.current_outbound_sets[node_id] = {}
 
-        self.potential_blocks_received = self.sync_store.potential_headers_received
-        self.potential_blocks = self.sync_store.potential_headers
+        self.potential_blocks_received = self.sync_store.potential_blocks_received
+        self.potential_blocks = self.sync_store.potential_blocks
 
         # No blocks received yet
         for height in range(self.fully_validated_up_to + 1, len(self.header_hashes)):
@@ -68,11 +68,9 @@ class SyncPeersHandler:
         """
         Returns True iff all required blocks have been downloaded.
         """
-        log.warning("Done?")
         for height in range(self.fully_validated_up_to + 1, len(self.header_hashes)):
             if not self.potential_blocks_received[uint32(height)].is_set():
                 # Some blocks have not been received yet
-                log.warning("not done...")
                 return False
         # We have received all blocks
         return True
