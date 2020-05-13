@@ -103,6 +103,7 @@ class BlockTools:
                         plotter.create_plot_disk(
                             str(plot_dir),
                             str(plot_dir),
+                            str(plot_dir),
                             filename,
                             k,
                             b"genesis",
