@@ -46,7 +46,6 @@ class FullNodeView {
             lca_timestamp: 1585023165,
             syncing: false,
             sync_tip_height: 0,
-            sync_phase: 0,
             sync_progress_height: 0,
             difficulty: 0,
             ips: 0,
@@ -229,12 +228,7 @@ class FullNodeView {
     }
 
     async update_view(redisplay_blocks) {
-        let sync_info = "";
-        if (this.state.sync_phase == 0) {
-            sync_info = "Downl. headers " + this.state.sync_progress_height + "/" + this.state.sync_tip_height;
-        } else {
-            sync_info = "Downl. blocks " + this.state.sync_progress_height + "/" + this.state.sync_tip_height;
-        }
+        let sync_info = "Verif. blocks " + this.state.sync_progress_height + "/" + this.state.sync_tip_height;
         syncing_textfield.innerHTML = this.state.syncing ? sync_info : "No";
         block_height_textfield.innerHTML = this.state.lca_height;
         max_block_height_textfield.innerHTML = this.state.max_height;
@@ -356,7 +350,6 @@ class FullNodeView {
             this.state.lca_timestamp = blockchain_state.lca.data.timestamp;
             this.state.syncing = blockchain_state.sync.sync_mode;
             this.state.sync_tip_height = blockchain_state.sync.sync_tip_height;
-            this.state.sync_phase = blockchain_state.sync.sync_phase;
             this.state.sync_progress_height = blockchain_state.sync.sync_progress_height;
             this.state.difficulty = blockchain_state.difficulty;
             this.state.ips = blockchain_state.ips;

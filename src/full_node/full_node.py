@@ -18,12 +18,8 @@ from src.full_node.block_store import BlockStore
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.coin_store import CoinStore
 from src.full_node.full_node_store import FullNodeStore
-from src.full_node.header_blockchain import HeaderBlockchain
 from src.full_node.mempool_manager import MempoolManager
-from src.full_node.sync_blocks_processor import (
-    SyncBlocksProcessor,
-    SyncHeaderBlocksProcessor,
-)
+from src.full_node.sync_blocks_processor import SyncBlocksProcessor
 from src.full_node.sync_peers_handler import SyncPeersHandler
 from src.full_node.sync_store import SyncStore
 from src.protocols import (
@@ -69,7 +65,6 @@ class FullNode:
     connection: aiosqlite.Connection
     sync_peers_handler: Optional[SyncPeersHandler]
     blockchain: Blockchain
-    header_blockchain: Optional[HeaderBlockchain]
     config: Dict
     server: Optional[ChiaServer]
     log: logging.Logger
@@ -91,7 +86,6 @@ class FullNode:
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants.copy()
         self.sync_peers_handler = None
-        self.header_blockchain = None
         for key, value in override_constants.items():
             self.constants[key] = value
         if name:
@@ -286,6 +280,7 @@ class FullNode:
 
     def _close(self):
         self._shut_down = True
+        self.blockchain.shut_down()
 
     async def _await_closed(self):
         await self.connection.close()
@@ -379,9 +374,6 @@ class FullNode:
             fork_point_height: uint32 = self.blockchain.find_fork_point_alternate_chain(
                 header_hashes
             )
-            self.header_blockchain = await HeaderBlockchain.create(
-                self.blockchain, fork_point_height, self.constants
-            )
 
         fork_point_hash: bytes32 = header_hashes[fork_point_height]
         self.log.info(f"Fork point: {fork_point_hash} at height {fork_point_height}")
@@ -393,88 +385,13 @@ class FullNode:
             if (con.node_id is not None and con.connection_type == NodeType.FULL_NODE)
         ]
 
-        assert self.header_blockchain is not None
         self.sync_peers_handler = SyncPeersHandler(
-            self.sync_store, peers, fork_point_height, self.header_blockchain, True
-        )
-        # Start processing header blocks that we have received (no block yet)
-        header_block_processor = SyncHeaderBlocksProcessor(
-            self.sync_store,
-            fork_point_height,
-            uint32(tip_height),
-            self.header_blockchain,
-        )
-        header_block_processor_task = asyncio.create_task(
-            header_block_processor.process()
-        )
-
-        while not self.sync_peers_handler.done():
-            self.log.warning("1. looping")
-            # Periodically checks for done, timeouts, shutdowns, new peers or disconnected peers.
-            if self._shut_down:
-                self.log.warning("2. shut down")
-                header_block_processor.shut_down()
-                break
-            if header_block_processor_task.done():
-                self.log.warning("3. done processing")
-                break
-            async for msg in self.sync_peers_handler.monitor_timeouts():
-                self.log.warning("4. yielding msg")
-                yield msg  # Disconnects from peers that are not responding
-
-            cur_peers = [
-                con.node_id
-                for con in self.server.global_connections.get_connections()
-                if (
-                    con.node_id is not None
-                    and con.connection_type == NodeType.FULL_NODE
-                )
-            ]
-            self.log.warning("5. checkinh new peers")
-            for node_id in cur_peers:
-                if node_id not in peers:
-                    self.sync_peers_handler.new_node_connected(node_id)
-            self.log.warning("6. checkinh old peers")
-            for node_id in peers:
-                if node_id not in cur_peers:
-                    # Disconnected peer, removes requests that are being sent to it
-                    self.sync_peers_handler.node_disconnected(node_id)
-            peers = cur_peers
-
-            self.log.warning("7. reqquest sets")
-            async for msg in self.sync_peers_handler._add_to_request_sets():
-                yield msg  # Send more requests if we can
-
-            self.log.warning("8. sleep")
-            await asyncio.sleep(2)
-
-        # Awaits for all blocks to be processed, a timeout to happen, or the node to shutdown
-        await header_block_processor_task
-        header_block_processor_task.result()  # If there was a timeout, this will raise TimeoutError
-        if self._shut_down:
-            return
-
-        self.log.info(f"Downloaded headers up to tip height: {tip_height}")
-        if not self.header_blockchain.get_weight() == tip_block.weight:
-            raise ConsensusError(Err.INVALID_WEIGHT, [tip_block.header])
-        header_hashes_validated = set(self.header_blockchain.headers.keys())
-
-        self.log.info(
-            f"Validated weight of headers. Downloaded {tip_height - fork_point_height} "
-            f"headers, tip height {tip_height}, tip weight {tip_block.weight}"
-        )
-
-        self.sync_peers_handler = SyncPeersHandler(
-            self.sync_store, peers, fork_point_height, self.blockchain, False
+            self.sync_store, peers, fork_point_height, self.blockchain
         )
 
         # Start processing blocks that we have received (no block yet)
         block_processor = SyncBlocksProcessor(
-            self.sync_store,
-            fork_point_height,
-            uint32(tip_height),
-            header_hashes_validated,
-            self.blockchain,
+            self.sync_store, fork_point_height, uint32(tip_height), self.blockchain,
         )
         block_processor_task = asyncio.create_task(block_processor.process())
 
@@ -537,8 +454,6 @@ class FullNode:
         Finalize sync by setting sync mode to False, clearing all sync information, and adding any final
         blocks that we have finalized recently.
         """
-        if self.header_blockchain is not None:
-            self.header_blockchain.shut_down()
         potential_fut_blocks = (self.sync_store.get_potential_future_blocks()).copy()
         self.sync_store.set_sync_mode(False)
 
@@ -1513,7 +1428,7 @@ class FullNode:
         async with self.blockchain.lock:
             # Tries to add the block to the blockchain
             added, replaced, error_code = await self.blockchain.receive_block(
-                respond_block.block, header_validated=False, sync_mode=False
+                respond_block.block, False, None, sync_mode=False
             )
             if added == ReceiveBlockResult.ADDED_TO_HEAD:
                 await self.mempool_manager.new_tips(

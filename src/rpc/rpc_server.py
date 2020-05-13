@@ -69,13 +69,11 @@ class RpcApiHandler:
             tip_hashes.append(tip.header_hash)
         if sync_mode and self.full_node.sync_peers_handler is not None:
             sync_tip_height = len(self.full_node.sync_store.get_potential_hashes())
-            sync_phase = 1 if len(self.full_node.sync_store.potential_blocks) > 0 else 0
             sync_progress_height = (
                 self.full_node.sync_peers_handler.fully_validated_up_to
             )
         else:
             sync_tip_height = 0
-            sync_phase = 0
             sync_progress_height = uint32(0)
 
         response = {
@@ -85,7 +83,6 @@ class RpcApiHandler:
             "sync": {
                 "sync_mode": sync_mode,
                 "sync_tip_height": sync_tip_height,
-                "sync_phase": sync_phase,
                 "sync_progress_height": sync_progress_height,
             },
             "difficulty": difficulty,

@@ -2,6 +2,8 @@ import asyncio
 import collections
 import logging
 from enum import Enum
+import multiprocessing
+import concurrent
 from typing import Dict, List, Optional, Set, Tuple
 
 from chiabip158 import PyBIP158
@@ -12,6 +14,7 @@ from src.consensus.block_rewards import calculate_base_fee
 from src.full_node.block_header_validation import (
     validate_unfinished_block_header,
     validate_finished_block_header,
+    pre_validate_finished_block_headers,
 )
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
@@ -71,6 +74,8 @@ class Blockchain:
     block_store: BlockStore
     # Coinbase freeze period
     coinbase_freeze: uint32
+    # Used to verify blocks in parallel
+    pool: concurrent.futures.ProcessPoolExecutor
 
     # Lock to prevent simultaneous reads and writes
     lock: asyncio.Lock
@@ -86,6 +91,10 @@ class Blockchain:
         """
         self = Blockchain()
         self.lock = asyncio.Lock()  # External lock handled by full node
+        cpu_count = multiprocessing.cpu_count()
+        self.pool = concurrent.futures.ProcessPoolExecutor(
+            max_workers=max(cpu_count - 1, 1)
+        )
         self.constants = consensus_constants.copy()
         for key, value in override_constants.items():
             self.constants[key] = value
@@ -98,6 +107,9 @@ class Blockchain:
         self.coinbase_freeze = self.constants["COINBASE_FREEZE_PERIOD"]
         await self._load_chain_from_store()
         return self
+
+    def shut_down(self):
+        self.pool.shutdown(wait=True)
 
     async def _load_chain_from_store(self,) -> None:
         """
@@ -255,7 +267,11 @@ class Blockchain:
             raise ValueError("Invalid genesis block")
 
     async def receive_block(
-        self, block: FullBlock, header_validated: bool = False, sync_mode: bool = False,
+        self,
+        block: FullBlock,
+        pre_validated: bool = False,
+        pos_quality_string: bytes32 = None,
+        sync_mode: bool = False,
     ) -> Tuple[ReceiveBlockResult, Optional[Header], Optional[Err]]:
         """
         Adds a new block into the blockchain, if it's valid and connected to the current
@@ -281,19 +297,19 @@ class Blockchain:
         curr_header_block = self.get_header_block(block)
         assert curr_header_block is not None
         # Validate block header
-        if not header_validated:
-            error_code: Optional[Err] = await validate_finished_block_header(
-                self.constants,
-                self.headers,
-                self.height_to_hash,
-                curr_header_block,
-                prev_header_block,
-                genesis,
-                False,
-            )
+        error_code: Optional[Err] = await validate_finished_block_header(
+            self.constants,
+            self.headers,
+            self.height_to_hash,
+            curr_header_block,
+            prev_header_block,
+            genesis,
+            pre_validated,
+            pos_quality_string,
+        )
 
-            if error_code is not None:
-                return ReceiveBlockResult.INVALID_BLOCK, None, error_code
+        if error_code is not None:
+            return ReceiveBlockResult.INVALID_BLOCK, None, error_code
 
         # Validate block body
         error_code = await self.validate_block_body(block)
@@ -471,6 +487,13 @@ class Blockchain:
     def get_next_min_iters(self, header_hash: bytes32) -> uint64:
         return get_next_min_iters(
             self.constants, self.headers, self.height_to_hash, header_hash
+        )
+
+    async def pre_validate_blocks_multiprocessing(
+        self, blocks: List[FullBlock]
+    ) -> List[Tuple[bool, Optional[bytes32]]]:
+        return await pre_validate_finished_block_headers(
+            self.constants, self.pool, blocks
         )
 
     async def validate_unfinished_block(

@@ -4,7 +4,6 @@ import time
 from typing import Any, AsyncGenerator, Dict, List, Union
 
 from src.full_node.blockchain import Blockchain
-from src.full_node.header_blockchain import HeaderBlockchain
 from src.full_node.sync_store import SyncStore
 from src.protocols import full_node_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
@@ -40,8 +39,7 @@ class SyncPeersHandler:
         sync_store: SyncStore,
         peers: List[bytes32],
         fork_height: uint32,
-        blockchain: Union[Blockchain, HeaderBlockchain],
-        headers_only: bool,
+        blockchain: Blockchain,
     ):
         self.sync_store = sync_store
         # Set of outbound requests for every full_node peer, and time sent
@@ -59,13 +57,8 @@ class SyncPeersHandler:
         for node_id in peers:
             self.current_outbound_sets[node_id] = {}
 
-        self.headers_only = headers_only
-        if self.headers_only:
-            self.potential_blocks_received = self.sync_store.potential_headers_received
-            self.potential_blocks = self.sync_store.potential_headers
-        else:
-            self.potential_blocks_received = self.sync_store.potential_blocks_received
-            self.potential_blocks = self.sync_store.potential_blocks
+        self.potential_blocks_received = self.sync_store.potential_headers_received
+        self.potential_blocks = self.sync_store.potential_headers
 
         # No blocks received yet
         for height in range(self.fully_validated_up_to + 1, len(self.header_hashes)):
@@ -180,33 +173,17 @@ class SyncPeersHandler:
             node_id, request_set = outbound_sets_list[index % len(outbound_sets_list)]
             request_set[self.header_hashes[height]] = uint64(int(time.time()))
 
-            # yields the request
-            if self.headers_only:
-                to_yield.append(
-                    full_node_protocol.RequestHeaderBlock(
-                        height, self.header_hashes[height]
-                    )
-                )
-            else:
-                to_yield.append(
-                    full_node_protocol.RequestBlock(height, self.header_hashes[height])
-                )
+            to_yield.append(
+                full_node_protocol.RequestBlock(height, self.header_hashes[height])
+            )
 
         for request in to_yield:
-            if self.headers_only:
-                yield OutboundMessage(
-                    NodeType.FULL_NODE,
-                    Message("request_header_block", request),
-                    Delivery.SPECIFIC,
-                    node_id,
-                )
-            else:
-                yield OutboundMessage(
-                    NodeType.FULL_NODE,
-                    Message("request_block", request),
-                    Delivery.SPECIFIC,
-                    node_id,
-                )
+            yield OutboundMessage(
+                NodeType.FULL_NODE,
+                Message("request_block", request),
+                Delivery.SPECIFIC,
+                node_id,
+            )
 
     async def new_block(
         self, block: Union[FullBlock, HeaderBlock]
@@ -215,12 +192,8 @@ class SyncPeersHandler:
         A new block was received from a peer.
         """
         header_hash: bytes32 = block.header_hash
-        if self.headers_only:
-            if not isinstance(block, HeaderBlock):
-                return
-        else:
-            if not isinstance(block, FullBlock):
-                return
+        if not isinstance(block, FullBlock):
+            return
         if (
             block.height >= len(self.header_hashes)
             or self.header_hashes[block.height] != header_hash

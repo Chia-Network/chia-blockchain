@@ -11,6 +11,7 @@ from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_mi
 from src.types.challenge import Challenge
 from src.types.header import Header
 from src.types.header_block import HeaderBlock
+from src.types.full_block import FullBlock
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.errors import Err
@@ -240,18 +241,15 @@ async def validate_finished_block_header(
 async def pre_validate_finished_block_headers(
     constants: Dict,
     pool: concurrent.futures.ProcessPoolExecutor,
-    blocks: List[HeaderBlock],
+    blocks: List[FullBlock],
 ) -> List[Tuple[bool, Optional[bytes32]]]:
     futures = []
 
     # Pool of workers to validate blocks concurrently
-    for header_block in blocks:
+    for block in blocks:
         futures.append(
             asyncio.get_running_loop().run_in_executor(
-                pool,
-                _pre_validate_finished_block_header,
-                constants,
-                bytes(header_block),
+                pool, _pre_validate_finished_block_header, constants, bytes(block),
             )
         )
     results = await asyncio.gather(*futures)
@@ -267,7 +265,7 @@ def _pre_validate_finished_block_header(constants: Dict, data: bytes):
     """
     Validates all parts of block that don't need to be serially checked
     """
-    block = HeaderBlock.from_bytes(data)
+    block = FullBlock.from_bytes(data)
 
     if not block.proof_of_time:
         return False, None
