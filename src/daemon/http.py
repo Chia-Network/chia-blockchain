@@ -3,6 +3,11 @@ import asyncio
 from aiohttp import web
 
 
+# GET http://127.0.0.1:PORT/daemon/service/SERVICE_NAME?m=start => start service
+# GET http://127.0.0.1:PORT/daemon/service/SERVICE_NAME?m=stop => stop service
+# GET http://127.0.0.1:PORT/daemon/service/ => list services
+
+
 def create_server_for_daemon(daemon, host="127.0.0.1"):
     routes = web.RouteTableDef()
 
@@ -12,7 +17,7 @@ def create_server_for_daemon(daemon, host="127.0.0.1"):
             pass
         return web.Response(text=str(r))
 
-    @routes.get('/daemon/service/exit/')
+    @routes.get('/daemon/exit/')
     async def exit(request):
         async for r in daemon.exit():
             pass
@@ -43,10 +48,3 @@ def create_server_for_daemon(daemon, host="127.0.0.1"):
     app.add_routes(routes)
     task = web._run_app(app)
     return asyncio.ensure_future(task)
-
-
-# daemon URLS
-
-# GET http://127.0.0.1:PORT/daemon/service/SERVICE_NAME?m=start => start service
-# GET http://127.0.0.1:PORT/daemon/service/SERVICE_NAME?m=stop => stop service
-# GET http://127.0.0.1:PORT/daemon/service/ => list services
