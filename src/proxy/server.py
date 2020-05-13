@@ -35,12 +35,11 @@ def _make_response_map_for_root_object(root_object):
             nonce = message.get("n")
             f = getattr(root_object, c, None)
             if not f:
-                d = dict(e="Missing or invalid command: %s" % c)
                 log.error("failure in %s message" % c)
                 return
         except Exception as ex:
             log.exception("failure in %s message" % c)
-            d = dict(e="exception: %s" % ex)
+            return
 
         args = message.get("q", {})
         try:
@@ -53,7 +52,6 @@ def _make_response_map_for_root_object(root_object):
             log.debug("handling %s message complete" % c)
         except Exception as ex:
             log.exception("failure in %s message" % c)
-            d = dict(e="exception: %s" % ex)
 
     async def response_writer_for_event(event):
         message = event["message"]
