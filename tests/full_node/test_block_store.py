@@ -108,7 +108,6 @@ class TestBlockStore:
             db_filename.unlink()
             db_filename_2.unlink()
             db_filename_3.unlink()
-            b.shut_down()
             raise
 
         await connection.close()
@@ -117,7 +116,6 @@ class TestBlockStore:
         db_filename.unlink()
         db_filename_2.unlink()
         db_filename_3.unlink()
-        b.shut_down()
 
     @pytest.mark.asyncio
     async def test_deadlock(self):

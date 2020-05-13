@@ -1,28 +1,22 @@
 import logging
 import time
-from typing import Dict, List, Optional, Set, Tuple, Union
-
+from typing import Dict, List, Optional, Tuple
+import asyncio
+import concurrent
 import blspy
 
-from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
-from src.consensus.pot_iterations import (
-    calculate_iterations_quality,
-    calculate_min_iters_from_iterations,
-)
+from src.consensus.block_rewards import calculate_block_reward
+from src.consensus.pot_iterations import calculate_iterations_quality
 from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_min_iters
 from src.types.challenge import Challenge
-from src.types.full_block import FullBlock
 from src.types.header import Header
 from src.types.header_block import HeaderBlock
+from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
-from src.util.cost_calculator import calculate_cost_of_program
-from src.util.errors import ConsensusError, Err
+from src.util.errors import Err
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64
-from src.util.significant_bits import (
-    count_significant_bits,
-    truncate_to_significant_bits,
-)
+from src.util.significant_bits import count_significant_bits
 
 log = logging.getLogger(__name__)
 
@@ -31,9 +25,10 @@ async def validate_unfinished_block_header(
     constants: Dict,
     headers: Dict[bytes32, Header],
     height_to_hash: Dict[uint32, bytes32],
-    block: HeaderBlock,
+    block_header: Header,
+    proof_of_space: ProofOfSpace,
     prev_header_block: Optional[HeaderBlock],
-    pre_validated: bool = True,
+    pre_validated: bool = False,
     pos_quality_string: bytes32 = None,
 ) -> Tuple[Optional[Err], Optional[uint64]]:
     """
@@ -46,26 +41,26 @@ async def validate_unfinished_block_header(
     """
     if not pre_validated:
         # 1. The hash of the proof of space must match header_data.proof_of_space_hash
-        if block.proof_of_space.get_hash() != block.header.data.proof_of_space_hash:
+        if proof_of_space.get_hash() != block_header.data.proof_of_space_hash:
             return (Err.INVALID_POSPACE_HASH, None)
 
         # 2. The coinbase signature must be valid, according the the pool public key
-        pair = block.header.data.coinbase_signature.PkMessagePair(
-            block.proof_of_space.pool_pubkey, block.header.data.coinbase.name(),
+        pair = block_header.data.coinbase_signature.PkMessagePair(
+            proof_of_space.pool_pubkey, block_header.data.coinbase.name(),
         )
 
-        if not block.header.data.coinbase_signature.validate([pair]):
+        if not block_header.data.coinbase_signature.validate([pair]):
             return (Err.INVALID_COINBASE_SIGNATURE, None)
 
         # 3. Check harvester signature of header data is valid based on harvester key
-        if not block.header.harvester_signature.verify(
-            [blspy.Util.hash256(block.header.data.get_hash())],
-            [block.proof_of_space.plot_pubkey],
+        if not block_header.harvester_signature.verify(
+            [blspy.Util.hash256(block_header.data.get_hash())],
+            [proof_of_space.plot_pubkey],
         ):
             return (Err.INVALID_HARVESTER_SIGNATURE, None)
 
     # 4. If not genesis, the previous block must exist
-    if prev_header_block is not None and block.prev_header_hash not in headers:
+    if prev_header_block is not None and block_header.prev_header_hash not in headers:
         return (Err.DOES_NOT_EXTEND, None)
 
     # 5. If not genesis, the timestamp must be >= the average timestamp of last 11 blocks
@@ -84,9 +79,9 @@ async def validate_unfinished_block_header(
             # For blocks 1 to 10, average timestamps of all previous blocks
             assert curr.height == 0
         prev_time: uint64 = uint64(int(sum(last_timestamps) // len(last_timestamps)))
-        if block.header.data.timestamp < prev_time:
+        if block_header.data.timestamp < prev_time:
             return (Err.TIMESTAMP_TOO_FAR_IN_PAST, None)
-        if block.header.data.timestamp > time.time() + constants["MAX_FUTURE_TIME"]:
+        if block_header.data.timestamp > time.time() + constants["MAX_FUTURE_TIME"]:
             return (Err.TIMESTAMP_TOO_FAR_IN_FUTURE, None)
 
     # 7. Extension data must be valid, if any is present
@@ -97,50 +92,45 @@ async def validate_unfinished_block_header(
         challenge: Challenge = prev_header_block.challenge
         challenge_hash = challenge.get_hash()
         # 8. Check challenge hash of prev is the same as in pos
-        if challenge_hash != block.proof_of_space.challenge_hash:
-            return (Err.INVALID_POSPACE_CHALLENGE, None)
-    else:
-        # 9. If genesis, the challenge hash in the proof of time must be the same as in the proof of space
-        assert block.proof_of_time is not None
-        challenge_hash = block.proof_of_time.challenge_hash
-
-        if challenge_hash != block.proof_of_space.challenge_hash:
+        if challenge_hash != proof_of_space.challenge_hash:
             return (Err.INVALID_POSPACE_CHALLENGE, None)
 
     # 10. The proof of space must be valid on the challenge
     if pos_quality_string is None:
-        pos_quality_string = block.proof_of_space.verify_and_get_quality_string()
+        pos_quality_string = proof_of_space.verify_and_get_quality_string()
         if not pos_quality_string:
             return (Err.INVALID_POSPACE, None)
 
     if prev_header_block is not None:
         # 11. If not genesis, the height on the previous block must be one less than on this block
-        if block.height != prev_header_block.height + 1:
+        if block_header.height != prev_header_block.height + 1:
             return (Err.INVALID_HEIGHT, None)
     else:
         # 12. If genesis, the height must be 0
-        if block.height != 0:
+        if block_header.height != 0:
             return (Err.INVALID_HEIGHT, None)
 
     # 13. The coinbase reward must match the block schedule
-    coinbase_reward = calculate_block_reward(block.height)
-    if coinbase_reward != block.header.data.coinbase.amount:
+    coinbase_reward = calculate_block_reward(block_header.height)
+    if coinbase_reward != block_header.data.coinbase.amount:
         return (Err.INVALID_COINBASE_AMOUNT, None)
 
     # 13b. The coinbase parent id must be the height
-    if block.header.data.coinbase.parent_coin_info != block.height.to_bytes(32, "big"):
+    if block_header.data.coinbase.parent_coin_info != block_header.height.to_bytes(
+        32, "big"
+    ):
         return (Err.INVALID_COINBASE_PARENT, None)
 
     # 13c. The fees coin parent id must be hash(hash(height))
-    if block.header.data.fees_coin.parent_coin_info != std_hash(
-        std_hash(uint32(block.height))
+    if block_header.data.fees_coin.parent_coin_info != std_hash(
+        std_hash(uint32(block_header.height))
     ):
         return (Err.INVALID_FEES_COIN_PARENT, None)
 
     difficulty: uint64
     if prev_header_block is not None:
         difficulty = get_next_difficulty(
-            constants, headers, height_to_hash, prev_header_block.header_hash
+            constants, headers, height_to_hash, prev_header_block.header
         )
         min_iters = get_next_min_iters(
             constants, headers, height_to_hash, prev_header_block
@@ -150,7 +140,7 @@ async def validate_unfinished_block_header(
         min_iters = uint64(constants["MIN_ITERS_STARTING"])
 
     number_of_iters: uint64 = calculate_iterations_quality(
-        pos_quality_string, block.proof_of_space.size, difficulty, min_iters,
+        pos_quality_string, proof_of_space.size, difficulty, min_iters,
     )
 
     assert count_significant_bits(difficulty) <= constants["SIGNIFICANT_BITS"]
@@ -158,22 +148,22 @@ async def validate_unfinished_block_header(
 
     if prev_header_block is not None:
         # 17. If not genesis, the total weight must be the parent weight + difficulty
-        if block.weight != prev_header_block.weight + difficulty:
+        if block_header.weight != prev_header_block.weight + difficulty:
             return (Err.INVALID_WEIGHT, None)
 
         # 18. If not genesis, the total iters must be parent iters + number_iters
         if (
-            block.header.data.total_iters
+            block_header.data.total_iters
             != prev_header_block.header.data.total_iters + number_of_iters
         ):
             return (Err.INVALID_TOTAL_ITERS, None)
     else:
         # 19. If genesis, the total weight must be starting difficulty
-        if block.weight != difficulty:
+        if block_header.weight != difficulty:
             return (Err.INVALID_WEIGHT, None)
 
         # 20. If genesis, the total iters must be number iters
-        if block.header.data.total_iters != number_of_iters:
+        if block_header.data.total_iters != number_of_iters:
             return (Err.INVALID_TOTAL_ITERS, None)
 
     return (None, number_of_iters)
@@ -185,7 +175,7 @@ async def validate_finished_block_header(
     height_to_hash: Dict[uint32, bytes32],
     block: HeaderBlock,
     prev_header_block: Optional[HeaderBlock],
-    genesis: bool = False,
+    genesis: bool,
     pre_validated: bool = False,
     pos_quality_string: bytes32 = None,
 ) -> Optional[Err]:
@@ -206,7 +196,8 @@ async def validate_finished_block_header(
         constants,
         headers,
         height_to_hash,
-        block,
+        block.header,
+        block.proof_of_space,
         prev_header_block,
         pre_validated,
         pos_quality_string,
@@ -235,10 +226,44 @@ async def validate_finished_block_header(
 
         if block.proof_of_time.challenge_hash != prev_challenge.get_hash():
             return Err.INVALID_POT_CHALLENGE
+    else:
+        # 9. If genesis, the challenge hash in the proof of time must be the same as in the proof of space
+        assert block.proof_of_time is not None
+        challenge_hash = block.proof_of_time.challenge_hash
+
+        if challenge_hash != block.proof_of_space.challenge_hash:
+            return Err.INVALID_POSPACE_CHALLENGE
+
     return None
 
 
-def pre_validate_finished_block_header(constants: Dict, data: bytes):
+async def pre_validate_finished_block_headers(
+    constants: Dict,
+    pool: concurrent.futures.ProcessPoolExecutor,
+    blocks: List[HeaderBlock],
+) -> List[Tuple[bool, Optional[bytes32]]]:
+    futures = []
+
+    # Pool of workers to validate blocks concurrently
+    for header_block in blocks:
+        futures.append(
+            asyncio.get_running_loop().run_in_executor(
+                pool,
+                _pre_validate_finished_block_header,
+                constants,
+                bytes(header_block),
+            )
+        )
+    results = await asyncio.gather(*futures)
+
+    for i, (val, pos) in enumerate(results):
+        if pos is not None:
+            pos = bytes32(pos)
+        results[i] = val, pos
+    return results
+
+
+def _pre_validate_finished_block_header(constants: Dict, data: bytes):
     """
     Validates all parts of block that don't need to be serially checked
     """

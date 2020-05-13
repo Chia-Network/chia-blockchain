@@ -54,9 +54,7 @@ class RpcApiHandler:
         tips: List[Header] = self.full_node.blockchain.get_current_tips()
         lca: Header = self.full_node.blockchain.lca_block
         sync_mode: bool = self.full_node.sync_store.get_sync_mode()
-        difficulty: uint64 = self.full_node.blockchain.get_next_difficulty(
-            lca.header_hash
-        )
+        difficulty: uint64 = self.full_node.blockchain.get_next_difficulty(lca)
         lca_block = await self.full_node.block_store.get_block(lca.header_hash)
         if lca_block is None:
             raise web.HTTPNotFound()

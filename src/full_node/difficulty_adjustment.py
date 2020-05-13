@@ -1,14 +1,11 @@
 from typing import Dict, Optional, Union
 
-from src.consensus.pot_iterations import (
-    calculate_iterations_quality,
-    calculate_min_iters_from_iterations,
-)
+from src.consensus.pot_iterations import calculate_min_iters_from_iterations
 from src.types.full_block import FullBlock
 from src.types.header import Header
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint32, uint64, uint128
+from src.util.ints import uint32, uint64
 from src.util.significant_bits import (
     count_significant_bits,
     truncate_to_significant_bits,
@@ -19,14 +16,13 @@ def get_next_difficulty(
     constants: Dict,
     headers: Dict[bytes32, Header],
     height_to_hash: Dict[uint32, bytes32],
-    header_hash: bytes32,
+    block: Header,
 ) -> uint64:
     """
-    Returns the difficulty of the next block that extends onto header_hash.
+    Returns the difficulty of the next block that extends onto block.
     Used to calculate the number of iterations. When changing this, also change the implementation
     in wallet_state_manager.py.
     """
-    block: Header = headers[header_hash]
 
     next_height: uint32 = uint32(block.height + 1)
     if next_height < constants["DIFFICULTY_EPOCH"]:
@@ -89,11 +85,13 @@ def get_next_difficulty(
     assert block2 is not None and block3 is not None
 
     # Current difficulty parameter (diff of block h = i - 1)
-    Tc = get_next_difficulty(constants, headers, height_to_hash, block.prev_header_hash)
+    Tc = get_next_difficulty(
+        constants, headers, height_to_hash, headers[block.prev_header_hash]
+    )
 
     # Previous difficulty parameter (diff of block h = i - 2048 - 1)
     Tp = get_next_difficulty(
-        constants, headers, height_to_hash, block2.prev_header_hash
+        constants, headers, height_to_hash, headers[block2.prev_header_hash]
     )
     if block1:
         timestamp1 = block1.data.timestamp  # i - 512 - 1
@@ -174,7 +172,7 @@ def get_next_min_iters(
 
     proof_of_space = block.proof_of_space
     difficulty = get_next_difficulty(
-        constants, headers, height_to_hash, prev_block_header.header_hash
+        constants, headers, height_to_hash, prev_block_header
     )
     iterations = uint64(
         block.header.data.total_iters - prev_block_header.data.total_iters

@@ -138,6 +138,11 @@ class SyncPeersHandler:
             if len(to_send) == free_slots:
                 # No more slots to send to any peers
                 break
+            header_hash = self.header_hashes[uint32(height)]
+            if header_hash in self.blockchain.headers:
+                # Avoids downloading blocks and headers that we already have
+                continue
+
             if self.potential_blocks_received[uint32(height)].is_set():
                 continue
             already_requested = False
@@ -170,15 +175,26 @@ class SyncPeersHandler:
             request_set[self.header_hashes[height]] = uint64(int(time.time()))
 
             # yields the request
-            request_sync = full_node_protocol.RequestBlock(
-                height, self.header_hashes[height]
-            )
-            yield OutboundMessage(
-                NodeType.FULL_NODE,
-                Message("request_block", request_sync),
-                Delivery.SPECIFIC,
-                node_id,
-            )
+            if self.headers_only:
+                request_sync = full_node_protocol.RequestHeaderBlock(
+                    height, self.header_hashes[height]
+                )
+                yield OutboundMessage(
+                    NodeType.FULL_NODE,
+                    Message("request_header_block", request_sync),
+                    Delivery.SPECIFIC,
+                    node_id,
+                )
+            else:
+                request_sync_block = full_node_protocol.RequestBlock(
+                    height, self.header_hashes[height]
+                )
+                yield OutboundMessage(
+                    NodeType.FULL_NODE,
+                    Message("request_block", request_sync_block),
+                    Delivery.SPECIFIC,
+                    node_id,
+                )
 
     async def new_block(
         self, block: Union[FullBlock, HeaderBlock]
@@ -188,9 +204,11 @@ class SyncPeersHandler:
         """
         header_hash: bytes32 = block.header_hash
         if self.headers_only:
-            assert isinstance(block, HeaderBlock)
+            if not isinstance(block, HeaderBlock):
+                return
         else:
-            assert isinstance(block, FullBlock)
+            if not isinstance(block, FullBlock):
+                return
         if (
             block.height >= len(self.header_hashes)
             or self.header_hashes[block.height] != header_hash

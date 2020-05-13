@@ -2,6 +2,7 @@ import asyncio
 import concurrent
 import logging
 import traceback
+import time
 from asyncio import Event
 from pathlib import Path
 from typing import AsyncGenerator, Dict, List, Optional, Tuple, Type
@@ -11,7 +12,8 @@ from chiabip158 import PyBIP158
 from chiapos import Verifier
 
 from src.consensus.constants import constants as consensus_constants
-from src.consensus.weight_verifier import verify_weight
+from src.consensus.block_rewards import calculate_base_fee
+from src.consensus.pot_iterations import calculate_iterations
 from src.full_node.block_store import BlockStore
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.coin_store import CoinStore
@@ -67,6 +69,7 @@ class FullNode:
     connection: aiosqlite.Connection
     sync_peers_handler: Optional[SyncPeersHandler]
     blockchain: Blockchain
+    header_blockchain: Optional[HeaderBlockchain]
     config: Dict
     server: Optional[ChiaServer]
     log: logging.Logger
@@ -88,6 +91,7 @@ class FullNode:
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants.copy()
         self.sync_peers_handler = None
+        self.header_blockchain = None
         for key, value in override_constants.items():
             self.constants[key] = value
         if name:
@@ -140,7 +144,7 @@ class FullNode:
                 challenge_hash = challenge.get_hash()
                 if tip.height > 0:
                     difficulty: uint64 = self.blockchain.get_next_difficulty(
-                        tip.prev_header_hash
+                        self.blockchain.headers[tip.prev_header_hash]
                     )
                 else:
                     difficulty = uint64(tip.weight)
@@ -282,7 +286,6 @@ class FullNode:
 
     def _close(self):
         self._shut_down = True
-        self.blockchain.shut_down()
 
     async def _await_closed(self):
         await self.connection.close()
@@ -342,12 +345,11 @@ class FullNode:
 
         self.sync_store.set_potential_hashes_received(Event())
 
-        timeout = 200
         sleep_interval = 10
         total_time_slept = 0
 
         while True:
-            if total_time_slept > timeout:
+            if total_time_slept > 30:
                 raise TimeoutError("Took too long to fetch header hashes.")
             if self._shut_down:
                 return
@@ -371,10 +373,15 @@ class FullNode:
 
         # Finding the fork point allows us to only download headers and blocks from the fork point
         header_hashes = self.sync_store.get_potential_hashes()
-        fork_point_height: uint32 = self.blockchain.find_fork_point_alternate_chain(
-            header_hashes
-        )
-        header_blockchain = HeaderBlockchain(self.blockchain, fork_point_height)
+
+        async with self.blockchain.lock:
+            # Lock blockchain so we can copy over the headers without any reorgs
+            fork_point_height: uint32 = self.blockchain.find_fork_point_alternate_chain(
+                header_hashes
+            )
+            self.header_blockchain = await HeaderBlockchain.create(
+                self.blockchain, fork_point_height, self.constants
+            )
 
         fork_point_hash: bytes32 = header_hashes[fork_point_height]
         self.log.info(f"Fork point: {fork_point_hash} at height {fork_point_height}")
@@ -390,8 +397,12 @@ class FullNode:
             self.sync_store, peers, fork_point_height, self.blockchain, True
         )
         # Start processing header blocks that we have received (no block yet)
+        assert self.header_blockchain is not None
         header_block_processor = SyncHeaderBlocksProcessor(
-            self.sync_store, fork_point_height, uint32(tip_height), self.blockchain
+            self.sync_store,
+            fork_point_height,
+            uint32(tip_height),
+            self.header_blockchain,
         )
         header_block_processor_task = asyncio.create_task(
             header_block_processor.process()
@@ -433,11 +444,13 @@ class FullNode:
             return
 
         self.log.info(f"Downloaded headers up to tip height: {tip_height}")
-        if not header_blockchain.get_weight() == tip_block.weight:
+        if not self.header_blockchain.get_weight() == tip_block.weight:
             raise ConsensusError(Err.INVALID_WEIGHT, [tip_block.header])
+        header_hashes_validated = set(self.header_blockchain.headers.keys())
 
         self.log.info(
-            f"Validated weight of headers. Downloaded {tip_height - fork_point_height} headers, tip height {tip_height}"
+            f"Validated weight of headers. Downloaded {tip_height - fork_point_height} "
+            f"headers, tip height {tip_height}, tip weight {tip_block.weight}"
         )
 
         self.sync_peers_handler = SyncPeersHandler(
@@ -446,7 +459,11 @@ class FullNode:
 
         # Start processing blocks that we have received (no block yet)
         block_processor = SyncBlocksProcessor(
-            self.sync_store, fork_point_height, uint32(tip_height), self.blockchain
+            self.sync_store,
+            fork_point_height,
+            uint32(tip_height),
+            header_hashes_validated,
+            self.blockchain,
         )
         block_processor_task = asyncio.create_task(block_processor.process())
 
@@ -506,6 +523,8 @@ class FullNode:
         Finalize sync by setting sync mode to False, clearing all sync information, and adding any final
         blocks that we have finalized recently.
         """
+        if self.header_blockchain is not None:
+            self.header_blockchain.shut_down()
         potential_fut_blocks = (self.sync_store.get_potential_future_blocks()).copy()
         self.sync_store.set_sync_mode(False)
 
@@ -1267,7 +1286,7 @@ class FullNode:
             encoded_filter = bytes(bip158.GetEncoded())
 
         proof_of_space_hash: bytes32 = request.proof_of_space.get_hash()
-        difficulty = self.blockchain.get_next_difficulty(target_tip.header_hash)
+        difficulty = self.blockchain.get_next_difficulty(target_tip)
 
         assert target_tip_block is not None
         vdf_min_iters: uint64 = self.blockchain.get_next_min_iters(target_tip_block)
@@ -1475,16 +1494,12 @@ class FullNode:
         if self.blockchain.contains_block(header_hash):
             return
 
-        prevalidate_block = await self.blockchain.pre_validate_blocks_multiprocessing(
-            [respond_block.block]
-        )
-        val, pos = prevalidate_block[0]
         prev_lca = self.blockchain.lca_block
 
         async with self.blockchain.lock:
             # Tries to add the block to the blockchain
             added, replaced, error_code = await self.blockchain.receive_block(
-                respond_block.block, val, pos, sync_mode=False
+                respond_block.block, header_validated=False, sync_mode=False
             )
             if added == ReceiveBlockResult.ADDED_TO_HEAD:
                 await self.mempool_manager.new_tips(
@@ -1557,7 +1572,7 @@ class FullNode:
             )
 
             difficulty = self.blockchain.get_next_difficulty(
-                respond_block.block.prev_header_hash
+                self.blockchain.headers[respond_block.block.prev_header_hash]
             )
             next_vdf_min_iters = self.blockchain.get_next_min_iters(respond_block.block)
             next_vdf_ips = next_vdf_min_iters // (
@@ -1803,7 +1818,7 @@ class FullNode:
                 == self.constants["DIFFICULTY_DELAY"]
             ):
                 difficulty_update = self.blockchain.get_next_difficulty(
-                    curr.prev_header_hash
+                    self.blockchain.headers[curr.prev_header_hash]
                 )
             if (curr.height + 1) % self.constants["DIFFICULTY_EPOCH"] == 0:
                 iters_update = curr.data.total_iters

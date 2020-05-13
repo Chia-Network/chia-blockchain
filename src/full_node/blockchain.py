@@ -1,8 +1,6 @@
 import asyncio
 import collections
-import concurrent
 import logging
-import multiprocessing
 from enum import Enum
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -10,13 +8,14 @@ from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
 from src.consensus.constants import constants as consensus_constants
+from src.consensus.block_rewards import calculate_base_fee
 from src.full_node.block_header_validation import (
-    pre_validate_finished_block_header,
+    validate_unfinished_block_header,
     validate_finished_block_header,
 )
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
-from src.full_node.difficulty_adjustment import get_next_difficulty
+from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_min_iters
 from src.types.challenge import Challenge
 from src.types.coin import Coin, hash_coin_list
 from src.types.coin_record import CoinRecord
@@ -64,8 +63,6 @@ class Blockchain:
     height_to_hash: Dict[uint32, bytes32]
     # All headers (but not orphans) from genesis to the tip are guaranteed to be in headers
     headers: Dict[bytes32, Header]
-    # Process pool to verify blocks
-    pool: concurrent.futures.ProcessPoolExecutor
     # Genesis block
     genesis: FullBlock
     # Unspent Store
@@ -77,8 +74,6 @@ class Blockchain:
 
     # Lock to prevent simultaneous reads and writes
     lock: asyncio.Lock
-
-    _is_shutdown: bool
 
     @staticmethod
     async def create(
@@ -102,16 +97,7 @@ class Blockchain:
         self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
         self.coinbase_freeze = self.constants["COINBASE_FREEZE_PERIOD"]
         await self._load_chain_from_store()
-        cpu_count = multiprocessing.cpu_count()
-        self.pool = concurrent.futures.ProcessPoolExecutor(
-            max_workers=max(cpu_count - 1, 1)
-        )
-        self._is_shutdown = False
         return self
-
-    def shut_down(self):
-        self._is_shutdown = True
-        self.pool.shutdown(wait=True)
 
     async def _load_chain_from_store(self,) -> None:
         """
@@ -195,7 +181,7 @@ class Blockchain:
     def get_challenge(self, block: FullBlock) -> Optional[Challenge]:
         if block.proof_of_time is None:
             return None
-        if block.header_hash not in self.headers:
+        if block.prev_header_hash not in self.headers and block.height > 0:
             return None
 
         prev_challenge_hash = block.proof_of_space.challenge_hash
@@ -205,7 +191,7 @@ class Blockchain:
             "DIFFICULTY_DELAY"
         ]:
             new_difficulty = get_next_difficulty(
-                self.constants, self.headers, self.height_to_hash, block.header_hash
+                self.constants, self.headers, self.height_to_hash, block.header
             )
         else:
             new_difficulty = None
@@ -219,7 +205,7 @@ class Blockchain:
 
     def get_header_block(self, block: FullBlock) -> Optional[HeaderBlock]:
         challenge: Optional[Challenge] = self.get_challenge(block)
-        if not challenge or not block.proof_of_time:
+        if challenge is None or block.proof_of_time is None:
             return None
         return HeaderBlock(
             block.proof_of_space, block.proof_of_time, challenge, block.header
@@ -269,11 +255,7 @@ class Blockchain:
             raise ValueError("Invalid genesis block")
 
     async def receive_block(
-        self,
-        block: FullBlock,
-        pre_validated: bool = False,
-        pos_quality_string: bytes32 = None,
-        sync_mode: bool = False,
+        self, block: FullBlock, header_validated: bool = False, sync_mode: bool = False,
     ) -> Tuple[ReceiveBlockResult, Optional[Header], Optional[Err]]:
         """
         Adds a new block into the blockchain, if it's valid and connected to the current
@@ -299,19 +281,19 @@ class Blockchain:
         curr_header_block = self.get_header_block(block)
         assert curr_header_block is not None
         # Validate block header
-        error_code: Optional[Err] = await validate_finished_block_header(
-            self.constants,
-            self.headers,
-            self.height_to_hash,
-            curr_header_block,
-            prev_header_block,
-            genesis,
-            pre_validated,
-            pos_quality_string,
-        )
+        if not header_validated:
+            error_code: Optional[Err] = await validate_finished_block_header(
+                self.constants,
+                self.headers,
+                self.height_to_hash,
+                curr_header_block,
+                prev_header_block,
+                genesis,
+                False,
+            )
 
-        if error_code is not None:
-            return ReceiveBlockResult.INVALID_BLOCK, None, error_code
+            if error_code is not None:
+                return ReceiveBlockResult.INVALID_BLOCK, None, error_code
 
         # Validate block body
         error_code = await self.validate_block_body(block)
@@ -329,33 +311,6 @@ class Blockchain:
             return ReceiveBlockResult.ADDED_TO_HEAD, header, None
         else:
             return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
-
-    async def pre_validate_blocks_multiprocessing(
-        self, blocks: List[FullBlock]
-    ) -> List[Tuple[bool, Optional[bytes32]]]:
-        futures = []
-
-        # Pool of workers to validate blocks concurrently
-        for block in blocks:
-            if self._is_shutdown:
-                return [(False, None) for block in blocks]
-            header_block = self.get_header_block(block)
-            assert header_block is not None
-            futures.append(
-                asyncio.get_running_loop().run_in_executor(
-                    self.pool,
-                    pre_validate_finished_block_header,
-                    self.constants,
-                    bytes(header_block),
-                )
-            )
-        results = await asyncio.gather(*futures)
-
-        for i, (val, pos) in enumerate(results):
-            if pos is not None:
-                pos = bytes32(pos)
-            results[i] = val, pos
-        return results
 
     async def _reconsider_heads(
         self, block: Header, genesis: bool, sync_mode: bool
@@ -507,6 +462,31 @@ class Blockchain:
         blocks.reverse()
 
         await self.coin_store.add_lcas(blocks)
+
+    def get_next_difficulty(self, header_hash: bytes32) -> uint64:
+        return get_next_difficulty(
+            self.constants, self.headers, self.height_to_hash, header_hash
+        )
+
+    def get_next_min_iters(self, header_hash: bytes32) -> uint64:
+        return get_next_min_iters(
+            self.constants, self.headers, self.height_to_hash, header_hash
+        )
+
+    async def validate_unfinished_block(
+        self, block: FullBlock, prev_full_block: FullBlock
+    ) -> Tuple[Optional[Err], Optional[uint64]]:
+        prev_hb = self.get_header_block(prev_full_block)
+        assert prev_hb is not None
+        return await validate_unfinished_block_header(
+            self.constants,
+            self.headers,
+            self.height_to_hash,
+            block.header,
+            block.proof_of_space,
+            prev_hb,
+            False,
+        )
 
     async def validate_block_body(self, block: FullBlock) -> Optional[Err]:
         """
