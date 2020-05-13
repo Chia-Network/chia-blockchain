@@ -1,18 +1,20 @@
 import logging
 import aiosqlite
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from src.types.full_block import FullBlock
 from src.types.header import Header
 from src.types.sized_bytes import bytes32
 from src.util.hash import std_hash
-from src.util.ints import uint32
+from src.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 
 
 class BlockStore:
     db: aiosqlite.Connection
+    proof_of_time_heights: Dict[Tuple[bytes32, uint64], uint32]
+    challenge_hash_dict: Dict[bytes32, bytes32]
 
     @classmethod
     async def create(cls, connection):
@@ -30,6 +32,11 @@ class BlockStore:
             "text PRIMARY KEY, proof_hash text, header blob, is_lca tinyint, is_tip tinyint)"
         )
 
+        # Challenge hash
+        await self.db.execute(
+            "CREATE TABLE IF NOT EXISTS challenge_hash(header_hash text PRIMARY KEY, challenge_hash text)"
+        )
+
         # Height index so we can look up in order of height for sync purposes
         await self.db.execute(
             "CREATE INDEX IF NOT EXISTS block_height on blocks(height)"
@@ -42,6 +49,8 @@ class BlockStore:
         await self.db.execute("CREATE INDEX IF NOT EXISTS lca on headers(is_lca)")
         await self.db.execute("CREATE INDEX IF NOT EXISTS lca on headers(is_tip)")
         await self.db.commit()
+        self.proof_of_time_heights = {}
+        self.challenge_hash_dict = {}
 
         return self
 
@@ -98,6 +107,14 @@ class BlockStore:
             ),
         )
         await cursor_2.close()
+        cursor_3 = await self.db.execute(
+            ("INSERT OR REPLACE INTO challenge_hash VALUES(?, ?)"),
+            (
+                block.header_hash.hex(),
+                block.proof_of_space.challenge_hash.hex(),
+            ),
+        )
+        await cursor_3.close()
         await self.db.commit()
 
     async def get_block(self, header_hash: bytes32) -> Optional[FullBlock]:
@@ -132,3 +149,28 @@ class BlockStore:
         rows = await cursor.fetchall()
         await cursor.close()
         return {bytes.fromhex(row[0]): bytes.fromhex(row[1]) for row in rows}
+
+    async def init_challenge_hashes(self) -> Dict[bytes32, bytes32]:
+        cursor = await self.db.execute("SELECT header_hash, challenge_hash from challenge_hash")
+        rows = await cursor.fetchall()
+        await cursor.close()
+        self.challenge_hash_dict = {
+            bytes.fromhex(row[0]): bytes.fromhex(row[1]) for row in rows
+        }
+
+    def get_challenge_hash(self, header_hash: bytes32) -> bytes32:
+        return self.challenge_hash_dict[header_hash]
+
+    def add_proof_of_time(self, challenge: bytes32, iter: uint64, height: uint32) -> None:
+        self.proof_of_time_heights[
+            (
+                challenge,
+                iter,
+            )
+        ] = height
+
+    def get_height_proof_of_time(self, challenge: bytes32, iter: uint64) -> Optional[uint32]:
+        pot_tuple = (challenge, iter)
+        if pot_tuple in self.proof_of_time_heights:
+            return self.proof_of_time_heights[pot_tuple]
+        return None

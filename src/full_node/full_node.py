@@ -976,20 +976,17 @@ class FullNode:
         A proof of time, received by a peer full node. If we have the rest of the block,
         we can complete it. Otherwise, we just verify and propagate the proof.
         """
-        height: Optional[uint32] = None
-        pot_tuple = (
+        height: Optional[uint32] = self.block_store.get_height_proof_of_time(
             respond_compact_proof_of_time.proof.challenge_hash,
             respond_compact_proof_of_time.proof.number_of_iterations,
         )
-        if pot_tuple in self.blockchain.pot_to_chain_height:
-            height = self.blockchain.pot_to_chain_height[pot_tuple]
         if height is None:
             self.log.info("No block for compact proof of time.")
             return
         if not respond_compact_proof_of_time.proof.is_valid(
             self.constants["DISCRIMINANT_SIZE_BITS"]
         ):
-            self.log.info("Invalid compact proof of time.")
+            self.log.error("Invalid compact proof of time.")
             return
 
         blocks: List[FullBlock] = await self.block_store.get_blocks_at([height])

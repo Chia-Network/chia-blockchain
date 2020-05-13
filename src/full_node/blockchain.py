@@ -80,9 +80,6 @@ class Blockchain:
     block_store: BlockStore
     # Coinbase freeze period
     coinbase_freeze: uint32
-    # Map (challenge_hash, iters) to height.
-    pot_to_chain_height: Dict[Tuple[bytes32, uint64], uint32]
-
     # Lock to prevent simultaneous reads and writes
     lock: asyncio.Lock
 
@@ -107,7 +104,6 @@ class Blockchain:
         self.block_store = block_store
         self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
         self.coinbase_freeze = self.constants["COINBASE_FREEZE_PERIOD"]
-        self.pot_to_chain_height = {}
         await self._load_chain_from_store()
         return self
 
@@ -132,6 +128,8 @@ class Blockchain:
                     raise RuntimeError(f"Invalid genesis block {self.genesis}")
             return
 
+        await self.block_store.init_challenge_hashes()
+
         # Set the state (lca block and tips)
         self.lca_block = lca_db
         self.tips = tips_db
@@ -142,7 +140,21 @@ class Blockchain:
             heights = [b.height for b in cur]
             i = heights.index(max(heights))
             self.headers[cur[i].header_hash] = cur[i]
-            cur[i] = headers_db[cur[i].prev_header_hash]
+            prev: Header = headers_db[cur[i].prev_header_hash]
+
+            try:
+                challenge_hash = self.block_store.get_challenge_hash(
+                    cur[i].header_hash
+                )
+                self.block_store.add_proof_of_time(
+                    challenge_hash,
+                    cur[i].data.total_iters - prev.data.total_iters,
+                    cur[i].data.height,
+                )
+            except Exception as e:
+                log.error(f"Database corruption: {type(e)} {e}")
+
+            cur[i] = prev
 
         # Consistency check, tips should have an LCA equal to the DB LCA
         assert cur[0] == self.lca_block
@@ -152,22 +164,21 @@ class Blockchain:
         while True:
             self.headers[cur_b.header_hash] = cur_b
             self.height_to_hash[cur_b.height] = cur_b.header_hash
-            full_block: Optional[FullBlock] = await self.block_store.get_block(
-                cur_b.header_hash
-            )
-            if full_block is not None:
-                assert full_block.proof_of_time is not None
-                self.pot_to_chain_height[
-                    (
-                        full_block.proof_of_time.challenge_hash,
-                        full_block.proof_of_time.number_of_iterations,
-                    )
-                ] = full_block.height
-            else:
-                log.error("Can't retrieve block from memory by header hash.")
             if cur_b.height == 0:
                 break
-            cur_b = headers_db[cur_b.prev_header_hash]
+            prev_b: Header = headers_db[cur_b.prev_header_hash]
+            try:
+                challenge_hash = self.block_store.get_challenge_hash(
+                    cur_b
+                )
+                self.block_store.add_proof_of_time(
+                    challenge_hash,
+                    cur_b.data.total_iters - prev_b.data.total_iters,
+                    cur_b.data.height,
+                )
+            except Exception as e:
+                log.error(f"Database corruption: {type(e)} {e}")
+            cur_b = prev_b
 
         # Asserts that the DB genesis block is correct
         assert cur_b == self.genesis.header
@@ -543,13 +554,12 @@ class Blockchain:
 
         # Always immediately add the block to the database, after updating blockchain state
         await self.block_store.add_block(block)
-        if block.proof_of_time is not None:
-            self.pot_to_chain_height[
-                (
-                    block.proof_of_time.challenge_hash,
-                    block.proof_of_time.number_of_iterations,
-                )
-            ] = block.height
+        assert block.proof_of_time is not None
+        self.block_store.add_proof_of_time(
+            block.proof_of_time.challenge_hash,
+            block.proof_of_time.number_of_iterations,
+            block.height,
+        )
         res, header = await self._reconsider_heads(block.header, genesis, sync_mode)
         if res:
             return ReceiveBlockResult.ADDED_TO_HEAD, header, None
