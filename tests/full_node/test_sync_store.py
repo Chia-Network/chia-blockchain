@@ -57,7 +57,3 @@ class TestStore:
         # add/get potential tip, get potential tips num
         db.add_potential_tip(blocks[6])
         assert blocks[6] == db.get_potential_tip(blocks[6].header_hash)
-
-        # Add potential block
-        await db.add_potential_block(genesis)
-        assert genesis == await db.get_potential_block(uint32(0))
