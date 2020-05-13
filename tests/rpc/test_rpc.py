@@ -48,7 +48,7 @@ class TestRpc:
             client = await RpcClient.create(test_rpc_port)
             state = await client.get_blockchain_state()
             assert state["lca"].header_hash is not None
-            assert not state["sync_mode"]
+            assert not state["sync"]["sync_mode"]
             assert len(state["tips"]) > 0
             assert state["difficulty"] > 0
             assert state["ips"] > 0

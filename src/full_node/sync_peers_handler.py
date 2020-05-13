@@ -75,9 +75,11 @@ class SyncPeersHandler:
         """
         Returns True iff all required blocks have been downloaded.
         """
+        log.warning("Done?")
         for height in range(self.fully_validated_up_to + 1, len(self.header_hashes)):
             if not self.potential_blocks_received[uint32(height)].is_set():
                 # Some blocks have not been received yet
+                log.warning("not done...")
                 return False
         # We have received all blocks
         return True

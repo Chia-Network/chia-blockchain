@@ -146,6 +146,7 @@ class SyncHeaderBlocksProcessor:
         for batch_start_height in range(
             self.fork_height + 1, self.tip_height + 1, self.BATCH_SIZE
         ):
+            log.warning("looping in the processor external")
             total_time_slept = 0
             batch_end_height = min(
                 batch_start_height + self.BATCH_SIZE - 1, self.tip_height
@@ -156,7 +157,9 @@ class SyncHeaderBlocksProcessor:
                     batch_start_height = height + 1
 
             while True:
+                log.warning("looping in the processor")
                 if self._shut_down:
+                    log.warning("shut down in the processor")
                     return
                 if total_time_slept > self.TOTAL_TIMEOUT:
                     raise TimeoutError("Took too long to fetch header blocks")

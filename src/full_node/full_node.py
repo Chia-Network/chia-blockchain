@@ -409,13 +409,17 @@ class FullNode:
         )
 
         while not self.sync_peers_handler.done():
+            self.log.warning("1. looping")
             # Periodically checks for done, timeouts, shutdowns, new peers or disconnected peers.
             if self._shut_down:
+                self.log.warning("2. shut down")
                 header_block_processor.shut_down()
                 break
             if header_block_processor_task.done():
+                self.log.warning("3. done processing")
                 break
             async for msg in self.sync_peers_handler.monitor_timeouts():
+                self.log.warning("4. yielding msg")
                 yield msg  # Disconnects from peers that are not responding
 
             cur_peers = [
@@ -426,18 +430,22 @@ class FullNode:
                     and con.connection_type == NodeType.FULL_NODE
                 )
             ]
+            self.log.warning("5. checkinh new peers")
             for node_id in cur_peers:
                 if node_id not in peers:
                     self.sync_peers_handler.new_node_connected(node_id)
+            self.log.warning("6. checkinh old peers")
             for node_id in peers:
                 if node_id not in cur_peers:
                     # Disconnected peer, removes requests that are being sent to it
                     self.sync_peers_handler.node_disconnected(node_id)
             peers = cur_peers
 
+            self.log.warning("7. reqquest sets")
             async for msg in self.sync_peers_handler._add_to_request_sets():
                 yield msg  # Send more requests if we can
 
+            self.log.warning("8. sleep")
             await asyncio.sleep(2)
 
         # Awaits for all blocks to be processed, a timeout to happen, or the node to shutdown
