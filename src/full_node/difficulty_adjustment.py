@@ -35,9 +35,6 @@ def get_next_difficulty(
     elif next_height % constants["DIFFICULTY_EPOCH"] != constants["DIFFICULTY_DELAY"]:
         # Not at a point where difficulty would change
         prev_block: Header = headers[block.prev_header_hash]
-        assert prev_block is not None
-        if prev_block is None:
-            raise Exception("Previous block is invalid.")
         return uint64(block.weight - prev_block.weight)
 
     #       old diff                  curr diff       new diff
