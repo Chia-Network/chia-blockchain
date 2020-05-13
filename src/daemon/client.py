@@ -1,8 +1,5 @@
-import asyncio
-
 import aiohttp
 
-from src.proxy.client import request_response_proxy
 from src.util.path import mkdir
 
 
@@ -22,7 +19,7 @@ def socket_server_path(root_path):
     return root_path / "run" / "start-daemon.socket"
 
 
-async def client_rw_for_start_daemon(root_path, use_unix_socket):
+def kwargs_for_start_daemon(root_path, use_unix_socket):
     """
     Connect to the unix or TCP socket, and return the reader & writer.
     """
@@ -30,12 +27,10 @@ async def client_rw_for_start_daemon(root_path, use_unix_socket):
     mkdir(path.parent)
     try:
         if use_unix_socket:
-            r, w = await asyncio.open_unix_connection(path)
-        else:
-            with open(path) as f:
-                port = int(f.readline())
-            r, w = await asyncio.open_connection("127.0.0.1", port=port)
-        return r, w
+            return dict(path=path)
+        with open(path) as f:
+            port = int(f.readline())
+        return dict(host="127.0.0.1", port=port)
     except Exception as ex:
         pass
 
@@ -63,7 +58,7 @@ class DaemonProxy:
 
     async def is_running(self, service_name):
         uri = f"/daemon/service/is_running/?service={service_name}"
-        return await self._get(uri)
+        return (await self._get(uri)) == "True"
 
     async def ping(self):
         uri = f"/daemon/ping/"
@@ -78,10 +73,8 @@ async def connect_to_daemon(root_path, use_unix_socket):
     """
     Connect to the local daemon.
     """
-    return DaemonProxy(host='127.0.0.1', port=8080)
-
-    reader, writer = await client_rw_for_start_daemon(root_path, use_unix_socket)
-    return request_response_proxy(reader, writer)
+    kwargs = kwargs_for_start_daemon(root_path, should_use_unix_socket())
+    return DaemonProxy(**kwargs)
 
 
 async def connect_to_daemon_and_validate(root_path):
