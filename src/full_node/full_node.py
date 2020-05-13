@@ -343,6 +343,7 @@ class FullNode:
         sleep_interval = 10
         total_time_slept = 0
 
+        # TODO: verify weight here once we have the correct protocol messages (interative flyclient)
         while True:
             if total_time_slept > 30:
                 raise TimeoutError("Took too long to fetch header hashes.")
