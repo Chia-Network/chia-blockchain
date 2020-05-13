@@ -23,6 +23,7 @@ from .client import (
     socket_server_path,
     should_use_unix_socket,
 )
+from .http import create_server_for_daemon
 
 log = logging.getLogger(__name__)
 
@@ -239,6 +240,9 @@ async def async_run_daemon(root_path):
     daemon = Daemon(root_path, listen_socket)
 
     print(f"daemon: listening on {where}", flush=True)
+
+    task = create_server_for_daemon(daemon)
+    f = asyncio.ensure_future(task)
 
     return await api_server(rws_aiter, daemon)
 
