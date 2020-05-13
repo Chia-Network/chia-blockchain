@@ -149,7 +149,7 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
     if "starting_height" in dic:
         config["starting_height"] = dic["starting_height"]
 
-    keychain = Keychain.create(key_seed.hex(),True)
+    keychain = Keychain.create(key_seed.hex(), True)
     keychain.set_wallet_seed(key_seed)
     test_constants_copy = test_constants.copy()
     for k in dic.keys():

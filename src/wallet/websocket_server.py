@@ -44,6 +44,7 @@ TIMEOUT = 30
 
 log = logging.getLogger(__name__)
 
+
 def format_response(command: str, response_data: Dict[str, Any]):
     """
     Formats the response into standard format used between renderer.js and here
@@ -67,7 +68,6 @@ class WebSocketServer:
         if self.config["testing"] is True:
             self.config["database_path"] = "test_db_wallet.db"
 
-
     async def start(self):
         self.log.info("Starting Websocket Server")
 
@@ -75,8 +75,12 @@ class WebSocketServer:
             asyncio.ensure_future(self.stop())
 
         try:
-            asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
-            asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
+            asyncio.get_running_loop().add_signal_handler(
+                signal.SIGINT, master_close_cb
+            )
+            asyncio.get_running_loop().add_signal_handler(
+                signal.SIGTERM, master_close_cb
+            )
         except NotImplementedError:
             self.log.info("Not implemented")
 
@@ -90,7 +94,6 @@ class WebSocketServer:
         self.log.info("Waiting webSocketServer closure")
         await self.websocket_server.wait_closed()
         self.log.info("webSocketServer closed")
-
 
     async def start_wallet(self) -> bool:
         private_key = self.keychain.get_wallet_key()
@@ -107,7 +110,12 @@ class WebSocketServer:
             log.info(f"Not Testing")
             self.wallet_node = await WalletNode.create(self.config, self.keychain)
 
-        self.trade_manager = await TradeManager.create(self.wallet_node.wallet_state_manager)
+        if self.wallet_node is None:
+            return False
+
+        self.trade_manager = await TradeManager.create(
+            self.wallet_node.wallet_state_manager
+        )
         self.wallet_node.wallet_state_manager.set_callback(self.state_changed_callback)
 
         net_config = load_config(self.root_path, "config.yaml")
@@ -129,7 +137,8 @@ class WebSocketServer:
 
         if "full_node_peer" in self.config:
             full_node_peer = PeerInfo(
-                self.config["full_node_peer"]["host"], self.config["full_node_peer"]["port"]
+                self.config["full_node_peer"]["host"],
+                self.config["full_node_peer"]["port"],
             )
 
             self.log.info(f"Connecting to full node peer at {full_node_peer}")
@@ -366,7 +375,7 @@ class WebSocketServer:
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
         name: str = await wallet.get_name()
-        response = {"wallet_id": wallet_id,"name": name}
+        response = {"wallet_id": wallet_id, "name": name}
         return await websocket.send(format_response(response_api, response))
 
     async def cc_generate_zero_val(self, websocket, request, response_api):
@@ -610,7 +619,7 @@ class WebSocketServer:
                 else:
                     tb = traceback.format_exc()
                     self.log.error(f"Error while handling message: {tb}")
-                    error = {"success": False, "error": f"{e}" }
+                    error = {"success": False, "error": f"{e}"}
                     if command is None:
                         command = "UnknownCommand"
                     await websocket.send(format_response(command, error))
@@ -715,7 +724,6 @@ async def start_websocket_server():
     """
     Starts WalletNode, WebSocketServer, and ChiaServer
     """
-
 
     setproctitle("chia-wallet")
     keychain = Keychain.create(testing=False)

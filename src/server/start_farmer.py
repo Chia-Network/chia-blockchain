@@ -14,7 +14,6 @@ from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.util.config import load_config, load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.cmds.init import check_keys
 from src.util.logging import initialize_logging
 from src.util.setproctitle import setproctitle
 

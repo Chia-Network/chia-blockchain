@@ -206,9 +206,7 @@ class Keychain:
 
         wallet_sk = ExtendedPrivateKey.from_seed(wallet_seed)
         wallet_pk = wallet_sk.public_child(0).get_public_key()
-        wallet_target = create_puzzlehash_for_pk(
-            BLSPublicKey(bytes(wallet_pk))
-        )
+        wallet_target = create_puzzlehash_for_pk(BLSPublicKey(bytes(wallet_pk)))
         return wallet_target
 
     def get_pool_target(self) -> Optional[bytes32]:
@@ -222,16 +220,18 @@ class Keychain:
 
         wallet_sk = ExtendedPrivateKey.from_seed(wallet_seed)
         wallet_pk = wallet_sk.public_child(0).get_public_key()
-        wallet_target = create_puzzlehash_for_pk(
-            BLSPublicKey(bytes(wallet_pk))
-        )
+        wallet_target = create_puzzlehash_for_pk(BLSPublicKey(bytes(wallet_pk)))
         return wallet_target
 
     def set_pool_target(self, target: bytes32):
-        keyring.set_password(self.get_service(), self.get_pool_target_user(), target.hex())
+        keyring.set_password(
+            self.get_service(), self.get_pool_target_user(), target.hex()
+        )
 
     def set_wallet_target(self, target: bytes32):
-        keyring.set_password(self.get_service(), self.get_wallet_target_user(), target.hex())
+        keyring.set_password(
+            self.get_service(), self.get_wallet_target_user(), target.hex()
+        )
 
     def set_pool_key_raw(self, key_0: bytes, key_1: bytes):
         keyring.set_password(self.get_service(), self.get_pool_user_raw(0), key_0.hex())
@@ -259,7 +259,6 @@ class Keychain:
 
         default_pool = std_hash(std_hash(std_hash(wallet_seed)))
         return default_pool
-
 
     def safe_delete(self, service: str, user: str):
         try:

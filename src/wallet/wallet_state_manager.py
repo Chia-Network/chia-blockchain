@@ -79,6 +79,7 @@ class WalletStateManager:
     main_wallet: Wallet
     wallets: Dict[uint32, Any]
     private_key: ExtendedPrivateKey
+    keychain: Keychain
 
     @staticmethod
     async def create(

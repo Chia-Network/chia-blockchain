@@ -171,7 +171,9 @@ class Farmer:
         and request a pool partial, a header signature, or both, if the proof is good enough.
         """
 
-        if response.proof.pool_pubkey not in [sk.get_public_key() for sk in self.pool_keys]:
+        if response.proof.pool_pubkey not in [
+            sk.get_public_key() for sk in self.pool_keys
+        ]:
             raise RuntimeError("Pool pubkey not in list of approved keys")
 
         challenge_hash: bytes32 = self.harvester_responses_challenge[
@@ -208,8 +210,7 @@ class Farmer:
 
         if estimate_secs < self.config["pool_share_threshold"]:
             request1 = harvester_protocol.RequestPartialProof(
-                response.quality_string,
-                self.wallet_target,
+                response.quality_string, self.wallet_target,
             )
             yield OutboundMessage(
                 NodeType.HARVESTER,
@@ -225,11 +226,7 @@ class Farmer:
 
             coinbase, signature = self.coinbase_rewards[new_proof_height]
             request2 = farmer_protocol.RequestHeaderHash(
-                challenge_hash,
-                coinbase,
-                signature,
-                self.wallet_target,
-                response.proof,
+                challenge_hash, coinbase, signature, self.wallet_target, response.proof,
             )
 
             yield OutboundMessage(
