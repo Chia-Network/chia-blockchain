@@ -390,14 +390,14 @@ class FullNode:
         peers = [
             con.node_id
             for con in self.server.global_connections.get_connections()
-            if con.node_id is not None
+            if (con.node_id is not None and con.connection_type == NodeType.FULL_NODE)
         ]
 
+        assert self.header_blockchain is not None
         self.sync_peers_handler = SyncPeersHandler(
-            self.sync_store, peers, fork_point_height, self.blockchain, True
+            self.sync_store, peers, fork_point_height, self.header_blockchain, True
         )
         # Start processing header blocks that we have received (no block yet)
-        assert self.header_blockchain is not None
         header_block_processor = SyncHeaderBlocksProcessor(
             self.sync_store,
             fork_point_height,
@@ -421,7 +421,10 @@ class FullNode:
             cur_peers = [
                 con.node_id
                 for con in self.server.global_connections.get_connections()
-                if con.node_id is not None
+                if (
+                    con.node_id is not None
+                    and con.connection_type == NodeType.FULL_NODE
+                )
             ]
             for node_id in cur_peers:
                 if node_id not in peers:
@@ -480,7 +483,10 @@ class FullNode:
             cur_peers = [
                 con.node_id
                 for con in self.server.global_connections.get_connections()
-                if con.node_id is not None
+                if (
+                    con.node_id is not None
+                    and con.connection_type == NodeType.FULL_NODE
+                )
             ]
             for node_id in cur_peers:
                 if node_id not in peers:

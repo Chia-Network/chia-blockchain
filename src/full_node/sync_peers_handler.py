@@ -4,6 +4,7 @@ import time
 from typing import Any, AsyncGenerator, Dict, List, Union
 
 from src.full_node.blockchain import Blockchain
+from src.full_node.header_blockchain import HeaderBlockchain
 from src.full_node.sync_store import SyncStore
 from src.protocols import full_node_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
@@ -39,7 +40,7 @@ class SyncPeersHandler:
         sync_store: SyncStore,
         peers: List[bytes32],
         fork_height: uint32,
-        blockchain: Blockchain,
+        blockchain: Union[Blockchain, HeaderBlockchain],
         headers_only: bool,
     ):
         self.sync_store = sync_store
@@ -94,7 +95,9 @@ class SyncPeersHandler:
                     remove_node_ids.append(node_id)
         for rnid in remove_node_ids:
             if rnid in self.current_outbound_sets:
-                log.warning(f"Timeout receiving block, closing the connection")
+                log.warning(
+                    f"Timeout receiving block, closing connection with node {rnid}"
+                )
                 self.current_outbound_sets.pop(rnid, None)
                 yield OutboundMessage(
                     NodeType.FULL_NODE, Message("", None), Delivery.CLOSE, rnid
