@@ -148,7 +148,7 @@ class Blockchain:
                 )
                 self.block_store.add_proof_of_time(
                     challenge_hash,
-                    cur[i].data.total_iters - prev.data.total_iters,
+                    uint64(cur[i].data.total_iters - prev.data.total_iters),
                     cur[i].data.height,
                 )
             except Exception as e:
@@ -173,7 +173,7 @@ class Blockchain:
                 )
                 self.block_store.add_proof_of_time(
                     challenge_hash,
-                    cur_b.data.total_iters - prev_b.data.total_iters,
+                    uint64(cur_b.data.total_iters - prev_b.data.total_iters),
                     cur_b.data.height,
                 )
             except Exception as e:

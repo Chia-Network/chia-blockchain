@@ -150,7 +150,7 @@ class BlockStore:
         await cursor.close()
         return {bytes.fromhex(row[0]): bytes.fromhex(row[1]) for row in rows}
 
-    async def init_challenge_hashes(self) -> Dict[bytes32, bytes32]:
+    async def init_challenge_hashes(self) -> None:
         cursor = await self.db.execute("SELECT header_hash, challenge_hash from challenge_hash")
         rows = await cursor.fetchall()
         await cursor.close()
