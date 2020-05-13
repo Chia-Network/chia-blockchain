@@ -165,6 +165,7 @@ class SyncPeersHandler:
         outbound_sets_list = list(self.current_outbound_sets.items())
         outbound_sets_list.sort(key=lambda x: len(x[1]))
         index = 0
+        to_yield: List[Any] = []
         for height in to_send:
             # Find a the next peer with an empty slot. There must be an empty slot: to_send
             # includes up to free_slots things, and current_outbound sets cannot change since there is
@@ -181,22 +182,28 @@ class SyncPeersHandler:
 
             # yields the request
             if self.headers_only:
-                request_sync = full_node_protocol.RequestHeaderBlock(
-                    height, self.header_hashes[height]
+                to_yield.append(
+                    full_node_protocol.RequestHeaderBlock(
+                        height, self.header_hashes[height]
+                    )
                 )
+            else:
+                to_yield.append(
+                    full_node_protocol.RequestBlock(height, self.header_hashes[height])
+                )
+
+        for request in to_yield:
+            if self.headers_only:
                 yield OutboundMessage(
                     NodeType.FULL_NODE,
-                    Message("request_header_block", request_sync),
+                    Message("request_header_block", request),
                     Delivery.SPECIFIC,
                     node_id,
                 )
             else:
-                request_sync_block = full_node_protocol.RequestBlock(
-                    height, self.header_hashes[height]
-                )
                 yield OutboundMessage(
                     NodeType.FULL_NODE,
-                    Message("request_block", request_sync_block),
+                    Message("request_block", request),
                     Delivery.SPECIFIC,
                     node_id,
                 )
