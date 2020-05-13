@@ -1,8 +1,6 @@
 import logging
 import time
 from typing import Dict, List, Optional, Tuple
-import asyncio
-import concurrent
 import blspy
 
 from src.consensus.block_rewards import calculate_block_reward
@@ -238,30 +236,7 @@ async def validate_finished_block_header(
     return None
 
 
-async def pre_validate_finished_block_headers(
-    constants: Dict,
-    pool: concurrent.futures.ProcessPoolExecutor,
-    blocks: List[FullBlock],
-) -> List[Tuple[bool, Optional[bytes32]]]:
-    futures = []
-
-    # Pool of workers to validate blocks concurrently
-    for block in blocks:
-        futures.append(
-            asyncio.get_running_loop().run_in_executor(
-                pool, _pre_validate_finished_block_header, constants, bytes(block),
-            )
-        )
-    results = await asyncio.gather(*futures)
-
-    for i, (val, pos) in enumerate(results):
-        if pos is not None:
-            pos = bytes32(pos)
-        results[i] = val, pos
-    return results
-
-
-def _pre_validate_finished_block_header(constants: Dict, data: bytes):
+def pre_validate_finished_block_header(constants: Dict, data: bytes):
     """
     Validates all parts of block that don't need to be serially checked
     """

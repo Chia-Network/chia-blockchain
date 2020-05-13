@@ -14,7 +14,7 @@ from src.consensus.block_rewards import calculate_base_fee
 from src.full_node.block_header_validation import (
     validate_unfinished_block_header,
     validate_finished_block_header,
-    pre_validate_finished_block_headers,
+    pre_validate_finished_block_header,
 )
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
@@ -77,6 +77,9 @@ class Blockchain:
     # Used to verify blocks in parallel
     pool: concurrent.futures.ProcessPoolExecutor
 
+    # Whether blockchain is shut down or not
+    _shut_down: bool
+
     # Lock to prevent simultaneous reads and writes
     lock: asyncio.Lock
 
@@ -103,12 +106,14 @@ class Blockchain:
         self.headers = {}
         self.coin_store = coin_store
         self.block_store = block_store
+        self._shut_down = False
         self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
         self.coinbase_freeze = self.constants["COINBASE_FREEZE_PERIOD"]
         await self._load_chain_from_store()
         return self
 
     def shut_down(self):
+        self._shut_down = True
         self.pool.shutdown(wait=True)
 
     async def _load_chain_from_store(self,) -> None:
@@ -492,9 +497,26 @@ class Blockchain:
     async def pre_validate_blocks_multiprocessing(
         self, blocks: List[FullBlock]
     ) -> List[Tuple[bool, Optional[bytes32]]]:
-        return await pre_validate_finished_block_headers(
-            self.constants, self.pool, blocks
-        )
+        futures = []
+        # Pool of workers to validate blocks concurrently
+        for block in blocks:
+            if self._shut_down:
+                return [(False, None) for _ in range(len(blocks))]
+            futures.append(
+                asyncio.get_running_loop().run_in_executor(
+                    self.pool,
+                    pre_validate_finished_block_header,
+                    self.constants,
+                    bytes(block),
+                )
+            )
+        results = await asyncio.gather(*futures)
+
+        for i, (val, pos) in enumerate(results):
+            if pos is not None:
+                pos = bytes32(pos)
+            results[i] = val, pos
+        return results
 
     async def validate_unfinished_block(
         self, block: FullBlock, prev_full_block: FullBlock

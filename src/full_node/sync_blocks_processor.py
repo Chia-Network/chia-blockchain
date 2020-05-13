@@ -87,6 +87,9 @@ class SyncBlocksProcessor:
                 blocks
             )
 
+            if self._shut_down:
+                return
+
             for index, block in enumerate(blocks):
                 assert block is not None
 
