@@ -69,6 +69,7 @@ async def async_main():
             # Called by the UI, when node is closed, or when a signal is sent
             log.info("Closing all connections, and server...")
             server.close_all()
+            full_node._close()
             server_closed = True
 
     if config["start_rpc_server"]:
@@ -90,7 +91,7 @@ async def async_main():
     log.info("Closed all node servers.")
 
     # Stops the full node and closes DBs
-    await full_node._shutdown()
+    await full_node._await_closed()
 
     # Waits for the rpc server to close
     if rpc_cleanup is not None:

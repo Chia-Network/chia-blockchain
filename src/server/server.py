@@ -326,6 +326,11 @@ class ChiaServer:
                     # Does not ban the peer, this is just a graceful close of connection.
                     self.global_connections.close(connection, True)
                     continue
+                if connection.is_closing():
+                    self.log.info(
+                        f"Closing, so will not send {message.function} to peer {connection.get_peername()}"
+                    )
+                    continue
                 self.log.info(
                     f"-> {message.function} to peer {connection.get_peername()}"
                 )
@@ -407,6 +412,10 @@ class ChiaServer:
             connection.node_id = inbound_handshake.node_id
             connection.peer_server_port = int(inbound_handshake.server_port)
             connection.connection_type = inbound_handshake.node_type
+
+            if self._srwt_aiter.is_stopped():
+                raise Exception("No longer accepting handshakes, closing.")
+
             if not self.global_connections.add(connection):
                 raise ProtocolError(Err.DUPLICATE_CONNECTION, [False])
 
@@ -461,12 +470,18 @@ class ChiaServer:
             self.log.warning(
                 f"Connection error by peer {connection.get_peername()}, closing connection."
             )
+        except ssl.SSLError as e:
+            self.log.warning(
+                f"SSLError {e} in connection with peer {connection.get_peername()}."
+            )
         except (
             concurrent.futures._base.CancelledError,
             OSError,
             TimeoutError,
             asyncio.TimeoutError,
         ) as e:
+            tb = traceback.format_exc()
+            self.log.error(tb)
             self.log.error(
                 f"Timeout/OSError {e} in connection with peer {connection.get_peername()}, closing connection."
             )
@@ -566,6 +581,28 @@ class ChiaServer:
                             yield (peer, outbound_message.message)
                     else:
                         yield (peer, outbound_message.message)
+
+        elif outbound_message.delivery_method == Delivery.SPECIFIC:
+            # Send to a specific peer, by node_id, assuming the NodeType matches.
+            if outbound_message.specific_peer_node_id is None:
+                return
+            for peer in self.global_connections.get_connections():
+                if (
+                    peer.connection_type == outbound_message.peer_type
+                    and peer.node_id == outbound_message.specific_peer_node_id
+                ):
+                    yield (peer, outbound_message.message)
+
         elif outbound_message.delivery_method == Delivery.CLOSE:
-            # Close the connection but don't ban the peer
-            yield (connection, None)
+            if outbound_message.specific_peer_node_id is None:
+                # Close the connection but don't ban the peer
+                if connection.connection_type == outbound_message.peer_type:
+                    yield (connection, None)
+            else:
+                for peer in self.global_connections.get_connections():
+                    # Close the connection with the specific peer
+                    if (
+                        peer.connection_type == outbound_message.peer_type
+                        and peer.node_id == outbound_message.specific_peer_node_id
+                    ):
+                        yield (peer, outbound_message.message)

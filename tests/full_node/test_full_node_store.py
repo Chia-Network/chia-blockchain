@@ -60,11 +60,6 @@ class TestFullNodeStore:
         db = await FullNodeStore.create(connection)
         db_2 = await FullNodeStore.create(connection_2)
         try:
-            # Save/get sync
-            for sync_mode in (False, True):
-                db.set_sync_mode(sync_mode)
-                assert sync_mode == db.get_sync_mode()
-
             # Add/get candidate block
             assert db.get_candidate_block(0) is None
             partial = (

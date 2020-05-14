@@ -111,7 +111,7 @@ async def show_async(args, parser):
                 )
             else:
                 print("Current Blockchain Status. Full Node Synced")
-            print("Current least common ancestor:\n    ", lca_block.header_hash)
+            print("Latest Common Ancestor:\n    ", lca_block.header_hash)
             lca_time = struct_time(localtime(lca_block.data.timestamp))
             # Should auto format the align right of LCA height
             print(

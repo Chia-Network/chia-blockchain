@@ -51,9 +51,10 @@ class Connection:
         self.bytes_read = 0
         self.bytes_written = 0
         self.last_message_time: float = 0
+        self._cached_peer_name = self.writer.get_extra_info("peername")
 
     def get_peername(self):
-        return self.writer.get_extra_info("peername")
+        return self._cached_peer_name
 
     def get_socket(self):
         return self.writer.get_extra_info("socket")
@@ -65,6 +66,9 @@ class Connection:
 
     def get_last_message_time(self) -> float:
         return self.last_message_time
+
+    def is_closing(self) -> bool:
+        return self.writer.is_closing()
 
     async def send(self, message: Message):
         encoded: bytes = cbor.dumps({"f": message.function, "d": message.data})
