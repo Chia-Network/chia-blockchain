@@ -19,9 +19,9 @@ def socket_server_path(root_path):
     return root_path / "run" / "start-daemon.socket"
 
 
-def kwargs_for_start_daemon(root_path, use_unix_socket):
+def uri_info_for_start_daemon(root_path, use_unix_socket):
     """
-    Connect to the unix or TCP socket, and return the reader & writer.
+    Return the URI prefix and the path to the socket file.
     """
     path = socket_server_path(root_path)
     mkdir(path.parent)
@@ -77,7 +77,7 @@ async def connect_to_daemon(root_path, use_unix_socket):
     """
     Connect to the local daemon.
     """
-    prefix, unix_socket_path = kwargs_for_start_daemon(root_path, should_use_unix_socket())
+    prefix, unix_socket_path = uri_info_for_start_daemon(root_path, should_use_unix_socket())
     return DaemonProxy(prefix, unix_socket_path)
 
 

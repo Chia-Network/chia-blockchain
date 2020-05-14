@@ -63,11 +63,6 @@ def launch_service(root_path, service):
     return process, pid_path
 
 
-# GET http://127.0.0.1:PORT/daemon/service/SERVICE_NAME?m=start => start service
-# GET http://127.0.0.1:PORT/daemon/service/SERVICE_NAME?m=stop => stop service
-# GET http://127.0.0.1:PORT/daemon/service/ => list services
-
-
 async def kill_service(root_path, services, service_name, delay_before_kill=15):
     process = services.get(service_name)
     if process is None:
@@ -201,9 +196,10 @@ async def async_run_daemon(root_path):
         print("daemon: already launching")
         return 2
 
-    lockfile.close()
-
     app = create_server_for_daemon(root_path)
+
+    path = socket_server_path(root_path)
+    mkdir(path.parent)
 
     port = 60191
     while True:
@@ -221,6 +217,7 @@ async def async_run_daemon(root_path):
                 where = port
                 kwargs = dict(port=port, host="127.0.0.1")
             task = web._run_app(app, print=None, **kwargs)
+            lockfile.close()
             print(f"daemon: listening on {where}", flush=True)
             await task
         except Exception as ex:
