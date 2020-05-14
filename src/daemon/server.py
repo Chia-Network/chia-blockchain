@@ -6,8 +6,9 @@ import sys
 
 try:
     import fcntl
+    has_fcntl = True
 except ImportError:
-    fcntl = None
+    has_fcntl = False
 
 from aiohttp import web
 
@@ -167,7 +168,7 @@ def singleton(lockfile, text="semaphore"):
     Open a lockfile exclusively.
     """
     try:
-        if fcntl:
+        if has_fcntl:
             f = open(lockfile, "w")
             fcntl.lockf(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
         else:
