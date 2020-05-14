@@ -53,10 +53,8 @@ class RpcApiHandler:
         """
         tips: List[Header] = self.full_node.blockchain.get_current_tips()
         lca: Header = self.full_node.blockchain.lca_block
-        sync_mode: bool = self.full_node.full_node_store.get_sync_mode()
-        difficulty: uint64 = self.full_node.blockchain.get_next_difficulty(
-            lca.header_hash
-        )
+        sync_mode: bool = self.full_node.sync_store.get_sync_mode()
+        difficulty: uint64 = self.full_node.blockchain.get_next_difficulty(lca)
         lca_block = await self.full_node.block_store.get_block(lca.header_hash)
         if lca_block is None:
             raise web.HTTPNotFound()
@@ -69,12 +67,24 @@ class RpcApiHandler:
         tip_hashes = []
         for tip in tips:
             tip_hashes.append(tip.header_hash)
+        if sync_mode and self.full_node.sync_peers_handler is not None:
+            sync_tip_height = len(self.full_node.sync_store.get_potential_hashes())
+            sync_progress_height = (
+                self.full_node.sync_peers_handler.fully_validated_up_to
+            )
+        else:
+            sync_tip_height = 0
+            sync_progress_height = uint32(0)
 
         response = {
             "tips": tips,
             "tip_hashes": tip_hashes,
             "lca": lca,
-            "sync_mode": sync_mode,
+            "sync": {
+                "sync_mode": sync_mode,
+                "sync_tip_height": sync_tip_height,
+                "sync_progress_height": sync_progress_height,
+            },
             "difficulty": difficulty,
             "ips": ips,
             "min_iters": min_iters,
@@ -236,7 +246,7 @@ class RpcApiHandler:
         tip_weights = [tip.weight for tip in tips]
         i = tip_weights.index(max(tip_weights))
         max_tip: Header = tips[i]
-        if self.full_node.full_node_store.get_sync_mode():
+        if self.full_node.sync_store.get_sync_mode():
             potential_tips = self.full_node.sync_store.get_potential_tips_tuples()
             for _, pot_block in potential_tips:
                 if pot_block.weight > max_tip.weight:

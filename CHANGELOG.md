@@ -11,10 +11,13 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 
 ### Changed
 - chiapos is now easier to compile with MSVC.
+- Syncing is now faster and uses less memory
 
 ### Fixed
 - Build status shield layout fixed in README.md
 - Relic and thus blspy would crash on processors older than Haswell as they don't support lzc.
+- chia-check-plots works with plot root (the same as harvester)
+- Some networking errors are no longer printed
 
 ## [1.0beta5] aka Beta 1.5 - 2020-05-05
 ### Added
@@ -41,7 +44,7 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 - Currently, there is no way to restore a Coloured Coin Wallet.
 
 ## [1.0beta4] aka Beta 1.4 - 2020-04-29
-### Added  
+### Added
 - This release adds Coloured coin support with offers. Yes that is the correct spelling. Coloured coins allow you to issue a coin, token, or asset with nearly unlimited issuance plans and functionality. They support inner smart transactions so they can inherit any of the other functionality you can implement in Chialisp. Offers are especially cool as they create a truly decentralized exchange capability. Read much more about them in Bram's [blog post on Coloured coins](https://chia.net/2020/04/29/coloured-coins-launch.en.html).
 - This release adds support for native Windows via a (mostly) automated installer and MacOS Mojave. Windows still requires some PowerShell command line use. You should expect ongoing improvements in ease of install and replication of the command line tools in the GUI. Again huge thanks to @dkackman for continued Windows installer development. Native Windows is currently slightly slower than the same version running in WSL 2 on the same machine for both block verification and plotting.
 - We made some speed improvements that positively affected all platforms while trying to increase plotting speed in Windows.

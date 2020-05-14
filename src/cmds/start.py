@@ -29,7 +29,6 @@ def make_parser(parser):
 
 
 def start(args, parser):
-
     processes: List = []
     for service in services_for_groups(args.group):
         if pid_path_for_service(args.root_path, service).is_file():
@@ -57,14 +56,14 @@ def start(args, parser):
             process.wait()
     except KeyboardInterrupt:
         for process, pid_path in processes:
-            process.kill()
+            process.terminate()
     for process, pid_path in processes:
         try:
             process.wait()
             pid_path_killed = pid_path.with_suffix(".pid-killed")
             os.rename(pid_path, pid_path_killed)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Exception in chia start {e} {type(e)}")
     if len(processes) > 0:
         print("chia start complete")
     return 0

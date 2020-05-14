@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 
 
 def load_plots(
-    config_file: Dict, plot_config_file: Dict, pool_pubkeys: List[PublicKey]
+    config_file: Dict, plot_config_file: Dict, pool_pubkeys: Optional[List[PublicKey]]
 ) -> Dict[Path, DiskProver]:
     provers: Dict[Path, DiskProver] = {}
     for partial_filename_str, plot_config in plot_config_file["plots"].items():
@@ -35,7 +35,7 @@ def load_plots(
         pool_pubkey = PublicKey.from_bytes(bytes.fromhex(plot_config["pool_pk"]))
 
         # Only use plots that correct pools associated with them
-        if pool_pubkey not in pool_pubkeys:
+        if pool_pubkeys is not None and pool_pubkey not in pool_pubkeys:
             log.warning(
                 f"Plot {partial_filename} has a pool key that is not in the farmer's pool_pk list."
             )
@@ -47,7 +47,7 @@ def load_plots(
             if filename.exists():
                 try:
                     provers[partial_filename_str] = DiskProver(str(filename))
-                except ValueError as e:
+                except Exception as e:
                     log.error(f"Failed to open file {filename}. {e}")
                     failed_to_open = True
                     break
@@ -67,6 +67,7 @@ class Harvester:
     provers: Dict[Path, DiskProver]
     challenge_hashes: Dict[bytes32, Tuple[bytes32, Path, uint8]]
     _plot_notification_task: asyncio.Task
+    _reconnect_task: Optional[asyncio.Task]
     _is_shutdown: bool
     executor: concurrent.futures.ThreadPoolExecutor
 
@@ -82,6 +83,7 @@ class Harvester:
         # From quality string to (challenge_hash, filename, index)
         self.challenge_hashes = {}
         self._plot_notification_task = asyncio.create_task(self._plot_notification())
+        self._reconnect_task = None
         self._is_shutdown = False
         self.server = None
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
@@ -119,22 +121,26 @@ class Harvester:
 
         async def connection_check():
             while not self._is_shutdown:
-                if self.server is not None:
-                    farmer_retry = True
+                counter = 0
+                while not self._is_shutdown and counter % 30 == 0:
+                    if self.server is not None:
+                        farmer_retry = True
 
-                    for connection in self.server.global_connections.get_connections():
-                        if connection.get_peer_info() == farmer_peer:
-                            farmer_retry = False
+                        for (
+                            connection
+                        ) in self.server.global_connections.get_connections():
+                            if connection.get_peer_info() == farmer_peer:
+                                farmer_retry = False
 
-                    if farmer_retry:
-                        log.info(f"Reconnecting to farmer {farmer_retry}")
-                        if not await self.server.start_client(
-                            farmer_peer, None, auth=True
-                        ):
-                            await asyncio.sleep(1)
-                await asyncio.sleep(30)
+                        if farmer_retry:
+                            log.info(f"Reconnecting to farmer {farmer_retry}")
+                            if not await self.server.start_client(
+                                farmer_peer, None, auth=True
+                            ):
+                                await asyncio.sleep(1)
+                    await asyncio.sleep(1)
 
-        self.reconnect_task = asyncio.create_task(connection_check())
+        self._reconnect_task = asyncio.create_task(connection_check())
 
     def _shutdown(self):
         self._is_shutdown = True
@@ -142,6 +148,8 @@ class Harvester:
 
     async def _await_shutdown(self):
         await self._plot_notification_task
+        if self._reconnect_task is not None:
+            await self._reconnect_task
 
     @api_request
     async def harvester_handshake(
