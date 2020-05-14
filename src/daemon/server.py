@@ -220,7 +220,7 @@ async def async_run_daemon(root_path):
             lockfile.close()
             print(f"daemon: listening on {where}", flush=True)
             break
-        except Exception as ex:
+        except Exception:
             port += 1
 
     await task

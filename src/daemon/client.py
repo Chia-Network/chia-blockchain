@@ -31,7 +31,7 @@ def uri_info_for_start_daemon(root_path, use_unix_socket):
         with open(path) as f:
             port = int(f.readline())
         return f"http://127.0.0.1:{port}", None
-    except Exception as ex:
+    except Exception:
         pass
 
     return None
@@ -92,6 +92,6 @@ async def connect_to_daemon_and_validate(root_path):
         r = await connection.ping()
         if r == "pong":
             return connection
-    except Exception as ex:
+    except Exception:
         pass
     return None
