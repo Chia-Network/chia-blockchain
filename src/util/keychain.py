@@ -22,6 +22,7 @@ if platform == "linux":
 else:
     keyring = keyring_main
 
+
 def binary_search(a, x, lo=0, hi=None):
     hi = hi if hi is not None else len(a)
     pos = bisect.bisect_left(a, x, lo, hi)

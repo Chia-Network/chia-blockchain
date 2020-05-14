@@ -111,7 +111,7 @@ def handler(args, parser):
     elif command == "set_harvester_key":
         set_seed(args, "harvester")
     elif command == "set_pool_key":
-        set_key(args, "pool")
+        set_seed(args, "pool")
     elif command == "show_wallet_key":
         show_mnemonics("wallet")
     elif command == "show_harvester_key":
