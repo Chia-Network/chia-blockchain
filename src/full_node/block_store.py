@@ -29,12 +29,8 @@ class BlockStore:
         # Headers
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS headers(height bigint, header_hash "
-            "text PRIMARY KEY, proof_hash text, header blob, is_lca tinyint, is_tip tinyint)"
-        )
-
-        # Challenge hash
-        await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS challenge_hash(header_hash text PRIMARY KEY, challenge_hash text)"
+            "text PRIMARY KEY, proof_hash text, challenge_hash text, header "
+            "blob, is_lca tinyint, is_tip tinyint)"
         )
 
         # Height index so we can look up in order of height for sync purposes
@@ -98,23 +94,16 @@ class BlockStore:
             block.proof_of_space.get_hash() + block.proof_of_time.output.get_hash()
         )
         cursor_2 = await self.db.execute(
-            ("INSERT OR REPLACE INTO headers VALUES(?, ?, ?, ?, 0, 0)"),
+            ("INSERT OR REPLACE INTO headers VALUES(?, ?, ?, ?, ?, 0, 0)"),
             (
                 block.height,
                 block.header_hash.hex(),
                 proof_hash.hex(),
+                block.proof_of_space.challenge_hash.hex(),
                 bytes(block.header),
             ),
         )
         await cursor_2.close()
-        cursor_3 = await self.db.execute(
-            ("INSERT OR REPLACE INTO challenge_hash VALUES(?, ?)"),
-            (
-                block.header_hash.hex(),
-                block.proof_of_space.challenge_hash.hex(),
-            ),
-        )
-        await cursor_3.close()
         await self.db.commit()
 
     async def get_block(self, header_hash: bytes32) -> Optional[FullBlock]:
@@ -151,7 +140,7 @@ class BlockStore:
         return {bytes.fromhex(row[0]): bytes.fromhex(row[1]) for row in rows}
 
     async def init_challenge_hashes(self) -> None:
-        cursor = await self.db.execute("SELECT header_hash, challenge_hash from challenge_hash")
+        cursor = await self.db.execute("SELECT header_hash, challenge_hash from headers")
         rows = await cursor.fetchall()
         await cursor.close()
         self.challenge_hash_dict = {

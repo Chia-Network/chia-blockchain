@@ -906,13 +906,16 @@ class FullNode:
     async def new_compact_proof_of_time(
         self, new_compact_proof_of_time: full_node_protocol.NewCompactProofOfTime
     ) -> OutboundMessageGenerator:
-        # If we already have the compact PoT in a finished block, return
+        # If we already have the compact PoT in a connected to header block, return
         blocks: List[FullBlock] = await self.block_store.get_blocks_at(
             [new_compact_proof_of_time.height]
         )
         for block in blocks:
             assert block.proof_of_time is not None
-            if block.proof_of_time.witness_type == 0:
+            if (
+                block.proof_of_time.witness_type == 0
+                and block.header_hash in self.blockchain.headers
+            ):
                 return
 
         yield OutboundMessage(
