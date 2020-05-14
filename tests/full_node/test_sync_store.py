@@ -42,69 +42,18 @@ class TestStore:
         assert sqlite3.threadsafety == 1
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
         blocks_alt = bt.get_consecutive_blocks(test_constants, 3, [], 9, b"1")
-        db_filename = Path("blockchain_test.db")
-        db_filename_2 = Path("blockchain_test_2.db")
+        db = await SyncStore.create()
+        db_2 = await SyncStore.create()
 
-        if db_filename.exists():
-            db_filename.unlink()
-        if db_filename_2.exists():
-            db_filename_2.unlink()
+        # Save/get sync
+        for sync_mode in (False, True):
+            db.set_sync_mode(sync_mode)
+            assert sync_mode == db.get_sync_mode()
+        genesis = FullBlock.from_bytes(test_constants["GENESIS_BLOCK"])
 
-        connection = await aiosqlite.connect(db_filename)
-        connection_2 = await aiosqlite.connect(db_filename_2)
+        # clear sync info
+        await db.clear_sync_info()
 
-        db = await SyncStore.create(connection)
-        db_2 = await SyncStore.create(connection_2)
-        try:
-            genesis = FullBlock.from_bytes(test_constants["GENESIS_BLOCK"])
-
-            # clear sync info
-            await db.clear_sync_info()
-
-            # add/get potential tip, get potential tips num
-            db.add_potential_tip(blocks[6])
-            assert blocks[6] == db.get_potential_tip(blocks[6].header_hash)
-
-            # Add potential block
-            await db.add_potential_block(genesis)
-            assert genesis == await db.get_potential_block(uint32(0))
-
-        except Exception:
-            await connection.close()
-            await connection_2.close()
-            db_filename.unlink()
-            db_filename_2.unlink()
-            raise
-
-        await connection.close()
-        await connection_2.close()
-        db_filename.unlink()
-        db_filename_2.unlink()
-
-    @pytest.mark.asyncio
-    async def test_deadlock(self):
-        blocks = bt.get_consecutive_blocks(test_constants, 10, [], 9, b"0")
-        db_filename = Path("blockchain_test.db")
-
-        if db_filename.exists():
-            db_filename.unlink()
-
-        connection = await aiosqlite.connect(db_filename)
-        db = await SyncStore.create(connection)
-        tasks = []
-
-        for i in range(10000):
-            rand_i = random.randint(0, 10)
-            if random.random() < 0.5:
-                tasks.append(
-                    asyncio.create_task(db.add_potential_block(blocks[rand_i]))
-                )
-            if random.random() < 0.5:
-                tasks.append(
-                    asyncio.create_task(
-                        db.get_potential_block(blocks[rand_i].header_hash)
-                    )
-                )
-        await asyncio.gather(*tasks)
-        await connection.close()
-        db_filename.unlink()
+        # add/get potential tip, get potential tips num
+        db.add_potential_tip(blocks[6])
+        assert blocks[6] == db.get_potential_tip(blocks[6].header_hash)

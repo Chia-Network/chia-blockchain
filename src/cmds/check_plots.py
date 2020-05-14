@@ -1,16 +1,16 @@
 import argparse
-from pathlib import Path
+import logging
 
-from blspy import PrivateKey, PublicKey
-
-from chiapos import DiskProver, Verifier
-from src.types.proof_of_space import ProofOfSpace
-from src.types.sized_bytes import bytes32
+from chiapos import Verifier
 from src.util.config import load_config
+from src.util.logging import initialize_logging
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.hash import std_hash
+from src.harvester import load_plots
+
 
 plot_config_filename = "plots.yaml"
+config_filename = "plots.yaml"
 
 
 def main():
@@ -20,33 +20,22 @@ def main():
 
     parser = argparse.ArgumentParser(description="Chia plot checking script.")
     parser.add_argument(
-        "-n", "--num", help="Number of challenges", type=int, default=1000
+        "-n", "--num", help="Number of challenges", type=int, default=100
     )
     args = parser.parse_args()
 
-    print("Checking plots in plots.yaml")
-
     root_path = DEFAULT_ROOT_PATH
     plot_config = load_config(root_path, plot_config_filename)
+    config = load_config(root_path, config_filename)
+
+    initialize_logging("%(name)-22s", {"log_stdout": True}, root_path)
+    log = logging.getLogger(__name__)
 
     v = Verifier()
-    for plot_filename, plot_info in plot_config["plots"].items():
-        plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(
-            PublicKey.from_bytes(bytes.fromhex(plot_info["pool_pk"])),
-            PrivateKey.from_bytes(bytes.fromhex(plot_info["sk"])).get_public_key(),
-        )
-        if not Path(plot_filename).exists():
-            # Tries relative path
-            full_path: Path = DEFAULT_ROOT_PATH / plot_filename
-            if not full_path.exists():
-                # Tries absolute path
-                full_path = Path(plot_filename)
-                if not full_path.exists():
-                    print(f"Plot file {full_path} not found.")
-                    continue
-            pr = DiskProver(str(full_path))
-        else:
-            pr = DiskProver(plot_filename)
+    log.info("Loading plots in plots.yaml using harvester loading code\n")
+    provers = load_plots(config, plot_config, None)
+    log.info("\n\nStarting to test each plot with {args.num} challenges each\n")
+    for plot_path, pr in provers.items():
         total_proofs = 0
         try:
             for i in range(args.num):
@@ -57,17 +46,22 @@ def main():
                     proof = pr.get_full_proof(challenge, index)
                     total_proofs += 1
                     ver_quality_str = v.validate_proof(
-                        plot_seed, pr.get_size(), challenge, proof
+                        pr.get_id(), pr.get_size(), challenge, proof
                     )
                     assert quality_str == ver_quality_str
         except BaseException as e:
             if isinstance(e, KeyboardInterrupt):
-                print("Interrupted, closing")
+                log.warning("Interrupted, closing")
                 return
-            print(f"{type(e)}: {e} error in proving/verifying for plot {plot_filename}")
-        print(
-            f"{plot_filename}: Proofs {total_proofs} / {args.num}, {round(total_proofs/float(args.num), 4)}"
-        )
+            log.error(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
+        if total_proofs > 0:
+            log.info(
+                f"{plot_path}: Proofs {total_proofs} / {args.num}, {round(total_proofs/float(args.num), 4)}"
+            )
+        else:
+            log.error(
+                f"{plot_path}: Proofs {total_proofs} / {args.num}, {round(total_proofs/float(args.num), 4)}"
+            )
 
 
 if __name__ == "__main__":

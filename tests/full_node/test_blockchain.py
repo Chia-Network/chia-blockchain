@@ -58,12 +58,11 @@ class TestGenesisBlock:
         assert len(bc1.get_current_tips()) == 1
         genesis_block = bc1.get_current_tips()[0]
         assert genesis_block.height == 0
-        assert (
-            bc1.get_next_difficulty(genesis_block.header_hash)
-        ) == genesis_block.weight
+        assert (bc1.get_next_difficulty(genesis_block)) == genesis_block.weight
         assert bc1.get_next_min_iters(bc1.genesis) > 0
 
         await connection.close()
+        bc1.shut_down()
 
 
 class TestBlockValidation:
@@ -509,9 +508,9 @@ class TestBlockValidation:
             assert result == ReceiveBlockResult.ADDED_TO_HEAD
             assert error_code is None
 
-        diff_25 = b.get_next_difficulty(blocks[24].header_hash)
-        diff_26 = b.get_next_difficulty(blocks[25].header_hash)
-        diff_27 = b.get_next_difficulty(blocks[26].header_hash)
+        diff_25 = b.get_next_difficulty(blocks[24].header)
+        diff_26 = b.get_next_difficulty(blocks[25].header)
+        diff_27 = b.get_next_difficulty(blocks[26].header)
 
         assert diff_26 == diff_25
         assert diff_27 > diff_26
@@ -524,6 +523,7 @@ class TestBlockValidation:
         assert (b.get_next_min_iters(blocks[27])) == (b.get_next_min_iters(blocks[26]))
 
         await connection.close()
+        b.shut_down()
 
 
 class TestReorgs:
@@ -558,6 +558,7 @@ class TestReorgs:
         assert b.get_current_tips()[0].height == 119
 
         await connection.close()
+        b.shut_down()
 
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self):
@@ -602,6 +603,7 @@ class TestReorgs:
         assert result == ReceiveBlockResult.ADDED_TO_HEAD
 
         await connection.close()
+        b.shut_down()
 
     @pytest.mark.asyncio
     async def test_lca(self):
@@ -631,6 +633,7 @@ class TestReorgs:
         assert b.lca_block.header_hash == blocks[0].header_hash
 
         await connection.close()
+        b.shut_down()
 
     @pytest.mark.asyncio
     async def test_find_fork_point(self):
@@ -674,6 +677,7 @@ class TestReorgs:
         )
         assert b.lca_block.data == blocks[4].header.data
         await connection.close()
+        b.shut_down()
 
     @pytest.mark.asyncio
     async def test_get_header_hashes(self):
@@ -693,3 +697,4 @@ class TestReorgs:
         assert header_hashes == [block.header_hash for block in blocks]
 
         await connection.close()
+        b.shut_down()
