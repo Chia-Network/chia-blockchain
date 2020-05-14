@@ -70,17 +70,26 @@ def mnemonic_to_string(mnemonic):
 
 
 def show_mnemonics(key):
+    key_raw = None
     if key == "wallet":
         entropy = keychain.get_wallet_seed()
+        if entropy is None:
+            key_raw = keychain.get_wallet_key_raw()
     elif key == "harvester":
         entropy = keychain.get_harvester_seed()
     elif key == "pool":
         entropy = keychain.get_pool_seed()
+        if entropy is None:
+            key_raw = keychain.get_pool_keys_raw()
     else:
         print("Wrong key type")
         return
     if entropy is None:
-        print(f"No key for {key}")
+        if key_raw is not None:
+            print(f"Raw key: { bytes(key_raw).hex()}")
+            print(f"please migrate to using key derrived from mnemonic for easier")
+        else:
+            print(f"No key for {key}")
         return
     mnemonic = bytes_to_mnemonic(entropy)
     mnemonic_string = mnemonic_to_string(mnemonic)

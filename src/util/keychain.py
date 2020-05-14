@@ -106,6 +106,12 @@ class Keychain:
         else:
             return f"wallet-{self.user}"
 
+    def get_wallet_user_raw(self):
+        if self.testing:
+            return f"wallet-{self.user}-raw-test"
+        else:
+            return f"wallet-{self.user}-raw"
+
     def get_harvester_user(self):
         if self.testing:
             return f"harvester-{self.user}-test"
@@ -146,6 +152,9 @@ class Keychain:
     def set_wallet_seed(self, seed: bytes):
         keyring.set_password(self.get_service(), self.get_wallet_user(), seed.hex())
 
+    def set_wallet_raw_key(self, key: bytes):
+        keyring.set_password(self.get_service(), self.get_wallet_user_raw(), key.hex())
+
     def get_stored_entropy(self, user: str):
         return keyring.get_password(self.get_service(), user)
 
@@ -155,10 +164,18 @@ class Keychain:
             return None
         return hexstr_to_bytes(seed)
 
+    def get_wallet_key_raw(self) -> Optional[ExtendedPrivateKey]:
+        key = self.get_stored_entropy(self.get_wallet_user_raw())
+        if key is None:
+            return None
+
+        key = ExtendedPrivateKey.from_bytes(hexstr_to_bytes(key))
+        return key
+
     def get_wallet_key(self) -> Optional[ExtendedPrivateKey]:
         wallet_seed = self.get_wallet_seed()
         if wallet_seed is None:
-            return None
+            return self.get_wallet_key_raw()
 
         wallet_sk = ExtendedPrivateKey.from_seed(wallet_seed)
         return wallet_sk
@@ -208,12 +225,12 @@ class Keychain:
         if stored is not None:
             return hexstr_to_bytes(stored)
 
-        wallet_seed = self.get_wallet_seed()
-        if wallet_seed is None:
+        wallet_sk = self.get_wallet_key()
+        if wallet_sk is None:
             return None
 
-        wallet_sk = ExtendedPrivateKey.from_seed(wallet_seed)
         wallet_pk = wallet_sk.public_child(0).get_public_key()
+
         wallet_target = create_puzzlehash_for_pk(BLSPublicKey(bytes(wallet_pk)))
         return wallet_target
 

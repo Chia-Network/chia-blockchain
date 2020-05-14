@@ -4,6 +4,8 @@ import shutil
 from argparse import Namespace, ArgumentParser
 from typing import List, Tuple, Dict, Any
 from blspy import ExtendedPrivateKey
+from src.util.keychain import Keychain
+
 from src.types.BLSSignature import BLSPublicKey
 from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.util.config import unflatten_properties
@@ -55,6 +57,26 @@ def check_keys(new_root):
         keys_config["pool_target"] = wallet_target.hex()
         print(f"updating wallet target and pool target to {wallet_target.hex()}")
         save_config(new_root, "keys.yaml", keys_config)
+
+
+# Leave check_keys as a backup for now, remove it later
+def migrate_to_keychain(new_root):
+    keychain: Keychain = Keychain.create()
+    print("\nMigrating keys.yaml to keychain")
+    keys_config = load_config(new_root, "keys.yaml")
+    seed = keychain.get_wallet_seed()
+    raw_key = keychain.get_wallet_key_raw()
+    if seed is not None or raw_key is not None:
+        print("\nkeys already in keychain")
+        return
+    wallet_key_bytes = bytes.fromhex(keys_config["wallet_sk"])
+    wallet_sk = ExtendedPrivateKey.from_bytes(wallet_key_bytes)
+    wallet_target = create_puzzlehash_for_pk(
+        BLSPublicKey(bytes(wallet_sk.public_child(0).get_public_key()))
+    )
+    keychain.set_wallet_raw_key(wallet_key_bytes)
+    keychain.set_wallet_target(wallet_target)
+    keychain.set_pool_target(wallet_target)
 
 
 def migrate_from(
@@ -127,6 +149,7 @@ def migrate_from(
     )
 
     check_keys(new_root)
+    migrate_to_keychain(new_root)
 
     print("\nIf you want to move your plot files, you should also modify")
     print(f"{config_path_for_filename(new_root, 'plots.yaml')}")
@@ -160,6 +183,8 @@ def chia_init(args: Namespace):
     print(f"migrating to {root_path}")
     if root_path.is_dir():
         check_keys(root_path)
+        migrate_to_keychain(root_path)
+
         print(f"{root_path} already exists, no migration action taken")
         return -1
 
