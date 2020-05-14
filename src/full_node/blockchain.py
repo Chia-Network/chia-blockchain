@@ -1,44 +1,40 @@
+import asyncio
 import collections
 import logging
-import multiprocessing
-import time
 from enum import Enum
-from typing import Dict, List, Optional, Tuple, Set
-import asyncio
+import multiprocessing
 import concurrent
-import blspy
+from typing import Dict, List, Optional, Set, Tuple
+
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
-from src.consensus.block_rewards import calculate_block_reward, calculate_base_fee
 from src.consensus.constants import constants as consensus_constants
-from src.consensus.pot_iterations import (
-    calculate_min_iters_from_iterations,
-    calculate_iterations_quality,
+from src.consensus.block_rewards import calculate_base_fee
+from src.full_node.block_header_validation import (
+    validate_unfinished_block_header,
+    validate_finished_block_header,
+    pre_validate_finished_block_header,
 )
 from src.full_node.block_store import BlockStore
-from src.types.condition_opcodes import ConditionOpcode
-from src.types.condition_var_pair import ConditionVarPair
-
-from src.types.full_block import FullBlock, additions_for_npc
+from src.full_node.coin_store import CoinStore
+from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_min_iters
+from src.types.challenge import Challenge
 from src.types.coin import Coin, hash_coin_list
 from src.types.coin_record import CoinRecord
-from src.types.header_block import HeaderBlock
+from src.types.condition_opcodes import ConditionOpcode
+from src.types.condition_var_pair import ConditionVarPair
+from src.types.full_block import FullBlock, additions_for_npc
 from src.types.header import Header
+from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
-from src.full_node.coin_store import CoinStore
-from src.util.errors import Err, ConsensusError
-from src.util.cost_calculator import calculate_cost_of_program
-from src.util.merkle_set import MerkleSet
 from src.util.blockchain_check_conditions import blockchain_check_conditions_dict
 from src.util.condition_tools import hash_key_pairs_for_conditions_dict
-from src.util.ints import uint32, uint64
-from src.types.challenge import Challenge
+from src.util.cost_calculator import calculate_cost_of_program
+from src.util.errors import ConsensusError, Err
 from src.util.hash import std_hash
-from src.util.significant_bits import (
-    truncate_to_significant_bits,
-    count_significant_bits,
-)
+from src.util.ints import uint32, uint64
+from src.util.merkle_set import MerkleSet
 
 log = logging.getLogger(__name__)
 
@@ -70,8 +66,6 @@ class Blockchain:
     height_to_hash: Dict[uint32, bytes32]
     # All headers (but not orphans) from genesis to the tip are guaranteed to be in headers
     headers: Dict[bytes32, Header]
-    # Process pool to verify blocks
-    pool: concurrent.futures.ProcessPoolExecutor
     # Genesis block
     genesis: FullBlock
     # Unspent Store
@@ -80,6 +74,11 @@ class Blockchain:
     block_store: BlockStore
     # Coinbase freeze period
     coinbase_freeze: uint32
+    # Used to verify blocks in parallel
+    pool: concurrent.futures.ProcessPoolExecutor
+
+    # Whether blockchain is shut down or not
+    _shut_down: bool
 
     # Lock to prevent simultaneous reads and writes
     lock: asyncio.Lock
@@ -95,6 +94,10 @@ class Blockchain:
         """
         self = Blockchain()
         self.lock = asyncio.Lock()  # External lock handled by full node
+        cpu_count = multiprocessing.cpu_count()
+        self.pool = concurrent.futures.ProcessPoolExecutor(
+            max_workers=max(cpu_count - 1, 1)
+        )
         self.constants = consensus_constants.copy()
         for key, value in override_constants.items():
             self.constants[key] = value
@@ -103,10 +106,15 @@ class Blockchain:
         self.headers = {}
         self.coin_store = coin_store
         self.block_store = block_store
+        self._shut_down = False
         self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
         self.coinbase_freeze = self.constants["COINBASE_FREEZE_PERIOD"]
         await self._load_chain_from_store()
         return self
+
+    def shut_down(self):
+        self._shut_down = True
+        self.pool.shutdown(wait=True)
 
     async def _load_chain_from_store(self,) -> None:
         """
@@ -190,7 +198,7 @@ class Blockchain:
     def get_challenge(self, block: FullBlock) -> Optional[Challenge]:
         if block.proof_of_time is None:
             return None
-        if block.header_hash not in self.headers:
+        if block.prev_header_hash not in self.headers and block.height > 0:
             return None
 
         prev_challenge_hash = block.proof_of_space.challenge_hash
@@ -199,7 +207,9 @@ class Blockchain:
         if (block.height + 1) % self.constants["DIFFICULTY_EPOCH"] == self.constants[
             "DIFFICULTY_DELAY"
         ]:
-            new_difficulty = self.get_next_difficulty(block.header_hash)
+            new_difficulty = get_next_difficulty(
+                self.constants, self.headers, self.height_to_hash, block.header
+            )
         else:
             new_difficulty = None
         return Challenge(
@@ -212,7 +222,7 @@ class Blockchain:
 
     def get_header_block(self, block: FullBlock) -> Optional[HeaderBlock]:
         challenge: Optional[Challenge] = self.get_challenge(block)
-        if not challenge or not block.proof_of_time:
+        if challenge is None or block.proof_of_time is None:
             return None
         return HeaderBlock(
             block.proof_of_space, block.proof_of_time, challenge, block.header
@@ -261,239 +271,6 @@ class Blockchain:
         else:
             raise ValueError("Invalid genesis block")
 
-    def get_next_difficulty(self, header_hash: bytes32) -> uint64:
-        """
-        Returns the difficulty of the next block that extends onto header_hash.
-        Used to calculate the number of iterations. When changing this, also change the implementation
-        in wallet_state_manager.py.
-        """
-        block: Header = self.headers[header_hash]
-
-        next_height: uint32 = uint32(block.height + 1)
-        if next_height < self.constants["DIFFICULTY_EPOCH"]:
-            # We are in the first epoch
-            return uint64(self.constants["DIFFICULTY_STARTING"])
-
-        # Epochs are diffined as intervals of DIFFICULTY_EPOCH blocks, inclusive and indexed at 0.
-        # For example, [0-2047], [2048-4095], etc. The difficulty changes DIFFICULTY_DELAY into the
-        # epoch, as opposed to the first block (as in Bitcoin).
-        elif (
-            next_height % self.constants["DIFFICULTY_EPOCH"]
-            != self.constants["DIFFICULTY_DELAY"]
-        ):
-            # Not at a point where difficulty would change
-            prev_block: Header = self.headers[block.prev_header_hash]
-            assert prev_block is not None
-            if prev_block is None:
-                raise Exception("Previous block is invalid.")
-            return uint64(block.weight - prev_block.weight)
-
-        #       old diff                  curr diff       new diff
-        # ----------|-----|----------------------|-----|-----...
-        #           h1    h2                     h3   i-1
-        # Height1 is the last block 2 epochs ago, so we can include the time to mine 1st block in previous epoch
-        height1 = uint32(
-            next_height
-            - self.constants["DIFFICULTY_EPOCH"]
-            - self.constants["DIFFICULTY_DELAY"]
-            - 1
-        )
-        # Height2 is the DIFFICULTY DELAYth block in the previous epoch
-        height2 = uint32(next_height - self.constants["DIFFICULTY_EPOCH"] - 1)
-        # Height3 is the last block in the previous epoch
-        height3 = uint32(next_height - self.constants["DIFFICULTY_DELAY"] - 1)
-
-        # h1 to h2 timestamps are mined on previous difficulty, while  and h2 to h3 timestamps are mined on the
-        # current difficulty
-
-        block1, block2, block3 = None, None, None
-        if block not in self.get_current_tips() or height3 not in self.height_to_hash:
-            # This means we are either on a fork, or on one of the chains, but after the LCA,
-            # so we manually backtrack.
-            curr: Optional[Header] = block
-            assert curr is not None
-            while (
-                curr.height not in self.height_to_hash
-                or self.height_to_hash[curr.height] != curr.header_hash
-            ):
-                if curr.height == height1:
-                    block1 = curr
-                elif curr.height == height2:
-                    block2 = curr
-                elif curr.height == height3:
-                    block3 = curr
-                curr = self.headers.get(curr.prev_header_hash, None)
-                assert curr is not None
-        # Once we are before the fork point (and before the LCA), we can use the height_to_hash map
-        if not block1 and height1 >= 0:
-            # height1 could be -1, for the first difficulty calculation
-            block1 = self.headers[self.height_to_hash[height1]]
-        if not block2:
-            block2 = self.headers[self.height_to_hash[height2]]
-        if not block3:
-            block3 = self.headers[self.height_to_hash[height3]]
-        assert block2 is not None and block3 is not None
-
-        # Current difficulty parameter (diff of block h = i - 1)
-        Tc = self.get_next_difficulty(block.prev_header_hash)
-
-        # Previous difficulty parameter (diff of block h = i - 2048 - 1)
-        Tp = self.get_next_difficulty(block2.prev_header_hash)
-        if block1:
-            timestamp1 = block1.data.timestamp  # i - 512 - 1
-        else:
-            # In the case of height == -1, there is no timestamp here, so assume the genesis block
-            # took constants["BLOCK_TIME_TARGET"] seconds to mine.
-            genesis = self.headers[self.height_to_hash[uint32(0)]]
-            timestamp1 = genesis.data.timestamp - self.constants["BLOCK_TIME_TARGET"]
-        timestamp2 = block2.data.timestamp  # i - 2048 + 512 - 1
-        timestamp3 = block3.data.timestamp  # i - 512 - 1
-
-        # Numerator fits in 128 bits, so big int is not necessary
-        # We multiply by the denominators here, so we only have one fraction in the end (avoiding floating point)
-        term1 = (
-            self.constants["DIFFICULTY_DELAY"]
-            * Tp
-            * (timestamp3 - timestamp2)
-            * self.constants["BLOCK_TIME_TARGET"]
-        )
-        term2 = (
-            (self.constants["DIFFICULTY_WARP_FACTOR"] - 1)
-            * (self.constants["DIFFICULTY_EPOCH"] - self.constants["DIFFICULTY_DELAY"])
-            * Tc
-            * (timestamp2 - timestamp1)
-            * self.constants["BLOCK_TIME_TARGET"]
-        )
-
-        # Round down after the division
-        new_difficulty_precise: uint64 = uint64(
-            (term1 + term2)
-            // (
-                self.constants["DIFFICULTY_WARP_FACTOR"]
-                * (timestamp3 - timestamp2)
-                * (timestamp2 - timestamp1)
-            )
-        )
-        # Take only DIFFICULTY_SIGNIFICANT_BITS significant bits
-        new_difficulty = uint64(
-            truncate_to_significant_bits(
-                new_difficulty_precise, self.constants["SIGNIFICANT_BITS"]
-            )
-        )
-        assert (
-            count_significant_bits(new_difficulty) <= self.constants["SIGNIFICANT_BITS"]
-        )
-
-        # Only change by a max factor, to prevent attacks, as in greenpaper, and must be at least 1
-        max_diff = uint64(
-            truncate_to_significant_bits(
-                self.constants["DIFFICULTY_FACTOR"] * Tc,
-                self.constants["SIGNIFICANT_BITS"],
-            )
-        )
-        min_diff = uint64(
-            truncate_to_significant_bits(
-                Tc // self.constants["DIFFICULTY_FACTOR"],
-                self.constants["SIGNIFICANT_BITS"],
-            )
-        )
-        if new_difficulty >= Tc:
-            return min(new_difficulty, max_diff)
-        else:
-            return max([uint64(1), new_difficulty, min_diff])
-
-    def get_next_min_iters(self, block: FullBlock) -> uint64:
-        """
-        Returns the VDF speed in iterations per seconds, to be used for the next block. This depends on
-        the number of iterations of the last epoch, and changes at the same block as the difficulty.
-        """
-        next_height: uint32 = uint32(block.height + 1)
-        if next_height < self.constants["DIFFICULTY_EPOCH"]:
-            # First epoch has a hardcoded vdf speed
-            return self.constants["MIN_ITERS_STARTING"]
-
-        prev_block_header: Header = self.headers[block.prev_header_hash]
-
-        proof_of_space = block.proof_of_space
-        difficulty = self.get_next_difficulty(prev_block_header.header_hash)
-        iterations = uint64(
-            block.header.data.total_iters - prev_block_header.data.total_iters
-        )
-        prev_min_iters = calculate_min_iters_from_iterations(
-            proof_of_space, difficulty, iterations
-        )
-
-        if (
-            next_height % self.constants["DIFFICULTY_EPOCH"]
-            != self.constants["DIFFICULTY_DELAY"]
-        ):
-            # Not at a point where ips would change, so return the previous ips
-            # TODO: cache this for efficiency
-            return prev_min_iters
-
-        # min iters (along with difficulty) will change in this block, so we need to calculate the new one.
-        # The calculation is (iters_2 - iters_1) // epoch size
-        # 1 and 2 correspond to height_1 and height_2, being the last block of the second to last, and last
-        # block of the last epochs. Basically, it's total iterations per block on average.
-
-        # Height1 is the last block 2 epochs ago, so we can include the iterations taken for mining first block in epoch
-        height1 = uint32(
-            next_height
-            - self.constants["DIFFICULTY_EPOCH"]
-            - self.constants["DIFFICULTY_DELAY"]
-            - 1
-        )
-        # Height2 is the last block in the previous epoch
-        height2 = uint32(next_height - self.constants["DIFFICULTY_DELAY"] - 1)
-
-        block1: Optional[Header] = None
-        block2: Optional[Header] = None
-        if block not in self.get_current_tips() or height2 not in self.height_to_hash:
-            # This means we are either on a fork, or on one of the chains, but after the LCA,
-            # so we manually backtrack.
-            curr: Optional[Header] = block.header
-            assert curr is not None
-            while (
-                curr.height not in self.height_to_hash
-                or self.height_to_hash[curr.height] != curr.header_hash
-            ):
-                if curr.height == height1:
-                    block1 = curr
-                elif curr.height == height2:
-                    block2 = curr
-                curr = self.headers.get(curr.prev_header_hash, None)
-                assert curr is not None
-        # Once we are before the fork point (and before the LCA), we can use the height_to_hash map
-        if block1 is None and height1 >= 0:
-            # height1 could be -1, for the first difficulty calculation
-            block1 = self.headers.get(self.height_to_hash[height1], None)
-        if block2 is None:
-            block2 = self.headers.get(self.height_to_hash[height2], None)
-        assert block2 is not None
-
-        if block1 is not None:
-            iters1 = block1.data.total_iters
-        else:
-            # In the case of height == -1, iters = 0
-            iters1 = uint64(0)
-
-        iters2 = block2.data.total_iters
-
-        min_iters_precise = uint64(
-            (iters2 - iters1)
-            // (
-                self.constants["DIFFICULTY_EPOCH"]
-                * self.constants["MIN_ITERS_PROPORTION"]
-            )
-        )
-        min_iters = uint64(
-            truncate_to_significant_bits(
-                min_iters_precise, self.constants["SIGNIFICANT_BITS"]
-            )
-        )
-        assert count_significant_bits(min_iters) <= self.constants["SIGNIFICANT_BITS"]
-        return min_iters
-
     async def receive_block(
         self,
         block: FullBlock,
@@ -515,9 +292,32 @@ class Blockchain:
         if block.prev_header_hash not in self.headers and not genesis:
             return ReceiveBlockResult.DISCONNECTED_BLOCK, None, None
 
-        error_code: Optional[Err] = await self.validate_block(
-            block, genesis, pre_validated, pos_quality_string
+        prev_header_block: Optional[HeaderBlock] = None
+        if not genesis:
+            prev_full_block = await self.block_store.get_block(block.prev_header_hash)
+            assert prev_full_block is not None
+            prev_header_block = self.get_header_block(prev_full_block)
+            assert prev_header_block is not None
+
+        curr_header_block = self.get_header_block(block)
+        assert curr_header_block is not None
+        # Validate block header
+        error_code: Optional[Err] = await validate_finished_block_header(
+            self.constants,
+            self.headers,
+            self.height_to_hash,
+            curr_header_block,
+            prev_header_block,
+            genesis,
+            pre_validated,
+            pos_quality_string,
         )
+
+        if error_code is not None:
+            return ReceiveBlockResult.INVALID_BLOCK, None, error_code
+
+        # Validate block body
+        error_code = await self.validate_block_body(block)
 
         if error_code is not None:
             return ReceiveBlockResult.INVALID_BLOCK, None, error_code
@@ -532,312 +332,6 @@ class Blockchain:
             return ReceiveBlockResult.ADDED_TO_HEAD, header, None
         else:
             return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
-
-    async def validate_unfinished_block(
-        self,
-        block: FullBlock,
-        prev_full_block: Optional[FullBlock],
-        pre_validated: bool = True,
-        pos_quality_string: bytes32 = None,
-    ) -> Tuple[Optional[Err], Optional[uint64]]:
-        """
-        Block validation algorithm. Returns the number of VDF iterations that this block's
-        proof of time must have, if the candidate block is fully valid (except for proof of
-        time). The same as validate_block, but without proof of time and challenge validation.
-        If the block is invalid, an error code is returned.
-        """
-        if not pre_validated:
-            # 1. The hash of the proof of space must match header_data.proof_of_space_hash
-            if block.proof_of_space.get_hash() != block.header.data.proof_of_space_hash:
-                return (Err.INVALID_POSPACE_HASH, None)
-
-            # 2. The coinbase signature must be valid, according the the pool public key
-            pair = block.header.data.coinbase_signature.PkMessagePair(
-                block.proof_of_space.pool_pubkey, block.header.data.coinbase.name(),
-            )
-
-            if not block.header.data.coinbase_signature.validate([pair]):
-                return (Err.INVALID_COINBASE_SIGNATURE, None)
-
-            # 3. Check harvester signature of header data is valid based on harvester key
-            if not block.header.harvester_signature.verify(
-                [blspy.Util.hash256(block.header.data.get_hash())],
-                [block.proof_of_space.plot_pubkey],
-            ):
-                return (Err.INVALID_HARVESTER_SIGNATURE, None)
-
-        # 4. If not genesis, the previous block must exist
-        if prev_full_block is not None and block.prev_header_hash not in self.headers:
-            return (Err.DOES_NOT_EXTEND, None)
-
-        # 5. If not genesis, the timestamp must be >= the average timestamp of last 11 blocks
-        # and less than 2 hours in the future (if block height < 11, average all previous blocks).
-        # Average is the sum, int diveded by the number of timestamps
-        if prev_full_block is not None:
-            last_timestamps: List[uint64] = []
-            curr = prev_full_block.header
-            while len(last_timestamps) < self.constants["NUMBER_OF_TIMESTAMPS"]:
-                last_timestamps.append(curr.data.timestamp)
-                fetched = self.headers.get(curr.prev_header_hash, None)
-                if not fetched:
-                    break
-                curr = fetched
-            if len(last_timestamps) != self.constants["NUMBER_OF_TIMESTAMPS"]:
-                # For blocks 1 to 10, average timestamps of all previous blocks
-                assert curr.height == 0
-            prev_time: uint64 = uint64(
-                int(sum(last_timestamps) // len(last_timestamps))
-            )
-            if block.header.data.timestamp < prev_time:
-                return (Err.TIMESTAMP_TOO_FAR_IN_PAST, None)
-            if (
-                block.header.data.timestamp
-                > time.time() + self.constants["MAX_FUTURE_TIME"]
-            ):
-                return (Err.TIMESTAMP_TOO_FAR_IN_FUTURE, None)
-
-        # 6. The compact block filter must be correct, according to the body (BIP158)
-        if block.header.data.filter_hash != bytes32([0] * 32):
-            if block.transactions_filter is None:
-                return (Err.INVALID_TRANSACTIONS_FILTER_HASH, None)
-            if std_hash(block.transactions_filter) != block.header.data.filter_hash:
-                return (Err.INVALID_TRANSACTIONS_FILTER_HASH, None)
-        elif block.transactions_filter is not None:
-            return (Err.INVALID_TRANSACTIONS_FILTER_HASH, None)
-
-        # 7. Extension data must be valid, if any is present
-
-        # Compute challenge of parent
-        challenge_hash: bytes32
-        if prev_full_block is not None:
-            challenge: Optional[Challenge] = self.get_challenge(prev_full_block)
-            assert challenge is not None
-            challenge_hash = challenge.get_hash()
-            # 8. Check challenge hash of prev is the same as in pos
-            if challenge_hash != block.proof_of_space.challenge_hash:
-                return (Err.INVALID_POSPACE_CHALLENGE, None)
-        else:
-            # 9. If genesis, the challenge hash in the proof of time must be the same as in the proof of space
-            assert block.proof_of_time is not None
-            challenge_hash = block.proof_of_time.challenge_hash
-
-            if challenge_hash != block.proof_of_space.challenge_hash:
-                return (Err.INVALID_POSPACE_CHALLENGE, None)
-
-        # 10. The proof of space must be valid on the challenge
-        if pos_quality_string is None:
-            pos_quality_string = block.proof_of_space.verify_and_get_quality_string()
-            if not pos_quality_string:
-                return (Err.INVALID_POSPACE, None)
-
-        if prev_full_block is not None:
-            # 11. If not genesis, the height on the previous block must be one less than on this block
-            if block.height != prev_full_block.height + 1:
-                return (Err.INVALID_HEIGHT, None)
-        else:
-            # 12. If genesis, the height must be 0
-            if block.height != 0:
-                return (Err.INVALID_HEIGHT, None)
-
-        # 13. The coinbase reward must match the block schedule
-        coinbase_reward = calculate_block_reward(block.height)
-        if coinbase_reward != block.header.data.coinbase.amount:
-            return (Err.INVALID_COINBASE_AMOUNT, None)
-
-        # 13b. The coinbase parent id must be the height
-        if block.header.data.coinbase.parent_coin_info != block.height.to_bytes(
-            32, "big"
-        ):
-            return (Err.INVALID_COINBASE_PARENT, None)
-
-        # 13c. The fees coin parent id must be hash(hash(height))
-        fee_base = calculate_base_fee(block.height)
-        if block.header.data.fees_coin.parent_coin_info != std_hash(
-            std_hash(uint32(block.height))
-        ):
-            return (Err.INVALID_FEES_COIN_PARENT, None)
-
-        # target reward_fee = 1/8 coinbase reward + tx fees
-        if block.transactions_generator is not None:
-            # 14. Make sure transactions generator hash is valid (or all 0 if not present)
-            if (
-                block.transactions_generator.get_tree_hash()
-                != block.header.data.generator_hash
-            ):
-                return (Err.INVALID_TRANSACTIONS_GENERATOR_HASH, None)
-
-            # 15. If not genesis, the transactions must be valid and fee must be valid
-            # Verifies that fee_base + TX fees = fee_coin.amount
-            err = await self._validate_transactions(block, fee_base)
-            if err is not None:
-                return (err, None)
-        else:
-            # Make sure transactions generator hash is valid (or all 0 if not present)
-            if block.header.data.generator_hash != bytes32(bytes([0] * 32)):
-                return (Err.INVALID_TRANSACTIONS_GENERATOR_HASH, None)
-
-            # 16. If genesis, the fee must be the base fee, agg_sig must be None, and merkle roots must be valid
-            if fee_base != block.header.data.fees_coin.amount:
-                return (Err.INVALID_BLOCK_FEE_AMOUNT, None)
-            root_error = self._validate_merkle_root(block)
-            if root_error:
-                return (root_error, None)
-            if block.header.data.aggregated_signature is not None:
-                log.error("1")
-                return (Err.BAD_AGGREGATE_SIGNATURE, None)
-
-        difficulty: uint64
-        if prev_full_block is not None:
-            difficulty = self.get_next_difficulty(prev_full_block.header_hash)
-            min_iters = self.get_next_min_iters(prev_full_block)
-        else:
-            difficulty = uint64(self.constants["DIFFICULTY_STARTING"])
-            min_iters = uint64(self.constants["MIN_ITERS_STARTING"])
-
-        number_of_iters: uint64 = calculate_iterations_quality(
-            pos_quality_string, block.proof_of_space.size, difficulty, min_iters,
-        )
-
-        assert count_significant_bits(difficulty) <= self.constants["SIGNIFICANT_BITS"]
-        assert count_significant_bits(min_iters) <= self.constants["SIGNIFICANT_BITS"]
-
-        if prev_full_block is not None:
-            # 17. If not genesis, the total weight must be the parent weight + difficulty
-            if block.weight != prev_full_block.weight + difficulty:
-                return (Err.INVALID_WEIGHT, None)
-
-            # 18. If not genesis, the total iters must be parent iters + number_iters
-            if (
-                block.header.data.total_iters
-                != prev_full_block.header.data.total_iters + number_of_iters
-            ):
-                return (Err.INVALID_TOTAL_ITERS, None)
-        else:
-            # 19. If genesis, the total weight must be starting difficulty
-            if block.weight != difficulty:
-                return (Err.INVALID_WEIGHT, None)
-
-            # 20. If genesis, the total iters must be number iters
-            if block.header.data.total_iters != number_of_iters:
-                return (Err.INVALID_TOTAL_ITERS, None)
-
-        return (None, number_of_iters)
-
-    async def validate_block(
-        self,
-        block: FullBlock,
-        genesis: bool = False,
-        pre_validated: bool = False,
-        pos_quality_string: bytes32 = None,
-    ) -> Optional[Err]:
-        """
-        Block validation algorithm. Returns true iff the candidate block is fully valid,
-        and extends something in the blockchain.
-        """
-        prev_full_block: Optional[FullBlock]
-        if not genesis:
-            prev_full_block = await self.block_store.get_block(block.prev_header_hash)
-            if prev_full_block is None:
-                return Err.DOES_NOT_EXTEND
-        else:
-            prev_full_block = None
-
-        # 0. Validate unfinished block (check the rest of the conditions)
-        err, number_of_iters = await self.validate_unfinished_block(
-            block, prev_full_block, pre_validated, pos_quality_string
-        )
-        if err is not None:
-            return err
-
-        assert number_of_iters is not None
-
-        if block.proof_of_time is None:
-            return Err.BLOCK_IS_NOT_FINISHED
-
-        # 1. The number of iterations (based on quality, pos, difficulty, ips) must be the same as in the PoT
-        if number_of_iters != block.proof_of_time.number_of_iterations:
-            return Err.INVALID_NUM_ITERATIONS
-
-        # 2. the PoT must be valid, on a discriminant of size 1024, and the challenge_hash
-        if not pre_validated:
-            if not block.proof_of_time.is_valid(
-                self.constants["DISCRIMINANT_SIZE_BITS"]
-            ):
-                return Err.INVALID_POT
-        # 3. If not genesis, the challenge_hash in the proof of time must match the challenge on the previous block
-        if not genesis:
-            assert prev_full_block is not None
-            prev_challenge: Optional[Challenge] = self.get_challenge(prev_full_block)
-            assert prev_challenge is not None
-
-            if block.proof_of_time.challenge_hash != prev_challenge.get_hash():
-                return Err.INVALID_POT_CHALLENGE
-        return None
-
-    async def pre_validate_blocks(
-        self, blocks: List[FullBlock]
-    ) -> List[Tuple[bool, Optional[bytes32]]]:
-
-        results = []
-        for block in blocks:
-            val, pos = self.pre_validate_block_multi(bytes(block))
-            if pos is not None:
-                pos = bytes32(pos)
-            results.append((val, pos))
-
-        return results
-
-    async def pre_validate_blocks_multiprocessing(
-        self, blocks: List[FullBlock]
-    ) -> List[Tuple[bool, Optional[bytes32]]]:
-        futures = []
-
-        cpu_count = multiprocessing.cpu_count()
-        # Pool of workers to validate blocks concurrently
-        pool = concurrent.futures.ProcessPoolExecutor(max_workers=max(cpu_count - 1, 1))
-
-        for block in blocks:
-            futures.append(
-                asyncio.get_running_loop().run_in_executor(
-                    pool, self.pre_validate_block_multi, bytes(block)
-                )
-            )
-        results = await asyncio.gather(*futures)
-
-        for i, (val, pos) in enumerate(results):
-            if pos is not None:
-                pos = bytes32(pos)
-            results[i] = val, pos
-        pool.shutdown(wait=True)
-        return results
-
-    def pre_validate_block_multi(self, data) -> Tuple[bool, Optional[bytes]]:
-        """
-            Validates all parts of FullBlock that don't need to be serially checked
-        """
-        block = FullBlock.from_bytes(data)
-
-        if not block.proof_of_time:
-            return False, None
-
-        # 4. Check PoT
-        if not block.proof_of_time.is_valid(self.constants["DISCRIMINANT_SIZE_BITS"]):
-            return False, None
-
-        # 9. Check harvester signature of header data is valid based on harvester key
-        if not block.header.harvester_signature.verify(
-            [blspy.Util.hash256(block.header.data.get_hash())],
-            [block.proof_of_space.plot_pubkey],
-        ):
-            return False, None
-
-        # 10. Check proof of space based on challenge
-        pos_quality_string = block.proof_of_space.verify_and_get_quality_string()
-
-        if not pos_quality_string:
-            return False, None
-
-        return True, bytes(pos_quality_string)
 
     async def _reconsider_heads(
         self, block: Header, genesis: bool, sync_mode: bool
@@ -989,6 +483,101 @@ class Blockchain:
         blocks.reverse()
 
         await self.coin_store.add_lcas(blocks)
+
+    def get_next_difficulty(self, header_hash: bytes32) -> uint64:
+        return get_next_difficulty(
+            self.constants, self.headers, self.height_to_hash, header_hash
+        )
+
+    def get_next_min_iters(self, header_hash: bytes32) -> uint64:
+        return get_next_min_iters(
+            self.constants, self.headers, self.height_to_hash, header_hash
+        )
+
+    async def pre_validate_blocks_multiprocessing(
+        self, blocks: List[FullBlock]
+    ) -> List[Tuple[bool, Optional[bytes32]]]:
+        futures = []
+        # Pool of workers to validate blocks concurrently
+        for block in blocks:
+            if self._shut_down:
+                return [(False, None) for _ in range(len(blocks))]
+            futures.append(
+                asyncio.get_running_loop().run_in_executor(
+                    self.pool,
+                    pre_validate_finished_block_header,
+                    self.constants,
+                    bytes(block),
+                )
+            )
+        results = await asyncio.gather(*futures)
+
+        for i, (val, pos) in enumerate(results):
+            if pos is not None:
+                pos = bytes32(pos)
+            results[i] = val, pos
+        return results
+
+    async def validate_unfinished_block(
+        self, block: FullBlock, prev_full_block: FullBlock
+    ) -> Tuple[Optional[Err], Optional[uint64]]:
+        prev_hb = self.get_header_block(prev_full_block)
+        assert prev_hb is not None
+        return await validate_unfinished_block_header(
+            self.constants,
+            self.headers,
+            self.height_to_hash,
+            block.header,
+            block.proof_of_space,
+            prev_hb,
+            False,
+        )
+
+    async def validate_block_body(self, block: FullBlock) -> Optional[Err]:
+        """
+        Validates the transactions and body of the block. Returns None if everything
+        validates correctly, or an Err if something does not validate.
+        """
+
+        # 6. The compact block filter must be correct, according to the body (BIP158)
+        if block.header.data.filter_hash != bytes32([0] * 32):
+            if block.transactions_filter is None:
+                return Err.INVALID_TRANSACTIONS_FILTER_HASH
+            if std_hash(block.transactions_filter) != block.header.data.filter_hash:
+                return Err.INVALID_TRANSACTIONS_FILTER_HASH
+        elif block.transactions_filter is not None:
+            return Err.INVALID_TRANSACTIONS_FILTER_HASH
+
+        fee_base = calculate_base_fee(block.height)
+        # target reward_fee = 1/8 coinbase reward + tx fees
+        if block.transactions_generator is not None:
+            # 14. Make sure transactions generator hash is valid (or all 0 if not present)
+            if (
+                block.transactions_generator.get_tree_hash()
+                != block.header.data.generator_hash
+            ):
+                return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
+
+            # 15. If not genesis, the transactions must be valid and fee must be valid
+            # Verifies that fee_base + TX fees = fee_coin.amount
+            err = await self._validate_transactions(block, fee_base)
+            if err is not None:
+                return err
+        else:
+            # Make sure transactions generator hash is valid (or all 0 if not present)
+            if block.header.data.generator_hash != bytes32(bytes([0] * 32)):
+                return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
+
+            # 16. If genesis, the fee must be the base fee, agg_sig must be None, and merkle roots must be valid
+            if fee_base != block.header.data.fees_coin.amount:
+                return Err.INVALID_BLOCK_FEE_AMOUNT
+            root_error = self._validate_merkle_root(block)
+            if root_error:
+                return root_error
+            if block.header.data.aggregated_signature is not None:
+                log.error("1")
+                return Err.BAD_AGGREGATE_SIGNATURE
+        return None
 
     def _validate_merkle_root(
         self,
@@ -1241,6 +830,7 @@ class Blockchain:
             )
 
         # Verify aggregated signature
+        # TODO: move this to pre_validate_blocks_multiprocessing so we can sync faster
         if not block.header.data.aggregated_signature:
             return Err.BAD_AGGREGATE_SIGNATURE
         if not block.header.data.aggregated_signature.validate(hash_key_pairs):

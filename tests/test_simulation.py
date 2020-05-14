@@ -35,4 +35,4 @@ class TestSimulation:
             if max([h.height for h in node1.blockchain.get_current_tips()]) > 10:
                 return
             await asyncio.sleep(1)
-        assert False
+        raise Exception("Failed due to timeout")

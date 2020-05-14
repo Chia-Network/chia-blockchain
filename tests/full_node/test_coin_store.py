@@ -182,10 +182,12 @@ class TestCoinStore:
         except Exception as e:
             await connection.close()
             Path("blockchain_test.db").unlink()
+            b.shut_down()
             raise e
 
         await connection.close()
         Path("blockchain_test.db").unlink()
+        b.shut_down()
 
     @pytest.mark.asyncio
     async def test_get_puzzle_hash(self):
@@ -214,7 +216,9 @@ class TestCoinStore:
         except Exception as e:
             await connection.close()
             Path("blockchain_test.db").unlink()
+            b.shut_down()
             raise e
 
         await connection.close()
         Path("blockchain_test.db").unlink()
+        b.shut_down()
