@@ -27,10 +27,10 @@ def kwargs_for_start_daemon(root_path, use_unix_socket):
     mkdir(path.parent)
     try:
         if use_unix_socket:
-            return dict(path=path)
+            return f"http://unix", str(path)
         with open(path) as f:
             port = int(f.readline())
-        return dict(host="127.0.0.1", port=port)
+        return f"http://127.0.0.1:{port}", None
     except Exception as ex:
         pass
 
@@ -38,12 +38,16 @@ def kwargs_for_start_daemon(root_path, use_unix_socket):
 
 
 class DaemonProxy:
-    def __init__(self, host, port):
-        self._prefix = f"http://{host}:{port}"
+    def __init__(self, prefix, unix_socket_path):
+        self._prefix = prefix
+        self._unix_socket_path = unix_socket_path
 
     async def _get(self, uri):
         url = f"{self._prefix}{uri}"
-        async with aiohttp.ClientSession() as session:
+        kwargs = {}
+        if self._unix_socket_path:
+            kwargs = dict(connector=aiohttp.UnixConnector(self._unix_socket_path), connector_owner=True)
+        async with aiohttp.ClientSession(**kwargs) as session:
             async with session.get(url) as response:
                 r = await response.text()
         return r
@@ -73,8 +77,8 @@ async def connect_to_daemon(root_path, use_unix_socket):
     """
     Connect to the local daemon.
     """
-    kwargs = kwargs_for_start_daemon(root_path, should_use_unix_socket())
-    return DaemonProxy(**kwargs)
+    prefix, unix_socket_path = kwargs_for_start_daemon(root_path, should_use_unix_socket())
+    return DaemonProxy(prefix, unix_socket_path)
 
 
 async def connect_to_daemon_and_validate(root_path):

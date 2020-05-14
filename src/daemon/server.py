@@ -210,12 +210,12 @@ async def async_run_daemon(root_path):
         try:
             path = socket_server_path(root_path)
             mkdir(path.parent)
+            if path.exists():
+                path.unlink()
             if should_use_unix_socket():
                 where = path
-                kwargs = dict(path=path)
+                kwargs = dict(path=str(path))
             else:
-                if path.exists():
-                    path.unlink()
                 with open(path, "w") as f:
                     f.write(f"{port}\n")
                 where = port
