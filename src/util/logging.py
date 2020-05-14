@@ -25,9 +25,6 @@ def initialize_logging(prefix: str, logging_config: Dict, root_path: Path):
         logger = colorlog.getLogger()
         logger.addHandler(handler)
     else:
-        print(
-            f"Starting process and logging to {log_path}. Run with & to run in the background."
-        )
         logging.basicConfig(
             filename=log_path,
             filemode="a",
