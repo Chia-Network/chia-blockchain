@@ -19,6 +19,7 @@ const MnemonicField = props => {
   return (
     <Grid item xs={2}>
       <CssTextField
+        autoComplete="off"
         variant="outlined"
         margin="normal"
         fullWidth

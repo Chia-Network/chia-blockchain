@@ -10,7 +10,7 @@ export const changeWalletMenu = (item, id) => ({
 });
 
 const initial_state = {
-  view: tradeManager,
+  view: standardWallet,
   id: 1
 };
 
