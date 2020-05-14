@@ -178,7 +178,7 @@ class Blockchain:
             prev_b: Header = headers_db[cur_b.prev_header_hash]
             try:
                 challenge_hash = self.block_store.get_challenge_hash(
-                    cur_b
+                    cur_b.header_hash
                 )
                 self.block_store.add_proof_of_time(
                     challenge_hash,
