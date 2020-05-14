@@ -176,7 +176,6 @@ def singleton(lockfile, text="semaphore"):
             fd = os.open(lockfile, os.O_CREAT | os.O_EXCL | os.O_RDWR)
             f = open(fd, "w")
         f.write(text)
-        return f
     except IOError:
         return None
     return f
@@ -196,6 +195,7 @@ async def async_run_daemon(root_path):
         print("daemon: already launching")
         return 2
 
+    # TODO: clean this up, ensuring lockfile isn't removed until the listen port is open
     app = create_server_for_daemon(root_path)
 
     path = socket_server_path(root_path)
@@ -219,12 +219,11 @@ async def async_run_daemon(root_path):
             task = web._run_app(app, print=None, **kwargs)
             lockfile.close()
             print(f"daemon: listening on {where}", flush=True)
-            await task
+            break
         except Exception as ex:
-            breakpoint()
             port += 1
 
-    return asyncio.ensure_future(task)
+    await task
 
 
 def run_daemon(root_path):
