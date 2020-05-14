@@ -2,7 +2,7 @@ import bisect
 from secrets import token_bytes
 from typing import List, Optional
 
-import keyring
+import keyring as keyring_main
 import pkg_resources
 from bitstring import BitArray
 from blspy import ExtendedPrivateKey, PrivateKey
@@ -13,7 +13,14 @@ from src.types.BLSSignature import BLSPublicKey
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
 from src.util.hash import std_hash
+from sys import platform
+from keyrings.cryptfile.cryptfile import CryptFileKeyring
 
+if platform == "linux":
+    keyring = CryptFileKeyring()
+    keyring.keyring_key = "your keyring password"
+else:
+    keyring = keyring_main
 
 def binary_search(a, x, lo=0, hi=None):
     hi = hi if hi is not None else len(a)

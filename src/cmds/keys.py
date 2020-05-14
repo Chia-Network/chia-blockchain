@@ -36,7 +36,7 @@ def generate():
     print(mnemonics_string)
 
 
-def set_key(args, key_type):
+def set_seed(args, key_type):
     try:
         mnemonic = args.mnemonic
         print(f"Adding mnemonic: {mnemonic_to_string(mnemonic)}")
@@ -107,9 +107,9 @@ def handler(args, parser):
     if command == "generate":
         generate()
     elif command == "set_wallet_key":
-        set_key(args, "wallet")
+        set_seed(args, "wallet")
     elif command == "set_harvester_key":
-        set_key(args, "harvester")
+        set_seed(args, "harvester")
     elif command == "set_pool_key":
         set_key(args, "pool")
     elif command == "show_wallet_key":

@@ -20,6 +20,7 @@ dependencies = [
     "bitstring==3.1.6",
     "keyring==21.2.1",
     "keyring_jeepney==0.2",
+    "keyrings.cryptfile==1.3.4",
 ]
 
 upnp_dependencies = [
