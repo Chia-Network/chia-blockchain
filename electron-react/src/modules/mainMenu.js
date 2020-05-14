@@ -6,7 +6,7 @@ export const presentTimelord = "TIMELORD";
 export const changeMainMenu = item => ({ type: "MAIN_MENU", item: item });
 
 const initial_state = {
-  view: presentWallet
+  view: presentNode
 };
 
 export const mainMenuReducer = (state = { ...initial_state }, action) => {

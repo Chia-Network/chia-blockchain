@@ -28,6 +28,7 @@ import {
   presentTimelord
 } from "../modules/mainMenu";
 import { ModalDialog } from "./ModalDialog";
+import FullNode from "./FullNode";
 
 const drawerWidth = 200;
 
@@ -127,7 +128,7 @@ const ComopnentSwitch = () => {
   if (toPresent === presentWallet) {
     return <Wallets></Wallets>;
   } else if (toPresent == presentNode) {
-    return <div>Node</div>;
+    return <FullNode></FullNode>;
   } else if (toPresent == presentFarmer) {
     return <div>Farmer</div>;
   } else if (toPresent == presentTimelord) {
