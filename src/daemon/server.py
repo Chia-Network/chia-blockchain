@@ -2,7 +2,6 @@ import asyncio
 import logging
 import os
 import subprocess
-import sys
 
 try:
     import fcntl
@@ -86,7 +85,7 @@ async def kill_service(root_path, services, service_name, delay_before_kill=15):
             process.kill()
             log.info("sending kill signal to %s", service_name)
     r = process.wait()
-    log.info("process %s returned %d", process, r)
+    log.info("process %s returned %d", service_name, r)
     try:
         pid_path_killed = pid_path.with_suffix(".pid-killed")
         if pid_path_killed.exists():
@@ -144,7 +143,6 @@ def create_server_for_daemon(root_path):
 
     @routes.get('/daemon/exit/')
     async def exit(request):
-
         jobs = []
         for k in services.keys():
             jobs.append(kill_service(root_path, services, k))
@@ -152,9 +150,13 @@ def create_server_for_daemon(root_path):
             done, pending = await asyncio.wait(jobs)
         services.clear()
 
-        # TODO: fix this hack
-        asyncio.get_event_loop().call_later(5, lambda *args: sys.exit(0))
-        log.info("chia daemon exiting in 5 seconds")
+        # we can't await `site.stop()` here because that will cause a deadlock, waiting for this
+        # request to exit
+
+        site = request.app["site"]
+        task = asyncio.ensure_future(site.stop())
+        request.app["stop_task"] = task
+        log.info("chia daemon exiting")
         r = "exiting"
         return web.Response(text=str(r))
 
@@ -196,33 +198,39 @@ async def async_run_daemon(root_path):
         print("daemon: already launching")
         return 2
 
-    # TODO: clean this up, ensuring lockfile isn't removed until the listen port is open
     app = create_server_for_daemon(root_path)
+    runner = web.AppRunner(app)
+    await runner.setup()
 
     path = socket_server_path(root_path)
     mkdir(path.parent)
+    if path.exists():
+        path.unlink()
 
-    port = 60191
-    while True:
-        try:
-            path = socket_server_path(root_path)
-            mkdir(path.parent)
-            if path.exists():
-                path.unlink()
-            if should_use_unix_socket():
-                where = path
-                kwargs = dict(path=str(path))
-            else:
+    if should_use_unix_socket():
+        site = web.UnixSite(runner, path)
+        await site.start()
+        where = path
+    else:
+        port = 60191
+        while port < 65536:
+            host = "127.0.0.1"
+            site = web.TCPSite(runner, port=port, host=host)
+            try:
+                await site.start()
+                where = port
                 with open(path, "w") as f:
                     f.write(f"{port}\n")
-                where = port
-                kwargs = dict(port=port, host="127.0.0.1")
-            task = web._run_app(app, print=None, **kwargs)
-            lockfile.close()
-            print(f"daemon: listening on {where}", flush=True)
-            break
-        except Exception:
-            port += 1
+                break
+            except IOError:
+                port += 1
+        else:
+            raise RuntimeError("couldn't find a port to listen on")
+
+    app["site"] = site
+    lockfile.close()
+    print(f"daemon: listening on {where}", flush=True)
+    task = asyncio.ensure_future(site._server.wait_closed())
 
     await task
 
