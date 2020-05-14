@@ -12,7 +12,7 @@ import { withRouter, Redirect } from "react-router-dom";
 import CssTextField from "../components/cssTextField";
 import myStyle from "./style";
 import { useStore, useDispatch } from "react-redux";
-import { mnemonic_word_added } from "../modules/mnemonic_input";
+import { mnemonic_word_added, resetMnemonic } from "../modules/mnemonic_input";
 import { log_in } from "../modules/message";
 
 const MnemonicField = props => {
@@ -65,6 +65,7 @@ const Iterator = props => {
 
 const UIPart = props => {
   function goBack() {
+    dispatch(resetMnemonic());
     props.props.history.goBack();
   }
   const store = useStore();
@@ -75,6 +76,7 @@ const UIPart = props => {
     var mnemonic = state.mnemonic_state.mnemonic_input;
     dispatch(log_in(mnemonic));
   }
+
   const logged_in = useSelector(state => state.wallet_state.logged_in);
   const words = useSelector(state => state.wallet_state.mnemonic);
   const classes = myStyle();
