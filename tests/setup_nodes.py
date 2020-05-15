@@ -149,8 +149,9 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
     if "starting_height" in dic:
         config["starting_height"] = dic["starting_height"]
 
-    keychain = Keychain.create(key_seed.hex(), True)
-    keychain.set_wallet_seed(key_seed)
+    keychain = Keychain(key_seed.hex(), True)
+    keychain.add_private_key_seed(key_seed)
+    private_key = keychain.get_all_private_keys()[0][0]
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
@@ -164,7 +165,7 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
     network_id = net_config.get("network_id")
 
     wallet = await WalletNode.create(
-        config, keychain, override_constants=test_constants_copy, name="wallet1",
+        config, private_key, override_constants=test_constants_copy, name="wallet1",
     )
     assert ping_interval is not None
     assert network_id is not None
@@ -219,8 +220,9 @@ async def setup_harvester(port, dic={}):
 
 
 async def setup_farmer(port, dic={}):
+    print("root path", root_path)
     config = load_config(root_path, "config.yaml", "farmer")
-    keychain = bt.keychain
+    config_pool = load_config(root_path, "config.yaml", "pool")
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
@@ -229,7 +231,13 @@ async def setup_farmer(port, dic={}):
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")
 
-    farmer = Farmer(config, keychain, test_constants_copy)
+    config["xch_target_puzzle_hash"] = bt.fee_target.hex()
+    config["pool_public_keys"] = [
+        bytes(epk.get_public_key()).hex() for epk in bt.keychain.get_all_public_keys()
+    ]
+    config_pool["xch_target_puzzle_hash"] = bt.fee_target.hex()
+
+    farmer = Farmer(config, config_pool, bt.keychain, test_constants_copy)
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(

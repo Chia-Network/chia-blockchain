@@ -12,7 +12,9 @@ from chiabip158 import PyBIP158
 
 from chiapos import DiskPlotter, DiskProver
 from src import __version__
+from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.cmds.init import create_default_chia_config, initialize_ssl
+from src.types.BLSSignature import BLSPublicKey
 from src.consensus import block_rewards, pot_iterations
 from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
@@ -57,9 +59,6 @@ class BlockTools:
         create_default_chia_config(root_path)
         initialize_ssl(root_path)
         self.root_path = root_path
-        self.wallet_sk: PrivateKey = PrivateKey.from_seed(b"coinbase")
-        self.coinbase_target = std_hash(bytes(self.wallet_sk.get_public_key()))
-        self.fee_target = std_hash(bytes(self.wallet_sk.get_public_key()))
         self.n_wesolowski = uint8(0)
 
         if not real_plots:
@@ -72,10 +71,13 @@ class BlockTools:
             num_plots = 40
             # Use the empty string as the seed for the private key
 
-            self.keychain = Keychain.create("testing", True)
-            self.keychain.set_wallet_seed(b"")
-            self.keychain.set_pool_seed(b"")
-            pool_sk: PrivateKey = self.keychain.get_pool_keys()[0]
+            self.keychain = Keychain("testing", True)
+            self.keychain.delete_all_keys()
+            self.keychain.add_private_key_seed(b"block_tools")
+            print("keys:", self.keychain.get_all_private_keys())
+            pool_sk: PrivateKey = self.keychain.get_all_private_keys()[0][
+                0
+            ].get_private_key()
             pool_pk: PublicKey = pool_sk.get_public_key()
 
             plot_sks: List[PrivateKey] = [
@@ -129,18 +131,25 @@ class BlockTools:
             except FileNotFoundError:
                 raise RuntimeError("Plots not generated. Run chia-create-plots")
 
-            keychain = Keychain.create("testing", False)
-            pool_sks: List[PrivateKey] = keychain.get_pool_keys()
-            if len(pool_sks) != 2:
+            keychain = Keychain("testing", False)
+            private_keys: List[PrivateKey] = [
+                k.get_private_key() for (k, _) in keychain.get_all_private_keys()
+            ]
+            if len(private_keys) == 0:
                 raise RuntimeError("Keys not generated. Run `chia generate keys`")
 
             for key, value in plot_config["plots"].items():
-                for pool_sk in pool_sks:
-                    if bytes(pool_sk.get_public_key()).hex() == value["pool_pk"]:
-                        plot_config["plots"][key]["pool_sk"] = bytes(pool_sk).hex()
+                for sk in private_keys:
+                    if bytes(sk.get_public_key()).hex() == value["pool_pk"]:
+                        plot_config["plots"][key]["pool_sk"] = bytes(sk).hex()
 
             self.plot_config = plot_config
             self.use_any_pos = False
+
+        private_key = self.keychain.get_all_private_keys()[0][0]
+        self.fee_target = create_puzzlehash_for_pk(
+            BLSPublicKey(bytes(private_key.public_child(1).get_public_key()))
+        )
 
     def get_harvester_signature(self, header_data: HeaderData, plot_pk: PublicKey):
         for value_dict in self.plot_config["plots"].values():

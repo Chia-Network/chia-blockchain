@@ -6,11 +6,11 @@ import concurrent
 import random
 import logging
 import traceback
+from blspy import ExtendedPrivateKey
 
 from src.full_node.full_node import OutboundMessageGenerator
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
-from src.util.keychain import Keychain
 from src.util.merkle_set import (
     confirm_included_already_hashed,
     confirm_not_included_already_hashed,
@@ -76,7 +76,7 @@ class WalletNode:
     @staticmethod
     async def create(
         config: Dict,
-        keychain: Keychain,
+        private_key: ExtendedPrivateKey,
         name: str = None,
         override_constants: Dict = {},
     ):
@@ -90,11 +90,14 @@ class WalletNode:
         else:
             self.log = logging.getLogger(__name__)
 
-        path = path_from_root(DEFAULT_ROOT_PATH, config["database_path"])
+        db_path_key_suffix = str(private_key.get_public_key().get_fingerprint())
+        path = path_from_root(
+            DEFAULT_ROOT_PATH, f"{config['database_path']}-{db_path_key_suffix}"
+        )
         mkdir(path.parent)
 
         self.wallet_state_manager = await WalletStateManager.create(
-            keychain, config, path, self.constants
+            private_key, config, path, self.constants
         )
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
 

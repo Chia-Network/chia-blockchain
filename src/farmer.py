@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Any, Dict, List, Set
 
-from blspy import Util
+from blspy import Util, PublicKey
 from src.util.keychain import Keychain
 
 from src.consensus.block_rewards import calculate_block_reward
@@ -26,7 +26,13 @@ HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 
 
 class Farmer:
-    def __init__(self, farmer_config: Dict, keychain: Keychain, override_constants={}):
+    def __init__(
+        self,
+        farmer_config: Dict,
+        pool_config: Dict,
+        keychain: Keychain,
+        override_constants={},
+    ):
         self.config = farmer_config
         self.harvester_responses_header_hash: Dict[bytes32, bytes32] = {}
         self.harvester_responses_challenge: Dict[bytes32, bytes32] = {}
@@ -45,20 +51,31 @@ class Farmer:
         self.server = None
         self._shut_down = False
         self.keychain = keychain
-        self.wallet_target = self.keychain.get_wallet_target()
-        self.pool_target = self.keychain.get_pool_target()
-        self.pool_keys = self.keychain.get_pool_keys()
-        assert self.wallet_target is not None
-        assert self.pool_target is not None
-        assert len(self.pool_keys) == 2
+
+        # This is the farmer configuration
+        print(self.config)
+        self.wallet_target = bytes.fromhex(self.config["xch_target_puzzle_hash"])
+        self.pool_public_keys = [
+            PublicKey.from_bytes(bytes.fromhex(pk))
+            for pk in self.config["pool_public_keys"]
+        ]
+        print("pks", self.pool_public_keys)
+
+        # This is the pool configuration, which should be moved out to the pool once it exists
+        self.pool_target = bytes.fromhex(pool_config["xch_target_puzzle_hash"])
+        self.pool_sks = [
+            sk.get_private_key() for (sk, _) in self.keychain.get_all_private_keys()
+        ]
+
+        assert len(self.wallet_target) == 32
+        assert len(self.pool_target) == 32
+        assert len(self.pool_sks) > 0
         for key, value in override_constants.items():
             self.constants[key] = value
 
     async def _on_connect(self):
         # Sends a handshake to the harvester
-        msg = harvester_protocol.HarvesterHandshake(
-            [sk.get_public_key() for sk in self.pool_keys]
-        )
+        msg = harvester_protocol.HarvesterHandshake(self.pool_public_keys)
         yield OutboundMessage(
             NodeType.HARVESTER, Message("harvester_handshake", msg), Delivery.RESPOND
         )
@@ -171,9 +188,7 @@ class Farmer:
         and request a pool partial, a header signature, or both, if the proof is good enough.
         """
 
-        if response.proof.pool_pubkey not in [
-            sk.get_public_key() for sk in self.pool_keys
-        ]:
+        if response.proof.pool_pubkey not in self.pool_public_keys:
             raise RuntimeError("Pool pubkey not in list of approved keys")
 
         challenge_hash: bytes32 = self.harvester_responses_challenge[
@@ -328,9 +343,6 @@ class Farmer:
                 self.current_weight = proof_of_space_finalized.weight
 
             # TODO: ask the pool for this information
-
-            pool_sks = self.pool_keys
-
             coinbase_reward = uint64(
                 calculate_block_reward(uint32(proof_of_space_finalized.height + 1))
             )
@@ -339,7 +351,7 @@ class Farmer:
                 proof_of_space_finalized.height + 1,
                 self.pool_target,
                 coinbase_reward,
-                pool_sks[0],
+                self.pool_sks[0],
             )
 
             self.coinbase_rewards[uint32(proof_of_space_finalized.height + 1)] = (

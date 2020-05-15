@@ -9,7 +9,6 @@ from src.util.default_root import DEFAULT_ROOT_PATH
 SUBCOMMANDS = [
     "init",
     "keys",
-    "generate",
     "show",
     "start",
     "stop",

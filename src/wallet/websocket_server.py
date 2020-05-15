@@ -28,7 +28,6 @@ from src.simulator.simulator_constants import test_constants
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.util.config import load_config_cli, load_config
 from src.util.ints import uint64
-from src.types.sized_bytes import bytes32
 from src.util.logging import initialize_logging
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.rl_wallet.rl_wallet import RLWallet
@@ -84,7 +83,7 @@ class WebSocketServer:
         except NotImplementedError:
             self.log.info("Not implemented")
 
-        private_key = self.keychain.get_wallet_key()
+        private_key = self.keychain.get_all_private_keys()[0][0]
         if private_key is not None:
             await self.start_wallet()
 
@@ -96,7 +95,7 @@ class WebSocketServer:
         self.log.info("webSocketServer closed")
 
     async def start_wallet(self) -> bool:
-        private_key = self.keychain.get_wallet_key()
+        private_key = self.keychain.get_all_private_keys()[0][0]
         if private_key is None:
             self.log.info("No keys")
             return False
@@ -104,11 +103,11 @@ class WebSocketServer:
         if self.config["testing"] is True:
             log.info(f"Websocket server in testing mode")
             self.wallet_node = await WalletNode.create(
-                self.config, self.keychain, override_constants=test_constants
+                self.config, private_key, override_constants=test_constants
             )
         else:
             log.info(f"Not Testing")
-            self.wallet_node = await WalletNode.create(self.config, self.keychain)
+            self.wallet_node = await WalletNode.create(self.config, private_key)
 
         if self.wallet_node is None:
             return False
@@ -168,7 +167,7 @@ class WebSocketServer:
         if wallet.wallet_info.type == WalletType.STANDARD_WALLET:
             puzzle_hash = (await wallet.get_new_puzzlehash()).hex()
         elif wallet.wallet_info.type == WalletType.COLOURED_COIN:
-            puzzle_hash: bytes32 = await wallet.get_new_inner_hash()
+            puzzle_hash = await wallet.get_new_inner_hash()
 
         data = {
             "wallet_id": wallet_id,
@@ -553,7 +552,7 @@ class WebSocketServer:
         return await websocket.send(format_response(response_api, response))
 
     async def logged_in(self, websocket, response_api):
-        private_key = self.keychain.get_wallet_key()
+        private_key = self.keychain.get_all_private_keys()[0][0]
         if private_key is None:
             response = {"logged_in": False}
         else:
@@ -568,16 +567,11 @@ class WebSocketServer:
         self.log.info(f"Mnemonic {mnemonic}")
         seed = seed_from_mnemonic(mnemonic)
         self.log.info(f"Seed {seed}")
-        self.keychain.set_wallet_seed(seed)
-        k_seed = self.keychain.get_wallet_seed()
+        self.keychain.add_private_key_seed(seed)
 
         await self.start_wallet()
 
-        if k_seed == seed:
-            response = {"success": True}
-        else:
-            response = {"success": False}
-
+        response = {"success": True}
         return await websocket.send(format_response(response_api, response))
 
     async def clean_all_state(self):
@@ -726,7 +720,7 @@ async def start_websocket_server():
     """
 
     setproctitle("chia-wallet")
-    keychain = Keychain.create(testing=False)
+    keychain = Keychain(testing=False)
     websocket_server = WebSocketServer(keychain, DEFAULT_ROOT_PATH)
     await websocket_server.start()
     log.info("Wallet fully closed")

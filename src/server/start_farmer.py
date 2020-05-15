@@ -23,13 +23,16 @@ async def async_main():
     net_config = load_config(root_path, "config.yaml")
     config = load_config_cli(root_path, "config.yaml", "farmer")
 
+    # TOD: Remove once we have pool server
+    config_pool = load_config_cli(root_path, "config.yaml", "pool")
+
     initialize_logging("Farmer %(name)-25s", config["logging"], root_path)
     log = logging.getLogger(__name__)
     setproctitle("chia_farmer")
 
-    keychain = Keychain.create()
+    keychain = Keychain()
 
-    farmer = Farmer(config, keychain)
+    farmer = Farmer(config, config_pool, keychain)
 
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")

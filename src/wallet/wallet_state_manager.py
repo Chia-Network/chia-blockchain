@@ -19,7 +19,6 @@ from src.types.header_block import HeaderBlock
 from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint32, uint64
 from src.util.hash import std_hash
-from src.util.keychain import Keychain
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.cc_wallet import cc_wallet_puzzles
 from src.wallet.transaction_record import TransactionRecord
@@ -79,11 +78,10 @@ class WalletStateManager:
     main_wallet: Wallet
     wallets: Dict[uint32, Any]
     private_key: ExtendedPrivateKey
-    keychain: Keychain
 
     @staticmethod
     async def create(
-        keychain: Keychain,
+        private_key: ExtendedPrivateKey,
         config: Dict,
         db_path: Path,
         constants: Dict,
@@ -119,8 +117,7 @@ class WalletStateManager:
         main_wallet_info = await self.user_store.get_wallet_by_id(1)
         assert main_wallet_info is not None
 
-        self.keychain = keychain
-        self.private_key = self.keychain.get_wallet_key()
+        self.private_key = private_key
 
         self.main_wallet = await Wallet.create(self, main_wallet_info)
 
