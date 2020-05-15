@@ -144,7 +144,9 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
         db_path.unlink()
 
 
-async def setup_wallet_node(port, introducer_port=None, key_seed=b"setup_wallet_node", dic={}):
+async def setup_wallet_node(
+    port, introducer_port=None, key_seed=b"setup_wallet_node", dic={}
+):
     config = load_config(root_path, "config.yaml", "wallet")
     if "starting_height" in dic:
         config["starting_height"] = dic["starting_height"]

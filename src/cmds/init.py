@@ -44,6 +44,11 @@ def dict_add_new_default(
 def check_keys(new_root):
     keychain: Keychain = Keychain()
     all_pubkeys = keychain.get_all_public_keys()
+    if len(all_pubkeys) == 0:
+        print(
+            "No keys are present in the keychain. Generate them with 'chia keys generate_and_add'"
+        )
+        return
     all_targets = [
         create_puzzlehash_for_pk(
             BLSPublicKey(bytes(epk.public_child(0).get_public_key()))
@@ -89,15 +94,19 @@ def migrate_to_keychain(old_root, new_root):
     keychain: Keychain = Keychain()
 
     # Migrate wallet sk
-    keys_config = load_config(old_root, "keys.yaml")
-    wallet_key_bytes = bytes.fromhex(keys_config["wallet_sk"])
-    wallet_sk = ExtendedPrivateKey.from_bytes(wallet_key_bytes)
-    keychain.add_private_key(wallet_sk)
+    try:
+        keys_config = load_config(old_root, "keys.yaml", exit_on_error=False)
+        wallet_key_bytes = bytes.fromhex(keys_config["wallet_sk"])
+        wallet_sk = ExtendedPrivateKey.from_bytes(wallet_key_bytes)
+        keychain.add_private_key(wallet_sk)
 
-    # Migrate pool sks
-    pool_sks_bytes = [bytes.fromhex(h) for h in keys_config["pool_sks"]]
-    for k_bytes in pool_sks_bytes:
-        keychain.add_private_key_not_extended(PrivateKey.from_bytes(k_bytes))
+        # Migrate pool sks
+        pool_sks_bytes = [bytes.fromhex(h) for h in keys_config["pool_sks"]]
+        for k_bytes in pool_sks_bytes:
+            keychain.add_private_key_not_extended(PrivateKey.from_bytes(k_bytes))
+    except ValueError:
+        print("No keys.yaml to migrate from.")
+
     check_keys(new_root)
 
 

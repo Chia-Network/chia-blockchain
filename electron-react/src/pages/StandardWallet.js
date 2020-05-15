@@ -5,7 +5,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 import { withRouter, Redirect } from "react-router-dom";
 import { connect, useDispatch, useSelector } from "react-redux";
-import { log_out } from "../modules/message";
+import { delete_all_keys } from "../modules/message";
 import clsx from "clsx";
 import Drawer from "@material-ui/core/Drawer";
 import List from "@material-ui/core/List";

@@ -125,9 +125,15 @@ class Keychain:
             index += 1
 
     def add_private_key_seed(self, seed: bytes):
+        """
+        Adds a private key seed to the keychain. This is the best way to add keys, since they can
+        be backed up to mnemonics. A seed is used to generate a BLS ExtendedPrivateKey.
+        """
         index = self._get_free_private_key_seed_index()
         key = ExtendedPrivateKey.from_seed(seed)
-        if key in [k for (k, seed) in self.get_all_private_keys()]:
+        if key.get_public_key().get_fingerprint() in [
+            epk.get_public_key().get_fingerprint() for epk in self.get_all_public_keys()
+        ]:
             # Prevents duplicate add
             return
         keyring.set_password(
@@ -142,7 +148,9 @@ class Keychain:
 
         key_bytes = bytes(key)
         index = self._get_free_private_key_index()
-        if key in [k for (k, seed) in self.get_all_private_keys()]:
+        if key.get_public_key().get_fingerprint() in [
+            epk.get_public_key().get_fingerprint() for epk in self.get_all_public_keys()
+        ]:
             # Prevents duplicate add
             return
         keyring.set_password(
@@ -246,7 +254,9 @@ class Keychain:
                 delete_exception = True
 
             # Stop when there are no more keys to delete
-            if password is None or len(password) == 0 or delete_exception:
+            if (
+                password is None or len(password) == 0 or delete_exception
+            ) and index > 500:
                 break
             index += 1
 
@@ -263,6 +273,8 @@ class Keychain:
                 delete_exception = True
 
             # Stop when there are no more keys to delete
-            if password is None or len(password) == 0 or delete_exception:
+            if (
+                password is None or len(password) == 0 or delete_exception
+            ) and index > 500:
                 break
             index += 1

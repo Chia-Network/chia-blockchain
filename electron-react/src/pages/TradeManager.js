@@ -23,7 +23,6 @@ import {
   parsingStarted
 } from "../modules/TradeReducer";
 import { chia_to_mojo, mojo_to_chia_string } from "../util/chia";
-import { ModalDialog } from "./ModalDialog";
 import { openDialog } from "../modules/dialogReducer";
 import isElectron from "is-electron";
 import {
@@ -150,7 +149,6 @@ const TradeList = () => {
   const classes = useStyles();
 
   const trades = useSelector(state => state.trade_state.trades);
-  const count = useSelector(state => state.trade_state.trades.length);
   const wallets = useSelector(state => state.wallet_state.wallets);
 
   return (
@@ -218,7 +216,6 @@ const OfferView = () => {
   const classes = useStyles();
   const offer = useSelector(state => state.trade_state.parsed_offer);
   const dispatch = useDispatch();
-  const file_name = useSelector(state => state.trade_state.parsed_offer_name);
   const file_path = useSelector(state => state.trade_state.parsed_offer_path);
 
   function accept() {

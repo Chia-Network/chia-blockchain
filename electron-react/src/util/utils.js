@@ -18,7 +18,7 @@ export function get_query_variable(variable) {
   var vars = query.split("&");
   for (var i = 0; i < vars.length; i++) {
     var pair = vars[i].split("=");
-    if (decodeURIComponent(pair[0]) == variable) {
+    if (decodeURIComponent(pair[0]) === variable) {
       return decodeURIComponent(pair[1]);
     }
   }
@@ -35,7 +35,7 @@ export function big_int_to_array(x, num_bytes) {
 }
 
 export function hex_to_array(hexString) {
-  var hexString = hexString.slice(2);
+  hexString = hexString.slice(2);
   var arr = [];
   for (var i = 0; i < hexString.length; i += 2) {
     arr.push(parseInt(hexString.substr(i, 2), 16));

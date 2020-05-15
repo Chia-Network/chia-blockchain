@@ -1,5 +1,5 @@
 import * as actions from "../modules/websocket";
-import { format_message, incomingMessage } from "../modules/message";
+import { format_message } from "../modules/message";
 import { handle_message } from "./middleware_api";
 
 const socketMiddleware = () => {

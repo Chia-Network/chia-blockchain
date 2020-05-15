@@ -46,7 +46,6 @@ export const DialogItem = props => {
 
 export const ModalDialog = () => {
   const dialogs = useSelector(state => state.dialog_state.dialogs);
-  const count = useSelector(state => state.dialog_state.dialogs.length);
 
   console.log(dialogs);
 

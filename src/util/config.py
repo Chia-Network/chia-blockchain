@@ -38,10 +38,15 @@ def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
 
 
 def load_config(
-    root_path: Path, filename: Union[str, Path], sub_config: Optional[str] = None
+    root_path: Path,
+    filename: Union[str, Path],
+    sub_config: Optional[str] = None,
+    exit_on_error=True,
 ) -> Dict:
     path = config_path_for_filename(root_path, filename)
     if not path.is_file():
+        if not exit_on_error:
+            raise ValueError("Config not found")
         print(f"can't find {path}")
         print("** please run `chia init` to migrate or create new config files **")
         # TODO: fix this hack

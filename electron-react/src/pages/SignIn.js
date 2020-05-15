@@ -42,6 +42,9 @@ const useStyles = makeStyles(theme => ({
     marginTop: theme.spacing(8),
     marginBottom: theme.spacing(3)
   },
+  warning: {
+    color: "red"
+  },
   main: {
     height: "100%"
   }
@@ -50,16 +53,22 @@ const useStyles = makeStyles(theme => ({
 const SignIn = () => {
   const classes = useStyles();
   const logged_in = useSelector(state => state.wallet_state.logged_in);
+  const connected = useSelector(state => state.websocket.connected);
+  const public_key_fingerprints = useSelector(state => state.wallet_state.public_key_fingerprints);
   if (logged_in) {
     console.log("Redirecting to wallet");
     return <Redirect to="/dashboard" />;
+  }
+  if (public_key_fingerprints.length > 0) {
+    return <Redirect to="/SelectKey" />;
   }
   return (
     <div className={classes.root}>
       <Container className={classes.main} component="main" maxWidth="xs">
         <CssBaseline />
         <div className={classes.paper}>
-          <img className={classes.logo} src={logo} alt="Logo" />;
+          <img className={classes.logo} src={logo} alt="Logo" />
+          {connected ? "" : <h2 className={classes.warning}>Not connected to wallet</h2>}
           <div>
             <Link component={RouterLink} to="/Mnemonics">
               <Button

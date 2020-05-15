@@ -142,6 +142,8 @@ class WalletNode:
         return result
 
     async def _resend_queue(self):
+        if self._shut_down:
+            return
         if self.server is None:
             return
 
@@ -715,6 +717,8 @@ class WalletNode:
         Notification from full node that a new LCA (Least common ancestor of the three blockchain
         tips) has been added to the full node.
         """
+        if self._shut_down:
+            return
         if self.wallet_state_manager.sync_mode:
             return
         # If already seen LCA, ignore.
@@ -756,6 +760,8 @@ class WalletNode:
         until we have the required additions / removals for our wallets.
         """
         while True:
+            if self._shut_down:
+                return
             # We loop, to avoid infinite recursion. At the end of each iteration, we might want to
             # process the next block, if it exists.
 
@@ -870,6 +876,8 @@ class WalletNode:
         The full node has responded with the additions for a block. We will use this
         to try to finish the block, and add it to the state.
         """
+        if self._shut_down:
+            return
         if response.header_hash not in self.cached_blocks:
             self.log.warning("Do not have header for additions")
             return
@@ -1009,6 +1017,8 @@ class WalletNode:
         The full node has responded with the removals for a block. We will use this
         to try to finish the block, and add it to the state.
         """
+        if self._shut_down:
+            return
         if (
             response.header_hash not in self.cached_blocks
             or self.cached_blocks[response.header_hash][0].additions is None
