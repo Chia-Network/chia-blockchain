@@ -14,6 +14,7 @@ SUBCOMMANDS = [
     "stop",
     "version",
     "netspace",
+    "run_daemon",
 ]
 
 

@@ -43,6 +43,15 @@ test_constants["GENESIS_BLOCK"] = bytes(
 )
 
 
+async def _teardown_nodes(node_aiters: List) -> None:
+    awaitables = [node_iter.__anext__() for node_iter in node_aiters]
+    for sublist_awaitable in asyncio.as_completed(awaitables):
+        try:
+            await sublist_awaitable
+        except StopAsyncIteration:
+            pass
+
+
 async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={}):
     # SETUP
     test_constants_copy = test_constants.copy()
@@ -88,8 +97,9 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
 
     # TEARDOWN
     server_1.close_all()
+    full_node_1._close()
     await server_1.await_closed()
-    await full_node_1._shutdown()
+    await full_node_1._await_closed()
     db_path.unlink()
 
 
@@ -129,6 +139,7 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
         network_id,
         root_path,
         config,
+        f"full_node_server_{port}",
     )
     _ = await server_1.start_server(full_node_1._on_connect)
     full_node_1._set_server(server_1)
@@ -137,8 +148,9 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
 
     # TEARDOWN
     server_1.close_all()
+    full_node_1._close()
     await server_1.await_closed()
-    await full_node_1._shutdown()
+    await full_node_1._await_closed()
     db_path = root_path / f"{db_name}"
     if db_path.exists():
         db_path.unlink()
@@ -213,12 +225,13 @@ async def setup_harvester(port, dic={}):
         f"harvester_server_{port}",
     )
 
+    harvester.set_server(server)
     yield (harvester, server)
 
-    harvester._shutdown()
     server.close_all()
-    await harvester._await_shutdown()
+    harvester._shutdown()
     await server.await_closed()
+    await harvester._await_shutdown()
 
 
 async def setup_farmer(port, dic={}):
@@ -278,6 +291,7 @@ async def setup_introducer(port, dic={}):
         network_id,
         bt.root_path,
         config,
+        f"introducer_server_{port}",
     )
     _ = await server.start_server(None)
 
@@ -316,6 +330,7 @@ async def setup_timelord(port, dic={}):
         network_id,
         bt.root_path,
         config,
+        f"timelord_server_{port}",
     )
 
     coro = asyncio.start_server(
@@ -346,6 +361,7 @@ async def setup_timelord(port, dic={}):
 
 
 async def setup_two_nodes(dic={}):
+
     """
     Setup and teardown of two full nodes, with blockchains and separate DBs.
     """
@@ -359,11 +375,7 @@ async def setup_two_nodes(dic={}):
 
     yield (fn1, fn2, s1, s2)
 
-    for node_iter in node_iters:
-        try:
-            await node_iter.__anext__()
-        except StopAsyncIteration:
-            pass
+    await _teardown_nodes(node_iters)
 
 
 async def setup_node_and_wallet(dic={}):
@@ -377,11 +389,7 @@ async def setup_node_and_wallet(dic={}):
 
     yield (full_node, wallet, s1, s2)
 
-    for node_iter in node_iters:
-        try:
-            await node_iter.__anext__()
-        except StopAsyncIteration:
-            pass
+    await _teardown_nodes(node_iters)
 
 
 async def setup_node_and_two_wallets(dic={}):
@@ -397,11 +405,7 @@ async def setup_node_and_two_wallets(dic={}):
 
     yield (full_node, wallet, wallet_2, s1, s2, s3)
 
-    for node_iter in node_iters:
-        try:
-            await node_iter.__anext__()
-        except StopAsyncIteration:
-            pass
+    await _teardown_nodes(node_iters)
 
 
 async def setup_simulators_and_wallets(
@@ -427,11 +431,7 @@ async def setup_simulators_and_wallets(
 
     yield (simulators, wallets)
 
-    for node_iter in node_iters:
-        try:
-            await node_iter.__anext__()
-        except StopAsyncIteration:
-            pass
+    await _teardown_nodes(node_iters)
 
 
 async def setup_full_system(dic={}):
@@ -464,9 +464,4 @@ async def setup_full_system(dic={}):
 
     yield (node1, node2)
 
-    for node_iter in node_iters:
-
-        try:
-            await node_iter.__anext__()
-        except StopAsyncIteration:
-            pass
+    await _teardown_nodes(node_iters)

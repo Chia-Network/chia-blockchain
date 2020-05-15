@@ -81,20 +81,15 @@ class TestNodeLoad:
 
         start_unf = time.time()
         for i in range(1, num_blocks):
+            while max([h.height for h in full_node_2.blockchain.get_current_tips()]) < (
+                i - 1
+            ):
+                # Waits until we reach height i - 1
+                await asyncio.sleep(0.05)
+
             msg = Message("respond_block", full_node_protocol.RespondBlock(blocks[i]))
             server_1.push_message(
                 OutboundMessage(NodeType.FULL_NODE, msg, Delivery.BROADCAST)
             )
-
-        while time.time() - start_unf < 100:
-            if (
-                max([h.height for h in full_node_2.blockchain.get_current_tips()])
-                == num_blocks - 1
-            ):
-                print(
-                    f"Time taken to process {num_blocks} is {time.time() - start_unf}"
-                )
-                return
-            await asyncio.sleep(0.1)
-
-        raise Exception("Took too long to process blocks")
+        print(f"Time taken to process {num_blocks} is {time.time() - start_unf}")
+        assert time.time() - start_unf < 200

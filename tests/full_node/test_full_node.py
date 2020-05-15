@@ -703,12 +703,12 @@ class TestFullNodeProtocol:
         )
 
         # In sync mode
-        full_node_1.full_node_store.set_sync_mode(True)
+        full_node_1.sync_store.set_sync_mode(True)
         msgs = [
             _ async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks_new[-5]))
         ]
         assert len(msgs) == 0
-        full_node_1.full_node_store.set_sync_mode(False)
+        full_node_1.sync_store.set_sync_mode(False)
 
         # If invalid, do nothing
         block_invalid = FullBlock(

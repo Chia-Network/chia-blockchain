@@ -108,6 +108,7 @@ class TestBlockStore:
             db_filename.unlink()
             db_filename_2.unlink()
             db_filename_3.unlink()
+            b.shut_down()
             raise
 
         await connection.close()
@@ -116,27 +117,28 @@ class TestBlockStore:
         db_filename.unlink()
         db_filename_2.unlink()
         db_filename_3.unlink()
+        b.shut_down()
 
-    # @pytest.mark.asyncio
-    # async def test_deadlock(self):
-    #     blocks = bt.get_consecutive_blocks(test_constants, 10, [], 9, b"0")
-    #     db_filename = Path("blockchain_test.db")
+    @pytest.mark.asyncio
+    async def test_deadlock(self):
+        blocks = bt.get_consecutive_blocks(test_constants, 10, [], 9, b"0")
+        db_filename = Path("blockchain_test.db")
 
-    #     if db_filename.exists():
-    #         db_filename.unlink()
+        if db_filename.exists():
+            db_filename.unlink()
 
-    #     connection = await aiosqlite.connect(db_filename)
-    #     db = await BlockStore.create(connection)
-    #     tasks = []
+        connection = await aiosqlite.connect(db_filename)
+        db = await BlockStore.create(connection)
+        tasks = []
 
-    #     for i in range(10000):
-    #         rand_i = random.randint(0, 10)
-    #         if random.random() < 0.5:
-    #             tasks.append(asyncio.create_task(db.add_block(blocks[rand_i])))
-    #         if random.random() < 0.5:
-    #             tasks.append(
-    #                 asyncio.create_task(db.get_block(blocks[rand_i].header_hash))
-    #             )
-    #     await asyncio.gather(*tasks)
-    #     await connection.close()
-    #     db_filename.unlink()
+        for i in range(10000):
+            rand_i = random.randint(0, 10)
+            if random.random() < 0.5:
+                tasks.append(asyncio.create_task(db.add_block(blocks[rand_i])))
+            if random.random() < 0.5:
+                tasks.append(
+                    asyncio.create_task(db.get_block(blocks[rand_i].header_hash))
+                )
+        await asyncio.gather(*tasks)
+        await connection.close()
+        db_filename.unlink()

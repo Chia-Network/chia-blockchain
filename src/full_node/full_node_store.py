@@ -14,8 +14,6 @@ log = logging.getLogger(__name__)
 
 class FullNodeStore:
     db: aiosqlite.Connection
-    # Whether or not we are syncing
-    sync_mode: bool
     # Current estimate of the speed of the network timelords
     proof_of_time_estimate_ips: uint64
     # Proof of time heights
@@ -40,7 +38,6 @@ class FullNodeStore:
 
         await self.db.commit()
 
-        self.sync_mode = False
         self.proof_of_time_estimate_ips = uint64(10000)
         self.proof_of_time_heights = {}
         self.unfinished_blocks_leader = (
@@ -80,12 +77,6 @@ class FullNodeStore:
         for key in list(self.disconnected_blocks.keys()):
             if self.disconnected_blocks[key].height < height:
                 del self.disconnected_blocks[key]
-
-    def set_sync_mode(self, sync_mode: bool) -> None:
-        self.sync_mode = sync_mode
-
-    def get_sync_mode(self) -> bool:
-        return self.sync_mode
 
     def add_candidate_block(
         self,
