@@ -551,6 +551,25 @@ class WebSocketServer:
             response = {"success": success, "reason": reason}
         return await websocket.send(format_response(response_api, response))
 
+    # async def get_keys_list(self, websocket, response_api):
+    #     fingerprints = [pk.get_public_key().get_fingerprint() for pk in self.keychain.get_all_public_keys()]
+    #     response = {"public_key_fingerprints": fingerprints}
+    #     return await websocket.send(format_response(response_api, response))
+
+    # async def log_in(self, websocket, request, response_api):
+    #     await self.stop_wallet()
+    #     await self.clean_all_state()
+    #     mnemonic = request["mnemonic"]
+    #     self.log.info(f"Mnemonic {mnemonic}")
+    #     seed = seed_from_mnemonic(mnemonic)
+    #     self.log.info(f"Seed {seed}")
+    #     self.keychain.add_private_key_seed(seed)
+
+    #     await self.start_wallet()
+
+    #     response = {"success": True}
+    #     return await websocket.send(format_response(response_api, response))
+
     async def logged_in(self, websocket, response_api):
         private_key = self.keychain.get_all_private_keys()[0][0]
         if private_key is None:
