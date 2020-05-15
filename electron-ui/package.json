@@ -4,7 +4,8 @@
   "description": "A minimal Electron and Python Wallet ",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "test": "jest tests/"
   },
   "repository": "https://github.com/chia-networks/",
   "keywords": [
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "electron": "^8.2.0",
-    "electron-packager": "^14.2.1"
+    "electron-packager": "^14.2.1",
+    "jest": "^26.0.1"
   }
 }

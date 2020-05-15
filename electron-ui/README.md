@@ -6,6 +6,9 @@
 ## Run:
 ```npm start```
 
+## Tests:
+```npm run test```
+
 ## Error
 If run fails because of electron try doing this
 
