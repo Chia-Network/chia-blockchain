@@ -498,7 +498,7 @@ const TransactionTable = props => {
         </TableHead>
         <TableBody className={classes.tableBody}>
           {transactions.map(tx => (
-            <TableRow className={classes.row}>
+            <TableRow className={classes.row} key={tx.to_puzzle_hash + tx.created_at_time + tx.amount}>
               <TableCell className={classes.cell_short}>
                 {incoming_string(tx.incoming)}
               </TableCell>

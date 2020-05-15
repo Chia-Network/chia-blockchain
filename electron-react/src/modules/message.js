@@ -36,6 +36,13 @@ export const add_key = (mnemonic) => {
   return action
 }
 
+export const delete_key = (fingerprint) => {
+  var action = newMessage()
+  action.command = "delete_key"
+  action.data = {"fingerprint": fingerprint}
+  return action
+}
+
 export const delete_all_keys = () => {
   var action = newMessage()
   action.command = "delete_all_keys"

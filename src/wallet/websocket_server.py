@@ -595,6 +595,13 @@ class WebSocketServer:
         response = {"success": started}
         return await websocket.send(format_response(response_api, response))
 
+    async def delete_key(self, websocket, request, response_api):
+        await self.stop_wallet()
+        fingerprint = request["fingerprint"]
+        self.keychain.delete_key_by_fingerprint(fingerprint)
+        response = {"success": True}
+        return await websocket.send(format_response(response_api, response))
+
     async def clean_all_state(self):
         self.keychain.delete_all_keys()
         path = path_from_root(DEFAULT_ROOT_PATH, self.config["database_path"])
@@ -706,6 +713,8 @@ class WebSocketServer:
             await self.log_in(websocket, data, command)
         elif command == "add_key":
             await self.add_key(websocket, data, command)
+        elif command == "delete_key":
+            await self.delete_key(websocket, data, command)
         elif command == "delete_all_keys":
             await self.delete_all_keys(websocket, command)
         else:
