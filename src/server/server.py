@@ -261,6 +261,8 @@ class ChiaServer:
         A pipeline that starts with (StreamReader, StreamWriter), maps it though to
         connections, messages, executes a local API call, and returns responses.
         """
+        global_connections = self.global_connections
+        outbound_aiter = self._outbound_aiter
 
         # Maps a stream reader, writer and NodeType to a Connection object
         connections_aiter = map_aiter(
@@ -299,7 +301,7 @@ class ChiaServer:
 
         # Also uses the instance variable _outbound_aiter, which clients can use to send messages
         # at any time, not just on_connect.
-        outbound_aiter_mapped = map_aiter(lambda x: (None, x), self._outbound_aiter)
+        outbound_aiter_mapped = map_aiter(lambda x: (None, x), outbound_aiter)
 
         responses_aiter = join_aiters(
             iter_to_aiter(
@@ -317,7 +319,7 @@ class ChiaServer:
         async for connection, message in expanded_messages_aiter:
             if message is None:
                 # Does not ban the peer, this is just a graceful close of connection.
-                self.global_connections.close(connection, True)
+                global_connections.close(connection, True)
                 continue
             if connection.is_closing():
                 self.log.info(
@@ -331,7 +333,7 @@ class ChiaServer:
                 self.log.warning(
                     f"Cannot write to {connection}, already closed. Error {e}."
                 )
-                self.global_connections.close(connection, True)
+                global_connections.close(connection, True)
 
     async def stream_reader_writer_to_connection(
         self,
@@ -366,6 +368,9 @@ class ChiaServer:
         is unsuccessful, or we already have a connection with this peer, the connection is closed,
         and nothing is yielded.
         """
+        global_connections = self.global_connections
+        srwt_aiter = self._srwt_aiter
+
         # Send handshake message
         outbound_handshake = Message(
             "handshake",
@@ -391,7 +396,7 @@ class ChiaServer:
             ):
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
 
-            if inbound_handshake.node_id == self._node_id:
+            if inbound_handshake.node_id == outbound_handshake.data.node_id:
                 raise ProtocolError(Err.SELF_CONNECTION)
 
             # Makes sure that we only start one connection with each peer
@@ -399,10 +404,10 @@ class ChiaServer:
             connection.peer_server_port = int(inbound_handshake.server_port)
             connection.connection_type = inbound_handshake.node_type
 
-            if self._srwt_aiter.is_stopped():
+            if srwt_aiter.is_stopped():
                 raise Exception("No longer accepting handshakes, closing.")
 
-            if not self.global_connections.add(connection):
+            if not global_connections.add(connection):
                 raise ProtocolError(Err.DUPLICATE_CONNECTION, [False])
 
             # Send Ack message
@@ -433,7 +438,7 @@ class ChiaServer:
             # Make sure to close the connection even if it's not in global connections
             connection.close()
             # Remove the conenction from global connections
-            self.global_connections.close(connection)
+            global_connections.close(connection)
 
     async def connection_to_message(
         self, connection: Connection
@@ -443,6 +448,8 @@ class ChiaServer:
         along with a streamwriter to send back responses. On EOF received, the connection
         is removed from the global list.
         """
+        global_connections = self.global_connections
+
         try:
             while not connection.reader.at_eof():
                 message = await connection.read_one_message()
@@ -473,7 +480,7 @@ class ChiaServer:
             )
         finally:
             # Removes the connection from the global list, so we don't try to send things to it
-            self.global_connections.close(connection, True)
+            global_connections.close(connection, True)
 
     async def handle_message(
         self, pair: Tuple[Connection, Message], api: Any
@@ -482,6 +489,8 @@ class ChiaServer:
         Async generator which takes messages, parses, them, executes the right
         api function, and yields responses (to same connection, propagated, etc).
         """
+        global_connections = self.global_connections
+
         connection, full_message = pair
         try:
             if len(full_message.function) == 0 or full_message.function.startswith("_"):
@@ -530,7 +539,7 @@ class ChiaServer:
             tb = traceback.format_exc()
             self.log.error(f"Error, closing connection {connection}. {tb}")
             # TODO: Exception means peer gave us invalid information, so ban this peer.
-            self.global_connections.close(connection)
+            global_connections.close(connection)
 
     async def expand_outbound_messages(
         self, pair: Tuple[Connection, OutboundMessage]
@@ -538,6 +547,8 @@ class ChiaServer:
         """
         Expands each of the outbound messages into it's own message.
         """
+        global_connections = self.global_connections
+
         connection, outbound_message = pair
 
         if connection and outbound_message.delivery_method == Delivery.RESPOND:
@@ -549,7 +560,7 @@ class ChiaServer:
             to_yield_single: Tuple[Connection, Message]
             typed_peers: List[Connection] = [
                 peer
-                for peer in self.global_connections.get_connections()
+                for peer in global_connections.get_connections()
                 if peer.connection_type == outbound_message.peer_type
             ]
             if len(typed_peers) == 0:
@@ -560,7 +571,7 @@ class ChiaServer:
             or outbound_message.delivery_method == Delivery.BROADCAST_TO_OTHERS
         ):
             # Broadcast to all peers.
-            for peer in self.global_connections.get_connections():
+            for peer in global_connections.get_connections():
                 if peer.connection_type == outbound_message.peer_type:
                     if peer == connection:
                         if outbound_message.delivery_method == Delivery.BROADCAST:
@@ -572,7 +583,7 @@ class ChiaServer:
             # Send to a specific peer, by node_id, assuming the NodeType matches.
             if outbound_message.specific_peer_node_id is None:
                 return
-            for peer in self.global_connections.get_connections():
+            for peer in global_connections.get_connections():
                 if (
                     peer.connection_type == outbound_message.peer_type
                     and peer.node_id == outbound_message.specific_peer_node_id
@@ -585,7 +596,7 @@ class ChiaServer:
                 if connection.connection_type == outbound_message.peer_type:
                     yield (connection, None)
             else:
-                for peer in self.global_connections.get_connections():
+                for peer in global_connections.get_connections():
                     # Close the connection with the specific peer
                     if (
                         peer.connection_type == outbound_message.peer_type
