@@ -60,11 +60,6 @@ class ChiaServer:
         # Aiter used to broadcase messages
         self._outbound_aiter: push_aiter = push_aiter()
 
-        # Tasks for entire server pipeline
-        self._pipeline_task: asyncio.Future = asyncio.ensure_future(
-            self.initialize_pipeline(self._srwt_aiter, self._api, self._port)
-        )
-
         # Our unique random node id that we will other peers, regenerated on launch
         self._node_id = create_node_id()
 
@@ -74,6 +69,21 @@ class ChiaServer:
             self.log = logging.getLogger(name)
         else:
             self.log = logging.getLogger(__name__)
+
+        # Tasks for entire server pipeline
+        self._pipeline_task: asyncio.Future = asyncio.ensure_future(
+            self.initialize_pipeline(
+                self._srwt_aiter,
+                self._api,
+                self._port,
+                self._outbound_aiter,
+                self.global_connections,
+                self._local_type,
+                self._node_id,
+                self._network_id,
+                self.log,
+            )
+        )
 
         self.root_path = root_path
         self.config = config
@@ -256,19 +266,32 @@ class ChiaServer:
 
         return asyncio.create_task(ping())
 
-    async def initialize_pipeline(self, aiter, api: Any, server_port: int):
+    async def initialize_pipeline(
+        self,
+        aiter,
+        api: Any,
+        server_port: int,
+        outbound_aiter: push_aiter,
+        global_connections: PeerConnections,
+        local_type: NodeType,
+        node_id: bytes32,
+        network_id: bytes32,
+        log: logging.Logger,
+    ):
         """
         A pipeline that starts with (StreamReader, StreamWriter), maps it though to
         connections, messages, executes a local API call, and returns responses.
         """
-        global_connections = self.global_connections
-        outbound_aiter = self._outbound_aiter
-        local_type = self._local_type
-        srwt_aiter = self._srwt_aiter
+        srwt_aiter = aiter
+
+        assert global_connections == self.global_connections
+        assert outbound_aiter == self._outbound_aiter
+        assert local_type == self._local_type
+        assert srwt_aiter == self._srwt_aiter
         assert self._port == server_port
-        node_id = self._node_id
-        network_id = self._network_id
-        log = self.log
+        assert node_id == self._node_id
+        assert network_id == self._network_id
+        assert log == self.log
 
         # Maps a stream reader, writer and NodeType to a Connection object
         connections_aiter = map_aiter(
