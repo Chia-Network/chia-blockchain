@@ -45,6 +45,10 @@ steps:
   displayName: 'Build Electron UI'
   
 - script: |
+    python -m pip install -r requirements-dev.txt
+  displayName 'Install dev dependencies'
+  
+- script: |
     pip install pytest pytest-azurepipelines
-    pytest test -s -v
+    ppy.test tests -s -v
   displayName: 'pytest'
