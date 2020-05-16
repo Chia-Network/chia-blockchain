@@ -99,19 +99,22 @@ async def show_async(args, parser):
             tips = blockchain_state["tips"]
             difficulty = blockchain_state["difficulty"]
             ips = blockchain_state["ips"]
-            sync_mode = blockchain_state["sync_mode"]
+            sync_mode = blockchain_state["sync"]["sync_mode"]
             total_iters = lca_block.data.total_iters
             num_blocks: int = 10
 
             if sync_mode:
-                sync_max_block = await client.get_heaviest_block_seen()
+                sync_max_block = blockchain_state["sync"]["sync_tip_height"]
+                sync_current_block = blockchain_state["sync"]["sync_progress_height"]
                 # print (max_block)
                 print(
-                    "Current Blockchain Status. Full Node Syncing to",
-                    sync_max_block.data.height,
+                    "Current Blockchain Status: Full Node syncing to",
+                    sync_max_block,
+                    "\nCurrently synched to tip:",
+                    sync_current_block
                 )
             else:
-                print("Current Blockchain Status. Full Node Synced")
+                print("Current Blockchain Status: Full Node Synced")
             print("Latest Common Ancestor:\n    ", lca_block.header_hash)
             lca_time = struct_time(localtime(lca_block.data.timestamp))
             # Should auto format the align right of LCA height
@@ -243,7 +246,6 @@ async def show_async(args, parser):
             block = await client.get_block(hexstr_to_bytes(args.block_by_header_hash))
             # Would like to have a verbose flag for this
             if block is not None:
-                print(block)
                 prev_block_header_hash = block.header.data.prev_header_hash
                 prev_block_header = await client.get_block(prev_block_header_hash)
                 block_time = struct_time(localtime(block.header.data.timestamp))
@@ -282,7 +284,7 @@ async def show_async(args, parser):
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
             print(f"Connection error. Check if full node is running at {args.rpc_port}")
         else:
-            print(f"Exception {e}")
+            print(f"Exception from 'show' {e}")
 
     client.close()
     await client.await_closed()
