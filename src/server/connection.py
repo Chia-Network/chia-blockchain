@@ -32,6 +32,7 @@ class Connection:
         sw: StreamWriter,
         server_port: int,
         on_connect: OnConnectFunc,
+        log: logging.Logger,
     ):
         self.local_type = local_type
         self.connection_type = connection_type
@@ -45,6 +46,7 @@ class Connection:
         self.peer_server_port: Optional[int] = None
         self.node_id = None
         self.on_connect = on_connect
+        self.log = log
 
         # Connection metrics
         self.creation_time = time.time()
