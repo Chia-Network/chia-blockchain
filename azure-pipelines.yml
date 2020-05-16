@@ -4,7 +4,11 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/python
 
 trigger:
-- master
+  branches:
+    include:
+      - '*'
+#- master
+#- dev
 
 pool:
   vmImage: 'macOS-10.14'
@@ -24,8 +28,7 @@ steps:
 - script: |
     python -m pip install --upgrade pip
     pip install wheel pep517
-    #brew update
-    #brew install npm
+    brew install boost
     node -v
     npm cache clean -f
     npm install -g n
@@ -34,19 +37,23 @@ steps:
     cd ./electron-ui
     npm install
   displayName: 'Install dependencies'
-  
+
 - script: |
     pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
   displayName: 'Build wheels'
-  
+
 - script: |
     cd ./electron-ui
     npm install
   displayName: 'Build Electron UI'
-  
+
 - script: |
-    python -m pip install .
-  displayName: 'Install chia-blockchain'
+    sh install.sh
+  displayName: 'Run install.sh'
+
+- script: |
+    sh install-timelord.sh
+  displayName: 'Install timelord'
 
 - script: |
     python -m pip install -r requirements-dev.txt
@@ -56,3 +63,8 @@ steps:
     pip install pytest pytest-azurepipelines
     py.test tests -s -v
   displayName: 'pytest'
+
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: $(System.DefaultWorkingDirectory)/wheels
+    artifactName: MacOS-wheels
