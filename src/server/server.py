@@ -265,6 +265,9 @@ class ChiaServer:
         outbound_aiter = self._outbound_aiter
         local_type = self._local_type
         srwt_aiter = self._srwt_aiter
+        assert self._port == server_port
+        node_id = self._node_id
+        network_id = self._network_id
 
         # Maps a stream reader, writer and NodeType to a Connection object
         connections_aiter = map_aiter(
@@ -281,9 +284,16 @@ class ChiaServer:
 
         # Performs a handshake with the peer
 
+        outbound_handshake = Message(
+            "handshake",
+            Handshake(
+                network_id, protocol_version, node_id, uint16(server_port), local_type,
+            ),
+        )
+
         handshaked_connections_aiter = join_aiters(
             map_aiter(
-                lambda _: self.perform_handshake(_, srwt_aiter),
+                lambda _: self.perform_handshake(_, srwt_aiter, outbound_handshake),
                 connections_with_global_connections_aiter,
             )
         )
@@ -376,7 +386,10 @@ class ChiaServer:
                 yield connection, outbound_message, global_connections
 
     async def perform_handshake(
-        self, pair: Tuple[Connection, PeerConnections], srwt_aiter: push_aiter,
+        self,
+        pair: Tuple[Connection, PeerConnections],
+        srwt_aiter: push_aiter,
+        outbound_handshake: Message,
     ) -> AsyncGenerator[Tuple[Connection, PeerConnections], None]:
         """
         Performs handshake with this new connection, and yields the connection. If the handshake
@@ -389,16 +402,11 @@ class ChiaServer:
         assert global_connections == self.global_connections
 
         # Send handshake message
-        outbound_handshake = Message(
-            "handshake",
-            Handshake(
-                self._network_id,
-                protocol_version,
-                self._node_id,
-                uint16(self._port),
-                self._local_type,
-            ),
-        )
+        assert outbound_handshake.data.network_id == self._network_id
+        assert outbound_handshake.data.version == protocol_version
+        assert outbound_handshake.data.node_id == self._node_id
+        assert outbound_handshake.data.server_port == self._port
+        assert outbound_handshake.data.node_type == self._local_type
 
         try:
             await connection.send(outbound_handshake)
