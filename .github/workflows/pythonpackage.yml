@@ -36,7 +36,7 @@ jobs:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
         sh install.sh
-    - name: Install time lord
+    - name: Install timelord
       run: |
         . ./activate
         sh install-timelord.sh
