@@ -16,8 +16,8 @@ strategy:
   matrix:
     Python37:
       python.version: '3.7'
-    Python38:
-      python.version: '3.8'
+#    Python38:
+#      python.version: '3.8'
 
 steps:
 - task: UsePythonVersion@0
@@ -55,12 +55,12 @@ steps:
     sh install-timelord.sh
   displayName: 'Install timelord'
 
-#- script: |
-#    python -m pip install -r requirements-dev.txt
-#  displayName: 'Install dev dependencies'
+- script: |
+    python -m pip install -r requirements-dev.txt
+  displayName: 'Install dev dependencies'
 
 - script: |
-    pip install py pytest pytest-azurepipelines
+    pip install pytest pytest-azurepipelines
     py.test tests -s -v
   displayName: 'pytest'
 
