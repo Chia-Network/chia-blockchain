@@ -23,15 +23,27 @@ steps:
 
 - script: |
     python -m pip install --upgrade pip
-    pip install pep517 wheel
-    brew update
-    brew install npm
+    pip install wheel pep517
+    #brew update
+    #brew install npm
+    node -v
+    npm cache clean -f
+    npm install -g n
+    sudo n stable
     pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
-    pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
     cd ./electron-ui
     npm install
-  displayName: 'Install dependencies and build wheels'
-
+  displayName: 'Install dependencies'
+  
+- script: |
+    pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
+  displayName: 'Build wheels'
+  
+- script: |
+    cd ./electron-ui
+    npm install
+  displayName: 'Build Electron UI'
+  
 - script: |
     pip install pytest pytest-azurepipelines
     pytest test -s -v
