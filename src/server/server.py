@@ -61,8 +61,8 @@ class ChiaServer:
         self._outbound_aiter: push_aiter = push_aiter()
 
         # Tasks for entire server pipeline
-        self._pipeline_task: asyncio.Task = self.initialize_pipeline(
-            self._srwt_aiter, self._api, self._port
+        self._pipeline_task: asyncio.Future = asyncio.ensure_future(
+            self.initialize_pipeline(self._srwt_aiter, self._api, self._port)
         )
 
         # Our unique random node id that we will other peers, regenerated on launch
@@ -256,7 +256,7 @@ class ChiaServer:
 
         return asyncio.create_task(ping())
 
-    def initialize_pipeline(self, aiter, api: Any, server_port: int) -> asyncio.Task:
+    async def initialize_pipeline(self, aiter, api: Any, server_port: int):
         """
         A pipeline that starts with (StreamReader, StreamWriter), maps it though to
         connections, messages, executes a local API call, and returns responses.
@@ -314,31 +314,24 @@ class ChiaServer:
 
         # This will run forever. Sends each message through the TCP connection, using the
         # length encoding and CBOR serialization
-        async def serve_forever():
-            async for connection, message in expanded_messages_aiter:
-                if message is None:
-                    # Does not ban the peer, this is just a graceful close of connection.
-                    self.global_connections.close(connection, True)
-                    continue
-                if connection.is_closing():
-                    self.log.info(
-                        f"Closing, so will not send {message.function} to peer {connection.get_peername()}"
-                    )
-                    continue
+        async for connection, message in expanded_messages_aiter:
+            if message is None:
+                # Does not ban the peer, this is just a graceful close of connection.
+                self.global_connections.close(connection, True)
+                continue
+            if connection.is_closing():
                 self.log.info(
-                    f"-> {message.function} to peer {connection.get_peername()}"
+                    f"Closing, so will not send {message.function} to peer {connection.get_peername()}"
                 )
-                try:
-                    await connection.send(message)
-                except (RuntimeError, TimeoutError, OSError,) as e:
-                    self.log.warning(
-                        f"Cannot write to {connection}, already closed. Error {e}."
-                    )
-                    self.global_connections.close(connection, True)
-
-        # We will return a task for this, so user of start_chia_server or start_chia_client can wait until
-        # the server is closed.
-        return asyncio.get_running_loop().create_task(serve_forever())
+                continue
+            self.log.info(f"-> {message.function} to peer {connection.get_peername()}")
+            try:
+                await connection.send(message)
+            except (RuntimeError, TimeoutError, OSError,) as e:
+                self.log.warning(
+                    f"Cannot write to {connection}, already closed. Error {e}."
+                )
+                self.global_connections.close(connection, True)
 
     async def stream_reader_writer_to_connection(
         self,
