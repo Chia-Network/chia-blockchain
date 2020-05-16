@@ -1,6 +1,5 @@
 import aiohttp
 import asyncio
-from pathlib import Path
 
 from typing import Dict, Optional, List
 from src.util.byte_types import hexstr_to_bytes
@@ -40,8 +39,8 @@ class HarvesterRpcClient:
     async def refresh_plots(self) -> None:
         await self.fetch("refresh_plots", {})
 
-    async def delete_plot(self, filename: Path) -> bool:
-        return await self.fetch("delete_plot", {"filename": str(filename.resolve())})
+    async def delete_plot(self, filename: str) -> bool:
+        return await self.fetch("delete_plot", {"filename": filename})
 
     async def get_connections(self) -> List[Dict]:
         response = await self.fetch("get_connections", {})

@@ -24,7 +24,9 @@ class FarmerRpcApiHandler:
         """
         response = []
         for pospace_fin in self.farmer.challenges[self.farmer.current_weight]:
-            estimates = self.farmer.challenge_to_estimates.get(pospace_fin.challenge_hash, [])
+            estimates = self.farmer.challenge_to_estimates.get(
+                pospace_fin.challenge_hash, []
+            )
             response.append(
                 {
                     "challenge": pospace_fin.challenge_hash,

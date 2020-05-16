@@ -1,8 +1,6 @@
 from typing import Callable
 
 from aiohttp import web
-from blspy import PrivateKey, PublicKey
-from pathlib import Path
 
 from src.harvester import Harvester
 from src.types.peer_info import PeerInfo
@@ -32,13 +30,10 @@ class HarvesterRpcApiHandler:
         return obj_to_response({})
 
     async def delete_plot(self, request) -> web.Response:
-        print(request)
         request_data = await request.json()
-        absolute_filename = request_data["filename"]
-        filename_path = Path(absolute_filename)
-        response = self.harvester._delete_plot(filename_path)
+        filename = request_data["filename"]
+        response = self.harvester._delete_plot(filename)
         return obj_to_response(response)
-
 
     async def get_connections(self, request) -> web.Response:
         """
@@ -109,7 +104,9 @@ class HarvesterRpcApiHandler:
         return obj_to_response("")
 
 
-async def start_rpc_server(harvester: Harvester, stop_node_cb: Callable, rpc_port: uint16):
+async def start_rpc_server(
+    harvester: Harvester, stop_node_cb: Callable, rpc_port: uint16
+):
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.
@@ -120,7 +117,7 @@ async def start_rpc_server(harvester: Harvester, stop_node_cb: Callable, rpc_por
     app.add_routes(
         [
             web.post("/get_plots", handler.get_plots),
-            web.post("/refresh_plots", handler.delete_plot),
+            web.post("/refresh_plots", handler.refresh_plots),
             web.post("/delete_plot", handler.delete_plot),
             web.post("/get_connections", handler.get_connections),
             web.post("/open_connection", handler.open_connection),

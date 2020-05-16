@@ -3,6 +3,7 @@ import asyncio
 import pytest
 
 from src.rpc.farmer_rpc_server import start_rpc_server
+from src.rpc.harvester_rpc_server import start_rpc_server as start_rpc_server_h
 from src.protocols import full_node_protocol
 from src.rpc.farmer_rpc_client import FarmerRpcClient
 from src.rpc.harvester_rpc_client import HarvesterRpcClient
@@ -36,7 +37,9 @@ class TestRpc:
             farmer.server.close_all()
 
         rpc_cleanup = await start_rpc_server(farmer, stop_node_cb, test_rpc_port)
-        rpc_cleanup_2 = await start_rpc_server(harvester, stop_node_cb_2, test_rpc_port_2)
+        rpc_cleanup_2 = await start_rpc_server_h(
+            harvester, stop_node_cb_2, test_rpc_port_2
+        )
 
         try:
             client = await FarmerRpcClient.create(test_rpc_port)
@@ -49,9 +52,14 @@ class TestRpc:
             assert len(challenges) > 0
 
             plots = await client_2.get_plots()
-            print(plots)
             assert len(plots) > 0
-            quit()
+            print("Removing", plots[0]["filename"])
+            res = await client_2.delete_plot(plots[0]["filename"])
+            plots_2 = await client_2.get_plots()
+            assert len(plots_2) + 1 == len(plots)
+
+            await client_2.refresh_plots()
+
         except AssertionError:
             # Checks that the RPC manages to stop the node
             client.close()

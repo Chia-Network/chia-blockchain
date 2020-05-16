@@ -23,6 +23,8 @@ class EnhancedJSONEncoder(json.JSONEncoder):
             return o.to_json_dict()
         elif hasattr(type(o), "__bytes__"):
             return f"0x{bytes(o).hex()}"
+        elif isinstance(o, bytes):
+            return f"0x{o.hex()}"
         return super().default(o)
 
 
