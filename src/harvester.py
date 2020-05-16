@@ -13,6 +13,7 @@ from src.server.outbound_message import Delivery, Message, NodeType, OutboundMes
 from src.types.peer_info import PeerInfo
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
+from src.util.config import load_config, save_config
 from src.util.api_decorators import api_request
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.ints import uint8
@@ -66,6 +67,7 @@ class Harvester:
     plot_config: Dict
     provers: Dict[Path, DiskProver]
     challenge_hashes: Dict[bytes32, Tuple[bytes32, Path, uint8]]
+    pool_pubkeys: List[PublicKey]
     _plot_notification_task: asyncio.Task
     _reconnect_task: Optional[asyncio.Task]
     _is_shutdown: bool
@@ -86,6 +88,7 @@ class Harvester:
         self._reconnect_task = None
         self._is_shutdown = False
         self.server = None
+        self.pool_pubkeys = []
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
         return self
 
@@ -106,6 +109,68 @@ class Harvester:
                     )
             await asyncio.sleep(1)
             counter += 1
+
+    def _get_plots(self):
+        response = []
+        for path, prover in self.provers.items():
+            plot_pk = PrivateKey.from_bytes(
+                bytes.fromhex(self.plot_config["plots"][path]["sk"])
+            ).get_public_key()
+            pool_pk = PublicKey.from_bytes(
+                bytes.fromhex(self.plot_config["plots"][path]["pool_pk"])
+            )
+            response.append({
+                "filename": str(path.resolve()),
+                "size": prover.get_size(),
+                "plot-seed": prover.get_id(),
+                "memo": prover.get_memo(),
+                "plot_pk": bytes(plot_pk),
+                "pool_pk": bytes(pool_pk),
+            })
+        return response
+
+    def _refresh_plots(self):
+        self.provers = load_plots(
+            self.config, self.plot_config, self.pool_pubkeys
+        )
+
+    def _delete_plot(self, full_path):
+        to_remove: List[Path] = []
+        # Resolve to avoid issues with relative vs full
+        for path, prover in self.provers.items():
+            if path.resolve() == full_path:
+                to_remove.append(path)
+
+        if len(to_remove) == 0:
+            return False
+
+        plot_root = path_from_root(DEFAULT_ROOT_PATH, self.config.get("plot_root", "."))
+
+        to_remove_str = []
+
+        for path in to_remove:
+            # Removes the plot from the harvester
+            del self.provers[path]
+            # Removes the plot from disk
+            path.unlink()
+            for partial_filename_str, _ in self.plot_config["plots"].items():
+                potential_filenames = [
+                    plot_root / partial_filename_str,
+                    path_from_root(plot_root, partial_filename_str),
+                ]
+                if path in potential_filenames:
+                    to_remove_str.append(partial_filename_str)
+
+        try:
+            # Removes the plots from config.yaml
+            plot_config = load_config(DEFAULT_ROOT_PATH, "plots.yaml")
+            for s in to_remove_str:
+                del plot_config[s]
+
+            save_config(DEFAULT_ROOT_PATH, "plots.yaml", plot_config)
+        except FileNotFoundError:
+            raise RuntimeError("Plots not generated. Run chia-create-plots")
+        return True
 
     def set_server(self, server):
         self.server = server
@@ -160,8 +225,9 @@ class Harvester:
         which must be put into the plots, before the plotting process begins. We cannot
         use any plots which don't have one of the pool keys.
         """
+        self.pool_pubkeys = harvester_handshake.pool_pubkeys
         self.provers = load_plots(
-            self.config, self.plot_config, harvester_handshake.pool_pubkeys
+            self.config, self.plot_config, self.pool_pubkeys
         )
         if len(self.provers) == 0:
             log.warning(

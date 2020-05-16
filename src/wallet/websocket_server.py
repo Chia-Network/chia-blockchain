@@ -164,8 +164,8 @@ class WebSocketServer:
         self.websocket_server.close()
         if self.wallet_node is not None:
             self.wallet_node.server.close_all()
-            await self.wallet_node.wallet_state_manager.close_all_stores()
             self.wallet_node._shutdown()
+            await self.wallet_node.wallet_state_manager.close_all_stores()
 
     async def get_next_puzzle_hash(self, websocket, request, response_api):
         """

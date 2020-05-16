@@ -1,7 +1,4 @@
-import dataclasses
-import json
-
-from typing import Any, Callable, List, Optional
+from typing import Callable, List, Optional
 
 from aiohttp import web
 
@@ -12,27 +9,7 @@ from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32, uint64
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
-
-
-class EnhancedJSONEncoder(json.JSONEncoder):
-    """
-    Encodes bytes as hex strings with 0x, and converts all dataclasses to json.
-    """
-
-    def default(self, o: Any):
-        if dataclasses.is_dataclass(o):
-            return o.to_json_dict()
-        elif hasattr(type(o), "__bytes__"):
-            return f"0x{bytes(o).hex()}"
-        return super().default(o)
-
-
-def obj_to_response(o: Any) -> web.Response:
-    """
-    Converts a python object into json.
-    """
-    json_str = json.dumps(o, cls=EnhancedJSONEncoder, sort_keys=True)
-    return web.Response(body=json_str, content_type="application/json")
+from src.util.network import obj_to_response
 
 
 class RpcApiHandler:

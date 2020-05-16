@@ -16,6 +16,7 @@ from src.util.config import load_config, load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.logging import initialize_logging
 from src.util.setproctitle import setproctitle
+from src.rpc.farmer_rpc_server import start_rpc_server
 
 
 async def async_main():
@@ -56,12 +57,25 @@ async def async_main():
 
     _ = await server.start_server(farmer._on_connect)
 
+    rpc_cleanup = None
+    if config["start_rpc_server"]:
+        # Starts the RPC server
+        rpc_cleanup = await start_rpc_server(
+            farmer, server.close_all, config["rpc_port"]
+        )
+
     farmer.set_server(server)
     await asyncio.sleep(10)  # Allows full node to startup
     farmer._start_bg_tasks()
 
     await server.await_closed()
     farmer._shut_down = True
+
+    # Waits for the rpc server to close
+    if rpc_cleanup is not None:
+        await rpc_cleanup()
+    log.info("Closed RPC server.")
+
     log.info("Farmer fully closed.")
 
 
