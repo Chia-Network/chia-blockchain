@@ -16,8 +16,9 @@ The endpoint estimates space between any two block header hashes.
 syntax has changed slightly. By default it calculates the last 24 blocks from the
 current LCA. Optionally you can use the `-b` flag to start with a different block
 height. Use `-d` to specify the delta number of blocks back to compare to.
-- chiapos is now easier to compile with MSVC.
+- Releases GIL in python bindings when fetching qualities and proofs. This allows a multithreaded harvester to farm more plots concurrently. This is especially faster when there are multiple disks being harvested. The class is also made thread safe with mutex guards.
 - Syncing is now faster and uses less memory.
+- chiapos is now easier to compile with MSVC.
 
 ### Fixed
 - Build status shield layout fixed in README.md
