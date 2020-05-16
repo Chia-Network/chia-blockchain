@@ -26,6 +26,8 @@ steps:
     versionSpec: '$(python.version)'
   displayName: 'Use Python $(python.version)'
 
+#  since we're installing miniupnpc & setproctitle below,
+#  only cbor2 will end up in wheels/
 - script: |
     python -m pip install --upgrade pip
     pip install wheel pep517
@@ -33,7 +35,6 @@ steps:
     npm cache clean -f
     npm install -g n
     sudo n stable
-#   NOTE: since we're installing, only cbor2 will end up in wheels/
     pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
     cd ./electron-ui
     npm install
