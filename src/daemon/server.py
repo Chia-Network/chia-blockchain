@@ -97,6 +97,11 @@ async def kill_service(root_path, services, service_name, delay_before_kill=15):
     return 1
 
 
+def is_running(services, service_name):
+    process = services.get(service_name)
+    return process is not None and process.poll() is None
+
+
 def create_server_for_daemon(root_path):
     routes = web.RouteTableDef()
 
@@ -114,7 +119,7 @@ def create_server_for_daemon(root_path):
             r = "unknown service"
             return web.Response(text=str(r))
 
-        if service_name in services:
+        if is_running(services, service_name):
             r = "already running"
             return web.Response(text=str(r))
 
@@ -135,10 +140,9 @@ def create_server_for_daemon(root_path):
         return web.Response(text=str(r))
 
     @routes.get('/daemon/service/is_running/')
-    async def is_running(request):
+    async def is_running_handler(request):
         service_name = request.query.get("service")
-        process = services.get(service_name)
-        r = process is not None and process.poll() is None
+        r = is_running(services, service_name)
         return web.Response(text=str(r))
 
     @routes.get('/daemon/exit/')
