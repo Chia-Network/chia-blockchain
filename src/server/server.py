@@ -38,20 +38,15 @@ class ChiaServer:
         self._server: Optional[asyncio.AbstractServer] = None
 
         self._port = port  # TCP port to identify our node
-        self._api = api  # API module that will be called from the requests
         self._local_type = local_type  # NodeType (farmer, full node, timelord, pool, harvester, wallet)
 
         self._ping_interval = ping_interval
-        self._network_id = network_id
         # (StreamReader, StreamWriter, NodeType) aiter, gets things from server and clients and
         # sends them through the pipeline
         self._srwt_aiter: push_aiter = push_aiter()
 
         # Aiter used to broadcase messages
         self._outbound_aiter: push_aiter = push_aiter()
-
-        # Our unique random node id that we will other peers, regenerated on launch
-        self._node_id = create_node_id()
 
         # Taks list to keep references to tasks, so they don'y get GCd
         self._tasks: List[asyncio.Task] = [self._initialize_ping_task()]
@@ -60,17 +55,20 @@ class ChiaServer:
         else:
             self.log = logging.getLogger(__name__)
 
+        # Our unique random node id that we will other peers, regenerated on launch
+        node_id = create_node_id()
+
         # Tasks for entire server pipeline
         self._pipeline_task: asyncio.Future = asyncio.ensure_future(
             initialize_pipeline(
                 self._srwt_aiter,
-                self._api,
+                api,
                 self._port,
                 self._outbound_aiter,
                 self.global_connections,
                 self._local_type,
-                self._node_id,
-                self._network_id,
+                node_id,
+                network_id,
                 self.log,
             )
         )
