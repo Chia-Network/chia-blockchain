@@ -263,11 +263,13 @@ class ChiaServer:
         """
         global_connections = self.global_connections
         outbound_aiter = self._outbound_aiter
+        local_type = self._local_type
+        srwt_aiter = self._srwt_aiter
 
         # Maps a stream reader, writer and NodeType to a Connection object
         connections_aiter = map_aiter(
             partial_func.partial_async(
-                self.stream_reader_writer_to_connection, server_port
+                self.stream_reader_writer_to_connection, server_port, local_type,
             ),
             aiter,
         )
@@ -278,8 +280,12 @@ class ChiaServer:
         connections_with_global_connections_aiter = map_aiter(add_global_connections, connections_aiter)
 
         # Performs a handshake with the peer
+
         handshaked_connections_aiter = join_aiters(
-            map_aiter(self.perform_handshake, connections_with_global_connections_aiter)
+            map_aiter(
+                lambda _: self.perform_handshake(_, srwt_aiter),
+                connections_with_global_connections_aiter,
+            )
         )
         forker = aiter_forker(handshaked_connections_aiter)
         handshake_finished_1 = forker.fork(is_active=True)
@@ -345,13 +351,15 @@ class ChiaServer:
         self,
         swrt: Tuple[asyncio.StreamReader, asyncio.StreamWriter, OnConnectFunc],
         server_port: int,
+        local_type: NodeType,
     ) -> Connection:
         """
         Maps a tuple of (StreamReader, StreamWriter, on_connect) to a Connection object,
         which also stores the type of connection (str). It is also added to the global list.
         """
+        assert self._local_type == local_type
         sr, sw, on_connect = swrt
-        con = Connection(self._local_type, None, sr, sw, server_port, on_connect)
+        con = Connection(local_type, None, sr, sw, server_port, on_connect)
 
         self.log.info(f"Connection with {con.get_peername()} established")
         return con
@@ -368,14 +376,14 @@ class ChiaServer:
                 yield connection, outbound_message, global_connections
 
     async def perform_handshake(
-        self, pair: Tuple[Connection, PeerConnections]
+        self, pair: Tuple[Connection, PeerConnections], srwt_aiter: push_aiter,
     ) -> AsyncGenerator[Tuple[Connection, PeerConnections], None]:
         """
         Performs handshake with this new connection, and yields the connection. If the handshake
         is unsuccessful, or we already have a connection with this peer, the connection is closed,
         and nothing is yielded.
         """
-        srwt_aiter = self._srwt_aiter
+        assert srwt_aiter == self._srwt_aiter
 
         connection, global_connections = pair
         assert global_connections == self.global_connections
