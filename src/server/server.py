@@ -47,9 +47,6 @@ class ChiaServer:
         # Optional listening server. You can also use this class without starting one.
         self._server: Optional[asyncio.AbstractServer] = None
 
-        # Called for inbound connections after successful handshake
-        self._on_inbound_connect: OnConnectFunc = None
-
         self._port = port  # TCP port to identify our node
         self._api = api  # API module that will be called from the requests
         self._local_type = local_type  # NodeType (farmer, full node, timelord, pool, harvester, wallet)
@@ -121,16 +118,13 @@ class ChiaServer:
             self._port, host=None, reuse_address=True, ssl=ssl_context
         )
 
-        if on_connect is not None:
-            self._on_inbound_connect = on_connect
-
         def add_connection_type(
             srw: Tuple[asyncio.StreamReader, asyncio.StreamWriter]
-        ) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter, None]:
+        ) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter, OnConnectFunc]:
             ssl_object = srw[1].get_extra_info(name="ssl_object")
             peer_cert = ssl_object.getpeercert()
             self.log.info(f"Client authed as {peer_cert}")
-            return (srw[0], srw[1], None)
+            return (srw[0], srw[1], on_connect)
 
         srwt_aiter = map_aiter(add_connection_type, aiter)
 
@@ -367,10 +361,9 @@ class ChiaServer:
         """
         Async generator which calls the on_connect async generator method, and yields any outbound messages.
         """
-        for func in connection.on_connect, self._on_inbound_connect:
-            if func:
-                async for outbound_message in func():
-                    yield connection, outbound_message
+        if connection.on_connect:
+            async for outbound_message in connection.on_connect():
+                yield connection, outbound_message
 
     async def perform_handshake(
         self, connection: Connection
