@@ -28,7 +28,6 @@ steps:
 - script: |
     python -m pip install --upgrade pip
     pip install wheel pep517
-    brew install boost
     node -v
     npm cache clean -f
     npm install -g n
@@ -48,19 +47,20 @@ steps:
   displayName: 'Build Electron UI'
 
 - script: |
-    sh install.sh
-  displayName: 'Run install.sh'
+    pip install .
+  displayName: 'Install wheels'
 
 - script: |
+    brew install boost
     sh install-timelord.sh
   displayName: 'Install timelord'
 
-- script: |
-    python -m pip install -r requirements-dev.txt
-  displayName: 'Install dev dependencies'
+#- script: |
+#    python -m pip install -r requirements-dev.txt
+#  displayName: 'Install dev dependencies'
 
 - script: |
-    pip install pytest pytest-azurepipelines
+    pip install py pytest pytest-azurepipelines
     py.test tests -s -v
   displayName: 'pytest'
 
@@ -68,3 +68,4 @@ steps:
   inputs:
     targetPath: $(System.DefaultWorkingDirectory)/wheels
     artifactName: MacOS-wheels
+  displayName: 'Upload MacOS wheels'
