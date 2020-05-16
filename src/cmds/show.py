@@ -78,8 +78,9 @@ def make_parser(parser):
     parser.add_argument(
         "-p",
         "--rpc-port",
-        help=f"Set the port where the Full Node is hosting the RPC interface. See the rpc_port "
-        f"under full_node in config.yaml. Defaults to 8555",
+        help="Set the port where the Full Node is hosting the RPC interface."
+        + " See the rpc_port under full_node in config.yaml."
+        + "Defaults to 8555",
         type=int,
         default=8555,
     )
@@ -164,8 +165,8 @@ async def show_async(args, parser):
             connections = await client.get_connections()
             print("Connections")
             print(
-                f"Type      IP                                      Ports      NodeID        Last Connect"
-                f"       MB Up|Dwn"
+                "Type      IP                                      Ports      NodeID        Last Connect"
+                + "       MB Up|Dwn"
             )
             for con in connections:
                 last_connect_tuple = struct_time(localtime(con["last_message_time"]))
@@ -242,6 +243,7 @@ async def show_async(args, parser):
             block = await client.get_block(hexstr_to_bytes(args.block_by_header_hash))
             # Would like to have a verbose flag for this
             if block is not None:
+                print(block)
                 prev_block_header_hash = block.header.data.prev_header_hash
                 prev_block_header = await client.get_block(prev_block_header_hash)
                 block_time = struct_time(localtime(block.header.data.timestamp))

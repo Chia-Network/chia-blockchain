@@ -12,6 +12,8 @@ from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32, uint64
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
+from src.consensus.pot_iterations import calculate_min_iters_from_iterations
+from src.consensus.constants import constants
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -38,9 +40,9 @@ def obj_to_response(o: Any) -> web.Response:
 class RpcApiHandler:
     """
     Implementation of full node RPC API.
-    Note that this is not the same as the peer protocol, or wallet protocol (which run Chia's
-    protocol on top of TCP), it's a separate protocol on top of HTTP thats provides easy access
-    to the full node.
+    Note that this is not the same as the peer protocol, or wallet protocol
+    (which run Chia's protocol on top of TCP), it's a separate protocol on top
+    of HTTP thats provides easy access to the full node.
     """
 
     def __init__(self, full_node: FullNode, stop_cb: Callable):
@@ -149,8 +151,60 @@ class RpcApiHandler:
         ).values():
             if block.height == height:
                 response_headers.append(block.header)
-
         return obj_to_response(response_headers)
+
+    async def get_total_miniters(self, newer_block, older_block) -> uint64:
+        """
+        Calculates the sum of min_iters from all blocks starting from
+        old and up to and including new_block, but not including old_block.
+        """
+        older_block_parent = await self.full_node.block_store.get_block(older_block.prev_header_hash)
+        older_diff = older_block.weight - older_block_parent.weight
+        curr_mi = calculate_min_iters_from_iterations(
+            older_block.proof_of_space, older_diff, older_block.proof_of_time.number_of_iterations
+        )
+        # We do not count the min iters in the old block, since it's not included in the range
+        total_mi: uint64 = uint64(0)
+        for curr_h in range(older_block.height + 1, newer_block.height + 1):
+            if (curr_h % constants["DIFFICULTY_EPOCH"]) == constants["DIFFICULTY_DELAY"]:
+                curr_b_header = self.full_node.blockchain.height_to_hash.get(curr_h)
+                curr_b_block = await self.full_node.block_store.get_block(curr_b_header.header_hash)
+                curr_parent = await self.full_node.blockchain.headers.get(curr_b_block.prev_header_hash)
+                curr_diff = curr_b_block.weight - curr_parent.weight
+                curr_mi = calculate_min_iters_from_iterations(
+                    curr_b_block.proof_of_space,
+                    curr_diff,
+                    curr_b_block.proof_of_time.number_of_iterations,
+                )
+            total_mi = uint64(total_mi + curr_mi)
+
+        # print("Minimum iterations:", total_mi)
+        return total_mi
+
+    async def get_network_space(self, request) -> web.Response:
+        """
+        Retrieves an estimate of total space validating the chain
+        between two block header hashes.
+        """
+        request_data = await request.json()
+        if "newer_block_header_hash" not in request_data or "older_block_header_hash" not in request_data:
+            raise web.HTTPBadRequest()
+        newer_block_bytes = hexstr_to_bytes(request_data["newer_block_header_hash"])
+        older_block_bytes = hexstr_to_bytes(request_data["older_block_header_hash"])
+        newer_block = await self.full_node.block_store.get_block(newer_block_bytes)
+        older_block = await self.full_node.block_store.get_block(older_block_bytes)
+        delta_weight = newer_block.header.data.weight - older_block.header.data.weight
+        delta_iters = (
+            newer_block.header.data.total_iters - older_block.header.data.total_iters
+        )
+        delta_iters -= await self.get_total_miniters(newer_block, older_block)
+        weight_div_iters = delta_weight / delta_iters
+        tips_adjustment_constant = 0.65
+        network_space_constant = 2 ** 32  # 2^32
+        network_space_bytes_estimate = (
+            weight_div_iters * network_space_constant * tips_adjustment_constant
+        )
+        return obj_to_response(network_space_bytes_estimate)
 
     async def get_connections(self, request) -> web.Response:
         """
@@ -273,6 +327,7 @@ async def start_rpc_server(
             web.post(
                 "/get_unfinished_block_headers", handler.get_unfinished_block_headers
             ),
+            web.post("/get_network_space", handler.get_network_space),
             web.post("/get_connections", handler.get_connections),
             web.post("/open_connection", handler.open_connection),
             web.post("/close_connection", handler.close_connection),
