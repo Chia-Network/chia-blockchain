@@ -17,7 +17,8 @@ strategy:
     Python37:
       python.version: '3.7'
 #    Python38:
-#      python.version: '3.8'
+#      python.version: '3.8'  # Disabled 3.8 because artifact names conflict
+#                               Also, installer can target one verison
 
 steps:
 - task: UsePythonVersion@0
@@ -32,6 +33,7 @@ steps:
     npm cache clean -f
     npm install -g n
     sudo n stable
+#   NOTE: since we're installing, only cbor2 will end up in wheels/
     pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
     cd ./electron-ui
     npm install
@@ -46,10 +48,12 @@ steps:
     npm install
   displayName: 'Build Electron UI'
 
+#  Using wheels and release style install so no sh install.sh
 - script: |
     pip install .
   displayName: 'Install wheels'
 
+#  install-timelord.sh usually wants venv, but this clean runner is the "venv"
 - script: |
     brew install boost
     sh install-timelord.sh
