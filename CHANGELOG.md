@@ -20,6 +20,9 @@ height. Use `-d` to specify the delta number of blocks back to compare to.
 - Syncing is now faster and uses less memory.
 - chiapos is now easier to compile with MSVC.
 - The RPC endpoint `/get_blockchain_state` has changed. The "sync_mode" return has been replaced with a "sync" array of "sync_mode", "sync_tip_height", and "sync_progress_height" for ease of use with GUIs.
+- Moved to PyYAML 5.3.1 which prevents arbitrary code execution during python/object/new constructor.
+- Moved to Python cryptography 2.9.2 which deprecates OpenSSL 1.0.1 and now relies upon OpenSSL 1.1.1g.
+- Moved to aiosqlite 0.13.0 which adds official support for Python 3.8 and fixes a possible hung thread if a connection failed.
 
 ### Fixed
 - Build status shield layout fixed in README.md

@@ -6,8 +6,8 @@ dependencies = [
     "blspy==0.1.24",  # Signature library
     "cbor2==5.1.0",  # Used for network wire format
     "clvm==0.4",  # contract language
-    "PyYAML==5.3",  # Used for config file format
-    "aiosqlite==0.11.0",  # asyncio wrapper for sqlite, to store blocks
+    "PyYAML==5.3.1",  # Used for config file format
+    "aiosqlite==0.13.0",  # asyncio wrapper for sqlite, to store blocks
     "aiohttp==3.6.2",  # HTTP server for full node rpc
     "colorlog==4.1.0",  # Adds color to logs
     "chiavdf==0.12.10",  # timelord and vdf verification
@@ -16,7 +16,7 @@ dependencies = [
     "sortedcontainers==2.1.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
     "clvm-tools==0.1.1",  # clvm compiler tools
-    "cryptography==2.8",
+    "cryptography==2.9.2", #Python cryptography library for TLS
 ]
 
 upnp_dependencies = [
