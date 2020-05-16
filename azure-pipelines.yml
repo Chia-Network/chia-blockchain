@@ -46,7 +46,7 @@ steps:
   
 - script: |
     python -m pip install -r requirements-dev.txt
-  displayName 'Install dev dependencies'
+  displayName: 'Install dev dependencies'
   
 - script: |
     pip install pytest pytest-azurepipelines
