@@ -153,12 +153,14 @@ class RpcApiHandler:
                 response_headers.append(block.header)
         return obj_to_response(response_headers)
 
-    async def get_total_miniters(self, newer_block, older_block) -> uint64:
+    async def get_total_miniters(self, newer_block, older_block) -> Optional[uint64]:
         """
         Calculates the sum of min_iters from all blocks starting from
         old and up to and including new_block, but not including old_block.
         """
         older_block_parent = await self.full_node.block_store.get_block(older_block.prev_header_hash)
+        if older_block_parent is None:
+            return None
         older_diff = older_block.weight - older_block_parent.weight
         curr_mi = calculate_min_iters_from_iterations(
             older_block.proof_of_space, older_diff, older_block.proof_of_time.number_of_iterations
@@ -167,15 +169,23 @@ class RpcApiHandler:
         total_mi: uint64 = uint64(0)
         for curr_h in range(older_block.height + 1, newer_block.height + 1):
             if (curr_h % constants["DIFFICULTY_EPOCH"]) == constants["DIFFICULTY_DELAY"]:
-                curr_b_header = self.full_node.blockchain.height_to_hash.get(curr_h)
+                curr_b_header = self.full_node.blockchain.height_to_hash.get(uint32(int(curr_h)))
+                if curr_b_header is None:
+                    return None
                 curr_b_block = await self.full_node.block_store.get_block(curr_b_header.header_hash)
-                curr_parent = await self.full_node.blockchain.headers.get(curr_b_block.prev_header_hash)
+                if curr_b_block is None or curr_b_block.proof_of_time is None:
+                    return None
+                curr_parent = await self.full_node.block_store.get_block(curr_b_block.prev_header_hash)
+                if curr_parent is None:
+                    return None
                 curr_diff = curr_b_block.weight - curr_parent.weight
                 curr_mi = calculate_min_iters_from_iterations(
                     curr_b_block.proof_of_space,
-                    curr_diff,
+                    uint64(curr_diff),
                     curr_b_block.proof_of_time.number_of_iterations,
                 )
+                if curr_mi is None:
+                    raise web.HTTPBadRequest()
             total_mi = uint64(total_mi + curr_mi)
 
         # print("Minimum iterations:", total_mi)
@@ -192,12 +202,19 @@ class RpcApiHandler:
         newer_block_bytes = hexstr_to_bytes(request_data["newer_block_header_hash"])
         older_block_bytes = hexstr_to_bytes(request_data["older_block_header_hash"])
         newer_block = await self.full_node.block_store.get_block(newer_block_bytes)
+        if newer_block is None:
+            raise web.HTTPNotFound()
         older_block = await self.full_node.block_store.get_block(older_block_bytes)
+        if older_block is None:
+            raise web.HTTPNotFound()
         delta_weight = newer_block.header.data.weight - older_block.header.data.weight
         delta_iters = (
             newer_block.header.data.total_iters - older_block.header.data.total_iters
         )
-        delta_iters -= await self.get_total_miniters(newer_block, older_block)
+        total_min_inters = await self.get_total_miniters(newer_block, older_block)
+        if total_min_inters is None:
+            raise web.HTTPNotFound()
+        delta_iters -= total_min_inters
         weight_div_iters = delta_weight / delta_iters
         tips_adjustment_constant = 0.65
         network_space_constant = 2 ** 32  # 2^32
