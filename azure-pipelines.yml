@@ -50,5 +50,5 @@ steps:
   
 - script: |
     pip install pytest pytest-azurepipelines
-    ppy.test tests -s -v
+    py.test tests -s -v
   displayName: 'pytest'
