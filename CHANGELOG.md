@@ -18,6 +18,7 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 - Relic and thus blspy would crash on processors older than Haswell as they don't support lzc.
 - chia-check-plots works with plot root (the same as harvester)
 - Some networking errors are no longer printed
+- Blocks with compact proof of time are now updated into database.
 
 ## [1.0beta5] aka Beta 1.5 - 2020-05-05
 ### Added

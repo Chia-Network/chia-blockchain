@@ -150,19 +150,14 @@ class Blockchain:
             i = heights.index(max(heights))
             self.headers[cur[i].header_hash] = cur[i]
             prev: Header = headers_db[cur[i].prev_header_hash]
-
-            try:
-                challenge_hash = self.block_store.get_challenge_hash(
-                    cur[i].header_hash
-                )
-                self.block_store.add_proof_of_time(
-                    challenge_hash,
-                    uint64(cur[i].data.total_iters - prev.data.total_iters),
-                    cur[i].data.height,
-                )
-            except Exception as e:
-                log.error(f"Database corruption: {type(e)} {e}")
-
+            challenge_hash = self.block_store.get_challenge_hash(
+                cur[i].header_hash
+            )
+            self.block_store.add_proof_of_time(
+                challenge_hash,
+                uint64(cur[i].data.total_iters - prev.data.total_iters),
+                cur[i].data.height,
+            )
             cur[i] = prev
 
         # Consistency check, tips should have an LCA equal to the DB LCA
@@ -176,17 +171,14 @@ class Blockchain:
             if cur_b.height == 0:
                 break
             prev_b: Header = headers_db[cur_b.prev_header_hash]
-            try:
-                challenge_hash = self.block_store.get_challenge_hash(
-                    cur_b.header_hash
-                )
-                self.block_store.add_proof_of_time(
-                    challenge_hash,
-                    uint64(cur_b.data.total_iters - prev_b.data.total_iters),
-                    cur_b.data.height,
-                )
-            except Exception as e:
-                log.error(f"Database corruption: {type(e)} {e}")
+            challenge_hash = self.block_store.get_challenge_hash(
+                cur_b.header_hash
+            )
+            self.block_store.add_proof_of_time(
+                challenge_hash,
+                uint64(cur_b.data.total_iters - prev_b.data.total_iters),
+                cur_b.data.height,
+            )
             cur_b = prev_b
 
         # Asserts that the DB genesis block is correct

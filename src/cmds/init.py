@@ -167,6 +167,8 @@ def chia_init(args: Namespace):
     DO_NOT_MIGRATE_KEYS: List[str] = [
         "full_node.introducer_peer",
         "wallet.introducer_peer",
+        "full_node.database_path",
+        "full_node.simulator_database_path",
     ]
 
     # These are the files that will be migrated
