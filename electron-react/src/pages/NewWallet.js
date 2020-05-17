@@ -41,8 +41,6 @@ const Iterator = props => {
 };
 
 const UIPart = props => {
-  const logged_in = useSelector(state => state.wallet_state.logged_in);
-  const public_key_fingerprints = useSelector(state => state.wallet_state.public_key_fingerprints);
   const words = useSelector(state => state.wallet_state.mnemonic);
   const dispatch = useDispatch();
   const classes = myStyle();
@@ -53,13 +51,6 @@ const UIPart = props => {
 
   function next() {
     dispatch(add_key(words));
-  }
-
-  if (logged_in) {
-    return <Redirect to="/dashboard" />;
-  }
-  if (public_key_fingerprints.length > 0) {
-    return <Redirect to="/SelectKey" />;
   }
 
   return (

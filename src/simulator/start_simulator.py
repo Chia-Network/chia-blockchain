@@ -66,9 +66,8 @@ async def main():
             server_closed = True
 
         # Starts the RPC server
-    rpc_cleanup = await start_rpc_server(
-        full_node, master_close_cb, config["rpc_port"]
-    )
+
+    rpc_cleanup = await start_rpc_server(full_node, master_close_cb, config["rpc_port"])
 
     try:
         asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)

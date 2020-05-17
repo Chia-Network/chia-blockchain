@@ -1,5 +1,14 @@
 from typing import Callable, List, Optional
+import asyncio
+import dataclasses
+import json
+import traceback
+from asyncio import create_task
+import logging
 
+from typing import Any, Callable, List, Optional
+
+import aiohttp
 from aiohttp import web
 
 from src.full_node.full_node import FullNode
@@ -11,6 +20,12 @@ from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
 from src.util.network import obj_to_response
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
+from src.util.ws_message import create_payload, format_response, pong
+from src.util.logging import initialize_logging
+
+
+
+log = logging.getLogger(__name__)
 
 
 class RpcApiHandler:
@@ -24,8 +39,16 @@ class RpcApiHandler:
     def __init__(self, full_node: FullNode, stop_cb: Callable):
         self.full_node = full_node
         self.stop_cb: Callable = stop_cb
+        initialize_logging(
+            "RPC FullNode %(name)-25s",
+            self.full_node.config["logging"],
+            self.full_node.root_path,
+        )
+        self.log = log
+        self.shut_down = False
+        self.service_name = "chia_full_node"
 
-    async def get_blockchain_state(self, request) -> web.Response:
+    async def _get_blockchain_state(self):
         """
         Returns a summary of the node's view of the blockchain.
         """
@@ -35,7 +58,7 @@ class RpcApiHandler:
         difficulty: uint64 = self.full_node.blockchain.get_next_difficulty(lca)
         lca_block = await self.full_node.block_store.get_block(lca.header_hash)
         if lca_block is None:
-            raise web.HTTPNotFound()
+            return None
         min_iters: uint64 = self.full_node.blockchain.get_next_min_iters(lca_block)
         ips: uint64 = min_iters // (
             self.full_node.constants["BLOCK_TIME_TARGET"]
@@ -67,7 +90,24 @@ class RpcApiHandler:
             "ips": ips,
             "min_iters": min_iters,
         }
+        return response
+
+    async def get_blockchain_state(self, request) -> web.Response:
+        """
+        Returns a summary of the node's view of the blockchain.
+        """
+        response = await self._get_blockchain_state()
+        if response is None:
+            raise web.HTTPNotFound()
         return obj_to_response(response)
+
+    async def _get_block(self, header_hash):
+        header_hash = hexstr_to_bytes(header_hash)
+
+        block: Optional[FullBlock] = await self.full_node.block_store.get_block(
+            header_hash
+        )
+        return block
 
     async def get_block(self, request) -> web.Response:
         """
@@ -76,14 +116,20 @@ class RpcApiHandler:
         request_data = await request.json()
         if "header_hash" not in request_data:
             raise web.HTTPBadRequest()
-        header_hash = hexstr_to_bytes(request_data["header_hash"])
-
-        block: Optional[FullBlock] = await self.full_node.block_store.get_block(
-            header_hash
-        )
+        block = await self._get_block(request_data["header_hash"])
         if block is None:
             raise web.HTTPNotFound()
         return obj_to_response(block)
+
+    async def _get_header_by_height(self, height):
+        header_height = uint32(int(height))
+        header_hash: Optional[bytes32] = self.full_node.blockchain.height_to_hash.get(
+            header_height, None
+        )
+        if header_hash is None:
+            return None
+        header: Header = self.full_node.blockchain.headers[header_hash]
+        return header
 
     async def get_header_by_height(self, request) -> web.Response:
         """
@@ -92,14 +138,17 @@ class RpcApiHandler:
         request_data = await request.json()
         if "height" not in request_data:
             raise web.HTTPBadRequest()
-        header_height = uint32(int(request_data["height"]))
-        header_hash: Optional[bytes32] = self.full_node.blockchain.height_to_hash.get(
-            header_height, None
-        )
-        if header_hash is None:
+        header = await self._get_header_by_height(request_data["height"])
+        if header is None:
             raise web.HTTPNotFound()
-        header: Header = self.full_node.blockchain.headers[header_hash]
         return obj_to_response(header)
+
+    async def _get_header(self, header_hash_str: str):
+        header_hash = hexstr_to_bytes(header_hash_str)
+        header: Optional[Header] = self.full_node.blockchain.headers.get(
+            header_hash, None
+        )
+        return header
 
     async def get_header(self, request) -> web.Response:
         """
@@ -108,26 +157,19 @@ class RpcApiHandler:
         request_data = await request.json()
         if "header_hash" not in request_data:
             raise web.HTTPBadRequest()
-        header_hash = hexstr_to_bytes(request_data["header_hash"])
-        header: Optional[Header] = self.full_node.blockchain.headers.get(
-            header_hash, None
-        )
+        header = await self._get_header(request_data["header_hash"])
         if header is None:
             raise web.HTTPNotFound()
         return obj_to_response(header)
 
-    async def get_unfinished_block_headers(self, request) -> web.Response:
-        request_data = await request.json()
-        if "height" not in request_data:
-            raise web.HTTPBadRequest()
-        height = request_data["height"]
+    async def _get_unfinished_block_headers(self, height):
         response_headers: List[Header] = []
         for block in (
             await self.full_node.full_node_store.get_unfinished_blocks()
         ).values():
             if block.height == height:
                 response_headers.append(block.header)
-        return obj_to_response(response_headers)
+        return response_headers
 
     async def get_total_miniters(self, newer_block, older_block) -> Optional[uint64]:
         """
@@ -214,12 +256,17 @@ class RpcApiHandler:
         )
         return obj_to_response(network_space_bytes_estimate)
 
-    async def get_connections(self, request) -> web.Response:
-        """
-        Retrieves all connections to this full node, including farmers and timelords.
-        """
+    async def get_unfinished_block_headers(self, request) -> web.Response:
+        request_data = await request.json()
+        if "height" not in request_data:
+            raise web.HTTPBadRequest()
+        height = request_data["height"]
+        response_headers = await self._get_unfinished_block_headers(height)
+        return obj_to_response(response_headers)
+
+    async def _get_connections(self):
         if self.full_node.server is None:
-            return obj_to_response([])
+            return []
         connections = self.full_node.server.global_connections.get_connections()
         con_info = [
             {
@@ -237,7 +284,22 @@ class RpcApiHandler:
             }
             for con in connections
         ]
+        return con_info
+
+    async def get_connections(self, request) -> web.Response:
+        """
+        Retrieves all connections to this full node, including farmers and timelords.
+        """
+        con_info = await self._get_connections()
         return obj_to_response(con_info)
+
+    async def _open_connection(self, host, port):
+        target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
+
+        if self.full_node.server is None or not (
+            await self.full_node.server.start_client(target_node, None)
+        ):
+            raise web.HTTPInternalServerError()
 
     async def open_connection(self, request) -> web.Response:
         """
@@ -246,13 +308,19 @@ class RpcApiHandler:
         request_data = await request.json()
         host = request_data["host"]
         port = request_data["port"]
-        target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
-
-        if self.full_node.server is None or not (
-            await self.full_node.server.start_client(target_node, None)
-        ):
-            raise web.HTTPInternalServerError()
+        await self._open_connection(host, port)
         return obj_to_response("")
+
+    def _close_connection(self, node_id):
+        connections_to_close = [
+            c
+            for c in self.full_node.server.global_connections.get_connections()
+            if c.node_id == node_id
+        ]
+        if len(connections_to_close) == 0:
+            raise web.HTTPNotFound()
+        for connection in connections_to_close:
+            self.full_node.server.global_connections.close(connection)
 
     async def close_connection(self, request) -> web.Response:
         """
@@ -263,33 +331,24 @@ class RpcApiHandler:
         if self.full_node.server is None:
             raise web.HTTPInternalServerError()
 
-        connections_to_close = [
-            c
-            for c in self.full_node.server.global_connections.get_connections()
-            if c.node_id == node_id
-        ]
-        if len(connections_to_close) == 0:
-            raise web.HTTPNotFound()
-        for connection in connections_to_close:
-            self.full_node.server.global_connections.close(connection)
+        self._close_connection(node_id)
+
         return obj_to_response("")
+
+    def _stop_node(self):
+        if self.stop_cb is not None:
+            self.stop_cb()
 
     async def stop_node(self, request) -> web.Response:
         """
         Shuts down the node.
         """
-        if self.stop_cb is not None:
-            self.stop_cb()
+        self._stop_node()
         return obj_to_response("")
 
-    async def get_unspent_coins(self, request) -> web.Response:
-        """
-        Retrieves the unspent coins for a given puzzlehash.
-        """
-        request_data = await request.json()
-        puzzle_hash = hexstr_to_bytes(request_data["puzzle_hash"])
-        if "header_hash" in request_data:
-            header_hash = bytes32(hexstr_to_bytes(request_data["header_hash"]))
+    async def _get_unspent_coins(self, puzzle_hash, header_hash=None):
+        if header_hash is not None:
+            header_hash = bytes32(hexstr_to_bytes(header_hash))
             header = self.full_node.blockchain.headers.get(header_hash)
         else:
             header = None
@@ -298,12 +357,24 @@ class RpcApiHandler:
             puzzle_hash, header
         )
 
-        return obj_to_response(coin_records)
+        return coin_records
 
-    async def get_heaviest_block_seen(self, request) -> web.Response:
+    async def get_unspent_coins(self, request) -> web.Response:
         """
-        Returns the heaviest block ever seen, whether it's been added to the blockchain or not
+        Retrieves the unspent coins for a given puzzlehash.
         """
+        request_data = await request.json()
+        puzzle_hash = hexstr_to_bytes(request_data["puzzle_hash"])
+        if "header_hash" in request_data:
+            result = await self._get_unspent_coins(
+                puzzle_hash, request_data["header_hash"]
+            )
+        else:
+            result = await self._get_unspent_coins(puzzle_hash)
+
+        return obj_to_response(result)
+
+    async def _get_heaviest_block_seen(self):
         tips: List[Header] = self.full_node.blockchain.get_current_tips()
         tip_weights = [tip.weight for tip in tips]
         i = tip_weights.index(max(tip_weights))
@@ -313,7 +384,119 @@ class RpcApiHandler:
             for _, pot_block in potential_tips:
                 if pot_block.weight > max_tip.weight:
                     max_tip = pot_block.header
+
+    async def get_heaviest_block_seen(self, request) -> web.Response:
+        """
+        Returns the heaviest block ever seen, whether it's been added to the blockchain or not
+        """
+        max_tip = await self._get_heaviest_block_seen()
         return obj_to_response(max_tip)
+
+    async def ws_api(self, message):
+        """
+        This function gets called when new message is received via websocket.
+        """
+
+        command = message["command"]
+        if message["ack"]:
+            return None
+
+        data = None
+        if "data" in message:
+            data = message["data"]
+        if command == "ping":
+            return pong()
+        elif command == "get_heaviest_block":
+            response = await self._get_heaviest_block_seen()
+            return response
+        elif command == "get_unspent_coins":
+            puzzle_hash = data["puzzle_hash"]
+            header_hash = None
+            if "header_hash" in data:
+                header_hash = data["header_hash"]
+            return await self._get_unspent_coins(puzzle_hash, header_hash)
+        elif command == "stop_node":
+            await self._stop_node()
+            response = {"success": True}
+            return response
+        elif command == "close_connection":
+            node_id = data["node_id"]
+            return await self._close_connection(node_id)
+        elif command == "get_blockchain_state":
+            return await self._get_blockchain_state()
+        else:
+            response = {"error": f"unknown_command {command}"}
+            return response
+
+    async def safe_handle(self, websocket, payload):
+        message = None
+        try:
+            message = json.loads(payload)
+            response = await self.ws_api(message)
+            if response is not None:
+                self.log.info(f"message: {message}")
+                self.log.info(f"response: {response}")
+                self.log.info(f"payload: {format_response(message, response)}")
+                await websocket.send_str(format_response(message, response))
+
+        except BaseException as e:
+            tb = traceback.format_exc()
+            self.log.error(f"Error while handling message: {tb}")
+            error = {"success": False, "error": f"{e}"}
+            if message is None:
+                return
+            await websocket.send_str(format_response(message, error))
+
+    async def connection(self, ws):
+        data = {"service": self.service_name}
+        payload = create_payload("register_service", data, self.service_name, "daemon")
+        await ws.send_str(payload)
+
+        while True:
+            msg = await ws.receive()
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                message = msg.data.strip()
+                self.log.info(f"received message: {message}")
+                await self.safe_handle(ws, message)
+            elif msg.type == aiohttp.WSMsgType.BINARY:
+                self.log.warning("Received binary data")
+            elif msg.type == aiohttp.WSMsgType.PING:
+                await ws.pong()
+            elif msg.type == aiohttp.WSMsgType.PONG:
+                self.log.info("Pong received")
+            else:
+                if msg.type == aiohttp.WSMsgType.CLOSE:
+                    print("Closing")
+                    await ws.close()
+                elif msg.type == aiohttp.WSMsgType.ERROR:
+                    print("Error during receive %s" % ws.exception())
+                elif msg.type == aiohttp.WSMsgType.CLOSED:
+                    pass
+
+                break
+
+        await ws.close()
+
+    async def connect_to_daemon(self):
+        while True:
+            session = None
+            try:
+                if self.shut_down:
+                    break
+                session = aiohttp.ClientSession()
+                async with session.ws_connect(
+                    "ws://127.0.0.1:55400", autoclose=False, autoping=True
+                ) as ws:
+                    self.websocket = ws
+                    await self.connection(ws)
+                self.websocket = None
+                await session.close()
+            except BaseException as e:
+                self.log.error(f"Exception: {e}")
+                if session is not None:
+                    await session.close()
+                pass
+            await asyncio.sleep(1)
 
 
 async def start_rpc_server(
@@ -345,6 +528,7 @@ async def start_rpc_server(
         ]
     )
 
+    create_task(handler.connect_to_daemon())
     runner = web.AppRunner(app, access_log=None)
     await runner.setup()
     site = web.TCPSite(runner, "localhost", int(rpc_port))

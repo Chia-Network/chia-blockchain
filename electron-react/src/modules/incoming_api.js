@@ -1,4 +1,7 @@
-import { CardActions } from "@material-ui/core";
+import {
+  service_wallet_server,
+  service_full_node
+} from "../util/service_names";
 
 export const Wallet = (id, name, type, data) => ({
   id: id,
@@ -45,6 +48,7 @@ export const initial_wallet = Wallet(1, "Chia Wallet", "STANDARD_WALLET", "");
 const initial_state = {
   mnemonic: [],
   public_key_fingerprints: [],
+  logged_in_received: false,
   logged_in: false,
   wallets: [, initial_wallet],
   status: {
@@ -61,16 +65,22 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         return { ...state, logged_in: false };
       }
     case "INCOMING_MESSAGE":
-      if (action.command === "generate_mnemonic") {
-        var mnemonic_data = action.data.mnemonic;
+      if (action.message.origin !== service_wallet_server) {
+        return state;
+      }
+      const message = action.message;
+      const data = message.data;
+      const command = message.command;
+      if (command === "generate_mnemonic") {
+        var mnemonic_data = message.data.mnemonic;
         return { ...state, mnemonic: mnemonic_data };
-      } else if (action.command === "add_key") {
+      } else if (command === "add_key") {
+        var success = data.success;
+        return { ...state, logged_in: success };
+      } else if (command === "log_in") {
         var success = action.data.success;
         return { ...state, logged_in: success };
-      } else if (action.command === "log_in") {
-        var success = action.data.success;
-        return { ...state, logged_in: success };
-      } else if (action.command === "delete_all_keys") {
+      } else if (command === "delete_all_keys") {
         var success = action.data.success;
         if (success) {
           return { ...state, logged_in: false, public_key_fingerprints: [] };
@@ -78,12 +88,15 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       } else if (action.command === "get_public_keys") {
         var public_key_fingerprints = action.data.public_key_fingerprints;
         return { ...state, public_key_fingerprints: public_key_fingerprints };
-      } else if (action.command === "start_server") {
-        var started = action.data.success;
+      } else if (command === "logged_in") {
+        var logged_in = data.logged_in;
+        return { ...state, logged_in: logged_in, logged_in_received: true };
+      } else if (command === "ping") {
+        var started = data.success;
         return { ...state, server_started: started };
-      } else if (action.command === "get_wallets") {
-        if (action.data.success) {
-          const wallets = action.data.wallets;
+      } else if (command === "get_wallets") {
+        if (data.success) {
+          const wallets = data.wallets;
           var wallets_state = [];
           wallets.map(object => {
             var id = parseInt(object.id);
@@ -93,72 +106,70 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           console.log(wallets_state);
           return { ...state, wallets: wallets_state };
         }
-      } else if (action.command === "get_wallet_balance") {
-        if (action.data.success) {
-          var id = action.data.wallet_id;
+      } else if (command === "get_wallet_balance") {
+        if (data.success) {
+          var id = data.wallet_id;
           var wallets = state.wallets;
           var wallet = wallets[parseInt(id)];
           wallet.balance = balance;
-          var balance = action.data.confirmed_wallet_balance;
+          var balance = data.confirmed_wallet_balance;
           console.log("balance is: " + balance);
-          var unconfirmed_balance = action.data.unconfirmed_wallet_balance;
+          var unconfirmed_balance = data.unconfirmed_wallet_balance;
           wallet.balance_total = balance;
           wallet.balance_pending = unconfirmed_balance;
           return state;
         }
-      } else if (action.command === "get_transactions") {
-        if (action.data.success) {
-          var id = action.data.wallet_id;
-          var transactions = action.data.txs;
+      } else if (command === "get_transactions") {
+        if (data.success) {
+          var id = data.wallet_id;
+          var transactions = data.txs;
           var wallets = state.wallets;
           var wallet = wallets[parseInt(id)];
           wallet.transactions = transactions.reverse();
           return state;
         }
-      } else if (action.command === "get_next_puzzle_hash") {
-        var id = action.data.wallet_id;
-        var puzzle_hash = action.data.puzzle_hash;
+      } else if (command === "get_next_puzzle_hash") {
+        var id = data.wallet_id;
+        var puzzle_hash = data.puzzle_hash;
         var wallets = state.wallets;
         var wallet = wallets[parseInt(id)];
         console.log("wallet_id here: " + id);
         wallet.puzzle_hash = puzzle_hash;
         return { ...state };
-      } else if (action.command == "get_connection_info") {
-        console.log(action);
-        if (action.data.success) {
-          const connections = action.data.connections;
+      } else if (command == "get_connection_info") {
+        if (data.success) {
+          const connections = data.connections;
           state.status["connections"] = connections;
           state.status["connection_count"] = connections.length;
           return state;
         }
-      } else if (action.command === "get_height_info") {
-        const height = action.data.height;
+      } else if (command === "get_height_info") {
+        const height = data.height;
         state.status["height"] = height;
         return { ...state };
-      } else if (action.command === "get_sync_status") {
+      } else if (command === "get_sync_status") {
         console.log("command get_sync_status");
-        if (action.data.success) {
-          const syncing = action.data.syncing;
+        if (data.success) {
+          const syncing = data.syncing;
           state.status["syncing"] = syncing;
           return state;
         }
-      } else if (action.command === "cc_get_colour") {
-        const id = action.data.wallet_id;
-        const colour = action.data.colour;
+      } else if (command === "cc_get_colour") {
+        const id = data.wallet_id;
+        const colour = data.colour;
         var wallets = state.wallets;
         var wallet = wallets[parseInt(id)];
         wallet.colour = colour;
         return state;
-      } else if (action.command === "cc_get_name") {
-        const id = action.data.wallet_id;
-        const name = action.data.name;
+      } else if (command === "cc_get_name") {
+        const id = data.wallet_id;
+        const name = data.name;
         var wallets = state.wallets;
         var wallet = wallets[parseInt(id)];
         wallet.name = name;
         return state;
       }
       return state;
-      break;
     default:
       return state;
   }

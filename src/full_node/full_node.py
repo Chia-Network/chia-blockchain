@@ -70,6 +70,7 @@ class FullNode:
     log: logging.Logger
     constants: Dict
     _shut_down: bool
+    root_path: Path
 
     @classmethod
     async def create(
@@ -81,6 +82,7 @@ class FullNode:
     ):
         self = cls()
 
+        self.root_path = root_path
         self.config = config
         self.server = None
         self._shut_down = False  # Set to true to close all infinite loops

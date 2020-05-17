@@ -4,16 +4,14 @@ const BrowserWindow = electron.BrowserWindow;
 const path = require("path");
 const WebSocket = require("ws");
 const ipcMain = require("electron").ipcMain;
-
+import { config_testing } from "./config";
 // Whether to enter test mode. Uses the full node simulator and test constants.
-var local_test = false;
+var local_test = config_testing;
 
 // Only takes effect if local_test is false. Connects to a local introducer.
 var local_introducer = false;
 
 global.sharedObj = { local_test: local_test };
-
-var wallet_ui_html = "wallet-dark.html";
 
 /*************************************************************
  * py process
