@@ -8,28 +8,27 @@ import { connect, useSelector, useDispatch } from "react-redux";
 import Typography from "@material-ui/core/Typography";
 import Box from "@material-ui/core/Box";
 import { Paper, TableRow } from "@material-ui/core";
-import Tabs from '@material-ui/core/Tabs';
-import Tab from '@material-ui/core/Tab';
-import Button from '@material-ui/core/Button';
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableContainer from '@material-ui/core/TableContainer';
-import TableHead from '@material-ui/core/TableHead';
-import DeleteForeverIcon from '@material-ui/icons/DeleteForever';
+import Tabs from "@material-ui/core/Tabs";
+import Tab from "@material-ui/core/Tab";
+import Button from "@material-ui/core/Button";
+import Table from "@material-ui/core/Table";
+import TableBody from "@material-ui/core/TableBody";
+import TableCell from "@material-ui/core/TableCell";
+import TableContainer from "@material-ui/core/TableContainer";
+import TableHead from "@material-ui/core/TableHead";
+import DeleteForeverIcon from "@material-ui/icons/DeleteForever";
 
 import DonutLargeIcon from "@material-ui/icons/DonutLarge";
-import HourglassEmptyIcon from '@material-ui/icons/HourglassEmpty';
+import HourglassEmptyIcon from "@material-ui/icons/HourglassEmpty";
 import { unix_to_short_date } from "../util/utils";
 import { service_connection_types } from "../util/service_names";
 import { calculateSizeFromK } from "../util/plot_sizes";
 import { closeConnection, openConnection } from "../modules/farmerMessages";
 import { refreshPlots, deletePlot } from "../modules/harvesterMessages";
-import TextField from '@material-ui/core/TextField';
-import SettingsInputAntennaIcon from '@material-ui/icons/SettingsInputAntenna';
-import TablePagination from '@material-ui/core/TablePagination';
-import RefreshIcon from '@material-ui/icons/Refresh';
-
+import TextField from "@material-ui/core/TextField";
+import SettingsInputAntennaIcon from "@material-ui/icons/SettingsInputAntenna";
+import TablePagination from "@material-ui/core/TablePagination";
+import RefreshIcon from "@material-ui/icons/Refresh";
 
 const drawerWidth = 180;
 
@@ -39,10 +38,10 @@ const useStyles = makeStyles(theme => ({
     paddingLeft: "0px"
   },
   tabs: {
-    flexGrow: 1,
+    flexGrow: 1
   },
-  form : {
-    margin: theme.spacing(1),
+  form: {
+    margin: theme.spacing(1)
   },
   clickable: {
     cursor: "pointer"
@@ -51,7 +50,7 @@ const useStyles = makeStyles(theme => ({
     color: "red"
   },
   refreshButton: {
-    marginLeft: "20px",
+    marginLeft: "20px"
   },
   menuButton: {
     marginRight: 36
@@ -130,8 +129,8 @@ const useStyles = makeStyles(theme => ({
     paddingTop: theme.spacing(1)
   },
   table: {
-    minWidth: 650,
-  },
+    minWidth: 650
+  }
 }));
 
 const getStatusItems = (connected, plots_size) => {
@@ -144,7 +143,10 @@ const getStatusItems = (connected, plots_size) => {
     const item = { label: "Connection Status ", value: "not connected" };
     status_items.push(item);
   }
-  status_items.push({label: "Total size of local plots", value: Math.floor(plots_size / (Math.pow(1024, 3))).toString() + " GB"})
+  status_items.push({
+    label: "Total size of local plots",
+    value: Math.floor(plots_size / Math.pow(1024, 3)).toString() + " GB"
+  });
   return status_items;
 };
 
@@ -170,15 +172,13 @@ const StatusCell = props => {
 };
 
 const FarmerStatus = props => {
-  const plots = useSelector(
-    state => state.farming_state.harvester.plots
-  )
+  const plots = useSelector(state => state.farming_state.harvester.plots);
 
-  const total_size = plots.map((p) => calculateSizeFromK(p.size)).reduce((a, b) => a + b, 0)
+  const total_size = plots
+    .map(p => calculateSizeFromK(p.size))
+    .reduce((a, b) => a + b, 0);
 
-  const connected = useSelector(
-    state => state.daemon_state.farmer_connected
-  );
+  const connected = useSelector(state => state.daemon_state.farmer_connected);
   const statusItems = getStatusItems(connected, total_size);
 
   const classes = useStyles();
@@ -208,27 +208,27 @@ const Connections = props => {
   );
   const connection_error = useSelector(
     state => state.farming_state.farmer.open_connection_error
-  )
-  const [host, setHost] = React.useState('');
-  const handleChangeHost = (event) => {
+  );
+  const [host, setHost] = React.useState("");
+  const handleChangeHost = event => {
     setHost(event.target.value);
   };
 
-  const [port, setPort] = React.useState('');
-  const handleChangePort = (event) => {
+  const [port, setPort] = React.useState("");
+  const handleChangePort = event => {
     setPort(event.target.value);
   };
 
-  const deleteConnection = (node_id) => {
+  const deleteConnection = node_id => {
     return () => {
       dispatch(closeConnection(node_id));
-    }
-  }
+    };
+  };
   const connectToPeer = () => {
     dispatch(openConnection(host, port));
     setHost("");
     setPort("");
-  }
+  };
 
   return (
     <Paper className={classes.balancePaper}>
@@ -239,51 +239,82 @@ const Connections = props => {
               Connections
             </Typography>
           </div>
-        <TableContainer component={Paper}>
-          <Table className={classes.table} size="small" aria-label="a dense table">
-            <TableHead>
-              <TableRow>
-                <TableCell>Node Id</TableCell>
-                <TableCell align="right">Ip address</TableCell>
-                <TableCell align="right">Port</TableCell>
-                <TableCell align="right">Connected</TableCell>
-                <TableCell align="right">Last message</TableCell>
-                <TableCell align="right">Up/Down</TableCell>
-                <TableCell align="right">Connection type</TableCell>
-                <TableCell align="right">Delete</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {connections.map(item => (
-                <TableRow key={item.node_id}>
-                  <TableCell component="th" scope="row">{item.node_id.substring(0, 10)}...</TableCell>
-                  <TableCell align="right">{item.peer_host}</TableCell>
-                  <TableCell align="right">{item.peer_port}/{item.peer_server_port}</TableCell>
-                  <TableCell align="right">{unix_to_short_date(parseInt(item.creation_time))}</TableCell>
-                  <TableCell align="right">{unix_to_short_date(parseInt(item.last_message_time))}</TableCell>
-                  <TableCell align="right">{Math.floor(item.bytes_written / 1024)}/{Math.floor(item.bytes_read / 1024)} KB</TableCell>
-                  <TableCell align="right">{service_connection_types[item.type]}</TableCell>
-                  <TableCell className={classes.clickable} onClick={deleteConnection(item.node_id)} align="right"><DeleteForeverIcon></DeleteForeverIcon></TableCell>
+          <TableContainer component={Paper}>
+            <Table
+              className={classes.table}
+              size="small"
+              aria-label="a dense table"
+            >
+              <TableHead>
+                <TableRow>
+                  <TableCell>Node Id</TableCell>
+                  <TableCell align="right">Ip address</TableCell>
+                  <TableCell align="right">Port</TableCell>
+                  <TableCell align="right">Connected</TableCell>
+                  <TableCell align="right">Last message</TableCell>
+                  <TableCell align="right">Up/Down</TableCell>
+                  <TableCell align="right">Connection type</TableCell>
+                  <TableCell align="right">Delete</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <h4>Connect to Harvesters</h4>
-        <form className={classes.form} noValidate autoComplete="off">
-          <TextField label="Ip address / host" value={host} onChange={handleChangeHost}/>
-          <TextField label="Port" value={port} onChange={handleChangePort} />
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={connectToPeer}
-            className={classes.button}
-            startIcon={<SettingsInputAntennaIcon />}
-          >
-            Connect
-          </Button>
-        </form>
-        {connection_error === "" ? "" : <p className={classes.error}>{connection_error}</p>}
+              </TableHead>
+              <TableBody>
+                {connections.map(item => (
+                  <TableRow key={item.node_id}>
+                    <TableCell component="th" scope="row">
+                      {item.node_id.substring(0, 10)}...
+                    </TableCell>
+                    <TableCell align="right">{item.peer_host}</TableCell>
+                    <TableCell align="right">
+                      {item.peer_port}/{item.peer_server_port}
+                    </TableCell>
+                    <TableCell align="right">
+                      {unix_to_short_date(parseInt(item.creation_time))}
+                    </TableCell>
+                    <TableCell align="right">
+                      {unix_to_short_date(parseInt(item.last_message_time))}
+                    </TableCell>
+                    <TableCell align="right">
+                      {Math.floor(item.bytes_written / 1024)}/
+                      {Math.floor(item.bytes_read / 1024)} KB
+                    </TableCell>
+                    <TableCell align="right">
+                      {service_connection_types[item.type]}
+                    </TableCell>
+                    <TableCell
+                      className={classes.clickable}
+                      onClick={deleteConnection(item.node_id)}
+                      align="right"
+                    >
+                      <DeleteForeverIcon></DeleteForeverIcon>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <h4>Connect to Harvesters</h4>
+          <form className={classes.form} noValidate autoComplete="off">
+            <TextField
+              label="Ip address / host"
+              value={host}
+              onChange={handleChangeHost}
+            />
+            <TextField label="Port" value={port} onChange={handleChangePort} />
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={connectToPeer}
+              className={classes.button}
+              startIcon={<SettingsInputAntennaIcon />}
+            >
+              Connect
+            </Button>
+          </form>
+          {connection_error === "" ? (
+            ""
+          ) : (
+            <p className={classes.error}>{connection_error}</p>
+          )}
         </Grid>
       </Grid>
     </Paper>
@@ -291,9 +322,12 @@ const Connections = props => {
 };
 const Challenges = props => {
   const classes = useStyles();
-  const latest_challenges = useSelector(
+  var latest_challenges = useSelector(
     state => state.farming_state.farmer.latest_challenges
   );
+  if (!latest_challenges) {
+    latest_challenges = [];
+  }
   return (
     <Paper className={classes.balancePaper}>
       <Grid container spacing={0}>
@@ -303,28 +337,37 @@ const Challenges = props => {
               Challenges
             </Typography>
           </div>
-        <TableContainer component={Paper}>
-          <Table className={classes.table} size="small" aria-label="a dense table">
-            <TableHead>
-              <TableRow>
-                <TableCell>Challange hash</TableCell>
-                <TableCell align="right">Height</TableCell>
-                <TableCell align="right">Number of proofs</TableCell>
-                <TableCell align="right">Best estimate</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {latest_challenges.map(item => (
-                <TableRow key={item.challenge}>
-                  <TableCell component="th" scope="row">{item.challenge.substring(0, 10)}...</TableCell>
-                  <TableCell align="right">{item.height}</TableCell>
-                  <TableCell align="right">{item.estimates.length}</TableCell>
-                  <TableCell align="right">{Math.floor(Math.min.apply(Math, item.estimates) / 60)} minutes</TableCell>
+          <TableContainer component={Paper}>
+            <Table
+              className={classes.table}
+              size="small"
+              aria-label="a dense table"
+            >
+              <TableHead>
+                <TableRow>
+                  <TableCell>Challange hash</TableCell>
+                  <TableCell align="right">Height</TableCell>
+                  <TableCell align="right">Number of proofs</TableCell>
+                  <TableCell align="right">Best estimate</TableCell>
                 </TableRow>
-              ))}
+              </TableHead>
+              <TableBody>
+                {latest_challenges.map(item => (
+                  <TableRow key={item.challenge}>
+                    <TableCell component="th" scope="row">
+                      {item.challenge.substring(0, 10)}...
+                    </TableCell>
+                    <TableCell align="right">{item.height}</TableCell>
+                    <TableCell align="right">{item.estimates.length}</TableCell>
+                    <TableCell align="right">
+                      {Math.floor(Math.min.apply(Math, item.estimates) / 60)}{" "}
+                      minutes
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
-          </Table>
-        </TableContainer>
+            </Table>
+          </TableContainer>
         </Grid>
       </Grid>
     </Paper>
@@ -334,10 +377,8 @@ const Challenges = props => {
 const Plots = props => {
   const classes = useStyles();
   const dispatch = useDispatch();
-  const plots = useSelector(
-    state => state.farming_state.harvester.plots
-  );
-  plots.sort((a, b) => b.size - a.size)
+  const plots = useSelector(state => state.farming_state.harvester.plots);
+  plots.sort((a, b) => b.size - a.size);
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
 
@@ -345,20 +386,20 @@ const Plots = props => {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (event) => {
+  const handleChangeRowsPerPage = event => {
     setRowsPerPage(+event.target.value);
     setPage(0);
   };
 
-  const deletePlotClick = (filename) => {
+  const deletePlotClick = filename => {
     return () => {
       dispatch(deletePlot(filename));
-    }
-  }
+    };
+  };
 
   const refreshPlotsClick = () => {
     dispatch(refreshPlots());
-  }
+  };
 
   return (
     <Paper className={classes.balancePaper}>
@@ -367,53 +408,73 @@ const Plots = props => {
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
               Plots
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={refreshPlotsClick}
-              className={classes.refreshButton}
-              startIcon={<RefreshIcon />}
-            >
-              Refresh plots
-            </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={refreshPlotsClick}
+                className={classes.refreshButton}
+                startIcon={<RefreshIcon />}
+              >
+                Refresh plots
+              </Button>
             </Typography>
           </div>
 
-        <TableContainer component={Paper}>
-          <Table className={classes.table} size="small" aria-label="a dense table">
-            <TableHead>
-              <TableRow>
-                <TableCell>Filename</TableCell>
-                <TableCell align="right">Size</TableCell>
-                <TableCell align="right">Plot seed</TableCell>
-                <TableCell align="right">Plot pk</TableCell>
-                <TableCell align="right">Pool pk</TableCell>
-                <TableCell align="right">Delete</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {plots.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map(item => (
-                <TableRow key={item.filename}>
-                  <TableCell component="th" scope="row">{item.filename.substring(0, 60)}...</TableCell>
-                  <TableCell align="right">{item.size}</TableCell>
-                  <TableCell align="right">{item["plot-seed"].substring(0, 10)}</TableCell>
-                  <TableCell align="right">{item.plot_pk.substring(0, 10)}...</TableCell>
-                  <TableCell align="right">{item.pool_pk.substring(0, 10)}...</TableCell>
-                  <TableCell className={classes.clickable} onClick={deletePlotClick(item.filename)} align="right"><DeleteForeverIcon fontSize="small"></DeleteForeverIcon></TableCell>
+          <TableContainer component={Paper}>
+            <Table
+              className={classes.table}
+              size="small"
+              aria-label="a dense table"
+            >
+              <TableHead>
+                <TableRow>
+                  <TableCell>Filename</TableCell>
+                  <TableCell align="right">Size</TableCell>
+                  <TableCell align="right">Plot seed</TableCell>
+                  <TableCell align="right">Plot pk</TableCell>
+                  <TableCell align="right">Pool pk</TableCell>
+                  <TableCell align="right">Delete</TableCell>
                 </TableRow>
-              ))}
+              </TableHead>
+              <TableBody>
+                {plots
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map(item => (
+                    <TableRow key={item.filename}>
+                      <TableCell component="th" scope="row">
+                        {item.filename.substring(0, 60)}...
+                      </TableCell>
+                      <TableCell align="right">{item.size}</TableCell>
+                      <TableCell align="right">
+                        {item["plot-seed"].substring(0, 10)}
+                      </TableCell>
+                      <TableCell align="right">
+                        {item.plot_pk.substring(0, 10)}...
+                      </TableCell>
+                      <TableCell align="right">
+                        {item.pool_pk.substring(0, 10)}...
+                      </TableCell>
+                      <TableCell
+                        className={classes.clickable}
+                        onClick={deletePlotClick(item.filename)}
+                        align="right"
+                      >
+                        <DeleteForeverIcon fontSize="small"></DeleteForeverIcon>
+                      </TableCell>
+                    </TableRow>
+                  ))}
               </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-        rowsPerPageOptions={[10, 25, 100]}
-        component="div"
-        count={plots.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onChangePage={handleChangePage}
-        onChangeRowsPerPage={handleChangeRowsPerPage}
-      />
+            </Table>
+          </TableContainer>
+          <TablePagination
+            rowsPerPageOptions={[10, 25, 100]}
+            component="div"
+            count={plots.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onChangePage={handleChangePage}
+            onChangeRowsPerPage={handleChangeRowsPerPage}
+          />
         </Grid>
       </Grid>
     </Paper>
@@ -427,7 +488,6 @@ const Farmer = () => {
   const handleChange = (event, newValue) => {
     setValue(newValue);
   };
-
 
   return (
     <div className={classes.root}>
@@ -446,31 +506,32 @@ const Farmer = () => {
             <Tab icon={<DonutLargeIcon />} label="Farmer and Harverster" />
             <Tab icon={<HourglassEmptyIcon />} label="Plotting" />
           </Tabs>
-          { value === 0 ?
-          <Container maxWidth="lg" className={classes.container}>
-            <Grid container spacing={3}>
-              {/* Chart */}
-              <Grid item xs={12}>
-                <FarmerStatus></FarmerStatus>
+          {value === 0 ? (
+            <Container maxWidth="lg" className={classes.container}>
+              <Grid container spacing={3}>
+                {/* Chart */}
+                <Grid item xs={12}>
+                  <FarmerStatus></FarmerStatus>
+                </Grid>
+                <Grid item xs={12}>
+                  <Challenges></Challenges>
+                </Grid>
+                <Grid item xs={12}>
+                  <Connections></Connections>
+                </Grid>
+                <Grid item xs={12}>
+                  <Plots></Plots>
+                </Grid>
               </Grid>
-              <Grid item xs={12}>
-                <Challenges></Challenges>
+            </Container>
+          ) : (
+            <Container maxWidth="lg" className={classes.container}>
+              <Grid container spacing={3}>
+                Here goes the plotter
               </Grid>
-              <Grid item xs={12}>
-                <Connections></Connections>
-              </Grid>
-              <Grid item xs={12}>
-                <Plots></Plots>
-              </Grid>
-            </Grid>
-          </Container> :
-          <Container maxWidth="lg" className={classes.container}>
-            <Grid container spacing={3}>
-            Here goes the plotter
-            </Grid>
-          </Container>
-        }
-      </Paper>
+            </Container>
+          )}
+        </Paper>
       </main>
     </div>
   );
