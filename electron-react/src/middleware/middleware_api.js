@@ -22,7 +22,11 @@ import {
   service_farmer,
   service_harvester
 } from "../util/service_names";
-import { pingFullNode, getBlockChainState } from "../modules/fullnodeMessages";
+import {
+  pingFullNode,
+  getBlockChainState,
+  getLatestBlocks
+} from "../modules/fullnodeMessages";
 import {
   getLatestChallenges,
   getFarmerConnections,
@@ -75,6 +79,7 @@ export const handle_message = (store, payload) => {
       store.dispatch(get_connection_info());
     } else if (payload.origin === service_full_node) {
       store.dispatch(getBlockChainState());
+      store.dispatch(getLatestBlocks());
     } else if (payload.origin === service_farmer) {
       store.dispatch(getLatestChallenges());
       store.dispatch(getFarmerConnections());

@@ -13,6 +13,11 @@ import { withRouter } from "react-router-dom";
 import CssTextField from "../components/cssTextField";
 import myStyle from "./style";
 import { add_key } from "../modules/message";
+import {
+  changeEntranceMenu,
+  presentEntrace,
+  presentSelectKeys
+} from "../modules/entranceMenu";
 
 const MnemonicField = props => {
   return (
@@ -46,7 +51,7 @@ const UIPart = props => {
   const classes = myStyle();
 
   function goBack() {
-    props.props.history.goBack();
+    dispatch(changeEntranceMenu(presentSelectKeys));
   }
 
   function next() {
@@ -55,9 +60,9 @@ const UIPart = props => {
 
   return (
     <div className={classes.root}>
-      <Link onClick={goBack} href="#">
-        <ArrowBackIosIcon className={classes.navigator}> </ArrowBackIosIcon>
-      </Link>
+      <ArrowBackIosIcon onClick={goBack} className={classes.navigator}>
+        {" "}
+      </ArrowBackIosIcon>
       <div className={classes.grid_wrap}>
         <Container className={classes.grid} maxWidth="lg">
           <Typography className={classes.title} component="h1" variant="h5">

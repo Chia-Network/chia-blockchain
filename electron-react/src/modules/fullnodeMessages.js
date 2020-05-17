@@ -18,3 +18,10 @@ export const getBlockChainState = () => {
   action.data = {};
   return action;
 };
+
+export const getLatestBlocks = () => {
+  var action = fullNodeMessage();
+  action.command = "get_latest_block_headers";
+  action.data = {};
+  return action;
+};

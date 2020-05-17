@@ -1,6 +1,4 @@
-import {
-  service_full_node,
-} from "../util/service_names";
+import { service_full_node } from "../util/service_names";
 
 const initial_blockchain = {
   difficulty: 0,
@@ -16,7 +14,8 @@ const initial_blockchain = {
   tips: null
 };
 const initial_state = {
-  blockchain_state: initial_blockchain
+  blockchain_state: initial_blockchain,
+  headers: []
 };
 
 export const fullnodeReducer = (state = { ...initial_state }, action) => {
@@ -28,9 +27,15 @@ export const fullnodeReducer = (state = { ...initial_state }, action) => {
       const message = action.message;
       const data = message.data;
       const command = message.command;
-
+      console.log(message);
       if (command === "get_blockchain_state") {
         state.blockchain_state = data;
+        return state;
+      } else if (command === "get_latest_block_headers") {
+        if (data.success) {
+          const headers = data.headers;
+          state.headers = headers;
+        }
         return state;
       }
       return state;

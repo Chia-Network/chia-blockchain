@@ -4,7 +4,7 @@ import traceback
 from asyncio import create_task
 import logging
 
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Dict
 
 import aiohttp
 from aiohttp import web
@@ -43,6 +43,7 @@ class RpcApiHandler:
         self.log = log
         self.shut_down = False
         self.service_name = "chia_full_node"
+        self.cached_blockchain_state = None
 
     async def stop(self):
         self.shut_down = True
@@ -90,6 +91,7 @@ class RpcApiHandler:
             "ips": ips,
             "min_iters": min_iters,
         }
+        self.cached_blockchain_state = response
         return response
 
     async def get_blockchain_state(self, request) -> web.Response:
@@ -170,6 +172,71 @@ class RpcApiHandler:
             if block.height == height:
                 response_headers.append(block.header)
         return response_headers
+
+    async def _get_latest_block_headers(self):
+        headers: Dict[bytes32, Header] = {}
+        tips = self.full_node.blockchain.tips
+        heights = []
+        for tip in tips:
+            current = tip
+            heights.append(current.height + 1)
+            headers[current.header_hash] = current
+            for i in range(0, 8):
+                if current.height == 0:
+                    break
+                header: Optional[Header] = self.full_node.blockchain.headers.get(
+                    current.prev_header_hash, None
+                )
+                headers[header.header_hash] = header
+                current = header
+
+        all_unfinished = {}
+        for h in heights:
+            unfinished = await self._get_unfinished_block_headers(h)
+            for header in unfinished:
+                all_unfinished[header.header_hash] = header
+
+        sorted_headers = [
+            v
+            for v in sorted(
+                headers.values(), key=lambda item: item.height, reverse=True
+            )
+        ]
+        sorted_unfinished = [
+            v
+            for v in sorted(
+                all_unfinished.values(), key=lambda item: item.height, reverse=True
+            )
+        ]
+
+        finished_with_meta = []
+        for header in sorted_headers:
+            header_hash = header.header_hash
+            header_dict = header.to_json_dict()
+            header_dict["data"]["header_hash"] = header_hash
+            header_dict["data"]["finished"] = True
+            finished_with_meta.append(header_dict)
+
+        if self.cached_blockchain_state is None:
+            await self._get_blockchain_state()
+
+        ips = self.cached_blockchain_state["ips"]
+
+        unfinished_with_meta = []
+        for header in sorted_unfinished:
+            header_hash = header.header_hash
+            header_dict = header.to_json_dict()
+            header_dict["data"]["header_hash"] = header_hash
+            header_dict["data"]["finished"] = False
+            prev_header = self.full_node.blockchain.headers.get(header.prev_header_hash)
+            iter = header.data.total_iters - prev_header.data.total_iters
+            time_add = int(iter / ips)
+            header_dict["data"]["finish_time"] = header.data.timestamp + time_add
+            unfinished_with_meta.append(header_dict)
+
+        unfinished_with_meta.extend(finished_with_meta)
+
+        return unfinished_with_meta
 
     async def get_total_miniters(self, newer_block, older_block) -> Optional[uint64]:
         """
@@ -424,6 +491,10 @@ class RpcApiHandler:
             return await self._close_connection(node_id)
         elif command == "get_blockchain_state":
             return await self._get_blockchain_state()
+        elif command == "get_latest_block_headers":
+            headers = await self._get_latest_block_headers()
+            response = {"success": True, "headers": headers}
+            return response
         else:
             response = {"error": f"unknown_command {command}"}
             return response

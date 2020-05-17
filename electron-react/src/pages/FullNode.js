@@ -7,7 +7,7 @@ import { withRouter } from "react-router-dom";
 import { connect, useSelector } from "react-redux";
 import Typography from "@material-ui/core/Typography";
 import Box from "@material-ui/core/Box";
-import { Paper } from "@material-ui/core";
+import { Paper, ButtonBase } from "@material-ui/core";
 import { unix_to_short_date } from "../util/utils";
 
 const drawerWidth = 180;
@@ -92,12 +92,42 @@ const useStyles = makeStyles(theme => ({
     paddingLeft: theme.spacing(3),
     paddingRight: theme.spacing(3),
     paddingTop: theme.spacing(1)
+  },
+  left_block_cell: {
+    marginLeft: 10,
+    width: "25%",
+    textAlign: "left",
+    overflowWrap: "break-word"
+  },
+  center_block_cell: {
+    width: "25%",
+    textAlign: "center",
+    overflowWrap: "break-word"
+  },
+  center_block_cell_small: {
+    width: "15%",
+    textAlign: "center",
+    overflowWrap: "break-word"
+  },
+  right_block_cell: {
+    marginLeft: 30,
+    marginRight: 10,
+    width: "25%",
+    textAlign: "right",
+    overflowWrap: "break-word"
+  },
+  block_row: {
+    cursor: "pointer",
+    /* mouse over link */
+    "&:hover": {
+      backgroundColor: "#aaaaaa"
+    }
   }
 }));
 
 const getStatusItems = (state, connected) => {
   var status_items = [];
-  if (state.sync.sync_mode) {
+  if (state.sync && state.sync.sync_mode) {
     const progress = state.sync.sync_progress_height;
     const tip = state.sync.sync_tip_height;
     const item = { label: "Status", value: "Syncing " + progress + "/" + tip };
@@ -210,7 +240,12 @@ const FullNodeStatus = props => {
   );
 };
 
-const BlocksCard = props => {
+const BlocksCard = () => {
+  const headers = useSelector(state => state.full_node_state.headers);
+
+  function clickedBlock() {
+    console.log("Take me to block");
+  }
   const classes = useStyles();
   return (
     <Paper className={classes.balancePaper}>
@@ -221,6 +256,32 @@ const BlocksCard = props => {
               Blocks
             </Typography>
           </div>
+        </Grid>
+        <Grid item xs={12}>
+          {headers.map(header => (
+            <Box
+              className={classes.block_row}
+              onClick={clickedBlock}
+              display="flex"
+              key={header.data.header_hash}
+              style={{ minWidth: "100%" }}
+            >
+              <Box className={classes.left_block_cell}>
+                {header.data.header_hash.substring(0, 12) + "..."}
+              </Box>
+              <Box className={classes.center_block_cell_small}>
+                {header.data.height}
+              </Box>
+              <Box flexGrow={1} className={classes.center_block_cell}>
+                {unix_to_short_date(parseInt(header.data.timestamp))}
+              </Box>
+              <Box className={classes.right_block_cell}>
+                {header.data.finished
+                  ? "finished"
+                  : unix_to_short_date(parseInt(header.data.finish_time))}
+              </Box>
+            </Box>
+          ))}
         </Grid>
       </Grid>
     </Paper>
