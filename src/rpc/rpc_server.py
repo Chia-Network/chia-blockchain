@@ -44,8 +44,9 @@ class RpcApiHandler:
         self.shut_down = False
         self.service_name = "chia_full_node"
 
-    def stop(self):
+    async def stop(self):
         self.shut_down = True
+        await self.websocket.close()
 
     async def _get_blockchain_state(self):
         """
@@ -536,7 +537,7 @@ async def start_rpc_server(
     await site.start()
 
     async def cleanup():
-        handler.stop()
+        await handler.stop()
         await runner.cleanup()
         await daemon_connection
 
