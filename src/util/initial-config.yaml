@@ -13,6 +13,11 @@ harvester:
   farmer_peer:
     host: 127.0.0.1
     port: 8447
+
+  # If True, starts an RPC server at the following port
+  start_rpc_server: True
+  rpc_port: 8560
+
   # Location of all the plots, default ./plots, for relative paths in plots.yaml.
   # plot_root: "/mnt/pos"
   logging: *logging
@@ -35,6 +40,10 @@ farmer:
   harvester_peer:
     host: 127.0.0.1
     port: 8448
+
+  # If True, starts an RPC server at the following port
+  start_rpc_server: True
+  rpc_port: 8559
 
   pool_public_keys: {}
 

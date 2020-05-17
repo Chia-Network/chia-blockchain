@@ -265,6 +265,7 @@ async def setup_farmer(port, dic={}):
         config,
         f"farmer_server_{port}",
     )
+    farmer.set_server(server)
     _ = await server.start_server(farmer._on_connect)
 
     yield (farmer, server)
@@ -462,6 +463,6 @@ async def setup_full_system(dic={}):
         PeerInfo("127.0.0.1", uint16(node1_server._port))
     )
 
-    yield (node1, node2)
+    yield (node1, node2, harvester, farmer, introducer, timelord, vdf)
 
     await _teardown_nodes(node_iters)

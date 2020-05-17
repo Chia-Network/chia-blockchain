@@ -15,7 +15,7 @@ from src.types.peer_info import PeerInfo
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
-from src.util.ints import uint32, uint64, uint128
+from src.util.ints import uint32, uint64, uint128, uint8
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +42,7 @@ class Farmer:
         self.challenge_to_weight: Dict[bytes32, uint128] = {}
         self.challenge_to_height: Dict[bytes32, uint32] = {}
         self.challenge_to_best_iters: Dict[bytes32, uint64] = {}
+        self.challenge_to_estimates: Dict[bytes32, List[float]] = {}
         self.seen_challenges: Set[bytes32] = set()
         self.unfinished_challenges: Dict[uint128, List[bytes32]] = {}
         self.current_weight: uint128 = uint128(0)
@@ -53,13 +54,11 @@ class Farmer:
         self.keychain = keychain
 
         # This is the farmer configuration
-        print(self.config)
         self.wallet_target = bytes.fromhex(self.config["xch_target_puzzle_hash"])
         self.pool_public_keys = [
             PublicKey.from_bytes(bytes.fromhex(pk))
             for pk in self.config["pool_public_keys"]
         ]
-        print("pks", self.pool_public_keys)
 
         # This is the pool configuration, which should be moved out to the pool once it exists
         self.pool_target = bytes.fromhex(pool_config["xch_target_puzzle_hash"])
@@ -83,6 +82,27 @@ class Farmer:
     def set_server(self, server):
         self.server = server
 
+    async def _get_required_iters(
+        self, challenge_hash: bytes32, quality_string: bytes32, plot_size: uint8
+    ):
+        weight: uint128 = self.challenge_to_weight[challenge_hash]
+        difficulty: uint64 = uint64(0)
+        for posf in self.challenges[weight]:
+            if posf.challenge_hash == challenge_hash:
+                difficulty = posf.difficulty
+        if difficulty == 0:
+            raise RuntimeError("Did not find challenge")
+
+        estimate_min = (
+            self.proof_of_time_estimate_ips
+            * self.constants["BLOCK_TIME_TARGET"]
+            / self.constants["MIN_ITERS_PROPORTION"]
+        )
+        number_iters: uint64 = calculate_iterations_quality(
+            quality_string, plot_size, difficulty, estimate_min,
+        )
+        return number_iters
+
     @api_request
     async def challenge_response(
         self, challenge_response: harvester_protocol.ChallengeResponse
@@ -97,26 +117,13 @@ class Farmer:
                 f"Have already seen quality string {challenge_response.quality_string}"
             )
             return
-        weight: uint128 = self.challenge_to_weight[challenge_response.challenge_hash]
         height: uint32 = self.challenge_to_height[challenge_response.challenge_hash]
-        difficulty: uint64 = uint64(0)
-        for posf in self.challenges[weight]:
-            if posf.challenge_hash == challenge_response.challenge_hash:
-                difficulty = posf.difficulty
-        if difficulty == 0:
-            raise RuntimeError("Did not find challenge")
-
-        estimate_min = (
-            self.proof_of_time_estimate_ips
-            * self.constants["BLOCK_TIME_TARGET"]
-            / self.constants["MIN_ITERS_PROPORTION"]
-        )
-        number_iters: uint64 = calculate_iterations_quality(
+        number_iters = await self._get_required_iters(
+            challenge_response.challenge_hash,
             challenge_response.quality_string,
             challenge_response.plot_size,
-            difficulty,
-            estimate_min,
         )
+
         if height < 1000:  # As the difficulty adjusts, don't fetch all qualities
             if challenge_response.challenge_hash not in self.challenge_to_best_iters:
                 self.challenge_to_best_iters[
@@ -132,6 +139,11 @@ class Farmer:
             else:
                 return
         estimate_secs: float = number_iters / self.proof_of_time_estimate_ips
+        if challenge_response.challenge_hash not in self.challenge_to_estimates:
+            self.challenge_to_estimates[challenge_response.challenge_hash] = []
+        self.challenge_to_estimates[challenge_response.challenge_hash].append(
+            estimate_secs
+        )
 
         log.info(f"Estimate: {estimate_secs}, rate: {self.proof_of_time_estimate_ips}")
         if (
