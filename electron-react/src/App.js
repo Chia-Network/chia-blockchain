@@ -1,12 +1,10 @@
 import React from "react";
-import { Switch, Route } from "react-router-dom";
 import SignIn from "./pages/SignIn";
 import SelectKey from "./pages/SelectKey";
 import NewWallet from "./pages/NewWallet";
 import OldWallet from "./pages/OldWallet";
 import Dashboard from "./pages/Dashboard";
 import { connect, useSelector } from "react-redux";
-import Wallets from "./pages/Wallets";
 
 import { createMuiTheme, ThemeProvider } from "@material-ui/core/styles";
 import {
@@ -110,13 +108,13 @@ const CustomRouter = () => {
   } else if (public_key_fingerprints.length > 0) {
     return <SelectKey></SelectKey>;
   } else {
-    if (presentView == presentEntrace) {
+    if (presentView === presentEntrace) {
       return <SignIn></SignIn>;
-    } else if (presentView == presentOldWallet) {
+    } else if (presentView === presentOldWallet) {
       return <OldWallet></OldWallet>;
-    } else if (presentView == presentNewWallet) {
+    } else if (presentView === presentNewWallet) {
       return <NewWallet></NewWallet>;
-    } else if (presentView == presentDashboard) {
+    } else if (presentView === presentDashboard) {
       return <Dashboard></Dashboard>;
     }
   }

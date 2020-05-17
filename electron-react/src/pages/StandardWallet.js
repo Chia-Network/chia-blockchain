@@ -1,21 +1,9 @@
 import React from "react";
-import CssBaseline from "@material-ui/core/CssBaseline";
 import Grid from "@material-ui/core/Grid";
 import { makeStyles } from "@material-ui/core/styles";
-import Container from "@material-ui/core/Container";
-import { withRouter, Redirect } from "react-router-dom";
+import { withRouter } from "react-router-dom";
 import { connect, useDispatch, useSelector } from "react-redux";
-import { delete_all_keys } from "../modules/message";
-import clsx from "clsx";
-import Drawer from "@material-ui/core/Drawer";
-import List from "@material-ui/core/List";
 import Typography from "@material-ui/core/Typography";
-import Divider from "@material-ui/core/Divider";
-import ListItem from "@material-ui/core/ListItem";
-import ListItemIcon from "@material-ui/core/ListItemIcon";
-import ListItemText from "@material-ui/core/ListItemText";
-import ListSubheader from "@material-ui/core/ListSubheader";
-import DashboardIcon from "@material-ui/icons/Dashboard";
 import Paper from "@material-ui/core/Paper";
 import Box from "@material-ui/core/Box";
 import TextField from "@material-ui/core/TextField";
@@ -24,7 +12,6 @@ import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
 import TableCell from "@material-ui/core/TableCell";
 
-import TableContainer from "@material-ui/core/TableContainer";
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
 import {
@@ -32,10 +19,8 @@ import {
   send_transaction,
   farm_block
 } from "../modules/message";
-import { rosybrown } from "color-name";
 import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
 import { unix_to_short_date } from "../util/utils";
-import { StatusCard } from "./Wallets";
 
 const drawerWidth = 240;
 
@@ -213,7 +198,6 @@ const BalanceCard = props => {
               </Box>
               <Box>
                 <Typography
-                  alignRight
                   component="subtitle1"
                   variant="subtitle1"
                 >
@@ -233,7 +217,6 @@ const BalanceCard = props => {
               </Box>
               <Box>
                 <Typography
-                  alignRight
                   component="subtitle1"
                   variant="subtitle1"
                 >
@@ -253,12 +236,11 @@ const SendCard = props => {
   const classes = useStyles();
   var address_input = null;
   var amount_input = null;
-  var fee_input = null;
   const dispatch = useDispatch();
 
   function farm() {
     var address = address_input.value;
-    if (address != "") {
+    if (address !== "") {
       dispatch(farm_block(address));
     }
   }
@@ -266,7 +248,7 @@ const SendCard = props => {
   function send() {
     var address = address_input.value;
     var amount = chia_to_mojo(amount_input.value);
-    if (address != "" && amount != "") {
+    if (address !== "" && amount !== "") {
       dispatch(send_transaction(id, amount, 0, address));
     }
   }
@@ -287,7 +269,6 @@ const SendCard = props => {
               <Box flexGrow={1}>
                 <TextField
                   fullWidth
-                  id="outlined-basic"
                   inputRef={input => {
                     address_input = input;
                   }}
@@ -305,7 +286,6 @@ const SendCard = props => {
               <Box flexGrow={1}>
                 <TextField
                   fullWidth
-                  id="outlined-basic"
                   inputRef={input => {
                     amount_input = input;
                   }}
@@ -375,7 +355,7 @@ const TransactionTable = props => {
     state => state.wallet_state.wallets[id].transactions
   );
 
-  if (transactions.length == 0) {
+  if (transactions.length === 0) {
     return <div style={{ margin: "30px" }}>No previous transactions</div>;
   }
 
@@ -469,7 +449,6 @@ const AddressCard = props => {
                 <TextField
                   disabled
                   fullWidth
-                  id="outlined-basic"
                   label="Address"
                   value={puzzle_hash}
                   variant="outlined"

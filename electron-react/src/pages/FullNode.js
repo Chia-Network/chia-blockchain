@@ -3,15 +3,10 @@ import CssBaseline from "@material-ui/core/CssBaseline";
 import Grid from "@material-ui/core/Grid";
 import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
-import { withRouter, Redirect } from "react-router-dom";
-import { connect, useDispatch, useSelector } from "react-redux";
-import clsx from "clsx";
-import Drawer from "@material-ui/core/Drawer";
-import List from "@material-ui/core/List";
+import { withRouter } from "react-router-dom";
+import { connect, useSelector } from "react-redux";
 import Typography from "@material-ui/core/Typography";
-import Divider from "@material-ui/core/Divider";
 import Box from "@material-ui/core/Box";
-import { mojo_to_chia_string } from "../util/chia";
 import { Paper } from "@material-ui/core";
 import { unix_to_short_date } from "../util/utils";
 
@@ -100,7 +95,7 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
-const getSatusItems = (state, connected) => {
+const getStatusItems = (state, connected) => {
   var status_items = [];
   if (state.sync.sync_mode) {
     const progress = state.sync.sync_progress_height;
@@ -123,11 +118,11 @@ const getSatusItems = (state, connected) => {
 
   if (state.tips) {
     var max_height = 0;
-    state.tips.map(tip => {
+    for (let tip of state.tips) {
       if (parseInt(tip.height) > max_height) {
         max_height = parseInt(tip.height);
       }
-    });
+    }
     const item = { label: "Max Tip Block Height", value: "" + max_height };
     status_items.push(item);
   } else {
@@ -188,16 +183,13 @@ const StatusCell = props => {
   );
 };
 const FullNodeStatus = props => {
-  var id = props.wallet_id;
-  const balance = 0;
-  const balance_pending = 0;
   const blockchain_state = useSelector(
     state => state.full_node_state.blockchain_state
   );
   const connected = useSelector(
     state => state.daemon_state.full_node_connected
   );
-  const statusItems = getSatusItems(blockchain_state, connected);
+  const statusItems = getStatusItems(blockchain_state, connected);
 
   const classes = useStyles();
   return (
@@ -211,7 +203,7 @@ const FullNodeStatus = props => {
           </div>
         </Grid>
         {statusItems.map(item => (
-          <StatusCell item={item}></StatusCell>
+          <StatusCell item={item} key={item.label}></StatusCell>
         ))}
       </Grid>
     </Paper>
@@ -288,7 +280,6 @@ const SearchBlock = props => {
 
 const FullNode = () => {
   const classes = useStyles();
-  const dispatch = useDispatch();
 
   return (
     <div className={classes.root}>

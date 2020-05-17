@@ -1,8 +1,5 @@
 import {
-  service_wallet_server,
   service_full_node,
-  service_simulator,
-  service_daemon
 } from "../util/service_names";
 
 const initial_blockchain = {

@@ -1,6 +1,5 @@
 import {
   service_wallet_server,
-  service_full_node
 } from "../util/service_names";
 
 export const walletMessage = () => ({

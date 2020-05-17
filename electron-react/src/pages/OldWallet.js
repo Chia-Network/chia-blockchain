@@ -77,7 +77,6 @@ const UIPart = props => {
     dispatch(add_key(mnemonic));
   }
 
-  const logged_in = useSelector(state => state.wallet_state.logged_in);
   const words = useSelector(state => state.wallet_state.mnemonic);
   const classes = myStyle();
 

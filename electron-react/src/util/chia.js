@@ -67,7 +67,7 @@ class Chia {
 
   toString() {
     const displayUnit = units.getDisplay(this._unit);
-    const { format, fractionDigits, trailing } = displayUnit;
+    const { fractionDigits } = displayUnit;
     let options = { maximumFractionDigits: fractionDigits };
     return parseFloat(this._value).toLocaleString(undefined, options);
   }

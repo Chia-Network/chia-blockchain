@@ -1,7 +1,6 @@
 import React from "react";
 import {
   makeStyles,
-  Grid,
   Typography,
   Paper,
   List,
@@ -11,13 +10,7 @@ import {
 import ListItem from "@material-ui/core/ListItem";
 import ListItemIcon from "@material-ui/core/ListItemIcon";
 import ListItemText from "@material-ui/core/ListItemText";
-import ListSubheader from "@material-ui/core/ListSubheader";
-import DashboardIcon from "@material-ui/icons/Dashboard";
-import ShoppingCartIcon from "@material-ui/icons/ShoppingCart";
-import PeopleIcon from "@material-ui/icons/People";
-import BarChartIcon from "@material-ui/icons/BarChart";
-import LayersIcon from "@material-ui/icons/Layers";
-import AssignmentIcon from "@material-ui/icons/Assignment";
+
 import {
   changeCreateWallet,
   ALL_OPTIONS,
@@ -158,11 +151,11 @@ const CreateViewSwitch = () => {
 
   if (view === ALL_OPTIONS) {
     return <MainWalletList></MainWalletList>;
-  } else if (view == CREATE_CC_WALLET_OPTIONS) {
+  } else if (view === CREATE_CC_WALLET_OPTIONS) {
     return <CCListItems></CCListItems>;
-  } else if (view == CREATE_NEW_CC) {
+  } else if (view === CREATE_NEW_CC) {
     return <CreateNewCCWallet></CreateNewCCWallet>;
-  } else if (view == CRAETE_EXISTING_CC) {
+  } else if (view === CRAETE_EXISTING_CC) {
     return <CreateExistingCCWallet></CreateExistingCCWallet>;
   }
 };

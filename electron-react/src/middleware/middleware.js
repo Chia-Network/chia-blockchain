@@ -1,7 +1,5 @@
 import * as actions from "../modules/websocket";
 import {
-  format_message,
-  incomingMessage,
   registerService,
   startService
 } from "../modules/message";
@@ -33,19 +31,20 @@ const socketMiddleware = () => {
     var register_action = registerService();
     store.dispatch(register_action);
 
+    let start_wallet, start_node;
     if (config_testing) {
-      var start_wallet = startService(
+      start_wallet = startService(
         service_wallet_server + " --testing=true"
       );
-      var start_node = startService(service_simulator);
+      start_node = startService(service_simulator);
     } else {
-      var start_wallet = startService(service_wallet_server);
-      var start_node = startService(service_full_node);
+      start_wallet = startService(service_wallet_server);
+      start_node = startService(service_full_node);
     }
 
     store.dispatch(start_wallet);
     store.dispatch(start_node);
-    console.log("Register Service");
+    // console.log("Register Service");
   };
 
   const onClose = store => () => {
@@ -81,19 +80,19 @@ const socketMiddleware = () => {
         break;
       case "OUTGOING_MESSAGE":
         if (connected) {
-          console.log("socket" + socket);
-          console.log(
-            "Action command" + action.command + " data" + action.data
-          );
+          // console.log("socket" + socket);
+          // console.log(
+          //   "Action command" + action.command + " data" + action.data
+          // );
           const message = outgoing_message(
             action.command,
             action.data,
             action.destination
           );
-          console.log(message);
+          // console.log(message);
           socket.send(JSON.stringify(message));
         } else {
-          console.log("Socket not connected");
+          // console.log("Socket not connected");
         }
         break;
       default:

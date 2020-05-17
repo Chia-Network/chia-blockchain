@@ -43,23 +43,24 @@ const initial_state = {
 };
 
 export const tradeReducer = (state = { ...initial_state }, action) => {
+  let trade;
   switch (action.type) {
     case "TRADE_ADDED":
-      var trade = action.trade;
+      trade = action.trade;
       const new_trades = [...state.trades];
       new_trades.push(trade);
       return { ...state, trades: new_trades };
     case "RESET_TRADE":
-      var trade = [];
+      trade = [];
       state = { ...initial_state };
       return state;
     case "OFFER_PARSING":
       var status = action.status;
       state.parsing_state = status;
-      if (status == parsingStateParsed) {
+      if (status === parsingStateParsed) {
         state.parsed_offer = action.offer;
         state.show_offer = true;
-      } else if (status == parsingStateReset) {
+      } else if (status === parsingStateReset) {
         state.show_offer = false;
         state.parsing_state = parsingStatePending;
       }

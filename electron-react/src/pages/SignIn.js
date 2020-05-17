@@ -5,13 +5,11 @@ import Grid from "@material-ui/core/Grid";
 import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 import logo from "../assets/img/chia_logo.svg"; // Tell webpack this JS file uses this image
-import { withRouter, Redirect } from "react-router-dom";
-import { connect, useSelector, useDispatch } from "react-redux";
+import { withRouter } from "react-router-dom";
+import { connect, useDispatch } from "react-redux";
 import Link from "@material-ui/core/Link";
-import { Link as RouterLink } from "react-router-dom";
 import {
   changeEntranceMenu,
-  presentEntrace,
   presentOldWallet,
   presentNewWallet
 } from "../modules/entranceMenu";

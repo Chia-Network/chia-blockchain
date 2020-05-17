@@ -19,7 +19,7 @@ export const daemonReducer = (state = { ...initial_state }, action) => {
     case "INCOMING_MESSAGE":
       if (
         action.message.origin !== service_daemon &&
-        action.message.command != "ping"
+        action.message.command !== "ping"
       ) {
         return state;
       }

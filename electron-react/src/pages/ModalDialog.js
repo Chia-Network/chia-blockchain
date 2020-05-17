@@ -47,7 +47,7 @@ export const DialogItem = props => {
 export const ModalDialog = () => {
   const dialogs = useSelector(state => state.dialog_state.dialogs);
 
-  console.log(dialogs);
+  // console.log(dialogs);
 
   return (
     <div>

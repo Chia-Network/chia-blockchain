@@ -38,60 +38,60 @@ async function ping_full_node(store) {
 
 export const handle_message = (store, payload) => {
   store.dispatch(incomingMessage(payload));
-  console.log(payload);
-  if (payload.command == "ping") {
-    if (payload.origin == service_wallet_server) {
+  // console.log(payload);
+  if (payload.command === "ping") {
+    if (payload.origin === service_wallet_server) {
       store.dispatch(format_message("get_public_keys", {}));
       store.dispatch(format_message("get_wallets", {}));
       store.dispatch(get_height_info());
       store.dispatch(get_sync_status());
       store.dispatch(get_connection_info());
-    } else if (payload.origin == service_full_node) {
+    } else if (payload.origin === service_full_node) {
       store.dispatch(getBlockChainState());
     }
-  } else if (payload.command == "log_in") {
+  } else if (payload.command === "log_in") {
     if (payload.data.success) {
       store.dispatch(format_message("get_wallets", {}));
     }
-  } else if (payload.command == "logged_in") {
+  } else if (payload.command === "logged_in") {
     if (payload.data.logged_in) {
       store.dispatch(format_message("get_wallets", {}));
     }
   }
-  if (payload.command == "add_key") {
+  if (payload.command === "add_key") {
     if (payload.data.success) {
       store.dispatch(format_message("get_wallets", {}));
       store.dispatch(format_message("get_public_keys", {}));
     }
-  } else if (payload.command == "delete_key") {
+  } else if (payload.command === "delete_key") {
     if (payload.data.success) {
       store.dispatch(format_message("get_public_keys", {}));
     }
-  } else if (payload.command == "delete_all_keys") {
+  } else if (payload.command === "delete_all_keys") {
     if (payload.data.success) {
       store.dispatch(format_message("get_public_keys", {}));
     }
-  } else if (payload.command == "get_wallets") {
+  } else if (payload.command === "get_wallets") {
     if (payload.data.success) {
       const wallets = payload.data.wallets;
-      console.log(wallets);
-      wallets.map(wallet => {
+      // console.log(wallets);
+      for (let wallet of wallets) {
         store.dispatch(get_balance_for_wallet(wallet.id));
         store.dispatch(get_transactions(wallet.id));
         store.dispatch(get_puzzle_hash(wallet.id));
-        if (wallet.type == "COLOURED_COIN") {
+        if (wallet.type === "COLOURED_COIN") {
           store.dispatch(get_colour_name(wallet.id));
           store.dispatch(get_colour_info(wallet.id));
         }
-      });
+      }
     }
-  } else if (payload.command == "state_changed") {
-    console.log(payload.data.state);
-    console.log(payload);
+  } else if (payload.command === "state_changed") {
+    // console.log(payload.data.state);
+    // console.log(payload);
     const state = payload.data.state;
     if (state === "coin_added" || state === "coin_removed") {
       var wallet_id = payload.data.wallet_id;
-      console.log("WLID " + wallet_id);
+      // console.log("WLID " + wallet_id);
       store.dispatch(get_balance_for_wallet(wallet_id));
       store.dispatch(get_transactions(wallet_id));
     } else if (state === "sync_changed") {
@@ -99,7 +99,7 @@ export const handle_message = (store, payload) => {
     } else if (state === "new_block") {
       store.dispatch(get_height_info());
     } else if (state === "pending_transaction") {
-      var wallet_id = payload.data.wallet_id;
+      wallet_id = payload.data.wallet_id;
       store.dispatch(get_balance_for_wallet(wallet_id));
       store.dispatch(get_transactions(wallet_id));
     }
@@ -118,19 +118,19 @@ export const handle_message = (store, payload) => {
       store.dispatch(openDialog("Success!", "Offer accepted"));
     }
     store.dispatch(resetTrades());
-  } else if (payload.command == "get_wallets") {
+  } else if (payload.command === "get_wallets") {
     if (payload.data.success) {
       const wallets = payload.data.wallets;
-      console.log(wallets);
-      wallets.map(wallet => {
+      // console.log(wallets);
+      for (let wallet of wallets) {
         store.dispatch(get_balance_for_wallet(wallet.id));
         store.dispatch(get_transactions(wallet.id));
         store.dispatch(get_puzzle_hash(wallet.id));
-        if (wallet.type == "COLOURED_COIN") {
+        if (wallet.type === "COLOURED_COIN") {
           store.dispatch(get_colour_name(wallet.id));
           store.dispatch(get_colour_info(wallet.id));
         }
-      });
+      }
     }
   } else if (payload.command === "get_discrepancies_for_offer") {
     if (payload.data.success) {
@@ -139,24 +139,24 @@ export const handle_message = (store, payload) => {
   } else if (payload.command === "start_service") {
     const service = payload.data.service;
     if (payload.data.success) {
-      if (service == service_wallet_server) {
+      if (service === service_wallet_server) {
         ping_wallet(store);
-      } else if (service == service_full_node) {
+      } else if (service === service_full_node) {
         ping_full_node(store);
-      } else if (service == service_simulator) {
+      } else if (service === service_simulator) {
         ping_full_node(store);
       }
     } else if (payload.data.error === "already running") {
-      if (service == service_wallet_server) {
+      if (service === service_wallet_server) {
         ping_wallet(store);
-      } else if (service == service_full_node) {
+      } else if (service === service_full_node) {
         ping_full_node(store);
-      } else if (service == service_simulator) {
+      } else if (service === service_simulator) {
         ping_full_node(store);
       }
     }
   }
-  if (payload.data.success == false) {
+  if (payload.data.success === false) {
     if (payload.data.reason) {
       store.dispatch(openDialog("Error?", payload.data.reason));
     }

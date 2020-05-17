@@ -2,8 +2,6 @@ import React from "react";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemIcon from "@material-ui/core/ListItemIcon";
 import ListItemText from "@material-ui/core/ListItemText";
-import DashboardIcon from "@material-ui/icons/Dashboard";
-import AssignmentIcon from "@material-ui/icons/Assignment";
 import {
   presentWallet,
   presentNode,
@@ -12,7 +10,7 @@ import {
   changeMainMenu
 } from "../modules/mainMenu";
 import { delete_all_keys, logOut } from "../modules/message";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import List from "@material-ui/core/List";
 import Divider from "@material-ui/core/Divider";
 import AccountBalanceWalletIcon from "@material-ui/icons/AccountBalanceWallet";

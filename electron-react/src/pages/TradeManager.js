@@ -294,14 +294,14 @@ const DropView = () => {
     e.stopPropagation();
 
     const offer_file_path = e.dataTransfer.files[0].path;
-    const offer_name = offer_file_path.replace(/^.*[\\\/]/, "");
+    const offer_name = offer_file_path.replace(/^.*[\\/]/, "");
 
     dispatch(offerParsingName(offer_name, offer_file_path));
     dispatch(parse_trade_offer(offer_file_path));
     dispatch(parsingStarted());
   };
   const parsing_state = useSelector(state => state.trade_state.parsing_state);
-  const parsing = parsing_state == parsingStatePending ? true : false;
+  const parsing = parsing_state === parsingStatePending ? true : false;
 
   const progressStyle = parsing
     ? { visibility: "visible" }
@@ -366,7 +366,7 @@ const CreateOffer = () => {
       dispatch(openDialog("", "Please select coin type "));
       return;
     }
-    if (amount_input.value == "") {
+    if (amount_input.value === "") {
       dispatch(openDialog("", "Please select amount "));
       return;
     }
@@ -376,7 +376,7 @@ const CreateOffer = () => {
     }
     const mojo = chia_to_mojo(amount_input.value);
     var trade = null;
-    if (buy_or_sell.value == 1) {
+    if (buy_or_sell.value === 1) {
       trade = newBuy(mojo, wallet_id.value);
     } else {
       trade = newSell(mojo, wallet_id.value);
@@ -385,7 +385,7 @@ const CreateOffer = () => {
   }
   async function save() {
     console.log(trades.length);
-    if (trades.length == 0) {
+    if (trades.length === 0) {
       dispatch(openDialog("", "Please add trade pair"));
       return;
     }
@@ -396,7 +396,7 @@ const CreateOffer = () => {
       const offer = {};
       for (var i = 0; i < trades.length; i++) {
         const trade = trades[i];
-        if (trade.side == "buy") {
+        if (trade.side === "buy") {
           offer[trade.wallet_id] = trade.amount;
         } else {
           offer[trade.wallet_id] = -trade.amount;
@@ -474,7 +474,6 @@ const CreateOffer = () => {
                 <TextField
                   className={classes.input}
                   fullWidth
-                  id="outlined-basic"
                   inputRef={input => {
                     amount_input = input;
                   }}

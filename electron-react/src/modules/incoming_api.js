@@ -1,6 +1,5 @@
 import {
   service_wallet_server,
-  service_full_node
 } from "../util/service_names";
 
 export const Wallet = (id, name, type, data) => ({
@@ -50,7 +49,7 @@ const initial_state = {
   public_key_fingerprints: [],
   logged_in_received: false,
   logged_in: false,
-  wallets: [, initial_wallet],
+  wallets: [initial_wallet],
   status: {
     connections: [],
     connection_count: 0,
@@ -64,6 +63,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       if (action.message.command === "log_out") {
         return { ...state, logged_in: false };
       }
+      break;
     case "INCOMING_MESSAGE":
       if (action.message.origin !== service_wallet_server) {
         return state;
@@ -72,17 +72,18 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       const message = action.message;
       const data = message.data;
       const command = message.command;
+      let success, id, wallet, wallets;
       if (command === "generate_mnemonic") {
         var mnemonic_data = message.data.mnemonic;
         return { ...state, mnemonic: mnemonic_data };
       } else if (command === "add_key") {
-        var success = data.success;
+        success = data.success;
         return { ...state, logged_in: success };
       } else if (command === "log_in") {
-        var success = data.success;
+        success = data.success;
         return { ...state, logged_in: success };
       } else if (command === "delete_all_keys") {
-        var success = data.success;
+        success = data.success;
         if (success) {
           return {
             ...state,
@@ -108,22 +109,22 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         if (data.success) {
           const wallets = data.wallets;
           var wallets_state = [];
-          wallets.map(object => {
-            var id = parseInt(object.id);
+          for (let object of wallets) {
+            id = parseInt(object.id);
             var wallet_obj = Wallet(id, object.name, object.type, object.data);
             wallets_state[id] = wallet_obj;
-          });
-          console.log(wallets_state);
+          }
+          // console.log(wallets_state);
           return { ...state, wallets: wallets_state };
         }
       } else if (command === "get_wallet_balance") {
         if (data.success) {
-          var id = data.wallet_id;
-          var wallets = state.wallets;
-          var wallet = wallets[parseInt(id)];
-          wallet.balance = balance;
+          id = data.wallet_id;
+          wallets = state.wallets;
+          wallet = wallets[parseInt(id)];
           var balance = data.confirmed_wallet_balance;
-          console.log("balance is: " + balance);
+          wallet.balance = balance;
+          // console.log("balance is: " + balance);
           var unconfirmed_balance = data.unconfirmed_wallet_balance;
           wallet.balance_total = balance;
           wallet.balance_pending = unconfirmed_balance;
@@ -131,22 +132,22 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         }
       } else if (command === "get_transactions") {
         if (data.success) {
-          var id = data.wallet_id;
+          id = data.wallet_id;
           var transactions = data.txs;
-          var wallets = state.wallets;
-          var wallet = wallets[parseInt(id)];
+          wallets = state.wallets;
+          wallet = wallets[parseInt(id)];
           wallet.transactions = transactions.reverse();
           return state;
         }
       } else if (command === "get_next_puzzle_hash") {
-        var id = data.wallet_id;
+        id = data.wallet_id;
         var puzzle_hash = data.puzzle_hash;
-        var wallets = state.wallets;
-        var wallet = wallets[parseInt(id)];
-        console.log("wallet_id here: " + id);
+        wallets = state.wallets;
+        wallet = wallets[parseInt(id)];
+        // console.log("wallet_id here: " + id);
         wallet.puzzle_hash = puzzle_hash;
         return { ...state };
-      } else if (command == "get_connection_info") {
+      } else if (command === "get_connection_info") {
         if (data.success) {
           const connections = data.connections;
           state.status["connections"] = connections;
@@ -158,24 +159,24 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         state.status["height"] = height;
         return { ...state };
       } else if (command === "get_sync_status") {
-        console.log("command get_sync_status");
+        // console.log("command get_sync_status");
         if (data.success) {
           const syncing = data.syncing;
           state.status["syncing"] = syncing;
           return state;
         }
       } else if (command === "cc_get_colour") {
-        const id = data.wallet_id;
+        id = data.wallet_id;
         const colour = data.colour;
-        var wallets = state.wallets;
-        var wallet = wallets[parseInt(id)];
+        wallets = state.wallets;
+        wallet = wallets[parseInt(id)];
         wallet.colour = colour;
         return state;
       } else if (command === "cc_get_name") {
         const id = data.wallet_id;
         const name = data.name;
-        var wallets = state.wallets;
-        var wallet = wallets[parseInt(id)];
+        wallets = state.wallets;
+        wallet = wallets[parseInt(id)];
         wallet.name = name;
         return state;
       }

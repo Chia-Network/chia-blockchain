@@ -3,24 +3,17 @@ import clsx from "clsx";
 import { makeStyles } from "@material-ui/core/styles";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import Drawer from "@material-ui/core/Drawer";
-import Box from "@material-ui/core/Box";
 import AppBar from "@material-ui/core/AppBar";
 import Toolbar from "@material-ui/core/Toolbar";
-import List from "@material-ui/core/List";
 import Typography from "@material-ui/core/Typography";
 import Divider from "@material-ui/core/Divider";
 import IconButton from "@material-ui/core/IconButton";
-import Badge from "@material-ui/core/Badge";
 import Container from "@material-ui/core/Container";
-import Grid from "@material-ui/core/Grid";
-import Paper from "@material-ui/core/Paper";
-import Link from "@material-ui/core/Link";
-import MenuIcon from "@material-ui/icons/Menu";
 import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
-import NotificationsIcon from "@material-ui/icons/Notifications";
 import Wallets from "./Wallets";
+import MenuIcon from "@material-ui/icons/Menu";
 import { SideBar } from "./sidebar";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import {
   presentWallet,
   presentNode,
@@ -127,11 +120,11 @@ const ComopnentSwitch = () => {
 
   if (toPresent === presentWallet) {
     return <Wallets></Wallets>;
-  } else if (toPresent == presentNode) {
+  } else if (toPresent === presentNode) {
     return <FullNode></FullNode>;
-  } else if (toPresent == presentFarmer) {
+  } else if (toPresent === presentFarmer) {
     return <div>Farmer</div>;
-  } else if (toPresent == presentTimelord) {
+  } else if (toPresent === presentTimelord) {
     return <div>Timelord</div>;
   }
   return <div></div>;
@@ -146,7 +139,6 @@ export default function Dashboard() {
   const handleDrawerClose = () => {
     setOpen(false);
   };
-  const fixedHeightPaper = clsx(classes.paper, classes.fixedHeight);
 
   return (
     <div className={classes.root}>

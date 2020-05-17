@@ -11,7 +11,6 @@ import Container from "@material-ui/core/Container";
 import logo from "../assets/img/chia_logo.svg"; // Tell webpack this JS file uses this image
 import { withRouter, Redirect } from "react-router-dom";
 import { connect, useSelector, useDispatch } from "react-redux";
-import { Dialog } from '@material-ui/core';
 import { log_in, delete_key } from "../modules/message";
 import Link from "@material-ui/core/Link";
 import Button from "@material-ui/core/Button";
@@ -57,7 +56,7 @@ const SelectKey = () => {
   const logged_in = useSelector(state => state.wallet_state.logged_in);
   const connected_websocket = useSelector(state => state.websocket.connected);
   const public_key_fingerprints = useSelector(state => state.wallet_state.public_key_fingerprints);
-  if (!connected_websocket || public_key_fingerprints.length == 0) {
+  if (!connected_websocket || public_key_fingerprints.length === 0) {
     return <Redirect to="/" />;
   }
   if (logged_in) {

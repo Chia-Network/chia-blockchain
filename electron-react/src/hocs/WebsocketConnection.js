@@ -4,11 +4,10 @@ import { wsConnect } from "../modules/websocket";
 
 const WebSocketConnection = props => {
   const dispatch = useDispatch();
-
   useEffect(() => {
     const { host } = props;
     dispatch(wsConnect(host));
-  }, []);
+  }, [props, dispatch]);
 
   return props.children;
 };
