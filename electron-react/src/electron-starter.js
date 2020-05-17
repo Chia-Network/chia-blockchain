@@ -6,6 +6,7 @@ const WebSocket = require("ws");
 const ipcMain = require("electron").ipcMain;
 const config = require("./config");
 const local_test = config.local_test;
+var url = require("url");
 
 // Only takes effect if local_test is false. Connects to a local introducer.
 var local_introducer = false;
@@ -17,8 +18,8 @@ global.sharedObj = { local_test: local_test };
  *************************************************************/
 
 const PY_DIST_FOLDER = "pydist";
-const PY_FOLDER = "../src/wallet";
-const PY_MODULE = "websocket_server"; // without .py suffix
+const PY_FOLDER = "../src/daemon";
+const PY_MODULE = "server"; // without .py suffix
 
 let pyProc = null;
 let pyPort = null;
@@ -58,9 +59,12 @@ const createPyProc = () => {
     additional_args = ["--testing", local_test];
   }
   if (guessPackaged()) {
-    //pyProc = require('child_process').execFile(script, additional_args)
+    pyProc = require("child_process").execFile(script, additional_args);
   } else {
-    //pyProc = require('child_process').spawn('python', [script].concat(additional_args))
+    pyProc = require("child_process").spawn(
+      "python",
+      [script].concat(additional_args)
+    );
   }
   if (pyProc != null) {
     pyProc.stdout.setEncoding("utf8");
