@@ -140,6 +140,7 @@ class WebSocketServer:
                 full_node_retry = True
 
                 for connection in server.global_connections.get_connections():
+                    print(connection.get_peer_info(), full_node_peer)
                     if connection.get_peer_info() == full_node_peer:
                         full_node_retry = False
 
@@ -636,9 +637,9 @@ class WebSocketServer:
             message = json.loads(payload)
             response = await self.handle_message(message)
             if response is not None:
-                self.log.info(f"message: {message}")
-                self.log.info(f"response: {response}")
-                self.log.info(f"payload: {format_response(message, response)}")
+                # self.log.info(f"message: {message}")
+                # self.log.info(f"response: {response}")
+                # self.log.info(f"payload: {format_response(message, response)}")
                 await websocket.send_str(format_response(message, response))
 
         except BaseException as e:

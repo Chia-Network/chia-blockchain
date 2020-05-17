@@ -436,9 +436,9 @@ class RpcApiHandler:
             message = json.loads(payload)
             response = await self.ws_api(message)
             if response is not None:
-                self.log.info(f"message: {message}")
-                self.log.info(f"response: {response}")
-                self.log.info(f"payload: {format_response(message, response)}")
+                # self.log.info(f"message: {message}")
+                # self.log.info(f"response: {response}")
+                # self.log.info(f"payload: {format_response(message, response)}")
                 await websocket.send_str(format_response(message, response))
 
         except BaseException as e:
@@ -468,10 +468,10 @@ class RpcApiHandler:
                 self.log.info("Pong received")
             else:
                 if msg.type == aiohttp.WSMsgType.CLOSE:
-                    print("Closing")
+                    self.log.info("Closing")
                     await ws.close()
                 elif msg.type == aiohttp.WSMsgType.ERROR:
-                    print("Error during receive %s" % ws.exception())
+                    self.log.info("Error during receive %s" % ws.exception())
                 elif msg.type == aiohttp.WSMsgType.CLOSED:
                     pass
 

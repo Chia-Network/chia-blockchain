@@ -36,21 +36,25 @@ function sleep(ms) {
 }
 
 async function ping_wallet(store) {
+  console.log("pining wallet")
   await sleep(1500);
   store.dispatch(pingWallet());
 }
 
 async function ping_full_node(store) {
+  console.log("pining ful node")
   await sleep(1500);
   store.dispatch(pingFullNode());
 }
 
 async function ping_farmer(store) {
+  console.log("pining farmer")
   await sleep(1500);
   store.dispatch(pingFarmer());
 }
 
 async function ping_harvester(store) {
+  console.log("pining harvester")
   await sleep(1500);
   store.dispatch(pingHarvester());
 }
@@ -60,17 +64,21 @@ export const handle_message = (store, payload) => {
   // console.log(payload);
   if (payload.command === "ping") {
     if (payload.origin === service_wallet_server) {
+      console.log("Got ping from wallet")
       store.dispatch(format_message("get_public_keys", {}));
       store.dispatch(format_message("get_wallets", {}));
       store.dispatch(get_height_info());
       store.dispatch(get_sync_status());
       store.dispatch(get_connection_info());
     } else if (payload.origin === service_full_node) {
+      console.log("Got ping from node")
       store.dispatch(getBlockChainState());
     } else if (payload.origin === service_farmer) {
+      console.log("Got ping from farmer")
       store.dispatch(getLatestChallenges());
       store.dispatch(getConnections());
     } else if (payload.origin === service_harvester) {
+      console.log("Got ping from harvester")
       store.dispatch(getPlots());
     }
   } else if (payload.command === "log_in") {

@@ -102,7 +102,7 @@ class WebSocketServer:
         async for message in websocket:
             try:
                 decoded = json.loads(message)
-                self.log.info(f"Message received: {decoded}")
+                # self.log.info(f"Message received: {decoded}")
                 await self.handle_message(websocket, decoded)
             except (BaseException, websockets.exceptions.ConnectionClosed) as e:
                 if isinstance(e, websockets.exceptions.ConnectionClosed):
