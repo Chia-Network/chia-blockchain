@@ -4,7 +4,6 @@ import logging
 import os
 import signal
 import subprocess
-from typing import Dict
 import sys
 import traceback
 from typing import Dict, Any
@@ -341,6 +340,7 @@ def is_running(services, service_name):
 def create_server_for_daemon(root_path):
     server = WebSocketServer(root_path)
     return server
+
 
 def singleton(lockfile, text="semaphore"):
     """

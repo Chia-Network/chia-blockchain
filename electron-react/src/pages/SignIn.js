@@ -74,11 +74,6 @@ const SignIn = () => {
         <CssBaseline />
         <div className={classes.paper}>
           <img className={classes.logo} src={logo} alt="Logo" />
-          {connected ? (
-            ""
-          ) : (
-            <h2 className={classes.warning}>Not connected to wallet</h2>
-          )}
           <div>
             <Button
               onClick={go_old_wallet}

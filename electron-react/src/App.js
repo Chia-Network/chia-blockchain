@@ -1,22 +1,12 @@
-<<<<<<< HEAD
-import React from 'react';
-import { Switch, Route } from 'react-router-dom';
-import { connect } from 'react-redux';
-import SignIn from './pages/SignIn';
-import SelectKey from './pages/SelectKey';
-import NewWallet from './pages/NewWallet'
-import OldWallet from './pages/OldWallet'
-import Dashboard from './pages/Dashboard'
-=======
 import React from "react";
 import { Switch, Route } from "react-router-dom";
-import { connect, useSelector } from "react-redux";
 import SignIn from "./pages/SignIn";
+import SelectKey from "./pages/SelectKey";
 import NewWallet from "./pages/NewWallet";
 import OldWallet from "./pages/OldWallet";
-import Wallets from "./pages/Wallets";
 import Dashboard from "./pages/Dashboard";
->>>>>>> routing, daemon, react
+import { connect, useSelector } from "react-redux";
+import Wallets from "./pages/Wallets";
 
 import { createMuiTheme, ThemeProvider } from "@material-ui/core/styles";
 import {
@@ -106,13 +96,19 @@ const CustomRouter = () => {
   const wallet_connected = useSelector(
     state => state.daemon_state.wallet_connected
   );
+  const public_key_fingerprints = useSelector(
+    state => state.wallet_state.public_key_fingerprints
+  );
   const presentView = useSelector(state => state.entrance_menu.view);
+
   if (!wallet_connected) {
     return <LoadingScreen></LoadingScreen>;
   } else if (!logged_in_received) {
     return <LoadingScreen></LoadingScreen>;
   } else if (logged_in) {
     return <Dashboard></Dashboard>;
+  } else if (public_key_fingerprints.length > 0) {
+    return <SelectKey></SelectKey>;
   } else {
     if (presentView == presentEntrace) {
       return <SignIn></SignIn>;
@@ -129,17 +125,7 @@ const App = () => {
   return (
     <React.Fragment>
       <ThemeProvider theme={theme}>
-<<<<<<< HEAD
-        <Switch>
-          <Route exact path="/" component={SignIn} />
-          <Route exact path="/SelectKey" component={SelectKey} />
-          <Route exact path="/CreateMnemonics" component={NewWallet} />
-          <Route exact path="/Mnemonics" component={OldWallet} />
-          <Route exact path="/dashboard" component={Dashboard} />
-        </Switch>
-=======
         <CustomRouter></CustomRouter>
->>>>>>> routing, daemon, react
       </ThemeProvider>
     </React.Fragment>
   );

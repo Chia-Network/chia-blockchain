@@ -8,8 +8,8 @@ export const Wallet = (id, name, type, data) => ({
   name: name,
   type: type,
   data: data,
-  balance_total: 1,
-  balance_pending: 1,
+  balance_total: 0,
+  balance_pending: 0,
   transactions: [],
   puzzle_hash: "",
   colour: ""
@@ -61,13 +61,14 @@ const initial_state = {
 export const incomingReducer = (state = { ...initial_state }, action) => {
   switch (action.type) {
     case "LOG_OUT":
-      if (action.command === "log_out") {
+      if (action.message.command === "log_out") {
         return { ...state, logged_in: false };
       }
     case "INCOMING_MESSAGE":
       if (action.message.origin !== service_wallet_server) {
         return state;
       }
+
       const message = action.message;
       const data = message.data;
       const command = message.command;
@@ -78,16 +79,25 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         var success = data.success;
         return { ...state, logged_in: success };
       } else if (command === "log_in") {
-        var success = action.data.success;
+        var success = data.success;
         return { ...state, logged_in: success };
       } else if (command === "delete_all_keys") {
-        var success = action.data.success;
+        var success = data.success;
         if (success) {
-          return { ...state, logged_in: false, public_key_fingerprints: [] };
+          return {
+            ...state,
+            logged_in: false,
+            public_key_fingerprints: [],
+            logged_in_received: true
+          };
         }
-      } else if (action.command === "get_public_keys") {
-        var public_key_fingerprints = action.data.public_key_fingerprints;
-        return { ...state, public_key_fingerprints: public_key_fingerprints };
+      } else if (command === "get_public_keys") {
+        var public_key_fingerprints = data.public_key_fingerprints;
+        return {
+          ...state,
+          public_key_fingerprints: public_key_fingerprints,
+          logged_in_received: true
+        };
       } else if (command === "logged_in") {
         var logged_in = data.logged_in;
         return { ...state, logged_in: logged_in, logged_in_received: true };

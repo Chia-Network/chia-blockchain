@@ -93,7 +93,6 @@ class WebSocketServer:
         else:
             private_key = private_keys[0][0]
 
-
         if private_key is None:
             self.log.info("No keys")
             return False

@@ -1,12 +1,10 @@
-from typing import Callable, List, Optional
 import asyncio
-import dataclasses
 import json
 import traceback
 from asyncio import create_task
 import logging
 
-from typing import Any, Callable, List, Optional
+from typing import Callable, List, Optional
 
 import aiohttp
 from aiohttp import web
@@ -22,8 +20,6 @@ from src.util.network import obj_to_response
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
 from src.util.ws_message import create_payload, format_response, pong
 from src.util.logging import initialize_logging
-
-
 
 log = logging.getLogger(__name__)
 
