@@ -346,6 +346,10 @@ def singleton(lockfile, text="semaphore"):
     """
     Open a lockfile exclusively.
     """
+
+    if not lockfile.parent.exists():
+        mkdir(lockfile.parent)
+
     try:
         if has_fcntl:
             f = open(lockfile, "w")
