@@ -24,9 +24,11 @@ import { unix_to_short_date } from "../util/utils";
 import { service_connection_types } from "../util/service_names";
 import { calculateSizeFromK } from "../util/plot_sizes";
 import { closeConnection, openConnection } from "../modules/farmerMessages";
+import { refreshPlots, deletePlot } from "../modules/harvesterMessages";
 import TextField from '@material-ui/core/TextField';
 import SettingsInputAntennaIcon from '@material-ui/icons/SettingsInputAntenna';
-
+import TablePagination from '@material-ui/core/TablePagination';
+import RefreshIcon from '@material-ui/icons/Refresh';
 
 
 const drawerWidth = 180;
@@ -47,6 +49,9 @@ const useStyles = makeStyles(theme => ({
   },
   error: {
     color: "red"
+  },
+  refreshButton: {
+    marginLeft: "20px",
   },
   menuButton: {
     marginRight: 36
@@ -328,9 +333,33 @@ const Challenges = props => {
 
 const Plots = props => {
   const classes = useStyles();
-  const latest_challenges = useSelector(
-    state => state.farming_state.farmer.latest_challenges
+  const dispatch = useDispatch();
+  const plots = useSelector(
+    state => state.farming_state.harvester.plots
   );
+  plots.sort((a, b) => b.size - a.size)
+  const [page, setPage] = React.useState(0);
+  const [rowsPerPage, setRowsPerPage] = React.useState(10);
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(+event.target.value);
+    setPage(0);
+  };
+
+  const deletePlotClick = (filename) => {
+    return () => {
+      dispatch(deletePlot(filename));
+    }
+  }
+
+  const refreshPlotsClick = () => {
+    dispatch(refreshPlots());
+  }
+
   return (
     <Paper className={classes.balancePaper}>
       <Grid container spacing={0}>
@@ -338,30 +367,53 @@ const Plots = props => {
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
               Plots
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={refreshPlotsClick}
+              className={classes.refreshButton}
+              startIcon={<RefreshIcon />}
+            >
+              Refresh plots
+            </Button>
             </Typography>
           </div>
+
         <TableContainer component={Paper}>
           <Table className={classes.table} size="small" aria-label="a dense table">
             <TableHead>
               <TableRow>
-                <TableCell>Challange hash</TableCell>
-                <TableCell align="right">Height</TableCell>
-                <TableCell align="right">Number of proofs</TableCell>
-                <TableCell align="right">Best estimate</TableCell>
+                <TableCell>Filename</TableCell>
+                <TableCell align="right">Size</TableCell>
+                <TableCell align="right">Plot seed</TableCell>
+                <TableCell align="right">Plot pk</TableCell>
+                <TableCell align="right">Pool pk</TableCell>
+                <TableCell align="right">Delete</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {latest_challenges.map(item => (
-                <TableRow key={item.challenge}>
-                  <TableCell component="th" scope="row">{item.challenge.substring(0, 10)}...</TableCell>
-                  <TableCell align="right">{item.height}</TableCell>
-                  <TableCell align="right">{item.estimates.length}</TableCell>
-                  <TableCell align="right">{Math.floor(Math.min.apply(Math, item.estimates) / 60)} minutes</TableCell>
+              {plots.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map(item => (
+                <TableRow key={item.filename}>
+                  <TableCell component="th" scope="row">{item.filename.substring(0, 60)}...</TableCell>
+                  <TableCell align="right">{item.size}</TableCell>
+                  <TableCell align="right">{item["plot-seed"].substring(0, 10)}</TableCell>
+                  <TableCell align="right">{item.plot_pk.substring(0, 10)}...</TableCell>
+                  <TableCell align="right">{item.pool_pk.substring(0, 10)}...</TableCell>
+                  <TableCell className={classes.clickable} onClick={deletePlotClick(item.filename)} align="right"><DeleteForeverIcon fontSize="small"></DeleteForeverIcon></TableCell>
                 </TableRow>
               ))}
               </TableBody>
           </Table>
         </TableContainer>
+        <TablePagination
+        rowsPerPageOptions={[10, 25, 100]}
+        component="div"
+        count={plots.length}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onChangePage={handleChangePage}
+        onChangeRowsPerPage={handleChangeRowsPerPage}
+      />
         </Grid>
       </Grid>
     </Paper>
