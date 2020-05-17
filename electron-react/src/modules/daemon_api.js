@@ -2,7 +2,9 @@ import {
   service_wallet_server,
   service_full_node,
   service_simulator,
-  service_daemon
+  service_daemon,
+  service_farmer,
+  service_harvester
 } from "../util/service_names";
 
 const initial_state = {
@@ -11,7 +13,11 @@ const initial_state = {
   wallet_running: false,
   wallet_connected: false,
   full_node_running: false,
-  full_node_connected: false
+  full_node_connected: false,
+  farmer_running: false,
+  farmer_connected: false,
+  harvester_running: false,
+  harvester_connected: false,
 };
 
 export const daemonReducer = (state = { ...initial_state }, action) => {
@@ -38,6 +44,10 @@ export const daemonReducer = (state = { ...initial_state }, action) => {
           state.full_node_running = true;
         } else if (service === service_wallet_server) {
           state.wallet_running = true;
+        } else if (service === service_farmer) {
+          state.farmer_running = true;
+        } else if (service === service_harvester) {
+          state.harvester_running = true;
         }
       } else if (command === "ping") {
         const origin = message.origin;
@@ -47,6 +57,10 @@ export const daemonReducer = (state = { ...initial_state }, action) => {
           state.full_node_connected = true;
         } else if (origin === service_wallet_server) {
           state.wallet_connected = true;
+        } else if (origin === service_farmer) {
+          state.farmer_connected = true;
+        } else if (origin === service_harvester) {
+          state.harvester_connected = true;
         }
       }
       return state;

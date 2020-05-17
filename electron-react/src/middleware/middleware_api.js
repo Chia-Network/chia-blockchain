@@ -23,7 +23,7 @@ import {
   service_harvester
 } from "../util/service_names";
 import { pingFullNode, getBlockChainState } from "../modules/fullnodeMessages";
-import { getLatestChallenges, getConnections, pingFarmer } from "../modules/farmerMessages";
+import { getLatestChallenges, getFarmerConnections, pingFarmer } from "../modules/farmerMessages";
 import { getPlots, pingHarvester } from "../modules/harvesterMessages";
 import {
   changeEntranceMenu,
@@ -71,14 +71,11 @@ export const handle_message = (store, payload) => {
       store.dispatch(get_sync_status());
       store.dispatch(get_connection_info());
     } else if (payload.origin === service_full_node) {
-      console.log("Got ping from node")
       store.dispatch(getBlockChainState());
     } else if (payload.origin === service_farmer) {
-      console.log("Got ping from farmer")
       store.dispatch(getLatestChallenges());
-      store.dispatch(getConnections());
+      store.dispatch(getFarmerConnections());
     } else if (payload.origin === service_harvester) {
-      console.log("Got ping from harvester")
       store.dispatch(getPlots());
     }
   } else if (payload.command === "log_in") {
@@ -104,11 +101,14 @@ export const handle_message = (store, payload) => {
       store.dispatch(format_message("get_public_keys", {}));
     }
   } else if (payload.command === "get_public_keys") {
-    console.log("gpk", payload.data);
     if (payload.data.success && payload.data.public_key_fingerprints.length > 0) {
       store.dispatch(changeEntranceMenu(presentSelectKeys));
     } else {
       store.dispatch(changeEntranceMenu(presentNewWallet));
+    }
+  } else if (payload.command === "close_connection" || payload.command === "open_connection") {
+    if (payload.origin === service_farmer) {
+      store.dispatch(getFarmerConnections());
     }
   } else if (payload.command === "get_wallets") {
     if (payload.data.success) {

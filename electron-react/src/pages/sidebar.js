@@ -18,6 +18,7 @@ import AccountTreeIcon from "@material-ui/icons/AccountTree";
 import DonutLargeIcon from "@material-ui/icons/DonutLarge";
 import UpdateIcon from "@material-ui/icons/Update";
 import LockIcon from "@material-ui/icons/Lock";
+import DeleteForeverIcon from '@material-ui/icons/DeleteForever';
 import {
   changeEntranceMenu,
   presentSelectKeys
@@ -84,7 +85,7 @@ export const SideBar = () => {
         <div>
           <ListItem button onClick={deleteAllKeys} key="0">
             <ListItemIcon>
-              <LockIcon />
+              <DeleteForeverIcon />
             </ListItemIcon>
             <ListItemText primary="Delete All Keys" />
           </ListItem>

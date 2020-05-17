@@ -7,6 +7,7 @@ const initial_state = {
   farmer: {
     latest_challenges: [],
     connections: [],
+    open_connection_error: "",
   },
   harvester: {
     plots: [],
@@ -33,10 +34,18 @@ export const farmingReducer = (state = { ...initial_state }, action) => {
         state.farmer.connections = data;
         return state;
       }
+      if (command === "open_connection" && action.message.origin === service_farmer) {
+        if (data.success) {
+          state.farmer.open_connection_error = "";
+        } else {
+          state.farmer.open_connection_error = data.error;
+        }
+        return state;
+      }
 
       // Harvester API
       if (command === "get_plots") {
-        state.harvester.latest_challenges = data;
+        state.harvester.plots = data;
         return state;
       }
 

@@ -12,7 +12,7 @@ from sys import platform
 import websockets
 
 from src.util.ws_message import format_response
-from src.wallet.util.json_util import dict_to_json_str
+from src.util.json_util import dict_to_json_str
 
 try:
     import fcntl

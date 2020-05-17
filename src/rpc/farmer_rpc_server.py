@@ -1,4 +1,4 @@
-from typing import Callable, List
+from typing import Callable, List, Set
 
 from aiohttp import web
 import logging
@@ -11,7 +11,7 @@ from src.farmer import Farmer
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16
 from src.util.byte_types import hexstr_to_bytes
-from src.util.network import obj_to_response
+from src.util.json_util import obj_to_response
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.logging import initialize_logging
 from src.util.ws_message import create_payload, format_response, pong
@@ -28,9 +28,7 @@ class FarmerRpcApiHandler:
         self.farmer = farmer
         self.stop_cb: Callable = stop_cb
         initialize_logging(
-            "RPC Farmer %(name)-25s",
-            self.farmer.config["logging"],
-            DEFAULT_ROOT_PATH,
+            "RPC Farmer %(name)-25s", self.farmer.config["logging"], DEFAULT_ROOT_PATH,
         )
         self.log = log
         self.shut_down = False
@@ -42,10 +40,13 @@ class FarmerRpcApiHandler:
 
     async def _get_latest_challenges(self) -> List:
         response = []
+        seen_challenges: Set = set()
         for pospace_fin in self.farmer.challenges[self.farmer.current_weight]:
             estimates = self.farmer.challenge_to_estimates.get(
                 pospace_fin.challenge_hash, []
             )
+            if pospace_fin.challenge_hash in seen_challenges:
+                continue
             response.append(
                 {
                     "challenge": pospace_fin.challenge_hash,
@@ -55,17 +56,18 @@ class FarmerRpcApiHandler:
                     "estimates": estimates,
                 }
             )
+            seen_challenges.add(pospace_fin.challenge_hash)
         return response
 
     async def get_latest_challenges(self, request) -> web.Response:
         """
         Retrieves the latest challenge, including height, weight, and time to completion estimates.
         """
-        return obj_to_response(self._get_latest_challenges())
+        return obj_to_response(await self._get_latest_challenges())
 
     async def _get_connections(self) -> List:
         if self.farmer.server is None:
-            return obj_to_response([])
+            return []
         connections = self.farmer.server.global_connections.get_connections()
         con_info = [
             {
@@ -89,7 +91,7 @@ class FarmerRpcApiHandler:
         """
         Retrieves all connections to this farmer.
         """
-        return obj_to_response(self._get_connections())
+        return obj_to_response(await self._get_connections())
 
     async def _open_connection(self, host, port):
         target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
@@ -109,7 +111,10 @@ class FarmerRpcApiHandler:
         await self._open_connection(host, port)
         return obj_to_response("")
 
-    def _close_connection(self, node_id):
+    async def _close_connection(self, node_id):
+        node_id = hexstr_to_bytes(node_id)
+        if self.farmer.server is None:
+            raise web.HTTPInternalServerError()
         connections_to_close = [
             c
             for c in self.farmer.server.global_connections.get_connections()
@@ -125,12 +130,7 @@ class FarmerRpcApiHandler:
         Closes a connection given by the node id.
         """
         request_data = await request.json()
-        node_id = hexstr_to_bytes(request_data["node_id"])
-        if self.farmer.server is None:
-            raise web.HTTPInternalServerError()
-
-        self._close_connection(node_id)
-
+        await self._close_connection(request_data["node_id"])
         return obj_to_response("")
 
     async def stop_node(self, request) -> web.Response:
@@ -167,11 +167,14 @@ class FarmerRpcApiHandler:
             assert data is not None
             host = data["host"]
             port = data["port"]
-            return await self._open_connection(host, port)
+            await self._open_connection(host, port)
+            response = {"success": True}
+            return response
         elif command == "close_connection":
             assert data is not None
             node_id = data["node_id"]
-            return await self._close_connection(node_id)
+            await self._close_connection(node_id)
+            return response
         else:
             response_2 = {"error": f"unknown_command {command}"}
             return response_2

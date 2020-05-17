@@ -22,6 +22,7 @@ import {
 } from "../modules/mainMenu";
 import { ModalDialog } from "./ModalDialog";
 import FullNode from "./FullNode";
+import Farmer from "./Farmer";
 
 const drawerWidth = 200;
 
@@ -123,7 +124,7 @@ const ComopnentSwitch = () => {
   } else if (toPresent === presentNode) {
     return <FullNode></FullNode>;
   } else if (toPresent === presentFarmer) {
-    return <div>Farmer</div>;
+    return <Farmer></Farmer>;
   } else if (toPresent === presentTimelord) {
     return <div>Timelord</div>;
   }
@@ -133,12 +134,23 @@ const ComopnentSwitch = () => {
 export default function Dashboard() {
   const classes = useStyles();
   const [open, setOpen] = React.useState(true);
+  const toPresent = useSelector(state => state.main_menu.view);
   const handleDrawerOpen = () => {
     setOpen(true);
   };
   const handleDrawerClose = () => {
     setOpen(false);
   };
+  let title;
+  if (toPresent === presentWallet) {
+    title = "Wallets";
+  } else if (toPresent === presentNode) {
+    title = "Full Node";
+  } else if (toPresent === presentFarmer) {
+    title = "Farming";
+  } else if (toPresent === presentTimelord) {
+    title = "Timelord";
+  }
 
   return (
     <div className={classes.root}>
@@ -168,7 +180,7 @@ export default function Dashboard() {
             noWrap
             className={classes.title}
           >
-            Wallets
+            {title}
           </Typography>
         </Toolbar>
       </AppBar>

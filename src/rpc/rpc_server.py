@@ -16,7 +16,7 @@ from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32, uint64
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
-from src.util.network import obj_to_response
+from src.util.json_util import obj_to_response
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
 from src.util.ws_message import create_payload, format_response, pong
 from src.util.logging import initialize_logging
@@ -312,6 +312,9 @@ class RpcApiHandler:
         return obj_to_response("")
 
     def _close_connection(self, node_id):
+        node_id = hexstr_to_bytes(node_id)
+        if self.full_node.server is None:
+            raise web.HTTPInternalServerError()
         connections_to_close = [
             c
             for c in self.full_node.server.global_connections.get_connections()
@@ -327,12 +330,7 @@ class RpcApiHandler:
         Closes a connection given by the node id.
         """
         request_data = await request.json()
-        node_id = hexstr_to_bytes(request_data["node_id"])
-        if self.full_node.server is None:
-            raise web.HTTPInternalServerError()
-
-        self._close_connection(node_id)
-
+        self._close_connection(request_data["node_id"])
         return obj_to_response("")
 
     def _stop_node(self):

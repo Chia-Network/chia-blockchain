@@ -8,7 +8,7 @@ import websockets
 
 from src.types.sized_bytes import bytes32
 from src.util.ws_message import create_payload
-from src.wallet.util.json_util import dict_to_json_str
+from src.util.json_util import dict_to_json_str
 
 
 class DaemonProxy:
