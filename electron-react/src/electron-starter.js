@@ -4,9 +4,8 @@ const BrowserWindow = electron.BrowserWindow;
 const path = require("path");
 const WebSocket = require("ws");
 const ipcMain = require("electron").ipcMain;
-import { config_testing } from "./config";
-// Whether to enter test mode. Uses the full node simulator and test constants.
-var local_test = config_testing;
+const config = require("./config");
+const local_test = config.local_test;
 
 // Only takes effect if local_test is false. Connects to a local introducer.
 var local_introducer = false;

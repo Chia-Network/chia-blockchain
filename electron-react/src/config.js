@@ -1,1 +1,5 @@
-export const config_testing = false;
+const config = {
+  local_test: true
+};
+
+module.exports = config;

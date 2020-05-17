@@ -1,10 +1,6 @@
 import * as actions from "../modules/websocket";
-import {
-  registerService,
-  startService
-} from "../modules/message";
+import { registerService, startService } from "../modules/message";
 import { handle_message } from "./middleware_api";
-import { config_testing } from "../config";
 import {
   service_wallet_server,
   service_full_node,
@@ -12,6 +8,7 @@ import {
   service_farmer,
   service_harvester
 } from "../util/service_names";
+const config = require("../config");
 
 const crypto = require("crypto");
 
@@ -34,10 +31,8 @@ const socketMiddleware = () => {
     store.dispatch(register_action);
 
     let start_wallet, start_node;
-    if (config_testing) {
-      start_wallet = startService(
-        service_wallet_server + " --testing=true"
-      );
+    if (config.local_test) {
+      start_wallet = startService(service_wallet_server + " --testing=true");
       start_node = startService(service_simulator);
     } else {
       start_wallet = startService(service_wallet_server);

@@ -23,7 +23,11 @@ import {
   service_harvester
 } from "../util/service_names";
 import { pingFullNode, getBlockChainState } from "../modules/fullnodeMessages";
-import { getLatestChallenges, getFarmerConnections, pingFarmer } from "../modules/farmerMessages";
+import {
+  getLatestChallenges,
+  getFarmerConnections,
+  pingFarmer
+} from "../modules/farmerMessages";
 import { getPlots, pingHarvester } from "../modules/harvesterMessages";
 import {
   changeEntranceMenu,
@@ -36,35 +40,34 @@ function sleep(ms) {
 }
 
 async function ping_wallet(store) {
-  console.log("pining wallet")
+  console.log("pining wallet");
   await sleep(1500);
   store.dispatch(pingWallet());
 }
 
 async function ping_full_node(store) {
-  console.log("pining ful node")
+  console.log("pining ful node");
   await sleep(1500);
   store.dispatch(pingFullNode());
 }
 
 async function ping_farmer(store) {
-  console.log("pining farmer")
+  console.log("pining farmer");
   await sleep(1500);
   store.dispatch(pingFarmer());
 }
 
 async function ping_harvester(store) {
-  console.log("pining harvester")
+  console.log("pining harvester");
   await sleep(1500);
   store.dispatch(pingHarvester());
 }
 
 export const handle_message = (store, payload) => {
   store.dispatch(incomingMessage(payload));
-  // console.log(payload);
   if (payload.command === "ping") {
     if (payload.origin === service_wallet_server) {
-      console.log("Got ping from wallet")
+      console.log("Got ping from wallet");
       store.dispatch(format_message("get_public_keys", {}));
       store.dispatch(format_message("get_wallets", {}));
       store.dispatch(get_height_info());
@@ -101,21 +104,26 @@ export const handle_message = (store, payload) => {
       store.dispatch(format_message("get_public_keys", {}));
     }
   } else if (payload.command === "get_public_keys") {
-    if (payload.data.success && payload.data.public_key_fingerprints.length > 0) {
+    if (
+      payload.data.success &&
+      payload.data.public_key_fingerprints.length > 0
+    ) {
       store.dispatch(changeEntranceMenu(presentSelectKeys));
     } else {
       store.dispatch(changeEntranceMenu(presentNewWallet));
     }
-  } else if (payload.command === "close_connection" || payload.command === "open_connection") {
+  } else if (
+    payload.command === "close_connection" ||
+    payload.command === "open_connection"
+  ) {
     if (payload.origin === service_farmer) {
       store.dispatch(getFarmerConnections());
     }
   } else if (payload.command === "delete_plot") {
-      store.dispatch(getPlots());
+    store.dispatch(getPlots());
   } else if (payload.command === "get_wallets") {
     if (payload.data.success) {
       const wallets = payload.data.wallets;
-      // console.log(wallets);
       for (let wallet of wallets) {
         store.dispatch(get_balance_for_wallet(wallet.id));
         store.dispatch(get_transactions(wallet.id));
@@ -127,12 +135,9 @@ export const handle_message = (store, payload) => {
       }
     }
   } else if (payload.command === "state_changed") {
-    // console.log(payload.data.state);
-    // console.log(payload);
     const state = payload.data.state;
     if (state === "coin_added" || state === "coin_removed") {
       var wallet_id = payload.data.wallet_id;
-      // console.log("WLID " + wallet_id);
       store.dispatch(get_balance_for_wallet(wallet_id));
       store.dispatch(get_transactions(wallet_id));
     } else if (state === "sync_changed") {
