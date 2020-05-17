@@ -325,9 +325,11 @@ const Challenges = props => {
   var latest_challenges = useSelector(
     state => state.farming_state.farmer.latest_challenges
   );
+
   if (!latest_challenges) {
     latest_challenges = [];
   }
+
   return (
     <Paper className={classes.balancePaper}>
       <Grid container spacing={0}>
