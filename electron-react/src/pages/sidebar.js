@@ -18,7 +18,10 @@ import AccountTreeIcon from "@material-ui/icons/AccountTree";
 import DonutLargeIcon from "@material-ui/icons/DonutLarge";
 import UpdateIcon from "@material-ui/icons/Update";
 import LockIcon from "@material-ui/icons/Lock";
-import { Redirect } from "react-router-dom";
+import {
+  changeEntranceMenu,
+  presentSelectKeys
+} from "../modules/entranceMenu";
 
 const menuItems = [
   {
@@ -63,14 +66,14 @@ export const SideBar = () => {
   const dispatch = useDispatch();
 
   function deleteAllKeys() {
-    console.log("Deleting all keys");
+    // console.log("Deleting all keys");
     dispatch(delete_all_keys());
   }
 
   function changeKey() {
-    console.log("Changing key");
+    // console.log("Changing key");
     dispatch(logOut("log_out", {}));
-    return <Redirect to="/SelectKey" />;
+    dispatch(changeEntranceMenu(presentSelectKeys));
   }
 
   return (

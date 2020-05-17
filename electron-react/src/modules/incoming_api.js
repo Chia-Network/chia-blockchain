@@ -60,10 +60,7 @@ const initial_state = {
 export const incomingReducer = (state = { ...initial_state }, action) => {
   switch (action.type) {
     case "LOG_OUT":
-      if (action.message.command === "log_out") {
-        return { ...state, logged_in: false };
-      }
-      break;
+      return { ...state, logged_in: false };
     case "INCOMING_MESSAGE":
       if (action.message.origin !== service_wallet_server) {
         return state;

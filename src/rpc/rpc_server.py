@@ -44,6 +44,9 @@ class RpcApiHandler:
         self.shut_down = False
         self.service_name = "chia_full_node"
 
+    def stop(self):
+        self.shut_down = True
+
     async def _get_blockchain_state(self):
         """
         Returns a summary of the node's view of the blockchain.
@@ -406,6 +409,7 @@ class RpcApiHandler:
             response = await self._get_heaviest_block_seen()
             return response
         elif command == "get_unspent_coins":
+            assert data is not None
             puzzle_hash = data["puzzle_hash"]
             header_hash = None
             if "header_hash" in data:
@@ -416,6 +420,7 @@ class RpcApiHandler:
             response = {"success": True}
             return response
         elif command == "close_connection":
+            assert data is not None
             node_id = data["node_id"]
             return await self._close_connection(node_id)
         elif command == "get_blockchain_state":
@@ -524,13 +529,15 @@ async def start_rpc_server(
         ]
     )
 
-    create_task(handler.connect_to_daemon())
+    daemon_connection = create_task(handler.connect_to_daemon())
     runner = web.AppRunner(app, access_log=None)
     await runner.setup()
     site = web.TCPSite(runner, "localhost", int(rpc_port))
     await site.start()
 
     async def cleanup():
+        handler.stop()
         await runner.cleanup()
+        await daemon_connection
 
     return cleanup

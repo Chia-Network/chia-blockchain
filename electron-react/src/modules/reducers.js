@@ -10,6 +10,7 @@ import { dialogReducer } from "./dialogReducer";
 import { daemonReducer } from "./daemon_api";
 import { entranceReducer } from "./entranceMenu";
 import { fullnodeReducer } from "./fullnode_api";
+import { farmingReducer } from "./farming_api";
 
 const rootReducer = combineReducers({
   daemon_state: daemonReducer,
@@ -22,7 +23,8 @@ const rootReducer = combineReducers({
   trade_state: tradeReducer,
   dialog_state: dialogReducer,
   entrance_menu: entranceReducer,
-  full_node_state: fullnodeReducer
+  full_node_state: fullnodeReducer,
+  farming_state: farmingReducer
 });
 
 export default rootReducer;

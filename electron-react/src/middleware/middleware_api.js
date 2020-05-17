@@ -18,9 +18,18 @@ import { openDialog } from "../modules/dialogReducer";
 import {
   service_wallet_server,
   service_full_node,
-  service_simulator
+  service_simulator,
+  service_farmer,
+  service_harvester
 } from "../util/service_names";
 import { pingFullNode, getBlockChainState } from "../modules/fullnodeMessages";
+import { getLatestChallenges, getConnections, pingFarmer } from "../modules/farmerMessages";
+import { getPlots, pingHarvester } from "../modules/harvesterMessages";
+import {
+  changeEntranceMenu,
+  presentSelectKeys,
+  presentNewWallet
+} from "../modules/entranceMenu";
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -36,6 +45,16 @@ async function ping_full_node(store) {
   store.dispatch(pingFullNode());
 }
 
+async function ping_farmer(store) {
+  await sleep(1500);
+  store.dispatch(pingFarmer());
+}
+
+async function ping_harvester(store) {
+  await sleep(1500);
+  store.dispatch(pingHarvester());
+}
+
 export const handle_message = (store, payload) => {
   store.dispatch(incomingMessage(payload));
   // console.log(payload);
@@ -48,6 +67,11 @@ export const handle_message = (store, payload) => {
       store.dispatch(get_connection_info());
     } else if (payload.origin === service_full_node) {
       store.dispatch(getBlockChainState());
+    } else if (payload.origin === service_farmer) {
+      store.dispatch(getLatestChallenges());
+      store.dispatch(getConnections());
+    } else if (payload.origin === service_harvester) {
+      store.dispatch(getPlots());
     }
   } else if (payload.command === "log_in") {
     if (payload.data.success) {
@@ -70,6 +94,13 @@ export const handle_message = (store, payload) => {
   } else if (payload.command === "delete_all_keys") {
     if (payload.data.success) {
       store.dispatch(format_message("get_public_keys", {}));
+    }
+  } else if (payload.command === "get_public_keys") {
+    console.log("gpk", payload.data);
+    if (payload.data.success && payload.data.public_key_fingerprints.length > 0) {
+      store.dispatch(changeEntranceMenu(presentSelectKeys));
+    } else {
+      store.dispatch(changeEntranceMenu(presentNewWallet));
     }
   } else if (payload.command === "get_wallets") {
     if (payload.data.success) {
@@ -145,6 +176,10 @@ export const handle_message = (store, payload) => {
         ping_full_node(store);
       } else if (service === service_simulator) {
         ping_full_node(store);
+      } else if (service === service_farmer) {
+        ping_farmer(store);
+      } else if (service === service_harvester) {
+        ping_harvester(store);
       }
     } else if (payload.data.error === "already running") {
       if (service === service_wallet_server) {
@@ -153,6 +188,10 @@ export const handle_message = (store, payload) => {
         ping_full_node(store);
       } else if (service === service_simulator) {
         ping_full_node(store);
+      } else if (service === service_farmer) {
+        ping_farmer(store);
+      } else if (service === service_harvester) {
+        ping_harvester(store);
       }
     }
   }

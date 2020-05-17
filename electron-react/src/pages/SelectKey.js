@@ -9,12 +9,15 @@ import IconButton from '@material-ui/core/IconButton';
 import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 import logo from "../assets/img/chia_logo.svg"; // Tell webpack this JS file uses this image
-import { withRouter, Redirect } from "react-router-dom";
+import { withRouter } from "react-router-dom";
 import { connect, useSelector, useDispatch } from "react-redux";
 import { log_in, delete_key } from "../modules/message";
 import Link from "@material-ui/core/Link";
 import Button from "@material-ui/core/Button";
-import { Link as RouterLink } from "react-router-dom";
+import {
+  changeEntranceMenu,
+  presentNewWallet
+} from "../modules/entranceMenu";
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -53,15 +56,7 @@ const useStyles = makeStyles(theme => ({
 const SelectKey = () => {
   const dispatch = useDispatch();
   const classes = useStyles();
-  const logged_in = useSelector(state => state.wallet_state.logged_in);
-  const connected_websocket = useSelector(state => state.websocket.connected);
   const public_key_fingerprints = useSelector(state => state.wallet_state.public_key_fingerprints);
-  if (!connected_websocket || public_key_fingerprints.length === 0) {
-    return <Redirect to="/" />;
-  }
-  if (logged_in) {
-    return <Redirect to="/dashboard" />;
-  }
 
   const handleClick = (fingerprint) => {
     return () => dispatch(log_in(fingerprint))
@@ -71,6 +66,9 @@ const SelectKey = () => {
     return () => {
       dispatch(delete_key(fingerprint));
     }
+  }
+  const goToMnemonics = () => {
+    dispatch(changeEntranceMenu(presentNewWallet));
   }
 
   const list_items = public_key_fingerprints.map((fingerprint) => {
@@ -105,7 +103,7 @@ const SelectKey = () => {
             </List>
 
           </div>
-            <Link component={RouterLink} to="/Mnemonics">
+            <Link onClick={goToMnemonics}>
               <Button
                 type="submit"
                 fullWidth

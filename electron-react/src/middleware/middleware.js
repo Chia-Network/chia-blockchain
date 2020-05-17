@@ -8,7 +8,9 @@ import { config_testing } from "../config";
 import {
   service_wallet_server,
   service_full_node,
-  service_simulator
+  service_simulator,
+  service_farmer,
+  service_harvester
 } from "../util/service_names";
 
 const crypto = require("crypto");
@@ -41,9 +43,13 @@ const socketMiddleware = () => {
       start_wallet = startService(service_wallet_server);
       start_node = startService(service_full_node);
     }
+    let start_farmer = startService(service_farmer);
+    let start_harvester = startService(service_harvester);
 
     store.dispatch(start_wallet);
     store.dispatch(start_node);
+    store.dispatch(start_farmer);
+    store.dispatch(start_harvester);
     // console.log("Register Service");
   };
 

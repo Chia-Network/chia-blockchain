@@ -11,7 +11,8 @@ import {
   presentEntrace,
   presentOldWallet,
   presentNewWallet,
-  presentDashboard
+  presentDashboard,
+  presentSelectKeys
 } from "./modules/entranceMenu";
 import { Backdrop, CircularProgress } from "@material-ui/core";
 const defaultTheme = createMuiTheme();
@@ -94,9 +95,6 @@ const CustomRouter = () => {
   const wallet_connected = useSelector(
     state => state.daemon_state.wallet_connected
   );
-  const public_key_fingerprints = useSelector(
-    state => state.wallet_state.public_key_fingerprints
-  );
   const presentView = useSelector(state => state.entrance_menu.view);
 
   if (!wallet_connected) {
@@ -105,11 +103,11 @@ const CustomRouter = () => {
     return <LoadingScreen></LoadingScreen>;
   } else if (logged_in) {
     return <Dashboard></Dashboard>;
-  } else if (public_key_fingerprints.length > 0) {
-    return <SelectKey></SelectKey>;
   } else {
     if (presentView === presentEntrace) {
       return <SignIn></SignIn>;
+    } else if (presentView === presentSelectKeys) {
+      return <SelectKey></SelectKey>;
     } else if (presentView === presentOldWallet) {
       return <OldWallet></OldWallet>;
     } else if (presentView === presentNewWallet) {

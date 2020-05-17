@@ -64,7 +64,7 @@ class WebSocketServer:
     def __init__(self, root_path):
         self.root_path = root_path
         self.log = log
-        self.services = dict()
+        self.services: Dict = dict()
         self.connections: Dict[str, Any] = dict()  # service_name : WebSocket
         self.remote_address_map: Dict[str, str] = dict()  # remote_address: service_name
         self.ping_job = None
