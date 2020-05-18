@@ -3,8 +3,11 @@ export const Wallet = (id, name, type, data) => ({
   name: name,
   type: type,
   data: data,
-  balance_total: 1,
-  balance_pending: 1,
+  balance_total: 0,
+  balance_pending: 0,
+  balance_spendable: 0,
+  balance_frozen: 0,
+  balance_change: 0,
   transactions: [],
   puzzle_hash: "",
   colour: ""
@@ -92,8 +95,14 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           var balance = action.data.confirmed_wallet_balance;
           console.log("balance is: " + balance);
           var unconfirmed_balance = action.data.unconfirmed_wallet_balance;
+          var frozen_balance = action.data.frozen_balance;
+          var spendable_balance = action.data.spendable_balance;
+          var change_balance = action.data.change_balance;
           wallet.balance_total = balance;
           wallet.balance_pending = unconfirmed_balance;
+          wallet.balance_frozen = frozen_balance;
+          wallet.balance_spendable = spendable_balance;
+          wallet.balance_change = change_balance;
           return state;
         }
       } else if (action.command === "get_transactions") {

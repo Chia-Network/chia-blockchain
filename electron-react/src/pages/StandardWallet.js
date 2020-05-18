@@ -36,6 +36,8 @@ import { rosybrown } from "color-name";
 import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
 import { unix_to_short_date } from "../util/utils";
 import { StatusCard } from "./Wallets";
+import Accordion from "../components/Accordion";
+import LockIcon from "@material-ui/icons/Lock";
 
 const drawerWidth = 240;
 
@@ -129,7 +131,7 @@ const useStyles = makeStyles(theme => ({
     })
   },
   balancePaper: {
-    height: 200,
+    // height: 200,
     marginTop: theme.spacing(2)
   },
   sendCard: {
@@ -188,11 +190,36 @@ const BalanceCard = props => {
   const balance = useSelector(
     state => state.wallet_state.wallets[id].balance_total
   );
+  const balance_spendable = useSelector(
+    state => state.wallet_state.wallets[id].balance_spendable
+  );
   const balance_pending = useSelector(
     state => state.wallet_state.wallets[id].balance_pending
   );
+  const balance_frozen = useSelector(
+    state => state.wallet_state.wallets[id].balance_frozen
+  );
+  const balance_change = useSelector(
+    state => state.wallet_state.wallets[id].balance_change
+  );
 
   const classes = useStyles();
+
+  const balancebox_1 = "<table width='100%'>"
+  const balancebox_2 = "<tr><td align='left'>"
+  const balancebox_3 = "</td><td align='right'>"
+  const balancebox_4 = "</td></tr>"
+  const balancebox_row = "<tr height='8px'></tr>"
+  const balancebox_5 = "</td></tr></table>"
+  const balancebox_pending = "Pending Total Balance"
+  const balancebox_frozen = "Pending Farming Rewards"
+  const balancebox_change = "Pending Change"
+  const balancebox_xch = " XCH"
+  const balance_pending_chia = mojo_to_chia_string(balance_pending);
+  const balance_frozen_chia = mojo_to_chia_string(balance_frozen);
+  const balance_change_chia = mojo_to_chia_string(balance_change);
+  const acc_content = balancebox_1 + balancebox_2 + balancebox_pending + balancebox_3 + balance_pending_chia + balancebox_xch + balancebox_4 + balancebox_row + balancebox_2 + balancebox_frozen + balancebox_3 + balance_frozen_chia + balancebox_xch + balancebox_4 + balancebox_row + balancebox_2 + balancebox_change + balancebox_3 + balance_change_chia + balancebox_xch + balancebox_5;
+
   return (
     <Paper className={(classes.paper, classes.balancePaper)}>
       <Grid container spacing={0}>
@@ -228,7 +255,7 @@ const BalanceCard = props => {
             <Box display="flex">
               <Box flexGrow={1}>
                 <Typography component="subtitle1" variant="subtitle1">
-                  Pending Balance
+                  Spendable Balance
                 </Typography>
               </Box>
               <Box>
@@ -239,6 +266,15 @@ const BalanceCard = props => {
                 >
                   {mojo_to_chia_string(balance - balance_pending, "mojo")} XCH
                 </Typography>
+              </Box>
+            </Box>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.cardSubSection}>
+            <Box display="flex">
+              <Box flexGrow={1}>
+                <Accordion title="View pending balances..." content= {acc_content} />
               </Box>
             </Box>
           </div>
