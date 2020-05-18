@@ -1,18 +1,20 @@
 import logging
 import aiosqlite
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from src.types.full_block import FullBlock
 from src.types.header import Header
 from src.types.sized_bytes import bytes32
 from src.util.hash import std_hash
-from src.util.ints import uint32
+from src.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 
 
 class BlockStore:
     db: aiosqlite.Connection
+    proof_of_time_heights: Dict[Tuple[bytes32, uint64], uint32]
+    challenge_hash_dict: Dict[bytes32, bytes32]
 
     @classmethod
     async def create(cls, connection):
@@ -27,7 +29,8 @@ class BlockStore:
         # Headers
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS headers(height bigint, header_hash "
-            "text PRIMARY KEY, proof_hash text, header blob, is_lca tinyint, is_tip tinyint)"
+            "text PRIMARY KEY, proof_hash text, challenge_hash text, header "
+            "blob, is_lca tinyint, is_tip tinyint)"
         )
 
         # Height index so we can look up in order of height for sync purposes
@@ -42,6 +45,8 @@ class BlockStore:
         await self.db.execute("CREATE INDEX IF NOT EXISTS lca on headers(is_lca)")
         await self.db.execute("CREATE INDEX IF NOT EXISTS lca on headers(is_tip)")
         await self.db.commit()
+        self.proof_of_time_heights = {}
+        self.challenge_hash_dict = {}
 
         return self
 
@@ -89,11 +94,12 @@ class BlockStore:
             block.proof_of_space.get_hash() + block.proof_of_time.output.get_hash()
         )
         cursor_2 = await self.db.execute(
-            ("INSERT OR REPLACE INTO headers VALUES(?, ?, ?, ?, 0, 0)"),
+            ("INSERT OR REPLACE INTO headers VALUES(?, ?, ?, ?, ?, 0, 0)"),
             (
                 block.height,
                 block.header_hash.hex(),
                 proof_hash.hex(),
+                block.proof_of_space.challenge_hash.hex(),
                 bytes(block.header),
             ),
         )
@@ -132,3 +138,28 @@ class BlockStore:
         rows = await cursor.fetchall()
         await cursor.close()
         return {bytes.fromhex(row[0]): bytes.fromhex(row[1]) for row in rows}
+
+    async def init_challenge_hashes(self) -> None:
+        cursor = await self.db.execute("SELECT header_hash, challenge_hash from headers")
+        rows = await cursor.fetchall()
+        await cursor.close()
+        self.challenge_hash_dict = {
+            bytes.fromhex(row[0]): bytes.fromhex(row[1]) for row in rows
+        }
+
+    def get_challenge_hash(self, header_hash: bytes32) -> bytes32:
+        return self.challenge_hash_dict[header_hash]
+
+    def add_proof_of_time(self, challenge: bytes32, iter: uint64, height: uint32) -> None:
+        self.proof_of_time_heights[
+            (
+                challenge,
+                iter,
+            )
+        ] = height
+
+    def get_height_proof_of_time(self, challenge: bytes32, iter: uint64) -> Optional[uint32]:
+        pot_tuple = (challenge, iter)
+        if pot_tuple in self.proof_of_time_heights:
+            return self.proof_of_time_heights[pot_tuple]
+        return None
