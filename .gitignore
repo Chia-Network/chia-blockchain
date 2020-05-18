@@ -74,4 +74,4 @@ vdf_bench
 *.offer
 
 # Dev config react
-electron-react/src/dev_config.js
+./electron-react/src/dev_config.js

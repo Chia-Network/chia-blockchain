@@ -127,6 +127,12 @@ const createWindow = () => {
     );
   }
 
+  if (dev_config.react_tool) {
+    BrowserWindow.addDevToolsExtension(
+      path.join(os.homedir(), dev_config.react_tool)
+    );
+  }
+
   var startUrl =
     process.env.ELECTRON_START_URL ||
     url.format({
