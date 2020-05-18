@@ -2,9 +2,9 @@ import React from 'react';
 import { Switch, Route } from 'react-router-dom';
 import { connect } from 'react-redux';
 import SignIn from './pages/SignIn';
+import SelectKey from './pages/SelectKey';
 import NewWallet from './pages/NewWallet'
 import OldWallet from './pages/OldWallet'
-import Wallets from './pages/Wallets'
 import Dashboard from './pages/Dashboard'
 
 import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles';
@@ -78,6 +78,7 @@ const App = () => {
       <ThemeProvider theme={theme}>
         <Switch>
           <Route exact path="/" component={SignIn} />
+          <Route exact path="/SelectKey" component={SelectKey} />
           <Route exact path="/CreateMnemonics" component={NewWallet} />
           <Route exact path="/Mnemonics" component={OldWallet} />
           <Route exact path="/dashboard" component={Dashboard} />

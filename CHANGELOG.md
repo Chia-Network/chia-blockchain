@@ -8,13 +8,30 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 ### Added
 - We now have a CHANGELOG.md that adheres closely to the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) standard. We merged in the version history and updated some previous release notes to capture items important to the change log. We are modifying our release process to accumulate changes at the top of the change log and then copy those to the release notes at release time.
 - We added [lgtm](https://lgtm.com/) source analysis on pull request to the chia-blockchain, chiapos, chiavdf, chiabip158, and bls-library repositories to add some automated security analysis to our ci.
+- We added total network storage space estimation to the node rpc at the get_network_space endpoint.
+The endpoint estimates space between any two block header hashes.
+- New keychain system that replaces keys.yaml, and with migration from keys.yaml.
+-'chia keys' command line program, to see, add, remove private keys.
+- Farmer and Harvester RPC servers and clients, for support of the UI
+- New React user interface which is cleaner and more responsive
+- Create or import private keys with a 24 word mnemonic, both in the UI and 'chia keys' command line
+- Delete and change active keys from the UI
 
 ### Changed
+- `chia netspace` has been refactored to use the get_network_space rpc. The command
+syntax has changed slightly. By default it calculates the last 24 blocks from the
+current LCA. Optionally you can use the `-b` flag to start with a different block
+height. Use `-d` to specify the delta number of blocks back to compare to.
+- Releases GIL in python bindings when fetching qualities and proofs. This allows a multithreaded harvester to farm more plots concurrently. This is especially faster when there are multiple disks being harvested. The class is also made thread safe with mutex guards.
+- Syncing is now faster and uses less memory.
 - chiapos is now easier to compile with MSVC.
+- create plots now takes in an optional sk_seed, it is no longer read in from keys.yaml. If not passed in, it is randomly generated.
 
 ### Fixed
 - Build status shield layout fixed in README.md
 - Relic and thus blspy would crash on processors older than Haswell as they don't support lzc.
+- chia-check-plots works with plot root (the same as harvester)
+- Some networking errors are no longer printed
 
 ## [1.0beta5] aka Beta 1.5 - 2020-05-05
 ### Added
@@ -41,7 +58,7 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 - Currently, there is no way to restore a Coloured Coin Wallet.
 
 ## [1.0beta4] aka Beta 1.4 - 2020-04-29
-### Added  
+### Added
 - This release adds Coloured coin support with offers. Yes that is the correct spelling. Coloured coins allow you to issue a coin, token, or asset with nearly unlimited issuance plans and functionality. They support inner smart transactions so they can inherit any of the other functionality you can implement in Chialisp. Offers are especially cool as they create a truly decentralized exchange capability. Read much more about them in Bram's [blog post on Coloured coins](https://chia.net/2020/04/29/coloured-coins-launch.en.html).
 - This release adds support for native Windows via a (mostly) automated installer and MacOS Mojave. Windows still requires some PowerShell command line use. You should expect ongoing improvements in ease of install and replication of the command line tools in the GUI. Again huge thanks to @dkackman for continued Windows installer development. Native Windows is currently slightly slower than the same version running in WSL 2 on the same machine for both block verification and plotting.
 - We made some speed improvements that positively affected all platforms while trying to increase plotting speed in Windows.

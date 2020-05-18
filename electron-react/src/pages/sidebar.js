@@ -11,7 +11,7 @@ import {
   presentTimelord,
   changeMainMenu
 } from "../modules/mainMenu";
-import { log_out } from "../modules/message";
+import { delete_all_keys, logOut } from "../modules/message";
 import { useDispatch, useSelector } from "react-redux";
 import List from "@material-ui/core/List";
 import Divider from "@material-ui/core/Divider";
@@ -20,6 +20,7 @@ import AccountTreeIcon from "@material-ui/icons/AccountTree";
 import DonutLargeIcon from "@material-ui/icons/DonutLarge";
 import UpdateIcon from "@material-ui/icons/Update";
 import LockIcon from "@material-ui/icons/Lock";
+import { Redirect } from "react-router-dom";
 
 const menuItems = [
   {
@@ -53,7 +54,7 @@ const MenuItem = menuItem => {
   }
 
   return (
-    <ListItem button onClick={presentMe}>
+    <ListItem button onClick={presentMe} key={item.label}>
       <ListItemIcon>{item.icon}</ListItemIcon>
       <ListItemText primary={item.label} />
     </ListItem>
@@ -63,9 +64,15 @@ const MenuItem = menuItem => {
 export const SideBar = () => {
   const dispatch = useDispatch();
 
-  function logOut() {
-    console.log("Logging out");
-    dispatch(log_out());
+  function deleteAllKeys() {
+    console.log("Deleting all keys");
+    dispatch(delete_all_keys());
+  }
+
+  function changeKey() {
+    console.log("Changing key");
+    dispatch(logOut("log_out", {}));
+    return <Redirect to="/SelectKey" />;
   }
 
   return (
@@ -74,11 +81,17 @@ export const SideBar = () => {
       <Divider />
       <List>
         <div>
-          <ListItem button onClick={logOut}>
+          <ListItem button onClick={deleteAllKeys} key="0">
             <ListItemIcon>
               <LockIcon />
             </ListItemIcon>
-            <ListItemText primary="Log Out" />
+            <ListItemText primary="Delete All Keys" />
+          </ListItem>
+          <ListItem button onClick={changeKey} key="1">
+            <ListItemIcon>
+              <LockIcon />
+            </ListItemIcon>
+            <ListItemText primary="Change Key" />
           </ListItem>
         </div>
       </List>

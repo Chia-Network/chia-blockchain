@@ -29,17 +29,31 @@ export const genereate_mnemonics = () => {
   return action
 }
 
-export const log_in = (mnemonic) => {
+export const add_key = (mnemonic) => {
   var action = newMessage()
-  action.command = "log_in"
+  action.command = "add_key"
   action.data = {"mnemonic": mnemonic}
   return action
 }
 
-export const log_out = () => {
+export const delete_key = (fingerprint) => {
   var action = newMessage()
-  action.command = "log_out"
+  action.command = "delete_key"
+  action.data = {"fingerprint": fingerprint}
+  return action
+}
+
+export const delete_all_keys = () => {
+  var action = newMessage()
+  action.command = "delete_all_keys"
   action.data = {}
+  return action
+}
+
+export const log_in = (fingerprint) => {
+  var action = newMessage()
+  action.command = "log_in"
+  action.data = {"fingerprint": fingerprint}
   return action
 }
 
@@ -162,4 +176,6 @@ export const accept_trade_offer = (filepath) => {
 }
 
 export const incomingMessage = (command, data) => ({ type: 'INCOMING_MESSAGE', command, data});
+
+export const logOut = (command, data) => ({ type: 'LOG_OUT', command, data});
 

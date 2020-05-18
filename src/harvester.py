@@ -13,6 +13,7 @@ from src.server.outbound_message import Delivery, Message, NodeType, OutboundMes
 from src.types.peer_info import PeerInfo
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
+from src.util.config import load_config, save_config
 from src.util.api_decorators import api_request
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.ints import uint8
@@ -22,11 +23,14 @@ log = logging.getLogger(__name__)
 
 
 def load_plots(
-    config_file: Dict, plot_config_file: Dict, pool_pubkeys: List[PublicKey]
-) -> Dict[Path, DiskProver]:
-    provers: Dict[Path, DiskProver] = {}
+    config_file: Dict,
+    plot_config_file: Dict,
+    pool_pubkeys: Optional[List[PublicKey]],
+    root_path: Path,
+) -> Dict[str, DiskProver]:
+    provers: Dict[str, DiskProver] = {}
     for partial_filename_str, plot_config in plot_config_file["plots"].items():
-        plot_root = path_from_root(DEFAULT_ROOT_PATH, config_file.get("plot_root", "."))
+        plot_root = path_from_root(root_path, config_file.get("plot_root", "."))
         partial_filename = plot_root / partial_filename_str
         potential_filenames = [
             partial_filename,
@@ -35,7 +39,7 @@ def load_plots(
         pool_pubkey = PublicKey.from_bytes(bytes.fromhex(plot_config["pool_pk"]))
 
         # Only use plots that correct pools associated with them
-        if pool_pubkey not in pool_pubkeys:
+        if pool_pubkeys is not None and pool_pubkey not in pool_pubkeys:
             log.warning(
                 f"Plot {partial_filename} has a pool key that is not in the farmer's pool_pk list."
             )
@@ -47,7 +51,7 @@ def load_plots(
             if filename.exists():
                 try:
                     provers[partial_filename_str] = DiskProver(str(filename))
-                except ValueError as e:
+                except Exception as e:
                     log.error(f"Failed to open file {filename}. {e}")
                     failed_to_open = True
                     break
@@ -64,17 +68,23 @@ def load_plots(
 class Harvester:
     config: Dict
     plot_config: Dict
-    provers: Dict[Path, DiskProver]
-    challenge_hashes: Dict[bytes32, Tuple[bytes32, Path, uint8]]
+    provers: Dict[str, DiskProver]
+    challenge_hashes: Dict[bytes32, Tuple[bytes32, str, uint8]]
+    pool_pubkeys: List[PublicKey]
+    root_path: Path
     _plot_notification_task: asyncio.Task
+    _reconnect_task: Optional[asyncio.Task]
     _is_shutdown: bool
     executor: concurrent.futures.ThreadPoolExecutor
 
     @staticmethod
-    async def create(config: Dict, plot_config: Dict):
+    async def create(
+        config: Dict, plot_config: Dict, root_path: Path = DEFAULT_ROOT_PATH
+    ):
         self = Harvester()
         self.config = config
         self.plot_config = plot_config
+        self.root_path = root_path
 
         # From filename to prover
         self.provers = {}
@@ -82,8 +92,10 @@ class Harvester:
         # From quality string to (challenge_hash, filename, index)
         self.challenge_hashes = {}
         self._plot_notification_task = asyncio.create_task(self._plot_notification())
+        self._reconnect_task = None
         self._is_shutdown = False
         self.server = None
+        self.pool_pubkeys = []
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
         return self
 
@@ -105,6 +117,56 @@ class Harvester:
             await asyncio.sleep(1)
             counter += 1
 
+    def _get_plots(self):
+        response = []
+        for path, prover in self.provers.items():
+            plot_pk = PrivateKey.from_bytes(
+                bytes.fromhex(self.plot_config["plots"][path]["sk"])
+            ).get_public_key()
+            pool_pk = PublicKey.from_bytes(
+                bytes.fromhex(self.plot_config["plots"][path]["pool_pk"])
+            )
+            response.append(
+                {
+                    "filename": str(path),
+                    "size": prover.get_size(),
+                    "plot-seed": prover.get_id(),
+                    "memo": prover.get_memo(),
+                    "plot_pk": bytes(plot_pk),
+                    "pool_pk": bytes(pool_pk),
+                }
+            )
+        return response
+
+    def _refresh_plots(self):
+        self.provers = load_plots(
+            self.config, self.plot_config, self.pool_pubkeys, self.root_path
+        )
+
+    def _delete_plot(self, str_path: str):
+        if str_path not in self.provers:
+            return False
+
+        del self.provers[str_path]
+        plot_root = path_from_root(self.root_path, self.config.get("plot_root", "."))
+
+        # Remove absolute and relative paths
+        if Path(str_path).exists():
+            Path(str_path).unlink()
+
+        if (plot_root / Path(str_path)).exists():
+            (plot_root / Path(str_path)).unlink()
+
+        try:
+            # Removes the plot from config.yaml
+            plot_config = load_config(self.root_path, "plots.yaml")
+            del plot_config[str_path]
+            save_config(self.root_path, "plots.yaml", plot_config)
+        except (FileNotFoundError, KeyError) as e:
+            log.warning(f"Could not remove {str_path} {e}")
+            return False
+        return True
+
     def set_server(self, server):
         self.server = server
 
@@ -119,22 +181,26 @@ class Harvester:
 
         async def connection_check():
             while not self._is_shutdown:
-                if self.server is not None:
-                    farmer_retry = True
+                counter = 0
+                while not self._is_shutdown and counter % 30 == 0:
+                    if self.server is not None:
+                        farmer_retry = True
 
-                    for connection in self.server.global_connections.get_connections():
-                        if connection.get_peer_info() == farmer_peer:
-                            farmer_retry = False
+                        for (
+                            connection
+                        ) in self.server.global_connections.get_connections():
+                            if connection.get_peer_info() == farmer_peer:
+                                farmer_retry = False
 
-                    if farmer_retry:
-                        log.info(f"Reconnecting to farmer {farmer_retry}")
-                        if not await self.server.start_client(
-                            farmer_peer, None, auth=True
-                        ):
-                            await asyncio.sleep(1)
-                await asyncio.sleep(30)
+                        if farmer_retry:
+                            log.info(f"Reconnecting to farmer {farmer_retry}")
+                            if not await self.server.start_client(
+                                farmer_peer, None, auth=True
+                            ):
+                                await asyncio.sleep(1)
+                    await asyncio.sleep(1)
 
-        self.reconnect_task = asyncio.create_task(connection_check())
+        self._reconnect_task = asyncio.create_task(connection_check())
 
     def _shutdown(self):
         self._is_shutdown = True
@@ -142,6 +208,8 @@ class Harvester:
 
     async def _await_shutdown(self):
         await self._plot_notification_task
+        if self._reconnect_task is not None:
+            await self._reconnect_task
 
     @api_request
     async def harvester_handshake(
@@ -152,8 +220,9 @@ class Harvester:
         which must be put into the plots, before the plotting process begins. We cannot
         use any plots which don't have one of the pool keys.
         """
+        self.pool_pubkeys = harvester_handshake.pool_pubkeys
         self.provers = load_plots(
-            self.config, self.plot_config, harvester_handshake.pool_pubkeys
+            self.config, self.plot_config, self.pool_pubkeys, self.root_path
         )
         if len(self.provers) == 0:
             log.warning(
@@ -198,7 +267,7 @@ class Harvester:
             return quality_strings
 
         async def lookup_challenge(
-            filename: Path, prover: DiskProver
+            filename: str, prover: DiskProver
         ) -> List[harvester_protocol.ChallengeResponse]:
             # Exectures a DiskProverLookup in a threadpool, and returns responses
             all_responses: List[harvester_protocol.ChallengeResponse] = []

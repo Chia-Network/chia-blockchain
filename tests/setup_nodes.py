@@ -43,6 +43,15 @@ test_constants["GENESIS_BLOCK"] = bytes(
 )
 
 
+async def _teardown_nodes(node_aiters: List) -> None:
+    awaitables = [node_iter.__anext__() for node_iter in node_aiters]
+    for sublist_awaitable in asyncio.as_completed(awaitables):
+        try:
+            await sublist_awaitable
+        except StopAsyncIteration:
+            pass
+
+
 async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={}):
     # SETUP
     test_constants_copy = test_constants.copy()
@@ -88,8 +97,9 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
 
     # TEARDOWN
     server_1.close_all()
+    full_node_1._close()
     await server_1.await_closed()
-    await full_node_1._shutdown()
+    await full_node_1._await_closed()
     db_path.unlink()
 
 
@@ -129,6 +139,7 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
         network_id,
         root_path,
         config,
+        f"full_node_server_{port}",
     )
     _ = await server_1.start_server(full_node_1._on_connect)
     full_node_1._set_server(server_1)
@@ -137,20 +148,24 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
 
     # TEARDOWN
     server_1.close_all()
+    full_node_1._close()
     await server_1.await_closed()
-    await full_node_1._shutdown()
+    await full_node_1._await_closed()
     db_path = root_path / f"{db_name}"
     if db_path.exists():
         db_path.unlink()
 
 
-async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
+async def setup_wallet_node(
+    port, introducer_port=None, key_seed=b"setup_wallet_node", dic={}
+):
     config = load_config(root_path, "config.yaml", "wallet")
     if "starting_height" in dic:
         config["starting_height"] = dic["starting_height"]
 
-    keychain = Keychain.create(key_seed.hex(), True)
-    keychain.set_wallet_seed(key_seed)
+    keychain = Keychain(key_seed.hex(), True)
+    keychain.add_private_key_seed(key_seed)
+    private_key = keychain.get_all_private_keys()[0][0]
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
@@ -164,7 +179,7 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
     network_id = net_config.get("network_id")
 
     wallet = await WalletNode.create(
-        config, keychain, override_constants=test_constants_copy, name="wallet1",
+        config, private_key, override_constants=test_constants_copy, name="wallet1",
     )
     assert ping_interval is not None
     assert network_id is not None
@@ -210,17 +225,19 @@ async def setup_harvester(port, dic={}):
         f"harvester_server_{port}",
     )
 
+    harvester.set_server(server)
     yield (harvester, server)
 
-    harvester._shutdown()
     server.close_all()
-    await harvester._await_shutdown()
+    harvester._shutdown()
     await server.await_closed()
+    await harvester._await_shutdown()
 
 
 async def setup_farmer(port, dic={}):
+    print("root path", root_path)
     config = load_config(root_path, "config.yaml", "farmer")
-    keychain = bt.keychain
+    config_pool = load_config(root_path, "config.yaml", "pool")
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
@@ -229,7 +246,13 @@ async def setup_farmer(port, dic={}):
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")
 
-    farmer = Farmer(config, keychain, test_constants_copy)
+    config["xch_target_puzzle_hash"] = bt.fee_target.hex()
+    config["pool_public_keys"] = [
+        bytes(epk.get_public_key()).hex() for epk in bt.keychain.get_all_public_keys()
+    ]
+    config_pool["xch_target_puzzle_hash"] = bt.fee_target.hex()
+
+    farmer = Farmer(config, config_pool, bt.keychain, test_constants_copy)
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
@@ -242,6 +265,7 @@ async def setup_farmer(port, dic={}):
         config,
         f"farmer_server_{port}",
     )
+    farmer.set_server(server)
     _ = await server.start_server(farmer._on_connect)
 
     yield (farmer, server)
@@ -268,6 +292,7 @@ async def setup_introducer(port, dic={}):
         network_id,
         bt.root_path,
         config,
+        f"introducer_server_{port}",
     )
     _ = await server.start_server(None)
 
@@ -306,6 +331,7 @@ async def setup_timelord(port, dic={}):
         network_id,
         bt.root_path,
         config,
+        f"timelord_server_{port}",
     )
 
     coro = asyncio.start_server(
@@ -336,6 +362,7 @@ async def setup_timelord(port, dic={}):
 
 
 async def setup_two_nodes(dic={}):
+
     """
     Setup and teardown of two full nodes, with blockchains and separate DBs.
     """
@@ -349,11 +376,7 @@ async def setup_two_nodes(dic={}):
 
     yield (fn1, fn2, s1, s2)
 
-    for node_iter in node_iters:
-        try:
-            await node_iter.__anext__()
-        except StopAsyncIteration:
-            pass
+    await _teardown_nodes(node_iters)
 
 
 async def setup_node_and_wallet(dic={}):
@@ -367,11 +390,7 @@ async def setup_node_and_wallet(dic={}):
 
     yield (full_node, wallet, s1, s2)
 
-    for node_iter in node_iters:
-        try:
-            await node_iter.__anext__()
-        except StopAsyncIteration:
-            pass
+    await _teardown_nodes(node_iters)
 
 
 async def setup_node_and_two_wallets(dic={}):
@@ -387,11 +406,7 @@ async def setup_node_and_two_wallets(dic={}):
 
     yield (full_node, wallet, wallet_2, s1, s2, s3)
 
-    for node_iter in node_iters:
-        try:
-            await node_iter.__anext__()
-        except StopAsyncIteration:
-            pass
+    await _teardown_nodes(node_iters)
 
 
 async def setup_simulators_and_wallets(
@@ -417,11 +432,7 @@ async def setup_simulators_and_wallets(
 
     yield (simulators, wallets)
 
-    for node_iter in node_iters:
-        try:
-            await node_iter.__anext__()
-        except StopAsyncIteration:
-            pass
+    await _teardown_nodes(node_iters)
 
 
 async def setup_full_system(dic={}):
@@ -452,11 +463,6 @@ async def setup_full_system(dic={}):
         PeerInfo("127.0.0.1", uint16(node1_server._port))
     )
 
-    yield (node1, node2)
+    yield (node1, node2, harvester, farmer, introducer, timelord, vdf)
 
-    for node_iter in node_iters:
-
-        try:
-            await node_iter.__anext__()
-        except StopAsyncIteration:
-            pass
+    await _teardown_nodes(node_iters)

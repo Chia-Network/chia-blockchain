@@ -5,6 +5,7 @@ import signal
 import time
 import traceback
 from pathlib import Path
+from blspy import ExtendedPrivateKey
 
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -28,7 +29,6 @@ from src.simulator.simulator_constants import test_constants
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.util.config import load_config_cli, load_config
 from src.util.ints import uint64
-from src.types.sized_bytes import bytes32
 from src.util.logging import initialize_logging
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.rl_wallet.rl_wallet import RLWallet
@@ -84,9 +84,7 @@ class WebSocketServer:
         except NotImplementedError:
             self.log.info("Not implemented")
 
-        private_key = self.keychain.get_wallet_key()
-        if private_key is not None:
-            await self.start_wallet()
+        await self.start_wallet()
 
         self.websocket_server = await websockets.serve(
             self.safe_handle, "localhost", self.config["rpc_port"]
@@ -95,8 +93,20 @@ class WebSocketServer:
         await self.websocket_server.wait_closed()
         self.log.info("webSocketServer closed")
 
-    async def start_wallet(self) -> bool:
-        private_key = self.keychain.get_wallet_key()
+    async def start_wallet(self, public_key_fingerprint: Optional[int] = None) -> bool:
+        private_keys = self.keychain.get_all_private_keys()
+        if len(private_keys) == 0:
+            self.log.info("No keys")
+            return False
+
+        if public_key_fingerprint is not None:
+            for sk, _ in private_keys:
+                if sk.get_public_key().get_fingerprint() == public_key_fingerprint:
+                    private_key = sk
+                    break
+        else:
+            private_key = private_keys[0][0]
+
         if private_key is None:
             self.log.info("No keys")
             return False
@@ -104,11 +114,11 @@ class WebSocketServer:
         if self.config["testing"] is True:
             log.info(f"Websocket server in testing mode")
             self.wallet_node = await WalletNode.create(
-                self.config, self.keychain, override_constants=test_constants
+                self.config, private_key, override_constants=test_constants
             )
         else:
             log.info(f"Not Testing")
-            self.wallet_node = await WalletNode.create(self.config, self.keychain)
+            self.wallet_node = await WalletNode.create(self.config, private_key)
 
         if self.wallet_node is None:
             return False
@@ -154,8 +164,8 @@ class WebSocketServer:
         self.websocket_server.close()
         if self.wallet_node is not None:
             self.wallet_node.server.close_all()
-            await self.wallet_node.wallet_state_manager.close_all_stores()
             self.wallet_node._shutdown()
+            await self.wallet_node.wallet_state_manager.close_all_stores()
 
     async def get_next_puzzle_hash(self, websocket, request, response_api):
         """
@@ -168,7 +178,7 @@ class WebSocketServer:
         if wallet.wallet_info.type == WalletType.STANDARD_WALLET:
             puzzle_hash = (await wallet.get_new_puzzlehash()).hex()
         elif wallet.wallet_info.type == WalletType.COLOURED_COIN:
-            puzzle_hash: bytes32 = await wallet.get_new_inner_hash()
+            puzzle_hash = await wallet.get_new_inner_hash()
 
         data = {
             "wallet_id": wallet_id,
@@ -561,32 +571,44 @@ class WebSocketServer:
             response = {"success": success, "reason": reason}
         return await websocket.send(format_response(response_api, response))
 
-    async def logged_in(self, websocket, response_api):
-        private_key = self.keychain.get_wallet_key()
-        if private_key is None:
-            response = {"logged_in": False}
-        else:
-            response = {"logged_in": True}
-
+    async def get_public_keys(self, websocket, response_api):
+        fingerprints = [
+            (esk.get_public_key().get_fingerprint(), seed is not None)
+            for (esk, seed) in self.keychain.get_all_private_keys()
+        ]
+        response = {"success": True, "public_key_fingerprints": fingerprints}
         return await websocket.send(format_response(response_api, response))
 
     async def log_in(self, websocket, request, response_api):
         await self.stop_wallet()
-        await self.clean_all_state()
+        fingerprint = request["fingerprint"]
+
+        started = await self.start_wallet(fingerprint)
+
+        response = {"success": started}
+        return await websocket.send(format_response(response_api, response))
+
+    async def add_key(self, websocket, request, response_api):
+        await self.stop_wallet()
         mnemonic = request["mnemonic"]
         self.log.info(f"Mnemonic {mnemonic}")
         seed = seed_from_mnemonic(mnemonic)
         self.log.info(f"Seed {seed}")
-        self.keychain.set_wallet_seed(seed)
-        k_seed = self.keychain.get_wallet_seed()
+        fingerprint = (
+            ExtendedPrivateKey.from_seed(seed).get_public_key().get_fingerprint()
+        )
+        self.keychain.add_private_key_seed(seed)
 
-        await self.start_wallet()
+        started = await self.start_wallet(fingerprint)
 
-        if k_seed == seed:
-            response = {"success": True}
-        else:
-            response = {"success": False}
+        response = {"success": started}
+        return await websocket.send(format_response(response_api, response))
 
+    async def delete_key(self, websocket, request, response_api):
+        await self.stop_wallet()
+        fingerprint = request["fingerprint"]
+        self.keychain.delete_key_by_fingerprint(fingerprint)
+        response = {"success": True}
         return await websocket.send(format_response(response_api, response))
 
     async def clean_all_state(self):
@@ -599,10 +621,11 @@ class WebSocketServer:
         if self.wallet_node is not None:
             if self.wallet_node.server is not None:
                 self.wallet_node.server.close_all()
+            self.wallet_node._shutdown()
             await self.wallet_node.wallet_state_manager.close_all_stores()
             self.wallet_node = None
 
-    async def log_out(self, websocket, response_api):
+    async def delete_all_keys(self, websocket, response_api):
         await self.stop_wallet()
         await self.clean_all_state()
         response = {"success": True}
@@ -691,14 +714,18 @@ class WebSocketServer:
             await self.respond_to_offer(websocket, data, command)
         elif command == "get_wallet_summaries":
             await self.get_wallet_summaries(websocket, data, command)
-        elif command == "logged_in":
-            await self.logged_in(websocket, command)
+        elif command == "get_public_keys":
+            await self.get_public_keys(websocket, command)
         elif command == "generate_mnemonic":
             await self.generate_mnemonic(websocket, command)
         elif command == "log_in":
             await self.log_in(websocket, data, command)
-        elif command == "log_out":
-            await self.log_out(websocket, command)
+        elif command == "add_key":
+            await self.add_key(websocket, data, command)
+        elif command == "delete_key":
+            await self.delete_key(websocket, data, command)
+        elif command == "delete_all_keys":
+            await self.delete_all_keys(websocket, command)
         else:
             response = {"error": f"unknown_command {command}"}
             await websocket.send(dict_to_json_str(response))
@@ -735,7 +762,7 @@ async def start_websocket_server():
     """
 
     setproctitle("chia-wallet")
-    keychain = Keychain.create(testing=False)
+    keychain = Keychain(testing=False)
     websocket_server = WebSocketServer(keychain, DEFAULT_ROOT_PATH)
     await websocket_server.start()
     log.info("Wallet fully closed")

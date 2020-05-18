@@ -45,6 +45,8 @@ class FullNodeView {
             lca_height: 0,
             lca_timestamp: 1585023165,
             syncing: false,
+            sync_tip_height: 0,
+            sync_progress_height: 0,
             difficulty: 0,
             ips: 0,
             min_iters: 0,
@@ -226,7 +228,8 @@ class FullNodeView {
     }
 
     async update_view(redisplay_blocks) {
-        syncing_textfield.innerHTML = this.state.syncing ? "Yes" : "No";
+        let sync_info = "Verif. blocks " + this.state.sync_progress_height + "/" + this.state.sync_tip_height;
+        syncing_textfield.innerHTML = this.state.syncing ? sync_info : "No";
         block_height_textfield.innerHTML = this.state.lca_height;
         max_block_height_textfield.innerHTML = this.state.max_height;
         lca_time_textfield.innerHTML = unix_to_short_date(this.state.lca_timestamp);
@@ -345,7 +348,9 @@ class FullNodeView {
             this.state.lca_height = blockchain_state.lca.data.height;
             this.state.lca_hash = await hash_header(blockchain_state.lca);
             this.state.lca_timestamp = blockchain_state.lca.data.timestamp;
-            this.state.syncing = blockchain_state.sync_mode;
+            this.state.syncing = blockchain_state.sync.sync_mode;
+            this.state.sync_tip_height = blockchain_state.sync.sync_tip_height;
+            this.state.sync_progress_height = blockchain_state.sync.sync_progress_height;
             this.state.difficulty = blockchain_state.difficulty;
             this.state.ips = blockchain_state.ips;
             this.state.min_iters = blockchain_state.min_iters;

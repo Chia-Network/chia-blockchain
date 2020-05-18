@@ -5,7 +5,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 import { withRouter, Redirect } from "react-router-dom";
 import { connect, useDispatch, useSelector } from "react-redux";
-import { log_out } from "../modules/message";
+import { delete_all_keys } from "../modules/message";
 import clsx from "clsx";
 import Drawer from "@material-ui/core/Drawer";
 import List from "@material-ui/core/List";
@@ -140,7 +140,7 @@ const WalletItem = props => {
 const WalletList = () => {
   const wallets = useSelector(state => state.wallet_state.wallets);
 
-  return wallets.map(wallet => <WalletItem wallet_id={wallet.id}></WalletItem>);
+  return wallets.map(wallet => <WalletItem wallet_id={wallet.id} key={wallet.id}></WalletItem>);
 };
 
 const WalletViewSwitch = () => {
@@ -228,9 +228,6 @@ const Wallets = () => {
     setOpen(false);
   };
   const fixedHeightPaper = clsx(classes.paper, classes.fixedHeight);
-  function log_out_click() {
-    dispatch(log_out());
-  }
   if (!logged_in) {
     console.log("Redirecting to start");
     return <Redirect to="/" />;

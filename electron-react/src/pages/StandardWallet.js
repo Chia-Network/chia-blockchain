@@ -5,7 +5,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 import { withRouter, Redirect } from "react-router-dom";
 import { connect, useDispatch, useSelector } from "react-redux";
-import { log_out } from "../modules/message";
+import { delete_all_keys } from "../modules/message";
 import clsx from "clsx";
 import Drawer from "@material-ui/core/Drawer";
 import List from "@material-ui/core/List";
@@ -441,7 +441,7 @@ const TransactionTable = props => {
         </TableHead>
         <TableBody className={classes.tableBody}>
           {transactions.map(tx => (
-            <TableRow className={classes.row}>
+            <TableRow className={classes.row} key={tx.to_puzzle_hash + tx.created_at_time + tx.amount}>
               <TableCell className={classes.cell_short}>
                 {incoming_string(tx.incoming)}
               </TableCell>

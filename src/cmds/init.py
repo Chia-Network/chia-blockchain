@@ -3,7 +3,7 @@ import shutil
 
 from argparse import Namespace, ArgumentParser
 from typing import List, Tuple, Dict, Any
-from blspy import ExtendedPrivateKey
+from blspy import ExtendedPrivateKey, PrivateKey
 from src.util.keychain import Keychain
 
 from src.types.BLSSignature import BLSPublicKey
@@ -42,45 +42,79 @@ def dict_add_new_default(
 
 
 def check_keys(new_root):
-    print("\nchecking keys.yaml")
-    keys_config = load_config(new_root, "keys.yaml")
-
-    wallet_sk = ExtendedPrivateKey.from_bytes(bytes.fromhex(keys_config["wallet_sk"]))
-    wallet_target = create_puzzlehash_for_pk(
-        BLSPublicKey(bytes(wallet_sk.public_child(0).get_public_key()))
-    )
-    if (
-        wallet_target.hex() != keys_config["wallet_target"]
-        or wallet_target.hex() != keys_config["pool_target"]
-    ):
-        keys_config["wallet_target"] = wallet_target.hex()
-        keys_config["pool_target"] = wallet_target.hex()
-        print(f"updating wallet target and pool target to {wallet_target.hex()}")
-        save_config(new_root, "keys.yaml", keys_config)
-
-
-# Leave check_keys as a backup for now, remove it later
-def migrate_to_keychain(new_root):
-    keychain: Keychain = Keychain.create()
-    print("\nMigrating keys.yaml to keychain")
-    keys_config = load_config(new_root, "keys.yaml")
-    seed = keychain.get_wallet_seed()
-    raw_key = keychain.get_wallet_key_raw()
-    if seed is not None or raw_key is not None:
-        print("\nkeys already in keychain")
+    keychain: Keychain = Keychain()
+    all_pubkeys = keychain.get_all_public_keys()
+    if len(all_pubkeys) == 0:
+        print(
+            "No keys are present in the keychain. Generate them with 'chia keys generate_and_add'"
+        )
         return
-    wallet_key_bytes = bytes.fromhex(keys_config["wallet_sk"])
-    wallet_sk = ExtendedPrivateKey.from_bytes(wallet_key_bytes)
-    wallet_target = create_puzzlehash_for_pk(
-        BLSPublicKey(bytes(wallet_sk.public_child(0).get_public_key()))
-    )
-    keychain.set_wallet_raw_key(wallet_key_bytes)
-    keychain.set_wallet_target(wallet_target)
-    keychain.set_pool_target(wallet_target)
+    all_targets = [
+        create_puzzlehash_for_pk(
+            BLSPublicKey(bytes(epk.public_child(0).get_public_key()))
+        ).hex()
+        for epk in all_pubkeys
+    ]
+
+    config: Dict = load_config(new_root, "config.yaml")
+    # Set the destinations
+    if (
+        "xch_target_puzzle_hash" not in config["farmer"]
+        or config["farmer"]["xch_target_puzzle_hash"] not in all_targets
+    ):
+        print(
+            f"Setting the xch destination address for coinbase fees reward to {all_targets[0]}"
+        )
+        config["farmer"]["xch_target_puzzle_hash"] = all_targets[0]
+
+    if (
+        "xch_target_puzzle_hash" not in config["pool"]
+        or config["pool"]["xch_target_puzzle_hash"] not in all_targets
+    ):
+        print(
+            f"Setting the xch destination address for coinbase reward to {all_targets[0]}"
+        )
+        config["pool"]["xch_target_puzzle_hash"] = all_targets[0]
+
+    # Set the pool pks in the farmer
+    all_pubkeys_hex = set([bytes(pk.get_public_key()).hex() for pk in all_pubkeys])
+    for pk_hex in config["farmer"]["pool_public_keys"]:
+        # Add original ones in config
+        all_pubkeys_hex.add(pk_hex)
+
+    config["farmer"]["pool_public_keys"] = all_pubkeys_hex
+    save_config(new_root, "config.yaml", config)
+
+
+def migrate_to_keychain(old_root, new_root):
+    # Transfer the keys from the old root config folder into the keychain.
+    # Also set the right public keys in the config files for farming.
+
+    print("\nMigrating keys.yaml to keychain")
+    keychain: Keychain = Keychain()
+
+    # Migrate wallet sk
+    try:
+        keys_config = load_config(old_root, "keys.yaml", exit_on_error=False)
+        wallet_key_bytes = bytes.fromhex(keys_config["wallet_sk"])
+        wallet_sk = ExtendedPrivateKey.from_bytes(wallet_key_bytes)
+        keychain.add_private_key(wallet_sk)
+
+        # Migrate pool sks
+        pool_sks_bytes = [bytes.fromhex(h) for h in keys_config["pool_sks"]]
+        for k_bytes in pool_sks_bytes:
+            keychain.add_private_key_not_extended(PrivateKey.from_bytes(k_bytes))
+    except ValueError:
+        print("No keys.yaml to migrate from.")
+
+    check_keys(new_root)
 
 
 def migrate_from(
-    old_root: Path, new_root: Path, manifest: List[str], do_not_migrate_keys: List[str]
+    old_root: Path,
+    new_root: Path,
+    manifest: List[str],
+    do_not_migrate_settings: List[str],
 ):
     """
     Copy all the files in "manifest" to the new config directory.
@@ -108,7 +142,7 @@ def migrate_from(
     config: Dict = load_config(new_root, "config.yaml")
     config_str: str = initial_config_file("config.yaml")
     default_config: Dict = yaml.safe_load(config_str)
-    flattened_keys = unflatten_properties({k: "" for k in do_not_migrate_keys})
+    flattened_keys = unflatten_properties({k: "" for k in do_not_migrate_settings})
     dict_add_new_default(config, default_config, flattened_keys)
 
     save_config(new_root, "config.yaml", config)
@@ -148,9 +182,6 @@ def migrate_from(
         "\nYour plots have not been moved so be careful deleting old preferences folders."
     )
 
-    check_keys(new_root)
-    migrate_to_keychain(new_root)
-
     print("\nIf you want to move your plot files, you should also modify")
     print(f"{config_path_for_filename(new_root, 'plots.yaml')}")
     return 1
@@ -182,14 +213,15 @@ def chia_init(args: Namespace):
 
     print(f"migrating to {root_path}")
     if root_path.is_dir():
-        check_keys(root_path)
-        migrate_to_keychain(root_path)
+        # This is reached if CHIA_ROOT is set, or if user has run chia init twice
+        # before a new update.
+        migrate_to_keychain(root_path, root_path)
 
         print(f"{root_path} already exists, no migration action taken")
         return -1
 
     # These are the config keys that will not be migrated, and instead the default is used
-    DO_NOT_MIGRATE_KEYS: List[str] = [
+    DO_NOT_MIGRATE_SETTINGS: List[str] = [
         "full_node.introducer_peer",
         "wallet.introducer_peer",
     ]
@@ -198,23 +230,27 @@ def chia_init(args: Namespace):
     MANIFEST: List[str] = [
         "config/config.yaml",
         "config/plots.yaml",
-        "config/keys.yaml",
         "config/trusted.crt",
         "config/trusted.key",
     ]
 
     PATH_MANIFEST_LIST: List[Tuple[Path, List[str]]] = [
         (Path(os.path.expanduser("~/.chia/beta-%s" % _)), MANIFEST)
-        for _ in ["1.0b5.dev0", "1.0b4", "1.0b3", "1.0b2", "1.0b1"]
+        for _ in ["1.0b5", "1.0b5.dev0", "1.0b4", "1.0b3", "1.0b2", "1.0b1"]
     ]
 
     for old_path, manifest in PATH_MANIFEST_LIST:
-        r = migrate_from(old_path, root_path, manifest, DO_NOT_MIGRATE_KEYS)
+        # This is reached if the user has updated the application, and therefore a new configuration
+        # folder must be used. First we migrate the config fies, and then we migrate the private keys.
+        r = migrate_from(old_path, root_path, manifest, DO_NOT_MIGRATE_SETTINGS)
         if r:
+            migrate_to_keychain(old_path, root_path)
             break
     else:
         create_default_chia_config(root_path)
         initialize_ssl(root_path)
-        print("Please generate your keys with 'chia generate keys'")
+        print("")
+        print("To see your keys, run 'chia keys show'")
+        print("Please generate your keys with 'chia keys generate_and_add.'")
 
     return 0

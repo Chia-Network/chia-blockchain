@@ -13,6 +13,11 @@ harvester:
   farmer_peer:
     host: 127.0.0.1
     port: 8447
+
+  # If True, starts an RPC server at the following port
+  start_rpc_server: True
+  rpc_port: 8560
+
   # Location of all the plots, default ./plots, for relative paths in plots.yaml.
   # plot_root: "/mnt/pos"
   logging: *logging
@@ -22,6 +27,8 @@ harvester:
   ssl:
     crt: "trusted.crt"
     key: "trusted.key"
+
+pool: {}
 
 farmer:
   # The farmer server (if run) will run on this port
@@ -33,6 +40,13 @@ farmer:
   harvester_peer:
     host: 127.0.0.1
     port: 8448
+
+  # If True, starts an RPC server at the following port
+  start_rpc_server: True
+  rpc_port: 8559
+
+  pool_public_keys: {}
+
   # To send a share to a pool, a block must be faster than this, in seconds
   pool_share_threshold: 50000
   # To send to the full node, a block must be faster than this, in seconds

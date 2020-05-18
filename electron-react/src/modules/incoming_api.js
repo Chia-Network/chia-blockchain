@@ -1,3 +1,5 @@
+import { CardActions } from "@material-ui/core";
+
 export const Wallet = (id, name, type, data) => ({
   id: id,
   name: name,
@@ -45,6 +47,7 @@ export const initial_wallet = Wallet(1, "Chia Wallet", "STANDARD_WALLET", "");
 
 const initial_state = {
   mnemonic: [],
+  public_key_fingerprints: [],
   logged_in: false,
   wallets: [, initial_wallet],
   status: {
@@ -56,21 +59,28 @@ const initial_state = {
 
 export const incomingReducer = (state = { ...initial_state }, action) => {
   switch (action.type) {
+    case "LOG_OUT":
+      if (action.command === "log_out") {
+        return { ...state, logged_in: false };
+      }
     case "INCOMING_MESSAGE":
       if (action.command === "generate_mnemonic") {
         var mnemonic_data = action.data.mnemonic;
         return { ...state, mnemonic: mnemonic_data };
+      } else if (action.command === "add_key") {
+        var success = action.data.success;
+        return { ...state, logged_in: success };
       } else if (action.command === "log_in") {
         var success = action.data.success;
         return { ...state, logged_in: success };
-      } else if (action.command === "log_out") {
+      } else if (action.command === "delete_all_keys") {
         var success = action.data.success;
         if (success) {
-          return { ...state, logged_in: false };
+          return { ...state, logged_in: false, public_key_fingerprints: [] };
         }
-      } else if (action.command === "logged_in") {
-        var logged_in = action.data.logged_in;
-        return { ...state, logged_in: logged_in };
+      } else if (action.command === "get_public_keys") {
+        var public_key_fingerprints = action.data.public_key_fingerprints;
+        return { ...state, public_key_fingerprints: public_key_fingerprints };
       } else if (action.command === "start_server") {
         var started = action.data.success;
         return { ...state, server_started: started };

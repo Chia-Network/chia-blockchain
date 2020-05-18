@@ -6,11 +6,11 @@ import concurrent
 import random
 import logging
 import traceback
+from blspy import ExtendedPrivateKey
 
 from src.full_node.full_node import OutboundMessageGenerator
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
-from src.util.keychain import Keychain
 from src.util.merkle_set import (
     confirm_included_already_hashed,
     confirm_not_included_already_hashed,
@@ -76,7 +76,7 @@ class WalletNode:
     @staticmethod
     async def create(
         config: Dict,
-        keychain: Keychain,
+        private_key: ExtendedPrivateKey,
         name: str = None,
         override_constants: Dict = {},
     ):
@@ -90,11 +90,14 @@ class WalletNode:
         else:
             self.log = logging.getLogger(__name__)
 
-        path = path_from_root(DEFAULT_ROOT_PATH, config["database_path"])
+        db_path_key_suffix = str(private_key.get_public_key().get_fingerprint())
+        path = path_from_root(
+            DEFAULT_ROOT_PATH, f"{config['database_path']}-{db_path_key_suffix}"
+        )
         mkdir(path.parent)
 
         self.wallet_state_manager = await WalletStateManager.create(
-            keychain, config, path, self.constants
+            private_key, config, path, self.constants
         )
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
 
@@ -139,6 +142,8 @@ class WalletNode:
         return result
 
     async def _resend_queue(self):
+        if self._shut_down:
+            return
         if self.server is None:
             return
 
@@ -712,6 +717,8 @@ class WalletNode:
         Notification from full node that a new LCA (Least common ancestor of the three blockchain
         tips) has been added to the full node.
         """
+        if self._shut_down:
+            return
         if self.wallet_state_manager.sync_mode:
             return
         # If already seen LCA, ignore.
@@ -753,6 +760,8 @@ class WalletNode:
         until we have the required additions / removals for our wallets.
         """
         while True:
+            if self._shut_down:
+                return
             # We loop, to avoid infinite recursion. At the end of each iteration, we might want to
             # process the next block, if it exists.
 
@@ -867,6 +876,8 @@ class WalletNode:
         The full node has responded with the additions for a block. We will use this
         to try to finish the block, and add it to the state.
         """
+        if self._shut_down:
+            return
         if response.header_hash not in self.cached_blocks:
             self.log.warning("Do not have header for additions")
             return
@@ -1006,6 +1017,8 @@ class WalletNode:
         The full node has responded with the removals for a block. We will use this
         to try to finish the block, and add it to the state.
         """
+        if self._shut_down:
+            return
         if (
             response.header_hash not in self.cached_blocks
             or self.cached_blocks[response.header_hash][0].additions is None

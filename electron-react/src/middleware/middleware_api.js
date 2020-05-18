@@ -15,20 +15,28 @@ export const handle_message = (store, payload) => {
     store.dispatch(incomingMessage(payload.command, payload.data))
     if (payload.command == "start_server") {
         console.log("fetch state")
-        store.dispatch(format_message("logged_in", {}))
+        store.dispatch(format_message("get_public_keys", {}))
+    }
+    else if (payload.command == "log_in") {
         store.dispatch(format_message("get_wallets", {}))
         store.dispatch(get_height_info())
         store.dispatch(get_sync_status())
         store.dispatch(get_connection_info())
     }
-    else if (payload.command == "log_in") {
+    else if (payload.command == "add_key") {
         if (payload.data.success) {
             store.dispatch(format_message("get_wallets", {}))
+            store.dispatch(format_message("get_public_keys", {}))
         }
     }
-    else if (payload.command == "logged_in") {
-        if (payload.data.logged_in) {
-            store.dispatch(format_message("get_wallets", {}))
+    else if (payload.command == "delete_key") {
+        if (payload.data.success) {
+            store.dispatch(format_message("get_public_keys", {}))
+        }
+    }
+    else if (payload.command == "delete_all_keys") {
+        if (payload.data.success) {
+            store.dispatch(format_message("get_public_keys", {}))
         }
     }
     else if (payload.command == "get_wallets") {
@@ -48,7 +56,7 @@ export const handle_message = (store, payload) => {
     } else if (payload.command == "state_changed") {
         console.log(payload.data.state)
         console.log(payload)
-        const state = payload.data.state 
+        const state = payload.data.state
         if (state === "coin_added" || state === "coin_removed") {
             var wallet_id = payload.data.wallet_id
             console.log("WLID " + wallet_id)
@@ -80,7 +88,7 @@ export const handle_message = (store, payload) => {
     } else if (payload.command === "respond_to_offer") {
         if (payload.data.success) {
             store.dispatch(openDialog("Success!", "Offer accepted"))
-        } 
+        }
         store.dispatch(resetTrades())
     }
     if (payload.data.success == false) {

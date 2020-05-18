@@ -1,7 +1,4 @@
-import dataclasses
-import json
-
-from typing import Any, Callable, List, Optional
+from typing import Callable, List, Optional
 
 from aiohttp import web
 
@@ -12,35 +9,16 @@ from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32, uint64
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
-
-
-class EnhancedJSONEncoder(json.JSONEncoder):
-    """
-    Encodes bytes as hex strings with 0x, and converts all dataclasses to json.
-    """
-
-    def default(self, o: Any):
-        if dataclasses.is_dataclass(o):
-            return o.to_json_dict()
-        elif hasattr(type(o), "__bytes__"):
-            return f"0x{bytes(o).hex()}"
-        return super().default(o)
-
-
-def obj_to_response(o: Any) -> web.Response:
-    """
-    Converts a python object into json.
-    """
-    json_str = json.dumps(o, cls=EnhancedJSONEncoder, sort_keys=True)
-    return web.Response(body=json_str, content_type="application/json")
+from src.util.network import obj_to_response
+from src.consensus.pot_iterations import calculate_min_iters_from_iterations
 
 
 class RpcApiHandler:
     """
     Implementation of full node RPC API.
-    Note that this is not the same as the peer protocol, or wallet protocol (which run Chia's
-    protocol on top of TCP), it's a separate protocol on top of HTTP thats provides easy access
-    to the full node.
+    Note that this is not the same as the peer protocol, or wallet protocol
+    (which run Chia's protocol on top of TCP), it's a separate protocol on top
+    of HTTP thats provides easy access to the full node.
     """
 
     def __init__(self, full_node: FullNode, stop_cb: Callable):
@@ -53,10 +31,8 @@ class RpcApiHandler:
         """
         tips: List[Header] = self.full_node.blockchain.get_current_tips()
         lca: Header = self.full_node.blockchain.lca_block
-        sync_mode: bool = self.full_node.full_node_store.get_sync_mode()
-        difficulty: uint64 = self.full_node.blockchain.get_next_difficulty(
-            lca.header_hash
-        )
+        sync_mode: bool = self.full_node.sync_store.get_sync_mode()
+        difficulty: uint64 = self.full_node.blockchain.get_next_difficulty(lca)
         lca_block = await self.full_node.block_store.get_block(lca.header_hash)
         if lca_block is None:
             raise web.HTTPNotFound()
@@ -69,12 +45,24 @@ class RpcApiHandler:
         tip_hashes = []
         for tip in tips:
             tip_hashes.append(tip.header_hash)
+        if sync_mode and self.full_node.sync_peers_handler is not None:
+            sync_tip_height = len(self.full_node.sync_store.get_potential_hashes())
+            sync_progress_height = (
+                self.full_node.sync_peers_handler.fully_validated_up_to
+            )
+        else:
+            sync_tip_height = 0
+            sync_progress_height = uint32(0)
 
         response = {
             "tips": tips,
             "tip_hashes": tip_hashes,
             "lca": lca,
-            "sync_mode": sync_mode,
+            "sync": {
+                "sync_mode": sync_mode,
+                "sync_tip_height": sync_tip_height,
+                "sync_progress_height": sync_progress_height,
+            },
             "difficulty": difficulty,
             "ips": ips,
             "min_iters": min_iters,
@@ -139,8 +127,92 @@ class RpcApiHandler:
         ).values():
             if block.height == height:
                 response_headers.append(block.header)
-
         return obj_to_response(response_headers)
+
+    async def get_total_miniters(self, newer_block, older_block) -> Optional[uint64]:
+        """
+        Calculates the sum of min_iters from all blocks starting from
+        old and up to and including new_block, but not including old_block.
+        """
+        older_block_parent = await self.full_node.block_store.get_block(
+            older_block.prev_header_hash
+        )
+        if older_block_parent is None:
+            return None
+        older_diff = older_block.weight - older_block_parent.weight
+        curr_mi = calculate_min_iters_from_iterations(
+            older_block.proof_of_space,
+            older_diff,
+            older_block.proof_of_time.number_of_iterations,
+        )
+        # We do not count the min iters in the old block, since it's not included in the range
+        total_mi: uint64 = uint64(0)
+        for curr_h in range(older_block.height + 1, newer_block.height + 1):
+            if (
+                curr_h % self.full_node.constants["DIFFICULTY_EPOCH"]
+            ) == self.full_node.constants["DIFFICULTY_DELAY"]:
+                curr_b_header = self.full_node.blockchain.height_to_hash.get(
+                    uint32(int(curr_h))
+                )
+                if curr_b_header is None:
+                    return None
+                curr_b_block = await self.full_node.block_store.get_block(
+                    curr_b_header.header_hash
+                )
+                if curr_b_block is None or curr_b_block.proof_of_time is None:
+                    return None
+                curr_parent = await self.full_node.block_store.get_block(
+                    curr_b_block.prev_header_hash
+                )
+                if curr_parent is None:
+                    return None
+                curr_diff = curr_b_block.weight - curr_parent.weight
+                curr_mi = calculate_min_iters_from_iterations(
+                    curr_b_block.proof_of_space,
+                    uint64(curr_diff),
+                    curr_b_block.proof_of_time.number_of_iterations,
+                )
+                if curr_mi is None:
+                    raise web.HTTPBadRequest()
+            total_mi = uint64(total_mi + curr_mi)
+
+        # print("Minimum iterations:", total_mi)
+        return total_mi
+
+    async def get_network_space(self, request) -> web.Response:
+        """
+        Retrieves an estimate of total space validating the chain
+        between two block header hashes.
+        """
+        request_data = await request.json()
+        if (
+            "newer_block_header_hash" not in request_data
+            or "older_block_header_hash" not in request_data
+        ):
+            raise web.HTTPBadRequest()
+        newer_block_bytes = hexstr_to_bytes(request_data["newer_block_header_hash"])
+        older_block_bytes = hexstr_to_bytes(request_data["older_block_header_hash"])
+        newer_block = await self.full_node.block_store.get_block(newer_block_bytes)
+        if newer_block is None:
+            raise web.HTTPNotFound()
+        older_block = await self.full_node.block_store.get_block(older_block_bytes)
+        if older_block is None:
+            raise web.HTTPNotFound()
+        delta_weight = newer_block.header.data.weight - older_block.header.data.weight
+        delta_iters = (
+            newer_block.header.data.total_iters - older_block.header.data.total_iters
+        )
+        total_min_inters = await self.get_total_miniters(newer_block, older_block)
+        if total_min_inters is None:
+            raise web.HTTPNotFound()
+        delta_iters -= total_min_inters
+        weight_div_iters = delta_weight / delta_iters
+        tips_adjustment_constant = 0.65
+        network_space_constant = 2 ** 32  # 2^32
+        network_space_bytes_estimate = (
+            weight_div_iters * network_space_constant * tips_adjustment_constant
+        )
+        return obj_to_response(network_space_bytes_estimate)
 
     async def get_connections(self, request) -> web.Response:
         """
@@ -236,7 +308,7 @@ class RpcApiHandler:
         tip_weights = [tip.weight for tip in tips]
         i = tip_weights.index(max(tip_weights))
         max_tip: Header = tips[i]
-        if self.full_node.full_node_store.get_sync_mode():
+        if self.full_node.sync_store.get_sync_mode():
             potential_tips = self.full_node.sync_store.get_potential_tips_tuples()
             for _, pot_block in potential_tips:
                 if pot_block.weight > max_tip.weight:
@@ -263,6 +335,7 @@ async def start_rpc_server(
             web.post(
                 "/get_unfinished_block_headers", handler.get_unfinished_block_headers
             ),
+            web.post("/get_network_space", handler.get_network_space),
             web.post("/get_connections", handler.get_connections),
             web.post("/open_connection", handler.open_connection),
             web.post("/close_connection", handler.close_connection),
