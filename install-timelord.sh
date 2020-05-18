@@ -22,6 +22,8 @@ else
     echo "Installing chiavdf from source on Ubuntu/Debian"
     # Install needed development tools
     sudo apt-get install cmake libgmp-dev libboost-python-dev libpython3.7-dev libboost-system-dev -y
+    echo pip install pybind11==2.5.0
+    pip install pybind11==2.5.0
     echo venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
     venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
     ln -s venv/lib/python3.7/site-packages/vdf_bench
@@ -31,6 +33,8 @@ else
     brew install boost
     echo "installing chiavdf from source for MacOS"
     # User needs to provide required packages
+    echo pip install pybind11==2.5.0
+    pip install pybind11==2.5.0
     echo venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
     venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
     ln -s venv/lib/python3.7/site-packages/vdf_bench
