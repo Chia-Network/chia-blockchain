@@ -39,7 +39,7 @@ class TestRpc:
                 pass
 
         def stop_node_cb():
-            full_node_1._shutdown()
+            full_node_1._close()
             server_1.close_all()
 
         rpc_cleanup = await start_rpc_server(full_node_1, stop_node_cb, test_rpc_port)
@@ -48,7 +48,7 @@ class TestRpc:
             client = await RpcClient.create(test_rpc_port)
             state = await client.get_blockchain_state()
             assert state["lca"].header_hash is not None
-            assert not state["sync_mode"]
+            assert not state["sync"]["sync_mode"]
             assert len(state["tips"]) > 0
             assert state["difficulty"] > 0
             assert state["ips"] > 0
