@@ -122,6 +122,9 @@ const useStyles = makeStyles(theme => ({
     "&:hover": {
       backgroundColor: "#aaaaaa"
     }
+  },
+  block_header: {
+    marginBottom: 10
   }
 }));
 
@@ -258,6 +261,20 @@ const BlocksCard = () => {
           </div>
         </Grid>
         <Grid item xs={12}>
+          <Box
+            className={classes.block_header}
+            onClick={clickedBlock}
+            display="flex"
+            key={"header"}
+            style={{ minWidth: "100%" }}
+          >
+            <Box className={classes.left_block_cell}>Header Hash</Box>
+            <Box className={classes.center_block_cell_small}>Height</Box>
+            <Box flexGrow={1} className={classes.center_block_cell}>
+              Time Created
+            </Box>
+            <Box className={classes.right_block_cell}>Time Finished</Box>
+          </Box>
           {headers.map(header => (
             <Box
               className={classes.block_row}
