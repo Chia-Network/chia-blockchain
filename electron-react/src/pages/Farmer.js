@@ -17,20 +17,20 @@ import TableCell from "@material-ui/core/TableCell";
 import TableContainer from "@material-ui/core/TableContainer";
 import TableHead from "@material-ui/core/TableHead";
 import DeleteForeverIcon from "@material-ui/icons/DeleteForever";
+import List from '@material-ui/core/List';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemText from '@material-ui/core/ListItemText';
 
 import DonutLargeIcon from "@material-ui/icons/DonutLarge";
 import HourglassEmptyIcon from "@material-ui/icons/HourglassEmpty";
-import { unix_to_short_date } from "../util/utils";
-import { service_connection_types } from "../util/service_names";
+
 import { calculateSizeFromK } from "../util/plot_sizes";
 import { closeConnection, openConnection } from "../modules/farmerMessages";
 import { refreshPlots, deletePlot } from "../modules/harvesterMessages";
-import TextField from "@material-ui/core/TextField";
-import SettingsInputAntennaIcon from "@material-ui/icons/SettingsInputAntenna";
+
 import TablePagination from "@material-ui/core/TablePagination";
 import RefreshIcon from "@material-ui/icons/Refresh";
-
-const drawerWidth = 180;
+import Connections from "./Connections";
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -40,46 +40,11 @@ const useStyles = makeStyles(theme => ({
   tabs: {
     flexGrow: 1
   },
-  form: {
-    margin: theme.spacing(1)
-  },
   clickable: {
     cursor: "pointer"
   },
-  error: {
-    color: "red"
-  },
   refreshButton: {
     marginLeft: "20px"
-  },
-  menuButton: {
-    marginRight: 36
-  },
-  menuButtonHidden: {
-    display: "none"
-  },
-  title: {
-    flexGrow: 1
-  },
-  drawerPaper: {
-    position: "relative",
-    whiteSpace: "nowrap",
-    width: drawerWidth,
-    transition: theme.transitions.create("width", {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen
-    })
-  },
-  drawerPaperClose: {
-    overflowX: "hidden",
-    transition: theme.transitions.create("width", {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen
-    }),
-    width: theme.spacing(7),
-    [theme.breakpoints.up("sm")]: {
-      width: theme.spacing(9)
-    }
   },
   content: {
     flexGrow: 1,
@@ -91,32 +56,8 @@ const useStyles = makeStyles(theme => ({
     paddingBottom: theme.spacing(0),
     paddingRight: theme.spacing(0)
   },
-  paper: {
-    padding: theme.spacing(0),
-    display: "flex",
-    overflow: "auto",
-    flexDirection: "column"
-  },
-  fixedHeight: {
-    height: 240
-  },
-  drawerWallet: {
-    position: "relative",
-    whiteSpace: "nowrap",
-    width: drawerWidth,
-    height: "100%",
-    transition: theme.transitions.create("width", {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen
-    })
-  },
   balancePaper: {
     marginTop: theme.spacing(2)
-  },
-  bottomOptions: {
-    position: "absolute",
-    bottom: 0,
-    width: "100%"
   },
   cardTitle: {
     paddingLeft: theme.spacing(1),
@@ -200,126 +141,6 @@ const FarmerStatus = props => {
   );
 };
 
-const Connections = props => {
-  const classes = useStyles();
-  const dispatch = useDispatch();
-  const connections = useSelector(
-    state => state.farming_state.farmer.connections
-  );
-  const connection_error = useSelector(
-    state => state.farming_state.farmer.open_connection_error
-  );
-  const [host, setHost] = React.useState("");
-  const handleChangeHost = event => {
-    setHost(event.target.value);
-  };
-
-  const [port, setPort] = React.useState("");
-  const handleChangePort = event => {
-    setPort(event.target.value);
-  };
-
-  const deleteConnection = node_id => {
-    return () => {
-      dispatch(closeConnection(node_id));
-    };
-  };
-  const connectToPeer = () => {
-    dispatch(openConnection(host, port));
-    setHost("");
-    setPort("");
-  };
-
-  return (
-    <Paper className={classes.balancePaper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              Connections
-            </Typography>
-          </div>
-          <TableContainer component={Paper}>
-            <Table
-              className={classes.table}
-              size="small"
-              aria-label="a dense table"
-            >
-              <TableHead>
-                <TableRow>
-                  <TableCell>Node Id</TableCell>
-                  <TableCell align="right">Ip address</TableCell>
-                  <TableCell align="right">Port</TableCell>
-                  <TableCell align="right">Connected</TableCell>
-                  <TableCell align="right">Last message</TableCell>
-                  <TableCell align="right">Up/Down</TableCell>
-                  <TableCell align="right">Connection type</TableCell>
-                  <TableCell align="right">Delete</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {connections.map(item => (
-                  <TableRow key={item.node_id}>
-                    <TableCell component="th" scope="row">
-                      {item.node_id.substring(0, 10)}...
-                    </TableCell>
-                    <TableCell align="right">{item.peer_host}</TableCell>
-                    <TableCell align="right">
-                      {item.peer_port}/{item.peer_server_port}
-                    </TableCell>
-                    <TableCell align="right">
-                      {unix_to_short_date(parseInt(item.creation_time))}
-                    </TableCell>
-                    <TableCell align="right">
-                      {unix_to_short_date(parseInt(item.last_message_time))}
-                    </TableCell>
-                    <TableCell align="right">
-                      {Math.floor(item.bytes_written / 1024)}/
-                      {Math.floor(item.bytes_read / 1024)} KB
-                    </TableCell>
-                    <TableCell align="right">
-                      {service_connection_types[item.type]}
-                    </TableCell>
-                    <TableCell
-                      className={classes.clickable}
-                      onClick={deleteConnection(item.node_id)}
-                      align="right"
-                    >
-                      <DeleteForeverIcon></DeleteForeverIcon>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          <h4>Connect to Harvesters</h4>
-          <form className={classes.form} noValidate autoComplete="off">
-            <TextField
-              label="Ip address / host"
-              value={host}
-              onChange={handleChangeHost}
-            />
-            <TextField label="Port" value={port} onChange={handleChangePort} />
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={connectToPeer}
-              className={classes.button}
-              startIcon={<SettingsInputAntennaIcon />}
-            >
-              Connect
-            </Button>
-          </form>
-          {connection_error === "" ? (
-            ""
-          ) : (
-            <p className={classes.error}>{connection_error}</p>
-          )}
-        </Grid>
-      </Grid>
-    </Paper>
-  );
-};
 const Challenges = props => {
   const classes = useStyles();
   var latest_challenges = useSelector(
@@ -329,7 +150,6 @@ const Challenges = props => {
   if (!latest_challenges) {
     latest_challenges = [];
   }
-
   return (
     <Paper className={classes.balancePaper}>
       <Grid container spacing={0}>
@@ -362,8 +182,7 @@ const Challenges = props => {
                     <TableCell align="right">{item.height}</TableCell>
                     <TableCell align="right">{item.estimates.length}</TableCell>
                     <TableCell align="right">
-                      {Math.floor(Math.min.apply(Math, item.estimates) / 60)}{" "}
-                      minutes
+                      {item.estimates.length > 0 ? (Math.floor(Math.min.apply(Math, item.estimates) / 60)).toString() + " minutes" : "" }
                     </TableCell>
                   </TableRow>
                 ))}
@@ -380,6 +199,8 @@ const Plots = props => {
   const classes = useStyles();
   const dispatch = useDispatch();
   const plots = useSelector(state => state.farming_state.harvester.plots);
+  const not_found_filenames = useSelector(state => state.farming_state.harvester.not_found_filenames);
+  const failed_to_open_filenames = useSelector(state => state.farming_state.harvester.failed_to_open_filenames);
   plots.sort((a, b) => b.size - a.size);
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
@@ -477,6 +298,37 @@ const Plots = props => {
             onChangePage={handleChangePage}
             onChangeRowsPerPage={handleChangeRowsPerPage}
           />
+
+          {not_found_filenames.length > 0 ? <span>
+            <div className={classes.cardTitle}>
+              <Typography component="h6" variant="h6">
+                Not found plots
+              </Typography>
+              </div>
+            <List dense={classes.dense}>
+              {not_found_filenames.map(filename =>
+              <ListItem key={filename}>
+                <ListItemText
+                  primary={filename}
+                />
+              </ListItem>)}
+            </List> </span>
+            : ""}
+          {failed_to_open_filenames.length > 0 ? <span>
+            <div className={classes.cardTitle}>
+              <Typography component="h6" variant="h6">
+                Failed to open (invalid plots)
+              </Typography>
+            </div>
+            <List dense={classes.dense}>
+              {failed_to_open_filenames.map(filename =>
+              <ListItem key={filename}>
+                <ListItemText
+                  primary={filename}
+                />
+              </ListItem>)}
+            </List></span>
+            : ""}
         </Grid>
       </Grid>
     </Paper>
@@ -485,7 +337,22 @@ const Plots = props => {
 
 const Farmer = () => {
   const classes = useStyles();
+  const dispatch = useDispatch();
   const [value, setValue] = React.useState(0);
+
+  const connections = useSelector(
+    state => state.farming_state.farmer.connections
+  );
+  const connectionError = useSelector(
+    state => state.farming_state.farmer.open_connection_error
+  );
+
+  const openConnectionCallback = (host, port) => {
+    dispatch(openConnection(host, port))
+  }
+  const closeConnectionCallback = (node_id) => {
+    dispatch(closeConnection(node_id))
+  }
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
@@ -519,7 +386,7 @@ const Farmer = () => {
                   <Challenges></Challenges>
                 </Grid>
                 <Grid item xs={12}>
-                  <Connections></Connections>
+                  <Connections connections={connections} connectionError={connectionError} openConnection={openConnectionCallback} closeConnection={closeConnectionCallback}></Connections>
                 </Grid>
                 <Grid item xs={12}>
                   <Plots></Plots>

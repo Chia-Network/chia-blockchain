@@ -25,7 +25,8 @@ import {
 import {
   pingFullNode,
   getBlockChainState,
-  getLatestBlocks
+  getLatestBlocks,
+  getFullNodeConnections,
 } from "../modules/fullnodeMessages";
 import {
   getLatestChallenges,
@@ -80,6 +81,7 @@ export const handle_message = (store, payload) => {
     } else if (payload.origin === service_full_node) {
       store.dispatch(getBlockChainState());
       store.dispatch(getLatestBlocks());
+      store.dispatch(getFullNodeConnections());
     } else if (payload.origin === service_farmer) {
       store.dispatch(getLatestChallenges());
       store.dispatch(getFarmerConnections());

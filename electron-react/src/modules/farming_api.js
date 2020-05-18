@@ -26,17 +26,17 @@ export const farmingReducer = (state = { ...initial_state }, action) => {
 
       // Farmer API
       if (command === "get_latest_challenges") {
-        if (data.success == false) {
+        if (data.success === false) {
           return state;
         }
-        state.farmer.latest_challenges = data;
+        state.farmer.latest_challenges = data.latest_challenges;
         return state;
       }
       if (
         command === "get_connections" &&
         action.message.origin === service_farmer
       ) {
-        state.farmer.connections = data;
+        state.farmer.connections = data.connections;
         return state;
       }
       if (
@@ -53,7 +53,12 @@ export const farmingReducer = (state = { ...initial_state }, action) => {
 
       // Harvester API
       if (command === "get_plots") {
-        state.harvester.plots = data;
+        if (data.success === false) {
+          return state;
+        }
+        state.harvester.plots = data.plots;
+        state.harvester.failed_to_open_filenames = data.failed_to_open_filenames;
+        state.harvester.not_found_filenames = data.not_found_filenames;
         return state;
       }
 

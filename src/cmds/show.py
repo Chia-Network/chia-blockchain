@@ -111,7 +111,7 @@ async def show_async(args, parser):
                     "Current Blockchain Status: Full Node syncing to",
                     sync_max_block,
                     "\nCurrently synched to tip:",
-                    sync_current_block
+                    sync_current_block,
                 )
             else:
                 print("Current Blockchain Status: Full Node Synced")

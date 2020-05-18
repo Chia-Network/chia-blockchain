@@ -140,12 +140,13 @@ class WebSocketServer:
                 full_node_retry = True
 
                 for connection in server.global_connections.get_connections():
-                    print(connection.get_peer_info(), full_node_peer)
+                    self.log.warning(f"{connection.get_peer_info()} {full_node_peer}")
                     if connection.get_peer_info() == full_node_peer:
                         full_node_retry = False
 
                 if full_node_retry:
                     self.log.info(f"Connecting to full node peer at {full_node_peer}")
+                    # self.log.info()
                     _ = await server.start_client(full_node_peer, None)
                 await asyncio.sleep(30)
                 asyncio.create_task(maintain_connection())

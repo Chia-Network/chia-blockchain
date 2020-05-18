@@ -85,8 +85,10 @@ class Farmer:
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
+        if self.server is not None:
+            self.server.set_state_changed_callback(callback)
 
-    def _change_state(self, change: str):
+    def _state_changed(self, change: str):
         if self.state_changed_callback is not None:
             self.state_changed_callback(change)
 
@@ -170,6 +172,8 @@ class Farmer:
                 Message("request_proof_of_space", request),
                 Delivery.RESPOND,
             )
+
+            self._state_changed("challenge")
 
     def _start_bg_tasks(self):
         """
@@ -405,6 +409,13 @@ class Farmer:
                 Message("new_challenge", message),
                 Delivery.BROADCAST,
             )
+            # This allows the collection of estimates from the harvesters
+            self._state_changed("challenge")
+            for _ in range(20):
+                if self._shut_down:
+                    return
+                await asyncio.sleep(1)
+            self._state_changed("challenge")
 
     @api_request
     async def proof_of_space_arrived(

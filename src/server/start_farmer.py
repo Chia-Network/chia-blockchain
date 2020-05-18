@@ -56,6 +56,7 @@ async def async_main():
         log.info("signal handlers unsupported")
 
     _ = await server.start_server(farmer._on_connect)
+    farmer.set_server(server)
 
     rpc_cleanup = None
     if config["start_rpc_server"]:
@@ -64,7 +65,6 @@ async def async_main():
             farmer, server.close_all, config["rpc_port"]
         )
 
-    farmer.set_server(server)
     await asyncio.sleep(10)  # Allows full node to startup
     farmer._start_bg_tasks()
 

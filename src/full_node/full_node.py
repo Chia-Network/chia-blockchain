@@ -5,7 +5,7 @@ import traceback
 import time
 from asyncio import Event
 from pathlib import Path
-from typing import AsyncGenerator, Dict, List, Optional, Tuple, Type
+from typing import AsyncGenerator, Dict, List, Optional, Tuple, Type, Callable
 
 import aiosqlite
 from chiabip158 import PyBIP158
@@ -119,6 +119,15 @@ class FullNode:
 
     def _set_server(self, server: ChiaServer):
         self.server = server
+
+    def _set_state_changed_callback(self, callback: Callable):
+        self.state_changed_callback = callback
+        if self.server is not None:
+            self.server.set_state_changed_callback(callback)
+
+    def _state_changed(self, change: str):
+        if self.state_changed_callback is not None:
+            self.state_changed_callback(change)
 
     async def _send_tips_to_farmers(
         self, delivery: Delivery = Delivery.BROADCAST
@@ -1051,6 +1060,7 @@ class FullNode:
             Message("new_unfinished_block", new_unfinished_block),
             Delivery.BROADCAST_TO_OTHERS,
         )
+        self._state_changed("block")
 
     @api_request
     async def reject_unfinished_block_request(
@@ -1358,9 +1368,7 @@ class FullNode:
             compact_request = full_node_protocol.RespondCompactProofOfTime(
                 request.proof
             )
-            async for msg in self.respond_compact_proof_of_time(
-                compact_request
-            ):
+            async for msg in self.respond_compact_proof_of_time(compact_request):
                 yield msg
 
         dict_key = (
@@ -1628,6 +1636,7 @@ class FullNode:
         self.full_node_store.clear_candidate_blocks_below(clear_height)
         self.full_node_store.clear_disconnected_blocks_below(clear_height)
         await self.full_node_store.clear_unfinished_blocks_below(clear_height)
+        self._state_changed("block")
 
     @api_request
     async def reject_block_request(

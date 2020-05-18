@@ -51,7 +51,9 @@ async def initialize_pipeline(
     def add_global_connections(connection):
         return connection, global_connections
 
-    connections_with_global_connections_aiter = map_aiter(add_global_connections, connections_aiter)
+    connections_with_global_connections_aiter = map_aiter(
+        add_global_connections, connections_aiter
+    )
 
     # Performs a handshake with the peer
 
@@ -80,9 +82,7 @@ async def initialize_pipeline(
     # Handles each message one at a time, and yields responses to send back or broadcast
     responses_aiter = join_aiters(
         map_aiter(
-            partial_func.partial_async_gen(handle_message, api),
-            messages_aiter,
-            100,
+            partial_func.partial_async_gen(handle_message, api), messages_aiter, 100,
         )
     )
 
@@ -94,7 +94,9 @@ async def initialize_pipeline(
 
     # Also uses the instance variable _outbound_aiter, which clients can use to send messages
     # at any time, not just on_connect.
-    outbound_aiter_mapped = map_aiter(lambda x: (None, x, global_connections), outbound_aiter)
+    outbound_aiter_mapped = map_aiter(
+        lambda x: (None, x, global_connections), outbound_aiter
+    )
 
     responses_aiter = join_aiters(
         iter_to_aiter(
@@ -119,7 +121,9 @@ async def initialize_pipeline(
                 f"Closing, so will not send {message.function} to peer {connection.get_peername()}"
             )
             continue
-        connection.log.info(f"-> {message.function} to peer {connection.get_peername()}")
+        connection.log.info(
+            f"-> {message.function} to peer {connection.get_peername()}"
+        )
         try:
             await connection.send(message)
         except (RuntimeError, TimeoutError, OSError,) as e:
@@ -284,9 +288,7 @@ async def handle_message(
     try:
         if len(full_message.function) == 0 or full_message.function.startswith("_"):
             # This prevents remote calling of private methods that start with "_"
-            raise ProtocolError(
-                Err.INVALID_PROTOCOL_MESSAGE, [full_message.function]
-            )
+            raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [full_message.function])
 
         connection.log.info(
             f"<- {full_message.function} from peer {connection.get_peername()}"
@@ -304,9 +306,7 @@ async def handle_message(
         elif full_message.function == "pong":
             return
 
-        f_with_peer_name = getattr(
-            api, full_message.function + "_with_peer_name", None
-        )
+        f_with_peer_name = getattr(api, full_message.function + "_with_peer_name", None)
 
         if f_with_peer_name is not None:
             result = f_with_peer_name(full_message.data, connection.get_peername())

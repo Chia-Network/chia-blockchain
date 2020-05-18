@@ -11,15 +11,22 @@ const initial_blockchain = {
     sync_tip_height: 0
   },
   tip_hashes: null,
-  tips: null
+  tips: null,
 };
 const initial_state = {
   blockchain_state: initial_blockchain,
-  headers: []
+  connections: [],
+  open_connection_error: "",
+  headers: [],
+  block: null,  // If not null, page is changed to block page
+  header: null
 };
 
 export const fullnodeReducer = (state = { ...initial_state }, action) => {
   switch (action.type) {
+    case "CLEAR_BLOCK":
+      state.block = null;
+      return state;
     case "INCOMING_MESSAGE":
       if (action.message.origin !== service_full_node) {
         return state;
@@ -35,6 +42,27 @@ export const fullnodeReducer = (state = { ...initial_state }, action) => {
         if (data.success) {
           const headers = data.headers;
           state.headers = headers;
+        }
+        return state;
+      } else if (command === "get_block") {
+        if (data.success) {
+          state.block = data.block
+        }
+        return state
+      } else if (command === "get_header") {
+        if (data.success) {
+          state.header = data.header
+        }
+        return state
+      } else if (command === "get_connections") {
+        state.connections = data.connections;
+        return state;
+      }
+      if (command === "open_connection") {
+        if (data.success) {
+          state.open_connection_error = "";
+        } else {
+          state.open_connection_error = data.error;
         }
         return state;
       }

@@ -1,7 +1,6 @@
 import React, { Component } from "react";
 import Button from "@material-ui/core/Button";
 import CssBaseline from "@material-ui/core/CssBaseline";
-import Link from "@material-ui/core/Link";
 import Grid from "@material-ui/core/Grid";
 import Typography from "@material-ui/core/Typography";
 import { withTheme } from "@material-ui/styles";
@@ -15,7 +14,6 @@ import myStyle from "./style";
 import { add_key } from "../modules/message";
 import {
   changeEntranceMenu,
-  presentEntrace,
   presentSelectKeys
 } from "../modules/entranceMenu";
 

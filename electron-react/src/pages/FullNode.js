@@ -4,11 +4,15 @@ import Grid from "@material-ui/core/Grid";
 import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 import { withRouter } from "react-router-dom";
-import { connect, useSelector } from "react-redux";
+import { connect, useSelector, useDispatch } from "react-redux";
 import Typography from "@material-ui/core/Typography";
 import Box from "@material-ui/core/Box";
-import { Paper, ButtonBase } from "@material-ui/core";
+import { Paper } from "@material-ui/core";
 import { unix_to_short_date } from "../util/utils";
+import Connections from "./Connections";
+import Block from "./Block";
+import { closeConnection, openConnection, getBlock, getHeader } from "../modules/fullnodeMessages";
+
 
 const drawerWidth = 180;
 
@@ -119,6 +123,12 @@ const useStyles = makeStyles(theme => ({
   block_row: {
     cursor: "pointer",
     /* mouse over link */
+    "&:hover": {
+      backgroundColor: "#aaaaaa"
+    }
+  },
+  block_row_unfinished: {
+    color: "orange",
     "&:hover": {
       backgroundColor: "#aaaaaa"
     }
@@ -245,9 +255,15 @@ const FullNodeStatus = props => {
 
 const BlocksCard = () => {
   const headers = useSelector(state => state.full_node_state.headers);
+  const dispatch = useDispatch();
 
-  function clickedBlock() {
-    console.log("Take me to block");
+  function clickedBlock(height, header_hash, prev_header_hash) {
+    return () => {
+      dispatch(getBlock(header_hash));
+      if (height > 0) {
+        dispatch(getHeader(prev_header_hash));
+      }
+    }
   }
   const classes = useStyles();
   return (
@@ -263,7 +279,6 @@ const BlocksCard = () => {
         <Grid item xs={12}>
           <Box
             className={classes.block_header}
-            onClick={clickedBlock}
             display="flex"
             key={"header"}
             style={{ minWidth: "100%" }}
@@ -273,18 +288,19 @@ const BlocksCard = () => {
             <Box flexGrow={1} className={classes.center_block_cell}>
               Time Created
             </Box>
-            <Box className={classes.right_block_cell}>Time Finished</Box>
+            <Box className={classes.right_block_cell}>Expected finish time</Box>
           </Box>
           {headers.map(header => (
             <Box
-              className={classes.block_row}
-              onClick={clickedBlock}
+              className={header.data.finished ? classes.block_row : classes.block_row_unfinished}
+              onClick={header.data.finished ? clickedBlock(header.data.height, header.data.header_hash, header.data.prev_header_hash) : () => {}}
               display="flex"
               key={header.data.header_hash}
               style={{ minWidth: "100%" }}
             >
               <Box className={classes.left_block_cell}>
                 {header.data.header_hash.substring(0, 12) + "..."}
+                {header.data.finished ? "" : " (unfinished)"}
               </Box>
               <Box className={classes.center_block_cell_small}>
                 {header.data.height}
@@ -299,40 +315,6 @@ const BlocksCard = () => {
               </Box>
             </Box>
           ))}
-        </Grid>
-      </Grid>
-    </Paper>
-  );
-};
-
-const Connections = props => {
-  const classes = useStyles();
-  return (
-    <Paper className={classes.balancePaper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              Connections
-            </Typography>
-          </div>
-        </Grid>
-      </Grid>
-    </Paper>
-  );
-};
-
-const Control = props => {
-  const classes = useStyles();
-  return (
-    <Paper className={classes.balancePaper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              Control
-            </Typography>
-          </div>
         </Grid>
       </Grid>
     </Paper>
@@ -358,6 +340,27 @@ const SearchBlock = props => {
 
 const FullNode = () => {
   const classes = useStyles();
+  const dispatch = useDispatch();
+
+  const connections = useSelector(
+    state => state.full_node_state.connections
+  );
+  const connectionError = useSelector(
+    state => state.full_node_state.open_connection_error
+  );
+  const block = useSelector(
+    state => state.full_node_state.block
+  );
+  const header = useSelector(
+    state => state.full_node_state.header
+  );
+
+  const openConnectionCallback = (host, port) => {
+    dispatch(openConnection(host, port))
+  }
+  const closeConnectionCallback = (node_id) => {
+    dispatch(closeConnection(node_id))
+  }
 
   return (
     <div className={classes.root}>
@@ -365,22 +368,20 @@ const FullNode = () => {
       <main className={classes.content}>
         <Container maxWidth="lg" className={classes.container}>
           <Grid container spacing={3}>
-            {/* Chart */}
-            <Grid item xs={12}>
-              <FullNodeStatus></FullNodeStatus>
-            </Grid>
-            <Grid item xs={12}>
-              <Control></Control>
-            </Grid>
-            <Grid item xs={12}>
-              <BlocksCard></BlocksCard>
-            </Grid>
-            <Grid item xs={12}>
-              <Connections></Connections>
-            </Grid>
-            <Grid item xs={12}>
-              <SearchBlock></SearchBlock>
-            </Grid>
+          {block != null ? <Block block={block} prevHeader={header}></Block> : <span>
+              <Grid item xs={12}>
+                <FullNodeStatus></FullNodeStatus>
+              </Grid>
+              <Grid item xs={12}>
+                <BlocksCard></BlocksCard>
+              </Grid>
+              <Grid item xs={12}>
+                  <Connections connections={connections} connectionError={connectionError} openConnection={openConnectionCallback} closeConnection={closeConnectionCallback}></Connections>
+              </Grid>
+              <Grid item xs={12}>
+                <SearchBlock></SearchBlock>
+              </Grid>
+            </span>}
           </Grid>
         </Container>
       </main>

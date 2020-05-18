@@ -1,4 +1,4 @@
-from typing import Callable, List
+from typing import Callable, List, Dict
 
 from aiohttp import web
 import logging
@@ -34,14 +34,45 @@ class HarvesterRpcApiHandler:
         )
         self.log = log
         self.shut_down = False
+        self.websocket = None
         self.service_name = "chia_harvester"
 
     async def stop(self):
         self.shut_down = True
         await self.websocket.close()
 
-    async def _get_plots(self) -> List:
-        return self.harvester._get_plots()
+    async def _state_changed(self, change: str):
+        # self.log.warning(f"State changed: {change}")
+        if self.websocket is None:
+            return
+
+        if change == "plots":
+            data = await self._get_plots()
+            data["success"] = True
+            payload = create_payload("get_plots", data, self.service_name, "wallet_ui")
+        if change == "add_connection" or change == "close_connection":
+            data = {"success": True, "connections": await self._get_connections()}
+            payload = create_payload(
+                "get_connections", data, self.service_name, "wallet_ui"
+            )
+        try:
+            await self.websocket.send_str(payload)
+        except (BaseException) as e:
+            try:
+                self.log.warning(f"Sending data failed. Exception {type(e)}.")
+            except BrokenPipeError:
+                pass
+
+    def state_changed(self, change: str):
+        asyncio.create_task(self._state_changed(change))
+
+    async def _get_plots(self) -> Dict:
+        plots, failed_to_open, not_found = self.harvester._get_plots()
+        return {
+            "plots": plots,
+            "failed_to_open_filenames": failed_to_open,
+            "not_found_filenames": not_found,
+        }
 
     async def get_plots(self, request) -> web.Response:
         """
@@ -157,9 +188,12 @@ class HarvesterRpcApiHandler:
         if command == "ping":
             return pong()
         elif command == "get_connections":
-            return await self._get_connections()
+            cons = await self._get_connections()
+            return {"success": True, "connections": cons}
         elif command == "get_plots":
-            return await self._get_plots()
+            response = await self._get_plots()
+            response["success"] = True
+            return response
         elif command == "refresh_plots":
             await self._refresh_plots()
             response = {"success": True}
@@ -268,6 +302,7 @@ async def start_rpc_server(
     """
     handler = HarvesterRpcApiHandler(harvester, stop_node_cb)
     app = web.Application()
+    harvester._set_state_changed_callback(handler.state_changed)
 
     app.add_routes(
         [

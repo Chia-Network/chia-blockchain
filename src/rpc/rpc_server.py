@@ -43,11 +43,48 @@ class RpcApiHandler:
         self.log = log
         self.shut_down = False
         self.service_name = "chia_full_node"
+        self.websocket = None
         self.cached_blockchain_state = None
 
     async def stop(self):
         self.shut_down = True
         await self.websocket.close()
+
+    async def _state_changed(self, change: str):
+        # self.log.warning(f"State changed: {change}")
+        if self.websocket is None:
+            return
+        payloads = []
+        if change == "block":
+            headers = await self._get_latest_block_headers()
+            data = {"success": True, "headers": headers}
+            payloads.append(
+                create_payload(
+                    "get_latest_block_headers", data, self.service_name, "wallet_ui"
+                )
+            )
+            data = await self._get_blockchain_state()
+            payloads.append(
+                create_payload(
+                    "get_blockchain_state", data, self.service_name, "wallet_ui"
+                )
+            )
+        if change == "add_connection" or change == "close_connection":
+            data = {"success": True, "connections": await self._get_connections()}
+            payloads.append(
+                create_payload("get_connections", data, self.service_name, "wallet_ui")
+            )
+        try:
+            for payload in payloads:
+                await self.websocket.send_str(payload)
+        except (BaseException) as e:
+            try:
+                self.log.warning(f"Sending data failed. Exception {type(e)}.")
+            except BrokenPipeError:
+                pass
+
+    def state_changed(self, change: str):
+        asyncio.create_task(self._state_changed(change))
 
     async def _get_blockchain_state(self):
         """
@@ -79,7 +116,9 @@ class RpcApiHandler:
             sync_progress_height = uint32(0)
 
         newer_block_hex = lca.header_hash.hex()
-        older_block_hex = self.full_node.blockchain.height_to_hash[max(0, lca.height - 100)].hex()
+        older_block_hex = self.full_node.blockchain.height_to_hash[
+            max(0, lca.height - 100)
+        ].hex()
         space = await self._get_network_space(newer_block_hex, older_block_hex)
         response = {
             "tips": tips,
@@ -93,7 +132,7 @@ class RpcApiHandler:
             "difficulty": difficulty,
             "ips": ips,
             "min_iters": min_iters,
-            "space": space
+            "space": space,
         }
         self.cached_blockchain_state = response
         return response
@@ -267,11 +306,17 @@ class RpcApiHandler:
         # We do not count the min iters in the old block, since it's not included in the range
         total_mi: uint64 = uint64(0)
         for curr_h in range(older_block.height + 1, newer_block.height + 1):
-            if (curr_h % constants["DIFFICULTY_EPOCH"]) == constants["DIFFICULTY_DELAY"]:
-                curr_b_header_hash = self.full_node.blockchain.height_to_hash.get(uint32(int(curr_h)))
+            if (
+                curr_h % self.full_node.constants["DIFFICULTY_EPOCH"]
+            ) == self.full_node.constants["DIFFICULTY_DELAY"]:
+                curr_b_header_hash = self.full_node.blockchain.height_to_hash.get(
+                    uint32(int(curr_h))
+                )
                 if curr_b_header_hash is None:
                     return None
-                curr_b_block = await self.full_node.block_store.get_block(curr_b_header_hash)
+                curr_b_block = await self.full_node.block_store.get_block(
+                    curr_b_header_hash
+                )
                 if curr_b_block is None or curr_b_block.proof_of_time is None:
                     return None
                 curr_parent = await self.full_node.block_store.get_block(
@@ -318,7 +363,6 @@ class RpcApiHandler:
         )
         return uint128(int(network_space_bytes_estimate))
 
-
     async def get_network_space(self, request) -> web.Response:
         """
         Retrieves an estimate of total space validating the chain
@@ -333,7 +377,9 @@ class RpcApiHandler:
         newer_block_hex = request_data["newer_block_header_hash"]
         older_block_hex = request_data["older_block_header_hash"]
 
-        return obj_to_response(await self._get_network_space(newer_block_hex, older_block_hex))
+        return obj_to_response(
+            await self._get_network_space(newer_block_hex, older_block_hex)
+        )
 
     async def get_unfinished_block_headers(self, request) -> web.Response:
         request_data = await request.json()
@@ -343,7 +389,7 @@ class RpcApiHandler:
         response_headers = await self._get_unfinished_block_headers(height)
         return obj_to_response(response_headers)
 
-    async def _get_connections(self):
+    async def _get_connections(self) -> List:
         if self.full_node.server is None:
             return []
         connections = self.full_node.server.global_connections.get_connections()
@@ -367,10 +413,9 @@ class RpcApiHandler:
 
     async def get_connections(self, request) -> web.Response:
         """
-        Retrieves all connections to this full node, including farmers and timelords.
+        Retrieves all connections to this farmer.
         """
-        con_info = await self._get_connections()
-        return obj_to_response(con_info)
+        return obj_to_response(await self._get_connections())
 
     async def _open_connection(self, host, port):
         target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
@@ -390,7 +435,7 @@ class RpcApiHandler:
         await self._open_connection(host, port)
         return obj_to_response("")
 
-    def _close_connection(self, node_id):
+    async def _close_connection(self, node_id):
         node_id = hexstr_to_bytes(node_id)
         if self.full_node.server is None:
             raise web.HTTPInternalServerError()
@@ -409,7 +454,7 @@ class RpcApiHandler:
         Closes a connection given by the node id.
         """
         request_data = await request.json()
-        self._close_connection(request_data["node_id"])
+        await self._close_connection(request_data["node_id"])
         return obj_to_response("")
 
     def _stop_node(self):
@@ -497,12 +542,35 @@ class RpcApiHandler:
             await self._stop_node()
             response = {"success": True}
             return response
+        elif command == "get_connections":
+            cons = await self._get_connections()
+            return {"success": True, "connections": cons}
+        elif command == "open_connection":
+            assert data is not None
+            host = data["host"]
+            port = data["port"]
+            await self._open_connection(host, port)
+            response = {"success": True}
+            return response
         elif command == "close_connection":
             assert data is not None
             node_id = data["node_id"]
-            return await self._close_connection(node_id)
+            await self._close_connection(node_id)
+            return response
         elif command == "get_blockchain_state":
             return await self._get_blockchain_state()
+        elif command == "get_block":
+            assert data is not None
+            header_hash = data["header_hash"]
+            block = await self._get_block(header_hash)
+            response = {"success": True, "block": block}
+            return response
+        elif command == "get_header":
+            assert data is not None
+            header_hash = data["header_hash"]
+            header = await self._get_header(header_hash)
+            response = {"success": True, "header": header}
+            return response
         elif command == "get_latest_block_headers":
             headers = await self._get_latest_block_headers()
             response = {"success": True, "headers": headers}
@@ -591,6 +659,7 @@ async def start_rpc_server(
     """
     handler = RpcApiHandler(full_node, stop_node_cb)
     app = web.Application()
+    full_node._set_state_changed_callback(handler.state_changed)
 
     app.add_routes(
         [

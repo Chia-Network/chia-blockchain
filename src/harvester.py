@@ -1,7 +1,7 @@
 import logging
 import asyncio
 from pathlib import Path
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, Tuple, List, Callable
 import time
 import concurrent
 
@@ -27,8 +27,10 @@ def load_plots(
     plot_config_file: Dict,
     pool_pubkeys: Optional[List[PublicKey]],
     root_path: Path,
-) -> Dict[str, DiskProver]:
+) -> Tuple[Dict[str, DiskProver], List[str], List[str]]:
     provers: Dict[str, DiskProver] = {}
+    failed_to_open_filenames: List[str] = []
+    not_found_filenames: List[str] = []
     for partial_filename_str, plot_config in plot_config_file["plots"].items():
         plot_root = path_from_root(root_path, config_file.get("plot_root", "."))
         partial_filename = plot_root / partial_filename_str
@@ -47,6 +49,7 @@ def load_plots(
 
         found = False
         failed_to_open = False
+
         for filename in potential_filenames:
             if filename.exists():
                 try:
@@ -54,6 +57,7 @@ def load_plots(
                 except Exception as e:
                     log.error(f"Failed to open file {filename}. {e}")
                     failed_to_open = True
+                    failed_to_open_filenames.append(partial_filename_str)
                     break
                 log.info(
                     f"Loaded plot {filename} of size {provers[partial_filename_str].get_size()}"
@@ -62,13 +66,16 @@ def load_plots(
                 break
         if not found and not failed_to_open:
             log.warning(f"Plot at {potential_filenames} does not exist.")
-    return provers
+            not_found_filenames.append(partial_filename_str)
+    return (provers, failed_to_open_filenames, not_found_filenames)
 
 
 class Harvester:
     config: Dict
     plot_config: Dict
     provers: Dict[str, DiskProver]
+    failed_to_open_filenames: List[str]
+    not_found_filenames: List[str]
     challenge_hashes: Dict[bytes32, Tuple[bytes32, str, uint8]]
     pool_pubkeys: List[PublicKey]
     root_path: Path
@@ -76,6 +83,7 @@ class Harvester:
     _reconnect_task: Optional[asyncio.Task]
     _is_shutdown: bool
     executor: concurrent.futures.ThreadPoolExecutor
+    state_changed_callback: Optional[Callable]
 
     @staticmethod
     async def create(
@@ -88,6 +96,8 @@ class Harvester:
 
         # From filename to prover
         self.provers = {}
+        self.failed_to_open_filenames = []
+        self.not_found_filenames = []
 
         # From quality string to (challenge_hash, filename, index)
         self.challenge_hashes = {}
@@ -97,7 +107,17 @@ class Harvester:
         self.server = None
         self.pool_pubkeys = []
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
+        self.state_changed_callback = None
         return self
+
+    def _set_state_changed_callback(self, callback: Callable):
+        self.state_changed_callback = callback
+        if self.server is not None:
+            self.server.set_state_changed_callback(callback)
+
+    def _state_changed(self, change: str):
+        if self.state_changed_callback is not None:
+            self.state_changed_callback(change)
 
     async def _plot_notification(self):
         """
@@ -117,8 +137,8 @@ class Harvester:
             await asyncio.sleep(1)
             counter += 1
 
-    def _get_plots(self):
-        response = []
+    def _get_plots(self) -> Tuple[List[Dict], List[str], List[str]]:
+        response_plots: List[Dict] = []
         for path, prover in self.provers.items():
             plot_pk = PrivateKey.from_bytes(
                 bytes.fromhex(self.plot_config["plots"][path]["sk"])
@@ -126,7 +146,7 @@ class Harvester:
             pool_pk = PublicKey.from_bytes(
                 bytes.fromhex(self.plot_config["plots"][path]["pool_pk"])
             )
-            response.append(
+            response_plots.append(
                 {
                     "filename": str(path),
                     "size": prover.get_size(),
@@ -136,12 +156,15 @@ class Harvester:
                     "pool_pk": bytes(pool_pk),
                 }
             )
-        return response
+        return (response_plots, self.failed_to_open_filenames, self.not_found_filenames)
 
     def _refresh_plots(self):
-        self.provers = load_plots(
-            self.config, self.plot_config, self.pool_pubkeys, self.root_path
-        )
+        (
+            self.provers,
+            self.failed_to_open_filenames,
+            self.not_found_filenames,
+        ) = load_plots(self.config, self.plot_config, self.pool_pubkeys, self.root_path)
+        self._state_changed("plots")
 
     def _delete_plot(self, str_path: str):
         if str_path not in self.provers:
@@ -165,6 +188,7 @@ class Harvester:
         except (FileNotFoundError, KeyError) as e:
             log.warning(f"Could not remove {str_path} {e}")
             return False
+        self._state_changed("plots")
         return True
 
     def set_server(self, server):
@@ -221,9 +245,7 @@ class Harvester:
         use any plots which don't have one of the pool keys.
         """
         self.pool_pubkeys = harvester_handshake.pool_pubkeys
-        self.provers = load_plots(
-            self.config, self.plot_config, self.pool_pubkeys, self.root_path
-        )
+        self._refresh_plots()
         if len(self.provers) == 0:
             log.warning(
                 "Not farming any plots on this harvester. Check your configuration."

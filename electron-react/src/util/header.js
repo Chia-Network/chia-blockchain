@@ -1,4 +1,5 @@
 import { big_int_to_array, hex_to_array, arr_to_hex } from "./utils";
+/* global BigInt */
 
 export async function hash_header(header) {
   var buf = big_int_to_array(BigInt(header.data.height), 4);

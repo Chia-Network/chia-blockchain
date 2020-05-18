@@ -344,11 +344,11 @@ def create_server_for_daemon(root_path):
 
     services: Dict = dict()
 
-    @routes.get('/daemon/ping/')
+    @routes.get("/daemon/ping/")
     async def ping(request):
         return web.Response(text="pong")
 
-    @routes.get('/daemon/service/start/')
+    @routes.get("/daemon/service/start/")
     async def start_service(request):
         service_name = request.query.get("service")
         if not validate_service(service_name):
@@ -369,19 +369,19 @@ def create_server_for_daemon(root_path):
 
         return web.Response(text=str(r))
 
-    @routes.get('/daemon/service/stop/')
+    @routes.get("/daemon/service/stop/")
     async def stop_service(request):
         service_name = request.query.get("service")
         r = await kill_service(root_path, services, service_name)
         return web.Response(text=str(r))
 
-    @routes.get('/daemon/service/is_running/')
+    @routes.get("/daemon/service/is_running/")
     async def is_running_handler(request):
         service_name = request.query.get("service")
         r = is_running(services, service_name)
         return web.Response(text=str(r))
 
-    @routes.get('/daemon/exit/')
+    @routes.get("/daemon/exit/")
     async def exit(request):
         jobs = []
         for k in services.keys():
@@ -392,11 +392,6 @@ def create_server_for_daemon(root_path):
 
         # we can't await `site.stop()` here because that will cause a deadlock, waiting for this
         # request to exit
-
-
-def create_server_for_daemon(root_path):
-    server = WebSocketServer(root_path)
-    return server
 
 
 def singleton(lockfile, text="semaphore"):

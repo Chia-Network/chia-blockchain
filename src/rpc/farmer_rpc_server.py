@@ -32,27 +32,41 @@ class FarmerRpcApiHandler:
         )
         self.log = log
         self.shut_down = False
+        self.websocket = None
         self.service_name = "chia_farmer"
 
     async def stop(self):
         self.shut_down = True
         await self.websocket.close()
 
-    async def state_changed(self, change: str):
+    async def _state_changed(self, change: str):
+        # self.log.warning(f"State changed: {change}")
         if self.websocket is None:
             return
 
-        if change == "challenges":
-            data = await self._get_latest_challenges()
+        if change == "challenge":
+            data = {
+                "success": True,
+                "latest_challenges": await self._get_latest_challenges(),
+            }
+            payload = create_payload(
+                "get_latest_challenges", data, self.service_name, "wallet_ui"
+            )
+        if change == "add_connection" or change == "close_connection":
+            data = {"success": True, "connections": await self._get_connections()}
+            payload = create_payload(
+                "get_connections", data, self.service_name, "wallet_ui"
+            )
+        try:
+            await self.websocket.send_str(payload)
+        except (BaseException) as e:
             try:
-                await self.websocket.send_str(
-                    create_payload("get_latest_challenges", data, self.service_name, "wallet_ui")
-                )
-            except (BaseException) as e:
-                try:
-                    self.log.warning(f"Sending data failed. Exception {type(e)}.")
-                except BrokenPipeError:
-                    pass
+                self.log.warning(f"Sending data failed. Exception {type(e)}.")
+            except BrokenPipeError:
+                pass
+
+    def state_changed(self, change: str):
+        asyncio.create_task(self._state_changed(change))
 
     async def _get_latest_challenges(self) -> List:
         response = []
@@ -172,9 +186,11 @@ class FarmerRpcApiHandler:
         if command == "ping":
             return pong()
         elif command == "get_connections":
-            return await self._get_connections()
+            cons = await self._get_connections()
+            return {"success": True, "connections": cons}
         elif command == "get_latest_challenges":
-            return await self._get_latest_challenges()
+            challenges = await self._get_latest_challenges()
+            return {"sucess": True, "latest_challenges": challenges}
         elif command == "stop_node":
             await self._stop_node()
             response = {"success": True}
