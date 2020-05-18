@@ -267,17 +267,11 @@ class RpcApiHandler:
         # We do not count the min iters in the old block, since it's not included in the range
         total_mi: uint64 = uint64(0)
         for curr_h in range(older_block.height + 1, newer_block.height + 1):
-            if (
-                curr_h % self.full_node.constants["DIFFICULTY_EPOCH"]
-            ) == self.full_node.constants["DIFFICULTY_DELAY"]:
-                curr_b_header_hash = self.full_node.blockchain.height_to_hash.get(
-                    uint32(int(curr_h))
-                )
+            if (curr_h % constants["DIFFICULTY_EPOCH"]) == constants["DIFFICULTY_DELAY"]:
+                curr_b_header_hash = self.full_node.blockchain.height_to_hash.get(uint32(int(curr_h)))
                 if curr_b_header_hash is None:
                     return None
-                curr_b_block = await self.full_node.block_store.get_block(
-                    curr_b_header_hash
-                )
+                curr_b_block = await self.full_node.block_store.get_block(curr_b_header_hash)
                 if curr_b_block is None or curr_b_block.proof_of_time is None:
                     return None
                 curr_parent = await self.full_node.block_store.get_block(

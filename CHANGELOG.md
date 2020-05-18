@@ -8,7 +8,7 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 ### Added
 - We now have a CHANGELOG.md that adheres closely to the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) standard. We merged in the version history and updated some previous release notes to capture items important to the change log. We are modifying our release process to accumulate changes at the top of the change log and then copy those to the release notes at release time.
 - We added [lgtm](https://lgtm.com/) source analysis on pull request to the chia-blockchain, chiapos, chiavdf, chiabip158, and bls-library repositories to add some automated security analysis to our ci.
-- We added total network storage space estimation to the node rpc at the get_network_space endpoint.
+- We added total network storage space estimation to the node RPC at the get_network_space endpoint.
 The endpoint estimates space between any two block header hashes.
 - New keychain system that replaces keys.yaml, and with migration from keys.yaml.
 -'chia keys' command line program, to see, add, remove private keys.
@@ -18,20 +18,28 @@ The endpoint estimates space between any two block header hashes.
 - Delete and change active keys from the UI
 
 ### Changed
-- `chia netspace` has been refactored to use the get_network_space rpc. The command
+- `chia netspace` has been refactored to use the get_network_space RPC. The command
 syntax has changed slightly. By default it calculates the last 24 blocks from the
 current LCA. Optionally you can use the `-b` flag to start with a different block
 height. Use `-d` to specify the delta number of blocks back to compare to.
 - Releases GIL in python bindings when fetching qualities and proofs. This allows a multithreaded harvester to farm more plots concurrently. This is especially faster when there are multiple disks being harvested. The class is also made thread safe with mutex guards.
 - Syncing is now faster and uses less memory.
 - chiapos is now easier to compile with MSVC.
+<<<<<<< HEAD
 - create plots now takes in an optional sk_seed, it is no longer read in from keys.yaml. If not passed in, it is randomly generated.
+=======
+- The RPC endpoint `/get_blockchain_state` has changed. The "sync_mode" return has been replaced with a "sync" array of "sync_mode", "sync_tip_height", and "sync_progress_height" for ease of use with GUIs.
+- Moved to PyYAML 5.3.1 which prevents arbitrary code execution during python/object/new constructor.
+- Moved to Python cryptography 2.9.2 which deprecates OpenSSL 1.0.1 and now relies upon OpenSSL 1.1.1g.
+- Moved to aiosqlite 0.13.0 which adds official support for Python 3.8 and fixes a possible hung thread if a connection failed.
+>>>>>>> 94653c6daff2a8dbe1a1ce03a4df730b785b863d
 
 ### Fixed
 - Build status shield layout fixed in README.md
 - Relic and thus blspy would crash on processors older than Haswell as they don't support lzc.
 - chia-check-plots works with plot root (the same as harvester)
 - Some networking errors are no longer printed
+- Blocks with compact proof of time are now updated into database.
 
 ## [1.0beta5] aka Beta 1.5 - 2020-05-05
 ### Added

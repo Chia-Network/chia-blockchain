@@ -8,6 +8,8 @@ import sys
 import traceback
 from typing import Dict, Any
 from sys import platform
+from aiohttp import web
+
 
 import websockets
 
@@ -335,6 +337,61 @@ async def kill_service(root_path, services, service_name, delay_before_kill=15) 
 def is_running(services, service_name):
     process = services.get(service_name)
     return process is not None and process.poll() is None
+
+
+def create_server_for_daemon(root_path):
+    routes = web.RouteTableDef()
+
+    services: Dict = dict()
+
+    @routes.get('/daemon/ping/')
+    async def ping(request):
+        return web.Response(text="pong")
+
+    @routes.get('/daemon/service/start/')
+    async def start_service(request):
+        service_name = request.query.get("service")
+        if not validate_service(service_name):
+            r = "unknown service"
+            return web.Response(text=str(r))
+
+        if is_running(services, service_name):
+            r = "already running"
+            return web.Response(text=str(r))
+
+        try:
+            process, pid_path = launch_service(root_path, service_name)
+            services[service_name] = process
+            r = "started"
+        except (subprocess.SubprocessError, IOError):
+            log.exception(f"problem starting {service_name}")
+            r = "start failed"
+
+        return web.Response(text=str(r))
+
+    @routes.get('/daemon/service/stop/')
+    async def stop_service(request):
+        service_name = request.query.get("service")
+        r = await kill_service(root_path, services, service_name)
+        return web.Response(text=str(r))
+
+    @routes.get('/daemon/service/is_running/')
+    async def is_running_handler(request):
+        service_name = request.query.get("service")
+        r = is_running(services, service_name)
+        return web.Response(text=str(r))
+
+    @routes.get('/daemon/exit/')
+    async def exit(request):
+        jobs = []
+        for k in services.keys():
+            jobs.append(kill_service(root_path, services, k))
+        if jobs:
+            done, pending = await asyncio.wait(jobs)
+        services.clear()
+
+        # we can't await `site.stop()` here because that will cause a deadlock, waiting for this
+        # request to exit
 
 
 def create_server_for_daemon(root_path):

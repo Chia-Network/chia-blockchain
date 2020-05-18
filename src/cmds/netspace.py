@@ -57,7 +57,7 @@ async def netstorge_async(args, parser):
                 blockchain_state = await client.get_blockchain_state()
                 newer_block_height = blockchain_state["lca"].data.height
             else:
-                newer_block_height = args.start  # Starting block height in args
+                newer_block_height = int(args.start)  # Starting block height in args
             newer_block_header = await client.get_header_by_height(newer_block_height)
             older_block_height = newer_block_height - int(args.delta_block_height)
             older_block_header = await client.get_header_by_height(older_block_height)
