@@ -36,8 +36,10 @@ export const farmingReducer = (state = { ...initial_state }, action) => {
         command === "get_connections" &&
         action.message.origin === service_farmer
       ) {
-        state.farmer.connections = data.connections;
-        return state;
+        if (data.success) {
+          state.farmer.connections = data.connections;
+          return state;
+        }
       }
       if (
         command === "open_connection" &&
@@ -53,11 +55,12 @@ export const farmingReducer = (state = { ...initial_state }, action) => {
 
       // Harvester API
       if (command === "get_plots") {
-        if (data.success === false) {
+        if (data.success !== true) {
           return state;
         }
         state.harvester.plots = data.plots;
-        state.harvester.failed_to_open_filenames = data.failed_to_open_filenames;
+        state.harvester.failed_to_open_filenames =
+          data.failed_to_open_filenames;
         state.harvester.not_found_filenames = data.not_found_filenames;
         return state;
       }

@@ -4,8 +4,10 @@ import {
   service_simulator,
   service_daemon,
   service_farmer,
-  service_harvester
+  service_harvester,
+  service_plotter
 } from "../util/service_names";
+import { plottingStarted } from "./plotter_messages";
 
 const initial_state = {
   daemon_running: false,
@@ -18,6 +20,7 @@ const initial_state = {
   farmer_connected: false,
   harvester_running: false,
   harvester_connected: false,
+  plotter_running: false
 };
 
 export const daemonReducer = (state = { ...initial_state }, action) => {
@@ -61,6 +64,18 @@ export const daemonReducer = (state = { ...initial_state }, action) => {
           state.farmer_connected = true;
         } else if (origin === service_harvester) {
           state.harvester_connected = true;
+        }
+      } else if (command === "is_running") {
+        if (data.success) {
+          if (data.service == service_plotter) {
+            state.plotter_running = data.is_running;
+          }
+        }
+      } else if (command === "stop_service") {
+        if (data.success) {
+          if (data.service_name === service_plotter) {
+            state.plotter_running = false;
+          }
         }
       }
       return state;

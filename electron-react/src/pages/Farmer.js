@@ -7,7 +7,15 @@ import { withRouter } from "react-router-dom";
 import { connect, useSelector, useDispatch } from "react-redux";
 import Typography from "@material-ui/core/Typography";
 import Box from "@material-ui/core/Box";
-import { Paper, TableRow } from "@material-ui/core";
+import {
+  Paper,
+  TableRow,
+  Drawer,
+  Divider,
+  List,
+  ListItem,
+  ListItemText
+} from "@material-ui/core";
 import Tabs from "@material-ui/core/Tabs";
 import Tab from "@material-ui/core/Tab";
 import Button from "@material-ui/core/Button";
@@ -17,9 +25,6 @@ import TableCell from "@material-ui/core/TableCell";
 import TableContainer from "@material-ui/core/TableContainer";
 import TableHead from "@material-ui/core/TableHead";
 import DeleteForeverIcon from "@material-ui/icons/DeleteForever";
-import List from '@material-ui/core/List';
-import ListItem from '@material-ui/core/ListItem';
-import ListItemText from '@material-ui/core/ListItemText';
 
 import DonutLargeIcon from "@material-ui/icons/DonutLarge";
 import HourglassEmptyIcon from "@material-ui/icons/HourglassEmpty";
@@ -32,13 +37,21 @@ import TablePagination from "@material-ui/core/TablePagination";
 import RefreshIcon from "@material-ui/icons/Refresh";
 import Connections from "./Connections";
 
+import Plotter from "./Plotter";
+import clsx from "clsx";
+import { presentFarmer } from "../modules/farmer_menu";
+import { presentPlotter, changeFarmerMenu } from "../modules/farmer_menu";
+
+const drawerWidth = 180;
+
 const useStyles = makeStyles(theme => ({
   root: {
     display: "flex",
     paddingLeft: "0px"
   },
   tabs: {
-    flexGrow: 1
+    flexGrow: 1,
+    marginTop: 40
   },
   clickable: {
     cursor: "pointer"
@@ -47,9 +60,10 @@ const useStyles = makeStyles(theme => ({
     marginLeft: "20px"
   },
   content: {
-    flexGrow: 1,
     height: "calc(100vh - 64px)",
-    overflowX: "hidden"
+    overflowX: "hidden",
+    paddingRight: theme.spacing(3),
+    paddingBottom: theme.spacing(3)
   },
   container: {
     paddingTop: theme.spacing(0),
@@ -71,6 +85,15 @@ const useStyles = makeStyles(theme => ({
   },
   table: {
     minWidth: 650
+  },
+  drawerPaper: {
+    position: "relative",
+    whiteSpace: "nowrap",
+    width: drawerWidth,
+    transition: theme.transitions.create("width", {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen
+    })
   }
 }));
 
@@ -114,10 +137,12 @@ const StatusCell = props => {
 
 const FarmerStatus = props => {
   const plots = useSelector(state => state.farming_state.harvester.plots);
-
-  const total_size = plots
-    .map(p => calculateSizeFromK(p.size))
-    .reduce((a, b) => a + b, 0);
+  var total_size = 0;
+  if (plots !== undefined) {
+    total_size = plots
+      .map(p => calculateSizeFromK(p.size))
+      .reduce((a, b) => a + b, 0);
+  }
 
   const connected = useSelector(state => state.daemon_state.farmer_connected);
   const statusItems = getStatusItems(connected, total_size);
@@ -182,7 +207,11 @@ const Challenges = props => {
                     <TableCell align="right">{item.height}</TableCell>
                     <TableCell align="right">{item.estimates.length}</TableCell>
                     <TableCell align="right">
-                      {item.estimates.length > 0 ? (Math.floor(Math.min.apply(Math, item.estimates) / 60)).toString() + " minutes" : "" }
+                      {item.estimates.length > 0
+                        ? Math.floor(
+                            Math.min.apply(Math, item.estimates) / 60
+                          ).toString() + " minutes"
+                        : ""}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -199,8 +228,12 @@ const Plots = props => {
   const classes = useStyles();
   const dispatch = useDispatch();
   const plots = useSelector(state => state.farming_state.harvester.plots);
-  const not_found_filenames = useSelector(state => state.farming_state.harvester.not_found_filenames);
-  const failed_to_open_filenames = useSelector(state => state.farming_state.harvester.failed_to_open_filenames);
+  const not_found_filenames = useSelector(
+    state => state.farming_state.harvester.not_found_filenames
+  );
+  const failed_to_open_filenames = useSelector(
+    state => state.farming_state.harvester.failed_to_open_filenames
+  );
   plots.sort((a, b) => b.size - a.size);
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
@@ -299,108 +332,152 @@ const Plots = props => {
             onChangeRowsPerPage={handleChangeRowsPerPage}
           />
 
-          {not_found_filenames.length > 0 ? <span>
-            <div className={classes.cardTitle}>
-              <Typography component="h6" variant="h6">
-                Not found plots
-              </Typography>
+          {not_found_filenames.length > 0 ? (
+            <span>
+              <div className={classes.cardTitle}>
+                <Typography component="h6" variant="h6">
+                  Not found plots
+                </Typography>
               </div>
-            <List dense={classes.dense}>
-              {not_found_filenames.map(filename =>
-              <ListItem key={filename}>
-                <ListItemText
-                  primary={filename}
-                />
-              </ListItem>)}
-            </List> </span>
-            : ""}
-          {failed_to_open_filenames.length > 0 ? <span>
-            <div className={classes.cardTitle}>
-              <Typography component="h6" variant="h6">
-                Failed to open (invalid plots)
-              </Typography>
-            </div>
-            <List dense={classes.dense}>
-              {failed_to_open_filenames.map(filename =>
-              <ListItem key={filename}>
-                <ListItemText
-                  primary={filename}
-                />
-              </ListItem>)}
-            </List></span>
-            : ""}
+              <List dense={classes.dense}>
+                {not_found_filenames.map(filename => (
+                  <ListItem key={filename}>
+                    <ListItemText primary={filename} />
+                  </ListItem>
+                ))}
+              </List>{" "}
+            </span>
+          ) : (
+            ""
+          )}
+          {failed_to_open_filenames.length > 0 ? (
+            <span>
+              <div className={classes.cardTitle}>
+                <Typography component="h6" variant="h6">
+                  Failed to open (invalid plots)
+                </Typography>
+              </div>
+              <List dense={classes.dense}>
+                {failed_to_open_filenames.map(filename => (
+                  <ListItem key={filename}>
+                    <ListItemText primary={filename} />
+                  </ListItem>
+                ))}
+              </List>
+            </span>
+          ) : (
+            ""
+          )}
         </Grid>
       </Grid>
     </Paper>
   );
 };
 
-const Farmer = () => {
+const FarmerContent = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
-  const [value, setValue] = React.useState(0);
 
   const connections = useSelector(
     state => state.farming_state.farmer.connections
   );
+
   const connectionError = useSelector(
     state => state.farming_state.farmer.open_connection_error
   );
 
   const openConnectionCallback = (host, port) => {
-    dispatch(openConnection(host, port))
-  }
-  const closeConnectionCallback = (node_id) => {
-    dispatch(closeConnection(node_id))
-  }
-
-  const handleChange = (event, newValue) => {
-    setValue(newValue);
+    dispatch(openConnection(host, port));
+  };
+  const closeConnectionCallback = node_id => {
+    dispatch(closeConnection(node_id));
   };
 
+  const to_present = useSelector(state => state.farmer_menu.view);
+
+  if (to_present == presentFarmer) {
+    return (
+      <Container maxWidth="lg" className={classes.container}>
+        <Grid container spacing={3}>
+          {/* Chart */}
+          <Grid item xs={12}>
+            <FarmerStatus></FarmerStatus>
+          </Grid>
+          <Grid item xs={12}>
+            <Challenges></Challenges>
+          </Grid>
+          <Grid item xs={12}>
+            <Connections
+              connections={connections}
+              connectionError={connectionError}
+              openConnection={openConnectionCallback}
+              closeConnection={closeConnectionCallback}
+            ></Connections>
+          </Grid>
+          <Grid item xs={12}>
+            <Plots></Plots>
+          </Grid>
+        </Grid>
+      </Container>
+    );
+  } else {
+    return <Plotter></Plotter>;
+  }
+};
+
+const FarmerListItem = props => {
+  const dispatch = useDispatch();
+  const label = props.label;
+  const icon = props.icon;
+  const type = props.type;
+  function present() {
+    if (type === presentFarmer) {
+      dispatch(changeFarmerMenu(presentFarmer));
+    } else if (type == presentPlotter) {
+      dispatch(changeFarmerMenu(presentPlotter));
+    }
+  }
+
+  return (
+    <ListItem button onClick={present}>
+      <ListItemText primary={label} />
+    </ListItem>
+  );
+};
+
+const FarmerMenuList = () => {
+  return (
+    <List>
+      <FarmerListItem
+        label="Farmer & Harvester"
+        type={presentFarmer}
+      ></FarmerListItem>
+      <FarmerListItem label="Plotter" type={presentPlotter}></FarmerListItem>
+      <Divider />
+    </List>
+  );
+};
+
+const Farmer = () => {
+  const classes = useStyles();
+  var open = true;
   return (
     <div className={classes.root}>
       <CssBaseline />
+      <Drawer
+        variant="permanent"
+        classes={{
+          paper: classes.drawerPaper
+        }}
+        open={open}
+      >
+        <FarmerMenuList></FarmerMenuList>
+        <Divider />
+      </Drawer>
       <main className={classes.content}>
-        <Paper square className={classes.tabs}>
-          <Tabs
-            value={value}
-            onChange={handleChange}
-            // variant="fullWidth"
-            centered
-            indicatorColor="secondary"
-            textColor="secondary"
-            aria-label="icon label tabs example"
-          >
-            <Tab icon={<DonutLargeIcon />} label="Farmer and Harverster" />
-            <Tab icon={<HourglassEmptyIcon />} label="Plotting" />
-          </Tabs>
-          {value === 0 ? (
-            <Container maxWidth="lg" className={classes.container}>
-              <Grid container spacing={3}>
-                {/* Chart */}
-                <Grid item xs={12}>
-                  <FarmerStatus></FarmerStatus>
-                </Grid>
-                <Grid item xs={12}>
-                  <Challenges></Challenges>
-                </Grid>
-                <Grid item xs={12}>
-                  <Connections connections={connections} connectionError={connectionError} openConnection={openConnectionCallback} closeConnection={closeConnectionCallback}></Connections>
-                </Grid>
-                <Grid item xs={12}>
-                  <Plots></Plots>
-                </Grid>
-              </Grid>
-            </Container>
-          ) : (
-            <Container maxWidth="lg" className={classes.container}>
-              <Grid container spacing={3}>
-                Here goes the plotter
-              </Grid>
-            </Container>
-          )}
-        </Paper>
+        <Container maxWidth="lg" className={classes.container}>
+          <FarmerContent></FarmerContent>
+        </Container>
       </main>
     </div>
   );

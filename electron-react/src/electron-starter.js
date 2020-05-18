@@ -5,8 +5,12 @@ const path = require("path");
 const WebSocket = require("ws");
 const ipcMain = require("electron").ipcMain;
 const config = require("./config");
+const dev_config = require("./dev_config");
 const local_test = config.local_test;
+const redux_tool = dev_config.redux_tool;
 var url = require("url");
+const Tail = require("tail").Tail;
+const os = require("os");
 
 // Only takes effect if local_test is false. Connects to a local introducer.
 var local_introducer = false;
@@ -117,6 +121,12 @@ const createWindow = () => {
     }
   });
 
+  if (dev_config.redux_tool) {
+    BrowserWindow.addDevToolsExtension(
+      path.join(os.homedir(), dev_config.redux_tool)
+    );
+  }
+
   var startUrl =
     process.env.ELECTRON_START_URL ||
     url.format({
@@ -125,7 +135,6 @@ const createWindow = () => {
       slashes: true
     });
   console.log(startUrl);
-  startUrl += "?testing=" + local_test + "&wallet_id=1";
 
   mainWindow.loadURL(startUrl);
 

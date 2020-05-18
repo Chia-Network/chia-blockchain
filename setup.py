@@ -16,15 +16,11 @@ dependencies = [
     "sortedcontainers==2.1.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
     "clvm-tools==0.1.1",  # clvm compiler tools
-<<<<<<< HEAD
-    "cryptography==2.8",
     "bitstring==3.1.6",
     "keyring==21.2.1",
     "keyring_jeepney==0.2",
     "keyrings.cryptfile==1.3.4",
-=======
     "cryptography==2.9.2", #Python cryptography library for TLS
->>>>>>> 94653c6daff2a8dbe1a1ce03a4df730b785b863d
 ]
 
 upnp_dependencies = [

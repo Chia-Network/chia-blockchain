@@ -96,7 +96,6 @@ const CustomRouter = () => {
     state => state.daemon_state.wallet_connected
   );
   const presentView = useSelector(state => state.entrance_menu.view);
-
   if (!wallet_connected) {
     return <LoadingScreen></LoadingScreen>;
   } else if (!logged_in_received) {

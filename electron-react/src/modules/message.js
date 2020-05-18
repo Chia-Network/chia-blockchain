@@ -1,30 +1,9 @@
-import {
-  service_wallet_server,
-} from "../util/service_names";
+import { service_wallet_server } from "../util/service_names";
 
 export const walletMessage = () => ({
   type: "OUTGOING_MESSAGE",
   destination: service_wallet_server
 });
-
-export const daemonMessage = () => ({
-  type: "OUTGOING_MESSAGE",
-  destination: "daemon"
-});
-
-export const registerService = () => {
-  var action = daemonMessage();
-  action.command = "register_service";
-  action.data = { service: "wallet_ui" };
-  return action;
-};
-
-export const startService = service_name => {
-  var action = daemonMessage();
-  action.command = "start_service";
-  action.data = { service: service_name };
-  return action;
-};
 
 export const format_message = (command, data) => {
   var action = walletMessage();

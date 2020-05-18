@@ -576,7 +576,7 @@ class RpcApiHandler:
             response = {"success": True, "headers": headers}
             return response
         else:
-            response = {"error": f"unknown_command {command}"}
+            response = {"success": False, "error": f"unknown_command {command}"}
             return response
 
     async def safe_handle(self, websocket, payload):

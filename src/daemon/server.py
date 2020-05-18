@@ -45,6 +45,7 @@ if getattr(sys, "frozen", False):
         "chia_timelord": "start_timelord",
         "chia_timelord_launcher": "timelord_launcher",
         "chia_full_node_simulator": "start_simulator",
+        "plotter": "create_plots"
     }
 
     def executable_for_service(service_name):
@@ -162,7 +163,7 @@ class WebSocketServer:
         elif command == "register_service":
             response = await self.register_service(websocket, data)
         else:
-            response = {"error": f"unknown_command {command}"}
+            response = {"success": False, "error": f"unknown_command {command}"}
 
         full_response = format_response(message, response)
         await websocket.send(full_response)
@@ -198,7 +199,11 @@ class WebSocketServer:
                 log.exception(f"problem starting {service_name}")
                 error = "start failed"
 
-        response = {"success": success, "service": service_name, "error": error}
+        if service_name == "chia-create-plots":
+            response = {"success": success, "service": service_name,"out_file": f"{plotter_log_path(self.root_path).absolute()}",  "error": error}
+        else:
+            response = {"success": success, "service": service_name, "error": error}
+
         return response
 
     async def stop_service(self, request):
@@ -211,7 +216,10 @@ class WebSocketServer:
         service_name = request["service"]
         process = self.services.get(service_name)
         r = process is not None and process.poll() is None
-        response = {"success": True, "service_name": service_name, "is_running": r}
+        if service_name == "chia-create-plots":
+            response = {"success": True, "service_name": service_name, "is_running": r, "out_file": f"{plotter_log_path(self.root_path).absolute()}"}
+        else:
+            response = {"success": True, "service_name": service_name, "is_running": r}
         return response
 
     async def exit(self):
@@ -272,6 +280,8 @@ def pid_path_for_service(root_path, service):
     pid_name = service.replace(" ", "-").replace("/", "-")
     return root_path / "run" / f"{pid_name}.pid"
 
+def plotter_log_path(root_path):
+    return root_path / "plotter" / f"plotter_log.txt"
 
 def launch_service(root_path, service_command):
     """
@@ -289,7 +299,17 @@ def launch_service(root_path, service_command):
     service_name = service_array[0]
     service_executable = executable_for_service(service_name)
     service_array[0] = service_executable
-    process = subprocess.Popen(service_array, shell=False)
+    if service_name == "chia-create-plots":
+        plotter_path = plotter_log_path(root_path)
+        if plotter_path.parent.exists():
+            if plotter_path.exists():
+                plotter_path.unlink()
+        else:
+            mkdir(plotter_path.parent)
+        outfile = open(plotter_path.resolve(), 'w')
+        process = subprocess.Popen(service_array, shell=False, stdout=outfile)
+    else:
+        process = subprocess.Popen(service_array, shell=False)
     pid_path = pid_path_for_service(root_path, service_command)
     try:
         mkdir(pid_path.parent)
@@ -427,9 +447,10 @@ async def async_run_daemon(root_path):
         return 2
 
     # TODO: clean this up, ensuring lockfile isn't removed until the listen port is open
-    server = create_server_for_daemon(root_path)
+    create_server_for_daemon(root_path)
     log.info("before start")
-    await server.start()
+    ws_server = WebSocketServer(root_path)
+    await ws_server.start()
 
 
 def run_daemon(root_path):

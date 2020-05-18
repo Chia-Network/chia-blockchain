@@ -352,6 +352,7 @@ const OfferSwitch = () => {
     return <DropView></DropView>;
   }
 };
+
 const CreateOffer = () => {
   const wallets = useSelector(state => state.wallet_state.wallets);
   const classes = useStyles();

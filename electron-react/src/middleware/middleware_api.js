@@ -20,7 +20,8 @@ import {
   service_full_node,
   service_simulator,
   service_farmer,
-  service_harvester
+  service_harvester,
+  service_plotter
 } from "../util/service_names";
 import {
   pingFullNode,
@@ -39,6 +40,12 @@ import {
   presentSelectKeys,
   presentNewWallet
 } from "../modules/entranceMenu";
+import {
+  addProgress,
+  resetProgress,
+  plottingStarted
+} from "../modules/plotter_messages";
+import isElectron from "is-electron";
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -66,6 +73,32 @@ async function ping_harvester(store) {
   console.log("pining harvester");
   await sleep(1500);
   store.dispatch(pingHarvester());
+}
+
+async function track_progress(store, location) {
+  if (!isElectron()) {
+    return;
+  }
+  const Tail = window.require("tail").Tail;
+
+  const dispatch = store.dispatch;
+  var options = { fromBeginning: true, follow: true };
+  if (!location) {
+    return;
+  }
+  dispatch(plottingStarted());
+  try {
+    dispatch(resetProgress());
+    const tail = new Tail(location, options);
+    tail.on("line", data => {
+      dispatch(addProgress(data));
+    });
+    tail.on("error", err => {
+      dispatch(addProgress(err));
+    });
+  } catch (e) {
+    console.log(e);
+  }
 }
 
 export const handle_message = (store, payload) => {
@@ -174,7 +207,6 @@ export const handle_message = (store, payload) => {
   } else if (payload.command === "get_wallets") {
     if (payload.data.success) {
       const wallets = payload.data.wallets;
-      // console.log(wallets);
       for (let wallet of wallets) {
         store.dispatch(get_balance_for_wallet(wallet.id));
         store.dispatch(get_transactions(wallet.id));
@@ -202,6 +234,8 @@ export const handle_message = (store, payload) => {
         ping_farmer(store);
       } else if (service === service_harvester) {
         ping_harvester(store);
+      } else if (service === service_plotter) {
+        track_progress(store, payload.data.out_file);
       }
     } else if (payload.data.error === "already running") {
       if (service === service_wallet_server) {
@@ -214,6 +248,23 @@ export const handle_message = (store, payload) => {
         ping_farmer(store);
       } else if (service === service_harvester) {
         ping_harvester(store);
+      } else if (service === service_plotter) {
+      }
+    }
+  } else if (payload.command == "is_running") {
+    if (payload.data.success) {
+      const service = payload.data.service_name;
+      const is_running = payload.data.is_running;
+      if (service == service_plotter) {
+        if (is_running) {
+          track_progress(store, payload.data.out_file);
+        }
+      }
+    }
+  } else if (payload.command === "stop_service") {
+    if (payload.data.success) {
+      if (payload.data.service_name === service_plotter) {
+        store.dispatch(resetProgress());
       }
     }
   }

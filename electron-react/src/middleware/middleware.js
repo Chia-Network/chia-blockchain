@@ -1,12 +1,17 @@
 import * as actions from "../modules/websocket";
-import { registerService, startService } from "../modules/message";
+import {
+  registerService,
+  startService,
+  isServiceRunning
+} from "../modules/daemon_messages";
 import { handle_message } from "./middleware_api";
 import {
   service_wallet_server,
   service_full_node,
   service_simulator,
   service_farmer,
-  service_harvester
+  service_harvester,
+  service_plotter
 } from "../util/service_names";
 const config = require("../config");
 
@@ -40,12 +45,11 @@ const socketMiddleware = () => {
     }
     let start_farmer = startService(service_farmer);
     let start_harvester = startService(service_harvester);
-
+    store.dispatch(isServiceRunning(service_plotter));
     store.dispatch(start_wallet);
     store.dispatch(start_node);
     store.dispatch(start_farmer);
     store.dispatch(start_harvester);
-    // console.log("Register Service");
   };
 
   const onClose = store => () => {
