@@ -13,7 +13,7 @@ from src.full_node.full_node import FullNode
 from src.types.header import Header
 from src.types.full_block import FullBlock
 from src.types.peer_info import PeerInfo
-from src.util.ints import uint16, uint32, uint64
+from src.util.ints import uint16, uint32, uint64, uint128
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
 from src.util.json_util import obj_to_response
@@ -78,6 +78,9 @@ class RpcApiHandler:
             sync_tip_height = 0
             sync_progress_height = uint32(0)
 
+        newer_block_hex = lca.header_hash.hex()
+        older_block_hex = self.full_node.blockchain.height_to_hash[max(0, lca.height - 100)].hex()
+        space = await self._get_network_space(newer_block_hex, older_block_hex)
         response = {
             "tips": tips,
             "tip_hashes": tip_hashes,
@@ -90,6 +93,7 @@ class RpcApiHandler:
             "difficulty": difficulty,
             "ips": ips,
             "min_iters": min_iters,
+            "space": space
         }
         self.cached_blockchain_state = response
         return response
@@ -187,6 +191,7 @@ class RpcApiHandler:
                 header: Optional[Header] = self.full_node.blockchain.headers.get(
                     current.prev_header_hash, None
                 )
+                assert header is not None
                 headers[header.header_hash] = header
                 current = header
 
@@ -194,6 +199,7 @@ class RpcApiHandler:
         for h in heights:
             unfinished = await self._get_unfinished_block_headers(h)
             for header in unfinished:
+                assert header is not None
                 all_unfinished[header.header_hash] = header
 
         sorted_headers = [
@@ -210,21 +216,25 @@ class RpcApiHandler:
         ]
 
         finished_with_meta = []
+        finished_header_hashes = set()
         for header in sorted_headers:
             header_hash = header.header_hash
             header_dict = header.to_json_dict()
             header_dict["data"]["header_hash"] = header_hash
             header_dict["data"]["finished"] = True
             finished_with_meta.append(header_dict)
+            finished_header_hashes.add(header_hash)
 
         if self.cached_blockchain_state is None:
             await self._get_blockchain_state()
-
+        assert self.cached_blockchain_state is not None
         ips = self.cached_blockchain_state["ips"]
 
         unfinished_with_meta = []
         for header in sorted_unfinished:
             header_hash = header.header_hash
+            if header_hash in finished_header_hashes:
+                continue
             header_dict = header.to_json_dict()
             header_dict["data"]["header_hash"] = header_hash
             header_dict["data"]["finished"] = False
@@ -260,13 +270,13 @@ class RpcApiHandler:
             if (
                 curr_h % self.full_node.constants["DIFFICULTY_EPOCH"]
             ) == self.full_node.constants["DIFFICULTY_DELAY"]:
-                curr_b_header = self.full_node.blockchain.height_to_hash.get(
+                curr_b_header_hash = self.full_node.blockchain.height_to_hash.get(
                     uint32(int(curr_h))
                 )
-                if curr_b_header is None:
+                if curr_b_header_hash is None:
                     return None
                 curr_b_block = await self.full_node.block_store.get_block(
-                    curr_b_header.header_hash
+                    curr_b_header_hash
                 )
                 if curr_b_block is None or curr_b_block.proof_of_time is None:
                     return None
@@ -288,19 +298,10 @@ class RpcApiHandler:
         # print("Minimum iterations:", total_mi)
         return total_mi
 
-    async def get_network_space(self, request) -> web.Response:
-        """
-        Retrieves an estimate of total space validating the chain
-        between two block header hashes.
-        """
-        request_data = await request.json()
-        if (
-            "newer_block_header_hash" not in request_data
-            or "older_block_header_hash" not in request_data
-        ):
-            raise web.HTTPBadRequest()
-        newer_block_bytes = hexstr_to_bytes(request_data["newer_block_header_hash"])
-        older_block_bytes = hexstr_to_bytes(request_data["older_block_header_hash"])
+    async def _get_network_space(self, newer_block_hex, older_block_hex) -> uint128:
+        newer_block_bytes = hexstr_to_bytes(newer_block_hex)
+        older_block_bytes = hexstr_to_bytes(older_block_hex)
+
         newer_block = await self.full_node.block_store.get_block(newer_block_bytes)
         if newer_block is None:
             raise web.HTTPNotFound()
@@ -321,7 +322,24 @@ class RpcApiHandler:
         network_space_bytes_estimate = (
             weight_div_iters * network_space_constant * tips_adjustment_constant
         )
-        return obj_to_response(network_space_bytes_estimate)
+        return uint128(int(network_space_bytes_estimate))
+
+
+    async def get_network_space(self, request) -> web.Response:
+        """
+        Retrieves an estimate of total space validating the chain
+        between two block header hashes.
+        """
+        request_data = await request.json()
+        if (
+            "newer_block_header_hash" not in request_data
+            or "older_block_header_hash" not in request_data
+        ):
+            raise web.HTTPBadRequest()
+        newer_block_hex = request_data["newer_block_header_hash"]
+        older_block_hex = request_data["older_block_header_hash"]
+
+        return obj_to_response(await self._get_network_space(newer_block_hex, older_block_hex))
 
     async def get_unfinished_block_headers(self, request) -> web.Response:
         request_data = await request.json()

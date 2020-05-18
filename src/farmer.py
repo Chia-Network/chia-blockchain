@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Set, Optional, Callable
 
 from blspy import Util, PublicKey
 from src.util.keychain import Keychain
@@ -52,6 +52,7 @@ class Farmer:
         self.server = None
         self._shut_down = False
         self.keychain = keychain
+        self.state_changed_callback: Optional[Callable] = None
 
         # This is the farmer configuration
         self.wallet_target = bytes.fromhex(self.config["xch_target_puzzle_hash"])
@@ -81,6 +82,13 @@ class Farmer:
 
     def set_server(self, server):
         self.server = server
+
+    def _set_state_changed_callback(self, callback: Callable):
+        self.state_changed_callback = callback
+
+    def _change_state(self, change: str):
+        if self.state_changed_callback is not None:
+            self.state_changed_callback(change)
 
     async def _get_required_iters(
         self, challenge_hash: bytes32, quality_string: bytes32, plot_size: uint8

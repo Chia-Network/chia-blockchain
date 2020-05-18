@@ -38,6 +38,22 @@ class FarmerRpcApiHandler:
         self.shut_down = True
         await self.websocket.close()
 
+    async def state_changed(self, change: str):
+        if self.websocket is None:
+            return
+
+        if change == "challenges":
+            data = await self._get_latest_challenges()
+            try:
+                await self.websocket.send_str(
+                    create_payload("get_latest_challenges", data, self.service_name, "wallet_ui")
+                )
+            except (BaseException) as e:
+                try:
+                    self.log.warning(f"Sending data failed. Exception {type(e)}.")
+                except BrokenPipeError:
+                    pass
+
     async def _get_latest_challenges(self) -> List:
         response = []
         seen_challenges: Set = set()
@@ -257,6 +273,8 @@ async def start_rpc_server(farmer: Farmer, stop_node_cb: Callable, rpc_port: uin
     """
     handler = FarmerRpcApiHandler(farmer, stop_node_cb)
     app = web.Application()
+
+    farmer._set_state_changed_callback(handler.state_changed)
 
     app.add_routes(
         [
