@@ -72,13 +72,28 @@ class Wallet:
         )
         return spendable_am
 
-    async def get_pending_tx_balance(self) -> uint64:
-        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.wallet_info.id)
+    async def get_pending_change_balance(self) -> uint64:
+        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            self.wallet_info.id
+        )
         addition_amount = 0
 
         for record in unconfirmed_tx:
+            our_spend = False
+            for coin in record.removals:
+                if await self.wallet_state_manager.does_coin_belong_to_wallet(
+                    coin, self.wallet_info.id
+                ):
+                    our_spend = True
+                    break
+
+            if our_spend is not True:
+                continue
+
             for coin in record.additions:
-                if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.wallet_info.id):
+                if await self.wallet_state_manager.does_coin_belong_to_wallet(
+                    coin, self.wallet_info.id
+                ):
                     addition_amount += coin.amount
 
         return uint64(addition_amount)

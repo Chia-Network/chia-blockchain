@@ -334,7 +334,9 @@ class WalletStateManager:
         for record in spendable:
             amount = uint64(amount + record.coin.amount)
 
-        unconfirmed_tx: List[TransactionRecord] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
+        unconfirmed_tx: List[
+            TransactionRecord
+        ] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         removal_amount = 0
 
         for txrecord in unconfirmed_tx:

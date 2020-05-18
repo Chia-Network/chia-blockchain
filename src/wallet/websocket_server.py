@@ -277,7 +277,7 @@ class WebSocketServer:
         balance = await wallet.get_confirmed_balance()
         pending_balance = await wallet.get_unconfirmed_balance()
         spendable_balance = await wallet.get_spendable_balance()
-        pending_tx_balance = await wallet.get_pending_tx_balance()
+        pending_change = await wallet.get_pending_change_balance()
         if wallet.wallet_info.type == WalletType.COLOURED_COIN:
             frozen_balance = 0
         else:
@@ -290,7 +290,7 @@ class WebSocketServer:
             "unconfirmed_wallet_balance": pending_balance,
             "spendable_balance": spendable_balance,
             "frozen_balance": frozen_balance,
-            "pending_tx_balance": pending_tx_balance
+            "pending_change": pending_change,
         }
 
         await websocket.send(format_response(response_api, response))

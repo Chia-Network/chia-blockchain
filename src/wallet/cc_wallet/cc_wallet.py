@@ -508,24 +508,41 @@ class CCWallet:
         )
         removal_amount = 0
         for name, coin in unconfirmed_removals.items():
-            if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.wallet_info.id):
+            if await self.wallet_state_manager.does_coin_belong_to_wallet(
+                coin, self.wallet_info.id
+            ):
                 removal_amount += coin.amount
 
         result = amount - removal_amount
 
         return uint64(result)
 
-    async def get_pending_tx_balance(self) -> uint64:
-
-        unconfirmed_removals: Dict[
-            bytes32, Coin
-        ] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+    async def get_pending_change_balance(self) -> uint64:
+        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             self.wallet_info.id
         )
         addition_amount = 0
-        for name, coin in unconfirmed_removals.items():
-            if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.wallet_info.id):
-                addition_amount += coin.amount
+
+        for record in unconfirmed_tx:
+            our_spend = False
+            for coin in record.removals:
+                # Don't count eve spend as change
+                if coin.parent_coin_info.hex() == self.cc_info.my_colour_name:
+                    continue
+                if await self.wallet_state_manager.does_coin_belong_to_wallet(
+                    coin, self.wallet_info.id
+                ):
+                    our_spend = True
+                    break
+
+            if our_spend is not True:
+                continue
+
+            for coin in record.additions:
+                if await self.wallet_state_manager.does_coin_belong_to_wallet(
+                    coin, self.wallet_info.id
+                ):
+                    addition_amount += coin.amount
 
         return uint64(addition_amount)
 
