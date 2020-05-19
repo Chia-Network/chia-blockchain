@@ -45,7 +45,7 @@ if getattr(sys, "frozen", False):
         "chia_timelord": "start_timelord",
         "chia_timelord_launcher": "timelord_launcher",
         "chia_full_node_simulator": "start_simulator",
-        "plotter": "create_plots"
+        "plotter": "create_plots",
     }
 
     def executable_for_service(service_name):
@@ -200,7 +200,12 @@ class WebSocketServer:
                 error = "start failed"
 
         if service_name == "chia-create-plots":
-            response = {"success": success, "service": service_name,"out_file": f"{plotter_log_path(self.root_path).absolute()}",  "error": error}
+            response = {
+                "success": success,
+                "service": service_name,
+                "out_file": f"{plotter_log_path(self.root_path).absolute()}",
+                "error": error,
+            }
         else:
             response = {"success": success, "service": service_name, "error": error}
 
@@ -217,7 +222,12 @@ class WebSocketServer:
         process = self.services.get(service_name)
         r = process is not None and process.poll() is None
         if service_name == "chia-create-plots":
-            response = {"success": True, "service_name": service_name, "is_running": r, "out_file": f"{plotter_log_path(self.root_path).absolute()}"}
+            response = {
+                "success": True,
+                "service_name": service_name,
+                "is_running": r,
+                "out_file": f"{plotter_log_path(self.root_path).absolute()}",
+            }
         else:
             response = {"success": True, "service_name": service_name, "is_running": r}
         return response
@@ -280,8 +290,10 @@ def pid_path_for_service(root_path, service):
     pid_name = service.replace(" ", "-").replace("/", "-")
     return root_path / "run" / f"{pid_name}.pid"
 
+
 def plotter_log_path(root_path):
     return root_path / "plotter" / f"plotter_log.txt"
+
 
 def launch_service(root_path, service_command):
     """
@@ -306,7 +318,7 @@ def launch_service(root_path, service_command):
                 plotter_path.unlink()
         else:
             mkdir(plotter_path.parent)
-        outfile = open(plotter_path.resolve(), 'w')
+        outfile = open(plotter_path.resolve(), "w")
         process = subprocess.Popen(service_array, shell=False, stdout=outfile)
     else:
         process = subprocess.Popen(service_array, shell=False)

@@ -71,6 +71,7 @@ class FullNode:
     constants: Dict
     _shut_down: bool
     root_path: Path
+    state_changed_callback: Optional[Callable]
 
     @classmethod
     async def create(
@@ -115,6 +116,7 @@ class FullNode:
 
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
         await self.mempool_manager.new_tips(await self.blockchain.get_full_tips())
+        self.state_changed_callback = None
         return self
 
     def _set_server(self, server: ChiaServer):

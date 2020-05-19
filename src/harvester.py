@@ -346,10 +346,17 @@ class Harvester:
         if index is not None:
             proof_xs: bytes
             try:
-                proof_xs = self.provers[filename].get_full_proof(challenge_hash, index)
-            except RuntimeError:
-                self.provers[filename] = DiskProver(str(filename))
-                proof_xs = self.provers[filename].get_full_proof(challenge_hash, index)
+                try:
+                    proof_xs = self.provers[filename].get_full_proof(
+                        challenge_hash, index
+                    )
+                except RuntimeError:
+                    self.provers[filename] = DiskProver(str(filename))
+                    proof_xs = self.provers[filename].get_full_proof(
+                        challenge_hash, index
+                    )
+            except KeyError:
+                log.warning(f"KeyError plot {filename} does not exist.")
             pool_pubkey = PublicKey.from_bytes(
                 bytes.fromhex(self.plot_config["plots"][filename]["pool_pk"])
             )

@@ -37,7 +37,8 @@ class FarmerRpcApiHandler:
 
     async def stop(self):
         self.shut_down = True
-        await self.websocket.close()
+        if self.websocket is not None:
+            await self.websocket.close()
 
     async def _state_changed(self, change: str):
         # self.log.warning(f"State changed: {change}")
@@ -275,7 +276,7 @@ class FarmerRpcApiHandler:
                 self.websocket = None
                 await session.close()
             except BaseException as e:
-                self.log.error(f"Exception: {e}")
+                self.log.warning(f"Exception: {e}")
                 if session is not None:
                     await session.close()
                 pass

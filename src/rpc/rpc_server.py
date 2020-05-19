@@ -48,7 +48,8 @@ class RpcApiHandler:
 
     async def stop(self):
         self.shut_down = True
-        await self.websocket.close()
+        if self.websocket is not None:
+            await self.websocket.close()
 
     async def _state_changed(self, change: str):
         # self.log.warning(f"State changed: {change}")
@@ -117,9 +118,11 @@ class RpcApiHandler:
 
         newer_block_hex = lca.header_hash.hex()
         older_block_hex = self.full_node.blockchain.height_to_hash[
-            max(0, lca.height - 100)
+            max(1, lca.height - 100)
         ].hex()
+        log.info(f"getting space {newer_block_hex} {older_block_hex}")
         space = await self._get_network_space(newer_block_hex, older_block_hex)
+        log.info("got space")
         response = {
             "tips": tips,
             "tip_hashes": tip_hashes,
@@ -219,12 +222,20 @@ class RpcApiHandler:
     async def _get_latest_block_headers(self):
         headers: Dict[bytes32, Header] = {}
         tips = self.full_node.blockchain.tips
+        lca_hash = self.full_node.blockchain.lca_block.header_hash
         heights = []
+        seen_lca = False
         for tip in tips:
             current = tip
             heights.append(current.height + 1)
             headers[current.header_hash] = current
-            for i in range(0, 8):
+            i = 0
+            while True:
+                # Returns blocks up to the LCA, and at least 10 blocks from the tip
+                if current.header_hash == lca_hash:
+                    seen_lca = True
+                if seen_lca and i > 10:
+                    break
                 if current.height == 0:
                     break
                 header: Optional[Header] = self.full_node.blockchain.headers.get(
@@ -233,6 +244,7 @@ class RpcApiHandler:
                 assert header is not None
                 headers[header.header_hash] = header
                 current = header
+                i += 1
 
         all_unfinished = {}
         for h in heights:
@@ -585,9 +597,6 @@ class RpcApiHandler:
             message = json.loads(payload)
             response = await self.ws_api(message)
             if response is not None:
-                # self.log.info(f"message: {message}")
-                # self.log.info(f"response: {response}")
-                # self.log.info(f"payload: {format_response(message, response)}")
                 await websocket.send_str(format_response(message, response))
 
         except BaseException as e:
@@ -643,7 +652,7 @@ class RpcApiHandler:
                 self.websocket = None
                 await session.close()
             except BaseException as e:
-                self.log.error(f"Exception: {e}")
+                self.log.warning(f"Exception: {e}")
                 if session is not None:
                     await session.close()
                 pass

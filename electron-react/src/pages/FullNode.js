@@ -121,6 +121,8 @@ const useStyles = makeStyles(theme => ({
     overflowWrap: "break-word"
   },
   block_row: {
+    height: "30px",
+    borderBottom: "1px",
     cursor: "pointer",
     /* mouse over link */
     "&:hover": {
@@ -128,6 +130,8 @@ const useStyles = makeStyles(theme => ({
     }
   },
   block_row_unfinished: {
+    height: "30px",
+    borderBottom: "1px",
     color: "orange",
     "&:hover": {
       backgroundColor: "#aaaaaa"
@@ -201,6 +205,10 @@ const getStatusItems = (state, connected) => {
   const iters = state.min_iters;
   const min_item = { label: "Min Iterations", value: iters };
   status_items.push(min_item);
+
+  const space = (BigInt(state.space) / BigInt(Math.pow(1024, 4))).toString() + "TB";
+  const space_item = { label: "Estimated network space", value: iters };
+  status_items.push(space_item);
 
   return status_items;
 };

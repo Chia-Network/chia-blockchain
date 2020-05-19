@@ -12,6 +12,7 @@ const initial_blockchain = {
   },
   tip_hashes: null,
   tips: null,
+  space: 0,
 };
 const initial_state = {
   blockchain_state: initial_blockchain,

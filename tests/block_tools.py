@@ -74,7 +74,6 @@ class BlockTools:
             self.keychain = Keychain("testing", True)
             self.keychain.delete_all_keys()
             self.keychain.add_private_key_seed(b"block_tools")
-            print("keys:", self.keychain.get_all_private_keys())
             pool_sk: PrivateKey = self.keychain.get_all_private_keys()[0][
                 0
             ].get_private_key()
