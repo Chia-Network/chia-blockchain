@@ -43,9 +43,9 @@ jobs:
         working-directory: ${{ github.workspace }}\electron-wix\prerequisites\
         run: curl -OL --show-error --fail https://aka.ms/vs/16/release/vc_redist.x64.exe
 
-      - name: curl Python 3.7.6 Installer
+      - name: curl Python 3.7.7 Installer
         working-directory: ${{ github.workspace }}\electron-wix\prerequisites\
-        run: curl -OL --show-error --fail https://www.python.org/ftp/python/3.7.6/python-3.7.6-amd64.exe
+        run: curl -OL --show-error --fail https://www.python.org/ftp/python/3.7.7/python-3.7.7-amd64.exe
 
       - name: Build Windows installer with Wix
         env:
