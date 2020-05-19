@@ -1,13 +1,29 @@
+import React from "react";
 import { useEffect } from "react";
-import { useDispatch } from "react-redux";
-import { wsConnect } from "../modules/websocket";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  wsConnect,
+  wsConnecting,
+  websocketReducer
+} from "../modules/websocket";
 
 const WebSocketConnection = props => {
   const dispatch = useDispatch();
-  useEffect(() => {
-    const { host } = props;
-    dispatch(wsConnect(host));
-  }, [props, dispatch]);
+  const connected = useSelector(state => state.websocket.connected);
+  const connecting = useSelector(state => state.websocket.connecting);
+  var timeout = null;
+
+  function connect() {
+    timeout = setTimeout(() => {
+      const { host } = props;
+      dispatch(wsConnect(host));
+    }, 100);
+  }
+
+  if (!timeout && !connected && !connecting) {
+    dispatch(wsConnecting());
+    connect();
+  }
 
   return props.children;
 };
