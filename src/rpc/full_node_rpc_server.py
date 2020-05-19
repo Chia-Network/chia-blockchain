@@ -1,24 +1,17 @@
-from typing import Callable, Set, Dict
-
 from src.full_node.full_node import FullNode
 from src.util.ints import uint16
-from src.util.ws_message import create_payload
 from src.rpc.abstract_rpc_server import AbstractRpcApiHandler, start_rpc_server
 from typing import Callable, List, Optional, Dict
 
-import aiohttp
 from aiohttp import web
 
-from src.full_node.full_node import FullNode
 from src.types.header import Header
 from src.types.full_block import FullBlock
-from src.types.peer_info import PeerInfo
-from src.util.ints import uint16, uint32, uint64, uint128
+from src.util.ints import uint32, uint64, uint128
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
-from src.util.json_util import obj_to_response
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
-from src.util.ws_message import create_payload, format_response, pong
+from src.util.ws_message import create_payload
 
 
 class FullNodeRpcApiHandler(AbstractRpcApiHandler):
