@@ -56,15 +56,18 @@ const useStyles = makeStyles((theme) => ({
   content: {
     height: "calc(100vh - 64px)",
     overflowX: "hidden",
-    paddingRight: theme.spacing(3),
-    paddingBottom: theme.spacing(3),
+    padding: "0px",
+  },
+  noPadding: {
+    padding: "0px",
   },
   container: {
-    paddingTop: theme.spacing(0),
-    paddingBottom: theme.spacing(0),
-    paddingRight: theme.spacing(0),
+    paddingTop: theme.spacing(3),
+    paddingRight: theme.spacing(6),
+    paddingLeft: theme.spacing(6),
   },
   balancePaper: {
+    padding: theme.spacing(2),
     marginTop: theme.spacing(2),
   },
   cardTitle: {
@@ -468,7 +471,7 @@ const Farmer = () => {
         <FarmerMenuList></FarmerMenuList>
       </Drawer>
       <main className={classes.content}>
-        <Container maxWidth="lg" className={classes.container}>
+        <Container maxWidth="lg" className={classes.noPadding}>
           <FarmerContent></FarmerContent>
         </Container>
       </main>

@@ -11,25 +11,31 @@ import { Paper } from "@material-ui/core";
 import { unix_to_short_date } from "../util/utils";
 import Connections from "./Connections";
 import Block from "./Block";
-import { closeConnection, openConnection, getBlock, getHeader } from "../modules/fullnodeMessages";
+import {
+  closeConnection,
+  openConnection,
+  getBlock,
+  getHeader,
+} from "../modules/fullnodeMessages";
 
 /* global BigInt */
 
 const drawerWidth = 180;
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
   root: {
     display: "flex",
-    paddingLeft: "0px"
+    paddingLeft: "0px",
+    paddingRight: "0px",
   },
   menuButton: {
-    marginRight: 36
+    marginRight: 36,
   },
   menuButtonHidden: {
-    display: "none"
+    display: "none",
   },
   title: {
-    flexGrow: 1
+    flexGrow: 1,
   },
   drawerPaper: {
     position: "relative",
@@ -37,38 +43,38 @@ const useStyles = makeStyles(theme => ({
     width: drawerWidth,
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen
-    })
+      duration: theme.transitions.duration.enteringScreen,
+    }),
   },
   drawerPaperClose: {
     overflowX: "hidden",
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen
+      duration: theme.transitions.duration.leavingScreen,
     }),
     width: theme.spacing(7),
     [theme.breakpoints.up("sm")]: {
-      width: theme.spacing(9)
-    }
+      width: theme.spacing(9),
+    },
   },
   content: {
     flexGrow: 1,
     height: "calc(100vh - 64px)",
-    overflowX: "hidden"
+    overflowX: "hidden",
   },
   container: {
-    paddingTop: theme.spacing(0),
-    paddingBottom: theme.spacing(0),
-    paddingRight: theme.spacing(0)
+    paddingTop: theme.spacing(3),
+    paddingLeft: theme.spacing(6),
+    paddingRight: theme.spacing(6),
   },
   paper: {
     padding: theme.spacing(0),
     display: "flex",
     overflow: "auto",
-    flexDirection: "column"
+    flexDirection: "column",
   },
   fixedHeight: {
-    height: 240
+    height: 240,
   },
   drawerWallet: {
     position: "relative",
@@ -77,49 +83,50 @@ const useStyles = makeStyles(theme => ({
     height: "100%",
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen
-    })
+      duration: theme.transitions.duration.enteringScreen,
+    }),
   },
   balancePaper: {
-    marginTop: theme.spacing(2)
+    padding: theme.spacing(2),
+    marginTop: theme.spacing(2),
   },
   bottomOptions: {
     position: "absolute",
     bottom: 0,
-    width: "100%"
+    width: "100%",
   },
   cardTitle: {
     paddingLeft: theme.spacing(1),
     paddingTop: theme.spacing(1),
-    marginBottom: theme.spacing(1)
+    marginBottom: theme.spacing(1),
   },
   cardSubSection: {
     paddingLeft: theme.spacing(3),
     paddingRight: theme.spacing(3),
-    paddingTop: theme.spacing(1)
+    paddingTop: theme.spacing(1),
   },
   left_block_cell: {
     marginLeft: 10,
     width: "25%",
     textAlign: "left",
-    overflowWrap: "break-word"
+    overflowWrap: "break-word",
   },
   center_block_cell: {
     width: "25%",
     textAlign: "center",
-    overflowWrap: "break-word"
+    overflowWrap: "break-word",
   },
   center_block_cell_small: {
     width: "15%",
     textAlign: "center",
-    overflowWrap: "break-word"
+    overflowWrap: "break-word",
   },
   right_block_cell: {
     marginLeft: 30,
     marginRight: 10,
     width: "25%",
     textAlign: "right",
-    overflowWrap: "break-word"
+    overflowWrap: "break-word",
   },
   block_row: {
     height: "30px",
@@ -127,20 +134,20 @@ const useStyles = makeStyles(theme => ({
     cursor: "pointer",
     /* mouse over link */
     "&:hover": {
-      backgroundColor: "#aaaaaa"
-    }
+      backgroundColor: "#aaaaaa",
+    },
   },
   block_row_unfinished: {
     height: "30px",
     borderBottom: "1px",
     color: "orange",
     "&:hover": {
-      backgroundColor: "#aaaaaa"
-    }
+      backgroundColor: "#aaaaaa",
+    },
   },
   block_header: {
-    marginBottom: 10
-  }
+    marginBottom: 10,
+  },
 }));
 
 const getStatusItems = (state, connected) => {
@@ -207,14 +214,15 @@ const getStatusItems = (state, connected) => {
   const min_item = { label: "Min Iterations", value: iters };
   status_items.push(min_item);
 
-  const space = (BigInt(state.space) / BigInt(Math.pow(1024, 4))).toString() + "TB";
+  const space =
+    (BigInt(state.space) / BigInt(Math.pow(1024, 4))).toString() + "TB";
   const space_item = { label: "Estimated network space", value: space };
   status_items.push(space_item);
 
   return status_items;
 };
 
-const StatusCell = props => {
+const StatusCell = (props) => {
   const classes = useStyles();
   const item = props.item;
   const label = item.label;
@@ -234,12 +242,12 @@ const StatusCell = props => {
     </Grid>
   );
 };
-const FullNodeStatus = props => {
+const FullNodeStatus = (props) => {
   const blockchain_state = useSelector(
-    state => state.full_node_state.blockchain_state
+    (state) => state.full_node_state.blockchain_state
   );
   const connected = useSelector(
-    state => state.daemon_state.full_node_connected
+    (state) => state.daemon_state.full_node_connected
   );
   const statusItems = getStatusItems(blockchain_state, connected);
 
@@ -254,7 +262,7 @@ const FullNodeStatus = props => {
             </Typography>
           </div>
         </Grid>
-        {statusItems.map(item => (
+        {statusItems.map((item) => (
           <StatusCell item={item} key={item.label}></StatusCell>
         ))}
       </Grid>
@@ -263,7 +271,7 @@ const FullNodeStatus = props => {
 };
 
 const BlocksCard = () => {
-  const headers = useSelector(state => state.full_node_state.headers);
+  const headers = useSelector((state) => state.full_node_state.headers);
   const dispatch = useDispatch();
 
   function clickedBlock(height, header_hash, prev_header_hash) {
@@ -272,7 +280,7 @@ const BlocksCard = () => {
       if (height > 0) {
         dispatch(getHeader(prev_header_hash));
       }
-    }
+    };
   }
   const classes = useStyles();
   return (
@@ -299,10 +307,22 @@ const BlocksCard = () => {
             </Box>
             <Box className={classes.right_block_cell}>Expected finish time</Box>
           </Box>
-          {headers.map(header => (
+          {headers.map((header) => (
             <Box
-              className={header.data.finished ? classes.block_row : classes.block_row_unfinished}
-              onClick={header.data.finished ? clickedBlock(header.data.height, header.data.header_hash, header.data.prev_header_hash) : () => {}}
+              className={
+                header.data.finished
+                  ? classes.block_row
+                  : classes.block_row_unfinished
+              }
+              onClick={
+                header.data.finished
+                  ? clickedBlock(
+                      header.data.height,
+                      header.data.header_hash,
+                      header.data.prev_header_hash
+                    )
+                  : () => {}
+              }
               display="flex"
               key={header.data.header_hash}
               style={{ minWidth: "100%" }}
@@ -330,7 +350,7 @@ const BlocksCard = () => {
   );
 };
 
-const SearchBlock = props => {
+const SearchBlock = (props) => {
   const classes = useStyles();
   return (
     <Paper className={classes.balancePaper}>
@@ -351,25 +371,19 @@ const FullNode = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
 
-  const connections = useSelector(
-    state => state.full_node_state.connections
-  );
+  const connections = useSelector((state) => state.full_node_state.connections);
   const connectionError = useSelector(
-    state => state.full_node_state.open_connection_error
+    (state) => state.full_node_state.open_connection_error
   );
-  const block = useSelector(
-    state => state.full_node_state.block
-  );
-  const header = useSelector(
-    state => state.full_node_state.header
-  );
+  const block = useSelector((state) => state.full_node_state.block);
+  const header = useSelector((state) => state.full_node_state.header);
 
   const openConnectionCallback = (host, port) => {
-    dispatch(openConnection(host, port))
-  }
+    dispatch(openConnection(host, port));
+  };
   const closeConnectionCallback = (node_id) => {
-    dispatch(closeConnection(node_id))
-  }
+    dispatch(closeConnection(node_id));
+  };
 
   return (
     <div className={classes.root}>
@@ -377,20 +391,29 @@ const FullNode = () => {
       <main className={classes.content}>
         <Container maxWidth="lg" className={classes.container}>
           <Grid container spacing={3}>
-          {block != null ? <Block block={block} prevHeader={header}></Block> : <span>
-              <Grid item xs={12}>
-                <FullNodeStatus></FullNodeStatus>
-              </Grid>
-              <Grid item xs={12}>
-                <BlocksCard></BlocksCard>
-              </Grid>
-              <Grid item xs={12}>
-                  <Connections connections={connections} connectionError={connectionError} openConnection={openConnectionCallback} closeConnection={closeConnectionCallback}></Connections>
-              </Grid>
-              <Grid item xs={12}>
-                <SearchBlock></SearchBlock>
-              </Grid>
-            </span>}
+            {block != null ? (
+              <Block block={block} prevHeader={header}></Block>
+            ) : (
+              <span>
+                <Grid item xs={12}>
+                  <FullNodeStatus></FullNodeStatus>
+                </Grid>
+                <Grid item xs={12}>
+                  <BlocksCard></BlocksCard>
+                </Grid>
+                <Grid item xs={12}>
+                  <Connections
+                    connections={connections}
+                    connectionError={connectionError}
+                    openConnection={openConnectionCallback}
+                    closeConnection={closeConnectionCallback}
+                  ></Connections>
+                </Grid>
+                <Grid item xs={12}>
+                  <SearchBlock></SearchBlock>
+                </Grid>
+              </span>
+            )}
           </Grid>
         </Container>
       </main>
