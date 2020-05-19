@@ -365,7 +365,7 @@ const BalanceCard = (props) => {
                   component="subtitle1"
                   variant="subtitle1"
                 >
-                  {mojo_to_chia_string(balance - balance_pending, "mojo")} XCH
+                  {mojo_to_chia_string(balance_spendable, "mojo")} XCH
                 </Typography>
               </Box>
             </Box>
