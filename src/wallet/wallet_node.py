@@ -196,6 +196,28 @@ class WalletNode:
         introducer = self.config["introducer_peer"]
         introducer_peerinfo = PeerInfo(introducer["host"], introducer["port"])
 
+        async def node_connect_task():
+            while not self._shut_down:
+                if "full_node_peer" in self.config:
+                    full_node_peer = PeerInfo(
+                        self.config["full_node_peer"]["host"],
+                        self.config["full_node_peer"]["port"],
+                    )
+                    full_node_retry = True
+                    for connection in self.server.global_connections.get_connections():
+                        self.log.warning(
+                            f"{connection.get_peer_info()} {full_node_peer}"
+                        )
+                        if connection.get_peer_info() == full_node_peer:
+                            full_node_retry = False
+
+                    if full_node_retry:
+                        self.log.info(
+                            f"Connecting to full node peer at {full_node_peer}"
+                        )
+                        _ = await self.server.start_client(full_node_peer, None)
+                    await asyncio.sleep(30)
+
         async def introducer_client():
             async def on_connect() -> OutboundMessageGenerator:
                 msg = Message("request_peers", full_node_protocol.RequestPeers())
@@ -206,6 +228,7 @@ class WalletNode:
                     # If we are still connected to introducer, disconnect
                     if connection.connection_type == NodeType.INTRODUCER:
                         self.server.global_connections.close(connection)
+
                 if self._num_needed_peers():
                     if not await self.server.start_client(
                         introducer_peerinfo, on_connect
@@ -219,6 +242,7 @@ class WalletNode:
                 await asyncio.sleep(self.config["introducer_connect_interval"])
 
         self.introducer_task = asyncio.create_task(introducer_client())
+        self.node_connect_task = asyncio.create_task(node_connect_task())
 
     def _num_needed_peers(self) -> int:
         assert self.server is not None

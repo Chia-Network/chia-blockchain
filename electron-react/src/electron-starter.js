@@ -57,33 +57,33 @@ const createPyProc = () => {
       "--introducer_peer.host",
       "127.0.0.1",
       "--introducer_peer.port",
-      "8445"
+      "8445",
     ];
   } else {
     additional_args = ["--testing", local_test];
   }
-  if (guessPackaged()) {
-    pyProc = require("child_process").execFile(script, additional_args);
-  } else {
-    pyProc = require("child_process").spawn(
-      "python",
-      [script].concat(additional_args)
-    );
-  }
+  // if (guessPackaged()) {
+  //   pyProc = require("child_process").execFile(script, additional_args);
+  // } else {
+  //   pyProc = require("child_process").spawn(
+  //     "python",
+  //     [script].concat(additional_args)
+  //   );
+  // }
   if (pyProc != null) {
     pyProc.stdout.setEncoding("utf8");
 
-    pyProc.stdout.on("data", function(data) {
+    pyProc.stdout.on("data", function (data) {
       process.stdout.write(data.toString());
     });
 
     pyProc.stderr.setEncoding("utf8");
-    pyProc.stderr.on("data", function(data) {
+    pyProc.stderr.on("data", function (data) {
       //Here is where the error output goes
       process.stdout.write("stderr: " + data.toString());
     });
 
-    pyProc.on("close", function(code) {
+    pyProc.on("close", function (code) {
       //Here you can get the exit code of the script
       console.log("closing code: " + code);
     });
@@ -117,8 +117,8 @@ const createWindow = () => {
     show: false,
     webPreferences: {
       preload: __dirname + "/preload.js",
-      nodeIntegration: true
-    }
+      nodeIntegration: true,
+    },
   });
 
   if (dev_config.redux_tool) {
@@ -138,13 +138,13 @@ const createWindow = () => {
     url.format({
       pathname: path.join(__dirname, "/../build/index.html"),
       protocol: "file:",
-      slashes: true
+      slashes: true,
     });
   console.log(startUrl);
 
   mainWindow.loadURL(startUrl);
 
-  mainWindow.once("ready-to-show", function() {
+  mainWindow.once("ready-to-show", function () {
     mainWindow.show();
   });
 
@@ -174,7 +174,7 @@ ipcMain.on("load-page", (event, arg) => {
     require("url").format({
       pathname: path.join(__dirname, arg.file),
       protocol: "file:",
-      slashes: true
+      slashes: true,
     }) + arg.query
   );
 });

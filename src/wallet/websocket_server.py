@@ -10,7 +10,6 @@ from blspy import ExtendedPrivateKey
 from typing import List, Optional, Tuple
 
 import aiohttp
-from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
 from src.util.keychain import Keychain, seed_from_mnemonic, generate_mnemonic
 from src.util.path import path_from_root
@@ -130,30 +129,6 @@ class WebSocketServer:
             self.config,
         )
         self.wallet_node.set_server(server)
-
-        async def maintain_connection():
-            if "full_node_peer" in self.config:
-                full_node_peer = PeerInfo(
-                    self.config["full_node_peer"]["host"],
-                    self.config["full_node_peer"]["port"],
-                )
-                full_node_retry = True
-
-                for connection in server.global_connections.get_connections():
-                    self.log.warning(f"{connection.get_peer_info()} {full_node_peer}")
-                    if connection.get_peer_info() == full_node_peer:
-                        full_node_retry = False
-
-                if full_node_retry:
-                    self.log.info(f"Connecting to full node peer at {full_node_peer}")
-                    # self.log.info()
-                    _ = await server.start_client(full_node_peer, None)
-                await asyncio.sleep(30)
-                asyncio.create_task(maintain_connection())
-            else:
-                return
-
-        asyncio.create_task(maintain_connection())
 
         if self.config["testing"] is False:
             self.wallet_node._start_bg_tasks()

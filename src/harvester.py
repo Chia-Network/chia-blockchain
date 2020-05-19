@@ -167,10 +167,9 @@ class Harvester:
         self._state_changed("plots")
 
     def _delete_plot(self, str_path: str):
-        if str_path not in self.provers:
-            return False
+        if str_path in self.provers:
+            del self.provers[str_path]
 
-        del self.provers[str_path]
         plot_root = path_from_root(self.root_path, self.config.get("plot_root", "."))
 
         # Remove absolute and relative paths
@@ -183,8 +182,10 @@ class Harvester:
         try:
             # Removes the plot from config.yaml
             plot_config = load_config(self.root_path, "plots.yaml")
-            del plot_config[str_path]
-            save_config(self.root_path, "plots.yaml", plot_config)
+            if str_path in plot_config["plots"]:
+                del plot_config["plots"][str_path]
+                save_config(self.root_path, "plots.yaml", plot_config)
+                self.plot_config = plot_config
         except (FileNotFoundError, KeyError) as e:
             log.warning(f"Could not remove {str_path} {e}")
             return False

@@ -1,9 +1,8 @@
-import React from "react";
+import React, { Component } from "react";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import Grid from "@material-ui/core/Grid";
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles, withStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
-import { withRouter } from "react-router-dom";
 import { connect, useSelector, useDispatch } from "react-redux";
 import Typography from "@material-ui/core/Typography";
 import Box from "@material-ui/core/Box";
@@ -15,6 +14,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  Tooltip,
 } from "@material-ui/core";
 import Button from "@material-ui/core/Button";
 import Table from "@material-ui/core/Table";
@@ -23,6 +23,8 @@ import TableCell from "@material-ui/core/TableCell";
 import TableContainer from "@material-ui/core/TableContainer";
 import TableHead from "@material-ui/core/TableHead";
 import DeleteForeverIcon from "@material-ui/icons/DeleteForever";
+import ListItemSecondaryAction from "@material-ui/core/ListItemSecondaryAction";
+import IconButton from "@material-ui/core/IconButton";
 
 import { calculateSizeFromK } from "../util/plot_sizes";
 import { closeConnection, openConnection } from "../modules/farmerMessages";
@@ -35,10 +37,15 @@ import Connections from "./Connections";
 import Plotter from "./Plotter";
 import { presentFarmer } from "../modules/farmer_menu";
 import { presentPlotter, changeFarmerMenu } from "../modules/farmer_menu";
+import { big_int_to_array, arr_to_hex, sha256 } from "../util/utils";
+import { mojo_to_chia_string } from "../util/chia";
+import HelpIcon from "@material-ui/icons/Help";
+
+/* global BigInt */
 
 const drawerWidth = 180;
 
-const useStyles = makeStyles((theme) => ({
+const styles = (theme) => ({
   root: {
     display: "flex",
     paddingLeft: "0px",
@@ -65,6 +72,7 @@ const useStyles = makeStyles((theme) => ({
     paddingTop: theme.spacing(3),
     paddingRight: theme.spacing(6),
     paddingLeft: theme.spacing(6),
+    paddingBottom: theme.spacing(3),
   },
   balancePaper: {
     padding: theme.spacing(2),
@@ -92,22 +100,64 @@ const useStyles = makeStyles((theme) => ({
       duration: theme.transitions.duration.enteringScreen,
     }),
   },
-}));
+});
 
-const getStatusItems = (connected, plots_size) => {
+const useStyles = makeStyles(styles);
+
+const getStatusItems = (
+  connected,
+  farmerSpace,
+  totalChia,
+  biggestHeight,
+  totalNetworkSpace
+) => {
   var status_items = [];
 
   if (connected) {
-    const item = { label: "Connection Status ", value: "connected" };
+    const item = {
+      label: "Connection Status ",
+      value: "Connected",
+      colour: "green",
+    };
     status_items.push(item);
   } else {
-    const item = { label: "Connection Status ", value: "not connected" };
+    const item = {
+      label: "Connection Status ",
+      value: "Not connected",
+      colour: "red",
+    };
     status_items.push(item);
   }
+  const proportion = parseFloat(farmerSpace) / parseFloat(totalNetworkSpace);
+  const totalHours = 5.0 / proportion / 60;
+
   status_items.push({
     label: "Total size of local plots",
-    value: Math.floor(plots_size / Math.pow(1024, 3)).toString() + " GB",
+    value: Math.floor(farmerSpace / Math.pow(1024, 3)).toString() + " GB",
+    tooltip:
+      "You have " +
+      (proportion * 100).toFixed(6) +
+      "% of the space on the network, so farming a block will take " +
+      totalHours.toFixed(3) +
+      " hours in expectation",
   });
+
+  status_items.push({
+    label: "Total chia farmed",
+    value: mojo_to_chia_string(totalChia),
+  });
+  if (biggestHeight === 0) {
+    status_items.push({
+      label: "Last height farmed",
+      value: "No blocks farmed yet",
+    });
+  } else {
+    status_items.push({
+      label: "Last height farmed",
+      value: biggestHeight,
+    });
+  }
+
   return status_items;
 };
 
@@ -116,6 +166,8 @@ const StatusCell = (props) => {
   const item = props.item;
   const label = item.label;
   const value = item.value;
+  const colour = item.colour;
+  const tooltip = item.tooltip;
   return (
     <Grid item xs={6}>
       <div className={classes.cardSubSection}>
@@ -123,8 +175,17 @@ const StatusCell = (props) => {
           <Box flexGrow={1}>
             <Typography variant="subtitle1">{label}</Typography>
           </Box>
-          <Box>
-            <Typography variant="subtitle1">{value}</Typography>
+          <Box display="flex">
+            <Typography variant="subtitle1">
+              <span style={colour ? { color: colour } : {}}>{value}</span>
+            </Typography>
+            {tooltip ? (
+              <Tooltip title={tooltip}>
+                <HelpIcon style={{ color: "#c8c8c8", fontSize: 12 }}></HelpIcon>
+              </Tooltip>
+            ) : (
+              ""
+            )}
           </Box>
         </Box>
       </div>
@@ -134,15 +195,24 @@ const StatusCell = (props) => {
 
 const FarmerStatus = (props) => {
   const plots = useSelector((state) => state.farming_state.harvester.plots);
-  var total_size = 0;
+  const totalNetworkSpace = useSelector(
+    (state) => state.full_node_state.blockchain_state.space
+  );
+  var farmerSpace = 0;
   if (plots !== undefined) {
-    total_size = plots
+    farmerSpace = plots
       .map((p) => calculateSizeFromK(p.size))
       .reduce((a, b) => a + b, 0);
   }
 
   const connected = useSelector((state) => state.daemon_state.farmer_connected);
-  const statusItems = getStatusItems(connected, total_size);
+  const statusItems = getStatusItems(
+    connected,
+    farmerSpace,
+    props.totalChiaFarmed,
+    props.biggestHeight,
+    totalNetworkSpace
+  );
 
   const classes = useStyles();
   return (
@@ -295,17 +365,25 @@ const Plots = (props) => {
                   .map((item) => (
                     <TableRow key={item.filename}>
                       <TableCell component="th" scope="row">
-                        {item.filename.substring(0, 60)}...
+                        <Tooltip title={item.filename} interactive>
+                          <span>{item.filename.substring(0, 40)}...</span>
+                        </Tooltip>
                       </TableCell>
                       <TableCell align="right">{item.size}</TableCell>
                       <TableCell align="right">
-                        {item["plot-seed"].substring(0, 10)}
+                        <Tooltip title={item["plot-seed"]} interactive>
+                          <span>{item["plot-seed"].substring(0, 10)}</span>
+                        </Tooltip>
                       </TableCell>
                       <TableCell align="right">
-                        {item.plot_pk.substring(0, 10)}...
+                        <Tooltip title={item.plot_pk} interactive>
+                          <span>{item.plot_pk.substring(0, 10)}...</span>
+                        </Tooltip>
                       </TableCell>
                       <TableCell align="right">
-                        {item.pool_pk.substring(0, 10)}...
+                        <Tooltip title={item.pool_pk} interactive>
+                          <span>{item.pool_pk.substring(0, 10)}...</span>
+                        </Tooltip>
                       </TableCell>
                       <TableCell
                         className={classes.clickable}
@@ -336,10 +414,23 @@ const Plots = (props) => {
                   Not found plots
                 </Typography>
               </div>
+              <p>
+                Caution, deleting these plots will delete them forever. Check
+                that the storage devices are properly connected.
+              </p>
               <List dense={classes.dense}>
                 {not_found_filenames.map((filename) => (
                   <ListItem key={filename}>
                     <ListItemText primary={filename} />
+                    <ListItemSecondaryAction>
+                      <IconButton
+                        edge="end"
+                        aria-label="delete"
+                        onClick={deletePlotClick(filename)}
+                      >
+                        <DeleteForeverIcon />
+                      </IconButton>
+                    </ListItemSecondaryAction>
                   </ListItem>
                 ))}
               </List>{" "}
@@ -354,10 +445,22 @@ const Plots = (props) => {
                   Failed to open (invalid plots)
                 </Typography>
               </div>
+              <p>
+                These plots are invalid, you might want to delete them forever.
+              </p>
               <List dense={classes.dense}>
                 {failed_to_open_filenames.map((filename) => (
                   <ListItem key={filename}>
                     <ListItemText primary={filename} />
+                    <ListItemSecondaryAction>
+                      <IconButton
+                        edge="end"
+                        aria-label="delete"
+                        onClick={deletePlotClick(filename)}
+                      >
+                        <DeleteForeverIcon />
+                      </IconButton>
+                    </ListItemSecondaryAction>
                   </ListItem>
                 ))}
               </List>
@@ -371,7 +474,7 @@ const Plots = (props) => {
   );
 };
 
-const FarmerContent = () => {
+const FarmerContent = (props) => {
   const classes = useStyles();
   const dispatch = useDispatch();
 
@@ -398,7 +501,10 @@ const FarmerContent = () => {
         <Grid container spacing={3}>
           {/* Chart */}
           <Grid item xs={12}>
-            <FarmerStatus></FarmerStatus>
+            <FarmerStatus
+              totalChiaFarmed={props.totalChiaFarmed}
+              biggestHeight={props.biggestHeight}
+            ></FarmerStatus>
           </Grid>
           <Grid item xs={12}>
             <Challenges></Challenges>
@@ -454,29 +560,99 @@ const FarmerMenuList = () => {
     </List>
   );
 };
+class Farmer extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      totalChiaFarmed: BigInt(0),
+      biggestHeight: 0,
+    };
+  }
+  async checkRewards() {
+    let totalChia = BigInt(0);
+    let biggestHeight = 0;
+    for (let wallet of this.props.wallets) {
+      if (!wallet) {
+        continue;
+      }
+      for (let tx of wallet.transactions) {
+        if (tx.additions.length < 1) {
+          continue;
+        }
+        let hexHeight = arr_to_hex(
+          big_int_to_array(BigInt(tx.confirmed_at_index), 32)
+        );
+        let hexHeightHashBytes = await sha256(
+          big_int_to_array(BigInt(tx.confirmed_at_index), 32)
+        );
+        let hexHeightHash = arr_to_hex(hexHeightHashBytes);
+        if (
+          hexHeight === tx.additions[0].parent_coin_info ||
+          hexHeight === tx.additions[0].parent_coin_info.slice(2) ||
+          hexHeightHash === tx.additions[0].parent_coin_info ||
+          hexHeightHash === tx.additions[0].parent_coin_info.slice(2)
+        ) {
+          totalChia += BigInt(tx.amount);
+          if (tx.confirmed_at_index > biggestHeight) {
+            biggestHeight = tx.confirmed_at_index;
+          }
+          continue;
+        }
+      }
+    }
+    if (totalChia !== this.state.totalChiaFarmed) {
+      this.setState({
+        totalChiaFarmed: totalChia,
+        biggestHeight: biggestHeight,
+      });
+    }
+  }
+  async componentDidMount(prevProps) {
+    await this.checkRewards();
+  }
 
-const Farmer = () => {
-  const classes = useStyles();
-  var open = true;
-  return (
-    <div className={classes.root}>
-      <CssBaseline />
-      <Drawer
-        variant="permanent"
-        classes={{
-          paper: classes.drawerPaper,
-        }}
-        open={open}
-      >
-        <FarmerMenuList></FarmerMenuList>
-      </Drawer>
-      <main className={classes.content}>
-        <Container maxWidth="lg" className={classes.noPadding}>
-          <FarmerContent></FarmerContent>
-        </Container>
-      </main>
-    </div>
-  );
+  async componentDidUpdate(prevProps) {
+    await this.checkRewards();
+  }
+
+  render() {
+    const classes = this.props.classes;
+    var open = true;
+    return (
+      <div className={classes.root}>
+        <CssBaseline />
+        <Drawer
+          variant="permanent"
+          classes={{
+            paper: classes.drawerPaper,
+          }}
+          open={open}
+        >
+          <FarmerMenuList></FarmerMenuList>
+        </Drawer>
+        <main className={classes.content}>
+          <Container maxWidth="lg" className={classes.noPadding}>
+            <FarmerContent
+              totalChiaFarmed={this.state.totalChiaFarmed}
+              biggestHeight={this.state.biggestHeight}
+            ></FarmerContent>
+          </Container>
+        </main>
+      </div>
+    );
+  }
+}
+
+const mapStateToProps = (state, ownProps) => {
+  return {
+    wallets: state.wallet_state.wallets,
+  };
 };
 
-export default withRouter(connect()(Farmer));
+const mapDispatchToProps = (dispatch, ownProps) => {
+  return {};
+};
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(withStyles(styles)(Farmer));

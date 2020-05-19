@@ -15,39 +15,39 @@ import { service_connection_types } from "../util/service_names";
 import TextField from "@material-ui/core/TextField";
 import SettingsInputAntennaIcon from "@material-ui/icons/SettingsInputAntenna";
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
   form: {
-    margin: theme.spacing(1)
+    margin: theme.spacing(1),
   },
   clickable: {
-    cursor: "pointer"
+    cursor: "pointer",
   },
   error: {
-    color: "red"
+    color: "red",
   },
   container: {
     paddingTop: theme.spacing(0),
     paddingBottom: theme.spacing(0),
-    paddingRight: theme.spacing(0)
+    paddingRight: theme.spacing(0),
   },
   balancePaper: {
-    marginTop: theme.spacing(2)
+    marginTop: theme.spacing(2),
+    padding: theme.spacing(2),
   },
   cardTitle: {
     paddingLeft: theme.spacing(1),
     paddingTop: theme.spacing(1),
-    marginBottom: theme.spacing(1)
+    marginBottom: theme.spacing(1),
   },
   table: {
-    minWidth: 650
+    minWidth: 650,
   },
   connect: {
-    marginLeft: theme.spacing(1)
-  }
+    marginLeft: theme.spacing(1),
+  },
 }));
 
-
-const Connections = props => {
+const Connections = (props) => {
   const classes = useStyles();
 
   const connections = props.connections;
@@ -55,16 +55,16 @@ const Connections = props => {
   const connectionTime = props.connectionTime ? props.connectionTime : false;
 
   const [host, setHost] = React.useState("");
-  const handleChangeHost = event => {
+  const handleChangeHost = (event) => {
     setHost(event.target.value);
   };
 
   const [port, setPort] = React.useState("");
-  const handleChangePort = event => {
+  const handleChangePort = (event) => {
     setPort(event.target.value);
   };
 
-  const deleteConnection = node_id => {
+  const deleteConnection = (node_id) => {
     return () => {
       props.closeConnection(node_id);
     };
@@ -97,17 +97,17 @@ const Connections = props => {
                   <TableCell align="right">Port</TableCell>
                   <TableCell align="right">Up/Down</TableCell>
                   <TableCell align="right">Connection type</TableCell>
-                  {connectionTime ?
+                  {connectionTime ? (
                     <TableCell align="right">Connected</TableCell>
-                  : null}
-                  {connectionTime ?
+                  ) : null}
+                  {connectionTime ? (
                     <TableCell align="right">Last message</TableCell>
-                  : null}
+                  ) : null}
                   <TableCell align="right">Delete</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {connections.map(item => (
+                {connections.map((item) => (
                   <TableRow key={item.node_id}>
                     <TableCell component="th" scope="row">
                       {item.node_id.substring(0, 10)}...
@@ -125,15 +125,16 @@ const Connections = props => {
                       {service_connection_types[item.type]}
                     </TableCell>
 
-                    {connectionTime ?
+                    {connectionTime ? (
                       <TableCell align="right">
                         {unix_to_short_date(parseInt(item.creation_time))}
-                      </TableCell> : null}
-                    {connectionTime ?
-                     <TableCell align="right">
+                      </TableCell>
+                    ) : null}
+                    {connectionTime ? (
+                      <TableCell align="right">
                         {unix_to_short_date(parseInt(item.last_message_time))}
                       </TableCell>
-                    : null }
+                    ) : null}
                     <TableCell
                       className={classes.clickable}
                       onClick={deleteConnection(item.node_id)}

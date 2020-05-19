@@ -1,4 +1,4 @@
-import { big_int_to_array, hex_to_array, arr_to_hex } from "./utils";
+import { big_int_to_array, hex_to_array, arr_to_hex, sha256 } from "./utils";
 /* global BigInt */
 
 export async function hash_header(header) {
@@ -35,6 +35,6 @@ export async function hash_header(header) {
   buf = buf.concat(hex_to_array(header.data.generator_hash));
   buf = buf.concat(hex_to_array(header.harvester_signature));
 
-  let hash = await window.crypto.subtle.digest("SHA-256", new Uint8Array(buf));
+  let hash = await sha256(buf);
   return arr_to_hex(hash);
 }

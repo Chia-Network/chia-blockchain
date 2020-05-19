@@ -1,6 +1,4 @@
-import {
-  service_wallet_server,
-} from "../util/service_names";
+import { service_wallet_server } from "../util/service_names";
 
 export const Wallet = (id, name, type, data) => ({
   id: id,
@@ -11,7 +9,7 @@ export const Wallet = (id, name, type, data) => ({
   balance_pending: 0,
   transactions: [],
   puzzle_hash: "",
-  colour: ""
+  colour: "",
 });
 
 export const Transaction = (
@@ -39,7 +37,7 @@ export const Transaction = (
   spend_bundle: spend_bundle,
   additions: additions,
   removals: removals,
-  wallet_id: wallet_id
+  wallet_id: wallet_id,
 });
 
 export const initial_wallet = Wallet(1, "Chia Wallet", "STANDARD_WALLET", "");
@@ -53,8 +51,8 @@ const initial_state = {
   status: {
     connections: [],
     connection_count: 0,
-    syncing: false
-  }
+    syncing: false,
+  },
 };
 
 export const incomingReducer = (state = { ...initial_state }, action) => {
@@ -86,7 +84,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
             ...state,
             logged_in: false,
             public_key_fingerprints: [],
-            logged_in_received: true
+            logged_in_received: true,
           };
         }
       } else if (command === "get_public_keys") {
@@ -94,7 +92,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         return {
           ...state,
           public_key_fingerprints: public_key_fingerprints,
-          logged_in_received: true
+          logged_in_received: true,
         };
       } else if (command === "logged_in") {
         var logged_in = data.logged_in;

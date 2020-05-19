@@ -229,9 +229,6 @@ class HarvesterRpcApiHandler:
             message = json.loads(payload)
             response = await self.ws_api(message)
             if response is not None:
-                self.log.info(f"message: {message}")
-                self.log.info(f"response: {response}")
-                self.log.info(f"payload: {format_response(message, response)}")
                 await websocket.send_str(format_response(message, response))
 
         except BaseException as e:

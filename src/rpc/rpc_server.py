@@ -120,9 +120,7 @@ class RpcApiHandler:
         older_block_hex = self.full_node.blockchain.height_to_hash[
             max(1, lca.height - 100)
         ].hex()
-        log.info(f"getting space {newer_block_hex} {older_block_hex}")
         space = await self._get_network_space(newer_block_hex, older_block_hex)
-        log.info("got space")
         response = {
             "tips": tips,
             "tip_hashes": tip_hashes,

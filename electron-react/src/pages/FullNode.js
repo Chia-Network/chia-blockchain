@@ -7,10 +7,13 @@ import { withRouter } from "react-router-dom";
 import { connect, useSelector, useDispatch } from "react-redux";
 import Typography from "@material-ui/core/Typography";
 import Box from "@material-ui/core/Box";
-import { Paper } from "@material-ui/core";
+import { Paper, Tooltip } from "@material-ui/core";
 import { unix_to_short_date } from "../util/utils";
 import Connections from "./Connections";
 import Block from "./Block";
+import Button from "@material-ui/core/Button";
+import TextField from "@material-ui/core/TextField";
+import HelpIcon from "@material-ui/icons/Help";
 import {
   closeConnection,
   openConnection,
@@ -30,6 +33,10 @@ const useStyles = makeStyles((theme) => ({
   },
   menuButton: {
     marginRight: 36,
+  },
+  searchHashButton: {
+    marginLeft: "10px",
+    height: "100%",
   },
   menuButtonHidden: {
     display: "none",
@@ -66,6 +73,7 @@ const useStyles = makeStyles((theme) => ({
     paddingTop: theme.spacing(3),
     paddingLeft: theme.spacing(6),
     paddingRight: theme.spacing(6),
+    paddingBottom: theme.spacing(3),
   },
   paper: {
     padding: theme.spacing(0),
@@ -155,10 +163,21 @@ const getStatusItems = (state, connected) => {
   if (state.sync && state.sync.sync_mode) {
     const progress = state.sync.sync_progress_height;
     const tip = state.sync.sync_tip_height;
-    const item = { label: "Status", value: "Syncing " + progress + "/" + tip };
+    const item = {
+      label: "Status",
+      value: "Syncing " + progress + "/" + tip,
+      colour: "orange",
+      tooltip:
+        "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain",
+    };
     status_items.push(item);
   } else {
-    const item = { label: "Status", value: "Synced" };
+    const item = {
+      label: "Status",
+      value: "Synced",
+      colour: "green",
+      tooltip: "This node is fully caught up and validating the network",
+    };
     status_items.push(item);
   }
 
@@ -174,8 +193,8 @@ const getStatusItems = (state, connected) => {
   if (state.tips) {
     var max_height = 0;
     for (let tip of state.tips) {
-      if (parseInt(tip.height) > max_height) {
-        max_height = parseInt(tip.height);
+      if (parseInt(tip.data.height) > max_height) {
+        max_height = parseInt(tip.data.height);
       }
     }
     const item = { label: "Max Tip Block Height", value: "" + max_height };
@@ -188,7 +207,12 @@ const getStatusItems = (state, connected) => {
   if (state.lca) {
     const lca_time = state.lca.data.timestamp;
     const date_string = unix_to_short_date(parseInt(lca_time));
-    const item = { label: "LCA Time", value: date_string };
+    const item = {
+      label: "LCA Time",
+      value: date_string,
+      tooltip:
+        "This is the time of the latest common ancestor, which is a block ancestor of all tip blocks. Note that the full node keeps track of up to three tips at each height.",
+    };
     status_items.push(item);
   } else {
     const item = { label: "LCA Time", value: "" };
@@ -196,10 +220,18 @@ const getStatusItems = (state, connected) => {
   }
 
   if (connected) {
-    const item = { label: "Connection Status ", value: "connected" };
+    const item = {
+      label: "Connection Status ",
+      value: "Connected",
+      colour: "green",
+    };
     status_items.push(item);
   } else {
-    const item = { label: "Connection Status ", value: "not connected" };
+    const item = {
+      label: "Connection Status ",
+      value: "Not connected",
+      colour: "red",
+    };
     status_items.push(item);
   }
   const difficulty = state.difficulty;
@@ -207,7 +239,12 @@ const getStatusItems = (state, connected) => {
   status_items.push(diff_item);
 
   const ips = state.ips;
-  const ips_item = { label: "Iterations per Second", value: ips };
+  const ips_item = {
+    label: "Iterations per Second",
+    value: ips,
+    tooltip:
+      "The estimated proof of time speed of the fastest timelord in the network.",
+  };
   status_items.push(ips_item);
 
   const iters = state.min_iters;
@@ -216,7 +253,12 @@ const getStatusItems = (state, connected) => {
 
   const space =
     (BigInt(state.space) / BigInt(Math.pow(1024, 4))).toString() + "TB";
-  const space_item = { label: "Estimated network space", value: space };
+  const space_item = {
+    label: "Estimated network space",
+    value: space,
+    tooltip:
+      "Estimated sum of all the plotted disk space of all farmers in the network",
+  };
   status_items.push(space_item);
 
   return status_items;
@@ -227,15 +269,26 @@ const StatusCell = (props) => {
   const item = props.item;
   const label = item.label;
   const value = item.value;
+  const tooltip = item.tooltip;
+  const colour = item.colour;
   return (
     <Grid item xs={6}>
       <div className={classes.cardSubSection}>
         <Box display="flex">
-          <Box flexGrow={1}>
+          <Box display="flex" flexGrow={1}>
             <Typography variant="subtitle1">{label}</Typography>
+            {tooltip ? (
+              <Tooltip title={tooltip}>
+                <HelpIcon style={{ color: "#c8c8c8", fontSize: 12 }}></HelpIcon>
+              </Tooltip>
+            ) : (
+              ""
+            )}
           </Box>
           <Box>
-            <Typography variant="subtitle1">{value}</Typography>
+            <Typography variant="subtitle1">
+              <span style={colour ? { color: colour } : {}}>{value}</span>
+            </Typography>
           </Box>
         </Box>
       </div>
@@ -285,66 +338,64 @@ const BlocksCard = () => {
   const classes = useStyles();
   return (
     <Paper className={classes.balancePaper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              Blocks
-            </Typography>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
+      <Grid item xs={12}>
+        <div className={classes.cardTitle}>
+          <Typography component="h6" variant="h6">
+            Blocks
+          </Typography>
+        </div>
+      </Grid>
+      <Grid item xs={12}>
+        <Box
+          className={classes.block_header}
+          display="flex"
+          key={"header"}
+          style={{ minWidth: "100%" }}
+        >
+          <Box className={classes.left_block_cell}>Header Hash</Box>
+          <Box className={classes.center_block_cell_small}>Height</Box>
+          <Box flexGrow={1} className={classes.center_block_cell}>
+            Time Created
+          </Box>
+          <Box className={classes.right_block_cell}>Expected finish time</Box>
+        </Box>
+        {headers.map((header) => (
           <Box
-            className={classes.block_header}
+            className={
+              header.data.finished
+                ? classes.block_row
+                : classes.block_row_unfinished
+            }
+            onClick={
+              header.data.finished
+                ? clickedBlock(
+                    header.data.height,
+                    header.data.header_hash,
+                    header.data.prev_header_hash
+                  )
+                : () => {}
+            }
             display="flex"
-            key={"header"}
+            key={header.data.header_hash}
             style={{ minWidth: "100%" }}
           >
-            <Box className={classes.left_block_cell}>Header Hash</Box>
-            <Box className={classes.center_block_cell_small}>Height</Box>
+            <Box className={classes.left_block_cell}>
+              {header.data.header_hash.substring(0, 12) + "..."}
+              {header.data.finished ? "" : " (unfinished)"}
+            </Box>
+            <Box className={classes.center_block_cell_small}>
+              {header.data.height}
+            </Box>
             <Box flexGrow={1} className={classes.center_block_cell}>
-              Time Created
+              {unix_to_short_date(parseInt(header.data.timestamp))}
             </Box>
-            <Box className={classes.right_block_cell}>Expected finish time</Box>
+            <Box className={classes.right_block_cell}>
+              {header.data.finished
+                ? "finished"
+                : unix_to_short_date(parseInt(header.data.finish_time))}
+            </Box>
           </Box>
-          {headers.map((header) => (
-            <Box
-              className={
-                header.data.finished
-                  ? classes.block_row
-                  : classes.block_row_unfinished
-              }
-              onClick={
-                header.data.finished
-                  ? clickedBlock(
-                      header.data.height,
-                      header.data.header_hash,
-                      header.data.prev_header_hash
-                    )
-                  : () => {}
-              }
-              display="flex"
-              key={header.data.header_hash}
-              style={{ minWidth: "100%" }}
-            >
-              <Box className={classes.left_block_cell}>
-                {header.data.header_hash.substring(0, 12) + "..."}
-                {header.data.finished ? "" : " (unfinished)"}
-              </Box>
-              <Box className={classes.center_block_cell_small}>
-                {header.data.height}
-              </Box>
-              <Box flexGrow={1} className={classes.center_block_cell}>
-                {unix_to_short_date(parseInt(header.data.timestamp))}
-              </Box>
-              <Box className={classes.right_block_cell}>
-                {header.data.finished
-                  ? "finished"
-                  : unix_to_short_date(parseInt(header.data.finish_time))}
-              </Box>
-            </Box>
-          ))}
-        </Grid>
+        ))}
       </Grid>
     </Paper>
   );
@@ -352,14 +403,48 @@ const BlocksCard = () => {
 
 const SearchBlock = (props) => {
   const classes = useStyles();
+  const dispatch = useDispatch();
+  const [searchHash, setSearchHash] = React.useState("");
+  const handleChangeSearchHash = (event) => {
+    setSearchHash(event.target.value);
+  };
+  const clickSearch = () => {
+    setSearchHash("");
+    dispatch(getBlock(searchHash));
+  };
   return (
     <Paper className={classes.balancePaper}>
       <Grid container spacing={0}>
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Search
+              Search block by header hash
             </Typography>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.cardSubSection}>
+            <Box display="flex">
+              <Box flexGrow={1}>
+                <TextField
+                  fullWidth
+                  label="Block hash"
+                  value={searchHash}
+                  onChange={handleChangeSearchHash}
+                  variant="outlined"
+                />
+              </Box>
+              <Box>
+                <Button
+                  onClick={clickSearch}
+                  className={classes.searchHashButton}
+                  color="secondary"
+                  disableElevation
+                >
+                  Search
+                </Button>
+              </Box>
+            </Box>
           </div>
         </Grid>
       </Grid>

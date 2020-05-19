@@ -439,7 +439,8 @@ class FullNode:
             async for msg in self.sync_peers_handler._add_to_request_sets():
                 yield msg  # Send more requests if we can
 
-            await asyncio.sleep(2)
+            self._state_changed("block")
+            await asyncio.sleep(5)
 
         # Awaits for all blocks to be processed, a timeout to happen, or the node to shutdown
         await block_processor_task
