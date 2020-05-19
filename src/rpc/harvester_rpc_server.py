@@ -12,8 +12,6 @@ from src.types.peer_info import PeerInfo
 from src.util.ints import uint16
 from src.util.byte_types import hexstr_to_bytes
 from src.util.json_util import obj_to_response
-from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.logging import initialize_logging
 from src.util.ws_message import create_payload, format_response, pong
 
 log = logging.getLogger(__name__)

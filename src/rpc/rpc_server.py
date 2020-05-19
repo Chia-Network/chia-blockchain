@@ -19,7 +19,6 @@ from src.util.byte_types import hexstr_to_bytes
 from src.util.json_util import obj_to_response
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
 from src.util.ws_message import create_payload, format_response, pong
-from src.util.logging import initialize_logging
 
 log = logging.getLogger(__name__)
 
