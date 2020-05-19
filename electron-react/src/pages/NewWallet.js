@@ -10,14 +10,12 @@ import { connect, useSelector, useDispatch } from "react-redux";
 import { genereate_mnemonics } from "../modules/message";
 import { withRouter } from "react-router-dom";
 import CssTextField from "../components/cssTextField";
+import logo from "../assets/img/chia_logo.svg"; // Tell webpack this JS file uses this image
 import myStyle from "./style";
 import { add_key } from "../modules/message";
-import {
-  changeEntranceMenu,
-  presentSelectKeys
-} from "../modules/entranceMenu";
+import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
 
-const MnemonicField = props => {
+const MnemonicField = (props) => {
   return (
     <Grid item xs={2}>
       <CssTextField
@@ -37,14 +35,14 @@ const MnemonicField = props => {
     </Grid>
   );
 };
-const Iterator = props => {
+const Iterator = (props) => {
   return props.mnemonic.map((word, i) => (
     <MnemonicField key={i} word={word} id={"id_" + (i + 1)} index={i + 1} />
   ));
 };
 
-const UIPart = props => {
-  const words = useSelector(state => state.wallet_state.mnemonic);
+const UIPart = (props) => {
+  const words = useSelector((state) => state.wallet_state.mnemonic);
   const dispatch = useDispatch();
   const classes = myStyle();
 
@@ -63,9 +61,15 @@ const UIPart = props => {
       </ArrowBackIosIcon>
       <div className={classes.grid_wrap}>
         <Container className={classes.grid} maxWidth="lg">
-          <Typography className={classes.title} component="h1" variant="h5">
-            Write Down These Words
+          <img className={classes.logo} src={logo} alt="Logo" />
+          <Typography className={classes.title} component="h4" variant="h4">
+            New Wallet
           </Typography>
+          <p className={classes.instructions}>
+            Welcome to the Chia wallet. The following words make up your private
+            key, so write them down and keep them safe. They can be used to
+            recover the wallet.
+          </p>
           <Grid container spacing={2}>
             <Iterator mnemonic={words}></Iterator>
           </Grid>
@@ -99,9 +103,7 @@ class NewWallet extends Component {
     this.classes = props.theme;
   }
 
-  componentDidMount(props) {
-    console.log("Get Mnemonic");
-  }
+  componentDidMount(props) {}
 
   render() {
     return <UIPart props={this.props}></UIPart>;

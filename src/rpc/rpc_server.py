@@ -35,11 +35,6 @@ class RpcApiHandler:
     def __init__(self, full_node: FullNode, stop_cb: Callable):
         self.full_node = full_node
         self.stop_cb: Callable = stop_cb
-        initialize_logging(
-            "RPC FullNode %(name)-25s",
-            self.full_node.config["logging"],
-            self.full_node.root_path,
-        )
         self.log = log
         self.shut_down = False
         self.service_name = "chia_full_node"

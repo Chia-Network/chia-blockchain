@@ -205,9 +205,6 @@ class WalletNode:
                     )
                     full_node_retry = True
                     for connection in self.server.global_connections.get_connections():
-                        self.log.warning(
-                            f"{connection.get_peer_info()} {full_node_peer}"
-                        )
                         if connection.get_peer_info() == full_node_peer:
                             full_node_retry = False
 

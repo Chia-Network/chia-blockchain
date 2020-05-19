@@ -27,9 +27,6 @@ class FarmerRpcApiHandler:
     def __init__(self, farmer: Farmer, stop_cb: Callable):
         self.farmer = farmer
         self.stop_cb: Callable = stop_cb
-        initialize_logging(
-            "RPC Farmer %(name)-25s", self.farmer.config["logging"], DEFAULT_ROOT_PATH,
-        )
         self.log = log
         self.shut_down = False
         self.websocket = None

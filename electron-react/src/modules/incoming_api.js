@@ -40,14 +40,14 @@ export const Transaction = (
   wallet_id: wallet_id,
 });
 
-export const initial_wallet = Wallet(1, "Chia Wallet", "STANDARD_WALLET", "");
+// export const initial_wallet = Wallet(0, "Chia Wallet", "STANDARD_WALLET", "");
 
 const initial_state = {
   mnemonic: [],
   public_key_fingerprints: [],
   logged_in_received: false,
   logged_in: false,
-  wallets: [initial_wallet],
+  wallets: [],
   status: {
     connections: [],
     connection_count: 0,

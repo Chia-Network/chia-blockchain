@@ -27,11 +27,6 @@ class HarvesterRpcApiHandler:
     def __init__(self, harvester: Harvester, stop_cb: Callable):
         self.harvester = harvester
         self.stop_cb: Callable = stop_cb
-        initialize_logging(
-            "RPC Harvester %(name)-25s",
-            self.harvester.config["logging"],
-            DEFAULT_ROOT_PATH,
-        )
         self.log = log
         self.shut_down = False
         self.websocket = None
