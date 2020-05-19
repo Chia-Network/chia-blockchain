@@ -139,7 +139,9 @@ const WalletItem = props => {
 const WalletList = () => {
   const wallets = useSelector(state => state.wallet_state.wallets);
 
-  return wallets.map(wallet => <WalletItem wallet_id={wallet.id} key={wallet.id}></WalletItem>);
+  return wallets.map(wallet => (
+    <WalletItem wallet_id={wallet.id} key={wallet.id}></WalletItem>
+  ));
 };
 
 const WalletViewSwitch = () => {
@@ -193,7 +195,7 @@ export const StatusCard = () => {
 
   return (
     <div style={{ margin: 16 }}>
-      <Typography component="subtitle1" variant="subtitle1" color="secondary">
+      <Typography variant="subtitle1" color="secondary">
         Status
       </Typography>
       <div style={{ marginLeft: 8 }}>

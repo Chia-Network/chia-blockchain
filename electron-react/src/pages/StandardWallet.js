@@ -192,15 +192,10 @@ const BalanceCard = props => {
           <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box flexGrow={1}>
-                <Typography component="subtitle1" variant="subtitle1">
-                  Total Balance
-                </Typography>
+                <Typography variant="subtitle1">Total Balance</Typography>
               </Box>
               <Box>
-                <Typography
-                  component="subtitle1"
-                  variant="subtitle1"
-                >
+                <Typography variant="subtitle1">
                   {mojo_to_chia_string(balance)} XCH
                 </Typography>
               </Box>
@@ -211,15 +206,10 @@ const BalanceCard = props => {
           <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box flexGrow={1}>
-                <Typography component="subtitle1" variant="subtitle1">
-                  Pending Balance
-                </Typography>
+                <Typography variant="subtitle1">Pending Balance</Typography>
               </Box>
               <Box>
-                <Typography
-                  component="subtitle1"
-                  variant="subtitle1"
-                >
+                <Typography component="subtitle1" variant="subtitle1">
                   {mojo_to_chia_string(balance - balance_pending, "mojo")} XCH
                 </Typography>
               </Box>
@@ -385,7 +375,10 @@ const TransactionTable = props => {
         </TableHead>
         <TableBody className={classes.tableBody}>
           {transactions.map(tx => (
-            <TableRow className={classes.row} key={tx.to_puzzle_hash + tx.created_at_time + tx.amount}>
+            <TableRow
+              className={classes.row}
+              key={tx.to_puzzle_hash + tx.created_at_time + tx.amount}
+            >
               <TableCell className={classes.cell_short}>
                 {incoming_string(tx.incoming)}
               </TableCell>
