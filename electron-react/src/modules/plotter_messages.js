@@ -1,5 +1,5 @@
-import { service_daemon, service_plotter } from "../util/service_names";
-import { daemonMessage, startService } from "./daemon_messages";
+import { service_plotter } from "../util/service_names";
+import { startService } from "./daemon_messages";
 
 export const plotControl = () => ({
   type: "PLOTTER_CONTROL"

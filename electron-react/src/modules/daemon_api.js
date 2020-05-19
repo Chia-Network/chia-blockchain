@@ -7,7 +7,6 @@ import {
   service_harvester,
   service_plotter
 } from "../util/service_names";
-import { plottingStarted } from "./plotter_messages";
 
 const initial_state = {
   daemon_running: false,
@@ -67,7 +66,7 @@ export const daemonReducer = (state = { ...initial_state }, action) => {
         }
       } else if (command === "is_running") {
         if (data.success) {
-          if (data.service == service_plotter) {
+          if (data.service === service_plotter) {
             state.plotter_running = data.is_running;
           }
         }

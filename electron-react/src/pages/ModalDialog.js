@@ -52,7 +52,7 @@ export const ModalDialog = () => {
   return (
     <div>
       {dialogs.map(dialog => (
-        <DialogItem dialog={dialog}></DialogItem>
+        <DialogItem dialog={dialog} key={dialog}></DialogItem>
       ))}
     </div>
   );

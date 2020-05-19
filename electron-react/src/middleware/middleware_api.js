@@ -9,7 +9,7 @@ import {
   get_connection_info,
   get_colour_info,
   get_colour_name,
-  pingWallet
+  pingWallet,
 } from "../modules/message";
 
 import { createState } from "../modules/createWalletReducer";
@@ -21,7 +21,7 @@ import {
   service_simulator,
   service_farmer,
   service_harvester,
-  service_plotter
+  service_plotter,
 } from "../util/service_names";
 import {
   pingFullNode,
@@ -32,45 +32,41 @@ import {
 import {
   getLatestChallenges,
   getFarmerConnections,
-  pingFarmer
+  pingFarmer,
 } from "../modules/farmerMessages";
 import { getPlots, pingHarvester } from "../modules/harvesterMessages";
 import {
   changeEntranceMenu,
   presentSelectKeys,
-  presentNewWallet
+  presentNewWallet,
 } from "../modules/entranceMenu";
 import {
   addProgress,
   resetProgress,
-  plottingStarted
+  plottingStarted,
 } from "../modules/plotter_messages";
 import isElectron from "is-electron";
 
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function ping_wallet(store) {
-  console.log("pining wallet");
   await sleep(1500);
   store.dispatch(pingWallet());
 }
 
 async function ping_full_node(store) {
-  console.log("pining ful node");
   await sleep(1500);
   store.dispatch(pingFullNode());
 }
 
 async function ping_farmer(store) {
-  console.log("pining farmer");
   await sleep(1500);
   store.dispatch(pingFarmer());
 }
 
 async function ping_harvester(store) {
-  console.log("pining harvester");
   await sleep(1500);
   store.dispatch(pingHarvester());
 }
@@ -90,10 +86,10 @@ async function track_progress(store, location) {
   try {
     dispatch(resetProgress());
     const tail = new Tail(location, options);
-    tail.on("line", data => {
+    tail.on("line", (data) => {
       dispatch(addProgress(data));
     });
-    tail.on("error", err => {
+    tail.on("error", (err) => {
       dispatch(addProgress(err));
     });
   } catch (e) {
@@ -105,7 +101,6 @@ export const handle_message = (store, payload) => {
   store.dispatch(incomingMessage(payload));
   if (payload.command === "ping") {
     if (payload.origin === service_wallet_server) {
-      console.log("Got ping from wallet");
       store.dispatch(format_message("get_public_keys", {}));
       store.dispatch(format_message("get_wallets", {}));
       store.dispatch(get_height_info());
@@ -251,11 +246,11 @@ export const handle_message = (store, payload) => {
       } else if (service === service_plotter) {
       }
     }
-  } else if (payload.command == "is_running") {
+  } else if (payload.command === "is_running") {
     if (payload.data.success) {
       const service = payload.data.service_name;
       const is_running = payload.data.is_running;
-      if (service == service_plotter) {
+      if (service === service_plotter) {
         if (is_running) {
           track_progress(store, payload.data.out_file);
         }

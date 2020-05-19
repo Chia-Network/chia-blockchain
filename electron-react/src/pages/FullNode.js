@@ -13,6 +13,7 @@ import Connections from "./Connections";
 import Block from "./Block";
 import { closeConnection, openConnection, getBlock, getHeader } from "../modules/fullnodeMessages";
 
+/* global BigInt */
 
 const drawerWidth = 180;
 
@@ -207,7 +208,7 @@ const getStatusItems = (state, connected) => {
   status_items.push(min_item);
 
   const space = (BigInt(state.space) / BigInt(Math.pow(1024, 4))).toString() + "TB";
-  const space_item = { label: "Estimated network space", value: iters };
+  const space_item = { label: "Estimated network space", value: space };
   status_items.push(space_item);
 
   return status_items;

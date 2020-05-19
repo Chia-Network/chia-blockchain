@@ -8,14 +8,9 @@ import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
 import TableCell from "@material-ui/core/TableCell";
 import TableContainer from "@material-ui/core/TableContainer";
-import TableHead from "@material-ui/core/TableHead";
-import DeleteForeverIcon from "@material-ui/icons/DeleteForever";
 import { unix_to_short_date } from "../util/utils";
-import { service_connection_types } from "../util/service_names";
-import TextField from "@material-ui/core/TextField";
-import SettingsInputAntennaIcon from "@material-ui/icons/SettingsInputAntenna";
 import { clearBlock } from "../modules/fullnodeMessages";
-import { connect, useSelector, useDispatch } from "react-redux";
+import { useDispatch } from "react-redux";
 import {chia_formatter} from "../util/chia";
 
 /* global BigInt */
@@ -64,7 +59,7 @@ const Block = props => {
   const prevHeader = props.prevHeader;
 
   let diff = 0;
-  if (block.header.data.height == 0) {
+  if (block.header.data.height === 0) {
       diff = block.header.data.weight;
   } else if (prevHeader) {
       diff = block.header.data.weight - prevHeader.data.weight;

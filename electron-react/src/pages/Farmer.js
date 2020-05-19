@@ -14,10 +14,8 @@ import {
   Divider,
   List,
   ListItem,
-  ListItemText
+  ListItemText,
 } from "@material-ui/core";
-import Tabs from "@material-ui/core/Tabs";
-import Tab from "@material-ui/core/Tab";
 import Button from "@material-ui/core/Button";
 import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
@@ -25,9 +23,6 @@ import TableCell from "@material-ui/core/TableCell";
 import TableContainer from "@material-ui/core/TableContainer";
 import TableHead from "@material-ui/core/TableHead";
 import DeleteForeverIcon from "@material-ui/icons/DeleteForever";
-
-import DonutLargeIcon from "@material-ui/icons/DonutLarge";
-import HourglassEmptyIcon from "@material-ui/icons/HourglassEmpty";
 
 import { calculateSizeFromK } from "../util/plot_sizes";
 import { closeConnection, openConnection } from "../modules/farmerMessages";
@@ -38,53 +33,52 @@ import RefreshIcon from "@material-ui/icons/Refresh";
 import Connections from "./Connections";
 
 import Plotter from "./Plotter";
-import clsx from "clsx";
 import { presentFarmer } from "../modules/farmer_menu";
 import { presentPlotter, changeFarmerMenu } from "../modules/farmer_menu";
 
 const drawerWidth = 180;
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
   root: {
     display: "flex",
-    paddingLeft: "0px"
+    paddingLeft: "0px",
   },
   tabs: {
     flexGrow: 1,
-    marginTop: 40
+    marginTop: 40,
   },
   clickable: {
-    cursor: "pointer"
+    cursor: "pointer",
   },
   refreshButton: {
-    marginLeft: "20px"
+    marginLeft: "20px",
   },
   content: {
     height: "calc(100vh - 64px)",
     overflowX: "hidden",
     paddingRight: theme.spacing(3),
-    paddingBottom: theme.spacing(3)
+    paddingBottom: theme.spacing(3),
   },
   container: {
     paddingTop: theme.spacing(0),
     paddingBottom: theme.spacing(0),
-    paddingRight: theme.spacing(0)
+    paddingRight: theme.spacing(0),
   },
   balancePaper: {
-    marginTop: theme.spacing(2)
+    marginTop: theme.spacing(2),
   },
   cardTitle: {
     paddingLeft: theme.spacing(1),
     paddingTop: theme.spacing(1),
-    marginBottom: theme.spacing(1)
+    marginBottom: theme.spacing(1),
   },
   cardSubSection: {
     paddingLeft: theme.spacing(3),
     paddingRight: theme.spacing(3),
-    paddingTop: theme.spacing(1)
+    paddingTop: theme.spacing(1),
   },
   table: {
-    minWidth: 650
+    minWidth: 650,
   },
   drawerPaper: {
     position: "relative",
@@ -92,9 +86,9 @@ const useStyles = makeStyles(theme => ({
     width: drawerWidth,
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen
-    })
-  }
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+  },
 }));
 
 const getStatusItems = (connected, plots_size) => {
@@ -109,12 +103,12 @@ const getStatusItems = (connected, plots_size) => {
   }
   status_items.push({
     label: "Total size of local plots",
-    value: Math.floor(plots_size / Math.pow(1024, 3)).toString() + " GB"
+    value: Math.floor(plots_size / Math.pow(1024, 3)).toString() + " GB",
   });
   return status_items;
 };
 
-const StatusCell = props => {
+const StatusCell = (props) => {
   const classes = useStyles();
   const item = props.item;
   const label = item.label;
@@ -135,16 +129,16 @@ const StatusCell = props => {
   );
 };
 
-const FarmerStatus = props => {
-  const plots = useSelector(state => state.farming_state.harvester.plots);
+const FarmerStatus = (props) => {
+  const plots = useSelector((state) => state.farming_state.harvester.plots);
   var total_size = 0;
   if (plots !== undefined) {
     total_size = plots
-      .map(p => calculateSizeFromK(p.size))
+      .map((p) => calculateSizeFromK(p.size))
       .reduce((a, b) => a + b, 0);
   }
 
-  const connected = useSelector(state => state.daemon_state.farmer_connected);
+  const connected = useSelector((state) => state.daemon_state.farmer_connected);
   const statusItems = getStatusItems(connected, total_size);
 
   const classes = useStyles();
@@ -158,7 +152,7 @@ const FarmerStatus = props => {
             </Typography>
           </div>
         </Grid>
-        {statusItems.map(item => (
+        {statusItems.map((item) => (
           <StatusCell item={item} key={item.label}></StatusCell>
         ))}
       </Grid>
@@ -166,10 +160,10 @@ const FarmerStatus = props => {
   );
 };
 
-const Challenges = props => {
+const Challenges = (props) => {
   const classes = useStyles();
   var latest_challenges = useSelector(
-    state => state.farming_state.farmer.latest_challenges
+    (state) => state.farming_state.farmer.latest_challenges
   );
 
   if (!latest_challenges) {
@@ -199,7 +193,7 @@ const Challenges = props => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {latest_challenges.map(item => (
+                {latest_challenges.map((item) => (
                   <TableRow key={item.challenge}>
                     <TableCell component="th" scope="row">
                       {item.challenge.substring(0, 10)}...
@@ -224,15 +218,15 @@ const Challenges = props => {
   );
 };
 
-const Plots = props => {
+const Plots = (props) => {
   const classes = useStyles();
   const dispatch = useDispatch();
-  const plots = useSelector(state => state.farming_state.harvester.plots);
+  const plots = useSelector((state) => state.farming_state.harvester.plots);
   const not_found_filenames = useSelector(
-    state => state.farming_state.harvester.not_found_filenames
+    (state) => state.farming_state.harvester.not_found_filenames
   );
   const failed_to_open_filenames = useSelector(
-    state => state.farming_state.harvester.failed_to_open_filenames
+    (state) => state.farming_state.harvester.failed_to_open_filenames
   );
   plots.sort((a, b) => b.size - a.size);
   const [page, setPage] = React.useState(0);
@@ -242,12 +236,12 @@ const Plots = props => {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = event => {
+  const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(+event.target.value);
     setPage(0);
   };
 
-  const deletePlotClick = filename => {
+  const deletePlotClick = (filename) => {
     return () => {
       dispatch(deletePlot(filename));
     };
@@ -295,7 +289,7 @@ const Plots = props => {
               <TableBody>
                 {plots
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map(item => (
+                  .map((item) => (
                     <TableRow key={item.filename}>
                       <TableCell component="th" scope="row">
                         {item.filename.substring(0, 60)}...
@@ -340,7 +334,7 @@ const Plots = props => {
                 </Typography>
               </div>
               <List dense={classes.dense}>
-                {not_found_filenames.map(filename => (
+                {not_found_filenames.map((filename) => (
                   <ListItem key={filename}>
                     <ListItemText primary={filename} />
                   </ListItem>
@@ -358,7 +352,7 @@ const Plots = props => {
                 </Typography>
               </div>
               <List dense={classes.dense}>
-                {failed_to_open_filenames.map(filename => (
+                {failed_to_open_filenames.map((filename) => (
                   <ListItem key={filename}>
                     <ListItemText primary={filename} />
                   </ListItem>
@@ -379,23 +373,23 @@ const FarmerContent = () => {
   const dispatch = useDispatch();
 
   const connections = useSelector(
-    state => state.farming_state.farmer.connections
+    (state) => state.farming_state.farmer.connections
   );
 
   const connectionError = useSelector(
-    state => state.farming_state.farmer.open_connection_error
+    (state) => state.farming_state.farmer.open_connection_error
   );
 
   const openConnectionCallback = (host, port) => {
     dispatch(openConnection(host, port));
   };
-  const closeConnectionCallback = node_id => {
+  const closeConnectionCallback = (node_id) => {
     dispatch(closeConnection(node_id));
   };
 
-  const to_present = useSelector(state => state.farmer_menu.view);
+  const to_present = useSelector((state) => state.farmer_menu.view);
 
-  if (to_present == presentFarmer) {
+  if (to_present === presentFarmer) {
     return (
       <Container maxWidth="lg" className={classes.container}>
         <Grid container spacing={3}>
@@ -425,15 +419,14 @@ const FarmerContent = () => {
   }
 };
 
-const FarmerListItem = props => {
+const FarmerListItem = (props) => {
   const dispatch = useDispatch();
   const label = props.label;
-  const icon = props.icon;
   const type = props.type;
   function present() {
     if (type === presentFarmer) {
       dispatch(changeFarmerMenu(presentFarmer));
-    } else if (type == presentPlotter) {
+    } else if (type === presentPlotter) {
       dispatch(changeFarmerMenu(presentPlotter));
     }
   }
@@ -452,6 +445,7 @@ const FarmerMenuList = () => {
         label="Farmer & Harvester"
         type={presentFarmer}
       ></FarmerListItem>
+      <Divider />
       <FarmerListItem label="Plotter" type={presentPlotter}></FarmerListItem>
       <Divider />
     </List>
@@ -467,12 +461,11 @@ const Farmer = () => {
       <Drawer
         variant="permanent"
         classes={{
-          paper: classes.drawerPaper
+          paper: classes.drawerPaper,
         }}
         open={open}
       >
         <FarmerMenuList></FarmerMenuList>
-        <Divider />
       </Drawer>
       <main className={classes.content}>
         <Container maxWidth="lg" className={classes.container}>

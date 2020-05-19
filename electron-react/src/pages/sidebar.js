@@ -7,7 +7,7 @@ import {
   presentNode,
   presentFarmer,
   presentTimelord,
-  changeMainMenu
+  changeMainMenu,
 } from "../modules/mainMenu";
 import { delete_all_keys, logOut } from "../modules/message";
 import { useDispatch } from "react-redux";
@@ -18,36 +18,33 @@ import AccountTreeIcon from "@material-ui/icons/AccountTree";
 import DonutLargeIcon from "@material-ui/icons/DonutLarge";
 import UpdateIcon from "@material-ui/icons/Update";
 import LockIcon from "@material-ui/icons/Lock";
-import DeleteForeverIcon from '@material-ui/icons/DeleteForever';
-import {
-  changeEntranceMenu,
-  presentSelectKeys
-} from "../modules/entranceMenu";
+import DeleteForeverIcon from "@material-ui/icons/DeleteForever";
+import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
 
 const menuItems = [
   {
     label: "Wallet",
     present: presentWallet,
-    icon: <AccountBalanceWalletIcon></AccountBalanceWalletIcon>
+    icon: <AccountBalanceWalletIcon></AccountBalanceWalletIcon>,
   },
   {
-    label: "Node",
+    label: "Full Node",
     present: presentNode,
-    icon: <AccountTreeIcon></AccountTreeIcon>
+    icon: <AccountTreeIcon></AccountTreeIcon>,
   },
   {
-    label: "Farmer",
+    label: "Farming",
     present: presentFarmer,
-    icon: <DonutLargeIcon></DonutLargeIcon>
+    icon: <DonutLargeIcon></DonutLargeIcon>,
   },
   {
     label: "Timelord",
     present: presentTimelord,
-    icon: <UpdateIcon></UpdateIcon>
-  }
+    icon: <UpdateIcon></UpdateIcon>,
+  },
 ];
 
-const MenuItem = menuItem => {
+const MenuItem = (menuItem) => {
   const dispatch = useDispatch();
   const item = menuItem;
 
@@ -79,7 +76,7 @@ export const SideBar = () => {
 
   return (
     <div>
-      <List>{menuItems.map(item => MenuItem(item))}</List>
+      <List>{menuItems.map((item) => MenuItem(item))}</List>
       <Divider />
       <List>
         <div>
