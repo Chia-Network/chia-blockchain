@@ -567,6 +567,7 @@ class Farmer extends Component {
       totalChiaFarmed: BigInt(0),
       biggestHeight: 0,
     };
+    this.unmounted = false;
   }
   async checkRewards() {
     let totalChia = BigInt(0);
@@ -576,6 +577,7 @@ class Farmer extends Component {
         continue;
       }
       for (let tx of wallet.transactions) {
+        if (this.unmounted) return;
         if (tx.additions.length < 1) {
           continue;
         }
@@ -600,7 +602,7 @@ class Farmer extends Component {
         }
       }
     }
-    if (totalChia !== this.state.totalChiaFarmed) {
+    if (totalChia !== this.state.totalChiaFarmed && !this.unmounted) {
       this.setState({
         totalChiaFarmed: totalChia,
         biggestHeight: biggestHeight,
@@ -613,6 +615,10 @@ class Farmer extends Component {
 
   async componentDidUpdate(prevProps) {
     await this.checkRewards();
+  }
+
+  async componentWillUnmount() {
+    this.unmounted = true;
   }
 
   render() {

@@ -151,13 +151,6 @@ export const handle_message = (store, payload) => {
     } else {
       store.dispatch(changeEntranceMenu(presentNewWallet));
     }
-  } else if (
-    payload.command === "close_connection" ||
-    payload.command === "open_connection"
-  ) {
-    if (payload.origin === service_farmer) {
-      store.dispatch(getFarmerConnections());
-    }
   } else if (payload.command === "delete_plot") {
     store.dispatch(refreshPlots());
   } else if (payload.command === "get_wallets") {

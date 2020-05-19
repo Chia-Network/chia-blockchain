@@ -35,12 +35,13 @@ export const fullnodeReducer = (state = { ...initial_state }, action) => {
       const message = action.message;
       const data = message.data;
       const command = message.command;
+
       if (command === "get_blockchain_state") {
-        state.blockchain_state = data;
+        state.blockchain_state = data.blockchain_state;
         return state;
       } else if (command === "get_latest_block_headers") {
         if (data.success) {
-          const headers = data.headers;
+          const headers = data.latest_blocks;
           state.headers = headers;
         }
         return state;

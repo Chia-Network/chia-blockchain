@@ -144,13 +144,15 @@ class WebSocketServer:
             msg = await ws.receive()
             if msg.type == aiohttp.WSMsgType.TEXT:
                 message = msg.data.strip()
-                self.log.info(f"received message: {message}")
+                # self.log.info(f"received message: {message}")
                 await self.safe_handle(ws, message)
             elif msg.type == aiohttp.WSMsgType.BINARY:
-                self.log.warning("Received binary data")
+                pass
+                # self.log.warning("Received binary data")
             elif msg.type == aiohttp.WSMsgType.PING:
                 await ws.pong()
             elif msg.type == aiohttp.WSMsgType.PONG:
+                pass
                 self.log.info("Pong received")
             else:
                 if msg.type == aiohttp.WSMsgType.CLOSE:
@@ -707,7 +709,7 @@ class WebSocketServer:
         data = {
             "state": state,
         }
-        self.log.info(f"Wallet notify id is: {wallet_id}")
+        # self.log.info(f"Wallet notify id is: {wallet_id}")
         if wallet_id is not None:
             data["wallet_id"] = wallet_id
 

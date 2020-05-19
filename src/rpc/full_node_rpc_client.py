@@ -10,7 +10,7 @@ from src.util.ints import uint16, uint32, uint64
 from src.types.coin_record import CoinRecord
 
 
-class RpcClient:
+class FullNodeRpcClient:
     """
     Client to Chia RPC, connects to a local full node. Uses HTTP/JSON, and converts back from
     JSON into native python objects before returning. All api calls use POST requests.
@@ -38,9 +38,13 @@ class RpcClient:
 
     async def get_blockchain_state(self) -> Dict:
         response = await self.fetch("get_blockchain_state", {})
-        response["tips"] = [Header.from_json_dict(tip) for tip in response["tips"]]
-        response["lca"] = Header.from_json_dict(response["lca"])
-        return response
+        response["blockchain_state"]["tips"] = [
+            Header.from_json_dict(tip) for tip in response["blockchain_state"]["tips"]
+        ]
+        response["blockchain_state"]["lca"] = Header.from_json_dict(
+            response["blockchain_state"]["lca"]
+        )
+        return response["blockchain_state"]
 
     async def get_block(self, header_hash) -> Optional[FullBlock]:
         try:
@@ -49,7 +53,7 @@ class RpcClient:
             if e.message == "Not Found":
                 return None
             raise
-        return FullBlock.from_json_dict(response)
+        return FullBlock.from_json_dict(response["block"])
 
     async def get_header_by_height(self, header_height) -> Optional[Header]:
         try:
@@ -60,7 +64,7 @@ class RpcClient:
             if e.message == "Not Found":
                 return None
             raise
-        return Header.from_json_dict(response)
+        return Header.from_json_dict(response["header"])
 
     async def get_header(self, header_hash) -> Optional[Header]:
         try:
@@ -71,11 +75,11 @@ class RpcClient:
             if e.message == "Not Found":
                 return None
             raise
-        return Header.from_json_dict(response)
+        return Header.from_json_dict(response["header"])
 
     async def get_unfinished_block_headers(self, height: uint32) -> List[Header]:
         response = await self.fetch("get_unfinished_block_headers", {"height": height})
-        return [Header.from_json_dict(r) for r in response]
+        return [Header.from_json_dict(r) for r in response["headers"]]
 
     async def get_network_space(
         self, newer_block_header_hash: str, older_block_header_hash: str
@@ -92,13 +96,13 @@ class RpcClient:
             if e.message == "Not Found":
                 return None
             raise
-        return network_space_bytes_estimate
+        return network_space_bytes_estimate["space"]
 
     async def get_connections(self) -> List[Dict]:
         response = await self.fetch("get_connections", {})
-        for connection in response:
+        for connection in response["connections"]:
             connection["node_id"] = hexstr_to_bytes(connection["node_id"])
-        return response
+        return response["connections"]
 
     async def open_connection(self, host: str, port: int) -> Dict:
         return await self.fetch("open_connection", {"host": host, "port": int(port)})
@@ -118,12 +122,12 @@ class RpcClient:
             d = {"puzzle_hash": puzzle_hash.hex()}
         return [
             CoinRecord.from_json_dict(coin)
-            for coin in await self.fetch("get_unspent_coins", d)
+            for coin in ((await self.fetch("get_unspent_coins", d))["coin_records"])
         ]
 
     async def get_heaviest_block_seen(self) -> Header:
         response = await self.fetch("get_heaviest_block_seen", {})
-        return Header.from_json_dict(response)
+        return Header.from_json_dict(response["tip"])
 
     def close(self):
         self.closing_task = asyncio.create_task(self.session.close())

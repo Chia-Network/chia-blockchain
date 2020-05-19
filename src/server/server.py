@@ -55,7 +55,7 @@ class ChiaServer:
         else:
             self.log = logging.getLogger(__name__)
 
-        # Our unique random node id that we will other peers, regenerated on launch
+        # Our unique random node id that we will send to other peers, regenerated on launch
         node_id = create_node_id()
 
         # Tasks for entire server pipeline

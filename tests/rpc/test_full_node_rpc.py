@@ -2,9 +2,9 @@ import asyncio
 
 import pytest
 
-from src.rpc.rpc_server import start_rpc_server
+from src.rpc.full_node_rpc_server import start_full_node_rpc_server
 from src.protocols import full_node_protocol
-from src.rpc.rpc_client import RpcClient
+from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.util.ints import uint16
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 
@@ -42,10 +42,12 @@ class TestRpc:
             full_node_1._close()
             server_1.close_all()
 
-        rpc_cleanup = await start_rpc_server(full_node_1, stop_node_cb, test_rpc_port)
+        rpc_cleanup = await start_full_node_rpc_server(
+            full_node_1, stop_node_cb, test_rpc_port
+        )
 
         try:
-            client = await RpcClient.create(test_rpc_port)
+            client = await FullNodeRpcClient.create(test_rpc_port)
             state = await client.get_blockchain_state()
             assert state["lca"].header_hash is not None
             assert not state["sync"]["sync_mode"]

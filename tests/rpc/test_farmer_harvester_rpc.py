@@ -2,8 +2,8 @@ import asyncio
 
 import pytest
 
-from src.rpc.farmer_rpc_server import start_rpc_server
-from src.rpc.harvester_rpc_server import start_rpc_server as start_rpc_server_h
+from src.rpc.farmer_rpc_server import start_farmer_rpc_server
+from src.rpc.harvester_rpc_server import start_harvester_rpc_server
 from src.protocols import full_node_protocol
 from src.rpc.farmer_rpc_client import FarmerRpcClient
 from src.rpc.harvester_rpc_client import HarvesterRpcClient
@@ -35,8 +35,8 @@ class TestRpc:
         def stop_node_cb_2():
             farmer.server.close_all()
 
-        rpc_cleanup = await start_rpc_server(farmer, stop_node_cb, test_rpc_port)
-        rpc_cleanup_2 = await start_rpc_server_h(
+        rpc_cleanup = await start_farmer_rpc_server(farmer, stop_node_cb, test_rpc_port)
+        rpc_cleanup_2 = await start_harvester_rpc_server(
             harvester, stop_node_cb_2, test_rpc_port_2
         )
 

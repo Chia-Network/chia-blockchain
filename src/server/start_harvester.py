@@ -12,7 +12,7 @@ from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.util.config import load_config, load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.rpc.harvester_rpc_server import start_rpc_server
+from src.rpc.harvester_rpc_server import start_harvester_rpc_server
 from src.util.logging import initialize_logging
 from src.util.setproctitle import setproctitle
 
@@ -54,7 +54,7 @@ async def async_main():
     rpc_cleanup = None
     if config["start_rpc_server"]:
         # Starts the RPC server
-        rpc_cleanup = await start_rpc_server(
+        rpc_cleanup = await start_harvester_rpc_server(
             harvester, server.close_all, config["rpc_port"]
         )
 

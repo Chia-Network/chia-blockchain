@@ -16,7 +16,7 @@ from src.util.config import load_config, load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.logging import initialize_logging
 from src.util.setproctitle import setproctitle
-from src.rpc.farmer_rpc_server import start_rpc_server
+from src.rpc.farmer_rpc_server import start_farmer_rpc_server
 
 
 async def async_main():
@@ -61,7 +61,7 @@ async def async_main():
     rpc_cleanup = None
     if config["start_rpc_server"]:
         # Starts the RPC server
-        rpc_cleanup = await start_rpc_server(
+        rpc_cleanup = await start_farmer_rpc_server(
             farmer, server.close_all, config["rpc_port"]
         )
 

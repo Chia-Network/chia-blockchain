@@ -121,6 +121,7 @@ class PeerConnections:
         self._all_connections.append(connection)
 
         if connection.connection_type == NodeType.FULL_NODE:
+            self._state_changed("add_connection")
             return self.peers.add(connection.get_peer_info())
         self._state_changed("add_connection")
         return True

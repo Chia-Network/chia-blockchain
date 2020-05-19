@@ -4,7 +4,7 @@ import time
 from time import struct_time, localtime
 import datetime
 
-from src.rpc.rpc_client import RpcClient
+from src.rpc.full_node_rpc_client import FullNodeRpcClient
 
 
 def make_parser(parser):
@@ -48,7 +48,7 @@ async def netstorge_async(args, parser):
             add help on failure/no args
     """
     try:
-        client = await RpcClient.create(args.rpc_port)
+        client = await FullNodeRpcClient.create(args.rpc_port)
 
         # print (args.blocks)
         if args.delta_block_height:

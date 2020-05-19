@@ -38,9 +38,9 @@ class FarmerRpcClient:
 
     async def get_connections(self) -> List[Dict]:
         response = await self.fetch("get_connections", {})
-        for connection in response:
+        for connection in response["connections"]:
             connection["node_id"] = hexstr_to_bytes(connection["node_id"])
-        return response
+        return response["connections"]
 
     async def open_connection(self, host: str, port: int) -> Dict:
         return await self.fetch("open_connection", {"host": host, "port": int(port)})

@@ -31,7 +31,7 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 - Syncing is now faster and uses less memory.
 - chiapos is now easier to compile with MSVC.
 - create plots now takes in an optional sk_seed, it is no longer read in from keys.yaml. If not passed in, it is randomly generated.
-- The RPC endpoint `/get_blockchain_state` has changed. The "sync_mode" return has been replaced with a "sync" array of "sync_mode", "sync_tip_height", and "sync_progress_height" for ease of use with GUIs.
+- The Full node RPC response formats have been changed. All API calls now return a dict with success, and an additional value, for example {"success": True, "block": block}.
 - Moved to PyYAML 5.3.1 which prevents arbitrary code execution during python/object/new constructor.
 - Moved to Python cryptography 2.9.2 which deprecates OpenSSL 1.0.1 and now relies upon OpenSSL 1.1.1g.
 - Moved to aiosqlite 0.13.0 which adds official support for Python 3.8 and fixes a possible hung thread if a connection failed.
