@@ -45,6 +45,15 @@ TEST_ROOT_PATH = Path(
 ).resolve()
 
 
+def get_plot_dir(root_path):
+    CHIA_TEST_PLOT_ROOT = os.getenv("CHIA_TEST_PLOT_ROOT")
+    if CHIA_TEST_PLOT_ROOT:
+        return Path(
+            os.path.expanduser(CHIA_TEST_PLOT_ROOT.format(version=__version__))
+        ).resolve()
+    return root_path / "plots"
+
+
 class BlockTools:
     """
     Tools to generate blocks for testing.
@@ -81,7 +90,7 @@ class BlockTools:
                 ProofOfSpace.calculate_plot_seed(pool_pk, plot_pk)
                 for plot_pk in plot_pks
             ]
-            plot_dir = root_path / "plots"
+            plot_dir = get_plot_dir(root_path)
             mkdir(plot_dir)
             filenames: List[str] = [
                 f"genesis-plots-{k}{std_hash(int.to_bytes(i, 4, 'big')).hex()}.dat"
