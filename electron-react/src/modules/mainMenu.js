@@ -1,12 +1,11 @@
 export const presentWallet = "WALLET";
 export const presentNode = "NODE";
 export const presentFarmer = "FARMER";
-export const presentTimelord = "TIMELORD";
 
-export const changeMainMenu = item => ({ type: "MAIN_MENU", item: item });
+export const changeMainMenu = (item) => ({ type: "MAIN_MENU", item: item });
 
 const initial_state = {
-  view: presentWallet
+  view: presentWallet,
 };
 
 export const mainMenuReducer = (state = { ...initial_state }, action) => {

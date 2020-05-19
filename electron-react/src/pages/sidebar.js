@@ -6,7 +6,6 @@ import {
   presentWallet,
   presentNode,
   presentFarmer,
-  presentTimelord,
   changeMainMenu,
 } from "../modules/mainMenu";
 import { delete_all_keys, logOut } from "../modules/message";
@@ -16,7 +15,6 @@ import Divider from "@material-ui/core/Divider";
 import AccountBalanceWalletIcon from "@material-ui/icons/AccountBalanceWallet";
 import AccountTreeIcon from "@material-ui/icons/AccountTree";
 import DonutLargeIcon from "@material-ui/icons/DonutLarge";
-import UpdateIcon from "@material-ui/icons/Update";
 import LockIcon from "@material-ui/icons/Lock";
 import DeleteForeverIcon from "@material-ui/icons/DeleteForever";
 import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
@@ -36,11 +34,6 @@ const menuItems = [
     label: "Farming",
     present: presentFarmer,
     icon: <DonutLargeIcon></DonutLargeIcon>,
-  },
-  {
-    label: "Timelord",
-    present: presentTimelord,
-    icon: <UpdateIcon></UpdateIcon>,
   },
 ];
 

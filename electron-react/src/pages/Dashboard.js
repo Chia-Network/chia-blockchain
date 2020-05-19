@@ -14,12 +14,7 @@ import Wallets from "./Wallets";
 import MenuIcon from "@material-ui/icons/Menu";
 import { SideBar } from "./sidebar";
 import { useSelector } from "react-redux";
-import {
-  presentWallet,
-  presentNode,
-  presentFarmer,
-  presentTimelord,
-} from "../modules/mainMenu";
+import { presentWallet, presentNode, presentFarmer } from "../modules/mainMenu";
 import { ModalDialog } from "./ModalDialog";
 import FullNode from "./FullNode";
 import Farmer from "./Farmer";
@@ -124,8 +119,6 @@ const ComopnentSwitch = () => {
     return <FullNode></FullNode>;
   } else if (toPresent === presentFarmer) {
     return <Farmer></Farmer>;
-  } else if (toPresent === presentTimelord) {
-    return <div>Timelord</div>;
   }
   return <div></div>;
 };
@@ -147,8 +140,6 @@ export default function Dashboard() {
     title = "Full Node";
   } else if (toPresent === presentFarmer) {
     title = "Farming";
-  } else if (toPresent === presentTimelord) {
-    title = "Timelord";
   }
 
   return (

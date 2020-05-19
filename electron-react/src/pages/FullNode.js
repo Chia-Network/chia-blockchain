@@ -138,20 +138,17 @@ const useStyles = makeStyles((theme) => ({
   },
   block_row: {
     height: "30px",
-    borderBottom: "1px",
     cursor: "pointer",
+    borderBottom: "1px solid #eeeeee",
     /* mouse over link */
     "&:hover": {
-      backgroundColor: "#aaaaaa",
+      backgroundColor: "#eeeeee",
     },
   },
   block_row_unfinished: {
     height: "30px",
-    borderBottom: "1px",
+    borderBottom: "1px solid #eeeeee",
     color: "orange",
-    "&:hover": {
-      backgroundColor: "#aaaaaa",
-    },
   },
   block_header: {
     marginBottom: 10,
