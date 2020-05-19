@@ -14,8 +14,10 @@ import myStyle from "./style";
 import { useStore, useDispatch } from "react-redux";
 import { mnemonic_word_added, resetMnemonic } from "../modules/mnemonic_input";
 import { add_key } from "../modules/message";
+import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
+import logo from "../assets/img/chia_logo.svg"; // Tell webpack this JS file uses this image
 
-const MnemonicField = props => {
+const MnemonicField = (props) => {
   return (
     <Grid item xs={2}>
       <CssTextField
@@ -34,7 +36,7 @@ const MnemonicField = props => {
   );
 };
 
-const Iterator = props => {
+const Iterator = (props) => {
   const store = useStore();
   const dispatch = useDispatch();
 
@@ -63,10 +65,10 @@ const Iterator = props => {
   return indents;
 };
 
-const UIPart = props => {
+const UIPart = (props) => {
   function goBack() {
     dispatch(resetMnemonic());
-    props.props.history.goBack();
+    dispatch(changeEntranceMenu(presentSelectKeys));
   }
   const store = useStore();
   const dispatch = useDispatch();
@@ -77,7 +79,7 @@ const UIPart = props => {
     dispatch(add_key(mnemonic));
   }
 
-  const words = useSelector(state => state.wallet_state.mnemonic);
+  const words = useSelector((state) => state.wallet_state.mnemonic);
   const classes = myStyle();
 
   return (
@@ -87,9 +89,14 @@ const UIPart = props => {
       </Link>
       <div className={classes.grid_wrap}>
         <Container className={classes.grid} maxWidth="lg">
-          <Typography className={classes.title} component="h1" variant="h5">
-            Enter Your Mnemonics
+          <img className={classes.logo} src={logo} alt="Logo" />
+          <Typography className={classes.title} component="h4" variant="h4">
+            Import Wallet from Mnemonics
           </Typography>
+          <p className={classes.instructions}>
+            Enter the 24 word mmemonic that you have saved to import your
+            existing keys.
+          </p>
           <Grid container spacing={2}>
             <Iterator mnemonic={words}></Iterator>
           </Grid>
