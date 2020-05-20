@@ -24,7 +24,7 @@ async def async_main():
     log = logging.getLogger(__name__)
     setproctitle("chia_introducer")
 
-    introducer = Introducer(config)
+    introducer = Introducer(config["max_peers_to_send"], config["recent_peer_threshold"])
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")
     assert ping_interval is not None
