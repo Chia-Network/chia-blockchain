@@ -12,9 +12,10 @@ log = logging.getLogger(__name__)
 
 
 class Introducer:
-    def __init__(self, config: Dict):
-        self.config: Dict = config
+    def __init__(self, max_peers_to_send: int, recent_peer_threshold: int):
         self.vetted: Dict[bytes32, bool] = {}
+        self.max_peers_to_send = max_peers_to_send
+        self.recent_peer_threshold = recent_peer_threshold
 
     def set_global_connections(self, global_connections: PeerConnections):
         self.global_connections: PeerConnections = global_connections
@@ -23,9 +24,9 @@ class Introducer:
     async def request_peers(
         self, request: RequestPeers
     ) -> AsyncGenerator[OutboundMessage, None]:
-        max_peers = self.config["max_peers_to_send"]
+        max_peers = self.max_peers_to_send
         rawpeers = self.global_connections.peers.get_peers(
-            max_peers * 2, True, self.config["recent_peer_threshold"]
+            max_peers * 2, True, self.recent_peer_threshold
         )
 
         peers = []
