@@ -105,6 +105,14 @@ class PeerConnections:
         for c in all_connections:
             if c.connection_type == NodeType.FULL_NODE:
                 self.peers.add(c.get_peer_info())
+        self.state_changed_callback: Optional[Callable] = None
+
+    def set_state_changed_callback(self, callback: Callable):
+        self.state_changed_callback = callback
+
+    def _state_changed(self, state: str):
+        if self.state_changed_callback is not None:
+            self.state_changed_callback(state)
 
     def add(self, connection: Connection) -> bool:
         for c in self._all_connections:
@@ -113,7 +121,9 @@ class PeerConnections:
         self._all_connections.append(connection)
 
         if connection.connection_type == NodeType.FULL_NODE:
+            self._state_changed("add_connection")
             return self.peers.add(connection.get_peer_info())
+        self._state_changed("add_connection")
         return True
 
     def close(self, connection: Connection, keep_peer: bool = False):
@@ -121,12 +131,14 @@ class PeerConnections:
             info = connection.get_peer_info()
             self._all_connections.remove(connection)
             connection.close()
+            self._state_changed("close_connection")
             if not keep_peer:
                 self.peers.remove(info)
 
     def close_all_connections(self):
         for connection in self._all_connections:
             connection.close()
+            self._state_changed("close_connection")
         self._all_connections = []
         self.peers = Peers()
 

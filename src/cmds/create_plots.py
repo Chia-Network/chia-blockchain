@@ -1,6 +1,7 @@
 import argparse
 from copy import deepcopy
 from pathlib import Path
+from secrets import token_bytes
 
 from blspy import PrivateKey, PublicKey
 
@@ -9,6 +10,7 @@ from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.config import config_path_for_filename, load_config, save_config
 from src.util.default_root import DEFAULT_ROOT_PATH
+from src.util.keychain import Keychain
 from src.util.path import make_path_relative, mkdir, path_from_root
 
 
@@ -18,7 +20,6 @@ def main():
     """
     root_path = DEFAULT_ROOT_PATH
     plot_config_filename = config_path_for_filename(root_path, "plots.yaml")
-    key_config_filename = config_path_for_filename(root_path, "keys.yaml")
 
     parser = argparse.ArgumentParser(description="Chia plotting script.")
     parser.add_argument("-k", "--size", help="Plot size", type=int, default=26)
@@ -28,6 +29,9 @@ def main():
     parser.add_argument("-i", "--index", help="First plot index", type=int, default=0)
     parser.add_argument(
         "-p", "--pool_pub_key", help="Hex public key of pool", type=str, default=""
+    )
+    parser.add_argument(
+        "-s", "--sk_seed", help="Secret key seed in hex", type=str, default=None
     )
     parser.add_argument(
         "-t",
@@ -57,14 +61,18 @@ def main():
         default=new_plots_root,
     )
 
-    # We need the keys file, to access pool keys (if the exist), and the sk_seed.
     args = parser.parse_args()
-    if not key_config_filename.exists():
-        raise RuntimeError("Keys not generated. Run `chia generate keys`")
 
     # The seed is what will be used to generate a private key for each plot
-    key_config = load_config(root_path, key_config_filename)
-    sk_seed: bytes = bytes.fromhex(key_config["sk_seed"])
+    if args.sk_seed is not None:
+        sk_seed: bytes = bytes.fromhex(args.sk_seed)
+        print(f"Using the provided sk_seed {sk_seed.hex()}.")
+    else:
+        sk_seed = token_bytes(32)
+        print(
+            f"Using sk_seed {sk_seed.hex()}. Note that sk seed is now generated randomly, as opposed "
+            f"to from keys.yaml. If you want to use a specific seed, use the -s argument."
+        )
 
     pool_pk: PublicKey
     if len(args.pool_pub_key) > 0:
@@ -72,8 +80,14 @@ def main():
         pool_pk = PublicKey.from_bytes(bytes.fromhex(args.pool_pub_key))
     else:
         # Use the pool public key from the config, useful for solo farming
-        pool_sk = PrivateKey.from_bytes(bytes.fromhex(key_config["pool_sks"][0]))
-        pool_pk = pool_sk.get_public_key()
+        keychain = Keychain()
+        all_public_keys = keychain.get_all_public_keys()
+        if len(all_public_keys) == 0:
+            raise RuntimeError(
+                f"There are no private keys in the keychain, so we cannot create a plot. "
+                f"Please generate keys using 'chia keys generate_and_add' or pass in a pool pk with -p"
+            )
+        pool_pk = all_public_keys[0]
 
     print(
         f"Creating {args.num_plots} plots, from index {args.index} to "

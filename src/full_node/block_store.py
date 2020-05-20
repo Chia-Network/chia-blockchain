@@ -140,7 +140,9 @@ class BlockStore:
         return {bytes.fromhex(row[0]): bytes.fromhex(row[1]) for row in rows}
 
     async def init_challenge_hashes(self) -> None:
-        cursor = await self.db.execute("SELECT header_hash, challenge_hash from headers")
+        cursor = await self.db.execute(
+            "SELECT header_hash, challenge_hash from headers"
+        )
         rows = await cursor.fetchall()
         await cursor.close()
         self.challenge_hash_dict = {
@@ -150,15 +152,14 @@ class BlockStore:
     def get_challenge_hash(self, header_hash: bytes32) -> bytes32:
         return self.challenge_hash_dict[header_hash]
 
-    def add_proof_of_time(self, challenge: bytes32, iter: uint64, height: uint32) -> None:
-        self.proof_of_time_heights[
-            (
-                challenge,
-                iter,
-            )
-        ] = height
+    def add_proof_of_time(
+        self, challenge: bytes32, iter: uint64, height: uint32
+    ) -> None:
+        self.proof_of_time_heights[(challenge, iter,)] = height
 
-    def get_height_proof_of_time(self, challenge: bytes32, iter: uint64) -> Optional[uint32]:
+    def get_height_proof_of_time(
+        self, challenge: bytes32, iter: uint64
+    ) -> Optional[uint32]:
         pot_tuple = (challenge, iter)
         if pot_tuple in self.proof_of_time_heights:
             return self.proof_of_time_heights[pot_tuple]

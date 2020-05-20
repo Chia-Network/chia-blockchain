@@ -1,17 +1,15 @@
 import asyncio
 
 from typing import Any, Dict, Tuple, List
-import blspy
 from src.full_node.full_node import FullNode
 from src.server.connection import NodeType
 from src.server.server import ChiaServer
 from src.simulator.full_node_simulator import FullNodeSimulator
 from src.timelord_launcher import spawn_process, kill_processes
+from src.util.keychain import Keychain
 from src.wallet.wallet_node import WalletNode
 from tests.block_tools import BlockTools
-from src.types.BLSSignature import BLSPublicKey
 from src.util.config import load_config
-from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.harvester import Harvester
 from src.farmer import Farmer
 from src.introducer import Introducer
@@ -155,13 +153,16 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
         db_path.unlink()
 
 
-async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
+async def setup_wallet_node(
+    port, introducer_port=None, key_seed=b"setup_wallet_node", dic={}
+):
     config = load_config(root_path, "config.yaml", "wallet")
     if "starting_height" in dic:
         config["starting_height"] = dic["starting_height"]
-    key_config = {
-        "wallet_sk": bytes(blspy.ExtendedPrivateKey.from_seed(key_seed)).hex(),
-    }
+
+    keychain = Keychain(key_seed.hex(), True)
+    keychain.add_private_key_seed(key_seed)
+    private_key = keychain.get_all_private_keys()[0][0]
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
@@ -175,7 +176,7 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
     network_id = net_config.get("network_id")
 
     wallet = await WalletNode.create(
-        config, key_config, override_constants=test_constants_copy, name="wallet1",
+        config, private_key, override_constants=test_constants_copy, name="wallet1",
     )
     assert ping_interval is not None
     assert network_id is not None
@@ -203,7 +204,7 @@ async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
 async def setup_harvester(port, dic={}):
     config = load_config(root_path, "config.yaml", "harvester")
 
-    harvester = await Harvester.create(config, bt.plot_config)
+    harvester = await Harvester.create(config, bt.plot_config, bt.root_path)
 
     net_config = load_config(root_path, "config.yaml")
     ping_interval = net_config.get("ping_interval")
@@ -231,24 +232,9 @@ async def setup_harvester(port, dic={}):
 
 
 async def setup_farmer(port, dic={}):
+    print("root path", root_path)
     config = load_config(root_path, "config.yaml", "farmer")
-    pool_sk = blspy.PrivateKey.from_bytes(
-        bytes.fromhex(list(bt.plot_config["plots"].values())[0]["pool_sk"])
-    )
-    pool_target = create_puzzlehash_for_pk(
-        BLSPublicKey(bytes(pool_sk.get_public_key()))
-    )
-    wallet_sk = bt.wallet_sk
-    wallet_target = create_puzzlehash_for_pk(
-        BLSPublicKey(bytes(wallet_sk.get_public_key()))
-    )
-
-    key_config = {
-        "wallet_sk": bytes(wallet_sk).hex(),
-        "wallet_target": wallet_target.hex(),
-        "pool_sks": [bytes(pool_sk).hex()],
-        "pool_target": pool_target.hex(),
-    }
+    config_pool = load_config(root_path, "config.yaml", "pool")
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
@@ -257,7 +243,13 @@ async def setup_farmer(port, dic={}):
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")
 
-    farmer = Farmer(config, key_config, test_constants_copy)
+    config["xch_target_puzzle_hash"] = bt.fee_target.hex()
+    config["pool_public_keys"] = [
+        bytes(epk.get_public_key()).hex() for epk in bt.keychain.get_all_public_keys()
+    ]
+    config_pool["xch_target_puzzle_hash"] = bt.fee_target.hex()
+
+    farmer = Farmer(config, config_pool, bt.keychain, test_constants_copy)
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
@@ -270,6 +262,7 @@ async def setup_farmer(port, dic={}):
         config,
         f"farmer_server_{port}",
     )
+    farmer.set_server(server)
     _ = await server.start_server(farmer._on_connect)
 
     yield (farmer, server)
@@ -467,6 +460,6 @@ async def setup_full_system(dic={}):
         PeerInfo("127.0.0.1", uint16(node1_server._port))
     )
 
-    yield (node1, node2)
+    yield (node1, node2, harvester, farmer, introducer, timelord, vdf)
 
     await _teardown_nodes(node_iters)

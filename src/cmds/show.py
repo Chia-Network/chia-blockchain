@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from src.server.connection import NodeType
 from src.types.header_block import HeaderBlock
-from src.rpc.rpc_client import RpcClient
+from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.util.byte_types import hexstr_to_bytes
 from src.util.config import str2bool
 
@@ -91,7 +91,7 @@ async def show_async(args, parser):
 
     # TODO read configuration for rpc_port instead of assuming default
     try:
-        client = await RpcClient.create(args.rpc_port)
+        client = await FullNodeRpcClient.create(args.rpc_port)
 
         if args.state:
             blockchain_state = await client.get_blockchain_state()
@@ -111,7 +111,7 @@ async def show_async(args, parser):
                     "Current Blockchain Status: Full Node syncing to",
                     sync_max_block,
                     "\nCurrently synched to tip:",
-                    sync_current_block
+                    sync_current_block,
                 )
             else:
                 print("Current Blockchain Status: Full Node Synced")

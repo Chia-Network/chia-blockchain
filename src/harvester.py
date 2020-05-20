@@ -1,7 +1,7 @@
 import logging
 import asyncio
 from pathlib import Path
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, Tuple, List, Callable
 import time
 import concurrent
 
@@ -13,6 +13,7 @@ from src.server.outbound_message import Delivery, Message, NodeType, OutboundMes
 from src.types.peer_info import PeerInfo
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
+from src.util.config import load_config, save_config
 from src.util.api_decorators import api_request
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.ints import uint8
@@ -22,11 +23,16 @@ log = logging.getLogger(__name__)
 
 
 def load_plots(
-    config_file: Dict, plot_config_file: Dict, pool_pubkeys: Optional[List[PublicKey]]
-) -> Dict[Path, DiskProver]:
-    provers: Dict[Path, DiskProver] = {}
+    config_file: Dict,
+    plot_config_file: Dict,
+    pool_pubkeys: Optional[List[PublicKey]],
+    root_path: Path,
+) -> Tuple[Dict[str, DiskProver], List[str], List[str]]:
+    provers: Dict[str, DiskProver] = {}
+    failed_to_open_filenames: List[str] = []
+    not_found_filenames: List[str] = []
     for partial_filename_str, plot_config in plot_config_file["plots"].items():
-        plot_root = path_from_root(DEFAULT_ROOT_PATH, config_file.get("plot_root", "."))
+        plot_root = path_from_root(root_path, config_file.get("plot_root", "."))
         partial_filename = plot_root / partial_filename_str
         potential_filenames = [
             partial_filename,
@@ -43,6 +49,7 @@ def load_plots(
 
         found = False
         failed_to_open = False
+
         for filename in potential_filenames:
             if filename.exists():
                 try:
@@ -50,6 +57,7 @@ def load_plots(
                 except Exception as e:
                     log.error(f"Failed to open file {filename}. {e}")
                     failed_to_open = True
+                    failed_to_open_filenames.append(partial_filename_str)
                     break
                 log.info(
                     f"Loaded plot {filename} of size {provers[partial_filename_str].get_size()}"
@@ -58,27 +66,38 @@ def load_plots(
                 break
         if not found and not failed_to_open:
             log.warning(f"Plot at {potential_filenames} does not exist.")
-    return provers
+            not_found_filenames.append(partial_filename_str)
+    return (provers, failed_to_open_filenames, not_found_filenames)
 
 
 class Harvester:
     config: Dict
     plot_config: Dict
-    provers: Dict[Path, DiskProver]
-    challenge_hashes: Dict[bytes32, Tuple[bytes32, Path, uint8]]
+    provers: Dict[str, DiskProver]
+    failed_to_open_filenames: List[str]
+    not_found_filenames: List[str]
+    challenge_hashes: Dict[bytes32, Tuple[bytes32, str, uint8]]
+    pool_pubkeys: List[PublicKey]
+    root_path: Path
     _plot_notification_task: asyncio.Task
     _reconnect_task: Optional[asyncio.Task]
     _is_shutdown: bool
     executor: concurrent.futures.ThreadPoolExecutor
+    state_changed_callback: Optional[Callable]
 
     @staticmethod
-    async def create(config: Dict, plot_config: Dict):
+    async def create(
+        config: Dict, plot_config: Dict, root_path: Path = DEFAULT_ROOT_PATH
+    ):
         self = Harvester()
         self.config = config
         self.plot_config = plot_config
+        self.root_path = root_path
 
         # From filename to prover
         self.provers = {}
+        self.failed_to_open_filenames = []
+        self.not_found_filenames = []
 
         # From quality string to (challenge_hash, filename, index)
         self.challenge_hashes = {}
@@ -86,8 +105,19 @@ class Harvester:
         self._reconnect_task = None
         self._is_shutdown = False
         self.server = None
+        self.pool_pubkeys = []
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
+        self.state_changed_callback = None
         return self
+
+    def _set_state_changed_callback(self, callback: Callable):
+        self.state_changed_callback = callback
+        if self.server is not None:
+            self.server.set_state_changed_callback(callback)
+
+    def _state_changed(self, change: str):
+        if self.state_changed_callback is not None:
+            self.state_changed_callback(change)
 
     async def _plot_notification(self):
         """
@@ -106,6 +136,61 @@ class Harvester:
                     )
             await asyncio.sleep(1)
             counter += 1
+
+    def _get_plots(self) -> Tuple[List[Dict], List[str], List[str]]:
+        response_plots: List[Dict] = []
+        for path, prover in self.provers.items():
+            plot_pk = PrivateKey.from_bytes(
+                bytes.fromhex(self.plot_config["plots"][path]["sk"])
+            ).get_public_key()
+            pool_pk = PublicKey.from_bytes(
+                bytes.fromhex(self.plot_config["plots"][path]["pool_pk"])
+            )
+            response_plots.append(
+                {
+                    "filename": str(path),
+                    "size": prover.get_size(),
+                    "plot-seed": prover.get_id(),
+                    "memo": prover.get_memo(),
+                    "plot_pk": bytes(plot_pk),
+                    "pool_pk": bytes(pool_pk),
+                }
+            )
+        return (response_plots, self.failed_to_open_filenames, self.not_found_filenames)
+
+    def _refresh_plots(self):
+        (
+            self.provers,
+            self.failed_to_open_filenames,
+            self.not_found_filenames,
+        ) = load_plots(self.config, self.plot_config, self.pool_pubkeys, self.root_path)
+        self._state_changed("plots")
+
+    def _delete_plot(self, str_path: str):
+        if str_path in self.provers:
+            del self.provers[str_path]
+
+        plot_root = path_from_root(self.root_path, self.config.get("plot_root", "."))
+
+        # Remove absolute and relative paths
+        if Path(str_path).exists():
+            Path(str_path).unlink()
+
+        if (plot_root / Path(str_path)).exists():
+            (plot_root / Path(str_path)).unlink()
+
+        try:
+            # Removes the plot from config.yaml
+            plot_config = load_config(self.root_path, "plots.yaml")
+            if str_path in plot_config["plots"]:
+                del plot_config["plots"][str_path]
+                save_config(self.root_path, "plots.yaml", plot_config)
+                self.plot_config = plot_config
+        except (FileNotFoundError, KeyError) as e:
+            log.warning(f"Could not remove {str_path} {e}")
+            return False
+        self._state_changed("plots")
+        return True
 
     def set_server(self, server):
         self.server = server
@@ -160,9 +245,8 @@ class Harvester:
         which must be put into the plots, before the plotting process begins. We cannot
         use any plots which don't have one of the pool keys.
         """
-        self.provers = load_plots(
-            self.config, self.plot_config, harvester_handshake.pool_pubkeys
-        )
+        self.pool_pubkeys = harvester_handshake.pool_pubkeys
+        self._refresh_plots()
         if len(self.provers) == 0:
             log.warning(
                 "Not farming any plots on this harvester. Check your configuration."
@@ -206,7 +290,7 @@ class Harvester:
             return quality_strings
 
         async def lookup_challenge(
-            filename: Path, prover: DiskProver
+            filename: str, prover: DiskProver
         ) -> List[harvester_protocol.ChallengeResponse]:
             # Exectures a DiskProverLookup in a threadpool, and returns responses
             all_responses: List[harvester_protocol.ChallengeResponse] = []
@@ -263,10 +347,17 @@ class Harvester:
         if index is not None:
             proof_xs: bytes
             try:
-                proof_xs = self.provers[filename].get_full_proof(challenge_hash, index)
-            except RuntimeError:
-                self.provers[filename] = DiskProver(str(filename))
-                proof_xs = self.provers[filename].get_full_proof(challenge_hash, index)
+                try:
+                    proof_xs = self.provers[filename].get_full_proof(
+                        challenge_hash, index
+                    )
+                except RuntimeError:
+                    self.provers[filename] = DiskProver(str(filename))
+                    proof_xs = self.provers[filename].get_full_proof(
+                        challenge_hash, index
+                    )
+            except KeyError:
+                log.warning(f"KeyError plot {filename} does not exist.")
             pool_pubkey = PublicKey.from_bytes(
                 bytes.fromhex(self.plot_config["plots"][filename]["pool_pk"])
             )

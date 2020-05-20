@@ -32,8 +32,8 @@ async def main():
 
     db_path = path_from_root(root_path, config["simulator_database_path"])
     mkdir(db_path.parent)
-    db_path.unlink()
 
+    config["database_path"] = config["simulator_database_path"]
     full_node = await FullNodeSimulator.create(
         config, root_path=root_path, override_constants=test_constants,
     )
@@ -65,11 +65,9 @@ async def main():
             server.close_all()
             server_closed = True
 
-    if config["start_rpc_server"]:
         # Starts the RPC server
-        rpc_cleanup = await start_rpc_server(
-            full_node, master_close_cb, config["rpc_port"]
-        )
+
+    rpc_cleanup = await start_rpc_server(full_node, master_close_cb, config["rpc_port"])
 
     try:
         asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)

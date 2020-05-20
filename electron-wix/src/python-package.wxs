@@ -17,7 +17,7 @@
             <ExePackage Id="PythonExePackage"
                 Cache="yes"
                 Compressed="yes"
-                Description="Python 3.7.6"
+                Description="Python 3.7.7"
                 DetectCondition="python37Installed = 1 AND python37Version >= v$(var.pythonVersion)"
                 InstallCommand="/quiet"
                 PerMachine="no"

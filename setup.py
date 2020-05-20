@@ -16,6 +16,10 @@ dependencies = [
     "sortedcontainers==2.1.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
     "clvm-tools==0.1.1",  # clvm compiler tools
+    "bitstring==3.1.6",
+    "keyring==21.2.1",
+    "keyring_jeepney==0.2",
+    "keyrings.cryptfile==1.3.4",
     "cryptography==2.9.2", #Python cryptography library for TLS
 ]
 
@@ -47,6 +51,7 @@ kwargs = dict(
         uvloop=["uvloop"], dev=dev_dependencies, upnp=upnp_dependencies,
     ),
     packages=[
+        "build_scripts",
         "src",
         "src.cmds",
         "src.consensus",
@@ -64,6 +69,7 @@ kwargs = dict(
         "src.wallet.cc_wallet",
         "src.wallet.util",
         "src.ssl",
+        "src.util.bip39",
     ],
     scripts=[
         "scripts/_chia-common",
@@ -91,6 +97,7 @@ kwargs = dict(
     package_data={
         "src.util": ["initial-*.yaml"],
         "src.server": ["dummy.crt", "dummy.key"],
+        "src.util.bip39": ["english.txt"],
     },
     use_scm_version={"fallback_version": "unknown-no-.git-directory"},
     long_description=open("README.md").read(),
