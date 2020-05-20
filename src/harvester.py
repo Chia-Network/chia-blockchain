@@ -104,7 +104,6 @@ class Harvester:
         self._reconnect_task = None
         self._is_shutdown = False
         self.global_connections = None
-        self.server = None
         self.pool_pubkeys = []
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
         self.state_changed_callback = None
@@ -198,7 +197,7 @@ class Harvester:
         self.global_connections = global_connections
 
     def set_server(self, server):
-        self.server = server
+        pass
 
     def _shutdown(self):
         self._is_shutdown = True
