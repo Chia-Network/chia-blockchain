@@ -14,7 +14,7 @@ import {
   List,
   ListItem,
   ListItemText,
-  Tooltip,
+  Tooltip
 } from "@material-ui/core";
 import Button from "@material-ui/core/Button";
 import Table from "@material-ui/core/Table";
@@ -45,51 +45,51 @@ import HelpIcon from "@material-ui/icons/Help";
 
 const drawerWidth = 180;
 
-const styles = (theme) => ({
+const styles = theme => ({
   root: {
     display: "flex",
-    paddingLeft: "0px",
+    paddingLeft: "0px"
   },
   tabs: {
     flexGrow: 1,
-    marginTop: 40,
+    marginTop: 40
   },
   clickable: {
-    cursor: "pointer",
+    cursor: "pointer"
   },
   refreshButton: {
-    marginLeft: "20px",
+    marginLeft: "20px"
   },
   content: {
     height: "calc(100vh - 64px)",
     overflowX: "hidden",
-    padding: "0px",
+    padding: "0px"
   },
   noPadding: {
-    padding: "0px",
+    padding: "0px"
   },
   container: {
     paddingTop: theme.spacing(3),
     paddingRight: theme.spacing(6),
     paddingLeft: theme.spacing(6),
-    paddingBottom: theme.spacing(3),
+    paddingBottom: theme.spacing(3)
   },
   balancePaper: {
     padding: theme.spacing(2),
-    marginTop: theme.spacing(2),
+    marginTop: theme.spacing(2)
   },
   cardTitle: {
     paddingLeft: theme.spacing(1),
     paddingTop: theme.spacing(1),
-    marginBottom: theme.spacing(1),
+    marginBottom: theme.spacing(1)
   },
   cardSubSection: {
     paddingLeft: theme.spacing(3),
     paddingRight: theme.spacing(3),
-    paddingTop: theme.spacing(1),
+    paddingTop: theme.spacing(1)
   },
   table: {
-    minWidth: 650,
+    minWidth: 650
   },
   drawerPaper: {
     position: "relative",
@@ -97,9 +97,9 @@ const styles = (theme) => ({
     width: drawerWidth,
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
-  },
+      duration: theme.transitions.duration.enteringScreen
+    })
+  }
 });
 
 const useStyles = makeStyles(styles);
@@ -117,14 +117,14 @@ const getStatusItems = (
     const item = {
       label: "Connection Status ",
       value: "Connected",
-      colour: "green",
+      colour: "green"
     };
     status_items.push(item);
   } else {
     const item = {
       label: "Connection Status ",
       value: "Not connected",
-      colour: "red",
+      colour: "red"
     };
     status_items.push(item);
   }
@@ -139,29 +139,29 @@ const getStatusItems = (
       (proportion * 100).toFixed(6) +
       "% of the space on the network, so farming a block will take " +
       totalHours.toFixed(3) +
-      " hours in expectation",
+      " hours in expectation"
   });
 
   status_items.push({
     label: "Total chia farmed",
-    value: mojo_to_chia_string(totalChia),
+    value: mojo_to_chia_string(totalChia)
   });
   if (biggestHeight === 0) {
     status_items.push({
       label: "Last height farmed",
-      value: "No blocks farmed yet",
+      value: "No blocks farmed yet"
     });
   } else {
     status_items.push({
       label: "Last height farmed",
-      value: biggestHeight,
+      value: biggestHeight
     });
   }
 
   return status_items;
 };
 
-const StatusCell = (props) => {
+const StatusCell = props => {
   const classes = useStyles();
   const item = props.item;
   const label = item.label;
@@ -193,19 +193,19 @@ const StatusCell = (props) => {
   );
 };
 
-const FarmerStatus = (props) => {
-  const plots = useSelector((state) => state.farming_state.harvester.plots);
+const FarmerStatus = props => {
+  const plots = useSelector(state => state.farming_state.harvester.plots);
   const totalNetworkSpace = useSelector(
-    (state) => state.full_node_state.blockchain_state.space
+    state => state.full_node_state.blockchain_state.space
   );
   var farmerSpace = 0;
   if (plots !== undefined) {
     farmerSpace = plots
-      .map((p) => calculateSizeFromK(p.size))
+      .map(p => calculateSizeFromK(p.size))
       .reduce((a, b) => a + b, 0);
   }
 
-  const connected = useSelector((state) => state.daemon_state.farmer_connected);
+  const connected = useSelector(state => state.daemon_state.farmer_connected);
   const statusItems = getStatusItems(
     connected,
     farmerSpace,
@@ -225,7 +225,7 @@ const FarmerStatus = (props) => {
             </Typography>
           </div>
         </Grid>
-        {statusItems.map((item) => (
+        {statusItems.map(item => (
           <StatusCell item={item} key={item.label}></StatusCell>
         ))}
       </Grid>
@@ -233,10 +233,10 @@ const FarmerStatus = (props) => {
   );
 };
 
-const Challenges = (props) => {
+const Challenges = props => {
   const classes = useStyles();
   var latest_challenges = useSelector(
-    (state) => state.farming_state.farmer.latest_challenges
+    state => state.farming_state.farmer.latest_challenges
   );
 
   if (!latest_challenges) {
@@ -266,7 +266,7 @@ const Challenges = (props) => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {latest_challenges.map((item) => (
+                {latest_challenges.map(item => (
                   <TableRow key={item.challenge}>
                     <TableCell component="th" scope="row">
                       {item.challenge.substring(0, 10)}...
@@ -291,15 +291,15 @@ const Challenges = (props) => {
   );
 };
 
-const Plots = (props) => {
+const Plots = props => {
   const classes = useStyles();
   const dispatch = useDispatch();
-  const plots = useSelector((state) => state.farming_state.harvester.plots);
+  const plots = useSelector(state => state.farming_state.harvester.plots);
   const not_found_filenames = useSelector(
-    (state) => state.farming_state.harvester.not_found_filenames
+    state => state.farming_state.harvester.not_found_filenames
   );
   const failed_to_open_filenames = useSelector(
-    (state) => state.farming_state.harvester.failed_to_open_filenames
+    state => state.farming_state.harvester.failed_to_open_filenames
   );
   plots.sort((a, b) => b.size - a.size);
   const [page, setPage] = React.useState(0);
@@ -309,12 +309,12 @@ const Plots = (props) => {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (event) => {
+  const handleChangeRowsPerPage = event => {
     setRowsPerPage(+event.target.value);
     setPage(0);
   };
 
-  const deletePlotClick = (filename) => {
+  const deletePlotClick = filename => {
     return () => {
       dispatch(deletePlot(filename));
     };
@@ -362,7 +362,7 @@ const Plots = (props) => {
               <TableBody>
                 {plots
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((item) => (
+                  .map(item => (
                     <TableRow key={item.filename}>
                       <TableCell component="th" scope="row">
                         <Tooltip title={item.filename} interactive>
@@ -419,7 +419,7 @@ const Plots = (props) => {
                 that the storage devices are properly connected.
               </p>
               <List dense={classes.dense}>
-                {not_found_filenames.map((filename) => (
+                {not_found_filenames.map(filename => (
                   <ListItem key={filename}>
                     <ListItemText primary={filename} />
                     <ListItemSecondaryAction>
@@ -449,7 +449,7 @@ const Plots = (props) => {
                 These plots are invalid, you might want to delete them forever.
               </p>
               <List dense={classes.dense}>
-                {failed_to_open_filenames.map((filename) => (
+                {failed_to_open_filenames.map(filename => (
                   <ListItem key={filename}>
                     <ListItemText primary={filename} />
                     <ListItemSecondaryAction>
@@ -474,26 +474,26 @@ const Plots = (props) => {
   );
 };
 
-const FarmerContent = (props) => {
+const FarmerContent = props => {
   const classes = useStyles();
   const dispatch = useDispatch();
 
   const connections = useSelector(
-    (state) => state.farming_state.farmer.connections
+    state => state.farming_state.farmer.connections
   );
 
   const connectionError = useSelector(
-    (state) => state.farming_state.farmer.open_connection_error
+    state => state.farming_state.farmer.open_connection_error
   );
 
   const openConnectionCallback = (host, port) => {
     dispatch(openConnection(host, port));
   };
-  const closeConnectionCallback = (node_id) => {
+  const closeConnectionCallback = node_id => {
     dispatch(closeConnection(node_id));
   };
 
-  const to_present = useSelector((state) => state.farmer_menu.view);
+  const to_present = useSelector(state => state.farmer_menu.view);
 
   if (to_present === presentFarmer) {
     return (
@@ -528,7 +528,7 @@ const FarmerContent = (props) => {
   }
 };
 
-const FarmerListItem = (props) => {
+const FarmerListItem = props => {
   const dispatch = useDispatch();
   const label = props.label;
   const type = props.type;
@@ -565,7 +565,7 @@ class Farmer extends Component {
     super(props);
     this.state = {
       totalChiaFarmed: BigInt(0),
-      biggestHeight: 0,
+      biggestHeight: 0
     };
     this.unmounted = false;
   }
@@ -605,7 +605,7 @@ class Farmer extends Component {
     if (totalChia !== this.state.totalChiaFarmed && !this.unmounted) {
       this.setState({
         totalChiaFarmed: totalChia,
-        biggestHeight: biggestHeight,
+        biggestHeight: biggestHeight
       });
     }
   }
@@ -630,7 +630,7 @@ class Farmer extends Component {
         <Drawer
           variant="permanent"
           classes={{
-            paper: classes.drawerPaper,
+            paper: classes.drawerPaper
           }}
           open={open}
         >
@@ -651,7 +651,7 @@ class Farmer extends Component {
 
 const mapStateToProps = (state, ownProps) => {
   return {
-    wallets: state.wallet_state.wallets,
+    wallets: state.wallet_state.wallets
   };
 };
 

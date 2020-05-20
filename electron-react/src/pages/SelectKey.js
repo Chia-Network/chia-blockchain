@@ -17,60 +17,60 @@ import Button from "@material-ui/core/Button";
 import {
   changeEntranceMenu,
   presentOldWallet,
-  presentNewWallet,
+  presentNewWallet
 } from "../modules/entranceMenu";
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles(theme => ({
   root: {
     background: "linear-gradient(45deg, #181818 30%, #333333 90%)",
-    height: "100%",
+    height: "100%"
   },
   paper: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    height: "100%",
+    height: "100%"
   },
   textField: {
-    borderColor: "#ffffff",
+    borderColor: "#ffffff"
   },
   topButton: {
     height: 45,
     marginTop: theme.spacing(4),
-    marginBottom: theme.spacing(1),
+    marginBottom: theme.spacing(1)
   },
   bottomButton: {
     height: 45,
     marginTop: theme.spacing(2),
-    marginBottom: theme.spacing(1),
+    marginBottom: theme.spacing(1)
   },
   logo: {
     marginTop: theme.spacing(8),
-    marginBottom: theme.spacing(3),
+    marginBottom: theme.spacing(3)
   },
   main: {
-    height: "100%",
+    height: "100%"
   },
   whiteText: {
-    color: "white",
+    color: "white"
   },
   demo: {
-    backgroundColor: theme.palette.background.paper,
-  },
+    backgroundColor: theme.palette.background.paper
+  }
 }));
 
 const SelectKey = () => {
   const dispatch = useDispatch();
   const classes = useStyles();
   const public_key_fingerprints = useSelector(
-    (state) => state.wallet_state.public_key_fingerprints
+    state => state.wallet_state.public_key_fingerprints
   );
 
-  const handleClick = (fingerprint) => {
+  const handleClick = fingerprint => {
     return () => dispatch(log_in(fingerprint));
   };
 
-  const handleDelete = (fingerprint) => {
+  const handleDelete = fingerprint => {
     return () => {
       dispatch(delete_key(fingerprint));
     };
@@ -82,7 +82,7 @@ const SelectKey = () => {
     dispatch(changeEntranceMenu(presentNewWallet));
   };
 
-  const list_items = public_key_fingerprints.map((fingerprint) => {
+  const list_items = public_key_fingerprints.map(fingerprint => {
     return (
       <ListItem
         button

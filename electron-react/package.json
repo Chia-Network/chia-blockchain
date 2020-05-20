@@ -4,6 +4,8 @@
   "private": true,
   "devDependencies": {
     "foreman": "^3.0.1",
+    "prettier-eslint": "^9.0.1",
+    "prettier-eslint-cli": "^5.0.0",
     "redux-devtools-extension": "^2.13.8"
   },
   "dependencies": {
@@ -30,7 +32,8 @@
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject",
     "electron": "electron .",
-    "dev": "nf start -p 3000"
+    "dev": "nf start -p 3000",
+    "format": "prettier-eslint --write $PWD/\"src/**/*.js\""
   },
   "browserslist": {
     "production": [

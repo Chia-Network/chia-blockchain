@@ -15,7 +15,7 @@ import myStyle from "./style";
 import { add_key } from "../modules/message";
 import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
 
-const MnemonicField = (props) => {
+const MnemonicField = props => {
   return (
     <Grid item xs={2}>
       <CssTextField
@@ -35,14 +35,14 @@ const MnemonicField = (props) => {
     </Grid>
   );
 };
-const Iterator = (props) => {
+const Iterator = props => {
   return props.mnemonic.map((word, i) => (
     <MnemonicField key={i} word={word} id={"id_" + (i + 1)} index={i + 1} />
   ));
 };
 
-const UIPart = (props) => {
-  const words = useSelector((state) => state.wallet_state.mnemonic);
+const UIPart = props => {
+  const words = useSelector(state => state.wallet_state.mnemonic);
   const dispatch = useDispatch();
   const classes = myStyle();
 

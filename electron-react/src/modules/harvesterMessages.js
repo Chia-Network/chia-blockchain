@@ -19,10 +19,10 @@ export const getPlots = () => {
   return action;
 };
 
-export const deletePlot = (filename) => {
+export const deletePlot = filename => {
   var action = harvesterMessage();
   action.command = "delete_plot";
-  action.data = { filename, };
+  action.data = { filename };
   return action;
 };
 

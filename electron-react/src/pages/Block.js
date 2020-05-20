@@ -18,35 +18,35 @@ import HelpIcon from "@material-ui/icons/Help";
 
 /* global BigInt */
 
-const styles = (theme) => ({
+const styles = theme => ({
   form: {
-    margin: theme.spacing(1),
+    margin: theme.spacing(1)
   },
   clickable: {
-    cursor: "pointer",
+    cursor: "pointer"
   },
   error: {
-    color: "red",
+    color: "red"
   },
   container: {
     paddingTop: theme.spacing(0),
     paddingBottom: theme.spacing(0),
-    paddingRight: theme.spacing(0),
+    paddingRight: theme.spacing(0)
   },
   balancePaper: {
-    marginTop: theme.spacing(2),
+    marginTop: theme.spacing(2)
   },
   cardTitle: {
     paddingLeft: theme.spacing(1),
     paddingTop: theme.spacing(1),
-    marginBottom: theme.spacing(1),
+    marginBottom: theme.spacing(1)
   },
   table: {
-    minWidth: 650,
+    minWidth: 650
   },
   connect: {
-    marginLeft: theme.spacing(1),
-  },
+    marginLeft: theme.spacing(1)
+  }
 });
 
 class Block extends Component {
@@ -54,7 +54,7 @@ class Block extends Component {
     super(props);
     this.state = {
       headerHash: "",
-      plotSeed: "",
+      plotSeed: ""
     };
   }
 
@@ -75,7 +75,7 @@ class Block extends Component {
     const plotSeed = arr_to_hex(bufHash);
     this.setState({
       headerHash,
-      plotSeed,
+      plotSeed
     });
   }
 
@@ -126,14 +126,14 @@ class Block extends Component {
         name: "Timestamp",
         value: unix_to_short_date(block.header.data.timestamp),
         tooltip:
-          "This is the time the block was created by the farmer, which is before it is finalized with a proof of time",
+          "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
       },
       { name: "Height", value: block.header.data.height },
       {
         name: "Weight",
         value: BigInt(block.header.data.weight).toLocaleString(),
         tooltip:
-          "Weight is the total added difficulty of all blocks up to and including this one",
+          "Weight is the total added difficulty of all blocks up to and including this one"
       },
       { name: "Previous block", value: block.header.data.prev_header_hash },
       { name: "Difficulty", value: BigInt(diff).toLocaleString() },
@@ -141,7 +141,7 @@ class Block extends Component {
         name: "Total VDF Iterations",
         value: BigInt(block.header.data.total_iters).toLocaleString(),
         tooltip:
-          "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this block.",
+          "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this block."
       },
       {
         name: "Block VDF Iterations",
@@ -149,7 +149,7 @@ class Block extends Component {
           block.proof_of_time.number_of_iterations
         ).toLocaleString(),
         tooltip:
-          "The total number of VDF (verifiable delay function) or proof of time iterations on this block.",
+          "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
       },
       { name: "Proof of Space Size", value: block.proof_of_space.size },
       { name: "Plot Public Key", value: block.proof_of_space.plot_pubkey },
@@ -158,35 +158,35 @@ class Block extends Component {
         name: "Plot Seed",
         value: plotSeed,
         tooltip:
-          "The seed used to create the plot, this depends on the pool pk and plot pk",
+          "The seed used to create the plot, this depends on the pool pk and plot pk"
       },
       {
         name: "Transactions Filter Hash",
-        value: block.header.data.filter_hash,
+        value: block.header.data.filter_hash
       },
       {
         name: "Transactions Generator Hash",
-        value: block.header.data.generator_hash,
+        value: block.header.data.generator_hash
       },
       {
         name: "Coinbase Amount",
         value: chia_cb + " XCH",
         tooltip:
-          "The Chia block reward, goes to the pool (or individual farmer)",
+          "The Chia block reward, goes to the pool (or individual farmer)"
       },
       {
         name: "Coinbase Puzzle Hash",
-        value: block.header.data.coinbase.puzzle_hash,
+        value: block.header.data.coinbase.puzzle_hash
       },
       {
         name: "Fees Amount",
         value: chia_fees + " XCH",
-        tooltip: "The total fees in this block, goes to the farmer",
+        tooltip: "The total fees in this block, goes to the farmer"
       },
       {
         name: "Fees Puzzle Hash",
-        value: block.header.data.fees_coin.puzzle_hash,
-      },
+        value: block.header.data.fees_coin.puzzle_hash
+      }
     ];
     return (
       <Paper className={classes.balancePaper}>
@@ -202,7 +202,7 @@ class Block extends Component {
             <TableContainer component={Paper}>
               <Table className={classes.table} aria-label="simple table">
                 <TableBody>
-                  {rows.map((row) => (
+                  {rows.map(row => (
                     <TableRow key={row.name}>
                       <TableCell component="th" scope="row">
                         {row.name}{" "}
@@ -247,12 +247,12 @@ const mapDispatchToProps = (dispatch, ownProps) => {
     clearBlock: () => {
       dispatch(clearBlock());
     },
-    getHeader: (headerHash) => {
+    getHeader: headerHash => {
       dispatch(getHeader(headerHash));
     },
-    getBlock: (headerHash) => {
+    getBlock: headerHash => {
       dispatch(getBlock(headerHash));
-    },
+    }
   };
 };
 export default connect(

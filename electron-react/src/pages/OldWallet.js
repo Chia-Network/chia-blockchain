@@ -17,7 +17,7 @@ import { add_key } from "../modules/message";
 import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
 import logo from "../assets/img/chia_logo.svg"; // Tell webpack this JS file uses this image
 
-const MnemonicField = (props) => {
+const MnemonicField = props => {
   return (
     <Grid item xs={2}>
       <CssTextField
@@ -36,7 +36,7 @@ const MnemonicField = (props) => {
   );
 };
 
-const Iterator = (props) => {
+const Iterator = props => {
   const store = useStore();
   const dispatch = useDispatch();
 
@@ -65,7 +65,7 @@ const Iterator = (props) => {
   return indents;
 };
 
-const UIPart = (props) => {
+const UIPart = props => {
   function goBack() {
     dispatch(resetMnemonic());
     dispatch(changeEntranceMenu(presentSelectKeys));
@@ -79,7 +79,7 @@ const UIPart = (props) => {
     dispatch(add_key(mnemonic));
   }
 
-  const words = useSelector((state) => state.wallet_state.mnemonic);
+  const words = useSelector(state => state.wallet_state.mnemonic);
   const classes = myStyle();
 
   return (

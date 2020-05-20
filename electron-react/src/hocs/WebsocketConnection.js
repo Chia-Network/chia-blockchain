@@ -1,8 +1,5 @@
 import { useDispatch, useSelector } from "react-redux";
-import {
-  wsConnect,
-  wsConnecting,
-} from "../modules/websocket";
+import { wsConnect, wsConnecting } from "../modules/websocket";
 
 const WebSocketConnection = props => {
   const dispatch = useDispatch();

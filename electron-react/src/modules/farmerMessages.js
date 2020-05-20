@@ -29,13 +29,13 @@ export const getFarmerConnections = () => {
 export const openConnection = (host, port) => {
   var action = farmerMessage();
   action.command = "open_connection";
-  action.data = {host, port,};
+  action.data = { host, port };
   return action;
 };
 
-export const closeConnection = (node_id) => {
+export const closeConnection = node_id => {
   var action = farmerMessage();
   action.command = "close_connection";
-  action.data = {node_id,};
+  action.data = { node_id };
   return action;
 };

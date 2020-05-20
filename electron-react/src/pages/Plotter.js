@@ -10,7 +10,7 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem,
+  MenuItem
 } from "@material-ui/core";
 import Button from "@material-ui/core/Button";
 import TextField from "@material-ui/core/TextField";
@@ -21,40 +21,40 @@ import {
   workspaceSelected,
   finalSelected,
   startPlotting,
-  resetProgress,
+  resetProgress
 } from "../modules/plotter_messages";
 import { stopService } from "../modules/daemon_messages";
 import { service_plotter } from "../util/service_names";
 const drawerWidth = 180;
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles(theme => ({
   root: {
     display: "flex",
-    paddingLeft: "0px",
+    paddingLeft: "0px"
   },
   tabs: {
-    flexGrow: 1,
+    flexGrow: 1
   },
   form: {
-    margin: theme.spacing(1),
+    margin: theme.spacing(1)
   },
   clickable: {
-    cursor: "pointer",
+    cursor: "pointer"
   },
   error: {
-    color: "red",
+    color: "red"
   },
   refreshButton: {
-    marginLeft: "20px",
+    marginLeft: "20px"
   },
   menuButton: {
-    marginRight: 36,
+    marginRight: 36
   },
   menuButtonHidden: {
-    display: "none",
+    display: "none"
   },
   title: {
-    flexGrow: 1,
+    flexGrow: 1
   },
   drawerPaper: {
     position: "relative",
@@ -62,39 +62,39 @@ const useStyles = makeStyles((theme) => ({
     width: drawerWidth,
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
+      duration: theme.transitions.duration.enteringScreen
+    })
   },
   drawerPaperClose: {
     overflowX: "hidden",
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen,
+      duration: theme.transitions.duration.leavingScreen
     }),
     width: theme.spacing(7),
     [theme.breakpoints.up("sm")]: {
-      width: theme.spacing(9),
-    },
+      width: theme.spacing(9)
+    }
   },
   content: {
     marginTop: theme.spacing(3),
     paddingBottom: theme.spacing(6),
     height: "calc(100vh - 64px)",
-    overflowX: "hidden",
+    overflowX: "hidden"
   },
   container: {
     paddingTop: theme.spacing(0),
     paddingBottom: theme.spacing(0),
-    paddingRight: theme.spacing(0),
+    paddingRight: theme.spacing(0)
   },
   paper: {
     padding: theme.spacing(0),
     display: "flex",
     overflow: "auto",
-    flexDirection: "column",
+    flexDirection: "column"
   },
   fixedHeight: {
-    height: 240,
+    height: 240
   },
   drawerWallet: {
     position: "relative",
@@ -103,39 +103,39 @@ const useStyles = makeStyles((theme) => ({
     height: "100%",
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
+      duration: theme.transitions.duration.enteringScreen
+    })
   },
   balancePaper: {
     marginTop: theme.spacing(2),
     marginLeft: theme.spacing(2),
-    marginRight: theme.spacing(2),
+    marginRight: theme.spacing(2)
   },
   bottomOptions: {
     position: "absolute",
     bottom: 0,
-    width: "100%",
+    width: "100%"
   },
   cardTitle: {
     paddingLeft: theme.spacing(1),
     paddingTop: theme.spacing(1),
-    marginBottom: theme.spacing(1),
+    marginBottom: theme.spacing(1)
   },
   cardSubSection: {
     paddingLeft: theme.spacing(3),
     paddingRight: theme.spacing(3),
-    paddingTop: theme.spacing(1),
+    paddingTop: theme.spacing(1)
   },
   table: {
-    minWidth: 650,
+    minWidth: 650
   },
   selectButton: {
     width: 80,
     paddingLeft: theme.spacing(2),
-    height: 56,
+    height: 56
   },
   input: {
-    paddingRight: theme.spacing(2),
+    paddingRight: theme.spacing(2)
   },
   createButton: {
     float: "right",
@@ -143,7 +143,7 @@ const useStyles = makeStyles((theme) => ({
     paddingLeft: theme.spacing(2),
     height: 56,
     marginTop: theme.spacing(4),
-    marginBottom: theme.spacing(2),
+    marginBottom: theme.spacing(2)
   },
   logContainer: {
     marginLeft: theme.spacing(3),
@@ -159,12 +159,12 @@ const useStyles = makeStyles((theme) => ({
     paddingBottom: theme.spacing(3),
     overflowY: "auto",
     overflowWrap: "break-word",
-    lineHeight: 1.8,
+    lineHeight: 1.8
   },
   logPaper: {
     maxWidth: "100%",
     marginBottom: theme.spacing(3),
-    marginTop: theme.spacing(3),
+    marginTop: theme.spacing(3)
   },
   cancelButton: {
     float: "right",
@@ -172,7 +172,7 @@ const useStyles = makeStyles((theme) => ({
     paddingLeft: theme.spacing(2),
     height: 56,
     marginTop: theme.spacing(4),
-    marginBottom: theme.spacing(2),
+    marginBottom: theme.spacing(2)
   },
   clearButton: {
     float: "right",
@@ -180,8 +180,8 @@ const useStyles = makeStyles((theme) => ({
     marginRight: theme.spacing(2),
     height: 56,
     marginTop: theme.spacing(4),
-    marginBottom: theme.spacing(2),
-  },
+    marginBottom: theme.spacing(2)
+  }
 }));
 
 const plot_size_options = [
@@ -196,14 +196,14 @@ const plot_size_options = [
   { label: "101.4GB", value: 32, workspace: "566GB" },
   { label: "208.8GB", value: 33, workspace: "1095GB" },
   { label: "429.8GB", value: 34, workspace: "2287GB" },
-  { label: "884.1GB", value: 35, workspace: "4672GB" },
+  { label: "884.1GB", value: 35, workspace: "4672GB" }
 ];
 
 const WorkLocation = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
   const work_location = useSelector(
-    (state) => state.plot_control.workspace_location
+    state => state.plot_control.workspace_location
   );
   async function select() {
     if (isElectron()) {
@@ -251,7 +251,7 @@ const FinalLocation = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
   const final_location = useSelector(
-    (state) => state.plot_control.final_location
+    state => state.plot_control.final_location
   );
   async function select() {
     if (isElectron()) {
@@ -299,10 +299,10 @@ const CreatePlot = () => {
   const dispatch = useDispatch();
   const classes = useStyles();
   const work_location = useSelector(
-    (state) => state.plot_control.workspace_location
+    state => state.plot_control.workspace_location
   );
   const final_location = useSelector(
-    (state) => state.plot_control.final_location
+    state => state.plot_control.final_location
   );
   var plot_size_ref = null;
   var plot_count_ref = null;
@@ -344,12 +344,12 @@ const CreatePlot = () => {
                   <InputLabel>Plot Size</InputLabel>
                   <Select
                     value={25}
-                    inputRef={(input) => {
+                    inputRef={input => {
                       plot_size_ref = input;
                     }}
                     label="Plot Size"
                   >
-                    {plot_size_options.map((option) => (
+                    {plot_size_options.map(option => (
                       <MenuItem
                         value={option.value}
                         key={"size" + option.value}
@@ -369,12 +369,12 @@ const CreatePlot = () => {
                   <InputLabel>Plot Count</InputLabel>
                   <Select
                     value={1}
-                    inputRef={(input) => {
+                    inputRef={input => {
                       plot_count_ref = input;
                     }}
                     label="Colour"
                   >
-                    {plot_count_options.map((option) => (
+                    {plot_count_options.map(option => (
                       <MenuItem value={option} key={"count" + option}>
                         {option}
                       </MenuItem>
@@ -409,7 +409,7 @@ const CreatePlot = () => {
 };
 
 const Proggress = () => {
-  const progress = useSelector((state) => state.plot_control.progress);
+  const progress = useSelector(state => state.plot_control.progress);
   const classes = useStyles();
   const dispatch = useDispatch();
   function clearLog() {
@@ -458,7 +458,7 @@ const Proggress = () => {
 
 const Plotter = () => {
   const in_progress = useSelector(
-    (state) => state.plot_control.plotting_in_proggress
+    state => state.plot_control.plotting_in_proggress
   );
   return (
     <div>

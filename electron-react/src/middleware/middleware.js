@@ -2,7 +2,7 @@ import * as actions from "../modules/websocket";
 import {
   registerService,
   startService,
-  isServiceRunning,
+  isServiceRunning
 } from "../modules/daemon_messages";
 import { handle_message } from "./middleware_api";
 import {
@@ -11,7 +11,7 @@ import {
   service_simulator,
   service_farmer,
   service_harvester,
-  service_plotter,
+  service_plotter
 } from "../util/service_names";
 const config = require("../config");
 
@@ -23,14 +23,14 @@ const outgoing_message = (command, data, destination) => ({
   ack: false,
   origin: "wallet_ui",
   destination: destination,
-  request_id: crypto.randomBytes(32).toString("hex"),
+  request_id: crypto.randomBytes(32).toString("hex")
 });
 
 const socketMiddleware = () => {
   let socket = null;
   let connected = false;
 
-  const onOpen = (store) => (event) => {
+  const onOpen = store => event => {
     store.dispatch(actions.wsConnected(event.target.url));
     var register_action = registerService();
     store.dispatch(register_action);
@@ -52,16 +52,16 @@ const socketMiddleware = () => {
     store.dispatch(start_harvester);
   };
 
-  const onClose = (store) => () => {
+  const onClose = store => () => {
     store.dispatch(actions.wsDisconnected());
   };
 
-  const onMessage = (store) => (event) => {
+  const onMessage = store => event => {
     const payload = JSON.parse(event.data);
     handle_message(store, payload);
   };
 
-  return (store) => (next) => (action) => {
+  return store => next => action => {
     switch (action.type) {
       case "WS_CONNECT":
         if (socket !== null) {

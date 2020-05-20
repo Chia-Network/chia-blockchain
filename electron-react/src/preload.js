@@ -1,1 +1,1 @@
-window.remote = require('electron').remote;
+window.remote = require("electron").remote;

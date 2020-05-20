@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
-import "./Accordion.css"
+import React, { useState, useRef } from "react";
+import "./Accordion.css";
 import Typography from "@material-ui/core/Typography";
-import ChevronRightIcon from '@material-ui/icons/ChevronRight';
+import ChevronRightIcon from "@material-ui/icons/ChevronRight";
 
 function Accordion(props) {
   const [setActive, setActiveState] = useState("");
@@ -11,13 +11,26 @@ function Accordion(props) {
   const content = useRef(null);
   function toggleAccordion() {
     setActiveState(setActive === "" ? "active" : "");
-    setHeightState(setActive === "active" ? "0px" : `${content.current.scrollHeight}px`);
-    setRotateState(setActive === "active" ? "accordion__icon" : "accordion__icon rotate");
-    setTitleState(setActive === "active" ? "View pending balances..." : "Hide pending balances")
+    setHeightState(
+      setActive === "active" ? "0px" : `${content.current.scrollHeight}px`
+    );
+    setRotateState(
+      setActive === "active" ? "accordion__icon" : "accordion__icon rotate"
+    );
+    setTitleState(
+      setActive === "active"
+        ? "View pending balances..."
+        : "Hide pending balances"
+    );
   }
   return (
     <div className="accordion__section">
-      <Typography component="subtitle1" variant="subtitle1" className={`accordion ${setActive}`} onClick={toggleAccordion}>
+      <Typography
+        component="subtitle1"
+        variant="subtitle1"
+        className={`accordion ${setActive}`}
+        onClick={toggleAccordion}
+      >
         <ChevronRightIcon className={`${setRotate}`} />
         <p className="accordion_title">{`${setTitle}`}</p>
       </Typography>
@@ -28,11 +41,11 @@ function Accordion(props) {
       >
         <div
           className="accordion__text"
-          dangerouslySetInnerHTML = {{ __html: props.content }}
-          />
+          dangerouslySetInnerHTML={{ __html: props.content }}
+        />
       </div>
     </div>
-  )
+  );
 }
 
 export default Accordion;

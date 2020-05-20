@@ -6,7 +6,7 @@ export function unix_to_short_date(unix_timestamp) {
     d.toLocaleDateString("en-US", {
       day: "2-digit",
       month: "2-digit",
-      year: "numeric",
+      year: "numeric"
     }) +
     " " +
     d.toLocaleTimeString()
@@ -48,7 +48,7 @@ export function hex_to_array(hexString) {
 export function arr_to_hex(buffer) {
   // buffer is an ArrayBuffer
   return Array.prototype.map
-    .call(new Uint8Array(buffer), (x) => ("00" + x.toString(16)).slice(-2))
+    .call(new Uint8Array(buffer), x => ("00" + x.toString(16)).slice(-2))
     .join("");
 }
 

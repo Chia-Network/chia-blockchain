@@ -18,31 +18,31 @@ import {
   closeConnection,
   openConnection,
   getBlock,
-  getHeader,
+  getHeader
 } from "../modules/fullnodeMessages";
 
 /* global BigInt */
 
 const drawerWidth = 180;
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles(theme => ({
   root: {
     display: "flex",
     paddingLeft: "0px",
-    paddingRight: "0px",
+    paddingRight: "0px"
   },
   menuButton: {
-    marginRight: 36,
+    marginRight: 36
   },
   searchHashButton: {
     marginLeft: "10px",
-    height: "100%",
+    height: "100%"
   },
   menuButtonHidden: {
-    display: "none",
+    display: "none"
   },
   title: {
-    flexGrow: 1,
+    flexGrow: 1
   },
   drawerPaper: {
     position: "relative",
@@ -50,39 +50,39 @@ const useStyles = makeStyles((theme) => ({
     width: drawerWidth,
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
+      duration: theme.transitions.duration.enteringScreen
+    })
   },
   drawerPaperClose: {
     overflowX: "hidden",
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen,
+      duration: theme.transitions.duration.leavingScreen
     }),
     width: theme.spacing(7),
     [theme.breakpoints.up("sm")]: {
-      width: theme.spacing(9),
-    },
+      width: theme.spacing(9)
+    }
   },
   content: {
     flexGrow: 1,
     height: "calc(100vh - 64px)",
-    overflowX: "hidden",
+    overflowX: "hidden"
   },
   container: {
     paddingTop: theme.spacing(3),
     paddingLeft: theme.spacing(6),
     paddingRight: theme.spacing(6),
-    paddingBottom: theme.spacing(3),
+    paddingBottom: theme.spacing(3)
   },
   paper: {
     padding: theme.spacing(0),
     display: "flex",
     overflow: "auto",
-    flexDirection: "column",
+    flexDirection: "column"
   },
   fixedHeight: {
-    height: 240,
+    height: 240
   },
   drawerWallet: {
     position: "relative",
@@ -91,50 +91,50 @@ const useStyles = makeStyles((theme) => ({
     height: "100%",
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
+      duration: theme.transitions.duration.enteringScreen
+    })
   },
   balancePaper: {
     padding: theme.spacing(2),
-    marginTop: theme.spacing(2),
+    marginTop: theme.spacing(2)
   },
   bottomOptions: {
     position: "absolute",
     bottom: 0,
-    width: "100%",
+    width: "100%"
   },
   cardTitle: {
     paddingLeft: theme.spacing(1),
     paddingTop: theme.spacing(1),
-    marginBottom: theme.spacing(1),
+    marginBottom: theme.spacing(1)
   },
   cardSubSection: {
     paddingLeft: theme.spacing(3),
     paddingRight: theme.spacing(3),
-    paddingTop: theme.spacing(1),
+    paddingTop: theme.spacing(1)
   },
   left_block_cell: {
     marginLeft: 10,
     width: "25%",
     textAlign: "left",
-    overflowWrap: "break-word",
+    overflowWrap: "break-word"
   },
   center_block_cell: {
     width: "25%",
     textAlign: "center",
-    overflowWrap: "break-word",
+    overflowWrap: "break-word"
   },
   center_block_cell_small: {
     width: "15%",
     textAlign: "center",
-    overflowWrap: "break-word",
+    overflowWrap: "break-word"
   },
   right_block_cell: {
     marginLeft: 30,
     marginRight: 10,
     width: "25%",
     textAlign: "right",
-    overflowWrap: "break-word",
+    overflowWrap: "break-word"
   },
   block_row: {
     height: "30px",
@@ -142,17 +142,17 @@ const useStyles = makeStyles((theme) => ({
     borderBottom: "1px solid #eeeeee",
     /* mouse over link */
     "&:hover": {
-      backgroundColor: "#eeeeee",
-    },
+      backgroundColor: "#eeeeee"
+    }
   },
   block_row_unfinished: {
     height: "30px",
     borderBottom: "1px solid #eeeeee",
-    color: "orange",
+    color: "orange"
   },
   block_header: {
-    marginBottom: 10,
-  },
+    marginBottom: 10
+  }
 }));
 
 const getStatusItems = (state, connected) => {
@@ -165,7 +165,7 @@ const getStatusItems = (state, connected) => {
       value: "Syncing " + progress + "/" + tip,
       colour: "orange",
       tooltip:
-        "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain",
+        "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
     };
     status_items.push(item);
   } else {
@@ -173,7 +173,7 @@ const getStatusItems = (state, connected) => {
       label: "Status",
       value: "Synced",
       colour: "green",
-      tooltip: "This node is fully caught up and validating the network",
+      tooltip: "This node is fully caught up and validating the network"
     };
     status_items.push(item);
   }
@@ -208,7 +208,7 @@ const getStatusItems = (state, connected) => {
       label: "LCA Time",
       value: date_string,
       tooltip:
-        "This is the time of the latest common ancestor, which is a block ancestor of all tip blocks. Note that the full node keeps track of up to three tips at each height.",
+        "This is the time of the latest common ancestor, which is a block ancestor of all tip blocks. Note that the full node keeps track of up to three tips at each height."
     };
     status_items.push(item);
   } else {
@@ -220,14 +220,14 @@ const getStatusItems = (state, connected) => {
     const item = {
       label: "Connection Status ",
       value: "Connected",
-      colour: "green",
+      colour: "green"
     };
     status_items.push(item);
   } else {
     const item = {
       label: "Connection Status ",
       value: "Not connected",
-      colour: "red",
+      colour: "red"
     };
     status_items.push(item);
   }
@@ -240,7 +240,7 @@ const getStatusItems = (state, connected) => {
     label: "Iterations per Second",
     value: ips,
     tooltip:
-      "The estimated proof of time speed of the fastest timelord in the network.",
+      "The estimated proof of time speed of the fastest timelord in the network."
   };
   status_items.push(ips_item);
 
@@ -254,14 +254,14 @@ const getStatusItems = (state, connected) => {
     label: "Estimated network space",
     value: space,
     tooltip:
-      "Estimated sum of all the plotted disk space of all farmers in the network",
+      "Estimated sum of all the plotted disk space of all farmers in the network"
   };
   status_items.push(space_item);
 
   return status_items;
 };
 
-const StatusCell = (props) => {
+const StatusCell = props => {
   const classes = useStyles();
   const item = props.item;
   const label = item.label;
@@ -292,12 +292,12 @@ const StatusCell = (props) => {
     </Grid>
   );
 };
-const FullNodeStatus = (props) => {
+const FullNodeStatus = props => {
   const blockchain_state = useSelector(
-    (state) => state.full_node_state.blockchain_state
+    state => state.full_node_state.blockchain_state
   );
   const connected = useSelector(
-    (state) => state.daemon_state.full_node_connected
+    state => state.daemon_state.full_node_connected
   );
   const statusItems = getStatusItems(blockchain_state, connected);
 
@@ -312,7 +312,7 @@ const FullNodeStatus = (props) => {
             </Typography>
           </div>
         </Grid>
-        {statusItems.map((item) => (
+        {statusItems.map(item => (
           <StatusCell item={item} key={item.label}></StatusCell>
         ))}
       </Grid>
@@ -321,7 +321,7 @@ const FullNodeStatus = (props) => {
 };
 
 const BlocksCard = () => {
-  const headers = useSelector((state) => state.full_node_state.headers);
+  const headers = useSelector(state => state.full_node_state.headers);
   const dispatch = useDispatch();
 
   function clickedBlock(height, header_hash, prev_header_hash) {
@@ -356,7 +356,7 @@ const BlocksCard = () => {
           </Box>
           <Box className={classes.right_block_cell}>Expected finish time</Box>
         </Box>
-        {headers.map((header) => (
+        {headers.map(header => (
           <Box
             className={
               header.data.finished
@@ -398,11 +398,11 @@ const BlocksCard = () => {
   );
 };
 
-const SearchBlock = (props) => {
+const SearchBlock = props => {
   const classes = useStyles();
   const dispatch = useDispatch();
   const [searchHash, setSearchHash] = React.useState("");
-  const handleChangeSearchHash = (event) => {
+  const handleChangeSearchHash = event => {
     setSearchHash(event.target.value);
   };
   const clickSearch = () => {
@@ -453,17 +453,17 @@ const FullNode = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
 
-  const connections = useSelector((state) => state.full_node_state.connections);
+  const connections = useSelector(state => state.full_node_state.connections);
   const connectionError = useSelector(
-    (state) => state.full_node_state.open_connection_error
+    state => state.full_node_state.open_connection_error
   );
-  const block = useSelector((state) => state.full_node_state.block);
-  const header = useSelector((state) => state.full_node_state.header);
+  const block = useSelector(state => state.full_node_state.block);
+  const header = useSelector(state => state.full_node_state.header);
 
   const openConnectionCallback = (host, port) => {
     dispatch(openConnection(host, port));
   };
-  const closeConnectionCallback = (node_id) => {
+  const closeConnectionCallback = node_id => {
     dispatch(closeConnection(node_id));
   };
 

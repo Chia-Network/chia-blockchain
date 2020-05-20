@@ -6,7 +6,7 @@ import {
   presentWallet,
   presentNode,
   presentFarmer,
-  changeMainMenu,
+  changeMainMenu
 } from "../modules/mainMenu";
 import { delete_all_keys, logOut } from "../modules/message";
 import { useDispatch } from "react-redux";
@@ -23,21 +23,21 @@ const menuItems = [
   {
     label: "Wallet",
     present: presentWallet,
-    icon: <AccountBalanceWalletIcon></AccountBalanceWalletIcon>,
+    icon: <AccountBalanceWalletIcon></AccountBalanceWalletIcon>
   },
   {
     label: "Full Node",
     present: presentNode,
-    icon: <AccountTreeIcon></AccountTreeIcon>,
+    icon: <AccountTreeIcon></AccountTreeIcon>
   },
   {
     label: "Farming",
     present: presentFarmer,
-    icon: <DonutLargeIcon></DonutLargeIcon>,
-  },
+    icon: <DonutLargeIcon></DonutLargeIcon>
+  }
 ];
 
-const MenuItem = (menuItem) => {
+const MenuItem = menuItem => {
   const dispatch = useDispatch();
   const item = menuItem;
 
@@ -69,7 +69,7 @@ export const SideBar = () => {
 
   return (
     <div>
-      <List>{menuItems.map((item) => MenuItem(item))}</List>
+      <List>{menuItems.map(item => MenuItem(item))}</List>
       <Divider />
       <List>
         <div>
