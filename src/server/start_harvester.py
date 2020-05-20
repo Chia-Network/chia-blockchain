@@ -17,31 +17,7 @@ from src.rpc.harvester_rpc_server import start_harvester_rpc_server
 from src.util.logging import initialize_logging
 from src.util.setproctitle import setproctitle
 
-
-def start_harvester_bg_task(server, peer_info, log):
-    """
-    Start a background task that checks connection and reconnects periodically to the farmer.
-    """
-
-    async def connection_check():
-        while True:
-            farmer_retry = True
-
-            for (
-                connection
-            ) in server.global_connections.get_connections():
-                if connection.get_peer_info() == peer_info:
-                    farmer_retry = False
-
-            if farmer_retry:
-                log.info(f"Reconnecting to farmer {farmer_retry}")
-                if not await server.start_client(
-                    peer_info, None, auth=True
-                ):
-                    await asyncio.sleep(1)
-            await asyncio.sleep(1)
-
-    return asyncio.create_task(connection_check())
+from .reconnect_task import start_reconnect_task
 
 
 async def async_main():
@@ -90,7 +66,7 @@ async def async_main():
     peer_info = PeerInfo(
         config["farmer_peer"]["host"], config["farmer_peer"]["port"]
     )
-    farmer_bg_task = start_harvester_bg_task(server, peer_info, log)
+    farmer_bg_task = start_reconnect_task(server, peer_info, log)
 
     await server.await_closed()
     harvester._shutdown()
