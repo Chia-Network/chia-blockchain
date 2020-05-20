@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 import ssl
 from secrets import token_bytes
-from typing import Any, AsyncGenerator, List, Optional, Tuple, Dict, Callable
+from typing import Any, AsyncGenerator, List, Tuple, Dict, Callable
 
 from aiter import iter_to_aiter, map_aiter, push_aiter
 from aiter.server import start_server_aiter
@@ -19,15 +19,12 @@ from src.util.network import create_node_id
 from .pipeline import initialize_pipeline
 
 
-async def start_server(self: "ChiaServer", on_connect: OnConnectFunc = None) -> bool:
+async def start_server(self: "ChiaServer", on_connect: OnConnectFunc = None) -> asyncio.AbstractServer:
     """
     Launches a listening server on host and port specified, to connect to NodeType nodes. On each
     connection, the on_connect asynchronous generator will be called, and responses will be sent.
     Whenever a new TCP connection is made, a new srwt tuple is sent through the pipeline.
     """
-    if self._server is not None or self._pipeline_task.done():
-        return False
-
     ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH)
     private_cert, private_key = self.loadSSLConfig(
         "ssl", self.root_path, self.config
@@ -43,7 +40,7 @@ async def start_server(self: "ChiaServer", on_connect: OnConnectFunc = None) -> 
     else:
         ssl_context.verify_mode = ssl.CERT_REQUIRED
 
-    self._server, aiter = await start_server_aiter(
+    server, aiter = await start_server_aiter(
         self._port, host=None, reuse_address=True, ssl=ssl_context
     )
 
@@ -61,7 +58,7 @@ async def start_server(self: "ChiaServer", on_connect: OnConnectFunc = None) -> 
     self._tasks.append(asyncio.create_task(self._add_to_srwt_aiter(srwt_aiter)))
 
     self.log.info(f"Server started on port {self._port}")
-    return True
+    return server
 
 
 class ChiaServer:
@@ -78,9 +75,6 @@ class ChiaServer:
     ):
         # Keeps track of all connections to and from this node.
         self.global_connections: PeerConnections = PeerConnections([])
-
-        # Optional listening server. You can also use this class without starting one.
-        self._server: Optional[asyncio.AbstractServer] = None
 
         self._port = port  # TCP port to identify our node
         self._local_type = local_type  # NodeType (farmer, full node, timelord, pool, harvester, wallet)
@@ -146,15 +140,6 @@ class ChiaServer:
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
         An on connect method can also be specified, and this will be saved into the instance variables.
         """
-        if self._server is not None:
-            if (
-                target_node.host == "127.0.0.1"
-                or target_node.host == "0.0.0.0"
-                or target_node.host == "::1"
-                or target_node.host == "0:0:0:0:0:0:0:1"
-            ) and self._port == target_node.port:
-                self.global_connections.peers.remove(target_node)
-                return False
         if self._pipeline_task.done():
             return False
 
@@ -231,8 +216,6 @@ class ChiaServer:
         Starts closing all the clients and servers, by stopping the server and stopping the aiters.
         """
         self.global_connections.close_all_connections()
-        if self._server is not None:
-            self._server.close()
         if not self._outbound_aiter.is_stopped():
             self._outbound_aiter.stop()
         if not self._srwt_aiter.is_stopped():

@@ -72,30 +72,36 @@ async def async_main():
         root_path,
         config,
     )
-
-    try:
-        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
-        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
-    except NotImplementedError:
-        log.info("signal handlers unsupported")
-
-    _ = await start_server(server, farmer._on_connect)
     farmer.set_server(server)
+
+    peer_info = PeerInfo(
+        config["full_node_peer"]["host"], config["full_node_peer"]["port"]
+    )
+    server_socket = await start_server(server, farmer._on_connect)
+    farmer_bg_task = start_farmer_bg_task(server, peer_info, log)
+
+    def stop_all():
+        server_socket.close()
+        server.close_all()
+        farmer_bg_task.cancel()
+        farmer._shut_down = True
 
     rpc_cleanup = None
     if config["start_rpc_server"]:
         # Starts the RPC server
         rpc_cleanup = await start_farmer_rpc_server(
-            farmer, server.close_all, config["rpc_port"]
+            farmer, stop_all, config["rpc_port"]
         )
+
+    try:
+        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop_all)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop_all)
+    except NotImplementedError:
+        log.info("signal handlers unsupported")
 
     await asyncio.sleep(10)  # Allows full node to startup
 
-    peer_info = PeerInfo(
-        config["full_node_peer"]["host"], config["full_node_peer"]["port"]
-    )
-    farmer_bg_task = start_farmer_bg_task(server, peer_info, log)
-
+    await server_socket.wait_closed()
     await server.await_closed()
 
     # Waits for the rpc server to close
@@ -103,8 +109,6 @@ async def async_main():
         await rpc_cleanup()
     log.info("Closed RPC server.")
 
-    farmer._shut_down = True
-    farmer_bg_task.cancel()
     log.info("Farmer fully closed.")
 
 
