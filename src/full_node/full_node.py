@@ -5,7 +5,7 @@ import traceback
 import time
 from asyncio import Event
 from pathlib import Path
-from typing import AsyncGenerator, Dict, List, Optional, Tuple, Type
+from typing import AsyncGenerator, Dict, List, Optional, Tuple, Type, Callable
 
 import aiosqlite
 from chiabip158 import PyBIP158
@@ -70,6 +70,8 @@ class FullNode:
     log: logging.Logger
     constants: Dict
     _shut_down: bool
+    root_path: Path
+    state_changed_callback: Optional[Callable]
 
     @classmethod
     async def create(
@@ -81,6 +83,7 @@ class FullNode:
     ):
         self = cls()
 
+        self.root_path = root_path
         self.config = config
         self.server = None
         self._shut_down = False  # Set to true to close all infinite loops
@@ -113,10 +116,20 @@ class FullNode:
 
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
         await self.mempool_manager.new_tips(await self.blockchain.get_full_tips())
+        self.state_changed_callback = None
         return self
 
     def _set_server(self, server: ChiaServer):
         self.server = server
+
+    def _set_state_changed_callback(self, callback: Callable):
+        self.state_changed_callback = callback
+        if self.server is not None:
+            self.server.set_state_changed_callback(callback)
+
+    def _state_changed(self, change: str):
+        if self.state_changed_callback is not None:
+            self.state_changed_callback(change)
 
     async def _send_tips_to_farmers(
         self, delivery: Delivery = Delivery.BROADCAST
@@ -426,7 +439,8 @@ class FullNode:
             async for msg in self.sync_peers_handler._add_to_request_sets():
                 yield msg  # Send more requests if we can
 
-            await asyncio.sleep(2)
+            self._state_changed("block")
+            await asyncio.sleep(5)
 
         # Awaits for all blocks to be processed, a timeout to happen, or the node to shutdown
         await block_processor_task
@@ -737,13 +751,16 @@ class FullNode:
     async def new_compact_proof_of_time(
         self, new_compact_proof_of_time: full_node_protocol.NewCompactProofOfTime
     ) -> OutboundMessageGenerator:
-        # If we already have the compact PoT in a finished block, return
+        # If we already have the compact PoT in a connected to header block, return
         blocks: List[FullBlock] = await self.block_store.get_blocks_at(
             [new_compact_proof_of_time.height]
         )
         for block in blocks:
             assert block.proof_of_time is not None
-            if block.proof_of_time.witness_type == 1:
+            if (
+                block.proof_of_time.witness_type == 0
+                and block.header_hash in self.blockchain.headers
+            ):
                 return
 
         yield OutboundMessage(
@@ -807,28 +824,29 @@ class FullNode:
         A proof of time, received by a peer full node. If we have the rest of the block,
         we can complete it. Otherwise, we just verify and propagate the proof.
         """
-        height: Optional[uint32] = self.full_node_store.get_proof_of_time_heights(
-            (
-                respond_compact_proof_of_time.proof.challenge_hash,
-                respond_compact_proof_of_time.proof.number_of_iterations,
-            )
+        height: Optional[uint32] = self.block_store.get_height_proof_of_time(
+            respond_compact_proof_of_time.proof.challenge_hash,
+            respond_compact_proof_of_time.proof.number_of_iterations,
         )
         if height is None:
+            self.log.info("No block for compact proof of time.")
+            return
+        if not respond_compact_proof_of_time.proof.is_valid(
+            self.constants["DISCRIMINANT_SIZE_BITS"]
+        ):
+            self.log.error("Invalid compact proof of time.")
             return
 
         blocks: List[FullBlock] = await self.block_store.get_blocks_at([height])
         for block in blocks:
             assert block.proof_of_time is not None
             if (
-                block.proof_of_time.witness_type != 1
+                block.proof_of_time.witness_type != 0
                 and block.proof_of_time.challenge_hash
                 == respond_compact_proof_of_time.proof.challenge_hash
                 and block.proof_of_time.number_of_iterations
                 == respond_compact_proof_of_time.proof.number_of_iterations
             ):
-                assert respond_compact_proof_of_time.proof.is_valid(
-                    self.constants["DISCRIMINANT_SIZE_BITS"]
-                )
                 block_new = FullBlock(
                     block.proof_of_space,
                     respond_compact_proof_of_time.proof,
@@ -837,6 +855,7 @@ class FullNode:
                     block.transactions_filter,
                 )
                 await self.block_store.add_block(block_new)
+                self.log.info(f"Stored compact block at height {block.height}.")
                 yield OutboundMessage(
                     NodeType.FULL_NODE,
                     Message(
@@ -1044,6 +1063,7 @@ class FullNode:
             Message("new_unfinished_block", new_unfinished_block),
             Delivery.BROADCAST_TO_OTHERS,
         )
+        self._state_changed("block")
 
     @api_request
     async def reject_unfinished_block_request(
@@ -1347,6 +1367,13 @@ class FullNode:
         A proof of time, received by a peer timelord. We can use this to complete a block,
         and call the block routine (which handles propagation and verification of blocks).
         """
+        if request.proof.witness_type == 0:
+            compact_request = full_node_protocol.RespondCompactProofOfTime(
+                request.proof
+            )
+            async for msg in self.respond_compact_proof_of_time(compact_request):
+                yield msg
+
         dict_key = (
             request.proof.challenge_hash,
             request.proof.number_of_iterations,
@@ -1356,9 +1383,10 @@ class FullNode:
             FullBlock
         ] = await self.full_node_store.get_unfinished_block(dict_key)
         if not unfinished_block_obj:
-            self.log.warning(
-                f"Received a proof of time that we cannot use to complete a block {dict_key}"
-            )
+            if request.proof.witness_type > 0:
+                self.log.warning(
+                    f"Received a proof of time that we cannot use to complete a block {dict_key}"
+                )
             return
 
         new_full_block: FullBlock = FullBlock(
@@ -1611,6 +1639,7 @@ class FullNode:
         self.full_node_store.clear_candidate_blocks_below(clear_height)
         self.full_node_store.clear_disconnected_blocks_below(clear_height)
         await self.full_node_store.clear_unfinished_blocks_below(clear_height)
+        self._state_changed("block")
 
     @api_request
     async def reject_block_request(

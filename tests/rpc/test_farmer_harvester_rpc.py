@@ -2,8 +2,8 @@ import asyncio
 
 import pytest
 
-from src.rpc.farmer_rpc_server import start_rpc_server
-from src.rpc.harvester_rpc_server import start_rpc_server as start_rpc_server_h
+from src.rpc.farmer_rpc_server import start_farmer_rpc_server
+from src.rpc.harvester_rpc_server import start_harvester_rpc_server
 from src.protocols import full_node_protocol
 from src.rpc.farmer_rpc_client import FarmerRpcClient
 from src.rpc.harvester_rpc_client import HarvesterRpcClient
@@ -27,7 +27,6 @@ class TestRpc:
     async def test1(self, simulation):
         test_rpc_port = uint16(21522)
         test_rpc_port_2 = uint16(21523)
-        print(simulation)
         full_node_1, _, harvester, farmer, _, _, _ = simulation
 
         def stop_node_cb():
@@ -36,8 +35,8 @@ class TestRpc:
         def stop_node_cb_2():
             farmer.server.close_all()
 
-        rpc_cleanup = await start_rpc_server(farmer, stop_node_cb, test_rpc_port)
-        rpc_cleanup_2 = await start_rpc_server_h(
+        rpc_cleanup = await start_farmer_rpc_server(farmer, stop_node_cb, test_rpc_port)
+        rpc_cleanup_2 = await start_harvester_rpc_server(
             harvester, stop_node_cb_2, test_rpc_port_2
         )
 
@@ -51,12 +50,11 @@ class TestRpc:
             challenges = await client.get_latest_challenges()
             assert len(challenges) > 0
 
-            plots = await client_2.get_plots()
-            assert len(plots) > 0
-            print("Removing", plots[0]["filename"])
-            res = await client_2.delete_plot(plots[0]["filename"])
-            plots_2 = await client_2.get_plots()
-            assert len(plots_2) + 1 == len(plots)
+            res = await client_2.get_plots()
+            assert len(res["plots"]) > 0
+            await client_2.delete_plot(res["plots"][0]["filename"])
+            res_2 = await client_2.get_plots()
+            assert len(res_2["plots"]) + 1 == len(res["plots"])
 
             await client_2.refresh_plots()
 

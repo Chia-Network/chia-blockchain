@@ -4,7 +4,7 @@ import time
 from time import struct_time, localtime
 import datetime
 
-from src.rpc.rpc_client import RpcClient
+from src.rpc.full_node_rpc_client import FullNodeRpcClient
 
 
 def make_parser(parser):
@@ -48,7 +48,7 @@ async def netstorge_async(args, parser):
             add help on failure/no args
     """
     try:
-        client = await RpcClient.create(args.rpc_port)
+        client = await FullNodeRpcClient.create(args.rpc_port)
 
         # print (args.blocks)
         if args.delta_block_height:
@@ -57,7 +57,7 @@ async def netstorge_async(args, parser):
                 blockchain_state = await client.get_blockchain_state()
                 newer_block_height = blockchain_state["lca"].data.height
             else:
-                newer_block_height = args.start  # Starting block height in args
+                newer_block_height = int(args.start)  # Starting block height in args
             newer_block_header = await client.get_header_by_height(newer_block_height)
             older_block_height = newer_block_height - int(args.delta_block_height)
             older_block_header = await client.get_header_by_height(older_block_height)

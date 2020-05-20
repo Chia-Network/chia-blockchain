@@ -1,7 +1,6 @@
 import React, { Component } from "react";
 import Button from "@material-ui/core/Button";
 import CssBaseline from "@material-ui/core/CssBaseline";
-import Link from "@material-ui/core/Link";
 import Grid from "@material-ui/core/Grid";
 import Typography from "@material-ui/core/Typography";
 import { withTheme } from "@material-ui/styles";
@@ -9,12 +8,14 @@ import Container from "@material-ui/core/Container";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { connect, useSelector, useDispatch } from "react-redux";
 import { genereate_mnemonics } from "../modules/message";
-import { withRouter, Redirect } from "react-router-dom";
+import { withRouter } from "react-router-dom";
 import CssTextField from "../components/cssTextField";
+import logo from "../assets/img/chia_logo.svg"; // Tell webpack this JS file uses this image
 import myStyle from "./style";
 import { add_key } from "../modules/message";
+import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
 
-const MnemonicField = props => {
+const MnemonicField = (props) => {
   return (
     <Grid item xs={2}>
       <CssTextField
@@ -34,44 +35,41 @@ const MnemonicField = props => {
     </Grid>
   );
 };
-const Iterator = props => {
+const Iterator = (props) => {
   return props.mnemonic.map((word, i) => (
     <MnemonicField key={i} word={word} id={"id_" + (i + 1)} index={i + 1} />
   ));
 };
 
-const UIPart = props => {
-  const logged_in = useSelector(state => state.wallet_state.logged_in);
-  const public_key_fingerprints = useSelector(state => state.wallet_state.public_key_fingerprints);
-  const words = useSelector(state => state.wallet_state.mnemonic);
+const UIPart = (props) => {
+  const words = useSelector((state) => state.wallet_state.mnemonic);
   const dispatch = useDispatch();
   const classes = myStyle();
 
   function goBack() {
-    props.props.history.goBack();
+    dispatch(changeEntranceMenu(presentSelectKeys));
   }
 
   function next() {
     dispatch(add_key(words));
   }
 
-  if (logged_in) {
-    return <Redirect to="/dashboard" />;
-  }
-  if (public_key_fingerprints.length > 0) {
-    return <Redirect to="/SelectKey" />;
-  }
-
   return (
     <div className={classes.root}>
-      <Link onClick={goBack} href="#">
-        <ArrowBackIosIcon className={classes.navigator}> </ArrowBackIosIcon>
-      </Link>
+      <ArrowBackIosIcon onClick={goBack} className={classes.navigator}>
+        {" "}
+      </ArrowBackIosIcon>
       <div className={classes.grid_wrap}>
         <Container className={classes.grid} maxWidth="lg">
-          <Typography className={classes.title} component="h1" variant="h5">
-            Write Down These Words
+          <img className={classes.logo} src={logo} alt="Logo" />
+          <Typography className={classes.title} component="h4" variant="h4">
+            New Wallet
           </Typography>
+          <p className={classes.instructions}>
+            Welcome to the Chia wallet. The following words make up your private
+            key, so write them down and keep them safe. They can be used to
+            recover the wallet.
+          </p>
           <Grid container spacing={2}>
             <Iterator mnemonic={words}></Iterator>
           </Grid>
@@ -105,9 +103,7 @@ class NewWallet extends Component {
     this.classes = props.theme;
   }
 
-  componentDidMount(props) {
-    console.log("Get Mnemonic");
-  }
+  componentDidMount(props) {}
 
   render() {
     return <UIPart props={this.props}></UIPart>;

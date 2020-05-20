@@ -6,7 +6,7 @@ export function unix_to_short_date(unix_timestamp) {
     d.toLocaleDateString("en-US", {
       day: "2-digit",
       month: "2-digit",
-      year: "numeric"
+      year: "numeric",
     }) +
     " " +
     d.toLocaleTimeString()
@@ -35,7 +35,9 @@ export function big_int_to_array(x, num_bytes) {
 }
 
 export function hex_to_array(hexString) {
-  hexString = hexString.slice(2);
+  if (hexString.substr(0, 2) === "0x" || hexString.substr(0, 2) === "0X") {
+    hexString = hexString.slice(2);
+  }
   var arr = [];
   for (var i = 0; i < hexString.length; i += 2) {
     arr.push(parseInt(hexString.substr(i, 2), 16));
@@ -46,6 +48,10 @@ export function hex_to_array(hexString) {
 export function arr_to_hex(buffer) {
   // buffer is an ArrayBuffer
   return Array.prototype.map
-    .call(new Uint8Array(buffer), x => ("00" + x.toString(16)).slice(-2))
+    .call(new Uint8Array(buffer), (x) => ("00" + x.toString(16)).slice(-2))
     .join("");
+}
+
+export async function sha256(buf) {
+  return await window.crypto.subtle.digest("SHA-256", new Uint8Array(buf));
 }

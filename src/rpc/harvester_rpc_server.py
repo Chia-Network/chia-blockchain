@@ -1,137 +1,62 @@
-from typing import Callable
-
-from aiohttp import web
+from typing import Callable, Dict
 
 from src.harvester import Harvester
-from src.types.peer_info import PeerInfo
 from src.util.ints import uint16
-from src.util.byte_types import hexstr_to_bytes
-from src.util.network import obj_to_response
+from src.util.ws_message import create_payload
+from src.rpc.abstract_rpc_server import AbstractRpcApiHandler, start_rpc_server
 
 
-class HarvesterRpcApiHandler:
-    """
-    Implementation of harvester RPC API.
-    """
-
+class HarvesterRpcApiHandler(AbstractRpcApiHandler):
     def __init__(self, harvester: Harvester, stop_cb: Callable):
-        self.harvester = harvester
-        self.stop_cb: Callable = stop_cb
+        super().__init__(harvester, stop_cb, "chia_harvester")
 
-    async def get_plots(self, request) -> web.Response:
-        """
-        Retrieves the latest challenge, including height, weight, and time to completion estimates.
-        """
-        response = self.harvester._get_plots()
-        return obj_to_response(response)
+    async def _state_changed(self, change: str):
+        assert self.websocket is not None
 
-    async def refresh_plots(self, request) -> web.Response:
-        self.harvester._refresh_plots()
-        return obj_to_response({})
+        if change == "plots":
+            data = await self.get_plots({})
+            payload = create_payload("get_plots", data, self.service_name, "wallet_ui")
+        else:
+            await super()._state_changed(change)
+            return
+        try:
+            await self.websocket.send_str(payload)
+        except (BaseException) as e:
+            try:
+                self.log.warning(f"Sending data failed. Exception {type(e)}.")
+            except BrokenPipeError:
+                pass
 
-    async def delete_plot(self, request) -> web.Response:
-        request_data = await request.json()
-        filename = request_data["filename"]
-        response = self.harvester._delete_plot(filename)
-        return obj_to_response(response)
+    async def get_plots(self, request: Dict) -> Dict:
+        plots, failed_to_open, not_found = self.service._get_plots()
+        return {
+            "success": True,
+            "plots": plots,
+            "failed_to_open_filenames": failed_to_open,
+            "not_found_filenames": not_found,
+        }
 
-    async def get_connections(self, request) -> web.Response:
-        """
-        Retrieves all connections to this harvester.
-        """
-        if self.harvester.server is None:
-            return obj_to_response([])
-        connections = self.harvester.server.global_connections.get_connections()
-        con_info = [
-            {
-                "type": con.connection_type,
-                "local_host": con.local_host,
-                "local_port": con.local_port,
-                "peer_host": con.peer_host,
-                "peer_port": con.peer_port,
-                "peer_server_port": con.peer_server_port,
-                "node_id": con.node_id,
-                "creation_time": con.creation_time,
-                "bytes_read": con.bytes_read,
-                "bytes_written": con.bytes_written,
-                "last_message_time": con.last_message_time,
-            }
-            for con in connections
-        ]
-        return obj_to_response(con_info)
+    async def refresh_plots(self, request: Dict) -> Dict:
+        self.service._refresh_plots()
+        return {"success": True}
 
-    async def open_connection(self, request) -> web.Response:
-        """
-        Opens a new connection to another node.
-        """
-        request_data = await request.json()
-        host = request_data["host"]
-        port = request_data["port"]
-        target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
-
-        if self.harvester.server is None or not (
-            await self.harvester.server.start_client(target_node, None)
-        ):
-            raise web.HTTPInternalServerError()
-        return obj_to_response("")
-
-    async def close_connection(self, request) -> web.Response:
-        """
-        Closes a connection given by the node id.
-        """
-        request_data = await request.json()
-        node_id = hexstr_to_bytes(request_data["node_id"])
-        if self.harvester.server is None:
-            raise web.HTTPInternalServerError()
-
-        connections_to_close = [
-            c
-            for c in self.harvester.server.global_connections.get_connections()
-            if c.node_id == node_id
-        ]
-        if len(connections_to_close) == 0:
-            raise web.HTTPNotFound()
-        for connection in connections_to_close:
-            self.harvester.server.global_connections.close(connection)
-        return obj_to_response("")
-
-    async def stop_node(self, request) -> web.Response:
-        """
-        Shuts down the node.
-        """
-        if self.stop_cb is not None:
-            self.stop_cb()
-        return obj_to_response("")
+    async def delete_plot(self, request: Dict) -> Dict:
+        filename = request["filename"]
+        success = self.service._delete_plot(filename)
+        return {"success": success}
 
 
-async def start_rpc_server(
+async def start_harvester_rpc_server(
     harvester: Harvester, stop_node_cb: Callable, rpc_port: uint16
 ):
-    """
-    Starts an HTTP server with the following RPC methods, to be used by local clients to
-    query the node.
-    """
     handler = HarvesterRpcApiHandler(harvester, stop_node_cb)
-    app = web.Application()
-
-    app.add_routes(
-        [
-            web.post("/get_plots", handler.get_plots),
-            web.post("/refresh_plots", handler.refresh_plots),
-            web.post("/delete_plot", handler.delete_plot),
-            web.post("/get_connections", handler.get_connections),
-            web.post("/open_connection", handler.open_connection),
-            web.post("/close_connection", handler.close_connection),
-            web.post("/stop_node", handler.stop_node),
-        ]
-    )
-
-    runner = web.AppRunner(app, access_log=None)
-    await runner.setup()
-    site = web.TCPSite(runner, "localhost", int(rpc_port))
-    await site.start()
-
-    async def cleanup():
-        await runner.cleanup()
-
+    routes = {
+        "/get_plots": handler.get_plots,
+        "/refresh_plots": handler.refresh_plots,
+        "/delete_plot": handler.delete_plot,
+    }
+    cleanup = await start_rpc_server(handler, rpc_port, routes)
     return cleanup
+
+
+AbstractRpcApiHandler.register(HarvesterRpcApiHandler)

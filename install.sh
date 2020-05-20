@@ -66,7 +66,7 @@ pip install --upgrade pip
 pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
 pip install -e .
 
-cd ./electron-ui
+cd ./electron-react
 npm install
 
 echo ""

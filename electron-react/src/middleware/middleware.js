@@ -1,28 +1,67 @@
 import * as actions from "../modules/websocket";
-import { format_message } from "../modules/message";
+import {
+  registerService,
+  startService,
+  isServiceRunning,
+} from "../modules/daemon_messages";
 import { handle_message } from "./middleware_api";
+import {
+  service_wallet_server,
+  service_full_node,
+  service_simulator,
+  service_farmer,
+  service_harvester,
+  service_plotter,
+} from "../util/service_names";
+const config = require("../config");
+
+const crypto = require("crypto");
+
+const outgoing_message = (command, data, destination) => ({
+  command: command,
+  data: data,
+  ack: false,
+  origin: "wallet_ui",
+  destination: destination,
+  request_id: crypto.randomBytes(32).toString("hex"),
+});
 
 const socketMiddleware = () => {
   let socket = null;
   let connected = false;
 
-  const onOpen = store => event => {
+  const onOpen = (store) => (event) => {
     store.dispatch(actions.wsConnected(event.target.url));
-    var action = format_message("start_server", "{wallet_id: 1}");
-    store.dispatch(action);
-    console.log("Start Server");
+    var register_action = registerService();
+    store.dispatch(register_action);
+
+    let start_wallet, start_node;
+    if (config.local_test) {
+      start_wallet = startService(service_wallet_server + " --testing=true");
+      start_node = startService(service_simulator);
+    } else {
+      start_wallet = startService(service_wallet_server);
+      start_node = startService(service_full_node);
+    }
+    let start_farmer = startService(service_farmer);
+    let start_harvester = startService(service_harvester);
+    store.dispatch(isServiceRunning(service_plotter));
+    store.dispatch(start_wallet);
+    store.dispatch(start_node);
+    store.dispatch(start_farmer);
+    store.dispatch(start_harvester);
   };
 
-  const onClose = store => () => {
+  const onClose = (store) => () => {
     store.dispatch(actions.wsDisconnected());
   };
 
-  const onMessage = store => event => {
+  const onMessage = (store) => (event) => {
     const payload = JSON.parse(event.data);
     handle_message(store, payload);
   };
 
-  return store => next => action => {
+  return (store) => (next) => (action) => {
     switch (action.type) {
       case "WS_CONNECT":
         if (socket !== null) {
@@ -46,13 +85,12 @@ const socketMiddleware = () => {
         break;
       case "OUTGOING_MESSAGE":
         if (connected) {
-          console.log("socket" + socket);
-          console.log(
-            "Action command" + action.command + " data" + action.data
+          const message = outgoing_message(
+            action.command,
+            action.data,
+            action.destination
           );
-          socket.send(
-            JSON.stringify({ command: action.command, data: action.data })
-          );
+          socket.send(JSON.stringify(message));
         } else {
           console.log("Socket not connected");
         }

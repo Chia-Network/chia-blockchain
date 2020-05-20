@@ -2,50 +2,42 @@ import React from "react";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemIcon from "@material-ui/core/ListItemIcon";
 import ListItemText from "@material-ui/core/ListItemText";
-import DashboardIcon from "@material-ui/icons/Dashboard";
-import AssignmentIcon from "@material-ui/icons/Assignment";
 import {
   presentWallet,
   presentNode,
   presentFarmer,
-  presentTimelord,
-  changeMainMenu
+  changeMainMenu,
 } from "../modules/mainMenu";
 import { delete_all_keys, logOut } from "../modules/message";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import List from "@material-ui/core/List";
 import Divider from "@material-ui/core/Divider";
 import AccountBalanceWalletIcon from "@material-ui/icons/AccountBalanceWallet";
 import AccountTreeIcon from "@material-ui/icons/AccountTree";
 import DonutLargeIcon from "@material-ui/icons/DonutLarge";
-import UpdateIcon from "@material-ui/icons/Update";
 import LockIcon from "@material-ui/icons/Lock";
-import { Redirect } from "react-router-dom";
+import DeleteForeverIcon from "@material-ui/icons/DeleteForever";
+import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
 
 const menuItems = [
   {
     label: "Wallet",
     present: presentWallet,
-    icon: <AccountBalanceWalletIcon></AccountBalanceWalletIcon>
+    icon: <AccountBalanceWalletIcon></AccountBalanceWalletIcon>,
   },
   {
-    label: "Node",
+    label: "Full Node",
     present: presentNode,
-    icon: <AccountTreeIcon></AccountTreeIcon>
+    icon: <AccountTreeIcon></AccountTreeIcon>,
   },
   {
-    label: "Farmer",
+    label: "Farming",
     present: presentFarmer,
-    icon: <DonutLargeIcon></DonutLargeIcon>
+    icon: <DonutLargeIcon></DonutLargeIcon>,
   },
-  {
-    label: "Timelord",
-    present: presentTimelord,
-    icon: <UpdateIcon></UpdateIcon>
-  }
 ];
 
-const MenuItem = menuItem => {
+const MenuItem = (menuItem) => {
   const dispatch = useDispatch();
   const item = menuItem;
 
@@ -65,25 +57,25 @@ export const SideBar = () => {
   const dispatch = useDispatch();
 
   function deleteAllKeys() {
-    console.log("Deleting all keys");
+    // console.log("Deleting all keys");
     dispatch(delete_all_keys());
   }
 
   function changeKey() {
-    console.log("Changing key");
+    // console.log("Changing key");
     dispatch(logOut("log_out", {}));
-    return <Redirect to="/SelectKey" />;
+    dispatch(changeEntranceMenu(presentSelectKeys));
   }
 
   return (
     <div>
-      <List>{menuItems.map(item => MenuItem(item))}</List>
+      <List>{menuItems.map((item) => MenuItem(item))}</List>
       <Divider />
       <List>
         <div>
           <ListItem button onClick={deleteAllKeys} key="0">
             <ListItemIcon>
-              <LockIcon />
+              <DeleteForeverIcon />
             </ListItemIcon>
             <ListItemText primary="Delete All Keys" />
           </ListItem>

@@ -5,10 +5,14 @@ import Grid from "@material-ui/core/Grid";
 import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 import logo from "../assets/img/chia_logo.svg"; // Tell webpack this JS file uses this image
-import { withRouter, Redirect } from "react-router-dom";
-import { connect, useSelector } from "react-redux";
+import { withRouter } from "react-router-dom";
+import { connect, useDispatch } from "react-redux";
 import Link from "@material-ui/core/Link";
-import { Link as RouterLink } from "react-router-dom";
+import {
+  changeEntranceMenu,
+  presentOldWallet,
+  presentNewWallet
+} from "../modules/entranceMenu";
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -52,46 +56,43 @@ const useStyles = makeStyles(theme => ({
 
 const SignIn = () => {
   const classes = useStyles();
-  const logged_in = useSelector(state => state.wallet_state.logged_in);
-  const connected = useSelector(state => state.websocket.connected);
-  const public_key_fingerprints = useSelector(state => state.wallet_state.public_key_fingerprints);
-  if (logged_in) {
-    console.log("Redirecting to wallet");
-    return <Redirect to="/dashboard" />;
+  const dispatch = useDispatch();
+
+  function go_new_wallet() {
+    dispatch(changeEntranceMenu(presentNewWallet));
   }
-  if (public_key_fingerprints.length > 0) {
-    return <Redirect to="/SelectKey" />;
+
+  function go_old_wallet() {
+    dispatch(changeEntranceMenu(presentOldWallet));
   }
+
   return (
     <div className={classes.root}>
       <Container className={classes.main} component="main" maxWidth="xs">
         <CssBaseline />
         <div className={classes.paper}>
           <img className={classes.logo} src={logo} alt="Logo" />
-          {connected ? "" : <h2 className={classes.warning}>Not connected to wallet</h2>}
           <div>
-            <Link component={RouterLink} to="/Mnemonics">
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                color="primary"
-                className={classes.topButton}
-              >
-                Enter Mnemonics
-              </Button>
-            </Link>
-            <Link component={RouterLink} to="/CreateMnemonics">
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                color="primary"
-                className={classes.lowerButton}
-              >
-                Generate New Keys
-              </Button>
-            </Link>
+            <Button
+              onClick={go_old_wallet}
+              type="submit"
+              fullWidth
+              variant="contained"
+              color="primary"
+              className={classes.topButton}
+            >
+              Enter Mnemonics
+            </Button>
+            <Button
+              onClick={go_new_wallet}
+              type="submit"
+              fullWidth
+              variant="contained"
+              color="primary"
+              className={classes.lowerButton}
+            >
+              Generate New Keys
+            </Button>
           </div>
           <Grid container>
             <Grid item xs></Grid>

@@ -5,7 +5,6 @@ import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 import { withRouter, Redirect } from "react-router-dom";
 import { connect, useDispatch, useSelector } from "react-redux";
-import { delete_all_keys } from "../modules/message";
 import clsx from "clsx";
 import Drawer from "@material-ui/core/Drawer";
 import List from "@material-ui/core/List";
@@ -111,10 +110,10 @@ const WalletItem = props => {
 
   var mainLabel = "";
   if (wallet.type === "STANDARD_WALLET") {
-    var mainLabel = "Chia Wallet";
+    mainLabel = "Chia Wallet";
     name = "Chia";
-  } else if (wallet.type == "COLOURED_COIN") {
-    var mainLabel = "CC Wallet";
+  } else if (wallet.type === "COLOURED_COIN") {
+    mainLabel = "CC Wallet";
     if (name.length > 18) {
       name = name.substring(0, 18);
       name = name.concat("...");
@@ -125,7 +124,7 @@ const WalletItem = props => {
     console.log(wallet);
     if (wallet.type === "STANDARD_WALLET") {
       dispatch(changeWalletMenu(standardWallet, wallet.id));
-    } else if (wallet.type == "COLOURED_COIN") {
+    } else if (wallet.type === "COLOURED_COIN") {
       dispatch(changeWalletMenu(CCWallet, wallet.id));
     }
   }
@@ -140,7 +139,9 @@ const WalletItem = props => {
 const WalletList = () => {
   const wallets = useSelector(state => state.wallet_state.wallets);
 
-  return wallets.map(wallet => <WalletItem wallet_id={wallet.id} key={wallet.id}></WalletItem>);
+  return wallets.map(wallet => (
+    <WalletItem wallet_id={wallet.id} key={wallet.id}></WalletItem>
+  ));
 };
 
 const WalletViewSwitch = () => {
@@ -149,11 +150,11 @@ const WalletViewSwitch = () => {
 
   if (toPresent === standardWallet) {
     return <StandardWallet wallet_id={id}></StandardWallet>;
-  } else if (toPresent == createWallet) {
+  } else if (toPresent === createWallet) {
     return <CreateWalletView></CreateWalletView>;
-  } else if (toPresent == tradeManager) {
+  } else if (toPresent === tradeManager) {
     return <TradeManger></TradeManger>;
-  } else if (toPresent == CCWallet) {
+  } else if (toPresent === CCWallet) {
     return <ColouredWallet wallet_id={id}> </ColouredWallet>;
   }
   return <div></div>;
@@ -194,7 +195,7 @@ export const StatusCard = () => {
 
   return (
     <div style={{ margin: 16 }}>
-      <Typography component="subtitle1" variant="subtitle1" color="secondary">
+      <Typography variant="subtitle1" color="secondary">
         Status
       </Typography>
       <div style={{ marginLeft: 8 }}>
@@ -217,19 +218,11 @@ export const StatusCard = () => {
 
 const Wallets = () => {
   const classes = useStyles();
-  const dispatch = useDispatch();
   const logged_in = useSelector(state => state.wallet_state.logged_in);
 
-  const [open, setOpen] = React.useState(true);
-  const handleDrawerOpen = () => {
-    setOpen(true);
-  };
-  const handleDrawerClose = () => {
-    setOpen(false);
-  };
-  const fixedHeightPaper = clsx(classes.paper, classes.fixedHeight);
+  const [open] = React.useState(true);
   if (!logged_in) {
-    console.log("Redirecting to start");
+    // console.log("Redirecting to start");
     return <Redirect to="/" />;
   }
   return (

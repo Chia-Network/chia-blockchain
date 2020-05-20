@@ -9,7 +9,7 @@ import {
   withTheme,
   useTheme,
   withStyles,
-  makeStyles
+  makeStyles,
 } from "@material-ui/styles";
 import Container from "@material-ui/core/Container";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
@@ -32,71 +32,71 @@ function Copyright() {
 const CssTextField = withStyles({
   root: {
     "& MuiFormLabel-root": {
-      color: "#e3f2fd"
+      color: "#e3f2fd",
     },
     "& label.Mui-focused": {
-      color: "#e3f2fd"
+      color: "#e3f2fd",
     },
     "& label.Mui-required": {
-      color: "#e3f2fd"
+      color: "#e3f2fd",
     },
     "& label.Mui-disabled": {
-      color: "#e3f2fd"
+      color: "#e3f2fd",
     },
     "& .MuiInput-underline:after": {
-      borderBottomColor: "#e3f2fd"
+      borderBottomColor: "#e3f2fd",
     },
     "& .MuiOutlinedInput-root": {
       "& fieldset": {
-        borderColor: "#e3f2fd"
+        borderColor: "#e3f2fd",
       },
       "&:hover fieldset": {
-        borderColor: "#e3f2fd"
+        borderColor: "#e3f2fd",
       },
       "&.Mui-focused fieldset": {
-        borderColor: "#e3f2fd"
+        borderColor: "#e3f2fd",
       },
       "&.Mui-disabled fieldset": {
-        borderColor: "#e3f2fd"
-      }
+        borderColor: "#e3f2fd",
+      },
     },
     color: "#ffffff",
     "& .MuiOutlinedInput-input": {
-      color: "#ffffff"
-    }
-  }
+      color: "#ffffff",
+    },
+  },
 })(TextField);
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
   root: {
     background: "linear-gradient(45deg, #142229 30%, #112240 90%)",
-    height: "100%"
+    height: "100%",
   },
   paper: {
     display: "flex",
     flexDirection: "column",
-    alignItems: "center"
+    alignItems: "center",
   },
   avatar: {
     marginTop: theme.spacing(8),
-    backgroundColor: theme.palette.secondary.main
+    backgroundColor: theme.palette.secondary.main,
   },
   form: {
     width: "100%", // Fix IE 11 issue.
-    marginTop: theme.spacing(5)
+    marginTop: theme.spacing(5),
   },
   textField: {
-    borderColor: "#ffffff"
+    borderColor: "#ffffff",
   },
   submit: {
     marginTop: theme.spacing(8),
-    marginBottom: theme.spacing(3)
+    marginBottom: theme.spacing(3),
   },
   grid: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    paddingTop: theme.spacing(5)
+    paddingTop: theme.spacing(5),
   },
   grid_item: {
     paddingTop: 10,
@@ -106,19 +106,19 @@ const useStyles = makeStyles(theme => ({
     backgroundColor: "#444444",
     color: "#ffffff",
     height: 50,
-    verticalAlign: "middle"
+    verticalAlign: "middle",
   },
   title: {
     color: "#ffffff",
     marginTop: theme.spacing(4),
-    marginBottom: theme.spacing(8)
+    marginBottom: theme.spacing(8),
   },
   navigator: {
     color: "#ffffff",
     marginTop: theme.spacing(4),
     marginLeft: theme.spacing(4),
-    fontSize: 35
-  }
+    fontSize: 35,
+  },
 }));
 
 class MnemonicLabel extends Component {
@@ -166,7 +166,7 @@ class MnemonicGrid extends Component {
 }
 
 const UIPart = () => {
-  const words = useSelector(state => state.wallet_state.mnemonic);
+  const words = useSelector((state) => state.wallet_state.mnemonic);
   const classes = useStyles();
   const theme = useTheme();
   return (
@@ -202,7 +202,6 @@ const UIPart = () => {
 };
 
 const CreateMnemonics = () => {
-  console.log("Get Mnemonic");
   var get_mnemonics = genereate_mnemonics();
   const dispatch = useDispatch();
   dispatch(get_mnemonics);
@@ -210,9 +209,9 @@ const CreateMnemonics = () => {
   return UIPart();
 };
 
-const mapStateToProps = state => {
+const mapStateToProps = (state) => {
   return {
-    mnemonic: state.wallet_state.mnemonic
+    mnemonic: state.wallet_state.mnemonic,
   };
 };
 export default withTheme(withRouter(connect()(CreateMnemonics)));

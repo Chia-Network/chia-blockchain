@@ -4,13 +4,13 @@ try {
     . ("$ScriptDirectory\config.ps1")
 }
 catch {
-    Write-Host "Error while loading supporting PowerShell Scripts" 
+    Write-Host "Error while loading supporting PowerShell Scripts"
     Write-Host $_
     exit 1
 }
 
 # package up the electron stuff and sources
-electron-packager ../electron-ui $env:walletProductName --platform=win32 --arch=x64 --icon="$env:resourceDir\icon.ico" `
+electron-packager ../electron-react $env:walletProductName --platform=win32 --arch=x64 --icon="$env:resourceDir\icon.ico" `
             --app-version="$env:version" --win32metadata.CompanyName="Chia Network" --win32metadata.ProductName="Chia Wallet" `
             --app-copyright="Chia Network 2020"
 if ($LastExitCode) { exit $LastExitCode }

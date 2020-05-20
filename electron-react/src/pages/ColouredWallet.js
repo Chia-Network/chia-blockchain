@@ -1,21 +1,10 @@
 import React from "react";
-import CssBaseline from "@material-ui/core/CssBaseline";
 import Grid from "@material-ui/core/Grid";
 import { makeStyles } from "@material-ui/core/styles";
-import Container from "@material-ui/core/Container";
-import { withRouter, Redirect } from "react-router-dom";
+import { withRouter } from "react-router-dom";
 import { connect, useDispatch, useSelector } from "react-redux";
-import { delete_all_keys } from "../modules/message";
-import clsx from "clsx";
-import Drawer from "@material-ui/core/Drawer";
-import List from "@material-ui/core/List";
+
 import Typography from "@material-ui/core/Typography";
-import Divider from "@material-ui/core/Divider";
-import ListItem from "@material-ui/core/ListItem";
-import ListItemIcon from "@material-ui/core/ListItemIcon";
-import ListItemText from "@material-ui/core/ListItemText";
-import ListSubheader from "@material-ui/core/ListSubheader";
-import DashboardIcon from "@material-ui/icons/Dashboard";
 import Paper from "@material-ui/core/Paper";
 import Box from "@material-ui/core/Box";
 import TextField from "@material-ui/core/TextField";
@@ -24,14 +13,13 @@ import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
 import TableCell from "@material-ui/core/TableCell";
 
-import TableContainer from "@material-ui/core/TableContainer";
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
 import {
   get_puzzle_hash,
   cc_spend,
   farm_block,
-  rename_cc_wallet,
+  rename_cc_wallet
 } from "../modules/message";
 import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
 import { unix_to_short_date } from "../util/utils";
@@ -40,44 +28,44 @@ import LockIcon from "@material-ui/icons/Lock";
 
 const drawerWidth = 240;
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles(theme => ({
   root: {
     display: "flex",
-    paddingLeft: "0px",
+    paddingLeft: "0px"
   },
   toolbar: {
-    paddingRight: 24, // keep right padding when drawer closed
+    paddingRight: 24 // keep right padding when drawer closed
   },
   toolbarIcon: {
     display: "flex",
     alignItems: "center",
     justifyContent: "flex-end",
     padding: "0 8px",
-    ...theme.mixins.toolbar,
+    ...theme.mixins.toolbar
   },
   appBar: {
     zIndex: theme.zIndex.drawer + 1,
     transition: theme.transitions.create(["width", "margin"], {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen,
-    }),
+      duration: theme.transitions.duration.leavingScreen
+    })
   },
   appBarShift: {
     marginLeft: drawerWidth,
     width: `calc(100% - ${drawerWidth}px)`,
     transition: theme.transitions.create(["width", "margin"], {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
+      duration: theme.transitions.duration.enteringScreen
+    })
   },
   menuButton: {
-    marginRight: 36,
+    marginRight: 36
   },
   menuButtonHidden: {
-    display: "none",
+    display: "none"
   },
   title: {
-    flexGrow: 1,
+    flexGrow: 1
   },
   drawerPaper: {
     position: "relative",
@@ -85,40 +73,40 @@ const useStyles = makeStyles((theme) => ({
     width: drawerWidth,
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
+      duration: theme.transitions.duration.enteringScreen
+    })
   },
   drawerPaperClose: {
     overflowX: "hidden",
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen,
+      duration: theme.transitions.duration.leavingScreen
     }),
     width: theme.spacing(7),
     [theme.breakpoints.up("sm")]: {
-      width: theme.spacing(9),
-    },
+      width: theme.spacing(9)
+    }
   },
   appBarSpacer: theme.mixins.toolbar,
   content: {
     flexGrow: 1,
     height: "100vh",
-    overflow: "auto",
+    overflow: "auto"
   },
   container: {
     paddingTop: theme.spacing(0),
     paddingBottom: theme.spacing(0),
-    paddingRight: theme.spacing(0),
+    paddingRight: theme.spacing(0)
   },
   paper: {
     paddingBottom: 20,
     padding: theme.spacing(0),
     display: "flex",
     overflow: "auto",
-    flexDirection: "column",
+    flexDirection: "column"
   },
   fixedHeight: {
-    height: 240,
+    height: 240
   },
   drawerWallet: {
     position: "relative",
@@ -127,77 +115,77 @@ const useStyles = makeStyles((theme) => ({
     height: "100%",
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
+      duration: theme.transitions.duration.enteringScreen
+    })
   },
   balancePaper: {
     // height: 200,
-    marginTop: theme.spacing(2),
+    marginTop: theme.spacing(2)
   },
   sendCard: {
-    marginTop: theme.spacing(2),
+    marginTop: theme.spacing(2)
   },
   sendButton: {
     marginTop: theme.spacing(2),
     marginBottom: theme.spacing(2),
     width: 150,
-    height: 50,
+    height: 50
   },
   copyButton: {
     marginTop: theme.spacing(0),
     marginBottom: theme.spacing(0),
     width: 70,
-    height: 56,
+    height: 56
   },
   cardTitle: {
     paddingLeft: theme.spacing(1),
     paddingTop: theme.spacing(1),
-    marginBottom: theme.spacing(1),
+    marginBottom: theme.spacing(1)
   },
   cardSubSection: {
     paddingLeft: theme.spacing(3),
     paddingRight: theme.spacing(3),
-    paddingTop: theme.spacing(1),
+    paddingTop: theme.spacing(1)
   },
   walletContainer: {
-    marginBottom: theme.spacing(5),
+    marginBottom: theme.spacing(5)
   },
   table_root: {
     width: "100%",
     maxHeight: 600,
-    overflowY: "scroll",
+    overflowY: "scroll"
   },
   table: {
     height: "100%",
-    overflowY: "scroll",
+    overflowY: "scroll"
   },
   tableBody: {
     height: "100%",
-    overflowY: "scroll",
+    overflowY: "scroll"
   },
   row: {
-    width: 700,
+    width: 700
   },
   cell_short: {
     fontSize: "14px",
     width: 50,
-    overflowWrap: "break-word" /* Renamed property in CSS3 draft spec */,
+    overflowWrap: "break-word" /* Renamed property in CSS3 draft spec */
   },
   colourCard: {
     overflowWrap: "break-word",
     marginTop: theme.spacing(2),
-    paddingBottom: 20,
-  },
+    paddingBottom: 20
+  }
 }));
 
-const ColourCard = (props) => {
+const ColourCard = props => {
   var id = props.wallet_id;
-  console.log("AAAAAAAAA");
-  console.log(id);
+  // console.log("AAAAAAAAA");
+  // console.log(id);
 
   const dispatch = useDispatch();
-  const colour = useSelector((state) => state.wallet_state.wallets[id].colour);
-  const name = useSelector((state) => state.wallet_state.wallets[id].name);
+  const colour = useSelector(state => state.wallet_state.wallets[id].colour);
+  const name = useSelector(state => state.wallet_state.wallets[id].name);
   console.log(name);
 
   var name_input = null;
@@ -221,24 +209,16 @@ const ColourCard = (props) => {
           <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box flexGrow={1} style={{ marginBottom: 20 }}>
-                <Typography component="subtitle1" variant="subtitle1">
-                  Colour:
-                </Typography>
+                <Typography variant="subtitle1">Colour:</Typography>
               </Box>
               <Box
                 style={{
                   paddingLeft: 20,
                   width: "80%",
-                  overflowWrap: "break-word",
+                  overflowWrap: "break-word"
                 }}
               >
-                <Typography
-                  alignRight
-                  component="subtitle1"
-                  variant="subtitle1"
-                >
-                  {colour}
-                </Typography>
+                <Typography variant="subtitle1">{colour}</Typography>
               </Box>
             </Box>
           </div>
@@ -249,9 +229,8 @@ const ColourCard = (props) => {
               <Box flexGrow={1}>
                 <TextField
                   fullWidth
-                  id="outlined-basic"
                   label="Nickname"
-                  inputRef={(input) => {
+                  inputRef={input => {
                     name_input = input;
                   }}
                   defaultValue={name}
@@ -278,19 +257,19 @@ const ColourCard = (props) => {
   );
 };
 
-const BalanceCard = (props) => {
+const BalanceCard = props => {
   var id = props.wallet_id;
   const balance = useSelector(
-    (state) => state.wallet_state.wallets[id].balance_total
+    state => state.wallet_state.wallets[id].balance_total
   );
   const balance_spendable = useSelector(
-    (state) => state.wallet_state.wallets[id].balance_spendable
+    state => state.wallet_state.wallets[id].balance_spendable
   );
   const balance_pending = useSelector(
-    (state) => state.wallet_state.wallets[id].balance_pending
+    state => state.wallet_state.wallets[id].balance_pending
   );
   const balance_change = useSelector(
-    (state) => state.wallet_state.wallets[id].balance_change
+    state => state.wallet_state.wallets[id].balance_change
   );
 
   const balancebox_1 = "<table width='100%'>";
@@ -335,16 +314,10 @@ const BalanceCard = (props) => {
           <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box flexGrow={1}>
-                <Typography component="subtitle1" variant="subtitle1">
-                  Total Balance
-                </Typography>
+                <Typography variant="subtitle1">Total Balance</Typography>
               </Box>
               <Box>
-                <Typography
-                  alignRight
-                  component="subtitle1"
-                  variant="subtitle1"
-                >
+                <Typography variant="subtitle1">
                   {mojo_to_chia_string(balance)} XCH
                 </Typography>
               </Box>
@@ -355,16 +328,10 @@ const BalanceCard = (props) => {
           <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box flexGrow={1}>
-                <Typography component="subtitle1" variant="subtitle1">
-                  Spendable Balance
-                </Typography>
+                <Typography variant="subtitle1">Spendable Balance</Typography>
               </Box>
               <Box>
-                <Typography
-                  alignRight
-                  component="subtitle1"
-                  variant="subtitle1"
-                >
+                <Typography alignRight variant="subtitle1">
                   {mojo_to_chia_string(balance_spendable, "mojo")} XCH
                 </Typography>
               </Box>
@@ -388,17 +355,16 @@ const BalanceCard = (props) => {
   );
 };
 
-const SendCard = (props) => {
+const SendCard = props => {
   var id = props.wallet_id;
   const classes = useStyles();
   var address_input = null;
   var amount_input = null;
-  var fee_input = null;
   const dispatch = useDispatch();
 
   function farm() {
     var address = address_input.value;
-    if (address != "") {
+    if (address !== "") {
       dispatch(farm_block(address));
     }
   }
@@ -406,7 +372,7 @@ const SendCard = (props) => {
   function send() {
     var address = address_input.value;
     var amount = chia_to_mojo(amount_input.value);
-    if (address != "" && amount != "") {
+    if (address !== "" && amount !== "") {
       dispatch(cc_spend(id, address, amount));
     }
   }
@@ -427,8 +393,7 @@ const SendCard = (props) => {
               <Box flexGrow={1}>
                 <TextField
                   fullWidth
-                  id="outlined-basic"
-                  inputRef={(input) => {
+                  inputRef={input => {
                     address_input = input;
                   }}
                   label="Address"
@@ -445,8 +410,7 @@ const SendCard = (props) => {
               <Box flexGrow={1}>
                 <TextField
                   fullWidth
-                  id="outlined-basic"
-                  inputRef={(input) => {
+                  inputRef={input => {
                     amount_input = input;
                   }}
                   label="Amount"
@@ -487,7 +451,7 @@ const SendCard = (props) => {
   );
 };
 
-const HistoryCard = (props) => {
+const HistoryCard = props => {
   var id = props.wallet_id;
   const classes = useStyles();
   return (
@@ -508,25 +472,25 @@ const HistoryCard = (props) => {
   );
 };
 
-const TransactionTable = (props) => {
+const TransactionTable = props => {
   const classes = useStyles();
   var id = props.wallet_id;
   const transactions = useSelector(
-    (state) => state.wallet_state.wallets[id].transactions
+    state => state.wallet_state.wallets[id].transactions
   );
 
-  if (transactions.length == 0) {
+  if (transactions.length === 0) {
     return <div style={{ margin: "30px" }}>No previous transactions</div>;
   }
 
-  const incoming_string = (incoming) => {
+  const incoming_string = incoming => {
     if (incoming) {
       return "Incoming";
     } else {
       return "Outgoing";
     }
   };
-  const confirmed_to_string = (confirmed) => {
+  const confirmed_to_string = confirmed => {
     return confirmed ? "Confirmed" : "Pending";
   };
 
@@ -544,7 +508,7 @@ const TransactionTable = (props) => {
           </TableRow>
         </TableHead>
         <TableBody className={classes.tableBody}>
-          {transactions.map((tx) => (
+          {transactions.map(tx => (
             <TableRow
               className={classes.row}
               key={tx.to_puzzle_hash + tx.created_at_time + tx.amount}
@@ -578,16 +542,16 @@ const TransactionTable = (props) => {
   );
 };
 
-const AddressCard = (props) => {
+const AddressCard = props => {
   var id = props.wallet_id;
   const puzzle_hash = useSelector(
-    (state) => state.wallet_state.wallets[id].puzzle_hash
+    state => state.wallet_state.wallets[id].puzzle_hash
   );
   const classes = useStyles();
   const dispatch = useDispatch();
 
   function newAddress() {
-    console.log("Dispatch for id: " + id);
+    // console.log("Dispatch for id: " + id);
     dispatch(get_puzzle_hash(id));
   }
 
@@ -612,7 +576,6 @@ const AddressCard = (props) => {
                 <TextField
                   disabled
                   fullWidth
-                  id="outlined-basic"
                   label="Address"
                   value={puzzle_hash}
                   variant="outlined"
@@ -654,12 +617,13 @@ const AddressCard = (props) => {
   );
 };
 
-const ColouredWallet = (props) => {
+const ColouredWallet = props => {
   const classes = useStyles();
-  const id = useSelector((state) => state.wallet_menu.id);
-  const name = useSelector((state) => state.wallet_state.wallets[id].name);
+  const id = useSelector(state => state.wallet_menu.id);
+  const name = useSelector(state => state.wallet_state.wallets[id].name);
+  const wallets = useSelector(state => state.wallet_state.wallets);
 
-  return (
+  return wallets.length > props.wallet_id ? (
     <Grid className={classes.walletContainer} item xs={12}>
       <ColourCard wallet_id={id} name={name}></ColourCard>
       <BalanceCard wallet_id={id}></BalanceCard>
@@ -667,6 +631,8 @@ const ColouredWallet = (props) => {
       <AddressCard wallet_id={id}></AddressCard>
       <HistoryCard wallet_id={id}></HistoryCard>
     </Grid>
+  ) : (
+    ""
   );
 };
 
