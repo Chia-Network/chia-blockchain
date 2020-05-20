@@ -9,7 +9,7 @@ except ImportError:
 
 from src.introducer import Introducer
 from src.server.outbound_message import NodeType
-from src.server.server import ChiaServer
+from src.server.server import ChiaServer, start_server
 from src.util.config import load_config_cli, load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.logging import initialize_logging
@@ -38,7 +38,7 @@ async def async_main():
         DEFAULT_ROOT_PATH,
         config,
     )
-    _ = await server.start_server(None)
+    _ = await start_server(server)
 
     try:
         asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
