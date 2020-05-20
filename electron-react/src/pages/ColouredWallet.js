@@ -23,10 +23,7 @@ import {
 } from "../modules/message";
 import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
 import { unix_to_short_date } from "../util/utils";
-import ExpansionPanel from "@material-ui/core/ExpansionPanel";
-import ExpansionPanelSummary from "@material-ui/core/ExpansionPanelSummary";
-import ExpansionPanelDetails from "@material-ui/core/ExpansionPanelDetails";
-import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
+import Accordion from "../components/Accordion";
 import { openDialog } from "../modules/dialogReducer";
 
 const drawerWidth = 240;
@@ -295,15 +292,60 @@ const BalanceCard = props => {
   const balance = useSelector(
     state => state.wallet_state.wallets[id].balance_total
   );
+  const balance_total_chia = mojo_to_chia_string(balance);
   const balance_spendable = useSelector(
     state => state.wallet_state.wallets[id].balance_spendable
   );
+  var balance_spendable_chia = mojo_to_chia_string(balance_spendable, "mojo");
+  if (balance_spendable_chia < 0) {
+    balance_spendable_chia = 0;
+  }
   const balance_pending = useSelector(
     state => state.wallet_state.wallets[id].balance_pending
   );
   const balance_change = useSelector(
     state => state.wallet_state.wallets[id].balance_change
   );
+  const balance_ptotal = balance + balance_pending + balance_change;
+
+  const balancebox_1 = "<table width='100%'>";
+  const balancebox_2 = "<tr><td align='left'>";
+  const balancebox_3 = "</td><td align='right'>";
+  const balancebox_4 = "</td></tr>";
+  const balancebox_row = "<tr height='8px'></tr>";
+  const balancebox_5 = "</td></tr></table>";
+  const balancebox_ptotal = "Pending Total Balance";
+  const balancebox_pending = "Pending Transactions";
+  const balancebox_change = "Pending Change";
+  const balancebox_xch = " XCH";
+  const balancebox_hline =
+    "<tr><td colspan='2' style='text-align:center'><hr width='50%'></td></tr>";
+  const balance_ptotal_chia = mojo_to_chia_string(balance_ptotal, "mojo");
+  const balance_pending_chia = mojo_to_chia_string(balance_pending, "mojo");
+  const balance_change_chia = mojo_to_chia_string(balance_change, "mojo");
+  const acc_content =
+    balancebox_1 +
+    balancebox_2 +
+    balancebox_ptotal +
+    balancebox_3 +
+    balance_ptotal_chia +
+    balancebox_xch +
+    balancebox_hline +
+    balancebox_4 +
+    balancebox_row +
+    balancebox_2 +
+    balancebox_pending +
+    balancebox_3 +
+    balance_pending_chia +
+    balancebox_xch +
+    balancebox_4 +
+    balancebox_row +
+    balancebox_2 +
+    balancebox_change +
+    balancebox_3 +
+    balance_change_chia +
+    balancebox_xch +
+    balancebox_5;
 
   const classes = useStyles();
   return (
@@ -325,29 +367,10 @@ const BalanceCard = props => {
           <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box flexGrow={1}>
-                <ExpansionPanel className={classes.front}>
-                  <ExpansionPanelSummary
-                    expandIcon={<ExpandMoreIcon />}
-                    aria-controls="panel1a-content"
-                    id="panel1a-header"
-                  >
-                    <Typography className={classes.heading}>
-                      View pending balances
-                    </Typography>
-                  </ExpansionPanelSummary>
-                  <ExpansionPanelDetails>
-                    <Grid container spacing={0}>
-                      <BalanceCardSubSection
-                        title="Pending Balance"
-                        balance={balance_pending}
-                      />
-                      <BalanceCardSubSection
-                        title="Pending Change"
-                        balance={balance_change}
-                      />
-                    </Grid>
-                  </ExpansionPanelDetails>
-                </ExpansionPanel>
+                <Accordion
+                  title="View pending balances..."
+                  content={acc_content}
+                />
               </Box>
             </Box>
           </div>
