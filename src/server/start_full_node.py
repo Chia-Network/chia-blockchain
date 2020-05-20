@@ -12,7 +12,7 @@ except ImportError:
     uvloop = None
 
 from src.full_node.full_node import FullNode
-from src.protocols import full_node_protocol
+from src.protocols import introducer_protocol
 from src.rpc.full_node_rpc_server import start_full_node_rpc_server
 from src.server.server import ChiaServer
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
@@ -47,7 +47,7 @@ def start_full_node_bg_task(
 
     async def introducer_client():
         async def on_connect() -> OutboundMessageGenerator:
-            msg = Message("request_peers", full_node_protocol.RequestPeers())
+            msg = Message("request_peers", introducer_protocol.RequestPeers())
             yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
 
         while True:
