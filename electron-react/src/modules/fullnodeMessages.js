@@ -2,62 +2,64 @@ import { service_full_node } from "../util/service_names";
 
 export const fullNodeMessage = () => ({
   type: "OUTGOING_MESSAGE",
-  destination: service_full_node
+  message: {
+    destination: service_full_node
+  }
 });
 
 export const pingFullNode = () => {
   var action = fullNodeMessage();
-  action.command = "ping";
-  action.data = {};
+  action.message.command = "ping";
+  action.message.data = {};
   return action;
 };
 
 export const getBlockChainState = () => {
   var action = fullNodeMessage();
-  action.command = "get_blockchain_state";
-  action.data = {};
+  action.message.command = "get_blockchain_state";
+  action.message.data = {};
   return action;
 };
 
 export const getLatestBlocks = () => {
   var action = fullNodeMessage();
-  action.command = "get_latest_block_headers";
-  action.data = {};
+  action.message.command = "get_latest_block_headers";
+  action.message.data = {};
   return action;
 };
 
 export const getFullNodeConnections = () => {
   var action = fullNodeMessage();
-  action.command = "get_connections";
-  action.data = {};
+  action.message.command = "get_connections";
+  action.message.data = {};
   return action;
 };
 
 export const openConnection = (host, port) => {
   var action = fullNodeMessage();
-  action.command = "open_connection";
-  action.data = { host, port };
+  action.message.command = "open_connection";
+  action.message.data = { host, port };
   return action;
 };
 
 export const closeConnection = node_id => {
   var action = fullNodeMessage();
-  action.command = "close_connection";
-  action.data = { node_id };
+  action.message.command = "close_connection";
+  action.message.data = { node_id };
   return action;
 };
 
 export const getBlock = header_hash => {
   var action = fullNodeMessage();
-  action.command = "get_block";
-  action.data = { header_hash };
+  action.message.command = "get_block";
+  action.message.data = { header_hash };
   return action;
 };
 
 export const getHeader = header_hash => {
   var action = fullNodeMessage();
-  action.command = "get_header";
-  action.data = { header_hash };
+  action.message.command = "get_header";
+  action.message.data = { header_hash };
   return action;
 };
 

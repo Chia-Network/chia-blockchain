@@ -35,6 +35,7 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 - Moved to PyYAML 5.3.1 which prevents arbitrary code execution during python/object/new constructor.
 - Moved to Python cryptography 2.9.2 which deprecates OpenSSL 1.0.1 and now relies upon OpenSSL 1.1.1g.
 - Moved to aiosqlite 0.13.0 which adds official support for Python 3.8 and fixes a possible hung thread if a connection failed.
+- Replaced JS interface with React user interface which is cleaner and more responsive
 
 ### Fixed
 

@@ -1,32 +1,34 @@
 export const daemonMessage = () => ({
   type: "OUTGOING_MESSAGE",
-  destination: "daemon"
+  message: {
+    destination: "daemon"
+  }
 });
 
 export const registerService = () => {
   var action = daemonMessage();
-  action.command = "register_service";
-  action.data = { service: "wallet_ui" };
+  action.message.command = "register_service";
+  action.message.data = { service: "wallet_ui" };
   return action;
 };
 
 export const startService = service_name => {
   var action = daemonMessage();
-  action.command = "start_service";
-  action.data = { service: service_name };
+  action.message.command = "start_service";
+  action.message.data = { service: service_name };
   return action;
 };
 
 export const stopService = service_name => {
   var action = daemonMessage();
-  action.command = "stop_service";
-  action.data = { service: service_name };
+  action.message.command = "stop_service";
+  action.message.data = { service: service_name };
   return action;
 };
 
 export const isServiceRunning = service_name => {
   var action = daemonMessage();
-  action.command = "is_running";
-  action.data = { service: service_name };
+  action.message.command = "is_running";
+  action.message.data = { service: service_name };
   return action;
 };

@@ -7,7 +7,9 @@ const initial_state = {
     open_connection_error: ""
   },
   harvester: {
-    plots: []
+    plots: [],
+    not_found_filenames: [],
+    failed_to_open_filenames: []
   }
 };
 

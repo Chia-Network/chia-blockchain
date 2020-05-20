@@ -86,15 +86,15 @@ const socketMiddleware = () => {
       case "OUTGOING_MESSAGE":
         if (connected) {
           const message = outgoing_message(
-            action.command,
-            action.data,
-            action.destination
+            action.message.command,
+            action.message.data,
+            action.message.destination
           );
           socket.send(JSON.stringify(message));
         } else {
           console.log("Socket not connected");
         }
-        break;
+        return next(action);
       default:
         return next(action);
     }
