@@ -345,7 +345,6 @@ async def setup_timelord(port, dic={}):
     vdf_server = asyncio.ensure_future(coro)
 
     timelord.set_server(server)
-    timelord._start_bg_tasks()
 
     async def run_timelord():
         async for msg in timelord._manage_discriminant_queue():
