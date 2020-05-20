@@ -38,7 +38,6 @@ async def async_main():
         DEFAULT_ROOT_PATH,
         config,
     )
-    introducer.set_server(server)
     _ = await server.start_server(None)
 
     try:
