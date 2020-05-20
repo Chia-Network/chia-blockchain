@@ -9,26 +9,28 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 
 ### Added
 
-- We now have a CHANGELOG.md that adheres closely to the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) standard. We merged in the version history and updated some previous release notes to capture items important to the change log. We are modifying our release process to accumulate changes at the top of the change log and then copy those to the release notes at release time.
-- We added [lgtm](https://lgtm.com/) source analysis on pull request to the chia-blockchain, chiapos, chiavdf, chiabip158, and bls-library repositories to add some automated security analysis to our ci.
-- We added total network storage space estimation to the node RPC at the get_network_space endpoint instead of only being available in the cli. The PRC endpoint estimates space between any two block header hashes.
-- We've added a new keychain system that replaces keys.yaml, and migrates from keys.yaml. It uses each OS's keychain for secure key storage.
-- We added a `chia keys` command line program, to see, add, remove private keys.
-- We've added RPC servers and client implementations for Farmer and Harvester. The new UI uses these for additional information and functionality.
+- Windows and MacOS now have one click installers that then send users to a GUI on both platforms to farm or use their wallets.
+- You can see and control your farmer and harvester from the GUI on Windows, MacOS, and Linux.
+- Create plots and see the plotting log from a GUI on Windows, MacOS, and Linux.
 - You can now create or import private keys with a 24 word mnemonic, both in the UI and 'chia keys' command line.
-- You can delete and change active keys from the UI.
-- See and control your farmer and harvester from a graphical user interface on Windows, MacOS, and Linux.
-- Create plots and see the log from a graphical user interface on Windows, Macos, and Linux.
+- You can delete and change active keys from the GUI and cli.
+- We've added a new keychain system that replaces keys.yaml, and migrates existing users from keys.yaml. It utilizes each OS's keychain for slightly more secure key storage.
+- We added a `chia keys` command line program, to see, add, remove private keys.
+- We've added RPC servers and RPC client implementations for Farmer and Harvester. The new UI uses these for additional information and functionality.
+- We added total network storage space estimation to the node RPC at the `/get_network_space` endpoint instead of only being available in the cli. The PRC endpoint takes two block header hashes and estimates space between those header hashes.
+- We now have a CHANGELOG.md that adheres closely to the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) standard. We merged in the version history and updated some previous release notes to capture items important to the change log. We are modifying our release process to accumulate changes at the top of the change log and then copy those to the release notes at the time of the release.
+- We added [lgtm](https://lgtm.com/) source analysis on pull request to the chia-blockchain, chiapos, chiavdf, chiabip158, and bls-library repositories to add some automated security analysis to our ci.
+
 
 ### Changed
 
-- We replaced the Electron/JavaScript interface with a React user interface which is cleaner and more responsive
-- We now have a multithreaded harvester to farm more plots concurrently. This is especially faster when there are multiple disks being harvested. The class is also made thread safe with mutex guards. This is achieved by releasing GIL in python bindings when fetching qualities and proofs. We estimate that the former guidance of only 50 plots per physical drive is not 250-350 plots per physical drive. We will continue to improve this limit.
-- Syncing is now faster and uses less memory.
-- `chia netspace` has been refactored to use the get_network_space RPC. The command
+- We replaced the Electron/JavaScript interface with a React user interface which is cleaner and more responsive.
+- We now have a multithreaded harvester to farm more plots concurrently. This is especially faster when there are multiple disks being harvested. The class is also made thread safe with mutex guards. This is achieved by releasing GIL in the python bindings when fetching qualities and proofs. We estimate that the former guidance of only 50 plots per physical drive should be updated to 250-350 plots per physical drive. We will continue to improve the plots per physical drive limit during the beta period.
+- Syncing a node is now much faster and uses less memory.
+- `chia netspace` has been refactored to use the `/get_network_space` RPC. The command
   syntax has changed slightly. By default it calculates the last 24 blocks from the
-  current LCA. Optionally you can use the `-b` flag to start with a different block
-  height. Use `-d` to specify the delta number of blocks back to estimate over.
+  current LCA. Optionally you can use the `-b` flag to start the calculation from a different block
+  height. Use `-d` to specify the delta number of blocks back into history to estimate over from either LCA or your `-b` block height.
 - The Full node RPC response formats have been changed. All API calls now return a dict with success, and an additional value, for example {"success": True, "block": block}.
 - chiapos is now easier to compile with MSVC.
 - create plots now takes in an optional sk_seed, it is no longer read in from keys.yaml. If not passed in, it is randomly generated.
@@ -41,10 +43,10 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 
 - Starting and stopping servers now works much more reliably.
 - `chia-check-plots` uses the plot root and checks the plots in the same manner as harvester.
-- Relic and thus blspy would crash on processors older than Haswell as they don't support lzc.
-- Some non-crictical networking errors are no longer logged.
+- Fixed and issue where [Relic](https://github.com/relic-toolkit/relic) and thus blspy would crash on processors older than Haswell as they don't support lzc.
+- Some non-critical networking errors are no longer logged.
 - Blocks with compact proofs of time are now able to be updated into the node database.
-- Build status shield layout fixed in README.md
+- The build status shield layout is fixed in README.md
 
 ## [1.0beta5] aka Beta 1.5 - 2020-05-05
 
