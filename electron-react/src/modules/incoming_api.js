@@ -139,11 +139,12 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           wallet = wallets[parseInt(id)];
           var balance = data.confirmed_wallet_balance;
           var unconfirmed_balance = data.unconfirmed_wallet_balance;
+          var pending_balance = unconfirmed_balance - balance;
           var frozen_balance = data.frozen_balance;
           var spendable_balance = data.spendable_balance;
           var change_balance = data.pending_change;
           wallet.balance_total = balance;
-          wallet.balance_pending = unconfirmed_balance;
+          wallet.balance_pending = pending_balance;
           wallet.balance_frozen = frozen_balance;
           wallet.balance_spendable = spendable_balance;
           wallet.balance_change = change_balance;
