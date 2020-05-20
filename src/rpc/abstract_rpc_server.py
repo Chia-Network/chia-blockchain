@@ -147,7 +147,6 @@ class AbstractRpcApiHandler(ABC):
 
         f = getattr(self, command, None)
         if f is not None:
-            assert data is not None
             return await f(data)
         else:
             return {"error": f"unknown_command {command}"}

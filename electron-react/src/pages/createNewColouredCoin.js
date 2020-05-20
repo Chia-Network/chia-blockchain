@@ -79,12 +79,14 @@ export const CreateNewCCWallet = () => {
           <Box flexGrow={1}>
             <TextField
               className={custom.input}
+              id="filled-secondary"
+              variant="filled"
+              color="secondary"
               fullWidth
               inputRef={input => {
                 amount_input = input;
               }}
               label="Amount"
-              variant="outlined"
             />
           </Box>
           <Box>

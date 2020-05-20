@@ -121,7 +121,6 @@ const WalletItem = props => {
   }
 
   function presentWallet() {
-    console.log(wallet);
     if (wallet.type === "STANDARD_WALLET") {
       dispatch(changeWalletMenu(standardWallet, wallet.id));
     } else if (wallet.type === "COLOURED_COIN") {
@@ -140,7 +139,10 @@ const WalletList = () => {
   const wallets = useSelector(state => state.wallet_state.wallets);
 
   return wallets.map(wallet => (
-    <WalletItem wallet_id={wallet.id} key={wallet.id}></WalletItem>
+    <span key={wallet.id}>
+      <WalletItem wallet_id={wallet.id} key={wallet.id}></WalletItem>
+      <Divider />
+    </span>
   ));
 };
 
@@ -240,7 +242,6 @@ const Wallets = () => {
         <Divider />
         <List>
           <WalletList></WalletList>
-          <Divider />
         </List>
         <CreateWallet></CreateWallet>
       </Drawer>

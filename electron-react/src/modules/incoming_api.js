@@ -55,13 +55,30 @@ const initial_state = {
     connections: [],
     connection_count: 0,
     syncing: false
-  }
+  },
+  sending_transaction: false,
+  send_transaction_result: null
 };
 
 export const incomingReducer = (state = { ...initial_state }, action) => {
   switch (action.type) {
     case "LOG_OUT":
       return { ...state, logged_in: false };
+
+    case "CLEAR_SEND":
+      state["sending_transaction"] = false;
+      state["send_transaction_result"] = null;
+      return state;
+
+    case "OUTGOING_MESSAGE":
+      if (
+        action.message.command === "send_transaction" ||
+        action.message.command === "cc_spend"
+      ) {
+        state["sending_transaction"] = true;
+        state["send_transaction_result"] = null;
+      }
+      return state;
     case "INCOMING_MESSAGE":
       if (action.message.origin !== service_wallet_server) {
         return state;
@@ -121,11 +138,10 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           wallets = state.wallets;
           wallet = wallets[parseInt(id)];
           var balance = data.confirmed_wallet_balance;
-          console.log("balance is: " + balance);
           var unconfirmed_balance = data.unconfirmed_wallet_balance;
           var frozen_balance = data.frozen_balance;
           var spendable_balance = data.spendable_balance;
-          var change_balance = data.change_balance;
+          var change_balance = data.pending_change;
           wallet.balance_total = balance;
           wallet.balance_pending = unconfirmed_balance;
           wallet.balance_frozen = frozen_balance;
@@ -181,6 +197,11 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         wallets = state.wallets;
         wallet = wallets[parseInt(id)];
         wallet.name = name;
+        return state;
+      }
+      if (command === "send_transaction" || command === "cc_spend") {
+        state["sending_transaction"] = false;
+        state["send_transaction_result"] = message.data;
         return state;
       }
       return state;

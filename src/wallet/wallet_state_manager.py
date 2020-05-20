@@ -125,7 +125,7 @@ class WalletStateManager:
         self.wallets[main_wallet_info.id] = self.main_wallet
 
         for wallet_info in await self.get_all_wallets():
-            self.log.info(f"wallet_info {wallet_info}")
+            # self.log.info(f"wallet_info {wallet_info}")
             if wallet_info.type == WalletType.STANDARD_WALLET:
                 if wallet_info.id == 1:
                     continue
