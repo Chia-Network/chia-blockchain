@@ -1,7 +1,6 @@
 import asyncio
 import logging
 from pathlib import Path
-import ssl
 from secrets import token_bytes
 from typing import Any, List, Tuple, Dict, Callable
 
@@ -13,10 +12,10 @@ from src.server.connection import OnConnectFunc, PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.peer_info import PeerInfo
 from src.types.sized_bytes import bytes32
-from src.util.config import config_path_for_filename
 from src.util.network import create_node_id
 
 from .pipeline import initialize_pipeline
+from .ssl_context import ssl_context_for_client, ssl_context_for_server
 
 
 async def start_server(self: "ChiaServer", on_connect: OnConnectFunc = None) -> asyncio.AbstractServer:
@@ -25,20 +24,8 @@ async def start_server(self: "ChiaServer", on_connect: OnConnectFunc = None) -> 
     connection, the on_connect asynchronous generator will be called, and responses will be sent.
     Whenever a new TCP connection is made, a new srwt tuple is sent through the pipeline.
     """
-    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH)
-    private_cert, private_key = self.loadSSLConfig(
-        "ssl", self.root_path, self.config
-    )
-    ssl_context.load_cert_chain(certfile=private_cert, keyfile=private_key)
-    ssl_context.load_verify_locations(private_cert)
-
-    if (
-        self._local_type == NodeType.FULL_NODE
-        or self._local_type == NodeType.INTRODUCER
-    ):
-        ssl_context.verify_mode = ssl.CERT_NONE
-    else:
-        ssl_context.verify_mode = ssl.CERT_REQUIRED
+    require_cert = self._local_type not in (NodeType.FULL_NODE, NodeType.INTRODUCER)
+    ssl_context = ssl_context_for_server(self.root_path, self.config, require_cert=require_cert)
 
     server, aiter = await start_server_aiter(
         self._port, host=None, reuse_address=True, ssl=ssl_context
@@ -119,18 +106,6 @@ class ChiaServer:
         self.root_path = root_path
         self.config = config
 
-    def loadSSLConfig(self, tipo: str, path: Path, config: Dict):
-        if config is not None:
-            try:
-                return (
-                    config_path_for_filename(path, config[tipo]["crt"]),
-                    config_path_for_filename(path, config[tipo]["key"]),
-                )
-            except Exception:
-                pass
-
-        return None, None
-
     async def start_client(
         self,
         target_node: PeerInfo,
@@ -144,18 +119,7 @@ class ChiaServer:
         if self._pipeline_task.done():
             return False
 
-        ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH)
-        private_cert, private_key = self.loadSSLConfig(
-            "ssl", self.root_path, self.config
-        )
-
-        ssl_context.load_cert_chain(certfile=private_cert, keyfile=private_key)
-        if not auth:
-            ssl_context.verify_mode = ssl.CERT_NONE
-        else:
-            ssl_context.verify_mode = ssl.CERT_REQUIRED
-            ssl_context.load_verify_locations(private_cert)
-
+        ssl_context = ssl_context_for_client(self.root_path, self.config, auth=auth)
         try:
             reader, writer = await asyncio.open_connection(
                 target_node.host, int(target_node.port), ssl=ssl_context
