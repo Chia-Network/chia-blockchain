@@ -38,14 +38,19 @@ async def async_main():
         DEFAULT_ROOT_PATH,
         config,
     )
-    _ = await start_server(server)
+    server_socket = await start_server(server)
+
+    def stop_all():
+        server_socket.close()
+        server.close_all()
 
     try:
-        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
-        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop_all)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop_all)
     except NotImplementedError:
         log.info("signal handlers unsupported")
 
+    await server_socket.wait_closed()
     await server.await_closed()
     log.info("Introducer fully closed.")
 

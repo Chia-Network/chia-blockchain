@@ -75,14 +75,14 @@ async def async_main():
         loop=asyncio.get_running_loop(),
     )
 
-    def signal_received():
+    def stop_all():
         nonlocal timelord_shutdown_task
         server.close_all()
         timelord_shutdown_task = asyncio.create_task(timelord._shutdown())
 
     try:
-        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
-        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop_all)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop_all)
     except NotImplementedError:
         log.info("signal handlers unsupported")
 
