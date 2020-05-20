@@ -203,7 +203,6 @@ def init(args: Namespace, parser: ArgumentParser):
     return chia_init(args.root_path)
 
 
-
 def chia_init(root_path: Path):
     if os.environ.get("CHIA_ROOT", None) is not None:
         print(

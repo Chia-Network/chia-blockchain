@@ -13,9 +13,11 @@ from keyrings.cryptfile.cryptfile import CryptFileKeyring
 
 if platform == "win32" or platform == "cygwin":
     import keyring.backends.Windows
+
     keyring.set_keyring(keyring.backends.Windows.WinVaultKeyring())
 elif platform == "darwin":
     import keyring.backends.OS_X
+
     keyring.set_keyring(keyring.backends.OS_X.Keyring())
 elif platform == "linux":
     keyring = CryptFileKeyring()
