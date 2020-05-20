@@ -24,7 +24,7 @@ import traceback
 
 
 async def initialize_pipeline(
-    aiter,
+    srwt_aiter,
     api: Any,
     server_port: int,
     outbound_aiter: push_aiter,
@@ -38,14 +38,12 @@ async def initialize_pipeline(
     A pipeline that starts with (StreamReader, StreamWriter), maps it though to
     connections, messages, executes a local API call, and returns responses.
     """
-    srwt_aiter = aiter
-
     # Maps a stream reader, writer and NodeType to a Connection object
     connections_aiter = map_aiter(
         partial_func.partial_async(
             stream_reader_writer_to_connection, server_port, local_type, log,
         ),
-        aiter,
+        join_aiters(srwt_aiter),
     )
 
     def add_global_connections(connection):
