@@ -6,71 +6,71 @@
 trigger:
   branches:
     include:
-      - '*'
+      - "*"
 #- master
 #- dev
 
 pool:
-  vmImage: 'macOS-10.14'
+  vmImage: "macOS-10.14"
 strategy:
   matrix:
     Python37:
-      python.version: '3.7'
+      python.version: "3.7"
 #    Python38:
 #      python.version: '3.8'  # Disabled 3.8 because artifact names conflict
 #                               Also, installer can target one verison
 
 steps:
-- task: UsePythonVersion@0
-  inputs:
-    versionSpec: '$(python.version)'
-  displayName: 'Use Python $(python.version)'
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: "$(python.version)"
+    displayName: "Use Python $(python.version)"
 
-#  since we're installing miniupnpc & setproctitle below,
-#  only cbor2 will end up in wheels/
-- script: |
-    python -m pip install --upgrade pip
-    pip install wheel pep517
-    node -v
-    npm cache clean -f
-    npm install -g n
-    sudo n stable
-    pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
-    cd ./electron-ui
-    npm install
-  displayName: 'Install dependencies'
+  #  since we're installing miniupnpc & setproctitle below,
+  #  only cbor2 will end up in wheels/
+  - script: |
+      python -m pip install --upgrade pip
+      pip install wheel pep517
+      node -v
+      npm cache clean -f
+      npm install -g n
+      sudo n stable
+      pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
+      cd ./electron-react
+      npm install
+    displayName: "Install dependencies"
 
-- script: |
-    pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
-  displayName: 'Build wheels'
+  - script: |
+      pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
+    displayName: "Build wheels"
 
-- script: |
-    cd ./electron-ui
-    npm install
-  displayName: 'Build Electron UI'
+  - script: |
+      cd ./electron-react
+      npm install
+    displayName: "Build Electron UI"
 
-#  Using wheels and release style install so no sh install.sh
-- script: |
-    pip install .
-  displayName: 'Install wheels'
+  #  Using wheels and release style install so no sh install.sh
+  - script: |
+      pip install .
+    displayName: "Install wheels"
 
-#  install-timelord.sh usually wants venv, but this clean runner is the "venv"
-- script: |
-    brew install boost
-    sh install-timelord.sh
-  displayName: 'Install timelord'
+  #  install-timelord.sh usually wants venv, but this clean runner is the "venv"
+  - script: |
+      brew install boost
+      sh install-timelord.sh
+    displayName: "Install timelord"
 
-- script: |
-    python -m pip install -r requirements-dev.txt
-  displayName: 'Install dev dependencies'
+  - script: |
+      python -m pip install -r requirements-dev.txt
+    displayName: "Install dev dependencies"
 
-- script: |
-    pip install pytest pytest-azurepipelines
-    py.test tests -s -v
-  displayName: 'pytest'
+  - script: |
+      pip install pytest pytest-azurepipelines
+      py.test tests -s -v
+    displayName: "pytest"
 
-- task: PublishPipelineArtifact@1
-  inputs:
-    targetPath: $(System.DefaultWorkingDirectory)/wheels
-    artifactName: MacOS-wheels
-  displayName: 'Upload MacOS wheels'
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: $(System.DefaultWorkingDirectory)/wheels
+      artifactName: MacOS-wheels
+    displayName: "Upload MacOS wheels"

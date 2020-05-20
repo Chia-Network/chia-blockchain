@@ -4,7 +4,7 @@ import time
 from time import struct_time, localtime
 import datetime
 
-from src.rpc.rpc_client import RpcClient
+from src.rpc.full_node_rpc_client import FullNodeRpcClient
 
 
 def make_parser(parser):
@@ -48,7 +48,7 @@ async def netstorge_async(args, parser):
             add help on failure/no args
     """
     try:
-        client = await RpcClient.create(args.rpc_port)
+        client = await FullNodeRpcClient.create(args.rpc_port)
 
         # print (args.blocks)
         if args.delta_block_height:
@@ -63,13 +63,18 @@ async def netstorge_async(args, parser):
             older_block_header = await client.get_header_by_height(older_block_height)
             newer_block_header_hash = str(newer_block_header.get_hash())
             older_block_header_hash = str(older_block_header.get_hash())
-            elapsed_time = newer_block_header.data.timestamp - older_block_header.data.timestamp
-            newer_block_time_string = human_local_time(newer_block_header.data.timestamp)
-            older_block_time_string = human_local_time(older_block_header.data.timestamp)
+            elapsed_time = (
+                newer_block_header.data.timestamp - older_block_header.data.timestamp
+            )
+            newer_block_time_string = human_local_time(
+                newer_block_header.data.timestamp
+            )
+            older_block_time_string = human_local_time(
+                older_block_header.data.timestamp
+            )
             time_delta = datetime.timedelta(seconds=elapsed_time)
             network_space_bytes_estimate = await client.get_network_space(
-                newer_block_header_hash,
-                older_block_header_hash
+                newer_block_header_hash, older_block_header_hash
             )
             print(
                 f"Older Block: {older_block_header.data.height}\n"

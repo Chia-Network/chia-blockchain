@@ -23,7 +23,12 @@ async def stop_daemon(daemon):
         print("not running")
         return
     r = await daemon.exit()
-    print(r)
+    exited = r["data"]["success"]
+    if exited:
+        print("Daemon stopped")
+    else:
+        error = r["data"]["error"]
+        print(f"error: {error}")
 
 
 async def async_stop(args, parser):

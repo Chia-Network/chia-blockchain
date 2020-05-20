@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 import ssl
 from secrets import token_bytes
-from typing import Any, AsyncGenerator, List, Optional, Tuple, Dict
+from typing import Any, AsyncGenerator, List, Optional, Tuple, Dict, Callable
 
 from aiter import iter_to_aiter, map_aiter, push_aiter
 from aiter.server import start_server_aiter
@@ -55,7 +55,7 @@ class ChiaServer:
         else:
             self.log = logging.getLogger(__name__)
 
-        # Our unique random node id that we will other peers, regenerated on launch
+        # Our unique random node id that we will send to other peers, regenerated on launch
         node_id = create_node_id()
 
         # Tasks for entire server pipeline
@@ -205,6 +205,9 @@ class ChiaServer:
         async for swrt in aiter:
             if not self._srwt_aiter.is_stopped():
                 self._srwt_aiter.push(swrt)
+
+    def set_state_changed_callback(self, callback: Callable):
+        self.global_connections.set_state_changed_callback(callback)
 
     async def await_closed(self):
         """

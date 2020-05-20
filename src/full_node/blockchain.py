@@ -150,9 +150,7 @@ class Blockchain:
             i = heights.index(max(heights))
             self.headers[cur[i].header_hash] = cur[i]
             prev: Header = headers_db[cur[i].prev_header_hash]
-            challenge_hash = self.block_store.get_challenge_hash(
-                cur[i].header_hash
-            )
+            challenge_hash = self.block_store.get_challenge_hash(cur[i].header_hash)
             self.block_store.add_proof_of_time(
                 challenge_hash,
                 uint64(cur[i].data.total_iters - prev.data.total_iters),
@@ -171,9 +169,7 @@ class Blockchain:
             if cur_b.height == 0:
                 break
             prev_b: Header = headers_db[cur_b.prev_header_hash]
-            challenge_hash = self.block_store.get_challenge_hash(
-                cur_b.header_hash
-            )
+            challenge_hash = self.block_store.get_challenge_hash(cur_b.header_hash)
             self.block_store.add_proof_of_time(
                 challenge_hash,
                 uint64(cur_b.data.total_iters - prev_b.data.total_iters),

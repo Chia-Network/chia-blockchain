@@ -17,6 +17,7 @@ from src.util.condition_tools import (
     conditions_dict_for_solution,
     hash_key_pairs_for_conditions_dict,
 )
+from src.util.json_util import dict_to_json_str
 from src.util.ints import uint64, uint32
 from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.block_record import BlockRecord
@@ -29,7 +30,6 @@ from src.wallet.cc_wallet.cc_wallet_puzzles import (
 )
 from src.wallet.cc_wallet.ccparent import CCParent
 from src.wallet.transaction_record import TransactionRecord
-from src.wallet.util.json_util import dict_to_json_str
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet import Wallet
 from src.wallet.wallet_coin_record import WalletCoinRecord
@@ -494,6 +494,57 @@ class CCWallet:
             await self.wallet_state_manager.add_pending_transaction(cc_record)
 
         return full_spend
+
+    async def get_spendable_balance(self) -> uint64:
+        coins = await self.get_cc_spendable_coins()
+        amount = 0
+        for record in coins:
+            amount += record.coin.amount
+
+        unconfirmed_removals: Dict[
+            bytes32, Coin
+        ] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+            self.wallet_info.id
+        )
+        removal_amount = 0
+        for name, coin in unconfirmed_removals.items():
+            if await self.wallet_state_manager.does_coin_belong_to_wallet(
+                coin, self.wallet_info.id
+            ):
+                removal_amount += coin.amount
+
+        result = amount - removal_amount
+
+        return uint64(result)
+
+    async def get_pending_change_balance(self) -> uint64:
+        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            self.wallet_info.id
+        )
+        addition_amount = 0
+
+        for record in unconfirmed_tx:
+            our_spend = False
+            for coin in record.removals:
+                # Don't count eve spend as change
+                if coin.parent_coin_info.hex() == self.cc_info.my_colour_name:
+                    continue
+                if await self.wallet_state_manager.does_coin_belong_to_wallet(
+                    coin, self.wallet_info.id
+                ):
+                    our_spend = True
+                    break
+
+            if our_spend is not True:
+                continue
+
+            for coin in record.additions:
+                if await self.wallet_state_manager.does_coin_belong_to_wallet(
+                    coin, self.wallet_info.id
+                ):
+                    addition_amount += coin.amount
+
+        return uint64(addition_amount)
 
     async def get_cc_spendable_coins(self) -> List[WalletCoinRecord]:
         result: List[WalletCoinRecord] = []

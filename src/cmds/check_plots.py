@@ -33,7 +33,7 @@ def main():
 
     v = Verifier()
     log.info("Loading plots in plots.yaml using harvester loading code\n")
-    provers = load_plots(config, plot_config, None)
+    provers, _, _ = load_plots(config, plot_config, None, root_path)
     log.info("\n\nStarting to test each plot with {args.num} challenges each\n")
     for plot_path, pr in provers.items():
         total_proofs = 0

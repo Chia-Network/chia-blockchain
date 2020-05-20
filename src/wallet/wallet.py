@@ -62,6 +62,42 @@ class Wallet:
             self.wallet_info.id
         )
 
+    async def get_frozen_amount(self) -> uint64:
+        # TODO
+        return uint64(0)
+
+    async def get_spendable_balance(self) -> uint64:
+        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
+            self.wallet_info.id
+        )
+        return spendable_am
+
+    async def get_pending_change_balance(self) -> uint64:
+        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            self.wallet_info.id
+        )
+        addition_amount = 0
+
+        for record in unconfirmed_tx:
+            our_spend = False
+            for coin in record.removals:
+                if await self.wallet_state_manager.does_coin_belong_to_wallet(
+                    coin, self.wallet_info.id
+                ):
+                    our_spend = True
+                    break
+
+            if our_spend is not True:
+                continue
+
+            for coin in record.additions:
+                if await self.wallet_state_manager.does_coin_belong_to_wallet(
+                    coin, self.wallet_info.id
+                ):
+                    addition_amount += coin.amount
+
+        return uint64(addition_amount)
+
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
         return puzzle_for_pk(pubkey)
 

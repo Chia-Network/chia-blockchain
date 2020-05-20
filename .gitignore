@@ -67,11 +67,13 @@ chia-blockchain.tar.gz
 # Timelord utilities
 vdf_bench
 
-# Electron wallet node modules
-src/wallet/electron/node_modules/
-
 # Node modules
 **/node_modules
 
 # Offer Files
 *.offer
+
+# Dev config react
+electron-react/src/dev_config.js
+# React built app
+electron-react/build

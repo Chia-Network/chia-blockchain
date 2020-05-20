@@ -12,6 +12,7 @@ from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.util.config import load_config, load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
+from src.rpc.harvester_rpc_server import start_harvester_rpc_server
 from src.util.logging import initialize_logging
 from src.util.setproctitle import setproctitle
 
@@ -50,12 +51,25 @@ async def async_main():
     except NotImplementedError:
         log.info("signal handlers unsupported")
 
+    rpc_cleanup = None
+    if config["start_rpc_server"]:
+        # Starts the RPC server
+        rpc_cleanup = await start_harvester_rpc_server(
+            harvester, server.close_all, config["rpc_port"]
+        )
+
     harvester.set_server(server)
     await asyncio.sleep(1)
     harvester._start_bg_tasks()
     await server.await_closed()
     harvester._shutdown()
     await harvester._await_shutdown()
+
+    # Waits for the rpc server to close
+    if rpc_cleanup is not None:
+        await rpc_cleanup()
+    log.info("Closed RPC server.")
+
     log.info("Harvester fully closed.")
 
 

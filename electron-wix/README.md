@@ -10,10 +10,10 @@
 
 In PowerShell make sure that electron and all dependencies are present:
 
-````PowerShell
-# from the electron-ui folder
+```PowerShell
+# from the electron-react folder
 npm install --runtime=electron --target=1.7.6
-````
+```
 
 Verify that the wallet runs with `npm start`.
 
@@ -33,10 +33,10 @@ In order to sign the installation packages during the build:
 - Edit the version number in `config.ps1`.
 - Make sure all prerequisite executables are downloaded and placed in the `prerequisites` folder. Refer to pre-reqs [readme.md](./prerequisites/readme.md) for details.
 
-````PowerShell
+```PowerShell
 # from the electron-wix folder
 .\rebuild-all.ps1
-````
+```
 
 The various other build scripts can be used to build individual packages. MSI's and the full installer executable will be in the `electron-wix\build` folder.
 
@@ -44,7 +44,7 @@ The various other build scripts can be used to build individual packages. MSI's 
 
 The intaller executable cannot be used for per-machine installations and by default the MSIs are per user. In order to install per machine, run the following from an elevated command prompt:
 
-````PowerShell
+```PowerShell
 # replace the msi name with the current version
 msiexec /i <path_to_msi> MSIINSTALLPERUSER="" ALLUSERS=1
-````
+```

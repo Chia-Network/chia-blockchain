@@ -5,7 +5,7 @@ try {
 }
 catch {
     Write-Host "Error while loading supporting PowerShell Scripts"
-    Write-Host $_    
+    Write-Host $_
     exit 1
 }
 $packageName = "chia-$env:version.exe"
