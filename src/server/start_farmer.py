@@ -57,12 +57,12 @@ async def async_main():
         config["full_node_peer"]["host"], config["full_node_peer"]["port"]
     )
     server_socket = await start_server(server, farmer._on_connect)
-    farmer_bg_task = start_reconnect_task(server, peer_info, log)
+    reconnect_task = start_reconnect_task(server, peer_info, log)
 
     def stop_all():
         server_socket.close()
         server.close_all()
-        farmer_bg_task.cancel()
+        reconnect_task.cancel()
         farmer._shut_down = True
 
     rpc_cleanup = None
@@ -77,8 +77,6 @@ async def async_main():
         asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop_all)
     except NotImplementedError:
         log.info("signal handlers unsupported")
-
-    await asyncio.sleep(10)  # Allows full node to startup
 
     await server_socket.wait_closed()
     await server.await_closed()
