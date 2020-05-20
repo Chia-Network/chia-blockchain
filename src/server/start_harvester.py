@@ -48,9 +48,18 @@ async def async_main():
         config,
     )
 
+    peer_info = PeerInfo(
+        config["farmer_peer"]["host"], config["farmer_peer"]["port"]
+    )
+    reconnect_task = start_reconnect_task(server, peer_info, log)
+
+    def stop_all():
+        server.close_all()
+        reconnect_task.cancel()
+
     try:
-        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
-        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop_all)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop_all)
     except NotImplementedError:
         log.info("signal handlers unsupported")
 
@@ -63,10 +72,6 @@ async def async_main():
 
     harvester.set_server(server)
     await asyncio.sleep(1)
-    peer_info = PeerInfo(
-        config["farmer_peer"]["host"], config["farmer_peer"]["port"]
-    )
-    farmer_bg_task = start_reconnect_task(server, peer_info, log)
 
     await server.await_closed()
     harvester._shutdown()
@@ -77,7 +82,6 @@ async def async_main():
         await rpc_cleanup()
     log.info("Closed RPC server.")
 
-    farmer_bg_task.cancel()
     log.info("Harvester fully closed.")
 
 
