@@ -11,7 +11,6 @@ from src.consensus.pot_iterations import calculate_iterations_quality
 from src.consensus.coinbase import create_coinbase_coin_and_signature
 from src.protocols import farmer_protocol, harvester_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
-from src.types.peer_info import PeerInfo
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
@@ -176,34 +175,6 @@ class Farmer:
             )
 
             self._state_changed("challenge")
-
-    def _start_bg_tasks(self):
-        """
-        Start a background task that checks connection and reconnects periodically to the full_node.
-        """
-
-        full_node_peer = PeerInfo(
-            self.config["full_node_peer"]["host"], self.config["full_node_peer"]["port"]
-        )
-
-        async def connection_check():
-            while not self._shut_down:
-                if self.server is not None:
-                    full_node_retry = True
-
-                    for connection in self.server.global_connections.get_connections():
-                        if connection.get_peer_info() == full_node_peer:
-                            full_node_retry = False
-
-                    if full_node_retry:
-                        log.info(f"Reconnecting to full_node {full_node_peer}")
-                        if not await self.server.start_client(
-                            full_node_peer, None, auth=False
-                        ):
-                            await asyncio.sleep(1)
-                await asyncio.sleep(30)
-
-        self.reconnect_task = asyncio.create_task(connection_check())
 
     @api_request
     async def respond_proof_of_space(
