@@ -4,11 +4,10 @@ import pytest
 
 from src.rpc.farmer_rpc_server import start_farmer_rpc_server
 from src.rpc.harvester_rpc_server import start_harvester_rpc_server
-from src.protocols import full_node_protocol
 from src.rpc.farmer_rpc_client import FarmerRpcClient
 from src.rpc.harvester_rpc_client import HarvesterRpcClient
 from src.util.ints import uint16
-from tests.setup_nodes import setup_full_system, test_constants, bt
+from tests.setup_nodes import setup_full_system, test_constants
 
 
 @pytest.fixture(scope="module")

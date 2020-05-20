@@ -136,7 +136,6 @@ class WebSocketServer:
                 self.connections.pop(service_name)
                 self.remote_address_map.pop(remote_address)
                 self.log.warning("Ping failed, connection closed.")
-                pass
         self.ping_job = asyncio.create_task(self.ping_task())
 
     async def handle_message(self, websocket, message):
@@ -241,7 +240,7 @@ class WebSocketServer:
         for k in self.services.keys():
             jobs.append(kill_service(self.root_path, self.services, k))
         if jobs:
-            done, pending = await asyncio.wait(jobs)
+            await asyncio.wait(jobs)
         self.services.clear()
 
         # TODO: fix this hack
