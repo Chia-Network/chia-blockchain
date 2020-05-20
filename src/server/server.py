@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 import ssl
 from secrets import token_bytes
-from typing import Any, AsyncGenerator, List, Tuple, Dict, Callable
+from typing import Any, List, Tuple, Dict, Callable
 
 from aiter import iter_to_aiter, map_aiter, push_aiter
 from aiter.server import start_server_aiter
@@ -54,8 +54,9 @@ async def start_server(self: "ChiaServer", on_connect: OnConnectFunc = None) -> 
 
     srwt_aiter = map_aiter(add_connection_type, aiter)
 
-    # Push all aiters that come from the server, into the pipeline
-    self._tasks.append(asyncio.create_task(self._add_to_srwt_aiter(srwt_aiter)))
+    # Push aiters that come from the server into the pipeline
+    if not self._srwt_aiter.is_stopped():
+        self._srwt_aiter.push(srwt_aiter)
 
     self.log.info(f"Server started on port {self._port}")
     return server
@@ -170,30 +171,14 @@ class ChiaServer:
             )
             self.global_connections.peers.remove(target_node)
             return False
-        self._tasks.append(
-            asyncio.create_task(
-                self._add_to_srwt_aiter(iter_to_aiter([(reader, writer, on_connect)]))
-            )
-        )
+        if not self._srwt_aiter.is_stopped():
+            self._srwt_aiter.push(iter_to_aiter([(reader, writer, on_connect)]))
 
         ssl_object = writer.get_extra_info(name="ssl_object")
         peer_cert = ssl_object.getpeercert()
         self.log.info(f"Server authed as {peer_cert}")
 
         return True
-
-    async def _add_to_srwt_aiter(
-        self,
-        aiter: AsyncGenerator[
-            Tuple[asyncio.StreamReader, asyncio.StreamWriter, OnConnectFunc], None
-        ],
-    ):
-        """
-        Adds all swrt from aiter into the instance variable srwt_aiter, adding them to the pipeline.
-        """
-        async for swrt in aiter:
-            if not self._srwt_aiter.is_stopped():
-                self._srwt_aiter.push(swrt)
 
     def set_state_changed_callback(self, callback: Callable):
         self.global_connections.set_state_changed_callback(callback)
