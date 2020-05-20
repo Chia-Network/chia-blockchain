@@ -67,6 +67,7 @@ class FullNode:
     sync_peers_handler: Optional[SyncPeersHandler]
     blockchain: Blockchain
     config: Dict
+    global_connections: Optional[PeerConnections]
     server: Optional[ChiaServer]
     log: logging.Logger
     constants: Dict
@@ -130,8 +131,8 @@ class FullNode:
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
-        if self.server is not None:
-            self.server.set_state_changed_callback(callback)
+        if self.global_connections is not None:
+            self.global_connections.set_state_changed_callback(callback)
 
     def _state_changed(self, change: str):
         if self.state_changed_callback is not None:
