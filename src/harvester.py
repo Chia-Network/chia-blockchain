@@ -9,6 +9,7 @@ from blspy import PrependSignature, PrivateKey, PublicKey, Util
 
 from chiapos import DiskProver
 from src.protocols import harvester_protocol
+from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
@@ -102,6 +103,7 @@ class Harvester:
         self._plot_notification_task = asyncio.create_task(self._plot_notification())
         self._reconnect_task = None
         self._is_shutdown = False
+        self.global_connections = None
         self.server = None
         self.pool_pubkeys = []
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
@@ -110,8 +112,8 @@ class Harvester:
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
-        if self.server is not None:
-            self.server.set_state_changed_callback(callback)
+        if self.global_connections is not None:
+            self.global_connections.set_state_changed_callback(callback)
 
     def _state_changed(self, change: str):
         if self.state_changed_callback is not None:
@@ -191,6 +193,9 @@ class Harvester:
             return False
         self._state_changed("plots")
         return True
+
+    def set_global_connections(self, global_connections: Optional[PeerConnections]):
+        self.global_connections = global_connections
 
     def set_server(self, server):
         self.server = server
