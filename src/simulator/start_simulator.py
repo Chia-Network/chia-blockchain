@@ -11,7 +11,7 @@ except ImportError:
     uvloop = None
 
 from src.rpc.full_node_rpc_server import start_full_node_rpc_server
-from src.server.server import ChiaServer
+from src.server.server import ChiaServer, start_server
 from src.server.connection import NodeType
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli, load_config
@@ -54,7 +54,7 @@ async def main():
         config,
     )
     full_node._set_server(server)
-    _ = await server.start_server(full_node._on_connect)
+    _ = await start_server(server, full_node._on_connect)
     rpc_cleanup = None
 
     def master_close_cb():

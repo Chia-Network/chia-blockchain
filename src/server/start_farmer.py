@@ -11,7 +11,7 @@ except ImportError:
 
 from src.farmer import Farmer
 from src.server.outbound_message import NodeType
-from src.server.server import ChiaServer
+from src.server.server import ChiaServer, start_server
 from src.types.peer_info import PeerInfo
 from src.util.config import load_config, load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
@@ -79,7 +79,7 @@ async def async_main():
     except NotImplementedError:
         log.info("signal handlers unsupported")
 
-    _ = await server.start_server(farmer._on_connect)
+    _ = await start_server(server, farmer._on_connect)
     farmer.set_server(server)
 
     rpc_cleanup = None

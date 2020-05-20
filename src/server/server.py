@@ -19,6 +19,51 @@ from src.util.network import create_node_id
 from .pipeline import initialize_pipeline
 
 
+async def start_server(self: "ChiaServer", on_connect: OnConnectFunc = None) -> bool:
+    """
+    Launches a listening server on host and port specified, to connect to NodeType nodes. On each
+    connection, the on_connect asynchronous generator will be called, and responses will be sent.
+    Whenever a new TCP connection is made, a new srwt tuple is sent through the pipeline.
+    """
+    if self._server is not None or self._pipeline_task.done():
+        return False
+
+    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH)
+    private_cert, private_key = self.loadSSLConfig(
+        "ssl", self.root_path, self.config
+    )
+    ssl_context.load_cert_chain(certfile=private_cert, keyfile=private_key)
+    ssl_context.load_verify_locations(private_cert)
+
+    if (
+        self._local_type == NodeType.FULL_NODE
+        or self._local_type == NodeType.INTRODUCER
+    ):
+        ssl_context.verify_mode = ssl.CERT_NONE
+    else:
+        ssl_context.verify_mode = ssl.CERT_REQUIRED
+
+    self._server, aiter = await start_server_aiter(
+        self._port, host=None, reuse_address=True, ssl=ssl_context
+    )
+
+    def add_connection_type(
+        srw: Tuple[asyncio.StreamReader, asyncio.StreamWriter]
+    ) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter, OnConnectFunc]:
+        ssl_object = srw[1].get_extra_info(name="ssl_object")
+        peer_cert = ssl_object.getpeercert()
+        self.log.info(f"Client authed as {peer_cert}")
+        return (srw[0], srw[1], on_connect)
+
+    srwt_aiter = map_aiter(add_connection_type, aiter)
+
+    # Push all aiters that come from the server, into the pipeline
+    self._tasks.append(asyncio.create_task(self._add_to_srwt_aiter(srwt_aiter)))
+
+    self.log.info(f"Server started on port {self._port}")
+    return True
+
+
 class ChiaServer:
     def __init__(
         self,
@@ -90,50 +135,6 @@ class ChiaServer:
                 pass
 
         return None, None
-
-    async def start_server(self, on_connect: OnConnectFunc = None) -> bool:
-        """
-        Launches a listening server on host and port specified, to connect to NodeType nodes. On each
-        connection, the on_connect asynchronous generator will be called, and responses will be sent.
-        Whenever a new TCP connection is made, a new srwt tuple is sent through the pipeline.
-        """
-        if self._server is not None or self._pipeline_task.done():
-            return False
-
-        ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH)
-        private_cert, private_key = self.loadSSLConfig(
-            "ssl", self.root_path, self.config
-        )
-        ssl_context.load_cert_chain(certfile=private_cert, keyfile=private_key)
-        ssl_context.load_verify_locations(private_cert)
-
-        if (
-            self._local_type == NodeType.FULL_NODE
-            or self._local_type == NodeType.INTRODUCER
-        ):
-            ssl_context.verify_mode = ssl.CERT_NONE
-        else:
-            ssl_context.verify_mode = ssl.CERT_REQUIRED
-
-        self._server, aiter = await start_server_aiter(
-            self._port, host=None, reuse_address=True, ssl=ssl_context
-        )
-
-        def add_connection_type(
-            srw: Tuple[asyncio.StreamReader, asyncio.StreamWriter]
-        ) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter, OnConnectFunc]:
-            ssl_object = srw[1].get_extra_info(name="ssl_object")
-            peer_cert = ssl_object.getpeercert()
-            self.log.info(f"Client authed as {peer_cert}")
-            return (srw[0], srw[1], on_connect)
-
-        srwt_aiter = map_aiter(add_connection_type, aiter)
-
-        # Push all aiters that come from the server, into the pipeline
-        self._tasks.append(asyncio.create_task(self._add_to_srwt_aiter(srwt_aiter)))
-
-        self.log.info(f"Server started on port {self._port}")
-        return True
 
     async def start_client(
         self,
