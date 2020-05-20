@@ -19,28 +19,7 @@ from src.util.logging import initialize_logging
 from src.util.setproctitle import setproctitle
 from src.rpc.farmer_rpc_server import start_farmer_rpc_server
 
-
-def start_farmer_bg_task(server, peer_info, log):
-    """
-    Start a background task that checks connection and reconnects periodically to the full_node.
-    """
-
-    async def connection_check():
-        while True:
-            if server is not None:
-                full_node_retry = True
-
-                for connection in server.global_connections.get_connections():
-                    if connection.get_peer_info() == peer_info:
-                        full_node_retry = False
-
-                if full_node_retry:
-                    log.info(f"Reconnecting to full_node {peer_info}")
-                    if not await server.start_client(peer_info, None, auth=False):
-                        await asyncio.sleep(1)
-            await asyncio.sleep(30)
-
-    return asyncio.create_task(connection_check())
+from .reconnect_task import start_reconnect_task
 
 
 async def async_main():
@@ -78,7 +57,7 @@ async def async_main():
         config["full_node_peer"]["host"], config["full_node_peer"]["port"]
     )
     server_socket = await start_server(server, farmer._on_connect)
-    farmer_bg_task = start_farmer_bg_task(server, peer_info, log)
+    farmer_bg_task = start_reconnect_task(server, peer_info, log)
 
     def stop_all():
         server_socket.close()
