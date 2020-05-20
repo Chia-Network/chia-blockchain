@@ -10,6 +10,7 @@ from src.consensus.constants import constants as consensus_constants
 from src.consensus.pot_iterations import calculate_iterations_quality
 from src.consensus.coinbase import create_coinbase_coin_and_signature
 from src.protocols import farmer_protocol, harvester_protocol
+from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
@@ -81,13 +82,16 @@ class Farmer:
             NodeType.HARVESTER, Message("harvester_handshake", msg), Delivery.RESPOND
         )
 
+    def set_global_connections(self, global_connections: PeerConnections):
+        self.global_connections: PeerConnections = global_connections
+
     def set_server(self, server):
         self.server = server
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
-        if self.server is not None:
-            self.server.set_state_changed_callback(callback)
+        if self.global_connections is not None:
+            self.global_connections.set_state_changed_callback(callback)
 
     def _state_changed(self, change: str):
         if self.state_changed_callback is not None:

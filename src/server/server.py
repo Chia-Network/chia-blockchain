@@ -2,7 +2,7 @@ import asyncio
 import logging
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, List, Tuple, Dict, Callable
+from typing import Any, List, Tuple, Dict
 
 from aiter import iter_to_aiter, map_aiter, push_aiter
 from aiter.server import start_server_aiter
@@ -143,9 +143,6 @@ class ChiaServer:
         self.log.info(f"Server authed as {peer_cert}")
 
         return True
-
-    def set_state_changed_callback(self, callback: Callable):
-        self.global_connections.set_state_changed_callback(callback)
 
     async def await_closed(self):
         """
