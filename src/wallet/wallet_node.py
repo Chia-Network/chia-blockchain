@@ -19,6 +19,7 @@ from src.util.merkle_set import (
 )
 from src.protocols import wallet_protocol, full_node_protocol
 from src.consensus.constants import constants as consensus_constants
+from src.server.connection import PeerConnections
 from src.server.server import ChiaServer
 from src.server.outbound_message import OutboundMessage, NodeType, Message, Delivery
 from src.util.ints import uint32, uint64
@@ -181,6 +182,9 @@ class WalletNode:
 
         return messages
 
+    def set_global_connections(self, global_connections: PeerConnections):
+        self.global_connections = global_connections
+
     def set_server(self, server: ChiaServer):
         self.server = server
 
@@ -210,7 +214,7 @@ class WalletNode:
                         self.config["full_node_peer"]["port"],
                     )
                     full_node_retry = True
-                    for connection in self.server.global_connections.get_connections():
+                    for connection in self.global_connections.get_connections():
                         if connection.get_peer_info() == full_node_peer:
                             full_node_retry = False
 
@@ -227,10 +231,10 @@ class WalletNode:
                 yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
 
             while not self._shut_down:
-                for connection in self.server.global_connections.get_connections():
+                for connection in self.global_connections.get_connections():
                     # If we are still connected to introducer, disconnect
                     if connection.connection_type == NodeType.INTRODUCER:
-                        self.server.global_connections.close(connection)
+                        self.global_connections.close(connection)
 
                 if self._num_needed_peers():
                     if not await self.server.start_client(
@@ -251,7 +255,7 @@ class WalletNode:
     def _num_needed_peers(self) -> int:
         assert self.server is not None
         diff = self.config["target_peer_count"] - len(
-            self.server.global_connections.get_full_node_connections()
+            self.global_connections.get_full_node_connections()
         )
         if diff < 0:
             return 0
@@ -263,7 +267,7 @@ class WalletNode:
             )
             peers = [
                 c.get_peer_info()
-                for c in self.server.global_connections.get_full_node_connections()
+                for c in self.global_connections.get_full_node_connections()
             ]
             if full_node_peer in peers:
                 self.log.info(
@@ -271,12 +275,12 @@ class WalletNode:
                 )
                 for (
                     connection
-                ) in self.server.global_connections.get_full_node_connections():
+                ) in self.global_connections.get_full_node_connections():
                     if connection.get_peer_info() != full_node_peer:
                         self.log.info(
                             f"Closing unnecessary connection to {connection.get_peer_info()}."
                         )
-                        self.server.global_connections.close(connection)
+                        self.global_connections.close(connection)
                 return 0
         return diff
 
@@ -289,7 +293,7 @@ class WalletNode:
         """
         if self.server is None:
             return
-        conns = self.server.global_connections
+        conns = self.global_connections
         for peer in request.peer_list:
             conns.peers.add(peer)
 

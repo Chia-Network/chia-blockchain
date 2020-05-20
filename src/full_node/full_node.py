@@ -29,6 +29,7 @@ from src.protocols import (
     wallet_protocol,
 )
 from src.protocols.wallet_protocol import GeneratorResponse
+from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
 from src.types.BLSSignature import BLSSignature
@@ -96,6 +97,8 @@ class FullNode:
         else:
             self.log = logging.getLogger(__name__)
 
+        self.global_connections = None
+
         db_path = path_from_root(root_path, config["database_path"])
         mkdir(db_path.parent)
 
@@ -118,6 +121,9 @@ class FullNode:
         await self.mempool_manager.new_tips(await self.blockchain.get_full_tips())
         self.state_changed_callback = None
         return self
+
+    def set_global_connections(self, global_connections: PeerConnections):
+        self.global_connections = global_connections
 
     def _set_server(self, server: ChiaServer):
         self.server = server
@@ -256,9 +262,9 @@ class FullNode:
             yield msg
 
     def _num_needed_peers(self) -> int:
-        assert self.server is not None
+        assert self.global_connections is not None
         diff = self.config["target_peer_count"] - len(
-            self.server.global_connections.get_full_node_connections()
+            self.global_connections.get_full_node_connections()
         )
         return diff if diff >= 0 else 0
 
@@ -277,9 +283,9 @@ class FullNode:
 
             while not self._shut_down:
                 # If we are still connected to introducer, disconnect
-                for connection in self.server.global_connections.get_connections():
+                for connection in self.global_connections.get_connections():
                     if connection.connection_type == NodeType.INTRODUCER:
-                        self.server.global_connections.close(connection)
+                        self.global_connections.close(connection)
                 # The first time connecting to introducer, keep trying to connect
                 if self._num_needed_peers():
                     if not await self.server.start_client(
@@ -392,10 +398,10 @@ class FullNode:
         fork_point_hash: bytes32 = header_hashes[fork_point_height]
         self.log.info(f"Fork point: {fork_point_hash} at height {fork_point_height}")
 
-        assert self.server is not None
+        assert self.global_connections is not None
         peers = [
             con.node_id
-            for con in self.server.global_connections.get_connections()
+            for con in self.global_connections.get_connections()
             if (con.node_id is not None and con.connection_type == NodeType.FULL_NODE)
         ]
 
@@ -421,7 +427,7 @@ class FullNode:
 
             cur_peers = [
                 con.node_id
-                for con in self.server.global_connections.get_connections()
+                for con in self.global_connections.get_connections()
                 if (
                     con.node_id is not None
                     and con.connection_type == NodeType.FULL_NODE
@@ -1656,9 +1662,9 @@ class FullNode:
     async def request_peers(
         self, request: full_node_protocol.RequestPeers
     ) -> OutboundMessageGenerator:
-        if self.server is None:
+        if self.global_connections is None:
             return
-        peers = self.server.global_connections.peers.get_peers()
+        peers = self.global_connections.peers.get_peers()
 
         yield OutboundMessage(
             NodeType.FULL_NODE,
@@ -1670,9 +1676,9 @@ class FullNode:
     async def respond_peers(
         self, request: full_node_protocol.RespondPeers
     ) -> OutboundMessageGenerator:
-        if self.server is None:
+        if self.server is None or self.global_connections is None:
             return
-        conns = self.server.global_connections
+        conns = self.global_connections
         for peer in request.peer_list:
             conns.peers.add(peer)
 
