@@ -40,7 +40,6 @@ from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.mempool_item import MempoolItem
-from src.types.peer_info import PeerInfo
 from src.types.program import Program
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
@@ -267,35 +266,6 @@ class FullNode:
             self.global_connections.get_full_node_connections()
         )
         return diff if diff >= 0 else 0
-
-    def _start_bg_tasks(self):
-        """
-        Start a background task connecting periodically to the introducer and
-        requesting the peer list.
-        """
-        introducer = self.config["introducer_peer"]
-        introducer_peerinfo = PeerInfo(introducer["host"], introducer["port"])
-
-        async def introducer_client():
-            async def on_connect() -> OutboundMessageGenerator:
-                msg = Message("request_peers", full_node_protocol.RequestPeers())
-                yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
-
-            while not self._shut_down:
-                # If we are still connected to introducer, disconnect
-                for connection in self.global_connections.get_connections():
-                    if connection.connection_type == NodeType.INTRODUCER:
-                        self.global_connections.close(connection)
-                # The first time connecting to introducer, keep trying to connect
-                if self._num_needed_peers():
-                    if not await self.server.start_client(
-                        introducer_peerinfo, on_connect
-                    ):
-                        await asyncio.sleep(5)
-                        continue
-                await asyncio.sleep(self.config["introducer_connect_interval"])
-
-        self.introducer_task = asyncio.create_task(introducer_client())
 
     def _close(self):
         self._shut_down = True
