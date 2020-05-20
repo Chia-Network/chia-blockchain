@@ -1,6 +1,5 @@
-import asyncio
 import json
-from asyncio import Event, ensure_future
+from asyncio import Event, ensure_future, asyncio
 from typing import Dict, Any
 
 import websockets
@@ -114,5 +113,4 @@ async def connect_to_daemon_and_validate(root_path):
             return connection
     except Exception as ex:
         print(f"Exception {ex}")
-        pass
     return None

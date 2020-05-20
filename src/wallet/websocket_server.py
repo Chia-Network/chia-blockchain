@@ -152,7 +152,6 @@ class WebSocketServer:
             elif msg.type == aiohttp.WSMsgType.PING:
                 await ws.pong()
             elif msg.type == aiohttp.WSMsgType.PONG:
-                pass
                 self.log.info("Pong received")
             else:
                 if msg.type == aiohttp.WSMsgType.CLOSE:
@@ -186,7 +185,6 @@ class WebSocketServer:
                 self.log.error(f"Exception: {e}")
                 if session is not None:
                     await session.close()
-                pass
             await asyncio.sleep(1)
 
     async def stop(self):

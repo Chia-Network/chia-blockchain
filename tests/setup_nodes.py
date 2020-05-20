@@ -1,7 +1,6 @@
 import asyncio
 
 from typing import Any, Dict, Tuple, List
-import blspy
 from src.full_node.full_node import FullNode
 from src.server.connection import NodeType
 from src.server.server import ChiaServer
@@ -10,9 +9,7 @@ from src.timelord_launcher import spawn_process, kill_processes
 from src.util.keychain import Keychain
 from src.wallet.wallet_node import WalletNode
 from tests.block_tools import BlockTools
-from src.types.BLSSignature import BLSPublicKey
 from src.util.config import load_config
-from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.harvester import Harvester
 from src.farmer import Farmer
 from src.introducer import Introducer

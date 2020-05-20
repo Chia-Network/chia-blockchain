@@ -1,10 +1,9 @@
 from typing import Callable, Dict, Any
 from abc import ABC, abstractmethod
 
-from aiohttp import web
+from aiohttp import web, aiohttp
 import logging
 import asyncio
-import aiohttp
 import json
 import traceback
 
@@ -216,7 +215,6 @@ class AbstractRpcApiHandler(ABC):
                 self.log.warning(f"Exception: {e}")
                 if session is not None:
                     await session.close()
-                pass
             await asyncio.sleep(1)
 
 
