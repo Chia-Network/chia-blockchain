@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import AsyncGenerator, Dict
 
-from src.protocols.full_node_protocol import RespondPeers, RequestPeers
+from src.protocols.introducer_protocol import RespondPeers, RequestPeers
 from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.sized_bytes import bytes32

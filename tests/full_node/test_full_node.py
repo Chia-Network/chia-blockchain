@@ -7,7 +7,12 @@ from typing import Dict
 from secrets import token_bytes
 
 from src.consensus.constants import constants
-from src.protocols import full_node_protocol as fnp, timelord_protocol, wallet_protocol
+from src.protocols import (
+    full_node_protocol as fnp,
+    timelord_protocol,
+    wallet_protocol,
+    introducer_protocol,
+)
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
 from src.types.full_block import FullBlock
@@ -779,7 +784,10 @@ class TestFullNodeProtocol:
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await asyncio.sleep(2)  # Allow connections to get made
 
-        msgs = [_ async for _ in full_node_1.request_peers(fnp.RequestPeers())]
+        msgs = [
+            _
+            async for _ in full_node_1.request_peers(introducer_protocol.RequestPeers())
+        ]
         assert len(msgs[0].message.data.peer_list) > 0
 
 

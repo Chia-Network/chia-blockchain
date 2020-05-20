@@ -17,7 +17,7 @@ from src.util.merkle_set import (
     confirm_not_included_already_hashed,
     MerkleSet,
 )
-from src.protocols import wallet_protocol, full_node_protocol
+from src.protocols import introducer_protocol, wallet_protocol
 from src.consensus.constants import constants as consensus_constants
 from src.server.connection import PeerConnections
 from src.server.server import ChiaServer
@@ -227,7 +227,7 @@ class WalletNode:
 
         async def introducer_client():
             async def on_connect() -> OutboundMessageGenerator:
-                msg = Message("request_peers", full_node_protocol.RequestPeers())
+                msg = Message("request_peers", introducer_protocol.RequestPeers())
                 yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
 
             while not self._shut_down:
@@ -286,7 +286,7 @@ class WalletNode:
 
     @api_request
     async def respond_peers(
-        self, request: full_node_protocol.RespondPeers
+        self, request: introducer_protocol.RespondPeers
     ) -> OutboundMessageGenerator:
         """
         We have received a list of full node peers that we can connect to.
