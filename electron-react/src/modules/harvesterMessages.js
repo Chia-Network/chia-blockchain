@@ -2,33 +2,35 @@ import { service_harvester } from "../util/service_names";
 
 export const harvesterMessage = () => ({
   type: "OUTGOING_MESSAGE",
-  destination: service_harvester
+  message: {
+    destination: service_harvester
+  }
 });
 
 export const pingHarvester = () => {
   var action = harvesterMessage();
-  action.command = "ping";
-  action.data = {};
+  action.message.command = "ping";
+  action.message.data = {};
   return action;
 };
 
 export const getPlots = () => {
   var action = harvesterMessage();
-  action.command = "get_plots";
-  action.data = {};
+  action.message.command = "get_plots";
+  action.message.data = {};
   return action;
 };
 
 export const deletePlot = filename => {
   var action = harvesterMessage();
-  action.command = "delete_plot";
-  action.data = { filename };
+  action.message.command = "delete_plot";
+  action.message.data = { filename };
   return action;
 };
 
 export const refreshPlots = () => {
   var action = harvesterMessage();
-  action.command = "refresh_plots";
-  action.data = {};
+  action.message.command = "refresh_plots";
+  action.message.data = {};
   return action;
 };

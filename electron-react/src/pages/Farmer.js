@@ -40,6 +40,7 @@ import { presentPlotter, changeFarmerMenu } from "../modules/farmer_menu";
 import { big_int_to_array, arr_to_hex, sha256 } from "../util/utils";
 import { mojo_to_chia_string } from "../util/chia";
 import HelpIcon from "@material-ui/icons/Help";
+import { clearSend } from "../modules/message";
 
 /* global BigInt */
 
@@ -611,6 +612,7 @@ class Farmer extends Component {
   }
   async componentDidMount(prevProps) {
     await this.checkRewards();
+    this.props.clearSend(); // Hack to clear the send message in wallet
   }
 
   async componentDidUpdate(prevProps) {
@@ -656,7 +658,11 @@ const mapStateToProps = (state, ownProps) => {
 };
 
 const mapDispatchToProps = (dispatch, ownProps) => {
-  return {};
+  return {
+    clearSend: () => {
+      dispatch(clearSend());
+    }
+  };
 };
 export default connect(
   mapStateToProps,

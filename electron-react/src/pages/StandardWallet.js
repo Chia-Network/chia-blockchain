@@ -21,13 +21,24 @@ import {
 } from "../modules/message";
 import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
 import { unix_to_short_date } from "../util/utils";
-import { StatusCard } from "./Wallets";
-import Accordion from "../components/Accordion";
-import LockIcon from "@material-ui/icons/Lock";
+import ExpansionPanel from "@material-ui/core/ExpansionPanel";
+import ExpansionPanelSummary from "@material-ui/core/ExpansionPanelSummary";
+import ExpansionPanelDetails from "@material-ui/core/ExpansionPanelDetails";
+import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
+import { openDialog } from "../modules/dialogReducer";
 
 const drawerWidth = 240;
 
 const useStyles = makeStyles(theme => ({
+  front: {
+    zIndex: "100"
+  },
+  resultSuccess: {
+    color: "green"
+  },
+  resultFailure: {
+    color: "red"
+  },
   root: {
     display: "flex",
     paddingLeft: "0px"
@@ -98,13 +109,17 @@ const useStyles = makeStyles(theme => ({
     paddingRight: theme.spacing(0)
   },
   paper: {
-    padding: theme.spacing(0),
+    padding: theme.spacing(2),
     display: "flex",
     overflow: "auto",
     flexDirection: "column"
   },
   fixedHeight: {
     height: 240
+  },
+  heading: {
+    fontSize: theme.typography.pxToRem(15),
+    fontWeight: theme.typography.fontWeightRegular
   },
   drawerWallet: {
     position: "relative",
@@ -171,6 +186,26 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
+const BalanceCardSubSection = props => {
+  const classes = useStyles();
+  return (
+    <Grid item xs={12}>
+      <div className={classes.cardSubSection}>
+        <Box display="flex">
+          <Box flexGrow={1}>
+            <Typography variant="subtitle1">{props.title}</Typography>
+          </Box>
+          <Box>
+            <Typography variant="subtitle1">
+              {mojo_to_chia_string(props.balance)} XCH
+            </Typography>
+          </Box>
+        </Box>
+      </div>
+    </Grid>
+  );
+};
+
 const BalanceCard = props => {
   var id = props.wallet_id;
   const balance = useSelector(
@@ -191,42 +226,6 @@ const BalanceCard = props => {
 
   const classes = useStyles();
 
-  const balancebox_1 = "<table width='100%'>";
-  const balancebox_2 = "<tr><td align='left'>";
-  const balancebox_3 = "</td><td align='right'>";
-  const balancebox_4 = "</td></tr>";
-  const balancebox_row = "<tr height='8px'></tr>";
-  const balancebox_5 = "</td></tr></table>";
-  const balancebox_pending = "Pending Total Balance";
-  const balancebox_frozen = "Pending Farming Rewards";
-  const balancebox_change = "Pending Change";
-  const balancebox_xch = " XCH";
-  const balance_pending_chia = mojo_to_chia_string(balance_pending);
-  const balance_frozen_chia = mojo_to_chia_string(balance_frozen);
-  const balance_change_chia = mojo_to_chia_string(balance_change);
-  const acc_content =
-    balancebox_1 +
-    balancebox_2 +
-    balancebox_pending +
-    balancebox_3 +
-    balance_pending_chia +
-    balancebox_xch +
-    balancebox_4 +
-    balancebox_row +
-    balancebox_2 +
-    balancebox_frozen +
-    balancebox_3 +
-    balance_frozen_chia +
-    balancebox_xch +
-    balancebox_4 +
-    balancebox_row +
-    balancebox_2 +
-    balancebox_change +
-    balancebox_3 +
-    balance_change_chia +
-    balancebox_xch +
-    balancebox_5;
-
   return (
     <Paper className={(classes.paper, classes.balancePaper)}>
       <Grid container spacing={0}>
@@ -237,42 +236,42 @@ const BalanceCard = props => {
             </Typography>
           </div>
         </Grid>
+        <BalanceCardSubSection title="Total Balance" balance={balance} />
+        <BalanceCardSubSection
+          title="Spendable Balance"
+          balance={balance_spendable}
+        />
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box flexGrow={1}>
-                <Typography variant="subtitle1">Total Balance</Typography>
-              </Box>
-              <Box>
-                <Typography variant="subtitle1">
-                  {mojo_to_chia_string(balance)} XCH
-                </Typography>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <Typography variant="subtitle1">Spendable Balance</Typography>
-              </Box>
-              <Box>
-                <Typography alignRight variant="subtitle1">
-                  {mojo_to_chia_string(balance_spendable, "mojo")} XCH
-                </Typography>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <Accordion
-                  title="View pending balances..."
-                  content={acc_content}
-                />
+                <ExpansionPanel className={classes.front}>
+                  <ExpansionPanelSummary
+                    expandIcon={<ExpandMoreIcon />}
+                    aria-controls="panel1a-content"
+                    id="panel1a-header"
+                  >
+                    <Typography className={classes.heading}>
+                      View pending balances
+                    </Typography>
+                  </ExpansionPanelSummary>
+                  <ExpansionPanelDetails>
+                    <Grid container spacing={0}>
+                      <BalanceCardSubSection
+                        title="Pending Total Balance"
+                        balance={balance_pending}
+                      />
+                      <BalanceCardSubSection
+                        title="Pending Farming Rewards"
+                        balance={balance_frozen}
+                      />
+                      <BalanceCardSubSection
+                        title="Pending Change"
+                        balance={balance_change}
+                      />
+                    </Grid>
+                  </ExpansionPanelDetails>
+                </ExpansionPanel>
               </Box>
             </Box>
           </div>
@@ -289,6 +288,29 @@ const SendCard = props => {
   var amount_input = null;
   const dispatch = useDispatch();
 
+  const sending_transaction = useSelector(
+    state => state.wallet_state.sending_transaction
+  );
+
+  const send_transaction_result = useSelector(
+    state => state.wallet_state.send_transaction_result
+  );
+  let result_message = "";
+  let result_class = classes.resultSuccess;
+  if (send_transaction_result) {
+    if (send_transaction_result.status === "SUCCESS") {
+      result_message =
+        "Transaction has successfully been sent to a full node and included in the mempool.";
+    } else if (send_transaction_result.status === "PENDING") {
+      result_message =
+        "Transaction has sent to a full node and is pending inclusion into the mempool. " +
+        send_transaction_result.reason;
+    } else {
+      result_message = "Transaction failed. " + send_transaction_result.reason;
+      result_class = classes.resultFailure;
+    }
+  }
+
   function farm() {
     var address = address_input.value;
     if (address !== "") {
@@ -297,11 +319,40 @@ const SendCard = props => {
   }
 
   function send() {
-    var address = address_input.value;
-    var amount = chia_to_mojo(amount_input.value);
-    if (address !== "" && amount !== "") {
-      dispatch(send_transaction(id, amount, 0, address));
+    if (sending_transaction) {
+      return;
     }
+    let puzzle_hash = address_input.value;
+    const amount = chia_to_mojo(amount_input.value);
+
+    if (puzzle_hash.includes("colour")) {
+      dispatch(
+        openDialog(
+          "Error: Cannot send chia to coloured address. Please enter a chia address."
+        )
+      );
+      return;
+    } else if (puzzle_hash.substring(0, 12) === "chia_addr://") {
+      puzzle_hash = puzzle_hash.substring(12);
+    }
+    if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
+      puzzle_hash = puzzle_hash.substring(2);
+    }
+    if (puzzle_hash.length !== 64) {
+      dispatch(
+        openDialog("Please enter a 32 byte puzzle hash in hexadecimal format")
+      );
+      return;
+    }
+    const amount_value = parseFloat(Number(amount));
+    if (amount_value === 0 || !amount_value || isNaN(amount_value)) {
+      dispatch(openDialog("Please enter a valid numeric amount"));
+      return;
+    }
+
+    dispatch(send_transaction(id, amount_value, 0, puzzle_hash));
+    address_input.value = "";
+    amount_input.value = "";
   }
 
   return (
@@ -316,15 +367,23 @@ const SendCard = props => {
         </Grid>
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
+            <p className={result_class}>{result_message}</p>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box flexGrow={1}>
                 <TextField
+                  id="filled-secondary"
+                  variant="filled"
+                  color="secondary"
                   fullWidth
+                  disabled={sending_transaction}
                   inputRef={input => {
                     address_input = input;
                   }}
-                  label="Address"
-                  variant="outlined"
+                  label="Address / Puzzle hash"
                 />
               </Box>
               <Box></Box>
@@ -336,12 +395,15 @@ const SendCard = props => {
             <Box display="flex">
               <Box flexGrow={1}>
                 <TextField
+                  id="filled-secondary"
+                  variant="filled"
+                  color="secondary"
                   fullWidth
+                  disabled={sending_transaction}
                   inputRef={input => {
                     amount_input = input;
                   }}
                   label="Amount"
-                  variant="outlined"
                 />
               </Box>
             </Box>
@@ -366,6 +428,7 @@ const SendCard = props => {
                   className={classes.sendButton}
                   variant="contained"
                   color="primary"
+                  disabled={sending_transaction}
                 >
                   Send
                 </Button>
@@ -438,7 +501,12 @@ const TransactionTable = props => {
           {transactions.map(tx => (
             <TableRow
               className={classes.row}
-              key={tx.to_puzzle_hash + tx.created_at_time + tx.amount}
+              key={
+                tx.to_puzzle_hash +
+                tx.created_at_time +
+                tx.amount +
+                (tx.removals.length > 0 ? tx.removals[0].parent_coin_info : "")
+              }
             >
               <TableCell className={classes.cell_short}>
                 {incoming_string(tx.incoming)}

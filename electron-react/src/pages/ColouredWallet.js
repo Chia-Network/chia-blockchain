@@ -23,8 +23,11 @@ import {
 } from "../modules/message";
 import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
 import { unix_to_short_date } from "../util/utils";
-import Accordion from "../components/Accordion";
-import LockIcon from "@material-ui/icons/Lock";
+import ExpansionPanel from "@material-ui/core/ExpansionPanel";
+import ExpansionPanelSummary from "@material-ui/core/ExpansionPanelSummary";
+import ExpansionPanelDetails from "@material-ui/core/ExpansionPanelDetails";
+import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
+import { openDialog } from "../modules/dialogReducer";
 
 const drawerWidth = 240;
 
@@ -32,6 +35,12 @@ const useStyles = makeStyles(theme => ({
   root: {
     display: "flex",
     paddingLeft: "0px"
+  },
+  resultSuccess: {
+    color: "green"
+  },
+  resultFailure: {
+    color: "red"
   },
   toolbar: {
     paddingRight: 24 // keep right padding when drawer closed
@@ -99,14 +108,13 @@ const useStyles = makeStyles(theme => ({
     paddingRight: theme.spacing(0)
   },
   paper: {
-    paddingBottom: 20,
-    padding: theme.spacing(0),
+    padding: theme.spacing(1),
+    margin: theme.spacing(1),
+    marginBottom: theme.spacing(2),
+    marginTop: theme.spacing(2),
     display: "flex",
     overflow: "auto",
     flexDirection: "column"
-  },
-  fixedHeight: {
-    height: 240
   },
   drawerWallet: {
     position: "relative",
@@ -119,10 +127,6 @@ const useStyles = makeStyles(theme => ({
     })
   },
   balancePaper: {
-    // height: 200,
-    marginTop: theme.spacing(2)
-  },
-  sendCard: {
     marginTop: theme.spacing(2)
   },
   sendButton: {
@@ -153,7 +157,14 @@ const useStyles = makeStyles(theme => ({
   table_root: {
     width: "100%",
     maxHeight: 600,
-    overflowY: "scroll"
+    overflowY: "scroll",
+    padding: theme.spacing(1),
+    margin: theme.spacing(1),
+    marginBottom: theme.spacing(2),
+    marginTop: theme.spacing(2),
+    display: "flex",
+    overflow: "auto",
+    flexDirection: "column"
   },
   table: {
     height: "100%",
@@ -196,7 +207,7 @@ const ColourCard = props => {
 
   const classes = useStyles();
   return (
-    <Paper className={(classes.paper, classes.colourCard)}>
+    <Paper className={classes.paper}>
       <Grid container spacing={0}>
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
@@ -228,6 +239,9 @@ const ColourCard = props => {
             <Box display="flex">
               <Box flexGrow={1}>
                 <TextField
+                  id="filled-secondary"
+                  variant="filled"
+                  color="secondary"
                   fullWidth
                   label="Nickname"
                   inputRef={input => {
@@ -235,7 +249,6 @@ const ColourCard = props => {
                   }}
                   defaultValue={name}
                   key={name}
-                  variant="outlined"
                 />
               </Box>
               <Box>
@@ -257,6 +270,26 @@ const ColourCard = props => {
   );
 };
 
+const BalanceCardSubSection = props => {
+  const classes = useStyles();
+  return (
+    <Grid item xs={12}>
+      <div className={classes.cardSubSection}>
+        <Box display="flex">
+          <Box flexGrow={1}>
+            <Typography variant="subtitle1">{props.title}</Typography>
+          </Box>
+          <Box>
+            <Typography variant="subtitle1">
+              {mojo_to_chia_string(props.balance)} XCH
+            </Typography>
+          </Box>
+        </Box>
+      </div>
+    </Grid>
+  );
+};
+
 const BalanceCard = props => {
   var id = props.wallet_id;
   const balance = useSelector(
@@ -272,36 +305,9 @@ const BalanceCard = props => {
     state => state.wallet_state.wallets[id].balance_change
   );
 
-  const balancebox_1 = "<table width='100%'>";
-  const balancebox_2 = "<tr><td align='left'>";
-  const balancebox_3 = "</td><td align='right'>";
-  const balancebox_4 = "</td></tr>";
-  const balancebox_row = "<tr height='8px'></tr>";
-  const balancebox_5 = "</td></tr></table>";
-  const balancebox_pending = "Pending Total Balance";
-  const balancebox_change = "Pending Change";
-  const balancebox_xch = " XCH";
-  const balance_pending_chia = mojo_to_chia_string(balance_pending);
-  const balance_change_chia = mojo_to_chia_string(balance_change);
-  const acc_content =
-    balancebox_1 +
-    balancebox_2 +
-    balancebox_pending +
-    balancebox_3 +
-    balance_pending_chia +
-    balancebox_xch +
-    balancebox_4 +
-    balancebox_row +
-    balancebox_2 +
-    balancebox_change +
-    balancebox_3 +
-    balance_change_chia +
-    balancebox_xch +
-    balancebox_5;
-
   const classes = useStyles();
   return (
-    <Paper className={(classes.paper, classes.balancePaper)}>
+    <Paper className={classes.paper}>
       <Grid container spacing={0}>
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
@@ -310,42 +316,38 @@ const BalanceCard = props => {
             </Typography>
           </div>
         </Grid>
+        <BalanceCardSubSection title="Total Balance" amount={balance} />
+        <BalanceCardSubSection
+          title="Spendable Balance"
+          amount={balance_spendable}
+        />
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box flexGrow={1}>
-                <Typography variant="subtitle1">Total Balance</Typography>
-              </Box>
-              <Box>
-                <Typography variant="subtitle1">
-                  {mojo_to_chia_string(balance)} XCH
-                </Typography>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <Typography variant="subtitle1">Spendable Balance</Typography>
-              </Box>
-              <Box>
-                <Typography alignRight variant="subtitle1">
-                  {mojo_to_chia_string(balance_spendable, "mojo")} XCH
-                </Typography>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <Accordion
-                  title="View pending balances..."
-                  content={acc_content}
-                />
+                <ExpansionPanel className={classes.front}>
+                  <ExpansionPanelSummary
+                    expandIcon={<ExpandMoreIcon />}
+                    aria-controls="panel1a-content"
+                    id="panel1a-header"
+                  >
+                    <Typography className={classes.heading}>
+                      View pending balances
+                    </Typography>
+                  </ExpansionPanelSummary>
+                  <ExpansionPanelDetails>
+                    <Grid container spacing={0}>
+                      <BalanceCardSubSection
+                        title="Pending Balance"
+                        balance={balance_pending}
+                      />
+                      <BalanceCardSubSection
+                        title="Pending Change"
+                        balance={balance_change}
+                      />
+                    </Grid>
+                  </ExpansionPanelDetails>
+                </ExpansionPanel>
               </Box>
             </Box>
           </div>
@@ -362,6 +364,32 @@ const SendCard = props => {
   var amount_input = null;
   const dispatch = useDispatch();
 
+  const sending_transaction = useSelector(
+    state => state.wallet_state.sending_transaction
+  );
+
+  const send_transaction_result = useSelector(
+    state => state.wallet_state.send_transaction_result
+  );
+
+  const colour = useSelector(state => state.wallet_state.wallets[id].colour);
+
+  let result_message = "";
+  let result_class = classes.resultSuccess;
+  if (send_transaction_result) {
+    if (send_transaction_result.status === "SUCCESS") {
+      result_message =
+        "Transaction has successfully been sent to a full node and included in the mempool.";
+    } else if (send_transaction_result.status === "PENDING") {
+      result_message =
+        "Transaction has sent to a full node and is pending inclusion into the mempool. " +
+        send_transaction_result.reason;
+    } else {
+      result_message = "Transaction failed. " + send_transaction_result.reason;
+      result_class = classes.resultFailure;
+    }
+  }
+
   function farm() {
     var address = address_input.value;
     if (address !== "") {
@@ -370,15 +398,58 @@ const SendCard = props => {
   }
 
   function send() {
-    var address = address_input.value;
-    var amount = chia_to_mojo(amount_input.value);
-    if (address !== "" && amount !== "") {
-      dispatch(cc_spend(id, address, amount));
+    if (sending_transaction) {
+      return;
     }
+    let puzzle_hash = address_input.value;
+    const amount = chia_to_mojo(amount_input.value);
+
+    if (
+      puzzle_hash.includes("chia_addr") ||
+      puzzle_hash.includes("colour_desc")
+    ) {
+      dispatch(
+        openDialog(
+          "Error: recipient address is not a coloured wallet address. Please enter a coloured wallet address"
+        )
+      );
+      return;
+    }
+    if (puzzle_hash.substring(0, 14) === "colour_addr://") {
+      const colour_id = puzzle_hash.substring(14, 78);
+      puzzle_hash = puzzle_hash.substring(79);
+      if (colour_id !== colour) {
+        dispatch(
+          openDialog(
+            "Error the entered address appears to be for a different colour."
+          )
+        );
+        return;
+      }
+    }
+
+    if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
+      puzzle_hash = puzzle_hash.substring(2);
+    }
+    if (puzzle_hash.length !== 64) {
+      dispatch(
+        openDialog("Please enter a 32 byte puzzle hash in hexadecimal format")
+      );
+      return;
+    }
+    const amount_value = parseFloat(Number(amount));
+    if (amount_value === 0 || !amount_value || isNaN(amount_value)) {
+      dispatch(openDialog("Please enter a valid numeric amount"));
+      return;
+    }
+
+    dispatch(cc_spend(id, puzzle_hash, amount_value));
+    address_input.value = "";
+    amount_input.value = "";
   }
 
   return (
-    <Paper className={(classes.paper, classes.sendCard)}>
+    <Paper className={classes.paper}>
       <Grid container spacing={0}>
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
@@ -389,15 +460,22 @@ const SendCard = props => {
         </Grid>
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
+            <p className={result_class}>{result_message}</p>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box flexGrow={1}>
                 <TextField
+                  id="filled-secondary"
+                  variant="filled"
+                  color="secondary"
                   fullWidth
                   inputRef={input => {
                     address_input = input;
                   }}
                   label="Address"
-                  variant="outlined"
                 />
               </Box>
               <Box></Box>
@@ -409,12 +487,14 @@ const SendCard = props => {
             <Box display="flex">
               <Box flexGrow={1}>
                 <TextField
+                  id="filled-secondary"
+                  variant="filled"
+                  color="secondary"
                   fullWidth
                   inputRef={input => {
                     amount_input = input;
                   }}
                   label="Amount"
-                  variant="outlined"
                 />
               </Box>
             </Box>
@@ -455,7 +535,7 @@ const HistoryCard = props => {
   var id = props.wallet_id;
   const classes = useStyles();
   return (
-    <Paper className={(classes.paper, classes.sendCard)}>
+    <Paper className={classes.paper}>
       <Grid container spacing={0}>
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
@@ -560,7 +640,7 @@ const AddressCard = props => {
   }
 
   return (
-    <Paper className={(classes.paper, classes.sendCard)}>
+    <Paper className={classes.paper}>
       <Grid container spacing={0}>
         <Grid item xs={12}>
           <div className={classes.cardTitle}>

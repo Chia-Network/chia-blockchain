@@ -17,7 +17,7 @@ from src.util.ws_message import create_payload
 class FullNodeRpcApiHandler(AbstractRpcApiHandler):
     def __init__(self, full_node: FullNode, stop_cb: Callable):
         super().__init__(full_node, stop_cb, "chia_full_node")
-        self.cached_blockchain_state = Optional[Dict]
+        self.cached_blockchain_state: Optional[Dict] = None
 
     async def _state_changed(self, change: str):
         assert self.websocket is not None
@@ -85,7 +85,7 @@ class FullNodeRpcApiHandler(AbstractRpcApiHandler):
             }
         )
         assert space is not None
-        response = {
+        response: Dict = {
             "success": True,
             "blockchain_state": {
                 "tips": tips,
@@ -102,7 +102,7 @@ class FullNodeRpcApiHandler(AbstractRpcApiHandler):
                 "space": space["space"],
             },
         }
-        self.cached_blockchain_state = response["blockchain_state"]
+        self.cached_blockchain_state = dict(response["blockchain_state"])
         return response
 
     async def get_block(self, request: Dict) -> Optional[Dict]:
@@ -281,7 +281,6 @@ class FullNodeRpcApiHandler(AbstractRpcApiHandler):
                     raise web.HTTPBadRequest()
             total_mi = uint64(total_mi + curr_mi)
 
-        # print("Minimum iterations:", total_mi)
         return total_mi
 
     async def get_network_space(self, request: Dict) -> Optional[Dict]:
