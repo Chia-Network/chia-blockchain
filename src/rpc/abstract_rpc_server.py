@@ -74,9 +74,9 @@ class AbstractRpcApiHandler(ABC):
         return inner
 
     async def get_connections(self, request: Dict) -> Dict:
-        if self.service.server is None:
+        if self.service.global_connections is None:
             return {"success": False}
-        connections = self.service.server.global_connections.get_connections()
+        connections = self.service.global_connections.get_connections()
         con_info = [
             {
                 "type": con.connection_type,
@@ -100,7 +100,7 @@ class AbstractRpcApiHandler(ABC):
         port = request["port"]
         target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
 
-        if self.service.server is None or not (
+        if getattr(self.service, "server", None) is None or not (
             await self.service.server.start_client(target_node, None)
         ):
             raise aiohttp.web.HTTPInternalServerError()
@@ -108,17 +108,17 @@ class AbstractRpcApiHandler(ABC):
 
     async def close_connection(self, request: Dict):
         node_id = hexstr_to_bytes(request["node_id"])
-        if self.service.server is None:
+        if self.service.global_connections is None:
             raise aiohttp.web.HTTPInternalServerError()
         connections_to_close = [
             c
-            for c in self.service.server.global_connections.get_connections()
+            for c in self.service.global_connections.get_connections()
             if c.node_id == node_id
         ]
         if len(connections_to_close) == 0:
             raise aiohttp.web.HTTPNotFound()
         for connection in connections_to_close:
-            self.service.server.global_connections.close(connection)
+            self.service.global_connections.close(connection)
         return {"success": True}
 
     async def stop_node(self, request):

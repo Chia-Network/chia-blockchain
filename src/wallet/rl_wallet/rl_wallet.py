@@ -181,8 +181,6 @@ class RLWallet:
 
         self.wallet_state_manager = wallet_state_manager
 
-        self.server = None
-
         self.wallet_info = info
         self.standard_wallet = wallet
         self.rl_info = RLInfo.from_json_dict(json.loads(info.data))

@@ -47,10 +47,9 @@ class Timelord:
         self.potential_free_clients: List = []
         self.free_clients: List[Tuple[str, StreamReader, StreamWriter]] = []
         self._is_shutdown = False
-        self.server = None
 
     def set_server(self, server):
-        self.server = server
+        pass
 
     async def _handle_client(self, reader: StreamReader, writer: StreamWriter):
         async with self.lock:
