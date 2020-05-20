@@ -64,11 +64,7 @@ const createPyProc = () => {
   } else {
     console.log("Running python script");
     const Process = require("child_process").spawn;
-    pyProc = new Process(
-      "python",
-      [script].concat(additional_args),
-      processOptions
-    );
+    pyProc = new Process("python", [script], processOptions);
   }
   /*if (pyProc != null) {
     pyProc.stdout.setEncoding("utf8");

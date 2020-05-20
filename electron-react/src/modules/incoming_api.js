@@ -12,7 +12,7 @@ export const Wallet = (id, name, type, data) => ({
   balance_change: 0,
   transactions: [],
   puzzle_hash: "",
-  colour: "",
+  colour: ""
 });
 
 export const Transaction = (
@@ -40,7 +40,7 @@ export const Transaction = (
   spend_bundle: spend_bundle,
   additions: additions,
   removals: removals,
-  wallet_id: wallet_id,
+  wallet_id: wallet_id
 });
 
 // export const initial_wallet = Wallet(0, "Chia Wallet", "STANDARD_WALLET", "");
@@ -54,8 +54,8 @@ const initial_state = {
   status: {
     connections: [],
     connection_count: 0,
-    syncing: false,
-  },
+    syncing: false
+  }
 };
 
 export const incomingReducer = (state = { ...initial_state }, action) => {
@@ -87,7 +87,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
             ...state,
             logged_in: false,
             public_key_fingerprints: [],
-            logged_in_received: true,
+            logged_in_received: true
           };
         }
       } else if (command === "get_public_keys") {
@@ -95,7 +95,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         return {
           ...state,
           public_key_fingerprints: public_key_fingerprints,
-          logged_in_received: true,
+          logged_in_received: true
         };
       } else if (command === "logged_in") {
         var logged_in = data.logged_in;
@@ -107,8 +107,8 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         if (data.success) {
           const wallets = data.wallets;
           var wallets_state = [];
-          wallets.map((object) => {
-            var id = parseInt(object.id);
+          for (let object of wallets) {
+            id = parseInt(object.id);
             var wallet_obj = Wallet(id, object.name, object.type, object.data);
             wallets_state[id] = wallet_obj;
           }
