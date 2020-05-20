@@ -3,8 +3,8 @@ import logging
 from typing import AsyncGenerator, Dict
 
 from src.protocols.full_node_protocol import RespondPeers, RequestPeers
+from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
-from src.server.server import ChiaServer
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
 
@@ -16,15 +16,15 @@ class Introducer:
         self.config: Dict = config
         self.vetted: Dict[bytes32, bool] = {}
 
-    def set_server(self, server: ChiaServer):
-        self.server = server
+    def set_global_connections(self, global_connections: PeerConnections):
+        self.global_connections: PeerConnections = global_connections
 
     @api_request
     async def request_peers(
         self, request: RequestPeers
     ) -> AsyncGenerator[OutboundMessage, None]:
         max_peers = self.config["max_peers_to_send"]
-        rawpeers = self.server.global_connections.peers.get_peers(
+        rawpeers = self.global_connections.peers.get_peers(
             max_peers * 2, True, self.config["recent_peer_threshold"]
         )
 
