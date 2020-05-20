@@ -3,7 +3,7 @@ import asyncio
 from typing import Any, Dict, Tuple, List
 from src.full_node.full_node import FullNode
 from src.server.connection import NodeType
-from src.server.server import ChiaServer
+from src.server.server import ChiaServer, start_server
 from src.simulator.full_node_simulator import FullNodeSimulator
 from src.timelord_launcher import spawn_process, kill_processes
 from src.util.keychain import Keychain
@@ -87,7 +87,7 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
         config,
         "full-node-simulator-server",
     )
-    _ = await server_1.start_server(full_node_1._on_connect)
+    _ = await start_server(server_1, full_node_1._on_connect)
     full_node_1._set_server(server_1)
 
     yield (full_node_1, server_1)
@@ -138,7 +138,7 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
         config,
         f"full_node_server_{port}",
     )
-    _ = await server_1.start_server(full_node_1._on_connect)
+    _ = await start_server(server_1, full_node_1._on_connect)
     full_node_1._set_server(server_1)
 
     yield (full_node_1, server_1)
@@ -267,7 +267,7 @@ async def setup_farmer(port, dic={}):
         f"farmer_server_{port}",
     )
     farmer.set_server(server)
-    _ = await server.start_server(farmer._on_connect)
+    _ = await start_server(server, farmer._on_connect)
 
     yield (farmer, server)
 
@@ -295,7 +295,7 @@ async def setup_introducer(port, dic={}):
         config,
         f"introducer_server_{port}",
     )
-    _ = await server.start_server(None)
+    _ = await start_server(server)
 
     yield (introducer, server)
 
