@@ -12,6 +12,7 @@ from aiohttp import web
 
 
 import websockets
+from src.cmds.init import chia_init
 
 from src.util.ws_message import format_response
 from src.util.json_util import dict_to_json_str
@@ -32,7 +33,6 @@ log = logging.getLogger(__name__)
 
 # determine if application is a script file or frozen exe
 if getattr(sys, "frozen", False):
-    application_path = os.path.dirname(sys.executable)
     name_map = {
         "chia": "chia",
         "chia-check-plots": "check_plots",
@@ -49,11 +49,14 @@ if getattr(sys, "frozen", False):
     }
 
     def executable_for_service(service_name):
+        application_path = os.path.dirname(sys.executable)
         if platform == "win32" or platform == "cygwin":
             executable = name_map[service_name]
-            return f"{executable}.exe"
+            path = f"{application_path}/{executable}.exe"
+            return path
         else:
-            return name_map[service_name]
+            path = f"{application_path}/{name_map[service_name]}"
+            return path
 
 
 else:
@@ -450,9 +453,9 @@ def singleton(lockfile, text="semaphore"):
 
 
 async def async_run_daemon(root_path):
+    chia_init(root_path)
     config = load_config(root_path, "config.yaml")
     initialize_logging("daemon %(name)-25s", config["logging"], root_path)
-
     lockfile = singleton(daemon_launch_lock_path(root_path))
     if lockfile is None:
         print("daemon: already launching")

@@ -21,16 +21,19 @@ global.sharedObj = { local_test: local_test };
  * py process
  *************************************************************/
 
-const PY_DIST_FOLDER = "pydist";
+const PY_BUILD_FOLDER = "../daemon";
+const PY_DIST_FOLDER = "../daemon";
+const PY_DIST_FILE = "daemon";
 const PY_FOLDER = "../src/daemon";
 const PY_MODULE = "server"; // without .py suffix
 
 let pyProc = null;
-let pyPort = null;
 
 const guessPackaged = () => {
-  const fullPath = path.join(__dirname, PY_DIST_FOLDER);
-  return require("fs").existsSync(fullPath);
+  const fullPath = path.join(__dirname, PY_BUILD_FOLDER);
+  packed = require("fs").existsSync(fullPath);
+  console.log(fullPath);
+  return packed;
 };
 
 const getScriptPath = () => {
@@ -38,39 +41,36 @@ const getScriptPath = () => {
     return path.join(PY_FOLDER, PY_MODULE + ".py");
   }
   if (process.platform === "win32") {
-    return path.join(PY_DIST_FOLDER, PY_MODULE, PY_MODULE + ".exe");
+    return path.join(__dirname, PY_DIST_FOLDER, PY_DIST_FILE + ".exe");
   }
-  return path.join(PY_DIST_FOLDER, PY_MODULE, PY_MODULE);
-};
-
-const selectPort = () => {
-  pyPort = 9256;
-  return pyPort;
+  return path.join(__dirname, PY_DIST_FOLDER, PY_DIST_FILE);
 };
 
 const createPyProc = () => {
   let script = getScriptPath();
-  if (!local_test && local_introducer) {
-    additional_args = [
-      "--testing",
-      local_test,
-      "--introducer_peer.host",
-      "127.0.0.1",
-      "--introducer_peer.port",
-      "8445",
-    ];
-  } else {
-    additional_args = ["--testing", local_test];
-  }
+  processOptions = {};
+  processOptions.detached = true;
+  processOptions.stdio = "ignore";
+
   if (guessPackaged()) {
-    pyProc = require("child_process").execFile(script, additional_args);
+    try {
+      console.log("Running python executable: ");
+      const Process = require("child_process").spawn;
+      pyProc = new Process(script, [], processOptions);
+    } catch {
+      console.log("Running python executable: Error: ");
+      console.log("Script " + script);
+    }
   } else {
-    pyProc = require("child_process").spawn(
+    console.log("Running python script");
+    const Process = require("child_process").spawn;
+    pyProc = new Process(
       "python",
-      [script].concat(additional_args)
+      [script].concat(additional_args),
+      processOptions
     );
   }
-  if (pyProc != null) {
+  /*if (pyProc != null) {
     pyProc.stdout.setEncoding("utf8");
 
     pyProc.stdout.on("data", function (data) {
@@ -89,15 +89,17 @@ const createPyProc = () => {
     });
 
     console.log("child process success");
-  }
+  }*/
+  pyProc.unref();
 };
 
 const exitPyProc = () => {
-  if (pyProc != null) {
+  // Should be a setting
+  /*if (pyProc != null) {
     pyProc.kill();
     pyProc = null;
     pyPort = null;
-  }
+  }*/
 };
 
 app.on("ready", createPyProc);
@@ -113,12 +115,12 @@ const createWindow = () => {
   mainWindow = new BrowserWindow({
     width: 1500,
     height: 800,
-    backgroundColor: "#131722",
+    backgroundColor: "#ffffff",
     show: false,
     webPreferences: {
       preload: __dirname + "/preload.js",
-      nodeIntegration: true,
-    },
+      nodeIntegration: true
+    }
   });
 
   if (dev_config.redux_tool) {
@@ -138,13 +140,13 @@ const createWindow = () => {
     url.format({
       pathname: path.join(__dirname, "/../build/index.html"),
       protocol: "file:",
-      slashes: true,
+      slashes: true
     });
   console.log(startUrl);
 
   mainWindow.loadURL(startUrl);
 
-  mainWindow.once("ready-to-show", function () {
+  mainWindow.once("ready-to-show", function() {
     mainWindow.show();
   });
 
@@ -174,7 +176,7 @@ ipcMain.on("load-page", (event, arg) => {
     require("url").format({
       pathname: path.join(__dirname, arg.file),
       protocol: "file:",
-      slashes: true,
+      slashes: true
     }) + arg.query
   );
 });

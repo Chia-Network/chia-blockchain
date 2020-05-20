@@ -51,6 +51,7 @@ kwargs = dict(
         uvloop=["uvloop"], dev=dev_dependencies, upnp=upnp_dependencies,
     ),
     packages=[
+        "build_scripts",
         "src",
         "src.cmds",
         "src.consensus",

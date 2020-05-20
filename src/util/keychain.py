@@ -11,7 +11,13 @@ from src.util.hash import std_hash
 from sys import platform
 from keyrings.cryptfile.cryptfile import CryptFileKeyring
 
-if platform == "linux":
+if platform == "win32" or platform == "cygwin":
+    import keyring.backends.Windows
+    keyring.set_keyring(keyring.backends.Windows.WinVaultKeyring())
+elif platform == "darwin":
+    import keyring.backends.OS_X
+    keyring.set_keyring(keyring.backends.OS_X.Keyring())
+elif platform == "linux":
     keyring = CryptFileKeyring()
     keyring.keyring_key = "your keyring password"
 else:

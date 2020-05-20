@@ -67,20 +67,22 @@ def check_keys(new_root):
         )
         config["farmer"]["xch_target_puzzle_hash"] = all_targets[0]
 
-    if (
-        "xch_target_puzzle_hash" not in config["pool"]
-        or config["pool"]["xch_target_puzzle_hash"] not in all_targets
-    ):
-        print(
-            f"Setting the xch destination address for coinbase reward to {all_targets[0]}"
-        )
-        config["pool"]["xch_target_puzzle_hash"] = all_targets[0]
+    if "pool" in config:
+        if (
+            "xch_target_puzzle_hash" not in config["pool"]
+            or config["pool"]["xch_target_puzzle_hash"] not in all_targets
+        ):
+            print(
+                f"Setting the xch destination address for coinbase reward to {all_targets[0]}"
+            )
+            config["pool"]["xch_target_puzzle_hash"] = all_targets[0]
 
     # Set the pool pks in the farmer
     all_pubkeys_hex = set([bytes(pk.get_public_key()).hex() for pk in all_pubkeys])
-    for pk_hex in config["farmer"]["pool_public_keys"]:
-        # Add original ones in config
-        all_pubkeys_hex.add(pk_hex)
+    if "pool_public_keys" in config["farmer"]:
+        for pk_hex in config["farmer"]["pool_public_keys"]:
+            # Add original ones in config
+            all_pubkeys_hex.add(pk_hex)
 
     config["farmer"]["pool_public_keys"] = all_pubkeys_hex
     save_config(new_root, "config.yaml", config)
@@ -198,12 +200,11 @@ def initialize_ssl(root_path: Path):
 
 
 def init(args: Namespace, parser: ArgumentParser):
-    return chia_init(args)
+    return chia_init(args.root_path)
 
 
-def chia_init(args: Namespace):
-    root_path: Path = args.root_path
 
+def chia_init(root_path: Path):
     if os.environ.get("CHIA_ROOT", None) is not None:
         print(
             f"warning, your CHIA_ROOT is set to {os.environ['CHIA_ROOT']}. "
