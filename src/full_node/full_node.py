@@ -23,6 +23,7 @@ from src.full_node.sync_blocks_processor import SyncBlocksProcessor
 from src.full_node.sync_peers_handler import SyncPeersHandler
 from src.full_node.sync_store import SyncStore
 from src.protocols import (
+    introducer_protocol,
     farmer_protocol,
     full_node_protocol,
     timelord_protocol,
@@ -1630,7 +1631,7 @@ class FullNode:
 
     @api_request
     async def request_peers(
-        self, request: full_node_protocol.RequestPeers
+        self, request: introducer_protocol.RequestPeers
     ) -> OutboundMessageGenerator:
         if self.global_connections is None:
             return
@@ -1638,13 +1639,13 @@ class FullNode:
 
         yield OutboundMessage(
             NodeType.FULL_NODE,
-            Message("respond_peers", full_node_protocol.RespondPeers(peers)),
+            Message("respond_peers", introducer_protocol.RespondPeers(peers)),
             Delivery.RESPOND,
         )
 
     @api_request
     async def respond_peers(
-        self, request: full_node_protocol.RespondPeers
+        self, request: introducer_protocol.RespondPeers
     ) -> OutboundMessageGenerator:
         if self.server is None or self.global_connections is None:
             return
