@@ -12,11 +12,35 @@ except ImportError:
 from src.farmer import Farmer
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
+from src.types.peer_info import PeerInfo
 from src.util.config import load_config, load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.logging import initialize_logging
 from src.util.setproctitle import setproctitle
 from src.rpc.farmer_rpc_server import start_farmer_rpc_server
+
+
+def start_farmer_bg_task(server, peer_info, log):
+    """
+    Start a background task that checks connection and reconnects periodically to the full_node.
+    """
+
+    async def connection_check():
+        while True:
+            if server is not None:
+                full_node_retry = True
+
+                for connection in server.global_connections.get_connections():
+                    if connection.get_peer_info() == peer_info:
+                        full_node_retry = False
+
+                if full_node_retry:
+                    log.info(f"Reconnecting to full_node {peer_info}")
+                    if not await server.start_client(peer_info, None, auth=False):
+                        await asyncio.sleep(1)
+            await asyncio.sleep(30)
+
+    return asyncio.create_task(connection_check())
 
 
 async def async_main():
@@ -66,16 +90,21 @@ async def async_main():
         )
 
     await asyncio.sleep(10)  # Allows full node to startup
-    farmer._start_bg_tasks()
+
+    peer_info = PeerInfo(
+        config["full_node_peer"]["host"], config["full_node_peer"]["port"]
+    )
+    farmer_bg_task = start_farmer_bg_task(server, peer_info, log)
 
     await server.await_closed()
-    farmer._shut_down = True
 
     # Waits for the rpc server to close
     if rpc_cleanup is not None:
         await rpc_cleanup()
     log.info("Closed RPC server.")
 
+    farmer._shut_down = True
+    farmer_bg_task.cancel()
     log.info("Farmer fully closed.")
 
 
