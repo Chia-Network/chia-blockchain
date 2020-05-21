@@ -76,13 +76,12 @@ def hash_key_pairs_for_conditions_dict(
     coin_name: bytes32 = None,
 ) -> List[BLSSignature.PkMessagePair]:
     pairs: List[BLSSignature.PkMessagePair] = []
-    if coin_name is None:
-        for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
-            # TODO: check types
-            # assert len(_) == 3
-            blspubkey: BLSPublicKey = BLSPublicKey(cvp.var1)
-            message: bytes32 = bytes32(blspy.Util.hash256(cvp.var2))
-            pairs.append(BLSSignature.PkMessagePair(blspubkey, message))
+    for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
+        # TODO: check types
+        # assert len(_) == 3
+        blspubkey: BLSPublicKey = BLSPublicKey(cvp.var1)
+        message: bytes32 = cvp.var2
+        pairs.append(BLSSignature.PkMessagePair(blspubkey, message))
     if coin_name is not None:
         for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG_ME, []):
             aggsigme_blspubkey: BLSPublicKey = BLSPublicKey(cvp.var1)
