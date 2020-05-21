@@ -11,6 +11,7 @@ export const startPlotting = (size, count, workspace, final) => {
   args += " -n " + count;
   if (workspace) {
     args += " -t " + workspace;
+    args += " -2 " + workspace;
   }
   args += " -d " + final;
   var action = startService(service_plotter + args);

@@ -2,6 +2,7 @@ import argparse
 from copy import deepcopy
 from pathlib import Path
 from secrets import token_bytes
+import sys
 
 from blspy import PrivateKey, PublicKey
 
@@ -12,6 +13,11 @@ from src.util.config import config_path_for_filename, load_config, save_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.keychain import Keychain
 from src.util.path import make_path_relative, mkdir, path_from_root
+
+
+def log(to_log):
+    print(to_log)
+    sys.stdout.flush()
 
 
 def main():
@@ -66,10 +72,10 @@ def main():
     # The seed is what will be used to generate a private key for each plot
     if args.sk_seed is not None:
         sk_seed: bytes = bytes.fromhex(args.sk_seed)
-        print(f"Using the provided sk_seed {sk_seed.hex()}.")
+        log(f"Using the provided sk_seed {sk_seed.hex()}.")
     else:
         sk_seed = token_bytes(32)
-        print(
+        log(
             f"Using sk_seed {sk_seed.hex()}. Note that sk seed is now generated randomly, as opposed "
             f"to from keys.yaml. If you want to use a specific seed, use the -s argument."
         )
@@ -89,7 +95,7 @@ def main():
             )
         pool_pk = all_public_keys[0]
 
-    print(
+    log(
         f"Creating {args.num_plots} plots, from index {args.index} to "
         f"{args.index + args.num_plots - 1}, of size {args.size}, sk_seed {sk_seed.hex()} ppk {pool_pk}"
     )
@@ -120,7 +126,7 @@ def main():
             or full_path.name in filenames
         )
         if already_in_config:
-            print(f"Plot {filename} already exists (in config)")
+            log(f"Plot {filename} already exists (in config)")
             continue
 
         if not full_path.exists():
@@ -136,7 +142,7 @@ def main():
                 plot_seed,
             )
         else:
-            print(f"Plot {filename} already exists")
+            log(f"Plot {filename} already exists")
 
         # Updates the config if necessary.
         plot_config_plots_new[str(full_path)] = {
@@ -150,13 +156,13 @@ def main():
     try:
         args.tmp_dir.rmdir()
     except Exception:
-        print(
+        log(
             f"warning: did not remove primary temporary folder {args.tmp_dir}, it may not be empty."
         )
     try:
         args.tmp2_dir.rmdir()
     except Exception:
-        print(
+        log(
             f"warning: did not remove secondary temporary folder {args.tmp2_dir}, it may not be empty."
         )
 
