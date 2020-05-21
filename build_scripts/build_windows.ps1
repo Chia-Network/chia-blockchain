@@ -36,5 +36,4 @@ npm install -g electron-packager
 npm install
 npm run build
 electron-packager . Chia --overwrite --icon= ./src/assets/img/chia.ico
-cp -r Chia-win32-x64/ ~\e\
 node winstaller.js

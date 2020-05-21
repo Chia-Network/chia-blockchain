@@ -10,7 +10,7 @@ getInstallerConfig()
 
 function getInstallerConfig () {
   console.log('creating windows installer')
-  const rootPath = path.join('~/e/')
+  const rootPath = path.join('./')
   const home = path.join('~/')
   const outPath = path.join(home, 'r')
 

@@ -27,7 +27,7 @@ jobs:
         uses: actions/upload-artifact@v1
         with:
           name: Windows-Exe
-          path: ~\e\
+          path: ${{ github.workspace }}\electron-react\Chia-win32-x64
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v1
