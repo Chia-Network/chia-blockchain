@@ -28,8 +28,8 @@ global.sharedObj = { local_test: local_test };
  * py process
  *************************************************************/
 
-const PY_BUILD_FOLDER = "../daemon";
-const PY_DIST_FOLDER = "../daemon";
+const PY_MAC_DIST_FOLDER = "../daemon";
+const PY_WIN_DIST_FOLDER = "../../app.asar.unpacked/daemon";
 const PY_DIST_FILE = "daemon";
 const PY_FOLDER = "../src/daemon";
 const PY_MODULE = "server"; // without .py suffix
@@ -37,9 +37,17 @@ const PY_MODULE = "server"; // without .py suffix
 let pyProc = null;
 
 const guessPackaged = () => {
-  const fullPath = path.join(__dirname, PY_BUILD_FOLDER);
+  if (process.platform === "win32") {
+    const fullPath = path.join(__dirname, PY_WIN_DIST_FOLDER);
+    packed = require("fs").existsSync(fullPath);
+    console.log(fullPath);
+    console.log(packed);
+    return packed
+  }
+  const fullPath = path.join(__dirname, PY_MAC_DIST_FOLDER);
   packed = require("fs").existsSync(fullPath);
   console.log(fullPath);
+  console.log(packed);
   return packed;
 };
 
@@ -48,9 +56,9 @@ const getScriptPath = () => {
     return path.join(PY_FOLDER, PY_MODULE + ".py");
   }
   if (process.platform === "win32") {
-    return path.join(__dirname, PY_DIST_FOLDER, PY_DIST_FILE + ".exe");
+    return path.join(__dirname, PY_WIN_DIST_FOLDER, PY_DIST_FILE + ".exe");
   }
-  return path.join(__dirname, PY_DIST_FOLDER, PY_DIST_FILE);
+  return path.join(__dirname, PY_MAC_DIST_FOLDER, PY_DIST_FILE);
 };
 
 const createPyProc = () => {
@@ -70,6 +78,8 @@ const createPyProc = () => {
     }
   } else {
     console.log("Running python script");
+    console.log("Script " + script);
+
     const Process = require("child_process").spawn;
     pyProc = new Process("python", [script], processOptions);
   }
