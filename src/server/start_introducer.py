@@ -1,64 +1,32 @@
-import asyncio
-import signal
-import logging
-
-try:
-    import uvloop
-except ImportError:
-    uvloop = None
-
 from src.introducer import Introducer
 from src.server.outbound_message import NodeType
-from src.server.server import ChiaServer, start_server
-from src.util.config import load_config_cli, load_config
+from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.logging import initialize_logging
-from src.util.setproctitle import setproctitle
+
+from src.server.start_service import run_service
 
 
-async def async_main():
-    root_path = DEFAULT_ROOT_PATH
-    net_config = load_config(root_path, "config.yaml")
-    config = load_config_cli(root_path, "config.yaml", "introducer")
-    initialize_logging("Introducer %(name)-21s", config["logging"], root_path)
-    log = logging.getLogger(__name__)
-    setproctitle("chia_introducer")
-
-    introducer = Introducer(config["max_peers_to_send"], config["recent_peer_threshold"])
-    ping_interval = net_config.get("ping_interval")
-    network_id = net_config.get("network_id")
-    assert ping_interval is not None
-    assert network_id is not None
-    server = ChiaServer(
-        config["port"],
-        introducer,
-        NodeType.INTRODUCER,
-        ping_interval,
-        network_id,
-        DEFAULT_ROOT_PATH,
-        config,
+def service_kwargs_for_introducer(root_path=DEFAULT_ROOT_PATH):
+    service_name = "introducer"
+    config = load_config_cli(root_path, "config.yaml", service_name)
+    introducer = Introducer(
+        config["max_peers_to_send"], config["recent_peer_threshold"]
     )
-    server_socket = await start_server(server)
 
-    def stop_all():
-        server_socket.close()
-        server.close_all()
-
-    try:
-        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop_all)
-        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop_all)
-    except NotImplementedError:
-        log.info("signal handlers unsupported")
-
-    await server_socket.wait_closed()
-    await server.await_closed()
-    log.info("Introducer fully closed.")
+    kwargs = dict(
+        root_path=root_path,
+        api=introducer,
+        node_type=NodeType.INTRODUCER,
+        advertised_port=config["port"],
+        service_name=service_name,
+        server_listen_ports=[config["port"]],
+    )
+    return kwargs
 
 
 def main():
-    if uvloop is not None:
-        uvloop.install()
-    asyncio.run(async_main())
+    kwargs = service_kwargs_for_introducer()
+    return run_service(**kwargs)
 
 
 if __name__ == "__main__":
