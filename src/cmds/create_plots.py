@@ -93,7 +93,7 @@ def main():
                 f"There are no private keys in the keychain, so we cannot create a plot. "
                 f"Please generate keys using 'chia keys generate_and_add' or pass in a pool pk with -p"
             )
-        pool_pk = all_public_keys[0]
+        pool_pk = all_public_keys[0].public_child(0).get_public_key()
 
     log(
         f"Creating {args.num_plots} plots, from index {args.index} to "
