@@ -69,8 +69,19 @@ steps:
       py.test tests -s -v
     displayName: "pytest"
 
+  - script: |
+      cd build_scripts
+      sh build_mac.sh
+    displayName: "Build DMG"
+
   - task: PublishPipelineArtifact@1
     inputs:
       targetPath: $(System.DefaultWorkingDirectory)/wheels
       artifactName: MacOS-wheels
     displayName: "Upload MacOS wheels"
+
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: $(System.DefaultWorkingDirectory)/build_scripts/Chia.dmg
+      artifactName: MacOS-DMG
+    displayName: "Upload MacOS DMG"
