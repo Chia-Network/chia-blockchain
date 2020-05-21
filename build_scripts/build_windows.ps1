@@ -16,6 +16,7 @@ Write-Output "checkpoint 2";
 
 python -m venv venv
 . .\venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 cd build_scripts
 python install_win.py
 Write-Output "checkpoint 3";
@@ -34,5 +35,5 @@ npm install -g electron-installer-windows
 npm install -g electron-packager
 npm install
 npm build
-electron-packager . Chia --overwrite --icon=./src/assets/img/chia.png
+electron-packager . Chia --overwrite --icon= ./src/assets/img/chia.ico
 electron-installer-windows --src chia-win32-x64 --dest ..\build_scripts\installers
