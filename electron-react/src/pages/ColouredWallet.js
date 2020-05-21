@@ -292,7 +292,6 @@ const BalanceCard = props => {
   const balance = useSelector(
     state => state.wallet_state.wallets[id].balance_total
   );
-  const balance_total_chia = mojo_to_chia_string(balance);
   const balance_spendable = useSelector(
     state => state.wallet_state.wallets[id].balance_spendable
   );
