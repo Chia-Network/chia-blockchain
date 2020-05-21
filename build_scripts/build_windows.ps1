@@ -7,24 +7,28 @@ curl -OL --show-error --fail https://download.chia.net/simple/setproctitle/setpr
 # C:\curl\curl.exe -OL --show-error --fail https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
 # C:\curl\curl.exe -OL --show-error --fail https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl
 
-
+Write-Output "checkpoint 1";
 cd ..\..
 python -m pip install --upgrade pip
 pip install pep517 wheel
 pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ -f . --wheel-dir=.\build_scripts\win_build .
+Write-Output "checkpoint 1";
 
 Start-Process "$env:HOMEDRIVE$env:HOMEPATH\AppData\Local\Programs\Python\Python37\python.exe" -ArgumentList "-m venv venv" -Wait
 . .\venv\Scripts\Activate.ps1
 cd build_scripts
 python install_win.py
+Write-Output "checkpoint 3";
 
 pip install pywin32
 pip install pyinstaller
 pyinstaller daemon_windows.spec
+Write-Output "checkpoint 4";
 
 cp -r dist/daemon ../electron-react/
 cd ../electron-react
 
+Write-Output "checkpoint 5";
 
 npm install -g electron-installer-windows
 npm install -g electron-packager
