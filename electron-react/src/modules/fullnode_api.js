@@ -8,11 +8,11 @@ const initial_blockchain = {
   sync: {
     sync_mode: false,
     sync_progress_height: 0,
-    sync_tip_height: 0
+    sync_tip_height: 0,
   },
   tip_hashes: null,
   tips: null,
-  space: 0
+  space: 0,
 };
 const initial_state = {
   blockchain_state: initial_blockchain,
@@ -20,7 +20,7 @@ const initial_state = {
   open_connection_error: "",
   headers: [],
   block: null, // If not null, page is changed to block page
-  header: null
+  header: null,
 };
 
 export const fullnodeReducer = (state = { ...initial_state }, action) => {
@@ -37,7 +37,9 @@ export const fullnodeReducer = (state = { ...initial_state }, action) => {
       const command = message.command;
 
       if (command === "get_blockchain_state") {
-        state.blockchain_state = data.blockchain_state;
+        if (data.success) {
+          state.blockchain_state = data.blockchain_state;
+        }
         return state;
       } else if (command === "get_latest_block_headers") {
         if (data.success) {
