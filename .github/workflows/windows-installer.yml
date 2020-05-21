@@ -21,6 +21,7 @@ jobs:
       - name: curl miniupnpc and setproctitle
         working-directory: ${{ github.workspace }}\build_scripts
         run: |
+          git config --global core.longpaths true
           ./build_windows.ps1
 
       - name: Upload artifacts EXE
