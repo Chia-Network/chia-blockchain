@@ -34,6 +34,6 @@ Write-Output "checkpoint 5";
 npm install -g electron-installer-windows
 npm install -g electron-packager
 npm install
-npm build
+npm run build
 electron-packager . Chia --overwrite --icon= ./src/assets/img/chia.ico
 electron-installer-windows --src chia-win32-x64 --dest ..\build_scripts\installers
