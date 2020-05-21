@@ -26,9 +26,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
-        sudo apt-get install nodejs-dev
-      # sudo apt-get install node-gyp libssl1.0-dev
-      # Brutal work around for Github ci
+        sudo apt-get install nodejs-dev node-gyp
 
     - name: Install Mac dependencies
       if: startsWith(matrix.os, 'mac')

@@ -14,9 +14,9 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 - Create plots and see the plotting log from a GUI on Windows, MacOS, and Linux.
 - You can now create or import private keys with a 24 word mnemonic, both in the UI and 'chia keys' command line.
 - You can delete and change active keys from the GUI and cli.
-- We've added a new keychain system that replaces keys.yaml, and migrates existing users from keys.yaml. It utilizes each OS's keychain for slightly more secure key storage.
-- We added a `chia keys` command line program, to see, add, remove private keys.
-- We've added RPC servers and RPC client implementations for Farmer and Harvester. The new UI uses these for additional information and functionality.
+- We added a new keychain system that replaces keys.yaml, and migrates existing users from keys.yaml. It utilizes each OS's keychain for slightly more secure key storage.
+- We added a `chia keys` command line program, to see, add, and remove private keys.
+- We added RPC servers and RPC client implementations for Farmer and Harvester. The new UI uses these for additional information and functionality.
 - We added total network storage space estimation to the node RPC at the `/get_network_space` endpoint instead of only being available in the cli. The PRC endpoint takes two block header hashes and estimates space between those header hashes.
 - We now have a CHANGELOG.md that adheres closely to the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) standard. We merged in the version history and updated some previous release notes to capture items important to the change log. We are modifying our release process to accumulate changes at the top of the change log and then copy those to the release notes at the time of the release.
 - We added [lgtm](https://lgtm.com/) source analysis on pull request to the chia-blockchain, chiapos, chiavdf, chiabip158, and bls-library repositories to add some automated security analysis to our ci.
@@ -37,7 +37,6 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 - Moved to PyYAML 5.3.1 which prevents arbitrary code execution during python/object/new constructor.
 - Moved to Python cryptography 2.9.2 which deprecates OpenSSL 1.0.1 and now relies upon OpenSSL 1.1.1g.
 - Moved to aiosqlite 0.13.0 which adds official support for Python 3.8 and fixes a possible hung thread if a connection failed.
-- Replaced JS interface with React user interface which is cleaner and more responsive
 
 ### Fixed
 
@@ -46,6 +45,7 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 - Fixed and issue where [Relic](https://github.com/relic-toolkit/relic) and thus blspy would crash on processors older than Haswell as they don't support lzc.
 - Some non-critical networking errors are no longer logged.
 - Blocks with compact proofs of time are now able to be updated into the node database.
+- The `install-timelord.sh` script now correctly determines which version of python it is running under and correctly builds vdf_client and correctly links to vdf_bench.
 - The build status shield layout is fixed in README.md
 
 ## [1.0beta5] aka Beta 1.5 - 2020-05-05
