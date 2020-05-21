@@ -39,6 +39,8 @@ from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.util.errors import Err
 from src.util.path import path_from_root, mkdir
 
+from src.server.reconnect_task import start_reconnect_task
+
 
 class WalletNode:
     key_config: Dict
@@ -75,6 +77,8 @@ class WalletNode:
     _shut_down: bool
     root_path: Path
     local_test: bool
+
+    tasks: List[asyncio.Future]
 
     @staticmethod
     async def create(
@@ -122,6 +126,8 @@ class WalletNode:
         self.potential_header_hashes = {}
 
         self.server = None
+
+        self.tasks = []
 
         return self
 
@@ -197,6 +203,8 @@ class WalletNode:
     def _shutdown(self):
         print("Shutting down")
         self._shut_down = True
+        for task in self.tasks:
+            task.cancel()
 
     def _start_bg_tasks(self):
         """
@@ -205,25 +213,6 @@ class WalletNode:
         """
         introducer = self.config["introducer_peer"]
         introducer_peerinfo = PeerInfo(introducer["host"], introducer["port"])
-
-        async def node_connect_task():
-            while not self._shut_down:
-                if "full_node_peer" in self.config:
-                    full_node_peer = PeerInfo(
-                        self.config["full_node_peer"]["host"],
-                        self.config["full_node_peer"]["port"],
-                    )
-                    full_node_retry = True
-                    for connection in self.global_connections.get_connections():
-                        if connection.get_peer_info() == full_node_peer:
-                            full_node_retry = False
-
-                    if full_node_retry:
-                        self.log.info(
-                            f"Connecting to full node peer at {full_node_peer}"
-                        )
-                        _ = await self.server.start_client(full_node_peer, None)
-                    await asyncio.sleep(30)
 
         async def introducer_client():
             async def on_connect() -> OutboundMessageGenerator:
@@ -248,9 +237,17 @@ class WalletNode:
                         continue
                 await asyncio.sleep(self.config["introducer_connect_interval"])
 
+        if "full_node_peer" in self.config:
+            peer_info = PeerInfo(
+                self.config["full_node_peer"]["host"],
+                self.config["full_node_peer"]["port"],
+            )
+            task = asyncio.create_task(
+                start_reconnect_task(self.global_connections, peer_info, self.log)
+            )
+            self.tasks.append(task)
         if self.local_test is False:
-            self.introducer_task = asyncio.create_task(introducer_client())
-        self.node_connect_task = asyncio.create_task(node_connect_task())
+            self.tasks.append(asyncio.create_task(introducer_client()))
 
     def _num_needed_peers(self) -> int:
         assert self.server is not None
