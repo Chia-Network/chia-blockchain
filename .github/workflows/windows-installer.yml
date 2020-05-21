@@ -33,5 +33,4 @@ jobs:
         uses: actions/upload-artifact@v1
         with:
           name: Windows-Installers
-          path: ${{ github.workspace }}\electron-react\dist\installers
-
+          path: ${{ github.workspace }}\electron-react\release-builds\
