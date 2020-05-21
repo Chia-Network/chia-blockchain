@@ -12,9 +12,9 @@ cd ..\..
 python -m pip install --upgrade pip
 pip install pep517 wheel
 pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ -f . --wheel-dir=.\build_scripts\win_build .
-Write-Output "checkpoint 1";
+Write-Output "checkpoint 2";
 
-Start-Process "$env:HOMEDRIVE$env:HOMEPATH\AppData\Local\Programs\Python\Python37\python.exe" -ArgumentList "-m venv venv" -Wait
+python -m venv venv
 . .\venv\Scripts\Activate.ps1
 cd build_scripts
 python install_win.py
