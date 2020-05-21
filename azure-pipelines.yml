@@ -80,7 +80,7 @@ steps:
       artifactName: MacOS-wheels
     displayName: "Upload MacOS wheels"
 
-  - task: PublishPipelineArtifact@2
+  - task: PublishPipelineArtifact@1
     inputs:
       targetPath: $(System.DefaultWorkingDirectory)/build_scripts/Chia.dmg
       artifactName: MacOS-DMG
