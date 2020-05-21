@@ -11,8 +11,7 @@ getInstallerConfig()
 function getInstallerConfig () {
   console.log('creating windows installer')
   const rootPath = path.join('./')
-  const home = path.join('~/')
-  const outPath = path.join(home, 'r')
+  const outPath = path.join(rootPath, 'release-builds')
 
   return Promise.resolve({
     appDirectory: path.join(rootPath, 'Chia-win32-x64/'),
