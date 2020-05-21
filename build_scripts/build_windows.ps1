@@ -36,4 +36,4 @@ npm install -g electron-packager
 npm install
 npm run build
 electron-packager . Chia --overwrite --icon= ./src/assets/img/chia.ico
-electron-installer-windows --src chia-win32-x64 --dest ..\build_scripts\installers
+electron-installer-windows --src Chia-win32-x64 --config windows.json

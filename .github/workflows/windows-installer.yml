@@ -23,15 +23,15 @@ jobs:
         run: |
           ./build_windows.ps1
 
+      - name: Upload artifacts EXE
+        uses: actions/upload-artifact@v1
+        with:
+          name: Windows-Exe
+          path: ${{ github.workspace }}\electron-react\Chia-win32-x64
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v1
         with:
           name: Windows-Installers
-          path: ${{ github.workspace }}\build_scripts\installers
+          path: ${{ github.workspace }}\electron-react\dist\installers
 
-      -   name: Upload artifacts EXE
-          uses: actions/upload-artifact@v1
-          with:
-            name: Windows-Exe
-            path: ${{ github.workspace }}\electron-react\Chia-win32-x64
