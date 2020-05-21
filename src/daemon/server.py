@@ -313,10 +313,6 @@ def launch_service(root_path, service_command):
     service_name = service_array[0]
     service_executable = executable_for_service(service_name)
     service_array[0] = service_executable
-    startupinfo = None
-    if os.name == 'nt':
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     if service_name == "chia-create-plots":
         plotter_path = plotter_log_path(root_path)
         if plotter_path.parent.exists():
@@ -325,9 +321,9 @@ def launch_service(root_path, service_command):
         else:
             mkdir(plotter_path.parent)
         outfile = open(plotter_path.resolve(), "w")
-        process = subprocess.Popen(service_array, shell=False, stdout=outfile, startupinfo=startupinfo)
+        process = subprocess.Popen(service_array, shell=False, stdout=outfile)
     else:
-        process = subprocess.Popen(service_array, shell=False, startupinfo=startupinfo)
+        process = subprocess.Popen(service_array, shell=False)
     pid_path = pid_path_for_service(root_path, service_command)
     try:
         mkdir(pid_path.parent)

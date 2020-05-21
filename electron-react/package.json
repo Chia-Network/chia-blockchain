@@ -1,12 +1,8 @@
 {
-  "name": "Chia",
-  "author": "Straya Markovic",
-  "description": "GUI for Chia Blockchain",
-  "productName": "Chia",
+  "name": "chia-wallet",
   "version": "0.1.0",
   "private": true,
   "devDependencies": {
-    "electron-winstaller": "^4.0.0",
     "foreman": "^3.0.1",
     "prettier-eslint": "^9.0.1",
     "prettier-eslint-cli": "^5.0.0",

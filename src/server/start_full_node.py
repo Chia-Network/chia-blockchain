@@ -17,7 +17,6 @@ from src.util.logging import initialize_logging
 from src.util.config import load_config_cli, load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.setproctitle import setproctitle
-from multiprocessing import freeze_support
 
 
 async def async_main():
@@ -110,5 +109,4 @@ def main():
 
 
 if __name__ == "__main__":
-    freeze_support()
     main()

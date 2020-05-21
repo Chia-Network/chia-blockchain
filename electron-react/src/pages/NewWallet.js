@@ -42,12 +42,10 @@ const Iterator = props => {
 };
 
 const UIPart = props => {
-  var words = useSelector(state => state.wallet_state.mnemonic);
+  const words = useSelector(state => state.wallet_state.mnemonic);
   const dispatch = useDispatch();
   const classes = myStyle();
-  if (!words) {
-    words = []
-  }
+
   function goBack() {
     dispatch(changeEntranceMenu(presentSelectKeys));
   }

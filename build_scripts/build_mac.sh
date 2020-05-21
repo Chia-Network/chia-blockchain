@@ -6,9 +6,8 @@ sudo pyinstaller daemon.spec
 cp -r dist/daemon ../electron-react
 cd ..
 cd electron-react
-npm install
 npm run build
-electron-packager . Chia --overwrite --icon=./src/assets/img/chia.ico
-mv Chia-darwin-x64 ../build_scripts/dist/
+electron-packager . chia --overwrite
+mv chia-darwin-x64 ../build_scripts/dist/
 cd ../build_scripts
-electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia --overwrite
+electron-installer-dmg dist/chia-darwin-x64/chia.app Chia
