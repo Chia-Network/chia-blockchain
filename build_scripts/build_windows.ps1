@@ -35,5 +35,5 @@ npm install --save-dev electron-winstaller
 npm install -g electron-packager
 npm install
 npm run build
-electron-packager . Chia --overwrite --icon= ./src/assets/img/chia.ico
+electron-packager . Chia --asar --overwrite --icon= ./src/assets/img/chia.ico
 node winstaller.js
