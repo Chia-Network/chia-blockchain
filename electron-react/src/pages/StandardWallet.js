@@ -208,7 +208,6 @@ const BalanceCard = props => {
   const balance = useSelector(
     state => state.wallet_state.wallets[id].balance_total
   );
-  const balance_total_chia = mojo_to_chia_string(balance);
   const balance_spendable = useSelector(
     state => state.wallet_state.wallets[id].balance_spendable
   );
@@ -287,13 +286,10 @@ const BalanceCard = props => {
             </Typography>
           </div>
         </Grid>
-        <BalanceCardSubSection
-          title="Total Balance"
-          balance={balance_total_chia}
-        />
+        <BalanceCardSubSection title="Total Balance" balance={balance} />
         <BalanceCardSubSection
           title="Spendable Balance"
-          balance={balance_spendable_chia}
+          balance={balance_spendable}
         />
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
