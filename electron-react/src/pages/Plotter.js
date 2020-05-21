@@ -117,8 +117,8 @@ const useStyles = makeStyles(theme => ({
     width: "100%"
   },
   cardTitle: {
-    paddingLeft: theme.spacing(1),
-    paddingTop: theme.spacing(1),
+    paddingLeft: theme.spacing(3),
+    paddingTop: theme.spacing(2),
     marginBottom: theme.spacing(1)
   },
   cardSubSection: {
@@ -151,7 +151,8 @@ const useStyles = makeStyles(theme => ({
     minHeight: 400,
     maxHeight: 400,
     maxWidth: "100%",
-    backgroundColor: "#bbbbbb",
+    backgroundColor: "#f1f1f1",
+    border: "1px solid #888888",
     whiteSpace: "pre-wrap",
     paddingTop: theme.spacing(1),
     paddingLeft: theme.spacing(3),
@@ -185,7 +186,7 @@ const useStyles = makeStyles(theme => ({
 }));
 
 const plot_size_options = [
-  //{ label: "60MB", value: 16, workspace: "3.5GB" },
+  // { label: "60MB", value: 16, workspace: "3.5GB" },
   { label: "600MB", value: 25, workspace: "3.5GB" },
   { label: "1.3GB", value: 26, workspace: "7GB" },
   { label: "2.7GB", value: 27, workspace: "14.5GB" },
@@ -227,7 +228,11 @@ const WorkLocation = () => {
               disabled
               className={classes.input}
               fullWidth
-              label={work_location === "" ? "Work Location" : work_location}
+              label={
+                work_location === ""
+                  ? "Temporary folder location"
+                  : work_location
+              }
               variant="outlined"
             />
           </Box>
@@ -275,7 +280,9 @@ const FinalLocation = () => {
               disabled
               className={classes.input}
               fullWidth
-              label={final_location === "" ? "Final Location" : final_location}
+              label={
+                final_location === "" ? "Final folder location" : final_location
+              }
               variant="outlined"
             />
           </Box>
@@ -304,16 +311,23 @@ const CreatePlot = () => {
   const final_location = useSelector(
     state => state.plot_control.final_location
   );
-  var plot_size_ref = null;
-  var plot_count_ref = null;
+  const [plotSize, setPlotSize] = React.useState(25);
+  const [plotCount, setPlotCount] = React.useState(1);
+
+  const changePlotSize = event => {
+    setPlotSize(event.target.value);
+  };
+  const changePlotCount = event => {
+    setPlotCount(event.target.value);
+  };
 
   function create() {
-    const N = plot_count_ref.value;
-    const K = plot_size_ref.value;
-    console.log(work_location);
-    console.log(final_location);
-    console.log("N: " + N);
-    console.log("K: " + K);
+    if (!work_location || !final_location) {
+      dispatch(openDialog("Please specify a temporary and final directory"));
+      return;
+    }
+    const N = plotCount;
+    const K = plotSize;
     dispatch(startPlotting(K, N, work_location, final_location));
   }
 
@@ -332,6 +346,18 @@ const CreatePlot = () => {
             </Typography>
           </div>
         </Grid>
+        <Grid className={classes.cardTitle} item xs={12}>
+          <p>
+            {" "}
+            Using this tool, you can create plots, which are allocated space on
+            your hard drive used to farm and earn Chia. We recommend you keep
+            less than 200 plots. Also, temporary files are created during the
+            plotting process, which exceed the size of the final plot files, so
+            make sure you have enough space. Try to use a fast drive like an SSD
+            for the temporary foler, and a large slow hard drive (like external
+            HDD) for the final folder.
+          </p>
+        </Grid>
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
             <Grid container spacing={2}>
@@ -343,10 +369,8 @@ const CreatePlot = () => {
                 >
                   <InputLabel>Plot Size</InputLabel>
                   <Select
-                    value={25}
-                    inputRef={input => {
-                      plot_size_ref = input;
-                    }}
+                    value={plotSize}
+                    onChange={changePlotSize}
                     label="Plot Size"
                   >
                     {plot_size_options.map(option => (
@@ -354,7 +378,8 @@ const CreatePlot = () => {
                         value={option.value}
                         key={"size" + option.value}
                       >
-                        {option.label}
+                        {option.label} (k={option.value}, temporary space:{" "}
+                        {option.workspace})
                       </MenuItem>
                     ))}
                   </Select>
@@ -368,10 +393,8 @@ const CreatePlot = () => {
                 >
                   <InputLabel>Plot Count</InputLabel>
                   <Select
-                    value={1}
-                    inputRef={input => {
-                      plot_count_ref = input;
-                    }}
+                    value={plotCount}
+                    onChange={changePlotCount}
                     label="Colour"
                   >
                     {plot_count_options.map(option => (
@@ -427,7 +450,9 @@ const Proggress = () => {
           </Typography>
         </div>
         <div className={classes.logPaper}>
-          <div className={classes.logContainer}>{progress}</div>
+          <Box className={classes.logContainer} fontFamily="Monospace">
+            {progress}
+          </Box>
         </div>
         <div className={classes.cardSubSection}>
           <Grid container spacing={2}>
