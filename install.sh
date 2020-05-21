@@ -20,11 +20,11 @@ find_python() {
 
 if [ x$INSTALL_PYTHON_VERSION = x ]
 then
-  INSTALL_PYTHON_VERSION=`find_python`
+  INSTALL_PYTHON_VERSION=$(find_python)
 fi
 
 # Manage npm and other install requirements on an OS specific basis
-if [ `uname` = "Linux" ]; then
+if [ "$(uname)" = "Linux" ]; then
   #LINUX=1
   if type apt-get; then
     # Debian/Ubuntu
@@ -41,10 +41,10 @@ if [ `uname` = "Linux" ]; then
     curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
     sudo yum install -y nodejs
   fi
-elif [ `uname` = "Darwin" ] && type brew && ! npm version>/dev/null 2>&1; then
+elif [ "$(uname)" = "Darwin" ] && type brew && ! npm version>/dev/null 2>&1; then
   # Install npm if not installed
   brew install npm
-elif [ `uname` = "Darwin" ] && ! type brew >/dev/null 2>&1; then
+elif [ "$(uname)" = "Darwin" ] && ! type brew >/dev/null 2>&1; then
   echo "Installation currently requires brew on MacOS - https://brew.sh/"
 fi
 
@@ -55,7 +55,7 @@ INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION:-3.7}
 
 $INSTALL_PYTHON_PATH -m venv venv
 if [ ! -f "activate" ]; then
-    ln -s venv/bin/activate
+    ln -s venv/bin/activate .
 fi
 echo "Python version is $INSTALL_PYTHON_VERSION"
 . ./activate
