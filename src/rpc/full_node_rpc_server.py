@@ -74,16 +74,19 @@ class FullNodeRpcApiHandler(AbstractRpcApiHandler):
             sync_tip_height = 0
             sync_progress_height = uint32(0)
 
-        newer_block_hex = lca.header_hash.hex()
-        older_block_hex = self.service.blockchain.height_to_hash[
-            max(1, lca.height - 100)
-        ].hex()
-        space = await self.get_network_space(
-            {
-                "newer_block_header_hash": newer_block_hex,
-                "older_block_header_hash": older_block_hex,
-            }
-        )
+        if lca.height >= 1:
+            newer_block_hex = lca.header_hash.hex()
+            older_block_hex = self.service.blockchain.height_to_hash[
+                max(1, lca.height - 100)
+            ].hex()
+            space = await self.get_network_space(
+                {
+                    "newer_block_header_hash": newer_block_hex,
+                    "older_block_header_hash": older_block_hex,
+                }
+            )
+        else:
+            space = {"space": uint128(0)}
         assert space is not None
         response: Dict = {
             "success": True,
