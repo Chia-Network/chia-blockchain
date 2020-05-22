@@ -1,3 +1,4 @@
+#!/bin/bash
 set -e
 
 find_python() {
@@ -8,7 +9,7 @@ find_python() {
         which python$V > /dev/null
         if [ $? = 0 ]
         then
-            if [ x$BEST_VERSION = x ]
+            if [ x"$BEST_VERSION" = x ]
             then
                 BEST_VERSION=$V
             fi
@@ -18,7 +19,7 @@ find_python() {
     set -e
 }
 
-if [ x$INSTALL_PYTHON_VERSION = x ]
+if [ x"$INSTALL_PYTHON_VERSION" = x ]
 then
   INSTALL_PYTHON_VERSION=$(find_python)
 fi
@@ -58,9 +59,10 @@ if [ ! -f "activate" ]; then
     ln -s venv/bin/activate .
 fi
 echo "Python version is $INSTALL_PYTHON_VERSION"
-. ./activate
+source ./activate
 # pip 20.x+ supports Linux binary wheels
 pip install --upgrade pip
+pip install wheel
 #if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
 # This remains in case there is a diversion of binary wheels
 pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
