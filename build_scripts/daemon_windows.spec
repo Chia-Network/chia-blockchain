@@ -31,7 +31,7 @@ block_cipher = None
 subcommand_modules = [f"{root}/src.cmds.%s" % _ for _ in SUBCOMMANDS]
 other = ["aiter.active_aiter", "aiter.aiter_forker", "aiter.aiter_to_iter", "aiter.azip", "aiter.flatten_aiter", "aiter.gated_aiter",
 "aiter.iter_to_aiter", "aiter.join_aiters", "aiter.map_aiter", "aiter.map_filter_aiter", "aiter.preload_aiter",
-"aiter.push_aiter", "aiter.sharable_aiter", "aiter.stoppable_aiter","src.wallet.websocket_server", "win32cred", "pywintypes", "win32ctypes.pywin32"]
+"aiter.push_aiter", "aiter.sharable_aiter", "aiter.stoppable_aiter","src.wallet.websocket_server", "win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32"]
 
 entry_points = ["aiohttp", "aiohttp.aiohttp",
             "src.cmds.check_plots",
@@ -44,7 +44,7 @@ entry_points = ["aiohttp", "aiohttp.aiohttp",
             "src.server.start_timelord",
             "src.timelord_launcher",
             "src.simulator.start_simulator",
-            "src.util.bip32"]
+            "src.util.bip39"]
 
 subcommand_modules.extend(other)
 subcommand_modules.extend(entry_points)
