@@ -491,7 +491,7 @@ class BlockTools:
                 try:
                     prover = DiskProver(plots[i][0])
                 except ValueError:
-                    pass
+                    continue
                 qualities = prover.get_qualities_for_challenge(challenge_hash)
                 j = 0
                 for quality in qualities:
