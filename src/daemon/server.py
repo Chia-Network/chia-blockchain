@@ -315,8 +315,8 @@ def launch_service(root_path, service_command):
     service_array[0] = service_executable
     startupinfo = None
     if os.name == "nt":
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo = subprocess.STARTUPINFO()  # type: ignore
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore
     if service_name == "chia-create-plots":
         plotter_path = plotter_log_path(root_path)
         if plotter_path.parent.exists():
