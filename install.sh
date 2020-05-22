@@ -1,3 +1,4 @@
+#!/bin/bash
 set -e
 
 find_python() {
@@ -8,7 +9,7 @@ find_python() {
         which python$V > /dev/null
         if [ $? = 0 ]
         then
-            if [ x$BEST_VERSION = x ]
+            if [ x"$BEST_VERSION" = x ]
             then
                 BEST_VERSION=$V
             fi
@@ -18,13 +19,13 @@ find_python() {
     set -e
 }
 
-if [ x$INSTALL_PYTHON_VERSION = x ]
+if [ x"$INSTALL_PYTHON_VERSION" = x ]
 then
-  INSTALL_PYTHON_VERSION=`find_python`
+  INSTALL_PYTHON_VERSION=$(find_python)
 fi
 
 # Manage npm and other install requirements on an OS specific basis
-if [ `uname` = "Linux" ]; then
+if [ "$(uname)" = "Linux" ]; then
   #LINUX=1
   if type apt-get; then
     # Debian/Ubuntu
@@ -41,10 +42,10 @@ if [ `uname` = "Linux" ]; then
     curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
     sudo yum install -y nodejs
   fi
-elif [ `uname` = "Darwin" ] && type brew && ! npm version>/dev/null 2>&1; then
+elif [ "$(uname)" = "Darwin" ] && type brew && ! npm version>/dev/null 2>&1; then
   # Install npm if not installed
   brew install npm
-elif [ `uname` = "Darwin" ] && ! type brew >/dev/null 2>&1; then
+elif [ "$(uname)" = "Darwin" ] && ! type brew >/dev/null 2>&1; then
   echo "Installation currently requires brew on MacOS - https://brew.sh/"
 fi
 
@@ -55,12 +56,13 @@ INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION:-3.7}
 
 $INSTALL_PYTHON_PATH -m venv venv
 if [ ! -f "activate" ]; then
-    ln -s venv/bin/activate
+    ln -s venv/bin/activate .
 fi
 echo "Python version is $INSTALL_PYTHON_VERSION"
 . ./activate
 # pip 20.x+ supports Linux binary wheels
 pip install --upgrade pip
+pip install wheel
 #if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
 # This remains in case there is a diversion of binary wheels
 pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0

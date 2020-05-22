@@ -1,55 +1,78 @@
+#!/bin/bash
 echo "This requires the chia python virtual environment."
 echo "Execute '. ./activate' if you have not already, before running."
 echo "This version of Timelord requires CMake 3.14+ to compile vdf_client"
 
-PYTHON_VERSION=`python -c 'import sys; print(f"python{sys.version_info.major}.{sys.version_info.minor}")'`
-echo "Python version:" $PYTHON_VERSION
+PYTHON_VERSION=$(python -c 'import sys; print(f"python{sys.version_info.major}.{sys.version_info.minor}")')
+echo "Python version: $PYTHON_VERSION"
 
 export BUILD_VDF_BENCH=Y # Installs the useful vdf_bench test of CPU squaring speed
-THE_PATH=`python -c 'import pkg_resources; print( pkg_resources.get_distribution("chiavdf").location)' 2> /dev/null`/vdf_client
-CHIAVDF_VERSION=`python -c 'from setup import dependencies; t = [_ for _ in dependencies if _.startswith("chiavdf")][0]; print(t)'`
+THE_PATH=$(python -c 'import pkg_resources; print( pkg_resources.get_distribution("chiavdf").location)' 2> /dev/null)/vdf_client
+CHIAVDF_VERSION=$(python -c 'from setup import dependencies; t = [_ for _ in dependencies if _.startswith("chiavdf")][0]; print(t)')
 
-if [ `uname` = "Linux" ] && type apt-get;
-  then UBUNTU_DEBIAN=true
+ubuntu_cmake_install() {
+    UBUNTU_PRE_2004=$(python -c 'import subprocess; process = subprocess.run(["lsb_release", "-rs"], stdout=subprocess.PIPE); print(float(process.stdout) < float(20.04))')
+    if [ "$UBUNTU_PRE_2004" = "True" ]; then
+      echo "Ubuntu version is pre 20.04LTS - installing CMake with snap"
+      sudo apt-get install snap -y
+      sudo apt-get remove --purge cmake -y
+      hash -r
+      sudo snap install cmake --classic
+    else
+      echo "Ubuntu 20.04LTS and newer support CMake 3.16+"
+      sudo apt-get install cmake -y
+    fi
+}
+
+symlink_vdf_bench() {
+    if [ ! -e vdf_bench ] && [ -e venv/lib/"$1"/site-packages/vdf_bench ]; then
+      echo ln -s venv/lib/"$1"/site-packages/vdf_bench
+      ln -s venv/lib/"$1"/site-packages/vdf_bench .
+    elif [ ! -e venv/lib/"$1"/site-packages/vdf_bench ]; then
+      echo "ERROR: Could not find venv/lib/$1/site-packages/vdf_bench"
+    else
+      echo "./vdf_bench link exists"
+    fi
+}
+
+if [ "$(uname)" = "Linux" ] && type apt-get; then
+  UBUNTU_DEBIAN=true
   echo "Found Ubuntu/Debian"
-elif [ `uname` = "Darwin" ];
-  then MACOS=true
+elif [ "$(uname)" = "Darwin" ]; then
+  MACOS=true
   echo "Found MacOS"
 fi
 
-if [ -e $THE_PATH ] && ! test $MACOS
-then
-  echo $THE_PATH
+if [ -e "$THE_PATH" ]; then
+  echo "$THE_PATH"
   echo "vdf_client already exists, no action taken"
 else
-  if [ -e venv/bin/python ] && test $UBUNTU_DEBIAN
-  then
+  if [ -e venv/bin/python ] && test $UBUNTU_DEBIAN; then
     echo "Installing chiavdf from source on Ubuntu/Debian"
-    # Install needed development tools
-    echo apt-get install cmake libgmp-dev libboost-python-dev lib$PYTHON_VERSION-dev libboost-system-dev -y
-    sudo apt-get install cmake libgmp-dev libboost-python-dev lib$PYTHON_VERSION-dev libboost-system-dev -y
-    echo venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
-    venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
-    ln -s venv/lib/$PYTHON_VERSION/site-packages/vdf_bench
-  elif [ -e venv/bin/python ] && test $MACOS && brew info boost | grep -q 'Not installed'
-  then
-    echo "Installing chiavdf requirements for MacOS"
+    # If Ubuntu version is older than 20.04LTS then upgrade CMake
+    ubuntu_cmake_install
+    # Install remaining needed development tools - assumes venv and prior run of install.sh
+    echo apt-get install libgmp-dev libboost-python-dev lib"$PYTHON_VERSION"-dev libboost-system-dev -y
+    sudo apt-get install libgmp-dev libboost-python-dev lib"$PYTHON_VERSION"-dev libboost-system-dev -y
+    echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
+    venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
+    symlink_vdf_bench "$PYTHON_VERSION"
+  elif [ -e venv/bin/python ] && test $MACOS && brew info boost | grep -q 'Not installed'; then
+    echo "Installing chiavdf requirement boost for MacOS"
     brew install boost
-    echo "installing chiavdf from source for MacOS"
-    # User needs to provide required packages
-    echo venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
-    venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
-    echo ln -s venv/lib/$PYTHON_VERSION/site-packages/vdf_bench
-    ln -s venv/lib/$PYTHON_VERSION/site-packages/vdf_bench
-  elif [ -e venv/bin/python ]
-  then
     echo "installing chiavdf from source"
     # User needs to provide required packages
-    echo venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
-    venv/bin/python -m pip install --force --no-binary chiavdf $CHIAVDF_VERSION
-    ln -s venv/lib/$PYTHON_VERSION/site-packages/vdf_bench
+    echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
+    venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
+    link_vdf_bench "$PYTHON_VERSION"
+  elif [ -e venv/bin/python ]; then
+    echo "installing chiavdf from source"
+    # User needs to provide required packages
+    echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
+    venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
+    link_vdf_bench "$PYTHON_VERSION"
   else
     echo "no venv created yet, please run install.sh"
   fi
 fi
-echo "To see how fast your timelord is likely to be try './vdf_bench square_asm 250000' for an ips estimate"
+echo "To estimate a timelord on this CPU try './vdf_bench square_asm 400000' for an ips estimate"
