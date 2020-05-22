@@ -234,7 +234,7 @@ class Wallet:
         if coins is None:
             coins = await self.select_coins(amount + fee)
         if coins is None:
-            self.log.info(f"coins is None")
+            self.log.info("coins is None")
             return []
 
         self.log.info(f"coins is not None {coins}")

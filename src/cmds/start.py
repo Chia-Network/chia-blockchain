@@ -55,14 +55,14 @@ async def async_start(args, parser):
                 else:
                     print("stop failed")
             else:
-                print(f"already running, use `-r` to restart")
+                print("already running, use `-r` to restart")
                 continue
         print(f"{service}: ", end="", flush=True)
         msg = await daemon.start_service(service_name=service)
         success = msg["data"]["success"]
 
         if success is True:
-            print(f"started")
+            print("started")
         else:
             error = msg["data"]["error"]
             print(f"{service} failed to start. Error: {error}")

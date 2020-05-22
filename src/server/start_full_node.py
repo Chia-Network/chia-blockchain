@@ -44,7 +44,7 @@ async def async_main():
             )
             log.info(f"Port {config['port']} opened with UPnP.")
         except Exception:
-            log.exception(f"UPnP failed")
+            log.exception("UPnP failed")
 
     # Starts the full node server (which full nodes can connect to)
     ping_interval = net_config.get("ping_interval")

@@ -122,7 +122,7 @@ def migrate_from(
     Copy all the files in "manifest" to the new config directory.
     """
     if old_root == new_root:
-        print(f"same as new path, exiting")
+        print("same as new path, exiting")
         return 1
     if not old_root.is_dir():
         print(f"{old_root} not found - this is ok if you did not install this version.")

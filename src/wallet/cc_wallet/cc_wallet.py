@@ -236,7 +236,7 @@ class CCWallet:
         self, coin: Coin, height: int, header_hash: bytes32, removals: List[Coin]
     ):
         """ Notification from wallet state manager that wallet has been received. """
-        self.log.info(f"CC wallet has been notified that coin was added")
+        self.log.info("CC wallet has been notified that coin was added")
 
         search_for_parent: bool = True
 

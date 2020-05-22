@@ -43,15 +43,15 @@ class CoinStore:
         self.coin_record_db = connection
         await self.coin_record_db.execute(
             (
-                f"CREATE TABLE IF NOT EXISTS coin_record("
-                f"coin_name text PRIMARY KEY,"
-                f" confirmed_index bigint,"
-                f" spent_index bigint,"
-                f" spent int,"
-                f" coinbase int,"
-                f" puzzle_hash text,"
-                f" coin_parent text,"
-                f" amount bigint)"
+                "CREATE TABLE IF NOT EXISTS coin_record("
+                "coin_name text PRIMARY KEY,"
+                " confirmed_index bigint,"
+                " spent_index bigint,"
+                " spent int,"
+                " coinbase int,"
+                " puzzle_hash text,"
+                " coin_parent text,"
+                " amount bigint)"
             )
         )
 

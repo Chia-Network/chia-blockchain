@@ -97,12 +97,12 @@ class WebSocketServer:
             return False
 
         if self.config["testing"] is True:
-            log.info(f"Websocket server in testing mode")
+            log.info("Websocket server in testing mode")
             self.wallet_node = await WalletNode.create(
                 self.config, private_key, override_constants=test_constants
             )
         else:
-            log.info(f"Not Testing")
+            log.info("Not Testing")
             self.wallet_node = await WalletNode.create(self.config, private_key)
 
         if self.wallet_node is None:

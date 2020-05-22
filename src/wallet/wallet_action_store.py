@@ -23,14 +23,14 @@ class WalletActionStore:
 
         await self.db_connection.execute(
             (
-                f"CREATE TABLE IF NOT EXISTS action_queue("
-                f"id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                f" name text,"
-                f" wallet_id int,"
-                f" wallet_type int,"
-                f" wallet_callback text,"
-                f" done int,"
-                f" data text)"
+                "CREATE TABLE IF NOT EXISTS action_queue("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                " name text,"
+                " wallet_id int,"
+                " wallet_type int,"
+                " wallet_callback text,"
+                " done int,"
+                " data text)"
             )
         )
 
