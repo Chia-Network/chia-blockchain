@@ -1039,7 +1039,7 @@ class FullNode:
                 )
         else:
             # If we have seen an unfinished block at a greater or equal height, don't propagate
-            self.log.info(f"Unfinished block at old height, so don't propagate")
+            self.log.info("Unfinished block at old height, so don't propagate")
             return
 
         await self.full_node_store.add_unfinished_block(

@@ -27,7 +27,7 @@ else:
 
 
 def bip39_word_list() -> str:
-    return pkg_resources.resource_string("src.util.bip39", f"english.txt").decode()
+    return pkg_resources.resource_string("src.util.bip39", "english.txt").decode()
 
 
 def generate_mnemonic() -> List[str]:
@@ -72,7 +72,7 @@ def seed_from_mnemonic(mnemonic: List[str]):
     checksum = std_hash(entropy_bytes)
 
     if checksum[0] != checksum_bytes:
-        raise ValueError(f"Invalid order of mnemonic words")
+        raise ValueError("Invalid order of mnemonic words")
 
     return entropy_bytes
 

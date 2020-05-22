@@ -90,8 +90,8 @@ def main():
         all_public_keys = keychain.get_all_public_keys()
         if len(all_public_keys) == 0:
             raise RuntimeError(
-                f"There are no private keys in the keychain, so we cannot create a plot. "
-                f"Please generate keys using 'chia keys generate_and_add' or pass in a pool pk with -p"
+                "There are no private keys in the keychain, so we cannot create a plot. "
+                "Please generate keys using 'chia keys generate_and_add' or pass in a pool pk with -p"
             )
         pool_pk = all_public_keys[0].get_public_key()
 

@@ -96,7 +96,7 @@ class WebSocketServer:
         )
 
         self.log.info("Waiting Daemon WebSocketServer closure")
-        print(f"Daemon server started", flush=True)
+        print("Daemon server started", flush=True)
         await self.websocket_server.wait_closed()
         self.log.info("Daemon WebSocketServer closed")
 
@@ -294,7 +294,7 @@ def pid_path_for_service(root_path, service):
 
 
 def plotter_log_path(root_path):
-    return root_path / "plotter" / f"plotter_log.txt"
+    return root_path / "plotter" / "plotter_log.txt"
 
 
 def launch_service(root_path, service_command):

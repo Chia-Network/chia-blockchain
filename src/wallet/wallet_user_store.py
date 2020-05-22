@@ -22,11 +22,11 @@ class WalletUserStore:
 
         await self.db_connection.execute(
             (
-                f"CREATE TABLE IF NOT EXISTS users_wallets("
-                f"id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                f" name text,"
-                f" wallet_type int,"
-                f" data text)"
+                "CREATE TABLE IF NOT EXISTS users_wallets("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                " name text,"
+                " wallet_type int,"
+                " data text)"
             )
         )
 

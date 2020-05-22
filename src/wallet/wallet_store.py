@@ -28,22 +28,22 @@ class WalletStore:
         self.db_connection = connection
         await self.db_connection.execute(
             (
-                f"CREATE TABLE IF NOT EXISTS coin_record("
-                f"coin_name text PRIMARY KEY,"
-                f" confirmed_index bigint,"
-                f" spent_index bigint,"
-                f" spent int,"
-                f" coinbase int,"
-                f" puzzle_hash text,"
-                f" coin_parent text,"
-                f" amount bigint,"
-                f" wallet_type int,"
-                f" wallet_id int)"
+                "CREATE TABLE IF NOT EXISTS coin_record("
+                "coin_name text PRIMARY KEY,"
+                " confirmed_index bigint,"
+                " spent_index bigint,"
+                " spent int,"
+                " coinbase int,"
+                " puzzle_hash text,"
+                " coin_parent text,"
+                " amount bigint,"
+                " wallet_type int,"
+                " wallet_id int)"
             )
         )
         await self.db_connection.execute(
-            f"CREATE TABLE IF NOT EXISTS block_records(header_hash text PRIMARY KEY, height int,"
-            f" in_lca_path tinyint, block blob)"
+            "CREATE TABLE IF NOT EXISTS block_records(header_hash text PRIMARY KEY, height int,"
+            " in_lca_path tinyint, block blob)"
         )
 
         # Useful for reorg lookups

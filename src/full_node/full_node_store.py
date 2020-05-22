@@ -49,12 +49,12 @@ class FullNodeStore:
         self.disconnected_blocks = {}
 
         await self.db.execute(
-            f"CREATE TABLE IF NOT EXISTS unfinished_blocks("
-            f"challenge_hash text,"
-            f"iterations bigint,"
-            f"block blob,"
-            f"height int,"
-            f"PRIMARY KEY (challenge_hash, iterations))"
+            "CREATE TABLE IF NOT EXISTS unfinished_blocks("
+            "challenge_hash text,"
+            "iterations bigint,"
+            "block blob,"
+            "height int,"
+            "PRIMARY KEY (challenge_hash, iterations))"
         )
         await self.db.commit()
         return self
