@@ -1,6 +1,3 @@
-import asyncio
-import logging
-
 from src.farmer import Farmer
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
@@ -10,9 +7,6 @@ from src.util.default_root import DEFAULT_ROOT_PATH
 from src.rpc.farmer_rpc_server import start_farmer_rpc_server
 
 from src.server.start_service import run_service
-
-
-log = logging.getLogger(__name__)
 
 
 def service_kwargs_for_farmer(root_path=DEFAULT_ROOT_PATH):
@@ -30,17 +24,6 @@ def service_kwargs_for_farmer(root_path=DEFAULT_ROOT_PATH):
 
     rpc_cleanup = None
 
-    def stop_callback():
-        api._shut_down = True
-
-    def start_callback():
-        nonlocal rpc_cleanup
-        if config["start_rpc_server"]:
-            # Starts the RPC server
-            rpc_cleanup = asyncio.ensure_future(
-                start_farmer_rpc_server(api, stop_callback, config["rpc_port"])
-            )
-
     async def await_closed_callback():
         # Waits for the rpc server to close
         if rpc_cleanup is not None:
@@ -55,9 +38,7 @@ def service_kwargs_for_farmer(root_path=DEFAULT_ROOT_PATH):
         server_listen_ports=[config["port"]],
         connect_peers=connect_peers,
         on_connect_callback=api._on_connect,
-        start_callback=start_callback,
-        stop_callback=stop_callback,
-        await_closed_callback=await_closed_callback,
+        rpc_start_callback_port=(start_farmer_rpc_server, config["rpc_port"])
     )
     return kwargs
 

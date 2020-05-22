@@ -3,7 +3,7 @@ import logging
 import logging.config
 import signal
 
-from typing import Any, AsyncGenerator, Callable, List, Optional
+from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple
 
 try:
     import uvloop
@@ -34,6 +34,7 @@ class Service:
         server_listen_ports: List[int] = [],
         connect_peers: List[PeerInfo] = [],
         on_connect_callback: Optional[OutboundMessage] = None,
+        rpc_start_callback_port: Optional[Tuple[Callable, int]] = None,
         start_callback: Optional[Callable] = None,
         stop_callback: Optional[Callable] = None,
         await_closed_callback: Optional[Callable] = None,
@@ -52,6 +53,8 @@ class Service:
 
         config = load_config_cli(root_path, "config.yaml", service_name)
         initialize_logging(f"{service_name:<30s}", config["logging"], root_path)
+
+        self._rpc_start_callback_port = rpc_start_callback_port
 
         self._server = ChiaServer(
             config["port"],
@@ -84,6 +87,14 @@ class Service:
             return
 
         async def _run():
+            self._rpc_task = None
+
+            if self._rpc_start_callback_port:
+                rpc_f, rpc_port = self._rpc_start_callback_port
+                self._rpc_task = asyncio.ensure_future(
+                    rpc_f(self._api, self.stop, rpc_port)
+                )
+
             if self._start_callback:
                 self._start_callback()
             self._reconnect_tasks = [
@@ -100,8 +111,10 @@ class Service:
                 asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, self.stop)
             except NotImplementedError:
                 self._log.info("signal handlers unsupported")
+
             for _ in self._server_sockets:
                 await _.wait_closed()
+
             await self._server.await_closed()
             if self._await_closed_callback:
                 await self._await_closed_callback()
@@ -124,9 +137,13 @@ class Service:
             self._server.close_all()
             if self._stop_callback:
                 self._stop_callback()
+            self._api._shut_down = True
 
     async def wait_closed(self):
         await self._task
+        if self._rpc_task:
+            await self._rpc_task
+            self._log.info("Closed RPC server.")
         self._log.info("%s fully closed", self._node_type)
 
 
