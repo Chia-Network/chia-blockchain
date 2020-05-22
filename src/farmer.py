@@ -66,6 +66,9 @@ class Farmer:
         self.pool_sks = [
             sk.get_private_key() for (sk, _) in self.keychain.get_all_private_keys()
         ]
+        self.pool_sks_map = {}
+        for key in self.pool_sks:
+            self.pool_sks_map[bytes(key.get_public_key())] = key
 
         assert len(self.wallet_target) == 32
         assert len(self.pool_target) == 32
@@ -257,13 +260,24 @@ class Farmer:
                 Delivery.RESPOND,
             )
         if estimate_secs < self.config["propagate_threshold"]:
-            if new_proof_height not in self.coinbase_rewards:
+            pool_pk = bytes(response.proof.pool_pubkey)
+            if pool_pk not in self.pool_sks_map:
                 log.error(
-                    f"Don't have coinbase transaction for height {new_proof_height}, cannot submit PoS"
+                    f"Don't have the private key for the pool key used by harvester: {pool_pk.hex()}"
                 )
                 return
+            sk = self.pool_sks_map[pool_pk]
+            coinbase_reward = uint64(
+                calculate_block_reward(uint32(new_proof_height))
+            )
 
-            coinbase, signature = self.coinbase_rewards[new_proof_height]
+            coinbase, signature = create_coinbase_coin_and_signature(
+                new_proof_height,
+                self.pool_target,
+                coinbase_reward,
+                sk,
+            )
+
             request2 = farmer_protocol.RequestHeaderHash(
                 challenge_hash, coinbase, signature, self.wallet_target, response.proof,
             )
@@ -365,23 +379,6 @@ class Farmer:
             get_proofs = True
             if proof_of_space_finalized.weight > self.current_weight:
                 self.current_weight = proof_of_space_finalized.weight
-
-            # TODO: ask the pool for this information
-            coinbase_reward = uint64(
-                calculate_block_reward(uint32(proof_of_space_finalized.height + 1))
-            )
-
-            coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
-                proof_of_space_finalized.height + 1,
-                self.pool_target,
-                coinbase_reward,
-                self.pool_sks[0],
-            )
-
-            self.coinbase_rewards[uint32(proof_of_space_finalized.height + 1)] = (
-                coinbase_coin,
-                coinbase_signature,
-            )
 
             log.info(f"\tCurrent weight set to {self.current_weight}")
         self.seen_challenges.add(proof_of_space_finalized.challenge_hash)
