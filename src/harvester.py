@@ -78,15 +78,14 @@ class Harvester:
     challenge_hashes: Dict[bytes32, Tuple[bytes32, str, uint8]]
     pool_pubkeys: List[PublicKey]
     root_path: Path
-    _plot_notification_task: asyncio.Task
-    _reconnect_task: Optional[asyncio.Task]
+    _plot_notification_task: asyncio.Future
     _is_shutdown: bool
     executor: concurrent.futures.ThreadPoolExecutor
     state_changed_callback: Optional[Callable]
 
     @staticmethod
-    async def create(
-        config: Dict, plot_config: Dict, root_path: Path,
+    def create(
+        config: Dict, plot_config: Dict, root_path: Path
     ):
         self = Harvester()
         self.config = config
@@ -100,8 +99,7 @@ class Harvester:
 
         # From quality string to (challenge_hash, filename, index)
         self.challenge_hashes = {}
-        self._plot_notification_task = asyncio.create_task(self._plot_notification())
-        self._reconnect_task = None
+        self._plot_notification_task = asyncio.ensure_future(self._plot_notification())
         self._is_shutdown = False
         self.global_connections = None
         self.pool_pubkeys = []
@@ -205,8 +203,6 @@ class Harvester:
 
     async def _await_shutdown(self):
         await self._plot_notification_task
-        if self._reconnect_task is not None:
-            await self._reconnect_task
 
     @api_request
     async def harvester_handshake(
