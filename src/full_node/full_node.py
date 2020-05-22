@@ -75,16 +75,9 @@ class FullNode:
     root_path: Path
     state_changed_callback: Optional[Callable]
 
-    @classmethod
-    async def create(
-        cls: Type,
-        config: Dict,
-        root_path: Path,
-        name: str = None,
-        override_constants={},
+    def __init__(
+        self, config: Dict, root_path: Path, name: str = None, override_constants={},
     ):
-        self = cls()
-
         self.root_path = root_path
         self.config = config
         self.server = None
@@ -100,11 +93,18 @@ class FullNode:
 
         self.global_connections = None
 
-        db_path = path_from_root(root_path, config["database_path"])
-        mkdir(db_path.parent)
+        self.db_path = path_from_root(root_path, config["database_path"])
+        mkdir(self.db_path.parent)
 
+    @classmethod
+    async def create(cls: Type, *args, **kwargs):
+        _ = cls(*args, **kwargs)
+        await _.start()
+        return _
+
+    async def start(self):
         # create the store (db) and full node instance
-        self.connection = await aiosqlite.connect(db_path)
+        self.connection = await aiosqlite.connect(self.db_path)
         self.block_store = await BlockStore.create(self.connection)
         self.full_node_store = await FullNodeStore.create(self.connection)
         self.sync_store = await SyncStore.create()
@@ -121,7 +121,6 @@ class FullNode:
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
         await self.mempool_manager.new_tips(await self.blockchain.get_full_tips())
         self.state_changed_callback = None
-        return self
 
     def set_global_connections(self, global_connections: PeerConnections):
         self.global_connections = global_connections
