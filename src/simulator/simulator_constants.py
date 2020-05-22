@@ -20,6 +20,7 @@ test_constants: Dict[str, Any] = {
 }
 
 # test_constants["GENESIS_BLOCK"] = bytes(
-# bt.create_genesis_block(test_constants, bytes([0] * 32), b"0"))
+# bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
+# )
 
 # print(test_constants["GENESIS_BLOCK"])

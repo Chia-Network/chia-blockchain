@@ -1,15 +1,21 @@
 import asyncio
 from time import time
-from typing import List
+from typing import List, Tuple
 
+import clvm
 import pytest
 from clvm.casts import int_to_bytes
+from clvm_tools import binutils
 
 from src.server.outbound_message import OutboundMessage
 from src.protocols import full_node_protocol
+from src.types.BLSSignature import BLSSignature
+from src.types.coin_solution import CoinSolution
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
+from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
+from src.util.condition_tools import conditions_for_solution, conditions_by_opcode, hash_key_pairs_for_conditions_dict
 from src.util.ints import uint64
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.wallet_tools import WalletTool
@@ -888,3 +894,53 @@ class TestMempool:
 
         sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle_combined.name())
         assert sb is None
+
+    @pytest.mark.asyncio
+    async def test_agg_sig_condition(self, two_nodes):
+        num_blocks = 2
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_receiver = WalletTool()
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        block = blocks[1]
+        async for _ in full_node_1.respond_block(
+            full_node_protocol.RespondBlock(block)
+        ):
+            pass
+
+        unsigned: List[Tuple[Program, CoinSolution]] = wallet_a.generate_unsigned_transaction(1000, receiver_puzzlehash, block.header.data.coinbase, {}, 0)
+        assert len(unsigned) == 1
+
+        puzzle, solution = unsigned[0]
+        code_ = [puzzle, solution.solution]
+        sexp = Program.to(code_)
+
+        err, con, cost = conditions_for_solution(sexp)
+        assert con is not None
+
+        conditions_dict = conditions_by_opcode(con)
+        hash_key_pairs = hash_key_pairs_for_conditions_dict(conditions_dict, solution.coin.name())
+        assert len(hash_key_pairs) == 1
+
+        pk_pair: BLSSignature.PkMessagePair = hash_key_pairs[0]
+        assert pk_pair.message_hash == solution.solution.first().get_tree_hash()
+
+        spend_bundle = wallet_a.sign_transaction(unsigned)
+        assert spend_bundle is not None
+
+        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
+            spend_bundle
+        )
+        async for _ in full_node_1.respond_transaction(tx):
+            outbound: OutboundMessage = _
+            # Maybe transaction means that it's accepted in mempool
+            assert outbound.message.function == "new_transaction"
+
+        sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
+        assert sb is spend_bundle
