@@ -151,7 +151,7 @@ class BlockTools:
                 raise RuntimeError("Keys not generated. Run `chia generate keys`")
 
             self.prover_dict, _, _ = load_plots(
-                normal_config, plot_config, pool_pubkeys, DEFAULT_ROOT_PATH
+                normal_config["harvester"], plot_config, pool_pubkeys, DEFAULT_ROOT_PATH
             )
 
             new_plot_config: Dict = {"plots": {}}
