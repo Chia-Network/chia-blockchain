@@ -2,7 +2,6 @@ cd ..
 mkdir build_scripts\win_build
 cd build_scripts\win_build
 
-pip install pyinstaller
 curl -OL --show-error --fail https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl
 curl -OL --show-error --fail https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
 # C:\curl\curl.exe -OL --show-error --fail https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
@@ -23,6 +22,7 @@ python install_win.py
 Write-Output "checkpoint 3";
 
 pip install pywin32
+pip install pyinstaller
 pyinstaller daemon_windows.spec
 Write-Output "checkpoint 4";
 
