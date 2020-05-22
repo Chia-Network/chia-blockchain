@@ -37,6 +37,7 @@ from src.util.path import mkdir
 from src.util.significant_bits import truncate_to_significant_bits
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.config import load_config, load_config_cli
+from src.util.default_root import DEFAULT_ROOT_PATH
 
 
 TEST_ROOT_PATH = Path(
@@ -135,23 +136,24 @@ class BlockTools:
                 sys.exit(1)
         else:
             try:
-                plot_config = load_config(root_path, "plots.yaml")
+                plot_config = load_config(DEFAULT_ROOT_PATH, "plots.yaml")
             except FileNotFoundError:
                 raise RuntimeError("Plots not generated. Run chia-create-plots")
-
-            keychain = Keychain("testing", False)
+            self.keychain = Keychain(testing=False)
             private_keys: List[PrivateKey] = [
-                k.get_private_key() for (k, _) in keychain.get_all_private_keys()
+                k.get_private_key() for (k, _) in self.keychain.get_all_private_keys()
             ]
             if len(private_keys) == 0:
                 raise RuntimeError("Keys not generated. Run `chia generate keys`")
 
+            new_plot_config: Dict = {"plots": {}}
             for key, value in plot_config["plots"].items():
                 for sk in private_keys:
                     if bytes(sk.get_public_key()).hex() == value["pool_pk"]:
-                        plot_config["plots"][key]["pool_sk"] = bytes(sk).hex()
+                        new_plot_config["plots"][key] = value
+                        new_plot_config["plots"][key]["pool_sk"] = bytes(sk).hex()
 
-            self.plot_config = plot_config
+            self.plot_config = new_plot_config
             self.use_any_pos = False
 
         private_key = self.keychain.get_all_private_keys()[0][0]
@@ -486,7 +488,10 @@ class BlockTools:
             for i in range(len(plots)):
                 pool_sk = PrivateKey.from_bytes(bytes.fromhex(plots[i][1]["pool_sk"]))
                 plot_sk = PrivateKey.from_bytes(bytes.fromhex(plots[i][1]["sk"]))
-                prover = DiskProver(plots[i][0])
+                try:
+                    prover = DiskProver(plots[i][0])
+                except ValueError:
+                    pass
                 qualities = prover.get_qualities_for_challenge(challenge_hash)
                 j = 0
                 for quality in qualities:
