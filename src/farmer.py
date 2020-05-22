@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Any, Dict, List, Set, Optional, Callable
+from typing import Dict, List, Set, Optional, Callable
 
 from blspy import Util, PublicKey
 from src.util.keychain import Keychain
