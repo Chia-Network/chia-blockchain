@@ -103,6 +103,8 @@ class Service:
             for _ in self._server_sockets:
                 await _.wait_closed()
             await self._server.await_closed()
+            if self._await_closed_callback:
+                await self._await_closed_callback()
 
         self._task = asyncio.ensure_future(_run())
 
@@ -125,8 +127,6 @@ class Service:
 
     async def wait_closed(self):
         await self._task
-        if self._await_closed_callback:
-            await self._await_closed_callback
         self._log.info("%s fully closed", self._node_type)
 
 
@@ -138,4 +138,9 @@ async def async_run_service(*args, **kwargs):
 def run_service(*args, **kwargs):
     if uvloop is not None:
         uvloop.install()
-    asyncio.run(async_run_service(*args, **kwargs))
+    # TODO: use asyncio.run instead
+    # for now, we use `run_until_complete` as `asyncio.run` blocks on RPC server not exiting
+    if 1:
+        return asyncio.get_event_loop().run_until_complete(async_run_service(*args, **kwargs))
+    else:
+        return asyncio.run(async_run_service(*args, **kwargs))
