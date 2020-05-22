@@ -46,7 +46,6 @@ class Farmer:
         self.seen_challenges: Set[bytes32] = set()
         self.unfinished_challenges: Dict[uint128, List[bytes32]] = {}
         self.current_weight: uint128 = uint128(0)
-        self.coinbase_rewards: Dict[uint32, Any] = {}
         self.proof_of_time_estimate_ips: uint64 = uint64(10000)
         self.constants = consensus_constants.copy()
         self.server = None
