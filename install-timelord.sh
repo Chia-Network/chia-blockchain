@@ -64,13 +64,13 @@ else
     # User needs to provide required packages
     echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
     venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
-    link_vdf_bench "$PYTHON_VERSION"
+    symlink_vdf_bench "$PYTHON_VERSION"
   elif [ -e venv/bin/python ]; then
     echo "installing chiavdf from source"
     # User needs to provide required packages
     echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
     venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
-    link_vdf_bench "$PYTHON_VERSION"
+    symlink_vdf_bench "$PYTHON_VERSION"
   else
     echo "no venv created yet, please run install.sh"
   fi

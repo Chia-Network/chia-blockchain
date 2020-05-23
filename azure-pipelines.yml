@@ -29,9 +29,15 @@ steps:
   #  since we're installing miniupnpc & setproctitle below,
   #  only cbor2 will end up in wheels/
   - script: |
+      echo "which python b4 activate"
+      which python
+      which pip
       python -m venv venv
       ln -s venv/bin/activate .
       . ./activate
+      echo "which python after activate"
+      which python
+      which pip
       python -m pip install --upgrade pip
       pip install wheel pep517
       node -v
@@ -63,8 +69,13 @@ steps:
   #  install-timelord.sh usually wants venv, but this clean runner is the "venv"
   - script: |
       which python
+      which pip
+      . ./activate
+      which python
+      which pip
       brew install boost
       sh install-timelord.sh
+      ./vdf_bench square_asm 400000
     displayName: "Install timelord"
 
   - script: |
