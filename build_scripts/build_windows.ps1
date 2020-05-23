@@ -9,7 +9,7 @@ curl -OL --show-error --fail https://download.chia.net/simple/setproctitle/setpr
 Write-Output "\n";
 Write-Output "Install pip/python prerequisites\n";
 cd ..\..
-python3 -m pip install --upgrade pip
+python -m pip install --upgrade pip
 pip install pep517 wheel
 
 Write-Output "\n";
