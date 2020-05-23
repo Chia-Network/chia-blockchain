@@ -21,7 +21,7 @@ Write-Output "   ---";
 pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ -f . --wheel-dir=.\build_scripts\win_build .
 
 Write-Output "   ---";
-Write-Output "\Create venv - python3.7 or 3.8 is required in PATH";
+Write-Output "Create venv - python3.7 or 3.8 is required in PATH";
 Write-Output "   ---";
 python -m venv venv
 . .\venv\Scripts\Activate.ps1
