@@ -29,13 +29,10 @@ steps:
   #  since we're installing miniupnpc & setproctitle below,
   #  only cbor2 will end up in wheels/
   - script: |
-      echo "which python b4 activate"
-      which python
-      which pip
       python -m venv venv
       ln -s venv/bin/activate .
       . ./activate
-      echo "which python after activate"
+      echo "which python, pip after activate"
       which python
       which pip
       python -m pip install --upgrade pip
@@ -47,14 +44,17 @@ steps:
       pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
       cd ./electron-react
       npm install
+      npm audit fix
     displayName: "Install dependencies"
 
   - script: |
+      . ./activate
       which python
       pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
     displayName: "Build wheels"
 
   - script: |
+      . ./activate
       which python
       cd ./electron-react
       npm install
@@ -62,32 +62,36 @@ steps:
 
   #  Using wheels and release style install so no sh install.sh
   - script: |
+      . ./activate
       which python
       pip install .
     displayName: "Install wheels"
 
   #  install-timelord.sh usually wants venv, but this clean runner is the "venv"
   - script: |
-      which python
-      which pip
       . ./activate
       which python
-      which pip
       brew install boost
       sh install-timelord.sh
       ./vdf_bench square_asm 400000
     displayName: "Install timelord"
 
   - script: |
+      . ./activate
+      which python
       python -m pip install -r requirements-dev.txt
     displayName: "Install dev dependencies"
 
   - script: |
+      . ./activate
+      which python
       pip install pytest pytest-azurepipelines
       py.test tests -s -v
     displayName: "pytest"
 
   - script: |
+      . ./activate
+      which python
       cd build_scripts
       sh build_macos.sh
     displayName: "Build DMG"
