@@ -58,10 +58,8 @@ jobs:
 
     - name: Build MacOS DMG in Catalina
       if: startsWith(matrix.os, 'mac')
-      working-directory: ${{ github.workspace }}\build_scripts
       run: |
-        ls -l
-        pwd 
+        cd build_scripts
         sh build_macos.sh
 
     - name: Test blockchain code with pytest
