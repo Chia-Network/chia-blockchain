@@ -12,7 +12,7 @@ dependencies = [
     "colorlog==4.1.0",  # Adds color to logs
     "chiavdf==0.12.16",  # timelord and vdf verification
     "chiabip158==0.14",  # bip158-style wallet filters
-    "chiapos==0.12.17",  # proof of space
+    "chiapos==0.12.18",  # proof of space
     "sortedcontainers==2.1.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
     "clvm-tools==0.1.1",  # clvm compiler tools
