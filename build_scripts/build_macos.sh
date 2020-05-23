@@ -23,3 +23,4 @@ cd ../build_scripts
 
 echo"Create .dmg"
 electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia --overwrite
+ls -l
