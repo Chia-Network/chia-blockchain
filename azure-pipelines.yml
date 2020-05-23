@@ -49,13 +49,11 @@ steps:
 
   - script: |
       . ./activate
-      which python
       pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
     displayName: "Build wheels"
 
   - script: |
       . ./activate
-      which python
       cd ./electron-react
       npm install
     displayName: "Build Electron UI"
@@ -63,13 +61,13 @@ steps:
   #  Using wheels and release style install so no sh install.sh
   - script: |
       . ./activate
-      which python
       pip install .
     displayName: "Install wheels"
 
   #  install-timelord.sh usually wants venv, but this clean runner is the "venv"
   - script: |
       . ./activate
+      echo "which python"
       which python
       brew install boost
       sh install-timelord.sh
@@ -78,20 +76,17 @@ steps:
 
   - script: |
       . ./activate
-      which python
       python -m pip install -r requirements-dev.txt
     displayName: "Install dev dependencies"
 
   - script: |
       . ./activate
-      which python
       pip install pytest pytest-azurepipelines
       py.test tests -s -v
     displayName: "pytest"
 
   - script: |
       . ./activate
-      which python
       cd build_scripts
       sh build_macos.sh
     displayName: "Build DMG"
