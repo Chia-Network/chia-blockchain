@@ -1,8 +1,8 @@
 //handle setupevents as quickly as possible
-const setupEvents = require('./setupEvents')
+const setupEvents = require("./setupEvents");
 if (setupEvents.handleSquirrelEvent()) {
-   // squirrel event handled and app will exit in 1000ms, so don't do anything else
-   return;
+  // squirrel event handled and app will exit in 1000ms, so don't do anything else
+  return;
 }
 
 const electron = require("electron");
@@ -42,7 +42,7 @@ const guessPackaged = () => {
     packed = require("fs").existsSync(fullPath);
     console.log(fullPath);
     console.log(packed);
-    return packed
+    return packed;
   }
   const fullPath = path.join(__dirname, PY_MAC_DIST_FOLDER);
   packed = require("fs").existsSync(fullPath);
@@ -128,6 +128,8 @@ const createWindow = () => {
   mainWindow = new BrowserWindow({
     width: 1500,
     height: 800,
+    minWidth: 600,
+    minHeight: 800,
     backgroundColor: "#ffffff",
     show: false,
     webPreferences: {
