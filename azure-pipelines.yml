@@ -14,7 +14,7 @@ pool:
   vmImage: "macOS-10.14"
 strategy:
   matrix:
-    Moajave DMG:
+    Mojave DMG:
       python.version: "3.7"
 #    Python38:
 #      python.version: '3.8'  # Disabled 3.8 because artifact names conflict
@@ -42,9 +42,6 @@ steps:
       npm install -g n
       sudo n stable
       pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
-      cd ./electron-react
-      npm install
-      npm audit fix
     displayName: "Install dependencies"
 
   - script: |
@@ -56,6 +53,7 @@ steps:
       . ./activate
       cd ./electron-react
       npm install
+      npm audit fix
     displayName: "Build Electron UI"
 
   #  Using wheels and release style install so no sh install.sh
