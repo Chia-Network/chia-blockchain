@@ -71,7 +71,7 @@ steps:
 
   - script: |
       cd build_scripts
-      sh build_mac.sh
+      sh build_macos.sh
     displayName: "Build DMG"
 
   - task: PublishPipelineArtifact@1
