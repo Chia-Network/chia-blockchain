@@ -14,7 +14,7 @@ pool:
   vmImage: "macOS-10.14"
 strategy:
   matrix:
-    Python37:
+    Moajave DMG:
       python.version: "3.7"
 #    Python38:
 #      python.version: '3.8'  # Disabled 3.8 because artifact names conflict
@@ -89,7 +89,7 @@ steps:
       . ./activate
       cd build_scripts
       sh build_macos.sh
-    displayName: "Build DMG"
+    displayName: "Build DMG with build_scripts/build_macos.sh"
 
   - task: PublishPipelineArtifact@1
     inputs:
