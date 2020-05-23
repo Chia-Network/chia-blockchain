@@ -64,9 +64,9 @@ const getScriptPath = () => {
 const createPyProc = () => {
   let script = getScriptPath();
   processOptions = {};
-  processOptions.detached = true;
-  processOptions.stdio = "ignore";
-
+  //processOptions.detached = true;
+  //processOptions.stdio = "ignore";
+  pyProc = null
   if (guessPackaged()) {
     try {
       console.log("Running python executable: ");
@@ -83,7 +83,7 @@ const createPyProc = () => {
     const Process = require("child_process").spawn;
     pyProc = new Process("python", [script], processOptions);
   }
-  /*if (pyProc != null) {
+  if (pyProc != null) {
     pyProc.stdout.setEncoding("utf8");
 
     pyProc.stdout.on("data", function (data) {
@@ -102,17 +102,17 @@ const createPyProc = () => {
     });
 
     console.log("child process success");
-  }*/
-  pyProc.unref();
+  }
+  //pyProc.unref();
 };
 
 const exitPyProc = () => {
   // Should be a setting
-  /*if (pyProc != null) {
+  if (pyProc != null) {
     pyProc.kill();
     pyProc = null;
     pyPort = null;
-  }*/
+  }
 };
 
 app.on("ready", createPyProc);
@@ -163,7 +163,7 @@ const createWindow = () => {
     mainWindow.show();
   });
 
-  if (!local_test) {
+  if (!guessPackaged()) {
     mainWindow.webContents.openDevTools();
   }
 
