@@ -9,8 +9,8 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 
 ### Added
 
-- Windows and MacOS now have one click installers that then send users to a GUI on both platforms to farm or use their wallets.
-- You can see and control your farmer and harvester from the GUI on Windows, MacOS, and Linux.
+- Windows and MacOS now have one click installers that then send users to a GUI on both platforms to farm or use their wallets. Windows is built on GitHub Actions and MacOS is also built on Azure Pipelines so as to build on Mojave.
+- You can see and control your farmer, harvester, and plotter from the GUI on Windows, MacOS, and Linux.
 - Create plots and see the plotting log from a GUI on Windows, MacOS, and Linux.
 - You can now create or import private keys with a 24 word mnemonic, both in the UI and 'chia keys' command line.
 - You can delete and change active keys from the GUI and cli.
