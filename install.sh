@@ -70,6 +70,7 @@ pip install -e .
 
 cd ./electron-react
 npm install
+npm audit fix
 
 echo ""
 echo "Chia blockchain install.sh complete."

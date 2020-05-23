@@ -14,7 +14,7 @@ pool:
   vmImage: "macOS-10.14"
 strategy:
   matrix:
-    Python37:
+    Moajave DMG:
       python.version: "3.7"
 #    Python38:
 #      python.version: '3.8'  # Disabled 3.8 because artifact names conflict
@@ -29,6 +29,12 @@ steps:
   #  since we're installing miniupnpc & setproctitle below,
   #  only cbor2 will end up in wheels/
   - script: |
+      python -m venv venv
+      ln -s venv/bin/activate .
+      . ./activate
+      echo "which python, pip after activate"
+      which python
+      which pip
       python -m pip install --upgrade pip
       pip install wheel pep517
       node -v
@@ -38,41 +44,52 @@ steps:
       pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
       cd ./electron-react
       npm install
+      npm audit fix
     displayName: "Install dependencies"
 
   - script: |
+      . ./activate
       pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
     displayName: "Build wheels"
 
   - script: |
+      . ./activate
       cd ./electron-react
       npm install
     displayName: "Build Electron UI"
 
   #  Using wheels and release style install so no sh install.sh
   - script: |
+      . ./activate
       pip install .
     displayName: "Install wheels"
 
   #  install-timelord.sh usually wants venv, but this clean runner is the "venv"
   - script: |
+      . ./activate
+      echo "which python"
+      which python
       brew install boost
       sh install-timelord.sh
+      ./vdf_bench square_asm 400000
     displayName: "Install timelord"
 
   - script: |
+      . ./activate
       python -m pip install -r requirements-dev.txt
     displayName: "Install dev dependencies"
 
   - script: |
+      . ./activate
       pip install pytest pytest-azurepipelines
       py.test tests -s -v
     displayName: "pytest"
 
   - script: |
+      . ./activate
       cd build_scripts
       sh build_macos.sh
-    displayName: "Build DMG"
+    displayName: "Build DMG with build_scripts/build_macos.sh"
 
   - task: PublishPipelineArtifact@1
     inputs:
