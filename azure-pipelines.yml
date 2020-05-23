@@ -29,6 +29,9 @@ steps:
   #  since we're installing miniupnpc & setproctitle below,
   #  only cbor2 will end up in wheels/
   - script: |
+      python -m venv venv
+      ln -s venv/bin/activate .
+      . ./activate
       python -m pip install --upgrade pip
       pip install wheel pep517
       node -v
@@ -41,21 +44,25 @@ steps:
     displayName: "Install dependencies"
 
   - script: |
+      which python
       pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
     displayName: "Build wheels"
 
   - script: |
+      which python
       cd ./electron-react
       npm install
     displayName: "Build Electron UI"
 
   #  Using wheels and release style install so no sh install.sh
   - script: |
+      which python
       pip install .
     displayName: "Install wheels"
 
   #  install-timelord.sh usually wants venv, but this clean runner is the "venv"
   - script: |
+      which python
       brew install boost
       sh install-timelord.sh
     displayName: "Install timelord"
