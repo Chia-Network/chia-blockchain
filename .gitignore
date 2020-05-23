@@ -32,6 +32,9 @@ chia-blockchain.tar.gz.tar.gz
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+build_scripts/*.dmg
+build_scripts/build
+
 
 # Installer logs
 pip-log.txt
