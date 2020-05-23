@@ -24,6 +24,7 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 
 ### Changed
 
+- Due to an issue with aggsig and aggsig-me, the beta 1.6 blockchain is not compatible with earlier chains.
 - We replaced the Electron/JavaScript interface with a React user interface which is cleaner and more responsive.
 - We now have a multithreaded harvester to farm more plots concurrently. This is especially faster when there are multiple disks being harvested. The class is also made thread safe with mutex guards. This is achieved by releasing GIL in the python bindings when fetching qualities and proofs. We estimate that the former guidance of only 50 plots per physical drive should be updated to 250-350 plots per physical drive. We will continue to improve the plots per physical drive limit during the beta period.
 - Syncing a node is now much faster and uses less memory.
@@ -40,13 +41,15 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 
 ### Fixed
 
+- In beta 1.5 we introduced a bug in aggsig and aggsig-me that we have fixed in this release. That forced a hard fork of the chain so coins and balances are lost from beta 1.5. There is no impact on existing plots.
 - Starting and stopping servers now works much more reliably.
 - `chia-check-plots` uses the plot root and checks the plots in the same manner as harvester.
 - Fixed and issue where [Relic](https://github.com/relic-toolkit/relic) and thus blspy would crash on processors older than Haswell as they don't support lzc.
 - Some non-critical networking errors are no longer logged.
 - Blocks with compact proofs of time are now able to be updated into the node database.
-- The `install-timelord.sh` script now correctly determines which version of python it is running under and correctly builds vdf_client and correctly links to vdf_bench.
+- The `install-timelord.sh` script now correctly determines which version of python it is running under and correctly builds vdf_client and correctly links to vdf_bench. It also handles upgrading CMake on Ubuntu's older than 20.04LTS do satisfy the new CMake 3.14+ requirement to build Timelord.
 - The build status shield layout is fixed in README.md
+- Raspberry Pi 3/4 with Ubuntu 20.04LTS 64 bit should compile again.
 
 ## [1.0beta5] aka Beta 1.5 - 2020-05-05
 
@@ -63,6 +66,7 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 - Coloured coins now have a prefix to help identify them. When sending transactions, the new prefix is incompatible with older clients.
 - The user interface now refers to chia coins with their correct currency code of XCH.
 - The next release will now be in the dev branch instead of the e.g. beta-1.5. Additionally we are enforcing linear merge into dev and prefer rebase merges or partial squash merges of particularly chatty commit histories.
+- Building the sub reposities (chiapos, chiavdf, blslibrary) now requires CMake 3.14+.
 
 ### Fixed
 
