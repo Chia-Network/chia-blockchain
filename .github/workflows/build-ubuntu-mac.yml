@@ -60,6 +60,8 @@ jobs:
       if: startsWith(matrix.os, 'mac')
       working-directory: ${{ github.workspace }}\build_scripts
       run: |
+        ls -l
+        pwd 
         sh build_macos.sh
 
     - name: Test blockchain code with pytest
