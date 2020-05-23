@@ -56,6 +56,12 @@ jobs:
       run: |
         ./venv/bin/mypy src tests
 
+    - name: Build MacOS DMG in Catalina
+        working-directory: ${{ github.workspace }}\build_scripts
+        run: |
+          sh build_macos.ps1
+
+
     - name: Test blockchain code with pytest
       run: |
         ./venv/bin/py.test tests -s -v
