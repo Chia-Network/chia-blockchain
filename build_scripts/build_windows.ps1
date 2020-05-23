@@ -2,7 +2,7 @@ cd ..
 mkdir build_scripts\win_build
 cd build_scripts\win_build
 
-Write-Output
+Write-Output "   ---";
 Write-Output "curl miniupnpc, setprotitle";
 Write-Output "   ---";
 curl -OL --show-error --fail https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl
