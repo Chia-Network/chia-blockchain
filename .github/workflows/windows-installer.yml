@@ -18,13 +18,13 @@ jobs:
         with:
           python-version: "3.7"
 
-      - name: Run build_windows.ps1
+      - name: Build Windows installer with build_scripts\build_windows.ps1
         working-directory: ${{ github.workspace }}\build_scripts
         run: |
           git config --global core.longpaths true
           ./build_windows.ps1
 
-      - name: Upload Windows exe's
+      - name: Upload Windows exe's to artifacts
         uses: actions/upload-artifact@v1
         with:
           name: Windows-Exe
