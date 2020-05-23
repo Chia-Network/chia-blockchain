@@ -24,7 +24,7 @@ jobs:
           git config --global core.longpaths true
           ./build_windows.ps1
 
-      - name: Upload artifacts EXE
+      - name: Upload Windows exe's
         uses: actions/upload-artifact@v1
         with:
           name: Windows-Exe
