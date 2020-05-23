@@ -17,8 +17,8 @@ Write-Output "Build chia-blockchain wheels\n";
 pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ -f . --wheel-dir=.\build_scripts\win_build .
 
 Write-Output "\n";
-Write-Output "\Create venv\n";
-python3 -m venv venv
+Write-Output "\Create venv - python3.7 or 3.8 is required in PATH\n";
+python -m venv venv
 . .\venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install pywin32 pyinstaller
