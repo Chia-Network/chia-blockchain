@@ -64,10 +64,10 @@ steps:
       python -m pip install -r requirements-dev.txt
     displayName: "Install dev dependencies"
 
-  - script: |
-      pip install pytest pytest-azurepipelines
-      py.test tests -s -v
-    displayName: "pytest"
+#  - script: |
+#      pip install pytest pytest-azurepipelines
+#      py.test tests -s -v
+#    displayName: "pytest"
 
   - script: |
       cd build_scripts

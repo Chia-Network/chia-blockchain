@@ -66,9 +66,9 @@ jobs:
       run: |
         ./venv/bin/py.test tests -s -v
 
-    - name: Upload artifacts
+    - name: Upload MacOS artifacts
       if: startsWith(matrix.os, 'mac')
       uses: actions/upload-artifact@v1
       with:
         name: Chia-MacOS-10.15-dmg
-        path: ${{ github.workspace }}/electron-react/release-builds/
+        path: ${{ github.workspace }}/build_scripts/Chia.dmg
