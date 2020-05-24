@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { Component, useEffect } from "react";
 import Button from "@material-ui/core/Button";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import Link from "@material-ui/core/Link";
@@ -16,6 +16,7 @@ import { mnemonic_word_added, resetMnemonic } from "../modules/mnemonic_input";
 import { add_key } from "../modules/message";
 import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
 import logo from "../assets/img/chia_logo.svg"; // Tell webpack this JS file uses this image
+import { openDialog } from "../modules/dialogReducer";
 
 const MnemonicField = props => {
   return (
@@ -79,6 +80,15 @@ const UIPart = props => {
     dispatch(add_key(mnemonic));
   }
 
+  useEffect(() => {
+    dispatch(
+      openDialog(
+        "Welcome!",
+        `Enter the 24 word mmemonic that you have saved in order to restore your Chia wallet. `
+      )
+    );
+  }, []);
+
   const words = useSelector(state => state.wallet_state.mnemonic);
   const classes = myStyle();
 
@@ -89,14 +99,9 @@ const UIPart = props => {
       </Link>
       <div className={classes.grid_wrap}>
         <Container className={classes.grid} maxWidth="lg">
-          <img className={classes.logo} src={logo} alt="Logo" />
           <Typography className={classes.title} component="h4" variant="h4">
             Import Wallet from Mnemonics
           </Typography>
-          <p className={classes.instructions}>
-            Enter the 24 word mmemonic that you have saved to import your
-            existing keys.
-          </p>
           <Grid container spacing={2}>
             <Iterator mnemonic={words}></Iterator>
           </Grid>

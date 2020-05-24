@@ -36,7 +36,7 @@ const myStyle = makeStyles(theme => ({
     alignItems: "center"
   },
   grid_item: {
-    padding: theme.spacing(2),
+    padding: theme.spacing(1),
     paddingTop: 0,
     display: "flex",
     flexDirection: "column",

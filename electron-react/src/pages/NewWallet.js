@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { Component, useEffect } from "react";
 import Button from "@material-ui/core/Button";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import Grid from "@material-ui/core/Grid";
@@ -14,6 +14,7 @@ import logo from "../assets/img/chia_logo.svg"; // Tell webpack this JS file use
 import myStyle from "./style";
 import { add_key } from "../modules/message";
 import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
+import { openDialog } from "../modules/dialogReducer";
 
 const MnemonicField = props => {
   return (
@@ -46,8 +47,20 @@ const UIPart = props => {
   const dispatch = useDispatch();
   const classes = myStyle();
   if (!words) {
-    words = []
+    words = [];
   }
+
+  useEffect(() => {
+    dispatch(
+      openDialog(
+        "Welcome!",
+        `The following words are used for your wallet backup.
+        Without them, you will lose access to your wallet, keep them safe!!!
+        Write down each word along with the order number next to them. (Order is important) `
+      )
+    );
+  }, []);
+
   function goBack() {
     dispatch(changeEntranceMenu(presentSelectKeys));
   }
@@ -63,15 +76,9 @@ const UIPart = props => {
       </ArrowBackIosIcon>
       <div className={classes.grid_wrap}>
         <Container className={classes.grid} maxWidth="lg">
-          <img className={classes.logo} src={logo} alt="Logo" />
           <Typography className={classes.title} component="h4" variant="h4">
             New Wallet
           </Typography>
-          <p className={classes.instructions}>
-            Welcome to the Chia wallet. The following words make up your private
-            key, so write them down and keep them safe. They can be used to
-            recover the wallet.
-          </p>
           <Grid container spacing={2}>
             <Iterator mnemonic={words}></Iterator>
           </Grid>
