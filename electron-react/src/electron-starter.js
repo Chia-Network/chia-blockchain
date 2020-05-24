@@ -66,7 +66,7 @@ const createPyProc = () => {
   processOptions = {};
   //processOptions.detached = true;
   //processOptions.stdio = "ignore";
-  pyProc = null
+  pyProc = null;
   if (guessPackaged()) {
     try {
       console.log("Running python executable: ");
@@ -86,17 +86,17 @@ const createPyProc = () => {
   if (pyProc != null) {
     pyProc.stdout.setEncoding("utf8");
 
-    pyProc.stdout.on("data", function (data) {
+    pyProc.stdout.on("data", function(data) {
       process.stdout.write(data.toString());
     });
 
     pyProc.stderr.setEncoding("utf8");
-    pyProc.stderr.on("data", function (data) {
+    pyProc.stderr.on("data", function(data) {
       //Here is where the error output goes
       process.stdout.write("stderr: " + data.toString());
     });
 
-    pyProc.on("close", function (code) {
+    pyProc.on("close", function(code) {
       //Here you can get the exit code of the script
       console.log("closing code: " + code);
     });
