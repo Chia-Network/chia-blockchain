@@ -61,7 +61,7 @@ async function ping_wallet(store) {
   const state = store.getState();
   const wallet_connected = state.daemon_state.wallet_connected;
   if (!wallet_connected) {
-    ping_wallet();
+    ping_wallet(store);
   }
 }
 
@@ -71,7 +71,7 @@ async function ping_full_node(store) {
   const state = store.getState();
   const node_connected = state.daemon_state.full_node_connected;
   if (!node_connected) {
-    ping_full_node();
+    ping_full_node(store);
   }
 }
 
@@ -81,7 +81,7 @@ async function ping_farmer(store) {
   const state = store.getState();
   const farmer_connected = state.daemon_state.farmer_connected;
   if (!farmer_connected) {
-    ping_farmer();
+    ping_farmer(store);
   }
 }
 
@@ -91,7 +91,7 @@ async function ping_harvester(store) {
   const state = store.getState();
   const harvester_connected = state.daemon_state.harvester_connected;
   if (!harvester_connected) {
-    ping_harvester();
+    ping_harvester(store);
   }
 }
 
