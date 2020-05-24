@@ -15,6 +15,7 @@ import {
   presentSelectKeys
 } from "./modules/entranceMenu";
 import { Backdrop, CircularProgress } from "@material-ui/core";
+import { ModalDialog } from "./pages/ModalDialog";
 const defaultTheme = createMuiTheme();
 
 const theme = createMuiTheme({
@@ -120,6 +121,7 @@ const App = () => {
   return (
     <React.Fragment>
       <ThemeProvider theme={theme}>
+        <ModalDialog></ModalDialog>
         <CustomRouter></CustomRouter>
       </ThemeProvider>
     </React.Fragment>

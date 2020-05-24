@@ -35,11 +35,13 @@ const useStyles = makeStyles(theme => ({
     borderColor: "#ffffff"
   },
   topButton: {
+    width: 300,
     height: 45,
     marginTop: theme.spacing(4),
     marginBottom: theme.spacing(1)
   },
   bottomButton: {
+    width: 300,
     height: 45,
     marginTop: theme.spacing(2),
     marginBottom: theme.spacing(1)
@@ -132,7 +134,7 @@ const SelectKey = () => {
               color="primary"
               className={classes.topButton}
             >
-              Import existing key from mnemonics
+              Enter Mnemonics
             </Button>
           </Link>
           <Link onClick={goToNewWallet}>
