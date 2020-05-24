@@ -10,7 +10,6 @@ import { connect, useSelector, useDispatch } from "react-redux";
 import { genereate_mnemonics } from "../modules/message";
 import { withRouter } from "react-router-dom";
 import CssTextField from "../components/cssTextField";
-import logo from "../assets/img/chia_logo.svg"; // Tell webpack this JS file uses this image
 import myStyle from "./style";
 import { add_key } from "../modules/message";
 import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";

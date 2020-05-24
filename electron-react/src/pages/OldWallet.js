@@ -15,7 +15,6 @@ import { useStore, useDispatch } from "react-redux";
 import { mnemonic_word_added, resetMnemonic } from "../modules/mnemonic_input";
 import { add_key } from "../modules/message";
 import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
-import logo from "../assets/img/chia_logo.svg"; // Tell webpack this JS file uses this image
 import { openDialog } from "../modules/dialogReducer";
 
 const MnemonicField = props => {
