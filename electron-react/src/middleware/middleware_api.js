@@ -56,23 +56,43 @@ function sleep(ms) {
 }
 
 async function ping_wallet(store) {
-  await sleep(1500);
   store.dispatch(pingWallet());
+  await sleep(300);
+  const state = store.getState();
+  const wallet_connected = state.daemon_state.wallet_connected;
+  if (!wallet_connected) {
+    ping_wallet();
+  }
 }
 
 async function ping_full_node(store) {
-  await sleep(1500);
   store.dispatch(pingFullNode());
+  await sleep(300);
+  const state = store.getState();
+  const node_connected = state.daemon_state.full_node_connected;
+  if (!node_connected) {
+    ping_full_node();
+  }
 }
 
 async function ping_farmer(store) {
-  await sleep(1500);
   store.dispatch(pingFarmer());
+  await sleep(300);
+  const state = store.getState();
+  const farmer_connected = state.daemon_state.farmer_connected;
+  if (!farmer_connected) {
+    ping_farmer();
+  }
 }
 
 async function ping_harvester(store) {
-  await sleep(1500);
   store.dispatch(pingHarvester());
+  await sleep(300);
+  const state = store.getState();
+  const harvester_connected = state.daemon_state.harvester_connected;
+  if (!harvester_connected) {
+    ping_harvester();
+  }
 }
 
 async function track_progress(store, location) {
