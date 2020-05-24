@@ -66,15 +66,15 @@ export const daemonReducer = (state = { ...initial_state }, action) => {
       } else if (command === "is_running") {
         if (data.success) {
           const service = data.service;
-          if (data.service === service_plotter) {
+          if (service === service_plotter) {
             state.plotter_running = data.is_running;
-          } else if (data.service === service_full_node) {
+          } else if (service === service_full_node) {
             state.full_node_running = data.is_running;
-          } else if (data.service === service_wallet_server) {
+          } else if (service === service_wallet_server) {
             state.wallet_running = data.is_running;
-          } else if (data.service === service_farmer) {
+          } else if (service === service_farmer) {
             state.farmer_running = data.is_running;
-          } else if (data.service === service_harvester) {
+          } else if (service === service_harvester) {
             state.harvester_running = data.is_running;
           }
         }
