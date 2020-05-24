@@ -34,11 +34,10 @@ export const daemonReducer = (state = { ...initial_state }, action) => {
       const message = action.message;
       const data = message.data;
       const command = message.command;
-
       if (command === "register_service") {
         state.daemon_running = true;
         state.daemon_connected = true;
-      } else if (command === "service_started") {
+      } else if (command === "start_service") {
         const service = data.service;
         if (service === service_full_node) {
           state.full_node_running = true;
@@ -66,8 +65,17 @@ export const daemonReducer = (state = { ...initial_state }, action) => {
         }
       } else if (command === "is_running") {
         if (data.success) {
+          const service = data.service;
           if (data.service === service_plotter) {
             state.plotter_running = data.is_running;
+          } else if (data.service === service_full_node) {
+            state.full_node_running = data.is_running;
+          } else if (data.service === service_wallet_server) {
+            state.wallet_running = data.is_running;
+          } else if (data.service === service_farmer) {
+            state.farmer_running = data.is_running;
+          } else if (data.service === service_harvester) {
+            state.harvester_running = data.is_running;
           }
         }
       } else if (command === "stop_service") {
