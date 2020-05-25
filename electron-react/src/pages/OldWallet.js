@@ -86,7 +86,7 @@ const UIPart = props => {
         `Enter the 24 word mmemonic that you have saved in order to restore your Chia wallet. `
       )
     );
-  }, []);
+  }, [dispatch]);
 
   const words = useSelector(state => state.wallet_state.mnemonic);
   const classes = myStyle();

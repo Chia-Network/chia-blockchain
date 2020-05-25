@@ -50,6 +50,7 @@ import {
   plottingStarted
 } from "../modules/plotter_messages";
 import isElectron from "is-electron";
+import { startService } from "../modules/daemon_messages";
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -143,16 +144,19 @@ export const handle_message = (store, payload) => {
   } else if (payload.command === "log_in") {
     if (payload.data.success) {
       store.dispatch(format_message("get_wallets", {}));
+      let start_farmer = startService(service_farmer);
+      let start_harvester = startService(service_harvester);
+      store.dispatch(start_farmer);
+      store.dispatch(start_harvester);
     }
-  } else if (payload.command === "logged_in") {
-    if (payload.data.logged_in) {
-      store.dispatch(format_message("get_wallets", {}));
-    }
-  }
-  if (payload.command === "add_key") {
+  } else if (payload.command === "add_key") {
     if (payload.data.success) {
       store.dispatch(format_message("get_wallets", {}));
       store.dispatch(format_message("get_public_keys", {}));
+      let start_farmer = startService(service_farmer);
+      let start_harvester = startService(service_harvester);
+      store.dispatch(start_farmer);
+      store.dispatch(start_harvester);
     }
   } else if (payload.command === "delete_key") {
     if (payload.data.success) {

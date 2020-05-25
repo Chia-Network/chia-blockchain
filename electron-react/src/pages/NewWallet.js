@@ -58,7 +58,7 @@ const UIPart = props => {
         Write down each word along with the order number next to them. (Order is important) `
       )
     );
-  }, []);
+  }, [dispatch]);
 
   function goBack() {
     dispatch(changeEntranceMenu(presentSelectKeys));
