@@ -69,7 +69,6 @@ kwargs = dict(
         "src.wallet.cc_wallet",
         "src.wallet.util",
         "src.ssl",
-        "src.util.bip39",
     ],
     scripts=[
         "scripts/_chia-common",
@@ -95,9 +94,8 @@ kwargs = dict(
         ]
     },
     package_data={
-        "src.util": ["initial-*.yaml"],
+        "src.util": ["initial-*.yaml", "english.txt"],
         "src.server": ["dummy.crt", "dummy.key"],
-        "src.util.bip39": ["english.txt"],
     },
     use_scm_version={"fallback_version": "unknown-no-.git-directory"},
     long_description=open("README.md").read(),
