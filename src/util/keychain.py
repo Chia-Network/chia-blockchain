@@ -27,7 +27,7 @@ else:
 
 
 def bip39_word_list() -> str:
-    return pkg_resources.resource_string("src.util.bip39", "english.txt").decode()
+    return pkg_resources.resource_string(__name__, "english.txt").decode()
 
 
 def generate_mnemonic() -> List[str]:
