@@ -83,11 +83,9 @@ class Harvester:
     executor: concurrent.futures.ThreadPoolExecutor
     state_changed_callback: Optional[Callable]
 
-    @staticmethod
-    def create(
-        config: Dict, plot_config: Dict, root_path: Path
+    def __init__(
+        self, config: Dict, plot_config: Dict, root_path: Path
     ):
-        self = Harvester()
         self.config = config
         self.plot_config = plot_config
         self.root_path = root_path
@@ -101,11 +99,10 @@ class Harvester:
         self.challenge_hashes = {}
         self._plot_notification_task = asyncio.ensure_future(self._plot_notification())
         self._is_shutdown = False
-        self.global_connections = None
+        self.global_connections: Optional[PeerConnections] = None
         self.pool_pubkeys = []
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
         self.state_changed_callback = None
-        return self
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
