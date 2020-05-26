@@ -17,7 +17,7 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 - We added a new keychain system that replaces keys.yaml, and migrates existing users from keys.yaml. It utilizes each OS's keychain for slightly more secure key storage.
 - We added a `chia keys` command line program, to see, add, and remove private keys.
 - We added RPC servers and RPC client implementations for Farmer and Harvester. The new UI uses these for additional information and functionality.
-- We added total network storage space estimation to the node RPC at the `/get_network_space` endpoint instead of only being available in the cli. The PRC endpoint takes two block header hashes and estimates space between those header hashes.
+- We added total network storage space estimation to the node RPC at the `/get_network_space` endpoint instead of only being available in the cli. The RPC endpoint takes two block header hashes and estimates space between those header hashes.
 - We now have a CHANGELOG.md that adheres closely to the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) standard. We merged in the version history and updated some previous release notes to capture items important to the change log. We are modifying our release process to accumulate changes at the top of the change log and then copy those to the release notes at the time of the release.
 - We added [lgtm](https://lgtm.com/) source analysis on pull request to the chia-blockchain, chiapos, chiavdf, chiabip158, and bls-library repositories to add some automated security analysis to our ci.
 
