@@ -18,8 +18,8 @@ function getInstallerConfig () {
     authors: 'Chia Networks',
     noMsi: true,
     outputDirectory: path.join(outPath, 'windows-installer'),
-    exe: 'Chia.exe',
-    setupExe: 'ChiaSetup.exe',
+    exe: 'Chia-0.1.6.exe',
+    setupExe: 'ChiaSetup-0.1.6.exe',
     setupIcon: path.join(rootPath, 'src', 'assets', 'img', 'chia.ico')
   })
 }
