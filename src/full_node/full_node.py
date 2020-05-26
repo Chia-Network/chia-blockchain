@@ -883,7 +883,7 @@ class FullNode:
     async def broadcast_uncompact_blocks(
         self, delivery: Delivery = Delivery.BROADCAST
     ):
-        while self.full_node_store.get_sync_mode():
+        while self.sync_store.get_sync_mode():
             if self._shut_down:
                 return
             await asyncio.sleep(30)
