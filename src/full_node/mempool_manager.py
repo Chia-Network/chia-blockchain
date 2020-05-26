@@ -302,8 +302,8 @@ class MempoolManager:
                         potential_error = error
                     break
                 more_pairs = hash_key_pairs_for_conditions_dict(
-                        npc.condition_dict, npc.coin_name
-                    )
+                    npc.condition_dict, npc.coin_name
+                )
                 hash_key_pairs.update(more_pairs)
 
             if error:
