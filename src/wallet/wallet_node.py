@@ -3,6 +3,7 @@ import json
 import time
 from typing import Dict, Optional, Tuple, List, AsyncGenerator
 import concurrent
+from pathlib import Path
 import random
 import logging
 import traceback
@@ -34,7 +35,6 @@ from src.types.full_block import FullBlock
 from src.types.coin import Coin, hash_coin_list
 from src.full_node.blockchain import ReceiveBlockResult
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
-from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.errors import Err
 from src.util.path import path_from_root, mkdir
 
@@ -72,17 +72,20 @@ class WalletNode:
     # which is consecutive requests for the previous block
     short_sync_threshold: int
     _shut_down: bool
+    root_path: Path
 
     @staticmethod
     async def create(
         config: Dict,
         private_key: ExtendedPrivateKey,
+        root_path: Path,
         name: str = None,
         override_constants: Dict = {},
     ):
         self = WalletNode()
         self.config = config
         self.constants = consensus_constants.copy()
+        self.root_path = root_path
         for key, value in override_constants.items():
             self.constants[key] = value
         if name:
@@ -92,7 +95,7 @@ class WalletNode:
 
         db_path_key_suffix = str(private_key.get_public_key().get_fingerprint())
         path = path_from_root(
-            DEFAULT_ROOT_PATH, f"{config['database_path']}-{db_path_key_suffix}"
+            self.root_path, f"{config['database_path']}-{db_path_key_suffix}"
         )
         mkdir(path.parent)
 

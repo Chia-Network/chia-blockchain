@@ -176,7 +176,11 @@ async def setup_wallet_node(
     network_id = net_config.get("network_id")
 
     wallet = await WalletNode.create(
-        config, private_key, override_constants=test_constants_copy, name="wallet1",
+        config,
+        private_key,
+        root_path,
+        override_constants=test_constants_copy,
+        name="wallet1",
     )
     assert ping_interval is not None
     assert network_id is not None

@@ -99,11 +99,16 @@ class WebSocketServer:
         if self.config["testing"] is True:
             log.info("Websocket server in testing mode")
             self.wallet_node = await WalletNode.create(
-                self.config, private_key, override_constants=test_constants
+                self.config,
+                private_key,
+                self.root_path,
+                override_constants=test_constants,
             )
         else:
             log.info("Not Testing")
-            self.wallet_node = await WalletNode.create(self.config, private_key)
+            self.wallet_node = await WalletNode.create(
+                self.config, private_key, self.root_path
+            )
 
         if self.wallet_node is None:
             return False
@@ -125,7 +130,7 @@ class WebSocketServer:
             NodeType.WALLET,
             ping_interval,
             network_id,
-            DEFAULT_ROOT_PATH,
+            self.root_path,
             self.config,
         )
         self.wallet_node.set_server(server)
@@ -598,7 +603,7 @@ class WebSocketServer:
 
     async def clean_all_state(self):
         self.keychain.delete_all_keys()
-        path = path_from_root(DEFAULT_ROOT_PATH, self.config["database_path"])
+        path = path_from_root(self.root_path, self.config["database_path"])
         if path.exists():
             path.unlink()
 

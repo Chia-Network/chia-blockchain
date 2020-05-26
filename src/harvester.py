@@ -15,7 +15,6 @@ from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.config import load_config, save_config
 from src.util.api_decorators import api_request
-from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.ints import uint8
 from src.util.path import path_from_root
 
@@ -87,7 +86,7 @@ class Harvester:
 
     @staticmethod
     async def create(
-        config: Dict, plot_config: Dict, root_path: Path = DEFAULT_ROOT_PATH
+        config: Dict, plot_config: Dict, root_path: Path,
     ):
         self = Harvester()
         self.config = config
