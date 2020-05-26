@@ -582,18 +582,22 @@ class Farmer extends Component {
         if (tx.additions.length < 1) {
           continue;
         }
+        // Height here is filled into the whole 256 bits (32 bytes) of the parent
         let hexHeight = arr_to_hex(
           big_int_to_array(BigInt(tx.confirmed_at_index), 32)
         );
+        // Height is a 32 bit int so hashing it requires serializing it to 4 bytes
         let hexHeightHashBytes = await sha256(
-          big_int_to_array(BigInt(tx.confirmed_at_index), 32)
+          big_int_to_array(BigInt(tx.confirmed_at_index), 4)
         );
-        let hexHeightHash = arr_to_hex(hexHeightHashBytes);
+        let hexHeightDoubleHashBytes = await sha256(hexHeightHashBytes);
+        let hexHeightDoubleHash = arr_to_hex(hexHeightDoubleHashBytes);
+
         if (
           hexHeight === tx.additions[0].parent_coin_info ||
           hexHeight === tx.additions[0].parent_coin_info.slice(2) ||
-          hexHeightHash === tx.additions[0].parent_coin_info ||
-          hexHeightHash === tx.additions[0].parent_coin_info.slice(2)
+          hexHeightDoubleHash === tx.additions[0].parent_coin_info ||
+          hexHeightDoubleHash === tx.additions[0].parent_coin_info.slice(2)
         ) {
           totalChia += BigInt(tx.amount);
           if (tx.confirmed_at_index > biggestHeight) {
