@@ -490,14 +490,13 @@ class WalletStateManager:
             )
             await self.tx_store.add_transaction_record(tx_record)
         else:
-            unconfirmed_record = await self.tx_store.unconfirmed_with_addition_coin(
-                coin.name()
-            )
+            records = await self.tx_store.tx_with_addition_coin(coin.name(), wallet_id)
 
-            if len(unconfirmed_record) > 0:
+            if len(records) > 0:
                 # This is the change from this transaction
-                for record in unconfirmed_record:
-                    await self.tx_store.set_confirmed(record.name(), index)
+                for record in records:
+                    if record.confirmed is False:
+                        await self.tx_store.set_confirmed(record.name(), index)
             else:
                 now = uint64(int(time.time()))
                 tx_record = TransactionRecord(
