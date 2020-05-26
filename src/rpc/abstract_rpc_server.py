@@ -1,7 +1,7 @@
 from typing import Callable, Dict, Any
 from abc import ABC, abstractmethod
 
-from aiohttp import aiohttp, web
+import aiohttp
 import logging
 import asyncio
 import json
@@ -64,11 +64,11 @@ class AbstractRpcApiHandler(ABC):
         asyncio.create_task(self._state_changed(change))
 
     def _wrap_http_handler(self, f) -> Callable:
-        async def inner(request) -> web.Response:
+        async def inner(request) -> aiohttp.web.Response:
             request_data = await request.json()
             res_object = await f(request_data)
             if res_object is None:
-                raise web.HTTPNotFound()
+                raise aiohttp.web.HTTPNotFound()
             return obj_to_response(res_object)
 
         return inner
@@ -103,20 +103,20 @@ class AbstractRpcApiHandler(ABC):
         if self.service.server is None or not (
             await self.service.server.start_client(target_node, None)
         ):
-            raise web.HTTPInternalServerError()
+            raise aiohttp.web.HTTPInternalServerError()
         return {"success": True}
 
     async def close_connection(self, request: Dict):
         node_id = hexstr_to_bytes(request["node_id"])
         if self.service.server is None:
-            raise web.HTTPInternalServerError()
+            raise aiohttp.web.HTTPInternalServerError()
         connections_to_close = [
             c
             for c in self.service.server.global_connections.get_connections()
             if c.node_id == node_id
         ]
         if len(connections_to_close) == 0:
-            raise web.HTTPNotFound()
+            raise aiohttp.web.HTTPNotFound()
         for connection in connections_to_close:
             self.service.server.global_connections.close(connection)
         return {"success": True}
@@ -224,31 +224,31 @@ async def start_rpc_server(
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.
     """
-    app = web.Application()
+    app = aiohttp.web.Application()
     handler.service._set_state_changed_callback(handler.state_changed)
 
     routes = [
-        web.post(route, handler._wrap_http_handler(func))
+        aiohttp.web.post(route, handler._wrap_http_handler(func))
         for (route, func) in http_routes.items()
     ]
     routes += [
-        web.post(
+        aiohttp.web.post(
             "/get_connections", handler._wrap_http_handler(handler.get_connections)
         ),
-        web.post(
+        aiohttp.web.post(
             "/open_connection", handler._wrap_http_handler(handler.open_connection)
         ),
-        web.post(
+        aiohttp.web.post(
             "/close_connection", handler._wrap_http_handler(handler.close_connection)
         ),
-        web.post("/stop_node", handler._wrap_http_handler(handler.stop_node)),
+        aiohttp.web.post("/stop_node", handler._wrap_http_handler(handler.stop_node)),
     ]
 
     app.add_routes(routes)
     daemon_connection = asyncio.create_task(handler.connect_to_daemon())
-    runner = web.AppRunner(app, access_log=None)
+    runner = aiohttp.web.AppRunner(app, access_log=None)
     await runner.setup()
-    site = web.TCPSite(runner, "localhost", int(rpc_port))
+    site = aiohttp.web.TCPSite(runner, "localhost", int(rpc_port))
     await site.start()
 
     async def cleanup():
