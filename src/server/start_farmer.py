@@ -9,7 +9,7 @@ from src.rpc.farmer_rpc_server import start_farmer_rpc_server
 from src.server.start_service import run_service
 
 
-def service_kwargs_for_farmer(root_path=DEFAULT_ROOT_PATH):
+def service_kwargs_for_farmer(root_path):
     service_name = "farmer"
     config = load_config_cli(root_path, "config.yaml", service_name)
     keychain = Keychain()
@@ -21,13 +21,6 @@ def service_kwargs_for_farmer(root_path=DEFAULT_ROOT_PATH):
     # TOD: Remove once we have pool server
     config_pool = load_config_cli(root_path, "config.yaml", "pool")
     api = Farmer(config, config_pool, keychain)
-
-    rpc_cleanup = None
-
-    async def await_closed_callback():
-        # Waits for the rpc server to close
-        if rpc_cleanup is not None:
-            await rpc_cleanup
 
     kwargs = dict(
         root_path=root_path,
@@ -44,7 +37,7 @@ def service_kwargs_for_farmer(root_path=DEFAULT_ROOT_PATH):
 
 
 def main():
-    kwargs = service_kwargs_for_farmer()
+    kwargs = service_kwargs_for_farmer(DEFAULT_ROOT_PATH)
     return run_service(**kwargs)
 
 
