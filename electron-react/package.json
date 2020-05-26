@@ -3,7 +3,7 @@
   "author": "Straya Markovic",
   "description": "GUI for Chia Blockchain",
   "productName": "Chia",
-  "version": "0.1.0",
+  "version": "1.6.0",
   "private": true,
   "devDependencies": {
     "electron-winstaller": "^4.0.0",
