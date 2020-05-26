@@ -82,7 +82,7 @@ class WalletNode:
         root_path: Path,
         name: str = None,
         override_constants: Dict = {},
-        local_test: bool = False
+        local_test: bool = False,
     ):
         self = WalletNode()
         self.config = config
