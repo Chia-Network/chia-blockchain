@@ -22,5 +22,5 @@ mv Chia-darwin-x64 ../build_scripts/dist/
 cd ../build_scripts
 
 echo"Create .dmg"
-electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia --overwrite
+electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia-0.1.6 --overwrite
 ls -l
