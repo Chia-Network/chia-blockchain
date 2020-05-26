@@ -176,7 +176,11 @@ async def setup_wallet_node(
     network_id = net_config.get("network_id")
 
     wallet = await WalletNode.create(
-        config, private_key, override_constants=test_constants_copy, name="wallet1",
+        config,
+        private_key,
+        root_path,
+        override_constants=test_constants_copy,
+        name="wallet1",
     )
     assert ping_interval is not None
     assert network_id is not None
@@ -202,11 +206,11 @@ async def setup_wallet_node(
 
 
 async def setup_harvester(port, dic={}):
-    config = load_config(root_path, "config.yaml", "harvester")
-
+    config = load_config(bt.root_path, "config.yaml", "harvester")
+    # print(bt.plot_config)
     harvester = await Harvester.create(config, bt.plot_config, bt.root_path)
 
-    net_config = load_config(root_path, "config.yaml")
+    net_config = load_config(bt.root_path, "config.yaml")
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")
     assert ping_interval is not None
@@ -217,7 +221,7 @@ async def setup_harvester(port, dic={}):
         NodeType.HARVESTER,
         ping_interval,
         network_id,
-        root_path,
+        bt.root_path,
         config,
         f"harvester_server_{port}",
     )

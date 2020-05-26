@@ -15,7 +15,6 @@ from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.config import load_config, save_config
 from src.util.api_decorators import api_request
-from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.ints import uint8
 from src.util.path import path_from_root
 
@@ -87,7 +86,7 @@ class Harvester:
 
     @staticmethod
     async def create(
-        config: Dict, plot_config: Dict, root_path: Path = DEFAULT_ROOT_PATH
+        config: Dict, plot_config: Dict, root_path: Path,
     ):
         self = Harvester()
         self.config = config
@@ -158,7 +157,9 @@ class Harvester:
             )
         return (response_plots, self.failed_to_open_filenames, self.not_found_filenames)
 
-    def _refresh_plots(self):
+    def _refresh_plots(self, reload_config_file=True):
+        if reload_config_file:
+            self.plot_config = load_config(self.root_path, "plots.yaml")
         (
             self.provers,
             self.failed_to_open_filenames,
@@ -246,7 +247,7 @@ class Harvester:
         use any plots which don't have one of the pool keys.
         """
         self.pool_pubkeys = harvester_handshake.pool_pubkeys
-        self._refresh_plots()
+        self._refresh_plots(reload_config_file=False)
         if len(self.provers) == 0:
             log.warning(
                 "Not farming any plots on this harvester. Check your configuration."
