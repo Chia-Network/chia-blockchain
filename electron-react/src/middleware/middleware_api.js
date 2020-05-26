@@ -127,10 +127,6 @@ export const handle_message = (store, payload) => {
   if (payload.command === "ping") {
     if (payload.origin === service_wallet_server) {
       store.dispatch(format_message("get_public_keys", {}));
-      store.dispatch(format_message("get_wallets", {}));
-      store.dispatch(get_height_info());
-      store.dispatch(get_sync_status());
-      store.dispatch(get_connection_info());
     } else if (payload.origin === service_full_node) {
       store.dispatch(getBlockChainState());
       store.dispatch(getLatestBlocks());
@@ -148,11 +144,17 @@ export const handle_message = (store, payload) => {
       let start_harvester = startService(service_harvester);
       store.dispatch(start_farmer);
       store.dispatch(start_harvester);
+      store.dispatch(get_height_info());
+      store.dispatch(get_sync_status());
+      store.dispatch(get_connection_info());
     }
   } else if (payload.command === "add_key") {
     if (payload.data.success) {
       store.dispatch(format_message("get_wallets", {}));
       store.dispatch(format_message("get_public_keys", {}));
+      store.dispatch(get_height_info());
+      store.dispatch(get_sync_status());
+      store.dispatch(get_connection_info());
       let start_farmer = startService(service_farmer);
       let start_harvester = startService(service_harvester);
       store.dispatch(start_farmer);
