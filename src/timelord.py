@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Tuple
 from chiavdf import create_discriminant
 from src.protocols import timelord_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
+from src.server.server import ChiaServer
 from src.types.classgroup import ClassgroupElement
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
@@ -46,10 +47,11 @@ class Timelord:
         self.max_connection_time = self.config["max_connection_time"]
         self.potential_free_clients: List = []
         self.free_clients: List[Tuple[str, StreamReader, StreamWriter]] = []
+        self.server: Optional[ChiaServer] = None
         self._is_shutdown = False
 
-    def set_server(self, server):
-        pass
+    def set_server(self, server: ChiaServer):
+        self.server = server
 
     async def _handle_client(self, reader: StreamReader, writer: StreamWriter):
         async with self.lock:
@@ -430,7 +432,7 @@ class Timelord:
 
                 if len(self.proofs_to_write) > 0:
                     for msg in self.proofs_to_write:
-                        yield msg
+                        self.server.push_message(msg)
                     self.proofs_to_write.clear()
             await asyncio.sleep(0.5)
 
