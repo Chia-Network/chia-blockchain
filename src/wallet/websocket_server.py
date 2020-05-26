@@ -103,6 +103,7 @@ class WebSocketServer:
                 private_key,
                 self.root_path,
                 override_constants=test_constants,
+                local_test=True
             )
         else:
             log.info("Not Testing")
@@ -135,8 +136,7 @@ class WebSocketServer:
         )
         self.wallet_node.set_server(server)
 
-        if self.config["testing"] is False:
-            self.wallet_node._start_bg_tasks()
+        self.wallet_node._start_bg_tasks()
 
         return True
 
