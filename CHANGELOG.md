@@ -21,7 +21,6 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 - We now have a CHANGELOG.md that adheres closely to the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) standard. We merged in the version history and updated some previous release notes to capture items important to the change log. We are modifying our release process to accumulate changes at the top of the change log and then copy those to the release notes at the time of the release.
 - We added [lgtm](https://lgtm.com/) source analysis on pull request to the chia-blockchain, chiapos, chiavdf, chiabip158, and bls-library repositories to add some automated security analysis to our ci.
 
-
 ### Changed
 
 - Due to an issue with aggsig and aggsig-me, the beta 1.6 blockchain is not compatible with earlier chains.
@@ -34,7 +33,7 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
   height. Use `-d` to specify the delta number of blocks back into history to estimate over from either LCA or your `-b` block height.
 - The Full node RPC response formats have been changed. All API calls now return a dict with success, and an additional value, for example {"success": True, "block": block}.
 - chiapos is now easier to compile with MSVC.
-- create plots now takes in an optional sk_seed, it is no longer read in from keys.yaml. If not passed in, it is randomly generated.
+- create plots now takes in an optional sk_seed, it is no longer read in from keys.yaml. If not passed in, it is randomly generated. The -i argument can now only be used when you provide an sk_seed.
 - Moved to PyYAML 5.3.1 which prevents arbitrary code execution during python/object/new constructor.
 - Moved to Python cryptography 2.9.2 which deprecates OpenSSL 1.0.1 and now relies upon OpenSSL 1.1.1g.
 - Moved to aiosqlite 0.13.0 which adds official support for Python 3.8 and fixes a possible hung thread if a connection failed.

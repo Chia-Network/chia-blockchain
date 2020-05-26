@@ -55,8 +55,6 @@ class TestRpc:
             res_2 = await client_2.get_plots()
             assert len(res_2["plots"]) + 1 == len(res["plots"])
 
-            await client_2.refresh_plots()
-
         except AssertionError:
             # Checks that the RPC manages to stop the node
             client.close()

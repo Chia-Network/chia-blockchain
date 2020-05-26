@@ -15,7 +15,11 @@ from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
-from src.util.condition_tools import conditions_for_solution, conditions_by_opcode, hash_key_pairs_for_conditions_dict
+from src.util.condition_tools import (
+    conditions_for_solution,
+    conditions_by_opcode,
+    hash_key_pairs_for_conditions_dict,
+)
 from src.util.ints import uint64
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.wallet_tools import WalletTool
@@ -914,7 +918,11 @@ class TestMempool:
         ):
             pass
 
-        unsigned: List[Tuple[Program, CoinSolution]] = wallet_a.generate_unsigned_transaction(1000, receiver_puzzlehash, block.header.data.coinbase, {}, 0)
+        unsigned: List[
+            Tuple[Program, CoinSolution]
+        ] = wallet_a.generate_unsigned_transaction(
+            1000, receiver_puzzlehash, block.header.data.coinbase, {}, 0
+        )
         assert len(unsigned) == 1
 
         puzzle, solution = unsigned[0]
@@ -925,7 +933,9 @@ class TestMempool:
         assert con is not None
 
         conditions_dict = conditions_by_opcode(con)
-        hash_key_pairs = hash_key_pairs_for_conditions_dict(conditions_dict, solution.coin.name())
+        hash_key_pairs = hash_key_pairs_for_conditions_dict(
+            conditions_dict, solution.coin.name()
+        )
         assert len(hash_key_pairs) == 1
 
         pk_pair: BLSSignature.PkMessagePair = hash_key_pairs[0]

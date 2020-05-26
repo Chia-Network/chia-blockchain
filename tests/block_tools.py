@@ -36,14 +36,14 @@ from src.util.hash import std_hash
 from src.util.path import mkdir
 from src.util.significant_bits import truncate_to_significant_bits
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
-from src.util.config import load_config, load_config_cli
+from src.util.config import load_config, load_config_cli, save_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.harvester import load_plots
 
 
 TEST_ROOT_PATH = Path(
     os.path.expanduser(
-        os.getenv("CHIA_ROOT", "~/.chia/beta-{version}-test").format(
+        os.getenv("CHIA_TEST_ROOT", "~/.chia/beta-{version}-test").format(
             version=__version__
         )
     )
@@ -128,6 +128,8 @@ class BlockTools:
                         "sk": bytes(plot_sks[pn]).hex(),
                         "pool_sk": bytes(pool_sk).hex(),
                     }
+                save_config(self.root_path, "plots.yaml", self.plot_config)
+
             except KeyboardInterrupt:
                 for filename in filenames:
                     if (

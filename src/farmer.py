@@ -65,7 +65,7 @@ class Farmer:
         self.pool_sks = [
             sk.get_private_key() for (sk, _) in self.keychain.get_all_private_keys()
         ]
-        self.pool_sks_map = {}
+        self.pool_sks_map: Dict = {}
         for key in self.pool_sks:
             self.pool_sks_map[bytes(key.get_public_key())] = key
 
@@ -266,15 +266,10 @@ class Farmer:
                 )
                 return
             sk = self.pool_sks_map[pool_pk]
-            coinbase_reward = uint64(
-                calculate_block_reward(uint32(new_proof_height))
-            )
+            coinbase_reward = uint64(calculate_block_reward(uint32(new_proof_height)))
 
             coinbase, signature = create_coinbase_coin_and_signature(
-                new_proof_height,
-                self.pool_target,
-                coinbase_reward,
-                sk,
+                new_proof_height, self.pool_target, coinbase_reward, sk,
             )
 
             request2 = farmer_protocol.RequestHeaderHash(
