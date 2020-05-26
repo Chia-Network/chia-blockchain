@@ -25,6 +25,7 @@ import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
 import { unix_to_short_date } from "../util/utils";
 import Accordion from "../components/Accordion";
 import { openDialog } from "../modules/dialogReducer";
+const config = require("../config");
 
 const drawerWidth = 240;
 
@@ -531,6 +532,7 @@ const SendCard = props => {
                   className={classes.sendButton}
                   variant="contained"
                   color="primary"
+                  style={config.local_test ? {} : { visibility: "hidden" }}
                 >
                   Farm
                 </Button>

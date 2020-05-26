@@ -23,7 +23,7 @@ import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
 import { unix_to_short_date } from "../util/utils";
 import Accordion from "../components/Accordion";
 import { openDialog } from "../modules/dialogReducer";
-
+const config = require("../config");
 const drawerWidth = 240;
 
 const useStyles = makeStyles(theme => ({
@@ -443,6 +443,7 @@ const SendCard = props => {
                 <Button
                   onClick={farm}
                   className={classes.sendButton}
+                  style={config.local_test ? {} : { visibility: "hidden" }}
                   variant="contained"
                   color="primary"
                 >
