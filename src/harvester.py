@@ -158,8 +158,9 @@ class Harvester:
             )
         return (response_plots, self.failed_to_open_filenames, self.not_found_filenames)
 
-    def _refresh_plots(self):
-        self.plot_config = load_config(self.root_path, "plots.yaml")
+    def _refresh_plots(self, reload_config_file=True):
+        if reload_config_file:
+            self.plot_config = load_config(self.root_path, "plots.yaml")
         (
             self.provers,
             self.failed_to_open_filenames,
@@ -247,7 +248,7 @@ class Harvester:
         use any plots which don't have one of the pool keys.
         """
         self.pool_pubkeys = harvester_handshake.pool_pubkeys
-        self._refresh_plots()
+        self._refresh_plots(reload_config_file=False)
         if len(self.provers) == 0:
             log.warning(
                 "Not farming any plots on this harvester. Check your configuration."
