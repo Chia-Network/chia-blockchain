@@ -427,7 +427,7 @@ def create_server_for_daemon(root_path):
         for k in services.keys():
             jobs.append(kill_service(root_path, services, k))
         if jobs:
-            done, pending = await asyncio.wait(jobs)
+            await asyncio.wait(jobs)
         services.clear()
 
         # we can't await `site.stop()` here because that will cause a deadlock, waiting for this

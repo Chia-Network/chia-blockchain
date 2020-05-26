@@ -1,8 +1,7 @@
 from typing import Callable, Dict, Any
 from abc import ABC, abstractmethod
 
-from aiohttp import web
-import aiohttp
+from aiohttp import aiohttp, web
 import logging
 import asyncio
 import json

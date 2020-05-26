@@ -1,9 +1,8 @@
 import json
-from asyncio import Event, ensure_future
+from asyncio import asyncio, Event, ensure_future
 from typing import Dict, Any
 
 import websockets
-import asyncio
 
 from src.types.sized_bytes import bytes32
 from src.util.ws_message import create_payload
