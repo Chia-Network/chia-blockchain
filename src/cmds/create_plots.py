@@ -13,7 +13,7 @@ from src.types.sized_bytes import bytes32
 from src.util.config import config_path_for_filename, load_config, save_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.keychain import Keychain
-from src.util.path import make_path_relative, mkdir, path_from_root
+from src.util.path import mkdir, path_from_root
 
 
 def log(to_log):
