@@ -159,6 +159,7 @@ class Harvester:
         return (response_plots, self.failed_to_open_filenames, self.not_found_filenames)
 
     def _refresh_plots(self):
+        self.plot_config = load_config(self.root_path, "plots.yaml")
         (
             self.provers,
             self.failed_to_open_filenames,
