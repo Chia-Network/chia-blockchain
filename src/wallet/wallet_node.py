@@ -73,6 +73,7 @@ class WalletNode:
     short_sync_threshold: int
     _shut_down: bool
     root_path: Path
+    local_test: bool
 
     @staticmethod
     async def create(
@@ -81,11 +82,13 @@ class WalletNode:
         root_path: Path,
         name: str = None,
         override_constants: Dict = {},
+        local_test: bool = False
     ):
         self = WalletNode()
         self.config = config
         self.constants = consensus_constants.copy()
         self.root_path = root_path
+        self.local_test = local_test
         for key, value in override_constants.items():
             self.constants[key] = value
         if name:
@@ -241,7 +244,8 @@ class WalletNode:
                         continue
                 await asyncio.sleep(self.config["introducer_connect_interval"])
 
-        self.introducer_task = asyncio.create_task(introducer_client())
+        if self.local_test is False:
+            self.introducer_task = asyncio.create_task(introducer_client())
         self.node_connect_task = asyncio.create_task(node_connect_task())
 
     def _num_needed_peers(self) -> int:

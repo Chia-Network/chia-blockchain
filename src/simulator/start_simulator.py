@@ -10,7 +10,7 @@ try:
 except ImportError:
     uvloop = None
 
-from src.rpc.rpc_server import start_rpc_server
+from src.rpc.full_node_rpc_server import start_full_node_rpc_server
 from src.server.server import ChiaServer
 from src.server.connection import NodeType
 from src.util.logging import initialize_logging
@@ -24,7 +24,7 @@ async def main():
     root_path = DEFAULT_ROOT_PATH
     net_config = load_config(root_path, "config.yaml")
     config = load_config_cli(root_path, "config.yaml", "full_node")
-    setproctitle("chia_full_node")
+    setproctitle("chia_full_node_simulator")
     initialize_logging("FullNode %(name)-23s", config["logging"], root_path)
 
     log = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ async def main():
 
         # Starts the RPC server
 
-    rpc_cleanup = await start_rpc_server(full_node, master_close_cb, config["rpc_port"])
+    rpc_cleanup = await start_full_node_rpc_server(full_node, master_close_cb, config["rpc_port"])
 
     try:
         asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
@@ -80,7 +80,7 @@ async def main():
     log.info("Closed all node servers.")
 
     # Stops the full node and closes DBs
-    await full_node._shutdown()
+    await full_node._await_closed()
 
     # Waits for the rpc server to close
     if rpc_cleanup is not None:
