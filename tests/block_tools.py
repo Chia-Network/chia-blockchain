@@ -37,7 +37,6 @@ from src.util.path import mkdir
 from src.util.significant_bits import truncate_to_significant_bits
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.config import load_config, load_config_cli, save_config
-from src.util.default_root import DEFAULT_ROOT_PATH
 from src.harvester import load_plots
 
 
@@ -140,8 +139,8 @@ class BlockTools:
                 sys.exit(1)
         else:
             try:
-                plot_config = load_config(DEFAULT_ROOT_PATH, "plots.yaml")
-                normal_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+                plot_config = load_config(root_path, "plots.yaml")
+                normal_config = load_config(root_path, "config.yaml")
             except FileNotFoundError:
                 raise RuntimeError("Plots not generated. Run chia-create-plots")
             self.keychain = Keychain(testing=False)
@@ -153,7 +152,7 @@ class BlockTools:
                 raise RuntimeError("Keys not generated. Run `chia generate keys`")
 
             self.prover_dict, _, _ = load_plots(
-                normal_config["harvester"], plot_config, pool_pubkeys, DEFAULT_ROOT_PATH
+                normal_config["harvester"], plot_config, pool_pubkeys, root_path
             )
 
             new_plot_config: Dict = {"plots": {}}
@@ -660,7 +659,9 @@ class BlockTools:
 # This might take a while, using the python VDF implementation.
 # Run by doing python -m tests.block_tools
 if __name__ == "__main__":
-    bt = BlockTools(real_plots=True)
+    from src.util.default_root import DEFAULT_ROOT_PATH
+
+    bt = BlockTools(root_path=DEFAULT_ROOT_PATH, real_plots=True)
     print(
         bytes(
             bt.create_genesis_block(
