@@ -52,7 +52,7 @@ class AbstractRpcApiHandler(ABC):
             )
         try:
             await self.websocket.send_str(payload)
-        except (BaseException) as e:
+        except (BaseException.Exception) as e:
             try:
                 self.log.warning(f"Sending data failed. Exception {type(e)}.")
             except BrokenPipeError:
@@ -158,7 +158,7 @@ class AbstractRpcApiHandler(ABC):
             if response is not None:
                 await websocket.send_str(format_response(message, response))
 
-        except BaseException as e:
+        except BaseException.Exception as e:
             tb = traceback.format_exc()
             self.log.error(f"Error while handling message: {tb}")
             error = {"success": False, "error": f"{e}"}
@@ -210,7 +210,7 @@ class AbstractRpcApiHandler(ABC):
                     await self.connection(ws)
                 self.websocket = None
                 await session.close()
-            except BaseException as e:
+            except BaseException.Exception as e:
                 self.log.warning(f"Exception: {e}")
                 if session is not None:
                     await session.close()

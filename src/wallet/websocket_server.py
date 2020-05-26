@@ -637,7 +637,7 @@ class WebSocketServer:
                 # self.log.info(f"payload: {format_response(message, response)}")
                 await websocket.send_str(format_response(message, response))
 
-        except BaseException as e:
+        except BaseException.Exception as e:
             tb = traceback.format_exc()
             self.log.error(f"Error while handling message: {tb}")
             error = {"success": False, "error": f"{e}"}
@@ -730,7 +730,7 @@ class WebSocketServer:
                 await self.websocket.send_str(
                     create_payload("state_changed", data, "chia-wallet", "wallet_ui")
                 )
-            except (BaseException) as e:
+            except (BaseException.Exception) as e:
                 try:
                     self.log.warning(f"Sending data failed. Exception {type(e)}.")
                 except BrokenPipeError:
