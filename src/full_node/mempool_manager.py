@@ -301,6 +301,7 @@ class MempoolManager:
                         added_to_potential = True
                         potential_error = error
                     break
+
                 hash_key_pairs.extend(
                     hash_key_pairs_for_conditions_dict(
                         npc.condition_dict, npc.coin_name

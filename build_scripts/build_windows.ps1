@@ -56,7 +56,7 @@ Write-Output "   ---";
 Write-Output "Electron package Windows Installer";
 Write-Output "   ---";
 npm run build
-electron-packager . Chia --asar.unpack="**/daemon/**" --overwrite --icon=./src/assets/img/chia.ico
+electron-packager . Chia-0.1.6 --asar.unpack="**/daemon/**" --overwrite --icon=./src/assets/img/chia.ico
 node winstaller.js
 
 Write-Output "   ---";
