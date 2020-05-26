@@ -65,17 +65,7 @@ class Timelord:
                         self.potential_free_clients.remove((ip, end_time))
                         break
 
-    async def _shutdown(self):
-        async with self.lock:
-            for (
-                stop_discriminant,
-                (stop_writer, _, _),
-            ) in self.active_discriminants.items():
-                stop_writer.write(b"010")
-                await stop_writer.drain()
-                self.done_discriminants.append(stop_discriminant)
-            self.active_discriminants.clear()
-            self.active_discriminants_start_time.clear()
+    def _shutdown(self):
         self._is_shutdown = True
 
     async def _stop_worst_process(self, worst_weight_active):
@@ -435,6 +425,17 @@ class Timelord:
                         self.server.push_message(msg)
                     self.proofs_to_write.clear()
             await asyncio.sleep(0.5)
+
+        async with self.lock:
+            for (
+                stop_discriminant,
+                (stop_writer, _, _),
+            ) in self.active_discriminants.items():
+                stop_writer.write(b"010")
+                await stop_writer.drain()
+                self.done_discriminants.append(stop_discriminant)
+            self.active_discriminants.clear()
+            self.active_discriminants_start_time.clear()
 
     @api_request
     async def challenge_start(self, challenge_start: timelord_protocol.ChallengeStart):
