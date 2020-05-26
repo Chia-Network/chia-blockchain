@@ -128,7 +128,7 @@ def main():
         plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(
             pool_pk, sk.get_public_key()
         )
-        dt_string = datetime.now().strftime("%Y-%m-%d-%H:%M")
+        dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M")
 
         filename: str = f"plot-k{args.size}-{dt_string}-{plot_seed}.dat"
         full_path: Path = args.final_dir / filename
