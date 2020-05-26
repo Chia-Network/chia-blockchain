@@ -350,11 +350,7 @@ async def setup_timelord(port, dic={}):
 
     timelord.set_server(server)
 
-    async def run_timelord():
-        async for msg in timelord._manage_discriminant_queue():
-            server.push_message(msg)
-
-    timelord_task = asyncio.create_task(run_timelord())
+    timelord_task = asyncio.create_task(timelord._manage_discriminant_queue())
 
     yield (timelord, server)
 

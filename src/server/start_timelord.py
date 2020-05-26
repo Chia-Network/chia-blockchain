@@ -65,6 +65,7 @@ async def async_main():
         DEFAULT_ROOT_PATH,
         config,
     )
+    timelord.set_server(server)
 
     timelord_shutdown_task: Optional[asyncio.Task] = None
 
@@ -95,8 +96,7 @@ async def async_main():
 
     vdf_server = asyncio.ensure_future(coro)
 
-    async for msg in timelord._manage_discriminant_queue():
-        server.push_message(msg)
+    await timelord._manage_discriminant_queue()
 
     log.info("Closed discriminant queue.")
     if timelord_shutdown_task is not None:
