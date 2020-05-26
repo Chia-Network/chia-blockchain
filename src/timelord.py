@@ -2,6 +2,7 @@ import asyncio
 import io
 import logging
 import time
+import random
 from asyncio import Lock, StreamReader, StreamWriter
 from typing import Dict, List, Optional, Tuple
 
@@ -14,7 +15,7 @@ from src.types.peer_info import PeerInfo
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
-from src.util.ints import uint64, int512, uint128
+from src.util.ints import uint8, uint64, int512, uint128
 
 log = logging.getLogger(__name__)
 
@@ -49,6 +50,10 @@ class Timelord:
         self.free_clients: List[Tuple[str, StreamReader, StreamWriter]] = []
         self._is_shutdown = False
         self.server = None
+        self.sanitizer_mode = self.config["sanitizer_mode"]
+        log.info(f"Am I sanitizing? {self.sanitizer_mode}")
+        self.last_time_seen_discriminant: Dict = {}
+        self.max_known_weights: List[uint128] = []
 
     def set_server(self, server):
         self.server = server
@@ -255,6 +260,18 @@ class Timelord:
         disc: int = create_discriminant(
             challenge_hash, self.constants["DISCRIMINANT_SIZE_BITS"]
         )
+        # Tell the client if we're interested in extending the chain
+        # or to produce compact proofs.
+        if not self.sanitizer_mode:
+            if self.config["fast_algorithm"]:
+                # Run n-wesolowski algorithm.
+                writer.write(b"N")
+            else:
+                # Run two-wesolowski algorithm.
+                writer.write(b"T")
+        else:
+            writer.write(b"S")
+        await writer.drain()
 
         prefix = str(len(str(disc)))
         if len(prefix) == 1:
@@ -269,6 +286,11 @@ class Timelord:
             async with self.lock:
                 if challenge_hash not in self.done_discriminants:
                     self.done_discriminants.append(challenge_hash)
+                if self.sanitizer_mode:
+                    if challenge_hash in self.pending_iters:
+                        del self.pending_iters[challenge_hash]
+                    if challenge_hash in self.submitted_iters:
+                        del self.submitted_iters[challenge_hash]
             return
 
         if ok.decode() != "OK":
@@ -295,13 +317,17 @@ class Timelord:
                         del self.active_discriminants_start_time[challenge_hash]
                     if challenge_hash not in self.done_discriminants:
                         self.done_discriminants.append(challenge_hash)
+                    if self.sanitizer_mode:
+                        if challenge_hash in self.pending_iters:
+                            del self.pending_iters[challenge_hash]
+                        if challenge_hash in self.submitted_iters:
+                            del self.submitted_iters[challenge_hash]
                 break
 
             msg = ""
             try:
                 msg = data.decode()
-            except Exception as e:
-                log.error(f"Exception while decoding data {e}")
+            except Exception:
                 pass
 
             if msg == "STOP":
@@ -331,6 +357,11 @@ class Timelord:
                             del self.active_discriminants_start_time[challenge_hash]
                         if challenge_hash not in self.done_discriminants:
                             self.done_discriminants.append(challenge_hash)
+                        if self.sanitizer_mode:
+                            if challenge_hash in self.pending_iters:
+                                del self.pending_iters[challenge_hash]
+                            if challenge_hash in self.submitted_iters:
+                                del self.submitted_iters[challenge_hash]
                     break
 
                 iterations_needed = uint64(
@@ -341,7 +372,9 @@ class Timelord:
                 y_size = uint64(int.from_bytes(y_size_bytes, "big", signed=True))
 
                 y_bytes = stdout_bytes_io.read(y_size)
-
+                witness_type = uint8(
+                    int.from_bytes(stdout_bytes_io.read(1), "big", signed=True)
+                )
                 proof_bytes: bytes = stdout_bytes_io.read()
 
                 # Verifies our own proof just in case
@@ -354,7 +387,7 @@ class Timelord:
                     challenge_hash,
                     iterations_needed,
                     output,
-                    self.config["n_wesolowski"],
+                    witness_type,
                     proof_bytes,
                 )
 
@@ -374,7 +407,19 @@ class Timelord:
                         )
                     )
 
-                await self._update_proofs_count(challenge_weight)
+                if not self.sanitizer_mode:
+                    await self._update_proofs_count(challenge_weight)
+                else:
+                    async with self.lock:
+                        writer.write(b"010")
+                        await writer.drain()
+                        try:
+                            del self.active_discriminants[challenge_hash]
+                            del self.active_discriminants_start_time[challenge_hash]
+                            del self.pending_iters[challenge_hash]
+                            del self.submitted_iters[challenge_hash]
+                        except KeyError:
+                            log.error("Discriminant stopped anormally.")
 
     async def _manage_discriminant_queue(self):
         while not self._is_shutdown:
@@ -464,6 +509,51 @@ class Timelord:
                     self.proofs_to_write.clear()
             await asyncio.sleep(0.5)
 
+    async def _manage_discriminant_queue_sanitizer(self):
+        while not self._is_shutdown:
+            async with self.lock:
+                if len(self.discriminant_queue) > 0:
+                    with_iters = [
+                        (d, w)
+                        for d, w in self.discriminant_queue
+                        if d in self.pending_iters
+                        and len(self.pending_iters[d]) != 0
+                    ]
+                    disc = None
+                    if len(with_iters) > 0:
+                        disc, weight = random.choice(with_iters)
+                        if (
+                            self.last_time_seen_discriminant[disc]
+                            < time.time() - 7200
+                        ):
+                            # Haven't seen 'challenge_start' in over 2 hours
+                            # Assume other timelord finished a proof, unless
+                            # this gets broadcasted again.
+                            self.discriminant_queue.remove((disc, weight))
+                            if disc in self.pending_iters:
+                                del self.pending_iters[disc]
+                            if disc in self.submitted_iters:
+                                del self.submitted_iters[disc]
+                            disc = None
+                    if (
+                        disc is not None
+                        and len(self.free_clients) != 0
+                    ):
+                        log.info(f"Creating compact weso proof: weight {weight}.")
+                        ip, sr, sw = self.free_clients[0]
+                        self.free_clients = self.free_clients[1:]
+                        self.discriminant_queue.remove((disc, weight))
+                        asyncio.create_task(
+                            self._do_process_communication(
+                                disc, weight, ip, sr, sw
+                            )
+                        )
+                if len(self.proofs_to_write) > 0:
+                    for msg in self.proofs_to_write:
+                        yield msg
+                    self.proofs_to_write.clear()
+            await asyncio.sleep(3)
+
     @api_request
     async def challenge_start(self, challenge_start: timelord_protocol.ChallengeStart):
         """
@@ -471,19 +561,38 @@ class Timelord:
         should be started on it. We add the challenge into the queue if it's worth it to have.
         """
         async with self.lock:
-            if challenge_start.challenge_hash in self.seen_discriminants:
-                log.info(
-                    f"Have already seen this challenge hash {challenge_start.challenge_hash}. Ignoring."
+            if not self.sanitizer_mode:
+                if challenge_start.challenge_hash in self.seen_discriminants:
+                    log.info(
+                        f"Have already seen this challenge hash {challenge_start.challenge_hash}. Ignoring."
+                    )
+                    return
+                if challenge_start.weight <= self.best_weight_three_proofs:
+                    log.info("Not starting challenge, already three proofs at that weight")
+                    return
+                self.seen_discriminants.append(challenge_start.challenge_hash)
+                self.discriminant_queue.append(
+                    (challenge_start.challenge_hash, challenge_start.weight)
                 )
-                return
-            if challenge_start.weight <= self.best_weight_three_proofs:
-                log.info("Not starting challenge, already three proofs at that weight")
-                return
-            self.seen_discriminants.append(challenge_start.challenge_hash)
-            self.discriminant_queue.append(
-                (challenge_start.challenge_hash, challenge_start.weight)
-            )
-            log.info("Appended to discriminant queue.")
+                log.info("Appended to discriminant queue.")
+            else:
+                self.last_time_seen_discriminant[challenge_start.challenge_hash] = time.time()
+                disc_dict = dict(self.discriminant_queue)
+                if challenge_start.challenge_hash in disc_dict:
+                    log.info("Challenge already in discriminant queue. Ignoring.")
+                    return
+                if challenge_start.challenge_hash in self.active_discriminants:
+                    log.info("Challenge currently running. Ignoring.")
+                    return
+
+                self.discriminant_queue.append(
+                    (challenge_start.challenge_hash, challenge_start.weight)
+                )
+                if challenge_start.weight not in self.max_known_weights:
+                    self.max_known_weights.append(challenge_start.weight)
+                    self.max_known_weights.sort()
+                    if len(self.max_known_weights) > 5:
+                        self.max_known_weights = self.max_known_weights[-5:]
 
     @api_request
     async def proof_of_space_info(
@@ -495,14 +604,25 @@ class Timelord:
         many iterations to run for.
         """
         async with self.lock:
-            log.info(
-                f"proof_of_space_info {proof_of_space_info.challenge_hash} {proof_of_space_info.iterations_needed}"
-            )
-            if proof_of_space_info.challenge_hash in self.done_discriminants:
+            if not self.sanitizer_mode:
                 log.info(
-                    f"proof_of_space_info {proof_of_space_info.challenge_hash} already done, returning"
+                    f"proof_of_space_info {proof_of_space_info.challenge_hash} {proof_of_space_info.iterations_needed}"
                 )
-                return
+                if proof_of_space_info.challenge_hash in self.done_discriminants:
+                    log.info(
+                        f"proof_of_space_info {proof_of_space_info.challenge_hash} already done, returning"
+                    )
+                    return
+            else:
+                disc_dict = dict(self.discriminant_queue)
+                if proof_of_space_info.challenge_hash in disc_dict:
+                    challenge_weight = disc_dict[proof_of_space_info.challenge_hash]
+                    if challenge_weight >= min(self.max_known_weights):
+                        log.info("Not storing iter, waiting for more block confirmations.")
+                        return
+                else:
+                    log.info("Not storing iter, challenge inactive.")
+                    return
 
             if proof_of_space_info.challenge_hash not in self.pending_iters:
                 self.pending_iters[proof_of_space_info.challenge_hash] = []
@@ -523,3 +643,8 @@ class Timelord:
                 self.pending_iters[proof_of_space_info.challenge_hash].append(
                     proof_of_space_info.iterations_needed
                 )
+            if (
+                self.sanitizer_mode
+                and len(self.pending_iters[proof_of_space_info.challenge_hash]) != 1
+            ):
+                log.error(f"Invalid length of pending iters: {challenge_weight}")

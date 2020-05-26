@@ -290,6 +290,9 @@ class FullNode:
                 await asyncio.sleep(self.config["introducer_connect_interval"])
 
         self.introducer_task = asyncio.create_task(introducer_client())
+        self.broadcast_uncompact_task = asyncio.create_task(
+            self.broadcast_uncompact_blocks()
+        )
 
     def _close(self):
         self._shut_down = True
@@ -876,6 +879,68 @@ class FullNode:
         self.log.warning(f"Rejected compact PoT Request {reject}")
         for _ in []:
             yield _
+
+    async def broadcast_uncompact_blocks(
+        self, delivery: Delivery = Delivery.BROADCAST
+    ):
+        while self.full_node_store.get_sync_mode():
+            if self._shut_down:
+                return
+            await asyncio.sleep(30)
+        min_height = 1
+        while not self._shut_down:
+            new_min_height = None
+            max_height = self.blockchain.lca_block.height
+            uncompact_blocks = 0
+            self.log.info("Started broadcasting uncompact blocks.")
+
+            for h in range(min_height, max_height):
+                blocks: List[FullBlock] = await self.block_store.get_blocks_at(
+                    [uint32(h)]
+                )
+                for block in blocks:
+                    assert block.proof_of_time is not None
+                    if block.header_hash not in self.blockchain.headers:
+                        continue
+
+                    if block.proof_of_time.witness_type != 0:
+                        challenge_msg = timelord_protocol.ChallengeStart(
+                            block.proof_of_time.challenge_hash,
+                            block.weight,
+                        )
+                        pos_info_msg = timelord_protocol.ProofOfSpaceInfo(
+                            block.proof_of_time.challenge_hash,
+                            block.proof_of_time.number_of_iterations,
+                        )
+
+                        if self.server is not None:
+                            self.server.push_message(
+                                OutboundMessage(
+                                    NodeType.TIMELORD,
+                                    Message("challenge_start", challenge_msg),
+                                    delivery,
+                                )
+                            )
+                            self.server.push_message(
+                                OutboundMessage(
+                                    NodeType.TIMELORD,
+                                    Message("proof_of_space_info", pos_info_msg),
+                                    delivery,
+                                )
+                            )
+                        if (
+                            uncompact_blocks == 0
+                            and h <= max(1, max_height - 200)
+                        ):
+                            new_min_height = h
+                        uncompact_blocks += 1
+
+            if new_min_height is None:
+                new_min_height = max(1, max_height - 200)
+            min_height = new_min_height
+
+            self.log.info(f"Broadcasted {uncompact_blocks} uncompact blocks to timelords.")
+            await asyncio.sleep(1800)
 
     @api_request
     async def new_unfinished_block(

@@ -69,8 +69,13 @@ async def async_main():
 
     vdf_server = asyncio.ensure_future(coro)
 
-    async for msg in timelord._manage_discriminant_queue():
-        server.push_message(msg)
+    sanitizer_mode = config["sanitizer_mode"]
+    if not sanitizer_mode:
+        async for msg in timelord._manage_discriminant_queue():
+            server.push_message(msg)
+    else:
+        async for msg in timelord._manage_discriminant_queue_sanitizer():
+            server.push_message(msg)
 
     log.info("Closed discriminant queue.")
     if timelord_shutdown_task is not None:
