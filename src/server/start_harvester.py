@@ -21,7 +21,7 @@ def service_kwargs_for_harvester(root_path=DEFAULT_ROOT_PATH):
         PeerInfo(config["farmer_peer"]["host"], config["farmer_peer"]["port"])
     ]
 
-    api = Harvester.create(config, plot_config, root_path)
+    api = Harvester(config, plot_config, root_path)
 
     kwargs = dict(
         root_path=root_path,
