@@ -358,10 +358,10 @@ const BalanceCard = props => {
             </Typography>
           </div>
         </Grid>
-        <BalanceCardSubSection title="Total Balance" amount={balance} />
+        <BalanceCardSubSection title="Total Balance" balance={balance} />
         <BalanceCardSubSection
           title="Spendable Balance"
-          amount={balance_spendable}
+          balance={balance_spendable}
         />
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
