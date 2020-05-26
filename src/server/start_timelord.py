@@ -1,7 +1,6 @@
 import asyncio
 import signal
 import logging
-from typing import Optional
 
 from src.consensus.constants import constants
 
@@ -67,8 +66,6 @@ async def async_main():
     )
     timelord.set_server(server)
 
-    timelord_shutdown_task: Optional[asyncio.Task] = None
-
     coro = asyncio.start_server(
         timelord._handle_client,
         config["vdf_server"]["host"],
@@ -77,9 +74,8 @@ async def async_main():
     )
 
     def stop_all():
-        nonlocal timelord_shutdown_task
         server.close_all()
-        timelord_shutdown_task = asyncio.create_task(timelord._shutdown())
+        timelord._shutdown()
 
     try:
         asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop_all)
@@ -99,8 +95,6 @@ async def async_main():
     await timelord._manage_discriminant_queue()
 
     log.info("Closed discriminant queue.")
-    if timelord_shutdown_task is not None:
-        await timelord_shutdown_task
     log.info("Shutdown timelord.")
 
     await server.await_closed()

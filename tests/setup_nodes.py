@@ -356,7 +356,7 @@ async def setup_timelord(port, dic={}):
 
     vdf_server.cancel()
     server.close_all()
-    await timelord._shutdown()
+    timelord._shutdown()
     await timelord_task
     await server.await_closed()
 
