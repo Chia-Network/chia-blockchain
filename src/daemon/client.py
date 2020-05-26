@@ -1,7 +1,7 @@
 import json
-from asyncio import asyncio, Event, ensure_future
 from typing import Dict, Any
 
+import asyncio
 import websockets
 
 from src.types.sized_bytes import bytes32
@@ -12,7 +12,7 @@ from src.util.json_util import dict_to_json_str
 class DaemonProxy:
     def __init__(self, uri):
         self._uri = uri
-        self._request_dict: Dict[bytes32, Event] = {}
+        self._request_dict: Dict[bytes32, asyncio.Event] = {}
         self.response_dict: Dict[bytes32, Any] = {}
         self.websocket = None
 
@@ -39,9 +39,9 @@ class DaemonProxy:
 
     async def _get(self, request):
         request_id = request["request_id"]
-        self._request_dict[request_id] = Event()
+        self._request_dict[request_id] = asyncio.Event()
         string = dict_to_json_str(request)
-        ensure_future(self.websocket.send(string))
+        asyncio.ensure_future(self.websocket.send(string))
 
         async def timeout():
             await asyncio.sleep(30)
@@ -49,7 +49,7 @@ class DaemonProxy:
                 print("Error, timeout.")
                 self._request_dict[request_id].set()
 
-        ensure_future(timeout())
+        asyncio.ensure_future(timeout())
         await self._request_dict[request_id].wait()
         if request_id in self.response_dict:
             response = self.response_dict[request_id]
