@@ -839,7 +839,7 @@ class Blockchain:
                 return Err.WRONG_PUZZLE_HASH
 
         # Verify conditions, create hash_key list for aggsig check
-        hash_key_pairs = []
+        hash_key_pairs = set()
         for npc in npc_list:
             unspent = removal_coin_records[npc.coin_name]
             error = blockchain_check_conditions_dict(
@@ -847,7 +847,7 @@ class Blockchain:
             )
             if error:
                 return error
-            hash_key_pairs.extend(
+            hash_key_pairs.update(
                 hash_key_pairs_for_conditions_dict(npc.condition_dict, npc.coin_name)
             )
 
@@ -855,7 +855,7 @@ class Blockchain:
         # TODO: move this to pre_validate_blocks_multiprocessing so we can sync faster
         if not block.header.data.aggregated_signature:
             return Err.BAD_AGGREGATE_SIGNATURE
-        if not block.header.data.aggregated_signature.validate(hash_key_pairs):
+        if not block.header.data.aggregated_signature.validate(list(hash_key_pairs)):
             return Err.BAD_AGGREGATE_SIGNATURE
 
         return None
