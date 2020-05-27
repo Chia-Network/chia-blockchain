@@ -33,7 +33,6 @@ Write-Output "   ---";
 Write-Output "Install chia-blockchain wheels into venv with install_win.py";
 Write-Output "   ---";
 cd build_scripts
-dir .\win_build\
 pip install --no-index --find-links=.\win_build\ chia-blockchain
 
 Write-Output "   ---";
