@@ -63,6 +63,7 @@ Write-Output "   ---";
 Write-Output "Electron package Windows Installer";
 Write-Output "   ---";
 npm run build
+editbin /STACK:8000000 daemon/create_plots.exe
 electron-packager . Chia-0.1.6 --asar.unpack="**/daemon/**" --overwrite --icon=./src/assets/img/chia.ico
 node winstaller.js
 
