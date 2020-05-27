@@ -43,6 +43,7 @@ entry_points = ["aiohttp", "aiohttp",
             "src.server.start_introducer",
             "src.server.start_timelord",
             "src.timelord_launcher",
+            "src.util.bip39",
             "src.simulator.start_simulator"]
 
 subcommand_modules.extend(other)
