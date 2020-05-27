@@ -48,7 +48,7 @@ subcommand_modules.extend(keyring_imports)
 
 daemon = Analysis([f"../src/daemon/server.py"],
              pathex=[f"../venv/lib/python3.7/site-packages/aiter/", f"../"],
-             binaries = [(f"../venv\Lib\site-packages\\*dll", '.')],
+             binaries = [("../venv\Lib\site-packages\\*dll", '.',), ("C:\Windows\System32\\msvcp140.dll", '.',) , ("C:\Windows\System32\\vcruntime140_1.dll", '.',)],
              datas=[keyring_datas, version_data, (f"../src/util/initial-config.yaml", f"./src/util/"),
              (f"../src/util/initial-plots.yaml", f"./src/util/") ],
              hiddenimports=subcommand_modules,
