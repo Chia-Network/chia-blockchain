@@ -270,9 +270,9 @@ const ColourCard = props => {
 
 const BalanceCardSubSection = props => {
   const classes = useStyles();
-  var cc_unit = props.name
+  var cc_unit = props.name;
   if (cc_unit.length > 10) {
-    cc_unit = cc_unit.substring(0,10) + '...'
+    cc_unit = cc_unit.substring(0, 10) + "...";
   }
   return (
     <Grid item xs={12}>
@@ -301,10 +301,6 @@ const BalanceCard = props => {
   const balance_spendable = useSelector(
     state => state.wallet_state.wallets[id].balance_spendable
   );
-  var balance_spendable_chia = mojo_to_chia_string(balance_spendable, "mojo");
-  if (balance_spendable_chia < 0) {
-    balance_spendable_chia = 0;
-  }
   const balance_pending = useSelector(
     state => state.wallet_state.wallets[id].balance_pending
   );
@@ -313,9 +309,9 @@ const BalanceCard = props => {
   );
   const balance_ptotal = balance + balance_pending + balance_change;
 
-  var cc_unit = name
+  var cc_unit = name;
   if (cc_unit.length > 10) {
-    cc_unit = cc_unit.substring(0,10) + '...'
+    cc_unit = cc_unit.substring(0, 10) + "...";
   }
 
   const balancebox_1 = "<table width='100%'>";
@@ -368,7 +364,11 @@ const BalanceCard = props => {
             </Typography>
           </div>
         </Grid>
-        <BalanceCardSubSection title="Total Balance" balance={balance} name={name}/>
+        <BalanceCardSubSection
+          title="Total Balance"
+          balance={balance}
+          name={name}
+        />
         <BalanceCardSubSection
           title="Spendable Balance"
           balance={balance_spendable}
