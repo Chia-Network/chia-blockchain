@@ -34,9 +34,12 @@ Write-Output "Install chia-blockchain wheels into venv with install_win.py";
 Write-Output "   ---";
 
 Write-Output "pip install miniupnpc";
-pip install --no-index --find-links=.\win_build\ miniupnpc
+dir
+dir .\build_scripts\win_build\
+dir .\build_scripts\
+pip install --no-index --find-links=.\build_scripts\win_build\ miniupnpc
 Write-Output "pip install setproctitle";
-pip install --no-index --find-links=.\win_build\ setproctitle
+pip install --no-index --find-links=.\build_scripts\win_build\ setproctitle
 cd build_scripts
 Write-Output "pip install chia-blockchain";
 pip install --no-index --find-links=.\win_build\ chia-blockchain
