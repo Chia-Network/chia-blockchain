@@ -253,6 +253,6 @@ def chia_init(root_path: Path):
         initialize_ssl(root_path)
         print("")
         print("To see your keys, run 'chia keys show'")
-        print("Please generate your keys with 'chia keys generate_and_add.'")
+        print("Please generate your keys with 'chia keys generate.'")
 
     return 0
