@@ -443,7 +443,7 @@ class CCWallet:
         tx = await self.standard_wallet.generate_signed_transaction(
             uint64(0), cc_puzzle_hash, uint64(0), origin_id, coins
         )
-        self.log.warning(f"cc_puzzle_hash is {cc_puzzle_hash}")
+        self.log.info(f"Generate zero val coin: cc_puzzle_hash is {cc_puzzle_hash}")
         eve_coin = Coin(origin_id, cc_puzzle_hash, uint64(0))
         if tx is None or tx.spend_bundle is None:
             return None
@@ -511,8 +511,9 @@ class CCWallet:
             if await self.wallet_state_manager.does_coin_belong_to_wallet(
                 coin, self.wallet_info.id
             ):
-                removal_amount += coin.amount
-
+                # Ignores eve coin
+                if coin.parent_coin_info.hex() != await self.get_colour():
+                    removal_amount += coin.amount
         result = amount - removal_amount
 
         return uint64(result)
@@ -527,7 +528,7 @@ class CCWallet:
             our_spend = False
             for coin in record.removals:
                 # Don't count eve spend as change
-                if coin.parent_coin_info.hex() == self.cc_info.my_colour_name:
+                if coin.parent_coin_info.hex() == await self.get_colour():
                     continue
                 if await self.wallet_state_manager.does_coin_belong_to_wallet(
                     coin, self.wallet_info.id
