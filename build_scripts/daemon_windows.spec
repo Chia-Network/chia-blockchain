@@ -33,7 +33,7 @@ other = ["aiter.active_aiter", "aiter.aiter_forker", "aiter.aiter_to_iter", "ait
 "aiter.iter_to_aiter", "aiter.join_aiters", "aiter.map_aiter", "aiter.map_filter_aiter", "aiter.preload_aiter",
 "aiter.push_aiter", "aiter.sharable_aiter", "aiter.stoppable_aiter","src.wallet.websocket_server", "win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32"]
 
-entry_points = ["aiohttp", "aiohttp.aiohttp",
+entry_points = ["aiohttp", "aiohttp",
             "src.cmds.check_plots",
             "src.cmds.create_plots",
             "src.wallet.websocket_server",
@@ -43,8 +43,7 @@ entry_points = ["aiohttp", "aiohttp.aiohttp",
             "src.server.start_introducer",
             "src.server.start_timelord",
             "src.timelord_launcher",
-            "src.simulator.start_simulator",
-            "src.util.bip39"]
+            "src.simulator.start_simulator"]
 
 subcommand_modules.extend(other)
 subcommand_modules.extend(entry_points)
@@ -80,7 +79,7 @@ full_node = Analysis([f"{root}/src/server/start_full_node.py"],
 wallet = Analysis([f"{root}/src/wallet/websocket_server.py"],
              pathex=[f"{root}/venv/lib/python3.7/site-packages/aiter/", f"{root}"],
              binaries = [],
-             datas=[(f"../src/util/english.txt", f"./src/bip39/"), version_data ],
+             datas=[(f"../src/util/english.txt", version_data ],
              hiddenimports=subcommand_modules,
              hookspath=[],
              runtime_hooks=[],
