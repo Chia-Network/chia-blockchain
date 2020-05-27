@@ -406,6 +406,17 @@ class Wallet:
         """ Use this API to send transactions. """
         await self.wallet_state_manager.add_pending_transaction(tx)
 
+    async def sign(self, value, pubkey):
+        index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
+        private = self.wallet_state_manager.private_key.private_child(
+            index
+        ).get_private_key()
+        pk = BLSPrivateKey(private)
+
+        sig = pk.sign(value)
+        assert sig.validate([sig.PkMessagePair(pubkey, value)])
+        return sig
+        
     # This is also defined in CCWallet as get_sigs()
     # I think this should be a the default way the wallet gets signatures in sign_transaction()
     async def get_sigs_for_innerpuz_with_innersol(
