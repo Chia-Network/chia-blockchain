@@ -103,7 +103,7 @@ class WebSocketServer:
                 private_key,
                 self.root_path,
                 override_constants=test_constants,
-                local_test=True
+                local_test=True,
             )
         else:
             log.info("Not Testing")
