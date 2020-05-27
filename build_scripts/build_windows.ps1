@@ -26,13 +26,15 @@ Write-Output "   ---";
 python -m venv venv
 . .\venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-pip install wheel pep517 pywin32 pyinstaller
+pip install wheel
+pip install pywin32 pyinstaller
 
 Write-Output "   ---";
 Write-Output "Install chia-blockchain wheels into venv with install_win.py";
 Write-Output "   ---";
 cd build_scripts
-python install_win.py
+dir .\win_build\
+pip install .\win_build\*.whl
 
 Write-Output "   ---";
 Write-Output "Use pyinstaller to create chia .exe's";
