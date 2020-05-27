@@ -32,13 +32,14 @@ pip install pywin32 pyinstaller
 Write-Output "   ---";
 Write-Output "Install chia-blockchain wheels into venv with install_win.py";
 Write-Output "   ---";
+pip install --only-binary miniupnpc setproctitle
 cd build_scripts
 pip install --no-index --find-links=.\win_build\ chia-blockchain
 
 Write-Output "   ---";
 Write-Output "Use pyinstaller to create chia .exe's";
 Write-Output "   ---";
-pyinstaller daemon_windows.spec
+pyinstaller --add-binary daemon_windows.spec
 
 Write-Output "   ---";
 Write-Output "Copy chia executables to electron-react/";
