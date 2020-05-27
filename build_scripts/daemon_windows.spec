@@ -10,10 +10,6 @@ keyring_imports = collect_submodules('keyring.backends')
 keyring_datas = copy_metadata('keyring')[0]
 
 from pkg_resources import get_distribution
-
-build = pathlib.Path().absolute()
-root = build.parent
-
 from PyInstaller.utils.hooks import copy_metadata
 version_data = copy_metadata(get_distribution("chia-blockchain"))[0]
 
@@ -28,7 +24,7 @@ SUBCOMMANDS = [
     "run_daemon",
 ]
 block_cipher = None
-subcommand_modules = [f"{root}/src.cmds.%s" % _ for _ in SUBCOMMANDS]
+subcommand_modules = [f"../src.cmds.%s" % _ for _ in SUBCOMMANDS]
 other = ["aiter.active_aiter", "aiter.aiter_forker", "aiter.aiter_to_iter", "aiter.azip", "aiter.flatten_aiter", "aiter.gated_aiter",
 "aiter.iter_to_aiter", "aiter.join_aiters", "aiter.map_aiter", "aiter.map_filter_aiter", "aiter.preload_aiter",
 "aiter.push_aiter", "aiter.sharable_aiter", "aiter.stoppable_aiter","src.wallet.websocket_server", "win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32"]
@@ -50,9 +46,9 @@ subcommand_modules.extend(other)
 subcommand_modules.extend(entry_points)
 subcommand_modules.extend(keyring_imports)
 
-daemon = Analysis([f"{root}/src/daemon/server.py"],
-             pathex=[f"{root}/venv/lib/python3.7/site-packages/aiter/", f"{root}"],
-             binaries = [(f"{root}/venv\Lib\site-packages\\*dll", '.')],
+daemon = Analysis([f"../src/daemon/server.py"],
+             pathex=[f"../venv/lib/python3.7/site-packages/aiter/", f"../"],
+             binaries = [(f"../venv\Lib\site-packages\\*dll", '.')],
              datas=[keyring_datas, version_data, (f"../src/util/initial-config.yaml", f"./src/util/"),
              (f"../src/util/initial-plots.yaml", f"./src/util/") ],
              hiddenimports=subcommand_modules,
@@ -64,8 +60,8 @@ daemon = Analysis([f"{root}/src/daemon/server.py"],
              cipher=block_cipher,
              noarchive=False)
 
-full_node = Analysis([f"{root}/src/server/start_full_node.py"],
-             pathex=[f"{root}/venv/lib/python3.7/site-packages/aiter/", f"{root}"],
+full_node = Analysis([f"../src/server/start_full_node.py"],
+             pathex=[f"../venv/lib/python3.7/site-packages/aiter/", f"../"],
              binaries = [],
              datas=[version_data],
              hiddenimports=subcommand_modules,
@@ -77,8 +73,8 @@ full_node = Analysis([f"{root}/src/server/start_full_node.py"],
              cipher=block_cipher,
              noarchive=False)
 
-wallet = Analysis([f"{root}/src/wallet/websocket_server.py"],
-             pathex=[f"{root}/venv/lib/python3.7/site-packages/aiter/", f"{root}"],
+wallet = Analysis([f"../src/wallet/websocket_server.py"],
+             pathex=[f"../venv/lib/python3.7/site-packages/aiter/", f"../"],
              binaries = [],
              datas=[(f"../src/util/english.txt", f"./src/util/"), version_data ],
              hiddenimports=subcommand_modules,
@@ -90,8 +86,8 @@ wallet = Analysis([f"{root}/src/wallet/websocket_server.py"],
              cipher=block_cipher,
              noarchive=False)
 
-plotter = Analysis([f"{root}/src/cmds/create_plots.py"],
-             pathex=[f"{root}/venv/lib/python3.7/site-packages/aiter/", f"{root}"],
+plotter = Analysis([f"../src/cmds/create_plots.py"],
+             pathex=[f"../venv/lib/python3.7/site-packages/aiter/", f".."],
              binaries = [],
              datas=[version_data],
              hiddenimports=subcommand_modules,
@@ -103,8 +99,8 @@ plotter = Analysis([f"{root}/src/cmds/create_plots.py"],
              cipher=block_cipher,
              noarchive=False)
 
-farmer = Analysis([f"{root}/src/server/start_farmer.py"],
-             pathex=[f"{root}/venv/lib/python3.7/site-packages/aiter/", f"{root}"],
+farmer = Analysis([f"../src/server/start_farmer.py"],
+             pathex=[f"../venv/lib/python3.7/site-packages/aiter/", f"../"],
              binaries = [],
              datas=[version_data],
              hiddenimports=subcommand_modules,
@@ -116,8 +112,8 @@ farmer = Analysis([f"{root}/src/server/start_farmer.py"],
              cipher=block_cipher,
              noarchive=False)
 
-harvester = Analysis([f"{root}/src/server/start_harvester.py"],
-             pathex=[f"{root}/venv/lib/python3.7/site-packages/aiter/", f"{root}"],
+harvester = Analysis([f"../src/server/start_harvester.py"],
+             pathex=[f"../venv/lib/python3.7/site-packages/aiter/", f"../"],
              binaries = [],
              datas=[version_data],
              hiddenimports=subcommand_modules,
@@ -129,8 +125,8 @@ harvester = Analysis([f"{root}/src/server/start_harvester.py"],
              cipher=block_cipher,
              noarchive=False)
 
-check_plots = Analysis([f"{root}/src/cmds/check_plots.py"],
-             pathex=[f"{root}/venv/lib/python3.7/site-packages/aiter/", f"{root}"],
+check_plots = Analysis([f"../src/cmds/check_plots.py"],
+             pathex=[f"../venv/lib/python3.7/site-packages/aiter/", f"../"],
              binaries = [],
              datas=[version_data],
              hiddenimports=subcommand_modules,
