@@ -299,9 +299,6 @@ const BalanceCard = props => {
   var balance_spendable = useSelector(
     state => state.wallet_state.wallets[id].balance_spendable
   );
-  if (balance_spendable < 0) {
-    balance_spendable = 0;
-  };
   const balance_pending = useSelector(
     state => state.wallet_state.wallets[id].balance_pending
   );
