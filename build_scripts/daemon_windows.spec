@@ -213,7 +213,7 @@ check_plots_exe = EXE(check_plots_pyz,
           check_plots.scripts,
           [],
           exclude_binaries=True,
-          name='start_harvester',
+          name='check_plots',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False)
