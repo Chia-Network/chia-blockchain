@@ -36,6 +36,7 @@ from src.wallet.wallet_node import WalletNode
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.setproctitle import setproctitle
+from src.cmds.init import check_keys
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -588,6 +589,7 @@ class WebSocketServer:
             ExtendedPrivateKey.from_seed(seed).get_public_key().get_fingerprint()
         )
         self.keychain.add_private_key_seed(seed)
+        check_keys(self.root_path)
 
         started = await self.start_wallet(fingerprint)
 
