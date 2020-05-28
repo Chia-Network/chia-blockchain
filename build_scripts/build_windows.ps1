@@ -1,4 +1,5 @@
 cd ..
+
 mkdir build_scripts\win_build
 cd build_scripts\win_build
 
@@ -63,7 +64,10 @@ Write-Output "   ---";
 Write-Output "Electron package Windows Installer";
 Write-Output "   ---";
 npm run build
-editbin /STACK:8000000 daemon/create_plots.exe
+
+Write-Output "Increase the stack for chiapos";
+Start-Process "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\MSVC\14.25.28610\bin\HostX64\x64\editbin.exe" -ArgumentList "/STACK:8000000 daemon/create_plots.exe" -Wait
+
 electron-packager . Chia-0.1.6 --asar.unpack="**/daemon/**" --overwrite --icon=./src/assets/img/chia.ico
 node winstaller.js
 

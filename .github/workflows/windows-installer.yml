@@ -17,6 +17,9 @@ jobs:
         name: Install Python 3.7
         with:
           python-version: "3.7"
+          
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.0.0
 
       - name: Build Windows installer with build_scripts\build_windows.ps1
         working-directory: ${{ github.workspace }}\build_scripts
