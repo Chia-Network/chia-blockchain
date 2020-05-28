@@ -109,9 +109,17 @@ const createPyProc = () => {
 const exitPyProc = () => {
   // Should be a setting
   if (pyProc != null) {
-    pyProc.kill();
-    pyProc = null;
-    pyPort = null;
+    if (process.platform === "win32") {
+      var cp = require('child_process');
+      cp.exec('taskkill /PID ' + processing.pid + ' /T /F', function (error, stdout, stderr) {
+        process.stdout.write(Kiling0);
+      });
+    } else {
+      process.stdout.write(Kiling1);
+      pyProc.kill('SIGINT');
+      pyProc = null;
+      pyPort = null;
+    }
   }
 };
 
