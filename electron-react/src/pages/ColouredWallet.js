@@ -308,7 +308,7 @@ const BalanceCard = props => {
   const balance_change = useSelector(
     state => state.wallet_state.wallets[id].balance_change
   );
-  const balance_ptotal = balance + balance_pending + balance_change;
+  const balance_ptotal = balance + balance_pending;
 
   var cc_unit = name;
   if (cc_unit.length > 10) {
