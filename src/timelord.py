@@ -2,7 +2,6 @@ import asyncio
 import io
 import logging
 import time
-import random
 from asyncio import Lock, StreamReader, StreamWriter
 from typing import Dict, List, Optional, Tuple
 
@@ -52,7 +51,6 @@ class Timelord:
         self.server = None
         self.sanitizer_mode = self.config["sanitizer_mode"]
         log.info(f"Am I sanitizing? {self.sanitizer_mode}")
-        self.last_time_seen_discriminant: Dict = {}
         self.max_known_weights: List[uint128] = []
 
     def set_server(self, server):
@@ -519,26 +517,11 @@ class Timelord:
                         if d in self.pending_iters
                         and len(self.pending_iters[d]) != 0
                     ]
-                    disc = None
-                    if len(with_iters) > 0:
-                        disc, weight = random.choice(with_iters)
-                        if (
-                            self.last_time_seen_discriminant[disc]
-                            < time.time() - 7200
-                        ):
-                            # Haven't seen 'challenge_start' in over 2 hours
-                            # Assume other timelord finished a proof, unless
-                            # this gets broadcasted again.
-                            self.discriminant_queue.remove((disc, weight))
-                            if disc in self.pending_iters:
-                                del self.pending_iters[disc]
-                            if disc in self.submitted_iters:
-                                del self.submitted_iters[disc]
-                            disc = None
                     if (
-                        disc is not None
-                        and len(self.free_clients) != 0
+                        len(with_iters) > 0
+                        and len(self.free_clients) > 0
                     ):
+                        disc, weight = with_iters[0]
                         log.info(f"Creating compact weso proof: weight {weight}.")
                         ip, sr, sw = self.free_clients[0]
                         self.free_clients = self.free_clients[1:]
@@ -576,7 +559,6 @@ class Timelord:
                 )
                 log.info("Appended to discriminant queue.")
             else:
-                self.last_time_seen_discriminant[challenge_start.challenge_hash] = time.time()
                 disc_dict = dict(self.discriminant_queue)
                 if challenge_start.challenge_hash in disc_dict:
                     log.info("Challenge already in discriminant queue. Ignoring.")

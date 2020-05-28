@@ -3,6 +3,7 @@ import concurrent
 import logging
 import traceback
 import time
+import random
 from asyncio import Event
 from pathlib import Path
 from typing import AsyncGenerator, Dict, List, Optional, Tuple, Type, Callable
@@ -887,12 +888,15 @@ class FullNode:
             if self._shut_down:
                 return
             await asyncio.sleep(30)
+
         min_height = 1
+        broadcast_list: List = []
+
         while not self._shut_down:
             new_min_height = None
             max_height = self.blockchain.lca_block.height
             uncompact_blocks = 0
-            self.log.info("Started broadcasting uncompact blocks.")
+            self.log.info("Scanning the blockchain for uncompact blocks.")
 
             for h in range(min_height, max_height):
                 blocks: List[FullBlock] = await self.block_store.get_blocks_at(
@@ -912,22 +916,12 @@ class FullNode:
                             block.proof_of_time.challenge_hash,
                             block.proof_of_time.number_of_iterations,
                         )
-
-                        if self.server is not None:
-                            self.server.push_message(
-                                OutboundMessage(
-                                    NodeType.TIMELORD,
-                                    Message("challenge_start", challenge_msg),
-                                    delivery,
-                                )
+                        broadcast_list.append(
+                            (
+                                challenge_msg,
+                                pos_info_msg,
                             )
-                            self.server.push_message(
-                                OutboundMessage(
-                                    NodeType.TIMELORD,
-                                    Message("proof_of_space_info", pos_info_msg),
-                                    delivery,
-                                )
-                            )
+                        )
                         if (
                             uncompact_blocks == 0
                             and h <= max(1, max_height - 200)
@@ -939,7 +933,30 @@ class FullNode:
                 new_min_height = max(1, max_height - 200)
             min_height = new_min_height
 
-            self.log.info(f"Broadcasted {uncompact_blocks} uncompact blocks to timelords.")
+            self.log.info(f"Collected {uncompact_blocks} uncompact blocks.")
+            # Broadcast at most 100 (random) blocks per hour.
+            # The sanitizers are expected not to have any idle time,
+            # unless running 9+ vdf_clients.
+            if len(broadcast_list) > 50:
+                random.shuffle(broadcast_list)
+                broadcast_list = broadcast_list[:50]
+            if self.server is not None:
+                for challenge_msg, pos_info_msg in broadcast_list:
+                    self.server.push_message(
+                        OutboundMessage(
+                            NodeType.TIMELORD,
+                            Message("challenge_start", challenge_msg),
+                            delivery,
+                        )
+                    )
+                    self.server.push_message(
+                        OutboundMessage(
+                            NodeType.TIMELORD,
+                            Message("proof_of_space_info", pos_info_msg),
+                            delivery,
+                        )
+                    )
+            self.log.info(f"Broadcasted {len(broadcast_list)} uncompact blocks to timelords.")
             await asyncio.sleep(1800)
 
     @api_request
