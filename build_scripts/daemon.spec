@@ -198,7 +198,7 @@ farmer_exe = EXE(farmer_pyz,
           strip=False)
 
 harvester_exe = EXE(harvester_pyz,
-          farmer.scripts,
+          harvester.scripts,
           [],
           exclude_binaries=True,
           name='start_harvester',
