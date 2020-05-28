@@ -1,8 +1,7 @@
 cd ..
-dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise"
-cd "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise"
-dir /s editbin.exe
-cd ~
+
+dir -r "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\MSVC"
+
 mkdir build_scripts\win_build
 cd build_scripts\win_build
 
