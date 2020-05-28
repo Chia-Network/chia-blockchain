@@ -75,4 +75,4 @@ jobs:
       uses: actions/upload-artifact@v1
       with:
         name: Chia-MacOS-10.15-dmg
-        path: ${{ github.workspace }}/build_scripts/Chia.dmg
+        path: ${{ github.workspace }}/build_scripts/Chia-0.1.6.dmg

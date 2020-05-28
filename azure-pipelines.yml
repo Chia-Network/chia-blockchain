@@ -97,6 +97,6 @@ steps:
 
   - task: PublishPipelineArtifact@1
     inputs:
-      targetPath: $(System.DefaultWorkingDirectory)/build_scripts/Chia.dmg
+      targetPath: $(System.DefaultWorkingDirectory)/build_scripts/Chia-0.1.6.dmg
       artifactName: MacOS-DMG
     displayName: "Upload MacOS DMG"

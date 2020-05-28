@@ -17,6 +17,9 @@ jobs:
         name: Install Python 3.7
         with:
           python-version: "3.7"
+          
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.0.0
 
       - name: Build Windows installer with build_scripts\build_windows.ps1
         working-directory: ${{ github.workspace }}\build_scripts
@@ -28,7 +31,7 @@ jobs:
         uses: actions/upload-artifact@v1
         with:
           name: Windows-Exe
-          path: ${{ github.workspace }}\electron-react\Chia-win32-x64
+          path: ${{ github.workspace }}\electron-react\Chia-0.1.6-win32-x64
 
       - name: Upload Installer to artifacts
         uses: actions/upload-artifact@v1

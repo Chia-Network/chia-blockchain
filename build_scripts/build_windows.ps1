@@ -1,4 +1,5 @@
 cd ..
+
 mkdir build_scripts\win_build
 cd build_scripts\win_build
 
@@ -26,13 +27,20 @@ Write-Output "   ---";
 python -m venv venv
 . .\venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
+pip install wheel
 pip install pywin32 pyinstaller
 
 Write-Output "   ---";
 Write-Output "Install chia-blockchain wheels into venv with install_win.py";
 Write-Output "   ---";
+
+Write-Output "pip install miniupnpc";
 cd build_scripts
-python install_win.py
+pip install --no-index --find-links=.\win_build\ miniupnpc
+Write-Output "pip install setproctitle";
+pip install --no-index --find-links=.\win_build\ setproctitle
+Write-Output "pip install chia-blockchain";
+pip install --no-index --find-links=.\win_build\ chia-blockchain
 
 Write-Output "   ---";
 Write-Output "Use pyinstaller to create chia .exe's";
@@ -56,7 +64,11 @@ Write-Output "   ---";
 Write-Output "Electron package Windows Installer";
 Write-Output "   ---";
 npm run build
-electron-packager . Chia --asar.unpack="**/daemon/**" --overwrite --icon=./src/assets/img/chia.ico
+
+Write-Output "Increase the stack for chiapos";
+Start-Process "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\MSVC\14.25.28610\bin\HostX64\x64\editbin.exe" -ArgumentList "/STACK:8000000 daemon/create_plots.exe" -Wait
+
+electron-packager . Chia-0.1.6 --asar.unpack="**/daemon/**" --overwrite --icon=./src/assets/img/chia.ico
 node winstaller.js
 
 Write-Output "   ---";

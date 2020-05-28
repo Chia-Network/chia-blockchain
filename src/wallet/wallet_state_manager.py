@@ -367,8 +367,15 @@ class WalletStateManager:
         """
         Returns the confirmed balance amount +/- sum of unconfirmed transactions.
         """
+        spendable: Set[WalletCoinRecord] = await self.get_spendable_coins_for_wallet(
+            wallet_id
+        )
 
-        confirmed = await self.get_confirmed_spendable_balance_for_wallet(wallet_id)
+        confirmed: uint64 = uint64(0)
+
+        for unspent in spendable:
+            confirmed = uint64(confirmed + unspent.coin.amount)
+
         unconfirmed_tx = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         addition_amount = 0
         removal_amount = 0

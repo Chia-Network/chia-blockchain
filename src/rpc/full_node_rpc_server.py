@@ -228,10 +228,11 @@ class FullNodeRpcApiHandler(AbstractRpcApiHandler):
             header_dict["data"]["header_hash"] = header_hash
             header_dict["data"]["finished"] = False
             prev_header = self.service.blockchain.headers.get(header.prev_header_hash)
-            iter = header.data.total_iters - prev_header.data.total_iters
-            time_add = int(iter / ips)
-            header_dict["data"]["finish_time"] = header.data.timestamp + time_add
-            unfinished_with_meta.append(header_dict)
+            if prev_header is not None:
+                iter = header.data.total_iters - prev_header.data.total_iters
+                time_add = int(iter / ips)
+                header_dict["data"]["finish_time"] = header.data.timestamp + time_add
+                unfinished_with_meta.append(header_dict)
 
         unfinished_with_meta.extend(finished_with_meta)
 
