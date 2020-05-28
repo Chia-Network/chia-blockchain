@@ -103,7 +103,7 @@ async function track_progress(store, location) {
   const Tail = window.require("tail").Tail;
 
   const dispatch = store.dispatch;
-  var options = { fromBeginning: true, follow: true };
+  var options = { fromBeginning: true, follow: true, useWatchFile: true };
   if (!location) {
     return;
   }
