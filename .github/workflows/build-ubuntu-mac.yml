@@ -21,6 +21,13 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Import app cert
+      if: startsWith(matrix.os, 'mac')
+      uses: Apple-Actions/import-codesign-certs@v1
+      with:
+        p12-file-base64: ${{ secrets.CERT_APP }}
+        p12-password: ${{ secrets.CERT_PASS }}
+
     - name: Install ubuntu dependencies
       if: startsWith(matrix.os, 'ubuntu')
       run: |
@@ -57,28 +64,6 @@ jobs:
     - name: Lint source with mypy
       run: |
         ./venv/bin/mypy src tests
-
-    - name: Import 3rd party cert
-      if: startsWith(matrix.os, 'mac')
-      uses: Apple-Actions/import-codesign-certs@v1
-      with:
-        p12-file-base64: ${{ secrets.CERT_3RD_PARTY }}
-        p12-password: ${{ secrets.CERT_PASS }}
-
-    - name: Import app cert
-      if: startsWith(matrix.os, 'mac')
-      uses: Apple-Actions/import-codesign-certs@v1
-      with:
-        p12-file-base64: ${{ secrets.CERT_APP }}
-        p12-password: ${{ secrets.CERT_PASS }}
-
-    - name: Import installer cert
-      if: startsWith(matrix.os, 'mac')
-      uses: Apple-Actions/import-codesign-certs@v1
-      with:
-        p12-file-base64: ${{ secrets.CERT_INSTALLER }}
-        p12-password: ${{ secrets.CERT_PASS }}
-
     - name: Build MacOS DMG in Catalina
       if: startsWith(matrix.os, 'mac')
       run: |
