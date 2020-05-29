@@ -424,6 +424,27 @@ class WalletStateManager:
         result = confirmed - removal_amount
         return uint64(result)
 
+    async def get_frozen_balance(self, wallet_id: int) -> uint64:
+        current_index = self.block_records[self.lca].height
+
+        coinbase_freeze_period = self.constants["COINBASE_FREEZE_PERIOD"]
+
+        valid_index = current_index - coinbase_freeze_period
+
+        not_frozen: Set[
+            WalletCoinRecord
+        ] = await self.wallet_store.get_spendable_for_index(valid_index, wallet_id)
+        all_records: Set[
+            WalletCoinRecord
+        ] = await self.wallet_store.get_spendable_for_index(current_index, wallet_id)
+        sum_not_frozen = sum(
+            record.coin.amount for record in not_frozen if record.coinbase
+        )
+        sum_all_records = sum(
+            record.coin.amount for record in all_records if record.coinbase
+        )
+        return uint64(sum_all_records - sum_not_frozen)
+
     async def unconfirmed_additions_for_wallet(
         self, wallet_id: int
     ) -> Dict[bytes32, Coin]:
