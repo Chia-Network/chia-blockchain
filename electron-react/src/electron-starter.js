@@ -110,13 +110,12 @@ const exitPyProc = () => {
   // Should be a setting
   if (pyProc != null) {
     if (process.platform === "win32") {
+      process.stdout.write("Killing daemon on windows");
       var cp = require('child_process');
-      cp.exec('taskkill /PID ' + processing.pid + ' /T /F', function (error, stdout, stderr) {
-        process.stdout.write(Kiling0);
-      });
+      cp.execSync('taskkill /PID ' + pyProc.pid + ' /T /F')
     } else {
-      process.stdout.write(Kiling1);
-      pyProc.kill('SIGINT');
+      process.stdout.write("Killing daemon on other platforms");
+      pyProc.kill();
       pyProc = null;
       pyPort = null;
     }
