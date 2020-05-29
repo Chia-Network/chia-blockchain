@@ -133,8 +133,8 @@ let mainWindow = null;
 
 const createWindow = () => {
   mainWindow = new BrowserWindow({
-    width: 1500,
-    height: 800,
+    width: 1200,
+    height: 1200,
     minWidth: 600,
     minHeight: 800,
     backgroundColor: "#ffffff",
@@ -172,9 +172,10 @@ const createWindow = () => {
     mainWindow.show();
   });
 
-  if (!guessPackaged()) {
-    mainWindow.webContents.openDevTools();
-  }
+  // Uncomment this to open devtools by default
+  // if (!guessPackaged()) {
+  //   mainWindow.webContents.openDevTools();
+  // }
 
   mainWindow.on("closed", () => {
     mainWindow = null;

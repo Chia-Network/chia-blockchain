@@ -44,7 +44,9 @@ async def async_main():
             )
             log.info(f"Port {config['port']} opened with UPnP.")
         except Exception:
-            log.exception("UPnP failed")
+            log.warning(
+                "UPnP failed. This is not required to run chia, but it allows incoming connections from other peers."
+            )
 
     # Starts the full node server (which full nodes can connect to)
     ping_interval = net_config.get("ping_interval")
