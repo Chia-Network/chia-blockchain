@@ -493,6 +493,7 @@ class FullNode:
         yield OutboundMessage(
             NodeType.WALLET, Message("new_lca", new_lca), Delivery.BROADCAST
         )
+        self._state_changed("block")
 
     @api_request
     async def new_tip(
