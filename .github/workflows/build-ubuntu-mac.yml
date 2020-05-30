@@ -65,11 +65,14 @@ jobs:
       run: |
         ./venv/bin/mypy src tests
 
+    - name: Setup Node on OSX
+        if: startsWith(matrix.os, 'mac')
+        uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+
     - name: Build MacOS DMG in Catalina
       if: startsWith(matrix.os, 'mac')
-      uses: actions/setup-node@v1
-      with:
-        node-version: '12.x'
       run: |
         . ./activate
         cd build_scripts
