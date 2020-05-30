@@ -256,6 +256,10 @@ async def connection_to_message(
         connection.log.warning(
             f"Connection error by peer {connection.get_peername()}, closing connection."
         )
+    except AttributeError as e:
+        connection.log.warning(
+            f"AttributeError {e} in connection with peer {connection.get_peername()}."
+        )
     except ssl.SSLError as e:
         connection.log.warning(
             f"SSLError {e} in connection with peer {connection.get_peername()}."
