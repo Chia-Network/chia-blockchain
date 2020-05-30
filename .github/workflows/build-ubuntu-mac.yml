@@ -69,8 +69,8 @@ jobs:
       run: |
         . ./activate
         cd build_scripts
-        ulimit -a
-        ulimit -n 300000
+        npm install -g npm@latest
+        npm install -g n
         sh build_macos.sh
 
     - name: Test blockchain code with pytest
