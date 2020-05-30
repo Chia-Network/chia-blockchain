@@ -64,13 +64,15 @@ jobs:
     - name: Lint source with mypy
       run: |
         ./venv/bin/mypy src tests
+
     - name: Build MacOS DMG in Catalina
       if: startsWith(matrix.os, 'mac')
+      uses: actions/setup-node@v1
+        with:
+          node-version: [12.0]
       run: |
         . ./activate
         cd build_scripts
-        npm install -g npm@latest
-        npm install -g n
         sh build_macos.sh
 
     - name: Test blockchain code with pytest
