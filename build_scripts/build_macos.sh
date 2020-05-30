@@ -2,7 +2,7 @@
 echo "Installing npm and electron packagers"
 npm install electron-installer-dmg -g
 npm install electron-packager -g
-npm install electron-osx-sign -g
+npm install electron/electron-osx-sign#master --save-dev -g
 
 echo "Create dist/"
 sudo rm -rf dist

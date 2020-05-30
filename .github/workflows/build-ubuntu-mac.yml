@@ -69,7 +69,8 @@ jobs:
       run: |
         . ./activate
         cd build_scripts
-        ulimit -n 10000
+        ulimit -a
+        ulimit -n 300000
         sh build_macos.sh
 
     - name: Test blockchain code with pytest
