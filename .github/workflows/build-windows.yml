@@ -1,4 +1,4 @@
-name: Build Windows Installer
+name: Build Windows
 
 on: [push, pull_request]
 
@@ -17,7 +17,7 @@ jobs:
         name: Install Python 3.7
         with:
           python-version: "3.7"
-          
+
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.0.0
 

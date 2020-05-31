@@ -316,7 +316,7 @@ class TradeManager:
                     if zero_spend_bundle is None:
                         return (
                             False,
-                            "unable to generate zero value coin, check you have chia available",
+                            "Unable to generate zero value coin. Confirm that you have chia available",
                         )
                     zero_spend_list.append(zero_spend_bundle)
 
