@@ -5,6 +5,7 @@ on: [push]
 
 jobs:
   build:
+    name: Python 3.7 and 3.8 on ubuntu-latest
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
