@@ -67,6 +67,11 @@ class WalletUserStore:
         await self.db_connection.commit()
         return await self.get_last_wallet()
 
+    async def delete_wallet(self, id: int):
+        cursor = await self.db_connection.execute(f"DELETE FROM users_wallets where id={id}")
+        await cursor.close()
+        await self.db_connection.commit()
+
     async def update_wallet(self, wallet_info: WalletInfo):
         cursor = await self.db_connection.execute(
             "INSERT or REPLACE INTO users_wallets VALUES(?, ?, ?, ?)",
