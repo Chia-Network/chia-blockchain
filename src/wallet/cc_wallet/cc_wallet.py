@@ -79,6 +79,7 @@ class CCWallet:
 
         spend_bundle = await self.generate_new_coloured_coin(amount)
         if spend_bundle is None:
+            await wallet_state_manager.user_store.delete_wallet(self.wallet_info.id)
             raise ValueError("Internal Error, unable to generate new coloured coin")
 
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
