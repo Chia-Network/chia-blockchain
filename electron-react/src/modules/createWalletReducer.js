@@ -21,6 +21,8 @@ const initial_state = {
 
 export const createWalletReducer = (state = { ...initial_state }, action) => {
   switch (action.type) {
+    case "LOG_OUT":
+      return { ...initial_state };
     case "CREATE_OPTIONS":
       var item = action.item;
       return { ...state, view: item };
