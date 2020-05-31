@@ -21,6 +21,13 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Import app cert
+      if: startsWith(matrix.os, 'mac')
+      uses: Apple-Actions/import-codesign-certs@v1
+      with:
+        p12-file-base64: ${{ secrets.CERT_APP }}
+        p12-password: ${{ secrets.CERT_PASS }}
+
     - name: Install ubuntu dependencies
       if: startsWith(matrix.os, 'ubuntu')
       run: |
@@ -57,6 +64,16 @@ jobs:
     - name: Lint source with mypy
       run: |
         ./venv/bin/mypy src tests
+
+    - name: Setup kernel for react native, increase watchers
+      if: startsWith(matrix.os, 'mac')
+      run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
+
+    - name: Setup Node on OSX
+      if: startsWith(matrix.os, 'mac')
+      uses: actions/setup-node@v1
+      with:
+        node-version: '12.x'
 
     - name: Build MacOS DMG in Catalina
       if: startsWith(matrix.os, 'mac')
