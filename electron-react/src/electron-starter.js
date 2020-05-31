@@ -28,7 +28,7 @@ global.sharedObj = { local_test: local_test };
  * py process
  *************************************************************/
 
-const PY_MAC_DIST_FOLDER = "../daemon";
+const PY_MAC_DIST_FOLDER = "../../app.asar.unpacked/daemon";
 const PY_WIN_DIST_FOLDER = "../../app.asar.unpacked/daemon";
 const PY_DIST_FILE = "daemon";
 const PY_FOLDER = "../src/daemon";
