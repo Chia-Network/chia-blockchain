@@ -31,7 +31,7 @@ pip install wheel
 pip install pywin32 pyinstaller
 
 Write-Output "   ---";
-Write-Output "Install chia-blockchain wheels into venv with install_win.py";
+Write-Output "Install chia-blockchain wheels into venv with pip";
 Write-Output "   ---";
 
 Write-Output "pip install miniupnpc";

@@ -49,6 +49,11 @@ steps:
       pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
     displayName: "Build wheels"
 
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '12.x'
+    displayName: "Setup Node 12.xß"
+
   - script: |
       . ./activate
       cd ./electron-react
@@ -62,7 +67,7 @@ steps:
       pip install .
     displayName: "Install wheels"
 
-  #  install-timelord.sh usually wants venv, but this clean runner is the "venv"
+  #  install-timelord.sh in venv
   - script: |
       . ./activate
       echo "which python"
@@ -72,16 +77,16 @@ steps:
       ./vdf_bench square_asm 400000
     displayName: "Install timelord"
 
-  - script: |
-      . ./activate
-      python -m pip install -r requirements-dev.txt
-    displayName: "Install dev dependencies"
+#  - script: |
+#      . ./activate
+#      python -m pip install -r requirements-dev.txt
+#    displayName: "Install dev dependencies"
 
-  - script: |
-      . ./activate
-      pip install pytest pytest-azurepipelines
-      py.test tests -s -v
-    displayName: "pytest"
+#  - script: |
+#      . ./activate
+#      pip install pytest pytest-azurepipelines
+#      py.test tests -s -v
+#    displayName: "pytest"
 
   - script: |
       . ./activate

@@ -1,17 +1,18 @@
-name: Build Ubuntu and MacOS
+name: Build Ubuntu on Python 3.7 and 3.8
 
 
 on: [push]
 
 jobs:
   build:
+    name: Python 3.7 and 3.8 on ubuntu-latest
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
         python-version: [3.7, 3.8]
-        os: [ubuntu-latest, macOS-latest]
+        os: [ubuntu-latest]
 
     steps:
     - uses: actions/checkout@v1
@@ -21,24 +22,11 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Import app cert
-      if: startsWith(matrix.os, 'mac')
-      uses: Apple-Actions/import-codesign-certs@v1
-      with:
-        p12-file-base64: ${{ secrets.CERT_APP }}
-        p12-password: ${{ secrets.CERT_PASS }}
-
     - name: Install ubuntu dependencies
-      if: startsWith(matrix.os, 'ubuntu')
       run: |
         sudo apt-get update
         sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
         sudo apt-get install nodejs-dev node-gyp
-
-    - name: Install Mac dependencies
-      if: startsWith(matrix.os, 'mac')
-      run: |
-        brew update
 
     - name: Run install script
       env:
@@ -65,31 +53,7 @@ jobs:
       run: |
         ./venv/bin/mypy src tests
 
-    - name: Setup kernel for react native, increase watchers
-      if: startsWith(matrix.os, 'mac')
-      run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
-
-    - name: Setup Node on OSX
-      if: startsWith(matrix.os, 'mac')
-      uses: actions/setup-node@v1
-      with:
-        node-version: '12.x'
-
-    - name: Build MacOS DMG in Catalina
-      if: startsWith(matrix.os, 'mac')
-      run: |
-        . ./activate
-        cd build_scripts
-        sh build_macos.sh
-
     - name: Test blockchain code with pytest
       run: |
         . ./activate
         ./venv/bin/py.test tests -s -v
-
-    - name: Upload MacOS artifacts
-      if: startsWith(matrix.os, 'mac')
-      uses: actions/upload-artifact@v1
-      with:
-        name: Chia-MacOS-10.15-dmg
-        path: ${{ github.workspace }}/build_scripts/Chia-0.1.6.dmg
