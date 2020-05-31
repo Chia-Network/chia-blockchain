@@ -15,6 +15,8 @@ const initial_state = {
 
 export const entranceReducer = (state = { ...initial_state }, action) => {
   switch (action.type) {
+    case "LOG_OUT":
+      return { ...initial_state };
     case "ENTRANCE_MENU":
       var item = action.item;
       return { ...state, view: item };

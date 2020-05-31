@@ -45,6 +45,8 @@ const initial_state = {
 export const tradeReducer = (state = { ...initial_state }, action) => {
   let trade;
   switch (action.type) {
+    case "LOG_OUT":
+      return { ...initial_state };
     case "TRADE_ADDED":
       trade = action.trade;
       const new_trades = [...state.trades];

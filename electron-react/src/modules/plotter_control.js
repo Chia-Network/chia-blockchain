@@ -8,6 +8,8 @@ const initial_state = {
 
 export const plotControlReducer = (state = { ...initial_state }, action) => {
   switch (action.type) {
+    case "LOG_OUT":
+      return { ...initial_state };
     case "PLOTTER_CONTROL":
       if (action.command === "workplace_location") {
         state.workspace_location = action.location;

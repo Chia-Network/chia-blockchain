@@ -63,7 +63,11 @@ const initial_state = {
 export const incomingReducer = (state = { ...initial_state }, action) => {
   switch (action.type) {
     case "LOG_OUT":
-      return { ...state, logged_in: false };
+      return {
+        ...initial_state,
+        logged_in_received: true,
+        public_key_fingerprints: state.public_key_fingerprints
+      };
 
     case "CLEAR_SEND":
       state["sending_transaction"] = false;
