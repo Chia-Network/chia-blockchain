@@ -141,6 +141,9 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           id = data.wallet_id;
           wallets = state.wallets;
           wallet = wallets[parseInt(id)];
+          if (!wallet) {
+            return state;
+          }
           var balance = data.confirmed_wallet_balance;
           var unconfirmed_balance = data.unconfirmed_wallet_balance;
           var pending_balance = unconfirmed_balance - balance;
@@ -160,6 +163,9 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           var transactions = data.txs;
           wallets = state.wallets;
           wallet = wallets[parseInt(id)];
+          if (!wallet) {
+            return state;
+          }
           wallet.transactions = transactions.reverse();
           return state;
         }
@@ -168,6 +174,9 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         var puzzle_hash = data.puzzle_hash;
         wallets = state.wallets;
         wallet = wallets[parseInt(id)];
+        if (!wallet) {
+          return state;
+        }
         // console.log("wallet_id here: " + id);
         wallet.puzzle_hash = puzzle_hash;
         return { ...state };
@@ -194,6 +203,9 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         const colour = data.colour;
         wallets = state.wallets;
         wallet = wallets[parseInt(id)];
+        if (!wallet) {
+          return state;
+        }
         wallet.colour = colour;
         return state;
       } else if (command === "cc_get_name") {
@@ -201,6 +213,9 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         const name = data.name;
         wallets = state.wallets;
         wallet = wallets[parseInt(id)];
+        if (!wallet) {
+          return state;
+        }
         wallet.name = name;
         return state;
       }
