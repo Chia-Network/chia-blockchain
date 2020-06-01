@@ -29,7 +29,7 @@ export const parsingStarted = () => ({
 });
 
 export const parsingStateNone = "NONE";
-export const parsingStatePending = "PEDNING";
+export const parsingStatePending = "PENDING";
 export const parsingStateParsed = "PARSED";
 export const parsingStateReset = "RESET";
 
