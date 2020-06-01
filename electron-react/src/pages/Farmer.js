@@ -511,15 +511,15 @@ const FarmerContent = props => {
             <Challenges></Challenges>
           </Grid>
           <Grid item xs={12}>
+            <Plots></Plots>
+          </Grid>
+          <Grid item xs={12}>
             <Connections
               connections={connections}
               connectionError={connectionError}
               openConnection={openConnectionCallback}
               closeConnection={closeConnectionCallback}
             ></Connections>
-          </Grid>
-          <Grid item xs={12}>
-            <Plots></Plots>
           </Grid>
         </Grid>
       </Container>

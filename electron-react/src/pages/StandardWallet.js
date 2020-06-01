@@ -19,10 +19,15 @@ import {
   send_transaction,
   farm_block
 } from "../modules/message";
+import ExpansionPanel from "@material-ui/core/ExpansionPanel";
+import ExpansionPanelSummary from "@material-ui/core/ExpansionPanelSummary";
+import ExpansionPanelDetails from "@material-ui/core/ExpansionPanelDetails";
+import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
 import { unix_to_short_date } from "../util/utils";
-import Accordion from "../components/Accordion";
 import { openDialog } from "../modules/dialogReducer";
+import { Tooltip } from "@material-ui/core";
+import HelpIcon from "@material-ui/icons/Help";
 const config = require("../config");
 const drawerWidth = 240;
 
@@ -128,10 +133,6 @@ const useStyles = makeStyles(theme => ({
       duration: theme.transitions.duration.enteringScreen
     })
   },
-  balancePaper: {
-    // height: 200,
-    marginTop: theme.spacing(2)
-  },
   sendCard: {
     marginTop: theme.spacing(2)
   },
@@ -190,7 +191,18 @@ const BalanceCardSubSection = props => {
       <div className={classes.cardSubSection}>
         <Box display="flex">
           <Box flexGrow={1}>
-            <Typography variant="subtitle1">{props.title}</Typography>
+            <Typography variant="subtitle1">
+              {props.title}
+              {props.tooltip ? (
+                <Tooltip title={props.tooltip}>
+                  <HelpIcon
+                    style={{ color: "#c8c8c8", fontSize: 12 }}
+                  ></HelpIcon>
+                </Tooltip>
+              ) : (
+                ""
+              )}
+            </Typography>
           </Box>
           <Box>
             <Typography variant="subtitle1">
@@ -221,59 +233,10 @@ const BalanceCard = props => {
     state => state.wallet_state.wallets[id].balance_change
   );
   const balance_ptotal = balance + balance_pending;
-
   const classes = useStyles();
 
-  const balancebox_1 = "<table width='100%'>";
-  const balancebox_2 = "<tr><td align='left'>";
-  const balancebox_3 = "</td><td align='right'>";
-  const balancebox_4 = "</td></tr>";
-  const balancebox_row = "<tr height='8px'></tr>";
-  const balancebox_5 = "</td></tr></table>";
-  const balancebox_ptotal = "Pending Total Balance";
-  const balancebox_pending = "Pending Transactions";
-  const balancebox_frozen = "Pending Farming Rewards";
-  const balancebox_change = "Pending Change";
-  const balancebox_xch = " XCH";
-  const balancebox_hline =
-    "<tr><td colspan='2' style='text-align:center'><hr width='50%'></td></tr>";
-  const balance_ptotal_chia = mojo_to_chia_string(balance_ptotal, "mojo");
-  const balance_pending_chia = mojo_to_chia_string(balance_pending);
-  const balance_frozen_chia = mojo_to_chia_string(balance_frozen);
-  const balance_change_chia = mojo_to_chia_string(balance_change);
-  const acc_content =
-    balancebox_1 +
-    balancebox_2 +
-    balancebox_ptotal +
-    balancebox_3 +
-    balance_ptotal_chia +
-    balancebox_xch +
-    balancebox_hline +
-    balancebox_4 +
-    balancebox_row +
-    balancebox_2 +
-    balancebox_pending +
-    balancebox_3 +
-    balance_pending_chia +
-    balancebox_xch +
-    balancebox_4 +
-    balancebox_row +
-    balancebox_2 +
-    balancebox_frozen +
-    balancebox_3 +
-    balance_frozen_chia +
-    balancebox_xch +
-    balancebox_4 +
-    balancebox_row +
-    balancebox_2 +
-    balancebox_change +
-    balancebox_3 +
-    balance_change_chia +
-    balancebox_xch +
-    balancebox_5;
-
   return (
-    <Paper className={(classes.paper, classes.balancePaper)}>
+    <Paper className={classes.paper}>
       <Grid container spacing={0}>
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
@@ -282,19 +245,65 @@ const BalanceCard = props => {
             </Typography>
           </div>
         </Grid>
-        <BalanceCardSubSection title="Total Balance" balance={balance} />
+        <BalanceCardSubSection
+          title="Total Balance"
+          balance={balance}
+          tooltip="This is the total amount of Chia in the blockchain at the LCA block (latest common ancestor) that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
+        />
         <BalanceCardSubSection
           title="Spendable Balance"
           balance={balance_spendable}
+          tooltip={
+            "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transctions, and Chia that you have just spend but is not yet in the blockchain."
+          }
         />
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box flexGrow={1}>
-                <Accordion
-                  title="View pending balances..."
-                  content={acc_content}
-                />
+                <ExpansionPanel className={classes.front}>
+                  <ExpansionPanelSummary
+                    expandIcon={<ExpandMoreIcon />}
+                    aria-controls="panel1a-content"
+                    id="panel1a-header"
+                  >
+                    <Typography className={classes.heading}>
+                      View pending balances
+                    </Typography>
+                  </ExpansionPanelSummary>
+                  <ExpansionPanelDetails>
+                    <Grid container spacing={0}>
+                      <BalanceCardSubSection
+                        title="Pending Total Balance"
+                        balance={balance_ptotal}
+                        tooltip={
+                          "This is the total balance + pending balance: it it what your balance will be after all pending transactions are confirmed."
+                        }
+                      />
+                      <BalanceCardSubSection
+                        title="Pending Balance"
+                        balance={balance_pending}
+                        tooltip={
+                          "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
+                        }
+                      />
+                      <BalanceCardSubSection
+                        title="Pending Farming Rewards"
+                        balance={balance_frozen}
+                        tooltip={
+                          "This is the total amount of farming rewards farmed recently, that have been confirmed but are not yet spendable. Farming rewards are frozen for 200 blocks."
+                        }
+                      />
+                      <BalanceCardSubSection
+                        title="Pending Change"
+                        balance={balance_change}
+                        tooltip={
+                          "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
+                        }
+                      />
+                    </Grid>
+                  </ExpansionPanelDetails>
+                </ExpansionPanel>
               </Box>
             </Box>
           </div>
