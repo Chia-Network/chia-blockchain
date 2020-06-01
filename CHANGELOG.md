@@ -44,6 +44,7 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 - In beta 1.5 we introduced a bug in aggsig and aggsig-me that we have fixed in this release. That forced a hard fork of the chain so coins and balances are lost from beta 1.5. There is no impact on existing plots.
 - Starting and stopping servers now works much more reliably.
 - `chia-check-plots` uses the plot root and checks the plots in the same manner as harvester.
+- `chia-check-plots` now does not override plots.yaml, which means concurrent plots will properly be added to plots.yaml.
 - Fixed and issue where [Relic](https://github.com/relic-toolkit/relic) and thus blspy would crash on processors older than Haswell as they don't support lzc.
 - Some non-critical networking errors are no longer logged.
 - Blocks with compact proofs of time are now able to be updated into the node database.
