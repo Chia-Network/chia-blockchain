@@ -41,14 +41,12 @@ from src.util.config import load_config, load_config_cli, save_config
 from src.harvester import load_plots
 
 
-TEMP_PLOT_DIR = tempfile.TemporaryDirectory()
-
-
 def get_plot_dir():
-    cache_path = Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/"))) / "test-plots"
-    if cache_path.exists():
-        return cache_path
-    return Path(TEMP_PLOT_DIR.name)
+    cache_path = (
+        Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/"))) / "test-plots"
+    )
+    mkdir(cache_path)
+    return cache_path
 
 
 class BlockTools:
@@ -57,9 +55,7 @@ class BlockTools:
     """
 
     def __init__(
-        self,
-        root_path: Optional[Path] = None,
-        real_plots: bool = False,
+        self, root_path: Optional[Path] = None, real_plots: bool = False,
     ):
         self._tempdir = None
         if root_path is None:

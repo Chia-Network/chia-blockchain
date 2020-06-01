@@ -7,6 +7,8 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 
 ## [Unreleased]
 
+- test plots now go into `~/.chia/test-plots/`
+
 ## [1.0beta6] aka Beta 1.6 - 2020-06-01
 
 ### Added
