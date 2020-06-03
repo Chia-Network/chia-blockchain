@@ -4,7 +4,6 @@ from typing import List
 from src.types.full_block import FullBlock
 from src.types.spend_bundle import SpendBundle
 from src.types.header_block import HeaderBlock
-from src.types.peer_info import PeerInfo
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
@@ -158,20 +157,6 @@ class RespondBlock:
 class RejectBlockRequest:
     height: uint32
     header_hash: bytes32
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RequestPeers:
-    """
-    Return full list of peers
-    """
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RespondPeers:
-    peer_list: List[PeerInfo]
 
 
 @dataclass(frozen=True)

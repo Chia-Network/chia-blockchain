@@ -107,6 +107,9 @@ const WalletItem = props => {
 
   const wallet = useSelector(state => state.wallet_state.wallets[id]);
   var name = useSelector(state => state.wallet_state.wallets[id].name);
+  if (!name) {
+    name = "";
+  }
 
   var mainLabel = "";
   if (wallet.type === "STANDARD_WALLET") {

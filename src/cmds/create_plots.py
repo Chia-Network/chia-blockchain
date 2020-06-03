@@ -158,6 +158,8 @@ def main():
             log(f"Plot {filename} already exists")
 
         # Updates the config if necessary.
+        plot_config = load_config(root_path, plot_config_filename)
+        plot_config_plots_new = deepcopy(plot_config.get("plots", []))
         plot_config_plots_new[str(full_path)] = {
             "sk": bytes(sk).hex(),
             "pool_pk": bytes(pool_pk).hex(),

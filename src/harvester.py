@@ -9,8 +9,8 @@ from blspy import PrependSignature, PrivateKey, PublicKey, Util
 
 from chiapos import DiskProver
 from src.protocols import harvester_protocol
+from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
-from src.types.peer_info import PeerInfo
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.config import load_config, save_config
@@ -78,17 +78,12 @@ class Harvester:
     challenge_hashes: Dict[bytes32, Tuple[bytes32, str, uint8]]
     pool_pubkeys: List[PublicKey]
     root_path: Path
-    _plot_notification_task: asyncio.Task
-    _reconnect_task: Optional[asyncio.Task]
+    _plot_notification_task: asyncio.Future
     _is_shutdown: bool
     executor: concurrent.futures.ThreadPoolExecutor
     state_changed_callback: Optional[Callable]
 
-    @staticmethod
-    async def create(
-        config: Dict, plot_config: Dict, root_path: Path,
-    ):
-        self = Harvester()
+    def __init__(self, config: Dict, plot_config: Dict, root_path: Path):
         self.config = config
         self.plot_config = plot_config
         self.root_path = root_path
@@ -100,19 +95,17 @@ class Harvester:
 
         # From quality string to (challenge_hash, filename, index)
         self.challenge_hashes = {}
-        self._plot_notification_task = asyncio.create_task(self._plot_notification())
-        self._reconnect_task = None
+        self._plot_notification_task = asyncio.ensure_future(self._plot_notification())
         self._is_shutdown = False
-        self.server = None
+        self.global_connections: Optional[PeerConnections] = None
         self.pool_pubkeys = []
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
         self.state_changed_callback = None
-        return self
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
-        if self.server is not None:
-            self.server.set_state_changed_callback(callback)
+        if self.global_connections is not None:
+            self.global_connections.set_state_changed_callback(callback)
 
     def _state_changed(self, change: str):
         if self.state_changed_callback is not None:
@@ -193,40 +186,11 @@ class Harvester:
         self._state_changed("plots")
         return True
 
+    def set_global_connections(self, global_connections: Optional[PeerConnections]):
+        self.global_connections = global_connections
+
     def set_server(self, server):
-        self.server = server
-
-    def _start_bg_tasks(self):
-        """
-        Start a background task that checks connection and reconnects periodically to the farmer.
-        """
-
-        farmer_peer = PeerInfo(
-            self.config["farmer_peer"]["host"], self.config["farmer_peer"]["port"]
-        )
-
-        async def connection_check():
-            while not self._is_shutdown:
-                counter = 0
-                while not self._is_shutdown and counter % 30 == 0:
-                    if self.server is not None:
-                        farmer_retry = True
-
-                        for (
-                            connection
-                        ) in self.server.global_connections.get_connections():
-                            if connection.get_peer_info() == farmer_peer:
-                                farmer_retry = False
-
-                        if farmer_retry:
-                            log.info(f"Reconnecting to farmer {farmer_retry}")
-                            if not await self.server.start_client(
-                                farmer_peer, None, auth=True
-                            ):
-                                await asyncio.sleep(1)
-                    await asyncio.sleep(1)
-
-        self._reconnect_task = asyncio.create_task(connection_check())
+        pass
 
     def _shutdown(self):
         self._is_shutdown = True
@@ -234,8 +198,6 @@ class Harvester:
 
     async def _await_shutdown(self):
         await self._plot_notification_task
-        if self._reconnect_task is not None:
-            await self._reconnect_task
 
     @api_request
     async def harvester_handshake(

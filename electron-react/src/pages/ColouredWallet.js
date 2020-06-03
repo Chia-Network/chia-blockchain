@@ -21,7 +21,11 @@ import {
   farm_block,
   rename_cc_wallet
 } from "../modules/message";
-import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
+import {
+  mojo_to_chia_string,
+  chia_to_mojo,
+  mojo_to_colouredcoin_string
+} from "../util/chia";
 import { unix_to_short_date } from "../util/utils";
 import Accordion from "../components/Accordion";
 import { openDialog } from "../modules/dialogReducer";
@@ -189,13 +193,10 @@ const useStyles = makeStyles(theme => ({
 
 const ColourCard = props => {
   var id = props.wallet_id;
-  // console.log("AAAAAAAAA");
-  // console.log(id);
 
   const dispatch = useDispatch();
   const colour = useSelector(state => state.wallet_state.wallets[id].colour);
   const name = useSelector(state => state.wallet_state.wallets[id].name);
-  console.log(name);
 
   var name_input = null;
 
@@ -283,7 +284,7 @@ const BalanceCardSubSection = props => {
           </Box>
           <Box>
             <Typography variant="subtitle1">
-              {mojo_to_chia_string(props.balance)} {cc_unit}
+              {mojo_to_colouredcoin_string(props.balance)} {cc_unit}
             </Typography>
           </Box>
         </Box>
@@ -294,11 +295,14 @@ const BalanceCardSubSection = props => {
 
 const BalanceCard = props => {
   var id = props.wallet_id;
-  const name = useSelector(state => state.wallet_state.wallets[id].name);
+  let name = useSelector(state => state.wallet_state.wallets[id].name);
+  if (!name) {
+    name = "";
+  }
   const balance = useSelector(
     state => state.wallet_state.wallets[id].balance_total
   );
-  const balance_spendable = useSelector(
+  var balance_spendable = useSelector(
     state => state.wallet_state.wallets[id].balance_spendable
   );
   const balance_pending = useSelector(
@@ -326,9 +330,18 @@ const BalanceCard = props => {
   const balancebox_unit = " " + cc_unit;
   const balancebox_hline =
     "<tr><td colspan='2' style='text-align:center'><hr width='50%'></td></tr>";
-  const balance_ptotal_chia = mojo_to_chia_string(balance_ptotal, "mojo");
-  const balance_pending_chia = mojo_to_chia_string(balance_pending, "mojo");
-  const balance_change_chia = mojo_to_chia_string(balance_change, "mojo");
+  const balance_ptotal_chia = mojo_to_colouredcoin_string(
+    balance_ptotal,
+    "mojo"
+  );
+  const balance_pending_chia = mojo_to_colouredcoin_string(
+    balance_pending,
+    "mojo"
+  );
+  const balance_change_chia = mojo_to_colouredcoin_string(
+    balance_change,
+    "mojo"
+  );
   const acc_content =
     balancebox_1 +
     balancebox_2 +

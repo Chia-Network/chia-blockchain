@@ -7,6 +7,10 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 
 ## [Unreleased]
 
+- test plots now go into `~/.chia/test-plots/`
+
+## [1.0beta6] aka Beta 1.6 - 2020-06-01
+
 ### Added
 
 - Windows and MacOS now have one click installers that then send users to a GUI on both platforms to farm or use their wallets. Windows is built on GitHub Actions and MacOS is also built on Azure Pipelines so as to build on Mojave.
@@ -18,6 +22,7 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 - We added a `chia keys` command line program, to see, add, and remove private keys.
 - We added RPC servers and RPC client implementations for Farmer and Harvester. The new UI uses these for additional information and functionality.
 - We added total network storage space estimation to the node RPC at the `/get_network_space` endpoint instead of only being available in the cli. The RPC endpoint takes two block header hashes and estimates space between those header hashes.
+- Logs now autorotate. Once the debug.log reaches 20MB it is compressed and archived keeping 7 historical 20MB logs.
 - We now have a CHANGELOG.md that adheres closely to the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) standard. We merged in the version history and updated some previous release notes to capture items important to the change log. We are modifying our release process to accumulate changes at the top of the change log and then copy those to the release notes at the time of the release.
 - We added [lgtm](https://lgtm.com/) source analysis on pull request to the chia-blockchain, chiapos, chiavdf, chiabip158, and bls-library repositories to add some automated security analysis to our ci.
 
@@ -43,10 +48,12 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 - In beta 1.5 we introduced a bug in aggsig and aggsig-me that we have fixed in this release. That forced a hard fork of the chain so coins and balances are lost from beta 1.5. There is no impact on existing plots.
 - Starting and stopping servers now works much more reliably.
 - `chia-check-plots` uses the plot root and checks the plots in the same manner as harvester.
+- `chia-check-plots` now does not override plots.yaml, which means concurrent plots will properly be added to plots.yaml.
 - Fixed and issue where [Relic](https://github.com/relic-toolkit/relic) and thus blspy would crash on processors older than Haswell as they don't support lzc.
 - Some non-critical networking errors are no longer logged.
 - Blocks with compact proofs of time are now able to be updated into the node database.
 - The `install-timelord.sh` script now correctly determines which version of python it is running under and correctly builds vdf_client and correctly links to vdf_bench. It also handles upgrading CMake on Ubuntu's older than 20.04LTS do satisfy the new CMake 3.14+ requirement to build Timelord.
+- An issue in asyncio was not being caught correctly and that could cause nodes to crash.
 - The build status shield layout is fixed in README.md
 - Raspberry Pi 3/4 with Ubuntu 20.04LTS 64 bit should compile again.
 

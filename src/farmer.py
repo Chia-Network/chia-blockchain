@@ -10,8 +10,8 @@ from src.consensus.constants import constants as consensus_constants
 from src.consensus.pot_iterations import calculate_iterations_quality
 from src.consensus.coinbase import create_coinbase_coin_and_signature
 from src.protocols import farmer_protocol, harvester_protocol
+from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
-from src.types.peer_info import PeerInfo
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
@@ -48,7 +48,6 @@ class Farmer:
         self.current_weight: uint128 = uint128(0)
         self.proof_of_time_estimate_ips: uint64 = uint64(10000)
         self.constants = consensus_constants.copy()
-        self.server = None
         self._shut_down = False
         self.keychain = keychain
         self.state_changed_callback: Optional[Callable] = None
@@ -82,13 +81,16 @@ class Farmer:
             NodeType.HARVESTER, Message("harvester_handshake", msg), Delivery.RESPOND
         )
 
+    def set_global_connections(self, global_connections: PeerConnections):
+        self.global_connections: PeerConnections = global_connections
+
     def set_server(self, server):
-        self.server = server
+        pass
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
-        if self.server is not None:
-            self.server.set_state_changed_callback(callback)
+        if self.global_connections is not None:
+            self.global_connections.set_state_changed_callback(callback)
 
     def _state_changed(self, change: str):
         if self.state_changed_callback is not None:
@@ -176,34 +178,6 @@ class Farmer:
             )
 
             self._state_changed("challenge")
-
-    def _start_bg_tasks(self):
-        """
-        Start a background task that checks connection and reconnects periodically to the full_node.
-        """
-
-        full_node_peer = PeerInfo(
-            self.config["full_node_peer"]["host"], self.config["full_node_peer"]["port"]
-        )
-
-        async def connection_check():
-            while not self._shut_down:
-                if self.server is not None:
-                    full_node_retry = True
-
-                    for connection in self.server.global_connections.get_connections():
-                        if connection.get_peer_info() == full_node_peer:
-                            full_node_retry = False
-
-                    if full_node_retry:
-                        log.info(f"Reconnecting to full_node {full_node_peer}")
-                        if not await self.server.start_client(
-                            full_node_peer, None, auth=False
-                        ):
-                            await asyncio.sleep(1)
-                await asyncio.sleep(30)
-
-        self.reconnect_task = asyncio.create_task(connection_check())
 
     @api_request
     async def respond_proof_of_space(

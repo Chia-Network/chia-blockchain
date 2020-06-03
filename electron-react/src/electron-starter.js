@@ -28,7 +28,7 @@ global.sharedObj = { local_test: local_test };
  * py process
  *************************************************************/
 
-const PY_MAC_DIST_FOLDER = "../daemon";
+const PY_MAC_DIST_FOLDER = "../../app.asar.unpacked/daemon";
 const PY_WIN_DIST_FOLDER = "../../app.asar.unpacked/daemon";
 const PY_DIST_FILE = "daemon";
 const PY_FOLDER = "../src/daemon";
@@ -109,9 +109,16 @@ const createPyProc = () => {
 const exitPyProc = () => {
   // Should be a setting
   if (pyProc != null) {
-    pyProc.kill();
-    pyProc = null;
-    pyPort = null;
+    if (process.platform === "win32") {
+      process.stdout.write("Killing daemon on windows");
+      var cp = require('child_process');
+      cp.execSync('taskkill /PID ' + pyProc.pid + ' /T /F')
+    } else {
+      process.stdout.write("Killing daemon on other platforms");
+      pyProc.kill();
+      pyProc = null;
+      pyPort = null;
+    }
   }
 };
 
@@ -126,8 +133,8 @@ let mainWindow = null;
 
 const createWindow = () => {
   mainWindow = new BrowserWindow({
-    width: 1500,
-    height: 800,
+    width: 1200,
+    height: 1200,
     minWidth: 600,
     minHeight: 800,
     backgroundColor: "#ffffff",
@@ -165,9 +172,10 @@ const createWindow = () => {
     mainWindow.show();
   });
 
-  if (!guessPackaged()) {
-    mainWindow.webContents.openDevTools();
-  }
+  // Uncomment this to open devtools by default
+  // if (!guessPackaged()) {
+  //   mainWindow.webContents.openDevTools();
+  // }
 
   mainWindow.on("closed", () => {
     mainWindow = null;

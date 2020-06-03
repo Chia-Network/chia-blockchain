@@ -15,6 +15,8 @@ const initial_state = {
 
 export const farmingReducer = (state = { ...initial_state }, action) => {
   switch (action.type) {
+    case "LOG_OUT":
+      return { ...initial_state };
     case "INCOMING_MESSAGE":
       if (
         action.message.origin !== service_farmer &&

@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import random
+import tempfile
 
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Optional
@@ -37,26 +38,15 @@ from src.util.path import mkdir
 from src.util.significant_bits import truncate_to_significant_bits
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.config import load_config, load_config_cli, save_config
-from src.util.default_root import DEFAULT_ROOT_PATH
 from src.harvester import load_plots
 
 
-TEST_ROOT_PATH = Path(
-    os.path.expanduser(
-        os.getenv("CHIA_TEST_ROOT", "~/.chia/beta-{version}-test").format(
-            version=__version__
-        )
+def get_plot_dir():
+    cache_path = (
+        Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/"))) / "test-plots"
     )
-).resolve()
-
-
-def get_plot_dir(root_path):
-    CHIA_TEST_PLOT_ROOT = os.getenv("CHIA_TEST_PLOT_ROOT")
-    if CHIA_TEST_PLOT_ROOT:
-        return Path(
-            os.path.expanduser(CHIA_TEST_PLOT_ROOT.format(version=__version__))
-        ).resolve()
-    return root_path / "plots"
+    mkdir(cache_path)
+    return cache_path
 
 
 class BlockTools:
@@ -65,8 +55,12 @@ class BlockTools:
     """
 
     def __init__(
-        self, root_path: Path = TEST_ROOT_PATH, real_plots: bool = False,
+        self, root_path: Optional[Path] = None, real_plots: bool = False,
     ):
+        self._tempdir = None
+        if root_path is None:
+            self._tempdir = tempfile.TemporaryDirectory()
+            root_path = Path(self._tempdir.name)
         create_default_chia_config(root_path)
         initialize_ssl(root_path)
         self.root_path = root_path
@@ -100,7 +94,7 @@ class BlockTools:
                 ProofOfSpace.calculate_plot_seed(pool_pk, plot_pk)
                 for plot_pk in plot_pks
             ]
-            plot_dir = get_plot_dir(root_path)
+            plot_dir = get_plot_dir()
             mkdir(plot_dir)
             filenames: List[str] = [
                 f"genesis-plots-{k}{std_hash(int.to_bytes(i, 4, 'big')).hex()}.dat"
@@ -140,8 +134,8 @@ class BlockTools:
                 sys.exit(1)
         else:
             try:
-                plot_config = load_config(DEFAULT_ROOT_PATH, "plots.yaml")
-                normal_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+                plot_config = load_config(root_path, "plots.yaml")
+                normal_config = load_config(root_path, "config.yaml")
             except FileNotFoundError:
                 raise RuntimeError("Plots not generated. Run chia-create-plots")
             self.keychain = Keychain(testing=False)
@@ -153,7 +147,7 @@ class BlockTools:
                 raise RuntimeError("Keys not generated. Run `chia generate keys`")
 
             self.prover_dict, _, _ = load_plots(
-                normal_config["harvester"], plot_config, pool_pubkeys, DEFAULT_ROOT_PATH
+                normal_config["harvester"], plot_config, pool_pubkeys, root_path
             )
 
             new_plot_config: Dict = {"plots": {}}
@@ -660,7 +654,9 @@ class BlockTools:
 # This might take a while, using the python VDF implementation.
 # Run by doing python -m tests.block_tools
 if __name__ == "__main__":
-    bt = BlockTools(real_plots=True)
+    from src.util.default_root import DEFAULT_ROOT_PATH
+
+    bt = BlockTools(root_path=DEFAULT_ROOT_PATH, real_plots=True)
     print(
         bytes(
             bt.create_genesis_block(

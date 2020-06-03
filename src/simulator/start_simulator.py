@@ -11,7 +11,7 @@ except ImportError:
     uvloop = None
 
 from src.rpc.full_node_rpc_server import start_full_node_rpc_server
-from src.server.server import ChiaServer
+from src.server.server import ChiaServer, start_server
 from src.server.connection import NodeType
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli, load_config
@@ -54,30 +54,32 @@ async def main():
         config,
     )
     full_node._set_server(server)
-    _ = await server.start_server(full_node._on_connect)
+    server_socket = await start_server(server, full_node._on_connect)
     rpc_cleanup = None
 
-    def master_close_cb():
+    def stop_all():
         nonlocal server_closed
         if not server_closed:
             # Called by the UI, when node is closed, or when a signal is sent
             log.info("Closing all connections, and server...")
             server.close_all()
+            server_socket.close()
             server_closed = True
 
         # Starts the RPC server
 
     rpc_cleanup = await start_full_node_rpc_server(
-        full_node, master_close_cb, config["rpc_port"]
+        full_node, stop_all, config["rpc_port"]
     )
 
     try:
-        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
-        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop_all)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop_all)
     except NotImplementedError:
         log.info("signal handlers unsupported")
 
     # Awaits for server and all connections to close
+    await server_socket.wait_closed()
     await server.await_closed()
     log.info("Closed all node servers.")
 

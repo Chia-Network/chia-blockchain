@@ -100,3 +100,21 @@ export const mojo_to_chia_string = mojo => {
     .to("chia")
     .toString();
 };
+
+export const mojo_to_colouredcoin = mojo => {
+  return chia_formatter(parseInt(mojo), "mojo")
+    .to("colouredcoin")
+    .value();
+};
+
+export const colouredcoin_to_mojo = colouredcoin => {
+  return chia_formatter(parseFloat(Number(colouredcoin)), "colouredcoin")
+    .to("mojo")
+    .value();
+};
+
+export const mojo_to_colouredcoin_string = mojo => {
+  return chia_formatter(Number(mojo), "mojo")
+    .to("colouredcoin")
+    .toString();
+};

@@ -24,12 +24,14 @@ from src.full_node.sync_blocks_processor import SyncBlocksProcessor
 from src.full_node.sync_peers_handler import SyncPeersHandler
 from src.full_node.sync_store import SyncStore
 from src.protocols import (
+    introducer_protocol,
     farmer_protocol,
     full_node_protocol,
     timelord_protocol,
     wallet_protocol,
 )
 from src.protocols.wallet_protocol import GeneratorResponse
+from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
 from src.types.BLSSignature import BLSSignature
@@ -40,7 +42,6 @@ from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.mempool_item import MempoolItem
-from src.types.peer_info import PeerInfo
 from src.types.program import Program
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
@@ -67,6 +68,7 @@ class FullNode:
     sync_peers_handler: Optional[SyncPeersHandler]
     blockchain: Blockchain
     config: Dict
+    global_connections: Optional[PeerConnections]
     server: Optional[ChiaServer]
     log: logging.Logger
     constants: Dict
@@ -74,16 +76,9 @@ class FullNode:
     root_path: Path
     state_changed_callback: Optional[Callable]
 
-    @classmethod
-    async def create(
-        cls: Type,
-        config: Dict,
-        root_path: Path,
-        name: str = None,
-        override_constants={},
+    def __init__(
+        self, config: Dict, root_path: Path, name: str = None, override_constants={},
     ):
-        self = cls()
-
         self.root_path = root_path
         self.config = config
         self.server = None
@@ -97,11 +92,20 @@ class FullNode:
         else:
             self.log = logging.getLogger(__name__)
 
-        db_path = path_from_root(root_path, config["database_path"])
-        mkdir(db_path.parent)
+        self.global_connections = None
 
+        self.db_path = path_from_root(root_path, config["database_path"])
+        mkdir(self.db_path.parent)
+
+    @classmethod
+    async def create(cls: Type, *args, **kwargs):
+        _ = cls(*args, **kwargs)
+        await _.start()
+        return _
+
+    async def start(self):
         # create the store (db) and full node instance
-        self.connection = await aiosqlite.connect(db_path)
+        self.connection = await aiosqlite.connect(self.db_path)
         self.block_store = await BlockStore.create(self.connection)
         self.full_node_store = await FullNodeStore.create(self.connection)
         self.sync_store = await SyncStore.create()
@@ -118,15 +122,20 @@ class FullNode:
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
         await self.mempool_manager.new_tips(await self.blockchain.get_full_tips())
         self.state_changed_callback = None
-        return self
+        self.broadcast_uncompact_task = asyncio.create_task(
+            self.broadcast_uncompact_blocks()
+        )
+
+    def set_global_connections(self, global_connections: PeerConnections):
+        self.global_connections = global_connections
 
     def _set_server(self, server: ChiaServer):
         self.server = server
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
-        if self.server is not None:
-            self.server.set_state_changed_callback(callback)
+        if self.global_connections is not None:
+            self.global_connections.set_state_changed_callback(callback)
 
     def _state_changed(self, change: str):
         if self.state_changed_callback is not None:
@@ -257,43 +266,11 @@ class FullNode:
             yield msg
 
     def _num_needed_peers(self) -> int:
-        assert self.server is not None
+        assert self.global_connections is not None
         diff = self.config["target_peer_count"] - len(
-            self.server.global_connections.get_full_node_connections()
+            self.global_connections.get_full_node_connections()
         )
         return diff if diff >= 0 else 0
-
-    def _start_bg_tasks(self):
-        """
-        Start a background task connecting periodically to the introducer and
-        requesting the peer list.
-        """
-        introducer = self.config["introducer_peer"]
-        introducer_peerinfo = PeerInfo(introducer["host"], introducer["port"])
-
-        async def introducer_client():
-            async def on_connect() -> OutboundMessageGenerator:
-                msg = Message("request_peers", full_node_protocol.RequestPeers())
-                yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
-
-            while not self._shut_down:
-                # If we are still connected to introducer, disconnect
-                for connection in self.server.global_connections.get_connections():
-                    if connection.connection_type == NodeType.INTRODUCER:
-                        self.server.global_connections.close(connection)
-                # The first time connecting to introducer, keep trying to connect
-                if self._num_needed_peers():
-                    if not await self.server.start_client(
-                        introducer_peerinfo, on_connect
-                    ):
-                        await asyncio.sleep(5)
-                        continue
-                await asyncio.sleep(self.config["introducer_connect_interval"])
-
-        self.introducer_task = asyncio.create_task(introducer_client())
-        self.broadcast_uncompact_task = asyncio.create_task(
-            self.broadcast_uncompact_blocks()
-        )
 
     def _close(self):
         self._shut_down = True
@@ -396,10 +373,10 @@ class FullNode:
         fork_point_hash: bytes32 = header_hashes[fork_point_height]
         self.log.info(f"Fork point: {fork_point_hash} at height {fork_point_height}")
 
-        assert self.server is not None
+        assert self.global_connections is not None
         peers = [
             con.node_id
-            for con in self.server.global_connections.get_connections()
+            for con in self.global_connections.get_connections()
             if (con.node_id is not None and con.connection_type == NodeType.FULL_NODE)
         ]
 
@@ -425,7 +402,7 @@ class FullNode:
 
             cur_peers = [
                 con.node_id
-                for con in self.server.global_connections.get_connections()
+                for con in self.global_connections.get_connections()
                 if (
                     con.node_id is not None
                     and con.connection_type == NodeType.FULL_NODE
@@ -497,6 +474,7 @@ class FullNode:
         yield OutboundMessage(
             NodeType.WALLET, Message("new_lca", new_lca), Delivery.BROADCAST
         )
+        self._state_changed("block")
 
     @api_request
     async def new_tip(
@@ -1735,25 +1713,25 @@ class FullNode:
 
     @api_request
     async def request_peers(
-        self, request: full_node_protocol.RequestPeers
+        self, request: introducer_protocol.RequestPeers
     ) -> OutboundMessageGenerator:
-        if self.server is None:
+        if self.global_connections is None:
             return
-        peers = self.server.global_connections.peers.get_peers()
+        peers = self.global_connections.peers.get_peers()
 
         yield OutboundMessage(
             NodeType.FULL_NODE,
-            Message("respond_peers", full_node_protocol.RespondPeers(peers)),
+            Message("respond_peers", introducer_protocol.RespondPeers(peers)),
             Delivery.RESPOND,
         )
 
     @api_request
     async def respond_peers(
-        self, request: full_node_protocol.RespondPeers
+        self, request: introducer_protocol.RespondPeers
     ) -> OutboundMessageGenerator:
-        if self.server is None:
+        if self.server is None or self.global_connections is None:
             return
-        conns = self.server.global_connections
+        conns = self.global_connections
         for peer in request.peer_list:
             conns.peers.add(peer)
 

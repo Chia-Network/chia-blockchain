@@ -25,6 +25,8 @@ const initial_state = {
 
 export const fullnodeReducer = (state = { ...initial_state }, action) => {
   switch (action.type) {
+    case "LOG_OUT":
+      return { ...initial_state };
     case "CLEAR_BLOCK":
       state.block = null;
       return state;

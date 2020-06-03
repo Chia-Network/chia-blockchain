@@ -42,8 +42,9 @@ class BlockStore:
         )
 
         # is_lca and is_tip index to quickly find tips and lca
+        await self.db.execute("CREATE INDEX IF NOT EXISTS hh on headers(header_hash)")
         await self.db.execute("CREATE INDEX IF NOT EXISTS lca on headers(is_lca)")
-        await self.db.execute("CREATE INDEX IF NOT EXISTS lca on headers(is_tip)")
+        await self.db.execute("CREATE INDEX IF NOT EXISTS tip on headers(is_tip)")
         await self.db.commit()
         self.proof_of_time_heights = {}
         self.challenge_hash_dict = {}
@@ -59,7 +60,7 @@ class BlockStore:
         return None
 
     async def set_lca(self, header_hash: bytes32) -> None:
-        cursor_1 = await self.db.execute("UPDATE headers SET is_lca=0")
+        cursor_1 = await self.db.execute("UPDATE headers SET is_lca=0 WHERE is_lca=1")
         await cursor_1.close()
         cursor_2 = await self.db.execute(
             "UPDATE headers SET is_lca=1 WHERE header_hash=?", (header_hash.hex(),)
@@ -74,7 +75,7 @@ class BlockStore:
         return [Header.from_bytes(row[0]) for row in rows]
 
     async def set_tips(self, header_hashes: List[bytes32]) -> None:
-        cursor_1 = await self.db.execute("UPDATE headers SET is_tip=0")
+        cursor_1 = await self.db.execute("UPDATE headers SET is_tip=0 WHERE is_tip=1")
         await cursor_1.close()
         tips_db = tuple([h.hex() for h in header_hashes])
 

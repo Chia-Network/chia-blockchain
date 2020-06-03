@@ -21,6 +21,7 @@ try:
 except ImportError:
     uvloop = None
 
+from src.cmds.init import check_keys
 from src.server.outbound_message import NodeType, OutboundMessage, Message, Delivery
 from src.server.server import ChiaServer
 from src.simulator.simulator_constants import test_constants
@@ -34,8 +35,6 @@ from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_node import WalletNode
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
-from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.setproctitle import setproctitle
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -588,6 +587,7 @@ class WebSocketServer:
             ExtendedPrivateKey.from_seed(seed).get_public_key().get_fingerprint()
         )
         self.keychain.add_private_key_seed(seed)
+        check_keys(self.root_path)
 
         started = await self.start_wallet(fingerprint)
 
@@ -740,31 +740,3 @@ class WebSocketServer:
         if self.websocket is None:
             return
         asyncio.create_task(self.notify_ui_that_state_changed(state, wallet_id))
-
-
-async def start_websocket_server():
-    """
-    Starts WalletNode, WebSocketServer, and ChiaServer
-    """
-
-    setproctitle("chia-wallet")
-    keychain = Keychain(testing=False)
-    websocket_server = WebSocketServer(keychain, DEFAULT_ROOT_PATH)
-    await websocket_server.start()
-    log.info("Wallet fully closed")
-
-
-def main():
-    if uvloop is not None:
-        uvloop.install()
-    asyncio.run(start_websocket_server())
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except Exception:
-        tb = traceback.format_exc()
-        log = logging.getLogger(__name__)
-        log.error(f"Error in wallet. {tb}")
-        raise

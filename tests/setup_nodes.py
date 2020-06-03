@@ -3,7 +3,7 @@ import asyncio
 from typing import Any, Dict, Tuple, List
 from src.full_node.full_node import FullNode
 from src.server.connection import NodeType
-from src.server.server import ChiaServer
+from src.server.server import ChiaServer, start_server
 from src.simulator.full_node_simulator import FullNodeSimulator
 from src.timelord_launcher import spawn_process, kill_processes
 from src.util.keychain import Keychain
@@ -87,12 +87,13 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
         config,
         "full-node-simulator-server",
     )
-    _ = await server_1.start_server(full_node_1._on_connect)
+    _ = await start_server(server_1, full_node_1._on_connect)
     full_node_1._set_server(server_1)
 
     yield (full_node_1, server_1)
 
     # TEARDOWN
+    _.close()
     server_1.close_all()
     full_node_1._close()
     await server_1.await_closed()
@@ -138,12 +139,13 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
         config,
         f"full_node_server_{port}",
     )
-    _ = await server_1.start_server(full_node_1._on_connect)
+    _ = await start_server(server_1, full_node_1._on_connect)
     full_node_1._set_server(server_1)
 
     yield (full_node_1, server_1)
 
     # TEARDOWN
+    _.close()
     server_1.close_all()
     full_node_1._close()
     await server_1.await_closed()
@@ -207,8 +209,8 @@ async def setup_wallet_node(
 
 async def setup_harvester(port, dic={}):
     config = load_config(bt.root_path, "config.yaml", "harvester")
-    # print(bt.plot_config)
-    harvester = await Harvester.create(config, bt.plot_config, bt.root_path)
+
+    harvester = Harvester(config, bt.plot_config, bt.root_path)
 
     net_config = load_config(bt.root_path, "config.yaml")
     ping_interval = net_config.get("ping_interval")
@@ -267,10 +269,11 @@ async def setup_farmer(port, dic={}):
         f"farmer_server_{port}",
     )
     farmer.set_server(server)
-    _ = await server.start_server(farmer._on_connect)
+    _ = await start_server(server, farmer._on_connect)
 
     yield (farmer, server)
 
+    _.close()
     server.close_all()
     await server.await_closed()
 
@@ -282,7 +285,9 @@ async def setup_introducer(port, dic={}):
 
     config = load_config(root_path, "config.yaml", "introducer")
 
-    introducer = Introducer(config)
+    introducer = Introducer(
+        config["max_peers_to_send"], config["recent_peer_threshold"]
+    )
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
@@ -295,10 +300,11 @@ async def setup_introducer(port, dic={}):
         config,
         f"introducer_server_{port}",
     )
-    _ = await server.start_server(None)
+    _ = await start_server(server)
 
     yield (introducer, server)
 
+    _.close()
     server.close_all()
     await server.await_closed()
 
@@ -345,19 +351,14 @@ async def setup_timelord(port, dic={}):
     vdf_server = asyncio.ensure_future(coro)
 
     timelord.set_server(server)
-    timelord._start_bg_tasks()
 
-    async def run_timelord():
-        async for msg in timelord._manage_discriminant_queue():
-            server.push_message(msg)
-
-    timelord_task = asyncio.create_task(run_timelord())
+    timelord_task = asyncio.create_task(timelord._manage_discriminant_queue())
 
     yield (timelord, server)
 
     vdf_server.cancel()
     server.close_all()
-    await timelord._shutdown()
+    timelord._shutdown()
     await timelord_task
     await server.await_closed()
 

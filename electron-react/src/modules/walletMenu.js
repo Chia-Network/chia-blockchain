@@ -16,6 +16,8 @@ const initial_state = {
 
 export const walletMenuReducer = (state = { ...initial_state }, action) => {
   switch (action.type) {
+    case "LOG_OUT":
+      return { ...initial_state };
     case "WALLET_MENU":
       var item = action.item;
       var id = action.id;

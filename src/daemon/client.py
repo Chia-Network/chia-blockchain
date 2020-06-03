@@ -111,5 +111,7 @@ async def connect_to_daemon_and_validate(root_path):
         if r["data"]["value"] == "pong":
             return connection
     except Exception as ex:
-        print(f"Exception {ex}")
-    return None
+        # ConnectionRefusedError means that daemon is not yet running
+        if not isinstance(ex, ConnectionRefusedError):
+            print("Exception connecting to daemon: {ex}")
+        return None
