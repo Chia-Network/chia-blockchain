@@ -24,11 +24,13 @@ then
   INSTALL_PYTHON_VERSION=$(find_python)
 fi
 
+UBUNTU=false
 # Manage npm and other install requirements on an OS specific basis
 if [ "$(uname)" = "Linux" ]; then
   #LINUX=1
   if type apt-get; then
     # Debian/Ubuntu
+    UBUNTU=true
     sudo apt-get install -y npm nodejs
   elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ]; then
     # AMZN 2
@@ -67,6 +69,26 @@ pip install wheel
 # This remains in case there is a diversion of binary wheels
 pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
 pip install -e .
+
+# Ubuntu before 20.04LTS has an ancient node.js
+echo ""
+UBUNTU_PRE_2004=false
+if $UBUNTU; then
+  echo "Installing on Ubuntu older than 20.04 LTS: Ugrading node.js to stable"
+  UBUNTU_PRE_2004=$(python -c 'import subprocess; process = subprocess.run(["lsb_release", "-rs"], stdout=subprocess.PIPE); print(float(process.stdout) < float(20.04))')
+fi
+
+if [ "$UBUNTU_PRE_2004" = "True" ]; then
+  UBUNTU_PRE_2004=true  # Unfortunately Python returns True when shell expects true
+  echo "would have run npm"
+  sudo npm install -g n
+  sudo n stable
+  export PATH="$PATH"
+fi
+
+if $UBUNTU && ! $UBUNTU_PRE_2004; then
+  echo "Installing on Ubuntu 20.04 LTS or newer: Using installed node.js version"
+fi
 
 cd ./electron-react
 npm install
