@@ -18,14 +18,18 @@ from .pipeline import initialize_pipeline
 from .ssl_context import ssl_context_for_client, ssl_context_for_server
 
 
-async def start_server(self: "ChiaServer", on_connect: OnConnectFunc = None) -> asyncio.AbstractServer:
+async def start_server(
+    self: "ChiaServer", on_connect: OnConnectFunc = None
+) -> asyncio.AbstractServer:
     """
     Launches a listening server on host and port specified, to connect to NodeType nodes. On each
     connection, the on_connect asynchronous generator will be called, and responses will be sent.
     Whenever a new TCP connection is made, a new srwt tuple is sent through the pipeline.
     """
     require_cert = self._local_type not in (NodeType.FULL_NODE, NodeType.INTRODUCER)
-    ssl_context = ssl_context_for_server(self.root_path, self.config, require_cert=require_cert)
+    ssl_context = ssl_context_for_server(
+        self.root_path, self.config, require_cert=require_cert
+    )
 
     server, aiter = await start_server_aiter(
         self._port, host=None, reuse_address=True, ssl=ssl_context
