@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from src.server.connection import NodeType
 from src.types.header_block import HeaderBlock
-from src.rpc.rpc_client import RpcClient
+from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.util.byte_types import hexstr_to_bytes
 from src.util.config import str2bool
 
@@ -78,8 +78,9 @@ def make_parser(parser):
     parser.add_argument(
         "-p",
         "--rpc-port",
-        help=f"Set the port where the Full Node is hosting the RPC interface. See the rpc_port "
-        f"under full_node in config.yaml. Defaults to 8555",
+        help="Set the port where the Full Node is hosting the RPC interface."
+        + " See the rpc_port under full_node in config.yaml."
+        + "Defaults to 8555",
         type=int,
         default=8555,
     )
@@ -90,7 +91,7 @@ async def show_async(args, parser):
 
     # TODO read configuration for rpc_port instead of assuming default
     try:
-        client = await RpcClient.create(args.rpc_port)
+        client = await FullNodeRpcClient.create(args.rpc_port)
 
         if args.state:
             blockchain_state = await client.get_blockchain_state()
@@ -98,19 +99,22 @@ async def show_async(args, parser):
             tips = blockchain_state["tips"]
             difficulty = blockchain_state["difficulty"]
             ips = blockchain_state["ips"]
-            sync_mode = blockchain_state["sync_mode"]
+            sync_mode = blockchain_state["sync"]["sync_mode"]
             total_iters = lca_block.data.total_iters
             num_blocks: int = 10
 
             if sync_mode:
-                sync_max_block = await client.get_heaviest_block_seen()
+                sync_max_block = blockchain_state["sync"]["sync_tip_height"]
+                sync_current_block = blockchain_state["sync"]["sync_progress_height"]
                 # print (max_block)
                 print(
-                    "Current Blockchain Status. Full Node Syncing to",
-                    sync_max_block.data.height,
+                    "Current Blockchain Status: Full Node syncing to",
+                    sync_max_block,
+                    "\nCurrently synched to tip:",
+                    sync_current_block,
                 )
             else:
-                print("Current Blockchain Status. Full Node Synced")
+                print("Current Blockchain Status: Full Node Synced")
             print("Latest Common Ancestor:\n    ", lca_block.header_hash)
             lca_time = struct_time(localtime(lca_block.data.timestamp))
             # Should auto format the align right of LCA height
@@ -164,8 +168,8 @@ async def show_async(args, parser):
             connections = await client.get_connections()
             print("Connections")
             print(
-                f"Type      IP                                      Ports      NodeID        Last Connect"
-                f"       MB Up|Dwn"
+                "Type      IP                                      Ports      NodeID        Last Connect"
+                + "       MB Up|Dwn"
             )
             for con in connections:
                 last_connect_tuple = struct_time(localtime(con["last_message_time"]))
@@ -280,7 +284,7 @@ async def show_async(args, parser):
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
             print(f"Connection error. Check if full node is running at {args.rpc_port}")
         else:
-            print(f"Exception {e}")
+            print(f"Exception from 'show' {e}")
 
     client.close()
     await client.await_closed()

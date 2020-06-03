@@ -5,7 +5,7 @@ import traceback
 import time
 from asyncio import Event
 from pathlib import Path
-from typing import AsyncGenerator, Dict, List, Optional, Tuple, Type
+from typing import AsyncGenerator, Dict, List, Optional, Tuple, Type, Callable
 
 import aiosqlite
 from chiabip158 import PyBIP158
@@ -23,12 +23,14 @@ from src.full_node.sync_blocks_processor import SyncBlocksProcessor
 from src.full_node.sync_peers_handler import SyncPeersHandler
 from src.full_node.sync_store import SyncStore
 from src.protocols import (
+    introducer_protocol,
     farmer_protocol,
     full_node_protocol,
     timelord_protocol,
     wallet_protocol,
 )
 from src.protocols.wallet_protocol import GeneratorResponse
+from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
 from src.types.BLSSignature import BLSSignature
@@ -39,7 +41,6 @@ from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.mempool_item import MempoolItem
-from src.types.peer_info import PeerInfo
 from src.types.program import Program
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
@@ -66,21 +67,18 @@ class FullNode:
     sync_peers_handler: Optional[SyncPeersHandler]
     blockchain: Blockchain
     config: Dict
+    global_connections: Optional[PeerConnections]
     server: Optional[ChiaServer]
     log: logging.Logger
     constants: Dict
     _shut_down: bool
+    root_path: Path
+    state_changed_callback: Optional[Callable]
 
-    @classmethod
-    async def create(
-        cls: Type,
-        config: Dict,
-        root_path: Path,
-        name: str = None,
-        override_constants={},
+    def __init__(
+        self, config: Dict, root_path: Path, name: str = None, override_constants={},
     ):
-        self = cls()
-
+        self.root_path = root_path
         self.config = config
         self.server = None
         self._shut_down = False  # Set to true to close all infinite loops
@@ -93,11 +91,20 @@ class FullNode:
         else:
             self.log = logging.getLogger(__name__)
 
-        db_path = path_from_root(root_path, config["database_path"])
-        mkdir(db_path.parent)
+        self.global_connections = None
 
+        self.db_path = path_from_root(root_path, config["database_path"])
+        mkdir(self.db_path.parent)
+
+    @classmethod
+    async def create(cls: Type, *args, **kwargs):
+        _ = cls(*args, **kwargs)
+        await _.start()
+        return _
+
+    async def start(self):
         # create the store (db) and full node instance
-        self.connection = await aiosqlite.connect(db_path)
+        self.connection = await aiosqlite.connect(self.db_path)
         self.block_store = await BlockStore.create(self.connection)
         self.full_node_store = await FullNodeStore.create(self.connection)
         self.sync_store = await SyncStore.create()
@@ -113,10 +120,22 @@ class FullNode:
 
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
         await self.mempool_manager.new_tips(await self.blockchain.get_full_tips())
-        return self
+        self.state_changed_callback = None
+
+    def set_global_connections(self, global_connections: PeerConnections):
+        self.global_connections = global_connections
 
     def _set_server(self, server: ChiaServer):
         self.server = server
+
+    def _set_state_changed_callback(self, callback: Callable):
+        self.state_changed_callback = callback
+        if self.global_connections is not None:
+            self.global_connections.set_state_changed_callback(callback)
+
+    def _state_changed(self, change: str):
+        if self.state_changed_callback is not None:
+            self.state_changed_callback(change)
 
     async def _send_tips_to_farmers(
         self, delivery: Delivery = Delivery.BROADCAST
@@ -243,40 +262,11 @@ class FullNode:
             yield msg
 
     def _num_needed_peers(self) -> int:
-        assert self.server is not None
+        assert self.global_connections is not None
         diff = self.config["target_peer_count"] - len(
-            self.server.global_connections.get_full_node_connections()
+            self.global_connections.get_full_node_connections()
         )
         return diff if diff >= 0 else 0
-
-    def _start_bg_tasks(self):
-        """
-        Start a background task connecting periodically to the introducer and
-        requesting the peer list.
-        """
-        introducer = self.config["introducer_peer"]
-        introducer_peerinfo = PeerInfo(introducer["host"], introducer["port"])
-
-        async def introducer_client():
-            async def on_connect() -> OutboundMessageGenerator:
-                msg = Message("request_peers", full_node_protocol.RequestPeers())
-                yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
-
-            while not self._shut_down:
-                # If we are still connected to introducer, disconnect
-                for connection in self.server.global_connections.get_connections():
-                    if connection.connection_type == NodeType.INTRODUCER:
-                        self.server.global_connections.close(connection)
-                # The first time connecting to introducer, keep trying to connect
-                if self._num_needed_peers():
-                    if not await self.server.start_client(
-                        introducer_peerinfo, on_connect
-                    ):
-                        await asyncio.sleep(5)
-                        continue
-                await asyncio.sleep(self.config["introducer_connect_interval"])
-
-        self.introducer_task = asyncio.create_task(introducer_client())
 
     def _close(self):
         self._shut_down = True
@@ -379,10 +369,10 @@ class FullNode:
         fork_point_hash: bytes32 = header_hashes[fork_point_height]
         self.log.info(f"Fork point: {fork_point_hash} at height {fork_point_height}")
 
-        assert self.server is not None
+        assert self.global_connections is not None
         peers = [
             con.node_id
-            for con in self.server.global_connections.get_connections()
+            for con in self.global_connections.get_connections()
             if (con.node_id is not None and con.connection_type == NodeType.FULL_NODE)
         ]
 
@@ -408,7 +398,7 @@ class FullNode:
 
             cur_peers = [
                 con.node_id
-                for con in self.server.global_connections.get_connections()
+                for con in self.global_connections.get_connections()
                 if (
                     con.node_id is not None
                     and con.connection_type == NodeType.FULL_NODE
@@ -426,7 +416,8 @@ class FullNode:
             async for msg in self.sync_peers_handler._add_to_request_sets():
                 yield msg  # Send more requests if we can
 
-            await asyncio.sleep(2)
+            self._state_changed("block")
+            await asyncio.sleep(5)
 
         # Awaits for all blocks to be processed, a timeout to happen, or the node to shutdown
         await block_processor_task
@@ -479,6 +470,7 @@ class FullNode:
         yield OutboundMessage(
             NodeType.WALLET, Message("new_lca", new_lca), Delivery.BROADCAST
         )
+        self._state_changed("block")
 
     @api_request
     async def new_tip(
@@ -737,13 +729,16 @@ class FullNode:
     async def new_compact_proof_of_time(
         self, new_compact_proof_of_time: full_node_protocol.NewCompactProofOfTime
     ) -> OutboundMessageGenerator:
-        # If we already have the compact PoT in a finished block, return
+        # If we already have the compact PoT in a connected to header block, return
         blocks: List[FullBlock] = await self.block_store.get_blocks_at(
             [new_compact_proof_of_time.height]
         )
         for block in blocks:
             assert block.proof_of_time is not None
-            if block.proof_of_time.witness_type == 1:
+            if (
+                block.proof_of_time.witness_type == 0
+                and block.header_hash in self.blockchain.headers
+            ):
                 return
 
         yield OutboundMessage(
@@ -807,28 +802,29 @@ class FullNode:
         A proof of time, received by a peer full node. If we have the rest of the block,
         we can complete it. Otherwise, we just verify and propagate the proof.
         """
-        height: Optional[uint32] = self.full_node_store.get_proof_of_time_heights(
-            (
-                respond_compact_proof_of_time.proof.challenge_hash,
-                respond_compact_proof_of_time.proof.number_of_iterations,
-            )
+        height: Optional[uint32] = self.block_store.get_height_proof_of_time(
+            respond_compact_proof_of_time.proof.challenge_hash,
+            respond_compact_proof_of_time.proof.number_of_iterations,
         )
         if height is None:
+            self.log.info("No block for compact proof of time.")
+            return
+        if not respond_compact_proof_of_time.proof.is_valid(
+            self.constants["DISCRIMINANT_SIZE_BITS"]
+        ):
+            self.log.error("Invalid compact proof of time.")
             return
 
         blocks: List[FullBlock] = await self.block_store.get_blocks_at([height])
         for block in blocks:
             assert block.proof_of_time is not None
             if (
-                block.proof_of_time.witness_type != 1
+                block.proof_of_time.witness_type != 0
                 and block.proof_of_time.challenge_hash
                 == respond_compact_proof_of_time.proof.challenge_hash
                 and block.proof_of_time.number_of_iterations
                 == respond_compact_proof_of_time.proof.number_of_iterations
             ):
-                assert respond_compact_proof_of_time.proof.is_valid(
-                    self.constants["DISCRIMINANT_SIZE_BITS"]
-                )
                 block_new = FullBlock(
                     block.proof_of_space,
                     respond_compact_proof_of_time.proof,
@@ -837,6 +833,7 @@ class FullNode:
                     block.transactions_filter,
                 )
                 await self.block_store.add_block(block_new)
+                self.log.info(f"Stored compact block at height {block.height}.")
                 yield OutboundMessage(
                     NodeType.FULL_NODE,
                     Message(
@@ -1020,7 +1017,7 @@ class FullNode:
                 )
         else:
             # If we have seen an unfinished block at a greater or equal height, don't propagate
-            self.log.info(f"Unfinished block at old height, so don't propagate")
+            self.log.info("Unfinished block at old height, so don't propagate")
             return
 
         await self.full_node_store.add_unfinished_block(
@@ -1044,6 +1041,7 @@ class FullNode:
             Message("new_unfinished_block", new_unfinished_block),
             Delivery.BROADCAST_TO_OTHERS,
         )
+        self._state_changed("block")
 
     @api_request
     async def reject_unfinished_block_request(
@@ -1347,6 +1345,13 @@ class FullNode:
         A proof of time, received by a peer timelord. We can use this to complete a block,
         and call the block routine (which handles propagation and verification of blocks).
         """
+        if request.proof.witness_type == 0:
+            compact_request = full_node_protocol.RespondCompactProofOfTime(
+                request.proof
+            )
+            async for msg in self.respond_compact_proof_of_time(compact_request):
+                yield msg
+
         dict_key = (
             request.proof.challenge_hash,
             request.proof.number_of_iterations,
@@ -1356,9 +1361,10 @@ class FullNode:
             FullBlock
         ] = await self.full_node_store.get_unfinished_block(dict_key)
         if not unfinished_block_obj:
-            self.log.warning(
-                f"Received a proof of time that we cannot use to complete a block {dict_key}"
-            )
+            if request.proof.witness_type > 0:
+                self.log.warning(
+                    f"Received a proof of time that we cannot use to complete a block {dict_key}"
+                )
             return
 
         new_full_block: FullBlock = FullBlock(
@@ -1611,6 +1617,7 @@ class FullNode:
         self.full_node_store.clear_candidate_blocks_below(clear_height)
         self.full_node_store.clear_disconnected_blocks_below(clear_height)
         await self.full_node_store.clear_unfinished_blocks_below(clear_height)
+        self._state_changed("block")
 
     @api_request
     async def reject_block_request(
@@ -1624,25 +1631,25 @@ class FullNode:
 
     @api_request
     async def request_peers(
-        self, request: full_node_protocol.RequestPeers
+        self, request: introducer_protocol.RequestPeers
     ) -> OutboundMessageGenerator:
-        if self.server is None:
+        if self.global_connections is None:
             return
-        peers = self.server.global_connections.peers.get_peers()
+        peers = self.global_connections.peers.get_peers()
 
         yield OutboundMessage(
             NodeType.FULL_NODE,
-            Message("respond_peers", full_node_protocol.RespondPeers(peers)),
+            Message("respond_peers", introducer_protocol.RespondPeers(peers)),
             Delivery.RESPOND,
         )
 
     @api_request
     async def respond_peers(
-        self, request: full_node_protocol.RespondPeers
+        self, request: introducer_protocol.RespondPeers
     ) -> OutboundMessageGenerator:
-        if self.server is None:
+        if self.server is None or self.global_connections is None:
             return
-        conns = self.server.global_connections
+        conns = self.global_connections
         for peer in request.peer_list:
             conns.peers.add(peer)
 

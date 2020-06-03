@@ -6,7 +6,16 @@ from src import __version__
 from src.util.default_root import DEFAULT_ROOT_PATH
 
 
-SUBCOMMANDS = ["init", "generate", "show", "start", "stop", "version", "netspace", "run_daemon"]
+SUBCOMMANDS = [
+    "init",
+    "keys",
+    "show",
+    "start",
+    "stop",
+    "version",
+    "netspace",
+    "run_daemon",
+]
 
 
 def create_parser() -> ArgumentParser:

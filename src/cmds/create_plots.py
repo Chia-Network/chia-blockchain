@@ -1,6 +1,9 @@
 import argparse
 from copy import deepcopy
 from pathlib import Path
+from datetime import datetime
+from secrets import token_bytes
+import sys
 
 from blspy import PrivateKey, PublicKey
 
@@ -9,7 +12,13 @@ from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.config import config_path_for_filename, load_config, save_config
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.path import make_path_relative, mkdir, path_from_root
+from src.util.keychain import Keychain
+from src.util.path import mkdir, path_from_root
+
+
+def log(to_log):
+    print(to_log)
+    sys.stdout.flush()
 
 
 def main():
@@ -18,16 +27,20 @@ def main():
     """
     root_path = DEFAULT_ROOT_PATH
     plot_config_filename = config_path_for_filename(root_path, "plots.yaml")
-    key_config_filename = config_path_for_filename(root_path, "keys.yaml")
 
     parser = argparse.ArgumentParser(description="Chia plotting script.")
     parser.add_argument("-k", "--size", help="Plot size", type=int, default=26)
     parser.add_argument(
         "-n", "--num_plots", help="Number of plots", type=int, default=1
     )
-    parser.add_argument("-i", "--index", help="First plot index", type=int, default=0)
+    parser.add_argument(
+        "-i", "--index", help="First plot index", type=int, default=None
+    )
     parser.add_argument(
         "-p", "--pool_pub_key", help="Hex public key of pool", type=str, default=""
+    )
+    parser.add_argument(
+        "-s", "--sk_seed", help="Secret key seed in hex", type=str, default=None
     )
     parser.add_argument(
         "-t",
@@ -57,14 +70,29 @@ def main():
         default=new_plots_root,
     )
 
-    # We need the keys file, to access pool keys (if the exist), and the sk_seed.
     args = parser.parse_args()
-    if not key_config_filename.exists():
-        raise RuntimeError("Keys not generated. Run `chia generate keys`")
+
+    if args.sk_seed is None and args.index is not None:
+        log(
+            f"You have specified the -i (index) argument without the -s (sk_seed) argument."
+            f" The program has changes, so that the sk_seed is now generated randomly, so -i is no longer necessary."
+            f" Please run the program without -i."
+        )
+        quit()
+
+    if args.index is None:
+        args.index = 0
 
     # The seed is what will be used to generate a private key for each plot
-    key_config = load_config(root_path, key_config_filename)
-    sk_seed: bytes = bytes.fromhex(key_config["sk_seed"])
+    if args.sk_seed is not None:
+        sk_seed: bytes = bytes.fromhex(args.sk_seed)
+        log(f"Using the provided sk_seed {sk_seed.hex()}.")
+    else:
+        sk_seed = token_bytes(32)
+        log(
+            f"Using sk_seed {sk_seed.hex()}. Note that sk seed is now generated randomly, as opposed "
+            f"to from keys.yaml. If you want to use a specific seed, use the -s argument."
+        )
 
     pool_pk: PublicKey
     if len(args.pool_pub_key) > 0:
@@ -72,10 +100,16 @@ def main():
         pool_pk = PublicKey.from_bytes(bytes.fromhex(args.pool_pub_key))
     else:
         # Use the pool public key from the config, useful for solo farming
-        pool_sk = PrivateKey.from_bytes(bytes.fromhex(key_config["pool_sks"][0]))
-        pool_pk = pool_sk.get_public_key()
+        keychain = Keychain()
+        all_public_keys = keychain.get_all_public_keys()
+        if len(all_public_keys) == 0:
+            raise RuntimeError(
+                "There are no private keys in the keychain, so we cannot create a plot. "
+                "Please generate keys using 'chia keys generate' or pass in a pool pk with -p"
+            )
+        pool_pk = all_public_keys[0].get_public_key()
 
-    print(
+    log(
         f"Creating {args.num_plots} plots, from index {args.index} to "
         f"{args.index + args.num_plots - 1}, of size {args.size}, sk_seed {sk_seed.hex()} ppk {pool_pk}"
     )
@@ -83,6 +117,7 @@ def main():
     mkdir(args.tmp_dir)
     mkdir(args.tmp2_dir)
     mkdir(args.final_dir)
+    finished_filenames = []
     for i in range(args.index, args.index + args.num_plots):
         # Generate a sk based on the seed, plot size (k), and index
         sk: PrivateKey = PrivateKey.from_seed(
@@ -93,20 +128,17 @@ def main():
         plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(
             pool_pk, sk.get_public_key()
         )
-        filename: str = f"plot-{i}-{args.size}-{plot_seed}.dat"
+        dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M")
+
+        filename: str = f"plot-k{args.size}-{dt_string}-{plot_seed}.dat"
         full_path: Path = args.final_dir / filename
 
         plot_config = load_config(root_path, plot_config_filename)
         plot_config_plots_new = deepcopy(plot_config.get("plots", []))
         filenames = [Path(k).name for k in plot_config_plots_new.keys()]
-        relative_path = make_path_relative(full_path, root_path)
-        already_in_config = (
-            relative_path in plot_config_plots_new
-            or full_path in plot_config_plots_new
-            or full_path.name in filenames
-        )
+        already_in_config = any(plot_seed.hex() in fname for fname in filenames)
         if already_in_config:
-            print(f"Plot {filename} already exists (in config)")
+            log(f"Plot {filename} already exists (in config)")
             continue
 
         if not full_path.exists():
@@ -121,10 +153,13 @@ def main():
                 bytes([]),
                 plot_seed,
             )
+            finished_filenames.append(filename)
         else:
-            print(f"Plot {filename} already exists")
+            log(f"Plot {filename} already exists")
 
         # Updates the config if necessary.
+        plot_config = load_config(root_path, plot_config_filename)
+        plot_config_plots_new = deepcopy(plot_config.get("plots", []))
         plot_config_plots_new[str(full_path)] = {
             "sk": bytes(sk).hex(),
             "pool_pk": bytes(pool_pk).hex(),
@@ -133,18 +168,23 @@ def main():
 
         # Dumps the new config to disk.
         save_config(root_path, plot_config_filename, plot_config)
+    log("")
+    log("Summary:")
     try:
         args.tmp_dir.rmdir()
     except Exception:
-        print(
+        log(
             f"warning: did not remove primary temporary folder {args.tmp_dir}, it may not be empty."
         )
     try:
         args.tmp2_dir.rmdir()
     except Exception:
-        print(
+        log(
             f"warning: did not remove secondary temporary folder {args.tmp2_dir}, it may not be empty."
         )
+    log(f"Created a total of {len(finished_filenames)} new plots")
+    for filename in finished_filenames:
+        log(filename)
 
 
 if __name__ == "__main__":

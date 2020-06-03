@@ -3,9 +3,11 @@ import json
 import time
 from typing import Dict, Optional, Tuple, List, AsyncGenerator
 import concurrent
+from pathlib import Path
 import random
 import logging
 import traceback
+from blspy import ExtendedPrivateKey
 
 from src.full_node.full_node import OutboundMessageGenerator
 from src.types.peer_info import PeerInfo
@@ -15,8 +17,9 @@ from src.util.merkle_set import (
     confirm_not_included_already_hashed,
     MerkleSet,
 )
-from src.protocols import wallet_protocol, full_node_protocol
+from src.protocols import introducer_protocol, wallet_protocol
 from src.consensus.constants import constants as consensus_constants
+from src.server.connection import PeerConnections
 from src.server.server import ChiaServer
 from src.server.outbound_message import OutboundMessage, NodeType, Message, Delivery
 from src.util.ints import uint32, uint64
@@ -33,9 +36,10 @@ from src.types.full_block import FullBlock
 from src.types.coin import Coin, hash_coin_list
 from src.full_node.blockchain import ReceiveBlockResult
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
-from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.errors import Err
 from src.util.path import path_from_root, mkdir
+
+from src.server.reconnect_task import start_reconnect_task
 
 
 class WalletNode:
@@ -71,15 +75,25 @@ class WalletNode:
     # which is consecutive requests for the previous block
     short_sync_threshold: int
     _shut_down: bool
+    root_path: Path
+    local_test: bool
+
+    tasks: List[asyncio.Future]
 
     @staticmethod
     async def create(
-        config: Dict, key_config: Dict, name: str = None, override_constants: Dict = {},
+        config: Dict,
+        private_key: ExtendedPrivateKey,
+        root_path: Path,
+        name: str = None,
+        override_constants: Dict = {},
+        local_test: bool = False,
     ):
         self = WalletNode()
         self.config = config
-        self.key_config = key_config
         self.constants = consensus_constants.copy()
+        self.root_path = root_path
+        self.local_test = local_test
         for key, value in override_constants.items():
             self.constants[key] = value
         if name:
@@ -87,11 +101,14 @@ class WalletNode:
         else:
             self.log = logging.getLogger(__name__)
 
-        path = path_from_root(DEFAULT_ROOT_PATH, config["database_path"])
+        db_path_key_suffix = str(private_key.get_public_key().get_fingerprint())
+        path = path_from_root(
+            self.root_path, f"{config['database_path']}-{db_path_key_suffix}"
+        )
         mkdir(path.parent)
 
         self.wallet_state_manager = await WalletStateManager.create(
-            key_config, config, path, self.constants
+            private_key, config, path, self.constants
         )
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
 
@@ -109,6 +126,8 @@ class WalletNode:
         self.potential_header_hashes = {}
 
         self.server = None
+
+        self.tasks = []
 
         return self
 
@@ -136,6 +155,8 @@ class WalletNode:
         return result
 
     async def _resend_queue(self):
+        if self._shut_down:
+            return
         if self.server is None:
             return
 
@@ -167,6 +188,9 @@ class WalletNode:
 
         return messages
 
+    def set_global_connections(self, global_connections: PeerConnections):
+        self.global_connections = global_connections
+
     def set_server(self, server: ChiaServer):
         self.server = server
 
@@ -179,6 +203,8 @@ class WalletNode:
     def _shutdown(self):
         print("Shutting down")
         self._shut_down = True
+        for task in self.tasks:
+            task.cancel()
 
     def _start_bg_tasks(self):
         """
@@ -190,14 +216,15 @@ class WalletNode:
 
         async def introducer_client():
             async def on_connect() -> OutboundMessageGenerator:
-                msg = Message("request_peers", full_node_protocol.RequestPeers())
+                msg = Message("request_peers", introducer_protocol.RequestPeers())
                 yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
 
             while not self._shut_down:
-                for connection in self.server.global_connections.get_connections():
+                for connection in self.global_connections.get_connections():
                     # If we are still connected to introducer, disconnect
                     if connection.connection_type == NodeType.INTRODUCER:
-                        self.server.global_connections.close(connection)
+                        self.global_connections.close(connection)
+
                 if self._num_needed_peers():
                     if not await self.server.start_client(
                         introducer_peerinfo, on_connect
@@ -210,12 +237,22 @@ class WalletNode:
                         continue
                 await asyncio.sleep(self.config["introducer_connect_interval"])
 
-        self.introducer_task = asyncio.create_task(introducer_client())
+        if "full_node_peer" in self.config:
+            peer_info = PeerInfo(
+                self.config["full_node_peer"]["host"],
+                self.config["full_node_peer"]["port"],
+            )
+            task = asyncio.create_task(
+                start_reconnect_task(self.global_connections, peer_info, self.log)
+            )
+            self.tasks.append(task)
+        if self.local_test is False:
+            self.tasks.append(asyncio.create_task(introducer_client()))
 
     def _num_needed_peers(self) -> int:
         assert self.server is not None
         diff = self.config["target_peer_count"] - len(
-            self.server.global_connections.get_full_node_connections()
+            self.global_connections.get_full_node_connections()
         )
         if diff < 0:
             return 0
@@ -227,33 +264,31 @@ class WalletNode:
             )
             peers = [
                 c.get_peer_info()
-                for c in self.server.global_connections.get_full_node_connections()
+                for c in self.global_connections.get_full_node_connections()
             ]
             if full_node_peer in peers:
                 self.log.info(
                     f"Will not attempt to connect to other nodes, already connected to {full_node_peer}"
                 )
-                for (
-                    connection
-                ) in self.server.global_connections.get_full_node_connections():
+                for connection in self.global_connections.get_full_node_connections():
                     if connection.get_peer_info() != full_node_peer:
                         self.log.info(
                             f"Closing unnecessary connection to {connection.get_peer_info()}."
                         )
-                        self.server.global_connections.close(connection)
+                        self.global_connections.close(connection)
                 return 0
         return diff
 
     @api_request
     async def respond_peers(
-        self, request: full_node_protocol.RespondPeers
+        self, request: introducer_protocol.RespondPeers
     ) -> OutboundMessageGenerator:
         """
         We have received a list of full node peers that we can connect to.
         """
         if self.server is None:
             return
-        conns = self.server.global_connections
+        conns = self.global_connections
         for peer in request.peer_list:
             conns.peers.add(peer)
 
@@ -709,6 +744,8 @@ class WalletNode:
         Notification from full node that a new LCA (Least common ancestor of the three blockchain
         tips) has been added to the full node.
         """
+        if self._shut_down:
+            return
         if self.wallet_state_manager.sync_mode:
             return
         # If already seen LCA, ignore.
@@ -750,6 +787,8 @@ class WalletNode:
         until we have the required additions / removals for our wallets.
         """
         while True:
+            if self._shut_down:
+                return
             # We loop, to avoid infinite recursion. At the end of each iteration, we might want to
             # process the next block, if it exists.
 
@@ -864,6 +903,8 @@ class WalletNode:
         The full node has responded with the additions for a block. We will use this
         to try to finish the block, and add it to the state.
         """
+        if self._shut_down:
+            return
         if response.header_hash not in self.cached_blocks:
             self.log.warning("Do not have header for additions")
             return
@@ -1003,6 +1044,8 @@ class WalletNode:
         The full node has responded with the removals for a block. We will use this
         to try to finish the block, and add it to the state.
         """
+        if self._shut_down:
+            return
         if (
             response.header_hash not in self.cached_blocks
             or self.cached_blocks[response.header_hash][0].additions is None

@@ -13,6 +13,11 @@ harvester:
   farmer_peer:
     host: 127.0.0.1
     port: 8447
+
+  # If True, starts an RPC server at the following port
+  start_rpc_server: True
+  rpc_port: 8560
+
   # Location of all the plots, default ./plots, for relative paths in plots.yaml.
   # plot_root: "/mnt/pos"
   logging: *logging
@@ -22,6 +27,11 @@ harvester:
   ssl:
     crt: "trusted.crt"
     key: "trusted.key"
+
+pool: {
+  # Replace this with a real puzzle hash
+  xch_target_puzzle_hash: a4259182b4d8e0af21331fc5be2681f953400b6726fa4095e3b91ae8f005a836
+}
 
 farmer:
   # The farmer server (if run) will run on this port
@@ -33,6 +43,16 @@ farmer:
   harvester_peer:
     host: 127.0.0.1
     port: 8448
+
+  # Replace this with a real puzzle hash
+  xch_target_puzzle_hash: a4259182b4d8e0af21331fc5be2681f953400b6726fa4095e3b91ae8f005a836
+
+  # If True, starts an RPC server at the following port
+  start_rpc_server: True
+  rpc_port: 8559
+
+  pool_public_keys: []
+
   # To send a share to a pool, a block must be faster than this, in seconds
   pool_share_threshold: 50000
   # To send to the full node, a block must be faster than this, in seconds
@@ -87,8 +107,8 @@ full_node:
   port: 8444
 
   # Run multiple nodes with different databases by changing the database_path
-  database_path: db/blockchain_v4.db
-  simulator_database_path: sim_db/simulator_blockchain_v4.db
+  database_path: db/blockchain_v5.db
+  simulator_database_path: sim_db/simulator_blockchain_v5.db
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
@@ -121,7 +141,7 @@ full_node:
       host: 127.0.0.1
       port: 8446
   introducer_peer:
-      host: introducer1.beta.chia.net  # Chia AWS introducer IPv4/IPv6
+      host: introducer.beta.chia.net  # Chia AWS introducer IPv4/IPv6
       port: 8444
   wallet_peer:
     host: 127.0.0.1
@@ -181,7 +201,7 @@ wallet:
   recent_peer_threshold: 6000
 
   introducer_peer:
-    host: introducer1.beta.chia.net  # Chia AWS introducer IPv4/IPv6
+    host: introducer.beta.chia.net  # Chia AWS introducer IPv4/IPv6
     port: 8444
 
   ssl:

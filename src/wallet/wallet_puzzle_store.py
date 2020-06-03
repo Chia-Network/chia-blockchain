@@ -32,13 +32,13 @@ class WalletPuzzleStore:
 
         await self.db_connection.execute(
             (
-                f"CREATE TABLE IF NOT EXISTS derivation_paths("
-                f"derivation_index int,"
-                f" pubkey text,"
-                f" puzzle_hash text PRIMARY_KEY,"
-                f" wallet_type int,"
-                f" wallet_id int,"
-                f" used tinyint)"
+                "CREATE TABLE IF NOT EXISTS derivation_paths("
+                "derivation_index int,"
+                " pubkey text,"
+                " puzzle_hash text PRIMARY_KEY,"
+                " wallet_type int,"
+                " wallet_id int,"
+                " used tinyint)"
             )
         )
         await self.db_connection.execute(

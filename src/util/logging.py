@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict
 
 from src.util.path import mkdir, path_from_root
+from logging.handlers import RotatingFileHandler
 
 
 def initialize_logging(prefix: str, logging_config: Dict, root_path: Path):
@@ -31,5 +32,9 @@ def initialize_logging(prefix: str, logging_config: Dict, root_path: Path):
             format=f"{prefix}: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
             datefmt="%H:%M:%S",
         )
+
         logger = logging.getLogger()
+        handler = RotatingFileHandler(log_path, maxBytes=20000000, backupCount=7)
+        logger.addHandler(handler)
+
     logger.setLevel(logging.INFO)

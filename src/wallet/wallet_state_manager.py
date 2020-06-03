@@ -38,7 +38,6 @@ from src.wallet.wallet_user_store import WalletUserStore
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.util.errors import Err
 from src.wallet.wallet import Wallet
-from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.types.program import Program
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.util.wallet_types import WalletType
@@ -46,7 +45,6 @@ from src.wallet.util.wallet_types import WalletType
 
 class WalletStateManager:
     constants: Dict
-    key_config: Dict
     config: Dict
     wallet_store: WalletStore
     tx_store: WalletTransactionStore
@@ -83,7 +81,7 @@ class WalletStateManager:
 
     @staticmethod
     async def create(
-        key_config: Dict,
+        private_key: ExtendedPrivateKey,
         config: Dict,
         db_path: Path,
         constants: Dict,
@@ -119,9 +117,7 @@ class WalletStateManager:
         main_wallet_info = await self.user_store.get_wallet_by_id(1)
         assert main_wallet_info is not None
 
-        self.key_config = key_config
-        sk_hex = self.key_config["wallet_sk"]
-        self.private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
+        self.private_key = private_key
 
         self.main_wallet = await Wallet.create(self, main_wallet_info)
 
@@ -129,16 +125,11 @@ class WalletStateManager:
         self.wallets[main_wallet_info.id] = self.main_wallet
 
         for wallet_info in await self.get_all_wallets():
-            self.log.info(f"wallet_info {wallet_info}")
+            # self.log.info(f"wallet_info {wallet_info}")
             if wallet_info.type == WalletType.STANDARD_WALLET:
                 if wallet_info.id == 1:
                     continue
                 wallet = await Wallet.create(config, wallet_info)
-                self.wallets[wallet_info.id] = wallet
-            elif wallet_info.type == WalletType.RATE_LIMITED:
-                wallet = await RLWallet.create(
-                    config, key_config, self, wallet_info, self.main_wallet,
-                )
                 self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.COLOURED_COIN:
                 wallet = await CCWallet.create(self, self.main_wallet, wallet_info,)
@@ -303,13 +294,13 @@ class WalletStateManager:
         """
         self.pending_tx_callback = callback
 
-    def state_changed(self, state: str):
+    def state_changed(self, state: str, wallet_id: int = None):
         """
         Calls the callback if it's present.
         """
         if self.state_changed_callback is None:
             return
-        self.state_changed_callback(state)
+        self.state_changed_callback(state, wallet_id)
 
     def tx_pending_changed(self):
         """
@@ -343,7 +334,19 @@ class WalletStateManager:
         for record in spendable:
             amount = uint64(amount + record.coin.amount)
 
-        return uint64(amount)
+        unconfirmed_tx: List[
+            TransactionRecord
+        ] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
+        removal_amount = 0
+
+        for txrecord in unconfirmed_tx:
+            for coin in txrecord.removals:
+                if await self.does_coin_belong_to_wallet(coin, wallet_id):
+                    removal_amount += coin.amount
+
+        result = amount - removal_amount
+
+        return uint64(result)
 
     async def does_coin_belong_to_wallet(self, coin: Coin, wallet_id: int) -> bool:
         """
@@ -364,8 +367,15 @@ class WalletStateManager:
         """
         Returns the confirmed balance amount +/- sum of unconfirmed transactions.
         """
+        spendable: Set[WalletCoinRecord] = await self.get_spendable_coins_for_wallet(
+            wallet_id
+        )
 
-        confirmed = await self.get_confirmed_spendable_balance_for_wallet(wallet_id)
+        confirmed: uint64 = uint64(0)
+
+        for unspent in spendable:
+            confirmed = uint64(confirmed + unspent.coin.amount)
+
         unconfirmed_tx = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         addition_amount = 0
         removal_amount = 0
@@ -414,6 +424,27 @@ class WalletStateManager:
         result = confirmed - removal_amount
         return uint64(result)
 
+    async def get_frozen_balance(self, wallet_id: int) -> uint64:
+        current_index = self.block_records[self.lca].height
+
+        coinbase_freeze_period = self.constants["COINBASE_FREEZE_PERIOD"]
+
+        valid_index = current_index - coinbase_freeze_period
+
+        not_frozen: Set[
+            WalletCoinRecord
+        ] = await self.wallet_store.get_spendable_for_index(valid_index, wallet_id)
+        all_records: Set[
+            WalletCoinRecord
+        ] = await self.wallet_store.get_spendable_for_index(current_index, wallet_id)
+        sum_not_frozen = sum(
+            record.coin.amount for record in not_frozen if record.coinbase
+        )
+        sum_all_records = sum(
+            record.coin.amount for record in all_records if record.coinbase
+        )
+        return uint64(sum_all_records - sum_not_frozen)
+
     async def unconfirmed_additions_for_wallet(
         self, wallet_id: int
     ) -> Dict[bytes32, Coin]:
@@ -459,6 +490,8 @@ class WalletStateManager:
         for unconfirmed in unconfirmed_record:
             await self.tx_store.set_confirmed(unconfirmed.name(), index)
 
+        self.state_changed("coin_removed", record.wallet_id)
+
     async def coin_added(self, coin: Coin, index: uint32, coinbase: bool):
         """
         Adding coin to the db
@@ -485,14 +518,13 @@ class WalletStateManager:
             )
             await self.tx_store.add_transaction_record(tx_record)
         else:
-            unconfirmed_record = await self.tx_store.unconfirmed_with_addition_coin(
-                coin.name()
-            )
+            records = await self.tx_store.tx_with_addition_coin(coin.name(), wallet_id)
 
-            if len(unconfirmed_record) > 0:
+            if len(records) > 0:
                 # This is the change from this transaction
-                for record in unconfirmed_record:
-                    await self.tx_store.set_confirmed(record.name(), index)
+                for record in records:
+                    if record.confirmed is False:
+                        await self.tx_store.set_confirmed(record.name(), index)
             else:
                 now = uint64(int(time.time()))
                 tx_record = TransactionRecord(
@@ -517,7 +549,7 @@ class WalletStateManager:
             coin, index, uint32(0), False, coinbase, wallet_type, wallet_id
         )
         await self.wallet_store.add_coin_record(coin_record)
-        self.state_changed("coin_added")
+
         if wallet_type == WalletType.COLOURED_COIN:
             wallet: CCWallet = self.wallets[wallet_id]
             header_hash: bytes32 = self.height_to_hash[index]
@@ -528,6 +560,9 @@ class WalletStateManager:
             assert block.removals is not None
             await wallet.coin_added(coin, index, header_hash, block.removals)
 
+        self.log.info(f"Doing state changed for wallet id {wallet_id}")
+        self.state_changed("coin_added", wallet_id)
+
     async def add_pending_transaction(self, tx_record: TransactionRecord):
         """
         Called from wallet before new transaction is sent to the full_node
@@ -535,14 +570,15 @@ class WalletStateManager:
 
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
         await self.tx_store.add_transaction_record(tx_record)
-        self.state_changed("pending_transaction")
         self.tx_pending_changed()
+        self.state_changed("pending_transaction", tx_record.wallet_id)
 
     async def add_transaction(self, tx_record: TransactionRecord):
         """
         Called from wallet to add transaction that is not being set to full_node
         """
         await self.tx_store.add_transaction_record(tx_record)
+        self.state_changed("pending_transaction", tx_record.wallet_id)
 
     async def remove_from_queue(
         self,
@@ -686,8 +722,6 @@ class WalletStateManager:
                     await self.coin_added(coin, block.height, False)
                 for coin in block.removals:
                     await self.coin_removed(coin, block.height)
-                self.state_changed("coin_added")
-                self.state_changed("coin_removed")
                 self.height_to_hash[uint32(0)] = block.header_hash
                 return ReceiveBlockResult.ADDED_TO_HEAD
 
@@ -734,8 +768,6 @@ class WalletStateManager:
                         await self.coin_removed(coin, path_block.height)
 
                 self.lca = block.header_hash
-                self.state_changed("coin_added")
-                self.state_changed("coin_removed")
                 self.state_changed("new_block")
                 return ReceiveBlockResult.ADDED_TO_HEAD
 

@@ -22,11 +22,11 @@ class WalletUserStore:
 
         await self.db_connection.execute(
             (
-                f"CREATE TABLE IF NOT EXISTS users_wallets("
-                f"id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                f" name text,"
-                f" wallet_type int,"
-                f" data text)"
+                "CREATE TABLE IF NOT EXISTS users_wallets("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                " name text,"
+                " wallet_type int,"
+                " data text)"
             )
         )
 
@@ -66,6 +66,13 @@ class WalletUserStore:
         await cursor.close()
         await self.db_connection.commit()
         return await self.get_last_wallet()
+
+    async def delete_wallet(self, id: int):
+        cursor = await self.db_connection.execute(
+            f"DELETE FROM users_wallets where id={id}"
+        )
+        await cursor.close()
+        await self.db_connection.commit()
 
     async def update_wallet(self, wallet_info: WalletInfo):
         cursor = await self.db_connection.execute(

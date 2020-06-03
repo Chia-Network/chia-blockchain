@@ -9,8 +9,8 @@ from typing import Dict, List, Optional, Tuple
 from chiavdf import create_discriminant
 from src.protocols import timelord_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
+from src.server.server import ChiaServer
 from src.types.classgroup import ClassgroupElement
-from src.types.peer_info import PeerInfo
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
@@ -47,39 +47,11 @@ class Timelord:
         self.max_connection_time = self.config["max_connection_time"]
         self.potential_free_clients: List = []
         self.free_clients: List[Tuple[str, StreamReader, StreamWriter]] = []
+        self.server: Optional[ChiaServer] = None
         self._is_shutdown = False
-        self.server = None
 
-    def set_server(self, server):
+    def set_server(self, server: ChiaServer):
         self.server = server
-
-    def _start_bg_tasks(self):
-        """
-        Start a background task that checks connection and reconnects periodically to the full_node.
-        """
-
-        full_node_peer = PeerInfo(
-            self.config["full_node_peer"]["host"], self.config["full_node_peer"]["port"]
-        )
-
-        async def connection_check():
-            while not self._is_shutdown:
-                if self.server is not None:
-                    full_node_retry = True
-
-                    for connection in self.server.global_connections.get_connections():
-                        if connection.get_peer_info() == full_node_peer:
-                            full_node_retry = False
-
-                    if full_node_retry:
-                        log.info(f"Reconnecting to full_node {full_node_retry}")
-                        if not await self.server.start_client(
-                            full_node_peer, None, auth=False
-                        ):
-                            await asyncio.sleep(1)
-                await asyncio.sleep(30)
-
-        self.reconnect_task = asyncio.create_task(connection_check())
 
     async def _handle_client(self, reader: StreamReader, writer: StreamWriter):
         async with self.lock:
@@ -93,17 +65,7 @@ class Timelord:
                         self.potential_free_clients.remove((ip, end_time))
                         break
 
-    async def _shutdown(self):
-        async with self.lock:
-            for (
-                stop_discriminant,
-                (stop_writer, _, _),
-            ) in self.active_discriminants.items():
-                stop_writer.write(b"010")
-                await stop_writer.drain()
-                self.done_discriminants.append(stop_discriminant)
-            self.active_discriminants.clear()
-            self.active_discriminants_start_time.clear()
+    def _shutdown(self):
         self._is_shutdown = True
 
     async def _stop_worst_process(self, worst_weight_active):
@@ -460,9 +422,20 @@ class Timelord:
 
                 if len(self.proofs_to_write) > 0:
                     for msg in self.proofs_to_write:
-                        yield msg
+                        self.server.push_message(msg)
                     self.proofs_to_write.clear()
             await asyncio.sleep(0.5)
+
+        async with self.lock:
+            for (
+                stop_discriminant,
+                (stop_writer, _, _),
+            ) in self.active_discriminants.items():
+                stop_writer.write(b"010")
+                await stop_writer.drain()
+                self.done_discriminants.append(stop_discriminant)
+            self.active_discriminants.clear()
+            self.active_discriminants_start_time.clear()
 
     @api_request
     async def challenge_start(self, challenge_start: timelord_protocol.ChallengeStart):

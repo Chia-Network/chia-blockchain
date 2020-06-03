@@ -1,7 +1,6 @@
 import asyncio
 import signal
 import logging
-from typing import Optional
 
 from src.consensus.constants import constants
 
@@ -13,10 +12,34 @@ except ImportError:
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.timelord import Timelord
+from src.types.peer_info import PeerInfo
 from src.util.config import load_config_cli, load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.logging import initialize_logging
 from src.util.setproctitle import setproctitle
+
+
+def start_timelord_bg_task(server, peer_info, log):
+    """
+    Start a background task that checks connection and reconnects periodically to the full_node.
+    """
+
+    async def connection_check():
+        while True:
+            if server is not None:
+                full_node_retry = True
+
+                for connection in server.global_connections.get_connections():
+                    if connection.get_peer_info() == peer_info:
+                        full_node_retry = False
+
+                if full_node_retry:
+                    log.info(f"Reconnecting to full_node {peer_info}")
+                    if not await server.start_client(peer_info, None, auth=False):
+                        await asyncio.sleep(1)
+            await asyncio.sleep(30)
+
+    return asyncio.create_task(connection_check())
 
 
 async def async_main():
@@ -41,8 +64,7 @@ async def async_main():
         DEFAULT_ROOT_PATH,
         config,
     )
-
-    timelord_shutdown_task: Optional[asyncio.Task] = None
+    timelord.set_server(server)
 
     coro = asyncio.start_server(
         timelord._handle_client,
@@ -51,34 +73,33 @@ async def async_main():
         loop=asyncio.get_running_loop(),
     )
 
-    def signal_received():
-        nonlocal timelord_shutdown_task
+    def stop_all():
         server.close_all()
-        timelord_shutdown_task = asyncio.create_task(timelord._shutdown())
+        timelord._shutdown()
 
     try:
-        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
-        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop_all)
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop_all)
     except NotImplementedError:
         log.info("signal handlers unsupported")
 
     await asyncio.sleep(10)  # Allows full node to startup
 
-    timelord.set_server(server)
-    timelord._start_bg_tasks()
+    peer_info = PeerInfo(
+        config["full_node_peer"]["host"], config["full_node_peer"]["port"]
+    )
+    bg_task = start_timelord_bg_task(server, peer_info, log)
 
     vdf_server = asyncio.ensure_future(coro)
 
-    async for msg in timelord._manage_discriminant_queue():
-        server.push_message(msg)
+    await timelord._manage_discriminant_queue()
 
     log.info("Closed discriminant queue.")
-    if timelord_shutdown_task is not None:
-        await timelord_shutdown_task
     log.info("Shutdown timelord.")
 
     await server.await_closed()
     vdf_server.cancel()
+    bg_task.cancel()
     log.info("Timelord fully closed.")
 
 

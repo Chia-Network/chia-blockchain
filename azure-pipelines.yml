@@ -1,0 +1,107 @@
+# Python package
+# Create and test a Python package on multiple Python versions.
+# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/python
+
+trigger:
+  branches:
+    include:
+      - "*"
+#- master
+#- dev
+
+pool:
+  vmImage: "macOS-10.14"
+strategy:
+  matrix:
+    Mojave DMG:
+      python.version: "3.7"
+#    Python38:
+#      python.version: '3.8'  # Disabled 3.8 because artifact names conflict
+#                               Also, installer can target one verison
+
+steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: "$(python.version)"
+    displayName: "Use Python $(python.version)"
+
+  #  since we're installing miniupnpc & setproctitle below,
+  #  only cbor2 will end up in wheels/
+  - script: |
+      python -m venv venv
+      ln -s venv/bin/activate .
+      . ./activate
+      echo "which python, pip after activate"
+      which python
+      which pip
+      python -m pip install --upgrade pip
+      pip install wheel pep517
+      node -v
+      npm cache clean -f
+      npm install -g n
+      sudo n stable
+      pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
+    displayName: "Install dependencies"
+
+  - script: |
+      . ./activate
+      pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
+    displayName: "Build wheels"
+
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '12.x'
+    displayName: "Setup Node 12.xß"
+
+  - script: |
+      . ./activate
+      cd ./electron-react
+      npm install
+      npm audit fix
+    displayName: "Build Electron UI"
+
+  #  Using wheels and release style install so no sh install.sh
+  - script: |
+      . ./activate
+      pip install .
+    displayName: "Install wheels"
+
+  #  install-timelord.sh in venv
+  - script: |
+      . ./activate
+      echo "which python"
+      which python
+      brew install boost
+      sh install-timelord.sh
+      ./vdf_bench square_asm 400000
+    displayName: "Install timelord"
+
+#  - script: |
+#      . ./activate
+#      python -m pip install -r requirements-dev.txt
+#    displayName: "Install dev dependencies"
+
+#  - script: |
+#      . ./activate
+#      pip install pytest pytest-azurepipelines
+#      py.test tests -s -v
+#    displayName: "pytest"
+
+  - script: |
+      . ./activate
+      cd build_scripts
+      sh build_macos.sh
+    displayName: "Build DMG with build_scripts/build_macos.sh"
+
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: $(System.DefaultWorkingDirectory)/wheels
+      artifactName: MacOS-wheels
+    displayName: "Upload MacOS wheels"
+
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: $(System.DefaultWorkingDirectory)/build_scripts/Chia-0.1.6.dmg
+      artifactName: MacOS-DMG
+    displayName: "Upload MacOS DMG"

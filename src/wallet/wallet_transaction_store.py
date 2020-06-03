@@ -27,18 +27,18 @@ class WalletTransactionStore:
         self.db_connection = connection
         await self.db_connection.execute(
             (
-                f"CREATE TABLE IF NOT EXISTS transaction_record("
-                f" transaction_record blob,"
-                f" bundle_id text PRIMARY KEY,"
-                f" confirmed_at_index bigint,"
-                f" created_at_time bigint,"
-                f" to_puzzle_hash text,"
-                f" amount bigint,"
-                f" fee_amount bigint,"
-                f" incoming int,"
-                f" confirmed int,"
-                f" sent int,"
-                f" wallet_id bigint)"
+                "CREATE TABLE IF NOT EXISTS transaction_record("
+                " transaction_record blob,"
+                " bundle_id text PRIMARY KEY,"
+                " confirmed_at_index bigint,"
+                " created_at_time bigint,"
+                " to_puzzle_hash text,"
+                " amount bigint,"
+                " fee_amount bigint,"
+                " incoming int,"
+                " confirmed int,"
+                " sent int,"
+                " wallet_id bigint)"
             )
         )
 
@@ -153,13 +153,13 @@ class WalletTransactionStore:
 
         return result
 
-    async def unconfirmed_with_addition_coin(
-        self, removal_id: bytes32
+    async def tx_with_addition_coin(
+        self, removal_id: bytes32, wallet_id: int
     ) -> List[TransactionRecord]:
         """ Returns a record containing removed coin with id: removal_id"""
         result = []
-        all_unconfirmed: List[TransactionRecord] = await self.get_all_unconfirmed()
-        for record in all_unconfirmed:
+        all: List[TransactionRecord] = await self.get_all_transactions(wallet_id)
+        for record in all:
             for coin in record.additions:
                 if coin.name() == removal_id:
                     result.append(record)

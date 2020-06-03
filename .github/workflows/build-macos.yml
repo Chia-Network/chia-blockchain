@@ -1,0 +1,83 @@
+name: Build MacOS
+
+
+on: [push]
+
+jobs:
+  build:
+    name: Python 3.7 on macOS-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        python-version: [3.7]
+        os: [macOS-latest]
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Setup Python environment
+      uses: actions/setup-python@v1.1.1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Import Apple app signing certificate
+      uses: Apple-Actions/import-codesign-certs@v1
+      with:
+        p12-file-base64: ${{ secrets.CERT_APP }}
+        p12-password: ${{ secrets.CERT_PASS }}
+
+    - name: Install MacOS dependencies
+      run: |
+        brew update
+
+    - name: Run install script
+      env:
+        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+      run: |
+        sh install.sh
+
+    - name: Install timelord
+      run: |
+        . ./activate
+        sh install-timelord.sh
+        ./vdf_bench square_asm 400000
+
+    - name: Install developer requirements
+      run: |
+        . ./activate
+        venv/bin/python -m pip install -r requirements-dev.txt
+
+    - name: Lint source with flake8
+      run: |
+        ./venv/bin/flake8 src
+
+    - name: Lint source with mypy
+      run: |
+        ./venv/bin/mypy src tests
+
+    - name: Setup kernel for react native, increase watchers
+      run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
+
+    - name: Setup Node 12.x
+      uses: actions/setup-node@v1
+      with:
+        node-version: '12.x'
+
+    - name: Build MacOS DMG in Catalina
+      run: |
+        . ./activate
+        cd build_scripts
+        sh build_macos.sh
+
+    - name: Test blockchain code with pytest
+      run: |
+        . ./activate
+        ./venv/bin/py.test tests -s -v
+
+    - name: Upload MacOS artifacts
+      uses: actions/upload-artifact@v1
+      with:
+        name: Chia-MacOS-10.15-dmg
+        path: ${{ github.workspace }}/build_scripts/Chia-0.1.6.dmg

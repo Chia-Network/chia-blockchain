@@ -29,7 +29,7 @@ class TestSimulation:
 
     @pytest.mark.asyncio
     async def test_simulation_1(self, simulation):
-        node1, node2 = simulation
+        node1, node2, _, _, _, _, _ = simulation
         start = time.time()
         while time.time() - start < 500:
             if max([h.height for h in node1.blockchain.get_current_tips()]) > 10:
