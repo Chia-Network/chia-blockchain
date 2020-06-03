@@ -99,7 +99,7 @@ timelord:
   # If set 'True', the timelord will create compact proofs of time, instead of 
   # extending the chain. The attribute 'fast_algorithm' won't apply if timelord
   # is running in sanitizer_mode.
-  sanitizer_mode: True
+  sanitizer_mode: False
 
   ssl:
     crt: "trusted.crt"

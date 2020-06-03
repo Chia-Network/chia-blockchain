@@ -9,6 +9,14 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 
 - test plots now go into `~/.chia/test-plots/`
 
+### Added
+
+- Added a faster VDF process, which generates n-wesolowski proofs very fast, after the VDF result is known.
+This requires a high number of CPUs. To use it, set timelord.fast_algorithm = True in the config file.
+- Added a new type of timelord, which generates compact proofs of time for the existing blocks. This helps
+reducing the database size. Full nodes send 100 random uncompact blocks per hour to timelords, and if
+timelord.sanitizer_mode = True, the timelord will work on those challenges.
+
 ## [1.0beta6] aka Beta 1.6 - 2020-06-01
 
 ### Added
