@@ -1,10 +1,8 @@
 import logging
 
-from typing import AsyncGenerator
-
 from src.full_node.full_node import FullNode
 from src.rpc.full_node_rpc_server import start_full_node_rpc_server
-from src.server.outbound_message import NodeType, OutboundMessage
+from src.server.outbound_message import NodeType
 from src.server.start_service import run_service
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
