@@ -83,9 +83,7 @@ class Harvester:
     executor: concurrent.futures.ThreadPoolExecutor
     state_changed_callback: Optional[Callable]
 
-    def __init__(
-        self, config: Dict, plot_config: Dict, root_path: Path
-    ):
+    def __init__(self, config: Dict, plot_config: Dict, root_path: Path):
         self.config = config
         self.plot_config = plot_config
         self.root_path = root_path
