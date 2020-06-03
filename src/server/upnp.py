@@ -3,6 +3,7 @@ import miniupnpc
 
 log = logging.getLogger(__name__)
 
+
 def upnp_remap_port(port):
     log.info(f"Attempting to enable UPnP (open up port {port})")
     try:
@@ -16,4 +17,3 @@ def upnp_remap_port(port):
         log.warning(
             "UPnP failed. This is not required to run chia, but it allows incoming connections from other peers."
         )
-
