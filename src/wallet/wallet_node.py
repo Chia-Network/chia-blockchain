@@ -242,9 +242,7 @@ class WalletNode:
                 self.config["full_node_peer"]["host"],
                 self.config["full_node_peer"]["port"],
             )
-            task = asyncio.create_task(
-                start_reconnect_task(self.global_connections, peer_info, self.log)
-            )
+            task = start_reconnect_task(self.global_connections, peer_info, self.log)
             self.tasks.append(task)
         if self.local_test is False:
             self.tasks.append(asyncio.create_task(introducer_client()))
