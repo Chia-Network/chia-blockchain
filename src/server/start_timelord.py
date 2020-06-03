@@ -96,7 +96,7 @@ async def async_main():
     if not sanitizer_mode:
         await timelord._manage_discriminant_queue()
     else:
-        await timelord._manage_discriminant_queue_sanitizer():
+        await timelord._manage_discriminant_queue_sanitizer()
 
     log.info("Closed discriminant queue.")
     log.info("Shutdown timelord.")

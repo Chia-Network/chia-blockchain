@@ -49,13 +49,10 @@ class Timelord:
         self.free_clients: List[Tuple[str, StreamReader, StreamWriter]] = []
         self.server: Optional[ChiaServer] = None
         self._is_shutdown = False
-<<<<<<< HEAD
         self.server = None
         self.sanitizer_mode = self.config["sanitizer_mode"]
         log.info(f"Am I sanitizing? {self.sanitizer_mode}")
         self.max_known_weights: List[uint128] = []
-=======
->>>>>>> dev
 
     def set_server(self, server: ChiaServer):
         self.server = server
