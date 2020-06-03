@@ -3,7 +3,7 @@ import asyncio
 
 def start_reconnect_task(server, peer_info, log):
     """
-    Start a background task that checks connection and reconnects periodically to the farmer.
+    Start a background task that checks connection and reconnects periodically to a peer.
     """
 
     async def connection_check():
