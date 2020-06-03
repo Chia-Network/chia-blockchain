@@ -31,7 +31,7 @@ def service_kwargs_for_farmer(root_path):
         server_listen_ports=[config["port"]],
         connect_peers=connect_peers,
         on_connect_callback=api._on_connect,
-        rpc_start_callback_port=(start_farmer_rpc_server, config["rpc_port"])
+        rpc_start_callback_port=(start_farmer_rpc_server, config["rpc_port"]),
     )
     return kwargs
 

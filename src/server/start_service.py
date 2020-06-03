@@ -217,6 +217,8 @@ def run_service(*args, **kwargs):
     # TODO: use asyncio.run instead
     # for now, we use `run_until_complete` as `asyncio.run` blocks on RPC server not exiting
     if 1:
-        return asyncio.get_event_loop().run_until_complete(async_run_service(*args, **kwargs))
+        return asyncio.get_event_loop().run_until_complete(
+            async_run_service(*args, **kwargs)
+        )
     else:
         return asyncio.run(async_run_service(*args, **kwargs))

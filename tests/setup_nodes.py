@@ -285,7 +285,9 @@ async def setup_introducer(port, dic={}):
 
     config = load_config(root_path, "config.yaml", "introducer")
 
-    introducer = Introducer(config["max_peers_to_send"], config["recent_peer_threshold"])
+    introducer = Introducer(
+        config["max_peers_to_send"], config["recent_peer_threshold"]
+    )
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(

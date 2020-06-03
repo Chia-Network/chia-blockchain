@@ -18,7 +18,9 @@ def load_ssl_paths(path: Path, config: Dict):
     return None
 
 
-def ssl_context_for_server(root_path: Path, config: Dict, require_cert: bool = False) -> Optional[ssl.SSLContext]:
+def ssl_context_for_server(
+    root_path: Path, config: Dict, require_cert: bool = False
+) -> Optional[ssl.SSLContext]:
     paths = load_ssl_paths(root_path, config)
     if paths is None:
         return paths
@@ -30,7 +32,9 @@ def ssl_context_for_server(root_path: Path, config: Dict, require_cert: bool = F
     return ssl_context
 
 
-def ssl_context_for_client(root_path: Path, config: Dict, auth: bool) -> Optional[ssl.SSLContext]:
+def ssl_context_for_client(
+    root_path: Path, config: Dict, auth: bool
+) -> Optional[ssl.SSLContext]:
     paths = load_ssl_paths(root_path, config)
     if paths is None:
         return paths

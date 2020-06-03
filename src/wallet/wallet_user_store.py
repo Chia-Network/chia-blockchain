@@ -68,7 +68,9 @@ class WalletUserStore:
         return await self.get_last_wallet()
 
     async def delete_wallet(self, id: int):
-        cursor = await self.db_connection.execute(f"DELETE FROM users_wallets where id={id}")
+        cursor = await self.db_connection.execute(
+            f"DELETE FROM users_wallets where id={id}"
+        )
         await cursor.close()
         await self.db_connection.commit()
 
