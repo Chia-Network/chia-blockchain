@@ -17,6 +17,12 @@ import AccountTreeIcon from "@material-ui/icons/AccountTree";
 import DonutLargeIcon from "@material-ui/icons/DonutLarge";
 import LockIcon from "@material-ui/icons/Lock";
 import DeleteForeverIcon from "@material-ui/icons/DeleteForever";
+import Button from "@material-ui/core/Button";
+import Dialog from "@material-ui/core/Dialog";
+import DialogActions from "@material-ui/core/DialogActions";
+import DialogContent from "@material-ui/core/DialogContent";
+import DialogContentText from "@material-ui/core/DialogContentText";
+import DialogTitle from "@material-ui/core/DialogTitle";
 import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
 
 const menuItems = [
@@ -54,12 +60,21 @@ const MenuItem = menuItem => {
 };
 
 export const SideBar = () => {
+  const [open, setOpen] = React.useState(false);
   const dispatch = useDispatch();
 
-  function deleteAllKeys() {
-    // console.log("Deleting all keys");
+  const handleClickOpen = () => {
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+
+  const handleCloseDelete = () => {
+    handleClose();
     dispatch(delete_all_keys());
-  }
+  };
 
   function changeKey() {
     // console.log("Changing key");
@@ -73,7 +88,7 @@ export const SideBar = () => {
       <Divider />
       <List>
         <div>
-          <ListItem button onClick={deleteAllKeys} key="0">
+          <ListItem button onClick={handleClickOpen} key="0">
             <ListItemIcon>
               <DeleteForeverIcon />
             </ListItemIcon>
@@ -87,6 +102,29 @@ export const SideBar = () => {
           </ListItem>
         </div>
       </List>
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">{"Delete all keys"}</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            Deleting all keys will permanatly remove the keys from your
+            computer, make sure you have backups. Are you sure you want to
+            continue?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} color="secondary">
+            Back
+          </Button>
+          <Button onClick={handleCloseDelete} color="secondary" autoFocus>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

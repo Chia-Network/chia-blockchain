@@ -1,5 +1,4 @@
 import logging
-import miniupnpc
 
 from typing import AsyncGenerator
 
@@ -9,29 +8,12 @@ from src.server.outbound_message import NodeType, OutboundMessage
 from src.server.start_service import run_service
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
+from src.server.upnp import upnp_remap_port
 
 from src.types.peer_info import PeerInfo
 
 
 log = logging.getLogger(__name__)
-
-
-OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
-
-
-def upnp_remap_port(port):
-    log.info(f"Attempting to enable UPnP (open up port {port})")
-    try:
-        upnp = miniupnpc.UPnP()
-        upnp.discoverdelay = 5
-        upnp.discover()
-        upnp.selectigd()
-        upnp.addportmapping(port, "TCP", upnp.lanaddr, port, "chia", "")
-        log.info(f"Port {port} opened with UPnP.")
-    except Exception:
-        log.warning(
-            "UPnP failed. This is not required to run chia, but it allows incoming connections from other peers."
-        )
 
 
 def service_kwargs_for_full_node(root_path):
