@@ -49,6 +49,7 @@ class Farmer:
         self.proof_of_time_estimate_ips: uint64 = uint64(10000)
         self.constants = consensus_constants.copy()
         self._shut_down = False
+        self.server = None
         self.keychain = keychain
         self.state_changed_callback: Optional[Callable] = None
 
@@ -85,7 +86,7 @@ class Farmer:
         self.global_connections: PeerConnections = global_connections
 
     def set_server(self, server):
-        pass
+        self.server = server
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback

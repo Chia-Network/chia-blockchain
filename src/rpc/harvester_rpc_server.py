@@ -1,4 +1,5 @@
 from typing import Callable, Dict
+from blspy import PrivateKey, PublicKey
 
 from src.harvester import Harvester
 from src.util.ints import uint16
@@ -45,6 +46,16 @@ class HarvesterRpcApiHandler(AbstractRpcApiHandler):
         success = self.service._delete_plot(filename)
         return {"success": success}
 
+    async def add_plot(self, request: Dict) -> Dict:
+        filename = request["filename"]
+        if "pool_pk" in request:
+            pool_pk = PublicKey.from_bytes(bytes.fromhex(request["pool_pk"]))
+        else:
+            pool_pk = None
+        plot_sk = PrivateKey.from_bytes(bytes.fromhex(request["plot_sk"]))
+        success = self.service._add_plot(filename, plot_sk, pool_pk)
+        return {"success": success}
+
 
 async def start_harvester_rpc_server(
     harvester: Harvester, stop_node_cb: Callable, rpc_port: uint16
@@ -54,6 +65,7 @@ async def start_harvester_rpc_server(
         "/get_plots": handler.get_plots,
         "/refresh_plots": handler.refresh_plots,
         "/delete_plot": handler.delete_plot,
+        "/add_plot": handler.add_plot,
     }
     cleanup = await start_rpc_server(handler, rpc_port, routes)
     return cleanup
