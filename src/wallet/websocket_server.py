@@ -5,7 +5,8 @@ import signal
 import time
 import traceback
 from pathlib import Path
-from blspy import ExtendedPrivateKey
+from blspy import ExtendedPrivateKey, PrivateKey
+from secrets import token_bytes
 
 from typing import List, Optional, Tuple
 
@@ -578,17 +579,42 @@ class WebSocketServer:
         return response
 
     async def add_key(self, request):
+        print("req:", request, type(request))
+        if "mnemonic" in request:
+            # Adding a key from 24 word mnemonic
+            mnemonic = request["mnemonic"]
+            seed = seed_from_mnemonic(mnemonic)
+            self.keychain.add_private_key_seed(seed)
+            esk = ExtendedPrivateKey.from_seed(seed)
+        elif "hexkey" in request:
+            # Adding a key from hex private key string. Two cases: extended private key (HD)
+            # which is 77 bytes, and int private key which is 32 bytes.
+            if len(request["hexkey"]) != 154 and len(request["hexkey"]) != 64:
+                return {"success": False}
+            if len(request["hexkey"]) == 64:
+                sk = PrivateKey.from_bytes(bytes.fromhex(request["hexkey"]))
+                self.keychain.add_private_key_not_extended(sk)
+                key_bytes = bytes(sk)
+                new_extended_bytes = bytearray(
+                    bytes(ExtendedPrivateKey.from_seed(token_bytes(32)))
+                )
+                final_extended_bytes = bytes(
+                    new_extended_bytes[: -len(key_bytes)] + key_bytes
+                )
+                esk = ExtendedPrivateKey.from_bytes(final_extended_bytes)
+            else:
+                esk = ExtendedPrivateKey.from_bytes(bytes.fromhex(request["hexkey"]))
+                self.keychain.add_private_key(esk)
+
+        else:
+            return {"success": False}
+
+        fingerprint = esk.get_public_key().get_fingerprint()
         await self.stop_wallet()
-        mnemonic = request["mnemonic"]
-        self.log.info(f"Mnemonic {mnemonic}")
-        seed = seed_from_mnemonic(mnemonic)
-        self.log.info(f"Seed {seed}")
-        fingerprint = (
-            ExtendedPrivateKey.from_seed(seed).get_public_key().get_fingerprint()
-        )
-        self.keychain.add_private_key_seed(seed)
+        # Makes sure the new key is added to config properly
         check_keys(self.root_path)
 
+        # Starts the wallet with the new key selected
         started = await self.start_wallet(fingerprint)
 
         response = {"success": started}
