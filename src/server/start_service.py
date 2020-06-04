@@ -129,12 +129,6 @@ class Service:
         async def _run():
             self._rpc_task = None
 
-            if self._rpc_start_callback_port:
-                rpc_f, rpc_port = self._rpc_start_callback_port
-                self._rpc_task = asyncio.ensure_future(
-                    rpc_f(self._api, self.stop, rpc_port)
-                )
-
             self._introducer_poll_task = None
             if self._periodic_introducer_poll:
                 (
@@ -153,6 +147,13 @@ class Service:
 
             if self._start_callback:
                 await self._start_callback()
+
+            if self._rpc_start_callback_port:
+                rpc_f, rpc_port = self._rpc_start_callback_port
+                self._rpc_task = asyncio.ensure_future(
+                    rpc_f(self._api, self.stop, rpc_port)
+                )
+
             self._reconnect_tasks = [
                 start_reconnect_task(self._server, _, self._log)
                 for _ in self._connect_peers

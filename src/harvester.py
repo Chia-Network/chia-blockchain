@@ -101,6 +101,7 @@ class Harvester:
         self.pool_pubkeys = []
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
         self.state_changed_callback = None
+        self.server = None
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -186,11 +187,37 @@ class Harvester:
         self._state_changed("plots")
         return True
 
+    def _add_plot(
+        self, str_path: str, plot_sk: PrivateKey, pool_pk: Optional[PublicKey]
+    ) -> bool:
+        plot_config = load_config(self.root_path, "plots.yaml")
+
+        if pool_pk is None:
+            for pool_pk_cand in self.pool_pubkeys:
+                pr = DiskProver(str_path)
+                if (
+                    ProofOfSpace.calculate_plot_seed(
+                        pool_pk_cand, plot_sk.get_public_key()
+                    )
+                    == pr.get_id()
+                ):
+                    pool_pk = pool_pk_cand
+                    break
+        if pool_pk is None:
+            return False
+        plot_config["plots"][str_path] = {
+            "sk": bytes(plot_sk).hex(),
+            "pool_pk": bytes(pool_pk).hex(),
+        }
+        save_config(self.root_path, "plots.yaml", plot_config)
+        self._refresh_plots()
+        return True
+
     def set_global_connections(self, global_connections: Optional[PeerConnections]):
         self.global_connections = global_connections
 
     def set_server(self, server):
-        pass
+        self.server = server
 
     def _shutdown(self):
         self._is_shutdown = True
