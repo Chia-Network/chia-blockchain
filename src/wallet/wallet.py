@@ -16,6 +16,7 @@ from src.util.condition_tools import (
 )
 from src.util.ints import uint64, uint32
 from src.wallet.BLSPrivateKey import BLSPrivateKey
+from src.wallet.abstract_wallet import AbstractWallet
 from src.wallet.puzzles.p2_conditions import puzzle_for_conditions
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 from src.wallet.puzzles.puzzle_utils import (
@@ -30,7 +31,7 @@ from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
 
 
-class Wallet:
+class Wallet(AbstractWallet):
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
