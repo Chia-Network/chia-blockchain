@@ -28,7 +28,11 @@ import IconButton from "@material-ui/core/IconButton";
 
 import { calculateSizeFromK } from "../util/plot_sizes";
 import { closeConnection, openConnection } from "../modules/farmerMessages";
-import { refreshPlots, deletePlot } from "../modules/harvesterMessages";
+import {
+  refreshPlots,
+  deletePlot,
+  addPlot
+} from "../modules/harvesterMessages";
 
 import TablePagination from "@material-ui/core/TablePagination";
 import RefreshIcon from "@material-ui/icons/Refresh";
@@ -41,6 +45,7 @@ import { big_int_to_array, arr_to_hex, sha256 } from "../util/utils";
 import { mojo_to_chia_string } from "../util/chia";
 import HelpIcon from "@material-ui/icons/Help";
 import { clearSend } from "../modules/message";
+import AddPlotDialog from "./AddPlotDialog";
 
 /* global BigInt */
 
@@ -100,6 +105,9 @@ const styles = theme => ({
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.enteringScreen
     })
+  },
+  addPlotButton: {
+    marginLeft: theme.spacing(2)
   }
 });
 
@@ -305,6 +313,7 @@ const Plots = props => {
   plots.sort((a, b) => b.size - a.size);
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
+  const [open, setOpen] = React.useState(false);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -324,6 +333,22 @@ const Plots = props => {
   const refreshPlotsClick = () => {
     dispatch(refreshPlots());
   };
+  const handleClose = responseDict => {
+    setOpen(false);
+    if (
+      responseDict["plotPath"] &&
+      responseDict["poolPkHex"] &&
+      responseDict["skHex"]
+    ) {
+      dispatch(
+        addPlot(
+          responseDict["plotPath"],
+          responseDict["poolPkHex"],
+          responseDict["skHex"]
+        )
+      );
+    }
+  };
 
   return (
     <Paper className={classes.balancePaper}>
@@ -341,6 +366,25 @@ const Plots = props => {
               >
                 Refresh plots
               </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                className={classes.addPlotButton}
+                onClick={() => {
+                  setOpen(true);
+                }}
+              >
+                Add plot
+              </Button>
+              <AddPlotDialog
+                classes={{
+                  paper: classes.paper
+                }}
+                id="ringtone-menu"
+                keepMounted
+                open={open}
+                onClose={handleClose}
+              />
             </Typography>
           </div>
 
