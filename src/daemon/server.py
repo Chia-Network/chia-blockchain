@@ -471,3 +471,17 @@ async def async_run_daemon(root_path):
     log.info("before start")
     ws_server = WebSocketServer(root_path)
     await ws_server.start()
+
+
+def run_daemon(root_path):
+    return asyncio.get_event_loop().run_until_complete(async_run_daemon(root_path))
+
+
+def main():
+    from src.util.default_root import DEFAULT_ROOT_PATH
+
+    return run_daemon(DEFAULT_ROOT_PATH)
+
+
+if __name__ == "__main__":
+    main()
