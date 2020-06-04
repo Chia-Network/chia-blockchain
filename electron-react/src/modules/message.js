@@ -62,6 +62,13 @@ export const add_key = mnemonic => {
   return action;
 };
 
+export const add_key_hex = hexkey => {
+  var action = walletMessage();
+  action.message.command = "add_key";
+  action.message.data = { hexkey };
+  return action;
+};
+
 export const delete_key = fingerprint => {
   var action = walletMessage();
   action.message.command = "delete_key";

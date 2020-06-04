@@ -17,7 +17,8 @@ import Button from "@material-ui/core/Button";
 import {
   changeEntranceMenu,
   presentOldWallet,
-  presentNewWallet
+  presentNewWallet,
+  presentImportHexKey
 } from "../modules/entranceMenu";
 
 const useStyles = makeStyles(theme => ({
@@ -35,13 +36,13 @@ const useStyles = makeStyles(theme => ({
     borderColor: "#ffffff"
   },
   topButton: {
-    width: 300,
+    width: 400,
     height: 45,
     marginTop: theme.spacing(4),
     marginBottom: theme.spacing(1)
   },
   bottomButton: {
-    width: 300,
+    width: 400,
     height: 45,
     marginTop: theme.spacing(2),
     marginBottom: theme.spacing(1)
@@ -79,6 +80,9 @@ const SelectKey = () => {
   };
   const goToMnemonics = () => {
     dispatch(changeEntranceMenu(presentOldWallet));
+  };
+  const goToHexKey = () => {
+    dispatch(changeEntranceMenu(presentImportHexKey));
   };
   const goToNewWallet = () => {
     dispatch(changeEntranceMenu(presentNewWallet));
@@ -134,7 +138,18 @@ const SelectKey = () => {
               color="primary"
               className={classes.topButton}
             >
-              Enter Mnemonics
+              Import from Mnemonics (24 words)
+            </Button>
+          </Link>
+          <Link onClick={goToHexKey}>
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              color="primary"
+              className={classes.bottomButton}
+            >
+              Import from hex private key
             </Button>
           </Link>
           <Link onClick={goToNewWallet}>
