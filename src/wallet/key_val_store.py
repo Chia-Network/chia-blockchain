@@ -1,16 +1,12 @@
-from typing import Optional, List, Any
+from typing import Optional, Any
 
 import aiosqlite
-from src.util.ints import uint32
 from src.util.streamable import Streamable
-from src.wallet.util.wallet_types import WalletType
-from src.wallet.wallet_action import WalletAction
 
 
 class KeyValStore:
     """
-    WalletActionStore keeps track of all wallet actions that require persistence.
-    Used by Colored coins, Atomic swaps, Rate Limited, and Authorized payee wallets
+    Multipurpose persistent key-value store
     """
 
     db_connection: aiosqlite.Connection
@@ -62,8 +58,7 @@ class KeyValStore:
         Adds object to key val store
         """
         cursor = await self.db_connection.execute(
-            "INSERT INTO key_val_store VALUES(?, ?)",
-            (key, bytes(obj).hex()),
+            "INSERT INTO key_val_store VALUES(?, ?)", (key, bytes(obj).hex()),
         )
         await cursor.close()
         await self.db_connection.commit()
