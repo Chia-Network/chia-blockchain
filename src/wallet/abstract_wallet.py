@@ -2,9 +2,7 @@ from abc import ABC, abstractmethod
 
 
 class AbstractWallet(ABC):
-
-    def __init__(self, value):
-        self.value = value
+    def __init__(self):
         super().__init__()
 
     @abstractmethod
@@ -12,7 +10,7 @@ class AbstractWallet(ABC):
         pass
 
     @abstractmethod
-    def puzzle_for_pk(self):
+    def puzzle_for_pk(self, pubkey: bytes):
         pass
 
     @abstractmethod
