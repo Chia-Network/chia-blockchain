@@ -12,6 +12,7 @@ from src.types.coin_solution import CoinSolution
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
+from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint32, uint64
 from src.wallet.cc_wallet import cc_wallet_puzzles
 from src.wallet.cc_wallet.cc_wallet import CCWallet
@@ -20,6 +21,7 @@ from src.wallet.cc_wallet.cc_wallet_puzzles import (
     create_spend_for_ephemeral,
 )
 from src.wallet.transaction_record import TransactionRecord
+from src.wallet.types.key_val_types import Trades
 from src.wallet.wallet import Wallet
 from src.wallet.wallet_state_manager import WalletStateManager
 from clvm_tools import binutils
@@ -43,7 +45,47 @@ class TradeManager:
 
         return self
 
+    async def get_trade_history(self) -> Trades:
+        current_trades_hex = await self.wallet_state_manager.basic_store.get("current_trades", Trades)
+        trades = Trades(hexstr_to_bytes(current_trades_hex))
+        return trades
+
+    async def cancel_trade(self, name: str):
+        self.log.info("Need to cancel this trade")
+
+    async def cancel_trade_safe(self, name: str):
+        self.log.info("Need to cancel this trade")
+
+    async def add_trade_to_history(self, offer: Dict[int, int], spend_bundle: SpendBundle):
+        current_trades = await self.wallet_state_manager.basic_store.get("current_trades", Trades)
+        if current_trades is None:
+            self.log.info("No trades stored yet")
+            trades = []
+            trades.append(spend_bundle)
+            current_trades = Trades(trades)
+            await self.wallet_state_manager.basic_store.set("current_trades", current_trades)
+            self.log.info("Trade stored")
+        else:
+            new_trades = []
+            current_trades = Trades.from_bytes(hexstr_to_bytes(current_trades))
+            new_trades.extend(current_trades.trades)
+            new_trades.append(spend_bundle)
+            to_store = Trades(new_trades)
+            await self.wallet_state_manager.basic_store.set("current_trades", to_store)
+            self.log.info("There are trades already")
+
     async def create_offer_for_ids(
+            self, offer: Dict[int, int], file_name: str
+    ) -> Tuple[bool, Optional[SpendBundle], Optional[str]]:
+        success, spend_bundle, error = await self._create_offer_for_ids(offer)
+
+        if success:
+            self.write_offer_to_disk(Path(file_name), spend_bundle)
+            await self.add_trade_to_history(offer, spend_bundle)
+
+        return success, spend_bundle, error
+
+    async def _create_offer_for_ids(
         self, offer: Dict[int, int]
     ) -> Tuple[bool, Optional[SpendBundle], Optional[str]]:
         """
