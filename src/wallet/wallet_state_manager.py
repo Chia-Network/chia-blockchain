@@ -22,6 +22,7 @@ from src.util.ints import uint32, uint64
 from src.util.hash import std_hash
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.cc_wallet import cc_wallet_puzzles
+from src.wallet.key_val_store import KeyValStore
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.block_record import BlockRecord
 from src.wallet.wallet_action import WalletAction
@@ -52,6 +53,7 @@ class WalletStateManager:
     puzzle_store: WalletPuzzleStore
     user_store: WalletUserStore
     action_store: WalletActionStore
+    basic_store: KeyValStore
     # Map from header hash to BlockRecord
     block_records: Dict[bytes32, BlockRecord]
     # Specifies the LCA path
@@ -104,6 +106,7 @@ class WalletStateManager:
         self.puzzle_store = await WalletPuzzleStore.create(self.db_connection)
         self.user_store = await WalletUserStore.create(self.db_connection)
         self.action_store = await WalletActionStore.create(self.db_connection)
+        self.basic_store = await KeyValStore.create(self.db_connection)
         self.lca = None
         self.sync_mode = False
         self.height_to_hash = {}
