@@ -3,7 +3,7 @@ cd ..
 mkdir build_scripts\win_build
 cd build_scripts\win_build
 dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\"
-Get-Command editbin.exe | Select-Object -ExpandProperty Definition
+echo $env:path
 
 Write-Output "   ---";
 Write-Output "curl miniupnpc, setprotitle";
