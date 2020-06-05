@@ -1,4 +1,5 @@
 import logging
+from multiprocessing import freeze_support
 
 from src.full_node.full_node import FullNode
 from src.rpc.full_node_rpc_server import start_full_node_rpc_server
@@ -61,4 +62,5 @@ def main():
 
 
 if __name__ == "__main__":
+    freeze_support()
     main()
