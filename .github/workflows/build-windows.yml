@@ -21,15 +21,11 @@ jobs:
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.0.0
 
-      - name: Add path to editbin.exe
-        run: |
-          $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
-          echo $env:path
-
       - name: Build Windows installer with build_scripts\build_windows.ps1
         working-directory: ${{ github.workspace }}\build_scripts
         run: |
           git config --global core.longpaths true
+          $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
           ./build_windows.ps1
 
       - name: Upload Windows exe's to artifacts
