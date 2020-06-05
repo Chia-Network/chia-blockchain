@@ -1,5 +1,4 @@
 import React from "react";
-import SignIn from "./pages/SignIn";
 import SelectKey from "./pages/SelectKey";
 import ImportHexKey from "./pages/ImportHexKey";
 import NewWallet from "./pages/NewWallet";
@@ -9,7 +8,6 @@ import { connect, useSelector } from "react-redux";
 
 import { createMuiTheme, ThemeProvider } from "@material-ui/core/styles";
 import {
-  presentEntrace,
   presentOldWallet,
   presentNewWallet,
   presentDashboard,
@@ -106,9 +104,7 @@ const CustomRouter = () => {
   } else if (logged_in) {
     return <Dashboard></Dashboard>;
   } else {
-    if (presentView === presentEntrace) {
-      return <SignIn></SignIn>;
-    } else if (presentView === presentSelectKeys) {
+    if (presentView === presentSelectKeys) {
       return <SelectKey></SelectKey>;
     } else if (presentView === presentImportHexKey) {
       return <ImportHexKey></ImportHexKey>;

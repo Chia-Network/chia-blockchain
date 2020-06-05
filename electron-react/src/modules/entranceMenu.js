@@ -1,4 +1,3 @@
-export const presentEntrace = "ENTRANCE";
 export const presentNewWallet = "NEW_WALLET";
 export const presentOldWallet = "OLD_WALLET";
 export const presentDashboard = "DASHBOARD";
@@ -11,7 +10,7 @@ export const changeEntranceMenu = item => ({
 });
 
 const initial_state = {
-  view: presentEntrace
+  view: presentSelectKeys
 };
 
 export const entranceReducer = (state = { ...initial_state }, action) => {
