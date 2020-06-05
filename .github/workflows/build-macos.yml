@@ -46,9 +46,7 @@ jobs:
 
     - name: Install developer requirements
       run: |
-        which python
         . ./activate
-        which python
         venv/bin/python -m pip install -r requirements-dev.txt
 
     - name: Lint source with flake8
@@ -70,13 +68,11 @@ jobs:
     - name: Set CHIA_INSTALLER_VERSION
       run: |
         . ./activate
-        which python
         echo "::set-env name=CHIA_INSTALLER_VERSION::$(python build_scripts/installer-version.py)"
 
     - name: Build MacOS DMG in Catalina
       run: |
         . ./activate
-        which python
         cd ./electron-react
         npm install
         npm audit fix
