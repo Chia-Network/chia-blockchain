@@ -135,7 +135,8 @@ const useStyles = makeStyles(theme => ({
     height: 56
   },
   input: {
-    paddingRight: theme.spacing(2)
+    paddingRight: theme.spacing(2),
+    cursor: "pointer"
   },
   createButton: {
     float: "right",
@@ -228,14 +229,15 @@ const WorkLocation = () => {
           <Box flexGrow={1}>
             <TextField
               disabled
+              variant="outlined"
               className={classes.input}
               fullWidth
+              onClick={select}
               label={
                 work_location === ""
                   ? "Temporary folder location"
                   : work_location
               }
-              variant="outlined"
             />
           </Box>
           <Box>
@@ -283,6 +285,7 @@ const FinalLocation = () => {
             <TextField
               disabled
               className={classes.input}
+              onClick={select}
               fullWidth
               label={
                 final_location === "" ? "Final folder location" : final_location
@@ -445,6 +448,9 @@ const Proggress = () => {
   function cancel() {
     dispatch(stopService(service_plotter));
   }
+  const plotting_stopped = useSelector(
+    state => state.plot_control.plotting_stopped
+  );
   return (
     <div>
       <Paper className={classes.balancePaper}>
@@ -459,16 +465,21 @@ const Proggress = () => {
           </Box>
         </div>
         <div className={classes.cardSubSection}>
+          {plotting_stopped ? <p>Plotting stopped succesfully.</p> : ""}
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <Button
-                onClick={cancel}
-                className={classes.cancelButton}
-                variant="contained"
-                color="primary"
-              >
-                Cancel
-              </Button>
+              {!plotting_stopped ? (
+                <Button
+                  onClick={cancel}
+                  className={classes.cancelButton}
+                  variant="contained"
+                  color="primary"
+                >
+                  Cancel
+                </Button>
+              ) : (
+                ""
+              )}
               <Button
                 onClick={clearLog}
                 className={classes.clearButton}
@@ -489,10 +500,13 @@ const Plotter = () => {
   const in_progress = useSelector(
     state => state.plot_control.plotting_in_proggress
   );
+  const plotting_stopped = useSelector(
+    state => state.plot_control.plotting_stopped
+  );
   return (
     <div>
       <CreatePlot></CreatePlot>
-      {in_progress ? <Proggress></Proggress> : <div></div>}
+      {in_progress || plotting_stopped ? <Proggress></Proggress> : <div></div>}
     </div>
   );
 };
