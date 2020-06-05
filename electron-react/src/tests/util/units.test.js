@@ -1,4 +1,4 @@
-const units = require('./units');
+const units = require('../../util/units');
 
 describe('units', () => {
     describe('#getUnit', () => {

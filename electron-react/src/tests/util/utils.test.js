@@ -1,4 +1,4 @@
-const utils = require('./utils');
+const utils = require('../../util/utils');
 
 describe('utils', () => {
     describe('#unix_to_short_date', () => {
