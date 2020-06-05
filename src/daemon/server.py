@@ -257,16 +257,7 @@ class WebSocketServer:
                 log.exception(f"problem starting {service_name}")
                 error = "start failed"
 
-        if service_name == "chia-create-plots":
-            response = {
-                "success": success,
-                "service": service_name,
-                "out_file": f"{plotter_log_path(self.root_path).absolute()}",
-                "error": error,
-            }
-        else:
-            response = {"success": success, "service": service_name, "error": error}
-
+        response = {"success": success, "service": service_name, "error": error}
         return response
 
     async def stop_service(self, request):
@@ -358,15 +349,15 @@ def launch_plotter(root_path, service_array):
     os.environ["CHIA_ROOT"] = str(root_path)
     service_name = service_array[0]
     service_executable = executable_for_service(service_name)
+
+    # Swap service name with name of executable
     service_array[0] = service_executable
     startupinfo = None
     if os.name == "nt":
         startupinfo = subprocess.STARTUPINFO()  # type: ignore
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore
-    log.info("launch 1")
 
     plotter_path = plotter_log_path(root_path)
-    log.info("launch 11")
 
     if plotter_path.parent.exists():
         if plotter_path.exists():
@@ -374,12 +365,10 @@ def launch_plotter(root_path, service_array):
     else:
         mkdir(plotter_path.parent)
     outfile = open(plotter_path.resolve(), "w")
-    log.info("launch 111")
 
     process = subprocess.Popen(
         service_array, shell=False, stdout=outfile, startupinfo=startupinfo
     )
-    log.info("launch 2")
 
     pid_path = pid_path_for_service(root_path, service_name)
     try:
