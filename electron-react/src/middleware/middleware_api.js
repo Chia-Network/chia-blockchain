@@ -50,7 +50,7 @@ import {
   plottingStarted
 } from "../modules/plotter_messages";
 import isElectron from "is-electron";
-import { startService } from "../modules/daemon_messages";
+import { startService, isServiceRunning } from "../modules/daemon_messages";
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -150,6 +150,7 @@ export const handle_message = (store, payload) => {
       store.dispatch(get_height_info());
       store.dispatch(get_sync_status());
       store.dispatch(get_connection_info());
+      store.dispatch(isServiceRunning(service_plotter));
     }
   } else if (payload.command === "add_key") {
     if (payload.data.success) {
