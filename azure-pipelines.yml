@@ -19,6 +19,8 @@ strategy:
 #    Python38:
 #      python.version: '3.8'  # Disabled 3.8 because artifact names conflict
 #                               Also, installer can target one verison
+variables:
+  CHIA_VERSION: "0.1.6"
 
 steps:
   - task: UsePythonVersion@0
@@ -32,15 +34,9 @@ steps:
       python -m venv venv
       ln -s venv/bin/activate .
       . ./activate
-      echo "which python, pip after activate"
-      which python
-      which pip
       python -m pip install --upgrade pip
       pip install wheel pep517
       node -v
-      npm cache clean -f
-      npm install -g n
-      sudo n stable
       pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
     displayName: "Install dependencies"
 
@@ -52,7 +48,7 @@ steps:
   - task: NodeTool@0
     inputs:
       versionSpec: '12.x'
-    displayName: "Setup Node 12.xß"
+    displayName: "Setup Node 12.x"
 
   - script: |
       . ./activate
@@ -68,14 +64,11 @@ steps:
     displayName: "Install wheels"
 
   #  install-timelord.sh in venv
-  - script: |
-      . ./activate
-      echo "which python"
-      which python
-      brew install boost
-      sh install-timelord.sh
-      ./vdf_bench square_asm 400000
-    displayName: "Install timelord"
+#  - script: |
+#      . ./activate
+#      brew install boost
+#      sh install-timelord.sh
+##    displayName: "Install timelord"
 
 #  - script: |
 #      . ./activate
