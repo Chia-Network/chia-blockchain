@@ -135,7 +135,8 @@ const useStyles = makeStyles(theme => ({
     height: 56
   },
   input: {
-    paddingRight: theme.spacing(2)
+    paddingRight: theme.spacing(2),
+    cursor: "pointer"
   },
   createButton: {
     float: "right",
@@ -143,7 +144,10 @@ const useStyles = makeStyles(theme => ({
     paddingLeft: theme.spacing(2),
     height: 56,
     marginTop: theme.spacing(4),
-    marginBottom: theme.spacing(2)
+    marginBottom: theme.spacing(2),
+    background: "linear-gradient(45deg, #0a6b19 30%, #6ff196 90%)",
+    boxShadow: "0 3px 5px 2px rgba(255, 105, 135, .3)",
+    color: "white"
   },
   logContainer: {
     marginLeft: theme.spacing(3),
@@ -213,7 +217,9 @@ const WorkLocation = () => {
       };
       const result = await window.remote.dialog.showOpenDialog(dialogOptions);
       const filePath = result["filePaths"][0];
-      dispatch(workspaceSelected(filePath));
+      if (filePath) {
+        dispatch(workspaceSelected(filePath));
+      }
     } else {
       dispatch(
         openDialog("", "This feature is available only from electron app")
@@ -228,14 +234,15 @@ const WorkLocation = () => {
           <Box flexGrow={1}>
             <TextField
               disabled
+              variant="outlined"
               className={classes.input}
               fullWidth
+              onClick={select}
               label={
                 work_location === ""
                   ? "Temporary folder location"
                   : work_location
               }
-              variant="outlined"
             />
           </Box>
           <Box>
@@ -267,7 +274,9 @@ const FinalLocation = () => {
       };
       const result = await window.remote.dialog.showOpenDialog(dialogOptions);
       const filePath = result["filePaths"][0];
-      dispatch(finalSelected(filePath));
+      if (filePath) {
+        dispatch(finalSelected(filePath));
+      }
     } else {
       dispatch(
         openDialog("", "This feature is available only from electron app")
@@ -283,6 +292,7 @@ const FinalLocation = () => {
             <TextField
               disabled
               className={classes.input}
+              onClick={select}
               fullWidth
               label={
                 final_location === "" ? "Final folder location" : final_location
@@ -445,6 +455,9 @@ const Proggress = () => {
   function cancel() {
     dispatch(stopService(service_plotter));
   }
+  const plotting_stopped = useSelector(
+    state => state.plot_control.plotting_stopped
+  );
   return (
     <div>
       <Paper className={classes.balancePaper}>
@@ -459,16 +472,21 @@ const Proggress = () => {
           </Box>
         </div>
         <div className={classes.cardSubSection}>
+          {plotting_stopped ? <p>Plotting stopped succesfully.</p> : ""}
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <Button
-                onClick={cancel}
-                className={classes.cancelButton}
-                variant="contained"
-                color="primary"
-              >
-                Cancel
-              </Button>
+              {!plotting_stopped ? (
+                <Button
+                  onClick={cancel}
+                  className={classes.cancelButton}
+                  variant="contained"
+                  color="primary"
+                >
+                  Cancel
+                </Button>
+              ) : (
+                ""
+              )}
               <Button
                 onClick={clearLog}
                 className={classes.clearButton}
@@ -489,10 +507,13 @@ const Plotter = () => {
   const in_progress = useSelector(
     state => state.plot_control.plotting_in_proggress
   );
+  const plotting_stopped = useSelector(
+    state => state.plot_control.plotting_stopped
+  );
   return (
     <div>
       <CreatePlot></CreatePlot>
-      {in_progress ? <Proggress></Proggress> : <div></div>}
+      {in_progress || plotting_stopped ? <Proggress></Proggress> : <div></div>}
     </div>
   );
 };

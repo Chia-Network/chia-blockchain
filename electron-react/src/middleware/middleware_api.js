@@ -47,10 +47,11 @@ import {
 import {
   addProgress,
   resetProgress,
+  plottingStopped,
   plottingStarted
 } from "../modules/plotter_messages";
 import isElectron from "is-electron";
-import { startService } from "../modules/daemon_messages";
+import { startService, isServiceRunning } from "../modules/daemon_messages";
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -96,6 +97,8 @@ async function ping_harvester(store) {
   }
 }
 
+let global_tail = null;
+
 async function track_progress(store, location) {
   if (!isElectron()) {
     return;
@@ -110,14 +113,17 @@ async function track_progress(store, location) {
   dispatch(plottingStarted());
   try {
     dispatch(resetProgress());
-    const tail = new Tail(location, options);
-    tail.on("line", data => {
+    if (global_tail) {
+      global_tail.unwatch();
+    }
+    global_tail = new Tail(location, options);
+    global_tail.on("line", data => {
       dispatch(addProgress(data));
       if (data.includes("Summary:")) {
         dispatch(refreshPlots());
       }
     });
-    tail.on("error", err => {
+    global_tail.on("error", err => {
       dispatch(addProgress(err));
     });
   } catch (e) {
@@ -150,6 +156,7 @@ export const handle_message = (store, payload) => {
       store.dispatch(get_height_info());
       store.dispatch(get_sync_status());
       store.dispatch(get_connection_info());
+      store.dispatch(isServiceRunning(service_plotter));
     }
   } else if (payload.command === "add_key") {
     if (payload.data.success) {
@@ -289,7 +296,7 @@ export const handle_message = (store, payload) => {
   } else if (payload.command === "stop_service") {
     if (payload.data.success) {
       if (payload.data.service_name === service_plotter) {
-        store.dispatch(resetProgress());
+        store.dispatch(plottingStopped());
       }
     }
   }
