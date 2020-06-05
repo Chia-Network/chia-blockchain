@@ -66,7 +66,8 @@ Write-Output "   ---";
 npm run build
 
 Write-Output "Increase the stack for chiapos";
-Start-Process "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\MSVC\14.25.28610\bin\HostX64\x64\editbin.exe" -ArgumentList "/STACK:8000000 daemon/create_plots.exe" -Wait
+dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\SDK\ScopeCppSDK\"
+Start-Process "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\editbin.exe" -ArgumentList "/STACK:8000000 daemon/create_plots.exe" -Wait
 
 electron-packager . Chia-0.1.6 --asar.unpack="**/daemon/**" --overwrite --icon=./src/assets/img/chia.ico
 node winstaller.js

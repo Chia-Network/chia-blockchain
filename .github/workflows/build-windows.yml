@@ -20,14 +20,14 @@ jobs:
 
       - name: Check path before
         run: |
-          echo "$PATH"
+          echo $PATH
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.0.0
 
       - name: Check path after
         run: |
-          echo "$PATH"
+          echo $PATH
 
       - name: Build Windows installer with build_scripts\build_windows.ps1
         working-directory: ${{ github.workspace }}\build_scripts

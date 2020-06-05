@@ -68,7 +68,10 @@ jobs:
     - name: Build MacOS DMG in Catalina
       run: |
         . ./activate
-        cd build_scripts
+        cd ./electron-react
+        npm install
+        npm audit fix
+        cd ../build_scripts
         sh build_macos.sh
 
     - name: Test blockchain code with pytest
