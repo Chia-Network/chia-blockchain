@@ -169,6 +169,7 @@ export const handle_message = (store, payload) => {
       let start_harvester = startService(service_harvester);
       store.dispatch(start_farmer);
       store.dispatch(start_harvester);
+      store.dispatch(isServiceRunning(service_plotter));
     }
   } else if (payload.command === "delete_key") {
     if (payload.data.success) {
@@ -179,14 +180,7 @@ export const handle_message = (store, payload) => {
       store.dispatch(format_message("get_public_keys", {}));
     }
   } else if (payload.command === "get_public_keys") {
-    if (
-      payload.data.success &&
-      payload.data.public_key_fingerprints.length > 0
-    ) {
-      store.dispatch(changeEntranceMenu(presentSelectKeys));
-    } else {
-      store.dispatch(changeEntranceMenu(presentNewWallet));
-    }
+    store.dispatch(changeEntranceMenu(presentSelectKeys));
   } else if (payload.command === "delete_plot") {
     store.dispatch(refreshPlots());
   } else if (payload.command === "get_wallets") {

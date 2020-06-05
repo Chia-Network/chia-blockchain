@@ -168,12 +168,19 @@ const getStatusItems = (state, connected) => {
         "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
     };
     status_items.push(item);
-  } else {
+  } else if (connected) {
     const item = {
       label: "Status",
       value: "Synced",
       colour: "green",
       tooltip: "This node is fully caught up and validating the network"
+    };
+    status_items.push(item);
+  } else {
+    const item = {
+      label: "Status",
+      value: "Not connected",
+      colour: "black"
     };
     status_items.push(item);
   }
