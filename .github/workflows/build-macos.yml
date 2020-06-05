@@ -66,6 +66,8 @@ jobs:
         node-version: '12.x'
 
     - name: Build MacOS DMG in Catalina
+      env:
+        CHIA_VERSION: 0.1.7
       run: |
         . ./activate
         cd ./electron-react
@@ -73,8 +75,7 @@ jobs:
         npm audit fix
         cd ../build_scripts
         sh build_macos.sh
-      env:
-        CHIA_VERSION: 0.1.7
+
 
     - name: Test blockchain code with pytest
       run: |

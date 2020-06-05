@@ -18,15 +18,12 @@ jobs:
         with:
           python-version: "3.7"
 
-      - name: Check path before
-        run: |
-          echo $env:path
-
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.0.0
 
-      - name: Check path after
+      - name: Add path to editbin.exe
         run: |
+          $env:path="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$end:path"
           echo $env:path
 
       - name: Build Windows installer with build_scripts\build_windows.ps1

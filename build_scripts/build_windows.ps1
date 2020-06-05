@@ -2,7 +2,8 @@ cd ..
 
 mkdir build_scripts\win_build
 cd build_scripts\win_build
-dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\SDK\ScopeCppSDK\"
+dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\"
+Get-Command editbin.exe | Select-Object -ExpandProperty Definition
 
 Write-Output "   ---";
 Write-Output "curl miniupnpc, setprotitle";
@@ -67,7 +68,8 @@ Write-Output "   ---";
 npm run build
 
 Write-Output "Increase the stack for chiapos";
-Start-Process "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\editbin.exe" -ArgumentList "/STACK:8000000 daemon/create_plots.exe" -Wait
+# editbin.exe needs to be in your path
+Start-Process "editbin.exe" -ArgumentList "/STACK:8000000 daemon/create_plots.exe" -Wait
 
 electron-packager . Chia-0.1.6 --asar.unpack="**/daemon/**" --overwrite --icon=./src/assets/img/chia.ico
 node winstaller.js
