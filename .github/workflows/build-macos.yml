@@ -68,7 +68,7 @@ jobs:
         node-version: '12.x'
 
     - name: Set CHIA_INSTALLER_VERSION
-      run:
+      run: |
         . ./activate
         which python
         echo "::set-env name=CHIA_INSTALLER_VERSION::$(python build_scripts/installer-version.py)"
