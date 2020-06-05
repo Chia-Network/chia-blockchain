@@ -23,7 +23,6 @@ jobs:
         env:
           CHIA_VERSION: 0.1.7
         run: |
-#          git config --global core.longpaths true
           $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
           ./build_windows.ps1
 
