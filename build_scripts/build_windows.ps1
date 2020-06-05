@@ -2,7 +2,7 @@ cd ..
 
 mkdir build_scripts\win_build
 cd build_scripts\win_build
-dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\"
+dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\"
 Get-Command editbin.exe | Select-Object -ExpandProperty Definition
 
 Write-Output "   ---";
@@ -47,7 +47,7 @@ pip install --no-index --find-links=.\win_build\ chia-blockchain
 Write-Output "   ---";
 Write-Output "Use pyinstaller to create chia .exe's";
 Write-Output "   ---";
-pyinstaller daemon_windows.spec
+pyinstaller --log-level DEBUG daemon_windows.spec
 
 Write-Output "   ---";
 Write-Output "Copy chia executables to electron-react/";
