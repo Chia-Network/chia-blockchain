@@ -186,14 +186,9 @@ class WebSocketServer:
         t2 = request["t2"]
         d = request["d"]
 
-        if os.name == "nt":
-            t.replace(" ", r"^ ")
-            t2.replace(" ", r"^ ")
-            d.replace(" ", r"^ ")
-        else:
-            t.replace(" ", r"\ ")
-            t2.replace(" ", r"\ ")
-            d.replace(" ", r"\ ")
+        t = "\'" + t + "\'"
+        t2 = "\'" + t2 + "\'"
+        d = "\'" + d + "\'"
 
         command_args = []
         command_args.append(service_name)
