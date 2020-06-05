@@ -559,15 +559,6 @@ class WebSocketServer:
         response = {"success": True, "public_key_fingerprints": fingerprints}
         return response
 
-    async def logged_in(self):
-        private_key = self.keychain.get_wallet_key()
-        if private_key is None:
-            response = {"logged_in": False}
-        else:
-            response = {"logged_in": True}
-
-        return response
-
     async def log_in(self, request):
         await self.stop_wallet()
         fingerprint = request["fingerprint"]
@@ -622,7 +613,10 @@ class WebSocketServer:
     async def delete_key(self, request):
         await self.stop_wallet()
         fingerprint = request["fingerprint"]
+        self.log.warning(f"Removing one key {fingerprint}")
+        self.log.warning(f"{self.keychain.get_all_public_keys()}")
         self.keychain.delete_key_by_fingerprint(fingerprint)
+        self.log.warning(f"{self.keychain.get_all_public_keys()}")
         response = {"success": True}
         return response
 
@@ -726,8 +720,6 @@ class WebSocketServer:
             return await self.get_wallet_summaries()
         elif command == "get_public_keys":
             return await self.get_public_keys()
-        elif command == "logged_in":
-            return await self.logged_in()
         elif command == "generate_mnemonic":
             return await self.generate_mnemonic()
         elif command == "log_in":
