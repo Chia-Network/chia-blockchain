@@ -3,7 +3,8 @@ const initial_state = {
   workspace_location: "",
   final_location: "",
   progress_location: "",
-  progress: ""
+  progress: "",
+  plotting_stopped: false
 };
 
 export const plotControlReducer = (state = { ...initial_state }, action) => {
@@ -21,11 +22,11 @@ export const plotControlReducer = (state = { ...initial_state }, action) => {
         state.progress += "\n" + action.progress;
       } else if (action.command === "plotting_started") {
         state.plotting_in_proggress = true;
+        state.plotting_stopped = false;
       } else if (action.command === "progress_location") {
         state.progress_location = action.location;
       } else if (action.command === "plotting_stopped") {
-        state.plotting_in_proggress = false;
-        state.progress = "";
+        state.plotting_stopped = true;
       }
       return state;
     default:
