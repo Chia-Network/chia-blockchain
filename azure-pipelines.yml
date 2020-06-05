@@ -19,8 +19,6 @@ strategy:
 #    Python38:
 #      python.version: '3.8'  # Disabled 3.8 because artifact names conflict
 #                               Also, installer can target one verison
-variables:
-  CHIA_VERSION: "0.1.6"
 
 steps:
   - task: UsePythonVersion@0
@@ -62,7 +60,7 @@ steps:
       . ./activate
       pip install .
     displayName: "Install wheels"
-
+    env: { CHIA_INSTALLER_VERSION: "0.1.6" }
   #  install-timelord.sh in venv
 #  - script: |
 #      . ./activate
