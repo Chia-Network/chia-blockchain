@@ -208,7 +208,9 @@ const WorkLocation = () => {
   );
   async function select() {
     if (isElectron()) {
-      const dialogOptions = { properties: ["openDirectory"] };
+      const dialogOptions = {
+        properties: ["openDirectory", "showHiddenFiles"]
+      };
       const result = await window.remote.dialog.showOpenDialog(dialogOptions);
       const filePath = result["filePaths"][0];
       dispatch(workspaceSelected(filePath));
@@ -260,7 +262,9 @@ const FinalLocation = () => {
   );
   async function select() {
     if (isElectron()) {
-      const dialogOptions = { properties: ["openDirectory"] };
+      const dialogOptions = {
+        properties: ["openDirectory", "showHiddenFiles"]
+      };
       const result = await window.remote.dialog.showOpenDialog(dialogOptions);
       const filePath = result["filePaths"][0];
       dispatch(finalSelected(filePath));
