@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   build:
-    name: Python 3.7 on windows-latest
+    name: Windows installer
     runs-on: [windows-latest]
 
     steps:
@@ -18,13 +18,12 @@ jobs:
         with:
           python-version: "3.7"
 
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.0.0
-
       - name: Build Windows installer with build_scripts\build_windows.ps1
         working-directory: ${{ github.workspace }}\build_scripts
+        env:
+          CHIA_VERSION: 0.1.6
         run: |
-          git config --global core.longpaths true
+          $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
           ./build_windows.ps1
 
       - name: Upload Windows exe's to artifacts
