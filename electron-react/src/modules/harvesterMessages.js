@@ -37,7 +37,7 @@ export const refreshPlots = () => {
 
 export const addPlot = (filename, pool_pk, plot_sk) => {
   var action = harvesterMessage();
-  action.message.command = "delete_plot";
+  action.message.command = "add_plot";
   action.message.data = { filename, pool_pk, plot_sk };
   return action;
 };

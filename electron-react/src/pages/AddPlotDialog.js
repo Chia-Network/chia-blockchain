@@ -54,7 +54,10 @@ function AddPlotDialog(props) {
 
   async function select(setterFn) {
     if (isElectron()) {
-      const dialogOptions = { properties: ["openDirectory"] };
+      const dialogOptions = {
+        properties: ["openFile", "showHiddenFiles"],
+        buttonLabel: "Select Plot"
+      };
       const result = await window.remote.dialog.showOpenDialog(dialogOptions);
       const filePath = result["filePaths"][0];
       setterFn(filePath);
