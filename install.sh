@@ -80,7 +80,6 @@ fi
 
 if [ "$UBUNTU_PRE_2004" = "True" ]; then
   UBUNTU_PRE_2004=true  # Unfortunately Python returns True when shell expects true
-  echo "would have run npm"
   sudo npm install -g n
   sudo n stable
   export PATH="$PATH"

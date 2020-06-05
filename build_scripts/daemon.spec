@@ -24,11 +24,11 @@ block_cipher = None
 subcommand_modules = [f"{root}/src.cmds.%s" % _ for _ in SUBCOMMANDS]
 other = ["aiter.active_aiter", "aiter.aiter_forker", "aiter.aiter_to_iter", "aiter.azip", "aiter.flatten_aiter", "aiter.gated_aiter",
 "aiter.iter_to_aiter", "aiter.join_aiters", "aiter.map_aiter", "aiter.map_filter_aiter", "aiter.preload_aiter",
-"aiter.push_aiter", "aiter.sharable_aiter", "aiter.stoppable_aiter","src.wallet.websocket_server"]
+"aiter.push_aiter", "aiter.sharable_aiter", "aiter.stoppable_aiter"]
 
 entry_points = ["src.cmds.check_plots",
             "src.cmds.create_plots",
-            "src.wallet.websocket_server",
+            "src.server.start_wallet",
             "src.server.start_full_node",
             "src.server.start_harvester",
             "src.server.start_farmer",
@@ -70,7 +70,7 @@ full_node = Analysis([f"{root}/src/server/start_full_node.py"],
              cipher=block_cipher,
              noarchive=False)
 
-wallet = Analysis([f"{root}/src/wallet/websocket_server.py"],
+wallet = Analysis([f"{root}/src/server/start_wallet.py"],
              pathex=[f"{root}/venv/lib/python3.7/site-packages/aiter/", f"{root}"],
              binaries = [],
              datas=[(f"../src/util/english.txt", f"./src/util/"), version_data ],
@@ -174,7 +174,7 @@ wallet_exe = EXE(wallet_pyz,
           wallet.scripts,
           [],
           exclude_binaries=True,
-          name='websocket_server',
+          name='wallet_server',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False)

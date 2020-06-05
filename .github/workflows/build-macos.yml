@@ -5,7 +5,7 @@ on: [push]
 
 jobs:
   build:
-    name: Python 3.7 on macOS-latest
+    name: MacOS-latest on Pyton 3.7
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -66,10 +66,16 @@ jobs:
         node-version: '12.x'
 
     - name: Build MacOS DMG in Catalina
+      env:
+        CHIA_VERSION: 0.1.6
       run: |
         . ./activate
-        cd build_scripts
+        cd ./electron-react
+        npm install
+        npm audit fix
+        cd ../build_scripts
         sh build_macos.sh
+
 
     - name: Test blockchain code with pytest
       run: |

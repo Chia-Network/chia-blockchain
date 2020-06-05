@@ -1,3 +1,9 @@
+# The environment variable CHIA_VERSION needs to be defined
+# $env:path should contain a path to editbin.exe
+
+if (-not (Test-Path env:CHIA_VERSION)) { $env:CHIA_VERSION = '0.0.0' }
+Write-Output "Chia Version is: $env:CHIA_VERSION";
+
 cd ..
 
 mkdir build_scripts\win_build
@@ -45,7 +51,7 @@ pip install --no-index --find-links=.\win_build\ chia-blockchain
 Write-Output "   ---";
 Write-Output "Use pyinstaller to create chia .exe's";
 Write-Output "   ---";
-pyinstaller daemon_windows.spec
+pyinstaller --log-level INFO daemon_windows.spec
 
 Write-Output "   ---";
 Write-Output "Copy chia executables to electron-react/";
@@ -65,10 +71,14 @@ Write-Output "Electron package Windows Installer";
 Write-Output "   ---";
 npm run build
 
+Write-Output "   ---";
 Write-Output "Increase the stack for chiapos";
-Start-Process "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\MSVC\14.25.28610\bin\HostX64\x64\editbin.exe" -ArgumentList "/STACK:8000000 daemon/create_plots.exe" -Wait
+# editbin.exe needs to be in your path
+Start-Process "editbin.exe" -ArgumentList "/STACK:8000000 daemon/create_plots.exe" -Wait
+Write-Output "   ---";
 
-electron-packager . Chia-0.1.6 --asar.unpack="**/daemon/**" --overwrite --icon=./src/assets/img/chia.ico
+$packageName = "Chia-$env:CHIA_VERSION"
+electron-packager . $packageName --asar.unpack="**/daemon/**" --overwrite --icon=./src/assets/img/chia.ico
 node winstaller.js
 
 Write-Output "   ---";
