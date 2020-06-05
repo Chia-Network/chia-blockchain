@@ -23,7 +23,7 @@ jobs:
 
       - name: Add path to editbin.exe
         run: |
-          $env:path="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$end:path"
+          $env:path='C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path'
           echo $env:path
 
       - name: Build Windows installer with build_scripts\build_windows.ps1

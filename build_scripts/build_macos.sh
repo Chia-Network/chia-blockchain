@@ -1,5 +1,5 @@
 #!/bin/bash
-if ! $CHIA_VERSION; then
+if [ ! $CHIA_VERSION ]; then
   echo "No environment variable CHIA_VERSION set. Exiting."
   exit 1
 fi

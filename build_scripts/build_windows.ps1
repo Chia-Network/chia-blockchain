@@ -2,7 +2,7 @@ cd ..
 
 mkdir build_scripts\win_build
 cd build_scripts\win_build
-dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\"
+dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\"
 Get-Command editbin.exe | Select-Object -ExpandProperty Definition
 
 Write-Output "   ---";
