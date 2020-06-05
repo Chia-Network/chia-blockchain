@@ -2,6 +2,8 @@ cd ..
 
 mkdir build_scripts\win_build
 cd build_scripts\win_build
+echo $env:path
+Get-Command editbin.exe | Select-Object -ExpandProperty Definition
 
 Write-Output "   ---";
 Write-Output "curl miniupnpc, setprotitle";
