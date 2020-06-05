@@ -1,4 +1,5 @@
 import logging
+from multiprocessing import freeze_support
 
 from src.full_node.full_node import FullNode
 from src.rpc.full_node_rpc_server import start_full_node_rpc_server
@@ -17,7 +18,7 @@ log = logging.getLogger(__name__)
 def service_kwargs_for_full_node(root_path):
     service_name = "full_node"
     config = load_config_cli(root_path, "config.yaml", service_name)
-
+    freeze_support()
     api = FullNode(config, root_path=root_path)
 
     introducer = config["introducer_peer"]
