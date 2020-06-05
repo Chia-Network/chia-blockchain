@@ -37,6 +37,9 @@ def main():
         "-i", "--index", help="First plot index", type=int, default=None
     )
     parser.add_argument(
+        "-b", "--buffer", help="Megabytes for sort/plot buffer", type=int, default=2048
+    )
+    parser.add_argument(
         "-p", "--pool_pub_key", help="Hex public key of pool", type=str, default=""
     )
     parser.add_argument(
@@ -152,6 +155,7 @@ def main():
                 args.size,
                 bytes([]),
                 plot_seed,
+                buffer,
             )
             finished_filenames.append(filename)
         else:
