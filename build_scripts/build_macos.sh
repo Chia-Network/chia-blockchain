@@ -1,4 +1,9 @@
 #!/bin/bash
+if [ ! $CHIA_VERSION ]; then
+  echo "No environment variable CHIA_VERSION set. Exiting."
+  exit 1
+fi
+
 echo "Installing npm and electron packagers"
 npm install electron-installer-dmg -g
 npm install electron-packager -g
@@ -24,5 +29,5 @@ mv Chia-darwin-x64 ../build_scripts/dist/
 cd ../build_scripts
 
 echo "Create .dmg"
-electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia-0.1.6 --overwrite
+electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia-$CHIA_VERSION --overwrite
 ls -l
