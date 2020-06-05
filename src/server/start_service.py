@@ -3,7 +3,6 @@ import logging
 import logging.config
 import signal
 
-from multiprocessing import freeze_support
 from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple
 
 try:
@@ -212,7 +211,6 @@ async def async_run_service(*args, **kwargs):
 
 
 def run_service(*args, **kwargs):
-    freeze_support()
     if uvloop is not None:
         uvloop.install()
     # TODO: use asyncio.run instead
