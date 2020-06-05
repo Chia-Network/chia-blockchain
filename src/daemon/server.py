@@ -37,7 +37,7 @@ if getattr(sys, "frozen", False):
         "chia": "chia",
         "chia-check-plots": "check_plots",
         "chia-create-plots": "create_plots",
-        "chia-wallet": "start_wallet",
+        "chia-wallet": "wallet_server",
         "chia_full_node": "start_full_node",
         "chia_harvester": "start_harvester",
         "chia_farmer": "start_farmer",
