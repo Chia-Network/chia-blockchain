@@ -144,7 +144,10 @@ const useStyles = makeStyles(theme => ({
     paddingLeft: theme.spacing(2),
     height: 56,
     marginTop: theme.spacing(4),
-    marginBottom: theme.spacing(2)
+    marginBottom: theme.spacing(2),
+    background: "linear-gradient(45deg, #0a6b19 30%, #6ff196 90%)",
+    boxShadow: "0 3px 5px 2px rgba(255, 105, 135, .3)",
+    color: "white"
   },
   logContainer: {
     marginLeft: theme.spacing(3),
@@ -214,7 +217,9 @@ const WorkLocation = () => {
       };
       const result = await window.remote.dialog.showOpenDialog(dialogOptions);
       const filePath = result["filePaths"][0];
-      dispatch(workspaceSelected(filePath));
+      if (filePath) {
+        dispatch(workspaceSelected(filePath));
+      }
     } else {
       dispatch(
         openDialog("", "This feature is available only from electron app")
@@ -269,7 +274,9 @@ const FinalLocation = () => {
       };
       const result = await window.remote.dialog.showOpenDialog(dialogOptions);
       const filePath = result["filePaths"][0];
-      dispatch(finalSelected(filePath));
+      if (filePath) {
+        dispatch(finalSelected(filePath));
+      }
     } else {
       dispatch(
         openDialog("", "This feature is available only from electron app")
