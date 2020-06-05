@@ -156,6 +156,8 @@ class WebSocketServer:
             response = await self.ping()
         elif command == "start_service":
             response = await self.start_service(data)
+        elif command == "start_plotting":
+            response = await self.start_plotting(data)
         elif command == "stop_service":
             response = await self.stop_service(data)
         elif command == "is_running":
@@ -172,6 +174,60 @@ class WebSocketServer:
 
     async def ping(self):
         response = {"success": True, "value": "pong"}
+        return response
+
+    async def start_plotting(self, request):
+        service_name = request["service"]
+        k = request["k"]
+        n = request["n"]
+        t = request["t"]
+        t2 = request["t2"]
+        d = request["d"]
+
+        if os.name == "nt":
+            t.replace(" ", r"^ ")
+            t2.replace(" ", r"^ ")
+            d.replace(" ", r"^ ")
+        else:
+            t.replace(" ", r"\ ")
+            t2.replace(" ", r"\ ")
+            d.replace(" ", r"\ ")
+
+        command_args = []
+        command_args.append(service_name)
+        command_args.append(f"-k {k}")
+        command_args.append(f"-n {n}")
+        command_args.append(f"-t {t}")
+        command_args.append(f"-2 {t2}")
+        command_args.append(f"-d {d}")
+
+        error = None
+        success = False
+
+        if service_name in self.services:
+            service = self.services[service_name]
+            r = service is not None and service.poll() is None
+            if r is False:
+                self.services.pop(service_name)
+                error = None
+            else:
+                error = "already running"
+        if error is None:
+            try:
+                self.log.info(f"Start potting: {command_args}")
+                process, pid_path = launch_plotter(self.root_path, command_args)
+                self.services[service_name] = process
+                success = True
+            except (subprocess.SubprocessError, IOError):
+                log.exception(f"problem starting {service_name}")
+                error = "start failed"
+
+        response = {
+            "success": success,
+            "service": service_name,
+            "out_file": f"{plotter_log_path(self.root_path).absolute()}",
+            "error": error,
+        }
         return response
 
     async def start_service(self, request):
@@ -297,6 +353,44 @@ def plotter_log_path(root_path):
     return root_path / "plotter" / "plotter_log.txt"
 
 
+def launch_plotter(root_path, service_array):
+    # we need to pass on the possibly altered CHIA_ROOT
+    os.environ["CHIA_ROOT"] = str(root_path)
+    service_name = service_array[0]
+    service_executable = executable_for_service(service_name)
+    service_array[0] = service_executable
+    startupinfo = None
+    if os.name == "nt":
+        startupinfo = subprocess.STARTUPINFO()  # type: ignore
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore
+    log.info("launch 1")
+
+    plotter_path = plotter_log_path(root_path)
+    log.info("launch 11")
+
+    if plotter_path.parent.exists():
+        if plotter_path.exists():
+            plotter_path.unlink()
+    else:
+        mkdir(plotter_path.parent)
+    outfile = open(plotter_path.resolve(), "w")
+    log.info("launch 111")
+
+    process = subprocess.Popen(
+        service_array, shell=False, stdout=outfile, startupinfo=startupinfo
+    )
+    log.info("launch 2")
+
+    pid_path = pid_path_for_service(root_path, service_name)
+    try:
+        mkdir(pid_path.parent)
+        with open(pid_path, "w") as f:
+            f.write(f"{process.pid}\n")
+    except Exception:
+        pass
+    return process, pid_path
+
+
 def launch_service(root_path, service_command):
     """
     Launch a child process.
@@ -317,19 +411,8 @@ def launch_service(root_path, service_command):
     if os.name == "nt":
         startupinfo = subprocess.STARTUPINFO()  # type: ignore
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore
-    if service_name == "chia-create-plots":
-        plotter_path = plotter_log_path(root_path)
-        if plotter_path.parent.exists():
-            if plotter_path.exists():
-                plotter_path.unlink()
-        else:
-            mkdir(plotter_path.parent)
-        outfile = open(plotter_path.resolve(), "w")
-        process = subprocess.Popen(
-            service_array, shell=False, stdout=outfile, startupinfo=startupinfo
-        )
-    else:
-        process = subprocess.Popen(service_array, shell=False, startupinfo=startupinfo)
+
+    process = subprocess.Popen(service_array, shell=False, startupinfo=startupinfo)
     pid_path = pid_path_for_service(root_path, service_command)
     try:
         mkdir(pid_path.parent)
