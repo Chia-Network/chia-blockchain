@@ -8,6 +8,10 @@ and this project does not yet adhere to [Semantic Versioning](https://semver.org
 ## [Unreleased]
 
 - test plots now go into `~/.chia/test-plots/`
+- Added ability to add plot from filesystem (also need pool_pk and sk from plots.yaml)
+- Added ability to import private keys from the UI
+- Changing keys will not interrupt plotting log
+- User can specify log level in the config file (defaults to info)
 
 ## [1.0beta6] aka Beta 1.6 - 2020-06-01
 
