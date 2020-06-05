@@ -37,4 +37,18 @@ def initialize_logging(prefix: str, logging_config: Dict, root_path: Path):
         handler = RotatingFileHandler(log_path, maxBytes=20000000, backupCount=7)
         logger.addHandler(handler)
 
-    logger.setLevel(logging.INFO)
+    if "log_level" in logging_config:
+        if logging_config["log_level"] == "CRITICAL":
+            logger.setLevel(logging.CRITICAL)
+        elif logging_config["log_level"] == "ERROR":
+            logger.setLevel(logging.ERROR)
+        elif logging_config["log_level"] == "WARNING":
+            logger.setLevel(logging.WARNING)
+        elif logging_config["log_level"] == "INFO":
+            logger.setLevel(logging.INFO)
+        elif logging_config["log_level"] == "DEBUG":
+            logger.setLevel(logging.DEBUG)
+        else:
+            logger.setLevel(logging.INFO)
+    else:
+        logger.setLevel(logging.INFO)

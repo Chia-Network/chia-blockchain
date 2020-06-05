@@ -106,7 +106,6 @@ class WebSocketServer:
                 local_test=True,
             )
         else:
-            log.info("Not Testing")
             self.wallet_node = await WalletNode.create(
                 self.config, private_key, self.root_path
             )
