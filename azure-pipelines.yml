@@ -20,7 +20,7 @@ strategy:
 #      python.version: '3.8'  # Disabled 3.8 because artifact names conflict
 #                               Also, installer can target one verison
 variables:
-  CHIA_VERSION: "0.1.7"
+  CHIA_VERSION: "0.1.6"
 
 steps:
   - task: UsePythonVersion@0
