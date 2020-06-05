@@ -19,7 +19,6 @@ jobs:
           python-version: "3.7"
 
       - name: Build Windows installer with build_scripts\build_windows.ps1
-        working-directory: ${{ github.workspace }}\build_scripts
         env:
           CHIA_INSTALLER_VERSION: 0.1.6
         run: |
