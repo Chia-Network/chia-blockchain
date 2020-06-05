@@ -1,7 +1,10 @@
 # The environment variable CHIA_INSTALLER_VERSION needs to be defined
 # $env:path should contain a path to editbin.exe
 
-if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) { $env:CHIA_INSTALLER_VERSION = '0.0.0' }
+if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
+  $env:CHIA_INSTALLER_VERSION = '0.0.0'
+  Write-Output "No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0"
+  }
 Write-Output "Chia Version is: $env:CHIA_INSTALLER_VERSION";
 
 cd ..

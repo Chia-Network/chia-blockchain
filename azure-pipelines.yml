@@ -60,7 +60,6 @@ steps:
       . ./activate
       pip install .
     displayName: "Install wheels"
-    env: { CHIA_INSTALLER_VERSION: "0.1.6" }
   #  install-timelord.sh in venv
 #  - script: |
 #      . ./activate
@@ -84,6 +83,7 @@ steps:
       cd build_scripts
       sh build_macos.sh
     displayName: "Build DMG with build_scripts/build_macos.sh"
+    env: { CHIA_INSTALLER_VERSION: "0.1.6" }
 
   - task: PublishPipelineArtifact@1
     inputs:

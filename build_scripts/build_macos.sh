@@ -1,8 +1,9 @@
 #!/bin/bash
 if [ ! $CHIA_INSTALLER_VERSION ]; then
-  echo "No environment variable CHIA_INSTALLER_VERSION set. Exiting."
-  exit 1
+  echo "No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0."
+  CHIA_INSTALLER_VERSION="0.0.0"
 fi
+echo "Chia Version is: $CHIA_INSTALLER_VERSION"
 
 echo "Installing npm and electron packagers"
 npm install electron-installer-dmg -g
