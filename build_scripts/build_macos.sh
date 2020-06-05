@@ -1,6 +1,6 @@
 #!/bin/bash
-if [ ! $CHIA_VERSION ]; then
-  echo "No environment variable CHIA_VERSION set. Exiting."
+if [ ! $CHIA_INSTALLER_VERSION ]; then
+  echo "No environment variable CHIA_INSTALLER_VERSION set. Exiting."
   exit 1
 fi
 
@@ -29,5 +29,5 @@ mv Chia-darwin-x64 ../build_scripts/dist/
 cd ../build_scripts
 
 echo "Create .dmg"
-electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia-$CHIA_VERSION --overwrite
+electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia-$CHIA_INSTALLER_VERSION --overwrite
 ls -l

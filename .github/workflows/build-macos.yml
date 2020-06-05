@@ -67,7 +67,7 @@ jobs:
 
     - name: Build MacOS DMG in Catalina
       env:
-        CHIA_VERSION: 0.1.6
+        CHIA_INSTALLER_VERSION: 0.1.6
       run: |
         . ./activate
         cd ./electron-react

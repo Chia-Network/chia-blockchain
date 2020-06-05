@@ -1,8 +1,8 @@
-# The environment variable CHIA_VERSION needs to be defined
+# The environment variable CHIA_INSTALLER_VERSION needs to be defined
 # $env:path should contain a path to editbin.exe
 
-if (-not (Test-Path env:CHIA_VERSION)) { $env:CHIA_VERSION = '0.0.0' }
-Write-Output "Chia Version is: $env:CHIA_VERSION";
+if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) { $env:CHIA_INSTALLER_VERSION = '0.0.0' }
+Write-Output "Chia Version is: $env:CHIA_INSTALLER_VERSION";
 
 cd ..
 
@@ -77,7 +77,7 @@ Write-Output "Increase the stack for chiapos";
 Start-Process "editbin.exe" -ArgumentList "/STACK:8000000 daemon/create_plots.exe" -Wait
 Write-Output "   ---";
 
-$packageName = "Chia-$env:CHIA_VERSION"
+$packageName = "Chia-$env:CHIA_INSTALLER_VERSION"
 electron-packager . $packageName --asar.unpack="**/daemon/**" --overwrite --icon=./src/assets/img/chia.ico
 node winstaller.js
 
