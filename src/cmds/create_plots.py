@@ -155,7 +155,7 @@ def main():
                 args.size,
                 bytes([]),
                 plot_seed,
-                buffer,
+                args.buffer,
             )
             finished_filenames.append(filename)
         else:
