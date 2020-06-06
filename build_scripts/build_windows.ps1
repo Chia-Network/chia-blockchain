@@ -97,3 +97,4 @@ Write-Output "   ---"
 Write-Output "Windows Installer complete"
 Write-Output "   ---"
 dir Chia-win32-x64
+dir release-builds
