@@ -23,7 +23,7 @@ jobs:
           CHIA_INSTALLER_VERSION: 0.1.6
         run: |
           $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
-          ./build_windows.ps1
+          .\build_scripts\build_windows.ps1
 
       - name: Upload Windows exe's to artifacts
         uses: actions/upload-artifact@v1

@@ -7,6 +7,7 @@ if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
   }
 Write-Output "Chia Version is: $env:CHIA_INSTALLER_VERSION"
 
+dir
 mkdir build_scripts\win_build
 cd build_scripts\win_build
 

@@ -82,6 +82,7 @@ steps:
       . ./activate
       cd build_scripts
       sh build_macos.sh
+      dir
     displayName: "Build DMG with build_scripts/build_macos.sh"
     env: { CHIA_INSTALLER_VERSION: "0.1.6" }
 
@@ -93,6 +94,6 @@ steps:
 
   - task: PublishPipelineArtifact@1
     inputs:
-      targetPath: $(System.DefaultWorkingDirectory)/build_scripts/Chia-0.1.6.dmg
+      targetPath: $(System.DefaultWorkingDirectory)/build_scripts/final-installer/
       artifactName: MacOS-DMG
     displayName: "Upload MacOS DMG"

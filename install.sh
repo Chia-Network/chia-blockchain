@@ -91,10 +91,13 @@ fi
 
 # We will set up node.js on GitHub Actions and Azure Pipelines directly
 # for Mac and Windows so skip unless completing a source/developer install
+# Ubuntu special cases above
 if [ ! $CI ]; then
   cd ./electron-react
   npm install
   npm audit fix
+else
+  echo "Skipping node.js in install.sh on ci"
 fi
 
 echo ""
