@@ -55,7 +55,6 @@ def main():
     if len(dev_release_number) > 0:
         if windows:
             dev_release_number_digits = "".join([i for i in dev_release_number if i.isdigit()])
-            print(dev_release_number_digits)
             dev_release_number = "." + dev_release_number_digits
         install_release_number += dev_release_number
 
