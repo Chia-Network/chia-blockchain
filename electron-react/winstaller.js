@@ -11,7 +11,6 @@ getInstallerConfig()
 function getInstallerConfig () {
   console.log('Creating windows installer')
   const rootPath = path.join('./')
-  console.log('past rootPath')
   const outPath = path.join(rootPath, 'release-builds')
   console.log('past outPath')
 
@@ -20,6 +19,7 @@ function getInstallerConfig () {
     authors: 'Chia Network',
     noMsi: true,
     outputDirectory: path.join(outPath, 'windows-installer'),
+//    outputDirectory: outPath,
     exe: 'Chia-' + process.env.CHIA_INSTALLER_VERSION + '.exe',
     setupExe: 'ChiaSetup-' + process.env.CHIA_INSTALLER_VERSION + '.exe',
     setupIcon: path.join(rootPath, 'src', 'assets', 'img', 'chia.ico')
