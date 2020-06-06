@@ -65,11 +65,6 @@ jobs:
       with:
         node-version: '12.x'
 
-#    - name: Set CHIA_INSTALLER_VERSION
-#      run: |
-#        . ./activate
-#        echo "::set-env name=CHIA_INSTALLER_VERSION::$(python build_scripts/installer-version.py)"
-
     - name: Build MacOS DMG in Catalina
       run: |
         . ./activate
@@ -79,10 +74,10 @@ jobs:
         cd ../build_scripts
         sh build_macos.sh
 
-#    - name: Test blockchain code with pytest
-#      run: |
-#        . ./activate
-#        ./venv/bin/py.test tests -s -v
+    - name: Test blockchain code with pytest
+      run: |
+        . ./activate
+        ./venv/bin/py.test tests -s -v
 
     - name: Upload MacOS artifacts
       uses: actions/upload-artifact@v1
