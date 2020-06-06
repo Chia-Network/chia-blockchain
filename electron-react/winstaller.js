@@ -17,9 +17,9 @@ function getInstallerConfig () {
   return Promise.resolve({
     appDirectory: path.join(rootPath, 'Chia-win32-x64'),
     authors: 'Chia Network',
+    version: env.CHIA_INSTALLER_VERSION,
     noMsi: true,
     outputDirectory: path.join(outPath, 'windows-installer'),
-//    outputDirectory: outPath,
     exe: 'Chia-' + process.env.CHIA_INSTALLER_VERSION + '.exe',
     setupExe: 'ChiaSetup-' + process.env.CHIA_INSTALLER_VERSION + '.exe',
     setupIcon: path.join(rootPath, 'src', 'assets', 'img', 'chia.ico')
