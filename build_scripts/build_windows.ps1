@@ -82,13 +82,12 @@ Write-Output "   ---"
 $packageName = "Chia-$env:CHIA_INSTALLER_VERSION"
 Write-Output "packageName is $packageName"
 
-mkdir final_installer
-electron-packager . Chia --asar.unpack="**/daemon/**" --overwrite --icon=.\src\assets\img\chia.ico --out final_installer
+electron-packager . Chia --asar.unpack="**/daemon/**" --overwrite --icon=.\src\assets\img\chia.ico
 #electron-osx-sign Chia-darwin-x64/Chia.app --no-gatekeeper-assess  --platform=darwin  --hardened-runtime --provisioning-profile=embedded.provisionprofile --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist
 node winstaller.js
 
 Write-Output "   ---"
 Write-Output "Windows Installer complete"
 Write-Output "   ---"
-dir
-dir final_installer
+dir Chia-win32-x64
+dir final_installer\Chia-win32-x64
