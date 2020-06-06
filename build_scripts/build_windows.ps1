@@ -10,7 +10,6 @@ Write-Output "   ---"
 curl -OL --show-error --fail https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl
 curl -OL --show-error --fail https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
 cd ..\..
-dir
 
 Write-Output "   ---"
 Write-Output "Create venv - python3.7 or 3.8 is required in PATH"
@@ -81,12 +80,16 @@ Start-Process "editbin.exe" -ArgumentList "/STACK:8000000 daemon\create_plots.ex
 Write-Output "   ---"
 
 $packageVersion = "$env:CHIA_INSTALLER_VERSION"
+$versionArray = $packageVersion.Split("{.}")
+$shortVersion = $versionArray[0], $versionArray[1], $versionArray[2] -join "."
 $packageName = "Chia-$packageVersion"
+
 Write-Output "packageName is $packageName"
+Write-Output "shortVersion is $shortVersion"
 
 Write-Output "   ---"
 Write-Output "electron-packager"
-electron-packager . Chia --asar.unpack="**/daemon/**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion
+electron-packager . Chia --asar.unpack="**/daemon/**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$shortVersion
 #electron-osx-sign Chia-darwin-x64/Chia.app --no-gatekeeper-assess  --platform=darwin  --hardened-runtime --provisioning-profile=embedded.provisionprofile --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist
 Write-Output "   ---"
 
