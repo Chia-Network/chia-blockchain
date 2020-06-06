@@ -11,13 +11,12 @@ getInstallerConfig()
 function getInstallerConfig () {
   console.log('Creating windows installer')
   const rootPath = path.join('./')
-  console.log('rootPath is'. rootPath)
+  console.log('past rootPath')
   const outPath = path.join(rootPath, 'release-builds')
-  console.log('outPath is'. outPath)
+  console.log('past outPath')
 
   return Promise.resolve({
-//    appDirectory: path.join(rootPath, 'Chia-' + process.env.CHIA_INSTALLER_VERSION + '-win32-x64/'),
-    appDirectory: path.join(rootPath, 'Chia-win32-x64/'),
+    appDirectory: path.join(rootPath, 'Chia-win32-x64'),
     authors: 'Chia Network',
     noMsi: true,
     outputDirectory: path.join(outPath, 'windows-installer'),
