@@ -19,8 +19,6 @@ strategy:
 #    Python38:
 #      python.version: '3.8'  # Disabled 3.8 because artifact names conflict
 #                               Also, installer can target one verison
-variables:
-  CHIA_VERSION: "0.1.6"
 
 steps:
   - task: UsePythonVersion@0
@@ -35,7 +33,7 @@ steps:
       ln -s venv/bin/activate .
       . ./activate
       python -m pip install --upgrade pip
-      pip install wheel pep517
+      pip install wheel pep517 setuptools_scm
       node -v
       pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
     displayName: "Install dependencies"
@@ -63,12 +61,12 @@ steps:
       pip install .
     displayName: "Install wheels"
 
-  #  install-timelord.sh in venv
+#  install-timelord.sh in venv
 #  - script: |
 #      . ./activate
 #      brew install boost
 #      sh install-timelord.sh
-##    displayName: "Install timelord"
+#    displayName: "Install timelord"
 
 #  - script: |
 #      . ./activate
@@ -85,7 +83,9 @@ steps:
       . ./activate
       cd build_scripts
       sh build_macos.sh
+      ls -l final_installer
     displayName: "Build DMG with build_scripts/build_macos.sh"
+    env: { CHIA_INSTALLER_VERSION: "0.1.6" }
 
   - task: PublishPipelineArtifact@1
     inputs:
@@ -95,6 +95,6 @@ steps:
 
   - task: PublishPipelineArtifact@1
     inputs:
-      targetPath: $(System.DefaultWorkingDirectory)/build_scripts/Chia-0.1.6.dmg
+      targetPath: $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
       artifactName: MacOS-DMG
     displayName: "Upload MacOS DMG"
