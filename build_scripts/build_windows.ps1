@@ -82,7 +82,8 @@ Write-Output "   ---"
 $packageName = "Chia-$env:CHIA_INSTALLER_VERSION"
 Write-Output "packageName is $packageName"
 
-electron-packager . $packageName --asar.unpack="**/daemon/**" --overwrite --icon=.\src\assets\img\chia.ico
+mkdir final_installer
+electron-packager . $packageName --asar.unpack="**/daemon/**" --overwrite --icon=.\src\assets\img\chia.ico --out final_installer
 node winstaller.js
 
 Write-Output "   ---"
