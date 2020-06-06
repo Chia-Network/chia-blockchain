@@ -118,9 +118,6 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           public_key_fingerprints: public_key_fingerprints,
           logged_in_received: true
         };
-      } else if (command === "logged_in") {
-        var logged_in = data.logged_in;
-        return { ...state, logged_in: logged_in, logged_in_received: true };
       } else if (command === "ping") {
         var started = data.success;
         return { ...state, server_started: started };

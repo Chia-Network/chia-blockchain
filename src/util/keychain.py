@@ -11,6 +11,8 @@ from src.util.hash import std_hash
 from sys import platform
 from keyrings.cryptfile.cryptfile import CryptFileKeyring
 
+MAX_KEYS = 100
+
 if platform == "win32" or platform == "cygwin":
     import keyring.backends.Windows
 
@@ -192,18 +194,20 @@ class Keychain:
         # Keys that have a seed are added first
         index = 0
         seed_hex = self._get_stored_entropy(self._get_private_key_seed_user(index))
-        while seed_hex is not None and len(seed_hex) > 0:
-            key = ExtendedPrivateKey.from_seed(hexstr_to_bytes(seed_hex))
-            all_keys.append((key, hexstr_to_bytes(seed_hex)))
+        while index <= MAX_KEYS:
+            if seed_hex is not None and len(seed_hex) > 0:
+                key = ExtendedPrivateKey.from_seed(hexstr_to_bytes(seed_hex))
+                all_keys.append((key, hexstr_to_bytes(seed_hex)))
             index += 1
             seed_hex = self._get_stored_entropy(self._get_private_key_seed_user(index))
 
         # Keys without a seed are added after
         index = 0
         key_hex = self._get_stored_entropy(self._get_private_key_user(index))
-        while key_hex is not None and len(key_hex) > 0:
-            key = ExtendedPrivateKey.from_bytes(hexstr_to_bytes(key_hex))
-            all_keys.append((key, None))
+        while index <= MAX_KEYS:
+            if key_hex is not None and len(key_hex) > 0:
+                key = ExtendedPrivateKey.from_bytes(hexstr_to_bytes(key_hex))
+                all_keys.append((key, None))
             index += 1
             key_hex = self._get_stored_entropy(self._get_private_key_user(index))
         return all_keys
@@ -222,23 +226,25 @@ class Keychain:
         index = 0
         key_hex = self._get_stored_entropy(self._get_private_key_user(index))
 
-        while key_hex is not None and len(key_hex) > 0:
-            key = ExtendedPrivateKey.from_bytes(hexstr_to_bytes(key_hex))
-            if key.get_public_key().get_fingerprint() == fingerprint:
-                keyring.delete_password(
-                    self._get_service(), self._get_private_key_user(index)
-                )
+        while index <= MAX_KEYS:
+            if key_hex is not None and len(key_hex) > 0:
+                key = ExtendedPrivateKey.from_bytes(hexstr_to_bytes(key_hex))
+                if key.get_public_key().get_fingerprint() == fingerprint:
+                    keyring.delete_password(
+                        self._get_service(), self._get_private_key_user(index)
+                    )
             index += 1
             key_hex = self._get_stored_entropy(self._get_private_key_user(index))
 
         index = 0
         seed_hex = self._get_stored_entropy(self._get_private_key_seed_user(index))
-        while seed_hex is not None and len(seed_hex) > 0:
-            key = ExtendedPrivateKey.from_seed(hexstr_to_bytes(seed_hex))
-            if key.get_public_key().get_fingerprint() == fingerprint:
-                keyring.delete_password(
-                    self._get_service(), self._get_private_key_seed_user(index)
-                )
+        while index <= MAX_KEYS:
+            if seed_hex is not None and len(seed_hex) > 0:
+                key = ExtendedPrivateKey.from_seed(hexstr_to_bytes(seed_hex))
+                if key.get_public_key().get_fingerprint() == fingerprint:
+                    keyring.delete_password(
+                        self._get_service(), self._get_private_key_seed_user(index)
+                    )
             index += 1
             seed_hex = self._get_stored_entropy(self._get_private_key_seed_user(index))
 
@@ -264,7 +270,7 @@ class Keychain:
             # Stop when there are no more keys to delete
             if (
                 password is None or len(password) == 0 or delete_exception
-            ) and index > 500:
+            ) and index > MAX_KEYS:
                 break
             index += 1
 
@@ -283,6 +289,6 @@ class Keychain:
             # Stop when there are no more keys to delete
             if (
                 password is None or len(password) == 0 or delete_exception
-            ) and index > 500:
+            ) and index > MAX_KEYS:
                 break
             index += 1

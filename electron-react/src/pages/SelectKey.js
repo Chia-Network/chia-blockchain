@@ -32,6 +32,11 @@ const useStyles = makeStyles(theme => ({
     alignItems: "center",
     height: "100%"
   },
+  centeredSpan: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center"
+  },
   textField: {
     borderColor: "#ffffff"
   },
@@ -56,6 +61,10 @@ const useStyles = makeStyles(theme => ({
   },
   whiteText: {
     color: "white"
+  },
+  whiteP: {
+    color: "white",
+    fontSize: "18px"
   },
   demo: {
     backgroundColor: theme.palette.background.paper
@@ -126,7 +135,17 @@ const SelectKey = () => {
         <CssBaseline />
         <div className={classes.paper}>
           <img className={classes.logo} src={logo} alt="Logo" />
-          <h2 className={classes.whiteText}>Select Key</h2>
+          {public_key_fingerprints && public_key_fingerprints.length > 0 ? (
+            <h2 className={classes.whiteText}>Select Key</h2>
+          ) : (
+            <span className={classes.centeredSpan}>
+              <h2 className={classes.whiteText}>Sign In</h2>
+              <p className={classes.whiteP}>
+                Welcome to Chia. Please log in with an existing key, or create a
+                a new key.
+              </p>
+            </span>
+          )}
           <div className={classes.demo}>
             <List dense={classes.dense}>{list_items}</List>
           </div>

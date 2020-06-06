@@ -112,7 +112,6 @@ class WebSocketServer:
                 await self.handle_message(websocket, decoded)
             except (BaseException, websockets.exceptions.ConnectionClosed) as e:
                 if isinstance(e, websockets.exceptions.ConnectionClosed):
-                    tb = traceback.format_exc()
                     service_name = self.remote_address_map[websocket.remote_address[1]]
                     self.log.info(
                         f"ConnectionClosed. Closing websocket with {service_name}"
