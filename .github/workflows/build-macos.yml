@@ -65,10 +65,10 @@ jobs:
       with:
         node-version: '12.x'
 
-    - name: Set CHIA_INSTALLER_VERSION
-      run: |
-        . ./activate
-        echo "::set-env name=CHIA_INSTALLER_VERSION::$(python build_scripts/installer-version.py)"
+#    - name: Set CHIA_INSTALLER_VERSION
+#      run: |
+#        . ./activate
+#        echo "::set-env name=CHIA_INSTALLER_VERSION::$(python build_scripts/installer-version.py)"
 
     - name: Build MacOS DMG in Catalina
       run: |

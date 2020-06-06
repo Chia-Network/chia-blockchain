@@ -1,4 +1,8 @@
 #!/bin/bash
+
+# The environment variable CHIA_INSTALLER_VERSION needs to be defined
+CHIA_INSTALLER_VERSION=$(python installer-version.py)
+
 if [ ! $CHIA_INSTALLER_VERSION ]; then
   echo "No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0."
   CHIA_INSTALLER_VERSION="0.0.0"

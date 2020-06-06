@@ -33,7 +33,7 @@ steps:
       ln -s venv/bin/activate .
       . ./activate
       python -m pip install --upgrade pip
-      pip install wheel pep517
+      pip install wheel pep517 setuptools_scm
       node -v
       pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
     displayName: "Install dependencies"
@@ -77,6 +77,14 @@ steps:
 #      pip install pytest pytest-azurepipelines
 #      py.test tests -s -v
 #    displayName: "pytest"
+
+- bash: |
+    echo "##vso[task.setvariable variable=sauce]crushed tomatoes"
+
+  - script: |
+      . ./activate
+      $env:CHIA_INSTALLER_VERSION = python build_scripts\installer-version.py
+    displayName: "get CHIA_INSTALLER_VERSION"
 
   - script: |
       . ./activate

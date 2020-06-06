@@ -90,4 +90,4 @@ Write-Output "   ---"
 Write-Output "Windows Installer complete"
 Write-Output "   ---"
 dir
-dir Chia-win32-x64
+dir final_installer
