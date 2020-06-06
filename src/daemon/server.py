@@ -185,7 +185,12 @@ class WebSocketServer:
         t = request["t"]
         t2 = request["t2"]
         d = request["d"]
-
+        t.replace(r"\\\\", r"/")
+        t2.replace(r"\\\\", r"/")
+        d.replace(r"\\\\", r"/")
+        log.info(f"t: {t}")
+        log.info(f"t2: {t2}")
+        log.info(f"d: {d}")
         t = "\'" + t + "\'"
         t2 = "\'" + t2 + "\'"
         d = "\'" + d + "\'"

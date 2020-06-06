@@ -113,7 +113,9 @@ def main():
         f"Creating {args.num_plots} plots, from index {args.index} to "
         f"{args.index + args.num_plots - 1}, of size {args.size}, sk_seed {sk_seed.hex()} ppk {pool_pk}"
     )
-
+    log(f"tmp: {args.tmp_dir}")
+    log(f"tmp2: {args.tmp2_dir}")
+    log(f"final_dir: {args.final_dir}")
     mkdir(args.tmp_dir)
     mkdir(args.tmp2_dir)
     mkdir(args.final_dir)
