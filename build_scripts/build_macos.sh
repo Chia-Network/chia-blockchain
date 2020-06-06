@@ -1,8 +1,13 @@
 #!/bin/bash
-if [ ! $CHIA_VERSION ]; then
-  echo "No environment variable CHIA_VERSION set. Exiting."
-  exit 1
+
+# The environment variable CHIA_INSTALLER_VERSION needs to be defined
+CHIA_INSTALLER_VERSION=$(python installer-version.py)
+
+if [ ! $CHIA_INSTALLER_VERSION ]; then
+  echo "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0."
+  CHIA_INSTALLER_VERSION="0.0.0"
 fi
+echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 
 echo "Installing npm and electron packagers"
 npm install electron-installer-dmg -g
@@ -29,5 +34,11 @@ mv Chia-darwin-x64 ../build_scripts/dist/
 cd ../build_scripts
 
 echo "Create .dmg"
-electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia-$CHIA_VERSION --overwrite
+mkdir final_installer
+electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia-$CHIA_INSTALLER_VERSION --overwrite --out final_installer
+echo "ls -l"
 ls -l
+echo "ls -l final_installer"
+ls -l final_installer
+echo "ls -l dist/Chia-darwin-x64/"
+ls -l dist/Chia-darwin-x64/

@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   build:
-    name: Windows installer
+    name: Windows installer on 3.7
     runs-on: [windows-latest]
 
     steps:
@@ -19,18 +19,15 @@ jobs:
           python-version: "3.7"
 
       - name: Build Windows installer with build_scripts\build_windows.ps1
-        working-directory: ${{ github.workspace }}\build_scripts
-        env:
-          CHIA_VERSION: 0.1.6
         run: |
           $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
-          ./build_windows.ps1
+          .\build_scripts\build_windows.ps1
 
       - name: Upload Windows exe's to artifacts
         uses: actions/upload-artifact@v1
         with:
           name: Windows-Exe
-          path: ${{ github.workspace }}\electron-react\Chia-0.1.6-win32-x64
+          path: ${{ github.workspace }}\electron-react\Chia-win32-x64\
 
       - name: Upload Installer to artifacts
         uses: actions/upload-artifact@v1
