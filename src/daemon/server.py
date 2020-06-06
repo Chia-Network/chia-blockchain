@@ -185,23 +185,19 @@ class WebSocketServer:
         t = request["t"]
         t2 = request["t2"]
         d = request["d"]
-        t.replace(r"\\\\", r"/")
-        t2.replace(r"\\\\", r"/")
-        d.replace(r"\\\\", r"/")
-        log.info(f"t: {t}")
-        log.info(f"t2: {t2}")
-        log.info(f"d: {d}")
-        t = "\'" + t + "\'"
-        t2 = "\'" + t2 + "\'"
-        d = "\'" + d + "\'"
+
+        if os.name != "nt":
+            t = "\'" + t + "\'"
+            t2 = "\'" + t2 + "\'"
+            d = "\'" + d + "\'"
 
         command_args = []
         command_args.append(service_name)
-        command_args.append(f"-k {k}")
-        command_args.append(f"-n {n}")
-        command_args.append(f"-t {t}")
-        command_args.append(f"-2 {t2}")
-        command_args.append(f"-d {d}")
+        command_args.append(f"-k={k}")
+        command_args.append(f"-n={n}")
+        command_args.append(f"-t={t}")
+        command_args.append(f"-2={t2}")
+        command_args.append(f"-d={d}")
 
         error = None
         success = False
