@@ -80,7 +80,7 @@ Start-Process "editbin.exe" -ArgumentList "/STACK:8000000 daemon\create_plots.ex
 Write-Output "   ---"
 
 $packageName = "Chia-$env:CHIA_INSTALLER_VERSION"
-Write-Host "packageName is $packageName" -BackgroundColor “Green” -ForegroundColor “Black”
+Write-Output "packageName is $packageName"
 
 electron-packager . $packageName --asar.unpack="**/daemon/**" --overwrite --icon=.\src\assets\img\chia.ico
 node winstaller.js
@@ -89,3 +89,4 @@ Write-Output "   ---"
 Write-Output "Windows Installer complete"
 Write-Output "   ---"
 dir
+dir Chia-win32-x64

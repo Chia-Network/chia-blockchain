@@ -97,7 +97,7 @@ if [ ! $CI ]; then
   npm install
   npm audit fix
 else
-  echo "Skipping node.js in install.sh on ci"
+  echo "Skipping node.js in install.sh on MacOS ci"
 fi
 
 echo ""
