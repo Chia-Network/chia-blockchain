@@ -10,6 +10,7 @@ Write-Output "   ---"
 curl -OL --show-error --fail https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl
 curl -OL --show-error --fail https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
 cd ..\..
+dir
 
 Write-Output "   ---"
 Write-Output "Create venv - python3.7 or 3.8 is required in PATH"
@@ -79,14 +80,16 @@ Write-Output "Increase the stack for chiapos"
 Start-Process "editbin.exe" -ArgumentList "/STACK:8000000 daemon\create_plots.exe" -Wait
 Write-Output "   ---"
 
-$packageName = "Chia-$env:CHIA_INSTALLER_VERSION"
-Write-Output "packageName is $packageName"
+#$packageName = "Chia-$env:CHIA_INSTALLER_VERSION"
+#Write-Output "packageName is $packageName"
 
 Write-Output "   ---"
 Write-Output "electron-packager"
 electron-packager . Chia --asar.unpack="**/daemon/**" --overwrite --icon=.\src\assets\img\chia.ico
 #electron-osx-sign Chia-darwin-x64/Chia.app --no-gatekeeper-assess  --platform=darwin  --hardened-runtime --provisioning-profile=embedded.provisionprofile --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist
 Write-Output "   ---"
+dir
+dir release-builds
 
 Write-Output "   ---"
 Write-Output "node winstaller.js"
@@ -96,5 +99,4 @@ Write-Output "   ---"
 Write-Output "   ---"
 Write-Output "Windows Installer complete"
 Write-Output "   ---"
-dir Chia-win32-x64
-dir release-builds
+dir
