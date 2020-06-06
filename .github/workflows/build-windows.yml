@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   build:
-    name: Windows installer
+    name: Windows installer on 3.7
     runs-on: [windows-latest]
 
     steps:

@@ -22,13 +22,13 @@ pip install pywin32 pyinstaller
 pip install setuptools_scm
 
 Write-Output "   ---"
-Write-Output "Populate CHIA_INSTALLER_VERSION"
+Write-Output "Get CHIA_INSTALLER_VERSION"
 # The environment variable CHIA_INSTALLER_VERSION needs to be defined
 $env:CHIA_INSTALLER_VERSION = python .\build_scripts\installer-version.py
 
 if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
   $env:CHIA_INSTALLER_VERSION = '0.0.0'
-  Write-Output "No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0"
+  Write-Output "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0"
   }
 Write-Output "Chia Version is: $env:CHIA_INSTALLER_VERSION"
 Write-Output "   ---"
@@ -90,4 +90,3 @@ Write-Output "   ---"
 Write-Output "Windows Installer complete"
 Write-Output "   ---"
 dir Chia-win32-x64
-dir final_installer\Chia-win32-x64
