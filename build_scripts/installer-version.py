@@ -1,9 +1,12 @@
-from src import __version__
+from setuptools_scm import get_version
 
 # example: 1.0b5.dev225
 def main():
 
-    version = __version__.split(".")
+    scm_full_version = get_version(root='..', relative_to=__file__)
+    left_full_version = scm_full_version.split("+")
+
+    version = left_full_version[0].split(".")
 
     scm_major_version = version[0]
     scm_minor_version = version[1]

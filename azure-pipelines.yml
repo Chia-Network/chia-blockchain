@@ -82,7 +82,7 @@ steps:
       . ./activate
       cd build_scripts
       sh build_macos.sh
-      dir
+      ls
     displayName: "Build DMG with build_scripts/build_macos.sh"
     env: { CHIA_INSTALLER_VERSION: "0.1.6" }
 

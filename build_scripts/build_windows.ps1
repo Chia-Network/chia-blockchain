@@ -19,7 +19,7 @@ python -m venv venv
 python -m pip install --upgrade pip
 pip install wheel pep517
 pip install pywin32 pyinstaller
-pip install importlib-metadata
+pip install setuptools_scm
 
 Write-Output "   ---"
 Write-Output "Populate CHIA_INSTALLER_VERSION"
