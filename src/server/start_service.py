@@ -126,7 +126,8 @@ class Service:
             return
 
         async def _run():
-            self._rpc_task = None
+            if self._start_callback:
+                await self._start_callback()
 
             self._introducer_poll_task = None
             if self._periodic_introducer_poll:
@@ -144,9 +145,7 @@ class Service:
                     target_peer_count,
                 )
 
-            if self._start_callback:
-                await self._start_callback()
-
+            self._rpc_task = None
             if self._rpc_start_callback_port:
                 rpc_f, rpc_port = self._rpc_start_callback_port
                 self._rpc_task = asyncio.ensure_future(
