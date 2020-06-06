@@ -28,7 +28,7 @@ def main():
         patch_release_number = orignial_minor_ver_list[1]
         if smc_patch_version and "dev" in smc_patch_version:
             patch_release_number = str(int(patch_release_number) + 1)
-            dev_release_number = "." + smc_patch_version
+            dev_release_number = "-" + smc_patch_version
     elif "0rc" in version[1]:
         original_minor_ver_list = scm_minor_version.split("0rc")
         major_release_number = str(1 - int(scm_major_version))  # decrement the major release for release candidate
@@ -36,7 +36,7 @@ def main():
         patch_release_number = original_minor_ver_list[1]
         if smc_patch_version and "dev" in smc_patch_version:
             patch_release_number = str(int(patch_release_number) + 1)
-            dev_release_number = "." + smc_patch_version
+            dev_release_number = "-" + smc_patch_version
     else:
         major_release_number = scm_major_version
         minor_release_number = scm_minor_version
@@ -46,7 +46,8 @@ def main():
     install_release_number = major_release_number + "." + minor_release_number
     if len(patch_release_number) > 0:
         install_release_number += "." + patch_release_number
-    install_release_number += dev_release_number
+    if len(dev_release_number) > 0:
+        install_release_number += dev_release_number
 
     print(str(install_release_number))
 

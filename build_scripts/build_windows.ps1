@@ -89,7 +89,7 @@ Write-Output "shortVersion is $shortVersion"
 
 Write-Output "   ---"
 Write-Output "electron-packager"
-electron-packager . Chia --asar.unpack="**/daemon/**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$shortVersion
+electron-packager . Chia --asar.unpack="**/daemon/**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=packageVersion
 #electron-osx-sign Chia-darwin-x64/Chia.app --no-gatekeeper-assess  --platform=darwin  --hardened-runtime --provisioning-profile=embedded.provisionprofile --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist
 Write-Output "   ---"
 
