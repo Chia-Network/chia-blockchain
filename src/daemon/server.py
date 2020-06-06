@@ -368,7 +368,7 @@ def launch_plotter(root_path, service_array):
     else:
         mkdir(plotter_path.parent)
     outfile = open(plotter_path.resolve(), "w")
-
+    log.info(f"Service array: {service_array}")
     process = subprocess.Popen(
         service_array, shell=False, stdout=outfile, startupinfo=startupinfo
     )
