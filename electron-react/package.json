@@ -3,7 +3,6 @@
   "author": "Straya Markovic",
   "description": "GUI for Chia Blockchain",
   "productName": "Chia",
-  "version": "0.1.6",
   "private": true,
   "devDependencies": {
     "electron": "^8.2.4",

@@ -89,9 +89,16 @@ if $UBUNTU && ! $UBUNTU_PRE_2004; then
   echo "Installing on Ubuntu 20.04 LTS or newer: Using installed node.js version"
 fi
 
-cd ./electron-react
-npm install
-npm audit fix
+# We will set up node.js on GitHub Actions and Azure Pipelines directly
+# for Mac and Windows so skip unless completing a source/developer install
+# Ubuntu special cases above
+if [ ! $CI ]; then
+  cd ./electron-react
+  npm install
+  npm audit fix
+else
+  echo "Skipping node.js in install.sh on MacOS ci"
+fi
 
 echo ""
 echo "Chia blockchain install.sh complete."

@@ -66,8 +66,6 @@ jobs:
         node-version: '12.x'
 
     - name: Build MacOS DMG in Catalina
-      env:
-        CHIA_VERSION: 0.1.6
       run: |
         . ./activate
         cd ./electron-react
@@ -75,7 +73,6 @@ jobs:
         npm audit fix
         cd ../build_scripts
         sh build_macos.sh
-
 
     - name: Test blockchain code with pytest
       run: |
@@ -85,5 +82,5 @@ jobs:
     - name: Upload MacOS artifacts
       uses: actions/upload-artifact@v1
       with:
-        name: Chia-MacOS-10.15-dmg
-        path: ${{ github.workspace }}/build_scripts/Chia-0.1.6.dmg
+        name: Chia-Installer-on-MacOS-10.15-dmg
+        path: ${{ github.workspace }}/build_scripts/final_installer/
