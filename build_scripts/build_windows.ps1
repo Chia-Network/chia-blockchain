@@ -1,13 +1,6 @@
-# The environment variable CHIA_INSTALLER_VERSION needs to be defined
 # $env:path should contain a path to editbin.exe
 
-if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
-  $env:CHIA_INSTALLER_VERSION = '0.0.0'
-  Write-Output "No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0"
-  }
-Write-Output "Chia Version is: $env:CHIA_INSTALLER_VERSION"
 
-dir
 mkdir build_scripts\win_build
 cd build_scripts\win_build
 
@@ -21,13 +14,24 @@ cd ..\..
 Write-Output "   ---"
 Write-Output "Create venv - python3.7 or 3.8 is required in PATH"
 Write-Output "   ---"
-(get-command python.exe).Path
 python -m venv venv
 . .\venv\Scripts\Activate.ps1
-(get-command python.exe).Path
 python -m pip install --upgrade pip
 pip install wheel pep517
 pip install pywin32 pyinstaller
+pip install importlib-metadata
+
+Write-Output "   ---"
+Write-Output "Populate CHIA_INSTALLER_VERSION"
+# The environment variable CHIA_INSTALLER_VERSION needs to be defined
+$env:CHIA_INSTALLER_VERSION = python .\build_scripts\installer-version.py
+
+if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
+  $env:CHIA_INSTALLER_VERSION = '0.0.0'
+  Write-Output "No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0"
+  }
+Write-Output "Chia Version is: $env:CHIA_INSTALLER_VERSION"
+Write-Output "   ---"
 
 Write-Output "   ---"
 Write-Output "Build chia-blockchain wheels"
