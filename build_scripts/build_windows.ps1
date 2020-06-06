@@ -24,7 +24,7 @@ pip install setuptools_scm
 Write-Output "   ---"
 Write-Output "Get CHIA_INSTALLER_VERSION"
 # The environment variable CHIA_INSTALLER_VERSION needs to be defined
-$env:CHIA_INSTALLER_VERSION = python .\build_scripts\installer-version.py
+$env:CHIA_INSTALLER_VERSION = python .\build_scripts\installer-version.py -win
 
 if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
   $env:CHIA_INSTALLER_VERSION = '0.0.0'
@@ -80,16 +80,13 @@ Start-Process "editbin.exe" -ArgumentList "/STACK:8000000 daemon\create_plots.ex
 Write-Output "   ---"
 
 $packageVersion = "$env:CHIA_INSTALLER_VERSION"
-$versionArray = $packageVersion.Split("{.}")
-$shortVersion = $versionArray[0], $versionArray[1], $versionArray[2] -join "."
 $packageName = "Chia-$packageVersion"
 
 Write-Output "packageName is $packageName"
-Write-Output "shortVersion is $shortVersion"
 
 Write-Output "   ---"
 Write-Output "electron-packager"
-electron-packager . Chia --asar.unpack="**/daemon/**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=packageVersion
+electron-packager . Chia --asar.unpack="**/daemon/**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion
 #electron-osx-sign Chia-darwin-x64/Chia.app --no-gatekeeper-assess  --platform=darwin  --hardened-runtime --provisioning-profile=embedded.provisionprofile --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist
 Write-Output "   ---"
 
