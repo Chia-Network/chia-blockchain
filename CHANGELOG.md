@@ -3,15 +3,32 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) for setuptools_scm related reasons.
+and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
+for setuptools_scm/PEP 440 reasons.
 
 ## [Unreleased]
 
-- test plots now go into `~/.chia/test-plots/`
-- Added ability to add plot from filesystem (also need pool_pk and sk from plots.yaml)
-- Added ability to import private keys from the UI
-- Changing keys will not interrupt plotting log
-- User can specify log level in the config file (defaults to info)
+### Added
+- Added ability to add plot from filesystem (also need pool_pk and sk from plots.yaml.)
+- Added ability to import private keys in the UI.
+- User can specify log level in the config file (defaults to info.)
+
+### Changed
+- Test plots for the simulation and testing harness now go into `~/.chia/test-plots/`
+- We have completely refactored all networking code towards making each Chia service use the same default networking infrastructure and move to websockets as the default networking wire protocol.
+- We added additional improvements and more RPCs to the start daemon and various services to continue to make chia start/stop reliable cross platform.
+- The install.sh script now discovers if it's running on Ubuntu less than 20.04 and correctly upgrade node.js to the modern stable version.
+- For GitHub ci builds of the Windows installer, editbin.exe is more reliably found.
+- All installer ci builds now obtain version information automatically from setuptools_scm and convert it to an installer version number that is appropriate for the platform and type of release (dev versus release.)
+- Plots are now refreshed in the UI after each plot instead of at the end of plotting.
+- We have made performance improvements to plotting speed on all platforms.
+
+### Fixed
+- Having spaces in the path to a plot or temporary directory caused plotting to fail.
+- Changing keys will no longer interrupt plotting log.
+- 1.6 introduced a bug where certain very many core machines would sync the blockchain very slowly.
+- The plotter log in the UI should scroll more reliably.
+- Starting chia now waits for the full node to be active before contacting the introducer.
 
 ## [1.0beta6] aka Beta 1.6 - 2020-06-01
 
