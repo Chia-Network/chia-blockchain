@@ -46,7 +46,7 @@ def check_keys(new_root):
     all_pubkeys = keychain.get_all_public_keys()
     if len(all_pubkeys) == 0:
         print(
-            "No keys are present in the keychain. Generate them with 'chia keys generate_and_add'"
+            "No keys are present in the keychain. Generate them with 'chia keys generate'"
         )
         return
     all_targets = [
@@ -251,6 +251,7 @@ def chia_init(root_path: Path):
     else:
         create_default_chia_config(root_path)
         initialize_ssl(root_path)
+        check_keys(root_path)
         print("")
         print("To see your keys, run 'chia keys show'")
         print("Please generate your keys with 'chia keys generate.'")
