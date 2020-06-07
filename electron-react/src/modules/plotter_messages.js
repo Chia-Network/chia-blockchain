@@ -1,20 +1,21 @@
 import { service_plotter } from "../util/service_names";
-import { startService } from "./daemon_messages";
+import { daemonMessage } from "./daemon_messages";
 
 export const plotControl = () => ({
   type: "PLOTTER_CONTROL"
 });
 
 export const startPlotting = (size, count, workspace, final) => {
-  var args = "";
-  args += " -k " + size;
-  args += " -n " + count;
-  if (workspace) {
-    args += " -t " + workspace;
-    args += " -2 " + workspace;
-  }
-  args += " -d " + final;
-  var action = startService(service_plotter + args);
+  var action = daemonMessage();
+  action.message.command = "start_plotting";
+  action.message.data = {
+    service: service_plotter,
+    k: size,
+    n: count,
+    t: workspace,
+    t2: workspace,
+    d: final
+  };
   return action;
 };
 
