@@ -243,6 +243,10 @@ export const handle_message = (store, payload) => {
     if (payload.data.success) {
       store.dispatch(offerParsed(payload.data.discrepancies));
     }
+  } else if (payload.command === "start_plotting") {
+    if (payload.data.success) {
+      track_progress(store, payload.data.out_file);
+    }
   } else if (payload.command === "start_service") {
     const service = payload.data.service;
     if (payload.data.success) {
