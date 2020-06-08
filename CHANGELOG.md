@@ -11,7 +11,7 @@ for setuptools_scm/PEP 440 reasons.
 ### Added
 - Added ability to add plot from filesystem (you will need pool_pk and sk from plots.yaml.)
 - Added ability to import private keys in the UI.
-= Added ability to see private keys and mnemonic seeds in the keys menu
+- Added ability to see private keys and mnemonic seeds in the keys menu
 - User can specify log level in the config file (defaults to info.)
 - The Windows installer is now signed by a Chia Network certificate. It may take some time to develop enough reputation to not warn multiple times during install.
 
