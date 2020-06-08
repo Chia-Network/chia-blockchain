@@ -12,7 +12,12 @@ from typing import List, Optional, Tuple
 
 import aiohttp
 from src.util.byte_types import hexstr_to_bytes
-from src.util.keychain import Keychain, seed_from_mnemonic, generate_mnemonic
+from src.util.keychain import (
+    Keychain,
+    seed_from_mnemonic,
+    bytes_to_mnemonic,
+    generate_mnemonic,
+)
 from src.util.path import path_from_root
 from src.util.ws_message import create_payload, format_response, pong
 from src.wallet.trade_manager import TradeManager
@@ -559,6 +564,22 @@ class WebSocketServer:
         response = {"success": True, "public_key_fingerprints": fingerprints}
         return response
 
+    async def get_private_key(self, request):
+        fingerprint = request["fingerprint"]
+        for esk, seed in self.keychain.get_all_private_keys():
+            if esk.get_public_key().get_fingerprint() == fingerprint:
+                s = bytes_to_mnemonic(seed) if seed is not None else None
+                self.log.warning(f"{s}, {esk}")
+                return {
+                    "success": True,
+                    "private_key": {
+                        "fingerprint": fingerprint,
+                        "esk": bytes(esk).hex(),
+                        "seed": s,
+                    },
+                }
+        return {"success": False, "private_key": {"fingerprint": fingerprint}}
+
     async def log_in(self, request):
         await self.stop_wallet()
         fingerprint = request["fingerprint"]
@@ -569,7 +590,6 @@ class WebSocketServer:
         return response
 
     async def add_key(self, request):
-        print("req:", request, type(request))
         if "mnemonic" in request:
             # Adding a key from 24 word mnemonic
             mnemonic = request["mnemonic"]
@@ -720,6 +740,8 @@ class WebSocketServer:
             return await self.get_wallet_summaries()
         elif command == "get_public_keys":
             return await self.get_public_keys()
+        elif command == "get_private_key":
+            return await self.get_private_key(data)
         elif command == "generate_mnemonic":
             return await self.generate_mnemonic()
         elif command == "log_in":
