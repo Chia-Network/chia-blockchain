@@ -167,7 +167,7 @@ class BlockStore:
         if pot_tuple in self.proof_of_time_heights:
             return self.proof_of_time_heights[pot_tuple]
         return None
-    
+
     def seen_compact_proof(
         self, challenge: bytes32, iter: uint64
     ) -> bool:
