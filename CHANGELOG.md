@@ -22,6 +22,7 @@ for setuptools_scm/PEP 440 reasons.
 - All installer ci builds now obtain version information automatically from setuptools_scm and convert it to an installer version number that is appropriate for the platform and type of release (dev versus release.)
 - Plots are now refreshed in the UI after each plot instead of at the end of plotting.
 - We have made performance improvements to plotting speed on all platforms.
+- We now codesign the Apple .dmg installer with the Chia Network developer ID.
 
 ### Fixed
 - Having spaces in the path to a plot or temporary directory caused plotting to fail.
