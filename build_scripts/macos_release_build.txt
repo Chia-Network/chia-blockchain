@@ -1,7 +1,8 @@
 #!/bin/bash
-#Now is how to notarize?
+# Now is how to notarize?
 
 echo "Ask for username and password - password should be an app specific password"
+# Generate app specific password https://support.apple.com/en-us/HT204397
 xcrun altool --notarize-app -f Chia-0.1.6.dmg --primary-bundle-id net.chia.blockchain -u username -p password
 echo "xcrun altool --notarize-app; -should return REQUEST-ID, use it in next command"
 

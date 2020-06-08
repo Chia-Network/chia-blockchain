@@ -94,16 +94,14 @@ Write-Output "node winstaller.js"
 node winstaller.js
 Write-Output "   ---"
 
-dir
-dir Chia-win32-x64
-dir release-builds
+dir release-builds\windows-installer\
 
 Write-Output "   ---"
 Write-Output "Add timestamp and verify signature"
 Write-Output "ChiaSetup should be ChiaSetup-$packageVersion.exe"
 Write-Output "   ---"
-Start-Process "signtool.exe" -ArgumentList "timestamp /td sha256 /t http://timestamp.comodoca.com/?td=sha256 .\release-builds\ChiaSetup-$packageVersion.exe"
-Start-Process "signtool.exe" -ArgumentList "verify /v /pa .\release-builds\ChiaSetup-$packageVersion.exe"
+Start-Process "signtool.exe" -ArgumentList "timestamp /td sha256 /t http://timestamp.comodoca.com/?td=sha256 .\windows-installer\release-builds\ChiaSetup-$packageVersion.exe"
+Start-Process "signtool.exe" -ArgumentList "verify /v /pa .\windows-installer\release-builds\ChiaSetup-$packageVersion.exe"
 
 Write-Output "   ---"
 Write-Output "Windows Installer complete"
