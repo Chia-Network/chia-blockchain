@@ -32,7 +32,7 @@ steps:
     inputs:
       certSecureFile: 'chia-apple-dev-id-app.p12'
       certPwd: $(CHIA_APPLE_DEV_ID_APP_PASS)
-      keychain: default
+      keychain: temp
       deleteCert: true
 
   #  since we're installing miniupnpc & setproctitle below,
