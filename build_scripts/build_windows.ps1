@@ -94,9 +94,6 @@ Write-Output "node winstaller.js"
 node winstaller.js
 Write-Output "   ---"
 
-dir .\release-builds\
-dir .\release-builds\windows-installer\
-
 Write-Output "   ---"
 Write-Output "Add timestamp and verify signature"
 Write-Output "   ---"
