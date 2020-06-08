@@ -1,5 +1,4 @@
 # $env:path should contain a path to editbin.exe and signtool.exe
-dir 'C:\Program Files (x86)\Windows Kits\10\App Certification Kit'
 
 mkdir build_scripts\win_build
 cd build_scripts\win_build
@@ -98,8 +97,8 @@ Write-Output "   ---"
 Write-Output "   ---"
 Write-Output "Add timestamp and verify signature"
 Write-Output "   ---"
-Start-Process "signtool.exe" -ArgumentList "timestamp /td sha256 /t http://timestamp.comodoca.com/?td=sha256 ChiaSetup-$packageVersion.exe"
-Start-Process "signtool.exe" -ArgumentList "verify /v /pa ChiaSetup-$packageVersion.exe"
+Start-Process "signtool.exe" -ArgumentList "timestamp /td sha256 /t http://timestamp.comodoca.com/?td=sha256 .\release-builds\ChiaSetup-$packageVersion.exe"
+Start-Process "signtool.exe" -ArgumentList "verify /v /pa .\release-builds\ChiaSetup-$packageVersion.exe"
 
 Write-Output "   ---"
 Write-Output "Windows Installer complete"
