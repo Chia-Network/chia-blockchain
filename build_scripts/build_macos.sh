@@ -28,8 +28,8 @@ cd electron-react
 echo "npm build"
 npm install
 npm run build
-electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=straya.domain.chia
-electron-osx-sign Chia-darwin-x64/Chia.app --no-gatekeeper-assess  --platform=darwin  --hardened-runtime --provisioning-profile=embedded.provisionprofile --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist
+electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain
+electron-osx-sign Chia-darwin-x64/Chia.app --no-gatekeeper-assess  --platform=darwin  --hardened-runtime --provisioning-profile=chiablockchain.provisionprofile --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist
 mv Chia-darwin-x64 ../build_scripts/dist/
 cd ../build_scripts
 
