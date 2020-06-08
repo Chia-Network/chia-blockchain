@@ -76,7 +76,7 @@ Write-Output "   ---"
 Write-Output "Increase the stack for chiapos"
 # editbin.exe needs to be in the path
 #Start-Process "editbin.exe" -ArgumentList "/STACK:8000000 daemon\create_plots.exe" -Wait
-editbin.exe /STACK:8000000 daemon\create_plots.exe"
+editbin.exe /STACK:8000000 daemon\create_plots.exe
 Write-Output "   ---"
 
 $packageVersion = "$env:CHIA_INSTALLER_VERSION"
@@ -87,7 +87,6 @@ Write-Output "packageName is $packageName"
 Write-Output "   ---"
 Write-Output "electron-packager"
 electron-packager . Chia --asar.unpack="**/daemon/**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion
-#electron-osx-sign Chia-darwin-x64/Chia.app --no-gatekeeper-assess  --platform=darwin  --hardened-runtime --provisioning-profile=embedded.provisionprofile --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist
 Write-Output "   ---"
 
 Write-Output "   ---"
