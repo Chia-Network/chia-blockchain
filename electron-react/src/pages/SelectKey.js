@@ -3,6 +3,7 @@ import CssBaseline from "@material-ui/core/CssBaseline";
 import List from "@material-ui/core/List";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemText from "@material-ui/core/ListItemText";
+import { Tooltip } from "@material-ui/core";
 import ListItemSecondaryAction from "@material-ui/core/ListItemSecondaryAction";
 import DeleteIcon from "@material-ui/icons/Delete";
 import IconButton from "@material-ui/core/IconButton";
@@ -11,9 +12,10 @@ import Container from "@material-ui/core/Container";
 import logo from "../assets/img/chia_logo.svg"; // Tell webpack this JS file uses this image
 import { withRouter } from "react-router-dom";
 import { connect, useSelector, useDispatch } from "react-redux";
-import { log_in, delete_key } from "../modules/message";
+import { log_in, delete_key, get_private_key } from "../modules/message";
 import Link from "@material-ui/core/Link";
 import Button from "@material-ui/core/Button";
+import VisibilityIcon from "@material-ui/icons/Visibility";
 import {
   changeEntranceMenu,
   presentOldWallet,
@@ -68,6 +70,9 @@ const useStyles = makeStyles(theme => ({
   },
   demo: {
     backgroundColor: theme.palette.background.paper
+  },
+  rightPadding: {
+    paddingRight: theme.spacing(3)
   }
 }));
 
@@ -80,6 +85,9 @@ const SelectKey = () => {
 
   const handleClick = fingerprint => {
     return () => dispatch(log_in(fingerprint));
+  };
+  const showKey = fingerprint => {
+    return () => dispatch(get_private_key(fingerprint));
   };
 
   const handleDelete = fingerprint => {
@@ -107,6 +115,7 @@ const SelectKey = () => {
         }
       >
         <ListItemText
+          className={classes.rightPadding}
           primary={
             "Private key with public fingerprint " + fingerprint[0].toString()
           }
@@ -117,13 +126,24 @@ const SelectKey = () => {
           }
         />
         <ListItemSecondaryAction>
-          <IconButton
-            edge="end"
-            aria-label="delete"
-            onClick={handleDelete(fingerprint[0])}
-          >
-            <DeleteIcon />
-          </IconButton>
+          <Tooltip title="See private key">
+            <IconButton
+              edge="end"
+              aria-label="delete"
+              onClick={showKey(fingerprint[0])}
+            >
+              <VisibilityIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="DANGER: permanantly delete private key">
+            <IconButton
+              edge="end"
+              aria-label="delete"
+              onClick={handleDelete(fingerprint[0])}
+            >
+              <DeleteIcon />
+            </IconButton>
+          </Tooltip>
         </ListItemSecondaryAction>
       </ListItem>
     );

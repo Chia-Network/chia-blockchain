@@ -39,11 +39,7 @@ import {
   pingHarvester,
   refreshPlots
 } from "../modules/harvesterMessages";
-import {
-  changeEntranceMenu,
-  presentSelectKeys,
-  presentNewWallet
-} from "../modules/entranceMenu";
+import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
 import {
   addProgress,
   resetProgress,
@@ -181,6 +177,17 @@ export const handle_message = (store, payload) => {
     }
   } else if (payload.command === "get_public_keys") {
     store.dispatch(changeEntranceMenu(presentSelectKeys));
+  } else if (payload.command === "get_private_key") {
+    const text =
+      "Extended hex key: " +
+      payload.data.private_key.esk +
+      "\n" +
+      (payload.data.private_key.seed
+        ? "seed: " + payload.data.private_key.seed
+        : "No 24 word seed, since this key is imported.");
+    store.dispatch(
+      openDialog("Private key " + payload.data.private_key.fingerprint, text)
+    );
   } else if (payload.command === "delete_plot") {
     store.dispatch(refreshPlots());
   } else if (payload.command === "get_wallets") {
