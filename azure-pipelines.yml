@@ -31,7 +31,7 @@ steps:
   - task: InstallAppleCertificate@2
     inputs:
       certSecureFile: 'chia-apple-dev-id-app.p12'
-      certPwd: '$(CHIA_APPLE_DEV_ID_APP_PASS)'
+      certPwd: $(CHIA_APPLE_DEV_ID_APP_PASS)
       keychain: default
       deleteCert: true
 
