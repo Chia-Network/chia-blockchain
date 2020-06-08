@@ -13,6 +13,12 @@ jobs:
           fetch-depth: 0
           # we need fetch-depth 0 so setuptools_scm can resolve tags
 
+      - name: Decode code signing cert into an encrypted file
+        uses: kitek/decode-base64-into-file-action@1.0
+        with:
+          encoded-value: ${{ secrets.WIN_CODE_SIGN_CERT }}
+          destination-file: .\electron-react\win_code_sign_cert.p12
+
       - uses: actions/setup-python@v1
         name: Install Python 3.7
         with:
