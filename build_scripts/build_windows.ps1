@@ -1,5 +1,4 @@
-# $env:path should contain a path to editbin.exe
-
+# $env:path should contain a path to editbin.exe and signtool.exe
 
 mkdir build_scripts\win_build
 cd build_scripts\win_build
@@ -76,7 +75,8 @@ npm run build
 Write-Output "   ---"
 Write-Output "Increase the stack for chiapos"
 # editbin.exe needs to be in the path
-Start-Process "editbin.exe" -ArgumentList "/STACK:8000000 daemon\create_plots.exe" -Wait
+#Start-Process "editbin.exe" -ArgumentList "/STACK:8000000 daemon\create_plots.exe" -Wait
+editbin.exe /STACK:8000000 daemon\create_plots.exe
 Write-Output "   ---"
 
 $packageVersion = "$env:CHIA_INSTALLER_VERSION"
@@ -87,7 +87,6 @@ Write-Output "packageName is $packageName"
 Write-Output "   ---"
 Write-Output "electron-packager"
 electron-packager . Chia --asar.unpack="**/daemon/**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion
-#electron-osx-sign Chia-darwin-x64/Chia.app --no-gatekeeper-assess  --platform=darwin  --hardened-runtime --provisioning-profile=embedded.provisionprofile --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist
 Write-Output "   ---"
 
 Write-Output "   ---"
@@ -96,7 +95,11 @@ node winstaller.js
 Write-Output "   ---"
 
 Write-Output "   ---"
+Write-Output "Add timestamp and verify signature"
+Write-Output "   ---"
+signtool.exe timestamp /v /t http://timestamp.comodoca.com/ .\release-builds\windows-installer\ChiaSetup-$packageVersion.exe
+signtool.exe verify /v /pa .\release-builds\windows-installer\ChiaSetup-$packageVersion.exe
+
+Write-Output "   ---"
 Write-Output "Windows Installer complete"
 Write-Output "   ---"
-dir
-dir Chia-win32-x64

@@ -9,20 +9,21 @@ for setuptools_scm/PEP 440 reasons.
 ## [Unreleased]
 
 ### Added
-- Added ability to add plot from filesystem (also need pool_pk and sk from plots.yaml.)
+- Added ability to add plot from filesystem (you will need pool_pk and sk from plots.yaml.)
 - Added ability to import private keys in the UI.
 - User can specify log level in the config file (defaults to info.)
+- The Windows installer is now signed by a Chia Network certificate. It may take some time to develop enough reputation to not warn multiple times during install.
 
 ### Changed
+- Plots are now refreshed in the UI after each plot instead of at the end of plotting.
+- We have made performance improvements to plotting speed on all platforms.
 - Test plots for the simulation and testing harness now go into `~/.chia/test-plots/`
 - We have completely refactored all networking code towards making each Chia service use the same default networking infrastructure and move to websockets as the default networking wire protocol.
 - We added additional improvements and more RPCs to the start daemon and various services to continue to make chia start/stop reliable cross platform.
-- The install.sh script now discovers if it's running on Ubuntu less than 20.04 and correctly upgrade node.js to the modern stable version.
+- The install.sh script now discovers if it's running on Ubuntu less than 20.04 and correctly upgrades node.js to the current stable version.
 - For GitHub ci builds of the Windows installer, editbin.exe is more reliably found.
 - All installer ci builds now obtain version information automatically from setuptools_scm and convert it to an installer version number that is appropriate for the platform and type of release (dev versus release.)
-- Plots are now refreshed in the UI after each plot instead of at the end of plotting.
-- We have made performance improvements to plotting speed on all platforms.
-- We now codesign the Apple .dmg installer with the Chia Network developer ID.
+- We now codesign the Apple .dmg installer with the Chia Network developer ID on both GitHub Actins and Azure Pipelines. We will be notarizing and distributing the Azure Pipelines version as it's built on MacOS Mojave (10.14.6) for stronger cross version support.
 
 ### Fixed
 - Having spaces in the path to a plot or temporary directory caused plotting to fail.
