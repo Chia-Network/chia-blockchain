@@ -15,7 +15,7 @@ class BlockStore:
     db: aiosqlite.Connection
     proof_of_time_heights: Dict[Tuple[bytes32, uint64], uint32]
     challenge_hash_dict: Dict[bytes32, bytes32]
-    self.seen_compact_proofs = set()
+    self.seen_compact_proofs: set
 
     @classmethod
     async def create(cls, connection):
