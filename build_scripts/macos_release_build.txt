@@ -1,28 +1,7 @@
 #!/bin/bash
-echo "Installing npm and electron packagers"
-npm install electron-installer-dmg -g
-npm install electron-packager -g
+#Now is how to notarize?
 
-echo "Create dist/"
-sudo rm -rf dist
-mkdir dist
-
-echo "Create executeables with pyinstaller"
-pip install pyinstaller
-sudo pyinstaller daemon.spec
-cp -r dist/daemon ../electron-react
-cd ..
-cd electron-react
-
-echo "npm release build"
-echo "This won't work unless you have Straya's Certs on your machine"
-npm install
-npm run build
-electron-packager . Chia  --platform=darwin --icon=./src/assets/img/chia.icns --overwrite --app-bundle-id=straya.domain.chia
-electron-osx-sign Chia-darwin-x64/Chia.app --no-gatekeeper-assess  --platform=darwin  --hardened-runtime --provisioning-profile=embedded.provisionprofile --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist
-electron-installer-dmg Chia-darwin-x64/Chia.app Chia-0.1.6
-
-echo "Ask Straya for username and password"
+echo "Ask for username and password"
 xcrun altool --notarize-app -f Chia-0.1.6.dmg --primary-bundle-id straya.domain.chia -u username -p password
 echo "xcrun altool --notarize-app; -should return REQUEST-ID, use it in next command"
 
@@ -31,7 +10,7 @@ xcrun altool --notarization-info  {REQUEST-ID} -u username -p password
 echo "It can take a while, run it every few minutes"
 
 
-echo "Once that is succesfull, execute the following command"
+echo "Once that is successful, execute the following command"
 xcrun stapler staple Chia-0.1.6.dmg
 
 echo "Validate DMG"

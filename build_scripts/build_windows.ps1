@@ -96,6 +96,12 @@ node winstaller.js
 Write-Output "   ---"
 
 Write-Output "   ---"
+Write-Output "Add timestamp and verify signature"
+Write-Output "   ---"
+Start-Process "signtool.exe" -ArgumentList "timestamp /td sha256 /t http://timestamp.comodoca.com/?td=sha256 ChiaSetup-$packageVersion.exe"
+Start-Process "signtool.exe" -ArgumentList "verify /v /pa ChiaSetup-$packageVersion.exe"
+
+Write-Output "   ---"
 Write-Output "Windows Installer complete"
 Write-Output "   ---"
 dir
