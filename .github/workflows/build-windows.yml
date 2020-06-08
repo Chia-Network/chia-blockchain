@@ -25,6 +25,8 @@ jobs:
           python-version: "3.7"
 
       - name: Build Windows installer with build_scripts\build_windows.ps1
+        env:
+          WIN_CODE_SIGN_PASS: ${{ secrets.WIN_CODE_SIGN_PASS }}
         run: |
           $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
           .\build_scripts\build_windows.ps1
