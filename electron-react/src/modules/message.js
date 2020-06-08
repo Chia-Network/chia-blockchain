@@ -90,6 +90,13 @@ export const log_in = fingerprint => {
   return action;
 };
 
+export const get_private_key = fingerprint => {
+  var action = walletMessage();
+  action.message.command = "get_private_key";
+  action.message.data = { fingerprint: fingerprint };
+  return action;
+};
+
 export const get_transactions = wallet_id => {
   var action = walletMessage();
   action.message.command = "get_transactions";
