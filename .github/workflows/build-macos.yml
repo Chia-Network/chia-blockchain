@@ -25,8 +25,8 @@ jobs:
     - name: Import Apple app signing certificate
       uses: Apple-Actions/import-codesign-certs@v1
       with:
-        p12-file-base64: ${{ secrets.CERT_APP }}
-        p12-password: ${{ secrets.CERT_PASS }}
+        p12-file-base64: ${{ secrets.APPLE_DEV_ID_APP }}
+        p12-password: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
 
     - name: Install MacOS dependencies
       run: |

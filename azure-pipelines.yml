@@ -26,6 +26,15 @@ steps:
       versionSpec: "$(python.version)"
     displayName: "Use Python $(python.version)"
 
+  # Install Apple certificate
+  # Install an Apple certificate required to build on a macOS agent machine
+  - task: InstallAppleCertificate@2
+    inputs:
+      certSecureFile: 'chia-apple-dev-id-app.p12'
+      certPwd: $(CHIA_APPLE_DEV_ID_APP_PASS)
+      keychain: temp
+      deleteCert: true
+
   #  since we're installing miniupnpc & setproctitle below,
   #  only cbor2 will end up in wheels/
   - script: |
