@@ -832,6 +832,11 @@ class FullNode:
                     block.transactions_generator,
                     block.transactions_filter,
                 )
+                if self.block_store.seen_compact_proof(
+                    respond_compact_proof_of_time.proof.challenge_hash,
+                    respond_compact_proof_of_time.proof.number_of_iterations,
+                ):
+                    return
                 await self.block_store.add_block(block_new)
                 self.log.info(f"Stored compact block at height {block.height}.")
                 yield OutboundMessage(
