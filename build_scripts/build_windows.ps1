@@ -1,5 +1,5 @@
-# $env:path should contain a path to editbin.exe
-
+# $env:path should contain a path to editbin.exe and signtool.exe
+dir 'C:\Program Files (x86)\Windows Kits\10\App Certification Kit'
 
 mkdir build_scripts\win_build
 cd build_scripts\win_build
