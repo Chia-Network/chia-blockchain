@@ -94,10 +94,13 @@ Write-Output "node winstaller.js"
 node winstaller.js
 Write-Output "   ---"
 
+dir .\windows-installer\
+dir .\windows-installer\release-builds\
+
 Write-Output "   ---"
 Write-Output "Add timestamp and verify signature"
 Write-Output "   ---"
-signtool.exe timestamp /v /td sha256 /t http://timestamp.comodoca.com/?td=sha256 .\windows-installer\release-builds\ChiaSetup-$packageVersion.exe
+signtool.exe timestamp /v /t http://timestamp.comodoca.com/ .\windows-installer\release-builds\ChiaSetup-$packageVersion.exe
 signtool.exe verify /v /pa .\windows-installer\release-builds\ChiaSetup-$packageVersion.exe
 
 Write-Output "   ---"
