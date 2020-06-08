@@ -11,6 +11,7 @@ for setuptools_scm/PEP 440 reasons.
 ### Added
 - Added ability to add plot from filesystem (you will need pool_pk and sk from plots.yaml.)
 - Added ability to import private keys in the UI.
+= Added ability to see private keys and mnemonic seeds in the keys menu
 - User can specify log level in the config file (defaults to info.)
 - The Windows installer is now signed by a Chia Network certificate. It may take some time to develop enough reputation to not warn multiple times during install.
 
@@ -30,6 +31,7 @@ for setuptools_scm/PEP 440 reasons.
 - Changing keys will no longer interrupt plotting log.
 - 1.6 introduced a bug where certain very many core machines would sync the blockchain very slowly.
 - The plotter log in the UI should scroll more reliably.
+- The plotter UI should display the correct log on all platforms
 - Starting chia now waits for the full node to be active before contacting the introducer.
 
 ## [1.0beta6] aka Beta 1.6 - 2020-06-01
