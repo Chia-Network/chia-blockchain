@@ -9,14 +9,12 @@ from typing import List, Optional, Tuple, Dict, Callable
 
 from src.util.byte_types import hexstr_to_bytes
 from src.util.keychain import (
-    Keychain,
     seed_from_mnemonic,
     generate_mnemonic,
     bytes_to_mnemonic,
 )
 from src.util.path import path_from_root
 from src.util.ws_message import create_payload
-from src.wallet.trade_manager import TradeManager
 
 try:
     import uvloop
@@ -26,9 +24,7 @@ except ImportError:
 from src.cmds.init import check_keys
 from src.server.outbound_message import NodeType, OutboundMessage, Message, Delivery
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
-from src.util.config import load_config_cli
 from src.util.ints import uint64, uint32
-from src.util.logging import initialize_logging
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.cc_wallet.cc_wallet import CCWallet
@@ -43,18 +39,8 @@ log = logging.getLogger(__name__)
 
 
 class WalletRpcApi:
-    def __init__(self, keychain: Keychain, root_path: Path):
-        self.config = load_config_cli(root_path, "config.yaml", "wallet")
-        initialize_logging("Wallet %(name)-25s", self.config["logging"], root_path)
-        self.log = log
-        self.keychain = keychain
-        self.websocket = None
-        self.root_path = root_path
-        self.wallet_node: Optional[WalletNode] = None
-        self.trade_manager: Optional[TradeManager] = None
-        self.shut_down = False
-        if self.config["testing"] is True:
-            self.config["database_path"] = "test_db_wallet.db"
+    def __init__(self, wallet_node: WalletNode):
+        self.wallet_node = wallet_node
 
     def get_routes(self) -> Dict[str, Callable]:
         return {
@@ -145,7 +131,6 @@ class WalletRpcApi:
                 "reason": f"Failed to push transaction {e}",
             }
             return data
-        self.log.error(tx)
         sent = False
         start = time.time()
         while time.time() - start < TIMEOUT:
@@ -346,7 +331,6 @@ class WalletRpcApi:
             }
             return data
 
-        self.log.error(tx)
         sent = False
         start = time.time()
         while time.time() - start < TIMEOUT:
@@ -415,7 +399,7 @@ class WalletRpcApi:
             success,
             discrepancies,
             error,
-        ) = await self.trade_manager.get_discrepancies_for_offer(file_path)
+        ) = await self.wallet_node.trade_manager.get_discrepancies_for_offer(file_path)
 
         if success:
             response = {"success": True, "discrepancies": discrepancies}
@@ -427,11 +411,15 @@ class WalletRpcApi:
     async def create_offer_for_ids(self, request):
         offer = request["ids"]
         file_name = request["filename"]
-        success, spend_bundle, error = await self.trade_manager.create_offer_for_ids(
-            offer
-        )
+        (
+            success,
+            spend_bundle,
+            error,
+        ) = await self.wallet_node.trade_manager.create_offer_for_ids(offer)
         if success:
-            self.trade_manager.write_offer_to_disk(Path(file_name), spend_bundle)
+            self.wallet_node.trade_manager.write_offer_to_disk(
+                Path(file_name), spend_bundle
+            )
             response = {"success": success}
         else:
             response = {"success": success, "reason": error}
@@ -440,7 +428,9 @@ class WalletRpcApi:
 
     async def respond_to_offer(self, request):
         file_path = Path(request["filename"])
-        success, reason = await self.trade_manager.respond_to_offer(file_path)
+        success, reason = await self.wallet_node.trade_manager.respond_to_offer(
+            file_path
+        )
         if success:
             response = {"success": success}
         else:
@@ -450,17 +440,16 @@ class WalletRpcApi:
     async def get_public_keys(self):
         fingerprints = [
             (esk.get_public_key().get_fingerprint(), seed is not None)
-            for (esk, seed) in self.keychain.get_all_private_keys()
+            for (esk, seed) in self.wallet_node.keychain.get_all_private_keys()
         ]
         response = {"success": True, "public_key_fingerprints": fingerprints}
         return response
 
     async def get_private_key(self, request):
         fingerprint = request["fingerprint"]
-        for esk, seed in self.keychain.get_all_private_keys():
+        for esk, seed in self.wallet_node.keychain.get_all_private_keys():
             if esk.get_public_key().get_fingerprint() == fingerprint:
                 s = bytes_to_mnemonic(seed) if seed is not None else None
-                self.log.warning(f"{s}, {esk}")
                 return {
                     "success": True,
                     "private_key": {
@@ -475,17 +464,16 @@ class WalletRpcApi:
         await self.stop_wallet()
         fingerprint = request["fingerprint"]
 
-        started = await self.start_wallet(fingerprint)
+        await self.wallet_node.start(fingerprint)
 
-        response = {"success": started}
-        return response
+        return {"success": True}
 
     async def add_key(self, request):
         if "mnemonic" in request:
             # Adding a key from 24 word mnemonic
             mnemonic = request["mnemonic"]
             seed = seed_from_mnemonic(mnemonic)
-            self.keychain.add_private_key_seed(seed)
+            self.wallet_node.keychain.add_private_key_seed(seed)
             esk = ExtendedPrivateKey.from_seed(seed)
         elif "hexkey" in request:
             # Adding a key from hex private key string. Two cases: extended private key (HD)
@@ -494,7 +482,7 @@ class WalletRpcApi:
                 return {"success": False}
             if len(request["hexkey"]) == 64:
                 sk = PrivateKey.from_bytes(bytes.fromhex(request["hexkey"]))
-                self.keychain.add_private_key_not_extended(sk)
+                self.wallet_node.keychain.add_private_key_not_extended(sk)
                 key_bytes = bytes(sk)
                 new_extended_bytes = bytearray(
                     bytes(ExtendedPrivateKey.from_seed(token_bytes(32)))
@@ -505,7 +493,7 @@ class WalletRpcApi:
                 esk = ExtendedPrivateKey.from_bytes(final_extended_bytes)
             else:
                 esk = ExtendedPrivateKey.from_bytes(bytes.fromhex(request["hexkey"]))
-                self.keychain.add_private_key(esk)
+                self.wallet_node.keychain.add_private_key(esk)
 
         else:
             return {"success": False}
@@ -514,24 +502,24 @@ class WalletRpcApi:
         await self.stop_wallet()
 
         # Makes sure the new key is added to config properly
-        check_keys(self.root_path)
+        check_keys(self.wallet_node.root_path)
 
         # Starts the wallet with the new key selected
-        started = await self.start_wallet(fingerprint)
+        await self.wallet_node.start(fingerprint)
 
-        response = {"success": started}
-        return response
+        return {"success": True}
 
     async def delete_key(self, request):
         await self.stop_wallet()
         fingerprint = request["fingerprint"]
-        self.keychain.delete_key_by_fingerprint(fingerprint)
-        response = {"success": True}
-        return response
+        self.wallet_node.keychain.delete_key_by_fingerprint(fingerprint)
+        return {"success": True}
 
     async def clean_all_state(self):
-        self.keychain.delete_all_keys()
-        path = path_from_root(self.root_path, self.config["database_path"])
+        self.wallet_node.keychain.delete_all_keys()
+        path = path_from_root(
+            self.wallet_node.root_path, self.wallet_node.config["database_path"]
+        )
         if path.exists():
             path.unlink()
 
@@ -539,9 +527,8 @@ class WalletRpcApi:
         if self.wallet_node is not None:
             if self.wallet_node.server is not None:
                 self.wallet_node.server.close_all()
-            self.wallet_node._shutdown()
-            await self.wallet_node.wallet_state_manager.close_all_stores()
-            self.wallet_node = None
+            self.wallet_node._close()
+            await self.wallet_node._await_closed()
 
     async def delete_all_keys(self):
         await self.stop_wallet()

@@ -1,7 +1,7 @@
 import asyncio
 import json
 import time
-from typing import Dict, Optional, Tuple, List, AsyncGenerator
+from typing import Dict, Optional, Tuple, List, AsyncGenerator, Callable
 import concurrent
 from pathlib import Path
 import random
@@ -38,8 +38,8 @@ from src.full_node.blockchain import ReceiveBlockResult
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.util.errors import Err
 from src.util.path import path_from_root, mkdir
-
-from src.server.reconnect_task import start_reconnect_task
+from src.util.keychain import Keychain
+from src.wallet.trade_manager import TradeManager
 
 
 class WalletNode:
@@ -77,20 +77,23 @@ class WalletNode:
     _shut_down: bool
     root_path: Path
     local_test: bool
+    state_changed_callback: Optional[Callable]
 
     tasks: List[asyncio.Future]
 
-    @staticmethod
-    async def create(
+    def __init__(
+        self,
         config: Dict,
-        private_key: ExtendedPrivateKey,
+        keychain: Keychain,
         root_path: Path,
         name: str = None,
         override_constants: Dict = {},
         local_test: bool = False,
     ):
-        self = WalletNode()
         self.config = config
+        if local_test:
+            self.config["database_path"] = "test_db_wallet.db"
+
         self.constants = consensus_constants.copy()
         self.root_path = root_path
         self.local_test = local_test
@@ -101,11 +104,10 @@ class WalletNode:
         else:
             self.log = logging.getLogger(__name__)
 
-        await self._set_private_key(private_key)
-
         # Normal operation data
         self.cached_blocks = {}
         self.future_block_hashes = {}
+        self.keychain = keychain
 
         # Sync data
         self._shut_down = False
@@ -115,23 +117,48 @@ class WalletNode:
         self.short_sync_threshold = 15
         self.potential_blocks_received = {}
         self.potential_header_hashes = {}
+        self.state_changed_callback = None
 
         self.server = None
 
         self.tasks = []
 
-        return self
+    async def start(self, public_key_fingerprint: Optional[int] = None):
+        self._shut_down = False
+        private_keys = self.keychain.get_all_private_keys()
+        if len(private_keys) == 0:
+            raise RuntimeError("No keys")
 
-    async def _set_private_key(self, private_key: ExtendedPrivateKey):
+        private_key: Optional[ExtendedPrivateKey] = None
+        if public_key_fingerprint is not None:
+            for sk, _ in private_keys:
+                if sk.get_public_key().get_fingerprint() == public_key_fingerprint:
+                    private_key = sk
+                    break
+        else:
+            private_key = private_keys[0][0]
+
+        if private_key is None:
+            raise RuntimeError("Invalid fingerprint {public_key_fingerprint}")
+
         db_path_key_suffix = str(private_key.get_public_key().get_fingerprint())
         path = path_from_root(
             self.root_path, f"{self.config['database_path']}-{db_path_key_suffix}"
         )
         mkdir(path.parent)
-
         self.wallet_state_manager = await WalletStateManager.create(
             private_key, self.config, path, self.constants
         )
+        self.trade_manager = await TradeManager.create(self.wallet_state_manager)
+        if self.state_changed_callback is not None:
+            self.wallet_state_manager.set_callback(self.state_changed_callback)
+            self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
+
+    def _set_state_changed_callback(self, callback: Callable):
+        self.state_changed_callback = callback
+        if self.global_connections is not None:
+            self.global_connections.set_state_changed_callback(callback)
+        self.wallet_state_manager.set_callback(self.state_changed_callback)
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
 
     def _pending_tx_handler(self):
@@ -205,8 +232,14 @@ class WalletNode:
 
     def _close(self):
         self._shut_down = True
+        self.wsm_close_task = asyncio.create_task(
+            self.wallet_node.wallet_state_manager.close_all_stores()
+        )
         for task in self.tasks:
             task.cancel()
+
+    async def _await_closed(self):
+        await self.wsm_close_task
 
     def _num_needed_peers(self) -> int:
         assert self.server is not None

@@ -149,9 +149,9 @@ class Service:
             self._rpc_task = None
             if self._rpc_start_callback_port:
                 rpc_api, rpc_port = self._rpc_info
-                self._rpc_task = asyncio.ensure_future(start_rpc_server(
-                    rpc_api, rpc_port, self.stop
-                ))
+                self._rpc_task = asyncio.ensure_future(
+                    start_rpc_server(rpc_api, rpc_port, self.stop)
+                )
 
             self._reconnect_tasks = [
                 start_reconnect_task(self._server, _, self._log)

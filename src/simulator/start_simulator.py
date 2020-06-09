@@ -34,9 +34,10 @@ async def main():
     mkdir(db_path.parent)
 
     config["database_path"] = config["simulator_database_path"]
-    full_node = await FullNodeSimulator.create(
+    full_node = FullNodeSimulator(
         config, root_path=root_path, override_constants=test_constants,
     )
+    await full_node.start()
 
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")

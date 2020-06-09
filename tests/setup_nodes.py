@@ -167,7 +167,6 @@ async def setup_wallet_node(
 
     keychain = Keychain(key_seed.hex(), True)
     keychain.add_private_key_seed(key_seed)
-    private_key = keychain.get_all_private_keys()[0][0]
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
@@ -182,11 +181,12 @@ async def setup_wallet_node(
 
     wallet = WalletNode(
         config,
-        private_key,
+        keychain,
         root_path,
         override_constants=test_constants_copy,
         name="wallet1",
     )
+
     await wallet.start()
     assert ping_interval is not None
     assert network_id is not None

@@ -5,7 +5,7 @@ import traceback
 import time
 from asyncio import Event
 from pathlib import Path
-from typing import AsyncGenerator, Dict, List, Optional, Tuple, Type, Callable
+from typing import AsyncGenerator, Dict, List, Optional, Tuple, Callable
 
 import aiosqlite
 from chiabip158 import PyBIP158

@@ -99,7 +99,6 @@ class TestRpc:
                 b"genesis",
                 plot_seed,
                 128,
-
             )
             await client_2.add_plot(str(plot_dir / filename), plot_sk, pool_pk)
             assert len((await client_2.get_plots())["plots"]) == num_plots + 1
