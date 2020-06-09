@@ -35,11 +35,12 @@ def service_kwargs_for_wallet(root_path):
 
     introducer = config["introducer_peer"]
     peer_info = PeerInfo(introducer["host"], introducer["port"])
+    connect_peers = [
+        PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])
+    ]
 
     async def start_callback():
         await api.start()
-        if config["enable_upnp"]:
-            upnp_remap_port(config["port"])
 
     def stop_callback():
         api._close()
@@ -59,6 +60,7 @@ def service_kwargs_for_wallet(root_path):
         stop_callback=stop_callback,
         await_closed_callback=await_closed_callback,
         rpc_info=(WalletRpcApi, config["rpc_port"]),
+        connect_peers=connect_peers,
         periodic_introducer_poll=(
             peer_info,
             config["introducer_connect_interval"],

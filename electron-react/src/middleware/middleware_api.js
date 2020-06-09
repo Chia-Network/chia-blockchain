@@ -134,6 +134,7 @@ export const handle_message = (store, payload) => {
   store.dispatch(incomingMessage(payload));
   if (payload.command === "ping") {
     if (payload.origin === service_wallet_server) {
+      store.dispatch(get_connection_info());
       store.dispatch(format_message("get_public_keys", {}));
     } else if (payload.origin === service_full_node) {
       store.dispatch(getBlockChainState());

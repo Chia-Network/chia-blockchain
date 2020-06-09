@@ -53,10 +53,11 @@ class RpcServer:
                 except BrokenPipeError:
                     pass
 
-    def state_changed(self, change: str):
+    def state_changed(self, *args):
+
         if self.websocket is None:
             return
-        asyncio.create_task(self._state_changed(change))
+        asyncio.create_task(self._state_changed(*args))
 
     def _wrap_http_handler(self, f) -> Callable:
         async def inner(request) -> aiohttp.web.Response:
@@ -140,6 +141,9 @@ class RpcServer:
             return pong()
 
         f = getattr(self, command, None)
+        if f is not None:
+            return await f(data)
+        f = getattr(self.rpc_api, command, None)
         if f is not None:
             return await f(data)
         else:

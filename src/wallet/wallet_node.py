@@ -233,7 +233,7 @@ class WalletNode:
     def _close(self):
         self._shut_down = True
         self.wsm_close_task = asyncio.create_task(
-            self.wallet_node.wallet_state_manager.close_all_stores()
+            self.wallet_state_manager.close_all_stores()
         )
         for task in self.tasks:
             task.cancel()
@@ -322,7 +322,7 @@ class WalletNode:
             Message("request_all_header_hashes_after", request_header_hashes),
             Delivery.RESPOND,
         )
-        timeout = 100
+        timeout = 50
         sleep_interval = 10
         sleep_interval_short = 1
         start_wait = time.time()
