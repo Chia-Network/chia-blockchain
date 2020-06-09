@@ -36,7 +36,6 @@ def main():
         minor_release_number = scm_major_version
         patch_release_number = orignial_minor_ver_list[1]
         if smc_patch_version and "dev" in smc_patch_version:
-            patch_release_number = str(int(patch_release_number) + 1)
             dev_release_number = "." + smc_patch_version
     elif "0rc" in version[1]:
         original_minor_ver_list = scm_minor_version.split("0rc")
@@ -46,7 +45,6 @@ def main():
         minor_release_number = str(int(scm_major_version) + 1)  # RC is 0.2.1 for RC 1
         patch_release_number = original_minor_ver_list[1]
         if smc_patch_version and "dev" in smc_patch_version:
-            patch_release_number = str(int(patch_release_number) + 1)
             dev_release_number = "." + smc_patch_version
     else:
         major_release_number = scm_major_version
