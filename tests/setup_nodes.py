@@ -24,7 +24,7 @@ root_path = bt.root_path
 
 test_constants: Dict[str, Any] = {
     "DIFFICULTY_STARTING": 1,
-    "DISCRIMINANT_SIZE_BITS": 16,
+    "DISCRIMINANT_SIZE_BITS": 8,
     "BLOCK_TIME_TARGET": 10,
     "MIN_BLOCK_TIME": 2,
     "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
@@ -33,7 +33,7 @@ test_constants: Dict[str, Any] = {
     "PROPAGATION_DELAY_THRESHOLD": 20,
     "TX_PER_SEC": 1,
     "MEMPOOL_BLOCK_BUFFER": 10,
-    "MIN_ITERS_STARTING": 50 * 2,
+    "MIN_ITERS_STARTING": 50 * 1,
 }
 test_constants["GENESIS_BLOCK"] = bytes(
     bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
@@ -161,6 +161,7 @@ async def setup_wallet_node(
     config = load_config(root_path, "config.yaml", "wallet")
     if "starting_height" in dic:
         config["starting_height"] = dic["starting_height"]
+    config["initial_num_public_keys"] = 5
 
     keychain = Keychain(key_seed.hex(), True)
     keychain.add_private_key_seed(key_seed)

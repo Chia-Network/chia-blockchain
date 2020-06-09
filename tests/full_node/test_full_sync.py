@@ -23,7 +23,7 @@ class TestFullSync:
 
     @pytest.mark.asyncio
     async def test_basic_sync(self, two_nodes):
-        num_blocks = 100
+        num_blocks = 40
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 

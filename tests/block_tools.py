@@ -71,10 +71,10 @@ class BlockTools:
             # No real plots supplied, so we will use the small test plots
             self.use_any_pos = True
             self.plot_config: Dict = {"plots": {}}
-            # Can't go much lower than 19, since plots start having no solutions
-            k: uint8 = uint8(19)
+            # Can't go much lower than 18, since plots start having no solutions
+            k: uint8 = uint8(18)
             # Uses many plots for testing, in order to guarantee proofs of space at every height
-            num_plots = 40
+            num_plots = 30
             # Use the empty string as the seed for the private key
 
             self.keychain = Keychain("testing", True)
