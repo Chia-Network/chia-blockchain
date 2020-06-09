@@ -1,5 +1,4 @@
-from typing import Callable, Dict, Any
-from abc import ABC, abstractmethod
+from typing import Callable, Dict, Any, Optional, List
 
 import aiohttp
 import logging
@@ -16,13 +15,13 @@ from src.util.ws_message import create_payload, format_response, pong
 log = logging.getLogger(__name__)
 
 
-class AbstractRpcApiHandler(ABC):
+class RpcServer:
     """
     Implementation of RPC server.
     """
 
-    def __init__(self, service: Any, stop_cb: Callable, service_name: str):
-        self.service = service
+    def __init__(self, rpc_api: Any, service_name: str, stop_cb: Callable):
+        self.rpc_api = rpc_api
         self.stop_cb: Callable = stop_cb
         self.log = log
         self.shut_down = False
@@ -34,29 +33,25 @@ class AbstractRpcApiHandler(ABC):
         if self.websocket is not None:
             await self.websocket.close()
 
-    @classmethod
-    def __subclasshook__(cls, C):
-        if cls is AbstractRpcApiHandler:
-            if any("_state_changed" in B.__dict__ for B in C.__mro__):
-                return True
-        return NotImplemented
-
-    @abstractmethod
-    async def _state_changed(self, change: str):
+    async def _state_changed(self, *args):
+        change = args[0]
         assert self.websocket is not None
+        payloads: List[str] = await self.rpc_api._state_changed(*args)
 
         if change == "add_connection" or change == "close_connection":
             data = await self.get_connections({})
             payload = create_payload(
                 "get_connections", data, self.service_name, "wallet_ui"
             )
-        try:
-            await self.websocket.send_str(payload)
-        except (BaseException) as e:
+            payloads.append(payload)
+        for payload in payloads:
             try:
-                self.log.warning(f"Sending data failed. Exception {type(e)}.")
-            except BrokenPipeError:
-                pass
+                await self.websocket.send_str(payload)
+            except (BaseException) as e:
+                try:
+                    self.log.warning(f"Sending data failed. Exception {type(e)}.")
+                except BrokenPipeError:
+                    pass
 
     def state_changed(self, change: str):
         if self.websocket is None:
@@ -74,9 +69,9 @@ class AbstractRpcApiHandler(ABC):
         return inner
 
     async def get_connections(self, request: Dict) -> Dict:
-        if self.service.global_connections is None:
+        if self.rpc_api.service.global_connections is None:
             return {"success": False}
-        connections = self.service.global_connections.get_connections()
+        connections = self.rpc_api.service.global_connections.get_connections()
         con_info = [
             {
                 "type": con.connection_type,
@@ -100,25 +95,25 @@ class AbstractRpcApiHandler(ABC):
         port = request["port"]
         target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
 
-        if getattr(self.service, "server", None) is None or not (
-            await self.service.server.start_client(target_node, None)
+        if getattr(self.rpc_api.service, "server", None) is None or not (
+            await self.rpc_api.service.server.start_client(target_node, None)
         ):
             raise aiohttp.web.HTTPInternalServerError()
         return {"success": True}
 
     async def close_connection(self, request: Dict):
         node_id = hexstr_to_bytes(request["node_id"])
-        if self.service.global_connections is None:
+        if self.rpc_api.service.global_connections is None:
             raise aiohttp.web.HTTPInternalServerError()
         connections_to_close = [
             c
-            for c in self.service.global_connections.get_connections()
+            for c in self.rpc_api.service.global_connections.get_connections()
             if c.node_id == node_id
         ]
         if len(connections_to_close) == 0:
             raise aiohttp.web.HTTPNotFound()
         for connection in connections_to_close:
-            self.service.global_connections.close(connection)
+            self.rpc_api.service.global_connections.close(connection)
         return {"success": True}
 
     async def stop_node(self, request):
@@ -218,41 +213,43 @@ class AbstractRpcApiHandler(ABC):
 
 
 async def start_rpc_server(
-    handler: AbstractRpcApiHandler, rpc_port: uint16, http_routes: Dict[str, Callable]
+    rpc_api: Any, rpc_port: uint16, stop_cb: Callable
 ):
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.
     """
     app = aiohttp.web.Application()
-    handler.service._set_state_changed_callback(handler.state_changed)
+    rpc_server = RpcServer(rpc_api, rpc_api.service_name, stop_cb)
+    rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
+    http_routes: Dict[str, Callable] = rpc_api.get_routes()
 
     routes = [
-        aiohttp.web.post(route, handler._wrap_http_handler(func))
+        aiohttp.web.post(route, rpc_server._wrap_http_handler(func))
         for (route, func) in http_routes.items()
     ]
     routes += [
         aiohttp.web.post(
-            "/get_connections", handler._wrap_http_handler(handler.get_connections)
+            "/get_connections", rpc_server._wrap_http_handler(rpc_server.get_connections)
         ),
         aiohttp.web.post(
-            "/open_connection", handler._wrap_http_handler(handler.open_connection)
+            "/open_connection", rpc_server._wrap_http_handler(rpc_server.open_connection)
         ),
         aiohttp.web.post(
-            "/close_connection", handler._wrap_http_handler(handler.close_connection)
+            "/close_connection", rpc_server._wrap_http_handler(rpc_server.close_connection)
         ),
-        aiohttp.web.post("/stop_node", handler._wrap_http_handler(handler.stop_node)),
+        aiohttp.web.post("/stop_node", rpc_server._wrap_http_handler(rpc_server.stop_node)),
     ]
 
     app.add_routes(routes)
-    daemon_connection = asyncio.create_task(handler.connect_to_daemon())
+    daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon())
     runner = aiohttp.web.AppRunner(app, access_log=None)
     await runner.setup()
     site = aiohttp.web.TCPSite(runner, "localhost", int(rpc_port))
     await site.start()
 
     async def cleanup():
-        await handler.stop()
+        await rpc_server.stop()
         await runner.cleanup()
         await daemon_connection
 
