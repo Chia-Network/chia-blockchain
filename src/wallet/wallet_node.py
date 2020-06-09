@@ -101,16 +101,7 @@ class WalletNode:
         else:
             self.log = logging.getLogger(__name__)
 
-        db_path_key_suffix = str(private_key.get_public_key().get_fingerprint())
-        path = path_from_root(
-            self.root_path, f"{config['database_path']}-{db_path_key_suffix}"
-        )
-        mkdir(path.parent)
-
-        self.wallet_state_manager = await WalletStateManager.create(
-            private_key, config, path, self.constants
-        )
-        self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
+        await self._set_private_key(private_key)
 
         # Normal operation data
         self.cached_blocks = {}
@@ -130,6 +121,18 @@ class WalletNode:
         self.tasks = []
 
         return self
+
+    async def _set_private_key(self, private_key: ExtendedPrivateKey):
+        db_path_key_suffix = str(private_key.get_public_key().get_fingerprint())
+        path = path_from_root(
+            self.root_path, f"{self.config['database_path']}-{db_path_key_suffix}"
+        )
+        mkdir(path.parent)
+
+        self.wallet_state_manager = await WalletStateManager.create(
+            private_key, self.config, path, self.constants
+        )
+        self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
 
     def _pending_tx_handler(self):
         asyncio.ensure_future(self._resend_queue())
@@ -200,52 +203,10 @@ class WalletNode:
         for msg in messages:
             yield msg
 
-    def _shutdown(self):
-        print("Shutting down")
+    def _close(self):
         self._shut_down = True
         for task in self.tasks:
             task.cancel()
-
-    def _start_bg_tasks(self):
-        """
-        Start a background task connecting periodically to the introducer and
-        requesting the peer list.
-        """
-        introducer = self.config["introducer_peer"]
-        introducer_peerinfo = PeerInfo(introducer["host"], introducer["port"])
-
-        async def introducer_client():
-            async def on_connect() -> OutboundMessageGenerator:
-                msg = Message("request_peers", introducer_protocol.RequestPeers())
-                yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
-
-            while not self._shut_down:
-                for connection in self.global_connections.get_connections():
-                    # If we are still connected to introducer, disconnect
-                    if connection.connection_type == NodeType.INTRODUCER:
-                        self.global_connections.close(connection)
-
-                if self._num_needed_peers():
-                    if not await self.server.start_client(
-                        introducer_peerinfo, on_connect
-                    ):
-                        await asyncio.sleep(5)
-                        continue
-                    await asyncio.sleep(5)
-                    if self._num_needed_peers() == self.config["target_peer_count"]:
-                        # Try again if we have 0 peers
-                        continue
-                await asyncio.sleep(self.config["introducer_connect_interval"])
-
-        if "full_node_peer" in self.config:
-            peer_info = PeerInfo(
-                self.config["full_node_peer"]["host"],
-                self.config["full_node_peer"]["port"],
-            )
-            task = start_reconnect_task(self.global_connections, peer_info, self.log)
-            self.tasks.append(task)
-        if self.local_test is False:
-            self.tasks.append(asyncio.create_task(introducer_client()))
 
     def _num_needed_peers(self) -> int:
         assert self.server is not None

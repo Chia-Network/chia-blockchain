@@ -12,6 +12,7 @@ except ImportError:
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.setproctitle import setproctitle
 from src.wallet.websocket_server import WebSocketServer
+from src.rpc.wallet_rpc_api import WalletRpcApi
 
 
 log = logging.getLogger(__name__)
@@ -24,8 +25,8 @@ async def start_websocket_server():
 
     setproctitle("chia-wallet")
     keychain = Keychain(testing=False)
-    websocket_server = WebSocketServer(keychain, DEFAULT_ROOT_PATH)
-    await websocket_server.start()
+    rpc_api = WalletRpcApi(keychain, DEFAULT_ROOT_PATH)
+    await rpc_api.start()
     log.info("Wallet fully closed")
 
 

@@ -96,12 +96,6 @@ class FullNode:
         self.db_path = path_from_root(root_path, config["database_path"])
         mkdir(self.db_path.parent)
 
-    @classmethod
-    async def create(cls: Type, *args, **kwargs):
-        _ = cls(*args, **kwargs)
-        await _.start()
-        return _
-
     async def start(self):
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)

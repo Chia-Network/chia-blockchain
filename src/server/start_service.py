@@ -17,6 +17,7 @@ from src.types.peer_info import PeerInfo
 from src.util.logging import initialize_logging
 from src.util.config import load_config_cli, load_config
 from src.util.setproctitle import setproctitle
+from src.rpc.rpc_server import start_rpc_server
 
 from .reconnect_task import start_reconnect_task
 
@@ -71,7 +72,7 @@ class Service:
         server_listen_ports: List[int] = [],
         connect_peers: List[PeerInfo] = [],
         on_connect_callback: Optional[OutboundMessage] = None,
-        rpc_start_callback_port: Optional[Tuple[Callable, int]] = None,
+        rpc_info: Optional[Tuple[type, int]] = None,
         start_callback: Optional[Callable] = None,
         stop_callback: Optional[Callable] = None,
         await_closed_callback: Optional[Callable] = None,
@@ -92,7 +93,7 @@ class Service:
         config = load_config_cli(root_path, "config.yaml", service_name)
         initialize_logging(f"{service_name:<30s}", config["logging"], root_path)
 
-        self._rpc_start_callback_port = rpc_start_callback_port
+        self._rpc_info = rpc_info
 
         self._server = ChiaServer(
             config["port"],
@@ -147,10 +148,10 @@ class Service:
 
             self._rpc_task = None
             if self._rpc_start_callback_port:
-                rpc_f, rpc_port = self._rpc_start_callback_port
-                self._rpc_task = asyncio.ensure_future(
-                    rpc_f(self._api, self.stop, rpc_port)
-                )
+                rpc_api, rpc_port = self._rpc_info
+                self._rpc_task = asyncio.ensure_future(start_rpc_server(
+                    rpc_api, rpc_port, self.stop
+                ))
 
             self._reconnect_tasks = [
                 start_reconnect_task(self._server, _, self._log)

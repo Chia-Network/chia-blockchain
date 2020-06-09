@@ -3,7 +3,7 @@ from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
 from src.util.config import load_config, load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.rpc.harvester_rpc_server import start_harvester_rpc_server
+from src.rpc.harvester_rpc_api import HarvesterRpcApi
 
 from src.server.start_service import run_service
 
@@ -31,7 +31,7 @@ def service_kwargs_for_harvester(root_path=DEFAULT_ROOT_PATH):
         service_name=service_name,
         server_listen_ports=[config["port"]],
         connect_peers=connect_peers,
-        rpc_start_callback_port=(start_harvester_rpc_server, config["rpc_port"]),
+        rpc_info=(HarvesterRpcApi, config["rpc_port"]),
     )
     return kwargs
 

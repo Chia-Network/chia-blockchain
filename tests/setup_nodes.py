@@ -69,12 +69,13 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
     if introducer_port is not None:
         config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = introducer_port
-    full_node_1 = await FullNodeSimulator.create(
+    full_node_1 = FullNodeSimulator(
         config=config,
         name=f"full_node_{port}",
         root_path=root_path,
         override_constants=test_constants_copy,
     )
+    await full_node_1.start()
     assert ping_interval is not None
     assert network_id is not None
     server_1 = ChiaServer(
@@ -121,12 +122,13 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
         config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = introducer_port
 
-    full_node_1 = await FullNode.create(
+    full_node_1 = FullNode(
         config=config,
         root_path=root_path,
         name=f"full_node_{port}",
         override_constants=test_constants_copy,
     )
+    await full_node_1.start()
     assert ping_interval is not None
     assert network_id is not None
     server_1 = ChiaServer(
@@ -178,13 +180,14 @@ async def setup_wallet_node(
     ping_interval = net_config.get("ping_interval")
     network_id = net_config.get("network_id")
 
-    wallet = await WalletNode.create(
+    wallet = WalletNode(
         config,
         private_key,
         root_path,
         override_constants=test_constants_copy,
         name="wallet1",
     )
+    await wallet.start()
     assert ping_interval is not None
     assert network_id is not None
     server = ChiaServer(
