@@ -115,7 +115,7 @@ class BlockTools:
                             k,
                             b"genesis",
                             plot_seeds[pn],
-                            2 * 1024,
+                            128,
                         )
                         done_filenames.add(filename)
                     self.plot_config["plots"][str(plot_dir / filename)] = {

@@ -1,19 +1,21 @@
 import asyncio
-import json
 import logging
-import signal
 import time
-import traceback
 from pathlib import Path
-from blspy import ExtendedPrivateKey
+from blspy import ExtendedPrivateKey, PrivateKey
+from secrets import token_bytes
 
 from typing import List, Optional, Tuple, Dict, Callable
 
-import aiohttp
 from src.util.byte_types import hexstr_to_bytes
-from src.util.keychain import Keychain, seed_from_mnemonic, generate_mnemonic
+from src.util.keychain import (
+    Keychain,
+    seed_from_mnemonic,
+    generate_mnemonic,
+    bytes_to_mnemonic,
+)
 from src.util.path import path_from_root
-from src.util.ws_message import create_payload, format_response, pong
+from src.util.ws_message import create_payload
 from src.wallet.trade_manager import TradeManager
 
 try:
@@ -23,10 +25,8 @@ except ImportError:
 
 from src.cmds.init import check_keys
 from src.server.outbound_message import NodeType, OutboundMessage, Message, Delivery
-from src.server.server import ChiaServer
-from src.simulator.simulator_constants import test_constants
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
-from src.util.config import load_config_cli, load_config
+from src.util.config import load_config_cli
 from src.util.ints import uint64, uint32
 from src.util.logging import initialize_logging
 from src.wallet.util.wallet_types import WalletType
@@ -56,7 +56,6 @@ class WalletRpcApi:
         if self.config["testing"] is True:
             self.config["database_path"] = "test_db_wallet.db"
 
-
     def get_routes(self) -> Dict[str, Callable]:
         return {
             "/get_wallet_balance": self.get_wallet_balance,
@@ -80,12 +79,12 @@ class WalletRpcApi:
             "/respond_to_offer": self.respond_to_offer,
             "/get_wallet_summaries": self.get_wallet_summaries,
             "/get_public_keys": self.get_public_keys,
-            "/logged_in": self.logged_in,
             "/generate_mnemonic": self.generate_mnemonic,
             "/log_in": self.log_in,
             "/add_key": self.add_key,
             "/delete_key": self.delete_key,
-            "/delete_all_keys": self.delete_all_keys
+            "/delete_all_keys": self.delete_all_keys,
+            "/get_private_key": self.get_private_key,
         }
 
     async def _state_changed(self, *args) -> List[str]:
@@ -116,7 +115,6 @@ class WalletRpcApi:
         response = {
             "wallet_id": wallet_id,
             "puzzle_hash": puzzle_hash,
-
         }
 
         return response
@@ -457,14 +455,21 @@ class WalletRpcApi:
         response = {"success": True, "public_key_fingerprints": fingerprints}
         return response
 
-    async def logged_in(self):
-        private_key = self.keychain.get_wallet_key()
-        if private_key is None:
-            response = {"logged_in": False}
-        else:
-            response = {"logged_in": True}
-
-        return response
+    async def get_private_key(self, request):
+        fingerprint = request["fingerprint"]
+        for esk, seed in self.keychain.get_all_private_keys():
+            if esk.get_public_key().get_fingerprint() == fingerprint:
+                s = bytes_to_mnemonic(seed) if seed is not None else None
+                self.log.warning(f"{s}, {esk}")
+                return {
+                    "success": True,
+                    "private_key": {
+                        "fingerprint": fingerprint,
+                        "esk": bytes(esk).hex(),
+                        "seed": s,
+                    },
+                }
+        return {"success": False, "private_key": {"fingerprint": fingerprint}}
 
     async def log_in(self, request):
         await self.stop_wallet()
@@ -476,17 +481,42 @@ class WalletRpcApi:
         return response
 
     async def add_key(self, request):
+        if "mnemonic" in request:
+            # Adding a key from 24 word mnemonic
+            mnemonic = request["mnemonic"]
+            seed = seed_from_mnemonic(mnemonic)
+            self.keychain.add_private_key_seed(seed)
+            esk = ExtendedPrivateKey.from_seed(seed)
+        elif "hexkey" in request:
+            # Adding a key from hex private key string. Two cases: extended private key (HD)
+            # which is 77 bytes, and int private key which is 32 bytes.
+            if len(request["hexkey"]) != 154 and len(request["hexkey"]) != 64:
+                return {"success": False}
+            if len(request["hexkey"]) == 64:
+                sk = PrivateKey.from_bytes(bytes.fromhex(request["hexkey"]))
+                self.keychain.add_private_key_not_extended(sk)
+                key_bytes = bytes(sk)
+                new_extended_bytes = bytearray(
+                    bytes(ExtendedPrivateKey.from_seed(token_bytes(32)))
+                )
+                final_extended_bytes = bytes(
+                    new_extended_bytes[: -len(key_bytes)] + key_bytes
+                )
+                esk = ExtendedPrivateKey.from_bytes(final_extended_bytes)
+            else:
+                esk = ExtendedPrivateKey.from_bytes(bytes.fromhex(request["hexkey"]))
+                self.keychain.add_private_key(esk)
+
+        else:
+            return {"success": False}
+
+        fingerprint = esk.get_public_key().get_fingerprint()
         await self.stop_wallet()
-        mnemonic = request["mnemonic"]
-        self.log.info(f"Mnemonic {mnemonic}")
-        seed = seed_from_mnemonic(mnemonic)
-        self.log.info(f"Seed {seed}")
-        fingerprint = (
-            ExtendedPrivateKey.from_seed(seed).get_public_key().get_fingerprint()
-        )
-        self.keychain.add_private_key_seed(seed)
+
+        # Makes sure the new key is added to config properly
         check_keys(self.root_path)
 
+        # Starts the wallet with the new key selected
         started = await self.start_wallet(fingerprint)
 
         response = {"success": started}

@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Any, Optional, List
+from typing import Callable, Dict, Any, List
 
 import aiohttp
 import logging
@@ -7,10 +7,10 @@ import json
 import traceback
 
 from src.types.peer_info import PeerInfo
-from src.util.ints import uint16
 from src.util.byte_types import hexstr_to_bytes
 from src.util.json_util import obj_to_response
 from src.util.ws_message import create_payload, format_response, pong
+from src.util.ints import uint16
 
 log = logging.getLogger(__name__)
 
@@ -212,9 +212,7 @@ class RpcServer:
             await asyncio.sleep(1)
 
 
-async def start_rpc_server(
-    rpc_api: Any, rpc_port: uint16, stop_cb: Callable
-):
+async def start_rpc_server(rpc_api: Any, rpc_port: uint16, stop_cb: Callable):
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.
@@ -230,15 +228,20 @@ async def start_rpc_server(
     ]
     routes += [
         aiohttp.web.post(
-            "/get_connections", rpc_server._wrap_http_handler(rpc_server.get_connections)
+            "/get_connections",
+            rpc_server._wrap_http_handler(rpc_server.get_connections),
         ),
         aiohttp.web.post(
-            "/open_connection", rpc_server._wrap_http_handler(rpc_server.open_connection)
+            "/open_connection",
+            rpc_server._wrap_http_handler(rpc_server.open_connection),
         ),
         aiohttp.web.post(
-            "/close_connection", rpc_server._wrap_http_handler(rpc_server.close_connection)
+            "/close_connection",
+            rpc_server._wrap_http_handler(rpc_server.close_connection),
         ),
-        aiohttp.web.post("/stop_node", rpc_server._wrap_http_handler(rpc_server.stop_node)),
+        aiohttp.web.post(
+            "/stop_node", rpc_server._wrap_http_handler(rpc_server.stop_node)
+        ),
     ]
 
     app.add_routes(routes)

@@ -2,7 +2,8 @@ import asyncio
 
 import pytest
 
-from src.rpc.full_node_rpc_server import start_full_node_rpc_server
+from src.rpc.full_node_rpc_api import FullNodeRpcApi
+from src.rpc.rpc_server import start_rpc_server
 from src.protocols import full_node_protocol
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.util.ints import uint16
@@ -42,8 +43,10 @@ class TestRpc:
             full_node_1._close()
             server_1.close_all()
 
-        rpc_cleanup = await start_full_node_rpc_server(
-            full_node_1, stop_node_cb, test_rpc_port
+        full_node_rpc_api = FullNodeRpcApi(full_node_1)
+
+        rpc_cleanup = await start_rpc_server(
+            full_node_rpc_api, test_rpc_port, stop_node_cb
         )
 
         try:

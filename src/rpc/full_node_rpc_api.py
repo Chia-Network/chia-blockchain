@@ -1,5 +1,4 @@
 from src.full_node.full_node import FullNode
-from src.util.ints import uint16
 from typing import Callable, List, Optional, Dict
 
 from aiohttp import web
@@ -11,6 +10,7 @@ from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
 from src.util.ws_message import create_payload
+
 
 class FullNodeRpcApi:
     def __init__(self, full_node: FullNode):

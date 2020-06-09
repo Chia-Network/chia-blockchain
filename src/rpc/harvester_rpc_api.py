@@ -1,9 +1,9 @@
 from typing import Callable, Dict, List
 
 from src.harvester import Harvester
-from src.util.ints import uint16
 from src.util.ws_message import create_payload
 from blspy import PrivateKey, PublicKey
+
 
 class HarvesterRpcApi:
     def __init__(self, harvester: Harvester):
@@ -52,5 +52,3 @@ class HarvesterRpcApi:
         plot_sk = PrivateKey.from_bytes(bytes.fromhex(request["plot_sk"]))
         success = self.service._add_plot(filename, plot_sk, pool_pk)
         return {"success": success}
-
-

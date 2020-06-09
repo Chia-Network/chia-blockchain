@@ -1,8 +1,8 @@
 from typing import Callable, Set, Dict, List
 
 from src.farmer import Farmer
-from src.util.ints import uint16
 from src.util.ws_message import create_payload
+
 
 class FarmerRpcApi:
     def __init__(self, farmer: Farmer):
@@ -15,9 +15,11 @@ class FarmerRpcApi:
     async def _state_changed(self, change: str) -> List[str]:
         if change == "challenge":
             data = await self.get_latest_challenges({})
-            return [create_payload(
-                "get_latest_challenges", data, self.service_name, "wallet_ui"
-            )]
+            return [
+                create_payload(
+                    "get_latest_challenges", data, self.service_name, "wallet_ui"
+                )
+            ]
         return []
 
     async def get_latest_challenges(self, request: Dict) -> Dict:
