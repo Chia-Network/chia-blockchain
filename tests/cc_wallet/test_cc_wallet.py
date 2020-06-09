@@ -424,7 +424,7 @@ class TestWalletSimulator:
 
     @pytest.mark.asyncio
     async def test_cc_trade_with_multiple_colours(self, two_wallet_nodes):
-        num_blocks = 10
+        num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_1, server_1 = full_nodes[0]
         wallet_node, server_2 = wallets[0]
