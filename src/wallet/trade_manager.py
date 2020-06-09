@@ -45,8 +45,10 @@ class TradeManager:
 
         return self
 
-    async def get_trade_history(self) -> Trades:
+    async def get_trade_history(self) -> Optional[Trades]:
         current_trades_hex = await self.wallet_state_manager.basic_store.get("current_trades", Trades)
+        if current_trades_hex is None:
+            return None
         trades = Trades(hexstr_to_bytes(current_trades_hex))
         return trades
 
