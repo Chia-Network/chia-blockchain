@@ -26,6 +26,7 @@ for setuptools_scm/PEP 440 reasons.
 ### Changed
 - Plots are now refreshed in the UI after each plot instead of at the end of plotting.
 - We have made performance improvements to plotting speed on all platforms.
+- The command line plotter now supports specifying it's memory buffer size.
 - Test plots for the simulation and testing harness now go into `~/.chia/test-plots/`
 - We have completely refactored all networking code towards making each Chia service use the same default networking infrastructure and move to websockets as the default networking wire protocol.
 - We added additional improvements and more RPCs to the start daemon and various services to continue to make chia start/stop reliable cross platform.
