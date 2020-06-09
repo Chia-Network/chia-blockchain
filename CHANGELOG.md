@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## [Unreleased]
+
+### Added
+
+### Changed
+
+### Fixed
+
 ## [1.0beta7] aka Beta 1.7 - 2020-06-08
 
 ### Added
