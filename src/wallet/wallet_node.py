@@ -152,7 +152,8 @@ class WalletNode:
         self.trade_manager = await TradeManager.create(self.wallet_state_manager)
         if self.state_changed_callback is not None:
             self.wallet_state_manager.set_callback(self.state_changed_callback)
-            self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
+
+        self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback

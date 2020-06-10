@@ -560,7 +560,6 @@ class WalletStateManager:
             assert block.removals is not None
             await wallet.coin_added(coin, index, header_hash, block.removals)
 
-        self.log.info(f"Doing state changed for wallet id {wallet_id}")
         self.state_changed("coin_added", wallet_id)
 
     async def add_pending_transaction(self, tx_record: TransactionRecord):
