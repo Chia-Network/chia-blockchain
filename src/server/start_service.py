@@ -149,7 +149,7 @@ class Service:
             self._rpc_task = None
             if self._rpc_info:
                 rpc_api, rpc_port = self._rpc_info
-                self._rpc_task = asyncio.ensure_future(
+                self._rpc_task = asyncio.create_task(
                     start_rpc_server(rpc_api(self._api), rpc_port, self.stop)
                 )
 
@@ -175,7 +175,7 @@ class Service:
             if self._await_closed_callback:
                 await self._await_closed_callback()
 
-        self._task = asyncio.ensure_future(_run())
+        self._task = asyncio.create_task(_run())
 
     async def run(self):
         self.start()
@@ -200,7 +200,7 @@ class Service:
     async def wait_closed(self):
         await self._task
         if self._rpc_task:
-            await self._rpc_task
+            await (await self._rpc_task)()
             self._log.info("Closed RPC server.")
         self._log.info("%s fully closed", self._node_type)
 

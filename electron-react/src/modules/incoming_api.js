@@ -178,6 +178,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         wallet.puzzle_hash = puzzle_hash;
         return { ...state };
       } else if (command === "get_connections") {
+        console.log("Got connections", data);
         if (data.success || data.connections) {
           const connections = data.connections;
           state.status["connections"] = connections;

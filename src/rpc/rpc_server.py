@@ -209,7 +209,7 @@ class RpcServer:
                     await self.connection(ws)
                 self.websocket = None
                 await session.close()
-            except BaseException as e:
+            except Exception as e:
                 self.log.warning(f"Exception: {e}")
                 if session is not None:
                     await session.close()

@@ -324,7 +324,7 @@ class WalletNode:
             Delivery.RESPOND,
         )
         timeout = 50
-        sleep_interval = 10
+        sleep_interval = 3
         sleep_interval_short = 1
         start_wait = time.time()
         while time.time() - start_wait < timeout:
@@ -597,6 +597,8 @@ class WalletNode:
                 else:
                     # Not added to chain yet. Try again soon.
                     await asyncio.sleep(sleep_interval_short)
+                    if self._shut_down:
+                        return
                     total_time_slept += sleep_interval_short
                     if hh in self.wallet_state_manager.block_records:
                         break

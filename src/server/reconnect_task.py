@@ -18,6 +18,6 @@ def start_reconnect_task(server, peer_info, log):
                 log.info(f"Reconnecting to peer {peer_info}")
                 if not await server.start_client(peer_info, None, auth=True):
                     await asyncio.sleep(1)
-            await asyncio.sleep(1)
+            await asyncio.sleep(2)
 
     return asyncio.create_task(connection_check())

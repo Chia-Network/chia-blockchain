@@ -25,7 +25,10 @@ class DaemonProxy:
 
         async def listener():
             while True:
-                message = await self.websocket.recv()
+                try:
+                    message = await self.websocket.recv()
+                except websockets.exceptions.ConnectionClosedOK as e:
+                    return
                 decoded = json.loads(message)
                 id = decoded["request_id"]
 
@@ -76,6 +79,7 @@ class DaemonProxy:
         data = {"service": service_name}
         request = self.format_request("is_running", data)
         response = await self._get(request)
+        print("IS RUNNING RESPONSE", response)
         is_running = response["data"]["is_running"]
         return is_running
 
@@ -83,6 +87,9 @@ class DaemonProxy:
         request = self.format_request("ping")
         response = await self._get(request)
         return response
+
+    async def close(self):
+        await self.websocket.close()
 
     async def exit(self):
         request = self.format_request("exit", {})
@@ -113,5 +120,5 @@ async def connect_to_daemon_and_validate(root_path):
     except Exception as ex:
         # ConnectionRefusedError means that daemon is not yet running
         if not isinstance(ex, ConnectionRefusedError):
-            print("Exception connecting to daemon: {ex}")
+            print(f"Exception connecting to daemon: {ex}")
         return None
