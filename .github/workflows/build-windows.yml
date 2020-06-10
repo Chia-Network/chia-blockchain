@@ -26,7 +26,7 @@ jobs:
           if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
           echo ::set-output name=HAS_SECRET::${HAS_SECRET}
         env:
-          SECRET: "${{ secrets.CERT_3RD_PARTY }}"
+          SECRET: "${{ secrets.WIN_CODE_SIGN_CERT }}"
 
       - name: Decode code signing cert into an encrypted file
         if: steps.check_secrets.outputs.HAS_SECRET
