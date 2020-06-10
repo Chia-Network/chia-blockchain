@@ -27,7 +27,7 @@ class DaemonProxy:
             while True:
                 try:
                     message = await self.websocket.recv()
-                except websockets.exceptions.ConnectionClosedOK as e:
+                except websockets.exceptions.ConnectionClosedOK:
                     return
                 decoded = json.loads(message)
                 id = decoded["request_id"]

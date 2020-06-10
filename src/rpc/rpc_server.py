@@ -73,6 +73,7 @@ class RpcServer:
         if self.rpc_api.service.global_connections is None:
             return {"success": False}
         connections = self.rpc_api.service.global_connections.get_connections()
+        log.warning(f"Retuning connections {connections}")
         con_info = [
             {
                 "type": con.connection_type,
@@ -155,6 +156,7 @@ class RpcServer:
             message = json.loads(payload)
             response = await self.ws_api(message)
             if response is not None:
+                # log.info(f"Sending {message} {response}")
                 await websocket.send_str(format_response(message, response))
 
         except BaseException as e:

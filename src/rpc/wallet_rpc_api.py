@@ -517,8 +517,6 @@ class WalletRpcApi:
 
     async def stop_wallet(self):
         if self.service is not None:
-            if self.service.server is not None:
-                self.service.server.close_all()
             self.service._close()
             await self.service._await_closed()
 

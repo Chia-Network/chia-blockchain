@@ -79,8 +79,6 @@ class WalletNode:
     local_test: bool
     state_changed_callback: Optional[Callable]
 
-    tasks: List[asyncio.Future]
-
     def __init__(
         self,
         config: Dict,
@@ -120,8 +118,6 @@ class WalletNode:
         self.state_changed_callback = None
 
         self.server = None
-
-        self.tasks = []
 
     async def start(self, public_key_fingerprint: Optional[int] = None):
         self._shut_down = False
@@ -236,8 +232,8 @@ class WalletNode:
         self.wsm_close_task = asyncio.create_task(
             self.wallet_state_manager.close_all_stores()
         )
-        for task in self.tasks:
-            task.cancel()
+        for connection in self.global_connections.get_connections():
+            connection.close()
 
     async def _await_closed(self):
         await self.wsm_close_task
