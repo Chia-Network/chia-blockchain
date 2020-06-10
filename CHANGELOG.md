@@ -11,8 +11,10 @@ for setuptools_scm/PEP 440 reasons.
 ### Added
 
 ### Changed
+- Minor changes have been made across the repositories to better support compiling on OpenBSD. HT @n1000
 
 ### Fixed
+- The version generator for new installers incorrectly handled the "dev" versions after a release tag.
 
 ## [1.0beta7] aka Beta 1.7 - 2020-06-08
 

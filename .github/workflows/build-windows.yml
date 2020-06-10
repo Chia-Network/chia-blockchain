@@ -14,6 +14,7 @@ jobs:
           # we need fetch-depth 0 so setuptools_scm can resolve tags
 
       - name: Decode code signing cert into an encrypted file
+        if: secrets.CERT_3RD_PARTY
         uses: kitek/decode-base64-into-file-action@1.0
         with:
           encoded-value: ${{ secrets.WIN_CODE_SIGN_CERT }}
