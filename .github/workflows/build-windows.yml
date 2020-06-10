@@ -8,12 +8,28 @@ jobs:
     runs-on: [windows-latest]
 
     steps:
+      - name: Cancel previous runs on the same branch
+        uses: styfle/cancel-workflow-action@0.4.0
+        with:
+          access_token: ${{ github.token }}
+
       - uses: actions/checkout@v1
         with:
           fetch-depth: 0
           # we need fetch-depth 0 so setuptools_scm can resolve tags
 
+      - name: Test for secrets access
+        id: check_secrets
+        shell: bash
+        run: |
+          unset HAS_SECRET
+          if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
+          echo ::set-output name=HAS_SECRET::${HAS_SECRET}
+        env:
+          SECRET: "${{ secrets.WIN_CODE_SIGN_CERT }}"
+
       - name: Decode code signing cert into an encrypted file
+        if: steps.check_secrets.outputs.HAS_SECRET
         uses: kitek/decode-base64-into-file-action@1.0
         with:
           encoded-value: ${{ secrets.WIN_CODE_SIGN_CERT }}
@@ -33,13 +49,13 @@ jobs:
           .\build_scripts\build_windows.ps1
 
       - name: Upload Windows exe's to artifacts
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v2
         with:
           name: Windows-Exe
           path: ${{ github.workspace }}\electron-react\Chia-win32-x64\
 
       - name: Upload Installer to artifacts
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v2
         with:
           name: Windows-Installers
           path: ${{ github.workspace }}\electron-react\release-builds\

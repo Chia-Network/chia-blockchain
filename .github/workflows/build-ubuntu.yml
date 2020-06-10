@@ -15,6 +15,11 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
+    - name: Cancel previous runs on the same branch
+      uses: styfle/cancel-workflow-action@0.4.0
+      with:
+        access_token: ${{ github.token }}
+        
     - uses: actions/checkout@v1
 
     - name: Setup Python environment

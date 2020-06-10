@@ -8,6 +8,11 @@ jobs:
     runs-on: [macos-latest]
 
     steps:
+    - name: Cancel previous runs on the same branch
+      uses: styfle/cancel-workflow-action@0.4.0
+      with:
+        access_token: ${{ github.token }}
+
     - uses: actions/checkout@v1
       with:
         fetch-depth: 0
@@ -16,6 +21,16 @@ jobs:
       name: Install Python
       with:
         python-version: '3.7'
+
+    - name: Test for secrets access
+      id: check_secrets
+      shell: bash
+      run: |
+        unset HAS_SECRET
+        if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
+        echo ::set-output name=HAS_SECRET::${HAS_SECRET}
+      env:
+        SECRET: "${{ secrets.test_pypi_password }}"
 
     - name: Build source distribution
       run: |
@@ -33,6 +48,7 @@ jobs:
       run: pip install twine
 
     - name: Publish distribution to Test PyPI
+      if: steps.check_secrets.outputs.HAS_SECRET
       env:
         TWINE_REPOSITORY_URL: https://test.pypi.org/legacy/
         TWINE_USERNAME: __token__
@@ -41,7 +57,7 @@ jobs:
       run: twine upload --non-interactive --skip-existing --verbose 'dist/*'
 
     - name: Publish distribution to PyPI
-      if: startsWith(github.event.ref, 'refs/tags')
+      if: steps.check_secrets.outputs.HAS_SECRET && startsWith(github.event.ref, 'refs/tags')
       env:
         TWINE_USERNAME: __token__
         TWINE_NON_INTERACTIVE: 1
