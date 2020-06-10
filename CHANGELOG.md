@@ -11,8 +11,12 @@ for setuptools_scm/PEP 440 reasons.
 ### Added
 
 ### Changed
+- Minor changes have been made across the repositories to better support compiling on OpenBSD. HT @n1000
+- A push to a branch will cancel all ci runs still running for that branch.
+- Ci's check to see if they have secret access and attempt to fail cleanly so that ci runs complete from PRs or forked repositories.
 
 ### Fixed
+- The version generator for new installers incorrectly handled the "dev" versions after a release tag.
 
 ## [1.0beta7] aka Beta 1.7 - 2020-06-08
 
