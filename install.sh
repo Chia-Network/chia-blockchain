@@ -49,6 +49,9 @@ elif [ "$(uname)" = "Darwin" ] && type brew && ! npm version>/dev/null 2>&1; the
   brew install npm
 elif [ "$(uname)" = "Darwin" ] && ! type brew >/dev/null 2>&1; then
   echo "Installation currently requires brew on MacOS - https://brew.sh/"
+elif [ "$(uname)" = "OpenBSD" ]; then
+  export MAKE=${MAKE:-gmake}
+  export BUILD_VDF_CLIENT=${BUILD_VDF_CLIENT:-N}
 fi
 
 # this fancy syntax sets INSTALL_PYTHON_PATH to "python3.7" unless INSTALL_PYTHON_VERSION is defined
@@ -67,7 +70,7 @@ pip install --upgrade pip
 pip install wheel
 #if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
 # This remains in case there is a diversion of binary wheels
-pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
+pip install --extra-index-url https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
 pip install -e .
 
 # Ubuntu before 20.04LTS has an ancient node.js
