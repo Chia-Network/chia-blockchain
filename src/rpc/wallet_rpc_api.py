@@ -232,22 +232,23 @@ class WalletRpcApi:
 
         if request["wallet_type"] == "cc_wallet":
             if request["mode"] == "new":
-                cc_wallet: CCWallet = await CCWallet.create_new_cc(
-                    wallet_state_manager, main_wallet, request["amount"]
-                )
-                response = {"success": True, "type": cc_wallet.wallet_info.type.name}
-                return response
+                try:
+                    cc_wallet: CCWallet = await CCWallet.create_new_cc(
+                        wallet_state_manager, main_wallet, request["amount"]
+                    )
+                    return {"success": True, "type": cc_wallet.wallet_info.type.name}
+                except Exception as e:
+                    return {"success": False, "reason": str(e)}
             elif request["mode"] == "existing":
-                cc_wallet = await CCWallet.create_wallet_for_cc(
-                    wallet_state_manager, main_wallet, request["colour"]
-                )
-                response = {"success": True, "type": cc_wallet.wallet_info.type.name}
-                return response
+                try:
+                    cc_wallet = await CCWallet.create_wallet_for_cc(
+                        wallet_state_manager, main_wallet, request["colour"]
+                    )
+                    return {"success": True, "type": cc_wallet.wallet_info.type.name}
+                except Exception as e:
+                    return {"success": False, "reason": str(e)}
 
-        response = {"success": False}
-        return response
-
-    def get_wallet_config(self, request: Dict):
+    def get_wallet_config(self):
         return (
             self.service.config,
             self.service.wallet_state_manager,
