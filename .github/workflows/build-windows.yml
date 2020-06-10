@@ -23,7 +23,7 @@ jobs:
         shell: bash
         run: |
           unset HAS_SECRET
-          if [ -n $SECRET ]; then HAS_SECRET='true' ; fi
+          if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
           echo ::set-output name=HAS_SECRET::${HAS_SECRET}
         env:
           SECRET: "${{ secrets.CERT_3RD_PARTY }}"
