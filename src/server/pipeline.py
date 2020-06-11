@@ -69,7 +69,7 @@ async def initialize_pipeline(
         )
     )
     forker = aiter_forker(handshaked_connections_aiter)
-    handshake_finished_1 = forker.fork(is_active=True)
+    handshake_finished_1 = forker
     handshake_finished_2 = forker.fork(is_active=True)
 
     # Reads messages one at a time from the TCP connection
