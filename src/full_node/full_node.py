@@ -121,6 +121,11 @@ class FullNode:
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
         await self.mempool_manager.new_tips(await self.blockchain.get_full_tips())
         self.state_changed_callback = None
+        uncompact_interval = self.config["send_uncompact_interval"]
+        if uncompact_interval > 0:
+            self.broadcast_uncompact_task = asyncio.create_task(
+                self.broadcast_uncompact_blocks(uncompact_interval)
+            )
 
     def set_global_connections(self, global_connections: PeerConnections):
         self.global_connections = global_connections
@@ -859,6 +864,81 @@ class FullNode:
         self.log.warning(f"Rejected compact PoT Request {reject}")
         for _ in []:
             yield _
+
+    async def broadcast_uncompact_blocks(
+        self, uncompact_interval, delivery: Delivery = Delivery.BROADCAST
+    ):
+        while self.sync_store.get_sync_mode():
+            if self._shut_down:
+                return
+            await asyncio.sleep(30)
+
+        min_height = 1
+        broadcast_list: List = []
+
+        while not self._shut_down:
+            new_min_height = None
+            max_height = self.blockchain.lca_block.height
+            uncompact_blocks = 0
+            self.log.info("Scanning the blockchain for uncompact blocks.")
+
+            for h in range(min_height, max_height):
+                blocks: List[FullBlock] = await self.block_store.get_blocks_at(
+                    [uint32(h)]
+                )
+                for block in blocks:
+                    assert block.proof_of_time is not None
+                    if block.header_hash not in self.blockchain.headers:
+                        continue
+
+                    if block.proof_of_time.witness_type != 0:
+                        challenge_msg = timelord_protocol.ChallengeStart(
+                            block.proof_of_time.challenge_hash,
+                            block.weight,
+                        )
+                        pos_info_msg = timelord_protocol.ProofOfSpaceInfo(
+                            block.proof_of_time.challenge_hash,
+                            block.proof_of_time.number_of_iterations,
+                        )
+                        broadcast_list.append(
+                            (
+                                challenge_msg,
+                                pos_info_msg,
+                            )
+                        )
+                        if (
+                            uncompact_blocks == 0
+                            and h <= max(1, max_height - 200)
+                        ):
+                            new_min_height = h
+                        uncompact_blocks += 1
+
+            if new_min_height is None:
+                new_min_height = max(1, max_height - 200)
+            min_height = new_min_height
+
+            self.log.info(f"Collected {uncompact_blocks} uncompact blocks.")
+            if len(broadcast_list) > 50:
+                random.shuffle(broadcast_list)
+                broadcast_list = broadcast_list[:50]
+            if self.server is not None:
+                for challenge_msg, pos_info_msg in broadcast_list:
+                    self.server.push_message(
+                        OutboundMessage(
+                            NodeType.TIMELORD,
+                            Message("challenge_start", challenge_msg),
+                            delivery,
+                        )
+                    )
+                    self.server.push_message(
+                        OutboundMessage(
+                            NodeType.TIMELORD,
+                            Message("proof_of_space_info", pos_info_msg),
+                            delivery,
+                        )
+                    )
+            self.log.info(f"Broadcasted {len(broadcast_list)} uncompact blocks to timelords.")
+            await asyncio.sleep(uncompact_interval)
 
     @api_request
     async def new_unfinished_block(
