@@ -49,16 +49,15 @@ class Introducer:
                     if peer.get_hash() not in self.vetted:
                         try:
                             log.info(f"Vetting peer {peer.host} {peer.port}")
-                            self.global_connections.close_all_connections()
-                            res = await self.server.start_client(peer)
-                            self.global_connections.close_all_connections()
+                            r, w = await asyncio.wait_for(asyncio.open_connection(peer.host, int(peer.port)), timeout=3)
+                            w.close()
                         except Exception as e:
                             log.warning(f"Could not vet {peer}. {type(e)}{str(e)}")
-                            self.vetted[peer.get_hash()] = True
+                            self.vetted[peer.get_hash()] = False
                             continue
 
                         log.info(f"Have vetted {peer} successfully!")
-                        self.vetted[peer.get_hash()] = res
+                        self.vetted[peer.get_hash()] = True
             except Exception as e:
                 log.error(e)
             await asyncio.sleep(30)

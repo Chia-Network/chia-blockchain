@@ -46,7 +46,7 @@ async def main():
             server.push_message(o_msg)
         servers.append(server)
 
-    await asyncio.sleep(20)
+    await asyncio.sleep(2000)
     # print("Starting to close")
     # for server in servers:
     #     server.close_all()
