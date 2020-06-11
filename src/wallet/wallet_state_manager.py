@@ -367,34 +367,6 @@ class WalletStateManager:
 
         return False
 
-    async def get_unconfirmed_spendable_for_wallet(self, wallet_id: int) -> uint64:
-        """
-        Returns the confirmed balance amount +/- sum of unconfirmed transactions.
-        """
-        spendable: Set[WalletCoinRecord] = await self.get_spendable_coins_for_wallet(
-            wallet_id
-        )
-
-        confirmed: uint64 = uint64(0)
-
-        for unspent in spendable:
-            confirmed = uint64(confirmed + unspent.coin.amount)
-
-        unconfirmed_tx = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
-        addition_amount = 0
-        removal_amount = 0
-
-        for record in unconfirmed_tx:
-            for coin in record.additions:
-                if await self.does_coin_belong_to_wallet(coin, wallet_id):
-                    addition_amount += coin.amount
-            for coin in record.removals:
-                if await self.does_coin_belong_to_wallet(coin, wallet_id):
-                    removal_amount += coin.amount
-
-        result = confirmed - removal_amount + addition_amount
-        return uint64(result)
-
     async def get_confirmed_balance_for_wallet(self, wallet_id: int) -> uint64:
         """
         Returns the confirmed balance, including coinbase rewards that are not spendable.
