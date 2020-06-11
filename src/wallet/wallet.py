@@ -145,13 +145,11 @@ class Wallet(AbstractWallet):
             if exclude is None:
                 exclude = []
 
-            spendable_am = await self.wallet_state_manager.get_unconfirmed_spendable_for_wallet(
-                self.wallet_info.id
-            )
+            spendable_amount = await self.get_spendable_balance()
 
-            if amount > spendable_am:
+            if amount > spendable_amount:
                 self.log.warning(
-                    f"Can't select amount higher than our spendable balance {amount}, spendable {spendable_am}"
+                    f"Can't select amount higher than our spendable balance {amount}, spendable {spendable_amount}"
                 )
                 return None
 
