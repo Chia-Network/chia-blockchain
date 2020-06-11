@@ -43,17 +43,13 @@ class Introducer:
                         return
                     if peer.get_hash() not in self.vetted:
                         try:
+                            log.info(f"Vetting peer {peer.host} {peer.port}")
                             r, w = await asyncio.open_connection(
                                 peer.host, int(peer.port)
                             )
                             w.close()
                             await w.wait_closed()
-                        except (
-                            ConnectionRefusedError,
-                            TimeoutError,
-                            OSError,
-                            asyncio.TimeoutError,
-                        ) as e:
+                        except Exception as e:
                             log.warning(f"Could not vet {peer}. {type(e)}{str(e)}")
                             self.vetted[peer.get_hash()] = False
                             continue
@@ -62,10 +58,7 @@ class Introducer:
                         self.vetted[peer.get_hash()] = True
             except Exception as e:
                 log.error(e)
-            for i in range(30):
-                await asyncio.sleep(1)
-                if self._shut_down:
-                    return
+            await asyncio.sleep(30)
 
     def set_global_connections(self, global_connections: PeerConnections):
         self.global_connections: PeerConnections = global_connections
