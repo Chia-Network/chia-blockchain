@@ -119,7 +119,6 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     config = load_config(root_path, "config.yaml", "full_node")
     config["database_path"] = db_name
     config["send_uncompact_interval"] = 30
-    config["introducer_connect_interval"] = 60
     if introducer_port is not None:
         config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = introducer_port
@@ -144,15 +143,15 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     )
     _ = await start_server(server_1, full_node_1._on_connect)
     full_node_1._set_server(server_1)
-    introducer = config["introducer_peer"]
-    peer_info = PeerInfo(introducer["host"], introducer["port"])
-    create_periodic_introducer_poll_task(
-        server_1,
-        peer_info,
-        full_node_1.global_connections,
-        config["introducer_connect_interval"],
-        config["target_peer_count"],
-    )
+    if introducer_port is not None:
+        peer_info = PeerInfo("127.0.0.1", introducer_port)
+        create_periodic_introducer_poll_task(
+            server_1,
+            peer_info,
+            full_node_1.global_connections,
+            config["introducer_connect_interval"],
+            config["target_peer_count"],
+        )
     yield (full_node_1, server_1)
 
     # TEARDOWN
