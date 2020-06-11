@@ -20,7 +20,7 @@ class KeyValStore:
         await self.db_connection.execute(
             (
                 "CREATE TABLE IF NOT EXISTS key_val_store("
-                " key text PRIMARY_KEY,"
+                " key text PRIMARY KEY,"
                 " value text)"
             )
         )
@@ -58,7 +58,8 @@ class KeyValStore:
         Adds object to key val store
         """
         cursor = await self.db_connection.execute(
-            "INSERT INTO key_val_store VALUES(?, ?)", (key, bytes(obj).hex()),
+            "INSERT OR REPLACE INTO key_val_store VALUES(?, ?)",
+            (key, bytes(obj).hex()),
         )
         await cursor.close()
         await self.db_connection.commit()
