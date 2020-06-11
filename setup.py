@@ -10,7 +10,7 @@ dependencies = [
     "aiosqlite==0.13.0",  # asyncio wrapper for sqlite, to store blocks
     "aiohttp==3.6.2",  # HTTP server for full node rpc
     "colorlog==4.1.0",  # Adds color to logs
-    "chiavdf==0.12.16",  # timelord and vdf verification
+    "chiavdf==0.3b9",  # timelord and vdf verification
     "chiabip158==0.14",  # bip158-style wallet filters
     "chiapos==0.12.21",  # proof of space
     "sortedcontainers==2.1.0",  # For maintaining sorted mempools

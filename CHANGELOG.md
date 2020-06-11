@@ -10,6 +10,12 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Added
 
+- Added a faster VDF process, which generates n-wesolowski proofs very fast, after the VDF result is known.
+This requires a high number of CPUs. To use it, set timelord.fast_algorithm = True in the config file.
+- Added a new type of timelord, which generates compact proofs of time for the existing blocks. This helps
+reducing the database size. Full nodes send 100 random uncompact blocks per hour to timelords, and if
+timelord.sanitizer_mode = True, the timelord will work on those challenges.
+
 ### Changed
 - Minor changes have been made across the repositories to better support compiling on OpenBSD. HT @n1000.
 - A push to a branch will cancel all ci runs still running for that branch.

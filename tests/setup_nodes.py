@@ -15,6 +15,7 @@ from src.farmer import Farmer
 from src.introducer import Introducer
 from src.timelord import Timelord
 from src.server.connection import PeerInfo
+from src.server.start_service import create_periodic_introducer_poll_task
 from src.util.ints import uint16, uint32
 
 
@@ -117,6 +118,8 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
 
     config = load_config(root_path, "config.yaml", "full_node")
     config["database_path"] = db_name
+    config["send_uncompact_interval"] = 30
+    config["introducer_connect_interval"] = 60
     if introducer_port is not None:
         config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = introducer_port
@@ -141,7 +144,15 @@ async def setup_full_node(db_name, port, introducer_port=None, dic={}):
     )
     _ = await start_server(server_1, full_node_1._on_connect)
     full_node_1._set_server(server_1)
-
+    introducer = config["introducer_peer"]
+    peer_info = PeerInfo(introducer["host"], introducer["port"])
+    create_periodic_introducer_poll_task(
+        server_1,
+        peer_info,
+        full_node_1.global_connections,
+        config["introducer_connect_interval"],
+        config["target_peer_count"],
+    )
     yield (full_node_1, server_1)
 
     # TEARDOWN
@@ -317,12 +328,14 @@ async def setup_vdf_clients(port):
     await kill_processes()
 
 
-async def setup_timelord(port, dic={}):
+async def setup_timelord(port, sanitizer, dic={}):
     config = load_config(root_path, "config.yaml", "timelord")
 
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
+    config["sanitizer_mode"] = sanitizer
+
     timelord = Timelord(config, test_constants_copy)
 
     net_config = load_config(root_path, "config.yaml")
@@ -341,10 +354,14 @@ async def setup_timelord(port, dic={}):
         f"timelord_server_{port}",
     )
 
+    vdf_server_port = config["vdf_server"]["port"]
+    if sanitizer:
+        vdf_server_port = 7999
+
     coro = asyncio.start_server(
         timelord._handle_client,
         config["vdf_server"]["host"],
-        config["vdf_server"]["port"],
+        vdf_server_port,
         loop=asyncio.get_running_loop(),
     )
 
@@ -352,8 +369,10 @@ async def setup_timelord(port, dic={}):
 
     timelord.set_server(server)
 
-    timelord_task = asyncio.create_task(timelord._manage_discriminant_queue())
-
+    if not sanitizer:
+        timelord_task = asyncio.create_task(timelord._manage_discriminant_queue())
+    else:
+        timelord_task = asyncio.create_task(timelord._manage_discriminant_queue_sanitizer())
     yield (timelord, server)
 
     vdf_server.cancel()
@@ -442,10 +461,12 @@ async def setup_full_system(dic={}):
         setup_introducer(21233),
         setup_harvester(21234, dic),
         setup_farmer(21235, dic),
-        setup_timelord(21236, dic),
+        setup_timelord(21236, False, dic),
         setup_vdf_clients(8000),
         setup_full_node("blockchain_test.db", 21237, 21233, dic),
         setup_full_node("blockchain_test_2.db", 21238, 21233, dic),
+        setup_timelord(21239, True, dic),
+        setup_vdf_clients(7999),
     ]
 
     introducer, introducer_server = await node_iters[0].__anext__()
@@ -455,6 +476,8 @@ async def setup_full_system(dic={}):
     vdf = await node_iters[4].__anext__()
     node1, node1_server = await node_iters[5].__anext__()
     node2, node2_server = await node_iters[6].__anext__()
+    sanitizer, sanitizer_server = await node_iters[7].__anext__()
+    vdf_sanitizer = await node_iters[8].__anext__()
 
     await harvester_server.start_client(
         PeerInfo("127.0.0.1", uint16(farmer_server._port)), auth=True
@@ -463,6 +486,9 @@ async def setup_full_system(dic={}):
 
     await timelord_server.start_client(
         PeerInfo("127.0.0.1", uint16(node1_server._port))
+    )
+    await sanitizer_server.start_client(
+        PeerInfo("127.0.0.1", uint16(node2_server._port))
     )
 
     yield (node1, node2, harvester, farmer, introducer, timelord, vdf)
