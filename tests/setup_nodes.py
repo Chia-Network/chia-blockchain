@@ -324,7 +324,10 @@ async def setup_vdf_clients(port):
 
     yield vdf_task
 
-    await kill_processes()
+    try:
+        await kill_processes()
+    except Exception:
+        pass
 
 
 async def setup_timelord(port, sanitizer, dic={}):
