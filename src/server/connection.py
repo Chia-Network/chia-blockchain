@@ -76,7 +76,7 @@ class Connection:
         encoded: bytes = cbor.dumps({"f": message.function, "d": message.data})
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
         self.writer.write(len(encoded).to_bytes(LENGTH_BYTES, "big") + encoded)
-        await self.writer.drain()
+        # await self.writer.drain()
         self.bytes_written += LENGTH_BYTES + len(encoded)
 
     async def read_one_message(self) -> Message:

@@ -49,6 +49,7 @@ class Introducer:
                     if peer.get_hash() not in self.vetted:
                         try:
                             log.info(f"Vetting peer {peer.host} {peer.port}")
+                            self.global_connections.close_all_connections()
                             res = await self.server.start_client(peer)
                             self.global_connections.close_all_connections()
                         except Exception as e:
