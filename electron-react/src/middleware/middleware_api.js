@@ -228,8 +228,6 @@ export const handle_message = (store, payload) => {
     if (payload.data.success) {
       store.dispatch(format_message("get_wallets", {}));
       store.dispatch(createState(true, false));
-    } else {
-      store.dispatch(openDialog("Error: ", payload.data.reason));
     }
   } else if (payload.command === "cc_set_name") {
     if (payload.data.success) {
@@ -311,7 +309,7 @@ export const handle_message = (store, payload) => {
   }
   if (payload.data.success === false) {
     if (payload.data.reason) {
-      store.dispatch(openDialog("Error?", payload.data.reason));
+      store.dispatch(openDialog("Error: ", payload.data.reason));
     }
   }
 };

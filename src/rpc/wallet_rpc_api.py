@@ -238,6 +238,7 @@ class WalletRpcApi:
                     )
                     return {"success": True, "type": cc_wallet.wallet_info.type.name}
                 except Exception as e:
+                    log.error("FAILED {e}")
                     return {"success": False, "reason": str(e)}
             elif request["mode"] == "existing":
                 try:
@@ -246,6 +247,7 @@ class WalletRpcApi:
                     )
                     return {"success": True, "type": cc_wallet.wallet_info.type.name}
                 except Exception as e:
+                    log.error("FAILED2 {e}")
                     return {"success": False, "reason": str(e)}
 
     def get_wallet_config(self):
