@@ -23,6 +23,7 @@ from src.util.hash import std_hash
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.cc_wallet import cc_wallet_puzzles
 from src.wallet.key_val_store import KeyValStore
+from src.wallet.trade_manager import TradeManager
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.block_record import BlockRecord
 from src.wallet.wallet_action import WalletAction
@@ -81,6 +82,8 @@ class WalletStateManager:
     main_wallet: Wallet
     wallets: Dict[uint32, Any]
     private_key: ExtendedPrivateKey
+
+    trade_manager: TradeManager
 
     @staticmethod
     async def create(
@@ -186,6 +189,7 @@ class WalletStateManager:
                 genesis_hb,
             )
 
+        self.trade_manager = await TradeManager.create(self)
         return self
 
     def get_public_key(self, index: uint32) -> PublicKey:
@@ -333,6 +337,11 @@ class WalletStateManager:
             wallet_id
         )
 
+        # All coins locked by pending orders
+        offer_locked_coins: Dict[
+            bytes32, Coin
+        ] = await self.trade_manager.get_locked_coins()
+
         amount: uint64 = uint64(0)
 
         for record in spendable:
@@ -347,6 +356,10 @@ class WalletStateManager:
             for coin in txrecord.removals:
                 if await self.does_coin_belong_to_wallet(coin, wallet_id):
                     removal_amount += coin.amount
+
+        for name, coin in offer_locked_coins.items():
+            if await self.does_coin_belong_to_wallet(coin, wallet_id):
+                removal_amount += coin.amount
 
         result = amount - removal_amount
 
@@ -491,6 +504,7 @@ class WalletStateManager:
                 removals=[],
                 wallet_id=wallet_id,
                 sent_to=[],
+                trade_id=None,
             )
             await self.tx_store.add_transaction_record(tx_record)
         else:
@@ -517,6 +531,7 @@ class WalletStateManager:
                     removals=[],
                     wallet_id=wallet_id,
                     sent_to=[],
+                    trade_id=None,
                 )
                 if coin.amount > 0:
                     await self.tx_store.add_transaction_record(tx_record)

@@ -117,12 +117,12 @@ class TestCCTrades:
 
         offer_dict = {1: 10, 2: -30}
 
-        success, spend_bundle, error = await trade_manager_1.create_offer_for_ids(
+        success, trade_offer, error = await trade_manager_1.create_offer_for_ids(
             offer_dict, file
         )
 
         assert success is True
-        assert spend_bundle is not None
+        assert trade_offer is not None
 
         success, offer, error = await trade_manager_2.get_discrepancies_for_offer(
             file_path
@@ -229,12 +229,12 @@ class TestCCTrades:
 
         offer_dict = {1: -1000, 2: -30, 3: 50}
 
-        success, spend_bundle, error = await trade_manager_1.create_offer_for_ids(
+        success, trade_offer, error = await trade_manager_1.create_offer_for_ids(
             offer_dict, file
         )
 
         assert success is True
-        assert spend_bundle is not None
+        assert trade_offer is not None
 
         success, offer, error = await trade_manager_2.get_discrepancies_for_offer(
             file_path
@@ -416,12 +416,12 @@ class TestCCTrades:
 
         offer_dict = {1: 10, 2: -30}
 
-        success, spend_bundle, error = await trade_manager_1.create_offer_for_ids(
+        success, trade_offer, error = await trade_manager_1.create_offer_for_ids(
             offer_dict, file
         )
 
         assert success is True
-        assert spend_bundle is not None
+        assert trade_offer is not None
 
         success, offer, error = await trade_manager_1.get_discrepancies_for_offer(
             file_path
@@ -434,7 +434,7 @@ class TestCCTrades:
         assert offer["chia"] == -10
         assert offer[colour] == 30
 
-        history = await trade_manager_1.get_trade_history()
+        history = await trade_manager_1.get_current_trades()
 
         assert len(history.trades) == 1
         (
@@ -459,7 +459,7 @@ class TestCCTrades:
             file_path_1
         )
 
-        history = await trade_manager_1.get_trade_history()
+        history = await trade_manager_1.get_current_trades()
 
         assert len(history.trades) == 2
         (
