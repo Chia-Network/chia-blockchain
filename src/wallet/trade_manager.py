@@ -46,10 +46,12 @@ class TradeManager:
         return self
 
     async def get_trade_history(self) -> Optional[Trades]:
-        current_trades_hex = await self.wallet_state_manager.basic_store.get("current_trades", Trades)
+        current_trades_hex = await self.wallet_state_manager.basic_store.get(
+            "current_trades", Trades
+        )
         if current_trades_hex is None:
             return None
-        trades = Trades(hexstr_to_bytes(current_trades_hex))
+        trades = Trades.from_bytes(hexstr_to_bytes(current_trades_hex))
         return trades
 
     async def cancel_trade(self, name: str):
@@ -58,30 +60,35 @@ class TradeManager:
     async def cancel_trade_safe(self, name: str):
         self.log.info("Need to cancel this trade")
 
-    async def add_trade_to_history(self, offer: Dict[int, int], spend_bundle: SpendBundle):
-        current_trades = await self.wallet_state_manager.basic_store.get("current_trades", Trades)
+    async def add_trade_to_history(
+        self, offer: Dict[int, int], spend_bundle: SpendBundle
+    ):
+        current_trades = await self.wallet_state_manager.basic_store.get(
+            "current_trades", Trades
+        )
+
         if current_trades is None:
             self.log.info("No trades stored yet")
             trades = []
             trades.append(spend_bundle)
-            current_trades = Trades(trades)
-            await self.wallet_state_manager.basic_store.set("current_trades", current_trades)
+            to_store = Trades(trades)
+            await self.wallet_state_manager.basic_store.set("current_trades", to_store)
             self.log.info("Trade stored")
         else:
-            new_trades = []
-            current_trades = Trades.from_bytes(hexstr_to_bytes(current_trades))
-            new_trades.extend(current_trades.trades)
+            new_trades: List[SpendBundle] = []
+            stored = Trades.from_bytes(hexstr_to_bytes(current_trades))
+            new_trades.extend(stored.trades)
             new_trades.append(spend_bundle)
             to_store = Trades(new_trades)
             await self.wallet_state_manager.basic_store.set("current_trades", to_store)
             self.log.info("There are trades already")
 
     async def create_offer_for_ids(
-            self, offer: Dict[int, int], file_name: str
+        self, offer: Dict[int, int], file_name: str
     ) -> Tuple[bool, Optional[SpendBundle], Optional[str]]:
         success, spend_bundle, error = await self._create_offer_for_ids(offer)
 
-        if success:
+        if success is True and spend_bundle is not None:
             self.write_offer_to_disk(Path(file_name), spend_bundle)
             await self.add_trade_to_history(offer, spend_bundle)
 
@@ -164,14 +171,11 @@ class TradeManager:
         if offer is not None:
             file_path.write_text(bytes(offer).hex())
 
-    async def get_discrepancies_for_offer(
-        self, file_path: Path
+    async def get_discrepancies_for_spend_bundle(
+        self, trade_offer: SpendBundle
     ) -> Tuple[bool, Optional[Dict], Optional[Exception]]:
         try:
-            self.log.info(f"trade offer: {file_path}")
             cc_discrepancies: Dict[bytes32, int] = dict()
-            trade_offer_hex = file_path.read_text()
-            trade_offer = SpendBundle.from_bytes(bytes.fromhex(trade_offer_hex))
             for coinsol in trade_offer.coin_solutions:
                 puzzle = coinsol.solution.first()
                 solution = coinsol.solution.rest().first()
@@ -211,6 +215,14 @@ class TradeManager:
             return True, cc_discrepancies, None
         except Exception as e:
             return False, None, e
+
+    async def get_discrepancies_for_offer(
+        self, file_path: Path
+    ) -> Tuple[bool, Optional[Dict], Optional[Exception]]:
+        self.log.info(f"trade offer: {file_path}")
+        trade_offer_hex = file_path.read_text()
+        trade_offer = SpendBundle.from_bytes(bytes.fromhex(trade_offer_hex))
+        return await self.get_discrepancies_for_spend_bundle(trade_offer)
 
     async def get_inner_puzzle_for_puzzle_hash(self, puzzle_hash) -> Optional[Program]:
         info = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
