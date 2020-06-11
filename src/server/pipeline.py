@@ -4,6 +4,7 @@ import logging
 import random
 import ssl
 from typing import Any, AsyncGenerator, List, Optional, Tuple
+from mem_top import mem_top
 
 from aiter import aiter_forker, iter_to_aiter, join_aiters, map_aiter, push_aiter
 
@@ -21,7 +22,10 @@ from src.util import partial_func
 from src.util.errors import Err, ProtocolError
 from src.util.ints import uint16
 import traceback
+from pympler import refbrowser
 
+from pympler.tracker import SummaryTracker
+tracker = SummaryTracker()
 
 async def initialize_pipeline(
     srwt_aiter,
@@ -106,10 +110,28 @@ async def initialize_pipeline(
     expanded_messages_aiter = join_aiters(
         map_aiter(expand_outbound_messages, responses_aiter, 100)
     )
+    async def print_mem():
+        while True:
+            await asyncio.sleep(30)
+            ib = refbrowser.InteractiveBrowser(global_connections)
+            tracker.print_diff()
+            print(mem_top())
+
+    async def send():
+        try:
+            await connection.send(message)
+        except Exception as e:
+            connection.log.warning(
+                f"Cannot write to {connection}, already closed. Error {e}."
+            )
+            global_connections.close(connection, True)
+    asyncio.create_task(print_mem())
 
     # This will run forever. Sends each message through the TCP connection, using the
     # length encoding and CBOR serialization
     async for connection, message in expanded_messages_aiter:
+        if connection is None:
+            continue
         if message is None:
             # Does not ban the peer, this is just a graceful close of connection.
             global_connections.close(connection, True)
@@ -122,13 +144,7 @@ async def initialize_pipeline(
         connection.log.info(
             f"-> {message.function} to peer {connection.get_peername()}"
         )
-        try:
-            await connection.send(message)
-        except (RuntimeError, TimeoutError, OSError,) as e:
-            connection.log.warning(
-                f"Cannot write to {connection}, already closed. Error {e}."
-            )
-            global_connections.close(connection, True)
+        asyncio.create_task(send())
 
 
 async def stream_reader_writer_to_connection(
