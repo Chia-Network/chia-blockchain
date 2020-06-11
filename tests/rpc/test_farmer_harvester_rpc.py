@@ -29,7 +29,7 @@ class TestRpc:
     async def test1(self, simulation):
         test_rpc_port = uint16(21522)
         test_rpc_port_2 = uint16(21523)
-        full_node_1, _, harvester, farmer, _, _, _ = simulation
+        full_node_1, _, harvester, farmer, _, _, _, _, _ = simulation
 
         def stop_node_cb():
             pass
