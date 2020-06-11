@@ -15,6 +15,11 @@ jobs:
         os: [macOS-latest]
 
     steps:
+    - name: Cancel previous runs on the same branch
+      uses: styfle/cancel-workflow-action@0.4.0
+      with:
+        access_token: ${{ github.token }}
+
     - uses: actions/checkout@v1
 
     - name: Setup Python environment
@@ -22,7 +27,18 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Test for secrets access
+      id: check_secrets
+      shell: bash
+      run: |
+        unset HAS_SECRET
+        if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
+        echo ::set-output name=HAS_SECRET::${HAS_SECRET}
+      env:
+        SECRET: "${{ secrets.APPLE_DEV_ID_APP }}"
+
     - name: Import Apple app signing certificate
+      if: steps.check_secrets.outputs.HAS_SECRET
       uses: Apple-Actions/import-codesign-certs@v1
       with:
         p12-file-base64: ${{ secrets.APPLE_DEV_ID_APP }}

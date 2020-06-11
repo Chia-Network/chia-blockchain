@@ -39,7 +39,10 @@ class Connection:
         self.reader = sr
         self.writer = sw
         socket = self.writer.get_extra_info("socket")
-        self.local_host = socket.getsockname()[0]
+        if socket is not None:
+            self.local_host = socket.getsockname()[0]
+        else:
+            self.local_host = "localhost"
         self.local_port = server_port
         self.peer_host = self.writer.get_extra_info("peername")[0]
         self.peer_port = self.writer.get_extra_info("peername")[1]
@@ -174,7 +177,7 @@ class Peers:
         if peer is None or not peer.port:
             return False
         if peer not in self._peers:
-            self._peers.append(peer)
+            self._peers.append(PeerInfo(peer.host, peer.port))
         self.time_added[peer.get_hash()] = uint64(int(time.time()))
         return True
 
