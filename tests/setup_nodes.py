@@ -490,6 +490,6 @@ async def setup_full_system(dic={}):
         PeerInfo("127.0.0.1", uint16(node2_server._port))
     )
 
-    yield (node1, node2, harvester, farmer, introducer, timelord, vdf)
+    yield (node1, node2, harvester, farmer, introducer, timelord, vdf, sanitizer, vdf_sanitizer)
 
     await _teardown_nodes(node_iters)

@@ -30,7 +30,7 @@ class TestSimulation:
 
     @pytest.mark.asyncio
     async def test_simulation_1(self, simulation):
-        node1, node2, _, _, _, _, _ = simulation
+        node1, node2, _, _, _, _, _, _, _ = simulation
         start = time.time()
         # Use node2 to test node communication, since only node1 extends the chain.
         while time.time() - start < 500:
