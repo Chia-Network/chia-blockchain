@@ -1,11 +1,12 @@
 import asyncio
 import logging
-from typing import AsyncGenerator, Dict
+from typing import AsyncGenerator, Dict, Optional
 
 from src.protocols.introducer_protocol import RespondPeers, RequestPeers
 from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.sized_bytes import bytes32
+from src.server.server import ChiaServer
 from src.util.api_decorators import api_request
 
 log = logging.getLogger(__name__)
@@ -17,6 +18,7 @@ class Introducer:
         self.max_peers_to_send = max_peers_to_send
         self.recent_peer_threshold = recent_peer_threshold
         self._shut_down = False
+        self.server: Optional[ChiaServer] = None
 
     async def start(self):
         log.info("starting vetting task")
@@ -27,6 +29,9 @@ class Introducer:
 
     async def _await_closed(self):
         await self._vetting_task
+
+    def _set_server(self, server: ChiaServer):
+        self.server = server
 
     async def _vetting_loop(self):
         while True:
@@ -44,18 +49,15 @@ class Introducer:
                     if peer.get_hash() not in self.vetted:
                         try:
                             log.info(f"Vetting peer {peer.host} {peer.port}")
-                            r, w = await asyncio.open_connection(
-                                peer.host, int(peer.port)
-                            )
-                            w.close()
-                            await w.wait_closed()
+                            res = await self.server.start_client(peer)
+                            self.global_connections.close_all_connections()
                         except Exception as e:
                             log.warning(f"Could not vet {peer}. {type(e)}{str(e)}")
-                            self.vetted[peer.get_hash()] = False
+                            self.vetted[peer.get_hash()] = True
                             continue
 
                         log.info(f"Have vetted {peer} successfully!")
-                        self.vetted[peer.get_hash()] = True
+                        self.vetted[peer.get_hash()] = res
             except Exception as e:
                 log.error(e)
             await asyncio.sleep(30)
