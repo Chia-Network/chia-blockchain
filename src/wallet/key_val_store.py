@@ -1,5 +1,4 @@
-from typing import Optional, Any
-
+from typing import Optional
 import aiosqlite
 from src.util.streamable import Streamable
 
@@ -37,7 +36,7 @@ class KeyValStore:
         await cursor.close()
         await self.db_connection.commit()
 
-    async def get(self, key: str, obj_class: Any = None) -> Optional[str]:
+    async def get(self, key: str) -> Optional[str]:
         """
         Return bytes representation of stored object
         """
