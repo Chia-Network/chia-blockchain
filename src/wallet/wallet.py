@@ -386,6 +386,7 @@ class Wallet(AbstractWallet):
             removals=rem_list,
             wallet_id=self.wallet_info.id,
             sent_to=[],
+            trade_id=None,
         )
 
         return tx_record
