@@ -434,14 +434,15 @@ class TestCCTrades:
         assert offer["chia"] == -10
         assert offer[colour] == 30
 
-        history = await trade_manager_1.get_current_trades()
+        pending_offers = await trade_manager_1.get_pending_offers()
+        pending_bundle = pending_offers[0].spend_bundle
 
-        assert len(history.trades) == 1
+        assert len(pending_offers) == 1
         (
             success,
             history_offer,
             error,
-        ) = await trade_manager_1.get_discrepancies_for_spend_bundle(history.trades[0])
+        ) = await trade_manager_1.get_discrepancies_for_spend_bundle(pending_bundle)
         assert offer == history_offer
 
         file_1 = "test_offer_file_1.offer"
@@ -451,20 +452,24 @@ class TestCCTrades:
             file_path_1.unlink()
 
         offer_dict_1 = {1: 11, 2: -33}
-        success, spend_bundle, error = await trade_manager_1.create_offer_for_ids(
+        success, trade_offer, error = await trade_manager_1.create_offer_for_ids(
             offer_dict_1, file_1
         )
+
+        assert success is True
+        assert trade_offer is not None
+        assert error is None
 
         success, offer_1, error = await trade_manager_1.get_discrepancies_for_offer(
             file_path_1
         )
 
-        history = await trade_manager_1.get_current_trades()
-
-        assert len(history.trades) == 2
+        pending_offers = await trade_manager_1.get_pending_offers()
+        pending_bundle_1 = pending_offers[1].spend_bundle
+        assert len(pending_offers) == 2
         (
             success,
             history_offer_1,
             error,
-        ) = await trade_manager_1.get_discrepancies_for_spend_bundle(history.trades[1])
+        ) = await trade_manager_1.get_discrepancies_for_spend_bundle(pending_bundle_1)
         assert history_offer_1 == offer_1
