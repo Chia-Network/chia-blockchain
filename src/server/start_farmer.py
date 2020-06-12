@@ -11,6 +11,7 @@ from src.server.start_service import run_service
 # See: https://bugs.python.org/issue29288
 u''.encode('idna')
 
+
 def service_kwargs_for_farmer(root_path):
     service_name = "farmer"
     config = load_config_cli(root_path, "config.yaml", service_name)
