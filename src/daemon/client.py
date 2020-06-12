@@ -79,7 +79,6 @@ class DaemonProxy:
         data = {"service": service_name}
         request = self.format_request("is_running", data)
         response = await self._get(request)
-        print("IS RUNNING RESPONSE", response)
         is_running = response["data"]["is_running"]
         return is_running
 

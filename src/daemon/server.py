@@ -111,25 +111,21 @@ class WebSocketServer:
                 # self.log.info(f"Message received: {decoded}")
                 await self.handle_message(websocket, decoded)
             except (
-                Exception,
                 websockets.exceptions.ConnectionClosed,
                 websockets.exceptions.ConnectionClosedOK,
             ) as e:
-                if isinstance(e, websockets.exceptions.ConnectionClosed) or isinstance(
-                    e, websockets.exceptions.ConnectionClosedOK
-                ):
-                    service_name = self.remote_address_map[websocket.remote_address[1]]
-                    self.log.info(
-                        f"ConnectionClosed. Closing websocket with {service_name}"
-                    )
-                    if service_name in self.connections:
-                        self.connections.pop(service_name)
-                    await websocket.close()
-                else:
-                    tb = traceback.format_exc()
-                    self.log.error(f"Error while handling message: {tb}")
-                    error = {"success": False, "error": f"{e}"}
-                    await websocket.send(format_response(message, error))
+                service_name = self.remote_address_map[websocket.remote_address[1]]
+                self.log.info(
+                    f"ConnectionClosed. Closing websocket with {service_name} {e}"
+                )
+                if service_name in self.connections:
+                    self.connections.pop(service_name)
+                await websocket.close()
+            except Exception as e:
+                tb = traceback.format_exc()
+                self.log.error(f"Error while handling message: {tb}")
+                error = {"success": False, "error": f"{e}"}
+                await websocket.send(format_response(message, error))
 
     async def ping_task(self):
         await asyncio.sleep(30)

@@ -177,7 +177,7 @@ class Peers:
         if peer is None or not peer.port:
             return False
         if peer not in self._peers:
-            self._peers.append(PeerInfo(peer.host, peer.port))
+            self._peers.append(peer)
         self.time_added[peer.get_hash()] = uint64(int(time.time()))
         return True
 

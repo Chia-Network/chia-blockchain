@@ -47,11 +47,8 @@ class RpcServer:
         for payload in payloads:
             try:
                 await self.websocket.send_str(payload)
-            except (BaseException) as e:
-                try:
-                    self.log.warning(f"Sending data failed. Exception {type(e)}.")
-                except BrokenPipeError:
-                    pass
+            except Exception as e:
+                self.log.warning(f"Sending data failed. Exception {type(e)}.")
 
     def state_changed(self, *args):
 
@@ -73,7 +70,6 @@ class RpcServer:
         if self.rpc_api.service.global_connections is None:
             return {"success": False}
         connections = self.rpc_api.service.global_connections.get_connections()
-        log.warning(f"Retuning connections {connections}")
         con_info = [
             {
                 "type": con.connection_type,
