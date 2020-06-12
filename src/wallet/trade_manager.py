@@ -100,7 +100,7 @@ class TradeManager:
     async def add_pending_offer(self, trade_offer: TradeOffer):
         pending_offers: List[TradeOffer] = await self.get_pending_offers()
         pending_offers.append(trade_offer)
-        to_store = PendingOffers(trade_offer)
+        to_store = PendingOffers(pending_offers)
         await self.wallet_state_manager.basic_store.set(PENDING_OFFERS, to_store)
         self.pending_offer_cache = pending_offers
 
