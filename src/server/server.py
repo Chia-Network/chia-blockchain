@@ -80,7 +80,11 @@ class ChiaServer:
         self._outbound_aiter: push_aiter = push_aiter()
 
         # Taks list to keep references to tasks, so they don'y get GCd
-        self._tasks: List[asyncio.Task] = [self._initialize_ping_task()]
+        self._tasks: List[asyncio.Task] = []
+        if local_type != NodeType.INTRODUCER:
+            # Introducers should not keep connections alive, they should close them
+            self._tasks.append(self._initialize_ping_task())
+
         if name:
             self.log = logging.getLogger(name)
         else:
