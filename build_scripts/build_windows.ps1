@@ -102,7 +102,7 @@ If ($env:HAS_SECRETS) {
    signtool.exe verify /v /pa .\release-builds\windows-installer\ChiaSetup-$packageVersion.exe
    }   Else    {
    Write-Output "Skipping timestamp and verify signatures - no authorization to install certificates"
-   }
+}
 
 Write-Output "   ---"
 Write-Output "Windows Installer complete"
