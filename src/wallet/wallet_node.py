@@ -76,7 +76,6 @@ class WalletNode:
     short_sync_threshold: int
     _shut_down: bool
     root_path: Path
-    local_test: bool
     state_changed_callback: Optional[Callable]
 
     def __init__(
@@ -86,15 +85,10 @@ class WalletNode:
         root_path: Path,
         name: str = None,
         override_constants: Dict = {},
-        local_test: bool = False,
     ):
         self.config = config
-        if local_test:
-            self.config["database_path"] = "test_db_wallet.db"
-
         self.constants = consensus_constants.copy()
         self.root_path = root_path
-        self.local_test = local_test
         for key, value in override_constants.items():
             self.constants[key] = value
         if name:

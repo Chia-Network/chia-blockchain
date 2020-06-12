@@ -215,15 +215,13 @@ class WalletRpcApi:
     async def get_sync_status(self, request: Dict):
         syncing = self.service.wallet_state_manager.sync_mode
 
-        response = {"syncing": syncing}
-
-        return response
+        return {"success": True, "syncing": syncing}
 
     async def get_height_info(self, request: Dict):
         lca = self.service.wallet_state_manager.lca
         height = self.service.wallet_state_manager.block_records[lca].height
 
-        response = {"height": height}
+        response = {"success": True, "height": height}
 
         return response
 

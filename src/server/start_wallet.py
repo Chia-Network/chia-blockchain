@@ -22,12 +22,9 @@ def service_kwargs_for_wallet(root_path):
     keychain = Keychain(testing=False)
 
     if config["testing"] is True:
+        config["database_path"] = "test_db_wallet.db"
         api = WalletNode(
-            config,
-            keychain,
-            root_path,
-            override_constants=test_constants,
-            local_test=True,
+            config, keychain, root_path, override_constants=test_constants,
         )
     else:
         api = WalletNode(config, keychain, root_path)
@@ -60,6 +57,7 @@ def service_kwargs_for_wallet(root_path):
         await_closed_callback=await_closed_callback,
         rpc_info=(WalletRpcApi, config["rpc_port"]),
         connect_peers=connect_peers,
+        auth_connect_peers=False,
         periodic_introducer_poll=(
             peer_info,
             config["introducer_connect_interval"],

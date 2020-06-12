@@ -21,7 +21,6 @@ class Introducer:
         self.server: Optional[ChiaServer] = None
 
     async def start(self):
-        log.info("starting vetting task")
         self._vetting_task = asyncio.create_task(self._vetting_loop())
 
     def _close(self):

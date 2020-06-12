@@ -189,7 +189,6 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         state.status["height"] = height;
         return { ...state };
       } else if (command === "get_sync_status") {
-        // console.log("command get_sync_status");
         if (data.success) {
           const syncing = data.syncing;
           state.status["syncing"] = syncing;

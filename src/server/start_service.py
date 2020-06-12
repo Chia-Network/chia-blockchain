@@ -71,6 +71,7 @@ class Service:
         service_name: str,
         server_listen_ports: List[int] = [],
         connect_peers: List[PeerInfo] = [],
+        auth_connect_peers: bool = True,
         on_connect_callback: Optional[OutboundMessage] = None,
         rpc_info: Optional[Tuple[type, int]] = None,
         start_callback: Optional[Callable] = None,
@@ -110,6 +111,7 @@ class Service:
                 f(self._server)
 
         self._connect_peers = connect_peers
+        self._auth_connect_peers = auth_connect_peers
         self._server_listen_ports = server_listen_ports
 
         self._api = api
@@ -154,7 +156,9 @@ class Service:
                 )
 
             self._reconnect_tasks = [
-                start_reconnect_task(self._server, _, self._log)
+                start_reconnect_task(
+                    self._server, _, self._log, self._auth_connect_peers
+                )
                 for _ in self._connect_peers
             ]
             self._server_sockets = [
