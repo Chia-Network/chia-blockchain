@@ -34,6 +34,7 @@ from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.cc_wallet import cc_wallet_puzzles
+from clvm_tools import binutils
 
 # TODO: write tests based on wallet tests
 # TODO: {Matt} compatibility based on deriving innerpuzzle from derivation record
@@ -334,7 +335,7 @@ class CCWallet:
 
                 if coin is not None:
                     if cc_wallet_puzzles.check_is_cc_puzzle(puzzle_program):
-                        puzzle_string = clvm.binutils.disassemble(puzzle_program)
+                        puzzle_string = binutils.disassemble(puzzle_program)
                         inner_puzzle_hash = hexstr_to_bytes(
                             get_innerpuzzle_from_puzzle(puzzle_string)
                         )
@@ -701,8 +702,8 @@ class CCWallet:
                 parent_info.amount,
             ),
             auditor.amount,
-            clvm.binutils.disassemble(inner_puzzle),
-            clvm.binutils.disassemble(innersol),
+            binutils.disassemble(inner_puzzle),
+            binutils.disassemble(innersol),
             auditor_info,
             auditees,
             False,
@@ -748,8 +749,8 @@ class CCWallet:
                     parent_info.amount,
                 ),
                 coin.amount,
-                clvm.binutils.disassemble(coin_inner_puzzle),
-                clvm.binutils.disassemble(innersol),
+                binutils.disassemble(coin_inner_puzzle),
+                binutils.disassemble(innersol),
                 auditor_info,
                 None,
             )
@@ -896,8 +897,8 @@ class CCWallet:
                     parent_info.amount,
                 ),
                 coin.amount,
-                clvm.binutils.disassemble(innerpuz),
-                clvm.binutils.disassemble(innersol),
+                binutils.disassemble(innerpuz),
+                binutils.disassemble(innersol),
                 None,
                 None,
             )
