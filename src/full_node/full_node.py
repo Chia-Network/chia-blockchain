@@ -3,7 +3,6 @@ import concurrent
 import logging
 import traceback
 import time
-from asyncio import Event
 from pathlib import Path
 from typing import AsyncGenerator, Dict, List, Optional, Tuple, Callable
 
@@ -322,7 +321,7 @@ class FullNode:
             f"Tip block {tip_block.header_hash} tip height {tip_block.height}"
         )
 
-        self.sync_store.set_potential_hashes_received(Event())
+        self.sync_store.set_potential_hashes_received(asyncio.Event())
 
         sleep_interval = 10
         total_time_slept = 0
@@ -1478,7 +1477,7 @@ class FullNode:
                         yield ret_msg
                 except asyncio.CancelledError:
                     self.log.error("Syncing failed, CancelledError")
-                except BaseException as e:
+                except Exception as e:
                     tb = traceback.format_exc()
                     self.log.error(f"Error with syncing: {type(e)}{tb}")
                 finally:
@@ -1691,7 +1690,6 @@ class FullNode:
     ) -> OutboundMessageGenerator:
         # Ignore if syncing
         if self.sync_store.get_sync_mode():
-            cost = None
             status = MempoolInclusionStatus.FAILED
             error: Optional[Err] = Err.UNKNOWN
         else:

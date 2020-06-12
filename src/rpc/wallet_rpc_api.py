@@ -113,7 +113,7 @@ class WalletRpcApi:
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         try:
             tx = await wallet.generate_signed_transaction_dict(request)
-        except BaseException as e:
+        except Exception as e:
             data = {
                 "status": "FAILED",
                 "reason": f"Failed to generate signed transaction {e}",
@@ -128,7 +128,7 @@ class WalletRpcApi:
             return data
         try:
             await wallet.push_transaction(tx)
-        except BaseException as e:
+        except Exception as e:
             data = {
                 "status": "FAILED",
                 "reason": f"Failed to push transaction {e}",
@@ -312,7 +312,7 @@ class WalletRpcApi:
         puzzle_hash = hexstr_to_bytes(request["innerpuzhash"])
         try:
             tx = await wallet.cc_spend(request["amount"], puzzle_hash)
-        except BaseException as e:
+        except Exception as e:
             data = {
                 "status": "FAILED",
                 "reason": f"{e}",

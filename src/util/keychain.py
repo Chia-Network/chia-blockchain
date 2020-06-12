@@ -264,7 +264,7 @@ class Keychain:
                 keyring.delete_password(
                     self._get_service(), self._get_private_key_seed_user(index)
                 )
-            except BaseException:
+            except Exception:
                 delete_exception = True
 
             # Stop when there are no more keys to delete
@@ -283,7 +283,7 @@ class Keychain:
                 keyring.delete_password(
                     self._get_service(), self._get_private_key_user(index)
                 )
-            except BaseException:
+            except Exception:
                 delete_exception = True
 
             # Stop when there are no more keys to delete

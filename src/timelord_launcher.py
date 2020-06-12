@@ -5,14 +5,13 @@ import pathlib
 import pkg_resources
 from src.util.logging import initialize_logging
 from src.util.config import load_config
-from asyncio import Lock
 from typing import List
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.setproctitle import setproctitle
 
 active_processes: List = []
 stopped = False
-lock = Lock()
+lock = asyncio.Lock()
 
 log = logging.getLogger(__name__)
 

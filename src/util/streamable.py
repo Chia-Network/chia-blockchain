@@ -4,9 +4,8 @@ from __future__ import annotations
 import dataclasses
 import io
 import pprint
-import json
 from enum import Enum
-from typing import Any, BinaryIO, List, Type, get_type_hints, Union, Dict
+from typing import Any, BinaryIO, List, Type, get_type_hints, Dict
 from src.util.byte_types import hexstr_to_bytes
 from src.types.program import Program
 from src.util.hash import std_hash
@@ -23,14 +22,13 @@ from blspy import (
 )
 
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint32, uint8, uint64, int64, uint128, int512
+from src.util.ints import uint32, uint64, int64, uint128, int512
 from src.util.type_checking import (
     is_type_List,
     is_type_Tuple,
     is_type_SpecificOptional,
     strictdataclass,
 )
-from src.wallet.util.wallet_types import WalletType
 
 pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
 

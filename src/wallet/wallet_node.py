@@ -635,7 +635,6 @@ class WalletNode:
             self.log.info(
                 f"Added orphan {block_record.header_hash} at height {block_record.height}"
             )
-            pass
         elif res == ReceiveBlockResult.ADDED_TO_HEAD:
             self.log.info(
                 f"Updated LCA to {block_record.header_hash} at height {block_record.height}"
@@ -748,7 +747,7 @@ class WalletNode:
                 self.wallet_state_manager.set_sync_mode(True)
                 async for ret_msg in self._sync():
                     yield ret_msg
-            except (BaseException, asyncio.CancelledError) as e:
+            except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Error with syncing. {type(e)} {tb}")
             self.wallet_state_manager.set_sync_mode(False)

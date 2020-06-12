@@ -3,8 +3,6 @@ import time
 
 import clvm
 from typing import Dict, Optional, List, Any, Set
-from clvm_tools import binutils
-from clvm.EvalError import EvalError
 from src.types.BLSSignature import BLSSignature
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
@@ -36,7 +34,6 @@ from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.cc_wallet import cc_wallet_puzzles
-from clvm import run_program
 
 # TODO: write tests based on wallet tests
 # TODO: {Matt} compatibility based on deriving innerpuzzle from derivation record
@@ -285,9 +282,9 @@ class CCWallet:
         """
         cost_sum = 0
         try:
-            cost_run, sexp = run_program(block_program, [])
+            cost_run, sexp = clvm.run_program(block_program, [])
             cost_sum += cost_run
-        except EvalError:
+        except clvm.EvalError.EvalError:
             return False
 
         for name_solution in sexp.as_iter():
@@ -308,7 +305,7 @@ class CCWallet:
                 cost_sum += cost_run
                 if error:
                     return False
-            except clvm.EvalError:
+            except clvm.EvalError.EvalError:
 
                 return False
             if conditions_dict is None:
@@ -337,7 +334,7 @@ class CCWallet:
 
                 if coin is not None:
                     if cc_wallet_puzzles.check_is_cc_puzzle(puzzle_program):
-                        puzzle_string = binutils.disassemble(puzzle_program)
+                        puzzle_string = clvm.binutils.disassemble(puzzle_program)
                         inner_puzzle_hash = hexstr_to_bytes(
                             get_innerpuzzle_from_puzzle(puzzle_string)
                         )
@@ -704,8 +701,8 @@ class CCWallet:
                 parent_info.amount,
             ),
             auditor.amount,
-            binutils.disassemble(inner_puzzle),
-            binutils.disassemble(innersol),
+            clvm.binutils.disassemble(inner_puzzle),
+            clvm.binutils.disassemble(innersol),
             auditor_info,
             auditees,
             False,
@@ -751,8 +748,8 @@ class CCWallet:
                     parent_info.amount,
                 ),
                 coin.amount,
-                binutils.disassemble(coin_inner_puzzle),
-                binutils.disassemble(innersol),
+                clvm.binutils.disassemble(coin_inner_puzzle),
+                clvm.binutils.disassemble(innersol),
                 auditor_info,
                 None,
             )
@@ -899,8 +896,8 @@ class CCWallet:
                     parent_info.amount,
                 ),
                 coin.amount,
-                binutils.disassemble(innerpuz),
-                binutils.disassemble(innersol),
+                clvm.binutils.disassemble(innerpuz),
+                clvm.binutils.disassemble(innersol),
                 None,
                 None,
             )

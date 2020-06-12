@@ -155,7 +155,7 @@ class RpcServer:
                 # log.info(f"Sending {message} {response}")
                 await websocket.send_str(format_response(message, response))
 
-        except BaseException as e:
+        except Exception as e:
             tb = traceback.format_exc()
             self.log.error(f"Error while handling message: {tb}")
             error = {"success": False, "error": f"{e}"}

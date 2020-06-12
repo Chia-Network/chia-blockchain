@@ -41,6 +41,7 @@ from src.wallet.wallet import Wallet
 from src.types.program import Program
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.util.wallet_types import WalletType
+from src.consensus.find_fork_point import find_fork_point_in_chain
 
 
 class WalletStateManager:
@@ -727,8 +728,8 @@ class WalletStateManager:
             # Not genesis, updated LCA
             if block.weight > self.block_records[self.lca].weight:
 
-                fork_h = self._find_fork_point_in_chain(
-                    self.block_records[self.lca], block
+                fork_h = find_fork_point_in_chain(
+                    self.block_records, self.block_records[self.lca], block
                 )
                 await self.reorg_rollback(fork_h)
 
@@ -996,24 +997,6 @@ class WalletStateManager:
             return False
         return True
 
-    def _find_fork_point_in_chain(
-        self, block_1: BlockRecord, block_2: BlockRecord
-    ) -> uint32:
-        """ Tries to find height where new chain (block_2) diverged from block_1 (assuming prev blocks
-        are all included in chain)"""
-        while block_2.height > 0 or block_1.height > 0:
-            if block_2.height > block_1.height:
-                block_2 = self.block_records[block_2.prev_header_hash]
-            elif block_1.height > block_2.height:
-                block_1 = self.block_records[block_1.prev_header_hash]
-            else:
-                if block_2.header_hash == block_1.header_hash:
-                    return block_2.height
-                block_2 = self.block_records[block_2.prev_header_hash]
-                block_1 = self.block_records[block_1.prev_header_hash]
-        assert block_2 == block_1  # Genesis block is the same, genesis fork
-        return uint32(0)
-
     def validate_select_proofs(
         self,
         all_proof_hashes: List[Tuple[bytes32, Optional[Tuple[uint64, uint64]]]],
@@ -1182,8 +1165,8 @@ class WalletStateManager:
         tx_filter = PyBIP158([b for b in transactions_filter])
 
         # Find fork point
-        fork_h: uint32 = self._find_fork_point_in_chain(
-            self.block_records[self.lca], new_block
+        fork_h: uint32 = find_fork_point_in_chain(
+            self.block_records, self.block_records[self.lca], new_block
         )
 
         # Get all unspent coins

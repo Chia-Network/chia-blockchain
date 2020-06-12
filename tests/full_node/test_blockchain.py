@@ -19,6 +19,7 @@ from src.consensus.coinbase import create_coinbase_coin_and_signature
 from src.types.sized_bytes import bytes32
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
+from src.consensus.find_fork_point import find_fork_point_in_chain
 
 
 bt = BlockTools()
@@ -655,12 +656,18 @@ class TestReorgs:
         for i in range(1, len(blocks_2)):
             await b.receive_block(blocks_2[i])
 
-        assert b._find_fork_point_in_chain(blocks[10].header, blocks_2[10].header) == 4
+        assert (
+            find_fork_point_in_chain(b.headers, blocks[10].header, blocks_2[10].header)
+            == 4
+        )
 
         for i in range(1, len(blocks_3)):
             await b.receive_block(blocks_3[i])
 
-        assert b._find_fork_point_in_chain(blocks[10].header, blocks_3[10].header) == 2
+        assert (
+            find_fork_point_in_chain(b.headers, blocks[10].header, blocks_3[10].header)
+            == 2
+        )
 
         assert b.lca_block.data == blocks[2].header.data
 
@@ -668,10 +675,15 @@ class TestReorgs:
             await b.receive_block(blocks_reorg[i])
 
         assert (
-            b._find_fork_point_in_chain(blocks[10].header, blocks_reorg[10].header) == 8
+            find_fork_point_in_chain(
+                b.headers, blocks[10].header, blocks_reorg[10].header
+            )
+            == 8
         )
         assert (
-            b._find_fork_point_in_chain(blocks_2[10].header, blocks_reorg[10].header)
+            find_fork_point_in_chain(
+                b.headers, blocks_2[10].header, blocks_reorg[10].header
+            )
             == 4
         )
         assert b.lca_block.data == blocks[4].header.data

@@ -134,7 +134,7 @@ class WebSocketServer:
                 connection = self.connections[service_name]
                 self.log.info(f"About to ping: {service_name}")
                 await connection.ping()
-            except (BaseException, websockets.exceptions.ConnectionClosed) as e:
+            except Exception as e:
                 self.log.info(f"Ping error: {e}")
                 self.connections.pop(service_name)
                 self.remote_address_map.pop(remote_address)

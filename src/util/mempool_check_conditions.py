@@ -1,7 +1,6 @@
 from typing import Optional, List, Dict, Tuple
 
-import clvm
-from clvm import EvalError
+from clvm.EvalError import EvalError
 from clvm.casts import int_from_bytes
 
 from src.types.condition_var_pair import ConditionVarPair
@@ -125,7 +124,7 @@ def get_name_puzzle_conditions(
             cost_sum += cost_run
             if error:
                 return error, [], uint64(cost_sum)
-        except clvm.EvalError:
+        except EvalError:
             return Err.INVALID_COIN_SOLUTION, [], uint64(cost_sum)
         if conditions_dict is None:
             conditions_dict = {}

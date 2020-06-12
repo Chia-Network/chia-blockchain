@@ -205,7 +205,7 @@ async def show_async(args, parser):
             print(f"Connecting to {ip}, {port}")
             try:
                 await client.open_connection(ip, int(port))
-            except BaseException:
+            except Exception:
                 # TODO: catch right exception
                 print(f"Failed to connect to {ip}:{port}")
         if args.remove_connection:
@@ -221,7 +221,7 @@ async def show_async(args, parser):
                         )
                         try:
                             await client.close_connection(con["node_id"])
-                        except BaseException:
+                        except Exception:
                             result_txt = (
                                 f"Failed to disconnect NodeID {args.remove_connection}"
                             )

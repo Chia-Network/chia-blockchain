@@ -2,7 +2,6 @@ import asyncio
 import io
 import logging
 import time
-from asyncio import Lock, StreamReader, StreamWriter
 from typing import Dict, List, Optional, Tuple
 
 
@@ -32,8 +31,10 @@ class Timelord:
                 )
             )
         }
-        self.lock: Lock = Lock()
-        self.active_discriminants: Dict[bytes32, Tuple[StreamWriter, uint64, str]] = {}
+        self.lock: asyncio.Lock = asyncio.Lock()
+        self.active_discriminants: Dict[
+            bytes32, Tuple[asyncio.StreamWriter, uint64, str]
+        ] = {}
         self.best_weight_three_proofs: int = -1
         self.active_discriminants_start_time: Dict = {}
         self.pending_iters: Dict = {}
@@ -46,14 +47,18 @@ class Timelord:
         self.discriminant_queue: List[Tuple[bytes32, uint128]] = []
         self.max_connection_time = self.config["max_connection_time"]
         self.potential_free_clients: List = []
-        self.free_clients: List[Tuple[str, StreamReader, StreamWriter]] = []
+        self.free_clients: List[
+            Tuple[str, asyncio.StreamReader, asyncio.StreamWriter]
+        ] = []
         self.server: Optional[ChiaServer] = None
         self._is_shutdown = False
 
     def set_server(self, server: ChiaServer):
         self.server = server
 
-    async def _handle_client(self, reader: StreamReader, writer: StreamWriter):
+    async def _handle_client(
+        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+    ):
         async with self.lock:
             client_ip = writer.get_extra_info("peername")[0]
             log.info(f"New timelord connection from client: {client_ip}.")
@@ -71,7 +76,7 @@ class Timelord:
     async def _stop_worst_process(self, worst_weight_active):
         # This is already inside a lock, no need to lock again.
         log.info(f"Stopping one process at weight {worst_weight_active}")
-        stop_writer: Optional[StreamWriter] = None
+        stop_writer: Optional[asyncio.StreamWriter] = None
         stop_discriminant: Optional[bytes32] = None
 
         low_weights = {
@@ -264,7 +269,6 @@ class Timelord:
                 msg = data.decode()
             except Exception as e:
                 log.error(f"Exception while decoding data {e}")
-                pass
 
             if msg == "STOP":
                 log.info(f"Stopped client running on ip {ip}.")

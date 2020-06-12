@@ -28,7 +28,6 @@ async def main():
     initialize_logging("FullNode %(name)-23s", config["logging"], root_path)
 
     log = logging.getLogger(__name__)
-    server_closed = False
 
     db_path = path_from_root(root_path, config["simulator_database_path"])
     mkdir(db_path.parent)
@@ -59,13 +58,10 @@ async def main():
     rpc_cleanup = None
 
     def stop_all():
-        nonlocal server_closed
-        if not server_closed:
-            # Called by the UI, when node is closed, or when a signal is sent
-            log.info("Closing all connections, and server...")
-            server.close_all()
-            server_socket.close()
-            server_closed = True
+        # Called by the UI, when node is closed, or when a signal is sent
+        log.info("Closing all connections, and server...")
+        server.close_all()
+        server_socket.close()
 
         # Starts the RPC server
 
