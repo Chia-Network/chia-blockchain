@@ -16,10 +16,10 @@ def service_kwargs_for_introducer(root_path=DEFAULT_ROOT_PATH):
     async def start_callback():
         await introducer.start()
 
-    def stop_callback():
+    def stop_callback(self):
         introducer._close()
 
-    async def await_closed_callback():
+    async def await_closed_callback(self):
         await introducer._await_closed()
 
     kwargs = dict(

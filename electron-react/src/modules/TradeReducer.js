@@ -53,7 +53,6 @@ export const tradeReducer = (state = { ...initial_state }, action) => {
       new_trades.push(trade);
       return { ...state, trades: new_trades };
     case "RESET_TRADE":
-      trade = [];
       state = { ...initial_state };
       return state;
     case "OFFER_PARSING":

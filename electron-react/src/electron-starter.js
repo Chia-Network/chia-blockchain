@@ -9,18 +9,12 @@ const electron = require("electron");
 const app = electron.app;
 const BrowserWindow = electron.BrowserWindow;
 const path = require("path");
-const WebSocket = require("ws");
 const ipcMain = require("electron").ipcMain;
 const config = require("./config");
 const dev_config = require("./dev_config");
 const local_test = config.local_test;
-const redux_tool = dev_config.redux_tool;
 var url = require("url");
-const Tail = require("tail").Tail;
 const os = require("os");
-
-// Only takes effect if local_test is false. Connects to a local introducer.
-var local_introducer = false;
 
 global.sharedObj = { local_test: local_test };
 
@@ -37,6 +31,7 @@ const PY_MODULE = "server"; // without .py suffix
 let pyProc = null;
 
 const guessPackaged = () => {
+  let packed;
   if (process.platform === "win32") {
     const fullPath = path.join(__dirname, PY_WIN_DIST_FOLDER);
     packed = require("fs").existsSync(fullPath);
@@ -63,7 +58,7 @@ const getScriptPath = () => {
 
 const createPyProc = () => {
   let script = getScriptPath();
-  processOptions = {};
+  let processOptions = {};
   //processOptions.detached = true;
   //processOptions.stdio = "ignore";
   pyProc = null;
@@ -111,8 +106,8 @@ const exitPyProc = () => {
   if (pyProc != null) {
     if (process.platform === "win32") {
       process.stdout.write("Killing daemon on windows");
-      var cp = require('child_process');
-      cp.execSync('taskkill /PID ' + pyProc.pid + ' /T /F')
+      var cp = require("child_process");
+      cp.execSync("taskkill /PID " + pyProc.pid + " /T /F");
     } else {
       process.stdout.write("Killing daemon on other platforms");
       pyProc.kill();

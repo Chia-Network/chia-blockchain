@@ -16,11 +16,6 @@ from src.util.keychain import (
 from src.util.path import path_from_root
 from src.util.ws_message import create_payload
 
-try:
-    import uvloop
-except ImportError:
-    uvloop = None
-
 from src.cmds.init import check_keys
 from src.server.outbound_message import NodeType, OutboundMessage, Message, Delivery
 from src.simulator.simulator_protocol import FarmNewBlockProtocol

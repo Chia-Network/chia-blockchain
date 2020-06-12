@@ -239,19 +239,6 @@ export const handle_message = (store, payload) => {
       store.dispatch(openDialog("Success!", "Offer accepted"));
     }
     store.dispatch(resetTrades());
-  } else if (payload.command === "get_wallets") {
-    if (payload.data.success) {
-      const wallets = payload.data.wallets;
-      for (let wallet of wallets) {
-        store.dispatch(get_balance_for_wallet(wallet.id));
-        store.dispatch(get_transactions(wallet.id));
-        store.dispatch(get_puzzle_hash(wallet.id));
-        if (wallet.type === "COLOURED_COIN") {
-          store.dispatch(get_colour_name(wallet.id));
-          store.dispatch(get_colour_info(wallet.id));
-        }
-      }
-    }
   } else if (payload.command === "get_discrepancies_for_offer") {
     if (payload.data.success) {
       store.dispatch(offerParsed(payload.data.discrepancies));

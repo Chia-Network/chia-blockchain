@@ -388,7 +388,7 @@ const SendCard = props => {
   }
 
   return (
-    <Paper className={(classes.paper, classes.sendCard)}>
+    <Paper className={classes.paper}>
       <Grid container spacing={0}>
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
@@ -478,7 +478,7 @@ const HistoryCard = props => {
   var id = props.wallet_id;
   const classes = useStyles();
   return (
-    <Paper className={(classes.paper, classes.sendCard)}>
+    <Paper className={classes.paper}>
       <Grid container spacing={0}>
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
@@ -588,7 +588,7 @@ const AddressCard = props => {
   }
 
   return (
-    <Paper className={(classes.paper, classes.sendCard)}>
+    <Paper className={classes.paper}>
       <Grid container spacing={0}>
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
