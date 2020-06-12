@@ -11,6 +11,8 @@ from src.server.upnp import upnp_remap_port
 
 from src.types.peer_info import PeerInfo
 
+# See: https://bugs.python.org/issue29288
+u''.encode('idna')
 
 log = logging.getLogger(__name__)
 

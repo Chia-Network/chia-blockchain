@@ -7,6 +7,9 @@ from src.rpc.harvester_rpc_server import start_harvester_rpc_server
 
 from src.server.start_service import run_service
 
+# See: https://bugs.python.org/issue29288
+u''.encode('idna')
+
 
 def service_kwargs_for_harvester(root_path=DEFAULT_ROOT_PATH):
     service_name = "harvester"

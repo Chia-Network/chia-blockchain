@@ -5,6 +5,9 @@ from src.util.default_root import DEFAULT_ROOT_PATH
 
 from src.server.start_service import run_service
 
+# See: https://bugs.python.org/issue29288
+u''.encode('idna')
+
 
 def service_kwargs_for_introducer(root_path=DEFAULT_ROOT_PATH):
     service_name = "introducer"
