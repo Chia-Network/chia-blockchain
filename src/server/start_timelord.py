@@ -4,6 +4,9 @@ import logging
 
 from src.consensus.constants import constants
 
+# See: https://bugs.python.org/issue29288
+u''.encode('idna')
+
 try:
     import uvloop
 except ImportError:

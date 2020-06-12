@@ -8,6 +8,9 @@ from src.rpc.farmer_rpc_server import start_farmer_rpc_server
 
 from src.server.start_service import run_service
 
+# See: https://bugs.python.org/issue29288
+u''.encode('idna')
+
 
 def service_kwargs_for_farmer(root_path):
     service_name = "farmer"
