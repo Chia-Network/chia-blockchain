@@ -85,6 +85,7 @@ class WalletStateManager:
     private_key: ExtendedPrivateKey
 
     trade_manager: TradeManager
+    generate_count: int
 
     @staticmethod
     async def create(
@@ -93,6 +94,7 @@ class WalletStateManager:
         db_path: Path,
         constants: ConsensusConstants,
         name: str = None,
+        testing: bool = False,
     ):
         self = WalletStateManager()
         self.config = config
@@ -121,7 +123,10 @@ class WalletStateManager:
         self.pending_tx_callback = None
         self.difficulty_resets_prev = {}
         self.db_path = db_path
-
+        if testing is True:
+            self.generate_count = 10
+        else:
+            self.generate_count = 100
         main_wallet_info = await self.user_store.get_wallet_by_id(1)
         assert main_wallet_info is not None
 

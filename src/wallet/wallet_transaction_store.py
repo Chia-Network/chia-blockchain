@@ -38,7 +38,8 @@ class WalletTransactionStore:
                 " incoming int,"
                 " confirmed int,"
                 " sent int,"
-                " wallet_id bigint)"
+                " wallet_id bigint,"
+                " trade_id text)"
             )
         )
 
