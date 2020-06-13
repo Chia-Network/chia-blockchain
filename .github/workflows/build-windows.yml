@@ -43,6 +43,7 @@ jobs:
       - name: Build Windows installer with build_scripts\build_windows.ps1
         env:
           WIN_CODE_SIGN_PASS: ${{ secrets.WIN_CODE_SIGN_PASS }}
+          HAS_SECRET: steps.check_secrets.outputs.HAS_SECRET
         run: |
           $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
           $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
