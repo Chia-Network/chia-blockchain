@@ -221,16 +221,17 @@ class Timelord:
         disc: int = create_discriminant(
             challenge_hash, self.constants["DISCRIMINANT_SIZE_BITS"]
         )
-        # Tell the client if we're interested in extending the chain
-        # or to produce compact proofs.
+        # Depending on the flags 'fast_algorithm' and 'sanitizer_mode',
+        # the timelord tells the vdf_client what to execute.
         if not self.sanitizer_mode:
             if self.config["fast_algorithm"]:
-                # Run n-wesolowski algorithm.
+                # Run n-wesolowski (fast) algorithm.
                 writer.write(b"N")
             else:
-                # Run two-wesolowski algorithm.
+                # Run two-wesolowski (slow) algorithm.
                 writer.write(b"T")
         else:
+            # Create compact proofs of time.
             writer.write(b"S")
         await writer.drain()
 
