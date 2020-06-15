@@ -11,3 +11,5 @@ class WalletType(IntEnum):
     CUSTODY = 5
     COLOURED_COIN = 6
     RECOVERABLE = 7
+    AUTHORISER = 8
+    DISTRIBUTED_ID = 9
