@@ -94,9 +94,6 @@ Write-Output "node winstaller.js"
 node winstaller.js
 Write-Output "   ---"
 
-Write-Output "HAS SECRET is:"
-Get-Childitem env:HAS_SECRET
-
 If ($env:HAS_SECRET) {
    Write-Output "   ---"
    Write-Output "Add timestamp and verify signature"
