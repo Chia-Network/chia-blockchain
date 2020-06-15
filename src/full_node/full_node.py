@@ -866,18 +866,19 @@ class FullNode:
         for _ in []:
             yield _
 
+    # Periodically scans for blocks with non compact proof of time
+    # (witness_type != 0) and sends them to the connected timelords.
     async def broadcast_uncompact_blocks(
         self, uncompact_interval, delivery: Delivery = Delivery.BROADCAST
     ):
-        while self.sync_store.get_sync_mode():
-            if self._shut_down:
-                return
-            await asyncio.sleep(30)
-
         min_height = 1
-        broadcast_list: List = []
-
         while not self._shut_down:
+            while self.sync_store.get_sync_mode():
+                if self._shut_down:
+                    return
+                await asyncio.sleep(30)
+
+            broadcast_list: List = []
             new_min_height = None
             max_height = self.blockchain.lca_block.height
             uncompact_blocks = 0
@@ -907,6 +908,10 @@ class FullNode:
                                 pos_info_msg,
                             )
                         )
+                        # Scan only since the first uncompact block we know about.
+                        # No block earlier than this will be uncompact in the future,
+                        # unless a reorg happens. The range to scan next time
+                        # is always at least 200 blocks, to protect against reorgs.
                         if (
                             uncompact_blocks == 0
                             and h <= max(1, max_height - 200)
@@ -915,6 +920,7 @@ class FullNode:
                         uncompact_blocks += 1
 
             if new_min_height is None:
+                # Every block is compact, but we still keep at least 200 blocks to iterate.
                 new_min_height = max(1, max_height - 200)
             min_height = new_min_height
 
@@ -922,6 +928,8 @@ class FullNode:
             if len(broadcast_list) > 50:
                 random.shuffle(broadcast_list)
                 broadcast_list = broadcast_list[:50]
+            if self.sync_store.get_sync_mode():
+                continue
             if self.server is not None:
                 for challenge_msg, pos_info_msg in broadcast_list:
                     self.server.push_message(
