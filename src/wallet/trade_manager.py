@@ -26,6 +26,8 @@ from src.wallet.types.key_val_types import PendingOffers, AcceptedOffers
 from src.wallet.wallet import Wallet
 from clvm_tools import binutils
 
+from src.wallet.wallet_coin_record import WalletCoinRecord
+
 PENDING_OFFERS = "pending_offers"
 ACCEPTED_OFFERS = "accepted_offers"
 
@@ -74,7 +76,8 @@ class TradeManager:
         accepted = AcceptedOffers.from_bytes((hexstr_to_bytes(accepted_offers_hex)))
         return accepted.trades
 
-    async def get_locked_coins(self) -> Dict[bytes32, Coin]:
+    async def get_locked_coins(self, wallet_id: int = None) -> Dict[bytes32, Coin]:
+        """ Returns a dictionary of confirmed coins that are locked by a trade. """
         current_trades = await self.get_pending_offers()
         if current_trades is None:
             return {}
@@ -82,20 +85,57 @@ class TradeManager:
         result = {}
         for trade_offer in current_trades:
             spend_bundle = trade_offer.spend_bundle
-            additions = spend_bundle.additions()
             removals = spend_bundle.removals()
-            for coin in additions:
-                result[coin.name()] = coin
+
             for coin in removals:
-                result[coin.name()] = coin
+                record: Optional[
+                    WalletCoinRecord
+                ] = await self.wallet_state_manager.wallet_store.get_coin_record_by_coin_id(
+                    coin.name()
+                )
+                if record is None:
+                    continue
+                if wallet_id is None or wallet_id == record.wallet_id:
+                    result[coin.name()] = coin
 
         return result
 
-    async def cancel_trade(self, trade_id: bytes32):
-        self.log.info("Need to cancel this trade")
+    async def cancel_pending_offer(self, trade_id: bytes32):
+        self.log.info(f"Cancel pending offer with id trade_id {trade_id.hex()}")
+        offers: List[TradeOffer] = await self.get_pending_offers()
+        filtered_offers: List[TradeOffer] = []
+        for offer in offers:
+            if offer.trade_id != trade_id:
+                filtered_offers.append(offer)
 
-    async def cancel_trade_safe(self, name: str):
-        self.log.info("Need to cancel this trade")
+        to_store = PendingOffers(filtered_offers)
+        await self.wallet_state_manager.basic_store.set(PENDING_OFFERS, to_store)
+
+    async def cancel_pending_offer_safely(self, trade_id: bytes32):
+        """ This will create a transaction that includes coins that were offered"""
+        self.log.info(f"Secure-Cancel pending offer with id trade_id {trade_id.hex()}")
+        offers: List[TradeOffer] = await self.get_pending_offers()
+        to_cancel: Optional[TradeOffer] = None
+        for offer in offers:
+            if offer.trade_id == trade_id:
+                to_cancel = offer
+                break
+        if to_cancel is None:
+            return
+
+        all_coins = to_cancel.spend_bundle.additions()
+        all_coins.extend(to_cancel.spend_bundle.removals())
+
+        for coin in all_coins:
+            wallet = self.wallet_state_manager.get_wallet_for_coin(coin)
+            if wallet is None:
+                continue
+            new_ph = await wallet.get_new_puzzlehash()
+            tx = wallet.generate_signed_transaction(
+                coin.amount, new_ph, 0, coins={coin}
+            )
+            await self.wallet_state_manager.add_pending_transaction(tx_record=tx)
+        return
 
     async def add_pending_offer(self, trade_offer: TradeOffer):
         pending_offers: List[TradeOffer] = await self.get_pending_offers()
@@ -195,7 +235,9 @@ class TradeManager:
                 return False, None, None
 
             trade_offer = TradeOffer(
-                created_at_time=uint64(int(time.time())), spend_bundle=spend_bundle
+                created_at_time=uint64(int(time.time())),
+                spend_bundle=spend_bundle,
+                trade_id=spend_bundle.name(),
             )
             return True, trade_offer, None
         except Exception as e:
