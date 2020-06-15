@@ -52,6 +52,9 @@ elif [ "$(uname)" = "Darwin" ] && ! type brew >/dev/null 2>&1; then
 elif [ "$(uname)" = "OpenBSD" ]; then
   export MAKE=${MAKE:-gmake}
   export BUILD_VDF_CLIENT=${BUILD_VDF_CLIENT:-N}
+elif [ "$(uname)" = "FreeBSD" ]; then
+  export MAKE=${MAKE:-gmake}
+  export BUILD_VDF_CLIENT=${BUILD_VDF_CLIENT:-N}
 fi
 
 # this fancy syntax sets INSTALL_PYTHON_PATH to "python3.7" unless INSTALL_PYTHON_VERSION is defined

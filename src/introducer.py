@@ -62,7 +62,10 @@ class Introducer:
                         self.vetted[peer.get_hash()] = True
             except Exception as e:
                 log.error(e)
-            await asyncio.sleep(30)
+            for i in range(30):
+                if self._shut_down:
+                    return
+                await asyncio.sleep(1)
 
     def set_global_connections(self, global_connections: PeerConnections):
         self.global_connections: PeerConnections = global_connections

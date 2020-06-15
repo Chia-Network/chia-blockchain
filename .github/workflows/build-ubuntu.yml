@@ -1,7 +1,7 @@
 name: Build Ubuntu on Python 3.7 and 3.8
 
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   build:
@@ -19,7 +19,7 @@ jobs:
       uses: styfle/cancel-workflow-action@0.4.0
       with:
         access_token: ${{ github.token }}
-        
+
     - uses: actions/checkout@v1
 
     - name: Setup Python environment

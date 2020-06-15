@@ -9,8 +9,10 @@ from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.keychain import Keychain
 from src.simulator.simulator_constants import test_constants
-
 from src.types.peer_info import PeerInfo
+
+# See: https://bugs.python.org/issue29288
+u"".encode("idna")
 
 
 log = logging.getLogger(__name__)
