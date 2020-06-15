@@ -2,6 +2,7 @@ import asyncio
 import time
 from pathlib import Path
 from secrets import token_bytes
+from typing import Optional
 
 import pytest
 
@@ -9,6 +10,7 @@ from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32, uint64
 from src.wallet.trade_manager import TradeManager
+from src.wallet.wallet_coin_record import WalletCoinRecord
 from tests.setup_nodes import setup_simulators_and_wallets
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 from src.wallet.cc_wallet.cc_wallet import CCWallet
@@ -55,6 +57,7 @@ class TestCCTrades:
         ):
             yield _
 
+    """
     @pytest.mark.asyncio
     async def test_cc_trade(self, two_wallet_nodes):
         num_blocks = 10
@@ -353,9 +356,10 @@ class TestCCTrades:
 
         await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 30)
         await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 30)
+    """
 
     @pytest.mark.asyncio
-    async def test_cc_trade_history(self, two_wallet_nodes):
+    async def test_cc_trade_all(self, two_wallet_nodes):
         num_blocks = 10
         full_nodes, wallets = two_wallet_nodes
         full_node_1, server_1 = full_nodes[0]
@@ -395,18 +399,11 @@ class TestCCTrades:
         assert cc_wallet.cc_info.my_core is not None
         colour = cc_wallet_puzzles.get_genesis_from_core(cc_wallet.cc_info.my_core)
 
-        cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
-            wallet_node_2.wallet_state_manager, wallet2, colour
-        )
-
-        assert cc_wallet.cc_info.my_core == cc_wallet_2.cc_info.my_core
-
         await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
         trade_manager_1 = await TradeManager.create(wallet_node.wallet_state_manager)
-        trade_manager_2 = await TradeManager.create(wallet_node_2.wallet_state_manager)
 
         file = "test_offer_file.offer"
         file_path = Path(file)
@@ -414,11 +411,21 @@ class TestCCTrades:
         if file_path.exists():
             file_path.unlink()
 
+        spendable = await wallet.get_spendable_balance()
         offer_dict = {1: 10, 2: -30}
 
         success, trade_offer, error = await trade_manager_1.create_offer_for_ids(
             offer_dict, file
         )
+
+        # Wallet spendable balance should be reduced by D[10] after creating this offer
+        locked_coin = await trade_manager_1.get_locked_coins(wallet.wallet_info.id)
+        locked_sum = 0
+        for name, coin in locked_coin.items():
+            locked_sum += coin.amount
+        spendable_after = await wallet.get_spendable_balance()
+        assert spendable == spendable_after + locked_sum
+        # await time_out_assert(15, wallet.get_confirmed_balance, 100)
 
         assert success is True
         assert trade_offer is not None
@@ -451,20 +458,39 @@ class TestCCTrades:
         if file_path_1.exists():
             file_path_1.unlink()
 
+        spendable_before_offer_1 = await wallet.get_spendable_balance()
+
         offer_dict_1 = {1: 11, 2: -33}
-        success, trade_offer, error = await trade_manager_1.create_offer_for_ids(
+        success, trade_offer_1, error = await trade_manager_1.create_offer_for_ids(
             offer_dict_1, file_1
         )
 
         assert success is True
-        assert trade_offer is not None
+        assert trade_offer_1 is not None
         assert error is None
+
+        spendable_after_offer_1 = await wallet.get_spendable_balance()
+        removal = trade_offer_1.spend_bundle.removals()
+        locked_sum = 0
+        for coin in removal:
+            record: Optional[
+                WalletCoinRecord
+            ] = await trade_manager_1.wallet_state_manager.wallet_store.get_coin_record_by_coin_id(
+                coin.name()
+            )
+            if record is None:
+                continue
+            if record.wallet_id == wallet.wallet_info.id:
+                locked_sum += coin.amount
+
+        assert spendable_before_offer_1 == spendable_after_offer_1 + locked_sum
 
         success, offer_1, error = await trade_manager_1.get_discrepancies_for_offer(
             file_path_1
         )
 
         pending_offers = await trade_manager_1.get_pending_offers()
+
         pending_bundle_1 = pending_offers[1].spend_bundle
         assert len(pending_offers) == 2
         (
@@ -473,3 +499,10 @@ class TestCCTrades:
             error,
         ) = await trade_manager_1.get_discrepancies_for_spend_bundle(pending_bundle_1)
         assert history_offer_1 == offer_1
+
+        # Cancel 2d trade offer by just deleting
+        await trade_manager_1.cancel_pending_offer(pending_offers[1].trade_id)
+
+        spendable_after_cancel_1 = await wallet.get_spendable_balance()
+
+        assert spendable_before_offer_1 == spendable_after_cancel_1
