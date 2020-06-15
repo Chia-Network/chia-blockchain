@@ -35,11 +35,6 @@ from src.wallet.derivation_record import DerivationRecord
 from src.wallet.cc_wallet import cc_wallet_puzzles
 from dataclasses import replace
 
-# TODO: write tests based on wallet tests
-# TODO: {Matt} compatibility based on deriving innerpuzzle from derivation record
-# TODO: {Matt} convert this into wallet_state_manager.puzzle_store
-# TODO: {Matt} add hooks in WebSocketServer for all UI functions
-
 
 class CCWallet:
     wallet_state_manager: Any
