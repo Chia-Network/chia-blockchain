@@ -342,11 +342,6 @@ class WalletStateManager:
             wallet_id
         )
 
-        # All coins locked by pending orders
-        offer_locked_coins: Dict[
-            bytes32, Coin
-        ] = await self.trade_manager.get_locked_coins()
-
         amount: uint64 = uint64(0)
 
         for record in spendable:
@@ -361,10 +356,6 @@ class WalletStateManager:
             for coin in txrecord.removals:
                 if await self.does_coin_belong_to_wallet(coin, wallet_id):
                     removal_amount += coin.amount
-
-        for name, coin in offer_locked_coins.items():
-            if await self.does_coin_belong_to_wallet(coin, wallet_id):
-                removal_amount += coin.amount
 
         result = amount - removal_amount
 
@@ -1213,6 +1204,14 @@ class WalletStateManager:
         result = await self.puzzle_store.puzzle_hash_exists(addition.puzzle_hash)
         return result
 
+    async def get_wallet_for_coin(self, coin_id: bytes32) -> Any:
+        coin_record = await self.wallet_store.get_coin_record(coin_id)
+        if coin_record is None:
+            return None
+        wallet_id = uint32(coin_record.wallet_id)
+        wallet = self.wallets[wallet_id]
+        return wallet
+
     async def get_relevant_removals(self, removals: List[Coin]) -> List[Coin]:
         """ Returns a list of our unspent coins that are in the passed list. """
 
@@ -1299,7 +1298,21 @@ class WalletStateManager:
 
         valid_index = current_index - coinbase_freeze_period
 
-        return await self.wallet_store.get_spendable_for_index(valid_index, wallet_id)
+        records = await self.wallet_store.get_spendable_for_index(
+            valid_index, wallet_id
+        )
+
+        offer_locked_coins: Dict[
+            bytes32, Coin
+        ] = await self.trade_manager.get_locked_coins()
+
+        filtered = set()
+        for record in records:
+            if record.coin.name() in offer_locked_coins:
+                continue
+            filtered.add(record)
+
+        return filtered
 
     async def create_action(
         self,
