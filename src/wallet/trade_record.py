@@ -26,9 +26,6 @@ class TradeRecord(Streamable):
     trade_id: bytes32
     sent_to: List[Tuple[str, uint8, Optional[str]]]
 
-    def name(self) -> bytes32:
-        return self.spend_bundle.name()
-
 
 @dataclass(frozen=True)
 @streamable
@@ -39,6 +36,4 @@ class TradeOffer(Streamable):
 
     created_at_time: uint64
     spend_bundle: SpendBundle
-
-    def name(self) -> bytes32:
-        return self.spend_bundle.name()
+    trade_id: bytes32
