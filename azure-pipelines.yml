@@ -95,7 +95,6 @@ steps:
       sh build_macos.sh
       ls -l final_installer
     displayName: "Build DMG with build_scripts/build_macos.sh"
-    env: { CHIA_INSTALLER_VERSION: "0.1.6" }
 
   - task: PublishPipelineArtifact@1
     inputs:
