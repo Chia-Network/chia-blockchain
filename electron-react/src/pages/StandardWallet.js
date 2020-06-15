@@ -254,7 +254,7 @@ const BalanceCard = props => {
           title="Spendable Balance"
           balance={balance_spendable}
           tooltip={
-            "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transctions, and Chia that you have just spend but is not yet in the blockchain."
+            "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transctions, and Chia that you have just spent but is not yet in the blockchain."
           }
         />
         <Grid item xs={12}>

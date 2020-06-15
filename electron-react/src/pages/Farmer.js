@@ -268,7 +268,7 @@ const Challenges = props => {
             >
               <TableHead>
                 <TableRow>
-                  <TableCell>Challange hash</TableCell>
+                  <TableCell>Challenge hash</TableCell>
                   <TableCell align="right">Height</TableCell>
                   <TableCell align="right">Number of proofs</TableCell>
                   <TableCell align="right">Best estimate</TableCell>
