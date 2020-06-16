@@ -1,4 +1,5 @@
 import time
+import traceback
 from pathlib import Path
 from secrets import token_bytes
 from typing import Dict, Optional, Tuple, List, Any
@@ -12,7 +13,6 @@ from src.types.coin_solution import CoinSolution
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
-from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint32, uint64
 from src.wallet.cc_wallet import cc_wallet_puzzles
 from src.wallet.cc_wallet.cc_wallet import CCWallet
@@ -20,28 +20,24 @@ from src.wallet.cc_wallet.cc_wallet_puzzles import (
     create_spend_for_auditor,
     create_spend_for_ephemeral,
 )
-from src.wallet.trade_record import TradeRecord, TradeOffer
+from src.wallet.trade_record import TradeRecord
+from src.wallet.trading.trade_status import TradeStatus
+from src.wallet.trading.trade_store import TradeStore
 from src.wallet.transaction_record import TransactionRecord
-from src.wallet.types.key_val_types import PendingOffers, AcceptedOffers
 from src.wallet.wallet import Wallet
 from clvm_tools import binutils
 
 from src.wallet.wallet_coin_record import WalletCoinRecord
 
-PENDING_OFFERS = "pending_offers"
-ACCEPTED_OFFERS = "accepted_offers"
-
 
 class TradeManager:
     wallet_state_manager: Any
     log: logging.Logger
-    locked_coin: Optional[Dict[bytes32, Coin]]
-    pending_offer_cache: Optional[List[TradeOffer]]
-    accepted_offer_cache: Optional[List[TradeRecord]]
+    trade_store: TradeStore
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any, name: str = None,
+        wallet_state_manager: Any, db_connection, name: str = None,
     ):
         self = TradeManager()
         if name:
@@ -50,121 +46,100 @@ class TradeManager:
             self.log = logging.getLogger(__name__)
 
         self.wallet_state_manager = wallet_state_manager
-        self.pending_offer_cache = None
-        self.accepted_offer_cache = None
+        self.trade_store = await TradeStore.create(db_connection)
         return self
 
-    async def get_pending_offers(self) -> List[TradeOffer]:
-        if self.pending_offer_cache is not None:
-            return self.pending_offer_cache.copy()
-        current_trades_hex = await self.wallet_state_manager.basic_store.get(
-            PENDING_OFFERS
-        )
-        if current_trades_hex is None:
-            return []
-        pending = PendingOffers.from_bytes(hexstr_to_bytes(current_trades_hex))
-        return pending.trades
+    async def get_offers_with_status(self, status: TradeStatus) -> List[TradeRecord]:
+        records = await self.trade_store.get_trade_record_with_status(status)
+        return records
 
-    async def get_accepted_offers(self) -> List[TradeRecord]:
-        if self.accepted_offer_cache is not None:
-            return self.accepted_offer_cache.copy()
-        accepted_offers_hex = await self.wallet_state_manager.basic_store.get(
-            ACCEPTED_OFFERS
-        )
-        if accepted_offers_hex is None:
-            return []
-        accepted = AcceptedOffers.from_bytes((hexstr_to_bytes(accepted_offers_hex)))
-        return accepted.trades
-
-    async def get_locked_coins(self, wallet_id: int = None) -> Dict[bytes32, Coin]:
+    async def get_locked_coins(
+        self, wallet_id: int = None
+    ) -> Dict[bytes32, WalletCoinRecord]:
         """ Returns a dictionary of confirmed coins that are locked by a trade. """
-        current_trades = await self.get_pending_offers()
-        if current_trades is None:
+        all_pending = []
+        pending_accept = await self.get_offers_with_status(TradeStatus.PENDING_ACCEPT)
+        pending_confirm = await self.get_offers_with_status(TradeStatus.PENDING_CONFIRM)
+        pending_cancel = await self.get_offers_with_status(TradeStatus.PENDING_CANCEL)
+        all_pending.extend(pending_accept)
+        all_pending.extend(pending_confirm)
+        all_pending.extend(pending_cancel)
+        if len(all_pending) == 0:
             return {}
 
         result = {}
-        for trade_offer in current_trades:
-            spend_bundle = trade_offer.spend_bundle
-            removals = spend_bundle.removals()
-
-            for coin in removals:
-                record: Optional[
-                    WalletCoinRecord
-                ] = await self.wallet_state_manager.wallet_store.get_coin_record_by_coin_id(
-                    coin.name()
-                )
-                if record is None:
-                    continue
-                if wallet_id is None or wallet_id == record.wallet_id:
-                    result[coin.name()] = coin
+        for trade_offer in all_pending:
+            locked = await self.get_locked_coins_in_spend_bundle(
+                trade_offer.spend_bundle
+            )
+            for name, record in locked.items():
+                if wallet_id is None or record.wallet_id == wallet_id:
+                    result[name] = record
 
         return result
 
-    async def cancel_pending_offer(self, trade_id: bytes32):
-        self.log.info(f"Cancel pending offer with id trade_id {trade_id.hex()}")
-        offers: List[TradeOffer] = await self.get_pending_offers()
-        filtered_offers: List[TradeOffer] = []
-        for offer in offers:
-            if offer.trade_id != trade_id:
-                filtered_offers.append(offer)
+    async def get_trade_by_id(self, trade_id: bytes) -> Optional[TradeRecord]:
+        record = await self.trade_store.get_trade_record(trade_id)
+        return record
 
-        to_store = PendingOffers(filtered_offers)
-        await self.wallet_state_manager.basic_store.set(PENDING_OFFERS, to_store)
+    async def get_locked_coins_in_spend_bundle(
+        self, bundle: SpendBundle
+    ) -> Dict[bytes32, WalletCoinRecord]:
+        """ Returns a list of coin records that are used in this SpendBundle"""
+        result = {}
+        removals = bundle.removals()
+        for coin in removals:
+            coin_record = await self.wallet_state_manager.wallet_store.get_coin_record_by_coin_id(
+                coin.name()
+            )
+            if coin_record is None:
+                continue
+            result[coin_record.name()] = coin_record
+        return result
+
+    async def cancel_pending_offer(self, trade_id: bytes32):
+        await self.trade_store.set_status(trade_id, TradeStatus.CANCELED)
 
     async def cancel_pending_offer_safely(self, trade_id: bytes32):
         """ This will create a transaction that includes coins that were offered"""
         self.log.info(f"Secure-Cancel pending offer with id trade_id {trade_id.hex()}")
-        offers: List[TradeOffer] = await self.get_pending_offers()
-        to_cancel: Optional[TradeOffer] = None
-        for offer in offers:
-            if offer.trade_id == trade_id:
-                to_cancel = offer
-                break
-        if to_cancel is None:
-            return
+        trade = await self.trade_store.get_trade_record(trade_id)
+        if trade is None:
+            return None
 
-        all_coins = to_cancel.spend_bundle.additions()
-        all_coins.extend(to_cancel.spend_bundle.removals())
+        all_coins = trade.spend_bundle.removals()
 
         for coin in all_coins:
-            wallet = self.wallet_state_manager.get_wallet_for_coin(coin)
+            wallet = await self.wallet_state_manager.get_wallet_for_coin(coin.name())
+
             if wallet is None:
                 continue
             new_ph = await wallet.get_new_puzzlehash()
-            tx = wallet.generate_signed_transaction(
+            tx = await wallet.generate_signed_transaction(
                 coin.amount, new_ph, 0, coins={coin}
             )
             await self.wallet_state_manager.add_pending_transaction(tx_record=tx)
+
+        await self.trade_store.set_status(trade_id, TradeStatus.PENDING_CANCEL)
         return
 
-    async def add_pending_offer(self, trade_offer: TradeOffer):
-        pending_offers: List[TradeOffer] = await self.get_pending_offers()
-        pending_offers.append(trade_offer)
-        to_store = PendingOffers(pending_offers)
-        await self.wallet_state_manager.basic_store.set(PENDING_OFFERS, to_store)
-        self.pending_offer_cache = pending_offers
-
-    async def add_accepted_offer(self, accepted: TradeRecord):
-        accepted_offers = await self.get_accepted_offers()
-        accepted_offers.append(accepted)
-        to_store = AcceptedOffers(accepted_offers)
-        await self.wallet_state_manager.basic_store.set(ACCEPTED_OFFERS, to_store)
-        self.accepted_offer_cache = accepted_offers
+    async def save_trade(self, trade: TradeRecord):
+        await self.trade_store.add_trade_record(trade)
 
     async def create_offer_for_ids(
         self, offer: Dict[int, int], file_name: str
-    ) -> Tuple[bool, Optional[TradeOffer], Optional[str]]:
+    ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
         success, trade_offer, error = await self._create_offer_for_ids(offer)
 
         if success is True and trade_offer is not None:
             self.write_offer_to_disk(Path(file_name), trade_offer)
-            await self.add_pending_offer(trade_offer)
+            await self.save_trade(trade_offer)
 
         return success, trade_offer, error
 
     async def _create_offer_for_ids(
         self, offer: Dict[int, int]
-    ) -> Tuple[bool, Optional[TradeOffer], Optional[str]]:
+    ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
         """
         Offer is dictionary of wallet ids and amount
         """
@@ -221,7 +196,7 @@ class TradeManager:
                         amount, to_exclude
                     )
                 else:
-                    return False, None, "unssuported wallet type"
+                    return False, None, "unsupported wallet type"
                 if new_spend_bundle.removals() == [] or new_spend_bundle is None:
                     raise Exception(f"Wallet {id} was unable to create offer.")
                 if spend_bundle is None:
@@ -234,16 +209,27 @@ class TradeManager:
             if spend_bundle is None:
                 return False, None, None
 
-            trade_offer = TradeOffer(
-                created_at_time=uint64(int(time.time())),
+            now = uint64(int(time.time()))
+            trade_offer: TradeRecord = TradeRecord(
+                confirmed_at_index=uint32(0),
+                accepted_at_time=None,
+                created_at_time=now,
+                my_offer=True,
+                sent=uint32(0),
                 spend_bundle=spend_bundle,
+                additions=spend_bundle.additions(),
+                removals=spend_bundle.removals(),
                 trade_id=spend_bundle.name(),
+                status=uint32(TradeStatus.PENDING_ACCEPT.value),
+                sent_to=[],
             )
             return True, trade_offer, None
         except Exception as e:
+            tb = traceback.format_exc()
+            self.log.error(f"Error with creating trade offer: {type(e)}{tb}")
             return False, None, str(e)
 
-    def write_offer_to_disk(self, file_path: Path, offer: TradeOffer):
+    def write_offer_to_disk(self, file_path: Path, offer: TradeRecord):
         if offer is not None:
             file_path.write_text(bytes(offer).hex())
 
@@ -297,7 +283,7 @@ class TradeManager:
     ) -> Tuple[bool, Optional[Dict], Optional[Exception]]:
         self.log.info(f"trade offer: {file_path}")
         trade_offer_hex = file_path.read_text()
-        trade_offer = TradeOffer.from_bytes(bytes.fromhex(trade_offer_hex))
+        trade_offer = TradeRecord.from_bytes(bytes.fromhex(trade_offer_hex))
         return await self.get_discrepancies_for_spend_bundle(trade_offer.spend_bundle)
 
     async def get_inner_puzzle_for_puzzle_hash(self, puzzle_hash) -> Optional[Program]:
@@ -332,7 +318,9 @@ class TradeManager:
         if not has_wallets:
             return False, "Unknown Error"
         trade_offer_hex = file_path.read_text()
-        trade_offer: TradeOffer = TradeOffer.from_bytes(bytes.fromhex(trade_offer_hex))
+        trade_offer: TradeRecord = TradeRecord.from_bytes(
+            bytes.fromhex(trade_offer_hex)
+        )
         offer_spend_bundle = trade_offer.spend_bundle
 
         coinsols = []  # [] of CoinSolutions
@@ -723,20 +711,22 @@ class TradeManager:
             trade_id=spend_bundle.name(),
         )
 
-        trade_record = TradeRecord(
+        now = uint64(int(time.time()))
+        trade_record: TradeRecord = TradeRecord(
             confirmed_at_index=uint32(0),
-            accepted_at_time=uint64(int(time.time())),
-            created_at_time=trade_offer.created_at_time,
-            confirmed=False,
+            accepted_at_time=now,
+            created_at_time=now,
+            my_offer=False,
             sent=uint32(0),
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
             trade_id=spend_bundle.name(),
+            status=uint32(TradeStatus.PENDING_CONFIRM.value),
             sent_to=[],
         )
 
-        await self.add_accepted_offer(trade_record)
+        await self.save_trade(trade_record)
 
         await self.wallet_state_manager.add_pending_transaction(tx_record)
         for tx in my_tx_records:

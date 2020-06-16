@@ -130,7 +130,8 @@ class TestCCWallet:
         assert cc_wallet.cc_info.my_core == cc_wallet_2.cc_info.my_core
 
         cc_2_hash = await cc_wallet_2.get_new_inner_hash()
-        await cc_wallet.cc_spend(uint64(60), cc_2_hash)
+        tx_record = await cc_wallet.generate_signed_transaction(uint64(60), cc_2_hash)
+        await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
@@ -142,8 +143,8 @@ class TestCCWallet:
         await time_out_assert(30, cc_wallet_2.get_unconfirmed_balance, 60)
 
         cc_hash = await cc_wallet.get_new_inner_hash()
-        await cc_wallet_2.cc_spend(uint64(15), cc_hash)
-
+        tx_record = await cc_wallet_2.generate_signed_transaction(uint64(15), cc_hash)
+        await wallet.wallet_state_manager.add_pending_transaction(tx_record)
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
@@ -292,8 +293,8 @@ class TestCCWallet:
         assert cc_wallet.cc_info.my_core == cc_wallet_2.cc_info.my_core
 
         cc_2_hash = await cc_wallet_2.get_new_inner_hash()
-        await cc_wallet.cc_spend(uint64(60), cc_2_hash)
-
+        tx_record = await cc_wallet.generate_signed_transaction(uint64(60), cc_2_hash)
+        await wallet.wallet_state_manager.add_pending_transaction(tx_record)
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
@@ -304,10 +305,10 @@ class TestCCWallet:
         await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 60)
 
         cc2_ph = await cc_wallet_2.get_new_cc_puzzle_hash()
-        spend_bundle = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(
+        tx_record = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(
             10, cc2_ph, 0
         )
-        await wallet.wallet_state_manager.main_wallet.push_transaction(spend_bundle)
+        await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
         for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))

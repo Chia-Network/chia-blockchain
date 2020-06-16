@@ -372,6 +372,9 @@ class CCWallet:
     async def get_new_inner_hash(self) -> bytes32:
         return await self.standard_wallet.get_new_puzzlehash()
 
+    async def get_new_puzzlehash(self) -> bytes32:
+        return await self.standard_wallet.get_new_puzzlehash()
+
     def do_replace(self, sexp, magic, magic_replacement):
         """ Generic way to replace anything inside a SEXP, not used currentyl """
         if sexp.listp():
@@ -645,13 +648,21 @@ class CCWallet:
 
         return parent_info
 
-    async def cc_spend(
-        self, amount: uint64, to_address: bytes32
-    ) -> Optional[SpendBundle]:
+    async def generate_signed_transaction(
+        self,
+        amount: uint64,
+        to_address: bytes32,
+        fee: uint64 = uint64(0),
+        origin_id: bytes32 = None,
+        coins: Set[Coin] = None,
+    ) -> Optional[TransactionRecord]:
         sigs: List[BLSSignature] = []
 
         # Get coins and calculate amount of change required
-        selected_coins: Optional[Set[Coin]] = await self.select_coins(amount)
+        if coins is None:
+            selected_coins: Optional[Set[Coin]] = await self.select_coins(amount)
+        else:
+            selected_coins = coins
         if selected_coins is None:
             return None
 
@@ -793,9 +804,8 @@ class CCWallet:
             sent_to=[],
             trade_id=None,
         )
-        await self.wallet_state_manager.add_pending_transaction(tx_record)
 
-        return spend_bundle
+        return tx_record
 
     async def add_parent(self, name: bytes32, parent: Optional[CCParent]):
         self.log.info(f"Adding parent {name}: {parent}")
