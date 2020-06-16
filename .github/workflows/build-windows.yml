@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
           # we need fetch-depth 0 so setuptools_scm can resolve tags
-          
+
       - name: Get npm cache directory
         id: npm-cache
         run: |
@@ -25,10 +25,10 @@ jobs:
 
       - uses: actions/cache@v2
         with:
-        path: ${{ steps.npm-cache.outputs.dir }}
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
+          path: ${{ steps.npm-cache.outputs.dir }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Get pip cache dir
         id: pip-cache
