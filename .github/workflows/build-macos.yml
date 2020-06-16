@@ -27,7 +27,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Cache node modules
+    - name: Cache npm
       uses: actions/cache@v2
       env:
         cache-name: cache-node-modules
