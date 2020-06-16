@@ -78,7 +78,7 @@ class Harvester:
     challenge_hashes: Dict[bytes32, Tuple[bytes32, str, uint8]]
     pool_pubkeys: List[PublicKey]
     root_path: Path
-    _plot_notification_task: asyncio.Future
+    _plot_notification_task: Optional[asyncio.Task]
     _is_shutdown: bool
     executor: concurrent.futures.ThreadPoolExecutor
     state_changed_callback: Optional[Callable]
@@ -95,13 +95,23 @@ class Harvester:
 
         # From quality string to (challenge_hash, filename, index)
         self.challenge_hashes = {}
-        self._plot_notification_task = asyncio.ensure_future(self._plot_notification())
         self._is_shutdown = False
+        self._plot_notification_task = None
         self.global_connections: Optional[PeerConnections] = None
         self.pool_pubkeys = []
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
         self.state_changed_callback = None
         self.server = None
+
+    async def _start(self):
+        self._plot_notification_task = asyncio.create_task(self._plot_notification())
+
+    def _close(self):
+        self._is_shutdown = True
+        self.executor.shutdown(wait=True)
+
+    async def _await_closed(self):
+        await self._plot_notification_task
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -213,18 +223,11 @@ class Harvester:
         self._refresh_plots()
         return True
 
-    def set_global_connections(self, global_connections: Optional[PeerConnections]):
+    def _set_global_connections(self, global_connections: Optional[PeerConnections]):
         self.global_connections = global_connections
 
-    def set_server(self, server):
+    def _set_server(self, server):
         self.server = server
-
-    def _shutdown(self):
-        self._is_shutdown = True
-        self.executor.shutdown(wait=True)
-
-    async def _await_shutdown(self):
-        await self._plot_notification_task
 
     @api_request
     async def harvester_handshake(

@@ -533,7 +533,7 @@ def singleton(lockfile, text="semaphore"):
 async def async_run_daemon(root_path):
     chia_init(root_path)
     config = load_config(root_path, "config.yaml")
-    initialize_logging("daemon %(name)-25s", config["logging"], root_path)
+    initialize_logging("daemon", config["logging"], root_path)
     lockfile = singleton(daemon_launch_lock_path(root_path))
     if lockfile is None:
         print("daemon: already launching")

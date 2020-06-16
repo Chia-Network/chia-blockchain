@@ -1,4 +1,3 @@
-import logging
 from multiprocessing import freeze_support
 
 from src.wallet.wallet_node import WalletNode
@@ -13,9 +12,6 @@ from src.types.peer_info import PeerInfo
 
 # See: https://bugs.python.org/issue29288
 u"".encode("idna")
-
-
-log = logging.getLogger(__name__)
 
 
 def service_kwargs_for_wallet(root_path):
@@ -38,7 +34,7 @@ def service_kwargs_for_wallet(root_path):
     ]
 
     async def start_callback():
-        await api.start()
+        await api._start()
 
     def stop_callback():
         api._close()

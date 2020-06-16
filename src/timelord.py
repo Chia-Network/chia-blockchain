@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Tuple
 
 
 from chiavdf import create_discriminant
+from src.consensus.constants import constants as consensus_constants
 from src.protocols import timelord_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
@@ -19,8 +20,11 @@ log = logging.getLogger(__name__)
 
 
 class Timelord:
-    def __init__(self, config: Dict, constants: Dict):
-        self.constants = constants
+    def __init__(self, config: Dict, override_constants: Dict = {}):
+        self.constants = consensus_constants.copy()
+        for key, value in override_constants.items():
+            self.constants[key] = value
+
         self.config: Dict = config
         self.ips_estimate = {
             k: v
@@ -51,9 +55,10 @@ class Timelord:
             Tuple[str, asyncio.StreamReader, asyncio.StreamWriter]
         ] = []
         self.server: Optional[ChiaServer] = None
+        self.vdf_server = None
         self._is_shutdown = False
 
-    def set_server(self, server: ChiaServer):
+    def _set_server(self, server: ChiaServer):
         self.server = server
 
     async def _handle_client(
@@ -70,8 +75,22 @@ class Timelord:
                         self.potential_free_clients.remove((ip, end_time))
                         break
 
-    def _shutdown(self):
+    async def _start(self):
+        self.disc_queue = asyncio.create_task(self._manage_discriminant_queue())
+        self.vdf_server = await asyncio.start_server(
+            self._handle_client,
+            self.config["vdf_server"]["host"],
+            self.config["vdf_server"]["port"],
+        )
+
+    def _close(self):
         self._is_shutdown = True
+        assert self.vdf_server is not None
+        self.vdf_server.close()
+
+    async def _await_closed(self):
+        assert self.disc_queue is not None
+        await self.disc_queue
 
     async def _stop_worst_process(self, worst_weight_active):
         # This is already inside a lock, no need to lock again.

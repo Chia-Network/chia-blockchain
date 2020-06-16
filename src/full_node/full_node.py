@@ -95,7 +95,7 @@ class FullNode:
         self.db_path = path_from_root(root_path, config["database_path"])
         mkdir(self.db_path.parent)
 
-    async def start(self):
+    async def _start(self):
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
         self.block_store = await BlockStore.create(self.connection)
@@ -115,7 +115,7 @@ class FullNode:
         await self.mempool_manager.new_tips(await self.blockchain.get_full_tips())
         self.state_changed_callback = None
 
-    def set_global_connections(self, global_connections: PeerConnections):
+    def _set_global_connections(self, global_connections: PeerConnections):
         self.global_connections = global_connections
 
     def _set_server(self, server: ChiaServer):

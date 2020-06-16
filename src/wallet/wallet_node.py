@@ -113,7 +113,7 @@ class WalletNode:
 
         self.server = None
 
-    async def start(self, public_key_fingerprint: Optional[int] = None):
+    async def _start(self, public_key_fingerprint: Optional[int] = None):
         self._shut_down = False
         private_keys = self.keychain.get_all_private_keys()
         if len(private_keys) == 0:
@@ -209,10 +209,10 @@ class WalletNode:
 
         return messages
 
-    def set_global_connections(self, global_connections: PeerConnections):
+    def _set_global_connections(self, global_connections: PeerConnections):
         self.global_connections = global_connections
 
-    def set_server(self, server: ChiaServer):
+    def _set_server(self, server: ChiaServer):
         self.server = server
 
     async def _on_connect(self) -> AsyncGenerator[OutboundMessage, None]:
@@ -677,7 +677,7 @@ class WalletNode:
                 f"SpendBundle has been received (and is pending) by the FullNode. {ack}"
             )
         else:
-            self.log.info(f"SpendBundle has been rejected by the FullNode. {ack}")
+            self.log.warning(f"SpendBundle has been rejected by the FullNode. {ack}")
         if ack.error is not None:
             await self.wallet_state_manager.remove_from_queue(
                 ack.txid, name, ack.status, Err[ack.error]

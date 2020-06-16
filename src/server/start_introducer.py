@@ -1,16 +1,12 @@
 from src.introducer import Introducer
 from src.server.outbound_message import NodeType
 from src.util.config import load_config_cli
-from src.util.logging import logging
 from src.util.default_root import DEFAULT_ROOT_PATH
 
 from src.server.start_service import run_service
 
 # See: https://bugs.python.org/issue29288
 u"".encode("idna")
-
-
-log = logging.getLogger(__name__)
 
 
 def service_kwargs_for_introducer(root_path=DEFAULT_ROOT_PATH):
@@ -21,7 +17,7 @@ def service_kwargs_for_introducer(root_path=DEFAULT_ROOT_PATH):
     )
 
     async def start_callback():
-        await introducer.start()
+        await introducer._start()
 
     def stop_callback():
         introducer._close()

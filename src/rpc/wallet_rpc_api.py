@@ -452,7 +452,7 @@ class WalletRpcApi:
         await self.stop_wallet()
         fingerprint = request["fingerprint"]
 
-        await self.service.start(fingerprint)
+        await self.service._start(fingerprint)
 
         return {"success": True}
 
@@ -493,7 +493,7 @@ class WalletRpcApi:
         check_keys(self.service.root_path)
 
         # Starts the wallet with the new key selected
-        await self.service.start(fingerprint)
+        await self.service._start(fingerprint)
 
         return {"success": True}
 

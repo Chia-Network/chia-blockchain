@@ -15,9 +15,10 @@ from src.server.outbound_message import Delivery, Message, NodeType, OutboundMes
 from src.server.server import ChiaServer, start_server
 from src.types.peer_info import PeerInfo
 from src.util.logging import initialize_logging
-from src.util.config import load_config_cli, load_config
+from src.util.config import load_config
 from src.util.setproctitle import setproctitle
 from src.rpc.rpc_server import start_rpc_server
+from src.server.connection import OnConnectFunc
 
 from .reconnect_task import start_reconnect_task
 
@@ -72,7 +73,7 @@ class Service:
         server_listen_ports: List[int] = [],
         connect_peers: List[PeerInfo] = [],
         auth_connect_peers: bool = True,
-        on_connect_callback: Optional[OutboundMessage] = None,
+        on_connect_callback: Optional[OnConnectFunc] = None,
         rpc_info: Optional[Tuple[type, int]] = None,
         start_callback: Optional[Callable] = None,
         stop_callback: Optional[Callable] = None,
@@ -90,14 +91,13 @@ class Service:
         proctitle_name = f"chia_{service_name}"
         setproctitle(proctitle_name)
         self._log = logging.getLogger(service_name)
-
-        config = load_config_cli(root_path, "config.yaml", service_name)
-        initialize_logging(f"{service_name:<30s}", config["logging"], root_path)
+        config = load_config(root_path, "config.yaml", service_name)
+        initialize_logging(service_name, config["logging"], root_path)
 
         self._rpc_info = rpc_info
 
         self._server = ChiaServer(
-            config["port"],
+            advertised_port,
             api,
             node_type,
             ping_interval,
@@ -123,6 +123,7 @@ class Service:
         self._start_callback = start_callback
         self._stop_callback = stop_callback
         self._await_closed_callback = await_closed_callback
+        self._advertised_port = advertised_port
 
     def start(self):
         if self._task is not None:
@@ -139,7 +140,6 @@ class Service:
                     introducer_connect_interval,
                     target_peer_count,
                 ) = self._periodic_introducer_poll
-
                 self._introducer_poll_task = create_periodic_introducer_poll_task(
                     self._server,
                     peer_info,
@@ -206,7 +206,7 @@ class Service:
         if self._rpc_task:
             await (await self._rpc_task)()
             self._log.info("Closed RPC server.")
-        self._log.info("%s fully closed", self._node_type)
+        self._log.info(f"Service at port {self._advertised_port} fully closed")
 
 
 async def async_run_service(*args, **kwargs):

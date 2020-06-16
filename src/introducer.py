@@ -20,7 +20,7 @@ class Introducer:
         self._shut_down = False
         self.server: Optional[ChiaServer] = None
 
-    async def start(self):
+    async def _start(self):
         self._vetting_task = asyncio.create_task(self._vetting_loop())
 
     def _close(self):
@@ -67,7 +67,7 @@ class Introducer:
                     return
                 await asyncio.sleep(1)
 
-    def set_global_connections(self, global_connections: PeerConnections):
+    def _set_global_connections(self, global_connections: PeerConnections):
         self.global_connections: PeerConnections = global_connections
 
     @api_request

@@ -1,4 +1,3 @@
-import logging
 from multiprocessing import freeze_support
 
 from src.full_node.full_node import FullNode
@@ -14,8 +13,6 @@ from src.types.peer_info import PeerInfo
 # See: https://bugs.python.org/issue29288
 u"".encode("idna")
 
-log = logging.getLogger(__name__)
-
 
 def service_kwargs_for_full_node(root_path):
     service_name = "full_node"
@@ -27,7 +24,7 @@ def service_kwargs_for_full_node(root_path):
     peer_info = PeerInfo(introducer["host"], introducer["port"])
 
     async def start_callback():
-        await api.start()
+        await api._start()
         if config["enable_upnp"]:
             upnp_remap_port(config["port"])
 

@@ -93,8 +93,8 @@ class ChiaServer:
         # Our unique random node id that we will send to other peers, regenerated on launch
         node_id = create_node_id()
 
-        if hasattr(api, "set_global_connections"):
-            api.set_global_connections(self.global_connections)
+        if hasattr(api, "_set_global_connections"):
+            api._set_global_connections(self.global_connections)
 
         # Tasks for entire server pipeline
         self._pipeline_task: asyncio.Future = asyncio.ensure_future(
