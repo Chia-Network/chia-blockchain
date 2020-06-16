@@ -18,22 +18,11 @@ class TradeRecord(Streamable):
     confirmed_at_index: uint32
     accepted_at_time: Optional[uint64]
     created_at_time: uint64
-    confirmed: bool
+    my_offer: bool
     sent: uint32
     spend_bundle: SpendBundle
     additions: List[Coin]
     removals: List[Coin]
     trade_id: bytes32
+    status: uint32  # TradeStatus, enum not streamable
     sent_to: List[Tuple[str, uint8, Optional[str]]]
-
-
-@dataclass(frozen=True)
-@streamable
-class TradeOffer(Streamable):
-    """
-    Used for storing offer offer spend_bundle and meta data
-    """
-
-    created_at_time: uint64
-    spend_bundle: SpendBundle
-    trade_id: bytes32
