@@ -16,6 +16,7 @@ from src.farmer import Farmer
 from src.introducer import Introducer
 from src.timelord import Timelord
 from src.server.connection import PeerInfo
+from src.server.start_service import create_periodic_introducer_poll_task
 from src.util.ints import uint16, uint32
 from src.server.start_service import Service
 from src.rpc.harvester_rpc_api import HarvesterRpcApi
@@ -63,6 +64,7 @@ async def setup_full_node(db_name, port, introducer_port=None, simulator=False, 
 
     config = load_config(bt.root_path, "config.yaml", "full_node")
     config["database_path"] = db_name
+    config["send_uncompact_interval"] = 30
     periodic_introducer_poll = None
     if introducer_port is not None:
         periodic_introducer_poll = (
@@ -195,6 +197,7 @@ async def setup_wallet_node(
 
     yield api, api.server
 
+    # await asyncio.sleep(1) # Sleep to ÷
     service.stop()
     await run_task
     if db_path.exists():
@@ -335,12 +338,18 @@ async def setup_vdf_clients(port):
 
     yield vdf_task
 
+    await kill_processes()
 
-async def setup_timelord(port, full_node_port, dic={}):
+
+async def setup_timelord(port, full_node_port, sanitizer, dic={}):
     config = load_config(bt.root_path, "config.yaml", "timelord")
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
+    config["sanitizer_mode"] = sanitizer
+    if sanitizer:
+        config["vdf_server"]["port"] = 7999
+
     api = Timelord(config, test_constants_copy)
 
     started = asyncio.Event()
@@ -400,29 +409,13 @@ async def setup_two_nodes(dic={}):
 async def setup_node_and_wallet(dic={}):
     node_iters = [
         setup_full_node("blockchain_test.db", 21234, simulator=False, dic=dic),
-        setup_wallet_node(21235, 21234, dic=dic),
+        setup_wallet_node(21235, None, dic=dic),
     ]
 
     full_node, s1 = await node_iters[0].__anext__()
     wallet, s2 = await node_iters[1].__anext__()
 
     yield (full_node, wallet, s1, s2)
-
-    await _teardown_nodes(node_iters)
-
-
-async def setup_node_and_two_wallets(dic={}):
-    node_iters = [
-        setup_full_node("blockchain_test.db", 21234, simulator=False, dic=dic),
-        setup_wallet_node(21235, 21234, key_seed=b"a", dic=dic),
-        setup_wallet_node(21236, 21234, key_seed=b"b", dic=dic),
-    ]
-
-    full_node, s1 = await node_iters[0].__anext__()
-    wallet, s2 = await node_iters[1].__anext__()
-    wallet_2, s3 = await node_iters[2].__anext__()
-
-    yield (full_node, wallet, wallet_2, s1, s2, s3)
 
     await _teardown_nodes(node_iters)
 
@@ -458,10 +451,12 @@ async def setup_full_system(dic={}):
         setup_introducer(21233),
         setup_harvester(21234, 21235, dic),
         setup_farmer(21235, 21237, dic),
-        setup_timelord(21236, 21237, dic),
+        setup_timelord(21236, 21237, False, dic),
         setup_vdf_clients(8000),
         setup_full_node("blockchain_test.db", 21237, 21233, False, dic),
         setup_full_node("blockchain_test_2.db", 21238, 21233, False, dic),
+        setup_timelord(21239, 21238, True, dic),
+        setup_vdf_clients(7999),
     ]
 
     introducer, introducer_server = await node_iters[0].__anext__()
@@ -472,7 +467,19 @@ async def setup_full_system(dic={}):
     vdf = await node_iters[4].__anext__()
     node1, node1_server = await node_iters[5].__anext__()
     node2, node2_server = await node_iters[6].__anext__()
+    sanitizer, sanitizer_server = await node_iters[7].__anext__()
+    vdf_sanitizer = await node_iters[8].__anext__()
 
-    yield (node1, node2, harvester, farmer, introducer, timelord, vdf)
+    yield (
+        node1,
+        node2,
+        harvester,
+        farmer,
+        introducer,
+        timelord,
+        vdf,
+        sanitizer,
+        vdf_sanitizer,
+    )
 
     await _teardown_nodes(node_iters)

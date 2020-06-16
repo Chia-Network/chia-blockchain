@@ -10,7 +10,7 @@ dependencies = [
     "aiosqlite==0.13.0",  # asyncio wrapper for sqlite, to store blocks
     "aiohttp==3.6.2",  # HTTP server for full node rpc
     "colorlog==4.1.0",  # Adds color to logs
-    "chiavdf==0.12.16",  # timelord and vdf verification
+    "chiavdf==0.3b11",  # timelord and vdf verification
     "chiabip158==0.14",  # bip158-style wallet filters
     "chiapos==0.12.21",  # proof of space
     "sortedcontainers==2.1.0",  # For maintaining sorted mempools
@@ -41,7 +41,7 @@ kwargs = dict(
     name="chia-blockchain",
     author="Mariano Sorgente",
     author_email="mariano@chia.net",
-    description="Chia proof of space plotting, proving, and verifying (wraps C++)",
+    description="Chia blockchain full node, farmer, timelord, and wallet.",
     url="https://chia.net/",
     license="Apache License",
     python_requires=">=3.7, <4",

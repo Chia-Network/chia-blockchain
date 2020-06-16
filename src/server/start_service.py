@@ -176,6 +176,8 @@ class Service:
                 await _.wait_closed()
 
             await self._server.await_closed()
+            if self._stop_callback:
+                self._stop_callback()
             if self._await_closed_callback:
                 await self._await_closed_callback()
 
@@ -198,8 +200,6 @@ class Service:
             self._api._shut_down = True
             if self._introducer_poll_task:
                 self._introducer_poll_task.cancel()
-            if self._stop_callback:
-                self._stop_callback()
 
     async def wait_closed(self):
         await self._task

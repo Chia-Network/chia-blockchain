@@ -94,7 +94,7 @@ Write-Output "node winstaller.js"
 node winstaller.js
 Write-Output "   ---"
 
-If ($env:HAS_SECRETS) {
+If ($env:HAS_SECRET) {
    Write-Output "   ---"
    Write-Output "Add timestamp and verify signature"
    Write-Output "   ---"
