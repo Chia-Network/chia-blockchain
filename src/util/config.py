@@ -35,9 +35,9 @@ def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Pat
 
 def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
     path = config_path_for_filename(root_path, filename)
-    with open(path.with_suffix('.' + str(os.getpid())), "w") as f:
+    with open(path.with_suffix("." + str(os.getpid())), "w") as f:
         yaml.safe_dump(config_data, f)
-    shutil.move(path.with_suffix('.' + str(os.getpid())), path)
+    shutil.move(path.with_suffix("." + str(os.getpid())), path)
 
 
 def load_config(

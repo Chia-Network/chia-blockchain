@@ -1,7 +1,7 @@
 import asyncio
 
 
-def start_reconnect_task(server, peer_info, log):
+def start_reconnect_task(server, peer_info, log, auth):
     """
     Start a background task that checks connection and reconnects periodically to a peer.
     """
@@ -16,8 +16,7 @@ def start_reconnect_task(server, peer_info, log):
 
             if peer_retry:
                 log.info(f"Reconnecting to peer {peer_info}")
-                if not await server.start_client(peer_info, None, auth=True):
-                    await asyncio.sleep(1)
-            await asyncio.sleep(1)
+                await server.start_client(peer_info, None, auth=auth)
+            await asyncio.sleep(3)
 
     return asyncio.create_task(connection_check())

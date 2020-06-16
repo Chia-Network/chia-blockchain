@@ -38,8 +38,8 @@ class TestMempool:
             yield _
 
     @pytest.fixture(scope="function")
-    async def two_nodes_standard_freeze(self):
-        async for _ in setup_two_nodes({"COINBASE_FREEZE_PERIOD": 200}):
+    async def two_nodes_small_freeze(self):
+        async for _ in setup_two_nodes({"COINBASE_FREEZE_PERIOD": 30}):
             yield _
 
     @pytest.mark.asyncio
@@ -77,7 +77,7 @@ class TestMempool:
         assert sb is spend_bundle
 
     @pytest.mark.asyncio
-    async def test_coinbase_freeze(self, two_nodes_standard_freeze):
+    async def test_coinbase_freeze(self, two_nodes_small_freeze):
         num_blocks = 2
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
@@ -87,7 +87,7 @@ class TestMempool:
         blocks = bt.get_consecutive_blocks(
             test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
         )
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_standard_freeze
+        full_node_1, full_node_2, server_1, server_2 = two_nodes_small_freeze
 
         block = blocks[1]
         async for _ in full_node_1.respond_block(
@@ -112,10 +112,10 @@ class TestMempool:
         assert sb is None
 
         blocks = bt.get_consecutive_blocks(
-            test_constants, 200, [], 10, b"", coinbase_puzzlehash
+            test_constants, 30, [], 10, b"", coinbase_puzzlehash
         )
 
-        for i in range(1, 201):
+        for i in range(1, 31):
             async for _ in full_node_1.respond_block(
                 full_node_protocol.RespondBlock(blocks[i])
             ):

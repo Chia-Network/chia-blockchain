@@ -21,6 +21,7 @@ dependencies = [
     "keyring_jeepney==0.2",
     "keyrings.cryptfile==1.3.4",
     "cryptography==2.9.2", #Python cryptography library for TLS
+    "concurrent-log-handler==0.9.16",  # Log to a file concurrently and rotate logs
 ]
 
 upnp_dependencies = [
@@ -40,7 +41,7 @@ kwargs = dict(
     name="chia-blockchain",
     author="Mariano Sorgente",
     author_email="mariano@chia.net",
-    description="Chia proof of space plotting, proving, and verifying (wraps C++)",
+    description="Chia blockchain full node, farmer, timelord, and wallet.",
     url="https://chia.net/",
     license="Apache License",
     python_requires=">=3.7, <4",

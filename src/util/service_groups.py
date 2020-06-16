@@ -4,7 +4,7 @@ SERVICES_FOR_GROUP = {
     "harvester": "chia_harvester".split(),
     "farmer": "chia_harvester chia_farmer chia_full_node chia-wallet".split(),
     "timelord": "chia_timelord chia_timelord_launcher chia_full_node".split(),
-    "wallet-server": "chia-wallet".split(),
+    "wallet-server": "chia-wallet chia_full_node".split(),
     "introducer": "chia_introducer".split(),
     "simulator": "chia_full_node_simulator".split(),
     "plotter": "chia-create-plots".split(),

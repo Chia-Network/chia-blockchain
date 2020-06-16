@@ -5,14 +5,13 @@ import pathlib
 import pkg_resources
 from src.util.logging import initialize_logging
 from src.util.config import load_config
-from asyncio import Lock
 from typing import List
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.setproctitle import setproctitle
 
 active_processes: List = []
 stopped = False
-lock = Lock()
+lock = asyncio.Lock()
 
 log = logging.getLogger(__name__)
 
@@ -23,7 +22,10 @@ async def kill_processes():
     async with lock:
         stopped = True
         for process in active_processes:
-            process.kill()
+            try:
+                process.kill()
+            except ProcessLookupError:
+                pass
 
 
 def find_vdf_client():
@@ -76,7 +78,7 @@ def main():
     root_path = DEFAULT_ROOT_PATH
     setproctitle("chia_timelord_launcher")
     config = load_config(root_path, "config.yaml", "timelord_launcher")
-    initialize_logging("Launcher %(name)-23s", config["logging"], root_path)
+    initialize_logging("TLauncher", config["logging"], root_path)
 
     def signal_received():
         asyncio.create_task(kill_processes())

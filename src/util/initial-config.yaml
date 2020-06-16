@@ -193,6 +193,7 @@ wallet:
   # If we are restoring from private key and don't know the height.
   starting_height: 0
   num_sync_batches: 50
+  initial_num_public_keys: 100
 
   full_node_peer:
     host: 127.0.0.1

@@ -1,11 +1,12 @@
 import asyncio
 import pytest
 import time
-from typing import Dict, Any
+from typing import Dict, Any, List
 from tests.setup_nodes import setup_full_system
 from tests.block_tools import BlockTools
 from src.consensus.constants import constants as consensus_constants
 from src.util.ints import uint32
+from src.types.full_block import FullBlock
 
 bt = BlockTools()
 test_constants: Dict[str, Any] = consensus_constants.copy()
@@ -33,16 +34,16 @@ class TestSimulation:
         node1, node2, _, _, _, _, _, _, _ = simulation
         start = time.time()
         # Use node2 to test node communication, since only node1 extends the chain.
-        while time.time() - start < 500:
+        while time.time() - start < 100:
             if max([h.height for h in node2.blockchain.get_current_tips()]) > 10:
                 break
             await asyncio.sleep(1)
-        
+
         if max([h.height for h in node2.blockchain.get_current_tips()]) <= 10:
-            raise Exception("Failed: could not get 10 blocks.") 
+            raise Exception("Failed: could not get 10 blocks.")
 
         # Wait additional 2 minutes to get a compact block.
-        while time.time() - start < 620:
+        while time.time() - start < 120:
             max_height = node1.blockchain.lca_block.height
             for h in range(1, max_height):
                 blocks_1: List[FullBlock] = await node1.block_store.get_blocks_at(
@@ -54,10 +55,12 @@ class TestSimulation:
                 has_compact_1 = False
                 has_compact_2 = False
                 for block in blocks_1:
+                    assert block.proof_of_time is not None
                     if block.proof_of_time.witness_type == 0:
                         has_compact_1 = True
                         break
                 for block in blocks_2:
+                    assert block.proof_of_time is not None
                     if block.proof_of_time.witness_type == 0:
                         has_compact_2 = True
                         break

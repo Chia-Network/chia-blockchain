@@ -35,6 +35,7 @@ from src.util.errors import ConsensusError, Err
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64
 from src.util.merkle_set import MerkleSet
+from src.consensus.find_fork_point import find_fork_point_in_chain
 
 log = logging.getLogger(__name__)
 
@@ -406,7 +407,7 @@ class Blockchain:
         # If LCA changed update the unspent store
         elif old_lca.header_hash != self.lca_block.header_hash:
             # New LCA is lower height but not the a parent of old LCA (Reorg)
-            fork_h = self._find_fork_point_in_chain(old_lca, self.lca_block)
+            fork_h = find_fork_point_in_chain(self.headers, old_lca, self.lca_block)
             # Rollback to fork
             await self.coin_store.rollback_lca_to_block(fork_h)
 
@@ -451,22 +452,6 @@ class Blockchain:
                 self.height_to_hash[uint32(curr_new.height)] = curr_new.header_hash
                 curr_new = self.headers[curr_new.prev_header_hash]
                 curr_old = self.headers[curr_old.prev_header_hash]
-
-    def _find_fork_point_in_chain(self, block_1: Header, block_2: Header) -> uint32:
-        """ Tries to find height where new chain (block_2) diverged from block_1 (assuming prev blocks
-        are all included in chain)"""
-        while block_2.height > 0 or block_1.height > 0:
-            if block_2.height > block_1.height:
-                block_2 = self.headers[block_2.prev_header_hash]
-            elif block_1.height > block_2.height:
-                block_1 = self.headers[block_1.prev_header_hash]
-            else:
-                if block_2.header_hash == block_1.header_hash:
-                    return block_2.height
-                block_2 = self.headers[block_2.prev_header_hash]
-                block_1 = self.headers[block_1.prev_header_hash]
-        assert block_2 == block_1  # Genesis block is the same, genesis fork
-        return uint32(0)
 
     async def _create_diffs_for_tips(self, target: Header):
         """ Adds to unspent store from tips down to target"""
@@ -715,7 +700,7 @@ class Blockchain:
                 return Err.DOUBLE_SPEND
 
         # Check if removals exist and were not previously spend. (unspent_db + diff_store + this_block)
-        fork_h = self._find_fork_point_in_chain(self.lca_block, block.header)
+        fork_h = find_fork_point_in_chain(self.headers, self.lca_block, block.header)
 
         # Get additions and removals since (after) fork_h but not including this block
         additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}

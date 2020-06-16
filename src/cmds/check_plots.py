@@ -28,7 +28,7 @@ def main():
     plot_config = load_config(root_path, plot_config_filename)
     config = load_config(root_path, config_filename)
 
-    initialize_logging("%(name)-22s", {"log_stdout": True}, root_path)
+    initialize_logging("check_plots", {"log_stdout": True}, root_path)
     log = logging.getLogger(__name__)
 
     v = Verifier()

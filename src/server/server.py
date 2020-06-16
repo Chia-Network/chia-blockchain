@@ -80,7 +80,11 @@ class ChiaServer:
         self._outbound_aiter: push_aiter = push_aiter()
 
         # Taks list to keep references to tasks, so they don'y get GCd
-        self._tasks: List[asyncio.Task] = [self._initialize_ping_task()]
+        self._tasks: List[asyncio.Task] = []
+        if local_type != NodeType.INTRODUCER:
+            # Introducers should not keep connections alive, they should close them
+            self._tasks.append(self._initialize_ping_task())
+
         if name:
             self.log = logging.getLogger(name)
         else:
@@ -89,8 +93,8 @@ class ChiaServer:
         # Our unique random node id that we will send to other peers, regenerated on launch
         node_id = create_node_id()
 
-        if hasattr(api, "set_global_connections"):
-            api.set_global_connections(self.global_connections)
+        if hasattr(api, "_set_global_connections"):
+            api._set_global_connections(self.global_connections)
 
         # Tasks for entire server pipeline
         self._pipeline_task: asyncio.Future = asyncio.ensure_future(

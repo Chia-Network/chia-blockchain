@@ -134,7 +134,7 @@ export const get_sync_status = () => {
 
 export const get_connection_info = () => {
   var action = walletMessage();
-  action.message.command = "get_connection_info";
+  action.message.command = "get_connections";
   action.message.data = {};
   return action;
 };

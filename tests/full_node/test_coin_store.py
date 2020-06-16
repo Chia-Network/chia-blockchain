@@ -129,7 +129,9 @@ class TestCoinStore:
 
     @pytest.mark.asyncio
     async def test_basic_reorg(self):
-        blocks = bt.get_consecutive_blocks(test_constants, 100, [], 9)
+        initial_block_count = 20
+        reorg_length = 15
+        blocks = bt.get_consecutive_blocks(test_constants, initial_block_count, [], 9)
         db_path = Path("blockchain_test.db")
         if db_path.exists():
             db_path.unlink()
@@ -141,7 +143,7 @@ class TestCoinStore:
 
             for i in range(1, len(blocks)):
                 await b.receive_block(blocks[i])
-            assert b.get_current_tips()[0].height == 100
+            assert b.get_current_tips()[0].height == initial_block_count
 
             for c, block in enumerate(blocks):
                 unspent = await coin_store.get_coin_record(
@@ -158,17 +160,21 @@ class TestCoinStore:
                 assert unspent_fee.name == block.header.data.fees_coin.name()
 
             blocks_reorg_chain = bt.get_consecutive_blocks(
-                test_constants, 30, blocks[:90], 9, b"1"
+                test_constants,
+                reorg_length,
+                blocks[: initial_block_count - 10],
+                9,
+                b"1",
             )
 
             for i in range(1, len(blocks_reorg_chain)):
                 reorg_block = blocks_reorg_chain[i]
                 result, removed, error_code = await b.receive_block(reorg_block)
-                if reorg_block.height < 90:
+                if reorg_block.height < initial_block_count - 10:
                     assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
-                elif reorg_block.height < 99:
+                elif reorg_block.height < initial_block_count - 1:
                     assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
-                elif reorg_block.height >= 100:
+                elif reorg_block.height >= initial_block_count:
                     assert result == ReceiveBlockResult.ADDED_TO_HEAD
                     unspent = await coin_store.get_coin_record(
                         reorg_block.header.data.coinbase.name(), reorg_block.header
@@ -178,7 +184,10 @@ class TestCoinStore:
                     assert unspent.spent == 0
                     assert unspent.spent_block_index == 0
                 assert error_code is None
-            assert b.get_current_tips()[0].height == 119
+            assert (
+                b.get_current_tips()[0].height
+                == initial_block_count - 10 + reorg_length - 1
+            )
         except Exception as e:
             await connection.close()
             Path("blockchain_test.db").unlink()

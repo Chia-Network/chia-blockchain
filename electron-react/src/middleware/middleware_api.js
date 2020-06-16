@@ -130,10 +130,29 @@ async function track_progress(store, location) {
   }
 }
 
+function refreshAllState(store) {
+  store.dispatch(format_message("get_wallets", {}));
+  let start_farmer = startService(service_farmer);
+  let start_harvester = startService(service_harvester);
+  store.dispatch(start_farmer);
+  store.dispatch(start_harvester);
+  store.dispatch(get_height_info());
+  store.dispatch(get_sync_status());
+  store.dispatch(get_connection_info());
+  store.dispatch(getBlockChainState());
+  store.dispatch(getLatestBlocks());
+  store.dispatch(getFullNodeConnections());
+  store.dispatch(getLatestChallenges());
+  store.dispatch(getFarmerConnections());
+  store.dispatch(getPlots());
+  store.dispatch(isServiceRunning(service_plotter));
+}
+
 export const handle_message = (store, payload) => {
   store.dispatch(incomingMessage(payload));
   if (payload.command === "ping") {
     if (payload.origin === service_wallet_server) {
+      store.dispatch(get_connection_info());
       store.dispatch(format_message("get_public_keys", {}));
     } else if (payload.origin === service_full_node) {
       store.dispatch(getBlockChainState());
@@ -147,28 +166,12 @@ export const handle_message = (store, payload) => {
     }
   } else if (payload.command === "log_in") {
     if (payload.data.success) {
-      store.dispatch(format_message("get_wallets", {}));
-      let start_farmer = startService(service_farmer);
-      let start_harvester = startService(service_harvester);
-      store.dispatch(start_farmer);
-      store.dispatch(start_harvester);
-      store.dispatch(get_height_info());
-      store.dispatch(get_sync_status());
-      store.dispatch(get_connection_info());
-      store.dispatch(isServiceRunning(service_plotter));
+      refreshAllState(store);
     }
   } else if (payload.command === "add_key") {
     if (payload.data.success) {
-      store.dispatch(format_message("get_wallets", {}));
       store.dispatch(format_message("get_public_keys", {}));
-      store.dispatch(get_height_info());
-      store.dispatch(get_sync_status());
-      store.dispatch(get_connection_info());
-      let start_farmer = startService(service_farmer);
-      let start_harvester = startService(service_harvester);
-      store.dispatch(start_farmer);
-      store.dispatch(start_harvester);
-      store.dispatch(isServiceRunning(service_plotter));
+      refreshAllState(store);
     }
   } else if (payload.command === "delete_key") {
     if (payload.data.success) {
@@ -224,8 +227,8 @@ export const handle_message = (store, payload) => {
   } else if (payload.command === "create_new_wallet") {
     if (payload.data.success) {
       store.dispatch(format_message("get_wallets", {}));
+      store.dispatch(createState(true, false));
     }
-    store.dispatch(createState(true, false));
   } else if (payload.command === "cc_set_name") {
     if (payload.data.success) {
       const wallet_id = payload.data.wallet_id;
@@ -236,19 +239,6 @@ export const handle_message = (store, payload) => {
       store.dispatch(openDialog("Success!", "Offer accepted"));
     }
     store.dispatch(resetTrades());
-  } else if (payload.command === "get_wallets") {
-    if (payload.data.success) {
-      const wallets = payload.data.wallets;
-      for (let wallet of wallets) {
-        store.dispatch(get_balance_for_wallet(wallet.id));
-        store.dispatch(get_transactions(wallet.id));
-        store.dispatch(get_puzzle_hash(wallet.id));
-        if (wallet.type === "COLOURED_COIN") {
-          store.dispatch(get_colour_name(wallet.id));
-          store.dispatch(get_colour_info(wallet.id));
-        }
-      }
-    }
   } else if (payload.command === "get_discrepancies_for_offer") {
     if (payload.data.success) {
       store.dispatch(offerParsed(payload.data.discrepancies));
@@ -306,7 +296,7 @@ export const handle_message = (store, payload) => {
   }
   if (payload.data.success === false) {
     if (payload.data.reason) {
-      store.dispatch(openDialog("Error?", payload.data.reason));
+      store.dispatch(openDialog("Error: ", payload.data.reason));
     }
   }
 };

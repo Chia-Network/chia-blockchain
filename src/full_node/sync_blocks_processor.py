@@ -40,6 +40,8 @@ class SyncBlocksProcessor:
         for batch_start_height in range(
             self.fork_height + 1, self.tip_height + 1, self.BATCH_SIZE
         ):
+            if self._shut_down:
+                return
             total_time_slept = 0
             batch_end_height = min(
                 batch_start_height + self.BATCH_SIZE - 1, self.tip_height

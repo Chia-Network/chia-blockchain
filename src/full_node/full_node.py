@@ -4,9 +4,8 @@ import logging
 import traceback
 import time
 import random
-from asyncio import Event
 from pathlib import Path
-from typing import AsyncGenerator, Dict, List, Optional, Tuple, Type, Callable
+from typing import AsyncGenerator, Dict, List, Optional, Tuple, Callable
 
 import aiosqlite
 from chiabip158 import PyBIP158
@@ -97,13 +96,7 @@ class FullNode:
         self.db_path = path_from_root(root_path, config["database_path"])
         mkdir(self.db_path.parent)
 
-    @classmethod
-    async def create(cls: Type, *args, **kwargs):
-        _ = cls(*args, **kwargs)
-        await _.start()
-        return _
-
-    async def start(self):
+    async def _start(self):
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
         self.block_store = await BlockStore.create(self.connection)
@@ -128,7 +121,7 @@ class FullNode:
                 self.broadcast_uncompact_blocks(uncompact_interval)
             )
 
-    def set_global_connections(self, global_connections: PeerConnections):
+    def _set_global_connections(self, global_connections: PeerConnections):
         self.global_connections = global_connections
 
     def _set_server(self, server: ChiaServer):
@@ -334,7 +327,7 @@ class FullNode:
             f"Tip block {tip_block.header_hash} tip height {tip_block.height}"
         )
 
-        self.sync_store.set_potential_hashes_received(Event())
+        self.sync_store.set_potential_hashes_received(asyncio.Event())
 
         sleep_interval = 10
         total_time_slept = 0
@@ -885,6 +878,8 @@ class FullNode:
             self.log.info("Scanning the blockchain for uncompact blocks.")
 
             for h in range(min_height, max_height):
+                if self._shut_down:
+                    return
                 blocks: List[FullBlock] = await self.block_store.get_blocks_at(
                     [uint32(h)]
                 )
@@ -895,27 +890,18 @@ class FullNode:
 
                     if block.proof_of_time.witness_type != 0:
                         challenge_msg = timelord_protocol.ChallengeStart(
-                            block.proof_of_time.challenge_hash,
-                            block.weight,
+                            block.proof_of_time.challenge_hash, block.weight,
                         )
                         pos_info_msg = timelord_protocol.ProofOfSpaceInfo(
                             block.proof_of_time.challenge_hash,
                             block.proof_of_time.number_of_iterations,
                         )
-                        broadcast_list.append(
-                            (
-                                challenge_msg,
-                                pos_info_msg,
-                            )
-                        )
+                        broadcast_list.append((challenge_msg, pos_info_msg,))
                         # Scan only since the first uncompact block we know about.
                         # No block earlier than this will be uncompact in the future,
                         # unless a reorg happens. The range to scan next time
                         # is always at least 200 blocks, to protect against reorgs.
-                        if (
-                            uncompact_blocks == 0
-                            and h <= max(1, max_height - 200)
-                        ):
+                        if uncompact_blocks == 0 and h <= max(1, max_height - 200):
                             new_min_height = h
                         uncompact_blocks += 1
 
@@ -946,7 +932,9 @@ class FullNode:
                             delivery,
                         )
                     )
-            self.log.info(f"Broadcasted {len(broadcast_list)} uncompact blocks to timelords.")
+            self.log.info(
+                f"Broadcasted {len(broadcast_list)} uncompact blocks to timelords."
+            )
             await asyncio.sleep(uncompact_interval)
 
     @api_request
@@ -1573,7 +1561,7 @@ class FullNode:
                         yield ret_msg
                 except asyncio.CancelledError:
                     self.log.error("Syncing failed, CancelledError")
-                except BaseException as e:
+                except Exception as e:
                     tb = traceback.format_exc()
                     self.log.error(f"Error with syncing: {type(e)}{tb}")
                 finally:
@@ -1786,7 +1774,6 @@ class FullNode:
     ) -> OutboundMessageGenerator:
         # Ignore if syncing
         if self.sync_store.get_sync_mode():
-            cost = None
             status = MempoolInclusionStatus.FAILED
             error: Optional[Err] = Err.UNKNOWN
         else:

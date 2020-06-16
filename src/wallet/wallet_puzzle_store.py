@@ -158,7 +158,6 @@ class WalletPuzzleStore:
         """
         Sets a derivation path to used so we don't use it again.
         """
-        pass
         cursor = await self.db_connection.execute(
             "UPDATE derivation_paths SET used=1 WHERE derivation_index<=?", (index,),
         )

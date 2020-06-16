@@ -2,11 +2,11 @@ import asyncio
 import io
 import logging
 import time
-from asyncio import Lock, StreamReader, StreamWriter
 from typing import Dict, List, Optional, Tuple
 
 
 from chiavdf import create_discriminant
+from src.consensus.constants import constants as consensus_constants
 from src.protocols import timelord_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
@@ -20,8 +20,11 @@ log = logging.getLogger(__name__)
 
 
 class Timelord:
-    def __init__(self, config: Dict, constants: Dict):
-        self.constants = constants
+    def __init__(self, config: Dict, override_constants: Dict = {}):
+        self.constants = consensus_constants.copy()
+        for key, value in override_constants.items():
+            self.constants[key] = value
+
         self.config: Dict = config
         self.ips_estimate = {
             k: v
@@ -32,8 +35,10 @@ class Timelord:
                 )
             )
         }
-        self.lock: Lock = Lock()
-        self.active_discriminants: Dict[bytes32, Tuple[StreamWriter, uint64, str]] = {}
+        self.lock: asyncio.Lock = asyncio.Lock()
+        self.active_discriminants: Dict[
+            bytes32, Tuple[asyncio.StreamWriter, uint64, str]
+        ] = {}
         self.best_weight_three_proofs: int = -1
         self.active_discriminants_start_time: Dict = {}
         self.pending_iters: Dict = {}
@@ -46,18 +51,22 @@ class Timelord:
         self.discriminant_queue: List[Tuple[bytes32, uint128]] = []
         self.max_connection_time = self.config["max_connection_time"]
         self.potential_free_clients: List = []
-        self.free_clients: List[Tuple[str, StreamReader, StreamWriter]] = []
+        self.free_clients: List[
+            Tuple[str, asyncio.StreamReader, asyncio.StreamWriter]
+        ] = []
         self.server: Optional[ChiaServer] = None
+        self.vdf_server = None
         self._is_shutdown = False
         self.sanitizer_mode = self.config["sanitizer_mode"]
-        log.info(f"Am I sanitizing? {self.sanitizer_mode}")
         self.last_time_seen_discriminant: Dict = {}
         self.max_known_weights: List[uint128] = []
 
-    def set_server(self, server: ChiaServer):
+    def _set_server(self, server: ChiaServer):
         self.server = server
 
-    async def _handle_client(self, reader: StreamReader, writer: StreamWriter):
+    async def _handle_client(
+        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+    ):
         async with self.lock:
             client_ip = writer.get_extra_info("peername")[0]
             log.info(f"New timelord connection from client: {client_ip}.")
@@ -69,13 +78,35 @@ class Timelord:
                         self.potential_free_clients.remove((ip, end_time))
                         break
 
-    def _shutdown(self):
+    async def _start(self):
+        if self.sanitizer_mode:
+            log.info("Starting timelord in sanitizer mode")
+            self.disc_queue = asyncio.create_task(
+                self._manage_discriminant_queue_sanitizer()
+            )
+        else:
+            log.info("Starting timelord in normal mode")
+            self.disc_queue = asyncio.create_task(self._manage_discriminant_queue())
+
+        self.vdf_server = await asyncio.start_server(
+            self._handle_client,
+            self.config["vdf_server"]["host"],
+            self.config["vdf_server"]["port"],
+        )
+
+    def _close(self):
         self._is_shutdown = True
+        assert self.vdf_server is not None
+        self.vdf_server.close()
+
+    async def _await_closed(self):
+        assert self.disc_queue is not None
+        await self.disc_queue
 
     async def _stop_worst_process(self, worst_weight_active):
         # This is already inside a lock, no need to lock again.
         log.info(f"Stopping one process at weight {worst_weight_active}")
-        stop_writer: Optional[StreamWriter] = None
+        stop_writer: Optional[asyncio.StreamWriter] = None
         stop_discriminant: Optional[bytes32] = None
 
         low_weights = {
@@ -289,8 +320,8 @@ class Timelord:
             msg = ""
             try:
                 msg = data.decode()
-            except Exception:
-                pass
+            except Exception as e:
+                log.error(f"Exception while decoding data {e}")
 
             if msg == "STOP":
                 log.info(f"Stopped client running on ip {ip}.")
@@ -489,22 +520,16 @@ class Timelord:
                     with_iters = [
                         (d, w)
                         for d, w in self.discriminant_queue
-                        if d in self.pending_iters
-                        and len(self.pending_iters[d]) != 0
+                        if d in self.pending_iters and len(self.pending_iters[d]) != 0
                     ]
-                    if (
-                        len(with_iters) > 0
-                        and len(self.free_clients) > 0
-                    ):
+                    if len(with_iters) > 0 and len(self.free_clients) > 0:
                         disc, weight = with_iters[0]
                         log.info(f"Creating compact weso proof: weight {weight}.")
                         ip, sr, sw = self.free_clients[0]
                         self.free_clients = self.free_clients[1:]
                         self.discriminant_queue.remove((disc, weight))
                         asyncio.create_task(
-                            self._do_process_communication(
-                                disc, weight, ip, sr, sw
-                            )
+                            self._do_process_communication(disc, weight, ip, sr, sw)
                         )
                 if len(self.proofs_to_write) > 0:
                     for msg in self.proofs_to_write:
@@ -526,7 +551,9 @@ class Timelord:
                     )
                     return
                 if challenge_start.weight <= self.best_weight_three_proofs:
-                    log.info("Not starting challenge, already three proofs at that weight")
+                    log.info(
+                        "Not starting challenge, already three proofs at that weight"
+                    )
                     return
                 self.seen_discriminants.append(challenge_start.challenge_hash)
                 self.discriminant_queue.append(
@@ -575,7 +602,9 @@ class Timelord:
                 if proof_of_space_info.challenge_hash in disc_dict:
                     challenge_weight = disc_dict[proof_of_space_info.challenge_hash]
                     if challenge_weight >= min(self.max_known_weights):
-                        log.info("Not storing iter, waiting for more block confirmations.")
+                        log.info(
+                            "Not storing iter, waiting for more block confirmations."
+                        )
                         return
                 else:
                     log.info("Not storing iter, challenge inactive.")
