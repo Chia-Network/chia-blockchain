@@ -878,6 +878,8 @@ class FullNode:
             self.log.info("Scanning the blockchain for uncompact blocks.")
 
             for h in range(min_height, max_height):
+                if self._shut_down:
+                    return
                 blocks: List[FullBlock] = await self.block_store.get_blocks_at(
                     [uint32(h)]
                 )

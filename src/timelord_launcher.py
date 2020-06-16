@@ -22,7 +22,10 @@ async def kill_processes():
     async with lock:
         stopped = True
         for process in active_processes:
-            process.kill()
+            try:
+                process.kill()
+            except ProcessLookupError:
+                pass
 
 
 def find_vdf_client():
