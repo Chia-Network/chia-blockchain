@@ -38,7 +38,3 @@ mkdir final_installer
 electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia-$CHIA_INSTALLER_VERSION --overwrite --out final_installer
 echo "ls -l"
 ls -l
-echo "ls -l final_installer"
-ls -l final_installer
-echo "ls -l dist/Chia-darwin-x64/"
-ls -l dist/Chia-darwin-x64/
