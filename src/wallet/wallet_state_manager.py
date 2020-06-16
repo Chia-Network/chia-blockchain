@@ -337,7 +337,6 @@ class WalletStateManager:
     ) -> uint64:
         """
         Returns the balance amount of all coins that are spendable.
-        Spendable - (Coinbase freeze period has passed.)
         """
         spendable: Set[WalletCoinRecord] = await self.get_spendable_coins_for_wallet(
             wallet_id
@@ -348,19 +347,7 @@ class WalletStateManager:
         for record in spendable:
             amount = uint64(amount + record.coin.amount)
 
-        unconfirmed_tx: List[
-            TransactionRecord
-        ] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
-        removal_amount = 0
-
-        for txrecord in unconfirmed_tx:
-            for coin in txrecord.removals:
-                if await self.does_coin_belong_to_wallet(coin, wallet_id):
-                    removal_amount += coin.amount
-
-        result = amount - removal_amount
-
-        return uint64(result)
+        return uint64(amount)
 
     async def does_coin_belong_to_wallet(self, coin: Coin, wallet_id: int) -> bool:
         """
@@ -1303,6 +1290,18 @@ class WalletStateManager:
             valid_index, wallet_id
         )
 
+        # Coins that are currently part of a transaction
+        unconfirmed_tx: List[
+            TransactionRecord
+        ] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
+        removal_dict: Dict[bytes32, Coin] = {}
+        for tx in unconfirmed_tx:
+            for coin in tx.removals:
+                # TODO, "if" might not be necessary once unconfirmed tx doesn't contain coins for other wallets
+                if await self.does_coin_belong_to_wallet(coin, wallet_id):
+                    removal_dict[coin.name()] = coin
+
+        # Coins that are part of the trade
         offer_locked_coins: Dict[
             bytes32, WalletCoinRecord
         ] = await self.trade_manager.get_locked_coins()
@@ -1310,6 +1309,8 @@ class WalletStateManager:
         filtered = set()
         for record in records:
             if record.coin.name() in offer_locked_coins:
+                continue
+            if record.coin.name() in removal_dict:
                 continue
             filtered.add(record)
 
