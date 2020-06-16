@@ -160,7 +160,7 @@ class Wallet:
                     self.wallet_info.id
                 )
             )
-            sum = 0
+            sum_value = 0
             used_coins: Set = set()
 
             # Use older coins first
@@ -174,13 +174,13 @@ class Wallet:
                 self.wallet_info.id
             )
             for coinrecord in unspent:
-                if sum >= amount and len(used_coins) > 0:
+                if sum_value >= amount and len(used_coins) > 0:
                     break
                 if coinrecord.coin.name() in unconfirmed_removals:
                     continue
                 if coinrecord.coin in exclude:
                     continue
-                sum += coinrecord.coin.amount
+                sum_value += coinrecord.coin.amount
                 used_coins.add(coinrecord.coin)
                 self.log.info(
                     f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_index}!"
@@ -188,36 +188,26 @@ class Wallet:
 
             # This happens when we couldn't use one of the coins because it's already used
             # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
-            unconfirmed_additions = None
-            if sum < amount:
+            if sum_value < amount:
                 raise ValueError(
                     "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
                 )
-                unconfirmed_additions = await self.wallet_state_manager.unconfirmed_additions_for_wallet(
-                    self.wallet_info.id
-                )
-                for coin in unconfirmed_additions.values():
-                    if sum > amount:
-                        break
-                    if coin.name() in unconfirmed_removals:
-                        continue
+                # TODO(straya): remove this
+                # unconfirmed_additions = await self.wallet_state_manager.unconfirmed_additions_for_wallet(
+                #     self.wallet_info.id
+                # )
+                # for coin in unconfirmed_additions.values():
+                #     if sum_value > amount:
+                #         break
+                #     if coin.name() in unconfirmed_removals:
+                #         continue
 
-                    sum += coin.amount
-                    used_coins.add(coin)
-                    self.log.info(f"Selected used coin: {coin.name()}")
+                #     sum_value += coin.amount
+                #     used_coins.add(coin)
+                #     self.log.info(f"Selected used coin: {coin.name()}")
 
-        if sum >= amount:
-            self.log.info(f"Successfully selected coins: {used_coins}")
-            return used_coins
-        else:
-            # This shouldn't happen because of: if amount > self.get_unconfirmed_balance_spendable():
-            self.log.error(
-                f"Wasn't able to select coins for amount: {amount}"
-                f"unspent: {unspent}"
-                f"unconfirmed_removals: {unconfirmed_removals}"
-                f"unconfirmed_additions: {unconfirmed_additions}"
-            )
-            return None
+        self.log.info(f"Successfully selected coins: {used_coins}")
+        return used_coins
 
     async def generate_unsigned_transaction(
         self,

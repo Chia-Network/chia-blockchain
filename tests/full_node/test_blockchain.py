@@ -19,19 +19,20 @@ from src.consensus.coinbase import create_coinbase_coin_and_signature
 from src.types.sized_bytes import bytes32
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
+from src.consensus.find_fork_point import find_fork_point_in_chain
 
 
 bt = BlockTools()
 test_constants: Dict[str, Any] = consensus_constants.copy()
 test_constants.update(
     {
-        "DIFFICULTY_STARTING": 5,
-        "DISCRIMINANT_SIZE_BITS": 16,
+        "DIFFICULTY_STARTING": 1,
+        "DISCRIMINANT_SIZE_BITS": 8,
         "BLOCK_TIME_TARGET": 10,
         "MIN_BLOCK_TIME": 2,
-        "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
-        "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
-        "MIN_ITERS_STARTING": 50 * 2,
+        "DIFFICULTY_EPOCH": 6,  # The number of blocks per epoch
+        "DIFFICULTY_DELAY": 2,  # EPOCH / WARP_FACTOR
+        "MIN_ITERS_STARTING": 50 * 1,
     }
 )
 test_constants["GENESIS_BLOCK"] = bytes(
@@ -493,7 +494,7 @@ class TestBlockValidation:
 
     @pytest.mark.asyncio
     async def test_difficulty_change(self):
-        num_blocks = 30
+        num_blocks = 14
         # Make it 5x faster than target time
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 2)
         db_path = Path("blockchain_test.db")
@@ -508,19 +509,18 @@ class TestBlockValidation:
             assert result == ReceiveBlockResult.ADDED_TO_HEAD
             assert error_code is None
 
-        diff_25 = b.get_next_difficulty(blocks[24].header)
-        diff_26 = b.get_next_difficulty(blocks[25].header)
-        diff_27 = b.get_next_difficulty(blocks[26].header)
+        diff_12 = b.get_next_difficulty(blocks[11].header)
+        diff_13 = b.get_next_difficulty(blocks[12].header)
+        diff_14 = b.get_next_difficulty(blocks[13].header)
 
-        assert diff_26 == diff_25
-        assert diff_27 > diff_26
-        assert (diff_27 / diff_26) <= test_constants["DIFFICULTY_FACTOR"]
+        assert diff_13 == diff_12
+        assert diff_14 > diff_13
+        assert (diff_14 / diff_13) <= test_constants["DIFFICULTY_FACTOR"]
 
         assert (b.get_next_min_iters(blocks[1])) == test_constants["MIN_ITERS_STARTING"]
-        assert (b.get_next_min_iters(blocks[24])) == (b.get_next_min_iters(blocks[23]))
-        assert (b.get_next_min_iters(blocks[25])) == (b.get_next_min_iters(blocks[24]))
-        assert (b.get_next_min_iters(blocks[26])) > (b.get_next_min_iters(blocks[25]))
-        assert (b.get_next_min_iters(blocks[27])) == (b.get_next_min_iters(blocks[26]))
+        assert (b.get_next_min_iters(blocks[12])) == (b.get_next_min_iters(blocks[11]))
+        assert (b.get_next_min_iters(blocks[13])) > (b.get_next_min_iters(blocks[12]))
+        assert (b.get_next_min_iters(blocks[14])) == (b.get_next_min_iters(blocks[13]))
 
         await connection.close()
         b.shut_down()
@@ -529,7 +529,7 @@ class TestBlockValidation:
 class TestReorgs:
     @pytest.mark.asyncio
     async def test_basic_reorg(self):
-        blocks = bt.get_consecutive_blocks(test_constants, 100, [], 9)
+        blocks = bt.get_consecutive_blocks(test_constants, 15, [], 9)
         db_path = Path("blockchain_test.db")
         if db_path.exists():
             db_path.unlink()
@@ -540,22 +540,22 @@ class TestReorgs:
 
         for i in range(1, len(blocks)):
             await b.receive_block(blocks[i])
-        assert b.get_current_tips()[0].height == 100
+        assert b.get_current_tips()[0].height == 15
 
         blocks_reorg_chain = bt.get_consecutive_blocks(
-            test_constants, 30, blocks[:90], 9, b"2"
+            test_constants, 7, blocks[:10], 9, b"2"
         )
         for i in range(1, len(blocks_reorg_chain)):
             reorg_block = blocks_reorg_chain[i]
             result, removed, error_code = await b.receive_block(reorg_block)
-            if reorg_block.height < 90:
+            if reorg_block.height < 10:
                 assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
-            elif reorg_block.height < 99:
+            elif reorg_block.height < 14:
                 assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
-            elif reorg_block.height >= 100:
+            elif reorg_block.height >= 15:
                 assert result == ReceiveBlockResult.ADDED_TO_HEAD
             assert error_code is None
-        assert b.get_current_tips()[0].height == 119
+        assert b.get_current_tips()[0].height == 16
 
         await connection.close()
         b.shut_down()
@@ -656,12 +656,18 @@ class TestReorgs:
         for i in range(1, len(blocks_2)):
             await b.receive_block(blocks_2[i])
 
-        assert b._find_fork_point_in_chain(blocks[10].header, blocks_2[10].header) == 4
+        assert (
+            find_fork_point_in_chain(b.headers, blocks[10].header, blocks_2[10].header)
+            == 4
+        )
 
         for i in range(1, len(blocks_3)):
             await b.receive_block(blocks_3[i])
 
-        assert b._find_fork_point_in_chain(blocks[10].header, blocks_3[10].header) == 2
+        assert (
+            find_fork_point_in_chain(b.headers, blocks[10].header, blocks_3[10].header)
+            == 2
+        )
 
         assert b.lca_block.data == blocks[2].header.data
 
@@ -669,10 +675,15 @@ class TestReorgs:
             await b.receive_block(blocks_reorg[i])
 
         assert (
-            b._find_fork_point_in_chain(blocks[10].header, blocks_reorg[10].header) == 8
+            find_fork_point_in_chain(
+                b.headers, blocks[10].header, blocks_reorg[10].header
+            )
+            == 8
         )
         assert (
-            b._find_fork_point_in_chain(blocks_2[10].header, blocks_reorg[10].header)
+            find_fork_point_in_chain(
+                b.headers, blocks_2[10].header, blocks_reorg[10].header
+            )
             == 4
         )
         assert b.lca_block.data == blocks[4].header.data

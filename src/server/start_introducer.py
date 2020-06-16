@@ -6,7 +6,7 @@ from src.util.default_root import DEFAULT_ROOT_PATH
 from src.server.start_service import run_service
 
 # See: https://bugs.python.org/issue29288
-u''.encode('idna')
+u"".encode("idna")
 
 
 def service_kwargs_for_introducer(root_path=DEFAULT_ROOT_PATH):
@@ -16,6 +16,15 @@ def service_kwargs_for_introducer(root_path=DEFAULT_ROOT_PATH):
         config["max_peers_to_send"], config["recent_peer_threshold"]
     )
 
+    async def start_callback():
+        await introducer._start()
+
+    def stop_callback():
+        introducer._close()
+
+    async def await_closed_callback():
+        await introducer._await_closed()
+
     kwargs = dict(
         root_path=root_path,
         api=introducer,
@@ -23,6 +32,9 @@ def service_kwargs_for_introducer(root_path=DEFAULT_ROOT_PATH):
         advertised_port=config["port"],
         service_name=service_name,
         server_listen_ports=[config["port"]],
+        start_callback=start_callback,
+        stop_callback=stop_callback,
+        await_closed_callback=await_closed_callback,
     )
     return kwargs
 

@@ -4,12 +4,12 @@ from src.types.peer_info import PeerInfo
 from src.util.keychain import Keychain
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.rpc.farmer_rpc_server import start_farmer_rpc_server
+from src.rpc.farmer_rpc_api import FarmerRpcApi
 
 from src.server.start_service import run_service
 
 # See: https://bugs.python.org/issue29288
-u''.encode('idna')
+u"".encode("idna")
 
 
 def service_kwargs_for_farmer(root_path):
@@ -33,8 +33,9 @@ def service_kwargs_for_farmer(root_path):
         service_name=service_name,
         server_listen_ports=[config["port"]],
         connect_peers=connect_peers,
+        auth_connect_peers=False,
         on_connect_callback=api._on_connect,
-        rpc_start_callback_port=(start_farmer_rpc_server, config["rpc_port"]),
+        rpc_info=(FarmerRpcApi, config["rpc_port"]),
     )
     return kwargs
 

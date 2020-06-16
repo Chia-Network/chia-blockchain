@@ -384,8 +384,3 @@ class TestWalletSync:
         assert len(records) == 1
         assert not records[0].spent
         assert not records[0].coinbase
-
-    @pytest.mark.asyncio
-    async def test_random_order_wallet_node(self, wallet_node):
-        # Call respond_removals and respond_additions in random orders
-        pass

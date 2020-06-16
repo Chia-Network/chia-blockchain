@@ -227,7 +227,7 @@ const OfferView = () => {
   }
 
   return (
-    <Paper className={(classes.paper, classes.balancePaper)}>
+    <Paper className={classes.paper}>
       <Grid container spacing={0}>
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
@@ -311,7 +311,7 @@ const DropView = () => {
     : { visibility: "hidden" };
 
   return (
-    <Paper className={(classes.paper, classes.balancePaper)}>
+    <Paper className={classes.paper}>
       <Grid container spacing={0}>
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
@@ -415,7 +415,7 @@ const CreateOffer = () => {
   }
 
   return (
-    <Paper className={(classes.paper, classes.balancePaper)}>
+    <Paper className={classes.paper}>
       <Grid container spacing={0}>
         <Grid item xs={12}>
           <div className={classes.cardTitle}>

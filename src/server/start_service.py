@@ -15,8 +15,10 @@ from src.server.outbound_message import Delivery, Message, NodeType, OutboundMes
 from src.server.server import ChiaServer, start_server
 from src.types.peer_info import PeerInfo
 from src.util.logging import initialize_logging
-from src.util.config import load_config_cli, load_config
+from src.util.config import load_config
 from src.util.setproctitle import setproctitle
+from src.rpc.rpc_server import start_rpc_server
+from src.server.connection import OnConnectFunc
 
 from .reconnect_task import start_reconnect_task
 
@@ -70,8 +72,9 @@ class Service:
         service_name: str,
         server_listen_ports: List[int] = [],
         connect_peers: List[PeerInfo] = [],
-        on_connect_callback: Optional[OutboundMessage] = None,
-        rpc_start_callback_port: Optional[Tuple[Callable, int]] = None,
+        auth_connect_peers: bool = True,
+        on_connect_callback: Optional[OnConnectFunc] = None,
+        rpc_info: Optional[Tuple[type, int]] = None,
         start_callback: Optional[Callable] = None,
         stop_callback: Optional[Callable] = None,
         await_closed_callback: Optional[Callable] = None,
@@ -88,14 +91,13 @@ class Service:
         proctitle_name = f"chia_{service_name}"
         setproctitle(proctitle_name)
         self._log = logging.getLogger(service_name)
+        config = load_config(root_path, "config.yaml", service_name)
+        initialize_logging(service_name, config["logging"], root_path)
 
-        config = load_config_cli(root_path, "config.yaml", service_name)
-        initialize_logging(f"{service_name:<30s}", config["logging"], root_path)
-
-        self._rpc_start_callback_port = rpc_start_callback_port
+        self._rpc_info = rpc_info
 
         self._server = ChiaServer(
-            config["port"],
+            advertised_port,
             api,
             node_type,
             ping_interval,
@@ -109,6 +111,7 @@ class Service:
                 f(self._server)
 
         self._connect_peers = connect_peers
+        self._auth_connect_peers = auth_connect_peers
         self._server_listen_ports = server_listen_ports
 
         self._api = api
@@ -120,6 +123,7 @@ class Service:
         self._start_callback = start_callback
         self._stop_callback = stop_callback
         self._await_closed_callback = await_closed_callback
+        self._advertised_port = advertised_port
 
     def start(self):
         if self._task is not None:
@@ -136,7 +140,6 @@ class Service:
                     introducer_connect_interval,
                     target_peer_count,
                 ) = self._periodic_introducer_poll
-
                 self._introducer_poll_task = create_periodic_introducer_poll_task(
                     self._server,
                     peer_info,
@@ -146,14 +149,16 @@ class Service:
                 )
 
             self._rpc_task = None
-            if self._rpc_start_callback_port:
-                rpc_f, rpc_port = self._rpc_start_callback_port
-                self._rpc_task = asyncio.ensure_future(
-                    rpc_f(self._api, self.stop, rpc_port)
+            if self._rpc_info:
+                rpc_api, rpc_port = self._rpc_info
+                self._rpc_task = asyncio.create_task(
+                    start_rpc_server(rpc_api(self._api), rpc_port, self.stop)
                 )
 
             self._reconnect_tasks = [
-                start_reconnect_task(self._server, _, self._log)
+                start_reconnect_task(
+                    self._server, _, self._log, self._auth_connect_peers
+                )
                 for _ in self._connect_peers
             ]
             self._server_sockets = [
@@ -171,10 +176,12 @@ class Service:
                 await _.wait_closed()
 
             await self._server.await_closed()
+            if self._stop_callback:
+                self._stop_callback()
             if self._await_closed_callback:
                 await self._await_closed_callback()
 
-        self._task = asyncio.ensure_future(_run())
+        self._task = asyncio.create_task(_run())
 
     async def run(self):
         self.start()
@@ -193,15 +200,13 @@ class Service:
             self._api._shut_down = True
             if self._introducer_poll_task:
                 self._introducer_poll_task.cancel()
-            if self._stop_callback:
-                self._stop_callback()
 
     async def wait_closed(self):
         await self._task
         if self._rpc_task:
-            await self._rpc_task
+            await (await self._rpc_task)()
             self._log.info("Closed RPC server.")
-        self._log.info("%s fully closed", self._node_type)
+        self._log.info(f"Service at port {self._advertised_port} fully closed")
 
 
 async def async_run_service(*args, **kwargs):
@@ -212,11 +217,4 @@ async def async_run_service(*args, **kwargs):
 def run_service(*args, **kwargs):
     if uvloop is not None:
         uvloop.install()
-    # TODO: use asyncio.run instead
-    # for now, we use `run_until_complete` as `asyncio.run` blocks on RPC server not exiting
-    if 1:
-        return asyncio.get_event_loop().run_until_complete(
-            async_run_service(*args, **kwargs)
-        )
-    else:
-        return asyncio.run(async_run_service(*args, **kwargs))
+    return asyncio.run(async_run_service(*args, **kwargs))

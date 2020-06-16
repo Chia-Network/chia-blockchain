@@ -84,10 +84,10 @@ class Farmer:
             NodeType.HARVESTER, Message("harvester_handshake", msg), Delivery.RESPOND
         )
 
-    def set_global_connections(self, global_connections: PeerConnections):
+    def _set_global_connections(self, global_connections: PeerConnections):
         self.global_connections: PeerConnections = global_connections
 
-    def set_server(self, server):
+    def _set_server(self, server):
         self.server = server
 
     def _set_state_changed_callback(self, callback: Callable):

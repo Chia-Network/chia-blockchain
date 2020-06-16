@@ -1,4 +1,5 @@
 import asyncio
+import signal
 
 from typing import Any, Dict, Tuple, List
 from src.full_node.full_node import FullNode
@@ -17,6 +18,8 @@ from src.timelord import Timelord
 from src.server.connection import PeerInfo
 from src.server.start_service import create_periodic_introducer_poll_task
 from src.util.ints import uint16, uint32
+from src.server.start_service import Service
+from src.rpc.harvester_rpc_api import HarvesterRpcApi
 
 
 bt = BlockTools()
@@ -25,7 +28,7 @@ root_path = bt.root_path
 
 test_constants: Dict[str, Any] = {
     "DIFFICULTY_STARTING": 1,
-    "DISCRIMINANT_SIZE_BITS": 16,
+    "DISCRIMINANT_SIZE_BITS": 8,
     "BLOCK_TIME_TARGET": 10,
     "MIN_BLOCK_TIME": 2,
     "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
@@ -34,7 +37,7 @@ test_constants: Dict[str, Any] = {
     "PROPAGATION_DELAY_THRESHOLD": 20,
     "TX_PER_SEC": 1,
     "MEMPOOL_BLOCK_BUFFER": 10,
-    "MIN_ITERS_STARTING": 50 * 2,
+    "MIN_ITERS_STARTING": 50 * 1,
 }
 test_constants["GENESIS_BLOCK"] = bytes(
     bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
@@ -50,8 +53,7 @@ async def _teardown_nodes(node_aiters: List) -> None:
             pass
 
 
-async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={}):
-    # SETUP
+async def setup_full_node(db_name, port, introducer_port=None, simulator=False, dic={}):
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
@@ -60,328 +62,330 @@ async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={})
     if db_path.exists():
         db_path.unlink()
 
-    net_config = load_config(root_path, "config.yaml")
-    ping_interval = net_config.get("ping_interval")
-    network_id = net_config.get("network_id")
-
-    config = load_config(root_path, "config.yaml", "full_node")
-    config["database_path"] = str(db_path)
-
-    if introducer_port is not None:
-        config["introducer_peer"]["host"] = "127.0.0.1"
-        config["introducer_peer"]["port"] = introducer_port
-    full_node_1 = await FullNodeSimulator.create(
-        config=config,
-        name=f"full_node_{port}",
-        root_path=root_path,
-        override_constants=test_constants_copy,
-    )
-    assert ping_interval is not None
-    assert network_id is not None
-    server_1 = ChiaServer(
-        port,
-        full_node_1,
-        NodeType.FULL_NODE,
-        ping_interval,
-        network_id,
-        bt.root_path,
-        config,
-        "full-node-simulator-server",
-    )
-    _ = await start_server(server_1, full_node_1._on_connect)
-    full_node_1._set_server(server_1)
-
-    yield (full_node_1, server_1)
-
-    # TEARDOWN
-    _.close()
-    server_1.close_all()
-    full_node_1._close()
-    await server_1.await_closed()
-    await full_node_1._await_closed()
-    db_path.unlink()
-
-
-async def setup_full_node(db_name, port, introducer_port=None, dic={}):
-    # SETUP
-    test_constants_copy = test_constants.copy()
-    for k in dic.keys():
-        test_constants_copy[k] = dic[k]
-
-    db_path = root_path / f"{db_name}"
-    if db_path.exists():
-        db_path.unlink()
-
-    net_config = load_config(root_path, "config.yaml")
-    ping_interval = net_config.get("ping_interval")
-    network_id = net_config.get("network_id")
-
-    config = load_config(root_path, "config.yaml", "full_node")
+    config = load_config(bt.root_path, "config.yaml", "full_node")
     config["database_path"] = db_name
     config["send_uncompact_interval"] = 30
+    periodic_introducer_poll = None
     if introducer_port is not None:
-        config["introducer_peer"]["host"] = "127.0.0.1"
-        config["introducer_peer"]["port"] = introducer_port
-
-    full_node_1 = await FullNode.create(
+        periodic_introducer_poll = (
+            PeerInfo("127.0.0.1", introducer_port),
+            30,
+            config["target_peer_count"],
+        )
+    FullNodeApi = FullNodeSimulator if simulator else FullNode
+    api = FullNodeApi(
         config=config,
         root_path=root_path,
         name=f"full_node_{port}",
         override_constants=test_constants_copy,
     )
-    assert ping_interval is not None
-    assert network_id is not None
-    server_1 = ChiaServer(
-        port,
-        full_node_1,
-        NodeType.FULL_NODE,
-        ping_interval,
-        network_id,
-        root_path,
-        config,
-        f"full_node_server_{port}",
-    )
-    _ = await start_server(server_1, full_node_1._on_connect)
-    full_node_1._set_server(server_1)
-    if introducer_port is not None:
-        peer_info = PeerInfo("127.0.0.1", introducer_port)
-        create_periodic_introducer_poll_task(
-            server_1,
-            peer_info,
-            full_node_1.global_connections,
-            config["introducer_connect_interval"],
-            config["target_peer_count"],
-        )
-    yield (full_node_1, server_1)
 
-    # TEARDOWN
-    _.close()
-    server_1.close_all()
-    full_node_1._close()
-    await server_1.await_closed()
-    await full_node_1._await_closed()
-    db_path = root_path / f"{db_name}"
+    started = asyncio.Event()
+
+    async def start_callback():
+        await api._start()
+        nonlocal started
+        started.set()
+
+    def stop_callback():
+        api._close()
+
+    async def await_closed_callback():
+        await api._await_closed()
+
+    service = Service(
+        root_path=root_path,
+        api=api,
+        node_type=NodeType.FULL_NODE,
+        advertised_port=port,
+        service_name="full_node",
+        server_listen_ports=[port],
+        auth_connect_peers=False,
+        on_connect_callback=api._on_connect,
+        start_callback=start_callback,
+        stop_callback=stop_callback,
+        await_closed_callback=await_closed_callback,
+        periodic_introducer_poll=periodic_introducer_poll,
+    )
+
+    run_task = asyncio.create_task(service.run())
+    await started.wait()
+
+    yield api, api.server
+
+    service.stop()
+    await run_task
     if db_path.exists():
         db_path.unlink()
 
 
 async def setup_wallet_node(
-    port, introducer_port=None, key_seed=b"setup_wallet_node", dic={}
+    port,
+    full_node_port=None,
+    introducer_port=None,
+    key_seed=b"setup_wallet_node",
+    dic={},
 ):
     config = load_config(root_path, "config.yaml", "wallet")
     if "starting_height" in dic:
         config["starting_height"] = dic["starting_height"]
+    config["initial_num_public_keys"] = 5
 
     keychain = Keychain(key_seed.hex(), True)
     keychain.add_private_key_seed(key_seed)
-    private_key = keychain.get_all_private_keys()[0][0]
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
-    db_path = root_path / f"test-wallet-db-{port}.db"
+    db_path_key_suffix = str(
+        keychain.get_all_public_keys()[0].get_public_key().get_fingerprint()
+    )
+    db_name = f"test-wallet-db-{port}"
+    db_path = root_path / f"test-wallet-db-{port}-{db_path_key_suffix}"
     if db_path.exists():
         db_path.unlink()
-    config["database_path"] = str(db_path)
+    config["database_path"] = str(db_name)
 
-    net_config = load_config(root_path, "config.yaml")
-    ping_interval = net_config.get("ping_interval")
-    network_id = net_config.get("network_id")
-
-    wallet = await WalletNode.create(
+    api = WalletNode(
         config,
-        private_key,
+        keychain,
         root_path,
         override_constants=test_constants_copy,
         name="wallet1",
     )
-    assert ping_interval is not None
-    assert network_id is not None
-    server = ChiaServer(
-        port,
-        wallet,
-        NodeType.WALLET,
-        ping_interval,
-        network_id,
-        root_path,
-        config,
-        "wallet-server",
+    periodic_introducer_poll = None
+    if introducer_port is not None:
+        periodic_introducer_poll = (
+            PeerInfo("127.0.0.1", introducer_port),
+            30,
+            config["target_peer_count"],
+        )
+    connect_peers: List[PeerInfo] = []
+    if full_node_port is not None:
+        connect_peers = [PeerInfo("127.0.0.1", full_node_port)]
+
+    started = asyncio.Event()
+
+    async def start_callback():
+        await api._start()
+        nonlocal started
+        started.set()
+
+    def stop_callback():
+        api._close()
+
+    async def await_closed_callback():
+        await api._await_closed()
+
+    service = Service(
+        root_path=root_path,
+        api=api,
+        node_type=NodeType.WALLET,
+        advertised_port=port,
+        service_name="wallet",
+        server_listen_ports=[port],
+        connect_peers=connect_peers,
+        auth_connect_peers=False,
+        on_connect_callback=api._on_connect,
+        start_callback=start_callback,
+        stop_callback=stop_callback,
+        await_closed_callback=await_closed_callback,
+        periodic_introducer_poll=periodic_introducer_poll,
     )
-    wallet.set_server(server)
 
-    yield (wallet, server)
+    run_task = asyncio.create_task(service.run())
+    await started.wait()
 
-    server.close_all()
-    await wallet.wallet_state_manager.clear_all_stores()
-    await wallet.wallet_state_manager.close_all_stores()
-    wallet.wallet_state_manager.unlink_db()
-    await server.await_closed()
+    yield api, api.server
+
+    # await asyncio.sleep(1) # Sleep to ÷
+    service.stop()
+    await run_task
+    if db_path.exists():
+        db_path.unlink()
+    keychain.delete_all_keys()
 
 
-async def setup_harvester(port, dic={}):
+async def setup_harvester(port, farmer_port, dic={}):
     config = load_config(bt.root_path, "config.yaml", "harvester")
 
-    harvester = Harvester(config, bt.plot_config, bt.root_path)
+    api = Harvester(config, bt.plot_config, bt.root_path)
 
-    net_config = load_config(bt.root_path, "config.yaml")
-    ping_interval = net_config.get("ping_interval")
-    network_id = net_config.get("network_id")
-    assert ping_interval is not None
-    assert network_id is not None
-    server = ChiaServer(
-        port,
-        harvester,
-        NodeType.HARVESTER,
-        ping_interval,
-        network_id,
-        bt.root_path,
-        config,
-        f"harvester_server_{port}",
+    started = asyncio.Event()
+
+    async def start_callback():
+        await api._start()
+        nonlocal started
+        started.set()
+
+    def stop_callback():
+        api._close()
+
+    async def await_closed_callback():
+        await api._await_closed()
+
+    service = Service(
+        root_path=root_path,
+        api=api,
+        node_type=NodeType.HARVESTER,
+        advertised_port=port,
+        service_name="harvester",
+        server_listen_ports=[port],
+        connect_peers=[PeerInfo("127.0.0.1", farmer_port)],
+        auth_connect_peers=True,
+        start_callback=start_callback,
+        stop_callback=stop_callback,
+        await_closed_callback=await_closed_callback,
     )
 
-    harvester.set_server(server)
-    yield (harvester, server)
+    run_task = asyncio.create_task(service.run())
+    await started.wait()
 
-    server.close_all()
-    harvester._shutdown()
-    await server.await_closed()
-    await harvester._await_shutdown()
+    yield api, api.server
+
+    service.stop()
+    await run_task
 
 
-async def setup_farmer(port, dic={}):
-    print("root path", root_path)
-    config = load_config(root_path, "config.yaml", "farmer")
+async def setup_farmer(port, full_node_port, dic={}):
+    config = load_config(bt.root_path, "config.yaml", "farmer")
     config_pool = load_config(root_path, "config.yaml", "pool")
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
-
-    net_config = load_config(root_path, "config.yaml")
-    ping_interval = net_config.get("ping_interval")
-    network_id = net_config.get("network_id")
-
     config["xch_target_puzzle_hash"] = bt.fee_target.hex()
     config["pool_public_keys"] = [
         bytes(epk.get_public_key()).hex() for epk in bt.keychain.get_all_public_keys()
     ]
     config_pool["xch_target_puzzle_hash"] = bt.fee_target.hex()
 
-    farmer = Farmer(config, config_pool, bt.keychain, test_constants_copy)
-    assert ping_interval is not None
-    assert network_id is not None
-    server = ChiaServer(
-        port,
-        farmer,
-        NodeType.FARMER,
-        ping_interval,
-        network_id,
-        root_path,
-        config,
-        f"farmer_server_{port}",
+    api = Farmer(config, config_pool, bt.keychain, test_constants_copy)
+
+    started = asyncio.Event()
+
+    async def start_callback():
+        nonlocal started
+        started.set()
+
+    service = Service(
+        root_path=root_path,
+        api=api,
+        node_type=NodeType.FARMER,
+        advertised_port=port,
+        service_name="farmer",
+        server_listen_ports=[port],
+        on_connect_callback=api._on_connect,
+        connect_peers=[PeerInfo("127.0.0.1", full_node_port)],
+        auth_connect_peers=False,
+        start_callback=start_callback,
     )
-    farmer.set_server(server)
-    _ = await start_server(server, farmer._on_connect)
 
-    yield (farmer, server)
+    run_task = asyncio.create_task(service.run())
+    await started.wait()
 
-    _.close()
-    server.close_all()
-    await server.await_closed()
+    yield api, api.server
+
+    service.stop()
+    await run_task
 
 
 async def setup_introducer(port, dic={}):
-    net_config = load_config(root_path, "config.yaml")
-    ping_interval = net_config.get("ping_interval")
-    network_id = net_config.get("network_id")
+    config = load_config(bt.root_path, "config.yaml", "introducer")
+    api = Introducer(config["max_peers_to_send"], config["recent_peer_threshold"])
 
-    config = load_config(root_path, "config.yaml", "introducer")
+    started = asyncio.Event()
 
-    introducer = Introducer(
-        config["max_peers_to_send"], config["recent_peer_threshold"]
+    async def start_callback():
+        await api._start()
+        nonlocal started
+        started.set()
+
+    def stop_callback():
+        api._close()
+
+    async def await_closed_callback():
+        await api._await_closed()
+
+    service = Service(
+        root_path=root_path,
+        api=api,
+        node_type=NodeType.INTRODUCER,
+        advertised_port=port,
+        service_name="introducer",
+        server_listen_ports=[port],
+        auth_connect_peers=False,
+        start_callback=start_callback,
+        stop_callback=stop_callback,
+        await_closed_callback=await_closed_callback,
     )
-    assert ping_interval is not None
-    assert network_id is not None
-    server = ChiaServer(
-        port,
-        introducer,
-        NodeType.INTRODUCER,
-        ping_interval,
-        network_id,
-        bt.root_path,
-        config,
-        f"introducer_server_{port}",
-    )
-    _ = await start_server(server)
 
-    yield (introducer, server)
+    run_task = asyncio.create_task(service.run())
+    await started.wait()
 
-    _.close()
-    server.close_all()
-    await server.await_closed()
+    yield api, api.server
+
+    service.stop()
+    await run_task
 
 
 async def setup_vdf_clients(port):
     vdf_task = asyncio.create_task(spawn_process("127.0.0.1", port, 1))
 
+    def stop():
+        asyncio.create_task(kill_processes())
+
+    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop)
+    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop)
+
     yield vdf_task
 
-    try:
-        await kill_processes()
-    except Exception:
-        pass
+    await kill_processes()
 
 
-async def setup_timelord(port, sanitizer, dic={}):
-    config = load_config(root_path, "config.yaml", "timelord")
-
+async def setup_timelord(port, full_node_port, sanitizer, dic={}):
+    config = load_config(bt.root_path, "config.yaml", "timelord")
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
     config["sanitizer_mode"] = sanitizer
-
-    timelord = Timelord(config, test_constants_copy)
-
-    net_config = load_config(root_path, "config.yaml")
-    ping_interval = net_config.get("ping_interval")
-    network_id = net_config.get("network_id")
-    assert ping_interval is not None
-    assert network_id is not None
-    server = ChiaServer(
-        port,
-        timelord,
-        NodeType.TIMELORD,
-        ping_interval,
-        network_id,
-        bt.root_path,
-        config,
-        f"timelord_server_{port}",
-    )
-
-    vdf_server_port = config["vdf_server"]["port"]
     if sanitizer:
-        vdf_server_port = 7999
+        config["vdf_server"]["port"] = 7999
 
-    coro = asyncio.start_server(
-        timelord._handle_client,
-        config["vdf_server"]["host"],
-        vdf_server_port,
-        loop=asyncio.get_running_loop(),
+    api = Timelord(config, test_constants_copy)
+
+    started = asyncio.Event()
+
+    async def start_callback():
+        await api._start()
+        nonlocal started
+        started.set()
+
+    def stop_callback():
+        api._close()
+
+    async def await_closed_callback():
+        await api._await_closed()
+
+    service = Service(
+        root_path=root_path,
+        api=api,
+        node_type=NodeType.TIMELORD,
+        advertised_port=port,
+        service_name="timelord",
+        server_listen_ports=[port],
+        connect_peers=[PeerInfo("127.0.0.1", full_node_port)],
+        auth_connect_peers=False,
+        start_callback=start_callback,
+        stop_callback=stop_callback,
+        await_closed_callback=await_closed_callback,
     )
 
-    vdf_server = asyncio.ensure_future(coro)
+    run_task = asyncio.create_task(service.run())
+    await started.wait()
 
-    timelord.set_server(server)
+    yield api, api.server
 
-    if not sanitizer:
-        timelord_task = asyncio.create_task(timelord._manage_discriminant_queue())
-    else:
-        timelord_task = asyncio.create_task(timelord._manage_discriminant_queue_sanitizer())
-    yield (timelord, server)
-
-    vdf_server.cancel()
-    server.close_all()
-    timelord._shutdown()
-    await timelord_task
-    await server.await_closed()
+    service.stop()
+    await run_task
 
 
 async def setup_two_nodes(dic={}):
@@ -390,8 +394,8 @@ async def setup_two_nodes(dic={}):
     Setup and teardown of two full nodes, with blockchains and separate DBs.
     """
     node_iters = [
-        setup_full_node("blockchain_test.db", 21234, dic=dic),
-        setup_full_node("blockchain_test_2.db", 21235, dic=dic),
+        setup_full_node("blockchain_test.db", 21234, simulator=False, dic=dic),
+        setup_full_node("blockchain_test_2.db", 21235, simulator=False, dic=dic),
     ]
 
     fn1, s1 = await node_iters[0].__anext__()
@@ -404,30 +408,14 @@ async def setup_two_nodes(dic={}):
 
 async def setup_node_and_wallet(dic={}):
     node_iters = [
-        setup_full_node_simulator("blockchain_test.db", 21234, dic=dic),
-        setup_wallet_node(21235, dic=dic),
+        setup_full_node("blockchain_test.db", 21234, simulator=False, dic=dic),
+        setup_wallet_node(21235, None, dic=dic),
     ]
 
     full_node, s1 = await node_iters[0].__anext__()
     wallet, s2 = await node_iters[1].__anext__()
 
     yield (full_node, wallet, s1, s2)
-
-    await _teardown_nodes(node_iters)
-
-
-async def setup_node_and_two_wallets(dic={}):
-    node_iters = [
-        setup_full_node("blockchain_test.db", 21234, dic=dic),
-        setup_wallet_node(21235, key_seed=b"a", dic=dic),
-        setup_wallet_node(21236, key_seed=b"b", dic=dic),
-    ]
-
-    full_node, s1 = await node_iters[0].__anext__()
-    wallet, s2 = await node_iters[1].__anext__()
-    wallet_2, s3 = await node_iters[2].__anext__()
-
-    yield (full_node, wallet, wallet_2, s1, s2, s3)
 
     await _teardown_nodes(node_iters)
 
@@ -440,16 +428,16 @@ async def setup_simulators_and_wallets(
     node_iters = []
 
     for index in range(0, simulator_count):
-        db_name = f"blockchain_test{index}.db"
         port = 50000 + index
-        sim = setup_full_node_simulator(db_name, port, dic=dic)
+        db_name = f"blockchain_test_{port}.db"
+        sim = setup_full_node(db_name, port, simulator=True, dic=dic)
         simulators.append(await sim.__anext__())
         node_iters.append(sim)
 
     for index in range(0, wallet_count):
         seed = bytes(uint32(index))
         port = 55000 + index
-        wlt = setup_wallet_node(port, key_seed=seed, dic=dic)
+        wlt = setup_wallet_node(port, None, key_seed=seed, dic=dic)
         wallets.append(await wlt.__anext__())
         node_iters.append(wlt)
 
@@ -461,19 +449,20 @@ async def setup_simulators_and_wallets(
 async def setup_full_system(dic={}):
     node_iters = [
         setup_introducer(21233),
-        setup_harvester(21234, dic),
-        setup_farmer(21235, dic),
-        setup_timelord(21236, False, dic),
+        setup_harvester(21234, 21235, dic),
+        setup_farmer(21235, 21237, dic),
+        setup_timelord(21236, 21237, False, dic),
         setup_vdf_clients(8000),
-        setup_full_node("blockchain_test.db", 21237, 21233, dic),
-        setup_full_node("blockchain_test_2.db", 21238, 21233, dic),
-        setup_timelord(21239, True, dic),
+        setup_full_node("blockchain_test.db", 21237, 21233, False, dic),
+        setup_full_node("blockchain_test_2.db", 21238, 21233, False, dic),
+        setup_timelord(21239, 21238, True, dic),
         setup_vdf_clients(7999),
     ]
 
     introducer, introducer_server = await node_iters[0].__anext__()
     harvester, harvester_server = await node_iters[1].__anext__()
     farmer, farmer_server = await node_iters[2].__anext__()
+    await asyncio.sleep(2)
     timelord, timelord_server = await node_iters[3].__anext__()
     vdf = await node_iters[4].__anext__()
     node1, node1_server = await node_iters[5].__anext__()
@@ -481,18 +470,16 @@ async def setup_full_system(dic={}):
     sanitizer, sanitizer_server = await node_iters[7].__anext__()
     vdf_sanitizer = await node_iters[8].__anext__()
 
-    await harvester_server.start_client(
-        PeerInfo("127.0.0.1", uint16(farmer_server._port)), auth=True
+    yield (
+        node1,
+        node2,
+        harvester,
+        farmer,
+        introducer,
+        timelord,
+        vdf,
+        sanitizer,
+        vdf_sanitizer,
     )
-    await farmer_server.start_client(PeerInfo("127.0.0.1", uint16(node1_server._port)))
-
-    await timelord_server.start_client(
-        PeerInfo("127.0.0.1", uint16(node1_server._port))
-    )
-    await sanitizer_server.start_client(
-        PeerInfo("127.0.0.1", uint16(node2_server._port))
-    )
-
-    yield (node1, node2, harvester, farmer, introducer, timelord, vdf, sanitizer, vdf_sanitizer)
 
     await _teardown_nodes(node_iters)

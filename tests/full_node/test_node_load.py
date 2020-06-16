@@ -39,7 +39,7 @@ class TestNodeLoad:
 
         await asyncio.sleep(2)  # Allow connections to get made
 
-        num_unfinished_blocks = 1000
+        num_unfinished_blocks = 500
         start_unf = time.time()
         for i in range(num_unfinished_blocks):
             msg = Message(
@@ -56,7 +56,7 @@ class TestNodeLoad:
             OutboundMessage(NodeType.FULL_NODE, block_msg, Delivery.BROADCAST)
         )
 
-        while time.time() - start_unf < 100:
+        while time.time() - start_unf < 50:
             if (
                 max([h.height for h in full_node_2.blockchain.get_current_tips()])
                 == num_blocks - 1
@@ -71,7 +71,7 @@ class TestNodeLoad:
 
     @pytest.mark.asyncio
     async def test_blocks_load(self, two_nodes):
-        num_blocks = 100
+        num_blocks = 50
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
 
@@ -92,4 +92,4 @@ class TestNodeLoad:
                 OutboundMessage(NodeType.FULL_NODE, msg, Delivery.BROADCAST)
             )
         print(f"Time taken to process {num_blocks} is {time.time() - start_unf}")
-        assert time.time() - start_unf < 200
+        assert time.time() - start_unf < 100

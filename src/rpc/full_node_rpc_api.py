@@ -1,6 +1,4 @@
 from src.full_node.full_node import FullNode
-from src.util.ints import uint16
-from src.rpc.abstract_rpc_server import AbstractRpcApiHandler, start_rpc_server
 from typing import Callable, List, Optional, Dict
 
 from aiohttp import web
@@ -14,38 +12,43 @@ from src.consensus.pot_iterations import calculate_min_iters_from_iterations
 from src.util.ws_message import create_payload
 
 
-class FullNodeRpcApiHandler(AbstractRpcApiHandler):
-    def __init__(self, full_node: FullNode, stop_cb: Callable):
-        super().__init__(full_node, stop_cb, "chia_full_node")
+class FullNodeRpcApi:
+    def __init__(self, full_node: FullNode):
+        self.service = full_node
+        self.service_name = "chia_full_node"
         self.cached_blockchain_state: Optional[Dict] = None
 
-    async def _state_changed(self, change: str):
-        assert self.websocket is not None
+    def get_routes(self) -> Dict[str, Callable]:
+        return {
+            "/get_blockchain_state": self.get_blockchain_state,
+            "/get_block": self.get_block,
+            "/get_header_by_height": self.get_header_by_height,
+            "/get_header": self.get_header,
+            "/get_unfinished_block_headers": self.get_unfinished_block_headers,
+            "/get_network_space": self.get_network_space,
+            "/get_unspent_coins": self.get_unspent_coins,
+            "/get_heaviest_block_seen": self.get_heaviest_block_seen,
+        }
+
+    async def _state_changed(self, change: str) -> List[str]:
         payloads = []
         if change == "block":
             data = await self.get_latest_block_headers({})
+            assert data is not None
             payloads.append(
                 create_payload(
                     "get_latest_block_headers", data, self.service_name, "wallet_ui"
                 )
             )
             data = await self.get_blockchain_state({})
+            assert data is not None
             payloads.append(
                 create_payload(
                     "get_blockchain_state", data, self.service_name, "wallet_ui"
                 )
             )
-        else:
-            await super()._state_changed(change)
-            return
-        try:
-            for payload in payloads:
-                await self.websocket.send_str(payload)
-        except (BaseException) as e:
-            try:
-                self.log.warning(f"Sending data failed. Exception {type(e)}.")
-            except BrokenPipeError:
-                pass
+            return payloads
+        return []
 
     async def get_blockchain_state(self, request: Dict):
         """
@@ -357,24 +360,3 @@ class FullNodeRpcApiHandler(AbstractRpcApiHandler):
                 if pot_block.weight > max_tip.weight:
                     max_tip = pot_block.header
         return {"success": True, "tip": max_tip}
-
-
-async def start_full_node_rpc_server(
-    full_node: FullNode, stop_node_cb: Callable, rpc_port: uint16
-):
-    handler = FullNodeRpcApiHandler(full_node, stop_node_cb)
-    routes = {
-        "/get_blockchain_state": handler.get_blockchain_state,
-        "/get_block": handler.get_block,
-        "/get_header_by_height": handler.get_header_by_height,
-        "/get_header": handler.get_header,
-        "/get_unfinished_block_headers": handler.get_unfinished_block_headers,
-        "/get_network_space": handler.get_network_space,
-        "/get_unspent_coins": handler.get_unspent_coins,
-        "/get_heaviest_block_seen": handler.get_heaviest_block_seen,
-    }
-    cleanup = await start_rpc_server(handler, rpc_port, routes)
-    return cleanup
-
-
-AbstractRpcApiHandler.register(FullNodeRpcApiHandler)

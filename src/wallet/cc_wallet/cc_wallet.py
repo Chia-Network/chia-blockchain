@@ -3,8 +3,6 @@ import time
 
 import clvm
 from typing import Dict, Optional, List, Any, Set
-from clvm_tools import binutils
-from clvm.EvalError import EvalError
 from src.types.BLSSignature import BLSSignature
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
@@ -36,7 +34,7 @@ from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.cc_wallet import cc_wallet_puzzles
-from clvm import run_program
+from clvm_tools import binutils
 
 # TODO: write tests based on wallet tests
 # TODO: {Matt} compatibility based on deriving innerpuzzle from derivation record
@@ -285,9 +283,9 @@ class CCWallet:
         """
         cost_sum = 0
         try:
-            cost_run, sexp = run_program(block_program, [])
+            cost_run, sexp = clvm.run_program(block_program, [])
             cost_sum += cost_run
-        except EvalError:
+        except clvm.EvalError.EvalError:
             return False
 
         for name_solution in sexp.as_iter():
@@ -308,7 +306,7 @@ class CCWallet:
                 cost_sum += cost_run
                 if error:
                     return False
-            except clvm.EvalError:
+            except clvm.EvalError.EvalError:
 
                 return False
             if conditions_dict is None:

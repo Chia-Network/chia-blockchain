@@ -1,13 +1,15 @@
 import asyncio
 
 import pytest
+
+from src.rpc.farmer_rpc_api import FarmerRpcApi
+from src.rpc.harvester_rpc_api import HarvesterRpcApi
 from blspy import PrivateKey
 from chiapos import DiskPlotter
 from src.types.proof_of_space import ProofOfSpace
-from src.rpc.farmer_rpc_server import start_farmer_rpc_server
-from src.rpc.harvester_rpc_server import start_harvester_rpc_server
 from src.rpc.farmer_rpc_client import FarmerRpcClient
 from src.rpc.harvester_rpc_client import HarvesterRpcClient
+from src.rpc.rpc_server import start_rpc_server
 from src.util.ints import uint16
 from tests.setup_nodes import setup_full_system, test_constants
 from tests.block_tools import get_plot_dir
@@ -37,9 +39,14 @@ class TestRpc:
         def stop_node_cb_2():
             pass
 
-        rpc_cleanup = await start_farmer_rpc_server(farmer, stop_node_cb, test_rpc_port)
-        rpc_cleanup_2 = await start_harvester_rpc_server(
-            harvester, stop_node_cb_2, test_rpc_port_2
+        farmer_rpc_api = FarmerRpcApi(farmer)
+        harvester_rpc_api = HarvesterRpcApi(harvester)
+
+        rpc_cleanup = await start_rpc_server(
+            farmer_rpc_api, test_rpc_port, stop_node_cb
+        )
+        rpc_cleanup_2 = await start_rpc_server(
+            harvester_rpc_api, test_rpc_port_2, stop_node_cb_2
         )
 
         try:
@@ -71,7 +78,7 @@ class TestRpc:
                 18,
                 b"genesis",
                 plot_seed,
-                2 * 1024,
+                128,
             )
             await client_2.add_plot(str(plot_dir / filename), plot_sk)
 
@@ -91,7 +98,7 @@ class TestRpc:
                 18,
                 b"genesis",
                 plot_seed,
-                2 * 1024,
+                128,
             )
             await client_2.add_plot(str(plot_dir / filename), plot_sk, pool_pk)
             assert len((await client_2.get_plots())["plots"]) == num_plots + 1

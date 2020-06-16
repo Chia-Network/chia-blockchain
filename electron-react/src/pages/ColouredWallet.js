@@ -330,18 +330,9 @@ const BalanceCard = props => {
   const balancebox_unit = " " + cc_unit;
   const balancebox_hline =
     "<tr><td colspan='2' style='text-align:center'><hr width='50%'></td></tr>";
-  const balance_ptotal_chia = mojo_to_colouredcoin_string(
-    balance_ptotal,
-    "mojo"
-  );
-  const balance_pending_chia = mojo_to_colouredcoin_string(
-    balance_pending,
-    "mojo"
-  );
-  const balance_change_chia = mojo_to_colouredcoin_string(
-    balance_change,
-    "mojo"
-  );
+  const balance_ptotal_chia = mojo_to_colouredcoin_string(balance_ptotal);
+  const balance_pending_chia = mojo_to_colouredcoin_string(balance_pending);
+  const balance_change_chia = mojo_to_colouredcoin_string(balance_change);
   const acc_content =
     balancebox_1 +
     balancebox_2 +

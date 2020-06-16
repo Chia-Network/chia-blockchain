@@ -177,7 +177,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         // console.log("wallet_id here: " + id);
         wallet.puzzle_hash = puzzle_hash;
         return { ...state };
-      } else if (command === "get_connection_info") {
+      } else if (command === "get_connections") {
         if (data.success || data.connections) {
           const connections = data.connections;
           state.status["connections"] = connections;
@@ -189,7 +189,6 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         state.status["height"] = height;
         return { ...state };
       } else if (command === "get_sync_status") {
-        // console.log("command get_sync_status");
         if (data.success) {
           const syncing = data.syncing;
           state.status["syncing"] = syncing;

@@ -101,8 +101,8 @@ class WebSocketServer:
         self.log.info("Daemon WebSocketServer closed")
 
     async def stop(self):
-        self.websocket_server.close()
         await self.exit()
+        self.websocket_server.close()
 
     async def safe_handle(self, websocket, path):
         async for message in websocket:
@@ -110,20 +110,22 @@ class WebSocketServer:
                 decoded = json.loads(message)
                 # self.log.info(f"Message received: {decoded}")
                 await self.handle_message(websocket, decoded)
-            except (BaseException, websockets.exceptions.ConnectionClosed) as e:
-                if isinstance(e, websockets.exceptions.ConnectionClosed):
-                    service_name = self.remote_address_map[websocket.remote_address[1]]
-                    self.log.info(
-                        f"ConnectionClosed. Closing websocket with {service_name}"
-                    )
-                    if service_name in self.connections:
-                        self.connections.pop(service_name)
-                    await websocket.close()
-                else:
-                    tb = traceback.format_exc()
-                    self.log.error(f"Error while handling message: {tb}")
-                    error = {"success": False, "error": f"{e}"}
-                    await websocket.send(format_response(message, error))
+            except (
+                websockets.exceptions.ConnectionClosed,
+                websockets.exceptions.ConnectionClosedOK,
+            ) as e:
+                service_name = self.remote_address_map[websocket.remote_address[1]]
+                self.log.info(
+                    f"ConnectionClosed. Closing websocket with {service_name} {e}"
+                )
+                if service_name in self.connections:
+                    self.connections.pop(service_name)
+                await websocket.close()
+            except Exception as e:
+                tb = traceback.format_exc()
+                self.log.error(f"Error while handling message: {tb}")
+                error = {"success": False, "error": f"{e}"}
+                await websocket.send(format_response(message, error))
 
     async def ping_task(self):
         await asyncio.sleep(30)
@@ -132,7 +134,7 @@ class WebSocketServer:
                 connection = self.connections[service_name]
                 self.log.info(f"About to ping: {service_name}")
                 await connection.ping()
-            except (BaseException, websockets.exceptions.ConnectionClosed) as e:
+            except Exception as e:
                 self.log.info(f"Ping error: {e}")
                 self.connections.pop(service_name)
                 self.remote_address_map.pop(remote_address)
@@ -164,14 +166,17 @@ class WebSocketServer:
         elif command == "is_running":
             response = await self.is_running(data)
         elif command == "exit":
-            response = await self.exit()
+            response = await self.stop()
         elif command == "register_service":
             response = await self.register_service(websocket, data)
         else:
             response = {"success": False, "error": f"unknown_command {command}"}
 
         full_response = format_response(message, response)
-        await websocket.send(full_response)
+        try:
+            await websocket.send(full_response)
+        except websockets.exceptions.ConnectionClosedOK:
+            pass
 
     async def ping(self):
         response = {"success": True, "value": "pong"}
@@ -312,7 +317,10 @@ class WebSocketServer:
         destination = message["destination"]
         if destination in self.connections:
             socket = self.connections[destination]
-            await socket.send(dict_to_json_str(message))
+            try:
+                await socket.send(dict_to_json_str(message))
+            except websockets.exceptions.ConnectionClosedOK:
+                pass
 
         return None
 
@@ -525,7 +533,7 @@ def singleton(lockfile, text="semaphore"):
 async def async_run_daemon(root_path):
     chia_init(root_path)
     config = load_config(root_path, "config.yaml")
-    initialize_logging("daemon %(name)-25s", config["logging"], root_path)
+    initialize_logging("daemon", config["logging"], root_path)
     lockfile = singleton(daemon_launch_lock_path(root_path))
     if lockfile is None:
         print("daemon: already launching")
