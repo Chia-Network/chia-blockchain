@@ -540,5 +540,21 @@ class TestCCTrades:
 
         assert spendable_before_offer_2 == spendable_after_offer_2 + locked_sum_2
 
-        # Cancel offer 1 by just deleting from db
+        # Cancel offer 2 by just doing a spend of coins in that offer
+
+        spendable_before_secure_cancel = await wallet.get_spendable_balance()
+
         await trade_manager_1.cancel_pending_offer_safely(trade_offer_2.trade_id)
+
+        spendable_after_secure_cancel = await wallet.get_spendable_balance()
+
+        assert spendable_after_secure_cancel == spendable_before_secure_cancel
+
+        for i in range(0, 4):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+
+        await asyncio.sleep(1)
+
+        spendable_after_cancel_confirmed = await wallet.get_spendable_balance()
+
+        assert spendable_before_offer_1 == spendable_after_cancel_confirmed
