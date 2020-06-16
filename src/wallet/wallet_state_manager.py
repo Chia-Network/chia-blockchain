@@ -112,6 +112,8 @@ class WalletStateManager:
         self.user_store = await WalletUserStore.create(self.db_connection)
         self.action_store = await WalletActionStore.create(self.db_connection)
         self.basic_store = await KeyValStore.create(self.db_connection)
+        self.trade_manager = await TradeManager.create(self, self.db_connection)
+
         self.lca = None
         self.sync_mode = False
         self.height_to_hash = {}
@@ -194,7 +196,6 @@ class WalletStateManager:
                 genesis_hb,
             )
 
-        self.trade_manager = await TradeManager.create(self)
         return self
 
     def get_public_key(self, index: uint32) -> PublicKey:
@@ -1303,7 +1304,7 @@ class WalletStateManager:
         )
 
         offer_locked_coins: Dict[
-            bytes32, Coin
+            bytes32, WalletCoinRecord
         ] = await self.trade_manager.get_locked_coins()
 
         filtered = set()
