@@ -13,6 +13,7 @@ import { fullnodeReducer } from "./fullnode_api";
 import { farmingReducer } from "./farming_api";
 import { plotControlReducer } from "./plotter_control";
 import { farmerMenuReducer } from "./farmer_menu";
+import { tradeMenuReducer } from './tradeMenu';
 
 const rootReducer = combineReducers({
   daemon_state: daemonReducer,
@@ -28,7 +29,8 @@ const rootReducer = combineReducers({
   full_node_state: fullnodeReducer,
   farming_state: farmingReducer,
   plot_control: plotControlReducer,
-  farmer_menu: farmerMenuReducer
+  farmer_menu: farmerMenuReducer,
+  trade_menu: tradeMenuReducer
 });
 
 export default rootReducer;

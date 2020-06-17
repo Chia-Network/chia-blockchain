@@ -6,7 +6,8 @@ import {
   presentWallet,
   presentNode,
   presentFarmer,
-  changeMainMenu
+  changeMainMenu,
+  presentTrading
 } from "../modules/mainMenu";
 import { delete_all_keys, logOut } from "../modules/message";
 import { useDispatch } from "react-redux";
@@ -24,6 +25,7 @@ import DialogContent from "@material-ui/core/DialogContent";
 import DialogContentText from "@material-ui/core/DialogContentText";
 import DialogTitle from "@material-ui/core/DialogTitle";
 import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
+import ImportExportIcon from "@material-ui/icons/ImportExport";
 
 const menuItems = [
   {
@@ -40,6 +42,11 @@ const menuItems = [
     label: "Farming",
     present: presentFarmer,
     icon: <DonutLargeIcon></DonutLargeIcon>
+  },
+  {
+    label: "Trading",
+    present: presentTrading,
+    icon: <ImportExportIcon></ImportExportIcon>
   }
 ];
 
