@@ -14,9 +14,15 @@ import Wallets from "./Wallets";
 import MenuIcon from "@material-ui/icons/Menu";
 import { SideBar } from "./sidebar";
 import { useSelector } from "react-redux";
-import { presentWallet, presentNode, presentFarmer } from "../modules/mainMenu";
+import {
+  presentWallet,
+  presentNode,
+  presentFarmer,
+  presentTrading
+} from "../modules/mainMenu";
 import FullNode from "./FullNode";
 import Farmer from "./Farmer";
+import { TradeManger } from "./trading/TradeManager";
 
 const drawerWidth = 200;
 
@@ -118,6 +124,8 @@ const ComopnentSwitch = () => {
     return <FullNode></FullNode>;
   } else if (toPresent === presentFarmer) {
     return <Farmer></Farmer>;
+  } else if (toPresent === presentTrading) {
+    return <TradeManger></TradeManger>;
   }
   return <div></div>;
 };
