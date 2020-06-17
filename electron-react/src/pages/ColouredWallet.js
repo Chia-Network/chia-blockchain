@@ -648,7 +648,7 @@ const TransactionTable = props => {
                 {confirmed_to_string(tx.confirmed)}
               </TableCell>
               <TableCell className={classes.cell_short}>
-                {mojo_to_chia_string(tx.amount)}
+                {mojo_to_colouredcoin_string(tx.amount)}
               </TableCell>
               <TableCell className={classes.cell_short}>
                 {mojo_to_chia_string(tx.fee_amount)}
