@@ -25,7 +25,7 @@ class TestNodeLoad:
 
     @pytest.mark.asyncio
     async def test_unfinished_blocks_load(self, two_nodes):
-        num_blocks = 10
+        num_blocks = 2
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
 
@@ -39,19 +39,21 @@ class TestNodeLoad:
 
         await asyncio.sleep(2)  # Allow connections to get made
 
-        num_unfinished_blocks = 500
+        num_unfinished_blocks = 250
         start_unf = time.time()
         for i in range(num_unfinished_blocks):
             msg = Message(
                 "respond_unfinished_block",
-                full_node_protocol.RespondUnfinishedBlock(blocks[9]),
+                full_node_protocol.RespondUnfinishedBlock(blocks[num_blocks - 1]),
             )
             server_1.push_message(
                 OutboundMessage(NodeType.FULL_NODE, msg, Delivery.BROADCAST)
             )
 
         # Send the whole block ast the end so we can detect when the node is done
-        block_msg = Message("respond_block", full_node_protocol.RespondBlock(blocks[9]))
+        block_msg = Message(
+            "respond_block", full_node_protocol.RespondBlock(blocks[num_blocks - 1])
+        )
         server_1.push_message(
             OutboundMessage(NodeType.FULL_NODE, block_msg, Delivery.BROADCAST)
         )
