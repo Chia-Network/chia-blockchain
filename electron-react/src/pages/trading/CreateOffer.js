@@ -10,27 +10,19 @@ import {
   MenuItem,
   Select,
   TextField,
-  Button,
-  CircularProgress
+  Button
 } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
 import {
   newBuy,
   newSell,
   addTrade,
-  resetTrades,
-  offerParsingName,
-  parsingStarted
-} from "../modules/TradeReducer";
-import { chia_to_mojo, mojo_to_chia_string } from "../util/chia";
-import { openDialog } from "../modules/dialogReducer";
+  resetTrades
+} from "../../modules/TradeReducer";
+import { chia_to_mojo, mojo_to_chia_string } from "../../util/chia";
+import { openDialog } from "../../modules/dialogReducer";
 import isElectron from "is-electron";
-import {
-  create_trade_offer,
-  parse_trade_offer,
-  accept_trade_offer
-} from "../modules/message";
-import { parsingStatePending } from "../modules/TradeReducer";
+import { create_trade_offer } from "../../modules/message";
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -189,171 +181,7 @@ const TradeList = () => {
   );
 };
 
-const OfferRow = props => {
-  const name = props.name;
-  const amount = props.amount;
-  const side = amount < 0 ? "Sell" : "Buy";
-
-  return (
-    <Box display="flex" style={{ minWidth: "100%" }}>
-      <Box flexGrow={1}>{side}</Box>
-      <Box flexGrow={1}>{mojo_to_chia_string(amount)}</Box>
-      <Box
-        style={{
-          marginRight: 10,
-          width: "40%",
-          textAlign: "right",
-          overflowWrap: "break-word"
-        }}
-      >
-        {name}
-      </Box>
-    </Box>
-  );
-};
-
-const OfferView = () => {
-  const classes = useStyles();
-  const offer = useSelector(state => state.trade_state.parsed_offer);
-  const dispatch = useDispatch();
-  const file_path = useSelector(state => state.trade_state.parsed_offer_path);
-
-  function accept() {
-    dispatch(accept_trade_offer(file_path));
-  }
-
-  function decline() {
-    dispatch(resetTrades());
-  }
-
-  return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              View Offer
-            </Typography>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.tradeSubSection}>
-            {Object.keys(offer).map(name => (
-              <OfferRow name={name} amount={offer[name]}></OfferRow>
-            ))}
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <Button
-                  onClick={accept}
-                  className={classes.saveButton}
-                  variant="contained"
-                  color="primary"
-                >
-                  Accept
-                </Button>
-              </Grid>
-              <Grid item xs={6}>
-                <Button
-                  onClick={decline}
-                  className={classes.cancelButton}
-                  variant="contained"
-                  color="primary"
-                >
-                  Cancel
-                </Button>
-              </Grid>
-            </Grid>
-          </div>
-        </Grid>
-      </Grid>
-    </Paper>
-  );
-};
-
-const DropView = () => {
-  const classes = useStyles();
-  const dispatch = useDispatch();
-  const handleDragEnter = e => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-  const handleDragLeave = e => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-  const handleDragOver = e => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-  const handleDrop = e => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const offer_file_path = e.dataTransfer.files[0].path;
-    const offer_name = offer_file_path.replace(/^.*[\\/]/, "");
-
-    dispatch(offerParsingName(offer_name, offer_file_path));
-    dispatch(parse_trade_offer(offer_file_path));
-    dispatch(parsingStarted());
-  };
-  const parsing_state = useSelector(state => state.trade_state.parsing_state);
-  const parsing = parsing_state === parsingStatePending ? true : false;
-
-  const progressStyle = parsing
-    ? { visibility: "visible" }
-    : { visibility: "hidden" };
-  const textStyle = !parsing
-    ? { visibility: "visible" }
-    : { visibility: "hidden" };
-
-  return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              View Offer
-            </Typography>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div
-            onDrop={e => handleDrop(e)}
-            onDragOver={e => handleDragOver(e)}
-            onDragEnter={e => handleDragEnter(e)}
-            onDragLeave={e => handleDragLeave(e)}
-            className={classes.dragContainer}
-          >
-            <Paper className={classes.drag} style={{ position: "relative" }}>
-              <div className={classes.dragText} style={textStyle}>
-                Drag and drop offer file
-              </div>
-              <div className={classes.circle} style={progressStyle}>
-                <CircularProgress color="secondary" />
-              </div>
-            </Paper>
-          </div>
-        </Grid>
-      </Grid>
-    </Paper>
-  );
-};
-
-const OfferSwitch = () => {
-  const show_offer = useSelector(state => state.trade_state.show_offer);
-
-  if (show_offer) {
-    return <OfferView></OfferView>;
-  } else {
-    return <DropView></DropView>;
-  }
-};
-
-const CreateOffer = () => {
+export const CreateOffer = () => {
   const wallets = useSelector(state => state.wallet_state.wallets);
   const classes = useStyles();
   const dispatch = useDispatch();
@@ -523,14 +351,5 @@ const CreateOffer = () => {
         </Grid>
       </Grid>
     </Paper>
-  );
-};
-
-export const TradeManger = () => {
-  return (
-    <div>
-      <CreateOffer></CreateOffer>
-      <OfferSwitch></OfferSwitch>
-    </div>
   );
 };

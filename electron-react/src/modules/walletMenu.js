@@ -1,6 +1,5 @@
 export const standardWallet = "STANDARD_WALLET";
 export const createWallet = "CREATE_WALLET";
-export const tradeManager = "TRADE_MANAGER";
 export const CCWallet = "CC_WALLET";
 
 export const changeWalletMenu = (item, id) => ({
