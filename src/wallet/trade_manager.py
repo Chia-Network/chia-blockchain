@@ -53,6 +53,27 @@ class TradeManager:
         records = await self.trade_store.get_trade_record_with_status(status)
         return records
 
+    async def get_coins_of_interest(self):
+        """
+        Returns list of coins we want to monitor blockchain for,
+        Those will be both coins belonging to us, and coins belonging to someone else that we tried to use in trade
+        This is important as we might not be the only one who tries to execute that trade.
+        """
+        all_pending = []
+        pending_accept = await self.get_offers_with_status(TradeStatus.PENDING_ACCEPT)
+        pending_confirm = await self.get_offers_with_status(TradeStatus.PENDING_CONFIRM)
+        pending_cancel = await self.get_offers_with_status(TradeStatus.PENDING_CANCEL)
+        all_pending.extend(pending_accept)
+        all_pending.extend(pending_confirm)
+        all_pending.extend(pending_cancel)
+        result = {}
+
+        for trade in all_pending:
+            for coin in trade.spend_bundle.removals():
+                result[coin.name()] = coin
+
+        return result
+
     async def get_locked_coins(
         self, wallet_id: int = None
     ) -> Dict[bytes32, WalletCoinRecord]:
@@ -77,6 +98,10 @@ class TradeManager:
                     result[name] = record
 
         return result
+
+    async def get_all_trades(self):
+        all: List[TradeRecord] = await self.trade_store.get_all_trades()
+        return all
 
     async def get_trade_by_id(self, trade_id: bytes) -> Optional[TradeRecord]:
         record = await self.trade_store.get_trade_record(trade_id)
