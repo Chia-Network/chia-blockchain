@@ -33,8 +33,8 @@ def service_kwargs_for_wallet(root_path):
         PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])
     ]
 
-    # async def start_callback():
-    #     await api._start()
+    async def start_callback():
+        await api._start()
 
     def stop_callback():
         api._close()
