@@ -15,6 +15,7 @@ from src.consensus.block_rewards import calculate_base_fee, calculate_block_rewa
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.cc_wallet import cc_wallet_puzzles
 from src.wallet.wallet_coin_record import WalletCoinRecord
+from tests.time_out_assert import time_out_assert
 from typing import List
 
 
@@ -50,18 +51,6 @@ class TestWalletSimulator:
             3, 2, {"COINBASE_FREEZE_PERIOD": 0}
         ):
             yield _
-
-    async def time_out_assert(self, timeout: int, function, value, arg=None):
-        start = time.time()
-        while time.time() - start < timeout:
-            if arg is None:
-                function_result = await function()
-            else:
-                function_result = await function(arg)
-            if value == function_result:
-                return
-            await asyncio.sleep(1)
-        assert False
 
     @pytest.mark.asyncio
     async def test_colour_creation(self, two_wallet_nodes):
