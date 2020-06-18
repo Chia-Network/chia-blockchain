@@ -7,3 +7,4 @@ class TradeStatus(Enum):
     PENDING_CANCEL = 2
     CANCELED = 3
     CONFIRMED = 4
+    FAILED = 5

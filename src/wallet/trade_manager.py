@@ -53,11 +53,12 @@ class TradeManager:
         records = await self.trade_store.get_trade_record_with_status(status)
         return records
 
-    async def get_coins_of_interest(self):
+    async def get_coins_of_interest(
+        self,
+    ) -> Tuple[Dict[bytes32, Coin], Dict[bytes32, Coin]]:
         """
-        Returns list of coins we want to monitor blockchain for,
-        Those will be both coins belonging to us, and coins belonging to someone else that we tried to use in trade
-        This is important as we might not be the only one who tries to execute that trade.
+        Returns list of coins we want to check if they are included in filter,
+        These will include coins that belong to us and coins that that on other side of treade
         """
         all_pending = []
         pending_accept = await self.get_offers_with_status(TradeStatus.PENDING_ACCEPT)
@@ -66,13 +67,94 @@ class TradeManager:
         all_pending.extend(pending_accept)
         all_pending.extend(pending_confirm)
         all_pending.extend(pending_cancel)
-        result = {}
+        removals = {}
+        additions = {}
 
         for trade in all_pending:
             for coin in trade.spend_bundle.removals():
-                result[coin.name()] = coin
+                removals[coin.name()] = coin
+            for coin in trade.spend_bundle.additions():
+                additions[coin.name()] = coin
 
-        return result
+        return removals, additions
+
+    async def get_trade_by_coin(self, coin: Coin) -> Optional[TradeRecord]:
+        all_trades = await self.get_all_trades()
+        for trade in all_trades:
+            if coin in trade.removals:
+                return trade
+            if coin in trade.additions:
+                return trade
+        return None
+
+    async def coins_of_interest_farmed(
+        self, removals: List[Coin], additions: List[Coin], index: uint32
+    ):
+        """
+        If both our coins and other coins in trade got removed that means that trade was successfully executed
+        If coins from other side of trade got farmed without ours, that means that trade failed because either someone
+        else completed trade or other side of trade canceled the trade by doing a spend.
+        If our coins got farmed but coins from other side didn't, we successfully canceled trade by spending inputs.
+        """
+        removal_dict = {}
+        addition_dict = {}
+        checked: Dict[bytes32, Coin] = {}
+        for coin in removals:
+            removal_dict[coin.name()] = coin
+        for coin in additions:
+            addition_dict[coin.name()] = coin
+
+        all_coins = []
+        all_coins.extend(removals)
+        all_coins.extend(additions)
+
+        for coin in all_coins:
+            if coin.name() in checked:
+                continue
+            trade = await self.get_trade_by_coin(coin)
+            if trade is None:
+                self.log.error(f"Coin: {Coin}, not in any trade")
+                continue
+
+            # Check if all coins that are part of the trade got farmed
+            # If coin is missing, trade failed
+            failed = False
+            for coin in trade.removals:
+                if coin.name() not in removal_dict:
+                    self.log.error(f"{coin} from trade not removed")
+                    failed = True
+                checked[coin.name()] = coin
+            for coin in trade.additions:
+                if coin.name() not in addition_dict:
+                    self.log.error(f"{coin} from trade not added")
+                    failed = True
+                checked[coin.name()] = coin
+
+            if failed is False:
+                # Mark this trade as succesfull
+                await self.trade_store.set_status(
+                    trade.trade_id, TradeStatus.CONFIRMED, index
+                )
+                self.log.info(
+                    f"Trade with id: {trade.trade_id} confirmed at height: {index}"
+                )
+            else:
+                # Either we canceled this trade or this trade failed
+                status = TradeStatus(trade.status)
+                if status is TradeStatus.PENDING_CANCEL:
+                    await self.trade_store.set_status(
+                        trade.trade_id, TradeStatus.CANCELED
+                    )
+                    self.log.info(
+                        f"Trade with id: {trade.trade_id} canceled at height: {index}"
+                    )
+                else:
+                    await self.trade_store.set_status(
+                        trade.trade_id, TradeStatus.FAILED
+                    )
+                    self.log.warning(
+                        f"Trade with id: {trade.trade_id} failed at height: {index}"
+                    )
 
     async def get_locked_coins(
         self, wallet_id: int = None
