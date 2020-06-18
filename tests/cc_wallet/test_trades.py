@@ -9,7 +9,6 @@ import pytest
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32, uint64
-from src.wallet.trade_manager import TradeManager
 from src.wallet.trading.trade_status import TradeStatus
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from tests.setup_nodes import setup_simulators_and_wallets
@@ -58,7 +57,6 @@ class TestCCTrades:
         ):
             yield _
 
-    """
     @pytest.mark.asyncio
     async def test_cc_trade(self, two_wallet_nodes):
         num_blocks = 10
@@ -110,8 +108,8 @@ class TestCCTrades:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        trade_manager_1 = await TradeManager.create(wallet_node.wallet_state_manager)
-        trade_manager_2 = await TradeManager.create(wallet_node_2.wallet_state_manager)
+        trade_manager_1 = wallet_node.wallet_state_manager.trade_manager
+        trade_manager_2 = wallet_node_2.wallet_state_manager.trade_manager
 
         file = "test_offer_file.offer"
         file_path = Path(file)
@@ -218,8 +216,8 @@ class TestCCTrades:
 
         assert blue_wallet.cc_info.my_core == blue_wallet_2.cc_info.my_core
 
-        trade_manager_1 = await TradeManager.create(wallet_node.wallet_state_manager)
-        trade_manager_2 = await TradeManager.create(wallet_node_2.wallet_state_manager)
+        trade_manager_1 = wallet_node.wallet_state_manager.trade_manager
+        trade_manager_2 = wallet_node_2.wallet_state_manager.trade_manager
 
         file = "test_offer_file.offer"
         file_path = Path(file)
@@ -319,8 +317,8 @@ class TestCCTrades:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        trade_manager_1 = await TradeManager.create(wallet_node.wallet_state_manager)
-        trade_manager_2 = await TradeManager.create(wallet_node_2.wallet_state_manager)
+        trade_manager_1 = wallet_node.wallet_state_manager.trade_manager
+        trade_manager_2 = wallet_node_2.wallet_state_manager.trade_manager
 
         file = "test_offer_file.offer"
         file_path = Path(file)
@@ -357,7 +355,6 @@ class TestCCTrades:
 
         await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 30)
         await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 30)
-    """
 
     @pytest.mark.asyncio
     async def test_cc_trade_all(self, two_wallet_nodes):
