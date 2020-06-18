@@ -46,7 +46,7 @@ class TestWalletSimulator:
 
     @pytest.mark.asyncio
     async def test_wallet_coinbase(self, wallet_node):
-        num_blocks = 10
+        num_blocks = 5
         full_nodes, wallets = wallet_node
         full_node_1, server_1 = full_nodes[0]
         wallet_node, server_2 = wallets[0]
@@ -68,7 +68,7 @@ class TestWalletSimulator:
 
     @pytest.mark.asyncio
     async def test_wallet_make_transaction(self, two_wallet_nodes):
-        num_blocks = 10
+        num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_1, server_1 = full_nodes[0]
         wallet_node, server_2 = wallets[0]
@@ -127,7 +127,7 @@ class TestWalletSimulator:
 
     @pytest.mark.asyncio
     async def test_wallet_coinbase_reorg(self, wallet_node):
-        num_blocks = 10
+        num_blocks = 5
         full_nodes, wallets = wallet_node
         full_node_1, server_1 = full_nodes[0]
         wallet_node, server_2 = wallets[0]
@@ -324,7 +324,7 @@ class TestWalletSimulator:
 
     @pytest.mark.asyncio
     async def test_wallet_make_transaction_with_fee(self, two_wallet_nodes):
-        num_blocks = 10
+        num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_1, server_1 = full_nodes[0]
         wallet_node, server_2 = wallets[0]

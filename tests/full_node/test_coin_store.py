@@ -200,7 +200,7 @@ class TestCoinStore:
 
     @pytest.mark.asyncio
     async def test_get_puzzle_hash(self):
-        num_blocks = 20
+        num_blocks = 10
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 9)
         db_path = Path("blockchain_test.db")
         if db_path.exists():

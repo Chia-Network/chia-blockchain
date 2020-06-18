@@ -24,7 +24,7 @@ class TestRpc:
 
     @pytest.mark.asyncio
     async def test1(self, two_nodes):
-        num_blocks = 10
+        num_blocks = 5
         test_rpc_port = uint16(21522)
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)

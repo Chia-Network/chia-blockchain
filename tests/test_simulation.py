@@ -35,14 +35,15 @@ class TestSimulation:
         start = time.time()
         # Use node2 to test node communication, since only node1 extends the chain.
         while time.time() - start < 100:
-            if max([h.height for h in node2.blockchain.get_current_tips()]) > 10:
+            if max([h.height for h in node2.blockchain.get_current_tips()]) > 7:
                 break
             await asyncio.sleep(1)
 
-        if max([h.height for h in node2.blockchain.get_current_tips()]) <= 10:
-            raise Exception("Failed: could not get 10 blocks.")
+        if max([h.height for h in node2.blockchain.get_current_tips()]) <= 7:
+            raise Exception("Failed: could not get 7 blocks.")
 
         # Wait additional 2 minutes to get a compact block.
+        start = time.time()
         while time.time() - start < 120:
             max_height = node1.blockchain.lca_block.height
             for h in range(1, max_height):
