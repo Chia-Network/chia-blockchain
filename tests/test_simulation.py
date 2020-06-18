@@ -70,4 +70,6 @@ class TestSimulation:
                     return False
             return True
 
-        await time_out_assert_custom_interval(120, 2, all_compact, True, node1, node2, max_height)
+        await time_out_assert_custom_interval(
+            120, 2, all_compact, True, node1, node2, max_height
+        )

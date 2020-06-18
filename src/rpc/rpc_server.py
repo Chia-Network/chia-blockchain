@@ -214,7 +214,9 @@ class RpcServer:
             await asyncio.sleep(1)
 
 
-async def start_rpc_server(rpc_api: Any, rpc_port: uint16, stop_cb: Callable):
+async def start_rpc_server(
+    rpc_api: Any, rpc_port: uint16, stop_cb: Callable, connect_to_daemon=True
+):
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.
@@ -247,7 +249,8 @@ async def start_rpc_server(rpc_api: Any, rpc_port: uint16, stop_cb: Callable):
     ]
 
     app.add_routes(routes)
-    daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon())
+    if connect_to_daemon:
+        daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon())
     runner = aiohttp.web.AppRunner(app, access_log=None)
     await runner.setup()
     site = aiohttp.web.TCPSite(runner, "localhost", int(rpc_port))
@@ -256,6 +259,7 @@ async def start_rpc_server(rpc_api: Any, rpc_port: uint16, stop_cb: Callable):
     async def cleanup():
         await rpc_server.stop()
         await runner.cleanup()
-        await daemon_connection
+        if connect_to_daemon:
+            await daemon_connection
 
     return cleanup
