@@ -54,7 +54,7 @@ class TestWalletSimulator:
 
     @pytest.mark.asyncio
     async def test_colour_creation(self, two_wallet_nodes):
-        num_blocks = 10
+        num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_1, server_1 = full_nodes[0]
         wallet_node, server_2 = wallets[0]
@@ -63,13 +63,13 @@ class TestWalletSimulator:
         ph = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-        for i in range(1, num_blocks):
+        for i in range(1, 4):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(1, num_blocks - 2)
+                for i in range(1, 4 - 2)
             ]
         )
 
@@ -87,7 +87,7 @@ class TestWalletSimulator:
 
     @pytest.mark.asyncio
     async def test_cc_spend(self, two_wallet_nodes):
-        num_blocks = 10
+        num_blocks = 8
         full_nodes, wallets = two_wallet_nodes
         full_node_1, server_1 = full_nodes[0]
         wallet_node, server_2 = wallets[0]
@@ -100,13 +100,13 @@ class TestWalletSimulator:
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
-        for i in range(1, num_blocks):
+        for i in range(1, 4):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(1, num_blocks - 2)
+                for i in range(1, 4 - 2)
             ]
         )
 
@@ -154,7 +154,7 @@ class TestWalletSimulator:
 
     @pytest.mark.asyncio
     async def test_get_wallet_for_colour(self, two_wallet_nodes):
-        num_blocks = 10
+        num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_1, server_1 = full_nodes[0]
         wallet_node, server_2 = wallets[0]
@@ -164,13 +164,13 @@ class TestWalletSimulator:
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
-        for i in range(1, num_blocks):
+        for i in range(1, 4):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(1, num_blocks - 2)
+                for i in range(1, 4 - 2)
             ]
         )
 
@@ -203,13 +203,13 @@ class TestWalletSimulator:
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-        for i in range(1, num_blocks):
+        for i in range(1, 4):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(1, num_blocks - 2)
+                for i in range(1, 4 - 2)
             ]
         )
         await time_out_assert(15, wallet.get_confirmed_balance, funds)
@@ -249,7 +249,7 @@ class TestWalletSimulator:
 
     @pytest.mark.asyncio
     async def test_cc_trade(self, two_wallet_nodes):
-        num_blocks = 10
+        num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_1, server_1 = full_nodes[0]
         wallet_node, server_2 = wallets[0]
@@ -263,13 +263,13 @@ class TestWalletSimulator:
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
-        for i in range(1, num_blocks):
+        for i in range(1, 4):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(1, num_blocks - 2)
+                for i in range(1, 4 - 2)
             ]
         )
 
@@ -340,7 +340,7 @@ class TestWalletSimulator:
 
     @pytest.mark.asyncio
     async def test_cc_spend_uncoloured(self, two_wallet_nodes):
-        num_blocks = 10
+        num_blocks = 8
         full_nodes, wallets = two_wallet_nodes
         full_node_1, server_1 = full_nodes[0]
         wallet_node, server_2 = wallets[0]
@@ -353,13 +353,13 @@ class TestWalletSimulator:
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
-        for i in range(1, num_blocks):
+        for i in range(1, 4):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(1, num_blocks - 2)
+                for i in range(1, 4 - 2)
             ]
         )
 
@@ -533,7 +533,7 @@ class TestWalletSimulator:
 
     @pytest.mark.asyncio
     async def test_create_offer_with_zero_val(self, two_wallet_nodes):
-        num_blocks = 10
+        num_blocks = 8
         full_nodes, wallets = two_wallet_nodes
         full_node_1, server_1 = full_nodes[0]
         wallet_node, server_2 = wallets[0]
@@ -547,13 +547,13 @@ class TestWalletSimulator:
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
-        for i in range(1, num_blocks):
+        for i in range(1, 4):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(1, num_blocks - 2)
+                for i in range(1, 4 - 2)
             ]
         )
 

@@ -265,7 +265,7 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet_0.get_confirmed_balance, funds)
         await time_out_assert(5, wallet_0.get_unconfirmed_balance, funds - 10)
 
-        for i in range(0, 7):
+        for i in range(0, 4):
             await full_node_0.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
         new_funds = sum(
@@ -285,7 +285,7 @@ class TestWalletSimulator:
         )
         await wallet_1.push_transaction(tx)
 
-        for i in range(0, 7):
+        for i in range(0, 4):
             await full_node_0.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
         confirmed_balance = await wallet_0.get_confirmed_balance()

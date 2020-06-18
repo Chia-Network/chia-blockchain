@@ -1,6 +1,7 @@
 import asyncio
 import signal
 
+from secrets import token_bytes
 from typing import Any, Dict, Tuple, List, Optional
 from src.full_node.full_node import FullNode
 from src.server.connection import NodeType
@@ -128,17 +129,14 @@ async def setup_full_node(
 
 
 async def setup_wallet_node(
-    port,
-    full_node_port=None,
-    introducer_port=None,
-    key_seed=b"setup_wallet_node",
-    dic={},
+    port, full_node_port=None, introducer_port=None, key_seed=None, dic={},
 ):
     config = load_config(root_path, "config.yaml", "wallet")
     if "starting_height" in dic:
         config["starting_height"] = dic["starting_height"]
     config["initial_num_public_keys"] = 5
 
+    key_seed = token_bytes(32)
     keychain = Keychain(key_seed.hex(), True)
     keychain.add_private_key_seed(key_seed)
     test_constants_copy = test_constants.copy()

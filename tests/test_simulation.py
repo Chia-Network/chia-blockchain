@@ -46,7 +46,7 @@ class TestSimulation:
         # Wait additional 2 minutes to get a compact block.
         max_height = node1.blockchain.lca_block.height
 
-        async def all_compact(node1, node2, max_height):
+        async def has_compact(node1, node2, max_height):
             for h in range(1, max_height):
                 blocks_1: List[FullBlock] = await node1.block_store.get_blocks_at(
                     [uint32(h)]
@@ -66,10 +66,10 @@ class TestSimulation:
                     if block.proof_of_time.witness_type == 0:
                         has_compact_2 = True
                         break
-                if not has_compact_1 or not has_compact_2:
-                    return False
+                if has_compact_1 and has_compact_2:
+                    return True
             return True
 
         await time_out_assert_custom_interval(
-            120, 2, all_compact, True, node1, node2, max_height
+            120, 2, has_compact, True, node1, node2, max_height
         )
