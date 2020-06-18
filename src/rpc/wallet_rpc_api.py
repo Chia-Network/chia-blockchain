@@ -18,7 +18,6 @@ from src.cmds.init import check_keys
 from src.server.outbound_message import NodeType, OutboundMessage, Message, Delivery
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.util.ints import uint64, uint32
-from src.wallet.trading.trade_status import TradeStatus
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.cc_wallet.cc_wallet import CCWallet
@@ -70,6 +69,11 @@ class WalletRpcApi:
         }
 
     async def get_trades(self, request: Dict):
+        if self.service is None:
+            return {"success": False}
+        if self.service.wallet_state_manager is None:
+            return {"success": False}
+
         all = request["all"]
         trade_mgr = self.service.wallet_state_manager.trade_manager
         if all:
@@ -85,7 +89,12 @@ class WalletRpcApi:
         response = {"success": True, "trades": result}
         return response
 
-    async def cancel_trade(self, request:Dict):
+    async def cancel_trade(self, request: Dict):
+        if self.service is None:
+            return {"success": False}
+        if self.service.wallet_state_manager is None:
+            return {"success": False}
+
         wsm = self.service.wallet_state_manager
         secure = request["secure"]
         trade_id = request["trade_id"]
