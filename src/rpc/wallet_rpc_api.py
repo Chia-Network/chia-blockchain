@@ -89,6 +89,8 @@ class WalletRpcApi:
             return {"success": False}
 
         wallet_id = uint32(int(request["wallet_id"]))
+        if self.service.wallet_state_manager is None:
+            return {"success": False}
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         if wallet.wallet_info.type == WalletType.STANDARD_WALLET:
@@ -184,6 +186,8 @@ class WalletRpcApi:
         return {"success": True}
 
     async def get_wallet_balance(self, request: Dict):
+        if self.service.wallet_state_manager is None:
+            return {"success": False}
         wallet_id = uint32(int(request["wallet_id"]))
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         balance = await wallet.get_confirmed_balance()
@@ -208,11 +212,15 @@ class WalletRpcApi:
         return response
 
     async def get_sync_status(self, request: Dict):
+        if self.service.wallet_state_manager is None:
+            return {"success": False}
         syncing = self.service.wallet_state_manager.sync_mode
 
         return {"success": True, "syncing": syncing}
 
     async def get_height_info(self, request: Dict):
+        if self.service.wallet_state_manager is None:
+            return {"success": False}
         lca = self.service.wallet_state_manager.lca
         height = self.service.wallet_state_manager.block_records[lca].height
 
@@ -251,6 +259,8 @@ class WalletRpcApi:
         )
 
     async def get_wallets(self, request: Dict):
+        if self.service.wallet_state_manager is None:
+            return {"success": False}
         wallets: List[
             WalletInfo
         ] = await self.service.wallet_state_manager.get_all_wallets()
@@ -364,6 +374,8 @@ class WalletRpcApi:
         return response
 
     async def get_wallet_summaries(self, request: Dict):
+        if self.service.wallet_state_manager is None:
+            return {"success": False}
         response = {}
         for wallet_id in self.service.wallet_state_manager.wallets:
             wallet = self.service.wallet_state_manager.wallets[wallet_id]
