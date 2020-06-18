@@ -39,7 +39,6 @@ from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.util.errors import Err
 from src.util.path import path_from_root, mkdir
 from src.util.keychain import Keychain
-from src.wallet.trade_manager import TradeManager
 
 
 class WalletNode:
@@ -143,7 +142,6 @@ class WalletNode:
             private_key, self.config, path, self.constants
         )
         assert self.wallet_state_manager is not None
-        self.trade_manager = await TradeManager.create(self.wallet_state_manager)
         if self.state_changed_callback is not None:
             self.wallet_state_manager.set_callback(self.state_changed_callback)
 
