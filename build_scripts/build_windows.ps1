@@ -4,10 +4,11 @@ mkdir build_scripts\win_build
 cd build_scripts\win_build
 
 Write-Output "   ---"
-Write-Output "curl miniupnpc, setprotitle"
+Write-Output "curl miniupnpc, setproctitle"
 Write-Output "   ---"
 curl -OL --show-error --fail https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl
 curl -OL --show-error --fail https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
+Write-Output "Using win_amd64 python 3.7 wheel from https://github.com/miniupnp/miniupnp/pull/475 (2.2.0-RC1)"
 cd ..\..
 
 Write-Output "   ---"

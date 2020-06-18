@@ -13,16 +13,25 @@ for setuptools_scm/PEP 440 reasons.
 - Added a faster VDF process, which generates n-wesolowski proofs very fast, after the VDF result is known.
 This requires a high number of CPUs. To use it, set timelord.fast_algorithm = True in the config file.
 - Added a new type of timelord, which generates compact proofs of time for the existing blocks. This helps
-reducing the database size. Full nodes send 100 random uncompact blocks per hour to timelords, and if
+reducing the database size. Full nodes send 100 random un-compact blocks per hour to timelords, and if
 timelord.sanitizer_mode = True, the timelord will work on those challenges.
+- Ci's check to see if they have secret access and attempt to fail cleanly so that ci runs successfully complete from PRs or forked repositories.
 
 ### Changed
 - Minor changes have been made across the repositories to better support compiling on OpenBSD. HT @n1000.
 - A push to a branch will cancel all ci runs still running for that branch.
-- Ci's check to see if they have secret access and attempt to fail cleanly so that ci runs complete from PRs or forked repositories.
+- Ci's now cache pip and npm caches between runs.
+- Improve test speed with smaller discriminants, less blocks, less keys, and smaller plots.
+- RPC servers and clients were refactored.
 
 ### Fixed
+- uPnP now works on Windows.
+- Log rotation should now properly rotate every 20MB and keep 7 historical logs.
+- Node had a significant memory leak under load due to an extraneous fork in the network code.
+- Skylake processors on Windows without AVX would fail to run.
+- Harvester no longer runs into 512 maximum file handles open on Windows.
 - The version generator for new installers incorrectly handled the "dev" versions after a release tag.
+- Due to a python bug, ssl connections could randomly fail. Worked around the issue - https://bugs.python.org/issue29288
 
 ## [1.0beta7] aka Beta 1.7 - 2020-06-08
 
