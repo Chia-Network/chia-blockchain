@@ -535,7 +535,7 @@ class BlockTools:
         number_iters: uint64 = pot_iterations.calculate_iterations(
             proof_of_space, difficulty, min_iters
         )
-        # print("Doing iters", number_iters)
+
         int_size = (test_constants["DISCRIMINANT_SIZE_BITS"] + 16) >> 4
 
         result = prove(
