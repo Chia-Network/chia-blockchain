@@ -21,8 +21,11 @@ from src.util.condition_tools import (
     hash_key_pairs_for_conditions_dict,
 )
 from src.util.ints import uint64
-from tests.setup_nodes import setup_two_nodes, test_constants, bt
+from tests.setup_nodes import setup_two_nodes, test_constants
+from tests.block_tools import BlockTools
 from tests.wallet_tools import WalletTool
+
+bt = BlockTools()
 
 
 @pytest.fixture(scope="module")
