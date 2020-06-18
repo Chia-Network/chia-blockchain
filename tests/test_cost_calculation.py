@@ -6,7 +6,8 @@ from src.consensus.constants import constants
 from src.util.bundle_tools import best_solution_program
 from src.util.cost_calculator import calculate_cost_of_program
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
-from tests.setup_nodes import test_constants, bt
+from tests.setup_nodes import test_constants
+from tests.block_tools import BlockTools
 from tests.wallet_tools import WalletTool
 
 
@@ -23,6 +24,7 @@ class TestCostCalculation:
         receiver = WalletTool()
 
         num_blocks = 2
+        bt = BlockTools()
         blocks = bt.get_consecutive_blocks(
             test_constants,
             num_blocks,

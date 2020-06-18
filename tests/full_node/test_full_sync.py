@@ -6,8 +6,11 @@ import pytest
 from src.types.peer_info import PeerInfo
 from src.protocols import full_node_protocol
 from src.util.ints import uint16
-from tests.setup_nodes import setup_two_nodes, test_constants, bt
+from tests.setup_nodes import setup_two_nodes, test_constants
+from tests.block_tools import BlockTools
 from tests.time_out_assert import time_out_assert
+
+bt = BlockTools()
 
 
 def node_height_at_least(node, h):
