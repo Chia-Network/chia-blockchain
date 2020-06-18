@@ -44,10 +44,10 @@ class TestRpc:
         harvester_rpc_api = HarvesterRpcApi(harvester)
 
         rpc_cleanup = await start_rpc_server(
-            farmer_rpc_api, test_rpc_port, stop_node_cb
+            farmer_rpc_api, test_rpc_port, stop_node_cb, connect_to_daemon=False
         )
         rpc_cleanup_2 = await start_rpc_server(
-            harvester_rpc_api, test_rpc_port_2, stop_node_cb_2
+            harvester_rpc_api, test_rpc_port_2, stop_node_cb_2, connect_to_daemon=False
         )
 
         try:

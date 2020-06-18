@@ -47,7 +47,7 @@ class TestRpc:
         full_node_rpc_api = FullNodeRpcApi(full_node_1)
 
         rpc_cleanup = await start_rpc_server(
-            full_node_rpc_api, test_rpc_port, stop_node_cb
+            full_node_rpc_api, test_rpc_port, stop_node_cb, connect_to_daemon=False
         )
 
         try:

@@ -1,7 +1,7 @@
 import asyncio
 import signal
 
-from typing import Any, Dict, Tuple, List
+from typing import Any, Dict, Tuple, List, Optional
 from src.full_node.full_node import FullNode
 from src.server.connection import NodeType
 from src.server.server import ChiaServer, start_server
@@ -253,7 +253,7 @@ async def setup_harvester(port, farmer_port, dic={}):
     await run_task
 
 
-async def setup_farmer(port, full_node_port, dic={}):
+async def setup_farmer(port, full_node_port: Optional[uint16] = None, dic={}):
     config = load_config(bt.root_path, "config.yaml", "farmer")
     config_pool = load_config(root_path, "config.yaml", "pool")
     test_constants_copy = test_constants.copy()
@@ -264,6 +264,10 @@ async def setup_farmer(port, full_node_port, dic={}):
         bytes(epk.get_public_key()).hex() for epk in bt.keychain.get_all_public_keys()
     ]
     config_pool["xch_target_puzzle_hash"] = bt.fee_target.hex()
+    if full_node_port:
+        connect_peers = [PeerInfo("127.0.0.1", full_node_port)]
+    else:
+        connect_peers = []
 
     api = Farmer(config, config_pool, bt.keychain, test_constants_copy)
 
@@ -281,7 +285,7 @@ async def setup_farmer(port, full_node_port, dic={}):
         service_name="farmer",
         server_listen_ports=[port],
         on_connect_callback=api._on_connect,
-        connect_peers=[PeerInfo("127.0.0.1", full_node_port)],
+        connect_peers=connect_peers,
         auth_connect_peers=False,
         start_callback=start_callback,
     )
@@ -456,7 +460,7 @@ async def setup_simulators_and_wallets(
 async def setup_farmer_harvester(dic={}):
     node_iters = [
         setup_harvester(21234, 21235, dic),
-        setup_farmer(21235, 21237, dic),
+        setup_farmer(21235, None, dic),
     ]
 
     harvester, harvester_server = await node_iters[0].__anext__()
@@ -464,12 +468,14 @@ async def setup_farmer_harvester(dic={}):
 
     yield (harvester, farmer)
 
+    await _teardown_nodes(node_iters)
+
 
 async def setup_full_system(dic={}):
     node_iters = [
         setup_introducer(21233),
         setup_harvester(21234, 21235, dic),
-        setup_farmer(21235, 21237, dic),
+        setup_farmer(21235, uint16(21237), dic),
         setup_timelord(21236, 21237, False, dic),
         setup_vdf_clients(8000),
         setup_full_node("blockchain_test.db", 21237, 21233, False, 10, dic),

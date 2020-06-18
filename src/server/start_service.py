@@ -124,6 +124,7 @@ class Service:
         self._stop_callback = stop_callback
         self._await_closed_callback = await_closed_callback
         self._advertised_port = advertised_port
+        self._server_sockets: List = []
 
     def start(self):
         if self._task is not None:
