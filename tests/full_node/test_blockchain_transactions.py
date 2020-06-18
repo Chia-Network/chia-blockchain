@@ -126,7 +126,7 @@ class TestBlockchainTransactions:
     @pytest.mark.asyncio
     async def test_validate_blockchain_with_double_spend(self, two_nodes):
 
-        num_blocks = 10
+        num_blocks = 5
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
         wallet_receiver = WalletTool()
@@ -156,12 +156,12 @@ class TestBlockchainTransactions:
         program = best_solution_program(block_spendbundle)
         aggsig = block_spendbundle.aggregated_signature
 
-        dic_h = {11: (program, aggsig)}
+        dic_h = {(num_blocks + 1): (program, aggsig)}
         new_blocks = bt.get_consecutive_blocks(
             test_constants, 1, blocks, 10, b"", coinbase_puzzlehash, dic_h
         )
 
-        next_block = new_blocks[11]
+        next_block = new_blocks[num_blocks + 1]
         error = await full_node_1.blockchain._validate_transactions(
             next_block, next_block.header.data.fees_coin.amount
         )
@@ -200,12 +200,12 @@ class TestBlockchainTransactions:
         program = best_solution_program(block_spendbundle)
         aggsig = block_spendbundle.aggregated_signature
 
-        dic_h = {11: (program, aggsig)}
+        dic_h = {(num_blocks + 1): (program, aggsig)}
         new_blocks = bt.get_consecutive_blocks(
             test_constants, 1, blocks, 10, b"", coinbase_puzzlehash, dic_h
         )
 
-        next_block = new_blocks[11]
+        next_block = new_blocks[(num_blocks + 1)]
         error = await full_node_1.blockchain._validate_transactions(
             next_block, next_block.header.data.fees_coin.amount
         )
