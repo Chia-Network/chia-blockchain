@@ -20,10 +20,24 @@ from src.types.sized_bytes import bytes32
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from tests.setup_nodes import test_constants
 from tests.block_tools import BlockTools
 
 bt = BlockTools()
+test_constants: Dict[str, Any] = consensus_constants.copy()
+test_constants.update(
+    {
+        "DIFFICULTY_STARTING": 1,
+        "DISCRIMINANT_SIZE_BITS": 8,
+        "BLOCK_TIME_TARGET": 10,
+        "MIN_BLOCK_TIME": 2,
+        "DIFFICULTY_EPOCH": 6,  # The number of blocks per epoch
+        "DIFFICULTY_DELAY": 2,  # EPOCH / WARP_FACTOR
+        "MIN_ITERS_STARTING": 50 * 1,
+    }
+)
+test_constants["GENESIS_BLOCK"] = bytes(
+    bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
+)
 
 
 @pytest.fixture(scope="module")
@@ -482,7 +496,7 @@ class TestBlockValidation:
     async def test_difficulty_change(self):
         num_blocks = 14
         # Make it 5x faster than target time
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 2)
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 1)
         db_path = Path("blockchain_test.db")
         if db_path.exists():
             db_path.unlink()
