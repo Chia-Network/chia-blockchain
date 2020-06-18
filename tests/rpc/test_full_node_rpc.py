@@ -8,6 +8,7 @@ from src.protocols import full_node_protocol
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.util.ints import uint16
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
+from tests.time_out_assert import time_out_assert
 
 
 @pytest.fixture(scope="module")
@@ -60,40 +61,41 @@ class TestRpc:
             assert state["min_iters"] > 0
 
             block = await client.get_block(state["lca"].header_hash)
-            assert block == blocks[7]
+            assert block == blocks[2]
             assert (await client.get_block(bytes([1] * 32))) is None
 
-            unf_block_headers = await client.get_unfinished_block_headers(5)
+            unf_block_headers = await client.get_unfinished_block_headers(4)
             assert len(unf_block_headers) == 1
-            assert unf_block_headers[0] == blocks[5].header
+            assert unf_block_headers[0] == blocks[4].header
 
             header = await client.get_header(state["lca"].header_hash)
-            assert header == blocks[7].header
+            assert header == blocks[2].header
 
-            assert (await client.get_header_by_height(7)) == blocks[7].header
+            assert (await client.get_header_by_height(2)) == blocks[2].header
 
             assert (await client.get_header_by_height(100)) is None
 
             coins = await client.get_unspent_coins(
                 blocks[-1].header.data.coinbase.puzzle_hash, blocks[-1].header_hash
             )
-            assert len(coins) == 16
+            assert len(coins) == 6
             coins_lca = await client.get_unspent_coins(
                 blocks[-1].header.data.coinbase.puzzle_hash
             )
-            assert len(coins_lca) == 16
+            assert len(coins_lca) == 6
 
             assert len(await client.get_connections()) == 0
 
             await client.open_connection("localhost", server_2._port)
-            await asyncio.sleep(2)
+
+            async def num_connections():
+                return len(await client.get_connections())
+
+            await time_out_assert(10, num_connections, 1)
             connections = await client.get_connections()
-            assert len(connections) == 1
 
             await client.close_connection(connections[0]["node_id"])
-            assert len(await client.get_connections()) == 0
-
-            await asyncio.sleep(2)  # Allow server to start
+            await time_out_assert(10, num_connections, 0)
         except AssertionError:
             # Checks that the RPC manages to stop the node
             client.close()

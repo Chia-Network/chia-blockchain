@@ -9,6 +9,7 @@ from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
 from tests.setup_nodes import setup_simulators_and_wallets
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
+from tests.time_out_assert import time_out_assert, time_out_assert_not_None
 
 
 @pytest.fixture(scope="module")
@@ -57,14 +58,13 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(3)
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
                 for i in range(1, num_blocks - 2)
             ]
         )
-        assert await wallet.get_confirmed_balance() == funds
+        await time_out_assert(5, wallet.get_confirmed_balance, funds)
 
     @pytest.mark.asyncio
     async def test_wallet_make_transaction(self, two_wallet_nodes):
@@ -88,10 +88,8 @@ class TestWalletSimulator:
             ]
         )
 
-        await asyncio.sleep(2)
-
-        assert await wallet.get_confirmed_balance() == funds
-        assert await wallet.get_unconfirmed_balance() == funds
+        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+        await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
 
         tx = await wallet.generate_signed_transaction(
             10,
@@ -100,17 +98,11 @@ class TestWalletSimulator:
         )
         await wallet.push_transaction(tx)
 
-        await asyncio.sleep(2)
-        confirmed_balance = await wallet.get_confirmed_balance()
-        unconfirmed_balance = await wallet.get_unconfirmed_balance()
-
-        assert confirmed_balance == funds
-        assert unconfirmed_balance == funds - 10
+        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+        await time_out_assert(5, wallet.get_unconfirmed_balance, funds - 10)
 
         for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
-
-        await asyncio.sleep(2)
 
         new_funds = sum(
             [
@@ -118,12 +110,8 @@ class TestWalletSimulator:
                 for i in range(1, (2 * num_blocks) - 1)
             ]
         )
-
-        confirmed_balance = await wallet.get_confirmed_balance()
-        unconfirmed_balance = await wallet.get_unconfirmed_balance()
-
-        assert confirmed_balance == new_funds - 10
-        assert unconfirmed_balance == new_funds - 10
+        await time_out_assert(5, wallet.get_confirmed_balance, new_funds - 10)
+        await time_out_assert(5, wallet.get_unconfirmed_balance, new_funds - 10)
 
     @pytest.mark.asyncio
     async def test_wallet_coinbase_reorg(self, wallet_node):
@@ -138,19 +126,18 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        await asyncio.sleep(3)
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
                 for i in range(1, num_blocks - 2)
             ]
         )
-        assert await wallet.get_confirmed_balance() == funds
+
+        await time_out_assert(5, wallet.get_confirmed_balance, funds)
 
         await full_node_1.reorg_from_index_to_new_index(
             ReorgProtocol(uint32(5), uint32(num_blocks + 3), token_bytes())
         )
-        await asyncio.sleep(3)
 
         funds = sum(
             [
@@ -159,7 +146,7 @@ class TestWalletSimulator:
             ]
         )
 
-        assert await wallet.get_confirmed_balance() == funds
+        await time_out_assert(5, wallet.get_confirmed_balance, funds)
 
     @pytest.mark.asyncio
     async def test_wallet_send_to_three_peers(self, three_sim_two_wallets):
@@ -193,16 +180,15 @@ class TestWalletSimulator:
             ):
                 pass
 
-        await asyncio.sleep(2)
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
                 for i in range(1, num_blocks - 2)
             ]
         )
-        assert (
-            await wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance()
-            == funds
+
+        await time_out_assert(
+            5, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds
         )
 
         tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
@@ -210,28 +196,27 @@ class TestWalletSimulator:
         )
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
-        await asyncio.sleep(1)
-
-        bundle0 = full_node_0.mempool_manager.get_spendbundle(tx.name())
-        assert bundle0 is not None
+        await time_out_assert_not_None(
+            5, full_node_0.mempool_manager.get_spendbundle, tx.name()
+        )
 
         # wallet0 <-> sever1
         await wallet_server_0.start_client(
             PeerInfo("localhost", uint16(server_1._port)), wallet_0._on_connect
         )
-        await asyncio.sleep(1)
 
-        bundle1 = full_node_1.mempool_manager.get_spendbundle(tx.name())
-        assert bundle1 is not None
+        await time_out_assert_not_None(
+            5, full_node_1.mempool_manager.get_spendbundle, tx.name()
+        )
 
         # wallet0 <-> sever2
         await wallet_server_0.start_client(
             PeerInfo("localhost", uint16(server_2._port)), wallet_0._on_connect
         )
-        await asyncio.sleep(1)
 
-        bundle2 = full_node_2.mempool_manager.get_spendbundle(tx.name())
-        assert bundle2 is not None
+        await time_out_assert_not_None(
+            5, full_node_2.mempool_manager.get_spendbundle, tx.name()
+        )
 
     @pytest.mark.asyncio
     async def test_wallet_make_transaction_hop(self, two_wallet_nodes_five_freeze):
@@ -262,7 +247,8 @@ class TestWalletSimulator:
             ]
         )
 
-        await asyncio.sleep(2)
+        await time_out_assert(5, wallet_0.get_confirmed_balance, funds)
+        await time_out_assert(5, wallet_0.get_unconfirmed_balance, funds)
 
         assert await wallet_0.get_confirmed_balance() == funds
         assert await wallet_0.get_unconfirmed_balance() == funds
@@ -275,18 +261,12 @@ class TestWalletSimulator:
 
         await wallet_0.push_transaction(tx)
 
-        await asyncio.sleep(1)
         # Full node height 11, wallet height 9
-        confirmed_balance = await wallet_0.get_confirmed_balance()
-        unconfirmed_balance = await wallet_0.get_unconfirmed_balance()
-
-        assert confirmed_balance == funds
-        assert unconfirmed_balance == funds - 10
+        await time_out_assert(5, wallet_0.get_confirmed_balance, funds)
+        await time_out_assert(5, wallet_0.get_unconfirmed_balance, funds - 10)
 
         for i in range(0, 7):
             await full_node_0.farm_new_block(FarmNewBlockProtocol(token_bytes()))
-
-        await asyncio.sleep(1)
 
         new_funds = sum(
             [
@@ -296,13 +276,9 @@ class TestWalletSimulator:
         )
 
         # Full node height 17, wallet height 15
-        confirmed_balance = await wallet_0.get_confirmed_balance()
-        unconfirmed_balance = await wallet_0.get_unconfirmed_balance()
-        wallet_2_confirmed_balance = await wallet_1.get_confirmed_balance()
-
-        assert confirmed_balance == new_funds - 10
-        assert unconfirmed_balance == new_funds - 10
-        assert wallet_2_confirmed_balance == 10
+        await time_out_assert(5, wallet_0.get_confirmed_balance, new_funds - 10)
+        await time_out_assert(5, wallet_0.get_unconfirmed_balance, new_funds - 10)
+        await time_out_assert(5, wallet_1.get_confirmed_balance, 10)
 
         tx = await wallet_1.generate_signed_transaction(
             5, await wallet_0.get_new_puzzlehash(), 0
@@ -312,15 +288,13 @@ class TestWalletSimulator:
         for i in range(0, 7):
             await full_node_0.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
-        await asyncio.sleep(1)
-
         confirmed_balance = await wallet_0.get_confirmed_balance()
         unconfirmed_balance = await wallet_0.get_unconfirmed_balance()
         wallet_2_confirmed_balance = await wallet_1.get_confirmed_balance()
 
-        assert confirmed_balance == new_funds - 5
-        assert unconfirmed_balance == new_funds - 5
-        assert wallet_2_confirmed_balance == 5
+        await time_out_assert(5, wallet_0.get_confirmed_balance, new_funds - 5)
+        await time_out_assert(5, wallet_0.get_unconfirmed_balance, new_funds - 5)
+        await time_out_assert(5, wallet_1.get_confirmed_balance, 5)
 
     @pytest.mark.asyncio
     async def test_wallet_make_transaction_with_fee(self, two_wallet_nodes):
@@ -344,7 +318,8 @@ class TestWalletSimulator:
             ]
         )
 
-        await asyncio.sleep(2)
+        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+        await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
 
         assert await wallet.get_confirmed_balance() == funds
         assert await wallet.get_unconfirmed_balance() == funds
@@ -361,17 +336,13 @@ class TestWalletSimulator:
 
         await wallet.push_transaction(tx)
 
-        await asyncio.sleep(2)
-        confirmed_balance = await wallet.get_confirmed_balance()
-        unconfirmed_balance = await wallet.get_unconfirmed_balance()
-
-        assert confirmed_balance == funds
-        assert unconfirmed_balance == funds - tx_amount - tx_fee
+        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+        await time_out_assert(
+            5, wallet.get_unconfirmed_balance, funds - tx_amount - tx_fee
+        )
 
         for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
-
-        await asyncio.sleep(2)
 
         new_funds = sum(
             [
@@ -380,8 +351,9 @@ class TestWalletSimulator:
             ]
         )
 
-        confirmed_balance = await wallet.get_confirmed_balance()
-        unconfirmed_balance = await wallet.get_unconfirmed_balance()
-
-        assert confirmed_balance == new_funds - tx_amount - tx_fee
-        assert unconfirmed_balance == new_funds - tx_amount - tx_fee
+        await time_out_assert(
+            5, wallet.get_confirmed_balance, new_funds - tx_amount - tx_fee
+        )
+        await time_out_assert(
+            5, wallet.get_unconfirmed_balance, new_funds - tx_amount - tx_fee
+        )

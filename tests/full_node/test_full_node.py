@@ -34,6 +34,7 @@ from src.util.merkle_set import (
     confirm_not_included_already_hashed,
 )
 from src.util.errors import Err, ConsensusError
+from tests.time_out_assert import time_out_assert
 
 
 async def get_block_path(full_node: FullNode):
@@ -92,7 +93,11 @@ class TestFullNodeProtocol:
         _, _, blocks = wallet_blocks
 
         await server_2.start_client(PeerInfo("127.0.0.1", uint16(server_1._port)), None)
-        await asyncio.sleep(2)  # Allow connections to get made
+
+        async def num_connections():
+            return len(full_node_1.global_connections.get_connections())
+
+        await time_out_assert(10, num_connections, 1)
 
         new_tip_1 = fnp.NewTip(
             blocks[-1].height, blocks[-1].weight, blocks[-1].header_hash
@@ -792,13 +797,22 @@ class TestFullNodeProtocol:
         wallet_a, wallet_receiver, blocks = wallet_blocks
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-        await asyncio.sleep(2)  # Allow connections to get made
 
-        msgs = [
-            _
-            async for _ in full_node_1.request_peers(introducer_protocol.RequestPeers())
-        ]
-        assert len(msgs[0].message.data.peer_list) > 0
+        async def num_connections():
+            return len(full_node_1.global_connections.get_connections())
+
+        await time_out_assert(10, num_connections, 1)
+
+        async def have_msgs():
+            msgs = [
+                _
+                async for _ in full_node_1.request_peers(
+                    introducer_protocol.RequestPeers()
+                )
+            ]
+            return len(msgs) > 0 and len(msgs[0].message.data.peer_list) > 0
+
+        await time_out_assert(10, have_msgs, True)
 
 
 class TestWalletProtocol:
