@@ -18,6 +18,7 @@ from src.cmds.init import check_keys
 from src.server.outbound_message import NodeType, OutboundMessage, Message, Delivery
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.util.ints import uint64, uint32
+from src.wallet.trading.trade_status import TradeStatus
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.cc_wallet.cc_wallet import CCWallet
@@ -64,7 +65,38 @@ class WalletRpcApi:
             "/delete_key": self.delete_key,
             "/delete_all_keys": self.delete_all_keys,
             "/get_private_key": self.get_private_key,
+            "/get_trades": self.get_trades,
+            "/cancel_trade": self.cancel_trade,
         }
+
+    async def get_trades(self, request: Dict):
+        all = request["all"]
+        trade_mgr = self.service.wallet_state_manager.trade_manager
+        if all:
+            all_trades = await trade_mgr.get_all_trades()
+            result = []
+            for trade in all_trades:
+                result.append(trade.to_ui_dict())
+        else:
+            trade_id = request["trade_id"]
+            trade = await trade_mgr.get_trade_by_id(trade_id)
+            result = [trade.to_ui_dict()]
+
+        response = {"success": True, "trades": result}
+        return response
+
+    async def cancel_trade(self, request:Dict):
+        wsm = self.service.wallet_state_manager
+        secure = request["secure"]
+        trade_id = request["trade_id"]
+
+        if secure:
+            await wsm.trade_manager.cancel_pending_offer_safely(trade_id)
+        else:
+            await wsm.trade_manager.cancel_pending_offer(trade_id)
+
+        response = {"success": True}
+        return response
 
     async def _state_changed(self, *args) -> List[str]:
         if len(args) < 2:
