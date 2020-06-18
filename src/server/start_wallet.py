@@ -50,7 +50,6 @@ def service_kwargs_for_wallet(root_path):
         service_name=service_name,
         server_listen_ports=[config["port"]],
         on_connect_callback=api._on_connect,
-        start_callback=start_callback,
         stop_callback=stop_callback,
         await_closed_callback=await_closed_callback,
         rpc_info=(WalletRpcApi, config["rpc_port"]),
