@@ -37,5 +37,5 @@ class TradeRecord(Streamable):
         result["created_at_time"] = self.created_at_time
         result["accepted_at_time"] = self.accepted_at_time
         result["confirmed_at_index"] = self.confirmed_at_index
-        result["status"]  = TradeStatus(self.status).name
+        result["status"] = TradeStatus(self.status).name
         return result

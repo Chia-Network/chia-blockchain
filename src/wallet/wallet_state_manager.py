@@ -446,14 +446,69 @@ class WalletStateManager:
                 removals[coin.name()] = coin
         return removals
 
-    async def coin_removed(self, coin: Coin, index: uint32):
+    async def coins_of_interest_received(
+        self, removals: List[Coin], additions: List[Coin], height: uint32
+    ):
+        trade_removals = await self.coins_of_interest_removed(removals, height)
+        trade_additions = await self.coins_of_interest_added(additions, height)
+        if len(trade_additions) > 0 or len(trade_removals) > 0:
+            await self.trade_manager.coins_of_interest_farmed(
+                trade_removals, trade_additions, height
+            )
+
+    async def coins_of_interest_added(
+        self, coins: List[Coin], height: uint32
+    ) -> List[Coin]:
+        (
+            trade_removals,
+            trade_additions,
+        ) = await self.trade_manager.get_coins_of_interest()
+        trade_adds: List[Coin] = []
+        for coin in coins:
+            if coin.name() in trade_additions:
+                trade_adds.append(coin)
+
+            is_coinbase = False
+
+            if (
+                bytes32((height).to_bytes(32, "big")) == coin.parent_coin_info
+                or std_hash(std_hash(height)) == coin.parent_coin_info
+            ):
+                is_coinbase = True
+
+            info = await self.puzzle_store.wallet_info_for_puzzle_hash(coin.puzzle_hash)
+            if info is not None:
+                wallet_id, wallet_type = info
+                await self.coin_added(coin, height, is_coinbase, uint32(wallet_id), wallet_type)
+
+        return trade_adds
+
+    async def coins_of_interest_removed(
+        self, coins: List[Coin], height: uint32
+    ) -> List[Coin]:
+        "This get's called when coins of our interest are spent on chain"
+        (
+            trade_removals,
+            trade_additions,
+        ) = await self.trade_manager.get_coins_of_interest()
+
+        # Keep track of trade coins that are removed
+        trade_coin_removed: List[Coin] = []
+
+        for coin in coins:
+            record = await self.wallet_store.get_coin_record_by_coin_id(coin.name())
+            if coin.name() in trade_removals:
+                trade_coin_removed.append(coin)
+            if record is None:
+                continue
+            await self.coin_removed(coin, height, record.wallet_id)
+
+        return trade_coin_removed
+
+    async def coin_removed(self, coin: Coin, index: uint32, wallet_id: int):
         """
         Called when coin gets spent
         """
-        # Only remove our coins
-        record = await self.wallet_store.get_coin_record_by_coin_id(coin.name())
-        if record is None:
-            return
 
         await self.wallet_store.set_spent(coin.name(), index)
 
@@ -463,15 +518,19 @@ class WalletStateManager:
         for unconfirmed in unconfirmed_record:
             await self.tx_store.set_confirmed(unconfirmed.name(), index)
 
-        self.state_changed("coin_removed", record.wallet_id)
+        self.state_changed("coin_removed", wallet_id)
 
-    async def coin_added(self, coin: Coin, index: uint32, coinbase: bool):
+    async def coin_added(
+        self,
+        coin: Coin,
+        index: uint32,
+        coinbase: bool,
+        wallet_id: uint32,
+        wallet_type: WalletType,
+    ):
         """
-        Adding coin to the db
+        Adding coin to DB
         """
-        info = await self.puzzle_store.wallet_info_for_puzzle_hash(coin.puzzle_hash)
-        assert info is not None
-        wallet_id, wallet_type = info
         if coinbase:
             now = uint64(int(time.time()))
             tx_record = TransactionRecord(
@@ -671,17 +730,9 @@ class WalletStateManager:
                 assert block.height == 0
                 await self.wallet_store.add_block_to_path(block.header_hash)
                 self.lca = block.header_hash
-                for coin in block.additions:
-                    is_coinbase = False
-                    if (
-                        bytes32((block.height).to_bytes(32, "big"))
-                        == coin.parent_coin_info
-                        or std_hash(std_hash(block.height)) == coin.parent_coin_info
-                    ):
-                        is_coinbase = True
-                    await self.coin_added(coin, block.height, is_coinbase)
-                for coin in block.removals:
-                    await self.coin_removed(coin, block.height)
+                await self.coins_of_interest_received(
+                    block.removals, block.additions, block.height
+                )
                 self.height_to_hash[uint32(0)] = block.header_hash
                 return ReceiveBlockResult.ADDED_TO_HEAD
 
@@ -712,20 +763,9 @@ class WalletStateManager:
                         path_block.additions is not None
                         and path_block.removals is not None
                     )
-                    for coin in path_block.additions:
-                        is_coinbase = False
-                        if (
-                            bytes32((path_block.height).to_bytes(32, "big"))
-                            == coin.parent_coin_info
-                            or std_hash(std_hash(path_block.height.to_bytes(4, "big")))
-                            == coin.parent_coin_info
-                        ):
-                            is_coinbase = True
-
-                        await self.coin_added(coin, path_block.height, is_coinbase)
-                    for coin in path_block.removals:
-                        await self.coin_removed(coin, path_block.height)
-
+                    await self.coins_of_interest_received(
+                        path_block.removals, path_block.additions, path_block.height
+                    )
                 self.lca = block.header_hash
                 self.state_changed("new_block")
                 return ReceiveBlockResult.ADDED_TO_HEAD
@@ -1161,6 +1201,18 @@ class WalletStateManager:
 
         removals_of_interest: bytes32 = []
         additions_of_interest: bytes32 = []
+
+        (
+            trade_removals,
+            trade_additions,
+        ) = await self.trade_manager.get_coins_of_interest()
+        for name, trade_coin in trade_removals.items():
+            if tx_filter.Match(bytearray(trade_coin.name())):
+                removals_of_interest.append(trade_coin.name())
+
+        for name, trade_coin in trade_additions.items():
+            if tx_filter.Match(bytearray(trade_coin.puzzle_hash)):
+                additions_of_interest.append(trade_coin.puzzle_hash)
 
         for coin_name in unspent_coin_names:
             if tx_filter.Match(bytearray(coin_name)):
