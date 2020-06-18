@@ -118,6 +118,9 @@ class WalletNode:
         self._shut_down = False
         private_keys = self.keychain.get_all_private_keys()
         if len(private_keys) == 0:
+            self.log.warning(
+                "No keys present. Create keys with the UI, or with the 'chia keys' program."
+            )
             return False
 
         private_key: Optional[ExtendedPrivateKey] = None
@@ -149,13 +152,13 @@ class WalletNode:
         return True
 
     def _set_state_changed_callback(self, callback: Callable):
-        if self.wallet_state_manager is None:
-            return
         self.state_changed_callback = callback
         if self.global_connections is not None:
             self.global_connections.set_state_changed_callback(callback)
-        self.wallet_state_manager.set_callback(self.state_changed_callback)
-        self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
+
+        if self.wallet_state_manager is not None:
+            self.wallet_state_manager.set_callback(self.state_changed_callback)
+            self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
 
     def _pending_tx_handler(self):
         if self.wallet_state_manager is None:
