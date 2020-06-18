@@ -9,6 +9,7 @@ from src.types.full_block import FullBlock
 from src.util.streamable import Streamable, streamable
 from tests.block_tools import BlockTools
 from src.protocols.wallet_protocol import RespondRemovals
+from tests.setup_nodes import test_constants, bt
 from src.util import cbor
 
 
@@ -53,16 +54,6 @@ class TestStreamable(unittest.TestCase):
             pass
 
     def test_json(self):
-        bt = BlockTools()
-
-        test_constants: Dict[str, Any] = {
-            "DIFFICULTY_STARTING": 5,
-            "DISCRIMINANT_SIZE_BITS": 16,
-            "BLOCK_TIME_TARGET": 10,
-            "MIN_BLOCK_TIME": 2,
-            "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
-            "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
-        }
         block = bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
 
         dict_block = block.to_json_dict()
