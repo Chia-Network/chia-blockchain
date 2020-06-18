@@ -11,8 +11,9 @@ from src.rpc.farmer_rpc_client import FarmerRpcClient
 from src.rpc.harvester_rpc_client import HarvesterRpcClient
 from src.rpc.rpc_server import start_rpc_server
 from src.util.ints import uint16
-from tests.setup_nodes import setup_full_system, test_constants
+from tests.setup_nodes import setup_farmer_harvester, test_constants
 from tests.block_tools import get_plot_dir
+from tests.time_out_assert import time_out_assert
 
 
 @pytest.fixture(scope="module")
@@ -24,14 +25,14 @@ def event_loop():
 class TestRpc:
     @pytest.fixture(scope="function")
     async def simulation(self):
-        async for _ in setup_full_system(test_constants):
+        async for _ in setup_farmer_harvester(test_constants):
             yield _
 
     @pytest.mark.asyncio
     async def test1(self, simulation):
         test_rpc_port = uint16(21522)
         test_rpc_port_2 = uint16(21523)
-        full_node_1, _, harvester, farmer, _, _, _, _, _ = simulation
+        harvester, farmer = simulation
 
         def stop_node_cb():
             pass
@@ -53,11 +54,17 @@ class TestRpc:
             client = await FarmerRpcClient.create(test_rpc_port)
             client_2 = await HarvesterRpcClient.create(test_rpc_port_2)
 
-            await asyncio.sleep(3)
-            assert len(await client.get_connections()) == 2
+            async def have_connections():
+                return len(await client.get_connections()) > 0
+
+            await time_out_assert(5, have_connections, True)
 
             challenges = await client.get_latest_challenges()
-            assert len(challenges) > 0
+
+            async def have_challenges():
+                return len(await client.get_latest_challenges()) > 0
+
+            await time_out_assert(5, have_challenges, True)
 
             res = await client_2.get_plots()
             num_plots = len(res["plots"])

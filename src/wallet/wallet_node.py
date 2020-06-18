@@ -106,7 +106,7 @@ class WalletNode:
         self.proof_hashes = []
         self.header_hashes = []
         self.header_hashes_error = False
-        self.short_sync_threshold = 15
+        self.short_sync_threshold = 15  # Change the test when changing this
         self.potential_blocks_received = {}
         self.potential_header_hashes = {}
         self.state_changed_callback = None

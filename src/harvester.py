@@ -128,7 +128,7 @@ class Harvester:
         """
         counter = 1
         while not self._is_shutdown:
-            if counter % 600 == 0:
+            if counter % 6000 == 0:
                 found = False
                 for filename, prover in self.provers.items():
                     log.info(f"Farming plot {filename} of size {prover.get_size()}")
@@ -137,7 +137,7 @@ class Harvester:
                     log.warning(
                         "Not farming any plots on this harvester. Check your configuration."
                     )
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.1)
             counter += 1
 
     def _get_plots(self) -> Tuple[List[Dict], List[str], List[str]]:

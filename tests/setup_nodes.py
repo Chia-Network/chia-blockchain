@@ -20,6 +20,7 @@ from src.server.start_service import create_periodic_introducer_poll_task
 from src.util.ints import uint16, uint32
 from src.server.start_service import Service
 from src.rpc.harvester_rpc_api import HarvesterRpcApi
+from tests.time_out_assert import time_out_assert
 
 
 bt = BlockTools()
@@ -204,7 +205,6 @@ async def setup_wallet_node(
 
     yield api, api.server
 
-    # await asyncio.sleep(1) # Sleep to ÷
     service.stop()
     await run_task
     if db_path.exists():
@@ -453,6 +453,18 @@ async def setup_simulators_and_wallets(
     await _teardown_nodes(node_iters)
 
 
+async def setup_farmer_harvester(dic={}):
+    node_iters = [
+        setup_harvester(21234, 21235, dic),
+        setup_farmer(21235, 21237, dic),
+    ]
+
+    harvester, harvester_server = await node_iters[0].__anext__()
+    farmer, farmer_server = await node_iters[1].__anext__()
+
+    yield (harvester, farmer)
+
+
 async def setup_full_system(dic={}):
     node_iters = [
         setup_introducer(21233),
@@ -469,7 +481,12 @@ async def setup_full_system(dic={}):
     introducer, introducer_server = await node_iters[0].__anext__()
     harvester, harvester_server = await node_iters[1].__anext__()
     farmer, farmer_server = await node_iters[2].__anext__()
-    await asyncio.sleep(2)
+
+    async def num_connections():
+        return len(harvester.global_connections.get_connections())
+
+    await time_out_assert(10, num_connections, 1)
+
     timelord, timelord_server = await node_iters[3].__anext__()
     vdf = await node_iters[4].__anext__()
     node1, node1_server = await node_iters[5].__anext__()
