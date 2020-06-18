@@ -57,12 +57,7 @@ async def two_nodes():
         yield _
 
 
-@pytest.fixture(scope="module")
-async def wallet_blocks(two_nodes):
-    """
-    Sets up the node with 10 blocks, and returns a payer and payee wallet.
-    """
-    num_blocks = 5
+async def wb(num_blocks, two_nodes):
     full_node_1, _, _, _ = two_nodes
     wallet_a = WalletTool()
     coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
@@ -75,6 +70,19 @@ async def wallet_blocks(two_nodes):
             pass
 
     return wallet_a, wallet_receiver, blocks
+
+
+@pytest.fixture(scope="module")
+async def wallet_blocks(two_nodes):
+    """
+    Sets up the node with 3 blocks, and returns a payer and payee wallet.
+    """
+    return await wb(3, two_nodes)
+
+
+@pytest.fixture(scope="module")
+async def wallet_blocks_five(two_nodes):
+    return await wb(5, two_nodes)
 
 
 class TestFullNodeProtocol:
@@ -93,19 +101,19 @@ class TestFullNodeProtocol:
 
         assert len(msgs_1) == 1
         assert msgs_1[0].message.data == fnp.RequestBlock(
-            uint32(5), blocks[-1].header_hash
+            uint32(3), blocks[-1].header_hash
         )
 
         new_tip_2 = fnp.NewTip(
-            blocks[3].height, blocks[3].weight, blocks[3].header_hash
+            blocks[2].height, blocks[2].weight, blocks[2].header_hash
         )
         msgs_2 = [x async for x in full_node_1.new_tip(new_tip_2)]
         assert len(msgs_2) == 0
 
     @pytest.mark.asyncio
-    async def test_new_transaction(self, two_nodes, wallet_blocks):
+    async def test_new_transaction(self, two_nodes, wallet_blocks_five):
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        wallet_a, wallet_receiver, blocks = wallet_blocks
+        wallet_a, wallet_receiver, blocks = wallet_blocks_five
         conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
 
         # Mempool has capacity of 100, make 110 unspents that we can use
@@ -209,9 +217,9 @@ class TestFullNodeProtocol:
         [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks_new[-1]))]
 
     @pytest.mark.asyncio
-    async def test_request_respond_transaction(self, two_nodes, wallet_blocks):
+    async def test_request_respond_transaction(self, two_nodes, wallet_blocks_five):
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        wallet_a, wallet_receiver, blocks = wallet_blocks
+        wallet_a, wallet_receiver, blocks = wallet_blocks_five
 
         tx_id = token_bytes(32)
         request_transaction = fnp.RequestTransaction(tx_id)
@@ -483,7 +491,7 @@ class TestFullNodeProtocol:
 
         blocks_new = bt.get_consecutive_blocks(
             test_constants,
-            10,
+            1,
             blocks_list[:],
             4,
             reward_puzzlehash=coinbase_puzzlehash,

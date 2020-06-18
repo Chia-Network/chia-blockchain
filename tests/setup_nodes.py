@@ -53,7 +53,14 @@ async def _teardown_nodes(node_aiters: List) -> None:
             pass
 
 
-async def setup_full_node(db_name, port, introducer_port=None, simulator=False, dic={}):
+async def setup_full_node(
+    db_name,
+    port,
+    introducer_port=None,
+    simulator=False,
+    send_uncompact_interval=30,
+    dic={},
+):
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
@@ -64,7 +71,7 @@ async def setup_full_node(db_name, port, introducer_port=None, simulator=False, 
 
     config = load_config(bt.root_path, "config.yaml", "full_node")
     config["database_path"] = db_name
-    config["send_uncompact_interval"] = 30
+    config["send_uncompact_interval"] = send_uncompact_interval
     periodic_introducer_poll = None
     if introducer_port is not None:
         periodic_introducer_poll = (
@@ -453,8 +460,8 @@ async def setup_full_system(dic={}):
         setup_farmer(21235, 21237, dic),
         setup_timelord(21236, 21237, False, dic),
         setup_vdf_clients(8000),
-        setup_full_node("blockchain_test.db", 21237, 21233, False, dic),
-        setup_full_node("blockchain_test_2.db", 21238, 21233, False, dic),
+        setup_full_node("blockchain_test.db", 21237, 21233, False, 10, dic),
+        setup_full_node("blockchain_test_2.db", 21238, 21233, False, 10, dic),
         setup_timelord(21239, 21238, True, dic),
         setup_vdf_clients(7999),
     ]
