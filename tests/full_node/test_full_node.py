@@ -24,7 +24,8 @@ from src.util.hash import std_hash
 from src.full_node.full_node import FullNode
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
-from tests.setup_nodes import setup_two_nodes, test_constants, bt
+from tests.setup_nodes import setup_two_nodes, test_constants
+from tests.block_tools import BlockTools
 from tests.wallet_tools import WalletTool
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.coin import hash_coin_list
@@ -35,6 +36,8 @@ from src.util.merkle_set import (
 )
 from src.util.errors import Err, ConsensusError
 from tests.time_out_assert import time_out_assert
+
+bt = BlockTools()
 
 
 async def get_block_path(full_node: FullNode):

@@ -20,7 +20,10 @@ from src.types.sized_bytes import bytes32
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from tests.setup_nodes import test_constants, bt
+from tests.setup_nodes import test_constants
+from tests.block_tools import BlockTools
+
+bt = BlockTools()
 
 
 @pytest.fixture(scope="module")

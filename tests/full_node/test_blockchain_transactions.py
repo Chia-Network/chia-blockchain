@@ -18,8 +18,11 @@ from src.types.spend_bundle import SpendBundle
 from src.util.errors import Err
 from src.util.ints import uint64
 from tests.block_tools import BlockTools
-from tests.setup_nodes import setup_two_nodes, test_constants, bt
+from tests.setup_nodes import setup_two_nodes, test_constants
+from tests.block_tools import BlockTools
 from tests.wallet_tools import WalletTool
+
+bt = BlockTools()
 
 
 @pytest.fixture(scope="module")
