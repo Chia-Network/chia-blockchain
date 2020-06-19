@@ -384,7 +384,7 @@ class FullNode:
             self.sync_store, fork_point_height, uint32(tip_height), self.blockchain,
         )
         block_processor_task = asyncio.create_task(block_processor.process())
-
+        lca = self.blockchain.lca_block
         while not self.sync_peers_handler.done():
             # Periodically checks for done, timeouts, shutdowns, new peers or disconnected peers.
             if self._shut_down:
@@ -414,6 +414,15 @@ class FullNode:
 
             async for msg in self.sync_peers_handler._add_to_request_sets():
                 yield msg  # Send more requests if we can
+
+            new_lca = self.blockchain.lca_block
+            if new_lca != lca:
+                new_lca_req = wallet_protocol.NewLCA(
+                    new_lca.header_hash, new_lca.height, new_lca.weight,
+                )
+                yield OutboundMessage(
+                    NodeType.WALLET, Message("new_lca", new_lca_req), Delivery.BROADCAST
+                )
 
             self._state_changed("block")
             await asyncio.sleep(5)

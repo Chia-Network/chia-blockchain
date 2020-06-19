@@ -11,7 +11,8 @@ from src.rpc.farmer_rpc_client import FarmerRpcClient
 from src.rpc.harvester_rpc_client import HarvesterRpcClient
 from src.rpc.rpc_server import start_rpc_server
 from src.util.ints import uint16
-from tests.setup_nodes import setup_farmer_harvester, test_constants
+from src.util.config import load_config
+from tests.setup_nodes import setup_farmer_harvester, test_constants, bt
 from tests.block_tools import get_plot_dir
 from tests.time_out_assert import time_out_assert
 
@@ -40,14 +41,28 @@ class TestRpc:
         def stop_node_cb_2():
             pass
 
+        config = load_config(bt.root_path, "config.yaml")
+        hostname = config["self_hostname"]
+        daemon_port = config["daemon_port"]
+
         farmer_rpc_api = FarmerRpcApi(farmer)
         harvester_rpc_api = HarvesterRpcApi(harvester)
 
         rpc_cleanup = await start_rpc_server(
-            farmer_rpc_api, test_rpc_port, stop_node_cb, connect_to_daemon=False
+            farmer_rpc_api,
+            hostname,
+            daemon_port,
+            test_rpc_port,
+            stop_node_cb,
+            connect_to_daemon=False,
         )
         rpc_cleanup_2 = await start_rpc_server(
-            harvester_rpc_api, test_rpc_port_2, stop_node_cb_2, connect_to_daemon=False
+            harvester_rpc_api,
+            hostname,
+            daemon_port,
+            test_rpc_port_2,
+            stop_node_cb_2,
+            connect_to_daemon=False,
         )
 
         try:
@@ -65,6 +80,11 @@ class TestRpc:
                 return len(await client.get_latest_challenges()) > 0
 
             await time_out_assert(5, have_challenges, True)
+
+            async def have_plots():
+                return len((await client_2.get_plots())["plots"]) > 0
+
+            await time_out_assert(5, have_plots, True)
 
             res = await client_2.get_plots()
             num_plots = len(res["plots"])

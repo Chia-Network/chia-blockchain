@@ -3,6 +3,8 @@ import asyncio
 import time
 from time import struct_time, localtime
 import datetime
+from src.util.config import load_config
+from src.util.default_root import DEFAULT_ROOT_PATH
 
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
 
@@ -31,7 +33,6 @@ def make_parser(parser):
         help="Set the port where the Full Node is hosting the RPC interface."
         + "See the rpc_port under full_node in config.yaml. Defaults to 8555",
         type=int,
-        default=8555,
     )
     parser.set_defaults(function=netspace)
 
@@ -44,11 +45,16 @@ def human_local_time(timestamp):
 async def netstorge_async(args, parser):
     """
     Calculates the estimated space on the network given two block header hases
-    # TODO: add config.yaml check for rpc-port
-            add help on failure/no args
+    # TODO: add help on failure/no args
     """
     try:
-        client = await FullNodeRpcClient.create(args.rpc_port)
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+        self_hostname = config["self_hostname"]
+        if "rpc_port" not in args or args.rpc_port is None:
+            rpc_port = config["full_node"]["rpc_port"]
+        else:
+            rpc_port = args.rpc_port
+        client = await FullNodeRpcClient.create(self_hostname, rpc_port)
 
         # print (args.blocks)
         if args.delta_block_height:

@@ -83,6 +83,8 @@ class Service:
         net_config = load_config(root_path, "config.yaml")
         ping_interval = net_config.get("ping_interval")
         network_id = net_config.get("network_id")
+        self.self_hostname = net_config.get("self_hostname")
+        self.daemon_port = net_config.get("daemon_port")
         assert ping_interval is not None
         assert network_id is not None
 
@@ -104,6 +106,7 @@ class Service:
             network_id,
             root_path,
             config,
+            name=f"{service_name}_server",
         )
         for _ in ["set_server", "_set_server"]:
             f = getattr(api, _, None)
@@ -153,7 +156,13 @@ class Service:
             if self._rpc_info:
                 rpc_api, rpc_port = self._rpc_info
                 self._rpc_task = asyncio.create_task(
-                    start_rpc_server(rpc_api(self._api), rpc_port, self.stop)
+                    start_rpc_server(
+                        rpc_api(self._api),
+                        self.self_hostname,
+                        self.daemon_port,
+                        rpc_port,
+                        self.stop,
+                    )
                 )
 
             self._reconnect_tasks = [
@@ -173,14 +182,19 @@ class Service:
             except NotImplementedError:
                 self._log.info("signal handlers unsupported")
 
+            self._log.warning("Waiting for server sockets")
             for _ in self._server_sockets:
                 await _.wait_closed()
 
+            self._log.warning("Waiting for server")
             await self._server.await_closed()
+            self._log.warning("Waiting for stop cb")
             if self._stop_callback:
                 self._stop_callback()
+            self._log.warning("Waiting for await closed")
             if self._await_closed_callback:
                 await self._await_closed_callback()
+            self._log.warning("Done")
 
         self._task = asyncio.create_task(_run())
 
@@ -193,12 +207,16 @@ class Service:
     def stop(self):
         if not self._is_stopping:
             self._is_stopping = True
+            self._log.warning("stopping sockets")
             for _ in self._server_sockets:
                 _.close()
+            self._log.warning("stopping recond")
             for _ in self._reconnect_tasks:
                 _.cancel()
+            self._log.warning("stopping server")
             self._server.close_all()
             self._api._shut_down = True
+            self._log.warning("stopping intro")
             if self._introducer_poll_task:
                 self._introducer_poll_task.cancel()
 

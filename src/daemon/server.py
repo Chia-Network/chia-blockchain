@@ -74,6 +74,9 @@ class WebSocketServer:
         self.connections: Dict[str, Any] = dict()  # service_name : WebSocket
         self.remote_address_map: Dict[str, str] = dict()  # remote_address: service_name
         self.ping_job = None
+        net_config = load_config(root_path, "config.yaml")
+        self.self_hostname = net_config["self_hostname"]
+        self.daemon_port = net_config["daemon_port"]
 
     async def start(self):
         self.log.info("Starting Daemon Server")
@@ -92,7 +95,7 @@ class WebSocketServer:
             self.log.info("Not implemented")
 
         self.websocket_server = await websockets.serve(
-            self.safe_handle, "localhost", 55400
+            self.safe_handle, self.self_hostname, self.daemon_port
         )
 
         self.log.info("Waiting Daemon WebSocketServer closure")

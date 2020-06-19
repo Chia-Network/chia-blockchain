@@ -74,6 +74,7 @@ class WalletNode:
     # How far away from LCA we must be to perform a full sync. Before then, do a short sync,
     # which is consecutive requests for the previous block
     short_sync_threshold: int
+    sync_generator_task: Optional[AsyncGenerator]
     _shut_down: bool
     root_path: Path
     state_changed_callback: Optional[Callable]
@@ -111,7 +112,7 @@ class WalletNode:
         self.potential_header_hashes = {}
         self.state_changed_callback = None
         self.wallet_state_manager = None
-
+        self.sync_generator_task = None
         self.server = None
 
     async def _start(self, public_key_fingerprint: Optional[int] = None) -> bool:
@@ -150,6 +151,22 @@ class WalletNode:
 
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
         return True
+
+    def _close(self):
+        self._shut_down = True
+        if self.wallet_state_manager is None:
+            return
+        self.wsm_close_task = asyncio.create_task(
+            self.wallet_state_manager.close_all_stores()
+        )
+        self.global_connections.close_all_connections()
+
+    async def _await_closed(self):
+        if self.sync_generator_task is not None:
+            await self.sync_generator_task.aclose()
+        if self.wallet_state_manager is None:
+            return
+        await self.wsm_close_task
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -238,21 +255,6 @@ class WalletNode:
 
         for msg in messages:
             yield msg
-
-    def _close(self):
-        self._shut_down = True
-        if self.wallet_state_manager is None:
-            return
-        self.wsm_close_task = asyncio.create_task(
-            self.wallet_state_manager.close_all_stores()
-        )
-        for connection in self.global_connections.get_connections():
-            connection.close()
-
-    async def _await_closed(self):
-        if self.wallet_state_manager is None:
-            return
-        await self.wsm_close_task
 
     def _num_needed_peers(self) -> int:
         if self.wallet_state_manager is None:
@@ -446,6 +448,8 @@ class WalletNode:
                             len(query_heights),
                         ),
                     ):
+                        if self._shut_down:
+                            return
                         blocks_missing = not self.potential_blocks_received[
                             uint32(query_heights[batch_start_index])
                         ].is_set()
@@ -551,11 +555,6 @@ class WalletNode:
         ):
             total_time_slept = 0
             while True:
-                if self._shut_down:
-                    return
-                if total_time_slept > timeout:
-                    raise TimeoutError("Took too long to fetch blocks")
-
                 # Request batches that we don't have yet
                 for batch_start in range(
                     height_checkpoint,
@@ -564,6 +563,10 @@ class WalletNode:
                         tip_height + 1,
                     ),
                 ):
+                    if self._shut_down:
+                        return
+                    if total_time_slept > timeout:
+                        raise TimeoutError("Took too long to fetch blocks")
                     batch_end = min(batch_start + 1, tip_height + 1)
                     blocks_missing = any(
                         [
@@ -784,7 +787,9 @@ class WalletNode:
             try:
                 # Performs sync, and catch exceptions so we don't close the connection
                 self.wallet_state_manager.set_sync_mode(True)
-                async for ret_msg in self._sync():
+                self.sync_generator_task = self._sync()
+                assert self.sync_generator_task is not None
+                async for ret_msg in self.sync_generator_task:
                     yield ret_msg
             except Exception as e:
                 tb = traceback.format_exc()

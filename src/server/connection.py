@@ -39,10 +39,7 @@ class Connection:
         self.reader = sr
         self.writer = sw
         socket = self.writer.get_extra_info("socket")
-        if socket is not None:
-            self.local_host = socket.getsockname()[0]
-        else:
-            self.local_host = "localhost"
+        self.local_host = socket.getsockname()[0]
         self.local_port = server_port
         self.peer_host = self.writer.get_extra_info("peername")[0]
         self.peer_port = self.writer.get_extra_info("peername")[1]
@@ -92,7 +89,10 @@ class Connection:
         return Message(full_message_loaded["f"], full_message_loaded["d"])
 
     def close(self):
+        # Closes the connection. This should only be called by PeerConnections class.
+        self.log.warning("STARTIN TO CLOSE CON")
         self.writer.close()
+        self.log.warning("CLOSED CON")
 
     def __str__(self) -> str:
         if self.peer_server_port is not None:
