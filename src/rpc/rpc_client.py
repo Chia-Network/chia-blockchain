@@ -21,9 +21,9 @@ class RpcClient:
     closing_task: Optional[asyncio.Task]
 
     @classmethod
-    async def create(cls, port: uint16):
+    async def create(cls, self_hostname: str, port: uint16):
         self = cls()
-        self.url = f"http://localhost:{str(port)}/"
+        self.url = f"http://{self_hostname}:{str(port)}/"
         self.session = aiohttp.ClientSession()
         self.closing_task = None
         return self

@@ -1,7 +1,8 @@
 const net = require("net");
 const port = process.env.PORT ? process.env.PORT - 100 : 3000;
+const config = require("./util/config");
 
-process.env.ELECTRON_START_URL = `http://localhost:${port}`;
+process.env.ELECTRON_START_URL = `http://${config.self_hostname}:${port}`;
 
 const client = new net.Socket();
 

@@ -10,6 +10,8 @@ from src.types.header_block import HeaderBlock
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.util.byte_types import hexstr_to_bytes
 from src.util.config import str2bool
+from src.util.config import load_config
+from src.util.default_root import DEFAULT_ROOT_PATH
 
 
 def make_parser(parser):
@@ -90,8 +92,15 @@ def make_parser(parser):
 async def show_async(args, parser):
 
     # TODO read configuration for rpc_port instead of assuming default
+
     try:
-        client = await FullNodeRpcClient.create(args.rpc_port)
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+        self_hostname = config["self_hostname"]
+        if "rpc_port" not in args or args.rpc_port is None:
+            rpc_port = config["full_node"]["rpc_port"]
+        else:
+            rpc_port = args.rpc_port
+        client = await FullNodeRpcClient.create(self_hostname, rpc_port)
 
         if args.state:
             blockchain_state = await client.get_blockchain_state()

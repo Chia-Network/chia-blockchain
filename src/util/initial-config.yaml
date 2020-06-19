@@ -1,18 +1,20 @@
 network_id: testnet  # testnet/mainnet
 # Send a ping to all peers after ping_interval seconds
 ping_interval: 120
+self_hostname: &self_hostname "localhost"
+daemon_port: 55400
 
 # Controls logging of all servers (harvester, farmer, etc..). Each one can be overriden.
 logging: &logging
   log_stdout: False  # If True, outputs to stdout instead of a file
   log_filename: "log/debug.log"
-  log_level: "INFO"  # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
+  log_level: "WARNING"  # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
 
 harvester:
   # The harvester server (if run) will run on this port
   port: 8448
   farmer_peer:
-    host: 127.0.0.1
+    host: *self_hostname
     port: 8447
 
   # If True, starts an RPC server at the following port
@@ -39,10 +41,10 @@ farmer:
   port: 8447
   # The farmer will attempt to connect to this full node and harvester
   full_node_peer:
-    host: 127.0.0.1
+    host: *self_hostname
     port: 8444
   harvester_peer:
-    host: 127.0.0.1
+    host: *self_hostname
     port: 8448
 
   # Replace this with a real puzzle hash
@@ -82,22 +84,22 @@ timelord:
   # For each client, an IP is provided, together with the estimated iterations per second.
   vdf_clients:
     ip:
-      - 127.0.0.1
+      - *self_hostname
     ips_estimate:
       - 100000
   full_node_peer:
-      host: 127.0.0.1
+      host: *self_hostname
       port: 8444
   # Maximum number of seconds allowed for a client to reconnect to the server.
   max_connection_time: 60
   # The ip and port where the TCP clients will connect.
   vdf_server:
-    host: 127.0.0.1
+    host: *self_hostname
     port: 8000
   logging: *logging
   # Set 'True' if clients connecting to this timelord have a high number of CPUs.
   fast_algorithm: False
-  # If set 'True', the timelord will create compact proofs of time, instead of 
+  # If set 'True', the timelord will create compact proofs of time, instead of
   # extending the chain. The attribute 'fast_algorithm' won't apply if timelord
   # is running in sanitizer_mode.
   sanitizer_mode: False
@@ -136,7 +138,7 @@ full_node:
   recent_peer_threshold: 6000
 
   # Send to the timelords uncompact blocks once every 'send_uncompact_interval' seconds
-  # Set to 0 if you don't use this feature. The recommended value is 
+  # Set to 0 if you don't use this feature. The recommended value is
   # send_uncompact_interval=1800
   send_uncompact_interval: 1800
 
@@ -144,16 +146,16 @@ full_node:
   connect_to_timelord: False
 
   farmer_peer:
-      host: 127.0.0.1
+      host: *self_hostname
       port: 8447
   timelord_peer:
-      host: 127.0.0.1
+      host: *self_hostname
       port: 8446
   introducer_peer:
       host: introducer.beta.chia.net  # Chia AWS introducer IPv4/IPv6
       port: 8444
   wallet_peer:
-    host: 127.0.0.1
+    host: *self_hostname
     port: 8449
   logging: *logging
 
@@ -173,7 +175,7 @@ ui:
   logging: *logging
 
 introducer:
-  host: 127.0.0.1
+  host: *self_hostname
   port: 8445
   max_peers_to_send: 20
   # The introducer will only return peers who it has seen in the last
@@ -196,7 +198,7 @@ wallet:
   initial_num_public_keys: 100
 
   full_node_peer:
-    host: 127.0.0.1
+    host: *self_hostname
     port: 8444
 
   testing: False

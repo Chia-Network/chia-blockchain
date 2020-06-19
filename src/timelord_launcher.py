@@ -66,11 +66,14 @@ async def spawn_process(host, port, counter):
         await asyncio.sleep(0.1)
 
 
-async def spawn_all_processes(config):
+async def spawn_all_processes(config, net_config):
     await asyncio.sleep(15)
     port = config["port"]
     process_count = config["process_count"]
-    awaitables = [spawn_process("127.0.0.1", port, i) for i in range(process_count)]
+    awaitables = [
+        spawn_process(net_config["self_hostname"], port, i)
+        for i in range(process_count)
+    ]
     await asyncio.gather(*awaitables)
 
 
@@ -78,6 +81,7 @@ def main():
     root_path = DEFAULT_ROOT_PATH
     setproctitle("chia_timelord_launcher")
     config = load_config(root_path, "config.yaml", "timelord_launcher")
+    net_config = load_config(root_path, "config.yaml")
     initialize_logging("TLauncher", config["logging"], root_path)
 
     def signal_received():
@@ -92,7 +96,7 @@ def main():
         log.info("signal handlers unsupported")
 
     try:
-        loop.run_until_complete(spawn_all_processes(config))
+        loop.run_until_complete(spawn_all_processes(config, net_config))
     finally:
         log.info("Launcher fully closed.")
         loop.close()
