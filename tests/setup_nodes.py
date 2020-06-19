@@ -27,6 +27,8 @@ from tests.time_out_assert import time_out_assert
 bt = BlockTools()
 
 root_path = bt.root_path
+global_config = load_config(bt.root_path, "config.yaml")
+self_hostname = global_config["self_hostname"]
 
 test_constants: Dict[str, Any] = {
     "DIFFICULTY_STARTING": 1,
@@ -77,7 +79,7 @@ async def setup_full_node(
     periodic_introducer_poll = None
     if introducer_port is not None:
         periodic_introducer_poll = (
-            PeerInfo("127.0.0.1", introducer_port),
+            PeerInfo(self_hostname, introducer_port),
             30,
             config["target_peer_count"],
         )
@@ -161,13 +163,13 @@ async def setup_wallet_node(
     periodic_introducer_poll = None
     if introducer_port is not None:
         periodic_introducer_poll = (
-            PeerInfo("127.0.0.1", introducer_port),
+            PeerInfo(self_hostname, introducer_port),
             30,
             config["target_peer_count"],
         )
     connect_peers: List[PeerInfo] = []
     if full_node_port is not None:
-        connect_peers = [PeerInfo("127.0.0.1", full_node_port)]
+        connect_peers = [PeerInfo(self_hostname, full_node_port)]
 
     started = asyncio.Event()
 
@@ -235,7 +237,7 @@ async def setup_harvester(port, farmer_port, dic={}):
         advertised_port=port,
         service_name="harvester",
         server_listen_ports=[port],
-        connect_peers=[PeerInfo("127.0.0.1", farmer_port)],
+        connect_peers=[PeerInfo(self_hostname, farmer_port)],
         auth_connect_peers=True,
         start_callback=start_callback,
         stop_callback=stop_callback,
@@ -263,7 +265,7 @@ async def setup_farmer(port, full_node_port: Optional[uint16] = None, dic={}):
     ]
     config_pool["xch_target_puzzle_hash"] = bt.fee_target.hex()
     if full_node_port:
-        connect_peers = [PeerInfo("127.0.0.1", full_node_port)]
+        connect_peers = [PeerInfo(self_hostname, full_node_port)]
     else:
         connect_peers = []
 
@@ -337,7 +339,7 @@ async def setup_introducer(port, dic={}):
 
 
 async def setup_vdf_clients(port):
-    vdf_task = asyncio.create_task(spawn_process("127.0.0.1", port, 1))
+    vdf_task = asyncio.create_task(spawn_process(self_hostname, port, 1))
 
     def stop():
         asyncio.create_task(kill_processes())
@@ -381,7 +383,7 @@ async def setup_timelord(port, full_node_port, sanitizer, dic={}):
         advertised_port=port,
         service_name="timelord",
         server_listen_ports=[port],
-        connect_peers=[PeerInfo("127.0.0.1", full_node_port)],
+        connect_peers=[PeerInfo(self_hostname, full_node_port)],
         auth_connect_peers=False,
         start_callback=start_callback,
         stop_callback=stop_callback,

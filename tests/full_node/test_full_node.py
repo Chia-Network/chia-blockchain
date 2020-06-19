@@ -29,6 +29,7 @@ from tests.block_tools import BlockTools
 from tests.wallet_tools import WalletTool
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.coin import hash_coin_list
+from src.util.config import load_config
 from src.util.merkle_set import (
     MerkleSet,
     confirm_included_already_hashed,
@@ -94,8 +95,10 @@ class TestFullNodeProtocol:
     async def test_new_tip(self, two_nodes, wallet_blocks):
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         _, _, blocks = wallet_blocks
+        config = load_config(bt.root_path, "config.yaml")
+        hostname = config["self_hostname"]
 
-        await server_2.start_client(PeerInfo("127.0.0.1", uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(hostname, uint16(server_1._port)), None)
 
         async def num_connections():
             return len(full_node_1.global_connections.get_connections())

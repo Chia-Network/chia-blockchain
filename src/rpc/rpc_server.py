@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Any, List
+from typing import Callable, Dict, Any, List, Optional
 
 import aiohttp
 import logging
@@ -25,7 +25,7 @@ class RpcServer:
         self.stop_cb: Callable = stop_cb
         self.log = log
         self.shut_down = False
-        self.websocket = None
+        self.websocket: Optional[aiohttp.ClientWebSocketResponse] = None
         self.service_name = service_name
 
     async def stop(self):
@@ -35,7 +35,8 @@ class RpcServer:
 
     async def _state_changed(self, *args):
         change = args[0]
-        assert self.websocket is not None
+        if self.websocket is None:
+            return
         payloads: List[str] = await self.rpc_api._state_changed(*args)
 
         if change == "add_connection" or change == "close_connection":
@@ -51,7 +52,6 @@ class RpcServer:
                 self.log.warning(f"Sending data failed. Exception {type(e)}.")
 
     def state_changed(self, *args):
-
         if self.websocket is None:
             return
         asyncio.create_task(self._state_changed(*args))
@@ -193,7 +193,7 @@ class RpcServer:
 
         await ws.close()
 
-    async def connect_to_daemon(self):
+    async def connect_to_daemon(self, self_hostname: str, daemon_port: uint16):
         while True:
             session = None
             try:
@@ -201,7 +201,9 @@ class RpcServer:
                     break
                 session = aiohttp.ClientSession()
                 async with session.ws_connect(
-                    "ws://127.0.0.1:55400", autoclose=False, autoping=True
+                    f"ws://{self_hostname}:{daemon_port}",
+                    autoclose=False,
+                    autoping=True,
                 ) as ws:
                     self.websocket = ws
                     await self.connection(ws)
@@ -215,7 +217,12 @@ class RpcServer:
 
 
 async def start_rpc_server(
-    rpc_api: Any, rpc_port: uint16, stop_cb: Callable, connect_to_daemon=True
+    rpc_api: Any,
+    self_hostname: str,
+    daemon_port: uint16,
+    rpc_port: uint16,
+    stop_cb: Callable,
+    connect_to_daemon=True,
 ):
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
@@ -250,10 +257,12 @@ async def start_rpc_server(
 
     app.add_routes(routes)
     if connect_to_daemon:
-        daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon())
+        daemon_connection = asyncio.create_task(
+            rpc_server.connect_to_daemon(self_hostname, daemon_port)
+        )
     runner = aiohttp.web.AppRunner(app, access_log=None)
     await runner.setup()
-    site = aiohttp.web.TCPSite(runner, "localhost", int(rpc_port))
+    site = aiohttp.web.TCPSite(runner, self_hostname, int(rpc_port))
     await site.start()
 
     async def cleanup():
