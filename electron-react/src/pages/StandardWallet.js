@@ -181,6 +181,9 @@ const useStyles = makeStyles(theme => ({
     fontSize: "14px",
     width: 50,
     overflowWrap: "break-word" /* Renamed property in CSS3 draft spec */
+  },
+  amountField: {
+    paddingRight: 20
   }
 }));
 
@@ -318,6 +321,7 @@ const SendCard = props => {
   const classes = useStyles();
   var address_input = null;
   var amount_input = null;
+  var fee_input = null;
   const dispatch = useDispatch();
 
   const sending_transaction = useSelector(
@@ -356,6 +360,7 @@ const SendCard = props => {
     }
     let puzzle_hash = address_input.value.trim();
     const amount = chia_to_mojo(amount_input.value);
+    const fee = chia_to_mojo(fee_input.value);
 
     if (puzzle_hash.includes("colour")) {
       dispatch(
@@ -382,9 +387,10 @@ const SendCard = props => {
       return;
     }
 
-    dispatch(send_transaction(id, amount_value, 0, puzzle_hash));
+    dispatch(send_transaction(id, amount_value, fee, puzzle_hash));
     address_input.value = "";
     amount_input.value = "";
+    fee_input.value = "";
   }
 
   return (
@@ -425,17 +431,33 @@ const SendCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
             <Box display="flex">
-              <Box flexGrow={1}>
+              <Box flexGrow={6}>
                 <TextField
                   id="filled-secondary"
                   variant="filled"
                   color="secondary"
                   fullWidth
                   disabled={sending_transaction}
+                  className={classes.amountField}
+                  margin="normal"
                   inputRef={input => {
                     amount_input = input;
                   }}
                   label="Amount"
+                />
+              </Box>
+              <Box flexGrow={6}>
+                <TextField
+                  id="filled-secondary"
+                  variant="filled"
+                  fullWidth
+                  color="secondary"
+                  margin="normal"
+                  disabled={sending_transaction}
+                  inputRef={input => {
+                    fee_input = input;
+                  }}
+                  label="Fee"
                 />
               </Box>
             </Box>
