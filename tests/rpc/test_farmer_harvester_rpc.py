@@ -66,8 +66,8 @@ class TestRpc:
         )
 
         try:
-            client = await FarmerRpcClient.create(test_rpc_port)
-            client_2 = await HarvesterRpcClient.create(test_rpc_port_2)
+            client = await FarmerRpcClient.create("localhost", test_rpc_port)
+            client_2 = await HarvesterRpcClient.create("localhost", test_rpc_port_2)
 
             async def have_connections():
                 return len(await client.get_connections()) > 0

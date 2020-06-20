@@ -476,12 +476,12 @@ async def setup_full_system(dic={}):
         setup_introducer(21233),
         setup_harvester(21234, 21235, dic),
         setup_farmer(21235, uint16(21237), dic),
-        setup_timelord(21236, 21237, False, dic),
         setup_vdf_clients(8000),
+        setup_timelord(21236, 21237, False, dic),
         setup_full_node("blockchain_test.db", 21237, 21233, False, 10, dic),
         setup_full_node("blockchain_test_2.db", 21238, 21233, False, 10, dic),
-        setup_timelord(21239, 21238, True, dic),
         setup_vdf_clients(7999),
+        setup_timelord(21239, 21238, True, dic),
     ]
 
     introducer, introducer_server = await node_iters[0].__anext__()
@@ -493,12 +493,12 @@ async def setup_full_system(dic={}):
 
     await time_out_assert(10, num_connections, 1)
 
-    timelord, timelord_server = await node_iters[3].__anext__()
-    vdf = await node_iters[4].__anext__()
+    vdf = await node_iters[3].__anext__()
+    timelord, timelord_server = await node_iters[4].__anext__()
     node1, node1_server = await node_iters[5].__anext__()
     node2, node2_server = await node_iters[6].__anext__()
-    sanitizer, sanitizer_server = await node_iters[7].__anext__()
-    vdf_sanitizer = await node_iters[8].__anext__()
+    vdf_sanitizer = await node_iters[7].__anext__()
+    sanitizer, sanitizer_server = await node_iters[8].__anext__()
 
     yield (
         node1,
