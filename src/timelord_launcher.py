@@ -2,6 +2,7 @@ import signal
 import asyncio
 import logging
 import pathlib
+import socket
 import pkg_resources
 from src.util.logging import initialize_logging
 from src.util.config import load_config
@@ -43,8 +44,9 @@ async def spawn_process(host, port, counter):
         try:
             dirname = path_to_vdf_client.parent
             basename = path_to_vdf_client.name
+            resolved = socket.gethostbyname(host)
             proc = await asyncio.create_subprocess_shell(
-                f"{basename} {host} {port} {counter}",
+                f"{basename} {resolved} {port} {counter}",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 env={"PATH": dirname},

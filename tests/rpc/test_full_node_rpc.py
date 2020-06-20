@@ -63,7 +63,7 @@ class TestRpc:
         )
 
         try:
-            client = await FullNodeRpcClient.create(test_rpc_port)
+            client = await FullNodeRpcClient.create("localhost", test_rpc_port)
             state = await client.get_blockchain_state()
             assert state["lca"].header_hash is not None
             assert not state["sync"]["sync_mode"]
