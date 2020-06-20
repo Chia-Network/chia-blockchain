@@ -90,9 +90,7 @@ class Connection:
 
     def close(self):
         # Closes the connection. This should only be called by PeerConnections class.
-        self.log.warning("STARTIN TO CLOSE CON")
         self.writer.close()
-        self.log.warning("CLOSED CON")
 
     def __str__(self) -> str:
         if self.peer_server_port is not None:

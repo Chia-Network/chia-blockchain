@@ -210,7 +210,8 @@ class RpcServer:
                 self.websocket = None
                 await session.close()
             except Exception as e:
-                self.log.warning(f"Exception: {e}")
+                tb = traceback.format_exc()
+                self.log.warning(f"Exception: {tb} {type(e)}")
                 if session is not None:
                     await session.close()
             await asyncio.sleep(1)

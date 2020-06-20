@@ -2,6 +2,7 @@ import asyncio
 import io
 import logging
 import time
+import socket
 from typing import Dict, List, Optional, Tuple
 
 
@@ -27,7 +28,7 @@ class Timelord:
 
         self.config: Dict = config
         self.ips_estimate = {
-            k: v
+            socket.gethostbyname(k): v
             for k, v in list(
                 zip(
                     self.config["vdf_clients"]["ip"],
