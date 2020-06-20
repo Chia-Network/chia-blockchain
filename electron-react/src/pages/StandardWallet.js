@@ -111,6 +111,7 @@ const useStyles = makeStyles(theme => ({
     paddingRight: theme.spacing(0)
   },
   paper: {
+    marginTop: theme.spacing(2),
     padding: theme.spacing(2),
     display: "flex",
     overflow: "auto",
@@ -359,6 +360,19 @@ const SendCard = props => {
       return;
     }
     let puzzle_hash = address_input.value.trim();
+    if (
+      amount_input.value === "" ||
+      Number(amount_input.value) === 0 ||
+      !Number(amount_input.value) ||
+      isNaN(Number(amount_input.value))
+    ) {
+      dispatch(openDialog("Please enter a valid numeric amount"));
+      return;
+    }
+    if (fee_input.value === "" || isNaN(Number(fee_input.value))) {
+      dispatch(openDialog("Please enter a valid numeric fee"));
+      return;
+    }
     const amount = chia_to_mojo(amount_input.value);
     const fee = chia_to_mojo(fee_input.value);
 
@@ -382,12 +396,9 @@ const SendCard = props => {
       return;
     }
     const amount_value = parseFloat(Number(amount));
-    if (amount_value === 0 || !amount_value || isNaN(amount_value)) {
-      dispatch(openDialog("Please enter a valid numeric amount"));
-      return;
-    }
+    const fee_value = parseFloat(Number(fee));
 
-    dispatch(send_transaction(id, amount_value, fee, puzzle_hash));
+    dispatch(send_transaction(id, amount_value, fee_value, puzzle_hash));
     address_input.value = "";
     amount_input.value = "";
     fee_input.value = "";
@@ -535,8 +546,10 @@ const TransactionTable = props => {
       return "Outgoing";
     }
   };
-  const confirmed_to_string = confirmed => {
-    return confirmed ? "Confirmed" : "Pending";
+  const confirmed_to_string = tx => {
+    return tx.confirmed
+      ? "Confirmed at height " + tx.confirmed_at_index
+      : "Pending";
   };
 
   return (
@@ -576,7 +589,7 @@ const TransactionTable = props => {
                 {unix_to_short_date(tx.created_at_time)}
               </TableCell>
               <TableCell className={classes.cell_short}>
-                {confirmed_to_string(tx.confirmed)}
+                {confirmed_to_string(tx)}
               </TableCell>
               <TableCell className={classes.cell_short}>
                 {mojo_to_chia_string(tx.amount)}
@@ -601,7 +614,6 @@ const AddressCard = props => {
   const dispatch = useDispatch();
 
   function newAddress() {
-    console.log("Dispatch for id: " + id);
     dispatch(get_puzzle_hash(id));
   }
 

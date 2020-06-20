@@ -1373,6 +1373,7 @@ class WalletStateManager:
     ) -> List[Tuple[str, MempoolInclusionStatus, Optional[str]]]:
         tr: Optional[TransactionRecord] = await self.get_transaction(tx_id)
         ret_list = []
+        self.log.warning(f"TR: {tr}")
         if tr is not None:
             for (name, ss, err) in tr.sent_to:
                 ret_list.append((name, MempoolInclusionStatus(ss), err))

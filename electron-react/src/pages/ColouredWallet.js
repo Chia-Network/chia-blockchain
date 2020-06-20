@@ -188,6 +188,9 @@ const useStyles = makeStyles(theme => ({
     overflowWrap: "break-word",
     marginTop: theme.spacing(2),
     paddingBottom: 20
+  },
+  amountField: {
+    paddingRight: 20
   }
 }));
 
@@ -293,12 +296,22 @@ const BalanceCardSubSection = props => {
   );
 };
 
+function get_cc_unit(name) {
+  var cc_unit = name;
+  if (cc_unit.length > 10) {
+    cc_unit = cc_unit.substring(0, 10) + "...";
+  }
+  return cc_unit;
+}
+
 const BalanceCard = props => {
   var id = props.wallet_id;
   let name = useSelector(state => state.wallet_state.wallets[id].name);
   if (!name) {
     name = "";
   }
+  const cc_unit = get_cc_unit(name);
+
   const balance = useSelector(
     state => state.wallet_state.wallets[id].balance_total
   );
@@ -312,11 +325,6 @@ const BalanceCard = props => {
     state => state.wallet_state.wallets[id].balance_change
   );
   const balance_ptotal = balance + balance_pending;
-
-  var cc_unit = name;
-  if (cc_unit.length > 10) {
-    cc_unit = cc_unit.substring(0, 10) + "...";
-  }
 
   const balancebox_1 = "<table width='100%'>";
   const balancebox_2 = "<tr><td align='left'>";
@@ -400,7 +408,13 @@ const SendCard = props => {
   const classes = useStyles();
   var address_input = null;
   var amount_input = null;
+  var fee_input = null;
   const dispatch = useDispatch();
+  let name = useSelector(state => state.wallet_state.wallets[id].name);
+  if (!name) {
+    name = "";
+  }
+  const cc_unit = get_cc_unit(name);
 
   const sending_transaction = useSelector(
     state => state.wallet_state.sending_transaction
@@ -440,7 +454,22 @@ const SendCard = props => {
       return;
     }
     let puzzle_hash = address_input.value.trim();
+    if (
+      amount_input.value === "" ||
+      Number(amount_input.value) === 0 ||
+      !Number(amount_input.value) ||
+      isNaN(Number(amount_input.value))
+    ) {
+      dispatch(openDialog("Please enter a valid numeric amount"));
+      return;
+    }
+    if (fee_input.value === "" || isNaN(Number(fee_input.value))) {
+      dispatch(openDialog("Please enter a valid numeric fee"));
+      return;
+    }
+
     const amount = chia_to_mojo(amount_input.value);
+    const fee = chia_to_mojo(fee_input.value);
 
     if (
       puzzle_hash.includes("chia_addr") ||
@@ -476,12 +505,9 @@ const SendCard = props => {
       return;
     }
     const amount_value = parseFloat(Number(amount));
-    if (amount_value === 0 || !amount_value || isNaN(amount_value)) {
-      dispatch(openDialog("Please enter a valid numeric amount"));
-      return;
-    }
+    const fee_value = parseFloat(Number(fee));
 
-    dispatch(cc_spend(id, puzzle_hash, amount_value));
+    dispatch(cc_spend(id, puzzle_hash, amount_value, fee_value));
     address_input.value = "";
     amount_input.value = "";
   }
@@ -510,6 +536,7 @@ const SendCard = props => {
                   variant="filled"
                   color="secondary"
                   fullWidth
+                  disabled={sending_transaction}
                   inputRef={input => {
                     address_input = input;
                   }}
@@ -523,16 +550,33 @@ const SendCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
             <Box display="flex">
-              <Box flexGrow={1}>
+              <Box flexGrow={6}>
                 <TextField
                   id="filled-secondary"
                   variant="filled"
                   color="secondary"
                   fullWidth
+                  disabled={sending_transaction}
+                  margin="normal"
+                  className={classes.amountField}
                   inputRef={input => {
                     amount_input = input;
                   }}
-                  label="Amount"
+                  label={"Amount (" + cc_unit + ")"}
+                />
+              </Box>
+              <Box flexGrow={6}>
+                <TextField
+                  id="filled-secondary"
+                  variant="filled"
+                  fullWidth
+                  color="secondary"
+                  margin="normal"
+                  disabled={sending_transaction}
+                  inputRef={input => {
+                    fee_input = input;
+                  }}
+                  label="Fee (XCH)"
                 />
               </Box>
             </Box>
@@ -670,7 +714,6 @@ const AddressCard = props => {
   const dispatch = useDispatch();
 
   function newAddress() {
-    // console.log("Dispatch for id: " + id);
     dispatch(get_puzzle_hash(id));
   }
 
