@@ -354,7 +354,7 @@ const SendCard = props => {
     if (sending_transaction) {
       return;
     }
-    let puzzle_hash = address_input.value;
+    let puzzle_hash = address_input.value.trim();
     const amount = chia_to_mojo(amount_input.value);
 
     if (puzzle_hash.includes("colour")) {
