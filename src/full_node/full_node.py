@@ -573,6 +573,9 @@ class FullNode:
         # Ignore if syncing
         if self.sync_store.get_sync_mode():
             return
+        # Ignore if already seen
+        if self.mempool_manager.seen(tx.transaction.name()):
+            return
         async with self.blockchain.lock:
             cost, status, error = await self.mempool_manager.add_spendbundle(
                 tx.transaction

@@ -139,24 +139,26 @@ export const get_connection_info = () => {
   return action;
 };
 
-export const create_coloured_coin = amount => {
+export const create_coloured_coin = (amount, fee) => {
   var action = walletMessage();
   action.message.command = "create_new_wallet";
   action.message.data = {
     wallet_type: "cc_wallet",
     mode: "new",
-    amount: amount
+    amount: amount,
+    fee: fee
   };
   return action;
 };
 
-export const create_cc_for_colour = colour => {
+export const create_cc_for_colour = (colour, fee) => {
   var action = walletMessage();
   action.message.command = "create_new_wallet";
   action.message.data = {
     wallet_type: "cc_wallet",
     mode: "existing",
-    colour: colour
+    colour: colour,
+    fee: fee
   };
   return action;
 };
@@ -182,13 +184,14 @@ export const rename_cc_wallet = (wallet_id, name) => {
   return action;
 };
 
-export const cc_spend = (wallet_id, puzzle_hash, amount) => {
+export const cc_spend = (wallet_id, puzzle_hash, amount, fee) => {
   var action = walletMessage();
   action.message.command = "cc_spend";
   action.message.data = {
     wallet_id: wallet_id,
     innerpuzhash: puzzle_hash,
-    amount: amount
+    amount: amount,
+    fee: fee
   };
   return action;
 };
