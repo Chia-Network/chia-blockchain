@@ -133,7 +133,7 @@ full_node:
   # How often to connect to introducer if we need to learn more peers
   introducer_connect_interval: 500
   # Continue trying to connect to more peers until this number of connections
-  target_peer_count: 10
+  target_peer_count: 15
   # Only connect to peers who we have heard about in the last recent_peer_threshold seconds
   recent_peer_threshold: 6000
 
