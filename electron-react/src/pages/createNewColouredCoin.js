@@ -19,11 +19,13 @@ import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { useStyles } from "./CreateWallet";
 import { create_coloured_coin } from "../modules/message";
 import { chia_to_mojo } from "../util/chia";
+import { openDialog } from "../modules/dialogReducer";
 
 export const customStyles = makeStyles(theme => ({
   input: {
     marginLeft: theme.spacing(3),
     marginRight: theme.spacing(3),
+    paddingRight: theme.spacing(3),
     height: 56
   },
   send: {
@@ -45,6 +47,7 @@ export const CreateNewCCWallet = () => {
   const custom = customStyles();
   const dispatch = useDispatch();
   var amount_input = null;
+  var fee_input = null;
   var pending = useSelector(state => state.create_options.pending);
   var created = useSelector(state => state.create_options.created);
 
@@ -53,9 +56,23 @@ export const CreateNewCCWallet = () => {
   }
 
   function create() {
+    if (
+      amount_input.value === "" ||
+      Number(amount_input.value) === 0 ||
+      !Number(amount_input.value) ||
+      isNaN(Number(amount_input.value))
+    ) {
+      dispatch(openDialog("Please enter a valid numeric amount"));
+      return;
+    }
+    if (fee_input.value === "" || isNaN(Number(fee_input.value))) {
+      dispatch(openDialog("Please enter a valid numeric fee"));
+      return;
+    }
     dispatch(createState(true, true));
     var amount = chia_to_mojo(amount_input.value);
-    dispatch(create_coloured_coin(amount));
+    var fee = chia_to_mojo(fee_input.value);
+    dispatch(create_coloured_coin(amount, fee));
   }
 
   return (
@@ -87,6 +104,19 @@ export const CreateNewCCWallet = () => {
                 amount_input = input;
               }}
               label="Amount"
+            />
+          </Box>
+          <Box flexGrow={1}>
+            <TextField
+              className={custom.input}
+              id="filled-secondary"
+              variant="filled"
+              color="secondary"
+              fullWidth
+              inputRef={input => {
+                fee_input = input;
+              }}
+              label="Fee"
             />
           </Box>
           <Box>

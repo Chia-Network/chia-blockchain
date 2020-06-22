@@ -116,7 +116,6 @@ class WalletRpcApi:
                 "reason": f"Failed to generate signed transaction {e}",
             }
             return data
-
         if tx is None:
             data = {
                 "status": "FAILED",
@@ -141,7 +140,7 @@ class WalletRpcApi:
             )
 
             if len(sent_to) == 0:
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(1)
                 continue
             status, err = sent_to[0][1], sent_to[0][2]
             if status == MempoolInclusionStatus.SUCCESS:

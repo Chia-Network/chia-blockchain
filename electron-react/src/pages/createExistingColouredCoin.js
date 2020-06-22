@@ -17,12 +17,15 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { useStyles } from "./CreateWallet";
+import { chia_to_mojo } from "../util/chia";
 import { create_cc_for_colour } from "../modules/message";
+import { openDialog } from "../modules/dialogReducer";
 
 export const customStyles = makeStyles(theme => ({
   input: {
     marginLeft: theme.spacing(3),
     marginRight: theme.spacing(3),
+    paddingRight: theme.spacing(3),
     height: 56
   },
   send: {
@@ -48,6 +51,7 @@ export const CreateExistingCCWallet = () => {
   const custom = customStyles();
   const dispatch = useDispatch();
   var colour_string = null;
+  var fee_input = null;
   var open = false;
   var pending = useSelector(state => state.create_options.pending);
   var created = useSelector(state => state.create_options.created);
@@ -57,9 +61,14 @@ export const CreateExistingCCWallet = () => {
   }
 
   function create() {
+    if (fee_input.value === "" || isNaN(Number(fee_input.value))) {
+      dispatch(openDialog("Please enter a valid numeric fee"));
+      return;
+    }
     dispatch(createState(true, true));
     const colour = colour_string.value;
-    dispatch(create_cc_for_colour(colour));
+    var fee = chia_to_mojo(fee_input.value);
+    dispatch(create_cc_for_colour(colour, fee));
   }
 
   return (
@@ -91,6 +100,19 @@ export const CreateExistingCCWallet = () => {
                 colour_string = input;
               }}
               label="Colour String"
+            />
+          </Box>
+          <Box flexGrow={1}>
+            <TextField
+              className={custom.input}
+              id="filled-secondary"
+              variant="filled"
+              color="secondary"
+              fullWidth
+              inputRef={input => {
+                fee_input = input;
+              }}
+              label="Fee"
             />
           </Box>
           <Box>

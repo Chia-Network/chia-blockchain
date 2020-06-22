@@ -573,7 +573,11 @@ class FullNode:
         # Ignore if syncing
         if self.sync_store.get_sync_mode():
             return
+
         async with self.blockchain.lock:
+            # Ignore if we have already added this transaction
+            if self.mempool_manager.get_spendbundle(tx.transaction.name()) is not None:
+                return
             cost, status, error = await self.mempool_manager.add_spendbundle(
                 tx.transaction
             )
