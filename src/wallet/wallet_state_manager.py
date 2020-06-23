@@ -862,7 +862,7 @@ class WalletStateManager:
         # Validate PoS and get quality
         quality_str: Optional[
             bytes32
-        ] = header_block.proof_of_space.verify_and_get_quality_string()
+        ] = header_block.proof_of_space.verify_and_get_quality_string(self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"])
         if quality_str is None:
             return False
 
@@ -1090,7 +1090,7 @@ class WalletStateManager:
             assert difficulty is not None
 
             # Validate pospace to get iters
-            quality_str = header_block.proof_of_space.verify_and_get_quality_string()
+            quality_str = header_block.proof_of_space.verify_and_get_quality_string(self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"])
             assert quality_str is not None
 
             if (

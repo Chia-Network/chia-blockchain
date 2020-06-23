@@ -218,6 +218,7 @@ class BlockTools:
                 block_list[-1].proof_of_space,
                 curr_difficulty,
                 block_list[-1].proof_of_time.number_of_iterations,
+                test_constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]
             )
 
         starting_height = block_list[-1].height + 1
@@ -515,7 +516,7 @@ class BlockTools:
             challenge_hash, pool_pk, plot_pk, selected_prover.get_size(), proof_xs
         )
         number_iters: uint64 = pot_iterations.calculate_iterations(
-            proof_of_space, difficulty, min_iters
+            proof_of_space, difficulty, min_iters, test_constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]
         )
 
         int_size = (test_constants["DISCRIMINANT_SIZE_BITS"] + 16) >> 4
