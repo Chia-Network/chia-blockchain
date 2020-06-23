@@ -439,7 +439,7 @@ class WalletRpcApi:
             success,
             discrepancies,
             error,
-        ) = await self.service.trade_manager.get_discrepancies_for_offer(file_path)
+        ) = await self.service.wallet_state_manager.trade_manager.get_discrepancies_for_offer(file_path)
 
         if success:
             response = {"success": True, "discrepancies": discrepancies}
@@ -455,9 +455,9 @@ class WalletRpcApi:
             success,
             spend_bundle,
             error,
-        ) = await self.service.trade_manager.create_offer_for_ids(offer)
+        ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(offer)
         if success:
-            self.service.trade_manager.write_offer_to_disk(
+            self.service.wallet_state_manager.trade_manager.write_offer_to_disk(
                 Path(file_name), spend_bundle
             )
             response = {"success": success}
@@ -468,7 +468,7 @@ class WalletRpcApi:
 
     async def respond_to_offer(self, request):
         file_path = Path(request["filename"])
-        success, reason = await self.service.trade_manager.respond_to_offer(file_path)
+        success, trade_record, reason = await self.service.wallet_state_manager.trade_manager.respond_to_offer(file_path)
         if success:
             response = {"success": success}
         else:
