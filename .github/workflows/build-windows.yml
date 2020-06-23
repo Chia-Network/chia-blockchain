@@ -13,7 +13,8 @@ jobs:
         with:
           access_token: ${{ github.token }}
 
-      - uses: actions/checkout@v1
+      - name: Checkout Code
+        uses: actions/checkout@v1
         with:
           fetch-depth: 0
           # we need fetch-depth 0 so setuptools_scm can resolve tags

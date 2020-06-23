@@ -4,10 +4,11 @@
 ## Linter GitHub Actions ##
 ###########################
 ###########################
-name: Lint Code Base
+name: Lint Code Base with GithHub Super Linter
 
 #
 # Documentation:
+# https://github.com/github/super-linter
 # https://help.github.com/en/articles/workflow-syntax-for-github-actions
 #
 

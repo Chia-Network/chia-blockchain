@@ -243,25 +243,25 @@ ignored-classes=optparse.Values,thread._local,_thread._local
 # (useful for modules/projects where namespaces are manipulated during runtime
 # and thus existing member attributes cannot be deduced by static analysis. It
 # supports qualified module names, as well as Unix pattern matching.
-ignored-modules=blspy
-                chiabip158
-                chiapos
-                chiavdf
-                cryptography
-                aiohttp
-                websockets
-                cbor2
-                keyring
-                bitstring
-                clvm_tools
-                setproctitle
-                clvm
-                colorlog
-                concurrent_log_handler
-                aiosqlite
-                sortedcontainers
-                aiter
-                miniupnpc
+ignored-modules=blspy,
+                chiabip158,
+                chiapos,
+                chiavdf,
+                cryptography,
+                aiohttp,
+                websockets,
+                cbor2,
+                keyring,
+                bitstring,
+                clvm_tools,
+                setproctitle,
+                clvm,
+                colorlog,
+                concurrent_log_handler,
+                aiosqlite,
+                sortedcontainers,
+                aiter,
+                miniupnpc,
                 pytest
 
 
