@@ -199,7 +199,7 @@ class Farmer:
         if difficulty == 0:
             raise RuntimeError("Did not find challenge")
 
-        computed_quality_string = response.proof.verify_and_get_quality_string()
+        computed_quality_string = response.proof.verify_and_get_quality_string(self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"])
         if computed_quality_string is None:
             raise RuntimeError("Invalid proof of space")
 
