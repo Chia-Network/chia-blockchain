@@ -17,61 +17,13 @@ from src.util.config import load_config, save_config
 from src.util.api_decorators import api_request
 from src.util.ints import uint8
 from src.util.path import path_from_root
+from src.util.plot_utils import load_plots
 
 log = logging.getLogger(__name__)
 
 
-def load_plots(
-    config_file: Dict,
-    plot_config_file: Dict,
-    pool_pubkeys: Optional[List[PublicKey]],
-    root_path: Path,
-) -> Tuple[Dict[str, DiskProver], List[str], List[str]]:
-    provers: Dict[str, DiskProver] = {}
-    failed_to_open_filenames: List[str] = []
-    not_found_filenames: List[str] = []
-    for partial_filename_str, plot_config in plot_config_file["plots"].items():
-        plot_root = path_from_root(root_path, config_file.get("plot_root", "."))
-        partial_filename = plot_root / partial_filename_str
-        potential_filenames = [
-            partial_filename,
-            path_from_root(plot_root, partial_filename_str),
-        ]
-        pool_pubkey = PublicKey.from_bytes(bytes.fromhex(plot_config["pool_pk"]))
-
-        # Only use plots that correct pools associated with them
-        if pool_pubkeys is not None and pool_pubkey not in pool_pubkeys:
-            log.warning(
-                f"Plot {partial_filename} has a pool key that is not in the farmer's pool_pk list."
-            )
-            continue
-
-        found = False
-        failed_to_open = False
-
-        for filename in potential_filenames:
-            if filename.exists():
-                try:
-                    provers[partial_filename_str] = DiskProver(str(filename))
-                except Exception as e:
-                    log.error(f"Failed to open file {filename}. {e}")
-                    failed_to_open = True
-                    failed_to_open_filenames.append(partial_filename_str)
-                    break
-                log.info(
-                    f"Loaded plot {filename} of size {provers[partial_filename_str].get_size()}"
-                )
-                found = True
-                break
-        if not found and not failed_to_open:
-            log.warning(f"Plot at {potential_filenames} does not exist.")
-            not_found_filenames.append(partial_filename_str)
-    return (provers, failed_to_open_filenames, not_found_filenames)
-
-
 class Harvester:
     config: Dict
-    plot_config: Dict
     provers: Dict[str, DiskProver]
     failed_to_open_filenames: List[str]
     not_found_filenames: List[str]
@@ -85,7 +37,6 @@ class Harvester:
 
     def __init__(self, config: Dict, plot_config: Dict, root_path: Path):
         self.config = config
-        self.plot_config = plot_config
         self.root_path = root_path
 
         # From filename to prover
@@ -162,64 +113,28 @@ class Harvester:
         return (response_plots, self.failed_to_open_filenames, self.not_found_filenames)
 
     def _refresh_plots(self, reload_config_file=True):
-        if reload_config_file:
-            self.plot_config = load_config(self.root_path, "plots.yaml")
         (
             self.provers,
             self.failed_to_open_filenames,
             self.not_found_filenames,
-        ) = load_plots(self.config, self.plot_config, self.pool_pubkeys, self.root_path)
+        ) = load_plots(self.config, self.farmer_pubkeys, self.root_path)
         self._state_changed("plots")
 
     def _delete_plot(self, str_path: str):
         if str_path in self.provers:
             del self.provers[str_path]
 
-        plot_root = path_from_root(self.root_path, self.config.get("plot_root", "."))
-
         # Remove absolute and relative paths
         if Path(str_path).exists():
             Path(str_path).unlink()
 
-        if (plot_root / Path(str_path)).exists():
-            (plot_root / Path(str_path)).unlink()
-
-        try:
-            # Removes the plot from config.yaml
-            plot_config = load_config(self.root_path, "plots.yaml")
-            if str_path in plot_config["plots"]:
-                del plot_config["plots"][str_path]
-                save_config(self.root_path, "plots.yaml", plot_config)
-                self.plot_config = plot_config
-        except (FileNotFoundError, KeyError) as e:
-            log.warning(f"Could not remove {str_path} {e}")
-            return False
         self._state_changed("plots")
         return True
 
-    def _add_plot(
-        self, str_path: str, plot_sk: PrivateKey, pool_pk: Optional[PublicKey]
-    ) -> bool:
-        plot_config = load_config(self.root_path, "plots.yaml")
-
-        if pool_pk is None:
-            for pool_pk_cand in self.pool_pubkeys:
-                pr = DiskProver(str_path)
-                if (
-                    ProofOfSpace.calculate_plot_seed(
-                        pool_pk_cand, plot_sk.get_public_key()
-                    )
-                    == pr.get_id()
-                ):
-                    pool_pk = pool_pk_cand
-                    break
-        if pool_pk is None:
-            return False
-        plot_config["plots"][str_path] = {
-            "sk": bytes(plot_sk).hex(),
-            "pool_pk": bytes(pool_pk).hex(),
-        }
-        save_config(self.root_path, "plots.yaml", plot_config)
+    def _add_plot_directory(self, str_path: str) -> bool:
+        config = load_config(self.root_path, "config.yaml")
+        config["harvester"]["plot_directories"].append(str_path)
+        save_config(self.root_path, "config.yaml", config)
         self._refresh_plots()
         return True
 
@@ -238,7 +153,7 @@ class Harvester:
         which must be put into the plots, before the plotting process begins. We cannot
         use any plots which don't have one of the pool keys.
         """
-        self.pool_pubkeys = harvester_handshake.pool_pubkeys
+        self.farmer_pubkeys = harvester_handshake.farmer_pubkeys
         self._refresh_plots(reload_config_file=False)
         if len(self.provers) == 0:
             log.warning(

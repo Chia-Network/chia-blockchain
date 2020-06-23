@@ -184,6 +184,28 @@ class Keychain:
         assert key.get_private_key() == key_not_extended
         self.add_private_key(key)
 
+    def get_first_private_key(
+        self,
+    ) -> Optional[Tuple[ExtendedPrivateKey, Optional[bytes]]]:
+        index = 0
+        seed_hex = self._get_stored_entropy(self._get_private_key_seed_user(index))
+        while index <= MAX_KEYS:
+            if seed_hex is not None and len(seed_hex) > 0:
+                key = ExtendedPrivateKey.from_seed(hexstr_to_bytes(seed_hex))
+                return (key, hexstr_to_bytes(seed_hex))
+            index += 1
+            seed_hex = self._get_stored_entropy(self._get_private_key_seed_user(index))
+
+        index = 0
+        key_hex = self._get_stored_entropy(self._get_private_key_user(index))
+        while index <= MAX_KEYS:
+            if key_hex is not None and len(key_hex) > 0:
+                key = ExtendedPrivateKey.from_bytes(hexstr_to_bytes(key_hex))
+                return (key, None)
+            index += 1
+            key_hex = self._get_stored_entropy(self._get_private_key_user(index))
+        return None
+
     def get_all_private_keys(self) -> List[Tuple[ExtendedPrivateKey, Optional[bytes]]]:
         """
         Returns all private keys (both seed-derived keys and raw ExtendedPrivateKeys), and
@@ -217,6 +239,12 @@ class Keychain:
         Returns all public keys (both seed-derived keys and raw keys).
         """
         return [sk.get_extended_public_key() for (sk, _) in self.get_all_private_keys()]
+
+    def get_first_public_key(self) -> Optional[ExtendedPublicKey]:
+        pair = self.get_first_private_key()
+        if pair is None:
+            return None
+        return pair[0].get_extended_public_key()
 
     def delete_key_by_fingerprint(self, fingerprint: int):
         """

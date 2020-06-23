@@ -15,16 +15,11 @@ def service_kwargs_for_harvester(root_path=DEFAULT_ROOT_PATH):
     service_name = "harvester"
     config = load_config_cli(root_path, "config.yaml", service_name)
 
-    try:
-        plot_config = load_config(root_path, "plots.yaml")
-    except FileNotFoundError:
-        raise RuntimeError("Plots not generated. Run chia-create-plots")
-
     connect_peers = [
         PeerInfo(config["farmer_peer"]["host"], config["farmer_peer"]["port"])
     ]
 
-    api = Harvester(config, plot_config, root_path)
+    api = Harvester(config, root_path)
 
     async def start_callback():
         await api._start()

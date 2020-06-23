@@ -139,7 +139,7 @@ async def setup_wallet_node(
     keychain.add_private_key_seed(key_seed)
     consensus_constants = constants_for_dic(dic)
     db_path_key_suffix = str(
-        keychain.get_all_public_keys()[0].get_public_key().get_fingerprint()
+        keychain.get_first_public_key().get_public_key().get_fingerprint()
     )
     db_name = f"test-wallet-db-{port}"
     db_path = bt.root_path / f"test-wallet-db-{port}-{db_path_key_suffix}"
@@ -252,9 +252,6 @@ async def setup_farmer(port, full_node_port: Optional[uint16] = None, dic={}):
     config_pool = load_config(bt.root_path, "config.yaml", "pool")
     consensus_constants = constants_for_dic(dic)
     config["xch_target_puzzle_hash"] = bt.fee_target.hex()
-    config["pool_public_keys"] = [
-        bytes(epk.get_public_key()).hex() for epk in bt.keychain.get_all_public_keys()
-    ]
     config_pool["xch_target_puzzle_hash"] = bt.fee_target.hex()
     if full_node_port:
         connect_peers = [PeerInfo(self_hostname, full_node_port)]
