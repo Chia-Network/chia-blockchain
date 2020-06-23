@@ -15,11 +15,8 @@ from src.types.spend_bundle import SpendBundle
 from src.types.header import Header
 from src.util.api_decorators import api_request
 from src.util.ints import uint64
-from tests.block_tools import BlockTools
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
-
-bt = BlockTools()
 
 
 class FullNodeSimulator(FullNode):
@@ -131,6 +128,8 @@ class FullNodeSimulator(FullNode):
             program = best_solution_program(bundle)
             dict_h[top_tip.height + 1] = (program, bundle.aggregated_signature)
             fees = bundle.fees()
+        from tests.block_tools import BlockTools
+        bt = BlockTools()
 
         more_blocks = bt.get_consecutive_blocks(
             self.constants.copy(),
@@ -157,6 +156,8 @@ class FullNodeSimulator(FullNode):
 
         current_blocks = await self.get_current_blocks(top_tip)
         block_count = new_index - old_index
+        from tests.block_tools import BlockTools
+        bt = BlockTools()
 
         more_blocks = bt.get_consecutive_blocks(
             self.constants.copy(),
