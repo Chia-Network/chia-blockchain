@@ -97,7 +97,7 @@ class BlockTools:
             plot_dir = get_plot_dir()
             mkdir(plot_dir)
             filenames: List[str] = [
-                f"genesis-plots-{k}{std_hash(int.to_bytes(i, 4, 'big')).hex()}.dat"
+                f"genesis-plots-{k}{std_hash(int.to_bytes(i, 4, 'big')).hex()}.plot"
                 for i in range(num_plots)
             ]
             done_filenames = set()
@@ -147,9 +147,7 @@ class BlockTools:
             if len(private_keys) == 0:
                 raise RuntimeError("Keys not generated. Run `chia generate keys`")
 
-            self.prover_dict, _, _ = load_plots(
-                normal_config["harvester"], plot_config, pool_pubkeys, root_path
-            )
+            self.prover_dict, _, _ = load_plots(normal_config, pool_pubkeys, root_path)
 
             new_plot_config: Dict = {"plots": {}}
             for key, value in plot_config["plots"].items():

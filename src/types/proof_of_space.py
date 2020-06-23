@@ -14,13 +14,16 @@ from src.util.hash import std_hash
 @streamable
 class ProofOfSpace(Streamable):
     challenge_hash: bytes32
-    pool_pubkey: PublicKey
+    farmer_puzzle_hash: bytes32
+    pool_puzzle_hash: bytes32
     plot_pubkey: PublicKey
     size: uint8
     proof: bytes
 
     def get_plot_seed(self) -> bytes32:
-        return self.calculate_plot_seed(self.pool_pubkey, self.plot_pubkey)
+        return self.calculate_plot_seed(
+            self.farmer_puzzle_hash, self.pool_puzzle_hash, self.plot_pubkey
+        )
 
     def verify_and_get_quality_string(self) -> Optional[bytes32]:
         v: Verifier = Verifier()
@@ -33,5 +36,22 @@ class ProofOfSpace(Streamable):
         return quality_str
 
     @staticmethod
-    def calculate_plot_seed(pool_pubkey: PublicKey, plot_pubkey: PublicKey) -> bytes32:
-        return bytes32(std_hash(bytes(pool_pubkey) + bytes(plot_pubkey)))
+    def calculate_plot_seed(
+        farmer_puzzle_hash: bytes32,
+        pool_puzzle_hash: bytes32,
+        plot_public_key: PublicKey,
+    ) -> bytes32:
+        return bytes32(
+            std_hash(farmer_puzzle_hash + pool_puzzle_hash + bytes(plot_public_key))
+        )
+
+    @staticmethod
+    def generate_plot_pubkey(
+        harvester_pk: PublicKey, farmer_pk: PublicKey
+    ) -> PublicKey:
+        # Insecure aggregation is fine here, since the harvester can choose any public key
+        # she wants. Insecure refers to suceptibility to the rogue pk attack:
+        # https://crypto.stanford.edu/~dabo/pubs/papers/BLSmultisig.html
+        # This however, is not relevant since the consensus will just verify the 2/2 signature as
+        # if it was a normal signature.
+        return PublicKey.aggregate_insecure([harvester_pk, farmer_pk])

@@ -15,7 +15,7 @@ class HarvesterRpcApi:
             "/get_plots": self.get_plots,
             "/refresh_plots": self.refresh_plots,
             "/delete_plot": self.delete_plot,
-            "/add_plot": self.add_plot,
+            "/add_plot_directory": self.add_plot_directory,
         }
 
     async def _state_changed(self, change: str) -> List[str]:
@@ -43,12 +43,7 @@ class HarvesterRpcApi:
         success = self.service._delete_plot(filename)
         return {"success": success}
 
-    async def add_plot(self, request: Dict) -> Dict:
-        filename = request["filename"]
-        if "pool_pk" in request:
-            pool_pk = PublicKey.from_bytes(bytes.fromhex(request["pool_pk"]))
-        else:
-            pool_pk = None
-        plot_sk = PrivateKey.from_bytes(bytes.fromhex(request["plot_sk"]))
-        success = self.service._add_plot(filename, plot_sk, pool_pk)
+    async def add_plot_directory(self, request: Dict) -> Dict:
+        dirname = request["dirname"]
+        success = self.service._add_plot_directory(dirname)
         return {"success": success}
