@@ -419,10 +419,10 @@ class TradeManager:
 
         return True
 
-    async def respond_to_offer(self, file_path: Path) -> Tuple[bool, Optional[str]]:
+    async def respond_to_offer(self, file_path: Path) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
         has_wallets = await self.maybe_create_wallets_for_offer(file_path)
         if not has_wallets:
-            return False, "Unknown Error"
+            return False, None, "Unknown Error"
         trade_offer_hex = file_path.read_text()
         trade_offer: TradeRecord = TradeRecord.from_bytes(
             bytes.fromhex(trade_offer_hex)
@@ -505,7 +505,7 @@ class TradeManager:
                     1
                 )
                 if coinsol.coin in [record.coin for record in unspent]:
-                    return False, "can't respond to own offer"
+                    return False, None, "can't respond to own offer"
                 if chia_discrepancy is None:
                     chia_discrepancy = cc_wallet_puzzles.get_output_discrepancy_for_puzzle_and_solution(
                         coinsol.coin, puzzle, solution
@@ -542,7 +542,7 @@ class TradeManager:
                     ].generate_zero_val_coin(False, to_exclude)
                     if zero_spend_bundle is None:
                         return (
-                            False,
+                            False, None,
                             "Unable to generate zero value coin. Confirm that you have chia available",
                         )
                     zero_spend_list.append(zero_spend_bundle)
@@ -555,7 +555,7 @@ class TradeManager:
                             my_cc_spends.add(add)
 
             if my_cc_spends == set() or my_cc_spends is None:
-                return False, "insufficient funds"
+                return False, None, "insufficient funds"
 
             auditor = my_cc_spends.pop()
             auditor_inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(
@@ -838,4 +838,4 @@ class TradeManager:
         for tx in my_tx_records:
             await self.wallet_state_manager.add_transaction(tx)
 
-        return True, None
+        return True, trade_record, None
