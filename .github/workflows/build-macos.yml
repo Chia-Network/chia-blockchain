@@ -22,9 +22,6 @@ jobs:
 
     - uses: actions/checkout@v1
 
-    - name: Lint Code Base
-      uses: docker://github/super-linter:v2.2.0
-
     - name: Setup Python environment
       uses: actions/setup-python@v1.1.1
       with:
@@ -74,10 +71,6 @@ jobs:
         p12-file-base64: ${{ secrets.APPLE_DEV_ID_APP }}
         p12-password: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
 
-#    - name: Install MacOS dependencies
-#      run: |
-#        brew update
-
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
@@ -90,18 +83,18 @@ jobs:
         sh install-timelord.sh
         ./vdf_bench square_asm 400000
 
-#    - name: Install developer requirements
-#      run: |
-#        . ./activate
-#        venv/bin/python -m pip install -r requirements-dev.txt
+    - name: Install developer requirements
+      run: |
+        . ./activate
+        venv/bin/python -m pip install -r requirements-dev.txt
 
-#    - name: Lint source with flake8
-#      run: |
-#        ./venv/bin/flake8 src
+    - name: Lint source with flake8
+      run: |
+        ./venv/bin/flake8 src
 
-#    - name: Lint source with mypy
-#      run: |
-#        ./venv/bin/mypy src tests
+    - name: Lint source with mypy
+      run: |
+        ./venv/bin/mypy src tests
 
     - name: Setup kernel for react native, increase watchers
       run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf

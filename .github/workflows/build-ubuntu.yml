@@ -22,6 +22,9 @@ jobs:
 
     - uses: actions/checkout@v1
 
+    - name: Lint Code Base
+      uses: docker://github/super-linter:v2.2.0
+
     - name: Setup Python environment
       uses: actions/setup-python@v1.1.1
       with:
@@ -70,13 +73,13 @@ jobs:
         . ./activate
         venv/bin/python -m pip install -r requirements-dev.txt
 
-    - name: Lint source with flake8
-      run: |
-        ./venv/bin/flake8 src
+#    - name: Lint source with flake8
+#      run: |
+#        ./venv/bin/flake8 src
 
-    - name: Lint source with mypy
-      run: |
-        ./venv/bin/mypy src tests
+#    - name: Lint source with mypy
+#      run: |
+#        ./venv/bin/mypy src tests
 
     - name: Test blockchain code with pytest
       run: |
