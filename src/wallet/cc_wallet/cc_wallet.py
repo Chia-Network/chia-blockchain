@@ -252,7 +252,6 @@ class CCWallet:
             if coin.parent_coin_info == name:
                 search_for_parent = False
                 break
-        # breakpoint()
 
         if search_for_parent:
             data: Dict[str, Any] = {
@@ -558,7 +557,7 @@ class CCWallet:
 
         record_list: Set[
             WalletCoinRecord
-        ] = await self.wallet_state_manager.wallet_store.get_unspent_coins_for_wallet(
+        ] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
             self.wallet_info.id
         )
 
@@ -581,13 +580,13 @@ class CCWallet:
                 return None
 
             self.log.info(f"About to select coins for amount {amount}")
-            unspent: List[WalletCoinRecord] = await self.get_cc_spendable_coins()
+            spendable: List[WalletCoinRecord] = await self.get_cc_spendable_coins()
 
             sum = 0
             used_coins: Set = set()
 
             # Use older coins first
-            unspent.sort(key=lambda r: r.confirmed_block_index)
+            spendable.sort(key=lambda r: r.confirmed_block_index)
 
             # Try to use coins from the store, if there isn't enough of "unused"
             # coins use change coins that are not confirmed yet
@@ -596,7 +595,7 @@ class CCWallet:
             ] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
                 self.wallet_info.id
             )
-            for coinrecord in unspent:
+            for coinrecord in spendable:
                 if sum >= amount and len(used_coins) > 0:
                     break
                 if coinrecord.coin.name() in unconfirmed_removals:
