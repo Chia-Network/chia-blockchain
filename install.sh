@@ -66,6 +66,7 @@ if [ ! -f "activate" ]; then
     ln -s venv/bin/activate .
 fi
 echo "Python version is $INSTALL_PYTHON_VERSION"
+# shellcheck disable=SC1091
 . ./activate
 # pip 20.x+ supports Linux binary wheels
 pip install --upgrade pip
