@@ -34,9 +34,6 @@ class ProofOfSpaceArrived:
 @cbor_message
 class RequestHeaderHash:
     challenge_hash: bytes32
-    coinbase: Coin
-    coinbase_signature: BLSSignature
-    fees_target_puzzle_hash: bytes32
     proof_of_space: ProofOfSpace
 
 

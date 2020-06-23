@@ -8,10 +8,12 @@ from src.types.header import Header
 from src.types.sized_bytes import bytes32
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.condition_tools import created_outputs_for_conditions_dict
-from src.util.ints import uint32, uint128
+from src.util.ints import uint32, uint128, uint64
 from src.util.streamable import Streamable, streamable
 from src.types.proof_of_space import ProofOfSpace
 from src.types.proof_of_time import ProofOfTime
+from src.consensus.coinbase import create_coinbase_coin, create_fees_coin
+from src.consensus.block_rewards import calculate_block_reward, calculate_base_fee
 
 
 def additions_for_npc(npc_list: List[NPC]) -> List[Coin]:
@@ -51,6 +53,19 @@ class FullBlock(Streamable):
     def header_hash(self) -> bytes32:
         return self.header.header_hash
 
+    def get_coinbase(self) -> Coin:
+        br = calculate_block_reward(self.height)
+        return create_coinbase_coin(
+            self.height, self.proof_of_space.pool_puzzle_hash, br
+        )
+
+    def get_fees_coin(self) -> Coin:
+        return create_fees_coin(
+            self.height,
+            self.proof_of_space.pool_puzzle_hash,
+            self.header.data.transaction_fees,
+        )
+
     def additions(self) -> List[Coin]:
         additions: List[Coin] = []
 
@@ -63,8 +78,9 @@ class FullBlock(Streamable):
             if npc_list is not None:
                 additions.extend(additions_for_npc(npc_list))
 
-        additions.append(self.header.data.coinbase)
-        additions.append(self.header.data.fees_coin)
+
+        additions.append(self.get_coinbase())
+        additions.append(self.get_fees_coin())
 
         return additions
 

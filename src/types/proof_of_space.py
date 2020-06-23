@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from blspy import PublicKey
+from blspy import PublicKey, InsecureSignature
 
 from chiapos import Verifier
 from src.types.sized_bytes import bytes32
@@ -17,6 +17,7 @@ class ProofOfSpace(Streamable):
     farmer_puzzle_hash: bytes32
     pool_puzzle_hash: bytes32
     plot_pubkey: PublicKey
+    challenge_signature: InsecureSignature
     size: uint8
     proof: bytes
 

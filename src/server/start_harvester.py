@@ -1,7 +1,7 @@
 from src.harvester import Harvester
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
-from src.util.config import load_config, load_config_cli
+from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.rpc.harvester_rpc_api import HarvesterRpcApi
 

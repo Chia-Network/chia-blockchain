@@ -3,7 +3,6 @@ import time
 from typing import Dict, List, Optional, Tuple
 import blspy
 
-from src.consensus.block_rewards import calculate_block_reward
 from src.consensus.pot_iterations import calculate_iterations_quality
 from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_min_iters
 from src.types.challenge import Challenge
@@ -44,12 +43,7 @@ async def validate_unfinished_block_header(
             return (Err.INVALID_POSPACE_HASH, None)
 
         # 2. The coinbase signature must be valid, according the the pool public key
-        pair = block_header.data.coinbase_signature.PkMessagePair(
-            proof_of_space.pool_pubkey, block_header.data.coinbase.name(),
-        )
-
-        if not block_header.data.coinbase_signature.validate([pair]):
-            return (Err.INVALID_COINBASE_SIGNATURE, None)
+        # TODO: change numbers
 
         # 3. Check harvester signature of header data is valid based on harvester key
         if not block_header.harvester_signature.verify(
@@ -110,21 +104,7 @@ async def validate_unfinished_block_header(
             return (Err.INVALID_HEIGHT, None)
 
     # 13. The coinbase reward must match the block schedule
-    coinbase_reward = calculate_block_reward(block_header.height)
-    if coinbase_reward != block_header.data.coinbase.amount:
-        return (Err.INVALID_COINBASE_AMOUNT, None)
-
-    # 13b. The coinbase parent id must be the height
-    if block_header.data.coinbase.parent_coin_info != block_header.height.to_bytes(
-        32, "big"
-    ):
-        return (Err.INVALID_COINBASE_PARENT, None)
-
-    # 13c. The fees coin parent id must be hash(hash(height))
-    if block_header.data.fees_coin.parent_coin_info != std_hash(
-        std_hash(uint32(block_header.height))
-    ):
-        return (Err.INVALID_FEES_COIN_PARENT, None)
+    # TODO: change numbers
 
     difficulty: uint64
     if prev_header_block is not None:
