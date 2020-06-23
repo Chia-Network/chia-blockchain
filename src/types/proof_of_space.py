@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from blspy import PublicKey, InsecureSignature
+from bitstring import BitArray
+from blspy import PublicKey, InsecureSignature, Util
 
 from chiapos import Verifier
 from src.types.sized_bytes import bytes32
@@ -26,12 +27,17 @@ class ProofOfSpace(Streamable):
             self.farmer_puzzle_hash, self.pool_puzzle_hash, self.plot_pubkey
         )
 
-    def verify_and_get_quality_string(self) -> Optional[bytes32]:
+    def verify_and_get_quality_string(self, num_zero_bits: uint8) -> Optional[bytes32]:
         v: Verifier = Verifier()
         plot_seed: bytes32 = self.get_plot_seed()
         quality_str = v.validate_proof(
             plot_seed, self.size, self.challenge_hash, bytes(self.proof)
         )
+        if not self.challenge_signature.verify([Util.hash256(self.challenge_hash)], [self.plot_pubkey]):
+            return None
+        h = BitArray(std_hash(bytes(self.challenge_signature)))
+        if h[:num_zero_bits].int != 0:
+            return None
         if not quality_str:
             return None
         return quality_str
