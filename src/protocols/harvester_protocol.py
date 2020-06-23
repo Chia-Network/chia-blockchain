@@ -17,7 +17,7 @@ Protocol between harvester and farmer.
 @dataclass(frozen=True)
 @cbor_message
 class HarvesterHandshake:
-    pool_pubkeys: List[PublicKey]
+    farmer_pubkeys: List[PublicKey]
 
 
 @dataclass(frozen=True)

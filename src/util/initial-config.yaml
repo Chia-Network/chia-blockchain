@@ -21,11 +21,10 @@ harvester:
   start_rpc_server: True
   rpc_port: 8560
 
-  # Location of all the plots, default ./plots, for relative paths in plots.yaml.
-  # plot_root: "/mnt/pos"
   logging: *logging
-  # new_plot_root is the default location where new plots are created by "chia-create-plots"
-  new_plot_root: plots
+
+  # Plots are searched for in the following directories
+  plot_directories: []
 
   ssl:
     crt: "trusted.crt"
@@ -53,8 +52,6 @@ farmer:
   # If True, starts an RPC server at the following port
   start_rpc_server: True
   rpc_port: 8559
-
-  pool_public_keys: []
 
   # To send a share to a pool, a block must be faster than this, in seconds
   pool_share_threshold: 50000

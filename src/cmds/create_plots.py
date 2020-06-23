@@ -1,5 +1,4 @@
 import argparse
-from copy import deepcopy
 from pathlib import Path
 from datetime import datetime
 from secrets import token_bytes
@@ -12,8 +11,11 @@ from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.config import config_path_for_filename, load_config, save_config
 from src.util.default_root import DEFAULT_ROOT_PATH
+from src.util.path import mkdir
+from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.util.keychain import Keychain
-from src.util.path import mkdir, path_from_root
+from src.types.BLSSignature import BLSPublicKey
+from src.util.plot_tools import get_plot_filenames, stream_plot_info
 
 
 def log(to_log):
@@ -21,12 +23,34 @@ def log(to_log):
     sys.stdout.flush()
 
 
+def get_default_puzzle_hash() -> bytes32:
+    keychain: Keychain = Keychain()
+    epk = keychain.get_first_public_key()
+    if epk is None:
+        raise RuntimeError(
+            "No keys, please run 'chia keys generate' or provide an address with -a and -p"
+        )
+    return create_puzzlehash_for_pk(
+        BLSPublicKey(bytes(epk.public_child(0).get_public_key()))
+    )
+
+
+def get_default_public_key() -> PublicKey:
+    keychain: Keychain = Keychain()
+    epk = keychain.get_first_public_key()
+    if epk is None:
+        raise RuntimeError(
+            "No keys, please run 'chia keys generate' or provide a public key with -f"
+        )
+    return PublicKey.from_bytes(bytes(epk.public_child(0).get_public_key()))
+
+
 def main():
     """
     Script for creating plots and adding them to the plot config file.
     """
     root_path = DEFAULT_ROOT_PATH
-    plot_config_filename = config_path_for_filename(root_path, "plots.yaml")
+    config_filename = config_path_for_filename(root_path, "config.yaml")
 
     parser = argparse.ArgumentParser(description="Chia plotting script.")
     parser.add_argument("-k", "--size", help="Plot size", type=int, default=26)
@@ -40,7 +64,17 @@ def main():
         "-b", "--buffer", help="Megabytes for sort/plot buffer", type=int, default=2048
     )
     parser.add_argument(
-        "-p", "--pool_pub_key", help="Hex public key of pool", type=str, default=""
+        "-f",
+        "--farmer_public_key",
+        help="Hex farmer public key",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
+        "-a", "--farmer_address", help="Hex farmer address", type=str, default=None
+    )
+    parser.add_argument(
+        "-p", "--pool_address", help="Hex pool address", type=str, default=None
     )
     parser.add_argument(
         "-s", "--sk_seed", help="Secret key seed in hex", type=str, default=None
@@ -57,20 +91,14 @@ def main():
         "--tmp2_dir",
         help="Second temporary directory for plotting files",
         type=Path,
-        default=Path("."),
-    )
-    new_plots_root = path_from_root(
-        root_path,
-        load_config(root_path, "config.yaml")
-        .get("harvester", {})
-        .get("new_plot_root", "plots"),
+        default=None,
     )
     parser.add_argument(
         "-d",
         "--final_dir",
         help="Final directory for plots (relative or absolute)",
         type=Path,
-        default=new_plots_root,
+        default=Path("."),
     )
 
     args = parser.parse_args()
@@ -82,6 +110,8 @@ def main():
             " Please run the program without -i."
         )
         quit()
+    if args.tmp2_dir is None:
+        args.tmp2_dir = args.final_dir
 
     if args.index is None:
         args.index = 0
@@ -93,28 +123,32 @@ def main():
     else:
         sk_seed = token_bytes(32)
         log(
-            f"Using sk_seed {sk_seed.hex()}. Note that sk seed is now generated randomly, as opposed "
-            f"to from keys.yaml. If you want to use a specific seed, use the -s argument."
+            f"Using sk_seed {sk_seed.hex()}. Note that sk seed is now generated randomly. "
+            f"If you want to use a specific seed, use the -s argument."
         )
 
-    pool_pk: PublicKey
-    if len(args.pool_pub_key) > 0:
-        # Use the provided pool public key, useful for using an external pool
-        pool_pk = PublicKey.from_bytes(bytes.fromhex(args.pool_pub_key))
+    farmer_public_key: PublicKey
+    if args.farmer_public_key is not None:
+        farmer_public_key = PublicKey.from_bytes(bytes.fromhex(args.farmer_public_key))
     else:
-        # Use the pool public key from the config, useful for solo farming
-        keychain = Keychain()
-        all_public_keys = keychain.get_all_public_keys()
-        if len(all_public_keys) == 0:
-            raise RuntimeError(
-                "There are no private keys in the keychain, so we cannot create a plot. "
-                "Please generate keys using 'chia keys generate' or pass in a pool pk with -p"
-            )
-        pool_pk = all_public_keys[0].get_public_key()
+        farmer_public_key = get_default_public_key()
+
+    farmer_address: bytes
+    if args.farmer_address is not None:
+        farmer_address = bytes.fromhex(args.farmer_address)
+    else:
+        farmer_address = get_default_puzzle_hash()
+
+    pool_address: bytes
+    if args.pool_address is not None:
+        pool_address = bytes.fromhex(args.pool_address)
+    else:
+        pool_address = get_default_puzzle_hash()
 
     log(
         f"Creating {args.num_plots} plots, from index {args.index} to "
-        f"{args.index + args.num_plots - 1}, of size {args.size}, sk_seed {sk_seed.hex()} ppk {pool_pk}"
+        f"{args.index + args.num_plots - 1}, of size {args.size}, sk_seed "
+        f"{sk_seed.hex()} farmer address {pool_address} pool address {pool_address} farmer public key {farmer_public_key}"
     )
 
     mkdir(args.tmp_dir)
@@ -127,22 +161,32 @@ def main():
             sk_seed + args.size.to_bytes(1, "big") + i.to_bytes(4, "big")
         )
 
-        # The plot seed is based on the pool and plot pks
+        # The plot public key is the combination of the harvester and farmer keys
+        plot_public_key = ProofOfSpace.generate_plot_pubkey(
+            sk.get_public_key(), farmer_public_key
+        )
+
+        # The plot seed is based on the harvester and farmer keys, and commits to rewards
+        # to the farmer address and pool address
         plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(
-            pool_pk, sk.get_public_key()
+            farmer_address, pool_address, plot_public_key
         )
         dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M")
 
-        filename: str = f"plot-k{args.size}-{dt_string}-{plot_seed}.dat"
+        filename: str = f"plot-k{args.size}-{dt_string}-{plot_seed}.plot"
         full_path: Path = args.final_dir / filename
 
-        plot_config = load_config(root_path, plot_config_filename)
-        plot_config_plots_new = deepcopy(plot_config.get("plots", []))
-        filenames = [Path(k).name for k in plot_config_plots_new.keys()]
-        already_in_config = any(plot_seed.hex() in fname for fname in filenames)
-        if already_in_config:
-            log(f"Plot {filename} already exists (in config)")
-            continue
+        # plot_config = load_config(root_path, plot_config_filename)
+        # plot_config_plots_new = deepcopy(plot_config.get("plots", []))
+        # filenames = [Path(k).name for k in plot_config_plots_new.keys()]
+        # already_in_config = any(plot_seed.hex() in fname for fname in filenames)
+        config = load_config(root_path, config_filename)
+        plot_filenames = get_plot_filenames(config)
+
+        if args.final_dir.resolve() not in plot_filenames:
+            # Adds the directory to the plot directories if it is not present
+            config["harvester"]["plot_directories"].append(str(args.final_dir))
+            save_config(root_path, config_filename, config)
 
         if not full_path.exists():
             # Creates the plot. This will take a long time for larger plots.
@@ -153,7 +197,7 @@ def main():
                 str(args.final_dir),
                 filename,
                 args.size,
-                bytes([]),
+                stream_plot_info(farmer_address, pool_address, farmer_public_key, sk),
                 plot_seed,
                 args.buffer,
             )
@@ -161,18 +205,6 @@ def main():
         else:
             log(f"Plot {filename} already exists")
 
-        # Updates the config if necessary.
-        plot_config = load_config(root_path, plot_config_filename)
-        plot_config_plots_new = deepcopy(plot_config.get("plots", []))
-        plot_config_plots_new[str(full_path)] = {
-            "sk": bytes(sk).hex(),
-            "pool_pk": bytes(pool_pk).hex(),
-        }
-        plot_config["plots"].update(plot_config_plots_new)
-
-        # Dumps the new config to disk.
-        save_config(root_path, plot_config_filename, plot_config)
-    log("")
     log("Summary:")
     try:
         args.tmp_dir.rmdir()

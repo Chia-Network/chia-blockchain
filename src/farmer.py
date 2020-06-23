@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Dict, List, Set, Optional, Callable
 
-from blspy import Util, PublicKey
+from blspy import Util
 from src.util.keychain import Keychain
 
 from src.consensus.block_rewards import calculate_block_reward
@@ -55,9 +55,9 @@ class Farmer:
 
         # This is the farmer configuration
         self.wallet_target = bytes.fromhex(self.config["xch_target_puzzle_hash"])
-        self.pool_public_keys = [
-            PublicKey.from_bytes(bytes.fromhex(pk))
-            for pk in self.config["pool_public_keys"]
+        self.farmer_public_keys = [
+            epk.public_child(0).get_public_key()
+            for epk in self.keychain.get_all_public_keys()
         ]
 
         # This is the pool configuration, which should be moved out to the pool once it exists
@@ -77,7 +77,7 @@ class Farmer:
 
     async def _on_connect(self):
         # Sends a handshake to the harvester
-        msg = harvester_protocol.HarvesterHandshake(self.pool_public_keys)
+        msg = harvester_protocol.HarvesterHandshake(self.farmer_public_keys)
         yield OutboundMessage(
             NodeType.HARVESTER, Message("harvester_handshake", msg), Delivery.RESPOND
         )
@@ -190,7 +190,7 @@ class Farmer:
         and request a pool partial, a header signature, or both, if the proof is good enough.
         """
 
-        if response.proof.pool_pubkey not in self.pool_public_keys:
+        if response.proof.pool_pubkey not in self.farmer_public_keys:
             raise RuntimeError("Pool pubkey not in list of approved keys")
 
         challenge_hash: bytes32 = self.harvester_responses_challenge[

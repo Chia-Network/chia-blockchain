@@ -11,6 +11,8 @@ class TesKeychain(unittest.TestCase):
         assert kc._get_free_private_key_seed_index() == 0
         assert kc._get_free_private_key_index() == 0
         assert len(kc.get_all_private_keys()) == 0
+        assert kc.get_first_private_key() is None
+        assert kc.get_first_public_key() is None
 
         mnemonic = generate_mnemonic()
         seed = seed_from_mnemonic(mnemonic)
@@ -40,6 +42,8 @@ class TesKeychain(unittest.TestCase):
         assert kc._get_free_private_key_index() == 2
         assert len(kc.get_all_private_keys()) == 4
         assert len(kc.get_all_public_keys()) == 4
+        assert kc.get_all_private_keys()[0] == kc.get_first_private_key()
+        assert kc.get_all_public_keys()[0] == kc.get_first_public_key()
         assert raw in [k for (k, s) in kc.get_all_private_keys()]
 
         kc.delete_key_by_fingerprint(raw_2.get_public_key().get_fingerprint())
