@@ -34,6 +34,7 @@ parserOptions:
 ###########
 plugins:
   - '@typescript-eslint'
+  - 'prettier'
 
 #########
 # Rules #
