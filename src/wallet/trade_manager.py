@@ -260,7 +260,7 @@ class TradeManager:
                     balance = await wallet.get_confirmed_balance()
                     if balance < abs(amount) and amount < 0:
                         raise Exception(f"insufficient funds in wallet {wallet_id}")
-                    if balance == 0 and amount > 0:
+                    if amount > 0:
                         if spend_bundle is None:
                             to_exclude: List[Coin] = []
                         else:
@@ -286,7 +286,6 @@ class TradeManager:
                         for add in additions:
                             if add not in removals and add.amount == 0:
                                 zero_val_coin = add
-
                         new_spend_bundle = await wallet.create_spend_bundle_relative_amount(
                             amount, zero_val_coin
                         )
@@ -304,7 +303,7 @@ class TradeManager:
                     )
                 else:
                     return False, None, "unsupported wallet type"
-                if new_spend_bundle.removals() == [] or new_spend_bundle is None:
+                if new_spend_bundle is None or new_spend_bundle.removals() == []:
                     raise Exception(f"Wallet {id} was unable to create offer.")
                 if spend_bundle is None:
                     spend_bundle = new_spend_bundle
