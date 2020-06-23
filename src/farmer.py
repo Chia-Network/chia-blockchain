@@ -192,7 +192,6 @@ class Farmer:
 
         challenge_hash: bytes32 = response.proof.challenge_hash
         challenge_weight: uint128 = self.challenge_to_weight[challenge_hash]
-        challenge_height: uint32 = self.challenge_to_height[challenge_hash]
         difficulty: uint64 = uint64(0)
         for posf in self.challenges[challenge_weight]:
             if posf.challenge_hash == challenge_hash:
@@ -200,7 +199,9 @@ class Farmer:
         if difficulty == 0:
             raise RuntimeError("Did not find challenge")
 
-        computed_quality_string = response.proof.verify_and_get_quality_string(self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"])
+        computed_quality_string = response.proof.verify_and_get_quality_string(
+            self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]
+        )
         if computed_quality_string is None:
             raise RuntimeError("Invalid proof of space")
 

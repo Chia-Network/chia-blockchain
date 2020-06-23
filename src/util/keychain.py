@@ -4,7 +4,7 @@ from typing import List, Tuple, Optional
 import keyring as keyring_main
 import pkg_resources
 from bitstring import BitArray
-from blspy import ExtendedPrivateKey, ExtendedPublicKey, PrivateKey
+from blspy import ExtendedPrivateKey, ExtendedPublicKey
 
 from src.util.byte_types import hexstr_to_bytes
 from src.util.hash import std_hash
@@ -93,7 +93,7 @@ class Keychain:
     testing: bool
     user: str
 
-    def __init__(self, user: str = "user", testing: bool = False):
+    def __init__(self, user: str = "user-1.8", testing: bool = False):
         self.testing = testing
         self.user = user
 
@@ -112,24 +112,12 @@ class Keychain:
         else:
             return f"wallet-{self.user}-{index}"
 
-    def _get_private_key_user(self, index: int):
-        if self.testing:
-            return f"wallet-{self.user}-raw-test-{index}"
-        else:
             return f"wallet-{self.user}-raw-{index}"
 
     def _get_free_private_key_seed_index(self) -> int:
         index = 0
         while True:
             key = self._get_stored_entropy(self._get_private_key_seed_user(index))
-            if key is None:
-                return index
-            index += 1
-
-    def _get_free_private_key_index(self):
-        index = 0
-        while True:
-            key = self._get_stored_entropy(self._get_private_key_user(index))
             if key is None:
                 return index
             index += 1
@@ -150,40 +138,6 @@ class Keychain:
             self._get_service(), self._get_private_key_seed_user(index), seed.hex()
         )
 
-    def add_private_key(self, key: ExtendedPrivateKey):
-        """
-        Adds an extended private key to the keychain. This is used for old keys from keys.yaml.
-        The new method is adding a seed (which can be converted into a mnemonic) instead.
-        """
-
-        key_bytes = bytes(key)
-        index = self._get_free_private_key_index()
-        if key.get_public_key().get_fingerprint() in [
-            epk.get_public_key().get_fingerprint() for epk in self.get_all_public_keys()
-        ]:
-            # Prevents duplicate add
-            return
-        keyring.set_password(
-            self._get_service(), self._get_private_key_user(index), key_bytes.hex()
-        )
-
-    def add_private_key_not_extended(self, key_not_extended: PrivateKey):
-        """
-        Creates a new key, and takes only the prefix information (chain code, version, etc).
-        This is used to migrate pool_sks from keys.yaml, which are not extended. Then adds
-        the key to the keychain.
-        """
-
-        key_bytes = bytes(key_not_extended)
-        new_extended_bytes = bytearray(
-            bytes(ExtendedPrivateKey.from_seed(token_bytes(32)))
-        )
-        final_extended_bytes = bytes(new_extended_bytes[: -len(key_bytes)] + key_bytes)
-        key = ExtendedPrivateKey.from_bytes(final_extended_bytes)
-        assert len(final_extended_bytes) == len(new_extended_bytes)
-        assert key.get_private_key() == key_not_extended
-        self.add_private_key(key)
-
     def get_first_private_key(
         self,
     ) -> Optional[Tuple[ExtendedPrivateKey, Optional[bytes]]]:
@@ -195,15 +149,6 @@ class Keychain:
                 return (key, hexstr_to_bytes(seed_hex))
             index += 1
             seed_hex = self._get_stored_entropy(self._get_private_key_seed_user(index))
-
-        index = 0
-        key_hex = self._get_stored_entropy(self._get_private_key_user(index))
-        while index <= MAX_KEYS:
-            if key_hex is not None and len(key_hex) > 0:
-                key = ExtendedPrivateKey.from_bytes(hexstr_to_bytes(key_hex))
-                return (key, None)
-            index += 1
-            key_hex = self._get_stored_entropy(self._get_private_key_user(index))
         return None
 
     def get_all_private_keys(self) -> List[Tuple[ExtendedPrivateKey, Optional[bytes]]]:
@@ -222,16 +167,6 @@ class Keychain:
                 all_keys.append((key, hexstr_to_bytes(seed_hex)))
             index += 1
             seed_hex = self._get_stored_entropy(self._get_private_key_seed_user(index))
-
-        # Keys without a seed are added after
-        index = 0
-        key_hex = self._get_stored_entropy(self._get_private_key_user(index))
-        while index <= MAX_KEYS:
-            if key_hex is not None and len(key_hex) > 0:
-                key = ExtendedPrivateKey.from_bytes(hexstr_to_bytes(key_hex))
-                all_keys.append((key, None))
-            index += 1
-            key_hex = self._get_stored_entropy(self._get_private_key_user(index))
         return all_keys
 
     def get_all_public_keys(self) -> List[ExtendedPublicKey]:
@@ -250,19 +185,6 @@ class Keychain:
         """
         Deletes all keys which have the given public key fingerprint.
         """
-
-        index = 0
-        key_hex = self._get_stored_entropy(self._get_private_key_user(index))
-
-        while index <= MAX_KEYS:
-            if key_hex is not None and len(key_hex) > 0:
-                key = ExtendedPrivateKey.from_bytes(hexstr_to_bytes(key_hex))
-                if key.get_public_key().get_fingerprint() == fingerprint:
-                    keyring.delete_password(
-                        self._get_service(), self._get_private_key_user(index)
-                    )
-            index += 1
-            key_hex = self._get_stored_entropy(self._get_private_key_user(index))
 
         index = 0
         seed_hex = self._get_stored_entropy(self._get_private_key_seed_user(index))

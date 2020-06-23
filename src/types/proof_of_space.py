@@ -33,7 +33,9 @@ class ProofOfSpace(Streamable):
         quality_str = v.validate_proof(
             plot_seed, self.size, self.challenge_hash, bytes(self.proof)
         )
-        if not self.challenge_signature.verify([Util.hash256(self.challenge_hash)], [self.plot_pubkey]):
+        if not self.challenge_signature.verify(
+            [Util.hash256(self.challenge_hash)], [self.plot_pubkey]
+        ):
             return None
         h = BitArray(std_hash(bytes(self.challenge_signature)))
         if h[:num_zero_bits].int != 0:

@@ -1,6 +1,5 @@
 import React from "react";
 import SelectKey from "./pages/SelectKey";
-import ImportHexKey from "./pages/ImportHexKey";
 import NewWallet from "./pages/NewWallet";
 import OldWallet from "./pages/OldWallet";
 import Dashboard from "./pages/Dashboard";
@@ -12,7 +11,6 @@ import {
   presentNewWallet,
   presentDashboard,
   presentSelectKeys,
-  presentImportHexKey
 } from "./modules/entranceMenu";
 import { Backdrop, CircularProgress } from "@material-ui/core";
 import { ModalDialog } from "./pages/ModalDialog";
@@ -106,8 +104,6 @@ const CustomRouter = () => {
   } else {
     if (presentView === presentSelectKeys) {
       return <SelectKey></SelectKey>;
-    } else if (presentView === presentImportHexKey) {
-      return <ImportHexKey></ImportHexKey>;
     } else if (presentView === presentOldWallet) {
       return <OldWallet></OldWallet>;
     } else if (presentView === presentNewWallet) {

@@ -12,7 +12,6 @@ from src.types.full_block import FullBlock
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.errors import Err
-from src.util.hash import std_hash
 from src.util.ints import uint32, uint64
 from src.util.significant_bits import count_significant_bits
 
@@ -90,7 +89,9 @@ async def validate_unfinished_block_header(
 
     # 10. The proof of space must be valid on the challenge
     if pos_quality_string is None:
-        pos_quality_string = proof_of_space.verify_and_get_quality_string(constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"])
+        pos_quality_string = proof_of_space.verify_and_get_quality_string(
+            constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]
+        )
         if not pos_quality_string:
             return (Err.INVALID_POSPACE, None)
 
@@ -237,7 +238,9 @@ def pre_validate_finished_block_header(constants: Dict, data: bytes):
         return False, None
 
     # 10. Check proof of space based on challenge
-    pos_quality_string = block.proof_of_space.verify_and_get_quality_string(constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"])
+    pos_quality_string = block.proof_of_space.verify_and_get_quality_string(
+        constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]
+    )
 
     if not pos_quality_string:
         return False, None

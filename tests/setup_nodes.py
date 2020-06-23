@@ -42,6 +42,7 @@ test_constants: Dict[str, Any] = {
     "TX_PER_SEC": 1,
     "MEMPOOL_BLOCK_BUFFER": 10,
     "MIN_ITERS_STARTING": 50 * 1,
+    "NUMBER_ZERO_BITS_CHALLENGE_SIG": 1,
 }
 test_constants["GENESIS_BLOCK"] = bytes(
     bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
@@ -144,9 +145,9 @@ async def setup_wallet_node(
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
-    db_path_key_suffix = str(
-        keychain.get_first_public_key().get_public_key().get_fingerprint()
-    )
+    first_pk = keychain.get_first_public_key()
+    assert first_pk is not None
+    db_path_key_suffix = str(first_pk.get_public_key().get_fingerprint())
     db_name = f"test-wallet-db-{port}"
     db_path = root_path / f"test-wallet-db-{port}-{db_path_key_suffix}"
     if db_path.exists():
@@ -214,8 +215,11 @@ async def setup_wallet_node(
 
 async def setup_harvester(port, farmer_port, dic={}):
     config = load_config(bt.root_path, "config.yaml", "harvester")
+    test_constants_copy = test_constants.copy()
+    for k in dic.keys():
+        test_constants_copy[k] = dic[k]
 
-    api = Harvester(config, bt.plot_config, bt.root_path)
+    api = Harvester(config, bt.root_path, test_constants_copy)
 
     started = asyncio.Event()
 
@@ -259,8 +263,6 @@ async def setup_farmer(port, full_node_port: Optional[uint16] = None, dic={}):
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
-    config["xch_target_puzzle_hash"] = bt.fee_target.hex()
-    config_pool["xch_target_puzzle_hash"] = bt.fee_target.hex()
     if full_node_port:
         connect_peers = [PeerInfo(self_hostname, full_node_port)]
     else:

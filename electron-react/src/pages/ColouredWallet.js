@@ -443,10 +443,7 @@ const SendCard = props => {
   }
 
   function farm() {
-    var address = address_input.value;
-    if (address !== "") {
-      dispatch(farm_block(address));
-    }
+    dispatch(farm_block());
   }
 
   function send() {

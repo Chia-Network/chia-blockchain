@@ -20,7 +20,10 @@ def calculate_iterations_quality(
 
 
 def calculate_iterations(
-    proof_of_space: ProofOfSpace, difficulty: uint64, min_iterations: uint64, num_zero_bits: uint8
+    proof_of_space: ProofOfSpace,
+    difficulty: uint64,
+    min_iterations: uint64,
+    num_zero_bits: uint8,
 ) -> uint64:
     """
     Convenience function to calculate the number of iterations using the proof instead
@@ -33,7 +36,10 @@ def calculate_iterations(
 
 
 def calculate_min_iters_from_iterations(
-    proof_of_space: ProofOfSpace, difficulty: uint64, iterations: uint64, num_zero_bits: uint8
+    proof_of_space: ProofOfSpace,
+    difficulty: uint64,
+    iterations: uint64,
+    num_zero_bits: uint8,
 ) -> uint64:
     """
     Using the total number of iterations on a block (which is encoded in the block) along with

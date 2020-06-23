@@ -152,7 +152,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_harvester_signature(
+                bt.get_plot_signature(
                     new_header_data, blocks[9].proof_of_space.plot_pubkey
                 ),
             ),
@@ -185,7 +185,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_harvester_signature(
+                bt.get_plot_signature(
                     new_header_data, blocks[9].proof_of_space.plot_pubkey
                 ),
             ),
@@ -221,7 +221,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_harvester_signature(
+                bt.get_plot_signature(
                     new_header_data, blocks[9].proof_of_space.plot_pubkey
                 ),
             ),
@@ -288,7 +288,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_harvester_signature(
+                bt.get_plot_signature(
                     new_header_data, blocks[9].proof_of_space.plot_pubkey
                 ),
             ),
@@ -337,7 +337,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_harvester_signature(
+                bt.get_plot_signature(
                     new_header_data, blocks[9].proof_of_space.plot_pubkey
                 ),
             ),
@@ -374,7 +374,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_harvester_signature(
+                bt.get_plot_signature(
                     new_header_data, blocks[9].proof_of_space.plot_pubkey
                 ),
             ),
@@ -412,7 +412,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_harvester_signature(
+                bt.get_plot_signature(
                     new_header_data, blocks[9].proof_of_space.plot_pubkey
                 ),
             ),
