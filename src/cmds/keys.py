@@ -7,6 +7,8 @@ from src.util.keychain import (
     Keychain,
     seed_from_mnemonic,
 )
+from src.types.BLSSignature import BLSPublicKey
+from src.consensus.coinbase import create_puzzlehash_for_pk
 
 command_list = [
     "generate",
@@ -178,6 +180,12 @@ def show_all_keys():
     for sk, seed in private_keys:
         print("")
         print("Fingerprint:", sk.get_public_key().get_fingerprint())
+        print("Extended Public key:", sk.get_extended_public_key())
+        print("Public key:", sk.get_public_key())
+        addr = create_puzzlehash_for_pk(
+            BLSPublicKey(sk.public_child(0).get_public_key())
+        ).hex()
+        print("First address:", addr)
         print("Extended private key:", bytes(sk).hex())
         if seed is not None:
             mnemonic = bytes_to_mnemonic(seed)

@@ -31,7 +31,7 @@ import { closeConnection, openConnection } from "../modules/farmerMessages";
 import {
   refreshPlots,
   deletePlot,
-  addPlot
+  addPlotDirectory
 } from "../modules/harvesterMessages";
 
 import TablePagination from "@material-ui/core/TablePagination";
@@ -333,20 +333,10 @@ const Plots = props => {
   const refreshPlotsClick = () => {
     dispatch(refreshPlots());
   };
-  const handleClose = responseDict => {
+  const handleClose = response => {
     setOpen(false);
-    if (
-      responseDict["plotPath"] &&
-      responseDict["poolPkHex"] &&
-      responseDict["skHex"]
-    ) {
-      dispatch(
-        addPlot(
-          responseDict["plotPath"],
-          responseDict["poolPkHex"],
-          responseDict["skHex"]
-        )
-      );
+    if (response) {
+      dispatch(addPlot(response));
     }
   };
 

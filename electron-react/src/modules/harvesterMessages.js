@@ -35,9 +35,9 @@ export const refreshPlots = () => {
   return action;
 };
 
-export const addPlot = (filename, pool_pk, plot_sk) => {
+export const addPlotDirectory = dirname => {
   var action = harvesterMessage();
-  action.message.command = "add_plot";
-  action.message.data = { filename, pool_pk, plot_sk };
+  action.message.command = "add_plot_directory";
+  action.message.data = { dirname };
   return action;
 };

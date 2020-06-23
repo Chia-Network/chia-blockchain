@@ -96,7 +96,7 @@ class TestRpc:
             plot_seed = ProofOfSpace.calculate_plot_seed(
                 pool_pk, plot_sk.get_public_key()
             )
-            filename = "test_farmer_harvester_rpc_plot.dat"
+            filename = "test_farmer_harvester_rpc_plot.plot"
             plotter.create_plot_disk(
                 str(plot_dir),
                 str(plot_dir),
@@ -116,7 +116,7 @@ class TestRpc:
             res_3 = await client_2.get_plots()
             assert len(res_3["plots"]) == num_plots
 
-            filename = "test_farmer_harvester_rpc_plot_2.dat"
+            filename = "test_farmer_harvester_rpc_plot_2.plot"
             plotter.create_plot_disk(
                 str(plot_dir),
                 str(plot_dir),

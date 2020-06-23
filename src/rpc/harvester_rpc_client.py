@@ -21,17 +21,5 @@ class HarvesterRpcClient(RpcClient):
     async def delete_plot(self, filename: str) -> bool:
         return await self.fetch("delete_plot", {"filename": filename})
 
-    async def add_plot(
-        self, filename: str, plot_sk: PrivateKey, pool_pk: Optional[PublicKey] = None
-    ) -> bool:
-        plot_sk_str = bytes(plot_sk).hex()
-        if pool_pk is not None:
-            pool_pk_str = bytes(pool_pk).hex()
-            return await self.fetch(
-                "add_plot",
-                {"filename": filename, "plot_sk": plot_sk_str, "pool_pk": pool_pk_str},
-            )
-        else:
-            return await self.fetch(
-                "add_plot", {"filename": filename, "plot_sk": plot_sk_str}
-            )
+    async def add_plot_directory(self, dirname: str) -> bool:
+        return await self.fetch("add_plot_directory", {"dirname": dirname})
