@@ -87,7 +87,7 @@ class RLWallet:
         )
         wallet_info = await wallet_state_manager.user_store.get_last_wallet()
         if wallet_info is None:
-            raise
+            raise Exception('wallet_info is None')
 
         await wallet_state_manager.puzzle_store.add_derivation_paths(
             [
@@ -139,7 +139,7 @@ class RLWallet:
             )
             wallet_info = await wallet_state_manager.user_store.get_last_wallet()
             if wallet_info is None:
-                raise
+                raise Exception('wallet_info is None')
 
             self = await RLWallet.create(
                 config, key_config, wallet_state_manager, wallet_info, wallet, name
@@ -343,7 +343,7 @@ class RLWallet:
             puzzle_hash
         )
         if index_for_puzzlehash == -1:
-            raise
+            raise Exception('index_for_puzzlehash == -1')
         pubkey = self.private_key.public_child(index_for_puzzlehash).get_public_key()
         private = self.private_key.private_child(index_for_puzzlehash).get_private_key()
         return pubkey, private
@@ -356,7 +356,7 @@ class RLWallet:
             clawback_pubkey.hex()
         )
         if index_for_pubkey == -1:
-            raise
+            raise Exception('index_for_pubkey == -1')
         pubkey = self.private_key.public_child(index_for_pubkey).get_public_key()
         private = self.private_key.private_child(index_for_pubkey).get_private_key()
         return pubkey, private
@@ -446,7 +446,7 @@ class RLWallet:
             or self.rl_info.user_pubkey is None
             or self.rl_info.admin_pubkey is None
         ):
-            raise
+            raise Exception('One ore more of the elements of rl_info is None')
         spends = []
         coin = clawback_coin
         puzzle = rl_puzzle_for_pk(
@@ -483,7 +483,7 @@ class RLWallet:
     async def clawback_rl_coin(self, clawback_puzzle_hash: bytes32):
         rl_coin = await self.get_rl_coin()
         if rl_coin is None:
-            raise
+            raise Exception('rl_coin is None')
         transaction = self.generate_unsigned_clawback_transaction(
             rl_coin, clawback_puzzle_hash
         )
@@ -503,7 +503,7 @@ class RLWallet:
             or rl_info.user_pubkey is None
             or rl_info.admin_pubkey is None
         ):
-            raise
+            raise Exception('One ore more of the elements of rl_info is None')
 
         list_of_coinsolutions = []
 
