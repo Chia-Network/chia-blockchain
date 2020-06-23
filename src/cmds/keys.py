@@ -1,5 +1,5 @@
 from pathlib import Path
-from blspy import PrivateKey, ExtendedPrivateKey
+from blspy import ExtendedPrivateKey
 from src.cmds.init import check_keys
 from src.util.keychain import (
     generate_mnemonic,
@@ -14,9 +14,7 @@ command_list = [
     "generate",
     "generate_and_print",
     "show",
-    "add_seed",
     "add",
-    "add_not_extended",
     "delete",
     "delete_all",
 ]
@@ -26,14 +24,10 @@ def help_message():
     print("usage: chia keys command")
     print(f"command can be any of {command_list}")
     print("")
-    print("chia keys generate  (generates and adds a key to keychain)")
-    print("chia keys generate_and_print  (generates but does NOT add to keychain)")
-    print("chia keys show (displays all the keys in keychain)")
-    print("chia keys add_seed -m [24 words] (add a private key through the mnemonic)")
-    print("chia keys add -k [extended key] (add an extended private key in hex form)")
-    print(
-        "chia keys add_not_extended -k [key] (add a not extended private key in hex form)"
-    )
+    print(f"chia keys generate  (generates and adds a key to keychain)")
+    print(f"chia keys generate_and_print  (generates but does NOT add to keychain)")
+    print(f"chia keys show (displays all the keys in keychain)")
+    print(f"chia keys add -m [24 words] (add a private key through the mnemonic)")
     print(
         "chia keys delete -f [fingerprint] (delete a key by it's pk fingerprint in hex form)"
     )
@@ -119,38 +113,6 @@ def add_private_key_seed(mnemonic):
         return
 
 
-def add_private_key(args):
-    """
-    Adds a private key to the keyring, without a seed (with the raw private key bytes).
-    """
-    if args.key is None:
-        print("Please specify the key argument -k")
-        quit()
-    key_hex = args.key
-    assert key_hex is not None
-    extended_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(key_hex))
-    print(
-        f"Adding private_key: {extended_key} with fingerprint {extended_key.get_public_key().get_fingerprint()}"
-    )
-    keychain.add_private_key(extended_key)
-
-
-def add_private_key_not_extended(args):
-    """
-    Adds a not extended private key to the keyring. This can be used for migrating old pool sks from keys.yaml.
-    """
-    if args.key is None:
-        print("Please specify the key argument -k")
-        quit()
-    key_hex = args.key
-    assert key_hex
-    private_key = PrivateKey.from_bytes(bytes.fromhex(key_hex))
-    print(
-        f"Adding private_key: {private_key} with fingerprint {private_key.get_public_key().get_fingerprint()}"
-    )
-    keychain.add_private_key_not_extended(private_key)
-
-
 def mnemonic_to_string(mnemonic):
     """
     Converts a menmonic to a user readable string in the terminal.
@@ -233,14 +195,8 @@ def handler(args, parser):
         check_keys(root_path)
     elif command == "show":
         show_all_keys()
-    elif command == "add_seed":
-        add_private_key_seed(args.mnemonic)
-        check_keys(root_path)
     elif command == "add":
-        add_private_key(args)
-        check_keys(root_path)
-    elif command == "add_not_extended":
-        add_private_key_not_extended(args)
+        add_private_key_seed(args.mnemonic)
         check_keys(root_path)
     elif command == "delete":
         delete(args)

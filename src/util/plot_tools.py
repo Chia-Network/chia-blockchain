@@ -11,6 +11,15 @@ from src.types.sized_bytes import bytes32
 log = logging.getLogger(__name__)
 
 
+@dataclass
+class PlotInfo:
+    prover: DiskProver
+    farmer_address: bytes32
+    pool_address: bytes32
+    farmer_public_key: PublicKey
+    harvester_sk: PrivateKey
+
+
 def _get_filenames(directory: Path) -> List[Path]:
     if not directory.is_dir():
         # If it is a file ending in .plot, add it
@@ -59,15 +68,6 @@ def stream_plot_info(
     )
     assert len(data) == (32 + 32 + 48 + 32)
     return data
-
-
-@dataclass
-class PlotInfo:
-    prover: DiskProver
-    farmer_address: bytes32
-    pool_address: bytes32
-    farmer_public_key: PublicKey
-    harvester_sk: PrivateKey
 
 
 def load_plots(

@@ -62,13 +62,6 @@ export const add_key = mnemonic => {
   return action;
 };
 
-export const add_key_hex = hexkey => {
-  var action = walletMessage();
-  action.message.command = "add_key";
-  action.message.data = { hexkey };
-  return action;
-};
-
 export const delete_key = fingerprint => {
   var action = walletMessage();
   action.message.command = "delete_key";
@@ -111,10 +104,10 @@ export const get_puzzle_hash = wallet_id => {
   return action;
 };
 
-export const farm_block = puzzle_hash => {
+export const farm_block = () => {
   var action = walletMessage();
   action.message.command = "farm_block";
-  action.message.data = { puzzle_hash: puzzle_hash };
+  action.message.data = {};
   return action;
 };
 

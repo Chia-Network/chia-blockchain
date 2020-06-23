@@ -42,7 +42,6 @@ from src.types.program import Program
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.util.wallet_types import WalletType
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from src.consensus.block_rewards import calculate_block_reward
 
 
 class WalletStateManager:
@@ -862,7 +861,9 @@ class WalletStateManager:
         # Validate PoS and get quality
         quality_str: Optional[
             bytes32
-        ] = header_block.proof_of_space.verify_and_get_quality_string(self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"])
+        ] = header_block.proof_of_space.verify_and_get_quality_string(
+            self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]
+        )
         if quality_str is None:
             return False
 
@@ -1090,7 +1091,9 @@ class WalletStateManager:
             assert difficulty is not None
 
             # Validate pospace to get iters
-            quality_str = header_block.proof_of_space.verify_and_get_quality_string(self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"])
+            quality_str = header_block.proof_of_space.verify_and_get_quality_string(
+                self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]
+            )
             assert quality_str is not None
 
             if (

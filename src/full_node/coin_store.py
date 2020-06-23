@@ -5,7 +5,7 @@ from src.types.coin import Coin
 from src.types.coin_record import CoinRecord
 from src.types.sized_bytes import bytes32
 from src.types.header import Header
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32
 
 
 class DiffStore:
@@ -91,7 +91,6 @@ class CoinStore:
         for coin_name in removals:
             await self.set_spent(coin_name, block.height)
 
-        fees = block.header.data.transaction_fees
         coinbase_coin = block.get_coinbase()
         fees_coin = block.get_fees_coin()
 

@@ -256,7 +256,7 @@ class FullNodeRpcApi:
             older_block.proof_of_space,
             older_diff,
             older_block.proof_of_time.number_of_iterations,
-            self.service.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]
+            self.service.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"],
         )
         # We do not count the min iters in the old block, since it's not included in the range
         total_mi: uint64 = uint64(0)
@@ -284,7 +284,7 @@ class FullNodeRpcApi:
                     curr_b_block.proof_of_space,
                     uint64(curr_diff),
                     curr_b_block.proof_of_time.number_of_iterations,
-                    self.service.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]
+                    self.service.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"],
                 )
                 if curr_mi is None:
                     raise web.HTTPBadRequest()

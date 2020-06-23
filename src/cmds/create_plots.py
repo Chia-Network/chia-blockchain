@@ -148,8 +148,8 @@ def main():
     log(
         f"Creating {args.num_plots} plots, from index {args.index} to "
         f"{args.index + args.num_plots - 1}, of size {args.size}, sk_seed "
-        f"{sk_seed.hex()} farmer address {pool_address} pool address "
-        f"{pool_address} farmer public key {farmer_public_key}"
+        f"{sk_seed.hex()} farmer address {pool_address.hex()} pool address "
+        f"{pool_address.hex()} farmer public key {farmer_public_key.hex()}"
     )
 
     mkdir(args.tmp_dir)

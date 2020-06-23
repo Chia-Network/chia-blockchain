@@ -36,7 +36,6 @@ from src.util.hash import std_hash
 from src.util.ints import uint32, uint64
 from src.util.merkle_set import MerkleSet
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from src.consensus.block_rewards import calculate_base_fee
 
 log = logging.getLogger(__name__)
 

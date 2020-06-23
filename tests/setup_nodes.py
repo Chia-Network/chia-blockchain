@@ -208,8 +208,11 @@ async def setup_wallet_node(
 
 async def setup_harvester(port, farmer_port, dic={}):
     config = load_config(bt.root_path, "config.yaml", "harvester")
+    test_constants_copy = test_constants.copy()
+    for k in dic.keys():
+        test_constants_copy[k] = dic[k]
 
-    api = Harvester(config, bt.plot_config, bt.root_path)
+    api = Harvester(config, bt.root_path, test_constants_copy)
 
     started = asyncio.Event()
 
@@ -253,6 +256,7 @@ async def setup_farmer(port, full_node_port: Optional[uint16] = None, dic={}):
     consensus_constants = constants_for_dic(dic)
     config["xch_target_puzzle_hash"] = bt.fee_target.hex()
     config_pool["xch_target_puzzle_hash"] = bt.fee_target.hex()
+
     if full_node_port:
         connect_peers = [PeerInfo(self_hostname, full_node_port)]
     else:
