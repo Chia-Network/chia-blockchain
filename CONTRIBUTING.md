@@ -16,7 +16,7 @@ You can visit our [Trello project board](https://trello.com/b/ZuNx7sET) to get a
 Generally things to the left are in progress or done. Some things go through "Coming up soon" but some will come directly out of other columns.
 Usually the things closer to the top of each column are the ones that will be worked on soonest.
 If you are interested in cryptography, math, or just like hacking in python, there are many interesting problems to work on.
-Contact any of the team members on keybase: https://keybase.io/team/chia_network.public, which we use as the main communication method and you can comment on any Trello card.
+Contact any of the team members on [Keybase](https://keybase.io/team/chia_network.public), which we use as the main communication method and you can comment on any Trello card.
 
 ## Run tests and linting
 The first time the tests are run, BlockTools will create and persist many plots. These are used for creating

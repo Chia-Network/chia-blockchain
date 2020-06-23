@@ -126,7 +126,8 @@ disable=print-statement,
         next-method-defined,
         dict-items-not-iterating,
         dict-keys-not-iterating,
-        dict-values-not-iterating
+        dict-values-not-iterating,
+        import-error
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -511,26 +512,6 @@ known-standard-library=
 
 # Force import order to recognize a module as part of a third party library.
 known-third-party=enchant
-                  blspy
-                  chiabip158
-                  chiapos
-                  chiavdf
-                  cryptography
-                  aiohttp
-                  websockets
-                  cbor2
-                  keyring
-                  bitstring
-                  clvm_tools
-                  setproctitle
-                  clvm
-                  colorlog
-                  concurrent_log_handler
-                  aiosqlite
-                  sortedcontainers
-                  aiter
-                  miniupnpc
-                  pytest
 
 
 [CLASSES]
