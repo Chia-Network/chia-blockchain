@@ -1315,7 +1315,10 @@ class FullNode:
         vdf_min_iters: uint64 = self.blockchain.get_next_min_iters(target_tip_block)
 
         iterations_needed: uint64 = calculate_iterations(
-            request.proof_of_space, difficulty, vdf_min_iters, self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]
+            request.proof_of_space,
+            difficulty,
+            vdf_min_iters,
+            self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"],
         )
 
         removal_merkle_set = MerkleSet()

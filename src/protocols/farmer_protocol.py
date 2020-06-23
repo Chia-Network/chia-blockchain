@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 from blspy import PrependSignature
-from src.types.coin import Coin
-from src.types.BLSSignature import BLSSignature
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message

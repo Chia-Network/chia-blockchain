@@ -56,7 +56,7 @@ class TestWalletSimulator:
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         funds = sum(
             [
@@ -79,7 +79,7 @@ class TestWalletSimulator:
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         for i in range(0, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         funds = sum(
             [
@@ -102,7 +102,7 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds - 10)
 
         for i in range(0, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         new_funds = sum(
             [
@@ -124,7 +124,7 @@ class TestWalletSimulator:
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         funds = sum(
             [
@@ -166,7 +166,7 @@ class TestWalletSimulator:
         )
 
         for i in range(1, num_blocks):
-            await full_node_0.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_0.farm_new_block(FarmNewBlockProtocol())
 
         all_blocks = await full_node_0.get_current_blocks(full_node_0.get_tip())
 
@@ -238,7 +238,7 @@ class TestWalletSimulator:
         )
 
         for i in range(0, num_blocks):
-            await full_node_0.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_0.farm_new_block(FarmNewBlockProtocol())
 
         funds = sum(
             [
@@ -266,7 +266,7 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet_0.get_unconfirmed_balance, funds - 10)
 
         for i in range(0, 4):
-            await full_node_0.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+            await full_node_0.farm_new_block(FarmNewBlockProtocol())
 
         new_funds = sum(
             [
@@ -286,7 +286,7 @@ class TestWalletSimulator:
         await wallet_1.push_transaction(tx)
 
         for i in range(0, 4):
-            await full_node_0.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+            await full_node_0.farm_new_block(FarmNewBlockProtocol())
 
         confirmed_balance = await wallet_0.get_confirmed_balance()
         unconfirmed_balance = await wallet_0.get_unconfirmed_balance()
@@ -309,7 +309,7 @@ class TestWalletSimulator:
     #     await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
     #     for i in range(0, num_blocks):
-    #         await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+    #         await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
     #     funds = sum(
     #         [
@@ -342,7 +342,7 @@ class TestWalletSimulator:
     #     )
 
     #     for i in range(0, num_blocks):
-    #         await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+    #         await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
     #     new_funds = sum(
     #         [

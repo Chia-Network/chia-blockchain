@@ -2,8 +2,7 @@ import asyncio
 import logging
 import time
 from pathlib import Path
-from blspy import ExtendedPrivateKey, PrivateKey
-from secrets import token_bytes
+from blspy import ExtendedPrivateKey
 
 from typing import List, Optional, Tuple, Dict, Callable
 
@@ -175,8 +174,7 @@ class WalletRpcApi:
         return response
 
     async def farm_block(self, request):
-        puzzle_hash = bytes.fromhex(request["puzzle_hash"])
-        request = FarmNewBlockProtocol(puzzle_hash)
+        request = FarmNewBlockProtocol()
         msg = OutboundMessage(
             NodeType.FULL_NODE, Message("farm_new_block", request), Delivery.BROADCAST,
         )
@@ -474,26 +472,6 @@ class WalletRpcApi:
             seed = seed_from_mnemonic(mnemonic)
             self.service.keychain.add_private_key_seed(seed)
             esk = ExtendedPrivateKey.from_seed(seed)
-        elif "hexkey" in request:
-            # Adding a key from hex private key string. Two cases: extended private key (HD)
-            # which is 77 bytes, and int private key which is 32 bytes.
-            if len(request["hexkey"]) != 154 and len(request["hexkey"]) != 64:
-                return {"success": False}
-            if len(request["hexkey"]) == 64:
-                sk = PrivateKey.from_bytes(bytes.fromhex(request["hexkey"]))
-                self.service.keychain.add_private_key_not_extended(sk)
-                key_bytes = bytes(sk)
-                new_extended_bytes = bytearray(
-                    bytes(ExtendedPrivateKey.from_seed(token_bytes(32)))
-                )
-                final_extended_bytes = bytes(
-                    new_extended_bytes[: -len(key_bytes)] + key_bytes
-                )
-                esk = ExtendedPrivateKey.from_bytes(final_extended_bytes)
-            else:
-                esk = ExtendedPrivateKey.from_bytes(bytes.fromhex(request["hexkey"]))
-                self.service.keychain.add_private_key(esk)
-
         else:
             return {"success": False}
 

@@ -64,7 +64,7 @@ class TestWalletSimulator:
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         for i in range(1, 4):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         funds = sum(
             [
@@ -80,7 +80,7 @@ class TestWalletSimulator:
         )
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
@@ -101,7 +101,7 @@ class TestWalletSimulator:
         await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         for i in range(1, 4):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         funds = sum(
             [
@@ -117,7 +117,7 @@ class TestWalletSimulator:
         )
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
@@ -135,7 +135,7 @@ class TestWalletSimulator:
         await cc_wallet.cc_spend(uint64(60), cc_2_hash)
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 40)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 40)
@@ -147,7 +147,7 @@ class TestWalletSimulator:
         await cc_wallet_2.cc_spend(uint64(15), cc_hash)
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 55)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 55)
@@ -165,7 +165,7 @@ class TestWalletSimulator:
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         for i in range(1, 4):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         funds = sum(
             [
@@ -181,7 +181,7 @@ class TestWalletSimulator:
         )
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         colour = await cc_wallet.get_colour()
         assert (
@@ -204,7 +204,7 @@ class TestWalletSimulator:
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         for i in range(1, 4):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         funds = sum(
             [
@@ -220,7 +220,7 @@ class TestWalletSimulator:
 
         ph = await wallet2.get_new_puzzlehash()
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
@@ -237,7 +237,7 @@ class TestWalletSimulator:
         await cc_wallet_2.generate_zero_val_coin()
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         unspent: List[WalletCoinRecord] = list(
             await cc_wallet_2.wallet_state_manager.get_spendable_coins_for_wallet(
@@ -264,7 +264,7 @@ class TestWalletSimulator:
         await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         for i in range(1, 4):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         funds = sum(
             [
@@ -280,7 +280,7 @@ class TestWalletSimulator:
         )
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
@@ -294,9 +294,9 @@ class TestWalletSimulator:
 
         assert cc_wallet.cc_info.my_core == cc_wallet_2.cc_info.my_core
 
-        await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
+        await full_node_1.farm_new_block(FarmNewBlockProtocol())
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         trade_manager_1 = await TradeManager.create(wallet_node.wallet_state_manager)
         trade_manager_2 = await TradeManager.create(wallet_node_2.wallet_state_manager)
@@ -333,7 +333,7 @@ class TestWalletSimulator:
         assert success is True
 
         for i in range(0, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 30)
         await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 30)
@@ -354,7 +354,7 @@ class TestWalletSimulator:
         await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         for i in range(1, 4):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         funds = sum(
             [
@@ -370,7 +370,7 @@ class TestWalletSimulator:
         )
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
@@ -388,7 +388,7 @@ class TestWalletSimulator:
         await cc_wallet.cc_spend(uint64(60), cc_2_hash)
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 40)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 40)
@@ -403,7 +403,7 @@ class TestWalletSimulator:
         await wallet.wallet_state_manager.main_wallet.push_transaction(spend_bundle)
 
         for i in range(0, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         id = cc_wallet_2.wallet_info.id
         wsm = cc_wallet_2.wallet_state_manager
@@ -428,7 +428,7 @@ class TestWalletSimulator:
         await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         funds = sum(
             [
@@ -444,7 +444,7 @@ class TestWalletSimulator:
         )
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         await time_out_assert(15, red_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, red_wallet.get_unconfirmed_balance, 100)
@@ -452,15 +452,15 @@ class TestWalletSimulator:
         assert red_wallet.cc_info.my_core is not None
         red = cc_wallet_puzzles.get_genesis_from_core(red_wallet.cc_info.my_core)
 
-        await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
+        await full_node_1.farm_new_block(FarmNewBlockProtocol())
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         blue_wallet_2: CCWallet = await CCWallet.create_new_cc(
             wallet_node_2.wallet_state_manager, wallet2, uint64(150)
         )
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         assert blue_wallet_2.cc_info.my_core is not None
         blue = cc_wallet_puzzles.get_genesis_from_core(blue_wallet_2.cc_info.my_core)
@@ -472,7 +472,7 @@ class TestWalletSimulator:
         assert red_wallet.cc_info.my_core == red_wallet_2.cc_info.my_core
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         blue_wallet: CCWallet = await CCWallet.create_wallet_for_cc(
             wallet_node.wallet_state_manager, wallet, blue
@@ -491,7 +491,7 @@ class TestWalletSimulator:
 
         await blue_wallet.generate_zero_val_coin()
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         offer_dict = {1: -1000, 2: -30, 3: 50}
 
@@ -517,7 +517,7 @@ class TestWalletSimulator:
 
         assert success is True
         for i in range(0, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         await time_out_assert(15, red_wallet_2.get_confirmed_balance, 30)
         await time_out_assert(15, red_wallet_2.get_unconfirmed_balance, 30)
@@ -548,7 +548,7 @@ class TestWalletSimulator:
         await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         for i in range(1, 4):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         funds = sum(
             [
@@ -564,7 +564,7 @@ class TestWalletSimulator:
         )
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
@@ -578,9 +578,9 @@ class TestWalletSimulator:
 
         assert cc_wallet.cc_info.my_core == cc_wallet_2.cc_info.my_core
 
-        await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
+        await full_node_1.farm_new_block(FarmNewBlockProtocol())
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         trade_manager_1 = await TradeManager.create(wallet_node.wallet_state_manager)
         trade_manager_2 = await TradeManager.create(wallet_node_2.wallet_state_manager)
@@ -617,7 +617,7 @@ class TestWalletSimulator:
         assert success is True
 
         for i in range(0, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
         await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 30)
         await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 30)
