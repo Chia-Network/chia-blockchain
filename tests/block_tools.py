@@ -201,12 +201,7 @@ class BlockTools:
             seconds_per_block = test_constants["BLOCK_TIME_TARGET"]
 
         if len(block_list) == 0:
-            if "GENESIS_BLOCK" in test_constants:
-                block_list.append(FullBlock.from_bytes(test_constants["GENESIS_BLOCK"]))
-            else:
-                block_list.append(
-                    self.create_genesis_block(test_constants, std_hash(seed), seed)
-                )
+            block_list.append(FullBlock.from_bytes(test_constants["GENESIS_BLOCK"]))
             prev_difficulty = test_constants["DIFFICULTY_STARTING"]
             curr_difficulty = prev_difficulty
             curr_min_iters = test_constants["MIN_ITERS_STARTING"]
