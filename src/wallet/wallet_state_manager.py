@@ -449,8 +449,8 @@ class WalletStateManager:
     async def coins_of_interest_received(
         self, removals: List[Coin], additions: List[Coin], height: uint32
     ):
-        trade_removals = await self.coins_of_interest_removed(removals, height)
         trade_additions = await self.coins_of_interest_added(additions, height)
+        trade_removals = await self.coins_of_interest_removed(removals, height)
         if len(trade_additions) > 0 or len(trade_removals) > 0:
             await self.trade_manager.coins_of_interest_farmed(
                 trade_removals, trade_additions, height
@@ -496,11 +496,15 @@ class WalletStateManager:
         trade_coin_removed: List[Coin] = []
 
         for coin in coins:
+            self.log.info(f"Coin removed: {coin.name()}")
             record = await self.wallet_store.get_coin_record_by_coin_id(coin.name())
             if coin.name() in trade_removals:
+                self.log.info(f"Coin:{coin.name()} is part of trade")
                 trade_coin_removed.append(coin)
             if record is None:
+                self.log.info(f"Coin:{coin.name()} NO RECORD")
                 continue
+            self.log.info(f"Coin:{coin.name()} Setting removed")
             await self.coin_removed(coin, height, record.wallet_id)
 
         return trade_coin_removed
