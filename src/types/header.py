@@ -7,7 +7,6 @@ from src.types.sized_bytes import bytes32
 from src.util.ints import uint64, uint32, uint128
 from src.util.streamable import Streamable, streamable
 from src.types.BLSSignature import BLSSignature
-from src.types.coin import Coin
 
 
 @dataclass(frozen=True)
@@ -22,9 +21,7 @@ class HeaderData(Streamable):
     total_iters: uint64
     additions_root: bytes32
     removals_root: bytes32
-    coinbase: Coin
-    coinbase_signature: BLSSignature
-    fees_coin: Coin
+    transaction_fees: uint64
     aggregated_signature: Optional[BLSSignature]
     cost: uint64
     extension_data: bytes32

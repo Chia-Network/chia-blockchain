@@ -36,6 +36,7 @@ from src.util.hash import std_hash
 from src.util.ints import uint32, uint64
 from src.util.merkle_set import MerkleSet
 from src.consensus.find_fork_point import find_fork_point_in_chain
+from src.consensus.block_rewards import calculate_base_fee
 
 log = logging.getLogger(__name__)
 
@@ -573,7 +574,7 @@ class Blockchain:
                 return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
 
             # 16. If genesis, the fee must be the base fee, agg_sig must be None, and merkle roots must be valid
-            if fee_base != block.header.data.fees_coin.amount:
+            if fee_base != block.header.data.transaction_fees:
                 return Err.INVALID_BLOCK_FEE_AMOUNT
             root_error = self._validate_merkle_root(block)
             if root_error:
@@ -679,6 +680,9 @@ class Blockchain:
         for coin_name in removals:
             byte_array_tx.append(bytearray(coin_name))
 
+        byte_array_tx.append(bytearray(block.proof_of_space.farmer_puzzle_hash))
+        byte_array_tx.append(bytearray(block.proof_of_space.pool_puzzle_hash))
+
         bip158: PyBIP158 = PyBIP158(byte_array_tx)
         encoded_filter = bytes(bip158.GetEncoded())
         filter_hash = std_hash(encoded_filter)
@@ -710,23 +714,26 @@ class Blockchain:
             block.prev_header_hash
         )
         assert curr is not None
-        log.info(f"curr.height is: {curr.height}, fork height is: {fork_h}")
+
         while curr.height > fork_h:
             removals_in_curr, additions_in_curr = await curr.tx_removals_and_additions()
             for c_name in removals_in_curr:
                 removals_since_fork.add(c_name)
             for c in additions_in_curr:
                 additions_since_fork[c.name()] = (c, curr.height)
-            additions_since_fork[curr.header.data.coinbase.name()] = (
-                curr.header.data.coinbase,
+
+            coinbase_coin = curr.get_coinbase()
+            fees_coin = curr.get_fees_coin()
+            additions_since_fork[coinbase_coin.name()] = (
+                coinbase_coin,
                 curr.height,
             )
-            additions_since_fork[curr.header.data.fees_coin.name()] = (
-                curr.header.data.fees_coin,
+            additions_since_fork[fees_coin.name()] = (
+                fees_coin,
                 curr.height,
             )
-            coinbases_since_fork[curr.header.data.coinbase.name()] = curr.height
-            coinbases_since_fork[curr.header.data.fees_coin.name()] = curr.height
+            coinbases_since_fork[coinbase_coin.name()] = curr.height
+            coinbases_since_fork[fees_coin.name()] = curr.height
             curr = await self.block_store.get_block(curr.prev_header_hash)
             assert curr is not None
 
@@ -815,7 +822,7 @@ class Blockchain:
             return Err.ASSERT_FEE_CONDITION_FAILED
 
         # Check coinbase reward
-        if fees + fee_base != block.header.data.fees_coin.amount:
+        if fees + fee_base != block.header.data.transaction_fees:
             return Err.BAD_COINBASE_REWARD
 
         # Verify that removed coin puzzle_hashes match with calculated puzzle_hashes

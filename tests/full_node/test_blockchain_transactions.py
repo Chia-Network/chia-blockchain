@@ -64,7 +64,7 @@ class TestBlockchainTransactions:
         spent_block = blocks[1]
 
         spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, spent_block.header.data.coinbase
+            1000, receiver_puzzlehash, spent_block.get_coinbase()
         )
 
         assert spend_bundle is not None
@@ -149,10 +149,10 @@ class TestBlockchainTransactions:
         spent_block = blocks[1]
 
         spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, spent_block.header.data.coinbase
+            1000, receiver_puzzlehash, spent_block.get_coinbase()
         )
         spend_bundle_double = wallet_a.generate_signed_transaction(
-            1001, receiver_puzzlehash, spent_block.header.data.coinbase
+            1001, receiver_puzzlehash, spent_block.get_coinbase()
         )
 
         block_spendbundle = SpendBundle.aggregate([spend_bundle, spend_bundle_double])
@@ -166,7 +166,7 @@ class TestBlockchainTransactions:
 
         next_block = new_blocks[num_blocks + 1]
         error = await full_node_1.blockchain._validate_transactions(
-            next_block, next_block.header.data.fees_coin.amount
+            next_block, next_block.get_fees_coin().amount
         )
 
         assert error is Err.DOUBLE_SPEND
@@ -193,10 +193,10 @@ class TestBlockchainTransactions:
         spent_block = blocks[1]
 
         spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, spent_block.header.data.coinbase
+            1000, receiver_puzzlehash, spent_block.get_coinbase()
         )
         spend_bundle_double = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, spent_block.header.data.coinbase
+            1000, receiver_puzzlehash, spent_block.get_coinbase()
         )
 
         block_spendbundle = SpendBundle.aggregate([spend_bundle, spend_bundle_double])
@@ -210,7 +210,7 @@ class TestBlockchainTransactions:
 
         next_block = new_blocks[(num_blocks + 1)]
         error = await full_node_1.blockchain._validate_transactions(
-            next_block, next_block.header.data.fees_coin.amount
+            next_block, next_block.get_fees_coin().amount
         )
 
         assert error is Err.DUPLICATE_OUTPUT
@@ -237,7 +237,7 @@ class TestBlockchainTransactions:
         spent_block = blocks[1]
 
         spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, spent_block.header.data.coinbase
+            1000, receiver_puzzlehash, spent_block.get_coinbase()
         )
         block_spendbundle = SpendBundle.aggregate([spend_bundle])
         program = best_solution_program(block_spendbundle)
@@ -273,7 +273,7 @@ class TestBlockchainTransactions:
                 pass
         next_block = new_blocks[13]
         error = await full_node_1.blockchain._validate_transactions(
-            next_block, next_block.header.data.fees_coin.amount
+            next_block, next_block.get_fees_coin().amount
         )
         assert error is None
         [
@@ -284,7 +284,7 @@ class TestBlockchainTransactions:
         ]
         next_block = new_blocks[14]
         error = await full_node_1.blockchain._validate_transactions(
-            next_block, next_block.header.data.fees_coin.amount
+            next_block, next_block.get_fees_coin().amount
         )
         assert error is Err.DOUBLE_SPEND
 
@@ -306,7 +306,7 @@ class TestBlockchainTransactions:
                 pass
         next_block = new_blocks[9]
         error = await full_node_1.blockchain._validate_transactions(
-            next_block, next_block.header.data.fees_coin.amount
+            next_block, next_block.get_fees_coin().amount
         )
         assert error is None
 
@@ -328,7 +328,7 @@ class TestBlockchainTransactions:
                 pass
         next_block = new_blocks[11]
         error = await full_node_1.blockchain._validate_transactions(
-            next_block, next_block.header.data.fees_coin.amount
+            next_block, next_block.get_fees_coin().amount
         )
         assert error is None
 
@@ -350,7 +350,7 @@ class TestBlockchainTransactions:
                 pass
         next_block = new_blocks[12]
         error = await full_node_1.blockchain._validate_transactions(
-            next_block, next_block.header.data.fees_coin.amount
+            next_block, next_block.get_fees_coin().amount
         )
         assert error is Err.DOUBLE_SPEND
 
@@ -372,7 +372,7 @@ class TestBlockchainTransactions:
                 pass
         next_block = new_blocks[15]
         error = await full_node_1.blockchain._validate_transactions(
-            next_block, next_block.header.data.fees_coin.amount
+            next_block, next_block.get_fees_coin().amount
         )
         assert error is Err.DOUBLE_SPEND
 
@@ -399,7 +399,7 @@ class TestBlockchainTransactions:
         spent_block = blocks[1]
 
         spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_1_puzzlehash, spent_block.header.data.coinbase
+            1000, receiver_1_puzzlehash, spent_block.get_coinbase()
         )
         block_spendbundle = SpendBundle.aggregate([spend_bundle])
         program = best_solution_program(block_spendbundle)
@@ -526,10 +526,10 @@ class TestBlockchainTransactions:
 
         spent_block = new_blocks[-1]
         spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_1_puzzlehash, spent_block.header.data.coinbase
+            1000, receiver_1_puzzlehash, spent_block.get_coinbase()
         )
         spend_bundle_2 = wallet_a.generate_signed_transaction(
-            1000, receiver_1_puzzlehash, spent_block.header.data.fees_coin
+            1000, receiver_1_puzzlehash, spent_block.get_fees_coin()
         )
 
         block_spendbundle = SpendBundle.aggregate([spend_bundle, spend_bundle_2])
@@ -547,7 +547,7 @@ class TestBlockchainTransactions:
             dic_h,
         )
         error = await full_node_1.blockchain._validate_transactions(
-            new_blocks[-1], new_blocks[-1].header.data.fees_coin.amount
+            new_blocks[-1], new_blocks[-1].get_fees_coin().amount
         )
         assert error is None
         [
@@ -598,7 +598,7 @@ class TestBlockchainTransactions:
 
         spent_block = new_blocks[-1]
         spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_1_puzzlehash, spent_block.header.data.coinbase
+            1000, receiver_1_puzzlehash, spent_block.get_coinbase()
         )
         block_spendbundle = SpendBundle.aggregate([spend_bundle])
         program = best_solution_program(block_spendbundle)
@@ -615,7 +615,7 @@ class TestBlockchainTransactions:
             dic_h,
         )
         error = await full_node_1.blockchain._validate_transactions(
-            new_blocks[-1], new_blocks[-1].header.data.fees_coin.amount
+            new_blocks[-1], new_blocks[-1].get_fees_coin().amount
         )
         assert error is Err.COINBASE_NOT_YET_SPENDABLE
 
@@ -640,7 +640,7 @@ class TestBlockchainTransactions:
         spent_block = blocks[1]
 
         spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_1_puzzlehash, spent_block.header.data.coinbase
+            1000, receiver_1_puzzlehash, spent_block.get_coinbase()
         )
         block_spendbundle = SpendBundle.aggregate([spend_bundle])
         program = best_solution_program(block_spendbundle)
@@ -702,23 +702,23 @@ class TestBlockchainTransactions:
         bad_block = blocks[2]
         valid_cvp = ConditionVarPair(
             ConditionOpcode.ASSERT_MY_COIN_ID,
-            spent_block.header.data.coinbase.name(),
+            spent_block.get_coinbase().name(),
             None,
         )
         valid_dic = {valid_cvp.opcode: [valid_cvp]}
         bad_cvp = ConditionVarPair(
             ConditionOpcode.ASSERT_MY_COIN_ID,
-            bad_block.header.data.coinbase.name(),
+            bad_block.get_coinbase().name(),
             None,
         )
 
         bad_dic = {bad_cvp.opcode: [bad_cvp]}
         bad_spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, spent_block.header.data.coinbase, bad_dic
+            1000, receiver_puzzlehash, spent_block.get_coinbase(), bad_dic
         )
 
         valid_spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, spent_block.header.data.coinbase, valid_dic
+            1000, receiver_puzzlehash, spent_block.get_coinbase(), valid_dic
         )
 
         # Invalid block bundle
@@ -735,7 +735,7 @@ class TestBlockchainTransactions:
         # Try to validate that block
         next_block = invalid_new_blocks[11]
         error = await full_node_1.blockchain._validate_transactions(
-            next_block, next_block.header.data.fees_coin.amount
+            next_block, next_block.get_fees_coin().amount
         )
 
         assert error is Err.ASSERT_MY_COIN_ID_FAILED
@@ -752,7 +752,7 @@ class TestBlockchainTransactions:
         )
         next_block = new_blocks[11]
         error = await full_node_1.blockchain._validate_transactions(
-            next_block, next_block.header.data.fees_coin.amount
+            next_block, next_block.get_fees_coin().amount
         )
         assert error is None
 
@@ -784,23 +784,23 @@ class TestBlockchainTransactions:
         # This condition requires block2 coinbase to be spent
         block1_cvp = ConditionVarPair(
             ConditionOpcode.ASSERT_COIN_CONSUMED,
-            block2.header.data.coinbase.name(),
+            block2.get_coinbase().name(),
             None,
         )
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block1.header.data.coinbase, block1_dic
+            1000, receiver_puzzlehash, block1.get_coinbase(), block1_dic
         )
 
         # This condition requires block1 coinbase to be spent
         block2_cvp = ConditionVarPair(
             ConditionOpcode.ASSERT_COIN_CONSUMED,
-            block1.header.data.coinbase.name(),
+            block1.get_coinbase().name(),
             None,
         )
         block2_dic = {block2_cvp.opcode: [block2_cvp]}
         block2_spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block2.header.data.coinbase, block2_dic
+            1000, receiver_puzzlehash, block2.get_coinbase(), block2_dic
         )
 
         # Invalid block bundle
@@ -817,7 +817,7 @@ class TestBlockchainTransactions:
         # Try to validate that block
         next_block = invalid_new_blocks[11]
         error = await full_node_1.blockchain._validate_transactions(
-            next_block, next_block.header.data.fees_coin.amount
+            next_block, next_block.get_fees_coin().amount
         )
 
         assert error is Err.ASSERT_COIN_CONSUMED_FAILED
@@ -838,7 +838,7 @@ class TestBlockchainTransactions:
         # Try to validate newly created block
         next_block = new_blocks[11]
         error = await full_node_1.blockchain._validate_transactions(
-            next_block, next_block.header.data.fees_coin.amount
+            next_block, next_block.get_fees_coin().amount
         )
 
         assert error is None
@@ -873,7 +873,7 @@ class TestBlockchainTransactions:
         )
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block1.header.data.coinbase, block1_dic
+            1000, receiver_puzzlehash, block1.get_coinbase(), block1_dic
         )
 
         # program that will be sent to early
@@ -890,7 +890,7 @@ class TestBlockchainTransactions:
         # Try to validate that block at index 11
         next_block = invalid_new_blocks[11]
         error = await full_node_1.blockchain._validate_transactions(
-            next_block, next_block.header.data.fees_coin.amount
+            next_block, next_block.get_fees_coin().amount
         )
 
         assert error is Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED
@@ -910,7 +910,7 @@ class TestBlockchainTransactions:
         next_block = valid_new_blocks[12]
 
         error = await full_node_1.blockchain._validate_transactions(
-            next_block, next_block.header.data.fees_coin.amount
+            next_block, next_block.get_fees_coin().amount
         )
 
         assert error is None
@@ -946,7 +946,7 @@ class TestBlockchainTransactions:
         )
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block1.header.data.coinbase, block1_dic
+            1000, receiver_puzzlehash, block1.get_coinbase(), block1_dic
         )
 
         # program that will be sent to early
@@ -963,7 +963,7 @@ class TestBlockchainTransactions:
         # Try to validate that block at index 11
         next_block = invalid_new_blocks[11]
         error = await full_node_1.blockchain._validate_transactions(
-            next_block, next_block.header.data.fees_coin.amount
+            next_block, next_block.get_fees_coin().amount
         )
 
         assert error is Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED
@@ -983,7 +983,7 @@ class TestBlockchainTransactions:
         next_block = valid_new_blocks[12]
 
         error = await full_node_1.blockchain._validate_transactions(
-            next_block, next_block.header.data.fees_coin.amount
+            next_block, next_block.get_fees_coin().amount
         )
 
         assert error is None
@@ -1019,7 +1019,7 @@ class TestBlockchainTransactions:
         )
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block1.header.data.coinbase, block1_dic
+            1000, receiver_puzzlehash, block1.get_coinbase(), block1_dic
         )
 
         # program that will be sent to early
@@ -1036,7 +1036,7 @@ class TestBlockchainTransactions:
         # Try to validate that block before 3 sec
         next_block = invalid_new_blocks[11]
         error = await full_node_1.blockchain._validate_transactions(
-            next_block, next_block.header.data.fees_coin.amount
+            next_block, next_block.get_fees_coin().amount
         )
 
         assert error is Err.ASSERT_TIME_EXCEEDS_FAILED
@@ -1059,7 +1059,7 @@ class TestBlockchainTransactions:
         next_block = valid_new_blocks[12]
 
         error = await full_node_1.blockchain._validate_transactions(
-            next_block, next_block.header.data.fees_coin.amount
+            next_block, next_block.get_fees_coin().amount
         )
 
         assert error is None
@@ -1086,7 +1086,7 @@ class TestBlockchainTransactions:
         spent_block = blocks[1]
 
         spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, spent_block.header.data.coinbase
+            1000, receiver_puzzlehash, spent_block.get_coinbase()
         )
 
         assert spend_bundle is not None
@@ -1127,9 +1127,7 @@ class TestBlockchainTransactions:
             next_block.header.data.total_iters,
             next_block.header.data.additions_root,
             next_block.header.data.removals_root,
-            next_block.header.data.coinbase,
-            next_block.header.data.coinbase_signature,
-            next_block.header.data.fees_coin,
+            next_block.header.data.transaction_fees,
             next_block.header.data.aggregated_signature,
             next_block.header.data.cost,
             next_block.header.data.extension_data,
@@ -1187,7 +1185,7 @@ class TestBlockchainTransactions:
         block1_dic = {cvp_fee.opcode: [cvp_fee]}
         # This spendbundle has 9 mojo as fee
         invalid_spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block1.header.data.coinbase, block1_dic, 9
+            1000, receiver_puzzlehash, block1.get_coinbase(), block1_dic, 9
         )
 
         assert invalid_spend_bundle is not None
@@ -1210,7 +1208,7 @@ class TestBlockchainTransactions:
         # Try to validate that block at index 11
         next_block = invalid_new_blocks[11]
         error = await full_node_1.blockchain._validate_transactions(
-            next_block, next_block.header.data.fees_coin.amount
+            next_block, next_block.get_fees_coin().amount
         )
 
         assert error is Err.ASSERT_FEE_CONDITION_FAILED
@@ -1219,7 +1217,7 @@ class TestBlockchainTransactions:
         cvp_fee = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None)
         condition_dict = {cvp_fee.opcode: [cvp_fee]}
         valid_spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block1.header.data.coinbase, condition_dict, 10
+            1000, receiver_puzzlehash, block1.get_coinbase(), condition_dict, 10
         )
 
         assert valid_spend_bundle is not None

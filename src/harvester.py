@@ -5,7 +5,7 @@ from typing import Dict, Optional, Tuple, List, Callable
 import time
 import concurrent
 
-from blspy import PrependSignature, PrivateKey, PublicKey, Util
+from blspy import PublicKey, Util, InsecureSignature
 
 from chiapos import DiskProver
 from src.protocols import harvester_protocol
@@ -16,43 +16,50 @@ from src.types.sized_bytes import bytes32
 from src.util.config import load_config, save_config
 from src.util.api_decorators import api_request
 from src.util.ints import uint8
-from src.util.path import path_from_root
-from src.util.plot_utils import load_plots
+from src.util.plot_utils import load_plots, PlotInfo
+from src.util.hash import std_hash
+from src.consensus.constants import constants as consensus_constants
+from bitstring import BitArray
 
 log = logging.getLogger(__name__)
 
 
 class Harvester:
     config: Dict
-    provers: Dict[str, DiskProver]
-    failed_to_open_filenames: List[str]
-    not_found_filenames: List[str]
-    challenge_hashes: Dict[bytes32, Tuple[bytes32, str, uint8]]
-    pool_pubkeys: List[PublicKey]
+    provers: Dict[Path, PlotInfo]
+    failed_to_open_filenames: List[Path]
+    challenge_signatures: Dict[Tuple[bytes32, Path], InsecureSignature]
+    no_key_filenames: List[Path]
+    farmer_pubkeys: List[PublicKey]
     root_path: Path
     _plot_notification_task: Optional[asyncio.Task]
     _is_shutdown: bool
     executor: concurrent.futures.ThreadPoolExecutor
     state_changed_callback: Optional[Callable]
+    constants: Dict
 
-    def __init__(self, config: Dict, plot_config: Dict, root_path: Path):
+    def __init__(self, config: Dict, root_path: Path, override_constants={}):
         self.config = config
         self.root_path = root_path
 
         # From filename to prover
         self.provers = {}
         self.failed_to_open_filenames = []
-        self.not_found_filenames = []
+        self.no_key_filenames = []
 
-        # From quality string to (challenge_hash, filename, index)
-        self.challenge_hashes = {}
+        # From (challenge_hash, filename) to farmer signature
+        self.challenge_signatures = {}
+
         self._is_shutdown = False
         self._plot_notification_task = None
         self.global_connections: Optional[PeerConnections] = None
-        self.pool_pubkeys = []
+        self.farmer_pubkeys = []
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
         self.state_changed_callback = None
         self.server = None
+        self.constants = consensus_constants.copy()
+        for key, value in override_constants.items():
+            self.constants[key] = value
 
     async def _start(self):
         self._plot_notification_task = asyncio.create_task(self._plot_notification())
@@ -80,53 +87,50 @@ class Harvester:
         counter = 1
         while not self._is_shutdown:
             if counter % 600 == 0:
-                found = False
-                for filename, prover in self.provers.items():
-                    log.info(f"Farming plot {filename} of size {prover.get_size()}")
-                    found = True
-                if not found:
-                    log.warning(
-                        "Not farming any plots on this harvester. Check your configuration."
-                    )
+                self._refresh_plots()
+                if len(self.provers) == 0:
+                    log.warning("Warning, not farming any plots on this harvester.")
             await asyncio.sleep(1)
             counter += 1
 
     def _get_plots(self) -> Tuple[List[Dict], List[str], List[str]]:
         response_plots: List[Dict] = []
-        for path, prover in self.provers.items():
-            plot_pk = PrivateKey.from_bytes(
-                bytes.fromhex(self.plot_config["plots"][path]["sk"])
-            ).get_public_key()
-            pool_pk = PublicKey.from_bytes(
-                bytes.fromhex(self.plot_config["plots"][path]["pool_pk"])
-            )
+        for path, plot_info in self.provers.items():
+            prover = plot_info.prover
             response_plots.append(
                 {
                     "filename": str(path),
                     "size": prover.get_size(),
                     "plot-seed": prover.get_id(),
-                    "memo": prover.get_memo(),
-                    "plot_pk": bytes(plot_pk),
-                    "pool_pk": bytes(pool_pk),
+                    "farmer_address": plot_info.farmer_address,
+                    "pool_address": plot_info.pool_address,
+                    "farmer_public_key": plot_info.farmer_public_key,
+                    "harvester_sk": plot_info.harvester_sk,
                 }
             )
-        return (response_plots, self.failed_to_open_filenames, self.not_found_filenames)
 
-    def _refresh_plots(self, reload_config_file=True):
+        return (
+            response_plots,
+            [str(s) for s in self.failed_to_open_filenames],
+            [str(s) for s in self.no_key_filenames],
+        )
+
+    def _refresh_plots(self):
         (
             self.provers,
             self.failed_to_open_filenames,
-            self.not_found_filenames,
+            self.no_key_filenames,
         ) = load_plots(self.config, self.farmer_pubkeys, self.root_path)
         self._state_changed("plots")
 
     def _delete_plot(self, str_path: str):
-        if str_path in self.provers:
-            del self.provers[str_path]
+        path = Path(str_path).resolve()
+        if path in self.provers:
+            del self.provers[path]
 
         # Remove absolute and relative paths
-        if Path(str_path).exists():
-            Path(str_path).unlink()
+        if path.exists():
+            path.unlink()
 
         self._state_changed("plots")
         return True
@@ -154,7 +158,7 @@ class Harvester:
         use any plots which don't have one of the pool keys.
         """
         self.farmer_pubkeys = harvester_handshake.farmer_pubkeys
-        self._refresh_plots(reload_config_file=False)
+        self._refresh_plots()
         if len(self.provers) == 0:
             log.warning(
                 "Not farming any plots on this harvester. Check your configuration."
@@ -198,7 +202,7 @@ class Harvester:
             return quality_strings
 
         async def lookup_challenge(
-            filename: str, prover: DiskProver
+            filename: Path, prover: DiskProver
         ) -> List[harvester_protocol.ChallengeResponse]:
             # Exectures a DiskProverLookup in a threadpool, and returns responses
             all_responses: List[harvester_protocol.ChallengeResponse] = []
@@ -207,21 +211,34 @@ class Harvester:
             )
             if quality_strings is not None:
                 for index, quality_str in enumerate(quality_strings):
-                    self.challenge_hashes[quality_str] = (
-                        new_challenge.challenge_hash,
-                        filename,
-                        uint8(index),
-                    )
                     response: harvester_protocol.ChallengeResponse = harvester_protocol.ChallengeResponse(
-                        new_challenge.challenge_hash, quality_str, prover.get_size()
+                        new_challenge.challenge_hash,
+                        str(filename),
+                        uint8(index),
+                        quality_str,
+                        prover.get_size(),
                     )
                     all_responses.append(response)
             return all_responses
 
-        awaitables = [
-            lookup_challenge(filename, prover)
-            for filename, prover in self.provers.items()
-        ]
+        awaitables = []
+        for filename, plot_info in self.provers.items():
+            harvester_sig = plot_info.harvester_sk.sign_insecure(
+                new_challenge.challenge_hash
+            )
+            agg_sig = None
+            for (farmer_pk, farmer_sig) in new_challenge.farmer_challenge_signatures:
+                if farmer_pk == plot_info.farmer_public_key:
+                    agg_sig = InsecureSignature.aggregate(harvester_sig, farmer_sig)
+            if agg_sig is None:
+                log.error("Farmer does not have the correct keys for this plot")
+                return
+
+            # This is actually secure, check proof_of_space.py for explanation
+            h = BitArray(std_hash(bytes(agg_sig)))
+            if h[: self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]].int == 0:
+                awaitables.append(lookup_challenge(filename, plot_info.prover))
+            self.challenge_signatures[(new_challenge.challenge_hash, filename)]
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         for sublist_awaitable in asyncio.as_completed(awaitables):
@@ -232,7 +249,8 @@ class Harvester:
                     Delivery.RESPOND,
                 )
         log.info(
-            f"Time taken to lookup qualities in {len(self.provers)} plots: {time.time() - start}"
+            f"Time taken to lookup qualities in {len(awaitables)} plots: {time.time() - start}. "
+            f"Total {len(self.provers)} plots"
         )
 
     @api_request
@@ -244,45 +262,58 @@ class Harvester:
         We look up the correct plot based on the quality, lookup the proof, and return it.
         """
         response: Optional[harvester_protocol.RespondProofOfSpace] = None
-        try:
-            # Using the quality string, find the right plot and index from our solutions
-            challenge_hash, filename, index = self.challenge_hashes[
-                request.quality_string
-            ]
-        except KeyError:
-            log.warning(f"Quality string {request.quality_string} not found")
-            return
-        if index is not None:
-            proof_xs: bytes
-            try:
-                try:
-                    proof_xs = self.provers[filename].get_full_proof(
-                        challenge_hash, index
-                    )
-                except RuntimeError:
-                    self.provers[filename] = DiskProver(str(filename))
-                    proof_xs = self.provers[filename].get_full_proof(
-                        challenge_hash, index
-                    )
-            except KeyError:
-                log.warning(f"KeyError plot {filename} does not exist.")
-            pool_pubkey = PublicKey.from_bytes(
-                bytes.fromhex(self.plot_config["plots"][filename]["pool_pk"])
-            )
-            plot_pubkey = PrivateKey.from_bytes(
-                bytes.fromhex(self.plot_config["plots"][filename]["sk"])
-            ).get_public_key()
-            proof_of_space: ProofOfSpace = ProofOfSpace(
-                challenge_hash,
-                pool_pubkey,
-                plot_pubkey,
-                uint8(self.provers[filename].get_size()),
-                proof_xs,
-            )
+        challenge_hash = request.challenge_hash
+        filename = Path(request.plot_id).resolve()
+        index = request.response_number
+        proof_xs: bytes
+        plot_info = self.provers[filename]
+        challenge_signature = self.challenge_signatures[(challenge_hash, filename)]
 
-            response = harvester_protocol.RespondProofOfSpace(
-                request.quality_string, proof_of_space
-            )
+        assert (
+            BitArray(std_hash(challenge_signature))[
+                : self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]
+            ].int
+            == 0
+        )
+
+        try:
+            try:
+                proof_xs = plot_info.prover.get_full_proof(challenge_hash, index)
+            except RuntimeError:
+                prover = DiskProver(str(filename))
+                self.provers[filename] = PlotInfo(
+                    prover,
+                    plot_info.farmer_address,
+                    plot_info.pool_address,
+                    plot_info.farmer_public_key,
+                    plot_info.harvester_sk,
+                )
+                proof_xs = self.provers[filename].get_full_proof(challenge_hash, index)
+        except KeyError:
+            log.warning(f"KeyError plot {filename} does not exist.")
+
+        plot_info = self.provers[filename]
+        plot_pubkey = ProofOfSpace.generate_plot_pubkey(
+            plot_info.harvester_sk.get_public_key(), plot_info.farmer_public_key
+        )
+
+        proof_of_space: ProofOfSpace = ProofOfSpace(
+            challenge_hash,
+            plot_info.farmer_address,
+            plot_info.pool_address,
+            plot_pubkey,
+            challenge_signature,
+            uint8(self.provers[filename].get_size()),
+            proof_xs,
+        )
+        proof_of_possession = plot_info.harvester_sk.sign_prepend(b"")
+        response = harvester_protocol.RespondProofOfSpace(
+            request.plot_id,
+            request.response_number,
+            proof_of_space,
+            plot_info.harvester_sk.get_public_key(),
+            proof_of_possession,
+        )
         if response:
             yield OutboundMessage(
                 NodeType.FARMER,
@@ -291,59 +322,24 @@ class Harvester:
             )
 
     @api_request
-    async def request_header_signature(
-        self, request: harvester_protocol.RequestHeaderSignature
-    ):
+    async def request_signature(self, request: harvester_protocol.RequestSignature):
         """
         The farmer requests a signature on the header hash, for one of the proofs that we found.
-        A signature is created on the header hash using the plot private key.
+        A signature is created on the header hash using the harvester private key. This can also
+        be used for pooling.
         """
-        if request.quality_string not in self.challenge_hashes:
-            return
+        plot_info = self.provers[Path(request.plot_id).resolve()]
 
-        _, filename, _ = self.challenge_hashes[request.quality_string]
-
-        plot_sk = PrivateKey.from_bytes(
-            bytes.fromhex(self.plot_config["plots"][filename]["sk"])
-        )
-        header_hash_signature: PrependSignature = plot_sk.sign_prepend(
-            request.header_hash
-        )
-        assert header_hash_signature.verify(
-            [Util.hash256(request.header_hash)], [plot_sk.get_public_key()]
+        plot_sk = plot_info.harvester_sk
+        signature: InsecureSignature = plot_sk.sign_insecure(request.message)
+        assert signature.verify(
+            [Util.hash256(request.message)], [plot_sk.get_public_key()]
         )
 
-        response: harvester_protocol.RespondHeaderSignature = harvester_protocol.RespondHeaderSignature(
-            request.quality_string, header_hash_signature,
+        response: harvester_protocol.RespondSignature = harvester_protocol.RespondSignature(
+            request.challenge_hash, request.plot_id, request.response_number, signature,
         )
+
         yield OutboundMessage(
-            NodeType.FARMER,
-            Message("respond_header_signature", response),
-            Delivery.RESPOND,
-        )
-
-    @api_request
-    async def request_partial_proof(
-        self, request: harvester_protocol.RequestPartialProof
-    ):
-        """
-        The farmer requests a signature on the farmer_target, for one of the proofs that we found.
-        We look up the correct plot based on the quality, lookup the proof, and sign
-        the farmer target hash using the plot private key. This will be used as a pool share.
-        """
-        _, filename, _ = self.challenge_hashes[request.quality_string]
-        plot_sk = PrivateKey.from_bytes(
-            bytes.fromhex(self.plot_config["plots"][filename]["sk"])
-        )
-        farmer_target_signature: PrependSignature = plot_sk.sign_prepend(
-            request.farmer_target_hash
-        )
-
-        response: harvester_protocol.RespondPartialProof = harvester_protocol.RespondPartialProof(
-            request.quality_string, farmer_target_signature
-        )
-        yield OutboundMessage(
-            NodeType.FARMER,
-            Message("respond_partial_proof", response),
-            Delivery.RESPOND,
+            NodeType.FARMER, Message("respond_signature", response), Delivery.RESPOND,
         )

@@ -19,7 +19,6 @@ from src.cmds.init import create_default_chia_config, initialize_ssl
 from src.types.BLSSignature import BLSPublicKey
 from src.consensus import block_rewards, pot_iterations
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
-from src.consensus.coinbase import create_coinbase_coin_and_signature
 from src.types.challenge import Challenge
 from src.types.classgroup import ClassgroupElement
 from src.types.full_block import FullBlock, additions_for_npc
@@ -546,10 +545,6 @@ class BlockTools:
 
         coinbase_reward = block_rewards.calculate_block_reward(height)
         fee_reward = uint64(block_rewards.calculate_base_fee(height) + fees)
-
-        coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
-            height, reward_puzzlehash, coinbase_reward, selected_pool_sk
-        )
 
         parent_coin_name = std_hash(std_hash(height))
         fees_coin = Coin(parent_coin_name, reward_puzzlehash, uint64(fee_reward))
