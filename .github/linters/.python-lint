@@ -252,6 +252,7 @@ ignored-modules=blspy,
                 websockets,
                 cbor2,
                 keyring,
+                keyrings.cryptfile,
                 bitstring,
                 clvm_tools,
                 setproctitle,
@@ -262,7 +263,8 @@ ignored-modules=blspy,
                 sortedcontainers,
                 aiter,
                 miniupnpc,
-                pytest
+                pytest,
+                setuptools_scm
 
 
 # Show a hint with possible names when a member name was not found. The aspect

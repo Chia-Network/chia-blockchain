@@ -45,4 +45,6 @@ jobs:
       ################################
       - name: Lint Code Base
         uses: docker://github/super-linter:v2.2.0
+        env:
+          VALIDATE_JAVASCRIPT_STANDARD: false
 ...
