@@ -89,7 +89,7 @@ class TestRpc:
             res = await client_2.get_plots()
             num_plots = len(res["plots"])
             assert num_plots > 0
-            plot_dir = get_plot_dir()
+            plot_dir = get_plot_dir() / "subdir"
             plotter = DiskPlotter()
             pool_pk = harvester.pool_pubkeys[0]
             plot_sk = PrivateKey.from_seed(b"Farmer harvester rpc test seed")
@@ -107,7 +107,11 @@ class TestRpc:
                 plot_seed,
                 128,
             )
-            await client_2.add_plot(str(plot_dir / filename), plot_sk)
+
+            res_2 = await client_2.get_plots()
+            assert len(res_2["plots"]) == num_plots
+
+            await client_2.add_plot_directory(str(plot_dir))
 
             res_2 = await client_2.get_plots()
             assert len(res_2["plots"]) == num_plots + 1
@@ -115,22 +119,6 @@ class TestRpc:
             await client_2.delete_plot(str(plot_dir / filename))
             res_3 = await client_2.get_plots()
             assert len(res_3["plots"]) == num_plots
-
-            filename = "test_farmer_harvester_rpc_plot_2.plot"
-            plotter.create_plot_disk(
-                str(plot_dir),
-                str(plot_dir),
-                str(plot_dir),
-                filename,
-                18,
-                b"genesis",
-                plot_seed,
-                128,
-            )
-            await client_2.add_plot(str(plot_dir / filename), plot_sk, pool_pk)
-            assert len((await client_2.get_plots())["plots"]) == num_plots + 1
-            await client_2.delete_plot(str(plot_dir / filename))
-            assert len((await client_2.get_plots())["plots"]) == num_plots
 
         except AssertionError:
             # Checks that the RPC manages to stop the node

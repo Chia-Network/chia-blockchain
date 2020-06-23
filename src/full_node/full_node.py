@@ -1276,9 +1276,6 @@ class FullNode:
 
         base_fee_reward = calculate_base_fee(target_tip.height + 1)
         full_fee_reward = uint64(int(base_fee_reward + spend_bundle_fees))
-        # Create fees coin
-        fee_hash = std_hash(std_hash(uint32(target_tip.height + 1)))
-        fees_coin = Coin(fee_hash, request.fees_target_puzzle_hash, full_fee_reward)
 
         # Calculate the cost of transactions
         cost = uint64(0)
@@ -1305,6 +1302,8 @@ class FullNode:
                 byte_array_tx.append(bytearray(coin.puzzle_hash))
             for coin in removals:
                 byte_array_tx.append(bytearray(coin.name()))
+            byte_array_tx.append(bytearray(request.proof_of_space.farmer_puzzle_hash))
+            byte_array_tx.append(bytearray(request.proof_of_space.pool_puzzle_hash))
 
             bip158: PyBIP158 = PyBIP158(byte_array_tx)
             encoded_filter = bytes(bip158.GetEncoded())
@@ -1369,9 +1368,7 @@ class FullNode:
             uint64(target_tip.data.total_iters + iterations_needed),
             additions_root,
             removal_root,
-            request.coinbase,
-            request.coinbase_signature,
-            fees_coin,
+            full_fee_reward,
             aggregate_sig,
             cost,
             extension_data,

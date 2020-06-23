@@ -31,7 +31,6 @@ from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_puzzle_store import WalletPuzzleStore
 from src.wallet.wallet_store import WalletStore
 from src.wallet.wallet_transaction_store import WalletTransactionStore
-from src.consensus.block_rewards import calculate_block_reward
 from src.full_node.blockchain import ReceiveBlockResult
 from src.consensus.pot_iterations import calculate_iterations_quality
 from src.util.significant_bits import truncate_to_significant_bits
@@ -43,6 +42,7 @@ from src.types.program import Program
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.util.wallet_types import WalletType
 from src.consensus.find_fork_point import find_fork_point_in_chain
+from src.consensus.block_rewards import calculate_block_reward
 
 
 class WalletStateManager:
@@ -655,10 +655,11 @@ class WalletStateManager:
         """
         cb_and_fees_additions = []
         if header_block is not None:
-            coinbase = header_block.header.data.coinbase
-            fees_coin = header_block.header.data.fees_coin
-            if await self.is_addition_relevant(coinbase):
-                cb_and_fees_additions.append(coinbase)
+            coinbase_coin = header_block.get_coinbase()
+            fees_coin = header_block.get_fees_coin()
+
+            if await self.is_addition_relevant(coinbase_coin):
+                cb_and_fees_additions.append(coinbase_coin)
             if await self.is_addition_relevant(fees_coin):
                 cb_and_fees_additions.append(fees_coin)
         assert block.additions is not None
@@ -983,19 +984,6 @@ class WalletStateManager:
         ):
             return False
 
-        # Check coinbase sig
-        pair = header_block.header.data.coinbase_signature.PkMessagePair(
-            header_block.proof_of_space.pool_pubkey,
-            header_block.header.data.coinbase.name(),
-        )
-
-        if not header_block.header.data.coinbase_signature.validate([pair]):
-            return False
-
-        # Check coinbase and fees amount
-        coinbase_reward = calculate_block_reward(br.height)
-        if coinbase_reward != header_block.header.data.coinbase.amount:
-            return False
         return True
 
     def validate_select_proofs(

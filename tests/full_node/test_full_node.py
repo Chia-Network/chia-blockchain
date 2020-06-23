@@ -140,7 +140,7 @@ class TestFullNodeProtocol:
         spend_bundle = wallet_a.generate_signed_transaction(
             100,
             receiver_puzzlehash,
-            blocks[1].header.data.coinbase,
+            blocks[1].get_coinbase(),
             condition_dic=conditions_dict,
         )
         assert spend_bundle is not None
@@ -240,7 +240,7 @@ class TestFullNodeProtocol:
 
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
         spend_bundle = wallet_a.generate_signed_transaction(
-            100, receiver_puzzlehash, blocks[2].header.data.coinbase,
+            100, receiver_puzzlehash, blocks[2].get_coinbase(),
         )
         assert spend_bundle is not None
         respond_transaction = fnp.RespondTransaction(spend_bundle)
@@ -268,7 +268,7 @@ class TestFullNodeProtocol:
 
         # Invalid transaction does not propagate
         spend_bundle = wallet_a.generate_signed_transaction(
-            100000000000000, receiver_puzzlehash, blocks[3].header.data.coinbase,
+            100000000000000, receiver_puzzlehash, blocks[3].get_coinbase(),
         )
         assert spend_bundle is not None
         respond_transaction = fnp.RespondTransaction(spend_bundle)
@@ -740,8 +740,10 @@ class TestFullNodeProtocol:
         block_invalid = FullBlock(
             ProofOfSpace(
                 blocks_new[-5].proof_of_space.challenge_hash,
-                blocks_new[-5].proof_of_space.pool_pubkey,
+                blocks_new[-5].proof_of_space.farmer_puzzle_hash,
+                blocks_new[-5].proof_of_space.pool_puzzle_hash,
                 blocks_new[-5].proof_of_space.plot_pubkey,
+                blocks_new[-5].proof_of_space.challenge_signature,
                 uint8(blocks_new[-5].proof_of_space.size + 1),
                 blocks_new[-5].proof_of_space.proof,
             ),
@@ -841,12 +843,12 @@ class TestWalletProtocol:
             pass
 
         spend_bundle = wallet_a.generate_signed_transaction(
-            100, wallet_a.get_new_puzzlehash(), blocks_new[-1].header.data.coinbase,
+            100, wallet_a.get_new_puzzlehash(), blocks_new[-1].get_coinbase(),
         )
         spend_bundle_bad = wallet_a.generate_signed_transaction(
             uint64.from_bytes(constants["MAX_COIN_AMOUNT"]),
             wallet_a.get_new_puzzlehash(),
-            blocks_new[-1].header.data.coinbase,
+            blocks_new[-1].get_coinbase(),
         )
 
         msgs = [
@@ -1076,7 +1078,7 @@ class TestWalletProtocol:
                 wallet_a.generate_signed_transaction(
                     100,
                     wallet_a.get_new_puzzlehash(),
-                    blocks_new[i - 8].header.data.coinbase,
+                    blocks_new[i - 8].get_coinbase(),
                 )
             )
         height_with_transactions = len(blocks_new) + 1
@@ -1258,7 +1260,7 @@ class TestWalletProtocol:
         for i in range(5):
             spend_bundles.append(
                 wallet_a.generate_signed_transaction(
-                    100, puzzle_hashes[i % 2], blocks_new[i - 8].header.data.coinbase,
+                    100, puzzle_hashes[i % 2], blocks_new[i - 8].get_coinbase(),
                 )
             )
         height_with_transactions = len(blocks_new) + 1
