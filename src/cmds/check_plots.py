@@ -95,7 +95,8 @@ def main():
         log.warning(f"{grand_total_bad} invalid plots")
     if len(no_key_filenames) > 0:
         log.warning(
-            f"There are {len(no_key_filenames)} plots with a farmer public key that is not on this machine. The private key must be in the keychain in order to farm them. Use 'chia keys' to transfer keys"
+            f"There are {len(no_key_filenames)} plots with a farmer public key that "
+            f"is not on this machine. The private key must be in the keychain in order to farm them. Use 'chia keys' to transfer keys"
         )
 
 

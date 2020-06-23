@@ -5,6 +5,7 @@ from src.util.ints import uint64
 from src.types.coin import Coin
 from src.types.BLSSignature import BLSSignature, BLSPublicKey
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
+from src.util.hash import std_hash
 
 
 def create_puzzlehash_for_pk(pub_key: BLSPublicKey) -> bytes32:
@@ -27,12 +28,6 @@ def create_coinbase_coin(block_index: int, puzzle_hash: bytes32, reward: uint64)
     return Coin(block_index_as_hash, puzzle_hash, reward)
 
 
-def create_coinbase_coin_and_signature(
-    block_index: int,
-    puzzle_hash: bytes32,
-    reward: uint64,
-    private_key: blspy.PrivateKey,
-):
-    coin = create_coinbase_coin(block_index, puzzle_hash, reward)
-    signature = sign_coinbase_coin(coin, private_key)
-    return coin, signature
+def create_fees_coin(block_index: int, puzzle_hash: bytes32, reward: uint64):
+    block_index_as_hash = std_hash(std_hash(bytes32(block_index.to_bytes(32, "big"))))
+    return Coin(block_index_as_hash, puzzle_hash, reward)

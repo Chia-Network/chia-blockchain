@@ -37,10 +37,10 @@ class TestCoinStore:
         # Save/get block
         for block in blocks:
             await db.new_lca(block)
-            unspent = await db.get_coin_record(block.header.data.coinbase.name())
-            unspent_fee = await db.get_coin_record(block.header.data.fees_coin.name())
-            assert block.header.data.coinbase == unspent.coin
-            assert block.header.data.fees_coin == unspent_fee.coin
+            unspent = await db.get_coin_record(block.get_coinbase().name())
+            unspent_fee = await db.get_coin_record(block.get_fees_coin().name())
+            assert block.get_coinbase() == unspent.coin
+            assert block.get_fees_coin() == unspent_fee.coin
 
         await connection.close()
         Path("fndb_test.db").unlink()
@@ -58,15 +58,15 @@ class TestCoinStore:
         # Save/get block
         for block in blocks:
             await db.new_lca(block)
-            unspent = await db.get_coin_record(block.header.data.coinbase.name())
-            unspent_fee = await db.get_coin_record(block.header.data.fees_coin.name())
-            assert block.header.data.coinbase == unspent.coin
-            assert block.header.data.fees_coin == unspent_fee.coin
+            unspent = await db.get_coin_record(block.get_coinbase().name())
+            unspent_fee = await db.get_coin_record(block.get_fees_coin().name())
+            assert block.get_coinbase() == unspent.coin
+            assert block.get_fees_coin() == unspent_fee.coin
 
             await db.set_spent(unspent.coin.name(), block.height)
             await db.set_spent(unspent_fee.coin.name(), block.height)
-            unspent = await db.get_coin_record(block.header.data.coinbase.name())
-            unspent_fee = await db.get_coin_record(block.header.data.fees_coin.name())
+            unspent = await db.get_coin_record(block.get_coinbase().name())
+            unspent_fee = await db.get_coin_record(block.get_fees_coin().name())
             assert unspent.spent == 1
             assert unspent_fee.spent == 1
 
@@ -86,15 +86,15 @@ class TestCoinStore:
         # Save/get block
         for block in blocks:
             await db.new_lca(block)
-            unspent = await db.get_coin_record(block.header.data.coinbase.name())
-            unspent_fee = await db.get_coin_record(block.header.data.fees_coin.name())
-            assert block.header.data.coinbase == unspent.coin
-            assert block.header.data.fees_coin == unspent_fee.coin
+            unspent = await db.get_coin_record(block.get_coinbase().name())
+            unspent_fee = await db.get_coin_record(block.get_fees_coin().name())
+            assert block.get_coinbase() == unspent.coin
+            assert block.get_fees_coin() == unspent_fee.coin
 
             await db.set_spent(unspent.coin.name(), block.height)
             await db.set_spent(unspent_fee.coin.name(), block.height)
-            unspent = await db.get_coin_record(block.header.data.coinbase.name())
-            unspent_fee = await db.get_coin_record(block.header.data.fees_coin.name())
+            unspent = await db.get_coin_record(block.get_coinbase().name())
+            unspent_fee = await db.get_coin_record(block.get_fees_coin().name())
             assert unspent.spent == 1
             assert unspent_fee.spent == 1
 
@@ -102,8 +102,8 @@ class TestCoinStore:
         await db.rollback_lca_to_block(reorg_index)
 
         for c, block in enumerate(blocks):
-            unspent = await db.get_coin_record(block.header.data.coinbase.name())
-            unspent_fee = await db.get_coin_record(block.header.data.fees_coin.name())
+            unspent = await db.get_coin_record(block.get_coinbase().name())
+            unspent_fee = await db.get_coin_record(block.get_fees_coin().name())
             if c <= reorg_index:
                 assert unspent.spent == 1
                 assert unspent_fee.spent == 1
@@ -134,17 +134,17 @@ class TestCoinStore:
 
             for c, block in enumerate(blocks):
                 unspent = await coin_store.get_coin_record(
-                    block.header.data.coinbase.name(), block.header
+                    block.get_coinbase().name(), block.header
                 )
                 unspent_fee = await coin_store.get_coin_record(
-                    block.header.data.fees_coin.name(), block.header
+                    block.get_fees_coin().name(), block.header
                 )
                 assert unspent.spent == 0
                 assert unspent_fee.spent == 0
                 assert unspent.confirmed_block_index == block.height
                 assert unspent.spent_block_index == 0
-                assert unspent.name == block.header.data.coinbase.name()
-                assert unspent_fee.name == block.header.data.fees_coin.name()
+                assert unspent.name == block.get_coinbase().name()
+                assert unspent_fee.name == block.get_fees_coin().name()
 
             blocks_reorg_chain = bt.get_consecutive_blocks(
                 test_constants_dict,
@@ -164,9 +164,9 @@ class TestCoinStore:
                 elif reorg_block.height >= initial_block_count:
                     assert result == ReceiveBlockResult.ADDED_TO_HEAD
                     unspent = await coin_store.get_coin_record(
-                        reorg_block.header.data.coinbase.name(), reorg_block.header
+                        reorg_block.get_coinbase().name(), reorg_block.header
                     )
-                    assert unspent.name == reorg_block.header.data.coinbase.name()
+                    assert unspent.name == reorg_block.get_coinbase().name()
                     assert unspent.confirmed_block_index == reorg_block.height
                     assert unspent.spent == 0
                     assert unspent.spent_block_index == 0
@@ -201,7 +201,7 @@ class TestCoinStore:
                 await b.receive_block(blocks[i])
             assert b.get_current_tips()[0].height == num_blocks
             unspent = await coin_store.get_coin_record(
-                blocks[1].header.data.coinbase.name(), blocks[-1].header
+                blocks[1].get_coinbase().name(), blocks[-1].header
             )
             unspent_puzzle_hash = unspent.coin.puzzle_hash
 

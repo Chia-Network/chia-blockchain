@@ -15,7 +15,6 @@ from src.util.ints import uint8, uint64
 from src.consensus.constants import ConsensusConstants
 from tests.block_tools import BlockTools
 from src.util.errors import Err
-from src.consensus.coinbase import create_coinbase_coin_and_signature
 from src.types.sized_bytes import bytes32
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
@@ -101,9 +100,7 @@ class TestBlockValidation:
                     blocks[9].header.data.total_iters,
                     blocks[9].header.data.additions_root,
                     blocks[9].header.data.removals_root,
-                    blocks[9].header.data.coinbase,
-                    blocks[9].header.data.coinbase_signature,
-                    blocks[9].header.data.fees_coin,
+                    blocks[9].header.data.transaction_fees,
                     blocks[9].header.data.aggregated_signature,
                     blocks[9].header.data.cost,
                     blocks[9].header.data.extension_data,
@@ -140,9 +137,7 @@ class TestBlockValidation:
             blocks[9].header.data.total_iters,
             blocks[9].header.data.additions_root,
             blocks[9].header.data.removals_root,
-            blocks[9].header.data.coinbase,
-            blocks[9].header.data.coinbase_signature,
-            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.transaction_fees,
             blocks[9].header.data.aggregated_signature,
             blocks[9].header.data.cost,
             blocks[9].header.data.extension_data,
@@ -176,9 +171,7 @@ class TestBlockValidation:
             blocks[9].header.data.total_iters,
             blocks[9].header.data.additions_root,
             blocks[9].header.data.removals_root,
-            blocks[9].header.data.coinbase,
-            blocks[9].header.data.coinbase_signature,
-            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.transaction_fees,
             blocks[9].header.data.aggregated_signature,
             blocks[9].header.data.cost,
             blocks[9].header.data.extension_data,
@@ -213,9 +206,7 @@ class TestBlockValidation:
             blocks[9].header.data.total_iters,
             blocks[9].header.data.additions_root,
             blocks[9].header.data.removals_root,
-            blocks[9].header.data.coinbase,
-            blocks[9].header.data.coinbase_signature,
-            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.transaction_fees,
             blocks[9].header.data.aggregated_signature,
             blocks[9].header.data.cost,
             blocks[9].header.data.extension_data,
@@ -264,8 +255,10 @@ class TestBlockValidation:
         bad_pos_proof[0] = uint8((bad_pos_proof[0] + 1) % 256)
         bad_pos = ProofOfSpace(
             blocks[9].proof_of_space.challenge_hash,
-            blocks[9].proof_of_space.pool_pubkey,
+            blocks[9].proof_of_space.farmer_puzzle_hash,
+            blocks[9].proof_of_space.pool_puzzle_hash,
             blocks[9].proof_of_space.plot_pubkey,
+            blocks[9].proof_of_space.challenge_signature,
             blocks[9].proof_of_space.size,
             bytes(bad_pos_proof),
         )
@@ -279,9 +272,7 @@ class TestBlockValidation:
             blocks[9].header.data.total_iters,
             blocks[9].header.data.additions_root,
             blocks[9].header.data.removals_root,
-            blocks[9].header.data.coinbase,
-            blocks[9].header.data.coinbase_signature,
-            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.transaction_fees,
             blocks[9].header.data.aggregated_signature,
             blocks[9].header.data.cost,
             blocks[9].header.data.extension_data,
@@ -313,8 +304,10 @@ class TestBlockValidation:
         bad_pos_proof[0] = uint8((bad_pos_proof[0] + 1) % 256)
         bad_pos = ProofOfSpace(
             blocks[9].proof_of_space.challenge_hash,
-            blocks[9].proof_of_space.pool_pubkey,
+            blocks[9].proof_of_space.farmer_puzzle_hash,
+            blocks[9].proof_of_space.pool_puzzle_hash,
             blocks[9].proof_of_space.plot_pubkey,
+            blocks[9].proof_of_space.challenge_signature,
             blocks[9].proof_of_space.size,
             bytes(bad_pos_proof),
         )
@@ -328,9 +321,7 @@ class TestBlockValidation:
             blocks[9].header.data.total_iters,
             blocks[9].header.data.additions_root,
             blocks[9].header.data.removals_root,
-            blocks[9].header.data.coinbase,
-            blocks[9].header.data.coinbase_signature,
-            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.transaction_fees,
             blocks[9].header.data.aggregated_signature,
             blocks[9].header.data.cost,
             blocks[9].header.data.extension_data,
@@ -368,9 +359,7 @@ class TestBlockValidation:
             blocks[9].header.data.total_iters,
             blocks[9].header.data.additions_root,
             blocks[9].header.data.removals_root,
-            blocks[9].header.data.coinbase,
-            blocks[9].header.data.coinbase_signature,
-            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.transaction_fees,
             blocks[9].header.data.aggregated_signature,
             blocks[9].header.data.cost,
             blocks[9].header.data.extension_data,
@@ -394,17 +383,9 @@ class TestBlockValidation:
         assert error_code == Err.INVALID_TRANSACTIONS_FILTER_HASH
 
     @pytest.mark.asyncio
-    async def test_invalid_coinbase_amount(self, initial_blockchain):
+    async def test_invalid_fees_amount(self, initial_blockchain):
         blocks, b = initial_blockchain
 
-        coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
-            blocks[9].header.data.height,
-            blocks[9].header.data.coinbase.puzzle_hash,
-            uint64(9991),
-            PrivateKey.from_bytes(
-                bytes.fromhex(list(bt.plot_config["plots"].values())[0]["pool_sk"])
-            ),
-        )
         new_header_data = HeaderData(
             blocks[9].header.data.height,
             blocks[9].header.data.prev_header_hash,
@@ -415,9 +396,7 @@ class TestBlockValidation:
             blocks[9].header.data.total_iters,
             blocks[9].header.data.additions_root,
             blocks[9].header.data.removals_root,
-            coinbase_coin,
-            coinbase_signature,
-            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.transaction_fees - 1,
             blocks[9].header.data.aggregated_signature,
             blocks[9].header.data.cost,
             blocks[9].header.data.extension_data,
@@ -439,55 +418,7 @@ class TestBlockValidation:
         )
         result, removed, error_code = await b.receive_block(block_bad)
         assert result == ReceiveBlockResult.INVALID_BLOCK
-        assert error_code == Err.INVALID_COINBASE_AMOUNT
-
-    @pytest.mark.asyncio
-    async def test_invalid_coinbase_signature(self, initial_blockchain):
-        blocks, b = initial_blockchain
-
-        coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
-            blocks[9].header.data.height,
-            blocks[9].header.data.coinbase.puzzle_hash,
-            uint64(9991),
-            PrivateKey.from_bytes(
-                bytes.fromhex(list(bt.plot_config["plots"].values())[0]["pool_sk"])
-            ),
-        )
-        new_header_data = HeaderData(
-            blocks[9].header.data.height,
-            blocks[9].header.data.prev_header_hash,
-            blocks[9].header.data.timestamp,
-            blocks[9].header.data.filter_hash,
-            blocks[9].header.data.proof_of_space_hash,
-            blocks[9].header.data.weight,
-            blocks[9].header.data.total_iters,
-            blocks[9].header.data.additions_root,
-            blocks[9].header.data.removals_root,
-            blocks[9].header.data.coinbase,
-            coinbase_signature,
-            blocks[9].header.data.fees_coin,
-            blocks[9].header.data.aggregated_signature,
-            blocks[9].header.data.cost,
-            blocks[9].header.data.extension_data,
-            blocks[9].header.data.generator_hash,
-        )
-
-        # Coinbase amount invalid
-        block_bad = FullBlock(
-            blocks[9].proof_of_space,
-            blocks[9].proof_of_time,
-            Header(
-                new_header_data,
-                bt.get_harvester_signature(
-                    new_header_data, blocks[9].proof_of_space.plot_pubkey
-                ),
-            ),
-            blocks[9].transactions_generator,
-            blocks[9].transactions_filter,
-        )
-        result, removed, error_code = await b.receive_block(block_bad)
-        assert result == ReceiveBlockResult.INVALID_BLOCK
-        assert error_code == Err.INVALID_COINBASE_SIGNATURE
+        assert error_code == Err.INVALID_BLOCK_FEE_AMOUNT
 
     @pytest.mark.asyncio
     async def test_difficulty_change(self):

@@ -280,10 +280,10 @@ async def show_async(args, parser):
                     # f"Pool Public Key            0x{block.proof_of_space.pool_pubkey}\n"
                     f"Tx Filter Hash         {b'block.transactions_filter'.hex()}\n"
                     f"Tx Generator Hash      {block.transactions_generator}\n"
-                    f"Coinbase Amount        {block.header.data.coinbase.amount/1000000000000}\n"
-                    f"Coinbase Puzzle Hash   0x{block.header.data.coinbase.puzzle_hash}\n"
-                    f"Fees Amount            {block.header.data.fees_coin.amount/1000000000000}\n"
-                    f"Fees Puzzle Hash       0x{block.header.data.fees_coin.puzzle_hash}\n"
+                    f"Coinbase Amount        {block.get_coinbase().amount/1000000000000}\n"
+                    f"Coinbase Puzzle Hash   0x{block.get_coinbase().puzzle_hash}\n"
+                    f"Fees Amount            {block.get_fees_coin().amount/1000000000000}\n"
+                    f"Fees Puzzle Hash       0x{block.get_fees_coin().puzzle_hash}\n"
                     f"Aggregated Signature   {aggregated_signature}"
                 )
             else:

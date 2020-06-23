@@ -138,7 +138,7 @@ class TestWalletSync:
         server_2.global_connections.close_all_connections()
 
         dic_h = {}
-        prev_coin = blocks[1].header.data.coinbase
+        prev_coin = blocks[1].get_coinbase()
         for i in range(11):
             pk, sk = await wallet_a.wallet_state_manager.get_keys(prev_coin.puzzle_hash)
             transaction_unsigned = wallet_a_dummy.generate_unsigned_transaction(
@@ -169,8 +169,8 @@ class TestWalletSync:
 
         # 2 block rewards and 3 fees
         assert await wallet_a.get_confirmed_balance() == (
-            blocks[1].header.data.coinbase.amount * 2
-        ) + (blocks[1].header.data.fees_coin.amount * 3)
+            blocks[1].get_coinbase().amount * 2
+        ) + (blocks[1].get_fees_coin().amount * 3)
         # All of our coins are spent and puzzle hashes present
         for puzzle_hash in puzzle_hashes[:-1]:
             records = await wallet_node.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
@@ -181,7 +181,7 @@ class TestWalletSync:
 
         # Then do the same but in a reorg chain
         dic_h = {}
-        prev_coin = blocks[1].header.data.coinbase
+        prev_coin = blocks[1].get_coinbase()
         for i in range(11):
             pk, sk = await wallet_a.wallet_state_manager.get_keys(prev_coin.puzzle_hash)
             transaction_unsigned = wallet_a_dummy.generate_unsigned_transaction(
@@ -219,8 +219,8 @@ class TestWalletSync:
 
         # 2 block rewards and 3 fees
         assert await wallet_a.get_confirmed_balance() == (
-            blocks[1].header.data.coinbase.amount * 2
-        ) + (blocks[1].header.data.fees_coin.amount * 3)
+            blocks[1].get_coinbase().amount * 2
+        ) + (blocks[1].get_fees_coin().amount * 3)
         # All of our coins are spent and puzzle hashes present
         for puzzle_hash in puzzle_hashes[:-1]:
             records = await wallet_node.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
@@ -279,8 +279,8 @@ class TestWalletSync:
         # 2 block rewards and 4 fees, plus 7000000000000 coins
         assert (
             await wallet_a.get_confirmed_balance()
-            == (blocks[1].header.data.coinbase.amount * 2)
-            + (blocks[1].header.data.fees_coin.amount * 4)
+            == (blocks[1].get_coinbase().amount * 2)
+            + (blocks[1].get_fees_coin().amount * 4)
             + 7000000000000
         )
         records = await wallet_node.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
