@@ -463,9 +463,7 @@ class TestMempool:
                 pass
 
         cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_MY_COIN_ID,
-            blocks[2].get_coinbase().name(),
-            None,
+            ConditionOpcode.ASSERT_MY_COIN_ID, blocks[2].get_coinbase().name(), None,
         )
         dic = {cvp.opcode: [cvp]}
 
@@ -612,9 +610,7 @@ class TestMempool:
                 pass
 
         cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_COIN_CONSUMED,
-            block2.get_coinbase().name(),
-            None,
+            ConditionOpcode.ASSERT_COIN_CONSUMED, block2.get_coinbase().name(), None,
         )
         dic = {cvp.opcode: [cvp]}
 
@@ -663,9 +659,7 @@ class TestMempool:
                 pass
 
         cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_COIN_CONSUMED,
-            block2.get_coinbase().name(),
-            None,
+            ConditionOpcode.ASSERT_COIN_CONSUMED, block2.get_coinbase().name(), None,
         )
         dic = {cvp.opcode: [cvp]}
 

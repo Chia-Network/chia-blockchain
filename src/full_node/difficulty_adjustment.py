@@ -176,7 +176,10 @@ def get_next_min_iters(
         block.header.data.total_iters - prev_block_header.data.total_iters
     )
     prev_min_iters = calculate_min_iters_from_iterations(
-        proof_of_space, difficulty, iterations, constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]
+        proof_of_space,
+        difficulty,
+        iterations,
+        constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"],
     )
 
     if next_height % constants["DIFFICULTY_EPOCH"] != constants["DIFFICULTY_DELAY"]:

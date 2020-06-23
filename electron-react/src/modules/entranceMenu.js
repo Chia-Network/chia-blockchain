@@ -2,7 +2,6 @@ export const presentNewWallet = "NEW_WALLET";
 export const presentOldWallet = "OLD_WALLET";
 export const presentDashboard = "DASHBOARD";
 export const presentSelectKeys = "SELECT_KEYS";
-export const presentImportHexKey = "IMPORT_HEX_HEX";
 
 export const changeEntranceMenu = item => ({
   type: "ENTRANCE_MENU",

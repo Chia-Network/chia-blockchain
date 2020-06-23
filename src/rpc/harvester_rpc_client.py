@@ -1,5 +1,4 @@
-from blspy import PrivateKey, PublicKey
-from typing import Optional, List, Dict
+from typing import List, Dict
 from src.rpc.rpc_client import RpcClient
 
 

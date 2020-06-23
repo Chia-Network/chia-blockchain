@@ -2,7 +2,6 @@ from typing import Callable, Dict, List
 
 from src.harvester import Harvester
 from src.util.ws_message import create_payload
-from blspy import PrivateKey, PublicKey
 
 
 class HarvesterRpcApi:

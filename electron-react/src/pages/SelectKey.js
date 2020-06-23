@@ -20,7 +20,6 @@ import {
   changeEntranceMenu,
   presentOldWallet,
   presentNewWallet,
-  presentImportHexKey
 } from "../modules/entranceMenu";
 
 const useStyles = makeStyles(theme => ({
@@ -97,9 +96,6 @@ const SelectKey = () => {
   };
   const goToMnemonics = () => {
     dispatch(changeEntranceMenu(presentOldWallet));
-  };
-  const goToHexKey = () => {
-    dispatch(changeEntranceMenu(presentImportHexKey));
   };
   const goToNewWallet = () => {
     dispatch(changeEntranceMenu(presentNewWallet));
@@ -178,17 +174,6 @@ const SelectKey = () => {
               className={classes.topButton}
             >
               Import from Mnemonics (24 words)
-            </Button>
-          </Link>
-          <Link onClick={goToHexKey}>
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              color="primary"
-              className={classes.bottomButton}
-            >
-              Import from hex private key
             </Button>
           </Link>
           <Link onClick={goToNewWallet}>
