@@ -13,6 +13,7 @@ from src.types.coin_solution import CoinSolution
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
+from src.util.hash import std_hash
 from src.util.ints import uint32, uint64
 from src.wallet.cc_wallet import cc_wallet_puzzles
 from src.wallet.cc_wallet.cc_wallet import CCWallet
@@ -81,6 +82,8 @@ class TradeManager:
     async def get_trade_by_coin(self, coin: Coin) -> Optional[TradeRecord]:
         all_trades = await self.get_all_trades()
         for trade in all_trades:
+            if trade.status == TradeStatus.CANCELED.value:
+                continue
             if coin in trade.removals:
                 return trade
             if coin in trade.additions:
@@ -140,15 +143,14 @@ class TradeManager:
                 )
             else:
                 # Either we canceled this trade or this trade failed
-                status = TradeStatus(trade.status)
-                if status is TradeStatus.PENDING_CANCEL:
+                if trade.status == TradeStatus.PENDING_CANCEL.value:
                     await self.trade_store.set_status(
                         trade.trade_id, TradeStatus.CANCELED
                     )
                     self.log.info(
                         f"Trade with id: {trade.trade_id} canceled at height: {index}"
                     )
-                else:
+                elif trade.status == TradeStatus.PENDING_CONFIRM.value:
                     await self.trade_store.set_status(
                         trade.trade_id, TradeStatus.FAILED
                     )
@@ -325,7 +327,7 @@ class TradeManager:
                 spend_bundle=spend_bundle,
                 additions=spend_bundle.additions(),
                 removals=spend_bundle.removals(),
-                trade_id=spend_bundle.name(),
+                trade_id=std_hash(spend_bundle.name() + bytes(now)),
                 status=uint32(TradeStatus.PENDING_ACCEPT.value),
                 sent_to=[],
             )
@@ -724,12 +726,13 @@ class TradeManager:
             spend_bundle = SpendBundle.aggregate(zero_spend_list)
 
         # Add transaction history hor this trade
+        now = uint64(int(time.time()))
         if chia_spend_bundle is not None:
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_spend_bundle])
             if chia_discrepancy < 0:
                 tx_record = TransactionRecord(
                     confirmed_at_index=uint32(0),
-                    created_at_time=uint64(int(time.time())),
+                    created_at_time=now,
                     to_puzzle_hash=token_bytes(),
                     amount=uint64(abs(chia_discrepancy)),
                     fee_amount=uint64(0),
@@ -741,7 +744,7 @@ class TradeManager:
                     removals=chia_spend_bundle.removals(),
                     wallet_id=uint32(1),
                     sent_to=[],
-                    trade_id=spend_bundle.name(),
+                    trade_id=std_hash(spend_bundle.name() + bytes(now))
                 )
             else:
                 tx_record = TransactionRecord(
@@ -758,7 +761,7 @@ class TradeManager:
                     removals=chia_spend_bundle.removals(),
                     wallet_id=uint32(1),
                     sent_to=[],
-                    trade_id=spend_bundle.name(),
+                    trade_id=std_hash(spend_bundle.name() + bytes(now)),
                 )
             my_tx_records.append(tx_record)
 
@@ -779,7 +782,7 @@ class TradeManager:
                     removals=spend_bundle.removals(),
                     wallet_id=wallet.wallet_info.id,
                     sent_to=[],
-                    trade_id=spend_bundle.name(),
+                    trade_id=std_hash(spend_bundle.name() + bytes(now)),
                 )
             else:
                 tx_record = TransactionRecord(
@@ -796,7 +799,7 @@ class TradeManager:
                     removals=spend_bundle.removals(),
                     wallet_id=wallet.wallet_info.id,
                     sent_to=[],
-                    trade_id=spend_bundle.name(),
+                    trade_id=std_hash(spend_bundle.name() + bytes(now)),
                 )
             my_tx_records.append(tx_record)
 
@@ -814,7 +817,7 @@ class TradeManager:
             removals=spend_bundle.removals(),
             wallet_id=uint32(0),
             sent_to=[],
-            trade_id=spend_bundle.name(),
+            trade_id=std_hash(spend_bundle.name() + bytes(now)),
         )
 
         now = uint64(int(time.time()))
@@ -827,7 +830,7 @@ class TradeManager:
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            trade_id=spend_bundle.name(),
+            trade_id=std_hash(spend_bundle.name() + bytes(now)),
             status=uint32(TradeStatus.PENDING_CONFIRM.value),
             sent_to=[],
         )

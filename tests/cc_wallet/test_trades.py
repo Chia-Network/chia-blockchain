@@ -398,5 +398,9 @@ class TestCCTrades:
 
         # Spendable should be the same as it was before making offer 1
         assert spendable_chia == spendable_after_cancel_1
-        trade_a = await trade_manager_a.get_trade_by_id(trade_offer.trade_id)
-        assert trade_a.status == TradeStatus.CANCELED.value
+
+        async def get_status():
+            trade_a = await trade_manager_a.get_trade_by_id(trade_offer.trade_id)
+            return trade_a.status
+
+        await time_out_assert(15, get_status, TradeStatus.CANCELED.value)
