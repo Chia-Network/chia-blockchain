@@ -16,7 +16,8 @@ u"".encode("idna")
 
 
 def service_kwargs_for_full_node(root_path):
-    service_name = "full_node_simulator"
+    service_name = "full_node"
+
     config = load_config_cli(root_path, "config.yaml", service_name)
     db_path = path_from_root(root_path, config["simulator_database_path"])
     mkdir(db_path.parent)
