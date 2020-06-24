@@ -479,7 +479,9 @@ class WalletStateManager:
             info = await self.puzzle_store.wallet_info_for_puzzle_hash(coin.puzzle_hash)
             if info is not None:
                 wallet_id, wallet_type = info
-                await self.coin_added(coin, height, is_coinbase, uint32(wallet_id), wallet_type)
+                await self.coin_added(
+                    coin, height, is_coinbase, uint32(wallet_id), wallet_type
+                )
 
         return trade_adds
 
