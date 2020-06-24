@@ -31,7 +31,7 @@ timelord.sanitizer_mode = True, the timelord will work on those challenges.
 - Skylake processors on Windows without AVX would fail to run.
 - Harvester no longer runs into 512 maximum file handles open on Windows.
 - The version generator for new installers incorrectly handled the "dev" versions after a release tag.
-- Due to a python bug, ssl connections could randomly fail. Worked around the issue - https://bugs.python.org/issue29288
+- Due to a python bug, ssl connections could randomly fail. Worked around [Python issue 29288](https://bugs.python.org/issue29288)
 
 ## [1.0beta7] aka Beta 1.7 - 2020-06-08
 
@@ -157,7 +157,7 @@ timelord.sanitizer_mode = True, the timelord will work on those challenges.
 - Harvester is now asynchronous and will better be able to look up more plots spread across more physical drives.
 - Full node startup time has been sped up significantly by optimizing the loading of the blockchain from disk.
 
-# Changed
+### Changed
 
 - Most scripts have been removed in favor of chia action commands. You can run `chia version` or `chia start node` for example. Just running `chia` will show you more options. However `chia-create-plots` continues to use the hyphenated form. Also it's now `chia generate keys` as another example.
 - Chia start commands like `chia start farmer` and `chia stop node` now keep track of process IDs in a run/ directory in your configuration directory. `chia stop` is unlikely to work on Windows native for now. If `chia start -r node` doesn't work you can force the run/ directory to be reset with `chia start -f node`.
@@ -193,7 +193,7 @@ timelord.sanitizer_mode = True, the timelord will work on those challenges.
 - We've made lots of little improvements that should speed up node syncing
 - We added full block lookup to `chia show`.
 
-# Changed
+### Changed
 
 - `chia-restart-harvester` has been renamed from `chia-start-harvester` to better reflect its functionality. Use it to restart a harvester that's farming so that it will pick up newly finished plots.
 - We made the Wallet configurable to connect to a remote trusted node.
@@ -201,11 +201,11 @@ timelord.sanitizer_mode = True, the timelord will work on those challenges.
 - We updated our miniupnpc dependency to version 2.1.
 - We increase the default farmer propagate threshold to reduce chain stall probability.
 
-# Deprecated
+### Deprecated
 
 - You should not copy over any prior Wallet database as they are not compatible with Beta3. Your existing full node will not have to re-sync and its database remains compatible.
 
-#Fixed
+#### Fixed
 
 - Among a lot of bug fixes was removing a regression that slowed plotting on MacOS by 3 times and may have had smaller impacts on plotting speed on other platforms.
 - We've removed some race conditions in the Wallet
@@ -230,7 +230,7 @@ timelord.sanitizer_mode = True, the timelord will work on those challenges.
 - If you’re a farmer you can use the Wallet to keep track of your earnings. Either use the same keys.yaml on the same machine or copy the keys.yaml to another machine where you want to track of and spend your coins.
 - We have continued to make improvements to the speed of VDF squaring, creating a VDF proof, and verifying a VDF proof.
 
-# Changed
+### Changed
 
 - We have revamped the chia management command line. To start a farmer all you have to do is start the venv with `. ./activate` and then type `chia-start-farmer &`. The [README.md](https://github.com/Chia-Network/chia-blockchain/blob/master/README.md) has been updated to reflect the new commands.
 - We have moved all node to node communication to TLS 1.3 by default. For now, all TLS is unauthenticated but certain types of over the wire node to node communications will have the ability to authenticate both by certificate and by inter protocol signature. Encrypting over the wire by default stops casual snooping of transaction origination, light wallet to trusted node communication, and harvester-farmer-node communication for example. This leaves only the mempool and the chain itself open to casual observation by the public and the various entities around the world.
@@ -243,7 +243,7 @@ timelord.sanitizer_mode = True, the timelord will work on those challenges.
 - Developer requirements were separated from the actual requirements.
 - `install-timelord.sh` has been pulled out from `install.sh`. This script downloads the source python package for chiavdf and compiles it locally for timelords. vdf_client can be included or excluded to make building normal user wheels easier.
 
-# Removed
+### Removed
 
 - The Beta release is not compatible with the history of the Alpha blockchain and we will be ceasing support of the Alpha chain approximately two weeks after the release of this Beta. However, your plots and keys are fully compatible with the Beta chain. Please save your plot keys! Examples of how to save your keys and upgrade to the Beta are available on the [repo wiki](https://github.com/Chia-Network/chia-blockchain/wiki).
 - The ssh ui and web ui are removed in favor of the cli ui and the Electron GUI. To mimic the ssh ui try `chia show -s -c` and try `chia show --help` for usage instructions.
@@ -267,7 +267,7 @@ timelord.sanitizer_mode = True, the timelord will work on those challenges.
 - You can now provide an index to create_plots using the -i flag to create an arbitrary new plot derived from an existing plot key. Thanks @xorinox.
 - There is a new restart_harvester.sh in scripts/ to easily restart a harvester when you want to add a newly completed plot to the farm without restarting farmer, fullnode, timelord, etc.
 - Harvesters now log errors if they encounter a malformed or corrupted plot file. Again thanks @xorinox.
-- New AJAX based full node UI. To access go to http://127.0.0.1:8555/index.html with any modern web browser on the same machine as the full node.
+- New AJAX based full node UI. To access go to [http://127.0.0.1:8555/index.html](http://127.0.0.1:8555/index.html) with any modern web browser on the same machine as the full node.
 - If you want to benchmark your CPU as a VDF you can use vdf_bench square_asm 500000 for the assembly optimized test or just vdf_bench square 500000 for the plain C++ code path. This tool is found in lib/chiavdf/fast_vdf/.
 - Improvements to shutting down services in all of the scripts in scripts/. Another @xorinox HT.
 
@@ -400,7 +400,7 @@ timelord.sanitizer_mode = True, the timelord will work on those challenges.
 ### Added
 
 - This is the first release of the Chia testnet! Blockchain consensus, proof of time, and proof of space are included.
-- More details on the release at https://www.chia.net/developer/
+- More details on the release at [https://www.chia.net/developer/](https://www.chia.net/developer/)
 
 [unreleased]: https://github.com/Chia-Network/chia-blockchain/compare/1.0beta5...dev
 [1.0beta5]: https://github.com/Chia-Network/chia-blockchain/compare/1.0beta4...1.0beta5

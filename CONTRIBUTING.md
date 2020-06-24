@@ -1,4 +1,5 @@
-## Introduction
+# Introduction
+
 Welcome to the chia-blockchain project!
 We are happy that you are taking a look at the code for Chia, a proof of space and time cryptocurrency.
 
@@ -8,16 +9,16 @@ It also includes a verifiable delay function implementation that it imports from
 
 If you want to learn more about this project, read the [wiki](https://github.com/Chia-Network/chia-blockchain/wiki), or check out the [green paper](https://www.chia.net/assets/ChiaGreenPaper.pdf).
 
-### Contributions
+## Contributions
 We would be pleased to accept code contributions to this project.
 As we are in the alpha stage, the main priority is getting a robust blockchain up and running, with as many of the mainnet features as possible.
 You can visit our [Trello project board](https://trello.com/b/ZuNx7sET) to get a sense of what is in the backlog.
 Generally things to the left are in progress or done. Some things go through "Coming up soon" but some will come directly out of other columns.
 Usually the things closer to the top of each column are the ones that will be worked on soonest.
 If you are interested in cryptography, math, or just like hacking in python, there are many interesting problems to work on.
-Contact any of the team members on keybase: https://keybase.io/team/chia_network.public, which we use as the main communication method and you can comment on any Trello card.
+Contact any of the team members on [Keybase](https://keybase.io/team/chia_network.public), which we use as the main communication method and you can comment on any Trello card.
 
-### Run tests and linting
+## Run tests and linting
 The first time the tests are run, BlockTools will create and persist many plots. These are used for creating
 proofs of space during testing. The next time tests are run, this won't be necessary.
 
@@ -30,7 +31,7 @@ py.test tests -s -v
 Black is used as an automatic style formatter to make things easier, and flake8 helps ensure consistent style.
 Mypy is very useful for ensuring objects are of the correct type, so try to always add the type of the return value, and the type of local variables.
 
-### Configure VS code
+## Configure VS code
 1. Install Python extension
 2. Set the environment to ./venv/bin/python
 3. Install mypy plugin
@@ -39,8 +40,8 @@ Mypy is very useful for ensuring objects are of the correct type, so try to alwa
 7. Preferences > Settings > Formatting > Python > Provider > black
 6. Preferences > Settings > mypy > Targets: set to ./src and ./tests
 
-### Submit changes
+## Submit changes
 To submit changes, please make a pull request to the `dev` development branch.
 
-### Copyright
+## Copyright
 By contributing to this repository, you agree to license your work under the Apache License Version 2.0, or the MIT License, or release your work to the public domain. Any work contributed where you are not the original author must contain its license header with the original author(s) and be in the public domain, or licensed under the Apache License Version 2.0 or the MIT License.

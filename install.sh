@@ -6,8 +6,7 @@ find_python() {
     unset BEST_VERSION
     for V in 37 3.7 38 3.8 3
     do
-        which python$V > /dev/null
-        if [ $? = 0 ]
+        if which python$V > /dev/null
         then
             if [ x"$BEST_VERSION" = x ]
             then
@@ -67,6 +66,7 @@ if [ ! -f "activate" ]; then
     ln -s venv/bin/activate .
 fi
 echo "Python version is $INSTALL_PYTHON_VERSION"
+# shellcheck disable=SC1091
 . ./activate
 # pip 20.x+ supports Linux binary wheels
 pip install --upgrade pip
@@ -98,7 +98,7 @@ fi
 # We will set up node.js on GitHub Actions and Azure Pipelines directly
 # for Mac and Windows so skip unless completing a source/developer install
 # Ubuntu special cases above
-if [ ! $CI ]; then
+if [ ! "$CI" ]; then
   cd ./electron-react
   npm install
   npm audit fix
