@@ -52,7 +52,7 @@ timelord.sanitizer_mode = True, the timelord will work on those challenges.
 - The install.sh script now discovers if it's running on Ubuntu less than 20.04 and correctly upgrades node.js to the current stable version.
 - For GitHub ci builds of the Windows installer, editbin.exe is more reliably found.
 - All installer ci builds now obtain version information automatically from setuptools_scm and convert it to an installer version number that is appropriate for the platform and type of release (dev versus release.)
-- We now codesign the Apple .dmg installer with the Chia Network developer ID on both GitHub Actins and Azure Pipelines. We will be notarizing and distributing the Azure Pipelines version as it's built on MacOS Mojave (10.14.6) for stronger cross version support.
+- We now codesign the Apple .dmg installer with the Chia Network developer ID on both GitHub Actions and Azure Pipelines. We will be notarizing and distributing the Azure Pipelines version as it's built on MacOS Mojave (10.14.6) for stronger cross version support.
 
 ### Fixed
 - Having spaces in the path to a plot or temporary directory caused plotting to fail.
