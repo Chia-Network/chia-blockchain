@@ -42,6 +42,7 @@ test_constants: Dict[str, Any] = {
     "TX_PER_SEC": 1,
     "MEMPOOL_BLOCK_BUFFER": 10,
     "MIN_ITERS_STARTING": 50 * 1,
+    "CLVM_COST_RATIO_CONSTANT": 108,
 }
 test_constants["GENESIS_BLOCK"] = bytes(
     bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
