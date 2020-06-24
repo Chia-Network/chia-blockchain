@@ -60,7 +60,7 @@ jobs:
           VALIDATE_DOCKER: true
           VALIDATE_GO: true
           VALIDATE_POWERSHELL: false
-          VALIDATE_CSS: true
+          VALIDATE_CSS: false
           VALIDATE_ENV: true
           DISABLE_ERRORS: false
 
