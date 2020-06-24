@@ -4,24 +4,23 @@ from setuptools import setup
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
     "blspy==0.1.28",  # Signature library
-    "cbor2==5.1.0",  # Used for network wire format
-    "clvm==0.4",  # contract language
-    "PyYAML==5.3.1",  # Used for config file format
-    "aiosqlite==0.13.0",  # asyncio wrapper for sqlite, to store blocks
-    "aiohttp==3.6.2",  # HTTP server for full node rpc
-    "colorlog==4.1.0",  # Adds color to logs
     "chiavdf==0.12.18",  # timelord and vdf verification
     "chiabip158==0.14",  # bip158-style wallet filters
     "chiapos==0.12.22",  # proof of space
-    "sortedcontainers==2.1.0",  # For maintaining sorted mempools
-    "websockets==8.1.0",  # For use in wallet RPC and electron UI
+    "clvm==0.4",  # contract language
     "clvm-tools==0.1.1",  # clvm compiler tools
-    "bitstring==3.1.6",
-    "keyring==21.2.1",
-    "keyring_jeepney==0.2",
-    "keyrings.cryptfile==1.3.4",
+    "aiosqlite==0.13.0",  # asyncio wrapper for sqlite, to store blocks
+    "aiohttp==3.6.2",  # HTTP server for full node rpc
+    "bitstring==3.1.7",  # Binary data management library
+    "cbor2==5.1.0",  # Used for network wire format
+    "colorlog==4.1.0",  # Adds color to logs
+    "concurrent-log-handler==0.9.16",  # Concurrently log and rotate logs
     "cryptography==2.9.2", #Python cryptography library for TLS
-    "concurrent-log-handler==0.9.16",  # Log to a file concurrently and rotate logs
+    "keyring==21.2.1",  # Store keys in MacOS Keychain, Windows Credential Locker
+    "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
+    "PyYAML==5.3.1",  # Used for config file format
+    "sortedcontainers==2.2.2",  # For maintaining sorted mempools
+    "websockets==8.1.0",  # For use in wallet RPC and electron UI
 ]
 
 upnp_dependencies = [
