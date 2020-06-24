@@ -28,12 +28,12 @@ upnp_dependencies = [
 ]
 dev_dependencies = [
     "pytest",
+    "pytest-asyncio",
     "flake8",
     "mypy",
+    "black",
     "isort",
     "autoflake",
-    "black",
-    "pytest-asyncio",
 ]
 
 kwargs = dict(
