@@ -1,5 +1,7 @@
 export const addTrade = trade => ({ type: "TRADE_ADDED", trade });
 export const resetTrades = () => ({ type: "RESET_TRADE" });
+export const presentTrade = trade => ({ type: "PRESENT_TRADES", trade });
+export const presetOverview = () => ({ type: "PRESENT_OVERVIEW" });
 
 export const newBuy = (amount, id) => ({
   amount: amount,
@@ -33,13 +35,31 @@ export const parsingStatePending = "PENDING";
 export const parsingStateParsed = "PARSED";
 export const parsingStateReset = "RESET";
 
+export const PendingTrade = (trade_id, status, offer_dict, timestamp) => ({
+  trade_id: trade_id,
+  status: status,
+  offer_dict: offer_dict,
+  timestamp: timestamp
+});
+
+const now = Math.floor(Date.now() / 1000);
+const example_trade = {
+  trade_id: "ababebababa",
+  status: "Pending",
+  timestamp: now,
+  offer_dict: { Chia: 100, sadasdas: 300, asdasda: -100 }
+};
+
 const initial_state = {
   trades: [],
   show_offer: false,
   parsing_state: parsingStateNone,
   parsed_offer: null,
   parsed_offer_name: "",
-  parsed_offer_path: ""
+  pending_trades: [example_trade],
+  trade_history: [],
+  showing_trade: true,
+  trade_showed: example_trade
 };
 
 export const tradeReducer = (state = { ...initial_state }, action) => {
@@ -69,6 +89,14 @@ export const tradeReducer = (state = { ...initial_state }, action) => {
     case "OFFER_NAME":
       state.parsed_offer_name = action.name;
       state.parsed_offer_path = action.path;
+      return state;
+    case "PRESENT_OVERVIEW":
+      state.showing_trade = false;
+      state.trade_showed = null;
+      return state;
+    case "PRESENT_TRADES":
+      state.showing_trade = true;
+      state.trade_showed = action.trade;
       return state;
     default:
       return state;
