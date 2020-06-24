@@ -13,7 +13,7 @@ import { fullnodeReducer } from "./fullnode_api";
 import { farmingReducer } from "./farming_api";
 import { plotControlReducer } from "./plotter_control";
 import { farmerMenuReducer } from "./farmer_menu";
-import { tradeMenuReducer } from './tradeMenu';
+import { tradeMenuReducer } from "./tradeMenu";
 
 const rootReducer = combineReducers({
   daemon_state: daemonReducer,
