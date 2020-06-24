@@ -152,7 +152,6 @@ class TestCCTrades:
         trade: TradeStatus = await trade_manager_0.get_trade_by_id(trade_offer.trade_id)
         assert TradeStatus(trade.status) is TradeStatus.CONFIRMED
 
-
     @pytest.mark.asyncio
     async def test_cc_trade_with_multiple_colours(self, wallets_prefarm):
         # This test start with CCWallet in both wallets. wall
@@ -164,7 +163,7 @@ class TestCCTrades:
         wallet_b = wallet_node_b.wallet_state_manager.main_wallet
 
         # cc_a_2 = coloured coin, Alice, wallet id = 2
-        cc_a_2  = wallet_node_a.wallet_state_manager.wallets[2]
+        cc_a_2 = wallet_node_a.wallet_state_manager.wallets[2]
         cc_b_2 = wallet_node_b.wallet_state_manager.wallets[2]
 
         cc_a_3: CCWallet = await CCWallet.create_new_cc(
@@ -271,8 +270,9 @@ class TestCCTrades:
 
         colour = await cc_a_4.get_colour()
 
-        cc_b_4: CCWallet = await  CCWallet.create_wallet_for_cc(wallet_node_b.wallet_state_manager, wallet_b, colour)
-
+        cc_b_4: CCWallet = await CCWallet.create_wallet_for_cc(
+            wallet_node_b.wallet_state_manager, wallet_b, colour
+        )
 
         offer = {1: -30, 4: 60}
         file = "test_offer_file.offer"
@@ -318,9 +318,9 @@ class TestCCTrades:
             file_path.unlink()
 
         spendable_chia = await wallet_a.get_spendable_balance()
-        spendable_cc_2 = await  cc_a_2.get_spendable_balance()
+        spendable_cc_2 = await cc_a_2.get_spendable_balance()
 
-        offer_dict = {1: 10, 2: -30, 3:30}
+        offer_dict = {1: 10, 2: -30, 3: 30}
 
         success, trade_offer, error = await trade_manager_a.create_offer_for_ids(
             offer_dict, file
