@@ -421,7 +421,9 @@ class TradeManager:
 
         return True
 
-    async def respond_to_offer(self, file_path: Path) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
+    async def respond_to_offer(
+        self, file_path: Path
+    ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
         has_wallets = await self.maybe_create_wallets_for_offer(file_path)
         if not has_wallets:
             return False, None, "Unknown Error"
@@ -463,7 +465,7 @@ class TradeManager:
                         wallets[colour].wallet_info.id
                     )
                     if coinsol.coin in [record.coin for record in unspent]:
-                        return False, "can't respond to own offer"
+                        return False, None, "can't respond to own offer"
                     innerpuzzlereveal = solution.rest().rest().rest().first()
                     innersol = solution.rest().rest().rest().rest().first()
                     out_amount = cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
@@ -544,7 +546,8 @@ class TradeManager:
                     ].generate_zero_val_coin(False, to_exclude)
                     if zero_spend_bundle is None:
                         return (
-                            False, None,
+                            False,
+                            None,
                             "Unable to generate zero value coin. Confirm that you have chia available",
                         )
                     zero_spend_list.append(zero_spend_bundle)
@@ -744,7 +747,7 @@ class TradeManager:
                     removals=chia_spend_bundle.removals(),
                     wallet_id=uint32(1),
                     sent_to=[],
-                    trade_id=std_hash(spend_bundle.name() + bytes(now))
+                    trade_id=std_hash(spend_bundle.name() + bytes(now)),
                 )
             else:
                 tx_record = TransactionRecord(
