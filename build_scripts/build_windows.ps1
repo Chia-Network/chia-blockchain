@@ -1,18 +1,14 @@
 # $env:path should contain a path to editbin.exe and signtool.exe
 
 mkdir build_scripts\win_build
-#cd build_scripts\win_build
 Set-Location -Path ".\build_scripts\win_build" -PassThru
 
 Write-Output "   ---"
 Write-Output "curl miniupnpc, setproctitle"
 Write-Output "   ---"
-#curl -OL --show-error --fail https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl
 Invoke-WebRequest -Uri "https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl" -OutFile "miniupnpc-2.1-cp37-cp37m-win_amd64.whl"
-#curl -OL --show-error --fail https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
 Invoke-WebRequest -Uri "https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl" -OutFile "setproctitle-1.1.10-cp37-cp37m-win_amd64.whl"
 Write-Output "Using win_amd64 python 3.7 wheel from https://github.com/miniupnp/miniupnp/pull/475 (2.2.0-RC1)"
-#cd ..\..
 Set-Location -Path - -PassThru
 
 Write-Output "   ---"
@@ -47,7 +43,6 @@ Write-Output "Install chia-blockchain wheels into venv with pip"
 Write-Output "   ---"
 
 Write-Output "pip install miniupnpc"
-#cd build_scripts
 Set-Location -Path ".\build_scripts" -PassThru
 pip install --no-index --find-links=.\win_build\ miniupnpc
 Write-Output "pip install setproctitle"
@@ -63,9 +58,7 @@ pyinstaller --log-level INFO daemon_windows.spec
 Write-Output "   ---"
 Write-Output "Copy chia executables to electron-react\"
 Write-Output "   ---"
-#cp -r dist/daemon ../electron-react/
 Copy-Item "dist\daemon" -Destination "..\electron-react\" -Recurse
-#cd ../electron-react
 Set-Location -Path "..\electron-react" -PassThru
 
 Write-Output "   ---"
@@ -83,7 +76,6 @@ npm run build
 Write-Output "   ---"
 Write-Output "Increase the stack for chiapos"
 # editbin.exe needs to be in the path
-#Start-Process "editbin.exe" -ArgumentList "/STACK:8000000 daemon\create_plots.exe" -Wait
 editbin.exe /STACK:8000000 daemon\create_plots.exe
 Write-Output "   ---"
 

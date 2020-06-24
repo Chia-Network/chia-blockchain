@@ -4,7 +4,7 @@
 ## Linter GitHub Actions ##
 ###########################
 ###########################
-name: Lint Code Base with GithHub Super Linter
+name: GithHub Super Linter
 
 #
 # Documentation:
@@ -59,7 +59,7 @@ jobs:
           VALIDATE_TYPESCRIPT_ES: true
           VALIDATE_DOCKER: true
           VALIDATE_GO: true
-          VALIDATE_POWERSHELL: true
+          VALIDATE_POWERSHELL: false
           VALIDATE_CSS: true
           VALIDATE_ENV: true
           DISABLE_ERRORS: false
