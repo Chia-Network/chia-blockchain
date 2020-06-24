@@ -299,6 +299,7 @@ const StatusCell = props => {
     </Grid>
   );
 };
+
 const FullNodeStatus = props => {
   const blockchain_state = useSelector(
     state => state.full_node_state.blockchain_state
