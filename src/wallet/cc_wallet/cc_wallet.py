@@ -154,7 +154,7 @@ class CCWallet:
             "CC Wallet", WalletType.COLOURED_COIN, info_as_string
         )
         if self.wallet_info is None:
-            raise
+            raise Exception('wallet_info is None')
 
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         return self

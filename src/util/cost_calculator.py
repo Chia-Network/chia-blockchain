@@ -19,7 +19,7 @@ def calculate_cost_of_program(
     total_clvm_cost = 0
     error, npc_list, cost = get_name_puzzle_conditions(program)
     if error:
-        raise
+        raise Exception('get_name_puzzle_conditions raised error' + str(error))
     total_clvm_cost += cost
 
     # Add cost of conditions
