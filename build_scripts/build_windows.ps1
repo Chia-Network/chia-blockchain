@@ -64,7 +64,7 @@ Write-Output "   ---"
 Write-Output "Copy chia executables to electron-react\"
 Write-Output "   ---"
 #cp -r dist/daemon ../electron-react/
-Copy-Item "dist\daemon\*" -Destination "..\electron-react\" -Recurse
+Copy-Item "dist\daemon" -Destination "..\electron-react\" -Recurse
 #cd ../electron-react
 Set-Location -Path "..\electron-react" -PassThru
 
