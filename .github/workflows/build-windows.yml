@@ -62,7 +62,7 @@ jobs:
           encoded-value: ${{ secrets.WIN_CODE_SIGN_CERT }}
           destination-file: .\electron-react\win_code_sign_cert.p12
 
-      - uses: actions/setup-python@v1
+      - uses: actions/setup-python@v2
         name: Install Python 3.7
         with:
           python-version: "3.7"
