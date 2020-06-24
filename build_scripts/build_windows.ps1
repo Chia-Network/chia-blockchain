@@ -48,7 +48,7 @@ Write-Output "   ---"
 
 Write-Output "pip install miniupnpc"
 #cd build_scripts
-Set-Location -Path ".\build-scripts" -PassThru
+Set-Location -Path ".\build_scripts" -PassThru
 pip install --no-index --find-links=.\win_build\ miniupnpc
 Write-Output "pip install setproctitle"
 pip install --no-index --find-links=.\win_build\ setproctitle
