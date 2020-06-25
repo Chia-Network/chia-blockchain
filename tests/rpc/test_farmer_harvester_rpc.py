@@ -2,8 +2,7 @@ import asyncio
 
 import pytest
 
-from src.rpc.farmer_rpc_api import FarmerRpcApi
-from src.rpc.harvester_rpc_api import HarvesterRpcApi
+from secrets import token_bytes
 from blspy import PrivateKey
 from chiapos import DiskPlotter
 from src.types.proof_of_space import ProofOfSpace
@@ -12,6 +11,9 @@ from src.rpc.harvester_rpc_client import HarvesterRpcClient
 from src.rpc.rpc_server import start_rpc_server
 from src.util.ints import uint16
 from src.util.config import load_config
+from src.rpc.farmer_rpc_api import FarmerRpcApi
+from src.rpc.harvester_rpc_api import HarvesterRpcApi
+
 from tests.setup_nodes import setup_farmer_harvester, test_constants, bt
 from tests.block_tools import get_plot_dir
 from tests.time_out_assert import time_out_assert
@@ -91,11 +93,6 @@ class TestRpc:
             assert num_plots > 0
             plot_dir = get_plot_dir() / "subdir"
             plotter = DiskPlotter()
-            pool_pk = harvester.pool_pubkeys[0]
-            plot_sk = PrivateKey.from_seed(b"Farmer harvester rpc test seed")
-            plot_seed = ProofOfSpace.calculate_plot_seed(
-                pool_pk, plot_sk.get_public_key()
-            )
             filename = "test_farmer_harvester_rpc_plot.plot"
             plotter.create_plot_disk(
                 str(plot_dir),
@@ -104,7 +101,7 @@ class TestRpc:
                 filename,
                 18,
                 b"genesis",
-                plot_seed,
+                token_bytes(32),
                 128,
             )
 

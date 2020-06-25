@@ -21,13 +21,7 @@ class TestMerkleSet:
 
         num_blocks = 10
         bt = BlockTools()
-        blocks = bt.get_consecutive_blocks(
-            test_constants,
-            num_blocks,
-            [],
-            10,
-            reward_puzzlehash=wallet_tool.get_new_puzzlehash(),
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10,)
 
         merkle_set = MerkleSet()
         merkle_set_reverse = MerkleSet()
