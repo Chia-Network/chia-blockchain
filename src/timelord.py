@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Tuple
 
 
 from chiavdf import create_discriminant
-from src.consensus.constants import constants as consensus_constants
+from src.consensus.constants import ConsensusConstants
 from src.protocols import timelord_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
@@ -21,11 +21,8 @@ log = logging.getLogger(__name__)
 
 
 class Timelord:
-    def __init__(self, config: Dict, override_constants: Dict = {}):
-        self.constants = consensus_constants.copy()
-        for key, value in override_constants.items():
-            self.constants[key] = value
-
+    def __init__(self, config: Dict, consensus_constants: ConsensusConstants):
+        self.constants = consensus_constants
         self.config: Dict = config
         self.ips_estimate = {
             socket.gethostbyname(k): v

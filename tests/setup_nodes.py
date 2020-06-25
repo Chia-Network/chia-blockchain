@@ -354,9 +354,8 @@ async def setup_vdf_clients(port):
 
 async def setup_timelord(port, full_node_port, sanitizer, dic={}):
     config = load_config(bt.root_path, "config.yaml", "timelord")
-    test_constants_copy = test_constants.copy()
-    for k in dic.keys():
-        test_constants_copy[k] = dic[k]
+    test_constants_copy = consensus_constants.replace(**test_constants)
+    test_constants_copy = test_constants_copy.replace(**dic)
     config["sanitizer_mode"] = sanitizer
     if sanitizer:
         config["vdf_server"]["port"] = 7999
