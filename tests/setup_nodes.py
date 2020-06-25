@@ -3,6 +3,7 @@ import signal
 
 from secrets import token_bytes
 from typing import Any, Dict, Tuple, List, Optional
+from src.consensus.constants import constants as consensus_constants
 from src.full_node.full_node import FullNode
 from src.server.connection import NodeType
 from src.server.server import ChiaServer, start_server
@@ -34,7 +35,6 @@ test_constants: Dict[str, Any] = {
     "DIFFICULTY_STARTING": 1,
     "DISCRIMINANT_SIZE_BITS": 8,
     "BLOCK_TIME_TARGET": 10,
-    "MIN_BLOCK_TIME": 2,
     "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
     "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
     "PROPAGATION_THRESHOLD": 10,
@@ -257,9 +257,8 @@ async def setup_harvester(port, farmer_port, dic={}):
 async def setup_farmer(port, full_node_port: Optional[uint16] = None, dic={}):
     config = load_config(bt.root_path, "config.yaml", "farmer")
     config_pool = load_config(root_path, "config.yaml", "pool")
-    test_constants_copy = test_constants.copy()
-    for k in dic.keys():
-        test_constants_copy[k] = dic[k]
+    test_constants_copy = consensus_constants.replace(**test_constants)
+    test_constants_copy = test_constants_copy.replace(**dic)
     config["xch_target_puzzle_hash"] = bt.fee_target.hex()
     config["pool_public_keys"] = [
         bytes(epk.get_public_key()).hex() for epk in bt.keychain.get_all_public_keys()

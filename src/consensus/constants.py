@@ -6,7 +6,7 @@ class ConsensusConstants:
     NUMBER_OF_HEADS: int
     DIFFICULTY_STARTING: int
     DIFFICULTY_FACTOR: int
-    DIFFICULTY_EPOCH: int = dataclasses.field(init=False)
+    DIFFICULTY_EPOCH: int
     DIFFICULTY_WARP_FACTOR: int
     DIFFICULTY_DELAY: int  # EPOCH / WARP_FACTOR
     SIGNIFICANT_BITS: int  # The number of bits to look at in difficulty and min iters. The rest are zeroed
@@ -50,8 +50,7 @@ class ConsensusConstants:
     MAX_BLOCK_COST_CLVM: int
 
     def __post_init__(self):
-        # see https://docs.python.org/3/library/dataclasses.html#frozen-instances
-        object.__setattr__(self, "DIFFICULTY_EPOCH", self.DIFFICULTY_DELAY * self.DIFFICULTY_WARP_FACTOR)
+        assert self.DIFFICULTY_EPOCH == self.DIFFICULTY_DELAY * self.DIFFICULTY_WARP_FACTOR
 
     def __getitem__(self, key):
         # TODO: remove this
@@ -64,6 +63,9 @@ class ConsensusConstants:
         # temporary, for compatibility
         return dataclasses.asdict(self)
 
+    def replace(self, **changes):
+        return dataclasses.replace(self, **changes)
+
 
 testnet_kwargs = {
     "NUMBER_OF_HEADS": 3,  # The number of tips each full node keeps track of and propagates
@@ -72,7 +74,7 @@ testnet_kwargs = {
     "DIFFICULTY_STARTING": 2 ** 31,
     "DIFFICULTY_FACTOR": 3,  # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]
     # These 3 constants must be changed at the same time
-    # "DIFFICULTY_EPOCH": 128,  # The number of blocks per epoch
+    "DIFFICULTY_EPOCH": 128,  # The number of blocks per epoch
     "DIFFICULTY_WARP_FACTOR": 4,  # DELAY divides EPOCH in order to warp efficiently.
     "DIFFICULTY_DELAY": 32,  # EPOCH / WARP_FACTOR
     "SIGNIFICANT_BITS": 12,  # The number of bits to look at in difficulty and min iters. The rest are zeroed

@@ -29,8 +29,8 @@ test_constants.update(
         "DIFFICULTY_STARTING": 1,
         "DISCRIMINANT_SIZE_BITS": 8,
         "BLOCK_TIME_TARGET": 10,
-        "MIN_BLOCK_TIME": 2,
         "DIFFICULTY_EPOCH": 6,  # The number of blocks per epoch
+        "DIFFICULTY_WARP_FACTOR": 3,
         "DIFFICULTY_DELAY": 2,  # EPOCH / WARP_FACTOR
         "MIN_ITERS_STARTING": 50 * 1,
     }
