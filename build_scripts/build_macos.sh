@@ -1,5 +1,5 @@
 #!/bin/bash
-
+pip install setuptools_scm
 # The environment variable CHIA_INSTALLER_VERSION needs to be defined
 CHIA_INSTALLER_VERSION=$(python installer-version.py)
 

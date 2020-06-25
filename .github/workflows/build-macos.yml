@@ -27,7 +27,7 @@ jobs:
         # we need fetch-depth 0 so setuptools_scm can resolve tags
 
     - name: Setup Python environment
-      uses: actions/setup-python@v1.1.1
+      uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
 

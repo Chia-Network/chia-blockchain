@@ -77,9 +77,9 @@ def main():
 
     if args.sk_seed is None and args.index is not None:
         log(
-            f"You have specified the -i (index) argument without the -s (sk_seed) argument."
-            f" The program has changes, so that the sk_seed is now generated randomly, so -i is no longer necessary."
-            f" Please run the program without -i."
+            "You have specified the -i (index) argument without the -s (sk_seed) argument."
+            " The program has changes, so that the sk_seed is now generated randomly, so -i is no longer necessary."
+            " Please run the program without -i."
         )
         quit()
 
