@@ -45,14 +45,11 @@ class TestBlockchainTransactions:
     @pytest.mark.asyncio
     async def test_basic_blockchain_tx(self, two_nodes):
         num_blocks = 10
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_farmer_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         for block in blocks:
@@ -90,7 +87,7 @@ class TestBlockchainTransactions:
 
         dic_h = {11: (program, aggsig)}
         new_blocks = bt.get_consecutive_blocks(
-            test_constants, 1, blocks, 10, b"", coinbase_puzzlehash, dic_h
+            test_constants, 1, blocks, 10, b"", dic_h
         )
 
         next_block = new_blocks[11]

@@ -18,7 +18,6 @@ class ProofOfSpace(Streamable):
     farmer_puzzle_hash: bytes32
     pool_puzzle_hash: bytes32
     plot_pubkey: PublicKey
-    challenge_signature: InsecureSignature
     size: uint8
     proof: bytes
 
@@ -33,16 +32,22 @@ class ProofOfSpace(Streamable):
         quality_str = v.validate_proof(
             plot_seed, self.size, self.challenge_hash, bytes(self.proof)
         )
-        if not self.challenge_signature.verify(
-            [Util.hash256(self.challenge_hash)], [self.plot_pubkey]
-        ):
+
+        if not self.can_create_proof(plot_seed, self.challenge_hash, num_zero_bits):
             return None
-        h = BitArray(std_hash(bytes(self.challenge_signature)))
-        if h[:num_zero_bits].int != 0:
-            return None
+
         if not quality_str:
             return None
         return quality_str
+
+    @staticmethod
+    def can_create_proof(
+        plot_seed: bytes32, challenge_hash: bytes32, num_zero_bits: uint8
+    ) -> bool:
+        h = BitArray(std_hash(bytes(challenge_hash) + bytes(plot_seed)))
+        if h[:num_zero_bits].int != 0:
+            return False
+        return True
 
     @staticmethod
     def calculate_plot_seed(
