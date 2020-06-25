@@ -32,8 +32,6 @@ dev_dependencies = [
     "flake8",
     "mypy",
     "black",
-    "isort",
-    "autoflake",
 ]
 
 kwargs = dict(
