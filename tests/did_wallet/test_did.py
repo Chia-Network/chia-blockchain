@@ -38,6 +38,13 @@ class TestWalletSimulator:
             yield _
 
     @pytest.fixture(scope="function")
+    async def four_wallet_nodes(self):
+        async for _ in setup_simulators_and_wallets(
+            1, 4, {"COINBASE_FREEZE_PERIOD": 0}
+        ):
+            yield _
+
+    @pytest.fixture(scope="function")
     async def two_wallet_nodes_five_freeze(self):
         async for _ in setup_simulators_and_wallets(
             1, 2, {"COINBASE_FREEZE_PERIOD": 5}
@@ -64,9 +71,9 @@ class TestWalletSimulator:
         assert False
 
     @pytest.mark.asyncio
-    async def test_identity_creation(self, two_wallet_nodes):
+    async def test_identity_creation(self, four_wallet_nodes):
         num_blocks = 10
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets = four_wallet_nodes
         full_node_1, server_1 = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         wallet = wallet_node.wallet_state_manager.main_wallet
