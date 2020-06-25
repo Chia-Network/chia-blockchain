@@ -650,7 +650,7 @@ class WalletStateManager:
         )
         await self.wallet_store.add_coin_record(coin_record)
 
-        if wallet_type == WalletType.COLOURED_COIN:
+        if wallet_type == WalletType.COLOURED_COIN or wallet_type == WalletType.DISTRIBUTED_ID:
             wallet: CCWallet = self.wallets[wallet_id]
             header_hash: bytes32 = self.height_to_hash[index]
             block: Optional[BlockRecord] = await self.wallet_store.get_block_record(
