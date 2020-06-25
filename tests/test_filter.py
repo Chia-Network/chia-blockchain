@@ -31,9 +31,7 @@ class TestFilter:
         num_blocks = 2
         ph = await wallet.get_new_puzzlehash()
         bt = BlockTools()
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, reward_puzzlehash=ph,
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
 
         for i in range(1, num_blocks):
             byte_array_tx: List[bytes] = []

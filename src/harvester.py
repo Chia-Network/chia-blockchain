@@ -28,7 +28,6 @@ class Harvester:
     config: Dict
     provers: Dict[Path, PlotInfo]
     failed_to_open_filenames: List[Path]
-    challenge_signatures: Dict[Tuple[bytes32, Path], InsecureSignature]
     no_key_filenames: List[Path]
     farmer_pubkeys: List[PublicKey]
     root_path: Path
@@ -46,9 +45,6 @@ class Harvester:
         self.provers = {}
         self.failed_to_open_filenames = []
         self.no_key_filenames = []
-
-        # From (challenge_hash, filename) to farmer signature
-        self.challenge_signatures = {}
 
         self._is_shutdown = False
         self._plot_notification_task = None
@@ -172,11 +168,7 @@ class Harvester:
         ChallengeResponse message is sent for each of the proofs found.
         """
         start = time.time()
-        challenge_size = len(new_challenge.challenge_hash)
-        if challenge_size != 32:
-            raise ValueError(
-                f"Invalid challenge size {challenge_size}, 32 was expected"
-            )
+        assert len(new_challenge.challenge_hash) == 32
 
         loop = asyncio.get_running_loop()
 
@@ -226,19 +218,12 @@ class Harvester:
             harvester_sig = plot_info.harvester_sk.sign_insecure(
                 new_challenge.challenge_hash
             )
-            agg_sig = None
-            for (farmer_pk, farmer_sig) in new_challenge.farmer_challenge_signatures:
-                if farmer_pk == plot_info.farmer_public_key:
-                    agg_sig = InsecureSignature.aggregate(harvester_sig, farmer_sig)
-            if agg_sig is None:
-                log.error("Farmer does not have the correct keys for this plot")
-                return
-
-            # This is actually secure, check proof_of_space.py for explanation
-            h = BitArray(std_hash(bytes(agg_sig)))
-            if h[: self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]].int == 0:
+            if ProofOfSpace.can_create_proof(
+                plot_info.prover.get_id(),
+                new_challenge.challenge_hash,
+                self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"],
+            ):
                 awaitables.append(lookup_challenge(filename, plot_info.prover))
-            self.challenge_signatures[(new_challenge.challenge_hash, filename)]
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         for sublist_awaitable in asyncio.as_completed(awaitables):
@@ -267,14 +252,6 @@ class Harvester:
         index = request.response_number
         proof_xs: bytes
         plot_info = self.provers[filename]
-        challenge_signature = self.challenge_signatures[(challenge_hash, filename)]
-
-        assert (
-            BitArray(std_hash(challenge_signature))[
-                : self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]
-            ].int
-            == 0
-        )
 
         try:
             try:
@@ -302,17 +279,11 @@ class Harvester:
             plot_info.farmer_address,
             plot_info.pool_address,
             plot_pubkey,
-            challenge_signature,
             uint8(self.provers[filename].get_size()),
             proof_xs,
         )
-        proof_of_possession = plot_info.harvester_sk.sign_prepend(b"")
         response = harvester_protocol.RespondProofOfSpace(
-            request.plot_id,
-            request.response_number,
-            proof_of_space,
-            plot_info.harvester_sk.get_public_key(),
-            proof_of_possession,
+            request.plot_id, request.response_number, proof_of_space,
         )
         if response:
             yield OutboundMessage(
@@ -331,13 +302,21 @@ class Harvester:
         plot_info = self.provers[Path(request.plot_id).resolve()]
 
         plot_sk = plot_info.harvester_sk
-        signature: InsecureSignature = plot_sk.sign_insecure(request.message)
-        assert signature.verify(
-            [Util.hash256(request.message)], [plot_sk.get_public_key()]
+        agg_pk = ProofOfSpace.generate_plot_pubkey(
+            plot_sk.get_public_key(), plot_info.farmer_public_key
         )
+        new_m = bytes(agg_pk) + Util.hash256(request.message)
+
+        # This is only a partial signature. When combined with the farmer's half, it will
+        # form a complete PrependSignature.
+        signature: InsecureSignature = plot_sk.sign_insecure(new_m)
 
         response: harvester_protocol.RespondSignature = harvester_protocol.RespondSignature(
-            request.challenge_hash, request.plot_id, request.response_number, signature,
+            request.challenge_hash,
+            request.plot_id,
+            request.response_number,
+            plot_sk.get_public_key(),
+            signature,
         )
 
         yield OutboundMessage(

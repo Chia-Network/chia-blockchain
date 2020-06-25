@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Dict, List, Set, Optional, Callable, Tuple
 
-from blspy import Util, InsecureSignature
+from blspy import Util, InsecureSignature, PrependSignature
 from src.util.keychain import Keychain
 
 from src.consensus.constants import ConsensusConstants
@@ -185,10 +185,6 @@ class Farmer:
         and request a pool partial, a header signature, or both, if the proof is good enough.
         """
 
-        assert response.proof_of_possession.verify(
-            [Util.hash256(b"")], [response.harvester_pk]
-        )
-
         challenge_hash: bytes32 = response.proof.challenge_hash
         challenge_weight: uint128 = self.challenge_to_weight[challenge_hash]
         difficulty: uint64 = uint64(0)
@@ -224,19 +220,6 @@ class Farmer:
         )
         estimate_secs: float = number_iters / self.proof_of_time_estimate_ips
 
-        found = False
-        for pk in self._get_public_keys():
-            if (
-                ProofOfSpace.generate_plot_pubkey(response.harvester_pk, pk)
-                == response.proof.plot_pubkey
-            ):
-                found = True
-        if not found:
-            log.error(
-                f"Don't have the private key required for farming plot with plot pk: {response.proof.plot_pubkey.hex()}"
-            )
-            return
-
         if estimate_secs < self.config["pool_share_threshold"]:
             # TODO: implement pooling
             pass
@@ -265,14 +248,23 @@ class Farmer:
         ]
         validates: bool = False
         for sk in self._get_private_keys():
-            sig = sk.sign_insecure(header_hash)
-            agg_sig = InsecureSignature.aggregate(response.message_signature, sig)
-
-            validates = agg_sig.verify(
-                [Util.hash256(header_hash)], [proof_of_space.plot_pubkey]
+            agg_pk = ProofOfSpace.generate_plot_pubkey(
+                response.harvester_pk, sk.get_public_key()
             )
-            if validates:
-                break
+            if agg_pk == proof_of_space.plot_pubkey:
+                new_m = bytes(agg_pk) + Util.hash256(header_hash)
+                farmer_share = sk.sign_insecure(new_m)
+                agg_sig = PrependSignature.from_insecure_sig(
+                    InsecureSignature.aggregate(
+                        response.message_signature, farmer_share
+                    )
+                )
+
+                validates = agg_sig.verify(
+                    [Util.hash256(new_m)], [proof_of_space.plot_pubkey]
+                )
+                if validates:
+                    break
         assert validates
 
         pos_hash: bytes32 = proof_of_space.get_hash()
@@ -348,17 +340,8 @@ class Farmer:
         ] = proof_of_space_finalized.height
 
         if get_proofs:
-            signatures = []
-            for sk in self._get_private_keys():
-                signatures.append(
-                    (
-                        sk.get_public_key(),
-                        sk.sign_insecure(proof_of_space_finalized.challenge_hash),
-                    )
-                )
-
             message = harvester_protocol.NewChallenge(
-                proof_of_space_finalized.challenge_hash, signatures
+                proof_of_space_finalized.challenge_hash
             )
             yield OutboundMessage(
                 NodeType.HARVESTER,

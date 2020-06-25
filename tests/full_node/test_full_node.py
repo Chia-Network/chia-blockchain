@@ -65,11 +65,8 @@ async def two_nodes():
 async def wb(num_blocks, two_nodes):
     full_node_1, _, _, _ = two_nodes
     wallet_a = WalletTool()
-    coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
     wallet_receiver = WalletTool()
-    blocks = bt.get_consecutive_blocks(
-        test_constants, num_blocks, [], 10, reward_puzzlehash=coinbase_puzzlehash
-    )
+    blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
     for i in range(1, num_blocks):
         async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks[i])):
             pass
@@ -501,12 +498,7 @@ class TestFullNodeProtocol:
         blocks_list = await get_block_path(full_node_1)
 
         blocks_new = bt.get_consecutive_blocks(
-            test_constants,
-            1,
-            blocks_list[:],
-            4,
-            reward_puzzlehash=coinbase_puzzlehash,
-            seed=b"Another seed 4",
+            test_constants, 1, blocks_list[:], 4, seed=b"Another seed 4",
         )
         for block in blocks_new:
             [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(block))]
@@ -518,7 +510,6 @@ class TestFullNodeProtocol:
                 1,
                 blocks_new[:],
                 4,
-                reward_puzzlehash=coinbase_puzzlehash,
                 seed=i.to_bytes(4, "big") + b"Another seed",
             )
             candidates.append(blocks_new_2[-1])
@@ -621,11 +612,7 @@ class TestFullNodeProtocol:
         # Don't propagate at old height
         [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(candidates[0]))]
         blocks_new_3 = bt.get_consecutive_blocks(
-            test_constants,
-            1,
-            blocks_new[:] + [candidates[0]],
-            10,
-            reward_puzzlehash=coinbase_puzzlehash,
+            test_constants, 1, blocks_new[:] + [candidates[0]], 10,
         )
         unf_block_new = FullBlock(
             blocks_new_3[-1].proof_of_space,

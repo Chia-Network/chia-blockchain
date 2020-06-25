@@ -258,7 +258,6 @@ class TestBlockValidation:
             blocks[9].proof_of_space.farmer_puzzle_hash,
             blocks[9].proof_of_space.pool_puzzle_hash,
             blocks[9].proof_of_space.plot_pubkey,
-            blocks[9].proof_of_space.challenge_signature,
             blocks[9].proof_of_space.size,
             bytes(bad_pos_proof),
         )
@@ -307,7 +306,6 @@ class TestBlockValidation:
             blocks[9].proof_of_space.farmer_puzzle_hash,
             blocks[9].proof_of_space.pool_puzzle_hash,
             blocks[9].proof_of_space.plot_pubkey,
-            blocks[9].proof_of_space.challenge_signature,
             blocks[9].proof_of_space.size,
             bytes(bad_pos_proof),
         )
