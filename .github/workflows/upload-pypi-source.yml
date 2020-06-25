@@ -5,7 +5,7 @@ on: [push, pull_request]
 jobs:
   upload_source_dist:
     name: Upload source distribution
-    runs-on: [macos-latest]
+    runs-on: [ubuntu-latest]
 
     steps:
     - name: Cancel previous runs on the same branch
