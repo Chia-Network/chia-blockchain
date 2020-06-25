@@ -7,7 +7,7 @@ mypy_extensions>=0.4.3
 pathspec>=0.6, <1
 regex>=2020.1.8
 toml>=0.9.4
-typed-ast>=1.4.0
+typed-ast>=1.4.1
 typing_extensions>=3.7.4
 
 flake8>=3.8.3
@@ -20,7 +20,7 @@ importlib-metadata
 mypy>=0.782
 # mypy Dependencies
 mypy_extensions >= 0.4.3
-typed_ast >= 1.4.1
+# typed_ast >= 1.4.1
 typing_extensions>=3.7.4
 
 pytest>=5.4.3
