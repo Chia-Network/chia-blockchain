@@ -9,4 +9,6 @@ from src.wallet.cc_wallet.ccparent import CCParent
 @dataclass(frozen=True)
 @streamable
 class DIDInfo(Streamable):
-    my_id = Optional[str]
+    my_core: Optional[str]
+    backup_ids: List[bytes]
+    parent_info: List[Tuple[bytes32, Optional[CCParent]]]  # {coin.name(): CCParent}
