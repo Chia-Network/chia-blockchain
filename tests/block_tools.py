@@ -46,6 +46,8 @@ from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.config import load_config, load_config_cli, save_config
 from src.util.plot_tools import load_plots, PlotInfo, stream_plot_info
 
+from tests.wallet_tools import WalletTool
+
 
 def get_plot_dir():
     cache_path = (
@@ -83,7 +85,8 @@ class BlockTools:
 
             self.keychain = Keychain("testing-1.8", True)
             self.keychain.delete_all_keys()
-            self.keychain.add_private_key_seed(b"block_tools")
+            self.keychain.add_private_key_seed(b"block_tools farmer key")
+            self.keychain.add_private_key_seed(b"block_tools pool key")
 
             plot_dir = get_plot_dir()
             mkdir(plot_dir)
@@ -126,7 +129,7 @@ class BlockTools:
                             str(plot_dir),
                             str(plot_dir),
                             str(plot_dir),
-                            filename,
+                            str(filename),
                             k,
                             stream_plot_info(
                                 farmer_address, pool_address, farmer_pk, sk
@@ -194,6 +197,14 @@ class BlockTools:
         harv_share = plot_info.harvester_sk.sign_insecure(challenge_hash)
         farm_share = farmer_sk.sign_insecure(challenge_hash)
         return InsecureSignature.aggregate(harv_share, farm_share)
+
+    def get_farmer_wallet_tool(self):
+        esks = self.keychain.get_all_private_keys()
+        return WalletTool(esks[1][0])
+
+    def get_pool_wallet_tool(self):
+        esks = self.keychain.get_all_private_keys()
+        return WalletTool(esks[1][0])
 
     def get_consecutive_blocks(
         self,
@@ -464,7 +475,6 @@ class BlockTools:
         selected_plot_info = None
         selected_proof_index = 0
         selected_quality: Optional[bytes] = None
-        selected_challenge_signature = None
         best_quality = 0
         plots = list(self.plots.values())
         if self.use_any_pos:
@@ -483,7 +493,6 @@ class BlockTools:
                 if len(qualities) > 0 and first_bits == 0:
                     selected_plot_info = plot_info
                     selected_quality = qualities[0]
-                    selected_challenge_signature = challenge_signature
                     break
         else:
             for i in range(len(plots)):
@@ -501,13 +510,11 @@ class BlockTools:
                     if qual_int > best_quality and first_bits == 0:
                         best_quality = qual_int
                         selected_quality = quality
-                        selected_challenge_signature = challenge_signature
                         selected_plot_info = plot_info
                         selected_proof_index = j
                     j += 1
 
         assert selected_plot_info is not None
-        assert selected_challenge_signature is not None
         if selected_quality is None:
             raise RuntimeError("No proofs for this challenge")
 
@@ -523,7 +530,6 @@ class BlockTools:
             selected_plot_info.farmer_address,
             selected_plot_info.pool_address,
             plot_pk,
-            selected_challenge_signature,
             selected_plot_info.prover.get_size(),
             proof_xs,
         )

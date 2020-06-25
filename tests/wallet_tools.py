@@ -37,11 +37,14 @@ class WalletTool:
     next_address = 0
     pubkey_num_lookup: Dict[str, int] = {}
 
-    def __init__(self):
+    def __init__(self, esk: Optional[ExtendedPrivateKey] = None):
         self.current_balance = 0
         self.my_utxos: set = set()
-        self.seed = urandom(1024)
-        self.extended_secret_key = ExtendedPrivateKey.from_seed(self.seed)
+        if esk is not None:
+            self.extended_secret_key = esk
+        else:
+            self.seed = urandom(1024)
+            self.extended_secret_key = ExtendedPrivateKey.from_seed(self.seed)
         self.generator_lookups: Dict = {}
         self.name = "MyChiaWallet"
         self.puzzle_pk_cache: Dict = {}
@@ -85,6 +88,14 @@ class WalletTool:
 
     def puzzle_for_pk(self, pubkey):
         return puzzle_for_pk(pubkey)
+
+    def get_first_puzzle(self):
+        pubkey = self.extended_secret_key.public_child(
+            self.next_address
+        ).get_public_key()
+        puzzle = puzzle_for_pk(bytes(pubkey))
+        self.puzzle_pk_cache[puzzle.get_tree_hash()] = 0
+        return puzzle
 
     def get_new_puzzle(self):
         pubkey_a = self.get_next_public_key()

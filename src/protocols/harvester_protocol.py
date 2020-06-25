@@ -24,7 +24,6 @@ class HarvesterHandshake:
 @cbor_message
 class NewChallenge:
     challenge_hash: bytes32
-    farmer_challenge_signatures: List[Tuple[PublicKey, InsecureSignature]]
 
 
 @dataclass(frozen=True)
@@ -51,8 +50,6 @@ class RespondProofOfSpace:
     plot_id: str
     response_number: uint8
     proof: ProofOfSpace
-    harvester_pk: PublicKey
-    proof_of_possession: PrependSignature
 
 
 @dataclass(frozen=True)
@@ -70,4 +67,5 @@ class RespondSignature:
     challenge_hash: bytes32
     plot_id: str
     response_number: uint8
+    harvester_pk: PublicKey
     message_signature: InsecureSignature

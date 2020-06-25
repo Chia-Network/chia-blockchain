@@ -24,13 +24,7 @@ class TestCostCalculation:
 
         num_blocks = 2
         bt = BlockTools()
-        blocks = bt.get_consecutive_blocks(
-            test_constants,
-            num_blocks,
-            [],
-            10,
-            reward_puzzlehash=wallet_tool.get_new_puzzlehash(),
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10,)
 
         spend_bundle = wallet_tool.generate_signed_transaction(
             blocks[1].get_coinbase().amount,
