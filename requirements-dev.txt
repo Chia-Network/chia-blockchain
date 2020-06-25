@@ -12,15 +12,15 @@ typing_extensions>=3.7.4
 
 flake8>=3.8.3
 # flake8 Dependencies
-pyflakes >= 2.2.0, < 2.3.0
-pycodestyle >= 2.6.0a1, < 2.7.0
-mccabe >= 0.6.0, < 0.7.0
-importlib-metadata; python_version<"3.8"
+pyflakes >= 2.2.0
+pycodestyle >= 2.6.0a1
+mccabe >= 0.6.0
+importlib-metadata
 
 mypy>=0.782
 # mypy Dependencies
 mypy_extensions >= 0.4.3
-typed_ast >= 1.4.0, < 1.5.0
+typed_ast >= 1.4.1
 typing_extensions>=3.7.4
 
 pytest>=5.4.3
