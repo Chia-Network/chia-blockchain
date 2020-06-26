@@ -1,5 +1,6 @@
 from multiprocessing import freeze_support
 
+from src.consensus.constants import constants as consensus_constants
 from src.wallet.wallet_node import WalletNode
 from src.rpc.wallet_rpc_api import WalletRpcApi
 from src.server.outbound_message import NodeType
@@ -19,13 +20,12 @@ def service_kwargs_for_wallet(root_path):
     config = load_config_cli(root_path, "config.yaml", service_name)
     keychain = Keychain(testing=False)
 
+    wallet_constants = consensus_constants
     if config["testing"] is True:
         config["database_path"] = "test_db_wallet.db"
-        api = WalletNode(
-            config, keychain, root_path, override_constants=test_constants,
-        )
-    else:
-        api = WalletNode(config, keychain, root_path)
+        wallet_constants = wallet_constants.replace(test_constants)
+
+    api = WalletNode(config, keychain, root_path, consensus_constants=wallet_constants)
 
     introducer = config["introducer_peer"]
     peer_info = PeerInfo(introducer["host"], introducer["port"])

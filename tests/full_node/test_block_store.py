@@ -7,6 +7,7 @@ import random
 
 import aiosqlite
 import pytest
+from src.consensus.constants import constants as consensus_constants
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.full_node.blockchain import Blockchain
@@ -71,7 +72,8 @@ class TestBlockStore:
             assert (await db.get_tips()) == [blocks[-2].header, blocks[-1].header]
 
             coin_store: CoinStore = await CoinStore.create(connection_3)
-            b: Blockchain = await Blockchain.create(coin_store, db_3, test_constants)
+            hacked_constants = consensus_constants.replace(**test_constants)
+            b: Blockchain = await Blockchain.create(coin_store, db_3, hacked_constants)
 
             assert b.lca_block == genesis.header
             assert b.tips == [genesis.header]

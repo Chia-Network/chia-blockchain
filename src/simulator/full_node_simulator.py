@@ -133,7 +133,7 @@ class FullNodeSimulator(FullNode):
             fees = bundle.fees()
 
         more_blocks = bt.get_consecutive_blocks(
-            self.constants,
+            self.constants.copy(),
             1,
             current_block,
             10,
@@ -159,7 +159,7 @@ class FullNodeSimulator(FullNode):
         block_count = new_index - old_index
 
         more_blocks = bt.get_consecutive_blocks(
-            self.constants,
+            self.constants.copy(),
             block_count,
             current_blocks[:old_index],
             10,
