@@ -1,5 +1,6 @@
 from multiprocessing import freeze_support
 
+from src.consensus.constants import constants
 from src.full_node.full_node import FullNode
 from src.rpc.full_node_rpc_api import FullNodeRpcApi
 from src.server.outbound_message import NodeType
@@ -18,7 +19,7 @@ def service_kwargs_for_full_node(root_path):
     service_name = "full_node"
     config = load_config_cli(root_path, "config.yaml", service_name)
 
-    api = FullNode(config, root_path=root_path)
+    api = FullNode(config, root_path=root_path, consensus_constants=constants)
 
     introducer = config["introducer_peer"]
     peer_info = PeerInfo(introducer["host"], introducer["port"])

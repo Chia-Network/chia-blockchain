@@ -9,8 +9,8 @@ from typing import Dict, List, Optional, Set, Tuple
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
-from src.consensus.constants import constants as consensus_constants
 from src.consensus.block_rewards import calculate_base_fee
+from src.consensus.constants import ConsensusConstants
 from src.full_node.block_header_validation import (
     validate_unfinished_block_header,
     validate_finished_block_header,
@@ -57,8 +57,7 @@ class ReceiveBlockResult(Enum):
 
 
 class Blockchain:
-    # Allow passing in custom overrides for any consesus parameters
-    constants: Dict
+    constants: ConsensusConstants
     # Tips of the blockchain
     tips: List[Header]
     # Least common ancestor of tips
@@ -86,7 +85,7 @@ class Blockchain:
 
     @staticmethod
     async def create(
-        coin_store: CoinStore, block_store: BlockStore, override_constants: Dict = {},
+        coin_store: CoinStore, block_store: BlockStore, consensus_constants: ConsensusConstants,
     ):
         """
         Initializes a blockchain with the header blocks from disk, assuming they have all been
@@ -99,9 +98,7 @@ class Blockchain:
         self.pool = concurrent.futures.ProcessPoolExecutor(
             max_workers=max(cpu_count - 1, 1)
         )
-        self.constants = consensus_constants.copy()
-        for key, value in override_constants.items():
-            self.constants[key] = value
+        self.constants = consensus_constants
         self.tips = []
         self.height_to_hash = {}
         self.headers = {}
@@ -225,7 +222,7 @@ class Blockchain:
             "DIFFICULTY_DELAY"
         ]:
             new_difficulty = get_next_difficulty(
-                self.constants, self.headers, self.height_to_hash, block.header
+                self.constants.copy(), self.headers, self.height_to_hash, block.header
             )
         else:
             new_difficulty = None
@@ -320,7 +317,7 @@ class Blockchain:
         assert curr_header_block is not None
         # Validate block header
         error_code: Optional[Err] = await validate_finished_block_header(
-            self.constants,
+            self.constants.copy(),
             self.headers,
             self.height_to_hash,
             curr_header_block,
@@ -493,12 +490,12 @@ class Blockchain:
 
     def get_next_difficulty(self, header_hash: bytes32) -> uint64:
         return get_next_difficulty(
-            self.constants, self.headers, self.height_to_hash, header_hash
+            self.constants.copy(), self.headers, self.height_to_hash, header_hash
         )
 
     def get_next_min_iters(self, header_hash: bytes32) -> uint64:
         return get_next_min_iters(
-            self.constants, self.headers, self.height_to_hash, header_hash
+            self.constants.copy(), self.headers, self.height_to_hash, header_hash
         )
 
     async def pre_validate_blocks_multiprocessing(
@@ -531,7 +528,7 @@ class Blockchain:
         prev_hb = self.get_header_block(prev_full_block)
         assert prev_hb is not None
         return await validate_unfinished_block_header(
-            self.constants,
+            self.constants.copy(),
             self.headers,
             self.height_to_hash,
             block.header,

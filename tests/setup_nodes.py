@@ -85,11 +85,12 @@ async def setup_full_node(
             config["target_peer_count"],
         )
     FullNodeApi = FullNodeSimulator if simulator else FullNode
+    hacked_constants = consensus_constants.replace(**test_constants_copy)
     api = FullNodeApi(
         config=config,
         root_path=root_path,
+        consensus_constants=hacked_constants,
         name=f"full_node_{port}",
-        override_constants=test_constants_copy,
     )
 
     started = asyncio.Event()
@@ -154,11 +155,12 @@ async def setup_wallet_node(
         db_path.unlink()
     config["database_path"] = str(db_name)
 
+    hacked_constants = consensus_constants.replace(**test_constants_copy)
     api = WalletNode(
         config,
         keychain,
         root_path,
-        override_constants=test_constants_copy,
+        consensus_constants=hacked_constants,
         name="wallet1",
     )
     periodic_introducer_poll = None

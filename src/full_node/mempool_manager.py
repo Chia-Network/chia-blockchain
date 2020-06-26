@@ -6,7 +6,7 @@ import logging
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
-from src.consensus.constants import constants as consensus_constants
+from src.consensus.constants import ConsensusConstants
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.util.bundle_tools import best_solution_program
@@ -32,11 +32,8 @@ log = logging.getLogger(__name__)
 
 
 class MempoolManager:
-    def __init__(self, coin_store: CoinStore, override_constants: Dict = {}):
-        # Allow passing in custom overrides
-        self.constants: Dict = consensus_constants.copy()
-        for key, value in override_constants.items():
-            self.constants[key] = value
+    def __init__(self, coin_store: CoinStore, consensus_constants: ConsensusConstants):
+        self.constants: ConsensusConstants = consensus_constants
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self.potential_txs: Dict[bytes32, SpendBundle] = {}

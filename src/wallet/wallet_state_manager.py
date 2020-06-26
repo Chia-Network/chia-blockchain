@@ -10,6 +10,7 @@ import aiosqlite
 from chiabip158 import PyBIP158
 from blspy import PublicKey, ExtendedPrivateKey
 
+from src.consensus.constants import ConsensusConstants
 from src.types.coin import Coin
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
@@ -45,7 +46,7 @@ from src.consensus.find_fork_point import find_fork_point_in_chain
 
 
 class WalletStateManager:
-    constants: Dict
+    constants: ConsensusConstants
     config: Dict
     wallet_store: WalletStore
     tx_store: WalletTransactionStore
@@ -85,7 +86,7 @@ class WalletStateManager:
         private_key: ExtendedPrivateKey,
         config: Dict,
         db_path: Path,
-        constants: Dict,
+        constants: ConsensusConstants,
         name: str = None,
     ):
         self = WalletStateManager()

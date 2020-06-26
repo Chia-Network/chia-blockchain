@@ -18,7 +18,7 @@ from src.util.merkle_set import (
     MerkleSet,
 )
 from src.protocols import introducer_protocol, wallet_protocol
-from src.consensus.constants import constants as consensus_constants
+from src.consensus.constants import ConsensusConstants
 from src.server.connection import PeerConnections
 from src.server.server import ChiaServer
 from src.server.outbound_message import OutboundMessage, NodeType, Message, Delivery
@@ -45,7 +45,7 @@ from src.wallet.trade_manager import TradeManager
 class WalletNode:
     key_config: Dict
     config: Dict
-    constants: Dict
+    constants: ConsensusConstants
     server: Optional[ChiaServer]
     log: logging.Logger
 
@@ -84,14 +84,12 @@ class WalletNode:
         config: Dict,
         keychain: Keychain,
         root_path: Path,
+        consensus_constants: ConsensusConstants,
         name: str = None,
-        override_constants: Dict = {},
     ):
         self.config = config
-        self.constants = consensus_constants.copy()
+        self.constants = consensus_constants
         self.root_path = root_path
-        for key, value in override_constants.items():
-            self.constants[key] = value
         if name:
             self.log = logging.getLogger(name)
         else:

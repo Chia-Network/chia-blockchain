@@ -11,7 +11,7 @@ import aiosqlite
 from chiabip158 import PyBIP158
 from chiapos import Verifier
 
-from src.consensus.constants import constants as consensus_constants
+from src.consensus.constants import ConsensusConstants
 from src.consensus.block_rewards import calculate_base_fee
 from src.consensus.pot_iterations import calculate_iterations
 from src.full_node.block_store import BlockStore
@@ -70,22 +70,20 @@ class FullNode:
     global_connections: Optional[PeerConnections]
     server: Optional[ChiaServer]
     log: logging.Logger
-    constants: Dict
+    constants: ConsensusConstants
     _shut_down: bool
     root_path: Path
     state_changed_callback: Optional[Callable]
 
     def __init__(
-        self, config: Dict, root_path: Path, name: str = None, override_constants={},
+        self, config: Dict, root_path: Path, consensus_constants: ConsensusConstants, name: str = None,
     ):
         self.root_path = root_path
         self.config = config
         self.server = None
         self._shut_down = False  # Set to true to close all infinite loops
-        self.constants = consensus_constants.copy()
+        self.constants = consensus_constants
         self.sync_peers_handler = None
-        for key, value in override_constants.items():
-            self.constants[key] = value
         if name:
             self.log = logging.getLogger(name)
         else:
