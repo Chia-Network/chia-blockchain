@@ -12,27 +12,13 @@ from src.types.sized_bytes import bytes32
 from src.util.config import config_path_for_filename, load_config, save_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.path import mkdir
-from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.util.keychain import Keychain
-from src.types.BLSSignature import BLSPublicKey
 from src.util.plot_tools import get_plot_filenames, stream_plot_info
 
 
 def log(to_log):
     print(to_log)
     sys.stdout.flush()
-
-
-def get_default_puzzle_hash() -> bytes32:
-    keychain: Keychain = Keychain()
-    epk = keychain.get_first_public_key()
-    if epk is None:
-        raise RuntimeError(
-            "No keys, please run 'chia keys generate' or provide an address with -a and -p"
-        )
-    return create_puzzlehash_for_pk(
-        BLSPublicKey(bytes(epk.public_child(0).get_public_key()))
-    )
 
 
 def get_default_public_key() -> PublicKey:
@@ -71,10 +57,7 @@ def main():
         default=None,
     )
     parser.add_argument(
-        "-a", "--farmer_address", help="Hex farmer address", type=str, default=None
-    )
-    parser.add_argument(
-        "-p", "--pool_address", help="Hex pool address", type=str, default=None
+        "-p", "--pool_public_key", help="Hex public key of pool", type=str, default=None
     )
     parser.add_argument(
         "-s", "--sk_seed", help="Secret key seed in hex", type=str, default=None
@@ -133,23 +116,17 @@ def main():
     else:
         farmer_public_key = get_default_public_key()
 
-    farmer_address: bytes
-    if args.farmer_address is not None:
-        farmer_address = bytes.fromhex(args.farmer_address)
+    pool_public_key: PublicKey
+    if args.pool_public_key is not None:
+        pool_public_key = bytes.fromhex(args.pool_public_key)
     else:
-        farmer_address = get_default_puzzle_hash()
-
-    pool_address: bytes
-    if args.pool_address is not None:
-        pool_address = bytes.fromhex(args.pool_address)
-    else:
-        pool_address = get_default_puzzle_hash()
+        pool_public_key = get_default_public_key()
 
     log(
         f"Creating {args.num_plots} plots, from index {args.index} to "
         f"{args.index + args.num_plots - 1}, of size {args.size}, sk_seed "
-        f"{sk_seed.hex()} farmer address {pool_address.hex()} pool address "
-        f"{pool_address.hex()} farmer public key {farmer_public_key.hex()}"
+        f"{sk_seed.hex()} pool public key "
+        f"{bytes(pool_public_key).hex()} farmer public key {bytes(farmer_public_key).hex()}"
     )
 
     mkdir(args.tmp_dir)
@@ -163,30 +140,27 @@ def main():
         )
 
         # The plot public key is the combination of the harvester and farmer keys
-        plot_public_key = ProofOfSpace.generate_plot_pubkey(
+        plot_public_key = ProofOfSpace.generate_plot_public_key(
             sk.get_public_key(), farmer_public_key
         )
 
-        # The plot seed is based on the harvester and farmer keys, and commits to rewards
-        # to the farmer address and pool address
+        # The plot seed is based on the harvester, farmer, and pool keys
         plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(
-            farmer_address, pool_address, plot_public_key
+            pool_public_key, plot_public_key
         )
         dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M")
 
         filename: str = f"plot-k{args.size}-{dt_string}-{plot_seed}.plot"
         full_path: Path = args.final_dir / filename
 
-        # plot_config = load_config(root_path, plot_config_filename)
-        # plot_config_plots_new = deepcopy(plot_config.get("plots", []))
-        # filenames = [Path(k).name for k in plot_config_plots_new.keys()]
-        # already_in_config = any(plot_seed.hex() in fname for fname in filenames)
         config = load_config(root_path, config_filename)
         plot_filenames = get_plot_filenames(config)
 
         if args.final_dir.resolve() not in plot_filenames:
             # Adds the directory to the plot directories if it is not present
-            config["harvester"]["plot_directories"].append(str(args.final_dir))
+            config["harvester"]["plot_directories"].append(
+                str(args.final_dir.resolve())
+            )
             save_config(root_path, config_filename, config)
 
         if not full_path.exists():
@@ -198,7 +172,7 @@ def main():
                 str(args.final_dir),
                 filename,
                 args.size,
-                stream_plot_info(farmer_address, pool_address, farmer_public_key, sk),
+                stream_plot_info(pool_public_key, farmer_public_key, sk),
                 plot_seed,
                 args.buffer,
             )

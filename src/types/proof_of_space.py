@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from bitstring import BitArray
-from blspy import PublicKey, InsecureSignature, Util
+from blspy import PublicKey
 
 from chiapos import Verifier
 from src.types.sized_bytes import bytes32
@@ -15,16 +15,13 @@ from src.util.hash import std_hash
 @streamable
 class ProofOfSpace(Streamable):
     challenge_hash: bytes32
-    farmer_puzzle_hash: bytes32
-    pool_puzzle_hash: bytes32
-    plot_pubkey: PublicKey
+    pool_public_key: PublicKey
+    plot_public_key: PublicKey
     size: uint8
     proof: bytes
 
     def get_plot_seed(self) -> bytes32:
-        return self.calculate_plot_seed(
-            self.farmer_puzzle_hash, self.pool_puzzle_hash, self.plot_pubkey
-        )
+        return self.calculate_plot_seed(self.pool_public_key, self.plot_public_key)
 
     def verify_and_get_quality_string(self, num_zero_bits: uint8) -> Optional[bytes32]:
         v: Verifier = Verifier()
@@ -44,23 +41,17 @@ class ProofOfSpace(Streamable):
     def can_create_proof(
         plot_seed: bytes32, challenge_hash: bytes32, num_zero_bits: uint8
     ) -> bool:
-        h = BitArray(std_hash(bytes(challenge_hash) + bytes(plot_seed)))
-        if h[:num_zero_bits].int != 0:
-            return False
-        return True
+        h = BitArray(std_hash(bytes(plot_seed) + bytes(challenge_hash)))
+        return h[:num_zero_bits].uint == 0
 
     @staticmethod
     def calculate_plot_seed(
-        farmer_puzzle_hash: bytes32,
-        pool_puzzle_hash: bytes32,
-        plot_public_key: PublicKey,
+        pool_public_key: PublicKey, plot_public_key: PublicKey,
     ) -> bytes32:
-        return bytes32(
-            std_hash(farmer_puzzle_hash + pool_puzzle_hash + bytes(plot_public_key))
-        )
+        return bytes32(std_hash(bytes(pool_public_key) + bytes(plot_public_key)))
 
     @staticmethod
-    def generate_plot_pubkey(
+    def generate_plot_public_key(
         harvester_pk: PublicKey, farmer_pk: PublicKey
     ) -> PublicKey:
         # Insecure aggregation is fine here, since the harvester can choose any public key
