@@ -137,6 +137,7 @@ class FullNodeSimulator(FullNode):
             1,
             current_block,
             10,
+            reward_puzzlehash=request.puzzle_hash,
             transaction_data_at_height=dict_h,
             seed=token_bytes(),
             fees=uint64(fees),
@@ -151,6 +152,7 @@ class FullNodeSimulator(FullNode):
     async def reorg_from_index_to_new_index(self, request: ReorgProtocol):
         new_index = request.new_index
         old_index = request.old_index
+        coinbase_ph = request.puzzle_hash
         top_tip = self.get_tip()
 
         current_blocks = await self.get_current_blocks(top_tip)
@@ -162,6 +164,7 @@ class FullNodeSimulator(FullNode):
             current_blocks[:old_index],
             10,
             seed=token_bytes(),
+            reward_puzzlehash=coinbase_ph,
             transaction_data_at_height={},
         )
         assert self.server is not None

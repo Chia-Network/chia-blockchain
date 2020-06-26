@@ -174,7 +174,8 @@ class WalletRpcApi:
         return response
 
     async def farm_block(self, request):
-        request = FarmNewBlockProtocol()
+        puzzle_hash = bytes.fromhex(request["puzzle_hash"])
+        request = FarmNewBlockProtocol(puzzle_hash)
         msg = OutboundMessage(
             NodeType.FULL_NODE, Message("farm_new_block", request), Delivery.BROADCAST,
         )
