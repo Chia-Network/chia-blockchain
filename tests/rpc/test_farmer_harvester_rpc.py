@@ -26,7 +26,7 @@ def event_loop():
 class TestRpc:
     @pytest.fixture(scope="function")
     async def simulation(self):
-        async for _ in setup_farmer_harvester(test_constants):
+        async for _ in setup_farmer_harvester(test_constants.copy()):
             yield _
 
     @pytest.mark.asyncio
