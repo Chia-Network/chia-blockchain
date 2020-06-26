@@ -683,12 +683,10 @@ if __name__ == "__main__":
     print(
         bytes(
             bt.create_genesis_block(
-                consensus_constants,
+                {},
                 bytes([2] * 32),
                 b"0",
-                bytes.fromhex(
-                    "a4259182b4d8e0af21331fc5be2681f953400b6726fa4095e3b91ae8f005a836"
-                ),
+                "30944219616695e48f7a9b54b38877104a1f5fbe85c61da2fbe35275418a64bc",
             )
         )
     )

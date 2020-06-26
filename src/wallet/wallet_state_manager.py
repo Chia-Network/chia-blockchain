@@ -652,28 +652,6 @@ class WalletStateManager:
         fast sync). If validation succeeds, block is adedd to DB. If it's a new TIP, transactions are
         reorged accordingly.
         """
-        cb_and_fees_additions = []
-        if header_block is not None:
-            coinbase_coin = header_block.get_coinbase()
-            fees_coin = header_block.get_fees_coin()
-
-            if await self.is_addition_relevant(coinbase_coin):
-                cb_and_fees_additions.append(coinbase_coin)
-            if await self.is_addition_relevant(fees_coin):
-                cb_and_fees_additions.append(fees_coin)
-        assert block.additions is not None
-        if len(cb_and_fees_additions) > 0:
-            block = BlockRecord(
-                block.header_hash,
-                block.prev_header_hash,
-                block.height,
-                block.weight,
-                block.additions + cb_and_fees_additions,
-                block.removals,
-                block.total_iters,
-                block.new_challenge_hash,
-            )
-
         assert block.additions is not None
         assert block.removals is not None
 
@@ -720,7 +698,14 @@ class WalletStateManager:
                 await self.wallet_store.add_block_to_path(block.header_hash)
                 self.lca = block.header_hash
                 for coin in block.additions:
-                    await self.coin_added(coin, block.height, False)
+                    is_coinbase = False
+                    if (
+                        bytes32((block.height).to_bytes(32, "big"))
+                        == coin.parent_coin_info
+                        or std_hash(std_hash(block.height)) == coin.parent_coin_info
+                    ):
+                        is_coinbase = True
+                    await self.coin_added(coin, block.height, is_coinbase)
                 for coin in block.removals:
                     await self.coin_removed(coin, block.height)
                 self.height_to_hash[uint32(0)] = block.header_hash
@@ -755,11 +740,10 @@ class WalletStateManager:
                     )
                     for coin in path_block.additions:
                         is_coinbase = False
-
                         if (
                             bytes32((path_block.height).to_bytes(32, "big"))
                             == coin.parent_coin_info
-                            or std_hash(std_hash(path_block.height))
+                            or std_hash(std_hash(path_block.height.to_bytes(4, "big")))
                             == coin.parent_coin_info
                         ):
                             is_coinbase = True

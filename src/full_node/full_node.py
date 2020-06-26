@@ -2067,16 +2067,7 @@ class FullNode:
         coins_map: List[Tuple[bytes32, List[Coin]]] = []
         proofs_map: List[Tuple[bytes32, bytes, Optional[bytes]]] = []
 
-        if block.transactions_generator is None:
-            proofs: Optional[List]
-            if request.puzzle_hashes is None:
-                proofs = None
-            else:
-                proofs = []
-            response = wallet_protocol.RespondAdditions(
-                block.height, block.header_hash, [], proofs
-            )
-        elif request.puzzle_hashes is None:
+        if request.puzzle_hashes is None:
             for puzzle_hash, coins in puzzlehash_coins_map.items():
                 coins_map.append((puzzle_hash, coins))
             response = wallet_protocol.RespondAdditions(
