@@ -544,12 +544,7 @@ class Blockchain:
         """
 
         # 6. The compact block filter must be correct, according to the body (BIP158)
-        if block.header.data.filter_hash != bytes32([0] * 32):
-            if block.transactions_filter is None:
-                return Err.INVALID_TRANSACTIONS_FILTER_HASH
-            if std_hash(block.transactions_filter) != block.header.data.filter_hash:
-                return Err.INVALID_TRANSACTIONS_FILTER_HASH
-        elif block.transactions_filter is not None:
+        if std_hash(block.transactions_filter) != block.header.data.filter_hash:
             return Err.INVALID_TRANSACTIONS_FILTER_HASH
 
         fee_base = calculate_base_fee(block.height)
@@ -573,14 +568,22 @@ class Blockchain:
                 return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
 
             # 16. If genesis, the fee must be the base fee, agg_sig must be None, and merkle roots must be valid
-            if fee_base != block.header.data.transaction_fees:
+            if fee_base != block.header.data.total_transaction_fees:
                 return Err.INVALID_BLOCK_FEE_AMOUNT
             root_error = self._validate_merkle_root(block)
             if root_error:
                 return root_error
-            if block.header.data.aggregated_signature is not None:
-                log.error("1")
+
+            # 17. Verify the pool signature even if there are no transactions
+            pool_target_m = bytes(block.header.data.pool_target)
+            hash_key_pairs = [
+                BLSSignature.PkMessagePair(
+                    block.proof_of_space.pool_public_key, std_hash(pool_target_m)
+                )
+            ]
+            if not block.header.data.aggregated_signature.validate(hash_key_pairs):
                 return Err.BAD_AGGREGATE_SIGNATURE
+
         return None
 
     def _validate_merkle_root(
@@ -605,7 +608,8 @@ class Blockchain:
 
         # Create addition Merkle set
         puzzlehash_coins_map: Dict[bytes32, List[Coin]] = {}
-        for coin in additions:
+
+        for coin in additions + [block.get_coinbase(), block.get_fees_coin()]:
             if coin.puzzle_hash in puzzlehash_coins_map:
                 puzzlehash_coins_map[coin.puzzle_hash].append(coin)
             else:
@@ -679,8 +683,8 @@ class Blockchain:
         for coin_name in removals:
             byte_array_tx.append(bytearray(coin_name))
 
-        byte_array_tx.append(bytearray(block.proof_of_space.farmer_puzzle_hash))
-        byte_array_tx.append(bytearray(block.proof_of_space.pool_puzzle_hash))
+        byte_array_tx.append(bytearray(block.header.data.farmer_rewards_puzzle_hash))
+        byte_array_tx.append(bytearray(block.header.data.pool_target.puzzle_hash))
 
         bip158: PyBIP158 = PyBIP158(byte_array_tx)
         encoded_filter = bytes(bip158.GetEncoded())
@@ -821,7 +825,7 @@ class Blockchain:
             return Err.ASSERT_FEE_CONDITION_FAILED
 
         # Check coinbase reward
-        if fees + fee_base != block.header.data.transaction_fees:
+        if fees + fee_base != block.header.data.total_transaction_fees:
             return Err.BAD_COINBASE_REWARD
 
         # Verify that removed coin puzzle_hashes match with calculated puzzle_hashes
@@ -830,7 +834,15 @@ class Blockchain:
                 return Err.WRONG_PUZZLE_HASH
 
         # Verify conditions, create hash_key list for aggsig check
-        hash_key_pairs = []
+        pool_target_m = bytes(block.header.data.pool_target)
+
+        # The pool signature on the pool target is checked here as well, since the pool signature is
+        # aggregated along with the transaction signatures
+        hash_key_pairs = [
+            BLSSignature.PkMessagePair(
+                block.proof_of_space.pool_public_key, std_hash(pool_target_m)
+            )
+        ]
         for npc in npc_list:
             unspent = removal_coin_records[npc.coin_name]
             error = blockchain_check_conditions_dict(

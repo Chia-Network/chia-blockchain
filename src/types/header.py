@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 
-from typing import Optional
 from blspy import PrependSignature
 
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64, uint32, uint128
 from src.util.streamable import Streamable, streamable
 from src.types.BLSSignature import BLSSignature
+from src.types.pool_target import PoolTarget
 
 
 @dataclass(frozen=True)
@@ -21,8 +21,10 @@ class HeaderData(Streamable):
     total_iters: uint64
     additions_root: bytes32
     removals_root: bytes32
-    transaction_fees: uint64
-    aggregated_signature: Optional[BLSSignature]
+    farmer_rewards_puzzle_hash: bytes32
+    total_transaction_fees: uint64
+    pool_target: PoolTarget
+    aggregated_signature: BLSSignature
     cost: uint64
     extension_data: bytes32
     generator_hash: bytes32  # This needs to be a tree hash

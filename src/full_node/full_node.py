@@ -14,6 +14,7 @@ from chiapos import Verifier
 from src.consensus.constants import ConsensusConstants
 from src.consensus.block_rewards import calculate_base_fee
 from src.consensus.pot_iterations import calculate_iterations
+from src.consensus.coinbase import create_coinbase_coin, create_fees_coin
 from src.full_node.block_store import BlockStore
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.coin_store import CoinStore
@@ -1266,13 +1267,15 @@ class FullNode:
                 SpendBundle
             ] = await self.mempool_manager.create_bundle_for_tip(target_tip)
         spend_bundle_fees = 0
-        aggregate_sig: Optional[BLSSignature] = None
+        aggregate_sig: BLSSignature = BLSSignature(bytes(request.pool_target_signature))
         solution_program: Optional[Program] = None
 
         if spend_bundle:
             solution_program = best_solution_program(spend_bundle)
             spend_bundle_fees = spend_bundle.fees()
-            aggregate_sig = spend_bundle.aggregated_signature
+            aggregate_sig = BLSSignature.aggregate(
+                [spend_bundle.aggregated_signature, aggregate_sig]
+            )
 
         base_fee_reward = calculate_base_fee(target_tip.height + 1)
         full_fee_reward = uint64(int(base_fee_reward + spend_bundle_fees))
@@ -1293,7 +1296,6 @@ class FullNode:
         timestamp: uint64 = uint64(int(time.time()))
 
         # Create filter
-        encoded_filter: Optional[bytes] = None
         byte_array_tx: List[bytes32] = []
         if spend_bundle:
             additions: List[Coin] = spend_bundle.additions()
@@ -1302,11 +1304,12 @@ class FullNode:
                 byte_array_tx.append(bytearray(coin.puzzle_hash))
             for coin in removals:
                 byte_array_tx.append(bytearray(coin.name()))
-            byte_array_tx.append(bytearray(request.proof_of_space.farmer_puzzle_hash))
-            byte_array_tx.append(bytearray(request.proof_of_space.pool_puzzle_hash))
 
-            bip158: PyBIP158 = PyBIP158(byte_array_tx)
-            encoded_filter = bytes(bip158.GetEncoded())
+        byte_array_tx.append(bytearray(request.farmer_rewards_puzzle_hash))
+        byte_array_tx.append(bytearray(request.pool_target.puzzle_hash))
+
+        bip158: PyBIP158 = PyBIP158(byte_array_tx)
+        encoded_filter: bytes = bytes(bip158.GetEncoded())
 
         proof_of_space_hash: bytes32 = request.proof_of_space.get_hash()
         difficulty = self.blockchain.get_next_difficulty(target_tip)
@@ -1334,10 +1337,17 @@ class FullNode:
         # Create removal Merkle set
         for coin in removals:
             removal_merkle_set.add_already_hashed(coin.name())
+        cb_reward = calculate_block_reward(target_tip.height + 1)
+        cb_coin = create_coinbase_coin(
+            target_tip.height + 1, request.pool_target.puzzle_hash, cb_reward
+        )
+        fees_coin = create_fees_coin(
+            target_tip.height + 1, request.farmer_rewards_puzzle_hash, full_fee_reward,
+        )
 
         # Create addition Merkle set
         puzzlehash_coins_map: Dict[bytes32, List[Coin]] = {}
-        for coin in additions:
+        for coin in additions + [cb_coin, fees_coin]:
             if coin.puzzle_hash in puzzlehash_coins_map:
                 puzzlehash_coins_map[coin.puzzle_hash].append(coin)
             else:
@@ -1356,11 +1366,8 @@ class FullNode:
             if solution_program is not None
             else bytes32([0] * 32)
         )
-        filter_hash = (
-            std_hash(encoded_filter)
-            if encoded_filter is not None
-            else bytes32([0] * 32)
-        )
+        filter_hash = std_hash(encoded_filter)
+
         block_header_data: HeaderData = HeaderData(
             uint32(target_tip.height + 1),
             prev_header_hash,
@@ -1371,7 +1378,9 @@ class FullNode:
             uint64(target_tip.data.total_iters + iterations_needed),
             additions_root,
             removal_root,
+            request.farmer_rewards_puzzle_hash,
             full_fee_reward,
+            request.pool_target,
             aggregate_sig,
             cost,
             extension_data,
@@ -1407,7 +1416,7 @@ class FullNode:
         we call the unfinished_block routine.
         """
         candidate: Optional[
-            Tuple[Optional[Program], Optional[bytes], HeaderData, ProofOfSpace]
+            Tuple[Optional[Program], bytes, HeaderData, ProofOfSpace]
         ] = self.full_node_store.get_candidate_block(header_signature.pos_hash)
         if candidate is None:
             self.log.warning(
@@ -2049,7 +2058,7 @@ class FullNode:
         assert block is not None
         _, additions = await block.tx_removals_and_additions()
         puzzlehash_coins_map: Dict[bytes32, List[Coin]] = {}
-        for coin in additions:
+        for coin in additions + [block.get_coinbase(), block.get_fees_coin()]:
             if coin.puzzle_hash in puzzlehash_coins_map:
                 puzzlehash_coins_map[coin.puzzle_hash].append(coin)
             else:

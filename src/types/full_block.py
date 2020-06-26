@@ -35,7 +35,7 @@ class FullBlock(Streamable):
     proof_of_time: Optional[ProofOfTime]
     header: Header
     transactions_generator: Optional[Program]
-    transactions_filter: Optional[bytes]
+    transactions_filter: bytes
 
     @property
     def prev_header_hash(self) -> bytes32:
@@ -56,14 +56,14 @@ class FullBlock(Streamable):
     def get_coinbase(self) -> Coin:
         br = calculate_block_reward(self.height)
         return create_coinbase_coin(
-            self.height, self.proof_of_space.pool_puzzle_hash, br
+            self.height, self.header.data.pool_target.puzzle_hash, br
         )
 
     def get_fees_coin(self) -> Coin:
         return create_fees_coin(
             self.height,
-            self.proof_of_space.pool_puzzle_hash,
-            self.header.data.transaction_fees,
+            self.header.data.farmer_rewards_puzzle_hash,
+            self.header.data.total_transaction_fees,
         )
 
     def additions(self) -> List[Coin]:

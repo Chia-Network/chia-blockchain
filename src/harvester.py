@@ -12,14 +12,11 @@ from src.protocols import harvester_protocol
 from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.proof_of_space import ProofOfSpace
-from src.types.sized_bytes import bytes32
 from src.util.config import load_config, save_config
 from src.util.api_decorators import api_request
 from src.util.ints import uint8
-from src.util.plot_utils import load_plots, PlotInfo
-from src.util.hash import std_hash
+from src.util.plot_tools import load_plots, PlotInfo
 from src.consensus.constants import constants as consensus_constants
-from bitstring import BitArray
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +26,7 @@ class Harvester:
     provers: Dict[Path, PlotInfo]
     failed_to_open_filenames: List[Path]
     no_key_filenames: List[Path]
-    farmer_pubkeys: List[PublicKey]
+    farmer_public_keys: List[PublicKey]
     root_path: Path
     _plot_notification_task: Optional[asyncio.Task]
     _is_shutdown: bool
@@ -49,7 +46,7 @@ class Harvester:
         self._is_shutdown = False
         self._plot_notification_task = None
         self.global_connections: Optional[PeerConnections] = None
-        self.farmer_pubkeys = []
+        self.farmer_public_keys = []
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
         self.state_changed_callback = None
         self.server = None
@@ -98,10 +95,11 @@ class Harvester:
                     "filename": str(path),
                     "size": prover.get_size(),
                     "plot-seed": prover.get_id(),
-                    "farmer_address": plot_info.farmer_address,
-                    "pool_address": plot_info.pool_address,
+                    "pool_public_key": plot_info.pool_public_key,
                     "farmer_public_key": plot_info.farmer_public_key,
                     "harvester_sk": plot_info.harvester_sk,
+                    "file_size": plot_info.file_size,
+                    "time_modified": plot_info.time_modified,
                 }
             )
 
@@ -113,11 +111,19 @@ class Harvester:
 
     def _refresh_plots(self):
         (
+            changed,
             self.provers,
             self.failed_to_open_filenames,
             self.no_key_filenames,
-        ) = load_plots(self.config, self.farmer_pubkeys, self.root_path)
-        self._state_changed("plots")
+        ) = load_plots(
+            self.provers,
+            self.config,
+            self.farmer_public_keys,
+            self.pool_public_keys,
+            self.root_path,
+        )
+        if changed:
+            self._state_changed("plots")
 
     def _delete_plot(self, str_path: str):
         path = Path(str_path).resolve()
@@ -133,7 +139,7 @@ class Harvester:
 
     def _add_plot_directory(self, str_path: str) -> bool:
         config = load_config(self.root_path, "config.yaml")
-        config["harvester"]["plot_directories"].append(str_path)
+        config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
         save_config(self.root_path, "config.yaml", config)
         self._refresh_plots()
         return True
@@ -153,7 +159,8 @@ class Harvester:
         which must be put into the plots, before the plotting process begins. We cannot
         use any plots which don't have one of the pool keys.
         """
-        self.farmer_pubkeys = harvester_handshake.farmer_pubkeys
+        self.farmer_public_keys = harvester_handshake.farmer_public_keys
+        self.pool_public_keys = harvester_handshake.pool_public_keys
         self._refresh_plots()
         if len(self.provers) == 0:
             log.warning(
@@ -169,6 +176,9 @@ class Harvester:
         """
         start = time.time()
         assert len(new_challenge.challenge_hash) == 32
+
+        # Refresh plots to see if there are any new ones
+        await self._refresh_plots()
 
         loop = asyncio.get_running_loop()
 
@@ -215,9 +225,6 @@ class Harvester:
 
         awaitables = []
         for filename, plot_info in self.provers.items():
-            harvester_sig = plot_info.harvester_sk.sign_insecure(
-                new_challenge.challenge_hash
-            )
             if ProofOfSpace.can_create_proof(
                 plot_info.prover.get_id(),
                 new_challenge.challenge_hash,
@@ -244,7 +251,8 @@ class Harvester:
     ):
         """
         The farmer requests a signature on the header hash, for one of the proofs that we found.
-        We look up the correct plot based on the quality, lookup the proof, and return it.
+        We look up the correct plot based on the plot id and response number, lookup the proof,
+        and return it.
         """
         response: Optional[harvester_protocol.RespondProofOfSpace] = None
         challenge_hash = request.challenge_hash
@@ -260,26 +268,28 @@ class Harvester:
                 prover = DiskProver(str(filename))
                 self.provers[filename] = PlotInfo(
                     prover,
-                    plot_info.farmer_address,
-                    plot_info.pool_address,
+                    plot_info.pool_public_key,
                     plot_info.farmer_public_key,
                     plot_info.harvester_sk,
+                    plot_info.file_size,
+                    plot_info.time_modified,
                 )
-                proof_xs = self.provers[filename].get_full_proof(challenge_hash, index)
+                proof_xs = self.provers[filename].prover.get_full_proof(
+                    challenge_hash, index
+                )
         except KeyError:
             log.warning(f"KeyError plot {filename} does not exist.")
 
         plot_info = self.provers[filename]
-        plot_pubkey = ProofOfSpace.generate_plot_pubkey(
+        plot_public_key = ProofOfSpace.generate_plot_public_key(
             plot_info.harvester_sk.get_public_key(), plot_info.farmer_public_key
         )
 
         proof_of_space: ProofOfSpace = ProofOfSpace(
             challenge_hash,
-            plot_info.farmer_address,
-            plot_info.pool_address,
-            plot_pubkey,
-            uint8(self.provers[filename].get_size()),
+            plot_info.pool_public_key,
+            plot_public_key,
+            uint8(self.provers[filename].prover.get_size()),
             proof_xs,
         )
         response = harvester_protocol.RespondProofOfSpace(
@@ -302,7 +312,7 @@ class Harvester:
         plot_info = self.provers[Path(request.plot_id).resolve()]
 
         plot_sk = plot_info.harvester_sk
-        agg_pk = ProofOfSpace.generate_plot_pubkey(
+        agg_pk = ProofOfSpace.generate_plot_public_key(
             plot_sk.get_public_key(), plot_info.farmer_public_key
         )
         new_m = bytes(agg_pk) + Util.hash256(request.message)
@@ -312,10 +322,10 @@ class Harvester:
         signature: InsecureSignature = plot_sk.sign_insecure(new_m)
 
         response: harvester_protocol.RespondSignature = harvester_protocol.RespondSignature(
-            request.challenge_hash,
             request.plot_id,
-            request.response_number,
+            request.message,
             plot_sk.get_public_key(),
+            plot_info.farmer_public_key,
             signature,
         )
 

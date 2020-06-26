@@ -55,7 +55,7 @@ class WalletNode:
     # Maintains headers recently received. Once the desired removals and additions are downloaded,
     # the data is persisted in the WalletStateManager. These variables are also used to store
     # temporary sync data. The bytes is the transaction filter.
-    cached_blocks: Dict[bytes32, Tuple[BlockRecord, HeaderBlock, Optional[bytes]]]
+    cached_blocks: Dict[bytes32, Tuple[BlockRecord, HeaderBlock, bytes]]
 
     # Prev hash to curr hash
     future_block_hashes: Dict[bytes32, bytes32]
@@ -876,23 +876,22 @@ class WalletNode:
                 return
 
             # If the block has transactions that we are interested in, fetch adds/deletes
-            if response.transactions_filter is not None:
-                (
-                    additions,
-                    removals,
-                ) = await self.wallet_state_manager.get_filter_additions_removals(
-                    block_record, response.transactions_filter
+            (
+                additions,
+                removals,
+            ) = await self.wallet_state_manager.get_filter_additions_removals(
+                block_record, response.transactions_filter
+            )
+            if len(additions) > 0 or len(removals) > 0:
+                request_a = wallet_protocol.RequestAdditions(
+                    block.height, block.header_hash, additions
                 )
-                if len(additions) > 0 or len(removals) > 0:
-                    request_a = wallet_protocol.RequestAdditions(
-                        block.height, block.header_hash, additions
-                    )
-                    yield OutboundMessage(
-                        NodeType.FULL_NODE,
-                        Message("request_additions", request_a),
-                        Delivery.RESPOND,
-                    )
-                    return
+                yield OutboundMessage(
+                    NodeType.FULL_NODE,
+                    Message("request_additions", request_a),
+                    Delivery.RESPOND,
+                )
+                return
 
             # If we don't have any transactions in filter, don't fetch, and finish the block
             block_record = BlockRecord(

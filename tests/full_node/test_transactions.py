@@ -8,7 +8,7 @@ from src.protocols import full_node_protocol
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
-from tests.setup_nodes import setup_simulators_and_wallets
+from tests.setup_nodes import setup_simulators_and_wallets, test_constants, bt
 from tests.time_out_assert import time_out_assert
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 
@@ -22,7 +22,9 @@ def event_loop():
 class TestTransactions:
     @pytest.fixture(scope="function")
     async def wallet_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
+        async for _ in setup_simulators_and_wallets(
+            1, 1, {"COINBASE_FREEZE_PERIOD": 0}
+        ):
             yield _
 
     @pytest.fixture(scope="function")
@@ -48,16 +50,24 @@ class TestTransactions:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
+        wallet_a = bt.get_farmer_wallet_tool()
+        blocks = bt.get_consecutive_blocks(test_constants, 3, [], 10, b"")
+        spend_bundle = wallet_a.generate_signed_transaction(
+            blocks[-1].get_fees_coin().amount, ph, blocks[0].get_fees_coin()
+        )
+        assert spend_bundle is not None
+        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
+            spend_bundle
+        )
+        async for outbound in full_node_1.respond_transaction(tx):
+            assert outbound.message.function == "new_transaction"
+
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol())
 
-        funds = sum(
-            [
-                calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(1, num_blocks - 2)
-            ]
-        )
+        funds = calculate_base_fee(uint32(i))
+        await asyncio.sleep(3)
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
 
     @pytest.mark.asyncio
@@ -86,15 +96,22 @@ class TestTransactions:
             PeerInfo("localhost", uint16(server_2._port)), None
         )
 
-        for i in range(1, num_blocks):
-            await full_node_0.farm_new_block(FarmNewBlockProtocol())
-
-        funds = sum(
-            [
-                calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(1, num_blocks - 2)
-            ]
+        wallet_a = bt.get_farmer_wallet_tool()
+        blocks = bt.get_consecutive_blocks(test_constants, 3, [], 10, b"")
+        spend_bundle = wallet_a.generate_signed_transaction(
+            blocks[-1].get_fees_coin().amount, ph, blocks[0].get_fees_coin()
         )
+        assert spend_bundle is not None
+        rt: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
+            spend_bundle
+        )
+        async for outbound in full_node_1.respond_transaction(rt):
+            assert outbound.message.function == "new_transaction"
+
+        for i in range(1, 4):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
+
+        funds = calculate_base_fee(uint32(0))
         await time_out_assert(
             10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds
         )
@@ -117,12 +134,6 @@ class TestTransactions:
         # Farm another block
         for i in range(1, 8):
             await full_node_1.farm_new_block(FarmNewBlockProtocol())
-        funds = sum(
-            [
-                calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(1, num_blocks)
-            ]
-        )
         await time_out_assert(
             10,
             wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance,
@@ -150,24 +161,32 @@ class TestTransactions:
             PeerInfo("localhost", uint16(server_0._port)), None
         )
         await server_0.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-
-        for i in range(1, num_blocks):
-            await full_node_0.farm_new_block(FarmNewBlockProtocol())
+        await server_1.start_client(PeerInfo("localhost", uint16(server_2._port)), None)
 
         all_blocks = await full_node_0.get_current_blocks(full_node_0.get_tip())
-
+        wallet_a = bt.get_farmer_wallet_tool()
+        all_blocks = bt.get_consecutive_blocks(test_constants, 3, all_blocks, 10, b"")
         for block in all_blocks:
-            async for _ in full_node_2.respond_block(
-                full_node_protocol.RespondBlock(block)
-            ):
-                pass
-
-        funds = sum(
             [
-                calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(1, num_blocks - 2)
+                _
+                async for _ in full_node_1.respond_block(
+                    full_node_protocol.RespondBlock(block)
+                )
             ]
+        spend_bundle = wallet_a.generate_signed_transaction(
+            all_blocks[2].get_fees_coin().amount, ph, all_blocks[2].get_fees_coin()
         )
+        assert spend_bundle is not None
+        rt: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
+            spend_bundle
+        )
+        async for outbound in full_node_1.respond_transaction(rt):
+            assert outbound.message.function == "new_transaction"
+
+        for i in range(1, 4):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol())
+
+        funds = calculate_base_fee(uint32(i))
         await time_out_assert(
             10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds
         )
@@ -175,6 +194,8 @@ class TestTransactions:
         tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
             10, token_bytes(), 0
         )
+        server_2.global_connections.close_all_connections()
+        await asyncio.sleep(2)
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
         await time_out_assert(

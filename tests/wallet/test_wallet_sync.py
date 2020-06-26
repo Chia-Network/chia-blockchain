@@ -116,15 +116,11 @@ class TestWalletSync:
         wallet_a = wallet_node.wallet_state_manager.main_wallet
         wallet_a_dummy = WalletTool()
         wallet_b = WalletTool()
-        coinbase_puzzlehash = await wallet_a.get_new_puzzlehash()
-        coinbase_puzzlehash_rest = wallet_b.get_new_puzzlehash()
         puzzle_hashes = [await wallet_a.get_new_puzzlehash() for _ in range(10)]
         puzzle_hashes.append(wallet_b.get_new_puzzlehash())
 
         bt = BlockTools()
-        blocks = bt.get_consecutive_blocks(
-            test_constants, 3, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, 3, [], 10, b"")
         for block in blocks:
             [
                 _
@@ -151,9 +147,7 @@ class TestWalletSync:
             prev_coin = Coin(prev_coin.name(), puzzle_hashes[i], uint64(1000))
             dic_h[i + 4] = (program, aggsig)
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, 13, blocks, 10, b"", coinbase_puzzlehash_rest, dic_h
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, 13, blocks, 10, b"", dic_h)
         # Move chain to height 16, with consecutive transactions in blocks 4 to 14
         for block in blocks:
             async for _ in full_node_1.respond_block(
@@ -195,13 +189,7 @@ class TestWalletSync:
             dic_h[i + 4] = (program, aggsig)
 
         blocks = bt.get_consecutive_blocks(
-            test_constants,
-            31,
-            blocks[:4],
-            10,
-            b"this is a reorg",
-            coinbase_puzzlehash_rest,
-            dic_h,
+            test_constants, 31, blocks[:4], 10, b"this is a reorg", dic_h,
         )
 
         # Move chain to height 34, with consecutive transactions in blocks 4 to 14
@@ -249,12 +237,7 @@ class TestWalletSync:
 
         # Farm a block (25) to ourselves
         blocks = bt.get_consecutive_blocks(
-            test_constants,
-            1,
-            blocks[:25],
-            10,
-            b"this is yet another reorg",
-            new_coinbase_puzzlehash,
+            test_constants, 1, blocks[:25], 10, b"this is yet another reorg",
         )
 
         # Brings height up to 40, with block 31 having half our reward spent to us
@@ -264,7 +247,6 @@ class TestWalletSync:
             blocks,
             10,
             b"this is yet another reorg more blocks",
-            coinbase_puzzlehash_rest,
             dic_h,
         )
         for block in blocks:

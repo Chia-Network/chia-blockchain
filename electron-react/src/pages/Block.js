@@ -69,8 +69,10 @@ class Block extends Component {
     }
     const headerHash = await hash_header(this.props.block.header);
 
-    let buf = hex_to_array(this.props.block.proof_of_space.pool_pubkey);
-    buf = buf.concat(hex_to_array(this.props.block.proof_of_space.plot_pubkey));
+    let buf = hex_to_array(this.props.block.proof_of_space.pool_public_key);
+    buf = buf.concat(
+      hex_to_array(this.props.block.proof_of_space.plot_public_key)
+    );
     const bufHash = await sha256(buf);
     const plotSeed = arr_to_hex(bufHash);
     this.setState({
@@ -152,8 +154,8 @@ class Block extends Component {
           "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
       },
       { name: "Proof of Space Size", value: block.proof_of_space.size },
-      { name: "Plot Public Key", value: block.proof_of_space.plot_pubkey },
-      { name: "Pool Public Key", value: block.proof_of_space.pool_pubkey },
+      { name: "Plot Public Key", value: block.proof_of_space.plot_public_key },
+      { name: "Pool Public Key", value: block.proof_of_space.pool_public_key },
       {
         name: "Plot Seed",
         value: plotSeed,

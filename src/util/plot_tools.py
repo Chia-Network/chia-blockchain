@@ -5,8 +5,6 @@ from chiapos import DiskProver
 from dataclasses import dataclass
 import logging
 
-from src.types.sized_bytes import bytes32
-
 
 log = logging.getLogger(__name__)
 
@@ -14,29 +12,32 @@ log = logging.getLogger(__name__)
 @dataclass
 class PlotInfo:
     prover: DiskProver
-    farmer_address: bytes32
-    pool_address: bytes32
+    pool_public_key: PublicKey
     farmer_public_key: PublicKey
     harvester_sk: PrivateKey
+    file_size: int
+    time_modified: float
 
 
 def _get_filenames(directory: Path) -> List[Path]:
-    if not directory.is_dir():
-        # If it is a file ending in .plot, add it
-        if directory.suffix == ".plot":
-            return [directory]
-        else:
-            # Ignore other files
-            return []
-    # If it is a directory, recurse
+    if not directory.exists():
+        log.warning(f"Directory: {directory} does not exist.")
+        return []
     all_files: List[Path] = []
     for child in directory.iterdir():
-        all_files += _get_filenames(child)
+        if not child.is_dir():
+            # If it is a file ending in .plot, add it
+            if child.suffix == ".plot":
+                all_files.append(child)
+            else:
+                log.info(f"Ignoring {child}, does not end in .plot")
+        else:
+            log.info(f"Not checking subdirectory {child}")
     return all_files
 
 
 def get_plot_filenames(config: Dict) -> Dict[Path, List[Path]]:
-    # Returns a map from directory to a list of all plots recursively in the directory
+    # Returns a map from directory to a list of all plots in the directory
     directory_names: List[str] = config["harvester"]["plot_directories"]
     all_files: Dict[Path, List[Path]] = {}
     for directory_name in directory_names:
@@ -45,62 +46,59 @@ def get_plot_filenames(config: Dict) -> Dict[Path, List[Path]]:
     return all_files
 
 
-def parse_plot_info(memo: bytes) -> Tuple[bytes32, bytes32, PublicKey, PrivateKey]:
+def parse_plot_info(memo: bytes) -> Tuple[PublicKey, PublicKey, PrivateKey]:
     # Parses the plot info bytes into keys
-    assert len(memo) == (32 + 32 + 48 + 32)
+    assert len(memo) == (48 + 48 + 32)
     return (
-        memo[:32],
-        memo[32:64],
-        PublicKey.from_bytes(memo[64 : 64 + 48]),
-        PrivateKey.from_bytes(memo[64 + 48 :]),
+        PublicKey.from_bytes(memo[:48]),
+        PublicKey.from_bytes(memo[48:96]),
+        PrivateKey.from_bytes(memo[96:]),
     )
 
 
 def stream_plot_info(
-    farmer_address: bytes32,
-    pool_address: bytes32,
-    farmer_public_key: PublicKey,
-    harvester_sk: PrivateKey,
+    pool_public_key: PublicKey, farmer_public_key: PublicKey, harvester_sk: PrivateKey,
 ):
     # Streams the plot info keys into bytes
-    data = (
-        farmer_address + pool_address + bytes(farmer_public_key) + bytes(harvester_sk)
-    )
-    assert len(data) == (32 + 32 + 48 + 32)
+    data = bytes(pool_public_key) + bytes(farmer_public_key) + bytes(harvester_sk)
+    assert len(data) == (48 + 48 + 32)
     return data
 
 
 def load_plots(
     config_file: Dict,
-    farmer_pubkeys: Optional[List[PublicKey]],
+    provers: Dict[Path, PlotInfo],
+    farmer_public_keys: Optional[List[PublicKey]],
+    pool_public_keys: Optional[List[PublicKey]],
     root_path: Path,
     open_no_key_filenames=False,
-) -> Tuple[Dict[Path, PlotInfo], List[Path], List[Path]]:
-    provers: Dict[Path, PlotInfo] = {}
+) -> Tuple[bool, Dict[Path, PlotInfo], List[Path], List[Path]]:
+    changed = False
     failed_to_open_filenames: List[Path] = []
     no_key_filenames: List[Path] = []
+    log.info(f'Searching directories {config_file["harvester"]["plot_directories"]}')
+
     plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(config_file)
     all_filenames: List[Path] = []
     for paths in plot_filenames.values():
         all_filenames += paths
-    log.info(f"Searching paths: {[str(x) for x in plot_filenames.keys()]}")
 
     for filename in all_filenames:
         if filename in provers:
-            continue
+            stat_info = filename.stat()
+            if stat_info.st_mtime == provers[filename].time_modified:
+                log.info(f"Already loaded plot {filename}")
+                continue
         if filename.exists():
             try:
                 prover = DiskProver(str(filename))
-                (
-                    farmer_address,
-                    pool_address,
-                    farmer_public_key,
-                    harvester_sk,
-                ) = parse_plot_info(prover.get_memo())
-                # Only use plots that correct pools associated with them
+                (pool_public_key, farmer_public_key, harvester_sk,) = parse_plot_info(
+                    prover.get_memo()
+                )
+                # Only use plots that correct keys associated with them
                 if (
-                    farmer_pubkeys is not None
-                    and farmer_public_key not in farmer_pubkeys
+                    farmer_public_keys is not None
+                    and farmer_public_key not in farmer_public_keys
                 ):
                     log.warning(
                         f"Plot {filename} has a farmer public key that is not in the farmer's pk list."
@@ -109,13 +107,27 @@ def load_plots(
                     if not open_no_key_filenames:
                         continue
 
+                if (
+                    pool_public_keys is not None
+                    and pool_public_key not in pool_public_keys
+                ):
+                    log.warning(
+                        f"Plot {filename} has a pool public key that is not in the farmer's pool pk list."
+                    )
+                    no_key_filenames.append(filename)
+                    if not open_no_key_filenames:
+                        continue
+
+                stat_info = filename.stat()
                 provers[filename] = PlotInfo(
                     prover,
-                    farmer_address,
-                    pool_address,
+                    pool_public_key,
                     farmer_public_key,
                     harvester_sk,
+                    stat_info.st_size,
+                    stat_info.st_mtime,
                 )
+                changed = True
             except Exception as e:
                 log.error(f"Failed to open file {filename}. {e}")
                 failed_to_open_filenames.append(filename)
@@ -123,4 +135,4 @@ def load_plots(
             log.info(
                 f"Found plot {filename} of size {provers[filename].prover.get_size()}"
             )
-    return (provers, failed_to_open_filenames, no_key_filenames)
+    return (changed, provers, failed_to_open_filenames, no_key_filenames)
