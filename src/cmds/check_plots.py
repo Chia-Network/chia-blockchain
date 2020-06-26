@@ -24,7 +24,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Chia plot checking script.")
     parser.add_argument(
-        "-n", "--num", help="Number of challenges", type=int, default=100
+        "-n", "--num", help="Number of challenges", type=int, default=30
     )
     args = parser.parse_args()
 

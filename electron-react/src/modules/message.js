@@ -104,10 +104,10 @@ export const get_puzzle_hash = wallet_id => {
   return action;
 };
 
-export const farm_block = () => {
+export const farm_block = puzzle_hash => {
   var action = walletMessage();
   action.message.command = "farm_block";
-  action.message.data = {};
+  action.message.data = { puzzle_hash: puzzle_hash };
   return action;
 };
 
