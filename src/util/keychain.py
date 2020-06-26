@@ -151,12 +151,12 @@ class Keychain:
             seed_hex = self._get_stored_entropy(self._get_private_key_seed_user(index))
         return None
 
-    def get_all_private_keys(self) -> List[Tuple[ExtendedPrivateKey, Optional[bytes]]]:
+    def get_all_private_keys(self) -> List[Tuple[ExtendedPrivateKey, bytes]]:
         """
         Returns all private keys (both seed-derived keys and raw ExtendedPrivateKeys), and
         the second value in the tuple is the bytes seed if it exists, otherwise None.
         """
-        all_keys: List[Tuple[ExtendedPrivateKey, Optional[bytes]]] = []
+        all_keys: List[Tuple[ExtendedPrivateKey, bytes]] = []
 
         # Keys that have a seed are added first
         index = 0

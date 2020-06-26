@@ -1,6 +1,7 @@
 import argparse
 import logging
 
+from blspy import PublicKey
 from chiapos import Verifier
 from collections import Counter
 from src.util.config import load_config
@@ -30,18 +31,23 @@ def main():
     root_path = DEFAULT_ROOT_PATH
     config = load_config(root_path, config_filename)
 
-    initialize_logging("check_plots", {"log_stdout": True}, root_path)
+    initialize_logging("", {"log_stdout": True}, root_path)
 
     v = Verifier()
-    log.info("Loading plots in config.yaml using plot_utils loading code\n")
+    log.info("Loading plots in config.yaml using plot_tools loading code\n")
     kc: Keychain = Keychain()
     pks = [epk.public_child(0).get_public_key() for epk in kc.get_all_public_keys()]
-    provers, failed_to_open_filenames, no_key_filenames = load_plots(
-        config, pks, root_path, open_no_key_filenames=True
+    pool_public_keys = [
+        PublicKey.from_bytes(bytes.fromhex(pk))
+        for pk in config["farmer"]["pool_public_keys"]
+    ]
+    _, provers, failed_to_open_filenames, no_key_filenames = load_plots(
+        config, {}, pks, pool_public_keys, root_path, open_no_key_filenames=True
     )
-    log.info("")
-    log.info("")
-    log.info(f"Starting to test each plot with {args.num} challenges each\n")
+    if len(provers) > 0:
+        log.info("")
+        log.info("")
+        log.info(f"Starting to test each plot with {args.num} challenges each\n")
     total_good_plots: Counter = Counter()
     total_bad_plots = 0
     total_size = 0
@@ -49,8 +55,7 @@ def main():
     for plot_path, plot_info in provers.items():
         pr = plot_info.prover
         log.info(f"Testing plot {plot_path} k={pr.get_size()}")
-        log.info(f"\tFarmer address: {plot_info.farmer_address.hex()}")
-        log.info(f"\tPool address: {plot_info.pool_address.hex()}")
+        log.info(f"\tPool public key: {plot_info.pool_public_key}")
         log.info(f"\tFarmer public key: {plot_info.farmer_public_key}")
         log.info(f"\tHarvester sk: {plot_info.harvester_sk}")
         total_proofs = 0
@@ -89,15 +94,16 @@ def main():
     log.info(
         f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024)} TB"
     )
-    log.info(f"Sizes: {total_good_plots}")
+    for (k, count) in sorted(dict(total_good_plots).items()):
+        log.info(f"{count} plots of size {k}")
     grand_total_bad = total_bad_plots + len(failed_to_open_filenames)
     if grand_total_bad > 0:
         log.warning(f"{grand_total_bad} invalid plots")
     if len(no_key_filenames) > 0:
         log.warning(
-            f"There are {len(no_key_filenames)} plots with a farmer public key that "
-            f"is not on this machine. The private key must be in the keychain in order to "
-            f"farm them. Use 'chia keys' to transfer keys"
+            f"There are {len(no_key_filenames)} plots with a farmer or pool public key that "
+            f"is not on this machine. The farmer private key must be in the keychain in order to "
+            f"farm them, use 'chia keys' to transfer keys. The pool public keys must be in the config.yaml"
         )
 
 

@@ -64,7 +64,7 @@ async def two_nodes():
 
 async def wb(num_blocks, two_nodes):
     full_node_1, _, _, _ = two_nodes
-    wallet_a = WalletTool()
+    wallet_a = bt.get_pool_wallet_tool()
     wallet_receiver = WalletTool()
     blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
     for i in range(1, num_blocks):
@@ -157,14 +157,8 @@ class TestFullNodeProtocol:
         aggsig = spend_bundle.aggregated_signature
 
         dic_h = {5: (program, aggsig)}
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
         blocks_new = bt.get_consecutive_blocks(
-            test_constants,
-            3,
-            blocks[:-1],
-            10,
-            reward_puzzlehash=coinbase_puzzlehash,
-            transaction_data_at_height=dic_h,
+            test_constants, 3, blocks[:-1], 10, transaction_data_at_height=dic_h,
         )
         # Already seen
         msgs = [x async for x in full_node_1.new_transaction(new_transaction)]
@@ -210,14 +204,12 @@ class TestFullNodeProtocol:
         aggsig = agg.aggregated_signature
 
         dic_h = {8: (program, aggsig)}
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
 
         blocks_new = bt.get_consecutive_blocks(
             test_constants,
             1,
             blocks_new,
             10,
-            reward_puzzlehash=coinbase_puzzlehash,
             transaction_data_at_height=dic_h,
             fees=uint64(total_fee),
         )
@@ -282,17 +274,10 @@ class TestFullNodeProtocol:
         no_unf_block = fnp.NewProofOfTime(uint32(5), bytes(32 * [1]), uint64(124512))
         assert len([x async for x in full_node_1.new_proof_of_time(no_unf_block)]) == 0
 
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-
         blocks = await get_block_path(full_node_1)
 
         blocks_new = bt.get_consecutive_blocks(
-            test_constants,
-            1,
-            blocks[:-1],
-            10,
-            reward_puzzlehash=coinbase_puzzlehash,
-            seed=b"1212412",
+            test_constants, 1, blocks[:-1], 10, seed=b"1212412",
         )
 
         unf_block = FullBlock(
@@ -349,16 +334,10 @@ class TestFullNodeProtocol:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         wallet_a, wallet_receiver, blocks = wallet_blocks
 
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
         blocks_list = await get_block_path(full_node_1)
 
         blocks_new = bt.get_consecutive_blocks(
-            test_constants,
-            1,
-            blocks_list,
-            10,
-            reward_puzzlehash=coinbase_puzzlehash,
-            seed=b"another seed",
+            test_constants, 1, blocks_list, 10, seed=b"another seed",
         )
         assert blocks_new[-1].proof_of_time is not None
         new_pot = fnp.NewProofOfTime(
@@ -394,16 +373,10 @@ class TestFullNodeProtocol:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         wallet_a, wallet_receiver, blocks = wallet_blocks
 
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
         blocks_list = await get_block_path(full_node_1)
 
         blocks_new = bt.get_consecutive_blocks(
-            test_constants,
-            1,
-            blocks_list,
-            10,
-            reward_puzzlehash=coinbase_puzzlehash,
-            seed=b"another seed 2",
+            test_constants, 1, blocks_list, 10, seed=b"another seed 2",
         )
         assert blocks_new[-1].proof_of_time is not None
         assert blocks_new[-2].proof_of_time is not None
@@ -447,16 +420,10 @@ class TestFullNodeProtocol:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         wallet_a, wallet_receiver, blocks = wallet_blocks
 
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
         blocks_list = await get_block_path(full_node_1)
 
         blocks_new = bt.get_consecutive_blocks(
-            test_constants,
-            2,
-            blocks_list,
-            10,
-            reward_puzzlehash=coinbase_puzzlehash,
-            seed=b"another seed 3",
+            test_constants, 2, blocks_list, 10, seed=b"another seed 3",
         )
         # Add one block
         [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks_new[-2]))]
@@ -494,7 +461,6 @@ class TestFullNodeProtocol:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         wallet_a, wallet_receiver, blocks = wallet_blocks
 
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
         blocks_list = await get_block_path(full_node_1)
 
         blocks_new = bt.get_consecutive_blocks(
@@ -727,10 +693,8 @@ class TestFullNodeProtocol:
         block_invalid = FullBlock(
             ProofOfSpace(
                 blocks_new[-5].proof_of_space.challenge_hash,
-                blocks_new[-5].proof_of_space.farmer_puzzle_hash,
-                blocks_new[-5].proof_of_space.pool_puzzle_hash,
-                blocks_new[-5].proof_of_space.plot_pubkey,
-                blocks_new[-5].proof_of_space.challenge_signature,
+                blocks_new[-5].proof_of_space.pool_public_key,
+                blocks_new[-5].proof_of_space.plot_public_key,
                 uint8(blocks_new[-5].proof_of_space.size + 1),
                 blocks_new[-5].proof_of_space.proof,
             ),
@@ -820,11 +784,7 @@ class TestWalletProtocol:
         blocks_list = await get_block_path(full_node_1)
 
         blocks_new = bt.get_consecutive_blocks(
-            test_constants,
-            1,
-            block_list=blocks_list,
-            seed=b"test_request_additions",
-            reward_puzzlehash=wallet_a.get_new_puzzlehash(),
+            test_constants, 1, block_list=blocks_list, seed=b"test_request_additions",
         )
         async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks_new[-1])):
             pass
@@ -1038,10 +998,7 @@ class TestWalletProtocol:
 
         # If there are no transactions, empty proof and coins
         blocks_new = bt.get_consecutive_blocks(
-            test_constants,
-            10,
-            block_list=blocks_list,
-            reward_puzzlehash=wallet_a.get_new_puzzlehash(),
+            test_constants, 10, block_list=blocks_list,
         )
         for block in blocks_new:
             [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(block))]
@@ -1221,10 +1178,7 @@ class TestWalletProtocol:
 
         # If there are no transactions, empty proof and coins
         blocks_new = bt.get_consecutive_blocks(
-            test_constants,
-            10,
-            block_list=blocks_list,
-            reward_puzzlehash=wallet_a.get_new_puzzlehash(),
+            test_constants, 10, block_list=blocks_list,
         )
         for block in blocks_new:
             [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(block))]
@@ -1277,8 +1231,8 @@ class TestWalletProtocol:
         ]
         assert len(msgs) == 1
         assert isinstance(msgs[0].message.data, wallet_protocol.RespondAdditions)
-        # One puzzle hash with change and fee (x3) = 9, minus two repeated ph = 7
-        assert len(msgs[0].message.data.coins) == 7
+        # One puzzle hash with change and fee (x3) = 9, minus two repeated ph = 7 + coinbase and fees = 9
+        assert len(msgs[0].message.data.coins) == 9
         assert msgs[0].message.data.proofs is None
 
         additions_merkle_set = MerkleSet()

@@ -48,9 +48,9 @@ async def validate_unfinished_block_header(
         # 3. Check harvester signature of header data is valid based on harvester key
         if not block_header.harvester_signature.verify(
             [blspy.Util.hash256(block_header.data.get_hash())],
-            [proof_of_space.plot_pubkey],
+            [proof_of_space.plot_public_key],
         ):
-            return (Err.INVALID_HARVESTER_SIGNATURE, None)
+            return (Err.INVALID_PLOT_SIGNATURE, None)
 
     # 4. If not genesis, the previous block must exist
     if prev_header_block is not None and block_header.prev_header_hash not in headers:
@@ -105,8 +105,12 @@ async def validate_unfinished_block_header(
         if block_header.height != 0:
             return (Err.INVALID_HEIGHT, None)
 
-    # 13. The coinbase reward must match the block schedule
-    # TODO: change numbers
+    # 13. The pool max height must be valid
+    if (
+        block_header.data.pool_target.max_height != 0
+        and block_header.data.pool_target.max_height < block_header.height
+    ):
+        return (Err.INVALID_POOL_TARGET, None)
 
     difficulty: uint64
     if prev_header_block is not None:
@@ -234,7 +238,7 @@ def pre_validate_finished_block_header(constants: ConsensusConstants, data: byte
     # 9. Check harvester signature of header data is valid based on harvester key
     if not block.header.harvester_signature.verify(
         [blspy.Util.hash256(block.header.data.get_hash())],
-        [block.proof_of_space.plot_pubkey],
+        [block.proof_of_space.plot_public_key],
     ):
         return False, None
 
