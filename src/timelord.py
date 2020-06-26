@@ -7,7 +7,6 @@ from typing import Dict, List, Optional, Tuple
 
 
 from chiavdf import create_discriminant
-from src.consensus.constants import ConsensusConstants
 from src.protocols import timelord_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
@@ -21,8 +20,8 @@ log = logging.getLogger(__name__)
 
 
 class Timelord:
-    def __init__(self, config: Dict, consensus_constants: ConsensusConstants):
-        self.constants = consensus_constants
+    def __init__(self, config: Dict, discriminant_size_bits: int):
+        self.discriminant_size_bits = discriminant_size_bits
         self.config: Dict = config
         self.ips_estimate = {
             socket.gethostbyname(k): v
@@ -248,7 +247,7 @@ class Timelord:
         self, challenge_hash, challenge_weight, ip, reader, writer
     ):
         disc: int = create_discriminant(
-            challenge_hash, self.constants["DISCRIMINANT_SIZE_BITS"]
+            challenge_hash, self.discriminant_size_bits
         )
         # Depending on the flags 'fast_algorithm' and 'sanitizer_mode',
         # the timelord tells the vdf_client what to execute.
@@ -382,7 +381,7 @@ class Timelord:
                     proof_bytes,
                 )
 
-                if not proof_of_time.is_valid(self.constants["DISCRIMINANT_SIZE_BITS"]):
+                if not proof_of_time.is_valid(self.discriminant_size_bits):
                     log.error("Invalid proof of time")
 
                 response = timelord_protocol.ProofOfTimeFinished(proof_of_time)
