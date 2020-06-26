@@ -7,15 +7,12 @@ from tests.block_tools import BlockTools
 from src.consensus.constants import constants as consensus_constants
 from src.util.ints import uint32
 from src.types.full_block import FullBlock
+from tests.make_test_constants import make_test_constants_with_genesis
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 
 bt = BlockTools()
-test_constants: Dict[str, Any] = consensus_constants.copy()
-test_constants.update({"DIFFICULTY_STARTING": 500, "MIN_ITERS_STARTING": 500})
 
-test_constants["GENESIS_BLOCK"] = bytes(
-    bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
-)
+test_constants = make_test_constants_with_genesis({"DIFFICULTY_STARTING": 500, "MIN_ITERS_STARTING": 500})
 
 
 def node_height_at_least(node, h):
@@ -33,7 +30,7 @@ def event_loop():
 class TestSimulation:
     @pytest.fixture(scope="function")
     async def simulation(self):
-        async for _ in setup_full_system(test_constants):
+        async for _ in setup_full_system(test_constants.copy()):
             yield _
 
     @pytest.mark.asyncio

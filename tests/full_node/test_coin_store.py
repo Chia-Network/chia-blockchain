@@ -10,12 +10,11 @@ from src.full_node.coin_store import CoinStore
 from src.full_node.block_store import BlockStore
 from tests.block_tools import BlockTools
 from src.consensus.constants import constants as consensus_constants
-from tests.setup_nodes import test_constants as override_constants
+from tests.setup_nodes import test_constants
 from tests.block_tools import BlockTools
 
 bt = BlockTools()
 
-test_constants = consensus_constants.replace(**override_constants)
 test_constants_dict = test_constants.copy()
 
 @pytest.fixture(scope="module")
