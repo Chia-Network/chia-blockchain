@@ -3,7 +3,7 @@ import signal
 
 from secrets import token_bytes
 from typing import Any, Dict, Tuple, List, Optional
-from src.consensus.constants import constants as consensus_constants
+from src.consensus.constants import constants as consensus_constants, ConsensusConstants
 from src.full_node.full_node import FullNode
 from src.server.connection import NodeType
 from src.server.server import ChiaServer, start_server
@@ -22,6 +22,7 @@ from src.server.start_service import create_periodic_introducer_poll_task
 from src.util.ints import uint16, uint32
 from src.server.start_service import Service
 from src.rpc.harvester_rpc_api import HarvesterRpcApi
+from tests.make_test_constants import make_test_constants_with_genesis
 from tests.time_out_assert import time_out_assert
 
 
@@ -31,7 +32,7 @@ root_path = bt.root_path
 global_config = load_config(bt.root_path, "config.yaml")
 self_hostname = global_config["self_hostname"]
 
-test_constants: Dict[str, Any] = {
+test_constants = make_test_constants_with_genesis({
     "DIFFICULTY_STARTING": 1,
     "DISCRIMINANT_SIZE_BITS": 8,
     "BLOCK_TIME_TARGET": 10,
@@ -43,10 +44,7 @@ test_constants: Dict[str, Any] = {
     "MEMPOOL_BLOCK_BUFFER": 10,
     "MIN_ITERS_STARTING": 50 * 1,
     "CLVM_COST_RATIO_CONSTANT": 108,
-}
-test_constants["GENESIS_BLOCK"] = bytes(
-    bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
-)
+})
 
 
 async def _teardown_nodes(node_aiters: List) -> None:
@@ -259,8 +257,7 @@ async def setup_harvester(port, farmer_port, dic={}):
 async def setup_farmer(port, full_node_port: Optional[uint16] = None, dic={}):
     config = load_config(bt.root_path, "config.yaml", "farmer")
     config_pool = load_config(root_path, "config.yaml", "pool")
-    test_constants_copy = consensus_constants.replace(**test_constants)
-    test_constants_copy = test_constants_copy.replace(**dic)
+    test_constants_copy = test_constants.replace(**dic)
     config["xch_target_puzzle_hash"] = bt.fee_target.hex()
     config["pool_public_keys"] = [
         bytes(epk.get_public_key()).hex() for epk in bt.keychain.get_all_public_keys()
@@ -356,8 +353,7 @@ async def setup_vdf_clients(port):
 
 async def setup_timelord(port, full_node_port, sanitizer, dic={}):
     config = load_config(bt.root_path, "config.yaml", "timelord")
-    test_constants_copy = consensus_constants.replace(**test_constants)
-    test_constants_copy = test_constants_copy.replace(**dic)
+    test_constants_copy = test_constants.replace(**dic)
     config["sanitizer_mode"] = sanitizer
     if sanitizer:
         config["vdf_server"]["port"] = 7999
