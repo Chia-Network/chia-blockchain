@@ -48,6 +48,7 @@ class WalletTool:
         self.generator_lookups: Dict = {}
         self.name = "MyChiaWallet"
         self.puzzle_pk_cache: Dict = {}
+        self.get_new_puzzle()
 
     def get_next_public_key(self):
         pubkey = self.extended_secret_key.public_child(
@@ -85,6 +86,7 @@ class WalletTool:
                         pubkey,
                         self.extended_secret_key.private_child(child).get_private_key(),
                     )
+        raise RuntimeError(f"Do not have the keys for puzzle hash {puzzle_hash}")
 
     def puzzle_for_pk(self, pubkey):
         return puzzle_for_pk(pubkey)

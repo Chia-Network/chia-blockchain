@@ -48,14 +48,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_basic_mempool(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -82,14 +79,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_coinbase_freeze(self, two_nodes_small_freeze):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes_small_freeze
 
         block = blocks[1]
@@ -114,9 +108,7 @@ class TestMempool:
         sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
         assert sb is None
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, 30, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, 30, [], 10, b"")
 
         for i in range(1, 31):
             async for _ in full_node_1.respond_block(
@@ -134,14 +126,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_double_spend(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -183,14 +172,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_double_spend_with_higher_fee(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -231,14 +217,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_invalid_block_index(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -274,14 +257,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_correct_block_index(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -317,14 +297,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_invalid_block_age(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -358,14 +335,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_correct_block_age(self, two_nodes):
         num_blocks = 4
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -401,14 +375,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_correct_my_id(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -444,14 +415,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_invalid_my_id(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -487,14 +455,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_assert_time_exceeds(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -532,14 +497,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_assert_time_exceeds_both_cases(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -590,14 +552,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_correct_coin_consumed(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -639,14 +598,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_invalid_coin_consumed(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -685,14 +641,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_assert_fee_condition(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -736,14 +689,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_assert_fee_condition_wrong_fee(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -787,18 +737,13 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_stealing_fee(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-        wallet_receiver = WalletTool()
+        wallet_a = bt.get_pool_wallet_tool()
+        wallet_receiver = bt.get_farmer_wallet_tool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, blocks, 10, b"", receiver_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, blocks, 10, b"")
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
@@ -819,9 +764,9 @@ class TestMempool:
             1000, receiver_puzzlehash, block.get_coinbase(), dic, fee
         )
 
-        wallet_2_coinbase = wallet_2_block.get_coinbase()
+        wallet_2_fees = wallet_2_block.get_fees_coin()
         steal_fee_spendbundle = wallet_receiver.generate_signed_transaction(
-            wallet_2_coinbase.amount + fee, receiver_puzzlehash, wallet_2_coinbase
+            wallet_2_fees.amount + fee - 4, receiver_puzzlehash, wallet_2_fees
         )
 
         assert spend_bundle1 is not None
@@ -829,7 +774,7 @@ class TestMempool:
 
         combined = SpendBundle.aggregate([spend_bundle1, steal_fee_spendbundle])
 
-        assert combined.fees() == 0
+        assert combined.fees() == 4
 
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
             spend_bundle1
@@ -855,14 +800,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_double_spend_same_bundle(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -899,14 +841,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_agg_sig_condition(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]

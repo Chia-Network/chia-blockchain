@@ -208,7 +208,7 @@ class TestCoinStore:
             coins = await coin_store.get_coin_records_by_puzzle_hash(
                 unspent_puzzle_hash, blocks[-1].header
             )
-            assert len(coins) == (num_blocks + 1) * 2
+            assert len(coins) == (num_blocks + 1)
         except Exception as e:
             await connection.close()
             Path("blockchain_test.db").unlink()

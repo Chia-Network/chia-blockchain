@@ -7,6 +7,8 @@ from src.util.keychain import Keychain
 
 from src.util.config import unflatten_properties
 from pathlib import Path
+from src.types.BLSSignature import BLSPublicKey
+from src.consensus.coinbase import create_puzzlehash_for_pk
 
 from src.util.config import (
     config_path_for_filename,
@@ -46,6 +48,48 @@ def check_keys(new_root):
             "No keys are present in the keychain. Generate them with 'chia keys generate'"
         )
         return
+    all_child_pubkeys = [epk.public_child(0).get_public_key() for epk in all_pubkeys]
+    all_targets = [
+        create_puzzlehash_for_pk(BLSPublicKey(bytes(pk))).hex()
+        for pk in all_child_pubkeys
+    ]
+
+    config: Dict = load_config(new_root, "config.yaml")
+
+    # Set the destinations
+    if "xch_target_puzzle_hash" not in config["farmer"]:
+        print(
+            f"Setting the xch destination address for coinbase fees reward to {all_targets[0]}"
+        )
+        config["farmer"]["xch_target_puzzle_hash"] = all_targets[0]
+    elif config["farmer"]["xch_target_puzzle_hash"] not in all_targets:
+        print("Target:", config["farmer"]["xch_target_puzzle_hash"])
+        assert len(config["farmer"]["xch_target_puzzle_hash"]) == 64
+        print(
+            "WARNING: farmer using a puzzle hash which we don't have the private keys for"
+        )
+
+    if "pool" in config:
+        if "xch_target_puzzle_hash" not in config["pool"]:
+            print(
+                f"Setting the xch destination address for coinbase reward to {all_targets[0]}"
+            )
+            config["pool"]["xch_target_puzzle_hash"] = all_targets[0]
+        elif config["pool"]["xch_target_puzzle_hash"] not in all_targets:
+            assert len(config["pool"]["xch_target_puzzle_hash"]) == 64
+            print(
+                "WARNING: pool using a puzzle hash which we don't have the private keys for"
+            )
+
+    # Set the pool pks in the farmer
+    all_pubkeys_hex = set([bytes(pk).hex() for pk in all_child_pubkeys])
+    if "pool_public_keys" in config["farmer"]:
+        for pk_hex in config["farmer"]["pool_public_keys"]:
+            # Add original ones in config
+            all_pubkeys_hex.add(pk_hex)
+
+    config["farmer"]["pool_public_keys"] = all_pubkeys_hex
+    save_config(new_root, "config.yaml", config)
 
 
 def migrate_from(

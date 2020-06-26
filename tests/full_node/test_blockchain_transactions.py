@@ -45,11 +45,14 @@ class TestBlockchainTransactions:
     @pytest.mark.asyncio
     async def test_basic_blockchain_tx(self, two_nodes):
         num_blocks = 10
-        wallet_a = bt.get_farmer_wallet_tool()
+        wallet_a = WalletTool()
+        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
+        blocks = bt.get_consecutive_blocks(
+            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
+        )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         for block in blocks:
@@ -87,7 +90,7 @@ class TestBlockchainTransactions:
 
         dic_h = {11: (program, aggsig)}
         new_blocks = bt.get_consecutive_blocks(
-            test_constants, 1, blocks, 10, b"", dic_h
+            test_constants, 1, blocks, 10, b"", coinbase_puzzlehash, dic_h
         )
 
         next_block = new_blocks[11]
@@ -121,7 +124,6 @@ class TestBlockchainTransactions:
         assert in_full_tips
         assert farmed_block is not None
         assert farmed_block.transactions_generator == program
-        assert farmed_block.header.data.aggregated_signature == aggsig
 
     @pytest.mark.asyncio
     async def test_validate_blockchain_with_double_spend(self, two_nodes):
@@ -612,7 +614,7 @@ class TestBlockchainTransactions:
             dic_h,
         )
         error = await full_node_1.blockchain._validate_transactions(
-            new_blocks[-1], new_blocks[-1].get_fees_coin().amount
+            new_blocks[-1], new_blocks[-1].get_coinbase().amount
         )
         assert error is Err.COINBASE_NOT_YET_SPENDABLE
 
@@ -1116,7 +1118,9 @@ class TestBlockchainTransactions:
             next_block.header.data.total_iters,
             next_block.header.data.additions_root,
             next_block.header.data.removals_root,
-            next_block.header.data.transaction_fees,
+            next_block.header.data.farmer_rewards_puzzle_hash,
+            next_block.header.data.total_transaction_fees,
+            next_block.header.data.pool_target,
             next_block.header.data.aggregated_signature,
             next_block.header.data.cost,
             next_block.header.data.extension_data,
@@ -1128,7 +1132,7 @@ class TestBlockchainTransactions:
             Header(
                 bad_header,
                 bt.get_plot_signature(
-                    bad_header, next_block.proof_of_space.plot_pubkey
+                    bad_header, next_block.proof_of_space.plot_public_key
                 ),
             ),
             next_block.transactions_generator,

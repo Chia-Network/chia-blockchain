@@ -22,8 +22,7 @@ class FullNodeStore:
     unfinished_blocks_leader: Tuple[uint32, uint64]
     # Blocks which we have created, but don't have proof of space yet, old ones are cleared
     candidate_blocks: Dict[
-        bytes32,
-        Tuple[Optional[Program], Optional[bytes], HeaderData, ProofOfSpace, uint32],
+        bytes32, Tuple[Optional[Program], bytes, HeaderData, ProofOfSpace, uint32],
     ]
     # Header hashes of unfinished blocks that we have seen recently
     seen_unfinished_blocks: set
@@ -82,7 +81,7 @@ class FullNodeStore:
         self,
         pos_hash: bytes32,
         transactions_generator: Optional[Program],
-        transactions_filter: Optional[bytes],
+        transactions_filter: bytes,
         header: HeaderData,
         pos: ProofOfSpace,
         height: uint32 = uint32(0),
@@ -97,7 +96,7 @@ class FullNodeStore:
 
     def get_candidate_block(
         self, pos_hash: bytes32
-    ) -> Optional[Tuple[Optional[Program], Optional[bytes], HeaderData, ProofOfSpace]]:
+    ) -> Optional[Tuple[Optional[Program], bytes, HeaderData, ProofOfSpace]]:
         res = self.candidate_blocks.get(pos_hash, None)
         if res is None:
             return None

@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Dict, List, Set, Optional, Callable, Tuple
 
-from blspy import Util, InsecureSignature, PrependSignature
+from blspy import Util, InsecureSignature, PrependSignature, PublicKey
 from src.util.keychain import Keychain
 
 from src.consensus.constants import ConsensusConstants
@@ -12,6 +12,7 @@ from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
+from src.types.pool_target import PoolTarget
 from src.util.api_decorators import api_request
 from src.util.ints import uint32, uint64, uint128, uint8
 
@@ -32,10 +33,9 @@ class Farmer:
         consensus_constants: ConsensusConstants,
     ):
         self.config = farmer_config
-        self.harvester_responses_header_hash: Dict[bytes32, bytes32] = {}
-        self.harvester_responses_challenge: Dict[bytes32, bytes32] = {}
         self.harvester_responses_proofs: Dict[Tuple, ProofOfSpace] = {}
         self.harvester_responses_proof_hash_to_info: Dict[bytes32, Tuple] = {}
+        self.header_hash_to_pos: Dict[bytes32, ProofOfSpace] = {}
         self.challenges: Dict[uint128, List[farmer_protocol.ProofOfSpaceFinalized]] = {}
         self.challenge_to_weight: Dict[bytes32, uint128] = {}
         self.challenge_to_height: Dict[bytes32, uint32] = {}
@@ -55,9 +55,30 @@ class Farmer:
             error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
             raise RuntimeError(error_str)
 
+        # This is the farmer configuration
+        self.wallet_target = bytes.fromhex(self.config["xch_target_puzzle_hash"])
+        self.pool_public_keys = [
+            PublicKey.from_bytes(bytes.fromhex(pk))
+            for pk in self.config["pool_public_keys"]
+        ]
+
+        # This is the pool configuration, which should be moved out to the pool once it exists
+        self.pool_target = bytes.fromhex(pool_config["xch_target_puzzle_hash"])
+        self.pool_sks_map: Dict = {}
+        for key in self._get_private_keys():
+            self.pool_sks_map[bytes(key.get_public_key())] = key
+
+        assert len(self.wallet_target) == 32
+        assert len(self.pool_target) == 32
+        if len(self.pool_sks_map) == 0:
+            error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
+            raise RuntimeError(error_str)
+
     async def _on_connect(self):
         # Sends a handshake to the harvester
-        msg = harvester_protocol.HarvesterHandshake(self.farmer_public_keys)
+        msg = harvester_protocol.HarvesterHandshake(
+            self._get_public_keys(), self.pool_public_keys
+        )
         yield OutboundMessage(
             NodeType.HARVESTER, Message("harvester_handshake", msg), Delivery.RESPOND
         )
@@ -120,11 +141,6 @@ class Farmer:
         of space is sufficiently good, and if so, we ask for the whole proof.
         """
 
-        # if challenge_response.quality_string in self.harvester_responses_challenge:
-        #     log.warning(
-        #         f"Have already seen quality string {challenge_response.quality_string}"
-        #     )
-        #     return
         height: uint32 = self.challenge_to_height[challenge_response.challenge_hash]
         number_iters = await self._get_required_iters(
             challenge_response.challenge_hash,
@@ -158,9 +174,6 @@ class Farmer:
             estimate_secs < self.config["pool_share_threshold"]
             or estimate_secs < self.config["propagate_threshold"]
         ):
-            self.harvester_responses_challenge[
-                challenge_response.quality_string
-            ] = challenge_response.challenge_hash
 
             request = harvester_protocol.RequestProofOfSpace(
                 challenge_response.challenge_hash,
@@ -224,8 +237,23 @@ class Farmer:
             # TODO: implement pooling
             pass
         if estimate_secs < self.config["propagate_threshold"]:
+            pool_pk = bytes(response.proof.pool_public_key)
+            if pool_pk not in self.pool_sks_map:
+                log.error(
+                    f"Don't have the private key for the pool key used by harvester: {pool_pk.hex()}"
+                )
+                return
+            pool_target: PoolTarget = PoolTarget(self.pool_target, uint32(0))
+            pool_target_signature: PrependSignature = self.pool_sks_map[
+                pool_pk
+            ].sign_prepend(bytes(pool_target))
+
             request2 = farmer_protocol.RequestHeaderHash(
-                challenge_hash, response.proof,
+                challenge_hash,
+                response.proof,
+                pool_target,
+                pool_target_signature,
+                self.wallet_target,
             )
 
             yield OutboundMessage(
@@ -240,18 +268,16 @@ class Farmer:
         Receives a signature on a block header hash, which is required for submitting
         a block to the blockchain.
         """
-        header_hash: bytes32 = self.harvester_responses_header_hash[
-            (response.challenge_hash, response.plot_id, response.response_number)
-        ]
-        proof_of_space: bytes32 = self.harvester_responses_proofs[
-            (response.challenge_hash, response.plot_id, response.response_number)
-        ]
+        header_hash = response.message
+        proof_of_space: bytes32 = self.header_hash_to_pos[header_hash]
         validates: bool = False
         for sk in self._get_private_keys():
-            agg_pk = ProofOfSpace.generate_plot_pubkey(
-                response.harvester_pk, sk.get_public_key()
-            )
-            if agg_pk == proof_of_space.plot_pubkey:
+            pk = sk.get_public_key()
+            if pk == response.farmer_pk:
+                agg_pk = ProofOfSpace.generate_plot_public_key(
+                    response.harvester_pk, pk
+                )
+                assert agg_pk == proof_of_space.plot_public_key
                 new_m = bytes(agg_pk) + Util.hash256(header_hash)
                 farmer_share = sk.sign_insecure(new_m)
                 agg_sig = PrependSignature.from_insecure_sig(
@@ -261,7 +287,7 @@ class Farmer:
                 )
 
                 validates = agg_sig.verify(
-                    [Util.hash256(new_m)], [proof_of_space.plot_pubkey]
+                    [Util.hash256(new_m)], [proof_of_space.plot_public_key]
                 )
                 if validates:
                     break
@@ -290,17 +316,14 @@ class Farmer:
             plot_id,
             response_number,
         ) = self.harvester_responses_proof_hash_to_info[response.pos_hash]
-        self.harvester_responses_header_hash[
-            (challenge_hash, plot_id, response_number)
-        ] = header_hash
+        pos = self.harvester_responses_proofs[challenge_hash, plot_id, response_number]
+        self.header_hash_to_pos[header_hash] = pos
 
         # TODO: only send to the harvester who made the proof of space, not all harvesters
-        request = harvester_protocol.RequestSignature(
-            challenge_hash, plot_id, response_number, header_hash
-        )
+        request = harvester_protocol.RequestSignature(plot_id, header_hash)
         yield OutboundMessage(
             NodeType.HARVESTER,
-            Message("request_header_signature", request),
+            Message("request_signature", request),
             Delivery.BROADCAST,
         )
 
