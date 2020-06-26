@@ -56,8 +56,7 @@ class DIDWallet:
             self.log = logging.getLogger(__name__)
 
         self.wallet_state_manager = wallet_state_manager
-
-        self.did_info = DIDInfo(backups_ids)
+        self.did_info = DIDInfo(None, backups_ids, [])
         info_as_string = bytes(self.did_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "DID Wallet", WalletType.DISTRIBUTED_ID, info_as_string
@@ -65,8 +64,57 @@ class DIDWallet:
         if self.wallet_info is None:
             raise ValueError("Internal Error")
 
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        bal = await self.standard_wallet.get_confirmed_balance()
+        if amount > bal:
+            raise ValueError("Not enough balance")
 
+        spend_bundle = await self.generate_new_decentralised_id(amount)
+        if spend_bundle is None:
+            raise ValueError("failed to generate ID for wallet")
+        # Change and actual coloured coin
+        non_ephemeral_spends: List[Coin] = spend_bundle.not_ephemeral_additions()
+        did_coin = None
+        for c in non_ephemeral_spends:
+            did_coin = c
+            break
+
+        if did_coin is None:
+            raise ValueError("Internal Error, unable to generate new coloured coin")
+
+        regular_record = TransactionRecord(
+            confirmed_at_index=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=did_coin.puzzle_hash,
+            amount=uint64(did_coin.amount),
+            fee_amount=uint64(0),
+            incoming=False,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=spend_bundle.additions(),
+            removals=spend_bundle.removals(),
+            wallet_id=self.wallet_state_manager.main_wallet.wallet_info.id,
+            sent_to=[],
+        )
+        did_record = TransactionRecord(
+            confirmed_at_index=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=did_coin.puzzle_hash,
+            amount=uint64(did_coin.amount),
+            fee_amount=uint64(0),
+            incoming=True,
+            confirmed=False,
+            sent=uint32(10),
+            spend_bundle=None,
+            additions=spend_bundle.additions(),
+            removals=spend_bundle.removals(),
+            wallet_id=self.wallet_info.id,
+            sent_to=[],
+        )
+        await self.standard_wallet.push_transaction(regular_record)
+        await self.standard_wallet.push_transaction(did_record)
+
+        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         return self
 
     @staticmethod
@@ -91,11 +139,48 @@ class DIDWallet:
         self.base_inner_puzzle_hash = None
         return self
 
+    async def get_confirmed_balance(self) -> uint64:
+        record_list: Set[
+            WalletCoinRecord
+        ] = await self.wallet_state_manager.wallet_store.get_unspent_coins_for_wallet(
+            self.wallet_info.id
+        )
+
+        amount: uint64 = uint64(0)
+        for record in record_list:
+            parent = await self.get_parent_for_coin(record.coin)
+            if parent is not None:
+                amount = uint64(amount + record.coin.amount)
+
+        self.log.info(f"Confirmed balance for did wallet is {amount}")
+        return uint64(amount)
+
+    async def get_unconfirmed_balance(self) -> uint64:
+        confirmed = await self.get_confirmed_balance()
+        unconfirmed_tx: List[
+            TransactionRecord
+        ] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            self.wallet_info.id
+        )
+        addition_amount = 0
+        removal_amount = 0
+
+        for record in unconfirmed_tx:
+            if record.incoming:
+                addition_amount += record.amount
+            else:
+                removal_amount += record.amount
+
+        result = confirmed - removal_amount + addition_amount
+
+        self.log.info(f"Unconfirmed balance for did wallet is {result}")
+        return uint64(result)
+
     async def coin_added(
         self, coin: Coin, height: int, header_hash: bytes32, removals: List[Coin]
     ):
         """ Notification from wallet state manager that wallet has been received. """
-        self.log.info("CC wallet has been notified that coin was added")
+        self.log.info("DID wallet has been notified that coin was added")
 
         search_for_parent: bool = True
 
@@ -228,14 +313,14 @@ class DIDWallet:
                 await self.wallet_state_manager.set_action_done(action_id)
 
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
-        innerpuzzle = did_puzzle.create_innerpuz(pubkey, self.did_info.backup_ids)
-        core = did_puzzle.create_core()
-        return did_puzzle.create_fullpuz(innerpuzzle, core)
+        innerpuzhash = Program(binutils.assemble(did_puzzle.create_innerpuz(pubkey, self.did_info.backup_ids))).get_tree_hash()
+        core = self.did_info.my_core
+        return Program(binutils.assemble(did_puzzle.create_fullpuz(innerpuzhash, core)))
 
     async def get_new_puzzle(self) -> Program:
         return self.puzzle_for_pk(
             bytes(
-                self.wallet_state_manager.get_unused_derivation_record(
+                await self.wallet_state_manager.get_unused_derivation_record(
                     self.wallet_info.id
                 ).pubkey
             )
@@ -254,14 +339,16 @@ class DIDWallet:
         return
 
     async def get_new_inner_hash(self) -> bytes32:
+        devrec = await self.wallet_state_manager.get_unused_derivation_record(self.standard_wallet.wallet_info.id)
+        pubkey = bytes(devrec.pubkey)
+        innerpuzzle = did_puzzle.create_innerpuz(pubkey, self.did_info.backup_ids)
+        innerpuz = Program(binutils.assemble(innerpuzzle))
+        return innerpuz.get_tree_hash()
 
-        return did_puzzle.get_new_puzzlehash(
-            bytes(
-                self.wallet_state_manager.get_unused_derivation_record(
-                    self.wallet_info.id
-                ).pubkey
-            )
-        )
+    async def get_innerhash_for_pubkey(self, pubkey: bytes):
+        innerpuzzle = did_puzzle.create_innerpuz(pubkey, self.did_info.backup_ids)
+        innerpuz = Program(binutils.assemble(innerpuzzle))
+        return innerpuz.get_tree_hash()
 
     async def inner_puzzle_for_did_puzzle(self, did_hash: bytes32) -> Program:
         record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
@@ -270,7 +357,15 @@ class DIDWallet:
         inner_puzzle: Program = did_puzzle.get_new_puzzlehash(bytes(record.pubkey))
         return inner_puzzle
 
-    async def generate_new_coloured_coin(self, amount: uint64) -> Optional[SpendBundle]:
+    async def get_parent_for_coin(self, coin) -> Optional[CCParent]:
+        parent_info = None
+        for name, ccparent in self.did_info.parent_info:
+            if name == coin.parent_coin_info:
+                parent_info = ccparent
+
+        return parent_info
+
+    async def generate_new_decentralised_id(self, amount: uint64) -> Optional[SpendBundle]:
 
         coins = await self.standard_wallet.select_coins(amount)
         if coins is None:
@@ -278,21 +373,15 @@ class DIDWallet:
 
         origin = coins.copy().pop()
         origin_id = origin.name()
-        # self.add_parent(origin_id, origin_id)
-        did_core = did_puzzle.create_core(origin_id)
-        parent_info = {}
-        parent_info[origin_id] = (
-            origin.parent_coin_info,
-            origin.puzzle_hash,
-            origin.amount,
-        )
 
-        did_info: DIDInfo = DIDInfo(did_core, self.did_info.backup_ids, parent_info)
+        did_core = did_puzzle.create_core(bytes(origin_id))
+
+        did_info: DIDInfo = DIDInfo(did_core, self.did_info.backup_ids, self.did_info.parent_info)
         await self.save_info(did_info)
 
         did_inner = await self.get_new_inner_hash()
         did_puz = did_puzzle.create_fullpuz(did_inner, did_core)
-        did_puzzle_hash = did_puz.get_tree_hash()
+        did_puzzle_hash = Program(binutils.assemble(did_puz)).get_tree_hash()
 
         tx_record: Optional[
             TransactionRecord
@@ -301,22 +390,46 @@ class DIDWallet:
         )
         self.log.warning(f"did_puzzle_hash is {did_puzzle_hash}")
         eve_coin = Coin(origin_id, did_puzzle_hash, amount)
+        future_parent = CCParent(eve_coin.parent_coin_info, did_inner, eve_coin.amount)
+        eve_parent = CCParent(
+            origin.parent_coin_info, origin.puzzle_hash, origin.amount
+        )
+        await self.add_parent(eve_coin.parent_coin_info, eve_parent)
+        await self.add_parent(eve_coin.name(), future_parent)
+
         if tx_record is None or tx_record.spend_bundle is None:
             return None
 
-        eve_spend = self.generate_eve_spend(eve_coin, did_puzzle, origin_id, did_inner)
+        eve_spend = self.generate_eve_spend(eve_coin, did_puz, origin_id, did_inner)
 
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend])
         return full_spend
 
-    def generate_eve_spend(coin: Coin, full_puzzle: Program, origin_id: bytes, innerpuz: Program):
-        # innerpuz solution is (mode amount new_innerpuz identity my_puz)
-        innersol = f"(0 {coin.amount} 0x{full_puzzle} 0x{coin.name()} )"
-        # core solution is (corehash parent_info my_amount puzzle_reveal solution)
-        solution = did_puzzle.make_eve_solution(
-            coin.parent_coin_info, coin.puzzle_hash, coin.amount
-        )
-        list_of_solutions = [CoinSolution(coin, clvm.to_sexp_f([full_puzzle, solution]),)]
+    def generate_eve_spend(self, coin: Coin, full_puzzle: Program, origin_id: bytes, innerpuz: Program):
+        # innerpuz solution is (mode amount new_puz identity my_puz)
+        innersol = f"(0 {coin.amount} 0x{coin.puzzle_hash} 0x{coin.name()} 0x{coin.puzzle_hash})"
+        # full solution is (corehash parent_info my_amount puzzle_reveal solution)
+        fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} 0x{coin.parent_coin_info} {coin.amount} {full_puzzle} {innersol})"
+        list_of_solutions = [CoinSolution(coin, clvm.to_sexp_f([Program(binutils.assemble(full_puzzle)), Program(binutils.assemble(fullsol))]),)]
         aggsig = BLSSignature.aggregate([])
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
         return spend_bundle
+
+    async def add_parent(self, name: bytes32, parent: Optional[CCParent]):
+        self.log.info(f"Adding parent {name}: {parent}")
+        current_list = self.did_info.parent_info.copy()
+        current_list.append((name, parent))
+        cc_info: DIDInfo = DIDInfo(
+            self.did_info.my_core, self.did_info.backup_ids, current_list,
+        )
+        await self.save_info(cc_info)
+
+    async def save_info(self, did_info: DIDInfo):
+        self.did_info = did_info
+        current_info = self.wallet_info
+        data_str = bytes(did_info).hex()
+        wallet_info = WalletInfo(
+            current_info.id, current_info.name, current_info.type, data_str
+        )
+        self.wallet_info = wallet_info
+        await self.wallet_state_manager.user_store.update_wallet(wallet_info)
