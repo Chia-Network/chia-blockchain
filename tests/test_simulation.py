@@ -11,7 +11,13 @@ from tests.time_out_assert import time_out_assert, time_out_assert_custom_interv
 
 bt = BlockTools()
 test_constants: Dict[str, Any] = consensus_constants.copy()
-test_constants.update({"DIFFICULTY_STARTING": 500, "MIN_ITERS_STARTING": 500})
+test_constants.update(
+    {
+        "DIFFICULTY_STARTING": 500,
+        "MIN_ITERS_STARTING": 500,
+        "NUMBER_ZERO_BITS_CHALLENGE_SIG": 1,
+    }
+)
 
 test_constants["GENESIS_BLOCK"] = bytes(
     bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")

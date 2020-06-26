@@ -694,4 +694,13 @@ if __name__ == "__main__":
     from src.util.default_root import DEFAULT_ROOT_PATH
 
     bt = BlockTools(root_path=DEFAULT_ROOT_PATH, real_plots=True)
-    print(bytes(bt.create_genesis_block({}, bytes([2] * 32), b"0",)))
+    print(
+        bytes(
+            bt.create_genesis_block(
+                {},
+                bytes([2] * 32),
+                b"0",
+                "30944219616695e48f7a9b54b38877104a1f5fbe85c61da2fbe35275418a64bc",
+            )
+        )
+    )

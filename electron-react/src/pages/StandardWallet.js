@@ -349,7 +349,10 @@ const SendCard = props => {
   }
 
   function farm() {
-    dispatch(farm_block());
+    var address = address_input.value;
+    if (address !== "") {
+      dispatch(farm_block(address));
+    }
   }
 
   function send() {

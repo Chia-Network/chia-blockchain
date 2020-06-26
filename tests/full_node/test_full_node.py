@@ -1176,7 +1176,7 @@ class TestWalletProtocol:
         assert len(msgs) == 1
         assert isinstance(msgs[0].message.data, wallet_protocol.RejectAdditionsRequest)
 
-        # If there are no transactions, empty proof and coins
+        # If there are no transactions, only cb and fees additions
         blocks_new = bt.get_consecutive_blocks(
             test_constants, 10, block_list=blocks_list,
         )
@@ -1192,7 +1192,7 @@ class TestWalletProtocol:
         ]
         assert len(msgs) == 1
         assert isinstance(msgs[0].message.data, wallet_protocol.RespondAdditions)
-        assert len(msgs[0].message.data.coins) == 0
+        assert len(msgs[0].message.data.coins) == 2
         assert msgs[0].message.data.proofs is None
 
         # Add a block with transactions
