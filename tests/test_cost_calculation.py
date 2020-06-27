@@ -40,12 +40,13 @@ class TestCostCalculation:
         assert spend_bundle is not None
         program = best_solution_program(spend_bundle)
 
-        error, npc_list, clvm_cost = calculate_cost_of_program(program)
+        ratio = test_constants["CLVM_COST_RATIO_CONSTANT"]
+
+        error, npc_list, clvm_cost = calculate_cost_of_program(program, ratio)
 
         error, npc_list, cost = get_name_puzzle_conditions(program)
 
         # Create condition + agg_sig_condition + length + cpu_cost
-        ratio = test_constants["CLVM_COST_RATIO_CONSTANT"]
         assert (
             clvm_cost == 200 * ratio + 20 * ratio + len(bytes(program)) * ratio + cost
         )

@@ -635,7 +635,10 @@ class Blockchain:
         if not block.transactions_generator:
             return Err.UNKNOWN
         # Get List of names removed, puzzles hashes for removed coins and conditions crated
-        error, npc_list, cost = calculate_cost_of_program(block.transactions_generator)
+        error, npc_list, cost = calculate_cost_of_program(
+            block.transactions_generator,
+            self.constants["CLVM_COST_RATIO_CONSTANT"]
+        )
 
         # 2. Check that cost <= MAX_BLOCK_COST_CLVM
         if cost > self.constants["MAX_BLOCK_COST_CLVM"]:
