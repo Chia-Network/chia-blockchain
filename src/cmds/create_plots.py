@@ -154,8 +154,7 @@ def main():
         full_path: Path = args.final_dir / filename
 
         config = load_config(root_path, config_filename)
-        plot_filenames = get_plot_filenames(config)
-
+        plot_filenames = get_plot_filenames(config["harvester"])
         if args.final_dir.resolve() not in plot_filenames:
             # Adds the directory to the plot directories if it is not present
             config["harvester"]["plot_directories"].append(

@@ -15,7 +15,7 @@ from src.server.outbound_message import Delivery, Message, NodeType, OutboundMes
 from src.server.server import ChiaServer, start_server
 from src.types.peer_info import PeerInfo
 from src.util.logging import initialize_logging
-from src.util.config import load_config
+from src.util.config import load_config, load_config_cli
 from src.util.setproctitle import setproctitle
 from src.rpc.rpc_server import start_rpc_server
 from src.server.connection import OnConnectFunc
@@ -79,6 +79,7 @@ class Service:
         stop_callback: Optional[Callable] = None,
         await_closed_callback: Optional[Callable] = None,
         periodic_introducer_poll: Optional[Tuple[PeerInfo, int, int]] = None,
+        parse_cli_args=True,
     ):
         net_config = load_config(root_path, "config.yaml")
         ping_interval = net_config.get("ping_interval")
@@ -93,7 +94,10 @@ class Service:
         proctitle_name = f"chia_{service_name}"
         setproctitle(proctitle_name)
         self._log = logging.getLogger(service_name)
-        config = load_config(root_path, "config.yaml", service_name)
+        if parse_cli_args:
+            config = load_config_cli(root_path, "config.yaml", service_name)
+        else:
+            config = load_config(root_path, "config.yaml", service_name)
         initialize_logging(service_name, config["logging"], root_path)
 
         self._rpc_info = rpc_info

@@ -118,6 +118,7 @@ async def setup_full_node(
         stop_callback=stop_callback,
         await_closed_callback=await_closed_callback,
         periodic_introducer_poll=periodic_introducer_poll,
+        parse_cli_args=False,
     )
 
     run_task = asyncio.create_task(service.run())
@@ -199,6 +200,7 @@ async def setup_wallet_node(
         stop_callback=stop_callback,
         await_closed_callback=await_closed_callback,
         periodic_introducer_poll=periodic_introducer_poll,
+        parse_cli_args=False,
     )
 
     run_task = asyncio.create_task(service.run())
@@ -246,6 +248,7 @@ async def setup_harvester(port, farmer_port, dic={}):
         start_callback=start_callback,
         stop_callback=stop_callback,
         await_closed_callback=await_closed_callback,
+        parse_cli_args=False,
     )
 
     run_task = asyncio.create_task(service.run())
@@ -290,6 +293,7 @@ async def setup_farmer(port, full_node_port: Optional[uint16] = None, dic={}):
         connect_peers=connect_peers,
         auth_connect_peers=False,
         start_callback=start_callback,
+        parse_cli_args=False,
     )
 
     run_task = asyncio.create_task(service.run())
@@ -329,6 +333,7 @@ async def setup_introducer(port, dic={}):
         start_callback=start_callback,
         stop_callback=stop_callback,
         await_closed_callback=await_closed_callback,
+        parse_cli_args=False,
     )
 
     run_task = asyncio.create_task(service.run())
@@ -390,6 +395,7 @@ async def setup_timelord(port, full_node_port, sanitizer, dic={}):
         start_callback=start_callback,
         stop_callback=stop_callback,
         await_closed_callback=await_closed_callback,
+        parse_cli_args=False,
     )
 
     run_task = asyncio.create_task(service.run())
