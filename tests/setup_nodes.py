@@ -134,13 +134,15 @@ async def setup_wallet_node(
         config["starting_height"] = starting_height
     config["initial_num_public_keys"] = 5
 
-    key_seed = token_bytes(32)
-    keychain = Keychain(key_seed.hex(), True)
-    keychain.add_private_key_seed(key_seed)
-    consensus_constants = constants_for_dic(dic)
-    db_path_key_suffix = str(
-        keychain.get_first_public_key().get_public_key().get_fingerprint()
-    )
+    entropy = token_bytes(32)
+    keychain = Keychain(entropy.hex(), True)
+    keychain.add_private_key(entropy, "")
+    test_constants_copy = test_constants.copy()
+    for k in dic.keys():
+        test_constants_copy[k] = dic[k]
+    first_pk = keychain.get_first_public_key()
+    assert first_pk is not None
+    db_path_key_suffix = str(first_pk.get_public_key().get_fingerprint())
     db_name = f"test-wallet-db-{port}"
     db_path = bt.root_path / f"test-wallet-db-{port}-{db_path_key_suffix}"
     if db_path.exists():

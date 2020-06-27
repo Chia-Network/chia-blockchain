@@ -63,7 +63,6 @@ def check_keys(new_root):
         )
         config["farmer"]["xch_target_puzzle_hash"] = all_targets[0]
     elif config["farmer"]["xch_target_puzzle_hash"] not in all_targets:
-        print("Target:", config["farmer"]["xch_target_puzzle_hash"])
         assert len(config["farmer"]["xch_target_puzzle_hash"]) == 64
         print(
             "WARNING: farmer using a puzzle hash which we don't have the private keys for"
