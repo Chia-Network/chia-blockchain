@@ -840,7 +840,7 @@ class CCWallet:
         ] = await self.standard_wallet.generate_signed_transaction(
             amount, cc_puzzle_hash, uint64(0), origin_id, coins
         )
-        self.log.warning(f"cc_puzzle_hash is {cc_puzzle_hash}")
+        self.log.info(f"cc_puzzle_hash is {cc_puzzle_hash}")
         eve_coin = Coin(origin_id, cc_puzzle_hash, amount)
         if tx_record is None or tx_record.spend_bundle is None:
             return None

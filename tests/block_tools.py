@@ -108,7 +108,7 @@ class BlockTools:
             filenames: List[Path] = [
                 Path(
                     plot_dir
-                    / f"genesis-plots-{k}{std_hash(int.to_bytes(i, 4, 'big')).hex()}.plot"
+                    / f"genesis-plots-1.8-{k}{std_hash(int.to_bytes(i, 4, 'big')).hex()}.plot"
                 )
                 for i in range(num_plots)
             ]
