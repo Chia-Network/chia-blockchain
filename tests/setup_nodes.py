@@ -2,11 +2,11 @@ import asyncio
 import signal
 
 from secrets import token_bytes
-from typing import Any, Dict, Tuple, List, Optional
-from src.consensus.constants import constants as consensus_constants, ConsensusConstants
+from typing import Dict, Tuple, List, Optional
+from src.consensus.constants import ConsensusConstants
 from src.full_node.full_node import FullNode
 from src.server.connection import NodeType
-from src.server.server import ChiaServer, start_server
+from src.server.server import ChiaServer
 from src.simulator.full_node_simulator import FullNodeSimulator
 from src.timelord_launcher import spawn_process, kill_processes
 from src.util.keychain import Keychain
@@ -18,17 +18,14 @@ from src.farmer import Farmer
 from src.introducer import Introducer
 from src.timelord import Timelord
 from src.server.connection import PeerInfo
-from src.server.start_service import create_periodic_introducer_poll_task
 from src.util.ints import uint16, uint32
 from src.server.start_service import Service
-from src.rpc.harvester_rpc_api import HarvesterRpcApi
 from tests.make_test_constants import make_test_constants_with_genesis
 from tests.time_out_assert import time_out_assert
 
 
 bt = BlockTools()
 
-root_path = bt.root_path
 global_config = load_config(bt.root_path, "config.yaml")
 self_hostname = global_config["self_hostname"]
 
@@ -68,7 +65,7 @@ async def setup_full_node(
     simulator=False,
     send_uncompact_interval=30,
 ):
-    db_path = root_path / f"{db_name}"
+    db_path = bt.root_path / f"{db_name}"
     if db_path.exists():
         db_path.unlink()
 
@@ -85,7 +82,7 @@ async def setup_full_node(
     FullNodeApi = FullNodeSimulator if simulator else FullNode
     api = FullNodeApi(
         config=config,
-        root_path=root_path,
+        root_path=bt.root_path,
         consensus_constants=consensus_constants,
         name=f"full_node_{port}",
     )
@@ -104,7 +101,7 @@ async def setup_full_node(
         await api._await_closed()
 
     service = Service(
-        root_path=root_path,
+        root_path=bt.root_path,
         api=api,
         node_type=NodeType.FULL_NODE,
         advertised_port=port,
@@ -132,7 +129,7 @@ async def setup_full_node(
 async def setup_wallet_node(
     port, full_node_port=None, introducer_port=None, key_seed=None, dic={}, starting_height=None,
 ):
-    config = load_config(root_path, "config.yaml", "wallet")
+    config = load_config(bt.root_path, "config.yaml", "wallet")
     if starting_height is not None:
         config["starting_height"] = starting_height
     config["initial_num_public_keys"] = 5
@@ -145,7 +142,7 @@ async def setup_wallet_node(
         keychain.get_all_public_keys()[0].get_public_key().get_fingerprint()
     )
     db_name = f"test-wallet-db-{port}"
-    db_path = root_path / f"test-wallet-db-{port}-{db_path_key_suffix}"
+    db_path = bt.root_path / f"test-wallet-db-{port}-{db_path_key_suffix}"
     if db_path.exists():
         db_path.unlink()
     config["database_path"] = str(db_name)
@@ -153,7 +150,7 @@ async def setup_wallet_node(
     api = WalletNode(
         config,
         keychain,
-        root_path,
+        bt.root_path,
         consensus_constants=consensus_constants,
         name="wallet1",
     )
@@ -182,7 +179,7 @@ async def setup_wallet_node(
         await api._await_closed()
 
     service = Service(
-        root_path=root_path,
+        root_path=bt.root_path,
         api=api,
         node_type=NodeType.WALLET,
         advertised_port=port,
@@ -228,7 +225,7 @@ async def setup_harvester(port, farmer_port, dic={}):
         await api._await_closed()
 
     service = Service(
-        root_path=root_path,
+        root_path=bt.root_path,
         api=api,
         node_type=NodeType.HARVESTER,
         advertised_port=port,
@@ -252,7 +249,7 @@ async def setup_harvester(port, farmer_port, dic={}):
 
 async def setup_farmer(port, full_node_port: Optional[uint16] = None, dic={}):
     config = load_config(bt.root_path, "config.yaml", "farmer")
-    config_pool = load_config(root_path, "config.yaml", "pool")
+    config_pool = load_config(bt.root_path, "config.yaml", "pool")
     consensus_constants = constants_for_dic(dic)
     config["xch_target_puzzle_hash"] = bt.fee_target.hex()
     config["pool_public_keys"] = [
@@ -273,7 +270,7 @@ async def setup_farmer(port, full_node_port: Optional[uint16] = None, dic={}):
         started.set()
 
     service = Service(
-        root_path=root_path,
+        root_path=bt.root_path,
         api=api,
         node_type=NodeType.FARMER,
         advertised_port=port,
@@ -312,7 +309,7 @@ async def setup_introducer(port, dic={}):
         await api._await_closed()
 
     service = Service(
-        root_path=root_path,
+        root_path=bt.root_path,
         api=api,
         node_type=NodeType.INTRODUCER,
         advertised_port=port,
@@ -370,7 +367,7 @@ async def setup_timelord(port, full_node_port, sanitizer, dic={}):
         await api._await_closed()
 
     service = Service(
-        root_path=root_path,
+        root_path=bt.root_path,
         api=api,
         node_type=NodeType.TIMELORD,
         advertised_port=port,
