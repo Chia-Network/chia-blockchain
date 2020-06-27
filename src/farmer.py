@@ -282,13 +282,11 @@ class Farmer:
                 farmer_share = sk.sign_insecure(new_m)
                 agg_sig = PrependSignature.from_insecure_sig(
                     InsecureSignature.aggregate(
-                        response.message_signature, farmer_share
+                        [response.message_signature, farmer_share]
                     )
                 )
 
-                validates = agg_sig.verify(
-                    [Util.hash256(new_m)], [proof_of_space.plot_public_key]
-                )
+                validates = agg_sig.verify([Util.hash256(header_hash)], [agg_pk])
                 if validates:
                     break
         assert validates

@@ -8,8 +8,7 @@ from src.protocols import full_node_protocol
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.util.ints import uint16
 from src.util.config import load_config
-from tests.setup_nodes import setup_two_nodes, test_constants
-from tests.block_tools import BlockTools
+from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.time_out_assert import time_out_assert
 
 
@@ -30,7 +29,6 @@ class TestRpc:
         num_blocks = 5
         test_rpc_port = uint16(21522)
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        bt = BlockTools()
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
 
         for i in range(1, num_blocks):
@@ -90,11 +88,11 @@ class TestRpc:
             coins = await client.get_unspent_coins(
                 blocks[-1].get_coinbase().puzzle_hash, blocks[-1].header_hash
             )
-            assert len(coins) == 6
+            assert len(coins) == 3
             coins_lca = await client.get_unspent_coins(
                 blocks[-1].get_coinbase().puzzle_hash
             )
-            assert len(coins_lca) == 6
+            assert len(coins_lca) == 3
 
             assert len(await client.get_connections()) == 0
 

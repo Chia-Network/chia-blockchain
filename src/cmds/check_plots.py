@@ -42,7 +42,12 @@ def main():
         for pk in config["farmer"]["pool_public_keys"]
     ]
     _, provers, failed_to_open_filenames, no_key_filenames = load_plots(
-        config, {}, pks, pool_public_keys, root_path, open_no_key_filenames=True
+        config["harvester"],
+        {},
+        pks,
+        pool_public_keys,
+        root_path,
+        open_no_key_filenames=True,
     )
     if len(provers) > 0:
         log.info("")

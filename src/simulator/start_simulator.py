@@ -24,7 +24,10 @@ def service_kwargs_for_full_node(root_path):
     config["database_path"] = config["simulator_database_path"]
 
     api = FullNodeSimulator(
-        config, root_path=root_path, consensus_constants=test_constants
+        config,
+        root_path=root_path,
+        name=service_name,
+        override_constants=test_constants,
     )
 
     introducer = config["introducer_peer"]

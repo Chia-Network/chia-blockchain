@@ -11,9 +11,8 @@ from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.types.full_block import FullBlock
 from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
-from src.util.ints import uint8, uint64
-from src.consensus.constants import ConsensusConstants
-from tests.block_tools import BlockTools
+from src.util.ints import uint8, uint64, uint32
+from src.consensus.constants import constants as consensus_constants
 from src.util.errors import Err
 from src.types.sized_bytes import bytes32
 from src.types.pool_target import PoolTarget
@@ -21,12 +20,12 @@ from src.types.BLSSignature import BLSSignature
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from tests.block_tools import BlockTools
-from tests.make_test_constants import make_test_constants_with_genesis
 
-bt = BlockTools()
+from tests.setup_nodes import bt
 
-test_constants: ConsensusConstants = make_test_constants_with_genesis({
+test_constants: Dict[str, Any] = consensus_constants.copy()
+test_constants.update(
+    {
         "DIFFICULTY_STARTING": 1,
         "DISCRIMINANT_SIZE_BITS": 8,
         "BLOCK_TIME_TARGET": 10,

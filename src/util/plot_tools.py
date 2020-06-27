@@ -4,6 +4,7 @@ from blspy import PrivateKey, PublicKey
 from chiapos import DiskProver
 from dataclasses import dataclass
 import logging
+import traceback
 
 
 log = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ def _get_filenames(directory: Path) -> List[Path]:
 
 def get_plot_filenames(config: Dict) -> Dict[Path, List[Path]]:
     # Returns a map from directory to a list of all plots in the directory
-    directory_names: List[str] = config["harvester"]["plot_directories"]
+    directory_names: List[str] = config["plot_directories"]
     all_files: Dict[Path, List[Path]] = {}
     for directory_name in directory_names:
         directory = Path(directory_name).resolve()
@@ -76,18 +77,19 @@ def load_plots(
     changed = False
     failed_to_open_filenames: List[Path] = []
     no_key_filenames: List[Path] = []
-    log.info(f'Searching directories {config_file["harvester"]["plot_directories"]}')
+    log.info(f'Searching directories {config_file["plot_directories"]}')
 
     plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(config_file)
     all_filenames: List[Path] = []
     for paths in plot_filenames.values():
         all_filenames += paths
+    total_size = 0
 
     for filename in all_filenames:
         if filename in provers:
             stat_info = filename.stat()
             if stat_info.st_mtime == provers[filename].time_modified:
-                log.info(f"Already loaded plot {filename}")
+                total_size += stat_info.st_size
                 continue
         if filename.exists():
             try:
@@ -127,12 +129,18 @@ def load_plots(
                     stat_info.st_size,
                     stat_info.st_mtime,
                 )
+                total_size += stat_info.st_size
                 changed = True
             except Exception as e:
-                log.error(f"Failed to open file {filename}. {e}")
+                tb = traceback.format_exc()
+                log.error(f"Failed to open file {filename}. {e} {tb}")
                 failed_to_open_filenames.append(filename)
                 break
             log.info(
                 f"Found plot {filename} of size {provers[filename].prover.get_size()}"
             )
+
+    log.info(
+        f"Loaded a total of {len(provers)} plots of size {total_size / (1024 ** 4)} TB"
+    )
     return (changed, provers, failed_to_open_filenames, no_key_filenames)
