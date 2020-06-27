@@ -1,6 +1,5 @@
 from typing import Tuple, Optional, List
 
-from src.consensus.constants import constants
 from src.consensus.condition_costs import ConditionCost
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.program import Program
@@ -12,6 +11,7 @@ from src.util.mempool_check_conditions import get_name_puzzle_conditions
 
 def calculate_cost_of_program(
     program: Program,
+    clvm_cost_ratio_constant: int,
 ) -> Tuple[Optional[Err], List[NPC], uint64]:
     """
     This function calculates the total cost of either block or a spendbundle
@@ -60,6 +60,6 @@ def calculate_cost_of_program(
     # Add raw size of the program
     total_vbyte_cost += len(bytes(program))
 
-    total_clvm_cost += total_vbyte_cost * constants["CLVM_COST_RATIO_CONSTANT"]
+    total_clvm_cost += total_vbyte_cost * clvm_cost_ratio_constant
 
     return error, npc_list, uint64(total_clvm_cost)

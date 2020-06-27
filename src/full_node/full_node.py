@@ -1283,7 +1283,10 @@ class FullNode:
         # Calculate the cost of transactions
         cost = uint64(0)
         if solution_program:
-            _, _, cost = calculate_cost_of_program(solution_program)
+            _, _, cost = calculate_cost_of_program(
+                solution_program,
+                self.constants.CLVM_COST_RATIO_CONSTANT
+            )
 
         extension_data: bytes32 = bytes32([0] * 32)
 
