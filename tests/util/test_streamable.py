@@ -7,10 +7,8 @@ from src.types.coin import Coin
 from src.types.sized_bytes import bytes32
 from src.types.full_block import FullBlock
 from src.util.streamable import Streamable, streamable
-from tests.block_tools import BlockTools
 from src.protocols.wallet_protocol import RespondRemovals
-from tests.setup_nodes import test_constants
-from tests.block_tools import BlockTools
+from tests.setup_nodes import test_constants, bt
 from src.util import cbor
 
 
@@ -55,7 +53,6 @@ class TestStreamable(unittest.TestCase):
             pass
 
     def test_json(self):
-        bt = BlockTools()
         block = bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
 
         dict_block = block.to_json_dict()

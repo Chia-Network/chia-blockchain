@@ -11,6 +11,7 @@ from src.rpc.harvester_rpc_client import HarvesterRpcClient
 from src.rpc.rpc_server import start_rpc_server
 from src.util.ints import uint16
 from src.util.config import load_config
+from src.util.plot_tools import stream_plot_info
 from src.rpc.farmer_rpc_api import FarmerRpcApi
 from src.rpc.harvester_rpc_api import HarvesterRpcApi
 
@@ -92,6 +93,7 @@ class TestRpc:
             num_plots = len(res["plots"])
             assert num_plots > 0
             plot_dir = get_plot_dir() / "subdir"
+            plot_dir.mkdir(parents=True, exist_ok=True)
             plotter = DiskPlotter()
             filename = "test_farmer_harvester_rpc_plot.plot"
             plotter.create_plot_disk(
@@ -100,7 +102,9 @@ class TestRpc:
                 str(plot_dir),
                 filename,
                 18,
-                b"genesis",
+                stream_plot_info(
+                    bt.pool_pk, bt.farmer_pk, PrivateKey.from_seed(b"123")
+                ),
                 token_bytes(32),
                 128,
             )

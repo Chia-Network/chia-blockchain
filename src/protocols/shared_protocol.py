@@ -5,7 +5,7 @@ from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
 from src.util.ints import uint16
 
-protocol_version = "0.0.15"
+protocol_version = "0.0.16"
 
 """
 Handshake when establishing a connection between two servers.

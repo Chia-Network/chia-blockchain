@@ -13,7 +13,6 @@ from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
 from src.util.ints import uint8, uint64, uint32
 from src.consensus.constants import constants as consensus_constants
-from tests.block_tools import BlockTools
 from src.util.errors import Err
 from src.types.sized_bytes import bytes32
 from src.types.pool_target import PoolTarget
@@ -21,9 +20,8 @@ from src.types.BLSSignature import BLSSignature
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from tests.block_tools import BlockTools
+from tests.setup_nodes import bt
 
-bt = BlockTools()
 test_constants: Dict[str, Any] = consensus_constants.copy()
 test_constants.update(
     {
