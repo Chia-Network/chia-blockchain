@@ -130,11 +130,11 @@ async def setup_full_node(
 
 
 async def setup_wallet_node(
-    port, full_node_port=None, introducer_port=None, key_seed=None, dic={},
+    port, full_node_port=None, introducer_port=None, key_seed=None, dic={}, starting_height=None,
 ):
     config = load_config(root_path, "config.yaml", "wallet")
-    if "starting_height" in dic:
-        config["starting_height"] = dic["starting_height"]
+    if starting_height is not None:
+        config["starting_height"] = starting_height
     config["initial_num_public_keys"] = 5
 
     key_seed = token_bytes(32)
@@ -411,11 +411,11 @@ async def setup_two_nodes(dic={}):
     await _teardown_nodes(node_iters)
 
 
-async def setup_node_and_wallet(dic={}):
+async def setup_node_and_wallet(dic={}, starting_height=None):
     consensus_constants = constants_for_dic(dic)
     node_iters = [
         setup_full_node(consensus_constants, "blockchain_test.db", 21234, simulator=False),
-        setup_wallet_node(21235, None, dic=dic),
+        setup_wallet_node(21235, None, dic=dic, starting_height=starting_height),
     ]
 
     full_node, s1 = await node_iters[0].__anext__()
@@ -427,7 +427,7 @@ async def setup_node_and_wallet(dic={}):
 
 
 async def setup_simulators_and_wallets(
-    simulator_count: int, wallet_count: int, dic: Dict
+    simulator_count: int, wallet_count: int, dic: Dict, starting_height=None,
 ):
     simulators: List[Tuple[FullNode, ChiaServer]] = []
     wallets = []
@@ -444,7 +444,7 @@ async def setup_simulators_and_wallets(
     for index in range(0, wallet_count):
         seed = bytes(uint32(index))
         port = 55000 + index
-        wlt = setup_wallet_node(port, None, key_seed=seed, dic=dic)
+        wlt = setup_wallet_node(port, None, key_seed=seed, dic=dic, starting_height=starting_height)
         wallets.append(await wlt.__anext__())
         node_iters.append(wlt)
 
