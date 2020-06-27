@@ -2,13 +2,12 @@ import asyncio
 import logging
 import time
 from pathlib import Path
-from blspy import ExtendedPrivateKey
 
 from typing import List, Optional, Tuple, Dict, Callable
 
 from src.util.byte_types import hexstr_to_bytes
 from src.util.keychain import (
-    seed_from_mnemonic,
+    bytes_from_mnemonic,
     generate_mnemonic,
     bytes_to_mnemonic,
 )
@@ -470,9 +469,9 @@ class WalletRpcApi:
         if "mnemonic" in request:
             # Adding a key from 24 word mnemonic
             mnemonic = request["mnemonic"]
-            seed = seed_from_mnemonic(mnemonic)
-            self.service.keychain.add_private_key_seed(seed)
-            esk = ExtendedPrivateKey.from_seed(seed)
+            entropy = bytes_from_mnemonic(mnemonic)
+            passphrase = ""
+            esk = self.service.keychain.add_private_key(entropy, passphrase)
         else:
             return {"success": False}
 
