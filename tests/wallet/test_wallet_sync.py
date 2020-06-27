@@ -41,7 +41,7 @@ class TestWalletSync:
 
     @pytest.fixture(scope="function")
     async def wallet_node_starting_height(self):
-        async for _ in setup_node_and_wallet(dic={"starting_height": 100}):
+        async for _ in setup_node_and_wallet(starting_height=100):
             yield _
 
     # @pytest.mark.asyncio
