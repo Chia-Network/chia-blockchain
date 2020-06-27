@@ -5,8 +5,7 @@ import pytest
 from src.util.bundle_tools import best_solution_program
 from src.util.cost_calculator import calculate_cost_of_program
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
-from tests.setup_nodes import test_constants
-from tests.block_tools import BlockTools
+from tests.setup_nodes import test_constants, bt
 from tests.wallet_tools import WalletTool
 
 
@@ -19,11 +18,10 @@ def event_loop():
 class TestCostCalculation:
     @pytest.mark.asyncio
     async def test_basics(self):
-        wallet_tool = WalletTool()
+        wallet_tool = bt.get_pool_wallet_tool()
         receiver = WalletTool()
 
         num_blocks = 2
-        bt = BlockTools()
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10,)
 
         spend_bundle = wallet_tool.generate_signed_transaction(

@@ -8,8 +8,7 @@ from src.server.connection import NodeType
 from src.server.outbound_message import Delivery, Message, OutboundMessage
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16
-from tests.setup_nodes import setup_two_nodes, test_constants
-from tests.block_tools import BlockTools
+from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.time_out_assert import time_out_assert
 
 
@@ -35,7 +34,6 @@ class TestNodeLoad:
     async def test_unfinished_blocks_load(self, two_nodes):
         num_blocks = 2
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        bt = BlockTools()
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
 
         for i in range(1, num_blocks - 1):
@@ -77,7 +75,6 @@ class TestNodeLoad:
     async def test_blocks_load(self, two_nodes):
         num_blocks = 50
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        bt = BlockTools()
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
