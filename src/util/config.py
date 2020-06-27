@@ -57,7 +57,9 @@ def load_config(
     return r
 
 
-def load_config_cli(root_path: Path, filename: str, sub_config: Optional[str]) -> Dict:
+def load_config_cli(
+    root_path: Path, filename: str, sub_config: Optional[str] = None
+) -> Dict:
     """
     Loads configuration from the specified filename, in the config directory,
     and then overrides any properties using the passed in command line arguments.

@@ -144,8 +144,8 @@ class Harvester:
     ):
         """
         Handshake between the harvester and farmer. The harvester receives the pool public keys,
-        which must be put into the plots, before the plotting process begins. We cannot
-        use any plots which don't have one of the pool keys.
+        as well as the farmer pks, which must be put into the plots, before the plotting process begins.
+        We cannot use any plots which have different keys in them.
         """
         self.farmer_public_keys = harvester_handshake.farmer_public_keys
         self.pool_public_keys = harvester_handshake.pool_public_keys
@@ -238,7 +238,7 @@ class Harvester:
         self, request: harvester_protocol.RequestProofOfSpace
     ):
         """
-        The farmer requests a signature on the header hash, for one of the proofs that we found.
+        The farmer requests a proof of space, for one of the plots.
         We look up the correct plot based on the plot id and response number, lookup the proof,
         and return it.
         """

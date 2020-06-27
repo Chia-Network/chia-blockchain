@@ -33,6 +33,7 @@ harvester:
 pool: {
   # Replace this with a real puzzle hash
   # xch_target_puzzle_hash: a4259182b4d8e0af21331fc5be2681f953400b6726fa4095e3b91ae8f005a836
+  logging: *logging
 }
 
 farmer:
