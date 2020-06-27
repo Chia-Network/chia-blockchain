@@ -1,11 +1,10 @@
 from pathlib import Path
-from blspy import ExtendedPrivateKey
 from src.cmds.init import check_keys
 from src.util.keychain import (
     generate_mnemonic,
     bytes_to_mnemonic,
     Keychain,
-    seed_from_mnemonic,
+    bytes_from_mnemonic,
 )
 from src.types.BLSSignature import BLSPublicKey
 from src.consensus.coinbase import create_puzzlehash_for_pk
@@ -98,16 +97,15 @@ def add_private_key_seed(mnemonic):
     """
 
     try:
-        seed = seed_from_mnemonic(mnemonic)
-        fingerprint = (
-            ExtendedPrivateKey.from_seed(seed).get_public_key().get_fingerprint()
-        )
+        entropy = bytes_from_mnemonic(mnemonic)
+        passphrase = ""
+        esk = keychain.add_private_key(entropy, passphrase)
+        fingerprint = esk.get_public_key().get_fingerprint()
         print(
-            f"Adding private key with public key fingerprint {fingerprint} and mnemonic"
+            f"Added private key with public key fingerprint {fingerprint} and mnemonic"
         )
         print(f"{mnemonic_to_string(mnemonic)}")
 
-        keychain.add_private_key_seed(seed)
     except ValueError as e:
         print(e)
         return

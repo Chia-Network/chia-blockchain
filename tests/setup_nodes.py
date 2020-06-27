@@ -139,9 +139,9 @@ async def setup_wallet_node(
         config["starting_height"] = dic["starting_height"]
     config["initial_num_public_keys"] = 5
 
-    key_seed = token_bytes(32)
-    keychain = Keychain(key_seed.hex(), True)
-    keychain.add_private_key_seed(key_seed)
+    entropy = token_bytes(32)
+    keychain = Keychain(entropy.hex(), True)
+    keychain.add_private_key(entropy, "")
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
