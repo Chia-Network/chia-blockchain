@@ -92,8 +92,16 @@ class BlockTools:
 
             self.keychain = Keychain("testing-1.8", True)
             self.keychain.delete_all_keys()
-            self.keychain.add_private_key_seed(b"block_tools farmer key")
-            self.keychain.add_private_key_seed(b"block_tools pool key")
+            self.farmer_pk = (
+                self.keychain.add_private_key(b"block_tools farmer key", "")
+                .public_child(0)
+                .get_public_key()
+            )
+            self.pool_pk = (
+                self.keychain.add_private_key(b"block_tools pool key", "")
+                .public_child(0)
+                .get_public_key()
+            )
 
             plot_dir = get_plot_dir()
             mkdir(plot_dir)
@@ -110,27 +118,17 @@ class BlockTools:
             try:
                 for pn, filename in enumerate(filenames):
                     sk: PrivateKey = PrivateKey.from_seed(pn.to_bytes(4, "big"))
-                    ekeys: List[ExtendedPublicKey] = self.keychain.get_all_public_keys()
-                    assert len(ekeys) >= 2
-                    farmer_pk: PublicKey = PublicKey.from_bytes(
-                        bytes(ekeys[0].public_child(0).get_public_key())
-                    )
-                    pool_pk: PublicKey = PublicKey.from_bytes(
-                        bytes(ekeys[1].public_child(0).get_public_key())
-                    )
                     plot_public_key = ProofOfSpace.generate_plot_public_key(
-                        sk.get_public_key(), farmer_pk
+                        sk.get_public_key(), self.farmer_pk
                     )
                     plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(
-                        pool_pk, plot_public_key
+                        self.pool_pk, plot_public_key
                     )
-                    self.farmer_pk = farmer_pk
-                    self.pool_pk = pool_pk
                     self.farmer_ph = create_puzzlehash_for_pk(
-                        BLSPublicKey(bytes(farmer_pk))
+                        BLSPublicKey(bytes(self.farmer_pk))
                     )
                     self.pool_ph = create_puzzlehash_for_pk(
-                        BLSPublicKey(bytes(pool_pk))
+                        BLSPublicKey(bytes(self.pool_pk))
                     )
                     if not (plot_dir / filename).exists():
                         plotter = DiskPlotter()
@@ -140,7 +138,7 @@ class BlockTools:
                             str(plot_dir),
                             str(filename),
                             k,
-                            stream_plot_info(pool_pk, farmer_pk, sk),
+                            stream_plot_info(self.pool_pk, self.farmer_pk, sk),
                             plot_seed,
                             128,
                         )
