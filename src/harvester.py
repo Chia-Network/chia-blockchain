@@ -28,11 +28,11 @@ class Harvester:
     no_key_filenames: List[Path]
     farmer_public_keys: List[PublicKey]
     root_path: Path
-    _plot_notification_task: Optional[asyncio.Task]
     _is_shutdown: bool
     executor: concurrent.futures.ThreadPoolExecutor
     state_changed_callback: Optional[Callable]
     constants: Dict
+    _refresh_lock: asyncio.Lock
 
     def __init__(self, config: Dict, root_path: Path, override_constants={}):
         self.config = config
@@ -44,7 +44,6 @@ class Harvester:
         self.no_key_filenames = []
 
         self._is_shutdown = False
-        self._plot_notification_task = None
         self.global_connections: Optional[PeerConnections] = None
         self.farmer_public_keys = []
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
@@ -55,14 +54,14 @@ class Harvester:
             self.constants[key] = value
 
     async def _start(self):
-        self._plot_notification_task = asyncio.create_task(self._plot_notification())
+        self._refresh_lock = asyncio.Lock()
 
     def _close(self):
         self._is_shutdown = True
         self.executor.shutdown(wait=True)
 
     async def _await_closed(self):
-        await self._plot_notification_task
+        pass
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -72,19 +71,6 @@ class Harvester:
     def _state_changed(self, change: str):
         if self.state_changed_callback is not None:
             self.state_changed_callback(change)
-
-    async def _plot_notification(self):
-        """
-        Log the plot filenames to console periodically
-        """
-        counter = 1
-        while not self._is_shutdown:
-            if counter % 600 == 0:
-                self._refresh_plots()
-                if len(self.provers) == 0:
-                    log.warning("Warning, not farming any plots on this harvester.")
-            await asyncio.sleep(1)
-            counter += 1
 
     def _get_plots(self) -> Tuple[List[Dict], List[str], List[str]]:
         response_plots: List[Dict] = []
@@ -109,19 +95,20 @@ class Harvester:
             [str(s) for s in self.no_key_filenames],
         )
 
-    def _refresh_plots(self):
-        (
-            changed,
-            self.provers,
-            self.failed_to_open_filenames,
-            self.no_key_filenames,
-        ) = load_plots(
-            self.provers,
-            self.config,
-            self.farmer_public_keys,
-            self.pool_public_keys,
-            self.root_path,
-        )
+    async def _refresh_plots(self):
+        async with self._refresh_lock:
+            (
+                changed,
+                self.provers,
+                self.failed_to_open_filenames,
+                self.no_key_filenames,
+            ) = load_plots(
+                self.config,
+                self.provers,
+                self.farmer_public_keys,
+                self.pool_public_keys,
+                self.root_path,
+            )
         if changed:
             self._state_changed("plots")
 
@@ -137,11 +124,12 @@ class Harvester:
         self._state_changed("plots")
         return True
 
-    def _add_plot_directory(self, str_path: str) -> bool:
+    async def _add_plot_directory(self, str_path: str) -> bool:
         config = load_config(self.root_path, "config.yaml")
         config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
+        self.config = config["harvester"]
         save_config(self.root_path, "config.yaml", config)
-        self._refresh_plots()
+        await self._refresh_plots()
         return True
 
     def _set_global_connections(self, global_connections: Optional[PeerConnections]):
@@ -161,7 +149,7 @@ class Harvester:
         """
         self.farmer_public_keys = harvester_handshake.farmer_public_keys
         self.pool_public_keys = harvester_handshake.pool_public_keys
-        self._refresh_plots()
+        await self._refresh_plots()
         if len(self.provers) == 0:
             log.warning(
                 "Not farming any plots on this harvester. Check your configuration."
@@ -311,20 +299,20 @@ class Harvester:
         """
         plot_info = self.provers[Path(request.plot_id).resolve()]
 
-        plot_sk = plot_info.harvester_sk
+        harvester_sk = plot_info.harvester_sk
         agg_pk = ProofOfSpace.generate_plot_public_key(
-            plot_sk.get_public_key(), plot_info.farmer_public_key
+            harvester_sk.get_public_key(), plot_info.farmer_public_key
         )
         new_m = bytes(agg_pk) + Util.hash256(request.message)
 
         # This is only a partial signature. When combined with the farmer's half, it will
         # form a complete PrependSignature.
-        signature: InsecureSignature = plot_sk.sign_insecure(new_m)
+        signature: InsecureSignature = harvester_sk.sign_insecure(new_m)
 
         response: harvester_protocol.RespondSignature = harvester_protocol.RespondSignature(
             request.plot_id,
             request.message,
-            plot_sk.get_public_key(),
+            harvester_sk.get_public_key(),
             plot_info.farmer_public_key,
             signature,
         )

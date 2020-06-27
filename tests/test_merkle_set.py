@@ -3,8 +3,7 @@ import asyncio
 import pytest
 
 from src.util.merkle_set import MerkleSet, confirm_included_already_hashed
-from tests.setup_nodes import test_constants
-from tests.block_tools import BlockTools
+from tests.setup_nodes import test_constants, bt
 from tests.wallet_tools import WalletTool
 
 
@@ -20,7 +19,6 @@ class TestMerkleSet:
         wallet_tool = WalletTool()
 
         num_blocks = 10
-        bt = BlockTools()
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10,)
 
         merkle_set = MerkleSet()

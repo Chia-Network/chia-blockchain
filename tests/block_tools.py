@@ -50,6 +50,7 @@ from src.util.significant_bits import truncate_to_significant_bits
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.config import load_config, load_config_cli, save_config
 from src.util.plot_tools import load_plots, PlotInfo, stream_plot_info
+from src.util.logging import initialize_logging
 
 from tests.wallet_tools import WalletTool
 
@@ -74,12 +75,13 @@ class BlockTools:
         if root_path is None:
             self._tempdir = tempfile.TemporaryDirectory()
             root_path = Path(self._tempdir.name)
-        create_default_chia_config(root_path)
-        initialize_ssl(root_path)
         self.root_path = root_path
         self.n_wesolowski = uint8(0)
+        self.real_plots = real_plots
 
         if not real_plots:
+            create_default_chia_config(root_path)
+            initialize_ssl(root_path)
             # No real plots supplied, so we will use the small test plots
             self.use_any_pos = True
             # Can't go much lower than 18, since plots start having no solutions
@@ -122,6 +124,8 @@ class BlockTools:
                     plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(
                         pool_pk, plot_public_key
                     )
+                    self.farmer_pk = farmer_pk
+                    self.pool_pk = pool_pk
                     self.farmer_ph = create_puzzlehash_for_pk(
                         BLSPublicKey(bytes(farmer_pk))
                     )
@@ -154,21 +158,22 @@ class BlockTools:
                         (plot_dir / filename).unlink()
                 sys.exit(1)
         else:
+            initialize_ssl(root_path)
             self.keychain = Keychain()
             self.use_any_pos = False
             pk = self.keychain.get_all_public_keys()[0].public_child(0).get_public_key()
             self.farmer_ph = create_puzzlehash_for_pk(BLSPublicKey(bytes(pk)))
             self.pool_ph = create_puzzlehash_for_pk(BLSPublicKey(bytes(pk)))
 
-        all_pubkeys: List[PublicKey] = [
+        self.all_pubkeys: List[PublicKey] = [
             epk.public_child(0).get_public_key()
             for epk in self.keychain.get_all_public_keys()
         ]
-        if len(all_pubkeys) == 0:
+        if len(self.all_pubkeys) == 0:
             raise RuntimeError("Keys not generated. Run `chia generate keys`")
-        normal_config = load_config(self.root_path, "config.yaml")
+        normal_config = load_config(self.root_path, "config.yaml", "harvester")
         _, self.plots, _, _ = load_plots(
-            normal_config, {}, all_pubkeys, all_pubkeys, root_path
+            normal_config, {}, self.all_pubkeys, self.all_pubkeys, root_path
         )
 
     def get_plot_signature(
@@ -492,21 +497,22 @@ class BlockTools:
                 random.seed(seed + i.to_bytes(4, "big"))
                 seeded_pn = random.randint(0, len(plots) - 1)
                 plot_info = plots[seeded_pn]
-                qualities = plot_info.prover.get_qualities_for_challenge(challenge_hash)
                 plot_seed = plot_info.prover.get_id()
                 ccp = ProofOfSpace.can_create_proof(
                     plot_seed,
                     challenge_hash,
                     test_constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"],
                 )
-                if len(qualities) > 0 and ccp:
+                if not ccp:
+                    continue
+                qualities = plot_info.prover.get_qualities_for_challenge(challenge_hash)
+                if len(qualities) > 0:
                     selected_plot_info = plot_info
                     selected_quality = qualities[0]
                     break
         else:
             for i in range(len(plots)):
                 plot_info = plots[i]
-                qualities = plot_info.prover.get_qualities_for_challenge(challenge_hash)
                 j = 0
                 plot_seed = plot_info.prover.get_id()
                 ccp = ProofOfSpace.can_create_proof(
@@ -514,9 +520,12 @@ class BlockTools:
                     challenge_hash,
                     test_constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"],
                 )
+                if not ccp:
+                    continue
+                qualities = plot_info.prover.get_qualities_for_challenge(challenge_hash)
                 for quality in qualities:
                     qual_int = int.from_bytes(quality, "big", signed=False)
-                    if qual_int > best_quality and ccp:
+                    if qual_int > best_quality:
                         best_quality = qual_int
                         selected_quality = quality
                         selected_plot_info = plot_info
@@ -532,7 +541,8 @@ class BlockTools:
         )
 
         plot_pk = ProofOfSpace.generate_plot_public_key(
-            plot_info.harvester_sk.get_public_key(), plot_info.farmer_public_key
+            selected_plot_info.harvester_sk.get_public_key(),
+            selected_plot_info.farmer_public_key,
         )
         proof_of_space: ProofOfSpace = ProofOfSpace(
             challenge_hash,
@@ -547,6 +557,8 @@ class BlockTools:
             min_iters,
             test_constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"],
         )
+        if self.real_plots:
+            print(f"Performing {number_iters} VDF iterations")
 
         int_size = (test_constants["DISCRIMINANT_SIZE_BITS"] + 16) >> 4
 
@@ -679,6 +691,7 @@ if __name__ == "__main__":
     from src.util.default_root import DEFAULT_ROOT_PATH
     from src.consensus.constants import constants as consensus_constants
 
+    initialize_logging("block_tools", {"log_stdout": True}, DEFAULT_ROOT_PATH)
     bt = BlockTools(root_path=DEFAULT_ROOT_PATH, real_plots=True)
     print(
         bytes(
@@ -686,7 +699,11 @@ if __name__ == "__main__":
                 {},
                 bytes([2] * 32),
                 b"0",
-                "30944219616695e48f7a9b54b38877104a1f5fbe85c61da2fbe35275418a64bc",
+                bytes32(
+                    bytes.fromhex(
+                        "30944219616695e48f7a9b54b38877104a1f5fbe85c61da2fbe35275418a64bc"
+                    )
+                ),
             )
         )
     )

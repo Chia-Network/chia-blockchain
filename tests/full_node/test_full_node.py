@@ -24,8 +24,7 @@ from src.util.hash import std_hash
 from src.full_node.full_node import FullNode
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
-from tests.setup_nodes import setup_two_nodes, test_constants
-from tests.block_tools import BlockTools
+from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.wallet_tools import WalletTool
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.coin import hash_coin_list
@@ -37,8 +36,6 @@ from src.util.merkle_set import (
 )
 from src.util.errors import Err, ConsensusError
 from tests.time_out_assert import time_out_assert
-
-bt = BlockTools()
 
 
 async def get_block_path(full_node: FullNode):
@@ -271,7 +268,9 @@ class TestFullNodeProtocol:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         wallet_a, wallet_receiver, _ = wallet_blocks
 
-        no_unf_block = fnp.NewProofOfTime(uint32(5), bytes(32 * [1]), uint64(124512))
+        no_unf_block = fnp.NewProofOfTime(
+            uint32(5), bytes(32 * [1]), uint64(124512), uint8(2)
+        )
         assert len([x async for x in full_node_1.new_proof_of_time(no_unf_block)]) == 0
 
         blocks = await get_block_path(full_node_1)
@@ -294,15 +293,17 @@ class TestFullNodeProtocol:
             unf_block.height,
             unf_block.proof_of_space.challenge_hash,
             res[0].message.data.iterations_needed,
+            uint8(2),
         )
         assert len([x async for x in full_node_1.new_proof_of_time(dont_have)]) == 1
 
         [x async for x in full_node_1.respond_block(fnp.RespondBlock(blocks_new[-1]))]
-
+        assert blocks_new[-1].proof_of_time is not None
         already_have = fnp.NewProofOfTime(
             unf_block.height,
             unf_block.proof_of_space.challenge_hash,
             res[0].message.data.iterations_needed,
+            blocks_new[-1].proof_of_time.witness_type,
         )
         assert len([x async for x in full_node_1.new_proof_of_time(already_have)]) == 0
 
@@ -315,6 +316,7 @@ class TestFullNodeProtocol:
             blocks[3].height,
             blocks[3].proof_of_space.challenge_hash,
             blocks[3].proof_of_time.number_of_iterations,
+            blocks[3].proof_of_time.witness_type,
         )
         res = [x async for x in full_node_1.request_proof_of_time(request)]
         assert len(res) == 1
@@ -324,6 +326,7 @@ class TestFullNodeProtocol:
             blocks[3].height,
             blocks[3].proof_of_space.challenge_hash,
             blocks[3].proof_of_time.number_of_iterations + 1,
+            blocks[3].proof_of_time.witness_type,
         )
         res_bad = [x async for x in full_node_1.request_proof_of_time(request_bad)]
         assert len(res_bad) == 1
@@ -344,6 +347,7 @@ class TestFullNodeProtocol:
             blocks_new[-1].height,
             blocks_new[-1].proof_of_space.challenge_hash,
             blocks_new[-1].proof_of_time.number_of_iterations,
+            blocks_new[-1].proof_of_time.witness_type,
         )
         [x async for x in full_node_1.new_proof_of_time(new_pot)]
 

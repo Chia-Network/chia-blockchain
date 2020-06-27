@@ -14,9 +14,7 @@ from src.full_node.blockchain import Blockchain
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
-from tests.block_tools import BlockTools
-from tests.setup_nodes import test_constants
-from tests.block_tools import BlockTools
+from tests.setup_nodes import test_constants, bt
 
 
 @pytest.fixture(scope="module")
@@ -29,7 +27,6 @@ class TestBlockStore:
     @pytest.mark.asyncio
     async def test_block_store(self):
         assert sqlite3.threadsafety == 1
-        bt = BlockTools()
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
         blocks_alt = bt.get_consecutive_blocks(test_constants, 3, [], 9, b"1")
         db_filename = Path("blockchain_test.db")
@@ -110,7 +107,6 @@ class TestBlockStore:
 
     @pytest.mark.asyncio
     async def test_deadlock(self):
-        bt = BlockTools()
         blocks = bt.get_consecutive_blocks(test_constants, 10, [], 9, b"0")
         db_filename = Path("blockchain_test.db")
 

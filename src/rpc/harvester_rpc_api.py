@@ -34,7 +34,7 @@ class HarvesterRpcApi:
         }
 
     async def refresh_plots(self, request: Dict) -> Dict:
-        self.service._refresh_plots()
+        await self.service._refresh_plots()
         return {"success": True}
 
     async def delete_plot(self, request: Dict) -> Dict:
@@ -44,5 +44,5 @@ class HarvesterRpcApi:
 
     async def add_plot_directory(self, request: Dict) -> Dict:
         dirname = request["dirname"]
-        success = self.service._add_plot_directory(dirname)
+        success = await self.service._add_plot_directory(dirname)
         return {"success": success}

@@ -19,10 +19,12 @@ from tests.block_tools import BlockTools
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
-bt = BlockTools()
-
 
 class FullNodeSimulator(FullNode):
+    def __init__(self, config, root_path, name, override_constants):
+        super().__init__(config, root_path, name, override_constants)
+        self.bt = BlockTools()
+
     def _set_server(self, server: ChiaServer):
         super()._set_server(server)
 
