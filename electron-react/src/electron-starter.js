@@ -101,21 +101,7 @@ const createPyProc = () => {
   //pyProc.unref();
 };
 
-const exitPyProc = () => {
-  // Should be a setting
-  if (pyProc != null) {
-    if (process.platform === "win32") {
-      process.stdout.write("Killing daemon on windows");
-      var cp = require("child_process");
-      cp.execSync("taskkill /PID " + pyProc.pid + " /T /F");
-    } else {
-      process.stdout.write("Killing daemon on other platforms");
-      pyProc.kill();
-      pyProc = null;
-      pyPort = null;
-    }
-  }
-};
+const exitPyProc = e => {};
 
 app.on("ready", createPyProc);
 app.on("will-quit", exitPyProc);
@@ -171,10 +157,35 @@ const createWindow = () => {
   // if (!guessPackaged()) {
   //   mainWindow.webContents.openDevTools();
   // }
-
-  mainWindow.on("closed", () => {
-    mainWindow = null;
+  mainWindow.on("close", e => {
+    var choice = require("electron").dialog.showMessageBoxSync({
+      type: "question",
+      buttons: ["Yes", "No"],
+      title: "Confirm",
+      message: "Are you sure you want to quit? Plotting and farming will stop."
+    });
+    if (choice == 1) {
+      e.preventDefault();
+      return;
+    }
+    // Should be a setting
+    if (pyProc != null) {
+      if (process.platform === "win32") {
+        process.stdout.write("Killing daemon on windows");
+        var cp = require("child_process");
+        cp.execSync("taskkill /PID " + pyProc.pid + " /T /F");
+      } else {
+        process.stdout.write("Killing daemon on other platforms");
+        pyProc.kill();
+        pyProc = null;
+        pyPort = null;
+      }
+    }
   });
+
+  // mainWindow.on("closed", () => {
+  //   mainWindow = null;
+  // });
 };
 
 app.on("ready", createWindow);
