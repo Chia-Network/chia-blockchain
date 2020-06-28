@@ -185,8 +185,11 @@ export const handle_message = (store, payload) => {
     store.dispatch(changeEntranceMenu(presentSelectKeys));
   } else if (payload.command === "get_private_key") {
     const text =
-      "Extended hex key: " +
+      "Extended private key: " +
       payload.data.private_key.esk +
+      "\n" +
+      "Extended public key: " +
+      payload.data.private_key.epk +
       "\n" +
       (payload.data.private_key.seed
         ? "seed: " + payload.data.private_key.seed
