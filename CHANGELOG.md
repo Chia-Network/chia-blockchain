@@ -16,6 +16,9 @@ This requires a high number of CPUs. To use it, set timelord.fast_algorithm = Tr
 reducing the database size. Full nodes send 100 random un-compact blocks per hour to timelords, and if
 timelord.sanitizer_mode = True, the timelord will work on those challenges.
 - Ci's check to see if they have secret access and attempt to fail cleanly so that ci runs successfully complete from PRs or forked repositories.
+- Ability to add plots by directory name in UI
+- Confirm before closing UI
+- Farmer now sends challenges after handshake with harvester
 
 ### Changed
 - Minor changes have been made across the repositories to better support compiling on OpenBSD. HT @n1000.
@@ -24,6 +27,18 @@ timelord.sanitizer_mode = True, the timelord will work on those challenges.
 - Improve test speed with smaller discriminants, less blocks, less keys, and smaller plots.
 - RPC servers and clients were refactored.
 - Changed XCH units to TXCH units for testnet.
+- The keychain no longer support old keys that don't have mnemonics
+- The keychain uses BIP39 for seed derivation, using the "" passphrase, and also stores public keys
+- Plots.yaml has been replaced with a storing keys in the plots, and a list of directories in config.yaml
+- Auto scanning of plot directories for .plot files
+- The block header format was changed (puzzle hashes and pool signature)
+- Coinbase and fees coin are now in merkle set, and bip158 filter
+- New harvester protocol with 2/2 harvester and farmer signatures, and modified farmer and full node protocols
+- 255/256 filter which allows many plots per harvester
+- Improved create_plots and check_plots scripts
+- Use real plot sizes in UI
+- Use chacha proof of space **(not on master yet)**
+- Plot refreshing happens during all new challenges, and only new/modified files are read
 
 ### Fixed
 - uPnP now works on Windows.
@@ -33,6 +48,7 @@ timelord.sanitizer_mode = True, the timelord will work on those challenges.
 - Harvester no longer runs into 512 maximum file handles open on Windows.
 - The version generator for new installers incorrectly handled the "dev" versions after a release tag.
 - Due to a python bug, ssl connections could randomly fail. Worked around [Python issue 29288](https://bugs.python.org/issue29288)
+- Removed websocket max message limit, allowing for more plots
 
 ## [1.0beta7] aka Beta 1.7 - 2020-06-08
 
