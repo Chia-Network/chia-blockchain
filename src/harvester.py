@@ -27,6 +27,8 @@ class Harvester:
     failed_to_open_filenames: List[Path]
     no_key_filenames: List[Path]
     farmer_public_keys: List[PublicKey]
+    pool_public_keys: List[PublicKey]
+    cached_challenges: List[harvester_protocol.NewChallenge]
     root_path: Path
     _is_shutdown: bool
     executor: concurrent.futures.ThreadPoolExecutor
@@ -46,10 +48,12 @@ class Harvester:
         self._is_shutdown = False
         self.global_connections: Optional[PeerConnections] = None
         self.farmer_public_keys = []
+        self.pool_public_keys = []
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
         self.state_changed_callback = None
         self.server = None
         self.constants = consensus_constants.copy()
+        self.cached_challenges = []
         for key, value in override_constants.items():
             self.constants[key] = value
 
@@ -83,6 +87,7 @@ class Harvester:
                     "plot-seed": prover.get_id(),
                     "pool_public_key": plot_info.pool_public_key,
                     "farmer_public_key": plot_info.farmer_public_key,
+                    "plot_public_key": plot_info.plot_public_key,
                     "harvester_sk": plot_info.harvester_sk,
                     "file_size": plot_info.file_size,
                     "time_modified": plot_info.time_modified,
@@ -149,11 +154,19 @@ class Harvester:
         """
         self.farmer_public_keys = harvester_handshake.farmer_public_keys
         self.pool_public_keys = harvester_handshake.pool_public_keys
+
         await self._refresh_plots()
+
         if len(self.provers) == 0:
             log.warning(
                 "Not farming any plots on this harvester. Check your configuration."
             )
+            return
+
+        for new_challenge in self.cached_challenges:
+            async for msg in self.new_challenge(new_challenge):
+                yield msg
+        self.cached_challenges = []
 
     @api_request
     async def new_challenge(self, new_challenge: harvester_protocol.NewChallenge):
@@ -162,6 +175,11 @@ class Harvester:
         for any proofs of space that are are found in the plots. If proofs are found, a
         ChallengeResponse message is sent for each of the proofs found.
         """
+        if len(self.pool_public_keys) == 0 or len(self.farmer_public_keys) == 0:
+            self.cached_challenges = self.cached_challenges[:5]
+            self.cached_challenges.insert(0, new_challenge)
+            return
+
         start = time.time()
         assert len(new_challenge.challenge_hash) == 32
 
@@ -258,6 +276,7 @@ class Harvester:
                     prover,
                     plot_info.pool_public_key,
                     plot_info.farmer_public_key,
+                    plot_info.plot_public_key,
                     plot_info.harvester_sk,
                     plot_info.file_size,
                     plot_info.time_modified,

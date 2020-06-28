@@ -22,9 +22,7 @@ class DaemonProxy:
         return request
 
     async def start(self):
-        self.websocket = await websockets.connect(
-            self._uri, max_size=(1024 * 1024 * 30)
-        )
+        self.websocket = await websockets.connect(self._uri, max_size=None)
 
         async def listener():
             while True:
