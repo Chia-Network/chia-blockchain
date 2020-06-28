@@ -1,5 +1,6 @@
 from typing import Dict, Optional, Union
 
+from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
 from src.types.full_block import FullBlock
 from src.types.header import Header
@@ -13,7 +14,7 @@ from src.util.significant_bits import (
 
 
 def get_next_difficulty(
-    constants: Dict,
+    constants: ConsensusConstants,
     headers: Dict[bytes32, Header],
     height_to_hash: Dict[uint32, bytes32],
     block: Header,
@@ -151,7 +152,7 @@ def get_next_difficulty(
 
 
 def get_next_min_iters(
-    constants: Dict,
+    constants: ConsensusConstants,
     headers: Dict[bytes32, Header],
     height_to_hash: Dict[uint32, bytes32],
     block: Union[FullBlock, HeaderBlock],

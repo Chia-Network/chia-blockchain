@@ -7,6 +7,7 @@ import random
 
 import aiosqlite
 import pytest
+from src.consensus.constants import constants as consensus_constants
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.full_node.blockchain import Blockchain

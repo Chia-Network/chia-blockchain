@@ -5,7 +5,7 @@ from typing import Dict, List, Set, Optional, Callable, Tuple
 from blspy import Util, InsecureSignature, PrependSignature, PublicKey
 from src.util.keychain import Keychain
 
-from src.consensus.constants import constants as consensus_constants
+from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_iterations_quality
 from src.protocols import farmer_protocol, harvester_protocol
 from src.server.connection import PeerConnections
@@ -30,7 +30,7 @@ class Farmer:
         farmer_config: Dict,
         pool_config: Dict,
         keychain: Keychain,
-        override_constants={},
+        consensus_constants: ConsensusConstants,
     ):
         self.config = farmer_config
         self.harvester_responses_proofs: Dict[Tuple, ProofOfSpace] = {}
@@ -45,7 +45,7 @@ class Farmer:
         self.unfinished_challenges: Dict[uint128, List[bytes32]] = {}
         self.current_weight: uint128 = uint128(0)
         self.proof_of_time_estimate_ips: uint64 = uint64(10000)
-        self.constants = consensus_constants.copy()
+        self.constants = consensus_constants
         self._shut_down = False
         self.server = None
         self.keychain = keychain
@@ -54,8 +54,6 @@ class Farmer:
         if len(self._get_public_keys()) == 0:
             error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
             raise RuntimeError(error_str)
-        for key, value in override_constants.items():
-            self.constants[key] = value
 
         # This is the farmer configuration
         self.wallet_target = bytes.fromhex(self.config["xch_target_puzzle_hash"])
@@ -133,9 +131,10 @@ class Farmer:
 
         estimate_min = (
             self.proof_of_time_estimate_ips
-            * self.constants["BLOCK_TIME_TARGET"]
-            / self.constants["MIN_ITERS_PROPORTION"]
+            * self.constants.BLOCK_TIME_TARGET
+            / self.constants.MIN_ITERS_PROPORTION
         )
+        estimate_min = uint64(int(estimate_min))
         number_iters: uint64 = calculate_iterations_quality(
             quality_string, plot_size, difficulty, estimate_min,
         )
@@ -233,9 +232,10 @@ class Farmer:
 
         estimate_min = (
             self.proof_of_time_estimate_ips
-            * self.constants["BLOCK_TIME_TARGET"]
-            / self.constants["MIN_ITERS_PROPORTION"]
+            * self.constants.BLOCK_TIME_TARGET
+            / self.constants.MIN_ITERS_PROPORTION
         )
+        estimate_min = uint64(int(estimate_min))
         number_iters: uint64 = calculate_iterations_quality(
             computed_quality_string, response.proof.size, difficulty, estimate_min,
         )

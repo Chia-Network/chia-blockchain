@@ -21,8 +21,8 @@ OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
 
 class FullNodeSimulator(FullNode):
-    def __init__(self, config, root_path, name, override_constants):
-        super().__init__(config, root_path, name, override_constants)
+    def __init__(self, config, root_path, consensus_constants, name):
+        super().__init__(config, root_path, consensus_constants, name)
         self.bt = BlockTools()
 
     def _set_server(self, server: ChiaServer):
@@ -135,7 +135,7 @@ class FullNodeSimulator(FullNode):
             fees = bundle.fees()
 
         more_blocks = self.bt.get_consecutive_blocks(
-            self.constants,
+            self.constants.copy(),
             1,
             current_block,
             10,
@@ -161,7 +161,7 @@ class FullNodeSimulator(FullNode):
         block_count = new_index - old_index
 
         more_blocks = self.bt.get_consecutive_blocks(
-            self.constants,
+            self.constants.copy(),
             block_count,
             current_blocks[:old_index],
             10,

@@ -7,7 +7,6 @@ from typing import Dict, List, Optional, Tuple
 
 
 from chiavdf import create_discriminant
-from src.consensus.constants import constants as consensus_constants
 from src.protocols import timelord_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
@@ -21,11 +20,8 @@ log = logging.getLogger(__name__)
 
 
 class Timelord:
-    def __init__(self, config: Dict, override_constants: Dict = {}):
-        self.constants = consensus_constants.copy()
-        for key, value in override_constants.items():
-            self.constants[key] = value
-
+    def __init__(self, config: Dict, discriminant_size_bits: int):
+        self.discriminant_size_bits = discriminant_size_bits
         self.config: Dict = config
         self.ips_estimate = {
             socket.gethostbyname(k): v
@@ -250,9 +246,7 @@ class Timelord:
     async def _do_process_communication(
         self, challenge_hash, challenge_weight, ip, reader, writer
     ):
-        disc: int = create_discriminant(
-            challenge_hash, self.constants["DISCRIMINANT_SIZE_BITS"]
-        )
+        disc: int = create_discriminant(challenge_hash, self.discriminant_size_bits)
         # Depending on the flags 'fast_algorithm' and 'sanitizer_mode',
         # the timelord tells the vdf_client what to execute.
         if not self.sanitizer_mode:
@@ -385,7 +379,7 @@ class Timelord:
                     proof_bytes,
                 )
 
-                if not proof_of_time.is_valid(self.constants["DISCRIMINANT_SIZE_BITS"]):
+                if not proof_of_time.is_valid(self.discriminant_size_bits):
                     log.error("Invalid proof of time")
 
                 response = timelord_protocol.ProofOfTimeFinished(proof_of_time)

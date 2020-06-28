@@ -6,7 +6,7 @@ import logging
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
-from src.consensus.constants import constants as consensus_constants
+from src.consensus.constants import ConsensusConstants
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.util.bundle_tools import best_solution_program
@@ -32,11 +32,8 @@ log = logging.getLogger(__name__)
 
 
 class MempoolManager:
-    def __init__(self, coin_store: CoinStore, override_constants: Dict = {}):
-        # Allow passing in custom overrides
-        self.constants: Dict = consensus_constants.copy()
-        for key, value in override_constants.items():
-            self.constants[key] = value
+    def __init__(self, coin_store: CoinStore, consensus_constants: ConsensusConstants):
+        self.constants: ConsensusConstants = consensus_constants
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self.potential_txs: Dict[bytes32, SpendBundle] = {}
@@ -125,7 +122,9 @@ class MempoolManager:
         # Calculate the cost and fees
         program = best_solution_program(new_spend)
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-        fail_reason, npc_list, cost = calculate_cost_of_program(program)
+        fail_reason, npc_list, cost = calculate_cost_of_program(
+            program, self.constants.CLVM_COST_RATIO_CONSTANT,
+        )
         if fail_reason:
             return None, MempoolInclusionStatus.FAILED, fail_reason
 

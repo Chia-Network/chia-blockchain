@@ -1,3 +1,4 @@
+from src.consensus.constants import constants
 from src.timelord import Timelord
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
@@ -18,7 +19,7 @@ def service_kwargs_for_timelord(root_path):
         PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])
     ]
 
-    api = Timelord(config, config)
+    api = Timelord(config, constants["DISCRIMINANT_SIZE_BITS"])
 
     async def start_callback():
         await api._start()

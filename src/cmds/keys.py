@@ -28,9 +28,9 @@ def help_message():
     print(f"chia keys show (displays all the keys in keychain)")
     print(f"chia keys add -m [24 words] (add a private key through the mnemonic)")
     print(
-        f"chia keys delete -f [fingerprint] (delete a key by it's pk fingerprint in hex form)"
+        "chia keys delete -f [fingerprint] (delete a key by it's pk fingerprint in hex form)"
     )
-    print(f"chia keys delete_all (delete all private keys in keychain)")
+    print("chia keys delete_all (delete all private keys in keychain)")
 
 
 def make_parser(parser):

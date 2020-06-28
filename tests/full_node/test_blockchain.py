@@ -13,6 +13,9 @@ from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
 from src.util.ints import uint8, uint64, uint32
 from src.consensus.constants import constants as consensus_constants
+from src.util.ints import uint8, uint64
+from src.consensus.constants import ConsensusConstants
+from tests.block_tools import BlockTools
 from src.util.errors import Err
 from src.types.sized_bytes import bytes32
 from src.types.pool_target import PoolTarget
@@ -20,23 +23,22 @@ from src.types.BLSSignature import BLSSignature
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from tests.setup_nodes import bt
+from tests.block_tools import BlockTools
+from tests.make_test_constants import make_test_constants_with_genesis
 
-test_constants: Dict[str, Any] = consensus_constants.copy()
-test_constants.update(
+bt = BlockTools()
+
+test_constants: ConsensusConstants = make_test_constants_with_genesis(
     {
         "DIFFICULTY_STARTING": 1,
         "DISCRIMINANT_SIZE_BITS": 8,
         "BLOCK_TIME_TARGET": 10,
-        "MIN_BLOCK_TIME": 2,
         "DIFFICULTY_EPOCH": 6,  # The number of blocks per epoch
+        "DIFFICULTY_WARP_FACTOR": 3,
         "DIFFICULTY_DELAY": 2,  # EPOCH / WARP_FACTOR
         "MIN_ITERS_STARTING": 50 * 1,
         "NUMBER_ZERO_BITS_CHALLENGE_SIG": 1,
     }
-)
-test_constants["GENESIS_BLOCK"] = bytes(
-    bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
 )
 
 

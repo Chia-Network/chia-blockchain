@@ -3,6 +3,7 @@ import time
 from typing import Dict, List, Optional, Tuple
 import blspy
 
+from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_iterations_quality
 from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_min_iters
 from src.types.challenge import Challenge
@@ -19,7 +20,7 @@ log = logging.getLogger(__name__)
 
 
 async def validate_unfinished_block_header(
-    constants: Dict,
+    constants: ConsensusConstants,
     headers: Dict[bytes32, Header],
     height_to_hash: Dict[uint32, bytes32],
     block_header: Header,
@@ -154,7 +155,7 @@ async def validate_unfinished_block_header(
 
 
 async def validate_finished_block_header(
-    constants: Dict,
+    constants: ConsensusConstants,
     headers: Dict[bytes32, Header],
     height_to_hash: Dict[uint32, bytes32],
     block: HeaderBlock,
@@ -221,7 +222,7 @@ async def validate_finished_block_header(
     return None
 
 
-def pre_validate_finished_block_header(constants: Dict, data: bytes):
+def pre_validate_finished_block_header(constants: ConsensusConstants, data: bytes):
     """
     Validates all parts of block that don't need to be serially checked
     """

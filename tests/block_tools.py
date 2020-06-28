@@ -22,10 +22,10 @@ from chiabip158 import PyBIP158
 from chiapos import DiskPlotter, DiskProver
 from src import __version__
 from src.consensus.coinbase import create_puzzlehash_for_pk
+from src.consensus.constants import ConsensusConstants
 from src.cmds.init import create_default_chia_config, initialize_ssl
 from src.types.BLSSignature import BLSPublicKey
 from src.consensus import block_rewards, pot_iterations
-from src.consensus.constants import constants
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 from src.consensus.pot_iterations import calculate_iterations
@@ -214,7 +214,7 @@ class BlockTools:
 
     def get_consecutive_blocks(
         self,
-        input_constants: Dict,
+        test_constants: ConsensusConstants,
         num_blocks: int,
         block_list: List[FullBlock] = [],
         seconds_per_block=None,
@@ -225,19 +225,11 @@ class BlockTools:
     ) -> List[FullBlock]:
         if transaction_data_at_height is None:
             transaction_data_at_height = {}
-        test_constants: Dict[str, Any] = constants.copy()
-        for key, value in input_constants.items():
-            test_constants[key] = value
         if seconds_per_block is None:
             seconds_per_block = test_constants["BLOCK_TIME_TARGET"]
 
         if len(block_list) == 0:
-            if "GENESIS_BLOCK" in test_constants:
-                block_list.append(FullBlock.from_bytes(test_constants["GENESIS_BLOCK"]))
-            else:
-                block_list.append(
-                    self.create_genesis_block(test_constants, std_hash(seed), seed)
-                )
+            block_list.append(FullBlock.from_bytes(test_constants["GENESIS_BLOCK"]))
             prev_difficulty = test_constants["DIFFICULTY_STARTING"]
             curr_difficulty = prev_difficulty
             curr_min_iters = test_constants["MIN_ITERS_STARTING"]
@@ -392,7 +384,7 @@ class BlockTools:
 
     def create_genesis_block(
         self,
-        input_constants: Dict,
+        test_constants: ConsensusConstants,
         challenge_hash=bytes([0] * 32),
         seed: bytes = b"",
         reward_puzzlehash: bytes32 = None,
@@ -400,10 +392,6 @@ class BlockTools:
         """
         Creates the genesis block with the specified details.
         """
-        test_constants: Dict[str, Any] = constants.copy()
-        for key, value in input_constants.items():
-            test_constants[key] = value
-
         return self._create_block(
             test_constants,
             challenge_hash,
@@ -421,7 +409,7 @@ class BlockTools:
 
     def create_next_block(
         self,
-        input_constants: Dict,
+        test_constants: ConsensusConstants,
         prev_block: FullBlock,
         timestamp: uint64,
         update_difficulty: bool,
@@ -436,9 +424,6 @@ class BlockTools:
         """
         Creates the next block with the specified details.
         """
-        test_constants: Dict[str, Any] = constants.copy()
-        for key, value in input_constants.items():
-            test_constants[key] = value
         assert prev_block.proof_of_time is not None
         if update_difficulty:
             challenge = Challenge(
@@ -479,7 +464,7 @@ class BlockTools:
 
     def _create_block(
         self,
-        test_constants: Dict,
+        test_constants: ConsensusConstants,
         challenge_hash: bytes32,
         height: uint32,
         prev_header_hash: bytes32,
@@ -702,13 +687,14 @@ class BlockTools:
 # Run by doing python -m tests.block_tools
 if __name__ == "__main__":
     from src.util.default_root import DEFAULT_ROOT_PATH
+    from src.consensus.constants import constants as consensus_constants
 
     initialize_logging("block_tools", {"log_stdout": True}, DEFAULT_ROOT_PATH)
     bt = BlockTools(root_path=DEFAULT_ROOT_PATH, real_plots=True)
     print(
         bytes(
             bt.create_genesis_block(
-                {},
+                consensus_constants,
                 bytes([0] * 32),
                 b"0",
                 bytes32(

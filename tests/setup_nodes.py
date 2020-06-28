@@ -2,10 +2,11 @@ import asyncio
 import signal
 
 from secrets import token_bytes
-from typing import Any, Dict, Tuple, List, Optional
+from typing import Dict, Tuple, List, Optional
+from src.consensus.constants import ConsensusConstants
 from src.full_node.full_node import FullNode
 from src.server.connection import NodeType
-from src.server.server import ChiaServer, start_server
+from src.server.server import ChiaServer
 from src.simulator.full_node_simulator import FullNodeSimulator
 from src.timelord_launcher import spawn_process, kill_processes
 from src.util.keychain import Keychain
@@ -17,36 +18,37 @@ from src.farmer import Farmer
 from src.introducer import Introducer
 from src.timelord import Timelord
 from src.server.connection import PeerInfo
-from src.server.start_service import create_periodic_introducer_poll_task
 from src.util.ints import uint16, uint32
 from src.server.start_service import Service
-from src.rpc.harvester_rpc_api import HarvesterRpcApi
+from tests.make_test_constants import make_test_constants_with_genesis
 from tests.time_out_assert import time_out_assert
 
 
 bt = BlockTools()
 
-root_path = bt.root_path
 global_config = load_config(bt.root_path, "config.yaml")
 self_hostname = global_config["self_hostname"]
 
-test_constants: Dict[str, Any] = {
-    "DIFFICULTY_STARTING": 1,
-    "DISCRIMINANT_SIZE_BITS": 8,
-    "BLOCK_TIME_TARGET": 10,
-    "MIN_BLOCK_TIME": 2,
-    "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
-    "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
-    "PROPAGATION_THRESHOLD": 10,
-    "PROPAGATION_DELAY_THRESHOLD": 20,
-    "TX_PER_SEC": 1,
-    "MEMPOOL_BLOCK_BUFFER": 10,
-    "MIN_ITERS_STARTING": 50 * 1,
-    "NUMBER_ZERO_BITS_CHALLENGE_SIG": 1,
-}
-test_constants["GENESIS_BLOCK"] = bytes(
-    bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
+test_constants = make_test_constants_with_genesis(
+    {
+        "DIFFICULTY_STARTING": 1,
+        "DISCRIMINANT_SIZE_BITS": 8,
+        "BLOCK_TIME_TARGET": 10,
+        "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
+        "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
+        "PROPAGATION_THRESHOLD": 10,
+        "PROPAGATION_DELAY_THRESHOLD": 20,
+        "TX_PER_SEC": 1,
+        "MEMPOOL_BLOCK_BUFFER": 10,
+        "MIN_ITERS_STARTING": 50 * 1,
+        "NUMBER_ZERO_BITS_CHALLENGE_SIG": 1,
+        "CLVM_COST_RATIO_CONSTANT": 108,
+    }
 )
+
+
+def constants_for_dic(dic):
+    return test_constants.replace(**dic)
 
 
 async def _teardown_nodes(node_aiters: List) -> None:
@@ -59,18 +61,14 @@ async def _teardown_nodes(node_aiters: List) -> None:
 
 
 async def setup_full_node(
+    consensus_constants: ConsensusConstants,
     db_name,
     port,
     introducer_port=None,
     simulator=False,
     send_uncompact_interval=30,
-    dic={},
 ):
-    test_constants_copy = test_constants.copy()
-    for k in dic.keys():
-        test_constants_copy[k] = dic[k]
-
-    db_path = root_path / f"{db_name}"
+    db_path = bt.root_path / f"{db_name}"
     if db_path.exists():
         db_path.unlink()
 
@@ -87,9 +85,9 @@ async def setup_full_node(
     FullNodeApi = FullNodeSimulator if simulator else FullNode
     api = FullNodeApi(
         config=config,
-        root_path=root_path,
+        root_path=bt.root_path,
+        consensus_constants=consensus_constants,
         name=f"full_node_{port}",
-        override_constants=test_constants_copy,
     )
 
     started = asyncio.Event()
@@ -106,7 +104,7 @@ async def setup_full_node(
         await api._await_closed()
 
     service = Service(
-        root_path=root_path,
+        root_path=bt.root_path,
         api=api,
         node_type=NodeType.FULL_NODE,
         advertised_port=port,
@@ -133,24 +131,27 @@ async def setup_full_node(
 
 
 async def setup_wallet_node(
-    port, full_node_port=None, introducer_port=None, key_seed=None, dic={},
+    port,
+    full_node_port=None,
+    introducer_port=None,
+    key_seed=None,
+    dic={},
+    starting_height=None,
 ):
-    config = load_config(root_path, "config.yaml", "wallet")
-    if "starting_height" in dic:
-        config["starting_height"] = dic["starting_height"]
+    config = load_config(bt.root_path, "config.yaml", "wallet")
+    if starting_height is not None:
+        config["starting_height"] = starting_height
     config["initial_num_public_keys"] = 5
 
     entropy = token_bytes(32)
     keychain = Keychain(entropy.hex(), True)
     keychain.add_private_key(entropy, "")
-    test_constants_copy = test_constants.copy()
-    for k in dic.keys():
-        test_constants_copy[k] = dic[k]
+    consensus_constants = constants_for_dic(dic)
     first_pk = keychain.get_first_public_key()
     assert first_pk is not None
     db_path_key_suffix = str(first_pk.get_public_key().get_fingerprint())
     db_name = f"test-wallet-db-{port}"
-    db_path = root_path / f"test-wallet-db-{port}-{db_path_key_suffix}"
+    db_path = bt.root_path / f"test-wallet-db-{port}-{db_path_key_suffix}"
     if db_path.exists():
         db_path.unlink()
     config["database_path"] = str(db_name)
@@ -158,8 +159,8 @@ async def setup_wallet_node(
     api = WalletNode(
         config,
         keychain,
-        root_path,
-        override_constants=test_constants_copy,
+        bt.root_path,
+        consensus_constants=consensus_constants,
         name="wallet1",
     )
     periodic_introducer_poll = None
@@ -187,7 +188,7 @@ async def setup_wallet_node(
         await api._await_closed()
 
     service = Service(
-        root_path=root_path,
+        root_path=bt.root_path,
         api=api,
         node_type=NodeType.WALLET,
         advertised_port=port,
@@ -237,7 +238,7 @@ async def setup_harvester(port, farmer_port, dic={}):
         await api._await_closed()
 
     service = Service(
-        root_path=root_path,
+        root_path=bt.root_path,
         api=api,
         node_type=NodeType.HARVESTER,
         advertised_port=port,
@@ -262,10 +263,9 @@ async def setup_harvester(port, farmer_port, dic={}):
 
 async def setup_farmer(port, full_node_port: Optional[uint16] = None, dic={}):
     config = load_config(bt.root_path, "config.yaml", "farmer")
-    config_pool = load_config(root_path, "config.yaml", "pool")
-    test_constants_copy = test_constants.copy()
-    for k in dic.keys():
-        test_constants_copy[k] = dic[k]
+    config_pool = load_config(bt.root_path, "config.yaml", "pool")
+    consensus_constants = constants_for_dic(dic)
+
     config["xch_target_puzzle_hash"] = bt.farmer_ph.hex()
     config["pool_public_keys"] = [bytes(pk).hex() for pk in bt.all_pubkeys]
     config_pool["xch_target_puzzle_hash"] = bt.pool_ph.hex()
@@ -274,7 +274,7 @@ async def setup_farmer(port, full_node_port: Optional[uint16] = None, dic={}):
     else:
         connect_peers = []
 
-    api = Farmer(config, config_pool, bt.keychain, test_constants_copy)
+    api = Farmer(config, config_pool, bt.keychain, consensus_constants)
 
     started = asyncio.Event()
 
@@ -283,7 +283,7 @@ async def setup_farmer(port, full_node_port: Optional[uint16] = None, dic={}):
         started.set()
 
     service = Service(
-        root_path=root_path,
+        root_path=bt.root_path,
         api=api,
         node_type=NodeType.FARMER,
         advertised_port=port,
@@ -323,7 +323,7 @@ async def setup_introducer(port, dic={}):
         await api._await_closed()
 
     service = Service(
-        root_path=root_path,
+        root_path=bt.root_path,
         api=api,
         node_type=NodeType.INTRODUCER,
         advertised_port=port,
@@ -361,14 +361,12 @@ async def setup_vdf_clients(port):
 
 async def setup_timelord(port, full_node_port, sanitizer, dic={}):
     config = load_config(bt.root_path, "config.yaml", "timelord")
-    test_constants_copy = test_constants.copy()
-    for k in dic.keys():
-        test_constants_copy[k] = dic[k]
+    consensus_constants = constants_for_dic(dic)
     config["sanitizer_mode"] = sanitizer
     if sanitizer:
         config["vdf_server"]["port"] = 7999
 
-    api = Timelord(config, test_constants_copy)
+    api = Timelord(config, consensus_constants["DISCRIMINANT_SIZE_BITS"])
 
     started = asyncio.Event()
 
@@ -384,7 +382,7 @@ async def setup_timelord(port, full_node_port, sanitizer, dic={}):
         await api._await_closed()
 
     service = Service(
-        root_path=root_path,
+        root_path=bt.root_path,
         api=api,
         node_type=NodeType.TIMELORD,
         advertised_port=port,
@@ -412,9 +410,14 @@ async def setup_two_nodes(dic={}):
     """
     Setup and teardown of two full nodes, with blockchains and separate DBs.
     """
+    consensus_constants = constants_for_dic(dic)
     node_iters = [
-        setup_full_node("blockchain_test.db", 21234, simulator=False, dic=dic),
-        setup_full_node("blockchain_test_2.db", 21235, simulator=False, dic=dic),
+        setup_full_node(
+            consensus_constants, "blockchain_test.db", 21234, simulator=False
+        ),
+        setup_full_node(
+            consensus_constants, "blockchain_test_2.db", 21235, simulator=False
+        ),
     ]
 
     fn1, s1 = await node_iters[0].__anext__()
@@ -425,10 +428,13 @@ async def setup_two_nodes(dic={}):
     await _teardown_nodes(node_iters)
 
 
-async def setup_node_and_wallet(dic={}):
+async def setup_node_and_wallet(dic={}, starting_height=None):
+    consensus_constants = constants_for_dic(dic)
     node_iters = [
-        setup_full_node("blockchain_test.db", 21234, simulator=False, dic=dic),
-        setup_wallet_node(21235, None, dic=dic),
+        setup_full_node(
+            consensus_constants, "blockchain_test.db", 21234, simulator=False
+        ),
+        setup_wallet_node(21235, None, dic=dic, starting_height=starting_height),
     ]
 
     full_node, s1 = await node_iters[0].__anext__()
@@ -440,23 +446,26 @@ async def setup_node_and_wallet(dic={}):
 
 
 async def setup_simulators_and_wallets(
-    simulator_count: int, wallet_count: int, dic: Dict
+    simulator_count: int, wallet_count: int, dic: Dict, starting_height=None,
 ):
     simulators: List[Tuple[FullNode, ChiaServer]] = []
     wallets = []
     node_iters = []
 
+    consensus_constants = constants_for_dic(dic)
     for index in range(0, simulator_count):
         port = 50000 + index
         db_name = f"blockchain_test_{port}.db"
-        sim = setup_full_node(db_name, port, simulator=True, dic=dic)
+        sim = setup_full_node(consensus_constants, db_name, port, simulator=True)
         simulators.append(await sim.__anext__())
         node_iters.append(sim)
 
     for index in range(0, wallet_count):
         seed = bytes(uint32(index))
         port = 55000 + index
-        wlt = setup_wallet_node(port, None, key_seed=seed, dic=dic)
+        wlt = setup_wallet_node(
+            port, None, key_seed=seed, dic=dic, starting_height=starting_height
+        )
         wallets.append(await wlt.__anext__())
         node_iters.append(wlt)
 
@@ -480,14 +489,19 @@ async def setup_farmer_harvester(dic={}):
 
 
 async def setup_full_system(dic={}):
+    consensus_constants = constants_for_dic(dic)
     node_iters = [
         setup_introducer(21233),
         setup_harvester(21234, 21235, dic),
         setup_farmer(21235, uint16(21237), dic),
         setup_vdf_clients(8000),
         setup_timelord(21236, 21237, False, dic),
-        setup_full_node("blockchain_test.db", 21237, 21233, False, 10, dic),
-        setup_full_node("blockchain_test_2.db", 21238, 21233, False, 10, dic),
+        setup_full_node(
+            consensus_constants, "blockchain_test.db", 21237, 21233, False, 10
+        ),
+        setup_full_node(
+            consensus_constants, "blockchain_test_2.db", 21238, 21233, False, 10
+        ),
         setup_vdf_clients(7999),
         setup_timelord(21239, 21238, True, dic),
     ]

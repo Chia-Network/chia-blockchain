@@ -13,7 +13,8 @@ jobs:
         with:
           access_token: ${{ github.token }}
 
-      - uses: actions/checkout@v1
+      - name: Checkout Code
+        uses: actions/checkout@v1
         with:
           fetch-depth: 0
           # we need fetch-depth 0 so setuptools_scm can resolve tags
@@ -61,7 +62,7 @@ jobs:
           encoded-value: ${{ secrets.WIN_CODE_SIGN_CERT }}
           destination-file: .\electron-react\win_code_sign_cert.p12
 
-      - uses: actions/setup-python@v1
+      - uses: actions/setup-python@v2
         name: Install Python 3.7
         with:
           python-version: "3.7"
