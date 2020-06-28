@@ -5,6 +5,7 @@ from chiapos import DiskProver
 from dataclasses import dataclass
 import logging
 import traceback
+from src.types.proof_of_space import ProofOfSpace
 
 
 log = logging.getLogger(__name__)
@@ -15,6 +16,7 @@ class PlotInfo:
     prover: DiskProver
     pool_public_key: PublicKey
     farmer_public_key: PublicKey
+    plot_public_key: PublicKey
     harvester_sk: PrivateKey
     file_size: int
     time_modified: float
@@ -121,10 +123,14 @@ def load_plots(
                         continue
 
                 stat_info = filename.stat()
+                plot_public_key: PublicKey = ProofOfSpace.generate_plot_public_key(
+                    harvester_sk.get_public_key(), farmer_public_key
+                )
                 provers[filename] = PlotInfo(
                     prover,
                     pool_public_key,
                     farmer_public_key,
+                    plot_public_key,
                     harvester_sk,
                     stat_info.st_size,
                     stat_info.st_mtime,

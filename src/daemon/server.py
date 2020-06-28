@@ -24,7 +24,7 @@ try:
 except ImportError:
     has_fcntl = False
 
-from src.util.config import load_config_cli
+from src.util.config import load_config
 from src.util.logging import initialize_logging
 from src.util.path import mkdir
 from src.util.service_groups import validate_service
@@ -74,7 +74,7 @@ class WebSocketServer:
         self.connections: Dict[str, Any] = dict()  # service_name : WebSocket
         self.remote_address_map: Dict[str, str] = dict()  # remote_address: service_name
         self.ping_job = None
-        net_config = load_config_cli(root_path, "config.yaml")
+        net_config = load_config(root_path, "config.yaml")
         self.self_hostname = net_config["self_hostname"]
         self.daemon_port = net_config["daemon_port"]
 
@@ -95,7 +95,7 @@ class WebSocketServer:
             self.log.info("Not implemented")
 
         self.websocket_server = await websockets.serve(
-            self.safe_handle, self.self_hostname, self.daemon_port
+            self.safe_handle, self.self_hostname, self.daemon_port, max_size=None
         )
 
         self.log.info("Waiting Daemon WebSocketServer closure")
@@ -535,7 +535,7 @@ def singleton(lockfile, text="semaphore"):
 
 async def async_run_daemon(root_path):
     chia_init(root_path)
-    config = load_config_cli(root_path, "config.yaml")
+    config = load_config(root_path, "config.yaml")
     initialize_logging("daemon", config["logging"], root_path)
     lockfile = singleton(daemon_launch_lock_path(root_path))
     if lockfile is None:

@@ -305,6 +305,9 @@ class FullNodeRpcApi:
         newer_block_hex = request["newer_block_header_hash"]
         older_block_hex = request["older_block_header_hash"]
 
+        if newer_block_hex == older_block_hex:
+            return None
+
         newer_block_bytes = hexstr_to_bytes(newer_block_hex)
         older_block_bytes = hexstr_to_bytes(older_block_hex)
 
