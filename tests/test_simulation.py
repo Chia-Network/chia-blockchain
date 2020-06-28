@@ -9,14 +9,7 @@ from src.types.full_block import FullBlock
 from tests.make_test_constants import make_test_constants_with_genesis
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 
-test_constants: Dict[str, Any] = consensus_constants.copy()
-test_constants.update(
-    {
-        "DIFFICULTY_STARTING": 50,
-        "MIN_ITERS_STARTING": 500,
-        "NUMBER_ZERO_BITS_CHALLENGE_SIG": 1,
-    }
-)
+
 
 test_constants = make_test_constants_with_genesis({"DIFFICULTY_STARTING": 500, "MIN_ITERS_STARTING": 500})
 
