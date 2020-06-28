@@ -132,12 +132,7 @@ class ChiaServer:
             reader, writer = await asyncio.open_connection(
                 target_node.host, int(target_node.port), ssl=ssl_context
             )
-        except (
-            ConnectionRefusedError,
-            TimeoutError,
-            OSError,
-            asyncio.TimeoutError,
-        ) as e:
+        except Exception as e:
             self.log.warning(
                 f"Could not connect to {target_node}. {type(e)}{str(e)}. Aborting and removing peer."
             )

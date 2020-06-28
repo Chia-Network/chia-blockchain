@@ -26,7 +26,6 @@ import DeleteForeverIcon from "@material-ui/icons/DeleteForever";
 import ListItemSecondaryAction from "@material-ui/core/ListItemSecondaryAction";
 import IconButton from "@material-ui/core/IconButton";
 
-import { calculateSizeFromK } from "../util/plot_sizes";
 import { closeConnection, openConnection } from "../modules/farmerMessages";
 import {
   refreshPlots,
@@ -207,11 +206,10 @@ const FarmerStatus = props => {
   const totalNetworkSpace = useSelector(
     state => state.full_node_state.blockchain_state.space
   );
+
   var farmerSpace = 0;
   if (plots !== undefined) {
-    farmerSpace = plots
-      .map(p => calculateSizeFromK(p.size))
-      .reduce((a, b) => a + b, 0);
+    farmerSpace = plots.map(p => p.file_size).reduce((a, b) => a + b, 0);
   }
 
   const connected = useSelector(state => state.daemon_state.farmer_connected);
@@ -336,7 +334,7 @@ const Plots = props => {
   const handleClose = response => {
     setOpen(false);
     if (response) {
-      dispatch(addPlot(response));
+      dispatch(addPlotDirectory(response));
     }
   };
 
@@ -404,20 +402,30 @@ const Plots = props => {
                           <span>{item.filename.substring(0, 40)}...</span>
                         </Tooltip>
                       </TableCell>
-                      <TableCell align="right">{item.size}</TableCell>
+                      <TableCell align="right">
+                        {item.size} (
+                        {Math.round(
+                          (item.file_size * 1000) / (1024 * 1024 * 1024)
+                        ) / 1000}
+                        GB)
+                      </TableCell>
                       <TableCell align="right">
                         <Tooltip title={item["plot-seed"]} interactive>
                           <span>{item["plot-seed"].substring(0, 10)}</span>
                         </Tooltip>
                       </TableCell>
                       <TableCell align="right">
-                        <Tooltip title={item.plot_pk} interactive>
-                          <span>{item.plot_pk.substring(0, 10)}...</span>
+                        <Tooltip title={item.plot_public_key} interactive>
+                          <span>
+                            {item.plot_public_key.substring(0, 10)}...
+                          </span>
                         </Tooltip>
                       </TableCell>
                       <TableCell align="right">
-                        <Tooltip title={item.pool_pk} interactive>
-                          <span>{item.pool_pk.substring(0, 10)}...</span>
+                        <Tooltip title={item.pool_public_key} interactive>
+                          <span>
+                            {item.pool_public_key.substring(0, 10)}...
+                          </span>
                         </Tooltip>
                       </TableCell>
                       <TableCell
