@@ -82,6 +82,13 @@ class Farmer:
         yield OutboundMessage(
             NodeType.HARVESTER, Message("harvester_handshake", msg), Delivery.RESPOND
         )
+        for posf in self.challenges[self.current_weight]:
+            message = harvester_protocol.NewChallenge(posf.challenge_hash)
+            yield OutboundMessage(
+                NodeType.HARVESTER,
+                Message("new_challenge", message),
+                Delivery.BROADCAST,
+            )
 
     def _set_global_connections(self, global_connections: PeerConnections):
         self.global_connections: PeerConnections = global_connections

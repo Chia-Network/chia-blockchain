@@ -695,7 +695,7 @@ if __name__ == "__main__":
         bytes(
             bt.create_genesis_block(
                 {},
-                bytes([2] * 32),
+                bytes([0] * 32),
                 b"0",
                 bytes32(
                     bytes.fromhex(

@@ -15,6 +15,7 @@ import { chia_formatter } from "../util/chia";
 import { hex_to_array, arr_to_hex, sha256 } from "../util/utils";
 import { hash_header } from "../util/header";
 import HelpIcon from "@material-ui/icons/Help";
+import { calculate_block_reward } from "../util/block_rewards";
 
 /* global BigInt */
 
@@ -109,14 +110,15 @@ class Block extends Component {
     }
     const headerHash = "0x" + this.state.headerHash;
     const plotSeed = "0x" + this.state.plotSeed;
+
     const chia_cb = chia_formatter(
-      parseFloat(BigInt(block.header.data.coinbase.amount)),
+      parseFloat(calculate_block_reward(block.header.data.height)),
       "mojo"
     )
       .to("chia")
       .toString();
     const chia_fees = chia_formatter(
-      parseFloat(BigInt(block.header.data.fees_coin.amount)),
+      parseFloat(BigInt(block.header.data.total_transaction_fees)),
       "mojo"
     )
       .to("chia")
@@ -174,11 +176,11 @@ class Block extends Component {
         name: "Coinbase Amount",
         value: chia_cb + " TXCH",
         tooltip:
-          "The Chia block reward, goes to the pool (or individual farmer)"
+          "The Chia block reward, goes to the pool (or farmer if not pooling)"
       },
       {
         name: "Coinbase Puzzle Hash",
-        value: block.header.data.coinbase.puzzle_hash
+        value: block.header.data.pool_target.puzzle_hash
       },
       {
         name: "Fees Amount",
@@ -187,7 +189,7 @@ class Block extends Component {
       },
       {
         name: "Fees Puzzle Hash",
-        value: block.header.data.fees_coin.puzzle_hash
+        value: block.header.data.farmer_rewards_puzzle_hash
       }
     ];
     return (
