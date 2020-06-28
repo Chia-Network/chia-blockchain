@@ -452,6 +452,7 @@ class WalletRpcApi:
                     "private_key": {
                         "fingerprint": fingerprint,
                         "esk": bytes(esk).hex(),
+                        "epk": bytes(esk.get_extended_public_key()).hex(),
                         "seed": s,
                     },
                 }
