@@ -143,8 +143,6 @@ class Keychain:
         else:
             return f"wallet-{self.user}-{index}"
 
-            return f"wallet-{self.user}-raw-{index}"
-
     def _get_free_private_key_index(self) -> int:
         """
         Get the index of the first free spot  in the keychain.
