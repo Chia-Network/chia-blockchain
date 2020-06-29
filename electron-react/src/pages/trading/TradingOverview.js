@@ -12,7 +12,8 @@ import { mojo_to_chia_string } from "../../util/chia";
 import {
   get_all_trades,
   cancel_trade,
-  cancel_trade_with_spend
+  cancel_trade_with_spend,
+  cancel_trade_action
 } from "../../modules/trade_messages";
 
 const useStyles = makeStyles(theme => ({
@@ -302,7 +303,7 @@ export const TradeDetail = () => {
   const dispatch = useDispatch();
   const presented = useSelector(state => state.trade_state.trade_showed);
   const status = presented.status;
-  debugger;
+
   var visible = { visibility: "visible" };
   if (
     status === "Confirmed" ||
@@ -320,7 +321,7 @@ export const TradeDetail = () => {
   }
 
   function cancel() {
-    dispatch(cancel_trade(presented.trade_id));
+    dispatch(cancel_trade_action(presented.trade_id));
   }
 
   const trade_detail_items = getDetailItems(presented);
