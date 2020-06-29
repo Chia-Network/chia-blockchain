@@ -29,6 +29,7 @@ const socketMiddleware = () => {
   let connected = false;
 
   const onOpen = store => event => {
+    connected = true;
     store.dispatch(actions.wsConnected(event.target.url));
     var register_action = registerService();
     store.dispatch(register_action);
@@ -63,14 +64,17 @@ const socketMiddleware = () => {
         }
 
         // connect to the remote host
-        socket = new WebSocket(action.host);
+        try {
+          socket = new WebSocket(action.host);
+        } catch {
+          console.log("Failed connection to", action.host);
+          break;
+        }
 
         // websocket handlers
         socket.onmessage = onMessage(store);
         socket.onclose = onClose(store);
         socket.onopen = onOpen(store);
-        connected = true;
-        break;
       case "WS_DISCONNECT":
         if (socket !== null) {
           socket.close();
