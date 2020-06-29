@@ -1,7 +1,6 @@
 import time
 from secrets import token_bytes
 
-import clvm
 from blspy import ExtendedPrivateKey
 from clvm import run_program
 from clvm_tools import binutils
@@ -10,7 +9,6 @@ from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.BLSSignature import BLSSignature
 from src.types.program import Program
-from src.util.condition_tools import parse_sexp_to_conditions
 from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 from tests.wallet_tools import WalletTool
@@ -36,7 +34,10 @@ def float_to_str(f):
 def run_and_return_cost_time(chialisp):
 
     start = time.time()
-    clvm_loop = f"((c (q ((c (f (a)) (c (f (a)) (c (f (r (a))) (c (f (r (r (a)))) (q ()))))))) (c (q ((c (i (f (r (a))) (q (i (q 1) ((c (f (a)) (c (f (a)) (c (- (f (r (a))) (q 1)) (c (f (r (r (a)))) (q ())))))) ((c (f (r (r (a)))) (q ()))))) (q (q ()))) (a)))) (a))))"
+    clvm_loop = "((c (q ((c (f (a)) (c (f (a)) (c (f (r (a))) (c (f (r (r (a))))"
+    " (q ()))))))) (c (q ((c (i (f (r (a))) (q (i (q 1) ((c (f (a)) (c (f (a))"
+    " (c (- (f (r (a))) (q 1)) (c (f (r (r (a)))) (q ()))))))"
+    " ((c (f (r (r (a)))) (q ()))))) (q (q ()))) (a)))) (a))))"
     loop_program = Program(binutils.assemble(clvm_loop))
     clvm_loop_solution = f"(1000 {chialisp})"
     solution_program = Program(binutils.assemble(clvm_loop_solution))
@@ -62,7 +63,9 @@ def benchmark_all_operators():
     if_clvm = "(i (= (q 1000000000) (q 1000000000)) (q 1000000000) (q 1000000000))"
     sha256tree = "(sha256 (q 1000000000))"
     pubkey_for_exp = "(pubkey_for_exp (q 1))"
-    point_add = "(point_add (q 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb) (q 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb))"
+    point_add = "(point_add"
+    " (q 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb)"
+    " (q 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb))"
     point_add_cost, point_add_time = run_and_return_cost_time(point_add)
     addition_cost, addition_time = run_and_return_cost_time(addition)
     substraction_cost, substraction_time = run_and_return_cost_time(substraction)

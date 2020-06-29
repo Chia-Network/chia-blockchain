@@ -17,7 +17,7 @@ def test_1():
 
     conditions = [
         make_create_coin_condition(std_hash(bytes(pp)), amount)
-        for pp, amount in [(puzzle_program_1, 1000), (puzzle_program_2, 2000),]
+        for pp, amount in [(puzzle_program_1, 1000), (puzzle_program_2, 2000), ]
     ]
 
     assert conditions is not None
@@ -33,7 +33,7 @@ def test_1():
     output_conditions_dict = conditions_by_opcode(output_conditions)
     pprint(output_conditions_dict)
     input_coin_info_hash = bytes([0] * 32)
-    additions = created_outputs_for_conditions_dict(
+    created_outputs_for_conditions_dict(
         output_conditions_dict, input_coin_info_hash
     )
     aggsigs = aggsig_in_conditions_dict(output_conditions_dict)

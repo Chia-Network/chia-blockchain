@@ -1,15 +1,11 @@
 import asyncio
 from secrets import token_bytes
 from pathlib import Path
-from typing import Any, Dict
 import sqlite3
-import random
 
 import aiosqlite
 import pytest
 from src.full_node.full_node_store import FullNodeStore
-from src.full_node.blockchain import Blockchain
-from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
 from tests.setup_nodes import test_constants, bt
@@ -26,7 +22,7 @@ class TestFullNodeStore:
     async def test_basic_store(self):
         assert sqlite3.threadsafety == 1
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
-        blocks_alt = bt.get_consecutive_blocks(test_constants, 3, [], 9, b"1")
+        # blocks_alt = bt.get_consecutive_blocks(test_constants, 3, [], 9, b"1")
         db_filename = Path("blockchain_test.db")
         db_filename_2 = Path("blockchain_test_2.db")
         db_filename_3 = Path("blockchain_test_3.db")

@@ -288,9 +288,9 @@ class TestWalletSimulator:
         for i in range(0, 4):
             await full_node_0.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
-        confirmed_balance = await wallet_0.get_confirmed_balance()
-        unconfirmed_balance = await wallet_0.get_unconfirmed_balance()
-        wallet_2_confirmed_balance = await wallet_1.get_confirmed_balance()
+        await wallet_0.get_confirmed_balance()
+        await wallet_0.get_unconfirmed_balance()
+        await wallet_1.get_confirmed_balance()
 
         await time_out_assert(5, wallet_0.get_confirmed_balance, new_funds - 5)
         await time_out_assert(5, wallet_0.get_unconfirmed_balance, new_funds - 5)

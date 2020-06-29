@@ -1,12 +1,11 @@
 import asyncio
-import time
 
 import pytest
 
 from src.types.peer_info import PeerInfo
 from src.protocols import full_node_protocol
 from src.util.ints import uint16, uint64, uint32
-from tests.setup_nodes import setup_two_nodes, setup_node_and_wallet, test_constants, bt
+from tests.setup_nodes import setup_node_and_wallet, test_constants, bt
 from src.types.spend_bundle import SpendBundle
 from src.util.bundle_tools import best_solution_program
 from tests.wallet_tools import WalletTool
