@@ -56,7 +56,6 @@ const socketMiddleware = () => {
     const payload = JSON.parse(event.data);
     const request_id = payload["request_id"];
     if (callback_map[request_id] != null) {
-      debugger;
       const callback_action = callback_map[request_id];
       const callback = callback_action.resolve_callback;
       callback(payload);
