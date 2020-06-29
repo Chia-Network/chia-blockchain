@@ -5,7 +5,6 @@ import pytest
 from secrets import token_bytes
 from blspy import PrivateKey
 from chiapos import DiskPlotter
-from src.types.proof_of_space import ProofOfSpace
 from src.rpc.farmer_rpc_client import FarmerRpcClient
 from src.rpc.harvester_rpc_client import HarvesterRpcClient
 from src.rpc.rpc_server import start_rpc_server
@@ -77,7 +76,7 @@ class TestRpc:
 
             await time_out_assert(5, have_connections, True)
 
-            challenges = await client.get_latest_challenges()
+            await client.get_latest_challenges()
 
             async def have_challenges():
                 return len(await client.get_latest_challenges()) > 0

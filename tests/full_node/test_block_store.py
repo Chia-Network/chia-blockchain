@@ -1,19 +1,14 @@
 import asyncio
-from secrets import token_bytes
 from pathlib import Path
-from typing import Any, Dict
 import sqlite3
 import random
 
 import aiosqlite
 import pytest
-from src.consensus.constants import constants as consensus_constants
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.full_node.blockchain import Blockchain
 from src.types.full_block import FullBlock
-from src.types.sized_bytes import bytes32
-from src.util.ints import uint32, uint64
 from tests.setup_nodes import test_constants, bt
 
 
@@ -41,11 +36,11 @@ class TestBlockStore:
             db_filename_3.unlink()
 
         connection = await aiosqlite.connect(db_filename)
-        connection_2 = await aiosqlite.connect(db_filename_2)
+        # connection_2 = await aiosqlite.connect(db_filename_2)
         connection_3 = await aiosqlite.connect(db_filename_3)
 
         db = await BlockStore.create(connection)
-        db_2 = await BlockStore.create(connection_2)
+        # db_2 = await BlockStore.create(connection_2)
         db_3 = await BlockStore.create(connection_3)
         try:
             genesis = FullBlock.from_bytes(test_constants["GENESIS_BLOCK"])
@@ -89,7 +84,7 @@ class TestBlockStore:
 
         except Exception:
             await connection.close()
-            await connection_2.close()
+            # await connection_2.close()
             await connection_3.close()
             db_filename.unlink()
             db_filename_2.unlink()
@@ -98,7 +93,7 @@ class TestBlockStore:
             raise
 
         await connection.close()
-        await connection_2.close()
+        # await connection_2.close()
         await connection_3.close()
         db_filename.unlink()
         db_filename_2.unlink()

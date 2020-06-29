@@ -1,15 +1,10 @@
 import asyncio
 from secrets import token_bytes
 from pathlib import Path
-from typing import Any, Dict
-import sqlite3
-import random
 import pytest
 import aiosqlite
 from blspy import PrivateKey
-from src.types.full_block import FullBlock
-from src.types.sized_bytes import bytes32
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32
 from src.wallet.wallet_puzzle_store import WalletPuzzleStore
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.util.wallet_types import WalletType
@@ -33,7 +28,7 @@ class TestPuzzleStore:
         db = await WalletPuzzleStore.create(con)
         try:
             derivation_recs = []
-            wallet_types = [t for t in WalletType]
+            # wallet_types = [t for t in WalletType]
 
             for i in range(1000):
                 derivation_recs.append(
@@ -54,23 +49,23 @@ class TestPuzzleStore:
                         uint32(2),
                     )
                 )
-            assert await db.puzzle_hash_exists(derivation_recs[0].puzzle_hash) == False
-            assert await db.index_for_pubkey(derivation_recs[0].pubkey) == None
+            assert await db.puzzle_hash_exists(derivation_recs[0].puzzle_hash) is False
+            assert await db.index_for_pubkey(derivation_recs[0].pubkey) is None
             assert (
-                await db.index_for_puzzle_hash(derivation_recs[2].puzzle_hash) == None
+                await db.index_for_puzzle_hash(derivation_recs[2].puzzle_hash) is None
             )
             assert (
                 await db.wallet_info_for_puzzle_hash(derivation_recs[2].puzzle_hash)
-                == None
+                is None
             )
             assert len((await db.get_all_puzzle_hashes())) == 0
-            assert await db.get_last_derivation_path() == None
-            assert await db.get_unused_derivation_path() == None
-            assert await db.get_derivation_record(0, 2) == None
+            assert await db.get_last_derivation_path() is None
+            assert await db.get_unused_derivation_path() is None
+            assert await db.get_derivation_record(0, 2) is None
 
             await db.add_derivation_paths(derivation_recs)
 
-            assert await db.puzzle_hash_exists(derivation_recs[0].puzzle_hash) == True
+            assert await db.puzzle_hash_exists(derivation_recs[0].puzzle_hash) is True
             assert await db.index_for_pubkey(derivation_recs[4].pubkey) == 2
             assert await db.index_for_puzzle_hash(derivation_recs[2].puzzle_hash) == 1
             assert await db.wallet_info_for_puzzle_hash(

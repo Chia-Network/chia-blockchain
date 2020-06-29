@@ -23,10 +23,10 @@ def help_message():
     print("usage: chia keys command")
     print(f"command can be any of {command_list}")
     print("")
-    print(f"chia keys generate  (generates and adds a key to keychain)")
-    print(f"chia keys generate_and_print  (generates but does NOT add to keychain)")
-    print(f"chia keys show (displays all the keys in keychain)")
-    print(f"chia keys add -m [24 words] (add a private key through the mnemonic)")
+    print("chia keys generate  (generates and adds a key to keychain)")
+    print("chia keys generate_and_print  (generates but does NOT add to keychain)")
+    print("chia keys show (displays all the keys in keychain)")
+    print("chia keys add -m [24 words] (add a private key through the mnemonic)")
     print(
         "chia keys delete -f [fingerprint] (delete a key by it's pk fingerprint in hex form)"
     )

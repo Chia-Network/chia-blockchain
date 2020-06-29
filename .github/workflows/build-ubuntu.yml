@@ -76,7 +76,7 @@ jobs:
 
     - name: Lint source with flake8
       run: |
-        ./venv/bin/flake8 src
+        ./venv/bin/flake8 src tests
 
     - name: Lint source with mypy
       run: |

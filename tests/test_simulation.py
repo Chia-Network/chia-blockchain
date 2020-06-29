@@ -1,9 +1,7 @@
 import asyncio
 import pytest
-import time
-from typing import Dict, Any, List
-from tests.setup_nodes import setup_full_system, bt
-from src.consensus.constants import constants as consensus_constants
+from typing import List
+from tests.setup_nodes import setup_full_system
 from src.util.ints import uint32
 from src.types.full_block import FullBlock
 from tests.make_test_constants import make_test_constants_with_genesis
