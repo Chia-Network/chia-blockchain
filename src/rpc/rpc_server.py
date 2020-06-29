@@ -153,7 +153,7 @@ class RpcServer:
             self.log.info(f"Rpc call <- {message['command']}")
             response = await self.ws_api(message)
             if response is not None:
-                # log.info(f"Sending {message} {response}")
+                log.info(f"RPC response -> {message['command']}")
                 await websocket.send_str(format_response(message, response))
 
         except Exception as e:

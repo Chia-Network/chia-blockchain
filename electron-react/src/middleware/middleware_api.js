@@ -201,6 +201,8 @@ export const handle_message = (store, payload) => {
     );
   } else if (payload.command === "delete_plot") {
     store.dispatch(refreshPlots());
+  } else if (payload.command === "refresh_plots") {
+    store.dispatch(getPlots());
   } else if (payload.command === "get_wallets") {
     if (payload.data.success) {
       const wallets = payload.data.wallets;
