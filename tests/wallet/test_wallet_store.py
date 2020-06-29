@@ -241,7 +241,7 @@ class TestWalletStore:
             assert len(await store.get_unspent_coins_at_height(3)) == 1
             assert len(await store.get_unspent_coins_at_height(4)) == 1
 
-        except "db connection error":
+        except AssertionError:
             await db_connection.close()
             raise
         await db_connection.close()
