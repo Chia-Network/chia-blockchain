@@ -1,16 +1,18 @@
+import unicodedata
+
 from secrets import token_bytes
+from sys import platform
 from typing import List, Tuple, Optional
+from hashlib import pbkdf2_hmac
 
 import keyring as keyring_main
 import pkg_resources
+
 from bitstring import BitArray
 from blspy import ExtendedPrivateKey, ExtendedPublicKey
-
-from src.util.hash import std_hash
-from sys import platform
 from keyrings.cryptfile.cryptfile import CryptFileKeyring
-from hashlib import pbkdf2_hmac
-import unicodedata
+from src.util.hash import std_hash
+
 
 MAX_KEYS = 100
 
@@ -295,9 +297,9 @@ class Keychain:
         pkent = None
         while True:
             try:
-                pkent = self._get_fingerprint_and_entropy(
+                pkent = self._get_pk_and_entropy(
                     self._get_private_key_user(index)
-                )
+                ) # changed from _get_fingerprint_and_entropy to _get_pk_and_entropy - GH
                 keyring.delete_password(
                     self._get_service(), self._get_private_key_user(index)
                 )
