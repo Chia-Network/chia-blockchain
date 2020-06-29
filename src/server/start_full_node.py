@@ -53,7 +53,7 @@ def service_kwargs_for_full_node(root_path):
         ),
     )
     if config["start_rpc_server"]:
-        kwards["rpc_info"] = (FullNodeRpcApi, config["rpc_port"])
+        kwargs["rpc_info"] = (FullNodeRpcApi, config["rpc_port"])
     return kwargs
 
 
