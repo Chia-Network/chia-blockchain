@@ -9,7 +9,6 @@ from src.util.path import mkdir, path_from_root
 from src.simulator.full_node_simulator import FullNodeSimulator
 from src.simulator.simulator_constants import test_constants
 
-from src.types.peer_info import PeerInfo
 
 # See: https://bugs.python.org/issue29288
 u"".encode("idna")
@@ -18,7 +17,7 @@ u"".encode("idna")
 def service_kwargs_for_full_node(root_path):
     service_name = "full_node"
 
-    config = load_config_cli(root_path, "config.yaml", service_name)
+    config = load_config_cli(root_path, "config.yaml", "full_node")
     db_path = path_from_root(root_path, config["simulator_database_path"])
     mkdir(db_path.parent)
 
@@ -30,9 +29,6 @@ def service_kwargs_for_full_node(root_path):
         name=service_name,
         override_constants=test_constants,
     )
-
-    introducer = config["introducer_peer"]
-    peer_info = PeerInfo(introducer["host"], introducer["port"])
 
     async def start_callback():
         await api._start()
@@ -55,11 +51,6 @@ def service_kwargs_for_full_node(root_path):
         stop_callback=stop_callback,
         await_closed_callback=await_closed_callback,
         rpc_info=(FullNodeRpcApi, config["rpc_port"]),
-        periodic_introducer_poll=(
-            peer_info,
-            config["introducer_connect_interval"],
-            config["target_peer_count"],
-        ),
     )
     return kwargs
 
