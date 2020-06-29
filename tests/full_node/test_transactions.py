@@ -1,5 +1,4 @@
 import asyncio
-import time
 from secrets import token_bytes
 
 import pytest

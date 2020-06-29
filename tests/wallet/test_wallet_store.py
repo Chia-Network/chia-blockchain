@@ -1,14 +1,9 @@
 import asyncio
 from secrets import token_bytes
 from pathlib import Path
-from typing import Any, Dict
-from secrets import token_bytes
 import aiosqlite
-import random
 
 import pytest
-from src.types.full_block import FullBlock
-from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64, uint128
 from src.wallet.wallet_store import WalletStore
 from src.wallet.wallet_coin_record import WalletCoinRecord
@@ -246,7 +241,7 @@ class TestWalletStore:
             assert len(await store.get_unspent_coins_at_height(3)) == 1
             assert len(await store.get_unspent_coins_at_height(4)) == 1
 
-        except:
+        except "db connection error":
             await db_connection.close()
             raise
         await db_connection.close()

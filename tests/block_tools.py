@@ -3,32 +3,28 @@ import sys
 import time
 import random
 import tempfile
-from bitstring import BitArray
 
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional
 
 from blspy import (
     PrependSignature,
     PrivateKey,
     PublicKey,
-    ExtendedPublicKey,
     InsecureSignature,
     Util,
 )
 from chiavdf import prove
 from chiabip158 import PyBIP158
 
-from chiapos import DiskPlotter, DiskProver
-from src import __version__
+from chiapos import DiskPlotter
 from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.consensus.constants import ConsensusConstants
 from src.cmds.init import create_default_chia_config, initialize_ssl
 from src.types.BLSSignature import BLSPublicKey
 from src.consensus import block_rewards, pot_iterations
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
-from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
-from src.consensus.pot_iterations import calculate_iterations
+from src.consensus.block_rewards import calculate_block_reward
 from src.consensus.coinbase import create_coinbase_coin, create_fees_coin
 from src.types.challenge import Challenge
 from src.types.classgroup import ClassgroupElement
@@ -48,8 +44,8 @@ from src.util.hash import std_hash
 from src.util.path import mkdir
 from src.util.significant_bits import truncate_to_significant_bits
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
-from src.util.config import load_config, load_config_cli, save_config
-from src.util.plot_tools import load_plots, PlotInfo, stream_plot_info
+from src.util.config import load_config, save_config
+from src.util.plot_tools import load_plots, stream_plot_info
 from src.util.logging import initialize_logging
 
 from tests.wallet_tools import WalletTool
@@ -582,7 +578,7 @@ class BlockTools:
 
         fee_reward = uint64(block_rewards.calculate_base_fee(height) + fees)
 
-        parent_coin_name = std_hash(std_hash(height))
+        std_hash(std_hash(height))
 
         # Create filter
         byte_array_tx: List[bytes32] = []
