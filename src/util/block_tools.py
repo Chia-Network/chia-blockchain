@@ -18,6 +18,8 @@ from blspy import (
 from chiavdf import prove
 from chiabip158 import PyBIP158
 
+
+from chiapos import DiskPlotter, DiskProver
 from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.consensus.constants import ConsensusConstants
 from src.cmds.init import create_default_chia_config, initialize_ssl
@@ -47,7 +49,6 @@ from src.util.significant_bits import truncate_to_significant_bits
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from src.plotting.plot_tools import load_plots
 from src.util.logging import initialize_logging
-
 from tests.wallet_tools import WalletTool
 
 
