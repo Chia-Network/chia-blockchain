@@ -15,7 +15,7 @@ from src.rpc.farmer_rpc_api import FarmerRpcApi
 from src.rpc.harvester_rpc_api import HarvesterRpcApi
 
 from tests.setup_nodes import setup_farmer_harvester, test_constants, bt
-from tests.block_tools import get_plot_dir
+from src.util.block_tools import get_plot_dir
 from tests.time_out_assert import time_out_assert
 
 
