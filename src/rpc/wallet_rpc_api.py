@@ -18,6 +18,8 @@ from src.cmds.init import check_keys
 from src.server.outbound_message import NodeType, OutboundMessage, Message, Delivery
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.util.ints import uint64, uint32
+from src.wallet.trade_record import TradeRecord
+from src.wallet.util.cc_utils import trade_record_to_dict
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.cc_wallet.cc_wallet import CCWallet
@@ -64,27 +66,44 @@ class WalletRpcApi:
             "/delete_key": self.delete_key,
             "/delete_all_keys": self.delete_all_keys,
             "/get_private_key": self.get_private_key,
-            "/get_trades": self.get_trades,
+            "/get_trade": self.get_trade,
+            "/get_all_trades": self.get_all_trades,
             "/cancel_trade": self.cancel_trade,
         }
 
-    async def get_trades(self, request: Dict):
+    async def get_trade(self, request: Dict):
         if self.service is None:
             return {"success": False}
         if self.service.wallet_state_manager is None:
             return {"success": False}
 
-        all = request["all"]
         trade_mgr = self.service.wallet_state_manager.trade_manager
-        if all:
-            all_trades = await trade_mgr.get_all_trades()
-            result = []
-            for trade in all_trades:
-                result.append(trade.to_ui_dict())
-        else:
-            trade_id = request["trade_id"]
-            trade = await trade_mgr.get_trade_by_id(trade_id)
-            result = [trade.to_ui_dict()]
+
+        trade_id = request["trade_id"]
+        trade: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(trade_id)
+        if trade is None:
+            response = {
+                f"success": False,
+                "error": "No trade with trade id: {trade_id}",
+            }
+            return response
+
+        result = trade_record_to_dict(trade)
+        response = {"success": True, "trade": result}
+        return response
+
+    async def get_all_trades(self, request: Dict):
+        if self.service is None:
+            return {"success": False}
+        if self.service.wallet_state_manager is None:
+            return {"success": False}
+
+        trade_mgr = self.service.wallet_state_manager.trade_manager
+
+        all_trades = await trade_mgr.get_all_trades()
+        result = []
+        for trade in all_trades:
+            result.append(trade_record_to_dict(trade))
 
         response = {"success": True, "trades": result}
         return response
@@ -97,7 +116,7 @@ class WalletRpcApi:
 
         wsm = self.service.wallet_state_manager
         secure = request["secure"]
-        trade_id = request["trade_id"]
+        trade_id = hexstr_to_bytes(request["trade_id"])
 
         if secure:
             await wsm.trade_manager.cancel_pending_offer_safely(trade_id)
@@ -458,7 +477,7 @@ class WalletRpcApi:
             spend_bundle,
             error,
         ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
-            offer
+            offer, file_name
         )
         if success:
             self.service.wallet_state_manager.trade_manager.write_offer_to_disk(
