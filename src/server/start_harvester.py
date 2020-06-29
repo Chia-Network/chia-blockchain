@@ -47,8 +47,9 @@ def service_kwargs_for_harvester(root_path=DEFAULT_ROOT_PATH):
         start_callback=start_callback,
         stop_callback=stop_callback,
         await_closed_callback=await_closed_callback,
-        rpc_info=(HarvesterRpcApi, config["rpc_port"]),
     )
+    if config["start_rpc_server"]:
+        kwargs["rpc_info"] = (HarvesterRpcApi, config["rpc_port"])
     return kwargs
 
 
