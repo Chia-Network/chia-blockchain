@@ -82,8 +82,8 @@ function AddPlotDialog(props) {
       </DialogTitle>
       <DialogContent dividers>
         <p>
-          This allows you to add a plot file that you have already created. If
-          you have not created any plots, go to the plotting screen.
+          This allows you to add a directory that has plots in it. If you have
+          not created any plots, go to the plotting screen.
         </p>
         <Box display="flex">
           <Box flexGrow={1}>

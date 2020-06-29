@@ -167,6 +167,7 @@ class Harvester:
             async for msg in self.new_challenge(new_challenge):
                 yield msg
         self.cached_challenges = []
+        self._state_changed("plots")
 
     @api_request
     async def new_challenge(self, new_challenge: harvester_protocol.NewChallenge):
