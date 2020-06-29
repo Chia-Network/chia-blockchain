@@ -299,7 +299,7 @@ class Keychain:
             try:
                 pkent = self._get_pk_and_entropy(
                     self._get_private_key_user(index)
-                ) # changed from _get_fingerprint_and_entropy to _get_pk_and_entropy - GH
+                )  # changed from _get_fingerprint_and_entropy to _get_pk_and_entropy - GH
                 keyring.delete_password(
                     self._get_service(), self._get_private_key_user(index)
                 )
