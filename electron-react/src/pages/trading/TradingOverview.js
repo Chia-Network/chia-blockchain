@@ -9,6 +9,8 @@ import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import Grid from "@material-ui/core/Grid";
 import HelpIcon from "@material-ui/icons/Help";
 import { mojo_to_chia_string } from "../../util/chia";
+
+import { ListItem } from "@material-ui/core";
 import {
   get_all_trades,
   cancel_trade,
@@ -63,9 +65,6 @@ const useStyles = makeStyles(theme => ({
     cursor: "pointer",
     borderBottom: "1px solid #eeeeee",
     /* mouse over link */
-    "&:hover": {
-      backgroundColor: "#eeeeee"
-    },
     height: 40
   },
   cardTitle: {
@@ -101,25 +100,25 @@ const TradeRow = props => {
   }
 
   return (
-    <Box
-      button
-      onClick={displayTrade}
-      display="flex"
-      style={{ minWidth: "100%" }}
-      className={classes.trade_row}
-    >
-      <Box flexGrow={1}>{trade_id.substring(0, 16)}</Box>
-      <Box flexGrow={1}>{status}</Box>
+    <ListItem button onClick={displayTrade}>
       <Box
-        style={{
-          marginRight: 10,
-          textAlign: "right",
-          overflowWrap: "break-word"
-        }}
+        display="flex"
+        style={{ minWidth: "100%" }}
+        className={classes.trade_row}
       >
-        {time}
+        <Box flexGrow={1}>{trade_id.substring(0, 16)}</Box>
+        <Box flexGrow={1}>{status}</Box>
+        <Box
+          style={{
+            marginRight: 10,
+            textAlign: "right",
+            overflowWrap: "break-word"
+          }}
+        >
+          {time}
+        </Box>
       </Box>
-    </Box>
+    </ListItem>
   );
 };
 
@@ -159,7 +158,7 @@ export const TradeTable = props => {
     <div className={classes.trade_table}>
       <TableHeader></TableHeader>
       {trades.map(trade => (
-        <TradeRow trade={trade}></TradeRow>
+        <TradeRow key={trade.trade_id} trade={trade}></TradeRow>
       ))}
     </div>
   );
@@ -217,7 +216,7 @@ const getDetailItems = trade => {
 
   var accepted = "";
   var accepted_time = trade.accepted_at_time;
-  debugger;
+
   if (accepted_time === null) {
     accepted = "Not accepted yet";
   } else {
@@ -356,6 +355,7 @@ export const TradeDetail = () => {
             <Typography component="subtitle">Coins:</Typography>
             {Object.keys(presented.offer_dict).map(name => (
               <OfferRow
+                key={name}
                 name={name}
                 amount={presented.offer_dict[name]}
               ></OfferRow>
