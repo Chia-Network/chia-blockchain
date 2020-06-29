@@ -423,7 +423,7 @@ def launch_service(root_path, service_command):
     return process, pid_path
 
 
-async def kill_service(root_path, services, service_name, delay_before_kill=15) -> bool:
+async def kill_service(root_path, services, service_name, delay_before_kill=10) -> bool:
     process = services.get(service_name)
     if process is None:
         return False
