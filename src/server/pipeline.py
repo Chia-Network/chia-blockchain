@@ -107,7 +107,7 @@ async def initialize_pipeline(
         map_aiter(expand_outbound_messages, responses_aiter, 100)
     )
 
-    async def send():
+    async def send(connection: Connection, message: Message):
         try:
             await connection.send(message)
         except Exception as e:
@@ -133,7 +133,7 @@ async def initialize_pipeline(
         connection.log.info(
             f"-> {message.function} to peer {connection.get_peername()}"
         )
-        asyncio.create_task(send())
+        asyncio.create_task(send(connection, message))
 
 
 async def stream_reader_writer_to_connection(

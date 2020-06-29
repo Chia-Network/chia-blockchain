@@ -108,27 +108,42 @@ class WebSocketServer:
         self.websocket_server.close()
 
     async def safe_handle(self, websocket, path):
-        async for message in websocket:
-            try:
-                decoded = json.loads(message)
-                # self.log.info(f"Message received: {decoded}")
-                await self.handle_message(websocket, decoded)
-            except (
-                websockets.exceptions.ConnectionClosed,
-                websockets.exceptions.ConnectionClosedOK,
-            ) as e:
+        service_name = ""
+        try:
+            async for message in websocket:
+                try:
+                    decoded = json.loads(message)
+                    response, socket_to_use = await self.handle_message(
+                        websocket, decoded
+                    )
+                except Exception as e:
+                    tb = traceback.format_exc()
+                    self.log.error(f"Error while handling message: {tb}")
+                    error = {"success": False, "error": f"{e}"}
+                    response = format_response(message, error)
+                if socket_to_use is not None:
+                    await socket_to_use.send(response)
+        except websockets.exceptions.ConnectionClosedOK as e:
+            if websocket.remote_address[1] in self.remote_address_map:
                 service_name = self.remote_address_map[websocket.remote_address[1]]
-                self.log.info(
-                    f"ConnectionClosed. Closing websocket with {service_name} {e}"
-                )
-                if service_name in self.connections:
-                    self.connections.pop(service_name)
-                await websocket.close()
-            except Exception as e:
-                tb = traceback.format_exc()
-                self.log.error(f"Error while handling message: {tb}")
-                error = {"success": False, "error": f"{e}"}
-                await websocket.send(format_response(message, error))
+            self.log.info(
+                f"ConnectionClosedOk. Closing websocket with {service_name} {e}"
+            )
+        except websockets.exceptions.WebSocketException as e:
+            if websocket.remote_address[1] in self.remote_address_map:
+                service_name = self.remote_address_map[websocket.remote_address[1]]
+            self.log.info(
+                f"Websocket exception. Closing websocket with {service_name} {e}"
+            )
+        except Exception as e:
+            tb = traceback.format_exc()
+            self.log.error(f"Unexpected exception in websocket: {e} {tb}")
+        finally:
+            if websocket.remote_address[1] in self.remote_address_map:
+                service_name = self.remote_address_map[websocket.remote_address[1]]
+            if service_name in self.connections:
+                self.connections.pop(service_name)
+            await websocket.close()
 
     async def ping_task(self):
         await asyncio.sleep(30)
@@ -142,6 +157,7 @@ class WebSocketServer:
                 self.connections.pop(service_name)
                 self.remote_address_map.pop(remote_address)
                 self.log.warning("Ping failed, connection closed.")
+                await connection.close()
         self.ping_job = asyncio.create_task(self.ping_task())
 
     async def handle_message(self, websocket, message):
@@ -152,8 +168,12 @@ class WebSocketServer:
         command = message["command"]
         destination = message["destination"]
         if destination != "daemon":
-            await self.message_for_service(message)
-            return
+            destination = message["destination"]
+            if destination in self.connections:
+                socket = self.connections[destination]
+                return (dict_to_json_str(message), socket)
+
+            return (None, None)
 
         data = None
         if "data" in message:
@@ -173,13 +193,11 @@ class WebSocketServer:
         elif command == "register_service":
             response = await self.register_service(websocket, data)
         else:
+            self.log.error(f"UK>> {message}")
             response = {"success": False, "error": f"unknown_command {command}"}
 
         full_response = format_response(message, response)
-        try:
-            await websocket.send(full_response)
-        except websockets.exceptions.ConnectionClosedOK:
-            pass
+        return (full_response, websocket)
 
     async def ping(self):
         response = {"success": True, "value": "pong"}
@@ -315,17 +333,6 @@ class WebSocketServer:
         response = {"success": True}
         self.log.info(f"registered for service {service}")
         return response
-
-    async def message_for_service(self, message):
-        destination = message["destination"]
-        if destination in self.connections:
-            socket = self.connections[destination]
-            try:
-                await socket.send(dict_to_json_str(message))
-            except websockets.exceptions.ConnectionClosedOK:
-                pass
-
-        return None
 
 
 def daemon_launch_lock_path(root_path):
