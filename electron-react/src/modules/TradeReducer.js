@@ -1,3 +1,5 @@
+import { service_wallet_server } from "../util/service_names";
+
 export const addTrade = trade => ({ type: "TRADE_ADDED", trade });
 export const resetTrades = () => ({ type: "RESET_TRADE" });
 export const presentTrade = trade => ({ type: "PRESENT_TRADES", trade });
@@ -35,36 +37,56 @@ export const parsingStatePending = "PENDING";
 export const parsingStateParsed = "PARSED";
 export const parsingStateReset = "RESET";
 
-export const PendingTrade = (trade_id, status, offer_dict, timestamp) => ({
-  trade_id: trade_id,
-  status: status,
-  offer_dict: offer_dict,
-  timestamp: timestamp
-});
-
-const now = Math.floor(Date.now() / 1000);
-const example_trade = {
-  trade_id: "ababebababa",
-  status: "Pending",
-  timestamp: now,
-  offer_dict: { Chia: 100, sadasdas: 300, asdasda: -100 }
-};
-
 const initial_state = {
   trades: [],
   show_offer: false,
   parsing_state: parsingStateNone,
   parsed_offer: null,
   parsed_offer_name: "",
-  pending_trades: [example_trade],
+  pending_trades: [],
   trade_history: [],
-  showing_trade: true,
-  trade_showed: example_trade
+  showing_trade: false,
+  trade_showed: null
 };
 
 export const tradeReducer = (state = { ...initial_state }, action) => {
   let trade;
   switch (action.type) {
+    case "INCOMING_MESSAGE":
+      if (action.message.origin !== service_wallet_server) {
+        return state;
+      }
+
+      const message = action.message;
+      const data = message.data;
+      const command = message.command;
+      const success = data.success;
+
+      if (command === "get_all_trades" && success === true) {
+        const all_trades = data.trades;
+        var pending_trades = [];
+        var trade_history = [];
+        for (var i = 0; i < all_trades.length; i++) {
+          const trade = all_trades[i];
+          const my_trade = trade.my_offer;
+          const confirmed_at_index = trade.confirmed_at_index;
+          if (my_trade === true && confirmed_at_index === 0) {
+            pending_trades.push(trade);
+          } else {
+            trade_history.push(trade);
+          }
+        }
+        return {
+          ...state,
+          trade_history: trade_history,
+          pending_trades: pending_trades
+        };
+      }
+      if (data.success === false) {
+        console.log("Error: " + data.error + "Command: " + command);
+        return state;
+      }
+      return state;
     case "LOG_OUT":
       return { ...initial_state };
     case "TRADE_ADDED":
