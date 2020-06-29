@@ -37,16 +37,15 @@ jobs:
     - name: Install developer requirements
       run: |
         python -m pip install --upgrade pip
-        . ./activate
-        venv/bin/python -m pip install -r requirements-dev.txt
+        pip install -r requirements-dev.txt
 
     - name: Lint source with flake8
       run: |
-        ./venv/bin/flake8 src tests
+        flake8 src tests
 
     - name: Lint source with mypy
       run: |
-        ./venv/bin/mypy src tests
+        mypy src tests
 
     - name: Build source distribution
       run: |
