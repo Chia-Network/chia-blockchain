@@ -11,7 +11,13 @@ from tests.time_out_assert import time_out_assert, time_out_assert_custom_interv
 
 
 
-test_constants = make_test_constants_with_genesis({"DIFFICULTY_STARTING": 500, "MIN_ITERS_STARTING": 500})
+test_constants = make_test_constants_with_genesis(
+    {
+        "DIFFICULTY_STARTING": 500,
+        "MIN_ITERS_STARTING": 500,
+        "NUMBER_ZERO_BITS_CHALLENGE_SIG": 1,
+    }
+)
 
 
 def node_height_at_least(node, h):

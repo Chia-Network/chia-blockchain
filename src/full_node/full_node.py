@@ -715,6 +715,14 @@ class FullNode:
         A proof of time, received by a peer full node. If we have the rest of the block,
         we can complete it. Otherwise, we just verify and propagate the proof.
         """
+        processed = False
+        if respond_proof_of_time.proof.witness_type == 0:
+            request = timelord_protocol.ProofOfTimeFinished(respond_proof_of_time.proof)
+
+            async for msg in self.proof_of_time_finished(request):
+                yield msg
+            processed = True
+
         if (
             await self.full_node_store.get_unfinished_block(
                 (
@@ -743,10 +751,12 @@ class FullNode:
                     ),
                     Delivery.BROADCAST_TO_OTHERS,
                 )
-
-            request = timelord_protocol.ProofOfTimeFinished(respond_proof_of_time.proof)
-            async for msg in self.proof_of_time_finished(request):
-                yield msg
+            if not processed:
+                request = timelord_protocol.ProofOfTimeFinished(
+                    respond_proof_of_time.proof
+                )
+                async for msg in self.proof_of_time_finished(request):
+                    yield msg
 
     @api_request
     async def reject_proof_of_time_request(
@@ -798,7 +808,7 @@ class FullNode:
                 yield OutboundMessage(
                     NodeType.FULL_NODE,
                     Message(
-                        "new_compact_proof_of_time",
+                        "new_proof_of_time",
                         full_node_protocol.NewProofOfTime(
                             height,
                             proof.challenge_hash,

@@ -150,6 +150,7 @@ class RpcServer:
         message = None
         try:
             message = json.loads(payload)
+            self.log.info(f"Rpc call <- {message['command']}")
             response = await self.ws_api(message)
             if response is not None:
                 # log.info(f"Sending {message} {response}")
@@ -172,20 +173,21 @@ class RpcServer:
             msg = await ws.receive()
             if msg.type == aiohttp.WSMsgType.TEXT:
                 message = msg.data.strip()
-                self.log.info(f"received message: {message}")
+                # self.log.info(f"received message: {message}")
                 await self.safe_handle(ws, message)
             elif msg.type == aiohttp.WSMsgType.BINARY:
-                self.log.warning("Received binary data")
+                self.log.info("Received binary data")
             elif msg.type == aiohttp.WSMsgType.PING:
+                self.log.info("Ping received")
                 await ws.pong()
             elif msg.type == aiohttp.WSMsgType.PONG:
                 self.log.info("Pong received")
             else:
                 if msg.type == aiohttp.WSMsgType.CLOSE:
-                    print("Closing")
+                    self.log.info("Closing RPC websocket")
                     await ws.close()
                 elif msg.type == aiohttp.WSMsgType.ERROR:
-                    print("Error during receive %s" % ws.exception())
+                    self.log.error("Error during receive %s" % ws.exception())
                 elif msg.type == aiohttp.WSMsgType.CLOSED:
                     pass
 
