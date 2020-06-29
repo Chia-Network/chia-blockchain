@@ -15,7 +15,7 @@ import {
   presentImportHexKey
 } from "./modules/entranceMenu";
 import { Backdrop, CircularProgress } from "@material-ui/core";
-import { ModalDialog } from "./pages/ModalDialog";
+import { ModalDialog, Spinner } from "./pages/ModalDialog";
 const defaultTheme = createMuiTheme();
 
 const theme = createMuiTheme({
@@ -122,6 +122,7 @@ const App = () => {
     <React.Fragment>
       <ThemeProvider theme={theme}>
         <ModalDialog></ModalDialog>
+        <Spinner></Spinner>
         <CustomRouter></CustomRouter>
       </ThemeProvider>
     </React.Fragment>

@@ -48,6 +48,7 @@ import {
 } from "../modules/plotter_messages";
 import isElectron from "is-electron";
 import { startService, isServiceRunning } from "../modules/daemon_messages";
+import { get_all_trades } from "../modules/trade_messages";
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -146,6 +147,7 @@ function refreshAllState(store) {
   store.dispatch(getFarmerConnections());
   store.dispatch(getPlots());
   store.dispatch(isServiceRunning(service_plotter));
+  store.dispatch(get_all_trades());
 }
 
 export const handle_message = (store, payload) => {
