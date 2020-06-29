@@ -362,7 +362,7 @@ const Plots = props => {
                   setOpen(true);
                 }}
               >
-                Add plot
+                Add plots
               </Button>
               <AddPlotDialog
                 classes={{

@@ -88,7 +88,6 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         return state;
       }
 
-      console.log("Got action!!", action);
       const message = action.message;
       const data = message.data;
       const command = message.command;
@@ -113,7 +112,6 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           };
         }
       } else if (command === "get_public_keys") {
-        console.log("Got command!!", data);
         success = data.success;
         if (success) {
           var public_key_fingerprints = data.public_key_fingerprints;
