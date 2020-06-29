@@ -19,6 +19,8 @@ timelord.sanitizer_mode = True, the timelord will work on those challenges.
 - Ability to add plots by directory name in UI
 - Confirm before closing UI
 - Farmer now sends challenges after handshake with harvester
+- UI now tries to shut down servers gracefully before exiting, and also closes daemon before starting
+
 
 ### Changed
 - Minor changes have been made across the repositories to better support compiling on OpenBSD. HT @n1000.
@@ -49,6 +51,8 @@ timelord.sanitizer_mode = True, the timelord will work on those challenges.
 - The version generator for new installers incorrectly handled the "dev" versions after a release tag.
 - Due to a python bug, ssl connections could randomly fail. Worked around [Python issue 29288](https://bugs.python.org/issue29288)
 - Removed websocket max message limit, allowing for more plots
+- Daemon was crashing when websocket gets improperly closed
+
 
 ## [1.0beta7] aka Beta 1.7 - 2020-06-08
 

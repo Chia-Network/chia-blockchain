@@ -18,7 +18,6 @@ const local_test = config.local_test;
 var url = require("url");
 const os = require("os");
 const crypto = require("crypto");
-const { request } = require("http");
 
 global.sharedObj = { local_test: local_test };
 
@@ -234,8 +233,7 @@ const createWindow = () => {
       type: "question",
       buttons: ["Yes", "No"],
       title: "Confirm",
-      message:
-        "Are you sure you want to quit? Plotting and farming will stop. Closing will take a few seconds."
+      message: "Are you sure you want to quit? Plotting and farming will stop."
     });
     if (choice == 1) {
       return;
