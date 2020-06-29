@@ -165,8 +165,8 @@ const createWindow = () => {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 1200,
-    minWidth: 600,
-    minHeight: 800,
+    minWidth: 500,
+    minHeight: 500,
     backgroundColor: "#ffffff",
     show: false,
     webPreferences: {
@@ -241,6 +241,8 @@ const createWindow = () => {
       return;
     }
     mainWindow.loadURL(closingUrl);
+    mainWindow.setBounds({ height: 500, width: 500 });
+
     decidedToClose = true;
     closeDaemon(() => {
       mainWindow.close();
