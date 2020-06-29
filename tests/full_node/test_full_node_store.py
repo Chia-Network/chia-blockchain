@@ -11,6 +11,7 @@ from src.util.ints import uint32, uint64
 from tests.setup_nodes import test_constants, bt
 
 
+
 @pytest.fixture(scope="module")
 def event_loop():
     loop = asyncio.get_event_loop()
