@@ -12,7 +12,6 @@ from chiavdf import prove
 from chiabip158 import PyBIP158
 
 from chiapos import DiskPlotter, DiskProver
-from src import __version__
 from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.consensus.constants import ConsensusConstants
 from src.cmds.init import create_default_chia_config, initialize_ssl
@@ -37,7 +36,7 @@ from src.util.hash import std_hash
 from src.util.path import mkdir
 from src.util.significant_bits import truncate_to_significant_bits
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
-from src.util.config import load_config, load_config_cli, save_config
+from src.util.config import load_config, save_config
 from src.harvester import load_plots
 
 
@@ -488,7 +487,7 @@ class BlockTools:
                         prover = self.prover_dict[plots[i][0]]
                     else:
                         prover = DiskProver(plots[i][0])
-                except (ValueError, KeyError) as e:
+                except (ValueError, KeyError):
                     continue
                 qualities = prover.get_qualities_for_challenge(challenge_hash)
                 j = 0

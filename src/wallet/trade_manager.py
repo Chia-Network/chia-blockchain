@@ -25,6 +25,7 @@ from src.wallet.trade_record import TradeRecord
 from src.wallet.trading.trade_status import TradeStatus
 from src.wallet.trading.trade_store import TradeStore
 from src.wallet.transaction_record import TransactionRecord
+from src.wallet.util.cc_utils import get_discrepancies_for_spend_bundle
 from src.wallet.wallet import Wallet
 from clvm_tools import binutils
 
@@ -72,9 +73,9 @@ class TradeManager:
         additions = {}
 
         for trade in all_pending:
-            for coin in trade.spend_bundle.removals():
+            for coin in trade.removals:
                 removals[coin.name()] = coin
-            for coin in trade.spend_bundle.additions():
+            for coin in trade.additions:
                 additions[coin.name()] = coin
 
         return removals, additions
@@ -174,9 +175,14 @@ class TradeManager:
 
         result = {}
         for trade_offer in all_pending:
-            locked = await self.get_locked_coins_in_spend_bundle(
-                trade_offer.spend_bundle
-            )
+            if trade_offer.tx_spend_bundle is None:
+                locked = await self.get_locked_coins_in_spend_bundle(
+                    trade_offer.spend_bundle
+                )
+            else:
+                locked = await self.get_locked_coins_in_spend_bundle(
+                    trade_offer.tx_spend_bundle
+                )
             for name, record in locked.items():
                 if wallet_id is None or record.wallet_id == wallet_id:
                     result[name] = record
@@ -216,7 +222,7 @@ class TradeManager:
         if trade is None:
             return None
 
-        all_coins = trade.spend_bundle.removals()
+        all_coins = trade.removals
 
         for coin in all_coins:
             wallet = await self.wallet_state_manager.get_wallet_for_coin(coin.name())
@@ -325,6 +331,7 @@ class TradeManager:
                 my_offer=True,
                 sent=uint32(0),
                 spend_bundle=spend_bundle,
+                tx_spend_bundle=None,
                 additions=spend_bundle.additions(),
                 removals=spend_bundle.removals(),
                 trade_id=std_hash(spend_bundle.name() + bytes(now)),
@@ -341,58 +348,13 @@ class TradeManager:
         if offer is not None:
             file_path.write_text(bytes(offer).hex())
 
-    async def get_discrepancies_for_spend_bundle(
-        self, trade_offer: SpendBundle
-    ) -> Tuple[bool, Optional[Dict], Optional[Exception]]:
-        try:
-            cc_discrepancies: Dict[bytes32, int] = dict()
-            for coinsol in trade_offer.coin_solutions:
-                puzzle = coinsol.solution.first()
-                solution = coinsol.solution.rest().first()
-
-                # work out the deficits between coin amount and expected output for each
-                if cc_wallet_puzzles.check_is_cc_puzzle(puzzle):
-                    parent_info = binutils.disassemble(solution.rest().first()).split(
-                        " "
-                    )
-                    if len(parent_info) > 1:
-                        colour = cc_wallet_puzzles.get_genesis_from_puzzle(
-                            binutils.disassemble(puzzle)
-                        )
-                        # get puzzle and solution
-                        innerpuzzlereveal = solution.rest().rest().rest().first()
-                        innersol = solution.rest().rest().rest().rest().first()
-                        # Get output amounts by running innerpuzzle and solution
-                        out_amount = cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
-                            innerpuzzlereveal, innersol
-                        )
-                        # add discrepancy to dict of discrepancies
-                        if colour in cc_discrepancies:
-                            cc_discrepancies[colour] += coinsol.coin.amount - out_amount
-                        else:
-                            cc_discrepancies[colour] = coinsol.coin.amount - out_amount
-                else:  # standard chia coin
-                    coin_amount = coinsol.coin.amount
-                    out_amount = cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
-                        puzzle, solution
-                    )
-                    diff = coin_amount - out_amount
-                    if "chia" in cc_discrepancies:
-                        cc_discrepancies["chia"] = cc_discrepancies["chia"] + diff
-                    else:
-                        cc_discrepancies["chia"] = diff
-
-            return True, cc_discrepancies, None
-        except Exception as e:
-            return False, None, e
-
     async def get_discrepancies_for_offer(
         self, file_path: Path
     ) -> Tuple[bool, Optional[Dict], Optional[Exception]]:
         self.log.info(f"trade offer: {file_path}")
         trade_offer_hex = file_path.read_text()
         trade_offer = TradeRecord.from_bytes(bytes.fromhex(trade_offer_hex))
-        return await self.get_discrepancies_for_spend_bundle(trade_offer.spend_bundle)
+        return get_discrepancies_for_spend_bundle(trade_offer.spend_bundle)
 
     async def get_inner_puzzle_for_puzzle_hash(self, puzzle_hash) -> Optional[Program]:
         info = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
@@ -830,7 +792,8 @@ class TradeManager:
             created_at_time=now,
             my_offer=False,
             sent=uint32(0),
-            spend_bundle=spend_bundle,
+            spend_bundle=offer_spend_bundle,
+            tx_spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
             trade_id=std_hash(spend_bundle.name() + bytes(now)),

@@ -3,7 +3,7 @@ import pytest
 import time
 from typing import Dict, Any, List
 from tests.setup_nodes import setup_full_system
-from tests.block_tools import BlockTools
+from src.util.block_tools import BlockTools
 from src.consensus.constants import constants as consensus_constants
 from src.util.ints import uint32
 from src.types.full_block import FullBlock
