@@ -1,8 +1,7 @@
 import asyncio
-from secrets import token_bytes
 from pathlib import Path
+from secrets import token_bytes
 import aiosqlite
-
 import pytest
 from src.util.ints import uint32, uint64, uint128
 from src.wallet.wallet_store import WalletStore
