@@ -125,6 +125,7 @@ const closeDaemon = callback => {
       ws.send(JSON.stringify(msg));
     });
     ws.on("message", function incoming(message) {
+      message = JSON.parse(message);
       if (message["ack"] === true && message["request_id"] === request_id) {
         called_cb = true;
         callback();
@@ -145,7 +146,7 @@ const closeDaemon = callback => {
     if (!called_cb) {
       callback();
     }
-  }, 5000);
+  }, 15000);
 };
 
 const exitPyProc = e => {};
@@ -193,6 +194,13 @@ const createWindow = () => {
       protocol: "file:",
       slashes: true
     });
+  var closingUrl =
+    process.env.ELECTRON_START_URL ||
+    url.format({
+      pathname: path.join(__dirname, "/../src/closing.html"),
+      protocol: "file:",
+      slashes: true
+    });
   console.log(startUrl);
 
   mainWindow.loadURL(startUrl);
@@ -207,6 +215,18 @@ const createWindow = () => {
   // }
   mainWindow.on("close", e => {
     if (decidedToClose) {
+      if (pyProc != null) {
+        if (process.platform === "win32") {
+          process.stdout.write("Killing daemon on windows");
+          var cp = require("child_process");
+          cp.execSync("taskkill /PID " + pyProc.pid + " /T /F");
+        } else {
+          process.stdout.write("Killing daemon on other platforms");
+          pyProc.kill();
+          pyProc = null;
+          pyPort = null;
+        }
+      }
       return;
     }
     e.preventDefault();
@@ -220,21 +240,9 @@ const createWindow = () => {
     if (choice == 1) {
       return;
     }
+    mainWindow.loadURL(closingUrl);
     decidedToClose = true;
     closeDaemon(() => {
-      // Should be a setting
-      if (pyProc != null) {
-        if (process.platform === "win32") {
-          process.stdout.write("Killing daemon on windows");
-          var cp = require("child_process");
-          cp.execSync("taskkill /PID " + pyProc.pid + " /T /F");
-        } else {
-          process.stdout.write("Killing daemon on other platforms");
-          pyProc.kill();
-          pyProc = null;
-          pyPort = null;
-        }
-      }
       mainWindow.close();
     });
   });
