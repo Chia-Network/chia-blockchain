@@ -1,6 +1,6 @@
 import unittest
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 
 from src.util.ints import uint32
 from src.types.coin import Coin

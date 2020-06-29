@@ -1,6 +1,5 @@
 import asyncio
 import time
-from typing import Any, Dict
 from pathlib import Path
 
 import aiosqlite
@@ -12,7 +11,8 @@ from src.types.full_block import FullBlock
 from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
 from src.util.ints import uint8, uint64, uint32
-from src.consensus.constants import constants as consensus_constants
+from src.consensus.constants import ConsensusConstants
+from tests.block_tools import BlockTools
 from src.util.errors import Err
 from src.types.sized_bytes import bytes32
 from src.types.pool_target import PoolTarget
@@ -20,6 +20,7 @@ from src.types.BLSSignature import BLSSignature
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.consensus.find_fork_point import find_fork_point_in_chain
+from tests.make_test_constants import make_test_constants_with_genesis
 
 from tests.setup_nodes import bt
 
@@ -546,7 +547,7 @@ class TestBlockValidation:
         diff_6 = b.get_next_difficulty(blocks[5].header)
         diff_7 = b.get_next_difficulty(blocks[6].header)
         diff_8 = b.get_next_difficulty(blocks[7].header)
-        diff_9 = b.get_next_difficulty(blocks[8].header)
+        # diff_9 = b.get_next_difficulty(blocks[8].header)
 
         assert diff_6 == diff_7
         assert diff_8 > diff_7

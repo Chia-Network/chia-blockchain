@@ -2,10 +2,8 @@ import asyncio
 from time import time
 from typing import List, Tuple
 
-import clvm
 import pytest
 from clvm.casts import int_to_bytes
-from clvm_tools import binutils
 
 from src.server.outbound_message import OutboundMessage
 from src.protocols import full_node_protocol
@@ -675,7 +673,7 @@ class TestMempool:
             if msg.message.function == "new_transaction":
                 new_transaction = True
 
-        assert new_transaction == True
+        assert new_transaction
 
         mempool_bundle = full_node_1.mempool_manager.get_spendbundle(
             spend_bundle1.name()
@@ -723,7 +721,7 @@ class TestMempool:
             if msg.message.function == "new_transaction":
                 new_transaction = True
 
-        assert new_transaction == False
+        assert new_transaction is False
 
         mempool_bundle = full_node_1.mempool_manager.get_spendbundle(
             spend_bundle1.name()
@@ -786,7 +784,7 @@ class TestMempool:
             if msg.message.function == "new_transaction":
                 new_transaction = True
 
-        assert new_transaction == False
+        assert new_transaction is False
 
         mempool_bundle = full_node_1.mempool_manager.get_spendbundle(
             spend_bundle1.name()
