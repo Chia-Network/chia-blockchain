@@ -36,11 +36,12 @@ class TestBlockStore:
             db_filename_3.unlink()
 
         connection = await aiosqlite.connect(db_filename)
-        # connection_2 = await aiosqlite.connect(db_filename_2)
+        connection_2 = await aiosqlite.connect(db_filename_2)
         connection_3 = await aiosqlite.connect(db_filename_3)
 
         db = await BlockStore.create(connection)
         # db_2 = await BlockStore.create(connection_2)
+        await BlockStore.create(connection_2)
         db_3 = await BlockStore.create(connection_3)
         try:
             genesis = FullBlock.from_bytes(test_constants["GENESIS_BLOCK"])
@@ -84,7 +85,7 @@ class TestBlockStore:
 
         except Exception:
             await connection.close()
-            # await connection_2.close()
+            await connection_2.close()
             await connection_3.close()
             db_filename.unlink()
             db_filename_2.unlink()
@@ -93,7 +94,7 @@ class TestBlockStore:
             raise
 
         await connection.close()
-        # await connection_2.close()
+        await connection_2.close()
         await connection_3.close()
         db_filename.unlink()
         db_filename_2.unlink()
