@@ -26,7 +26,8 @@
     "redux": "^4.0.5",
     "redux-thunk": "^2.3.0",
     "stringify": "^5.2.0",
-    "tail": "^2.0.3"
+    "tail": "^2.0.3",
+    "ws": "^7.3.0"
   },
   "homepage": "./",
   "main": "src/electron-starter.js",

@@ -19,7 +19,7 @@ import VisibilityIcon from "@material-ui/icons/Visibility";
 import {
   changeEntranceMenu,
   presentOldWallet,
-  presentNewWallet,
+  presentNewWallet
 } from "../modules/entranceMenu";
 
 const useStyles = makeStyles(theme => ({
@@ -81,6 +81,9 @@ const SelectKey = () => {
   const public_key_fingerprints = useSelector(
     state => state.wallet_state.public_key_fingerprints
   );
+  const public_key_fingerprints2 = useSelector(state => state);
+  console.log("PKS", public_key_fingerprints);
+  console.log("PKS2", public_key_fingerprints2);
 
   const handleClick = fingerprint => {
     return () => dispatch(log_in(fingerprint));

@@ -88,6 +88,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         return state;
       }
 
+      console.log("Got action!!", action);
       const message = action.message;
       const data = message.data;
       const command = message.command;
@@ -112,12 +113,16 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           };
         }
       } else if (command === "get_public_keys") {
-        var public_key_fingerprints = data.public_key_fingerprints;
-        return {
-          ...state,
-          public_key_fingerprints: public_key_fingerprints,
-          logged_in_received: true
-        };
+        console.log("Got command!!", data);
+        success = data.success;
+        if (success) {
+          var public_key_fingerprints = data.public_key_fingerprints;
+          return {
+            ...state,
+            public_key_fingerprints: public_key_fingerprints,
+            logged_in_received: true
+          };
+        }
       } else if (command === "ping") {
         var started = data.success;
         return { ...state, server_started: started };

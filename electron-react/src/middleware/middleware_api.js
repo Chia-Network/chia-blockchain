@@ -182,7 +182,9 @@ export const handle_message = (store, payload) => {
       store.dispatch(format_message("get_public_keys", {}));
     }
   } else if (payload.command === "get_public_keys") {
-    store.dispatch(changeEntranceMenu(presentSelectKeys));
+    if (payload.data.success) {
+      store.dispatch(changeEntranceMenu(presentSelectKeys));
+    }
   } else if (payload.command === "get_private_key") {
     const text =
       "Extended private key: " +
