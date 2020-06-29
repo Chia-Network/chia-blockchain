@@ -36,8 +36,9 @@ def service_kwargs_for_farmer(root_path):
         connect_peers=connect_peers,
         auth_connect_peers=False,
         on_connect_callback=api._on_connect,
-        rpc_info=(FarmerRpcApi, config["rpc_port"]),
     )
+    if config["start_rpc_server"]:
+        kwargs["rpc_info"] = (FarmerRpcApi, config["rpc_port"])
     return kwargs
 
 

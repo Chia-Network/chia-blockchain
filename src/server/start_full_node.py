@@ -46,13 +46,14 @@ def service_kwargs_for_full_node(root_path):
         start_callback=start_callback,
         stop_callback=stop_callback,
         await_closed_callback=await_closed_callback,
-        rpc_info=(FullNodeRpcApi, config["rpc_port"]),
         periodic_introducer_poll=(
             peer_info,
             config["introducer_connect_interval"],
             config["target_peer_count"],
         ),
     )
+    if config["start_rpc_server"]:
+        kwards["rpc_info"] = (FullNodeRpcApi, config["rpc_port"])
     return kwargs
 
 
