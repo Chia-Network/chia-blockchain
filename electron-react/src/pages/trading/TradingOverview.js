@@ -9,6 +9,11 @@ import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import Grid from "@material-ui/core/Grid";
 import HelpIcon from "@material-ui/icons/Help";
 import { mojo_to_chia_string } from "../../util/chia";
+import {
+  get_all_trades,
+  cancel_trade,
+  cancel_trade_with_spend
+} from "../../modules/trade_messages";
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -85,7 +90,7 @@ const useStyles = makeStyles(theme => ({
 const TradeRow = props => {
   const trade_id = props.trade.trade_id;
   const status = props.trade.status;
-  const time = unix_to_short_date(props.trade.timestamp);
+  const time = unix_to_short_date(props.trade.created_at_time);
   const classes = useStyles();
   const dispatch = useDispatch();
 
@@ -102,7 +107,7 @@ const TradeRow = props => {
       style={{ minWidth: "100%" }}
       className={classes.trade_row}
     >
-      <Box flexGrow={1}>{trade_id}</Box>
+      <Box flexGrow={1}>{trade_id.substring(0, 16)}</Box>
       <Box flexGrow={1}>{status}</Box>
       <Box
         style={{
@@ -164,7 +169,7 @@ const getDetailItems = trade => {
   const date = unix_to_short_date(trade.timestamp);
   const trade_id_item = {
     label: "Trade ID: ",
-    value: trade.trade_id,
+    value: trade.trade_id.substring(0, 16),
     colour: "black",
     tooltip: "Unique identifier"
   };
@@ -178,28 +183,49 @@ const getDetailItems = trade => {
 
   const date_item = {
     label: "Created At: ",
-    value: date,
+    value: unix_to_short_date(trade.created_at_time),
     colour: "black",
     tooltip: "Time this trade was created at this time"
   };
+  var confirmed_string = "";
+  var confirmed = trade.confirmed_at_index;
+  if (confirmed === 0) {
+    confirmed_string = "Not confirmed yet";
+  } else {
+    confirmed_string = trade.confirmed_at_index;
+  }
 
   const executed_at_item = {
-    label: "Executed at: ",
-    value: date,
+    label: "Confirmed at block: ",
+    value: confirmed_string,
     colour: "black",
     tooltip: "This trade was included on blockchain at this block height"
   };
-
+  var our = "";
+  if (trade.my_offer === true) {
+    our = "Yes";
+  } else {
+    our = "No";
+  }
   const offer_creator_item = {
     label: "Created by us: ",
-    value: date,
+    value: our,
     colour: "black",
     tooltip: "Indicated if this offer was created by us"
   };
 
+  var accepted = "";
+  var accepted_time = trade.accepted_at_time;
+  debugger;
+  if (accepted_time === null) {
+    accepted = "Not accepted yet";
+  } else {
+    accepted = unix_to_short_date(trade.accepted_at_time);
+  }
+
   const accepted_at_time = {
     label: "Accepted at time: ",
-    value: date,
+    value: accepted,
     colour: "black",
     tooltip: "Indicated what time this offer was accepted"
   };
@@ -226,7 +252,7 @@ const DetailCell = props => {
       <div className={classes.cardSubSection}>
         <Box display="flex">
           <Box display="flex" flexGrow={1}>
-            <Typography variant="subtitle1">{label}</Typography>
+            <Typography>{label}</Typography>
             {tooltip ? (
               <Tooltip title={tooltip}>
                 <HelpIcon style={{ color: "#c8c8c8", fontSize: 12 }}></HelpIcon>
@@ -236,7 +262,7 @@ const DetailCell = props => {
             )}
           </Box>
           <Box>
-            <Typography variant="subtitle1">
+            <Typography>
               <span style={colour ? { color: colour } : {}}>{value}</span>
             </Typography>
           </Box>
@@ -275,17 +301,30 @@ export const TradeDetail = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
   const presented = useSelector(state => state.trade_state.trade_showed);
-
+  const status = presented.status;
+  debugger;
+  var visible = { visibility: "visible" };
+  if (
+    status === "Confirmed" ||
+    status === "Pending Cancelled" ||
+    status === "Cancelled"
+  ) {
+    visible = { visibility: "hidden" };
+  }
   function goBack() {
     dispatch(presetOverview());
   }
 
-  function accept() {}
+  function secure_cancel() {
+    dispatch(cancel_trade_with_spend(presented.trade_id));
+  }
 
-  function cancel() {}
+  function cancel() {
+    dispatch(cancel_trade(presented.trade_id));
+  }
 
   const trade_detail_items = getDetailItems(presented);
-  debugger;
+
   return (
     <Paper className={classes.paper}>
       <div className={classes.pending_trades}>
@@ -313,9 +352,7 @@ export const TradeDetail = () => {
         <Divider></Divider>
         <div>
           <div className={classes.tradeSubSection}>
-            <Typography component="subtitle" variant="subtitle">
-              Coins:
-            </Typography>
+            <Typography component="subtitle">Coins:</Typography>
             {Object.keys(presented.offer_dict).map(name => (
               <OfferRow
                 name={name}
@@ -329,12 +366,13 @@ export const TradeDetail = () => {
             <Box flexGrow={1}></Box>
             <Box>
               <Button
-                onClick={accept}
+                onClick={secure_cancel}
                 className={classes.accept}
                 variant="contained"
                 color="primary"
+                style={visible}
               >
-                Accept
+                Cancel and Spend
               </Button>
             </Box>
             <Box>
@@ -343,6 +381,7 @@ export const TradeDetail = () => {
                 className={classes.accept}
                 variant="contained"
                 color="primary"
+                style={visible}
               >
                 Cancel
               </Button>
@@ -387,6 +426,10 @@ export const TradingHistory = () => {
 export const TradingOverview = () => {
   const classes = useStyles();
   const showing_trade = useSelector(state => state.trade_state.showing_trade);
+  const dispatch = useDispatch();
+
+  dispatch(get_all_trades());
+
   if (showing_trade === true) {
     return (
       <div className={classes.root}>
