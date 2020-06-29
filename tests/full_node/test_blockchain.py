@@ -13,7 +13,7 @@ from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
 from src.util.ints import uint8, uint64
 from src.consensus.constants import ConsensusConstants
-from tests.block_tools import BlockTools
+from src.util.block_tools import BlockTools
 from src.util.errors import Err
 from src.consensus.coinbase import create_coinbase_coin_and_signature
 from src.types.sized_bytes import bytes32

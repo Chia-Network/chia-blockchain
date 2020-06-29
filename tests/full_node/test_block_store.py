@@ -1,5 +1,4 @@
 import asyncio
-from secrets import token_bytes
 from pathlib import Path
 from typing import Any, Dict
 import sqlite3
@@ -14,7 +13,7 @@ from src.full_node.blockchain import Blockchain
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
-from tests.block_tools import BlockTools
+from src.util.block_tools import BlockTools
 from tests.setup_nodes import test_constants
 from tests.block_tools import BlockTools
 

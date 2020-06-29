@@ -11,7 +11,7 @@ from src.simulator.full_node_simulator import FullNodeSimulator
 from src.timelord_launcher import spawn_process, kill_processes
 from src.util.keychain import Keychain
 from src.wallet.wallet_node import WalletNode
-from tests.block_tools import BlockTools
+from src.util.block_tools import BlockTools
 from src.util.config import load_config
 from src.harvester import Harvester
 from src.farmer import Farmer
