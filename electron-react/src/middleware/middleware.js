@@ -14,6 +14,7 @@ import {
 const config = require("../config");
 
 const crypto = require("crypto");
+const callback_map = {};
 
 const outgoing_message = (command, data, destination) => ({
   command: command,
@@ -53,6 +54,14 @@ const socketMiddleware = () => {
 
   const onMessage = store => event => {
     const payload = JSON.parse(event.data);
+    const request_id = payload["request_id"];
+    if (callback_map[request_id] != null) {
+      debugger;
+      const callback_action = callback_map[request_id];
+      const callback = callback_action.resolve_callback;
+      callback(payload);
+      callback_map[request_id] = null;
+    }
     handle_message(store, payload);
   };
 
@@ -89,6 +98,9 @@ const socketMiddleware = () => {
             action.message.data,
             action.message.destination
           );
+          if (action.resolve_callback != null) {
+            callback_map[message.request_id] = action;
+          }
           socket.send(JSON.stringify(message));
         } else {
           console.log("Socket not connected");

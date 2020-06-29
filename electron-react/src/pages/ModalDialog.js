@@ -7,6 +7,9 @@ import DialogContentText from "@material-ui/core/DialogContentText";
 import DialogTitle from "@material-ui/core/DialogTitle";
 import { closeDialog } from "../modules/dialogReducer";
 import { useDispatch, useSelector } from "react-redux";
+import { Backdrop } from "@material-ui/core";
+import { CircularProgress } from "@material-ui/core";
+import { useStyles } from "./CreateWallet";
 
 export const DialogItem = props => {
   const dialog = props.dialog;
@@ -53,5 +56,15 @@ export const ModalDialog = () => {
         <DialogItem dialog={dialog} key={dialog}></DialogItem>
       ))}
     </div>
+  );
+};
+
+export const Spinner = () => {
+  const show = useSelector(state => state.progress.progress_indicator);
+  const classes = useStyles();
+  return (
+    <Backdrop className={classes.backdrop} open={show}>
+      <CircularProgress color="inherit" />
+    </Backdrop>
   );
 };
