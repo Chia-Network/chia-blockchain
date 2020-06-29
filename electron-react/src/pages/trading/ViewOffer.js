@@ -41,13 +41,14 @@ const useStyles = makeStyles(theme => ({
     })
   },
   paper: {
+    margin: theme.spacing(3),
     padding: theme.spacing(0),
     display: "flex",
     overflow: "auto",
     flexDirection: "column"
   },
   balancePaper: {
-    marginTop: theme.spacing(2)
+    margin: theme.spacing(3)
   },
   copyButton: {
     marginTop: theme.spacing(0),
