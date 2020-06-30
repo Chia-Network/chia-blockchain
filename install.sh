@@ -80,18 +80,18 @@ pip install -e .
 echo ""
 UBUNTU_PRE_2004=false
 if $UBUNTU; then
-  echo "Installing on Ubuntu older than 20.04 LTS: Ugrading node.js to stable"
   UBUNTU_PRE_2004=$(python -c 'import subprocess; process = subprocess.run(["lsb_release", "-rs"], stdout=subprocess.PIPE); print(float(process.stdout) < float(20.04))')
 fi
 
 if [ "$UBUNTU_PRE_2004" = "True" ]; then
+  echo "Installing on Ubuntu older than 20.04 LTS: Ugrading node.js to stable"
   UBUNTU_PRE_2004=true  # Unfortunately Python returns True when shell expects true
   sudo npm install -g n
   sudo n stable
   export PATH="$PATH"
 fi
 
-if $UBUNTU && ! $UBUNTU_PRE_2004; then
+if [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "False" ]; then
   echo "Installing on Ubuntu 20.04 LTS or newer: Using installed node.js version"
 fi
 
