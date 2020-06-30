@@ -290,11 +290,16 @@ class TestCCTrades:
         await time_out_assert(15, cc_a_4.get_confirmed_balance, 40)
         await time_out_assert(15, cc_b_4.get_confirmed_balance, 60)
 
-        trade_a = await trade_manager_a.get_trade_by_id(trade_a.trade_id)
-        trade_b = await trade_manager_b.get_trade_by_id(offer.trade_id)
+        async def assert_func():
+            trade = await trade_manager_a.get_trade_by_id(trade_a.trade_id)
+            return trade.status
 
-        assert trade_a.status == TradeStatus.CONFIRMED.value
-        assert trade_b.status == TradeStatus.CONFIRMED.value
+        async def assert_func_b():
+            trade = await trade_manager_b.get_trade_by_id(offer.trade_id)
+            return trade.status
+
+        await time_out_assert(15, assert_func, TradeStatus.CONFIRMED.value)
+        await time_out_assert(15, assert_func_b, TradeStatus.CONFIRMED.value)
 
     @pytest.mark.asyncio
     async def test_cc_trade_cancel_insecure(self, wallets_prefarm):
