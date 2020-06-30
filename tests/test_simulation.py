@@ -7,12 +7,14 @@ from src.util.block_tools import BlockTools
 from src.consensus.constants import constants as consensus_constants
 from src.util.ints import uint32
 from src.types.full_block import FullBlock
-from tests.make_test_constants import make_test_constants_with_genesis
+from src.util.make_test_constants import make_test_constants_with_genesis
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 
 bt = BlockTools()
 
-test_constants = make_test_constants_with_genesis({"DIFFICULTY_STARTING": 500, "MIN_ITERS_STARTING": 500})
+test_constants = make_test_constants_with_genesis(
+    {"DIFFICULTY_STARTING": 500, "MIN_ITERS_STARTING": 500}
+)
 
 
 def node_height_at_least(node, h):

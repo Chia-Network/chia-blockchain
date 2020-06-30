@@ -50,7 +50,9 @@ class ConsensusConstants:
     MAX_BLOCK_COST_CLVM: int
 
     def __post_init__(self):
-        assert self.DIFFICULTY_EPOCH == self.DIFFICULTY_DELAY * self.DIFFICULTY_WARP_FACTOR
+        assert (
+            self.DIFFICULTY_EPOCH == self.DIFFICULTY_DELAY * self.DIFFICULTY_WARP_FACTOR
+        )
 
     def __getitem__(self, key):
         # TODO: remove this

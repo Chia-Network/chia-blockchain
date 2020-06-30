@@ -76,7 +76,11 @@ class FullNode:
     state_changed_callback: Optional[Callable]
 
     def __init__(
-        self, config: Dict, root_path: Path, consensus_constants: ConsensusConstants, name: str = None,
+        self,
+        config: Dict,
+        root_path: Path,
+        consensus_constants: ConsensusConstants,
+        name: str = None,
     ):
         self.root_path = root_path
         self.config = config
@@ -1284,8 +1288,7 @@ class FullNode:
         cost = uint64(0)
         if solution_program:
             _, _, cost = calculate_cost_of_program(
-                solution_program,
-                self.constants.CLVM_COST_RATIO_CONSTANT
+                solution_program, self.constants.CLVM_COST_RATIO_CONSTANT
             )
 
         extension_data: bytes32 = bytes32([0] * 32)

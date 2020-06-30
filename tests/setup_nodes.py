@@ -20,7 +20,7 @@ from src.timelord import Timelord
 from src.server.connection import PeerInfo
 from src.util.ints import uint16, uint32
 from src.server.start_service import Service
-from tests.make_test_constants import make_test_constants_with_genesis
+from src.util.make_test_constants import make_test_constants_with_genesis
 from tests.time_out_assert import time_out_assert
 
 
@@ -29,19 +29,21 @@ bt = BlockTools()
 global_config = load_config(bt.root_path, "config.yaml")
 self_hostname = global_config["self_hostname"]
 
-test_constants = make_test_constants_with_genesis({
-    "DIFFICULTY_STARTING": 1,
-    "DISCRIMINANT_SIZE_BITS": 8,
-    "BLOCK_TIME_TARGET": 10,
-    "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
-    "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
-    "PROPAGATION_THRESHOLD": 10,
-    "PROPAGATION_DELAY_THRESHOLD": 20,
-    "TX_PER_SEC": 1,
-    "MEMPOOL_BLOCK_BUFFER": 10,
-    "MIN_ITERS_STARTING": 50 * 1,
-    "CLVM_COST_RATIO_CONSTANT": 108,
-})
+test_constants = make_test_constants_with_genesis(
+    {
+        "DIFFICULTY_STARTING": 1,
+        "DISCRIMINANT_SIZE_BITS": 8,
+        "BLOCK_TIME_TARGET": 10,
+        "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
+        "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
+        "PROPAGATION_THRESHOLD": 10,
+        "PROPAGATION_DELAY_THRESHOLD": 20,
+        "TX_PER_SEC": 1,
+        "MEMPOOL_BLOCK_BUFFER": 10,
+        "MIN_ITERS_STARTING": 50 * 1,
+        "CLVM_COST_RATIO_CONSTANT": 108,
+    }
+)
 
 
 def constants_for_dic(dic):
@@ -127,7 +129,12 @@ async def setup_full_node(
 
 
 async def setup_wallet_node(
-    port, full_node_port=None, introducer_port=None, key_seed=None, dic={}, starting_height=None,
+    port,
+    full_node_port=None,
+    introducer_port=None,
+    key_seed=None,
+    dic={},
+    starting_height=None,
 ):
     config = load_config(bt.root_path, "config.yaml", "wallet")
     if starting_height is not None:
@@ -396,8 +403,12 @@ async def setup_two_nodes(dic={}):
     """
     consensus_constants = constants_for_dic(dic)
     node_iters = [
-        setup_full_node(consensus_constants, "blockchain_test.db", 21234, simulator=False),
-        setup_full_node(consensus_constants, "blockchain_test_2.db", 21235, simulator=False),
+        setup_full_node(
+            consensus_constants, "blockchain_test.db", 21234, simulator=False
+        ),
+        setup_full_node(
+            consensus_constants, "blockchain_test_2.db", 21235, simulator=False
+        ),
     ]
 
     fn1, s1 = await node_iters[0].__anext__()
@@ -411,7 +422,9 @@ async def setup_two_nodes(dic={}):
 async def setup_node_and_wallet(dic={}, starting_height=None):
     consensus_constants = constants_for_dic(dic)
     node_iters = [
-        setup_full_node(consensus_constants, "blockchain_test.db", 21234, simulator=False),
+        setup_full_node(
+            consensus_constants, "blockchain_test.db", 21234, simulator=False
+        ),
         setup_wallet_node(21235, None, dic=dic, starting_height=starting_height),
     ]
 
@@ -441,7 +454,9 @@ async def setup_simulators_and_wallets(
     for index in range(0, wallet_count):
         seed = bytes(uint32(index))
         port = 55000 + index
-        wlt = setup_wallet_node(port, None, key_seed=seed, dic=dic, starting_height=starting_height)
+        wlt = setup_wallet_node(
+            port, None, key_seed=seed, dic=dic, starting_height=starting_height
+        )
         wallets.append(await wlt.__anext__())
         node_iters.append(wlt)
 
@@ -472,8 +487,12 @@ async def setup_full_system(dic={}):
         setup_farmer(21235, uint16(21237), dic),
         setup_vdf_clients(8000),
         setup_timelord(21236, 21237, False, dic),
-        setup_full_node(consensus_constants, "blockchain_test.db", 21237, 21233, False, 10),
-        setup_full_node(consensus_constants, "blockchain_test_2.db", 21238, 21233, False, 10),
+        setup_full_node(
+            consensus_constants, "blockchain_test.db", 21237, 21233, False, 10
+        ),
+        setup_full_node(
+            consensus_constants, "blockchain_test_2.db", 21238, 21233, False, 10
+        ),
         setup_vdf_clients(7999),
         setup_timelord(21239, 21238, True, dic),
     ]

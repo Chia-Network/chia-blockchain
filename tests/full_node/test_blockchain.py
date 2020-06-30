@@ -20,11 +20,12 @@ from src.types.sized_bytes import bytes32
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from tests.make_test_constants import make_test_constants_with_genesis
+from src.util.make_test_constants import make_test_constants_with_genesis
 
 bt = BlockTools()
 
-test_constants: ConsensusConstants = make_test_constants_with_genesis({
+test_constants: ConsensusConstants = make_test_constants_with_genesis(
+    {
         "DIFFICULTY_STARTING": 1,
         "DISCRIMINANT_SIZE_BITS": 8,
         "BLOCK_TIME_TARGET": 10,
@@ -32,7 +33,8 @@ test_constants: ConsensusConstants = make_test_constants_with_genesis({
         "DIFFICULTY_WARP_FACTOR": 3,
         "DIFFICULTY_DELAY": 2,  # EPOCH / WARP_FACTOR
         "MIN_ITERS_STARTING": 50 * 1,
-})
+    }
+)
 test_constants_dict: Dict[str, Any] = test_constants.copy()
 
 

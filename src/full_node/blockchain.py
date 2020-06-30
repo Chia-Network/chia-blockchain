@@ -85,7 +85,9 @@ class Blockchain:
 
     @staticmethod
     async def create(
-        coin_store: CoinStore, block_store: BlockStore, consensus_constants: ConsensusConstants,
+        coin_store: CoinStore,
+        block_store: BlockStore,
+        consensus_constants: ConsensusConstants,
     ):
         """
         Initializes a blockchain with the header blocks from disk, assuming they have all been
@@ -636,8 +638,7 @@ class Blockchain:
             return Err.UNKNOWN
         # Get List of names removed, puzzles hashes for removed coins and conditions crated
         error, npc_list, cost = calculate_cost_of_program(
-            block.transactions_generator,
-            self.constants["CLVM_COST_RATIO_CONSTANT"]
+            block.transactions_generator, self.constants["CLVM_COST_RATIO_CONSTANT"]
         )
 
         # 2. Check that cost <= MAX_BLOCK_COST_CLVM
