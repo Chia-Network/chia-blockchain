@@ -29,8 +29,9 @@ from src.wallet.wallet import Wallet
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.derivation_record import DerivationRecord
-from src.wallet.did_wallet import did_puzzle
+from src.wallet.did_wallet import did_wallet_puzzles
 from clvm import run_program
+from src.util.hash import std_hash
 
 
 class DIDWallet:
@@ -184,14 +185,14 @@ class DIDWallet:
 
         search_for_parent: bool = True
 
-        inner_puzzle = await self.inner_puzzle_for_cc_puzzle(coin.puzzle_hash)
+        inner_puzzle = await self.inner_puzzle_for_did_puzzle(coin.puzzle_hash)
         future_parent = CCParent(
-            coin.parent_coin_info, inner_puzzle.get_tree_hash(), coin.amount
+            coin.parent_coin_info, Program(binutils.assemble(inner_puzzle)).get_tree_hash(), coin.amount
         )
 
         await self.add_parent(coin.name(), future_parent)
 
-        for name, ccparent in self.cc_info.parent_info:
+        for name, ccparent in self.did_info.parent_info:
             if coin.parent_coin_info == name:
                 search_for_parent = False
                 break
@@ -279,10 +280,10 @@ class DIDWallet:
                         break
 
                 if coin is not None:
-                    if cc_wallet_puzzles.check_is_cc_puzzle(puzzle_program):
+                    if did_wallet_puzzles.check_is_did_puzzle(puzzle_program):
                         puzzle_string = binutils.disassemble(puzzle_program)
                         inner_puzzle_hash = hexstr_to_bytes(
-                            get_innerpuzzle_from_puzzle(puzzle_string)
+                            did_wallet_puzzles.get_innerpuzzle_from_puzzle(puzzle_string)
                         )
                         self.log.info(
                             f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle_hash.hex()}"
@@ -313,9 +314,9 @@ class DIDWallet:
                 await self.wallet_state_manager.set_action_done(action_id)
 
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
-        innerpuzhash = Program(binutils.assemble(did_puzzle.create_innerpuz(pubkey, self.did_info.backup_ids))).get_tree_hash()
+        innerpuzhash = Program(binutils.assemble(did_wallet_puzzles.create_innerpuz(pubkey, self.did_info.backup_ids))).get_tree_hash()
         core = self.did_info.my_core
-        return Program(binutils.assemble(did_puzzle.create_fullpuz(innerpuzhash, core)))
+        return Program(binutils.assemble(did_wallet_puzzles.create_fullpuz(innerpuzhash, core)))
 
     async def get_new_puzzle(self) -> Program:
         return self.puzzle_for_pk(
@@ -338,15 +339,19 @@ class DIDWallet:
 
         return
 
-    async def get_new_inner_hash(self) -> bytes32:
+    async def get_new_innerpuz(self) -> Program:
         devrec = await self.wallet_state_manager.get_unused_derivation_record(self.standard_wallet.wallet_info.id)
         pubkey = bytes(devrec.pubkey)
-        innerpuzzle = did_puzzle.create_innerpuz(pubkey, self.did_info.backup_ids)
+        innerpuzzle = did_wallet_puzzles.create_innerpuz(pubkey, self.did_info.backup_ids)
         innerpuz = Program(binutils.assemble(innerpuzzle))
+        return innerpuz
+
+    async def get_new_inner_hash(self) -> bytes32:
+        innerpuz = await self.get_new_innerpuz()
         return innerpuz.get_tree_hash()
 
     async def get_innerhash_for_pubkey(self, pubkey: bytes):
-        innerpuzzle = did_puzzle.create_innerpuz(pubkey, self.did_info.backup_ids)
+        innerpuzzle = did_wallet_puzzles.create_innerpuz(pubkey, self.did_info.backup_ids)
         innerpuz = Program(binutils.assemble(innerpuzzle))
         return innerpuz.get_tree_hash()
 
@@ -354,7 +359,7 @@ class DIDWallet:
         record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
             did_hash.hex()
         )
-        inner_puzzle: Program = did_puzzle.get_new_puzzlehash(bytes(record.pubkey))
+        inner_puzzle: Program = did_wallet_puzzles.create_innerpuz(bytes(record.pubkey), self.did_info.backup_ids)
         return inner_puzzle
 
     async def get_parent_for_coin(self, coin) -> Optional[CCParent]:
@@ -374,13 +379,15 @@ class DIDWallet:
         origin = coins.copy().pop()
         origin_id = origin.name()
 
-        did_core = did_puzzle.create_core(bytes(origin_id))
+        did_core = did_wallet_puzzles.create_core(bytes(origin_id))
 
         did_info: DIDInfo = DIDInfo(did_core, self.did_info.backup_ids, self.did_info.parent_info)
         await self.save_info(did_info)
 
-        did_inner = await self.get_new_inner_hash()
-        did_puz = did_puzzle.create_fullpuz(did_inner, did_core)
+        did_inner = await self.get_new_innerpuz()
+        did_inner_hash = did_inner.get_tree_hash()
+        did_puz = did_wallet_puzzles.create_fullpuz(did_inner_hash, did_core)
+        #breakpoint()
         did_puzzle_hash = Program(binutils.assemble(did_puz)).get_tree_hash()
 
         tx_record: Optional[
@@ -390,7 +397,7 @@ class DIDWallet:
         )
         self.log.warning(f"did_puzzle_hash is {did_puzzle_hash}")
         eve_coin = Coin(origin_id, did_puzzle_hash, amount)
-        future_parent = CCParent(eve_coin.parent_coin_info, did_inner, eve_coin.amount)
+        future_parent = CCParent(eve_coin.parent_coin_info, did_inner_hash, eve_coin.amount)
         eve_parent = CCParent(
             origin.parent_coin_info, origin.puzzle_hash, origin.amount
         )
@@ -400,18 +407,34 @@ class DIDWallet:
         if tx_record is None or tx_record.spend_bundle is None:
             return None
 
-        eve_spend = self.generate_eve_spend(eve_coin, did_puz, origin_id, did_inner)
+        eve_spend = await self.generate_eve_spend(eve_coin, did_puz, origin_id, did_inner)
 
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend])
         return full_spend
 
-    def generate_eve_spend(self, coin: Coin, full_puzzle: Program, origin_id: bytes, innerpuz: Program):
+    async def generate_eve_spend(self, coin: Coin, full_puzzle: str, origin_id: bytes, innerpuz: Program):
         # innerpuz solution is (mode amount new_puz identity my_puz)
         innersol = f"(0 {coin.amount} 0x{coin.puzzle_hash} 0x{coin.name()} 0x{coin.puzzle_hash})"
-        # full solution is (corehash parent_info my_amount puzzle_reveal solution)
-        fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} 0x{coin.parent_coin_info} {coin.amount} {full_puzzle} {innersol})"
+        # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
+        innerpuz_str = binutils.disassemble(innerpuz)
+        fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} 0x{coin.parent_coin_info} {coin.amount} {innerpuz_str} {innersol})"
+        #breakpoint()
         list_of_solutions = [CoinSolution(coin, clvm.to_sexp_f([Program(binutils.assemble(full_puzzle)), Program(binutils.assemble(fullsol))]),)]
-        aggsig = BLSSignature.aggregate([])
+        # sign for AGG_SIG_ME
+        message = std_hash(
+                bytes(coin.puzzle_hash) + bytes(coin.name())
+        )
+        #TODO - GET PUBKEY AND PRIVATEKEY
+        pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz_str)
+        index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
+        private = self.wallet_state_manager.private_key.private_child(
+            index
+        ).get_private_key()
+        pk = BLSPrivateKey(private)
+        signature = pk.sign(message)
+        assert signature.validate([signature.PkMessagePair(pubkey, message)])
+        sigs = [signature]
+        aggsig = BLSSignature.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
         return spend_bundle
 
