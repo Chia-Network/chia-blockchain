@@ -13,7 +13,7 @@ from src.wallet.trade_manager import TradeManager
 from tests.setup_nodes import setup_simulators_and_wallets
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 from src.wallet.did_wallet.did_wallet import DIDWallet
-from src.wallet.did_wallet import did_puzzle
+from src.wallet.did_wallet import did_wallet_puzzles
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from typing import List
 
