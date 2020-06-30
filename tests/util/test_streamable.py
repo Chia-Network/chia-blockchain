@@ -1,6 +1,6 @@
 import unittest
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 
 from src.util.ints import uint32
 from src.types.coin import Coin
@@ -10,7 +10,6 @@ from src.util.streamable import Streamable, streamable
 from src.util.block_tools import BlockTools
 from src.protocols.wallet_protocol import RespondRemovals
 from tests.setup_nodes import test_constants
-from tests.block_tools import BlockTools
 from src.util import cbor
 
 

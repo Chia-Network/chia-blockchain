@@ -6,7 +6,7 @@ from src.util.bundle_tools import best_solution_program
 from src.util.cost_calculator import calculate_cost_of_program
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from tests.setup_nodes import test_constants
-from tests.block_tools import BlockTools
+from src.util.block_tools import BlockTools
 from tests.wallet_tools import WalletTool
 
 

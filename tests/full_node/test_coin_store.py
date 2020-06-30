@@ -1,5 +1,4 @@
 import asyncio
-from typing import Any, Dict
 from pathlib import Path
 
 import aiosqlite
@@ -9,9 +8,7 @@ from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.coin_store import CoinStore
 from src.full_node.block_store import BlockStore
 from src.util.block_tools import BlockTools
-from src.consensus.constants import constants as consensus_constants
 from tests.setup_nodes import test_constants
-from tests.block_tools import BlockTools
 
 bt = BlockTools()
 

@@ -5,7 +5,7 @@ import random
 import tempfile
 
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional
 
 from blspy import PrependSignature, PrivateKey, PublicKey
 from chiavdf import prove

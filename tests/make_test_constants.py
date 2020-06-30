@@ -1,7 +1,7 @@
 from typing import Dict
 
 from src.consensus.constants import constants
-from .block_tools import BlockTools
+from src.util.block_tools import BlockTools
 
 
 def make_test_constants_with_genesis(test_constants_overrides: Dict):

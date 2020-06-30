@@ -20,7 +20,6 @@ from src.types.sized_bytes import bytes32
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from tests.block_tools import BlockTools
 from tests.make_test_constants import make_test_constants_with_genesis
 
 bt = BlockTools()
