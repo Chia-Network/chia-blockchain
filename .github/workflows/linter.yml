@@ -63,5 +63,6 @@ jobs:
           VALIDATE_CSS: false
           VALIDATE_ENV: true
           DISABLE_ERRORS: false
+          PYTHONPATH: ${{ github.workspace }}:$PYTHONPATH
 
 ...
