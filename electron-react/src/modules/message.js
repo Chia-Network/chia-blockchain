@@ -1,4 +1,5 @@
 import { service_wallet_server } from "../util/service_names";
+import { openProgress } from "./progressReducer";
 
 export const clearSend = () => {
   var action = {
@@ -14,6 +15,20 @@ export const walletMessage = () => ({
     destination: service_wallet_server
   }
 });
+
+export const async_api = (dispatch, action) => {
+  dispatch(openProgress());
+  var resolve_callback;
+  var reject_callback;
+  let myFirstPromise = new Promise((resolve, reject) => {
+    resolve_callback = resolve;
+    reject_callback = reject;
+  });
+  action.resolve_callback = resolve_callback;
+  action.reject_callback = reject_callback;
+  dispatch(action);
+  return myFirstPromise;
+};
 
 export const format_message = (command, data) => {
   var action = walletMessage();
@@ -189,33 +204,7 @@ export const cc_spend = (wallet_id, puzzle_hash, amount, fee) => {
   return action;
 };
 
-export const create_trade_offer = (trades, filepath) => {
-  var action = walletMessage();
-  action.message.command = "create_offer_for_ids";
-  const data = {
-    ids: trades,
-    filename: filepath
-  };
-  action.message.data = data;
-  return action;
-};
-
 export const logOut = (command, data) => ({ type: "LOG_OUT", command, data });
-
-export const parse_trade_offer = filepath => {
-  var action = walletMessage();
-  action.message.command = "get_discrepancies_for_offer";
-  const data = { filename: filepath };
-  action.message.data = data;
-  return action;
-};
-
-export const accept_trade_offer = filepath => {
-  var action = walletMessage();
-  action.message.command = "respond_to_offer";
-  action.message.data = { filename: filepath };
-  return action;
-};
 
 export const incomingMessage = message => ({
   type: "INCOMING_MESSAGE",

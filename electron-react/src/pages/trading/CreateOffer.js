@@ -23,6 +23,7 @@ import { chia_to_mojo, mojo_to_chia_string } from "../../util/chia";
 import { openDialog } from "../../modules/dialogReducer";
 import isElectron from "is-electron";
 import { create_trade_offer } from "../../modules/message";
+import { create_trade_action } from "../../modules/trade_messages";
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -232,7 +233,7 @@ export const CreateOffer = () => {
           offer[trade.wallet_id] = -trade.amount;
         }
       }
-      dispatch(create_trade_offer(offer, filePath));
+      dispatch(create_trade_action(offer, filePath));
     } else {
       dispatch(
         openDialog("", "This feature is available only from electron app")
