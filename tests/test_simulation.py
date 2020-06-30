@@ -4,7 +4,7 @@ from typing import List
 from tests.setup_nodes import setup_full_system
 from src.util.ints import uint32
 from src.types.full_block import FullBlock
-from tests.make_test_constants import make_test_constants_with_genesis
+from src.util.make_test_constants import make_test_constants_with_genesis
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 
 

@@ -83,8 +83,8 @@ class WalletRpcApi:
         trade: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(trade_id)
         if trade is None:
             response = {
-                f"success": False,
-                "error": "No trade with trade id: {trade_id}",
+                "success": False,
+                "error": f"No trade with trade id: {trade_id}",
             }
             return response
 

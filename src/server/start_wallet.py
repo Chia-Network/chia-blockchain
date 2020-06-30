@@ -23,7 +23,7 @@ def service_kwargs_for_wallet(root_path):
     wallet_constants = consensus_constants
     if config["testing"] is True:
         config["database_path"] = "test_db_wallet.db"
-        wallet_constants = wallet_constants.replace(**test_constants)
+        wallet_constants = test_constants
 
     api = WalletNode(config, keychain, root_path, consensus_constants=wallet_constants)
 
