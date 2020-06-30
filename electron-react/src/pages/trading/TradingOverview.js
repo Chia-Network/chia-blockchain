@@ -275,7 +275,17 @@ const DetailCell = props => {
 const OfferRow = props => {
   const name = props.name;
   const amount = props.amount;
-  const side = amount < 0 ? "Sell" : "Buy";
+  var trade = props.trade;
+  var multiplier = 1;
+  if (!trade) {
+    multiplier = 1;
+  } else {
+    if (trade.my_offer === true) {
+      multiplier = -1;
+    }
+  }
+
+  const side = amount * multiplier < 0 ? "Sell" : "Buy";
 
   return (
     <Box display="flex" style={{ minWidth: "100%" }}>
@@ -357,6 +367,7 @@ export const TradeDetail = () => {
               <OfferRow
                 key={name}
                 name={name}
+                trade={presented}
                 amount={presented.offer_dict[name]}
               ></OfferRow>
             ))}
