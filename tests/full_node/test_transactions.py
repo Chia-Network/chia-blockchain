@@ -130,7 +130,7 @@ class TestTransactions:
             (funds - 10),
         )
         await time_out_assert(
-            10, wallet_1.wallet_state_manager.main_wallet.get_confirmed_balance, (10)
+            15, wallet_1.wallet_state_manager.main_wallet.get_confirmed_balance, (10)
         )
 
     @pytest.mark.asyncio
