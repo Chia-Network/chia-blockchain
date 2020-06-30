@@ -16,3 +16,10 @@ def make_test_constants_with_genesis(test_constants_overrides: Dict):
     )
 
     return final_test_constants, bt
+
+
+def make_test_constants_without_genesis(test_constants_overrides: Dict):
+
+    test_constants = constants.replace(**test_constants_overrides)
+
+    return test_constants
