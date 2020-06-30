@@ -1,5 +1,5 @@
 from secrets import token_bytes
-from src.types.proof_of_space import ProofOfSpace # pylint: E0401
+from src.types.proof_of_space import ProofOfSpace  # pylint: E0401
 
 
 class TestProofOfSpace:
