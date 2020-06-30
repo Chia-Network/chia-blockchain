@@ -1,4 +1,5 @@
 [MASTER]
+errors-only=
 
 # A comma-separated list of package or module names from where C extensions may
 # be loaded. Extensions are loading into the active Python interpreter and may
@@ -7,7 +8,7 @@ extension-pkg-whitelist=
 
 # Add files or directories to the blacklist. They should be base names, not
 # paths.
-ignore=
+ignore=CVS
 
 # Add files or directories matching the regex patterns to the blacklist. The
 # regex matches against base names, not paths.
@@ -126,8 +127,7 @@ disable=print-statement,
         next-method-defined,
         dict-items-not-iterating,
         dict-keys-not-iterating,
-        dict-values-not-iterating,
-        import-error
+        dict-values-not-iterating
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -158,7 +158,7 @@ output-format=text
 reports=no
 
 # Activate the evaluation score.
-score=yes
+score=no
 
 
 [REFACTORING]
@@ -265,7 +265,6 @@ ignored-modules=blspy,
                 miniupnpc,
                 pytest,
                 setuptools_scm
-
 
 # Show a hint with possible names when a member name was not found. The aspect
 # of finding the hint is based on edit distance.
