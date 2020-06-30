@@ -23,6 +23,7 @@ class TestFullNodeStore:
         assert sqlite3.threadsafety == 1
         blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
         # blocks_alt = bt.get_consecutive_blocks(test_constants, 3, [], 9, b"1")
+        bt.get_consecutive_blocks(test_constants, 3, [], 9, b"1")
         db_filename = Path("blockchain_test.db")
         db_filename_2 = Path("blockchain_test_2.db")
         db_filename_3 = Path("blockchain_test_3.db")
