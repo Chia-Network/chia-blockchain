@@ -394,10 +394,9 @@ class TestCCTrades:
         for i in range(0, buffer_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
-        spendable_after_cancel_1 = await wallet_a.get_spendable_balance()
+        await time_out_assert(15, wallet_a.get_spendable_balance, spendable_chia)
 
         # Spendable should be the same as it was before making offer 1
-        assert spendable_chia == spendable_after_cancel_1
 
         async def get_status():
             trade_a = await trade_manager_a.get_trade_by_id(trade_offer.trade_id)
