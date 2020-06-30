@@ -66,7 +66,7 @@ kwargs = dict(
         "src.wallet.rl_wallet",
         "src.wallet.cc_wallet",
         "src.wallet.util",
-        "src.wallet.trading"
+        "src.wallet.trading",
         "src.ssl",
     ],
     scripts=[
