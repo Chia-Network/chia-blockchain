@@ -9,7 +9,7 @@ from src.server.outbound_message import Delivery, Message, OutboundMessage
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16
 from tests.setup_nodes import setup_two_nodes, test_constants
-from tests.block_tools import BlockTools
+from src.util.block_tools import BlockTools
 from tests.time_out_assert import time_out_assert
 
 

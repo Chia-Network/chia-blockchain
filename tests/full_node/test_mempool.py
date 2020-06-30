@@ -22,7 +22,7 @@ from src.util.condition_tools import (
 )
 from src.util.ints import uint64
 from tests.setup_nodes import setup_two_nodes, test_constants
-from tests.block_tools import BlockTools
+from src.util.block_tools import BlockTools
 from tests.wallet_tools import WalletTool
 
 bt = BlockTools()

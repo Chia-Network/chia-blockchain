@@ -13,7 +13,7 @@ from tests.wallet_tools import WalletTool
 from src.types.coin import Coin
 from src.consensus.coinbase import create_coinbase_coin
 from tests.time_out_assert import time_out_assert
-from tests.block_tools import BlockTools
+from src.util.block_tools import BlockTools
 
 
 def wallet_height_at_least(wallet_node, h):

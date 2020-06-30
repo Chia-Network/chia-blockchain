@@ -4,7 +4,7 @@ import pytest
 
 from src.util.merkle_set import MerkleSet, confirm_included_already_hashed
 from tests.setup_nodes import test_constants
-from tests.block_tools import BlockTools
+from src.util.block_tools import BlockTools
 from tests.wallet_tools import WalletTool
 
 

@@ -9,7 +9,7 @@ from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.util.ints import uint16
 from src.util.config import load_config
 from tests.setup_nodes import setup_two_nodes, test_constants
-from tests.block_tools import BlockTools
+from src.util.block_tools import BlockTools
 from tests.time_out_assert import time_out_assert
 
 

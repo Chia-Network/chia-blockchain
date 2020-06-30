@@ -3,7 +3,7 @@ from typing import List
 
 import pytest
 from blspy import ExtendedPrivateKey
-from tests.block_tools import BlockTools
+from src.util.block_tools import BlockTools
 from chiabip158 import PyBIP158
 
 from tests.setup_nodes import test_constants, setup_simulators_and_wallets
