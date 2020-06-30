@@ -18,7 +18,7 @@ from src.types.BLSSignature import BLSSignature
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from tests.make_test_constants import make_test_constants_with_genesis
+from src.util.make_test_constants import make_test_constants_with_genesis
 
 
 test_constants, bt = make_test_constants_with_genesis(
@@ -33,6 +33,7 @@ test_constants, bt = make_test_constants_with_genesis(
         "NUMBER_ZERO_BITS_CHALLENGE_SIG": 1,
     }
 )
+
 
 
 @pytest.fixture(scope="module")
