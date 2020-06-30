@@ -19,7 +19,7 @@ from src.timelord import Timelord
 from src.server.connection import PeerInfo
 from src.util.ints import uint16, uint32
 from src.server.start_service import Service
-from tests.make_test_constants import make_test_constants_with_genesis
+from src.util.make_test_constants import make_test_constants_with_genesis
 from tests.time_out_assert import time_out_assert
 
 
