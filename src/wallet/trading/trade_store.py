@@ -48,7 +48,6 @@ class TradeStore:
         )
 
         await self.db_connection.commit()
-        self.tx_record_cache = dict()
         return self
 
     async def _clear_database(self):
@@ -76,7 +75,7 @@ class TradeStore:
         await self.db_connection.commit()
 
     async def set_status(
-        self, trade_id: bytes32, status: TradeStatus, index: uint32 = 0
+        self, trade_id: bytes32, status: TradeStatus, index: uint32 = uint32(0)
     ):
         """
         Updates the status of the trade
@@ -164,7 +163,7 @@ class TradeStore:
             additions=current.additions,
             removals=current.removals,
             trade_id=current.trade_id,
-            status=TradeStatus.PENDING_CONFIRM.value,
+            status=uint32(TradeStatus.PENDING_CONFIRM.value),
             sent_to=[],
         )
 
