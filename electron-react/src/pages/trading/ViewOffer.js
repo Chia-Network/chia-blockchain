@@ -15,8 +15,11 @@ import {
   parsingStarted
 } from "../../modules/TradeReducer";
 import { mojo_to_chia_string } from "../../util/chia";
-import { parse_trade_offer, accept_trade_offer } from "../../modules/message";
 import { parsingStatePending } from "../../modules/TradeReducer";
+import {
+  accept_trade_action,
+  parse_trade_action
+} from "../../modules/trade_messages";
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -155,7 +158,7 @@ export const DropView = () => {
     const offer_name = offer_file_path.replace(/^.*[\\/]/, "");
 
     dispatch(offerParsingName(offer_name, offer_file_path));
-    dispatch(parse_trade_offer(offer_file_path));
+    dispatch(parse_trade_action(offer_file_path));
     dispatch(parsingStarted());
   };
   const parsing_state = useSelector(state => state.trade_state.parsing_state);
@@ -208,7 +211,7 @@ export const OfferView = () => {
   const file_path = useSelector(state => state.trade_state.parsed_offer_path);
 
   function accept() {
-    dispatch(accept_trade_offer(file_path));
+    dispatch(accept_trade_action(file_path));
   }
 
   function decline() {
