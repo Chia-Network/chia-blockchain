@@ -57,7 +57,7 @@ class DIDWallet:
             self.log = logging.getLogger(__name__)
 
         self.wallet_state_manager = wallet_state_manager
-        self.did_info = DIDInfo(None, backups_ids, [])
+        self.did_info = DIDInfo(None, backups_ids, [], None)
         info_as_string = bytes(self.did_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "DID Wallet", WalletType.DISTRIBUTED_ID, info_as_string
@@ -177,6 +177,90 @@ class DIDWallet:
         self.log.info(f"Unconfirmed balance for did wallet is {result}")
         return uint64(result)
 
+    async def select_coins(
+        self, amount, exclude: List[Coin] = None
+    ) -> Optional[Set[Coin]]:
+        """ Returns a set of coins that can be used for generating a new transaction. """
+        async with self.wallet_state_manager.lock:
+            if exclude is None:
+                exclude = []
+
+            spendable_am = await self.wallet_state_manager.get_unconfirmed_spendable_for_wallet(
+                self.wallet_info.id
+            )
+
+            if amount > spendable_am:
+                self.log.warning(
+                    f"Can't select amount higher than our spendable balance {amount}, spendable {spendable_am}"
+                )
+                return None
+
+            self.log.info(f"About to select coins for amount {amount}")
+            unspent: List[WalletCoinRecord] = list(
+                await self.wallet_state_manager.get_spendable_coins_for_wallet(
+                    self.wallet_info.id
+                )
+            )
+            sum = 0
+            used_coins: Set = set()
+
+            # Use older coins first
+            unspent.sort(key=lambda r: r.confirmed_block_index)
+
+            # Try to use coins from the store, if there isn't enough of "unused"
+            # coins use change coins that are not confirmed yet
+            unconfirmed_removals: Dict[
+                bytes32, Coin
+            ] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+                self.wallet_info.id
+            )
+            for coinrecord in unspent:
+                if sum >= amount and len(used_coins) > 0:
+                    break
+                if coinrecord.coin.name() in unconfirmed_removals:
+                    continue
+                if coinrecord.coin in exclude:
+                    continue
+                sum += coinrecord.coin.amount
+                used_coins.add(coinrecord.coin)
+                self.log.info(
+                    f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_index}!"
+                )
+
+            # This happens when we couldn't use one of the coins because it's already used
+            # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
+            unconfirmed_additions = None
+            if sum < amount:
+                raise ValueError(
+                    "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
+                )
+                unconfirmed_additions = await self.wallet_state_manager.unconfirmed_additions_for_wallet(
+                    self.wallet_info.id
+                )
+                for coin in unconfirmed_additions.values():
+                    if sum > amount:
+                        break
+                    if coin.name() in unconfirmed_removals:
+                        continue
+
+                    sum += coin.amount
+                    used_coins.add(coin)
+                    self.log.info(f"Selected used coin: {coin.name()}")
+
+        if sum >= amount:
+            self.log.info(f"Successfully selected coins: {used_coins}")
+            return used_coins
+        else:
+            # This shouldn't happen because of: if amount > self.get_unconfirmed_balance_spendable():
+            self.log.error(
+                f"Wasn't able to select coins for amount: {amount}"
+                f"unspent: {unspent}"
+                f"unconfirmed_removals: {unconfirmed_removals}"
+                f"unconfirmed_additions: {unconfirmed_additions}"
+            )
+            return None
+
+    # This will be used in the recovery case where we don't have the parent info already
     async def coin_added(
         self, coin: Coin, height: int, header_hash: bytes32, removals: List[Coin]
     ):
@@ -219,6 +303,7 @@ class DIDWallet:
                 data=data_str,
             )
 
+    # This should basically never be called as we don't want to receive ID coins from somebody else
     async def search_for_parent_info(
         self, block_program: Program, removals: List[Coin]
     ) -> bool:
@@ -327,9 +412,53 @@ class DIDWallet:
             )
         )
 
-    async def create_spend(self, puzhash, amount):
+    # This is used to cash out, and delete the ID
+    async def create_spend(self, puzhash):
+        coins = await self.select_coins(1)
+        coin = coins.pop()
+        # innerpuz solution is (mode amount new_puz identity my_puz)
+        innersol = f"(0 {coin.amount} 0x{puzhash} 0x{coin.name()} 0x{coin.puzzle_hash})"
+        # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
+        innerpuz_str = self.did_info.current_inner
+        full_puzzle: str = did_wallet_puzzles.create_fullpuz(Program(binutils.assemble(innerpuz_str)).get_tree_hash(), self.did_info.my_core)
+        parent_info = await self.get_parent_for_coin(coin)
 
-        return
+        fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} (0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount}) {coin.amount} {innerpuz_str} {innersol})"
+        #breakpoint()
+        list_of_solutions = [CoinSolution(coin, clvm.to_sexp_f([Program(binutils.assemble(full_puzzle)), Program(binutils.assemble(fullsol))]),)]
+        # sign for AGG_SIG_ME
+        message = std_hash(
+            bytes(puzhash) + bytes(coin.name())
+        )
+        pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz_str)
+        index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
+        private = self.wallet_state_manager.private_key.private_child(
+            index
+        ).get_private_key()
+        pk = BLSPrivateKey(private)
+        signature = pk.sign(message)
+        assert signature.validate([signature.PkMessagePair(pubkey, message)])
+        sigs = [signature]
+        aggsig = BLSSignature.aggregate(sigs)
+        spend_bundle = SpendBundle(list_of_solutions, aggsig)
+
+        did_record = TransactionRecord(
+            confirmed_at_index=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=puzhash,
+            amount=uint64(coin.amount),
+            fee_amount=uint64(0),
+            incoming=False,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=spend_bundle.additions(),
+            removals=spend_bundle.removals(),
+            wallet_id=self.wallet_info.id,
+            sent_to=[],
+        )
+        await self.standard_wallet.push_transaction(did_record)
+        return spend_bundle
 
     async def create_attestment(self):
 
@@ -381,13 +510,9 @@ class DIDWallet:
 
         did_core = did_wallet_puzzles.create_core(bytes(origin_id))
 
-        did_info: DIDInfo = DIDInfo(did_core, self.did_info.backup_ids, self.did_info.parent_info)
-        await self.save_info(did_info)
-
-        did_inner = await self.get_new_innerpuz()
+        did_inner: Program = await self.get_new_innerpuz()
         did_inner_hash = did_inner.get_tree_hash()
         did_puz = did_wallet_puzzles.create_fullpuz(did_inner_hash, did_core)
-        #breakpoint()
         did_puzzle_hash = Program(binutils.assemble(did_puz)).get_tree_hash()
 
         tx_record: Optional[
@@ -407,6 +532,10 @@ class DIDWallet:
         if tx_record is None or tx_record.spend_bundle is None:
             return None
 
+        # Only want to save this information if the transaction is valid
+        did_info: DIDInfo = DIDInfo(did_core, self.did_info.backup_ids, self.did_info.parent_info, binutils.disassemble(did_inner))
+        await self.save_info(did_info)
+
         eve_spend = await self.generate_eve_spend(eve_coin, did_puz, origin_id, did_inner)
 
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend])
@@ -424,7 +553,6 @@ class DIDWallet:
         message = std_hash(
                 bytes(coin.puzzle_hash) + bytes(coin.name())
         )
-        #TODO - GET PUBKEY AND PRIVATEKEY
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz_str)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
         private = self.wallet_state_manager.private_key.private_child(
@@ -443,7 +571,7 @@ class DIDWallet:
         current_list = self.did_info.parent_info.copy()
         current_list.append((name, parent))
         cc_info: DIDInfo = DIDInfo(
-            self.did_info.my_core, self.did_info.backup_ids, current_list,
+            self.did_info.my_core, self.did_info.backup_ids, current_list, self.did_info.current_inner
         )
         await self.save_info(cc_info)
 
