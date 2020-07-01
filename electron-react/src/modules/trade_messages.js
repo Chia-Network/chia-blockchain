@@ -1,5 +1,5 @@
 import { walletMessage, async_api } from "./message";
-import { openProgress, closeProgress } from "./progressReducer";
+import { closeProgress } from "./progressReducer";
 import { changeTradeMenu, tradingOverview } from "./tradeMenu";
 
 export const cancel_trade = trade_id => {
