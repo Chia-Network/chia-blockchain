@@ -41,6 +41,17 @@ export function cancel_trade_action(trade_id) {
   };
 }
 
+export function cancel_trade_with_spend_action(trade_id) {
+  return dispatch => {
+    return async_api(dispatch, cancel_trade_with_spend(trade_id)).then(
+      response => {
+        dispatch(get_all_trades());
+        dispatch(closeProgress());
+      }
+    );
+  };
+}
+
 export const create_trade_offer = (trades, filepath) => {
   var action = walletMessage();
   action.message.command = "create_offer_for_ids";
