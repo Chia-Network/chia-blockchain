@@ -123,14 +123,14 @@ class TradeManager:
             # Check if all coins that are part of the trade got farmed
             # If coin is missing, trade failed
             failed = False
-            for coin in trade.removals:
-                if coin.name() not in removal_dict:
-                    self.log.error(f"{coin} from trade not removed")
+            for removed_coin in trade.removals:
+                if removed_coin.name() not in removal_dict:
+                    self.log.error(f"{removed_coin} from trade not removed")
                     failed = True
-                checked[coin.name()] = coin
-            for coin in trade.additions:
-                if coin.name() not in addition_dict:
-                    self.log.error(f"{coin} from trade not added")
+                checked[removed_coin.name()] = removed_coin
+            for added_coin in trade.additions:
+                if added_coin.name() not in addition_dict:
+                    self.log.error(f"{added_coin} from trade not added")
                     failed = True
                 checked[coin.name()] = coin
 

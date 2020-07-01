@@ -13,7 +13,6 @@ import { mojo_to_chia_string } from "../../util/chia";
 import { ListItem } from "@material-ui/core";
 import {
   get_all_trades,
-  cancel_trade,
   cancel_trade_with_spend,
   cancel_trade_action
 } from "../../modules/trade_messages";
@@ -166,7 +165,6 @@ export const TradeTable = props => {
 
 const getDetailItems = trade => {
   var detail_items = [];
-  const date = unix_to_short_date(trade.timestamp);
   const trade_id_item = {
     label: "Trade ID: ",
     value: trade.trade_id.substring(0, 16),
