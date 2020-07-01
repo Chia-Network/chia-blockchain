@@ -172,7 +172,7 @@ export const DropView = () => {
     : { visibility: "hidden" };
 
   return (
-    <Paper className={(classes.paper, classes.balancePaper)}>
+    <Paper className={classes.balancePaper}>
       <Grid container spacing={0}>
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
@@ -219,7 +219,7 @@ export const OfferView = () => {
   }
 
   return (
-    <Paper className={(classes.paper, classes.balancePaper)}>
+    <Paper className={classes.balancePaper}>
       <Grid container spacing={0}>
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
