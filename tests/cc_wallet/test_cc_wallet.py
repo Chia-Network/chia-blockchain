@@ -315,6 +315,6 @@ class TestCCWallet:
 
         id = cc_wallet_2.wallet_info.id
         wsm = cc_wallet_2.wallet_state_manager
-        await self.time_out_assert(15, wsm.get_confirmed_balance_for_wallet, 70, id)
-        await self.time_out_assert(15, cc_wallet_2.get_confirmed_balance, 60)
-        await self.time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 60)
+        await time_out_assert(15, wsm.get_confirmed_balance_for_wallet, 70, id)
+        await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 60)
+        await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 60)
