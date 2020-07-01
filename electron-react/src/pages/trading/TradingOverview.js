@@ -13,7 +13,7 @@ import { mojo_to_chia_string } from "../../util/chia";
 import { ListItem } from "@material-ui/core";
 import {
   get_all_trades,
-  cancel_trade_with_spend,
+  cancel_trade_with_spend_action,
   cancel_trade_action
 } from "../../modules/trade_messages";
 
@@ -324,7 +324,7 @@ export const TradeDetail = () => {
   }
 
   function secure_cancel() {
-    dispatch(cancel_trade_with_spend(presented.trade_id));
+    dispatch(cancel_trade_with_spend_action(presented.trade_id));
   }
 
   function cancel() {
