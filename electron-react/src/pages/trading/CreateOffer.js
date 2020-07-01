@@ -22,7 +22,6 @@ import {
 import { chia_to_mojo, mojo_to_chia_string } from "../../util/chia";
 import { openDialog } from "../../modules/dialogReducer";
 import isElectron from "is-electron";
-import { create_trade_offer } from "../../modules/message";
 import { create_trade_action } from "../../modules/trade_messages";
 
 const useStyles = makeStyles(theme => ({
