@@ -12,3 +12,4 @@ class DIDInfo(Streamable):
     my_core: Optional[str]
     backup_ids: List[bytes]
     parent_info: List[Tuple[bytes32, Optional[CCParent]]]  # {coin.name(): CCParent}
+    current_inner: Optional[str]
