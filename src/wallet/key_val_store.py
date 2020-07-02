@@ -1,5 +1,7 @@
-from typing import Optional
+from typing import Any
 import aiosqlite
+
+from src.util.byte_types import hexstr_to_bytes
 from src.util.streamable import Streamable
 
 
@@ -36,7 +38,7 @@ class KeyValStore:
         await cursor.close()
         await self.db_connection.commit()
 
-    async def get(self, key: str) -> Optional[str]:
+    async def get_object(self, key: str, type: Any) -> Any:
         """
         Return bytes representation of stored object
         """
@@ -50,9 +52,9 @@ class KeyValStore:
         if row is None:
             return None
 
-        return row[1]
+        return type.from_bytes(hexstr_to_bytes(row[1]))
 
-    async def set(self, key: str, obj: Streamable):
+    async def set_object(self, key: str, obj: Streamable):
         """
         Adds object to key val store
         """

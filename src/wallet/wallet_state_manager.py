@@ -23,6 +23,7 @@ from src.util.hash import std_hash
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.cc_wallet import cc_wallet_puzzles
 from src.wallet.key_val_store import KeyValStore
+from src.wallet.settings.user_settings import UserSettings
 from src.wallet.trade_manager import TradeManager
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.block_record import BlockRecord
@@ -86,6 +87,7 @@ class WalletStateManager:
 
     trade_manager: TradeManager
     generate_count: int
+    user_settings: UserSettings
 
     @staticmethod
     async def create(
@@ -115,6 +117,7 @@ class WalletStateManager:
         self.basic_store = await KeyValStore.create(self.db_connection)
         self.trade_manager = await TradeManager.create(self, self.db_connection)
 
+        self.user_settings = await UserSettings.create(self.basic_store)
         self.lca = None
         self.sync_mode = False
         self.height_to_hash = {}
