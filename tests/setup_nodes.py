@@ -181,7 +181,7 @@ async def setup_wallet_node(
     started = asyncio.Event()
 
     async def start_callback():
-        await api._start()
+        await api._start(new_wallet=True)
         nonlocal started
         started.set()
 
