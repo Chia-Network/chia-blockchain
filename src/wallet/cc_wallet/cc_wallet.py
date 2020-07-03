@@ -69,7 +69,7 @@ class CCWallet:
         self.cc_info = CCInfo(None, [], None)
         info_as_string = bytes(self.cc_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "CC Wallet", WalletType.COLOURED_COIN, info_as_string
+            "CC Wallet", WalletType.COLOURED_COIN.value, info_as_string
         )
         if self.wallet_info is None:
             raise ValueError("Internal Error")

@@ -76,7 +76,7 @@ class WalletActionStore:
         self,
         name: str,
         wallet_id: int,
-        type: WalletType,
+        type: int,
         callback: str,
         done: bool,
         data: str,
@@ -86,7 +86,7 @@ class WalletActionStore:
         """
         cursor = await self.db_connection.execute(
             "INSERT INTO action_queue VALUES(?, ?, ?, ?, ?, ?, ?)",
-            (None, name, wallet_id, type.value, callback, done, data),
+            (None, name, wallet_id, type, callback, done, data),
         )
         await cursor.close()
         await self.db_connection.commit()

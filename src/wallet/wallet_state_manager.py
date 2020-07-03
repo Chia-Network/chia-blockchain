@@ -30,7 +30,7 @@ from src.wallet.block_record import BlockRecord
 from src.wallet.wallet_action import WalletAction
 from src.wallet.wallet_action_store import WalletActionStore
 from src.wallet.wallet_coin_record import WalletCoinRecord
-from src.wallet.wallet_info import WalletInfo
+from src.wallet.wallet_info import WalletInfo, WalletInfoBackup
 from src.wallet.wallet_puzzle_store import WalletPuzzleStore
 from src.wallet.wallet_store import WalletStore
 from src.wallet.wallet_transaction_store import WalletTransactionStore
@@ -142,16 +142,7 @@ class WalletStateManager:
         self.wallets = {}
         self.wallets[main_wallet_info.id] = self.main_wallet
 
-        for wallet_info in await self.get_all_wallets():
-            # self.log.info(f"wallet_info {wallet_info}")
-            if wallet_info.type == WalletType.STANDARD_WALLET:
-                if wallet_info.id == 1:
-                    continue
-                wallet = await Wallet.create(config, wallet_info)
-                self.wallets[wallet_info.id] = wallet
-            elif wallet_info.type == WalletType.COLOURED_COIN:
-                wallet = await CCWallet.create(self, self.main_wallet, wallet_info,)
-                self.wallets[wallet_info.id] = wallet
+        await self.load_wallets()
 
         async with self.puzzle_store.lock:
             index = await self.puzzle_store.get_last_derivation_path()
@@ -204,6 +195,19 @@ class WalletStateManager:
 
     def get_public_key(self, index: uint32) -> G1Element:
         return master_sk_to_wallet_sk(self.private_key, index).get_g1()
+
+    async def load_wallets(self):
+        for wallet_info in await self.get_all_wallets():
+            if wallet_info.id in self.wallets:
+                continue
+            if wallet_info.type == WalletType.STANDARD_WALLET.value:
+                if wallet_info.id == 1:
+                    continue
+                wallet = await Wallet.create(self.config, wallet_info)
+                self.wallets[wallet_info.id] = wallet
+            elif wallet_info.type == WalletType.COLOURED_COIN.value:
+                wallet = await CCWallet.create(self, self.main_wallet, wallet_info,)
+                self.wallets[wallet_info.id] = wallet
 
     async def get_keys(self, hash: bytes32) -> Optional[Tuple[G1Element, PrivateKey]]:
         index_for_puzzlehash = await self.puzzle_store.index_for_puzzle_hash(hash)
@@ -1318,6 +1322,30 @@ class WalletStateManager:
     async def get_all_wallets(self) -> List[WalletInfo]:
         return await self.user_store.get_all_wallets()
 
+    async def create_wallet_backup(self, file_path: Path):
+        all_wallets = await self.get_all_wallets()
+        for wallet in all_wallets:
+            if wallet.id == 1:
+                all_wallets.remove(wallet)
+                break
+
+        backup = WalletInfoBackup(all_wallets)
+        file_path.write_text(bytes(backup).hex())
+
+    async def import_backup_info(self, file_path):
+        backup_text = file_path.read_text()
+        backup: WalletInfoBackup = WalletInfoBackup.from_bytes(
+            hexstr_to_bytes(backup_text)
+        )
+
+        for wallet_info in backup.wallet_list:
+            await self.user_store.create_wallet(
+                wallet_info.name, wallet_info.type, wallet_info.data
+            )
+
+        await self.load_wallets()
+        await self.user_settings.user_imported_backup()
+
     async def get_wallet_for_colour(self, colour):
         for wallet_id in self.wallets:
             wallet = self.wallets[wallet_id]
@@ -1379,7 +1407,7 @@ class WalletStateManager:
         self,
         name: str,
         wallet_id: int,
-        type: WalletType,
+        type: int,
         callback: str,
         done: bool,
         data: str,
