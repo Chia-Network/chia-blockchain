@@ -6,7 +6,7 @@ import signal
 import subprocess
 import sys
 import traceback
-from typing import Dict, Any
+from typing import Dict, Any, List
 from sys import platform
 from aiohttp import web
 
@@ -35,8 +35,6 @@ log = logging.getLogger(__name__)
 if getattr(sys, "frozen", False):
     name_map = {
         "chia": "chia",
-        "chia-check-plots": "check_plots",
-        "chia-create-plots": "create_plots",
         "chia-wallet": "wallet_server",
         "chia_full_node": "start_full_node",
         "chia_harvester": "start_harvester",
@@ -45,7 +43,6 @@ if getattr(sys, "frozen", False):
         "chia_timelord": "start_timelord",
         "chia_timelord_launcher": "timelord_launcher",
         "chia_full_node_simulator": "start_simulator",
-        "plotter": "create_plots",
     }
 
     def executable_for_service(service_name):
@@ -216,8 +213,8 @@ class WebSocketServer:
         t2 = request["t2"]
         d = request["d"]
 
-        command_args = []
-        command_args.append(service_name)
+        command_args: List[str] = []
+        command_args += service_name.split(" ")
         command_args.append(f"-k={k}")
         command_args.append(f"-n={n}")
         command_args.append(f"-t={t}")
@@ -293,7 +290,7 @@ class WebSocketServer:
         service_name = request["service"]
         process = self.services.get(service_name)
         r = process is not None and process.poll() is None
-        if service_name == "chia-create-plots":
+        if service_name == "chia plots create":
             response = {
                 "success": True,
                 "service_name": service_name,

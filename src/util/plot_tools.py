@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import logging
 import traceback
 from src.types.proof_of_space import ProofOfSpace
+from src.util.config import load_config
 
 
 log = logging.getLogger(__name__)
@@ -67,13 +68,13 @@ def stream_plot_info(
 
 
 def load_plots(
-    config_file: Dict,
     provers: Dict[Path, PlotInfo],
     farmer_public_keys: Optional[List[PublicKey]],
     pool_public_keys: Optional[List[PublicKey]],
     root_path: Path,
     open_no_key_filenames=False,
 ) -> Tuple[bool, Dict[Path, PlotInfo], List[Path], List[Path]]:
+    config_file = load_config(root_path, "config.yaml", "harvester")
     changed = False
     failed_to_open_filenames: List[Path] = []
     no_key_filenames: List[Path] = []

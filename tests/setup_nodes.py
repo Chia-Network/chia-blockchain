@@ -211,12 +211,11 @@ async def setup_wallet_node(
 
 
 async def setup_harvester(port, farmer_port, dic={}):
-    config = load_config(bt.root_path, "config.yaml", "harvester")
     test_constants_copy = test_constants.copy()
     for k in dic.keys():
         test_constants_copy[k] = dic[k]
 
-    api = Harvester(config, bt.root_path, test_constants_copy)
+    api = Harvester(bt.root_path, test_constants_copy)
 
     started = asyncio.Event()
 
