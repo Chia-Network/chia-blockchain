@@ -7,7 +7,7 @@ SERVICES_FOR_GROUP = {
     "wallet-server": "chia-wallet chia_full_node".split(),
     "introducer": "chia_introducer".split(),
     "simulator": "chia_full_node_simulator".split(),
-    "plotter": "chia-create-plots".split(),
+    "plotter": "chia plots create".split(),
 }
 
 
