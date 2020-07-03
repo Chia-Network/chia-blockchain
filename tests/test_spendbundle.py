@@ -17,7 +17,7 @@ def test_1():
 
     conditions = [
         make_create_coin_condition(std_hash(bytes(pp)), amount)
-        for pp, amount in [(puzzle_program_1, 1000), (puzzle_program_2, 2000),]
+        for pp, amount in [(puzzle_program_1, 1000), (puzzle_program_2, 2000)]
     ]
 
     assert conditions is not None
