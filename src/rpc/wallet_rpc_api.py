@@ -498,6 +498,18 @@ class WalletRpcApi:
 
         return response
 
+    async def create_backup(self, request):
+        file_path = request["file_path"]
+        await self.service.wallet_state_manager.create_wallet_backup(file_path)
+        response = {"success": True}
+        return response
+
+    async def load_backup(self, request):
+        file_path = request["file_path"]
+        await self.service.wallet_state_manager.import_backup_info(file_path)
+        response = {"success": True}
+        return response
+
     async def respond_to_offer(self, request):
         file_path = Path(request["filename"])
         (

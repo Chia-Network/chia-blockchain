@@ -116,7 +116,10 @@ class WalletNode:
         self.server = None
 
     async def _start(
-        self, public_key_fingerprint: Optional[int] = None, new_wallet: bool = False
+        self,
+        public_key_fingerprint: Optional[int] = None,
+        new_wallet: bool = False,
+        backup_file: Optional[Path] = None,
     ) -> bool:
         self._shut_down = False
         private_keys = self.keychain.get_all_private_keys()
@@ -154,8 +157,11 @@ class WalletNode:
 
         backup_settings: BackupInitialized = self.wallet_state_manager.user_settings.get_backup_settings()
         if backup_settings.user_initialized is False:
-            self.backup_initialized = False
-            return False
+            if backup_file is None:
+                self.backup_initialized = False
+                return False
+            else:
+                await self.wallet_state_manager.import_backup_info(backup_file)
 
         self.backup_initialized = True
 
