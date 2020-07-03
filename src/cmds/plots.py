@@ -3,6 +3,7 @@ import logging
 from src.plotting.plot_tools import add_plot_directory
 from src.plotting.create_plots import create_plots
 from src.plotting.check_plots import check_plots
+from src.util.logging import initialize_logging
 
 
 log = logging.getLogger(__name__)
@@ -20,8 +21,8 @@ def help_message():
     print(f"command can be any of {command_list}")
     print("")
     print(
-        f"chia plots create -k [size] -n [number of plots] -s [sk_seed] -i [index] -b [memory buffer size MB]"
-        f" -f [farmer pk] -p [pool pk] -t [tmp dir] -2 [tmp dir 2] -d [final dir]  (creates plots)"
+        "chia plots create -k [size] -n [number of plots] -s [sk_seed] -i [index] -b [memory buffer size MB]"
+        + " -f [farmer pk] -p [pool pk] -t [tmp dir] -2 [tmp dir 2] -d [final dir]  (creates plots)"
     )
     print("chia plots check -n [num checks]  (checks plots)")
     print("chia plots add -d [directory] (adds a directory of plots)")
@@ -94,6 +95,7 @@ def handler(args, parser):
             "Please initialize (or migrate) your config directory with chia init."
         )
 
+    initialize_logging("", {"log_stdout": True}, root_path)
     command = args.command
     if command not in command_list:
         help_message()
