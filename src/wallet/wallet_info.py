@@ -1,7 +1,6 @@
 from dataclasses import dataclass
-
+from typing import List
 from src.util.streamable import streamable, Streamable
-from src.wallet.util.wallet_types import WalletType
 from src.util.ints import uint32
 
 
@@ -20,5 +19,15 @@ class WalletInfo(Streamable):
 
     id: uint32
     name: str
-    type: WalletType
+    type: int  # WalletType(type)
     data: str
+
+
+@dataclass(frozen=True)
+@streamable
+class WalletInfoBackup(Streamable):
+    """
+    Used for transforming list of WalletInfo objects into bytes.
+    """
+
+    wallet_list: List[WalletInfo]
