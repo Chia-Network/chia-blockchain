@@ -36,8 +36,7 @@ class Harvester:
     constants: Dict
     _refresh_lock: asyncio.Lock
 
-    def __init__(self, config: Dict, root_path: Path, override_constants={}):
-        self.config = config
+    def __init__(self, root_path: Path, override_constants={}):
         self.root_path = root_path
 
         # From filename to prover
@@ -108,7 +107,6 @@ class Harvester:
                 self.failed_to_open_filenames,
                 self.no_key_filenames,
             ) = load_plots(
-                self.config,
                 self.provers,
                 self.farmer_public_keys,
                 self.pool_public_keys,
@@ -131,10 +129,12 @@ class Harvester:
 
     async def _add_plot_directory(self, str_path: str) -> bool:
         config = load_config(self.root_path, "config.yaml")
-        config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
-        self.config = config["harvester"]
-        save_config(self.root_path, "config.yaml", config)
-        await self._refresh_plots()
+        if str(Path(str_path).resolve()) not in config["harvester"]["plot_directories"]:
+            config["harvester"]["plot_directories"].append(
+                str(Path(str_path).resolve())
+            )
+            save_config(self.root_path, "config.yaml", config)
+            await self._refresh_plots()
         return True
 
     def _set_global_connections(self, global_connections: Optional[PeerConnections]):

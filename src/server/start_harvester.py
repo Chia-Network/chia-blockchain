@@ -19,7 +19,7 @@ def service_kwargs_for_harvester(root_path=DEFAULT_ROOT_PATH):
         PeerInfo(config["farmer_peer"]["host"], config["farmer_peer"]["port"])
     ]
 
-    api = Harvester(config, root_path)
+    api = Harvester(root_path)
 
     async def start_callback():
         await api._start()

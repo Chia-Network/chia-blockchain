@@ -37,8 +37,9 @@ timelord.sanitizer_mode = True, the timelord will work on those challenges.
 - Coinbase and fees coin are now in merkle set, and bip158 filter
 - New harvester protocol with 2/2 harvester and farmer signatures, and modified farmer and full node protocols
 - 255/256 filter which allows many plots per harvester
-- Improved create_plots and check_plots scripts
-- Use real plot sizes in UI
+- Improved create_plots and check_plots scripts, which are now "chia plots create" and "chia plots check"
+- Add plot directories with "chia plots add"
+- Use real plot sizes in UI instead of formula
 - Use chacha proof of space **(not on master yet)**
 - Plot refreshing happens during all new challenges, and only new/modified files are read
 
