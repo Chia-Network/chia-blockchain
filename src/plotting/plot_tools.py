@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import logging
 import traceback
 from src.types.proof_of_space import ProofOfSpace
-from src.util.config import load_config
+from src.util.config import load_config, save_config
 
 
 log = logging.getLogger(__name__)
@@ -65,6 +65,13 @@ def stream_plot_info(
     data = bytes(pool_public_key) + bytes(farmer_public_key) + bytes(harvester_sk)
     assert len(data) == (48 + 48 + 32)
     return data
+
+
+def add_plot_directory(str_path, root_path):
+    config = load_config(root_path, "config.yaml")
+    if str(Path(str_path).resolve()) not in config["harvester"]["plot_directories"]:
+        config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
+    save_config(root_path, "config.yaml", config)
 
 
 def load_plots(
