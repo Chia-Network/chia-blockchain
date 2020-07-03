@@ -79,7 +79,7 @@ class ChiaConnection:
         self.writer.write(len(encoded).to_bytes(LENGTH_BYTES, "big") + encoded)
         try:
             # Need timeout here in case connection is closed, this allows GC to clean up
-            await asyncio.wait_for(self.writer.drain(), timeout=10*60)
+            await asyncio.wait_for(self.writer.drain(), timeout=10 * 60)
         except asyncio.TimeoutError:
             raise TimeoutError("self.writer.drain()")
         self.bytes_written += LENGTH_BYTES + len(encoded)
@@ -88,7 +88,7 @@ class ChiaConnection:
         size : bytes = b''
         try:
             # Need timeout here in case connection is closed, this allows GC to clean up
-            size = await asyncio.wait_for(self.reader.readexactly(LENGTH_BYTES), timeout=10*60)
+            size = await asyncio.wait_for(self.reader.readexactly(LENGTH_BYTES), timeout=10 * 60)
         except asyncio.TimeoutError:
             raise TimeoutError("self.reader.readexactly(LENGTH_BYTES)")
 
@@ -97,7 +97,7 @@ class ChiaConnection:
         full_message : bytes = b''
         try:
             # Need timeout here in case connection is closed, this allows GC to clean up
-            full_message = await asyncio.wait_for(self.reader.readexactly(full_message_length), timeout=10*60)
+            full_message = await asyncio.wait_for(self.reader.readexactly(full_message_length), timeout=10 * 60)
         except asyncio.TimeoutError:
             raise TimeoutError("self.reader.readexactly(full_message_length)")
 
