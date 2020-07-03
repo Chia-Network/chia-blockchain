@@ -43,7 +43,9 @@ class MempoolManager:
         self.mempools: Dict[bytes32, Mempool] = {}
 
         # old_mempools will contain transactions that were removed in the last 10 blocks
-        self.old_mempools: SortedDict[uint32, Dict[bytes32, MempoolItem]] = SortedDict()
+        self.old_mempools: SortedDict[
+            uint32, Dict[bytes32, MempoolItem]
+        ] = SortedDict()  # pylint: disable=E1136
         self.coin_store = coin_store
 
         tx_per_sec = self.constants["TX_PER_SEC"]
