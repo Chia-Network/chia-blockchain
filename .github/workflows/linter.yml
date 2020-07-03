@@ -17,9 +17,11 @@ name: GithHub Super Linter
 #############################
 on:
   push:
-    branches-ignore:
-      - 'master'
-
+    branches-ignore: [master]
+    # Remove the line above to run when pushing to master
+  pull_request:
+    branches: [master]
+    
 ###############
 # Set the Job #
 ###############
@@ -44,7 +46,7 @@ jobs:
       # Run Linter against code base #
       ################################
       - name: Lint Code Base
-        uses: docker://github/super-linter:v3
+        uses: docker://github/super-linter:v3.2
         env:
           VALIDATE_ALL_CODEBASE: true
           DEFAULT_BRANCH: master
@@ -59,7 +61,7 @@ jobs:
           VALIDATE_TYPESCRIPT_ES: true
           VALIDATE_DOCKER: true
           VALIDATE_GO: true
-          VALIDATE_POWERSHELL: false
+          VALIDATE_POWERSHELL: true
           VALIDATE_CSS: false
           VALIDATE_ENV: true
           DISABLE_ERRORS: false
