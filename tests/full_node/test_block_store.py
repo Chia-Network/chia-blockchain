@@ -1,19 +1,14 @@
 import asyncio
-from secrets import token_bytes
 from pathlib import Path
-from typing import Any, Dict
 import sqlite3
 import random
 
 import aiosqlite
 import pytest
-from src.consensus.constants import constants as consensus_constants
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.full_node.blockchain import Blockchain
 from src.types.full_block import FullBlock
-from src.types.sized_bytes import bytes32
-from src.util.ints import uint32, uint64
 from tests.setup_nodes import test_constants, bt
 
 
@@ -45,7 +40,8 @@ class TestBlockStore:
         connection_3 = await aiosqlite.connect(db_filename_3)
 
         db = await BlockStore.create(connection)
-        db_2 = await BlockStore.create(connection_2)
+        # db_2 = await BlockStore.create(connection_2)
+        await BlockStore.create(connection_2)
         db_3 = await BlockStore.create(connection_3)
         try:
             genesis = FullBlock.from_bytes(test_constants["GENESIS_BLOCK"])
