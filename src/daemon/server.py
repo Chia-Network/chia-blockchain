@@ -95,7 +95,12 @@ class WebSocketServer:
             self.log.info("Not implemented")
 
         self.websocket_server = await websockets.serve(
-            self.safe_handle, self.self_hostname, self.daemon_port, max_size=None
+            self.safe_handle,
+            self.self_hostname,
+            self.daemon_port,
+            max_size=None,
+            ping_interval=300,
+            ping_timeout=180,
         )
 
         self.log.info("Waiting Daemon WebSocketServer closure")

@@ -75,6 +75,7 @@ const socketMiddleware = () => {
         socket.onmessage = onMessage(store);
         socket.onclose = onClose(store);
         socket.onopen = onOpen(store);
+        break;
       case "WS_DISCONNECT":
         if (socket !== null) {
           socket.close();
