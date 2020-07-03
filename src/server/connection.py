@@ -1,7 +1,7 @@
 import logging
 import random
 import time
-from asyncio import StreamReader, StreamWriter
+import asyncio
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
 
 from src.server.outbound_message import Message, NodeType, OutboundMessage
@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 OnConnectFunc = Optional[Callable[[], AsyncGenerator[OutboundMessage, None]]]
 
 
-class Connection:
+class ChiaConnection:
     """
     Represents a connection to another node. Local host and port are ours, while peer host and
     port are the host and port of the peer that we are connected to. Node_id and connection_type are
@@ -28,8 +28,8 @@ class Connection:
         self,
         local_type: NodeType,
         connection_type: Optional[NodeType],
-        sr: StreamReader,
-        sw: StreamWriter,
+        sr: asyncio.StreamReader,
+        sw: asyncio.StreamWriter,
         server_port: int,
         on_connect: OnConnectFunc,
         log: logging.Logger,
@@ -48,7 +48,7 @@ class Connection:
         self.on_connect = on_connect
         self.log = log
 
-        # Connection metrics
+        # ChiaConnection metrics
         self.creation_time = time.time()
         self.bytes_read = 0
         self.bytes_written = 0
@@ -76,13 +76,30 @@ class Connection:
         encoded: bytes = cbor.dumps({"f": message.function, "d": message.data})
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
         self.writer.write(len(encoded).to_bytes(LENGTH_BYTES, "big") + encoded)
-        await self.writer.drain()
+        try:
+            # Need timeout here in case connection is closed, this allows GC to clean up
+            await asyncio.wait_for(self.writer.drain(), timeout=10 * 60)
+        except asyncio.TimeoutError:
+            raise TimeoutError("self.writer.drain()")
         self.bytes_written += LENGTH_BYTES + len(encoded)
 
     async def read_one_message(self) -> Message:
-        size = await self.reader.readexactly(LENGTH_BYTES)
+        size : bytes = b''
+        try:
+            # Need timeout here in case connection is closed, this allows GC to clean up
+            size = await asyncio.wait_for(self.reader.readexactly(LENGTH_BYTES), timeout=10 * 60)
+        except asyncio.TimeoutError:
+            raise TimeoutError("self.reader.readexactly(LENGTH_BYTES)")
+
         full_message_length = int.from_bytes(size, "big")
-        full_message: bytes = await self.reader.readexactly(full_message_length)
+
+        full_message : bytes = b''
+        try:
+            # Need timeout here in case connection is closed, this allows GC to clean up
+            full_message = await asyncio.wait_for(self.reader.readexactly(full_message_length), timeout=10 * 60)
+        except asyncio.TimeoutError:
+            raise TimeoutError("self.reader.readexactly(full_message_length)")
+
         full_message_loaded: Any = cbor.loads(full_message)
         self.bytes_read += LENGTH_BYTES + full_message_length
         self.last_message_time = time.time()
@@ -99,7 +116,7 @@ class Connection:
 
 
 class PeerConnections:
-    def __init__(self, all_connections: List[Connection] = []):
+    def __init__(self, all_connections: List[ChiaConnection] = []):
         self._all_connections = all_connections
         # Only full node peers are added to `peers`
         self.peers = Peers()
@@ -115,7 +132,7 @@ class PeerConnections:
         if self.state_changed_callback is not None:
             self.state_changed_callback(state)
 
-    def add(self, connection: Connection) -> bool:
+    def add(self, connection: ChiaConnection) -> bool:
         for c in self._all_connections:
             if c.node_id == connection.node_id:
                 return False
@@ -127,7 +144,7 @@ class PeerConnections:
         self._state_changed("add_connection")
         return True
 
-    def close(self, connection: Connection, keep_peer: bool = False):
+    def close(self, connection: ChiaConnection, keep_peer: bool = False):
         if connection in self._all_connections:
             info = connection.get_peer_info()
             self._all_connections.remove(connection)
@@ -147,10 +164,10 @@ class PeerConnections:
         return self._all_connections
 
     def get_full_node_connections(self):
-        return list(filter(Connection.get_peer_info, self._all_connections))
+        return list(filter(ChiaConnection.get_peer_info, self._all_connections))
 
     def get_full_node_peerinfos(self):
-        return list(filter(None, map(Connection.get_peer_info, self._all_connections)))
+        return list(filter(None, map(ChiaConnection.get_peer_info, self._all_connections)))
 
     def get_unconnected_peers(self, max_peers=0, recent_threshold=9999999):
         connected = self.get_full_node_peerinfos()
