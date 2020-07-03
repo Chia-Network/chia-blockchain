@@ -2,7 +2,6 @@ import logging
 import random
 import time
 import asyncio
-from asyncio import StreamReader, StreamWriter
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
 
 from src.server.outbound_message import Message, NodeType, OutboundMessage
@@ -29,8 +28,8 @@ class ChiaConnection:
         self,
         local_type: NodeType,
         connection_type: Optional[NodeType],
-        sr: StreamReader,
-        sw: StreamWriter,
+        sr: asyncio.StreamReader,
+        sw: asyncio.StreamWriter,
         server_port: int,
         on_connect: OnConnectFunc,
         log: logging.Logger,
