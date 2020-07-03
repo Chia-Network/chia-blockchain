@@ -6,14 +6,12 @@ from src.util.keychain import Keychain
 from src.util.config import load_config
 from src.plotting.plot_tools import load_plots
 from src.util.hash import std_hash
-from src.util.logging import initialize_logging
 
 
 log = logging.getLogger(__name__)
 
 
 def check_plots(args, root_path):
-    initialize_logging("", {"log_stdout": True}, root_path)
     config = load_config(root_path, "config.yaml")
     if args.num is not None:
         num = args.num
