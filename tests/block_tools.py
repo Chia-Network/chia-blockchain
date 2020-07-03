@@ -165,9 +165,8 @@ class BlockTools:
         ]
         if len(self.all_pubkeys) == 0:
             raise RuntimeError("Keys not generated. Run `chia generate keys`")
-        normal_config = load_config(self.root_path, "config.yaml", "harvester")
         _, self.plots, _, _ = load_plots(
-            normal_config, {}, self.all_pubkeys, self.all_pubkeys, root_path
+            {}, self.all_pubkeys, self.all_pubkeys, root_path
         )
 
     def get_plot_signature(
