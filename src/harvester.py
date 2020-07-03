@@ -15,7 +15,7 @@ from src.types.proof_of_space import ProofOfSpace
 from src.util.config import load_config, save_config
 from src.util.api_decorators import api_request
 from src.util.ints import uint8
-from src.util.plot_tools import load_plots, PlotInfo
+from src.plotting.plot_tools import load_plots, PlotInfo
 from src.consensus.constants import constants as consensus_constants
 
 log = logging.getLogger(__name__)
