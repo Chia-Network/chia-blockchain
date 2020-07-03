@@ -124,6 +124,8 @@ class Streamable:
             return tuple(full_list)
         if f_type is bool:
             return bool.from_bytes(f.read(4), "big")
+        if f_type is int:
+            return int.from_bytes(f.read(8), "big")
         if f_type == bytes:
             list_size = uint32(int.from_bytes(f.read(4), "big"))
             return f.read(list_size)
@@ -177,6 +179,8 @@ class Streamable:
             f.write(item.encode("utf-8"))
         elif f_type is bool:
             f.write(int(item).to_bytes(4, "big"))
+        elif f_type is int:
+            f.write(item.to_bytes(8, "big"))
         else:
             raise NotImplementedError(f"can't stream {item}, {f_type}")
 
