@@ -10,7 +10,6 @@ from src.util.keychain import Keychain
 from src.util.config import config_path_for_filename, load_config, save_config
 from src.util.path import mkdir
 from src.plotting.plot_tools import get_plot_filenames, stream_plot_info
-from src.util.logging import initialize_logging
 
 
 log = logging.getLogger(__name__)
@@ -27,7 +26,6 @@ def get_default_public_key() -> PublicKey:
 
 
 def create_plots(args, root_path, use_datetime=True):
-    initialize_logging("", {"log_stdout": True}, root_path)
     config_filename = config_path_for_filename(root_path, "config.yaml")
 
     if args.sk_seed is None and args.index is not None:
