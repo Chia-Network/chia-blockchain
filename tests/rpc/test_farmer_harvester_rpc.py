@@ -10,7 +10,7 @@ from src.rpc.harvester_rpc_client import HarvesterRpcClient
 from src.rpc.rpc_server import start_rpc_server
 from src.util.ints import uint16
 from src.util.config import load_config
-from src.util.plot_tools import stream_plot_info
+from src.plotting.plot_tools import stream_plot_info
 from src.rpc.farmer_rpc_api import FarmerRpcApi
 from src.rpc.harvester_rpc_api import HarvesterRpcApi
 

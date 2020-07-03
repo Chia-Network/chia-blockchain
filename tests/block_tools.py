@@ -3,13 +3,14 @@ import sys
 import time
 import random
 import tempfile
+import shutil
 
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
+from argparse import Namespace
 
 from blspy import (
     PrependSignature,
-    PrivateKey,
     PublicKey,
     InsecureSignature,
     Util,
@@ -17,10 +18,10 @@ from blspy import (
 from chiavdf import prove
 from chiabip158 import PyBIP158
 
-from chiapos import DiskPlotter
 from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.consensus.constants import ConsensusConstants
 from src.cmds.init import create_default_chia_config, initialize_ssl
+from src.cmds.plots import create_plots
 from src.types.BLSSignature import BLSPublicKey
 from src.consensus import block_rewards, pot_iterations
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
@@ -44,8 +45,7 @@ from src.util.hash import std_hash
 from src.util.path import mkdir
 from src.util.significant_bits import truncate_to_significant_bits
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
-from src.util.config import load_config, save_config
-from src.util.plot_tools import load_plots, stream_plot_info
+from src.plotting.plot_tools import load_plots
 from src.util.logging import initialize_logging
 
 from tests.wallet_tools import WalletTool
@@ -72,7 +72,6 @@ class BlockTools:
             self._tempdir = tempfile.TemporaryDirectory()
             root_path = Path(self._tempdir.name)
         self.root_path = root_path
-        self.n_wesolowski = uint8(0)
         self.real_plots = real_plots
 
         if not real_plots:
@@ -80,12 +79,6 @@ class BlockTools:
             initialize_ssl(root_path)
             # No real plots supplied, so we will use the small test plots
             self.use_any_pos = True
-            # Can't go much lower than 18, since plots start having no solutions
-            k: uint8 = uint8(18)
-            # Uses many plots for testing, in order to guarantee proofs of space at every height
-            num_plots = 35
-            # Use the empty string as the seed for the private key
-
             self.keychain = Keychain("testing-1.8", True)
             self.keychain.delete_all_keys()
             self.farmer_pk = (
@@ -98,58 +91,33 @@ class BlockTools:
                 .public_child(0)
                 .get_public_key()
             )
+            self.farmer_ph = create_puzzlehash_for_pk(
+                BLSPublicKey(bytes(self.farmer_pk))
+            )
+            self.pool_ph = create_puzzlehash_for_pk(BLSPublicKey(bytes(self.pool_pk)))
 
             plot_dir = get_plot_dir()
             mkdir(plot_dir)
-            filenames: List[Path] = [
-                Path(
-                    plot_dir
-                    / f"genesis-plots-1.8-{k}{std_hash(int.to_bytes(i, 4, 'big')).hex()}.plot"
-                )
-                for i in range(num_plots)
-            ]
-            done_filenames = set()
-            temp_dir = plot_dir / "plot.tmp"
+            temp_dir = plot_dir / "tmp"
             mkdir(temp_dir)
+            args = Namespace()
+            args.sk_seed = std_hash(b"").hex()
+            # Can't go much lower than 18, since plots start having no solutions
+            args.size = 18
+            # Uses many plots for testing, in order to guarantee proofs of space at every height
+            args.num = 35
+            args.index = 0
+            args.buffer = 32
+            args.farmer_public_key = bytes(self.farmer_pk).hex()
+            args.pool_public_key = bytes(self.pool_pk).hex()
+            args.tmp_dir = temp_dir
+            args.tmp2_dir = plot_dir
+            args.final_dir = plot_dir
             try:
-                for pn, filename in enumerate(filenames):
-                    sk: PrivateKey = PrivateKey.from_seed(pn.to_bytes(4, "big"))
-                    plot_public_key = ProofOfSpace.generate_plot_public_key(
-                        sk.get_public_key(), self.farmer_pk
-                    )
-                    plot_seed: bytes32 = ProofOfSpace.calculate_plot_seed(
-                        self.pool_pk, plot_public_key
-                    )
-                    self.farmer_ph = create_puzzlehash_for_pk(
-                        BLSPublicKey(bytes(self.farmer_pk))
-                    )
-                    self.pool_ph = create_puzzlehash_for_pk(
-                        BLSPublicKey(bytes(self.pool_pk))
-                    )
-                    if not (plot_dir / filename).exists():
-                        plotter = DiskPlotter()
-                        plotter.create_plot_disk(
-                            str(plot_dir),
-                            str(plot_dir),
-                            str(plot_dir),
-                            str(filename),
-                            k,
-                            stream_plot_info(self.pool_pk, self.farmer_pk, sk),
-                            plot_seed,
-                            128,
-                        )
-                        done_filenames.add(filename)
-                self.config = load_config(self.root_path, "config.yaml")
-                self.config["harvester"]["plot_directories"].append(str(plot_dir))
-                save_config(self.root_path, "config.yaml", self.config)
-
+                # No datetime in the filename, to get deterministic filenames and not replot
+                create_plots(args, root_path, use_datetime=False)
             except KeyboardInterrupt:
-                for filename in filenames:
-                    if (
-                        filename not in done_filenames
-                        and (plot_dir / filename).exists()
-                    ):
-                        (plot_dir / filename).unlink()
+                shutil.rmtree(plot_dir, ignore_errors=True)
                 sys.exit(1)
         else:
             initialize_ssl(root_path)
@@ -568,7 +536,7 @@ class BlockTools:
         proof_bytes = result[2 * int_size : 4 * int_size]
 
         proof_of_time = ProofOfTime(
-            challenge_hash, number_iters, output, self.n_wesolowski, proof_bytes,
+            challenge_hash, number_iters, output, uint8(0), proof_bytes,
         )
 
         # Use the extension data to create different blocks based on header hash
