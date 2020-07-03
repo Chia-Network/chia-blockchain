@@ -32,8 +32,6 @@ def _get_filenames(directory: Path) -> List[Path]:
             # If it is a file ending in .plot, add it
             if child.suffix == ".plot":
                 all_files.append(child)
-            else:
-                log.info(f"Ignoring {child}, does not end in .plot")
         else:
             log.info(f"Not checking subdirectory {child}")
     return all_files

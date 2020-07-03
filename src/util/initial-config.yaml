@@ -142,9 +142,6 @@ full_node:
   # send_uncompact_interval=1800
   send_uncompact_interval: 1800
 
-  connect_to_farmer: False
-  connect_to_timelord: False
-
   farmer_peer:
       host: *self_hostname
       port: 8447

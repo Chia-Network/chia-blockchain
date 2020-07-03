@@ -694,8 +694,8 @@ if __name__ == "__main__":
     print(
         bytes(
             bt.create_genesis_block(
-                {},
-                bytes([0] * 32),
+                consensus_constants,
+                bytes((20758).to_bytes(4, "big") + bytes([20758 % 256] * 28)),
                 b"0",
                 bytes32(
                     bytes.fromhex(
