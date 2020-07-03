@@ -90,4 +90,3 @@ def check_plots(args, root_path):
             f"is not on this machine. The farmer private key must be in the keychain in order to "
             f"farm them, use 'chia keys' to transfer keys. The pool public keys must be in the config.yaml"
         )
-    pass
