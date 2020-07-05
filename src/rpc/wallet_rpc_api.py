@@ -17,6 +17,7 @@ from src.cmds.init import check_keys
 from src.server.outbound_message import NodeType, OutboundMessage, Message, Delivery
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.util.ints import uint64, uint32
+from src.wallet.settings.settings_objects import BackupInitialized
 from src.wallet.trade_record import TradeRecord
 from src.wallet.util.cc_utils import trade_record_to_dict
 from src.wallet.util.wallet_types import WalletType
@@ -150,9 +151,9 @@ class WalletRpcApi:
             return {"success": False}
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 
-        if wallet.wallet_info.type == WalletType.STANDARD_WALLET:
+        if wallet.wallet_info.type == WalletType.STANDARD_WALLET.value:
             puzzle_hash = (await wallet.get_new_puzzlehash()).hex()
-        elif wallet.wallet_info.type == WalletType.COLOURED_COIN:
+        elif wallet.wallet_info.type == WalletType.COLOURED_COIN.value:
             puzzle_hash = await wallet.get_new_inner_hash()
 
         response = {
@@ -505,6 +506,8 @@ class WalletRpcApi:
         return response
 
     async def load_backup(self, request):
+        if self.service.wallet_state_manager is None:
+            return {"success": False}
         file_path = request["file_path"]
         await self.service.wallet_state_manager.import_backup_info(file_path)
         response = {"success": True}
@@ -552,10 +555,28 @@ class WalletRpcApi:
     async def log_in(self, request):
         await self.stop_wallet()
         fingerprint = request["fingerprint"]
+        if "skip_backup_import" in request:
+            skip = request["skip_backup_import"]
+            started = await self.service._start(
+                fingerprint=fingerprint, skip_backup_import=skip
+            )
+        elif "backup_file" in request:
+            file_path = request["file_path"]
+            started = await self.service._start(
+                fingerprint=fingerprint, backup_file=file_path
+            )
+        else:
+            started = await self.service._start(fingerprint)
 
-        await self.service._start(fingerprint)
+        if started is True:
+            return {"success": True}
+        else:
+            if self.service.wallet_state_manager is not None:
+                initialized: BackupInitialized = self.service.wallet_state_manager.user_settings.get_backup_settings()
+                if initialized.user_initialized is False:
+                    return {"success": False, "error": "not_initialized"}
 
-        return {"success": True}
+        return {"success": False, "error": "Unknown Error"}
 
     async def add_key(self, request):
         if "mnemonic" in request:
@@ -570,12 +591,27 @@ class WalletRpcApi:
         await self.stop_wallet()
 
         # Makes sure the new key is added to config properly
+        started = False
         check_keys(self.service.root_path)
+        type = request["type"]
+        if type == "new_wallet":
+            started = await self.service._start(
+                fingerprint=fingerprint, new_wallet=True
+            )
+        elif type == "skip":
+            started = await self.service._start(
+                fingerprint=fingerprint, skip_backup_import=True
+            )
+        elif type == "restore_backup":
+            file_path = request["file_path"]
+            started = await self.service._start(
+                fingerprint=fingerprint, backup_file=file_path
+            )
 
-        # Starts the wallet with the new key selected
-        await self.service._start(fingerprint)
-
-        return {"success": True}
+        if started is True:
+            return {"success": True}
+        else:
+            return {"success": False}
 
     async def delete_key(self, request):
         await self.stop_wallet()
