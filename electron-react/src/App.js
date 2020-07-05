@@ -11,9 +11,11 @@ import {
   presentNewWallet,
   presentDashboard,
   presentSelectKeys,
+  presentRestoreBackup
 } from "./modules/entranceMenu";
 import { Backdrop, CircularProgress } from "@material-ui/core";
 import { ModalDialog, Spinner } from "./pages/ModalDialog";
+import { RestoreBackup } from "./pages/backup/restoreBackup";
 const defaultTheme = createMuiTheme();
 
 const theme = createMuiTheme({
@@ -110,6 +112,8 @@ const CustomRouter = () => {
       return <NewWallet></NewWallet>;
     } else if (presentView === presentDashboard) {
       return <Dashboard></Dashboard>;
+    } else if (presentView === presentRestoreBackup) {
+      return <RestoreBackup></RestoreBackup>;
     }
   }
 };

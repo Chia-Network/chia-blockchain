@@ -1,5 +1,8 @@
 import { service_wallet_server } from "../util/service_names";
-import { openProgress } from "./progressReducer";
+import { openProgress, closeProgress } from "./progressReducer";
+import { refreshAllState } from "../middleware/middleware_api";
+import { changeEntranceMenu, presentRestoreBackup } from "./entranceMenu";
+import { openDialog } from "./dialogReducer";
 
 export const clearSend = () => {
   var action = {
@@ -16,8 +19,24 @@ export const walletMessage = () => ({
   }
 });
 
-export const async_api = (dispatch, action) => {
-  dispatch(openProgress());
+export const selectFingerprint = fingerprint => ({
+  type: "SELECT_FINGERPRINT",
+  fingerprint: fingerprint
+});
+
+export const unselectFingerprint = () => ({
+  type: "UNSELECT_FINGERPRINT"
+});
+
+export const selectMnemonic = mnemonic => ({
+  type: "SELECT_MNEMONIC",
+  mnemonic: mnemonic
+});
+
+export const async_api = (dispatch, action, open_spinner) => {
+  if (open_spinner === true) {
+    dispatch(openProgress());
+  }
   var resolve_callback;
   var reject_callback;
   let myFirstPromise = new Promise((resolve, reject) => {
@@ -70,11 +89,71 @@ export const genereate_mnemonics = () => {
   return action;
 };
 
-export const add_key = mnemonic => {
+export const add_key = (mnemonic, type, file_path) => {
   var action = walletMessage();
   action.message.command = "add_key";
-  action.message.data = { mnemonic: mnemonic };
+  action.message.data = {
+    mnemonic: mnemonic,
+    type: type,
+    file_path: file_path
+  };
   return action;
+};
+
+export const add_new_key_action = mnemonic => {
+  return dispatch => {
+    return async_api(
+      dispatch,
+      add_key(mnemonic, "new_wallet", null),
+      true
+    ).then(response => {
+      dispatch(closeProgress());
+      if (response.data.success) {
+        // Go to wallet
+        dispatch(format_message("get_public_keys", {}));
+        refreshAllState(dispatch);
+      } else {
+        const error = response.data.error;
+      }
+    });
+  };
+};
+
+export const add_and_skip_backup = mnemonic => {
+  return dispatch => {
+    return async_api(dispatch, add_key(mnemonic, "skip", null), true).then(
+      response => {
+        dispatch(closeProgress());
+        if (response.data.success) {
+          // Go to wallet
+          dispatch(format_message("get_public_keys", {}));
+          refreshAllState(dispatch);
+        } else {
+          const error = response.data.error;
+          dispatch(openDialog("Error", error));
+        }
+      }
+    );
+  };
+};
+
+export const add_and_restore_from_backup = (mnemonic, file_path) => {
+  return dispatch => {
+    return async_api(
+      dispatch,
+      add_key(mnemonic, "restore_backup", file_path),
+      true
+    ).then(response => {
+      dispatch(closeProgress());
+      if (response.data.success) {
+        // Go to wallet
+        dispatch(format_message("get_public_keys", {}));
+        refreshAllState(dispatch);
+      } else {
+        const error = response.data.error;
+      }
+    });
+  };
 };
 
 export const delete_key = fingerprint => {
@@ -96,6 +175,45 @@ export const log_in = fingerprint => {
   action.message.command = "log_in";
   action.message.data = { fingerprint: fingerprint };
   return action;
+};
+
+export const log_in_and_skip_import = fingerprint => {
+  var action = walletMessage();
+  action.message.command = "log_in";
+  action.message.data = { fingerprint: fingerprint, skip_backup: true };
+  return action;
+};
+
+export const log_in_and_import_backup = (fingerprint, file_path) => {
+  var action = walletMessage();
+  action.message.command = "log_in";
+  action.message.data = {
+    fingerprint: fingerprint,
+    skip_backup: true,
+    file_path: file_path
+  };
+  return action;
+};
+
+export const login_action = fingerprint => {
+  return dispatch => {
+    dispatch(selectFingerprint(fingerprint));
+    return async_api(dispatch, log_in(fingerprint), true).then(response => {
+      dispatch(closeProgress());
+      if (response.data.success) {
+        // Go to wallet
+        refreshAllState(dispatch);
+      } else {
+        const error = response.data.error;
+        if (error === "not_initialized") {
+          dispatch(changeEntranceMenu(presentRestoreBackup));
+          // Go to restore from backup screen
+        } else {
+          // Display error message
+        }
+      }
+    });
+  };
 };
 
 export const get_private_key = fingerprint => {
