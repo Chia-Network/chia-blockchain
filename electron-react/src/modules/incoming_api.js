@@ -1,4 +1,6 @@
 import { service_wallet_server } from "../util/service_names";
+import { statement } from "@babel/template";
+import { selectFingerprint } from "./message";
 
 export const Wallet = (id, name, type, data) => ({
   id: id,
@@ -48,6 +50,7 @@ export const Transaction = (
 const initial_state = {
   mnemonic: [],
   public_key_fingerprints: [],
+  selected_fingerprint: null,
   logged_in_received: false,
   logged_in: false,
   wallets: [],
@@ -62,6 +65,16 @@ const initial_state = {
 
 export const incomingReducer = (state = { ...initial_state }, action) => {
   switch (action.type) {
+    case "SELECT_FINGERPRINT":
+      return {
+        ...state,
+        selected_fingerprint: action.fingerprint
+      };
+    case "UNSELECT_FINGERPRINT":
+      return {
+        ...state,
+        selected_fingerprint: null
+      };
     case "LOG_OUT":
       return {
         ...initial_state,

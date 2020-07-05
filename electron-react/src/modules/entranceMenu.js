@@ -2,6 +2,7 @@ export const presentNewWallet = "NEW_WALLET";
 export const presentOldWallet = "OLD_WALLET";
 export const presentDashboard = "DASHBOARD";
 export const presentSelectKeys = "SELECT_KEYS";
+export const presentRestoreBackup = "RESTORE_BACKUP";
 
 export const changeEntranceMenu = item => ({
   type: "ENTRANCE_MENU",
