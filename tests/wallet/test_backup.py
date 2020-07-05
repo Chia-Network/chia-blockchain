@@ -69,6 +69,9 @@ class TestCCWalletBackup:
 
         wallet_node.wallet_state_manager.db_path.unlink()
 
+        started = await wallet_node._start()
+        assert started is False
+
         await wallet_node._start(backup_file=file_path)
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
