@@ -7,11 +7,10 @@ import { withTheme } from "@material-ui/styles";
 import Container from "@material-ui/core/Container";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { connect, useSelector, useDispatch } from "react-redux";
-import { genereate_mnemonics } from "../modules/message";
+import { genereate_mnemonics, add_new_key_action } from "../modules/message";
 import { withRouter } from "react-router-dom";
 import CssTextField from "../components/cssTextField";
 import myStyle from "./style";
-import { add_key } from "../modules/message";
 import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
 import { openDialog } from "../modules/dialogReducer";
 
@@ -65,7 +64,7 @@ const UIPart = props => {
   }
 
   function next() {
-    dispatch(add_key(words));
+    dispatch(add_new_key_action(words));
   }
 
   return (

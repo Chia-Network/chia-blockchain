@@ -61,6 +61,29 @@ const myStyle = makeStyles(theme => ({
   instructions: {
     color: "#ffffff",
     fontSize: 18
+  },
+  dragContainer: {
+    paddingLeft: 20,
+    paddingRight: 20,
+    paddingBottom: 20
+  },
+  drag: {
+    backgroundColor: "#888888",
+    height: 300,
+    width: "100%"
+  },
+  dragText: {
+    margin: 0,
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)"
+  },
+  circle: {
+    height: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
   }
 }));
 

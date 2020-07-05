@@ -1,36 +1,11 @@
 export const wordChanged = msg => ({ type: "MNEMONIC_TYPING" });
 export const resetMnemonic = msg => ({ type: "RESET_MNEMONIC" });
 
-const initial_state = { mnemonic_input: new Array("24") };
-/*const initial_state = {
-  mnemonic_input: [
-    "small",
-    "seed",
-    "inner",
-    "curtain",
-    "vanish",
-    "beyond",
-    "raccoon",
-    "effort",
-    "grab",
-    "laugh",
-    "flower",
-    "gospel",
-    "host",
-    "exist",
-    "east",
-    "valid",
-    "human",
-    "dismiss",
-    "nuclear",
-    "intact",
-    "cigar",
-    "earn",
-    "cousin",
-    "lounge"
-  ]
+const initial_state = {
+  mnemonic_input: new Array("24"),
+  selected_mnemonic: null
 };
-*/
+
 export const mnemonic_word_added = data => {
   var action = wordChanged();
   action.data = data;
@@ -48,6 +23,8 @@ export const mnemonicReducer = (state = { ...initial_state }, action) => {
       return { ...state, mnemonic_input: current_input };
     case "RESET_MNEMONIC":
       return { ...initial_state };
+    case "SELECT_MNEMONIC":
+      return { ...state, selected_mnemonic: action.mnemonic };
     default:
       return state;
   }
