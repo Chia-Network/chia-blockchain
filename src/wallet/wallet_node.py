@@ -117,11 +117,11 @@ class WalletNode:
 
     async def _start(
         self,
-        public_key_fingerprint: Optional[int] = None,
+        fingerprint: Optional[int] = None,
         new_wallet: bool = False,
         backup_file: Optional[Path] = None,
+        skip_backup_import: bool = False,
     ) -> bool:
-        self._shut_down = False
         private_keys = self.keychain.get_all_private_keys()
         if len(private_keys) == 0:
             self.log.warning(
@@ -152,16 +152,18 @@ class WalletNode:
 
         assert self.wallet_state_manager is not None
 
-        if new_wallet is True:
-            await self.wallet_state_manager.user_settings.user_created_new_wallet()
-
         backup_settings: BackupInitialized = self.wallet_state_manager.user_settings.get_backup_settings()
         if backup_settings.user_initialized is False:
-            if backup_file is None:
-                self.backup_initialized = False
-                return False
-            else:
+            if new_wallet is True:
+                await self.wallet_state_manager.user_settings.user_created_new_wallet()
+            elif skip_backup_import is True:
+                await self.wallet_state_manager.user_settings.user_skipped_backup_import()
+            elif backup_file is not None:
                 await self.wallet_state_manager.import_backup_info(backup_file)
+            else:
+                self.backup_initialized = False
+                self.wallet_state_manager = None
+                return False
 
         self.backup_initialized = True
 
@@ -169,11 +171,12 @@ class WalletNode:
             self.wallet_state_manager.set_callback(self.state_changed_callback)
 
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
+        self._shut_down = False
         return True
 
     def _close(self):
         self._shut_down = True
-        if self.wallet_state_manager is None or self.backup_initialized is False:
+        if self.wallet_state_manager is None:
             return
         self.wsm_close_task = asyncio.create_task(
             self.wallet_state_manager.close_all_stores()

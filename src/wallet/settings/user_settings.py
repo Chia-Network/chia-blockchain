@@ -34,13 +34,11 @@ class UserSettings:
         keys = self._keys()
         for setting in keys:
             name = setting.__name__
-            hex_str = await self.basic_store.get_object(name, BackupInitialized)
-            if hex_str is None:
+            object = await self.basic_store.get_object(name, BackupInitialized)
+            if object is None:
                 object = default_settings[name]
-            else:
-                bytes = hexstr_to_bytes(hex_str)
-                object = setting.from_bytes(bytes)
 
+            assert object is not None
             self.settings[name] = object
 
     async def setting_updated(self, setting: Any):
@@ -78,5 +76,5 @@ class UserSettings:
         await self.setting_updated(new)
         return new
 
-    def get_backup_settings(self):
+    def get_backup_settings(self) -> BackupInitialized:
         return self.settings[BackupInitialized.__name__]
