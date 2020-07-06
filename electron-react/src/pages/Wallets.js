@@ -108,12 +108,11 @@ const WalletItem = props => {
   if (!name) {
     name = "";
   }
-
   var mainLabel = "";
-  if (wallet.type === "STANDARD_WALLET") {
+  if (wallet.type === 0) {
     mainLabel = "Chia Wallet";
     name = "Chia";
-  } else if (wallet.type === "COLOURED_COIN") {
+  } else if (wallet.type === 6) {
     mainLabel = "CC Wallet";
     if (name.length > 18) {
       name = name.substring(0, 18);
@@ -122,9 +121,9 @@ const WalletItem = props => {
   }
 
   function presentWallet() {
-    if (wallet.type === "STANDARD_WALLET") {
+    if (wallet.type === 0) {
       dispatch(changeWalletMenu(standardWallet, wallet.id));
-    } else if (wallet.type === "COLOURED_COIN") {
+    } else if (wallet.type === 6) {
       dispatch(changeWalletMenu(CCWallet, wallet.id));
     }
   }
