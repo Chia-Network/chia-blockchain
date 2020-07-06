@@ -12,6 +12,7 @@ version_data = copy_metadata(get_distribution("chia-blockchain"))[0]
 
 SUBCOMMANDS = [
     "init",
+    "plots",
     "keys",
     "show",
     "start",
@@ -26,8 +27,7 @@ other = ["aiter.active_aiter", "aiter.aiter_forker", "aiter.aiter_to_iter", "ait
 "aiter.iter_to_aiter", "aiter.join_aiters", "aiter.map_aiter", "aiter.map_filter_aiter", "aiter.preload_aiter",
 "aiter.push_aiter", "aiter.sharable_aiter", "aiter.stoppable_aiter"]
 
-entry_points = ["src.cmds.check_plots",
-            "src.cmds.create_plots",
+entry_points = ["src.cmds.chia",
             "src.server.start_wallet",
             "src.server.start_full_node",
             "src.server.start_harvester",
@@ -83,7 +83,7 @@ wallet = Analysis([f"{root}/src/server/start_wallet.py"],
              cipher=block_cipher,
              noarchive=False)
 
-plotter = Analysis([f"{root}/src/cmds/create_plots.py"],
+plotter = Analysis([f"{root}/src/cmds/chia.py"],
              pathex=[f"{root}/venv/lib/python3.7/site-packages/aiter/", f"{root}"],
              binaries = [],
              datas=[version_data],
@@ -122,7 +122,7 @@ harvester = Analysis([f"{root}/src/server/start_harvester.py"],
              cipher=block_cipher,
              noarchive=False)
 
-check_plots = Analysis([f"{root}/src/cmds/check_plots.py"],
+check_plots = Analysis([f"{root}/src/cmds/chia.py"],
              pathex=[f"{root}/venv/lib/python3.7/site-packages/aiter/", f"{root}"],
              binaries = [],
              datas=[version_data],
