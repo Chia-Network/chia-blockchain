@@ -5,6 +5,7 @@ from .block_tools import BlockTools
 
 
 def make_test_constants_with_genesis(test_constants_overrides: Dict):
+    print("AMKING TESTS CONSTANTS")
 
     test_constants = constants.replace(**test_constants_overrides)
 
