@@ -105,7 +105,7 @@ class BlockTools:
             # Can't go much lower than 18, since plots start having no solutions
             args.size = 18
             # Uses many plots for testing, in order to guarantee proofs of space at every height
-            args.num = 35
+            args.num = 40
             args.index = 0
             args.buffer = 32
             args.farmer_public_key = bytes(self.farmer_pk).hex()
@@ -448,11 +448,14 @@ class BlockTools:
         selected_proof_index = 0
         selected_quality: Optional[bytes] = None
         best_quality = 0
-        plots = list(self.plots.values())
+        plots = [
+            pinfo
+            for _, pinfo in sorted(list(self.plots.items()), key=lambda x: str(x[0]))
+        ]
         if self.use_any_pos:
+            random.seed(seed)
             for i in range(len(plots) * 3):
                 # Allow passing in seed, to create reorgs and different chains
-                random.seed(seed + i.to_bytes(4, "big"))
                 seeded_pn = random.randint(0, len(plots) - 1)
                 plot_info = plots[seeded_pn]
                 plot_seed = plot_info.prover.get_id()
