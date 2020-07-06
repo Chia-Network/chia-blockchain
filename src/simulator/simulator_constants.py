@@ -1,7 +1,3 @@
-# Uncomment to generate new GENESIS_BLOCK
-# from src.util.block_tools import BlockTools
-
-# bt = BlockTools()
 from src.util.make_test_constants import make_test_constants_without_genesis
 
 test_constants = make_test_constants_without_genesis(
@@ -22,8 +18,24 @@ test_constants = make_test_constants_without_genesis(
     }
 )
 
-# genesis = bytes(
-# bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
-# )
+if __name__ == "__main__":
+    from src.util.default_root import DEFAULT_ROOT_PATH
+    from src.consensus.constants import constants as consensus_constants
+    from src.util.block_tools import BlockTools
+    from src.types.sized_bytes import bytes32
 
-# print(genesis)
+    bt = BlockTools(root_path=DEFAULT_ROOT_PATH, real_plots=True)
+    print(
+        bytes(
+            bt.create_genesis_block(
+                consensus_constants,
+                bytes((20758).to_bytes(4, "big") + bytes([20758 % 256] * 28)),
+                b"0",
+                bytes32(
+                    bytes.fromhex(
+                        "30944219616695e48f7a9b54b38877104a1f5fbe85c61da2fbe35275418a64bc"
+                    )
+                ),
+            )
+        )
+    )
