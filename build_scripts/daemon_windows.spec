@@ -16,7 +16,6 @@ version_data = copy_metadata(get_distribution("chia-blockchain"))[0]
 SUBCOMMANDS = [
     "init",
     "keys",
-    "plots",
     "show",
     "start",
     "stop",
@@ -31,6 +30,8 @@ other = ["aiter.active_aiter", "aiter.aiter_forker", "aiter.aiter_to_iter", "ait
 "aiter.push_aiter", "aiter.sharable_aiter", "aiter.stoppable_aiter", "win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32"]
 
 entry_points = ["aiohttp", "aiohttp",
+            "src.cmds.check_plots",
+            "src.cmds.create_plots",
             "src.server.start_wallet",
             "src.server.start_full_node",
             "src.server.start_harvester",
@@ -85,6 +86,19 @@ wallet = Analysis([f"../src/server/start_wallet.py"],
              cipher=block_cipher,
              noarchive=False)
 
+plotter = Analysis([f"../src/cmds/create_plots.py"],
+             pathex=[f"../venv/lib/python3.7/site-packages/aiter/", f".."],
+             binaries = [],
+             datas=[version_data],
+             hiddenimports=subcommand_modules,
+             hookspath=[],
+             runtime_hooks=[],
+             excludes=[],
+             win_no_prefer_redirects=False,
+             win_private_assemblies=False,
+             cipher=block_cipher,
+             noarchive=False)
+
 farmer = Analysis([f"../src/server/start_farmer.py"],
              pathex=[f"../venv/lib/python3.7/site-packages/aiter/", f"../"],
              binaries = [],
@@ -111,15 +125,32 @@ harvester = Analysis([f"../src/server/start_harvester.py"],
              cipher=block_cipher,
              noarchive=False)
 
+check_plots = Analysis([f"../src/cmds/check_plots.py"],
+             pathex=[f"../venv/lib/python3.7/site-packages/aiter/", f"../"],
+             binaries = [],
+             datas=[version_data],
+             hiddenimports=subcommand_modules,
+             hookspath=[],
+             runtime_hooks=[],
+             excludes=[],
+             win_no_prefer_redirects=False,
+             win_private_assemblies=False,
+             cipher=block_cipher,
+             noarchive=False)
+
 daemon_pyz = PYZ(daemon.pure, daemon.zipped_data,
              cipher=block_cipher)
 full_node_pyz = PYZ(full_node.pure, full_node.zipped_data,
              cipher=block_cipher)
 wallet_pyz = PYZ(wallet.pure, wallet.zipped_data,
              cipher=block_cipher)
+plotter_pyz = PYZ(plotter.pure, plotter.zipped_data,
+             cipher=block_cipher)
 farmer_pyz = PYZ(farmer.pure, farmer.zipped_data,
              cipher=block_cipher)
 harvester_pyz = PYZ(harvester.pure, harvester.zipped_data,
+             cipher=block_cipher)
+check_plots_pyz = PYZ(check_plots.pure, check_plots.zipped_data,
              cipher=block_cipher)
 
 daemon_exe = EXE(daemon_pyz,
@@ -151,6 +182,15 @@ wallet_exe = EXE(wallet_pyz,
           bootloader_ignore_signals=False,
           strip=False)
 
+plotter_exe = EXE(plotter_pyz,
+          plotter.scripts,
+          [],
+          exclude_binaries=True,
+          name='create_plots',
+          debug=False,
+          bootloader_ignore_signals=False,
+          strip=False)
+
 farmer_exe = EXE(farmer_pyz,
           farmer.scripts,
           [],
@@ -165,6 +205,15 @@ harvester_exe = EXE(harvester_pyz,
           [],
           exclude_binaries=True,
           name='start_harvester',
+          debug=False,
+          bootloader_ignore_signals=False,
+          strip=False)
+
+check_plots_exe = EXE(check_plots_pyz,
+          check_plots.scripts,
+          [],
+          exclude_binaries=True,
+          name='check_plots',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False)
@@ -184,6 +233,11 @@ coll = COLLECT(daemon_exe,
                wallet.zipfiles,
                wallet.datas,
 
+               plotter_exe,
+               plotter.binaries,
+               plotter.zipfiles,
+               plotter.datas,
+
                farmer_exe,
                farmer.binaries,
                farmer.zipfiles,
@@ -194,6 +248,10 @@ coll = COLLECT(daemon_exe,
                harvester.zipfiles,
                harvester.datas,
 
+               check_plots_exe,
+               check_plots.binaries,
+               check_plots.zipfiles,
+               check_plots.datas,
                strip = False,
                upx_exclude = [],
                name = 'daemon'
