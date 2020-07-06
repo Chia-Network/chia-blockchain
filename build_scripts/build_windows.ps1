@@ -74,9 +74,9 @@ Write-Output "   ---"
 npm run build
 
 Write-Output "   ---"
-Write-Output "Increase the stack for chiapos"
+Write-Output "Increase the stack for chia command for (chia plots create) chiapos limitations"
 # editbin.exe needs to be in the path
-editbin.exe /STACK:8000000 daemon\create_plots.exe
+editbin.exe /STACK:8000000 daemon\chia.exe
 Write-Output "   ---"
 
 $packageVersion = "$env:CHIA_INSTALLER_VERSION"

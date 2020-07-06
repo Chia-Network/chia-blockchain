@@ -235,7 +235,9 @@ class WebSocketServer:
         if error is None:
             try:
                 self.log.info(f"Start potting: {command_args}")
-                process, pid_path = launch_plotter(self.root_path, command_args)
+                process, pid_path = launch_plotter(
+                    self.root_path, service_name, command_args
+                )
                 self.services[service_name] = process
                 success = True
             except (subprocess.SubprocessError, IOError):
@@ -252,18 +254,17 @@ class WebSocketServer:
 
     async def start_service(self, request):
         service_command = request["service"]
-        service_name = service_command.split()[0]
         error = None
         success = False
 
-        if not validate_service(service_name):
+        if not validate_service(service_command):
             error = "unknown service"
 
-        if service_name in self.services:
-            service = self.services[service_name]
+        if service_command in self.services:
+            service = self.services[service_command]
             r = service is not None and service.poll() is None
             if r is False:
-                self.services.pop(service_name)
+                self.services.pop(service_command)
                 error = None
             else:
                 error = "already running"
@@ -271,13 +272,13 @@ class WebSocketServer:
         if error is None:
             try:
                 process, pid_path = launch_service(self.root_path, service_command)
-                self.services[service_name] = process
+                self.services[service_command] = process
                 success = True
             except (subprocess.SubprocessError, IOError):
-                log.exception(f"problem starting {service_name}")
+                log.exception(f"problem starting {service_command}")
                 error = "start failed"
 
-        response = {"success": success, "service": service_name, "error": error}
+        response = {"success": success, "service": service_command, "error": error}
         return response
 
     async def stop_service(self, request):
@@ -357,11 +358,10 @@ def plotter_log_path(root_path):
     return root_path / "plotter" / "plotter_log.txt"
 
 
-def launch_plotter(root_path, service_array):
+def launch_plotter(root_path, service_name, service_array):
     # we need to pass on the possibly altered CHIA_ROOT
     os.environ["CHIA_ROOT"] = str(root_path)
-    service_name = service_array[0]
-    service_executable = executable_for_service(service_name)
+    service_executable = executable_for_service(service_array[0])
 
     # Swap service name with name of executable
     service_array[0] = service_executable
@@ -406,8 +406,7 @@ def launch_service(root_path, service_command):
 
     # Innsert proper e
     service_array = service_command.split()
-    service_name = service_array[0]
-    service_executable = executable_for_service(service_name)
+    service_executable = executable_for_service(service_array[0])
     service_array[0] = service_executable
     startupinfo = None
     if os.name == "nt":
