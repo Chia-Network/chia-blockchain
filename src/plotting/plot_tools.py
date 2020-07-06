@@ -72,6 +72,7 @@ def add_plot_directory(str_path, root_path):
     if str(Path(str_path).resolve()) not in config["harvester"]["plot_directories"]:
         config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
     save_config(root_path, "config.yaml", config)
+    return config
 
 
 def load_plots(

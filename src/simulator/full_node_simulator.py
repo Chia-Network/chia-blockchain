@@ -17,13 +17,14 @@ from src.util.api_decorators import api_request
 from src.util.ints import uint64
 from tests.block_tools import BlockTools
 
+bt = BlockTools()
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
 
 class FullNodeSimulator(FullNode):
-    def __init__(self, config, root_path, name, override_constants):
-        super().__init__(config, root_path, name, override_constants)
-        self.bt = BlockTools()
+    def __init__(self, config, root_path, consensus_constants, name):
+        super().__init__(config, root_path, consensus_constants, name)
+        self.bt = bt
 
     def _set_server(self, server: ChiaServer):
         super()._set_server(server)
