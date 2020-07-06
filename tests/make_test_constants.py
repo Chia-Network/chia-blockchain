@@ -15,4 +15,4 @@ def make_test_constants_with_genesis(test_constants_overrides: Dict):
     final_test_constants = test_constants.replace(
         GENESIS_BLOCK=bytes(new_genesis_block)
     )
-    return final_test_constants
+    return final_test_constants, bt
