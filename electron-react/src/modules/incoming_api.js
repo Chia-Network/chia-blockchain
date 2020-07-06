@@ -60,11 +60,17 @@ const initial_state = {
     syncing: false
   },
   sending_transaction: false,
-  send_transaction_result: null
+  send_transaction_result: null,
+  show_create_backup: true
 };
 
 export const incomingReducer = (state = { ...initial_state }, action) => {
   switch (action.type) {
+    case "SHOW_CREATE_BACKUP":
+      return {
+        ...state,
+        show_create_backup: action.show
+      };
     case "SELECT_FINGERPRINT":
       return {
         ...state,

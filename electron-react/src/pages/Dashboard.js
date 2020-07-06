@@ -23,6 +23,7 @@ import {
 import FullNode from "./FullNode";
 import Farmer from "./Farmer";
 import { TradeManger } from "./trading/TradeManager";
+import { CreateBackup } from "./backup/createBackup";
 
 const drawerWidth = 100;
 
@@ -182,6 +183,7 @@ export default function Dashboard() {
         <Container maxWidth="lg" className={classes.container}>
           <ComopnentSwitch></ComopnentSwitch>
         </Container>
+        <CreateBackup></CreateBackup>
       </main>
     </div>
   );

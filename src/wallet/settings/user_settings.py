@@ -1,6 +1,5 @@
 from typing import Any, Dict
 
-from src.util.byte_types import hexstr_to_bytes
 from src.wallet.key_val_store import KeyValStore
 import logging
 
