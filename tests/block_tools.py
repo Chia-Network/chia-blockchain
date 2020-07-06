@@ -127,9 +127,9 @@ class BlockTools:
             self.farmer_ph = create_puzzlehash_for_pk(BLSPublicKey(bytes(pk)))
             self.pool_ph = create_puzzlehash_for_pk(BLSPublicKey(bytes(pk)))
 
+        self.all_esks = self.keychain.get_all_private_keys()
         self.all_pubkeys: List[PublicKey] = [
-            epk.public_child(0).get_public_key()
-            for epk in self.keychain.get_all_public_keys()
+            esk[0].public_child(0).get_public_key() for esk in self.all_esks
         ]
         if len(self.all_pubkeys) == 0:
             raise RuntimeError("Keys not generated. Run `chia generate keys`")
@@ -143,8 +143,7 @@ class BlockTools:
         """
         Returns the plot signature of the header data.
         """
-        esks = self.keychain.get_all_private_keys()
-        farmer_sk = esks[0][0].private_child(0).get_private_key()
+        farmer_sk = self.all_esks[0][0].private_child(0).get_private_key()
         for _, plot_info in self.plots.items():
             agg_pk = ProofOfSpace.generate_plot_public_key(
                 plot_info.harvester_sk.get_public_key(), plot_info.farmer_public_key
@@ -161,19 +160,17 @@ class BlockTools:
     def get_pool_key_signature(
         self, pool_target: PoolTarget, pool_pk: PublicKey
     ) -> Optional[PrependSignature]:
-        for esk, _ in self.keychain.get_all_private_keys():
+        for esk, _ in self.all_esks:
             sk = esk.private_child(0).get_private_key()
             if sk.get_public_key() == pool_pk:
                 return sk.sign_prepend(bytes(pool_target))
         return None
 
     def get_farmer_wallet_tool(self):
-        esks = self.keychain.get_all_private_keys()
-        return WalletTool(esks[0][0])
+        return WalletTool(self.all_esks[0][0])
 
     def get_pool_wallet_tool(self):
-        esks = self.keychain.get_all_private_keys()
-        return WalletTool(esks[1][0])
+        return WalletTool(self.all_esks[1][0])
 
     def get_consecutive_blocks(
         self,
