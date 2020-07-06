@@ -107,7 +107,7 @@ async def initialize_pipeline(
         map_aiter(expand_outbound_messages, responses_aiter, 100)
     )
 
-    async def send(connection: Connection, message: Message):
+    async def send(connection: ChiaConnection, message: Message):
         try:
             await connection.send(message)
         except Exception as e:
