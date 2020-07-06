@@ -7,9 +7,13 @@ from datetime import datetime
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.keychain import Keychain
-from src.util.config import config_path_for_filename, load_config, save_config
+from src.util.config import config_path_for_filename, load_config
 from src.util.path import mkdir
-from src.plotting.plot_tools import get_plot_filenames, stream_plot_info
+from src.plotting.plot_tools import (
+    get_plot_filenames,
+    stream_plot_info,
+    add_plot_directory,
+)
 
 
 log = logging.getLogger(__name__)
@@ -78,6 +82,8 @@ def create_plots(args, root_path, use_datetime=True):
     mkdir(args.tmp2_dir)
     mkdir(args.final_dir)
     finished_filenames = []
+    config = load_config(root_path, config_filename)
+    plot_filenames = get_plot_filenames(config["harvester"])
     for i in range(args.index, args.index + num):
         # Generate a sk based on the seed, plot size (k), and index
         sk: PrivateKey = PrivateKey.from_seed(
@@ -101,14 +107,13 @@ def create_plots(args, root_path, use_datetime=True):
             filename = f"plot-k{args.size}-{plot_seed}.plot"
         full_path: Path = args.final_dir / filename
 
-        config = load_config(root_path, config_filename)
-        plot_filenames = get_plot_filenames(config["harvester"])
         if args.final_dir.resolve() not in plot_filenames:
-            # Adds the directory to the plot directories if it is not present
-            config["harvester"]["plot_directories"].append(
+            if (
                 str(args.final_dir.resolve())
-            )
-            save_config(root_path, config_filename, config)
+                not in config["harvester"]["plot_directories"]
+            ):
+                # Adds the directory to the plot directories if it is not present
+                config = add_plot_directory(str(args.final_dir.resolve()), root_path)
 
         if not full_path.exists():
             # Creates the plot. This will take a long time for larger plots.

@@ -8,8 +8,7 @@ from tests.make_test_constants import make_test_constants_with_genesis
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 
 
-
-test_constants = make_test_constants_with_genesis(
+test_constants, bt = make_test_constants_with_genesis(
     {
         "DIFFICULTY_STARTING": 500,
         "MIN_ITERS_STARTING": 500,

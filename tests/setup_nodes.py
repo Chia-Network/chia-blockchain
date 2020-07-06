@@ -11,7 +11,6 @@ from src.simulator.full_node_simulator import FullNodeSimulator
 from src.timelord_launcher import spawn_process, kill_processes
 from src.util.keychain import Keychain
 from src.wallet.wallet_node import WalletNode
-from tests.block_tools import BlockTools
 from src.util.config import load_config
 from src.harvester import Harvester
 from src.farmer import Farmer
@@ -24,24 +23,25 @@ from tests.make_test_constants import make_test_constants_with_genesis
 from tests.time_out_assert import time_out_assert
 
 
-bt = BlockTools()
+test_constants, bt = make_test_constants_with_genesis(
+    {
+        "DIFFICULTY_STARTING": 1,
+        "DISCRIMINANT_SIZE_BITS": 8,
+        "BLOCK_TIME_TARGET": 10,
+        "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
+        "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
+        "PROPAGATION_THRESHOLD": 10,
+        "PROPAGATION_DELAY_THRESHOLD": 20,
+        "TX_PER_SEC": 1,
+        "MEMPOOL_BLOCK_BUFFER": 10,
+        "MIN_ITERS_STARTING": 50 * 1,
+        "NUMBER_ZERO_BITS_CHALLENGE_SIG": 1,
+        "CLVM_COST_RATIO_CONSTANT": 108,
+    }
+)
 
 global_config = load_config(bt.root_path, "config.yaml")
 self_hostname = global_config["self_hostname"]
-
-test_constants = make_test_constants_with_genesis({
-    "DIFFICULTY_STARTING": 1,
-    "DISCRIMINANT_SIZE_BITS": 8,
-    "BLOCK_TIME_TARGET": 10,
-    "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
-    "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
-    "PROPAGATION_THRESHOLD": 10,
-    "PROPAGATION_DELAY_THRESHOLD": 20,
-    "TX_PER_SEC": 1,
-    "MEMPOOL_BLOCK_BUFFER": 10,
-    "MIN_ITERS_STARTING": 50 * 1,
-    "CLVM_COST_RATIO_CONSTANT": 108,
-})
 
 
 def constants_for_dic(dic):

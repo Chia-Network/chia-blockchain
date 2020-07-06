@@ -1,9 +1,12 @@
 from pathlib import Path
 import logging
+import pathlib
 from src.plotting.plot_tools import add_plot_directory
 from src.plotting.create_plots import create_plots
 from src.plotting.check_plots import check_plots
 from src.util.logging import initialize_logging
+from argparse import ArgumentParser
+from src.util.default_root import DEFAULT_ROOT_PATH
 
 
 log = logging.getLogger(__name__)
@@ -108,3 +111,22 @@ def handler(args, parser):
     elif command == "add":
         str_path = args.final_dir
         add_plot_directory(str_path, root_path)
+
+
+def main():
+    # TODO: remove: this is a hack to get pypacker to be able to call the script
+    parser: ArgumentParser = ArgumentParser(description="Chia plots")
+    parser.add_argument(
+        "-r",
+        "--root-path",
+        help="Config file root (defaults to %s)." % DEFAULT_ROOT_PATH,
+        type=pathlib.Path,
+        default=DEFAULT_ROOT_PATH,
+    )
+    make_parser(parser)
+    args = parser.parse_args()
+    handler(args, parser)
+
+
+if __name__ == "__main__":
+    main()
