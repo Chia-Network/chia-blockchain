@@ -17,7 +17,6 @@ from src.util.api_decorators import api_request
 from src.util.ints import uint64
 from src.util.block_tools import BlockTools
 
-bt = BlockTools()
 
 bt: Optional[BlockTools] = None
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
