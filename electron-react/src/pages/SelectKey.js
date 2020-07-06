@@ -12,7 +12,12 @@ import Container from "@material-ui/core/Container";
 import logo from "../assets/img/chia_logo.svg"; // Tell webpack this JS file uses this image
 import { withRouter } from "react-router-dom";
 import { connect, useSelector, useDispatch } from "react-redux";
-import { login_action, delete_key, get_private_key } from "../modules/message";
+import {
+  login_action,
+  delete_key,
+  get_private_key,
+  selectFingerprint
+} from "../modules/message";
 import Link from "@material-ui/core/Link";
 import Button from "@material-ui/core/Button";
 import VisibilityIcon from "@material-ui/icons/Visibility";
@@ -101,6 +106,7 @@ const SelectKey = () => {
   const handleClick = fingerprint => {
     return () => {
       dispatch(resetMnemonic());
+      dispatch(selectFingerprint(fingerprint));
       dispatch(login_action(fingerprint));
     };
   };

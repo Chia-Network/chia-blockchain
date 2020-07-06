@@ -18,7 +18,10 @@ import { useDispatch, useSelector } from "react-redux";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { useStyles } from "./CreateWallet";
 import { chia_to_mojo } from "../util/chia";
-import { create_cc_for_colour } from "../modules/message";
+import {
+  create_cc_for_colour,
+  create_cc_for_colour_action
+} from "../modules/message";
 import { openDialog } from "../modules/dialogReducer";
 
 export const customStyles = makeStyles(theme => ({
@@ -68,7 +71,7 @@ export const CreateExistingCCWallet = () => {
     dispatch(createState(true, true));
     const colour = colour_string.value;
     var fee = chia_to_mojo(fee_input.value);
-    dispatch(create_cc_for_colour(colour, fee));
+    dispatch(create_cc_for_colour_action(colour, fee));
   }
 
   return (
