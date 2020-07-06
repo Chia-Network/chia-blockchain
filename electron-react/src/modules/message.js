@@ -3,6 +3,7 @@ import { openProgress, closeProgress } from "./progressReducer";
 import { refreshAllState } from "../middleware/middleware_api";
 import { changeEntranceMenu, presentRestoreBackup } from "./entranceMenu";
 import { openDialog } from "./dialogReducer";
+import { createState } from "./createWalletReducer";
 
 export const clearSend = () => {
   var action = {
@@ -31,6 +32,11 @@ export const unselectFingerprint = () => ({
 export const selectMnemonic = mnemonic => ({
   type: "SELECT_MNEMONIC",
   mnemonic: mnemonic
+});
+
+export const showCreateBackup = show => ({
+  type: "SHOW_CREATE_BACKUP",
+  show: show
 });
 
 export const async_api = (dispatch, action, open_spinner) => {
@@ -173,14 +179,14 @@ export const delete_all_keys = () => {
 export const log_in = fingerprint => {
   var action = walletMessage();
   action.message.command = "log_in";
-  action.message.data = { fingerprint: fingerprint };
+  action.message.data = { fingerprint: fingerprint, type: "normal" };
   return action;
 };
 
 export const log_in_and_skip_import = fingerprint => {
   var action = walletMessage();
   action.message.command = "log_in";
-  action.message.data = { fingerprint: fingerprint, skip_backup: true };
+  action.message.data = { fingerprint: fingerprint, type: "skip" };
   return action;
 };
 
@@ -189,7 +195,7 @@ export const log_in_and_import_backup = (fingerprint, file_path) => {
   action.message.command = "log_in";
   action.message.data = {
     fingerprint: fingerprint,
-    skip_backup: true,
+    type: "restore_backup",
     file_path: file_path
   };
   return action;
@@ -287,6 +293,68 @@ export const create_cc_for_colour = (colour, fee) => {
     fee: fee
   };
   return action;
+};
+
+export const create_backup = file_path => {
+  var action = walletMessage();
+  action.message.command = "create_backup";
+  action.message.data = {
+    file_path: file_path
+  };
+  return action;
+};
+
+export const create_backup_action = file_path => {
+  return dispatch => {
+    return async_api(dispatch, create_backup(file_path), true).then(
+      response => {
+        dispatch(closeProgress());
+        if (response.data.success) {
+          dispatch(showCreateBackup(false));
+        } else {
+          const error = response.data.error;
+          dispatch(openDialog("Error", error));
+        }
+      }
+    );
+  };
+};
+
+export const create_cc_action = (amount, fee) => {
+  return dispatch => {
+    return async_api(dispatch, create_coloured_coin(amount, fee), true).then(
+      response => {
+        dispatch(closeProgress());
+        dispatch(createState(true, false));
+
+        if (response.data.success) {
+          // Go to wallet
+          dispatch(showCreateBackup(true));
+          dispatch(createState(true, false));
+        } else {
+          const error = response.data.error;
+        }
+      }
+    );
+  };
+};
+
+export const create_cc_for_colour_action = (colour, fee) => {
+  return dispatch => {
+    return async_api(dispatch, create_cc_for_colour(colour, fee), true).then(
+      response => {
+        dispatch(closeProgress());
+        dispatch(createState(true, false));
+        if (response.data.success) {
+          // Go to wallet
+          dispatch(showCreateBackup(true));
+          dispatch(format_message("get_wallets", {}));
+        } else {
+          const error = response.data.error;
+        }
+      }
+    );
+  };
 };
 
 export const get_colour_info = wallet_id => {
