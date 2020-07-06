@@ -87,8 +87,6 @@ kwargs = dict(
             "chia_timelord = src.server.start_timelord:main",
             "chia_timelord_launcher = src.timelord_launcher:main",
             "chia_full_node_simulator = src.simulator.start_simulator:main",
-            "chia-check-plots = src.cmds.chia:main plots check",
-            "chia-create-plots = src.cmds.chia:main plots check",
         ]
     },
     package_data={
