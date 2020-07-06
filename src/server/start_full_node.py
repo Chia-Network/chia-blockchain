@@ -25,9 +25,9 @@ def service_kwargs_for_full_node(root_path):
     peer_info = PeerInfo(introducer["host"], introducer["port"])
 
     async def start_callback():
-        await api._start()
         if config["enable_upnp"]:
             upnp_remap_port(config["port"])
+        await api._start()
 
     def stop_callback():
         api._close()
