@@ -86,7 +86,7 @@ wallet = Analysis([f"../src/server/start_wallet.py"],
              cipher=block_cipher,
              noarchive=False)
 
-plotter = Analysis([f"../src/cmds/chia.py"],
+chia = Analysis([f"../src/cmds/chia.py"],
              pathex=[f"../venv/lib/python3.7/site-packages/aiter/", f".."],
              binaries = [],
              datas=[version_data],
@@ -125,32 +125,17 @@ harvester = Analysis([f"../src/server/start_harvester.py"],
              cipher=block_cipher,
              noarchive=False)
 
-check_plots = Analysis([f"../src/cmds/chia.py"],
-             pathex=[f"../venv/lib/python3.7/site-packages/aiter/", f"../"],
-             binaries = [],
-             datas=[version_data],
-             hiddenimports=subcommand_modules,
-             hookspath=[],
-             runtime_hooks=[],
-             excludes=[],
-             win_no_prefer_redirects=False,
-             win_private_assemblies=False,
-             cipher=block_cipher,
-             noarchive=False)
-
 daemon_pyz = PYZ(daemon.pure, daemon.zipped_data,
              cipher=block_cipher)
 full_node_pyz = PYZ(full_node.pure, full_node.zipped_data,
              cipher=block_cipher)
 wallet_pyz = PYZ(wallet.pure, wallet.zipped_data,
              cipher=block_cipher)
-plotter_pyz = PYZ(plotter.pure, plotter.zipped_data,
+chia_pyz = PYZ(chia.pure, chia.zipped_data,
              cipher=block_cipher)
 farmer_pyz = PYZ(farmer.pure, farmer.zipped_data,
              cipher=block_cipher)
 harvester_pyz = PYZ(harvester.pure, harvester.zipped_data,
-             cipher=block_cipher)
-check_plots_pyz = PYZ(check_plots.pure, check_plots.zipped_data,
              cipher=block_cipher)
 
 daemon_exe = EXE(daemon_pyz,
@@ -182,11 +167,11 @@ wallet_exe = EXE(wallet_pyz,
           bootloader_ignore_signals=False,
           strip=False)
 
-plotter_exe = EXE(plotter_pyz,
-          plotter.scripts,
+chia_exe = EXE(chia_pyz,
+          chia.scripts,
           [],
           exclude_binaries=True,
-          name='create_plots',
+          name='chia',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False)
@@ -209,15 +194,6 @@ harvester_exe = EXE(harvester_pyz,
           bootloader_ignore_signals=False,
           strip=False)
 
-check_plots_exe = EXE(check_plots_pyz,
-          check_plots.scripts,
-          [],
-          exclude_binaries=True,
-          name='check_plots',
-          debug=False,
-          bootloader_ignore_signals=False,
-          strip=False)
-
 coll = COLLECT(daemon_exe,
                daemon.binaries,
                daemon.zipfiles,
@@ -233,10 +209,10 @@ coll = COLLECT(daemon_exe,
                wallet.zipfiles,
                wallet.datas,
 
-               plotter_exe,
-               plotter.binaries,
-               plotter.zipfiles,
-               plotter.datas,
+               chia_exe,
+               chia.binaries,
+               chia.zipfiles,
+               chia.datas,
 
                farmer_exe,
                farmer.binaries,
@@ -248,10 +224,6 @@ coll = COLLECT(daemon_exe,
                harvester.zipfiles,
                harvester.datas,
 
-               check_plots_exe,
-               check_plots.binaries,
-               check_plots.zipfiles,
-               check_plots.datas,
                strip = False,
                upx_exclude = [],
                name = 'daemon'
