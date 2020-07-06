@@ -4,7 +4,7 @@ import pytest
 
 from src.util.merkle_set import MerkleSet, confirm_included_already_hashed
 from tests.setup_nodes import test_constants, bt
-from tests.wallet_tools import WalletTool
+from src.util.wallet_tools import WalletTool
 
 
 @pytest.fixture(scope="module")

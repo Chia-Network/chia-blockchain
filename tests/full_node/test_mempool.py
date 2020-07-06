@@ -20,7 +20,7 @@ from src.util.condition_tools import (
 )
 from src.util.ints import uint64
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
-from tests.wallet_tools import WalletTool
+from src.util.wallet_tools import WalletTool
 
 
 @pytest.fixture(scope="module")
