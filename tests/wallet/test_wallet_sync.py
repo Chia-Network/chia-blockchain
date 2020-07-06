@@ -8,7 +8,7 @@ from src.util.ints import uint16, uint64, uint32
 from tests.setup_nodes import setup_node_and_wallet, test_constants, bt
 from src.types.spend_bundle import SpendBundle
 from src.util.bundle_tools import best_solution_program
-from tests.wallet_tools import WalletTool
+from src.util.wallet_tools import WalletTool
 from src.types.coin import Coin
 from src.consensus.coinbase import create_coinbase_coin
 from tests.time_out_assert import time_out_assert
