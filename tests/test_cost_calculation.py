@@ -6,7 +6,7 @@ from src.util.bundle_tools import best_solution_program
 from src.util.cost_calculator import calculate_cost_of_program
 from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from tests.setup_nodes import test_constants, bt
-from tests.wallet_tools import WalletTool
+from src.util.wallet_tools import WalletTool
 
 
 @pytest.fixture(scope="module")
