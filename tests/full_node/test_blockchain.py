@@ -527,7 +527,7 @@ class TestBlockValidation:
     @pytest.mark.asyncio
     async def test_difficulty_change(self):
         num_blocks = 10
-        # Make it 5x faster than target time
+        # Make it much faster than target time, 1 second instead of 10 seconds, so difficulty goes up
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 1)
         db_path = Path("blockchain_test.db")
         if db_path.exists():
