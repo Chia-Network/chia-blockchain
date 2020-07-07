@@ -26,9 +26,10 @@ SUBCOMMANDS = [
 ]
 block_cipher = None
 subcommand_modules = [f"../src.cmds.%s" % _ for _ in SUBCOMMANDS]
+subcommand_modules.extend([f"src.cmds.%s" % _ for _ in SUBCOMMANDS])
 other = ["aiter.active_aiter", "aiter.aiter_forker", "aiter.aiter_to_iter", "aiter.azip", "aiter.flatten_aiter", "aiter.gated_aiter",
 "aiter.iter_to_aiter", "aiter.join_aiters", "aiter.map_aiter", "aiter.map_filter_aiter", "aiter.preload_aiter",
-"aiter.push_aiter", "aiter.sharable_aiter", "aiter.stoppable_aiter", "win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32"]
+"aiter.push_aiter", "aiter.sharable_aiter", "aiter.stoppable_aiter", "win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32", "pkg_resources.py2_warn"]
 
 entry_points = ["aiohttp", "aiohttp",
             "src.cmds.chia",
@@ -87,7 +88,7 @@ wallet = Analysis([f"../src/server/start_wallet.py"],
              noarchive=False)
 
 chia = Analysis([f"../src/cmds/chia.py"],
-             pathex=[f"../venv/lib/python3.7/site-packages/aiter/", f".."],
+             pathex=[f"../venv/lib/python3.7/site-packages/aiter/", f"../"],
              binaries = [],
              datas=[version_data],
              hiddenimports=subcommand_modules,
