@@ -87,7 +87,7 @@ wallet = Analysis([f"../src/server/start_wallet.py"],
              noarchive=False)
 
 chia = Analysis([f"../src/cmds/chia.py"],
-             pathex=[f"../venv/lib/python3.7/site-packages/aiter/", f".."],
+             pathex=[f"../venv/lib/python3.7/site-packages/aiter/", f"../"],
              binaries = [],
              datas=[version_data],
              hiddenimports=subcommand_modules,
