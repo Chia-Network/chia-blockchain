@@ -11,7 +11,7 @@ from src.types.BLSSignature import BLSSignature
 from src.types.program import Program
 from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
-from tests.wallet_tools import WalletTool
+from src.util.wallet_tools import WalletTool
 
 
 def float_to_str(f):
