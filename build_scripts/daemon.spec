@@ -23,9 +23,10 @@ SUBCOMMANDS = [
 ]
 block_cipher = None
 subcommand_modules = [f"{root}/src.cmds.%s" % _ for _ in SUBCOMMANDS]
+subcommand_modules.extend([f"src.cmds.%s" % _ for _ in SUBCOMMANDS])
 other = ["aiter.active_aiter", "aiter.aiter_forker", "aiter.aiter_to_iter", "aiter.azip", "aiter.flatten_aiter", "aiter.gated_aiter",
 "aiter.iter_to_aiter", "aiter.join_aiters", "aiter.map_aiter", "aiter.map_filter_aiter", "aiter.preload_aiter",
-"aiter.push_aiter", "aiter.sharable_aiter", "aiter.stoppable_aiter"]
+"aiter.push_aiter", "aiter.sharable_aiter", "aiter.stoppable_aiter", "pkg_resources.py2_warn"]
 
 entry_points = ["src.cmds.chia",
             "src.server.start_wallet",
