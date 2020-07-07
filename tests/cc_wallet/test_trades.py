@@ -2,18 +2,15 @@ import asyncio
 import time
 from pathlib import Path
 from secrets import token_bytes
-from typing import Optional
 
 import pytest
 
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
-from src.util.ints import uint16, uint32, uint64
+from src.util.ints import uint16, uint64
 from src.wallet.trade_manager import TradeManager
 from src.wallet.trading.trade_status import TradeStatus
-from src.wallet.wallet_coin_record import WalletCoinRecord
 from tests.setup_nodes import setup_simulators_and_wallets
-from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.cc_wallet import cc_wallet_puzzles
 
@@ -310,11 +307,7 @@ class TestCCTrades:
         # Wallet A will create offer, cancel it by deleting from db only
         wallet_node_a, wallet_node_b, full_node = wallets_prefarm
         wallet_a = wallet_node_a.wallet_state_manager.main_wallet
-        wallet_b = wallet_node_b.wallet_state_manager.main_wallet
         trade_manager_a: TradeManager = wallet_node_a.wallet_state_manager.trade_manager
-        trade_manager_b: TradeManager = wallet_node_b.wallet_state_manager.trade_manager
-        cc_a_2: CCWallet = wallet_node_a.wallet_state_manager.wallets[2]
-        cc_a_3: CCWallet = wallet_node_a.wallet_state_manager.wallets[3]
 
         file = "test_offer_file.offer"
         file_path = Path(file)
@@ -323,7 +316,6 @@ class TestCCTrades:
             file_path.unlink()
 
         spendable_chia = await wallet_a.get_spendable_balance()
-        spendable_cc_2 = await cc_a_2.get_spendable_balance()
 
         offer_dict = {1: 10, 2: -30, 3: 30}
 
@@ -362,11 +354,7 @@ class TestCCTrades:
 
         wallet_node_a, wallet_node_b, full_node = wallets_prefarm
         wallet_a = wallet_node_a.wallet_state_manager.main_wallet
-        wallet_b = wallet_node_b.wallet_state_manager.main_wallet
         trade_manager_a: TradeManager = wallet_node_a.wallet_state_manager.trade_manager
-        trade_manager_b: TradeManager = wallet_node_b.wallet_state_manager.trade_manager
-        cc_a_2: CCWallet = wallet_node_a.wallet_state_manager.wallets[2]
-        cc_a_3: CCWallet = wallet_node_a.wallet_state_manager.wallets[3]
 
         file = "test_offer_file.offer"
         file_path = Path(file)
