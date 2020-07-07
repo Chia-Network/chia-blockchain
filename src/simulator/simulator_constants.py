@@ -20,7 +20,6 @@ test_constants = make_test_constants_without_genesis(
 
 if __name__ == "__main__":
     from src.util.default_root import DEFAULT_ROOT_PATH
-    from src.consensus.constants import constants as consensus_constants
     from src.util.block_tools import BlockTools
     from src.types.sized_bytes import bytes32
 
@@ -28,12 +27,12 @@ if __name__ == "__main__":
     print(
         bytes(
             bt.create_genesis_block(
-                consensus_constants,
+                test_constants,
                 bytes((20758).to_bytes(4, "big") + bytes([20758 % 256] * 28)),
                 b"0",
                 bytes32(
                     bytes.fromhex(
-                        "30944219616695e48f7a9b54b38877104a1f5fbe85c61da2fbe35275418a64bc"
+                        "b38aebdf6db0de7b96b78e47216898c5269f18d2ea53e221811976b9fa31ee70"
                     )
                 ),
             )
