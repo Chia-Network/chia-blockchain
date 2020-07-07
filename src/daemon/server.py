@@ -256,6 +256,9 @@ class WebSocketServer:
         service_command = request["service"]
         error = None
         success = False
+        testing = False
+        if "testing" in request:
+            testing = request["testing"]
 
         if not validate_service(service_command):
             error = "unknown service"
@@ -271,7 +274,10 @@ class WebSocketServer:
 
         if error is None:
             try:
-                process, pid_path = launch_service(self.root_path, service_command)
+                exe_command = service_command
+                if testing is True:
+                    exe_command = f"{service_command} --testing=true"
+                process, pid_path = launch_service(self.root_path, exe_command)
                 self.services[service_command] = process
                 success = True
             except (subprocess.SubprocessError, IOError):
