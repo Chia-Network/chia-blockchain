@@ -20,6 +20,7 @@ timelord.sanitizer_mode = True, the timelord will work on those challenges.
 - Confirm before closing UI
 - Farmer now sends challenges after handshake with harvester
 - UI now tries to shut down servers gracefully before exiting, and also closes daemon before starting
+- The chia executable is now available if installing from windows or mac GUI.
 
 
 ### Changed
