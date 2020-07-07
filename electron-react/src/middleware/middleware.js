@@ -2,7 +2,8 @@ import * as actions from "../modules/websocket";
 import {
   registerService,
   startService,
-  isServiceRunning
+  isServiceRunning,
+  startServiceTest
 } from "../modules/daemon_messages";
 import { handle_message } from "./middleware_api";
 import {
@@ -37,7 +38,7 @@ const socketMiddleware = () => {
 
     let start_wallet, start_node;
     if (config.local_test) {
-      start_wallet = startService(service_wallet_server + " --testing=true");
+      start_wallet = startServiceTest(service_wallet_server);
       start_node = startService(service_simulator);
     } else {
       start_wallet = startService(service_wallet_server);
