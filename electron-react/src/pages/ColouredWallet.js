@@ -576,7 +576,7 @@ const SendCard = props => {
                   inputRef={input => {
                     fee_input = input;
                   }}
-                  label="Fee (XCH)"
+                  label="Fee (TXCH)"
                 />
               </Box>
             </Box>
