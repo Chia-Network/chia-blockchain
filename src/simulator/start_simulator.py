@@ -26,8 +26,8 @@ def service_kwargs_for_full_node(root_path):
     api = FullNodeSimulator(
         config,
         root_path=root_path,
+        consensus_constants=test_constants,
         name=service_name,
-        override_constants=test_constants,
     )
 
     async def start_callback():

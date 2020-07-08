@@ -11,6 +11,7 @@ from tests.setup_nodes import test_constants, bt
 
 test_constants_dict = test_constants.copy()
 
+
 @pytest.fixture(scope="module")
 def event_loop():
     loop = asyncio.get_event_loop()
@@ -112,7 +113,9 @@ class TestCoinStore:
     async def test_basic_reorg(self):
         initial_block_count = 20
         reorg_length = 15
-        blocks = bt.get_consecutive_blocks(test_constants_dict, initial_block_count, [], 9)
+        blocks = bt.get_consecutive_blocks(
+            test_constants_dict, initial_block_count, [], 9
+        )
         db_path = Path("blockchain_test.db")
         if db_path.exists():
             db_path.unlink()

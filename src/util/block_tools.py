@@ -348,7 +348,7 @@ class BlockTools:
         test_constants: ConsensusConstants,
         challenge_hash=bytes([0] * 32),
         seed: bytes = b"",
-        reward_puzzlehash: Optional[bytes32] = None,
+        reward_puzzlehash: bytes32 = None,
     ) -> FullBlock:
         """
         Creates the genesis block with the specified details.
