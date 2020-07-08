@@ -170,7 +170,7 @@ class Block extends Component {
       },
       {
         name: "Coinbase Amount",
-        value: chia_cb + " XCH",
+        value: chia_cb + " TXCH",
         tooltip:
           "The Chia block reward, goes to the pool (or individual farmer)"
       },
@@ -180,7 +180,7 @@ class Block extends Component {
       },
       {
         name: "Fees Amount",
-        value: chia_fees + " XCH",
+        value: chia_fees + " TXCH",
         tooltip: "The total fees in this block, goes to the farmer"
       },
       {

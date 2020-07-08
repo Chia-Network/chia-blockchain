@@ -23,6 +23,7 @@ timelord.sanitizer_mode = True, the timelord will work on those challenges.
 - Ci's now cache pip and npm caches between runs.
 - Improve test speed with smaller discriminants, less blocks, less keys, and smaller plots.
 - RPC servers and clients were refactored.
+- Changed XCH units to TXCH units for testnet.
 
 ### Fixed
 - uPnP now works on Windows.
