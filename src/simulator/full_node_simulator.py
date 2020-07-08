@@ -139,7 +139,7 @@ class FullNodeSimulator(FullNode):
             dict_h[top_tip.height + 1] = (program, bundle.aggregated_signature)
             fees = bundle.fees()
 
-        more_blocks = bt.get_consecutive_blocks(
+        more_blocks = self.bt.get_consecutive_blocks(
             self.constants.copy(),
             1,
             current_block,
@@ -165,7 +165,7 @@ class FullNodeSimulator(FullNode):
         current_blocks = await self.get_current_blocks(top_tip)
         block_count = new_index - old_index
 
-        more_blocks = bt.get_consecutive_blocks(
+        more_blocks = self.bt.get_consecutive_blocks(
             self.constants.copy(),
             block_count,
             current_blocks[:old_index],

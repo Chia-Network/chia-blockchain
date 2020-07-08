@@ -11,8 +11,8 @@ import aiosqlite
 from chiabip158 import PyBIP158
 from chiapos import Verifier
 
+from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 from src.consensus.constants import ConsensusConstants
-from src.consensus.block_rewards import calculate_base_fee
 from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.coinbase import create_coinbase_coin, create_fees_coin
 from src.full_node.block_store import BlockStore
@@ -78,7 +78,11 @@ class FullNode:
     state_changed_callback: Optional[Callable]
 
     def __init__(
-        self, config: Dict, root_path: Path, consensus_constants: ConsensusConstants, name: str = None,
+        self,
+        config: Dict,
+        root_path: Path,
+        consensus_constants: ConsensusConstants,
+        name: str = None,
     ):
         self.root_path = root_path
         self.config = config
@@ -1232,8 +1236,7 @@ class FullNode:
         cost = uint64(0)
         if solution_program:
             _, _, cost = calculate_cost_of_program(
-                solution_program,
-                self.constants.CLVM_COST_RATIO_CONSTANT
+                solution_program, self.constants.CLVM_COST_RATIO_CONSTANT
             )
 
         extension_data: bytes32 = bytes32([0] * 32)
