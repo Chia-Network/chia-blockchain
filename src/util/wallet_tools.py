@@ -140,7 +140,7 @@ class WalletTool:
                 if cvp.opcode == ConditionOpcode.ASSERT_FEE:
                     ret.append(make_assert_fee_condition(cvp.var1))
 
-        return clvm.to_sexp_f([puzzle_for_conditions(ret), []])
+        return Program.to([puzzle_for_conditions(ret), []])
 
     def generate_unsigned_transaction(
         self,
@@ -205,7 +205,7 @@ class WalletTool:
         aggsig = AugSchemeMPL.aggregate(sigs)
         solution_list: List[CoinSolution] = [
             CoinSolution(
-                coin_solution.coin, clvm.to_sexp_f([puzzle, coin_solution.solution])
+                coin_solution.coin, Program.to([puzzle, coin_solution.solution])
             )
             for (puzzle, coin_solution) in spends
         ]

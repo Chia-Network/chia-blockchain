@@ -582,7 +582,7 @@ class TradeManager:
                 )
                 coin_spend = CoinSolution(
                     coloured_coin,
-                    clvm.to_sexp_f(
+                    Program.to(
                         [
                             cc_wallet_puzzles.cc_make_puzzle(
                                 inner_puzzle.get_tree_hash(), core,
@@ -668,7 +668,7 @@ class TradeManager:
 
             cs = CoinSolution(
                 auditor,
-                clvm.to_sexp_f(
+                Program.to(
                     [
                         cc_wallet_puzzles.cc_make_puzzle(
                             auditor_inner_puzzle.get_tree_hash(), core
