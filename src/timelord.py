@@ -246,9 +246,7 @@ class Timelord:
     async def _do_process_communication(
         self, challenge_hash, challenge_weight, ip, reader, writer
     ):
-        disc: int = create_discriminant(
-            challenge_hash, self.discriminant_size_bits
-        )
+        disc: int = create_discriminant(challenge_hash, self.discriminant_size_bits)
         # Depending on the flags 'fast_algorithm' and 'sanitizer_mode',
         # the timelord tells the vdf_client what to execute.
         if not self.sanitizer_mode:

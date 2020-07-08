@@ -21,7 +21,6 @@ from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.util.make_test_constants import make_test_constants_with_genesis
 
 
-
 test_constants, bt = make_test_constants_with_genesis(
     {
         "DIFFICULTY_STARTING": 1,
@@ -31,8 +30,9 @@ test_constants, bt = make_test_constants_with_genesis(
         "DIFFICULTY_WARP_FACTOR": 3,
         "DIFFICULTY_DELAY": 2,  # EPOCH / WARP_FACTOR
         "MIN_ITERS_STARTING": 50 * 1,
-})
-test_constants_dict: Dict[str, Any] = test_constants.copy()
+        "NUMBER_ZERO_BITS_CHALLENGE_SIG": 1,
+    }
+)
 
 
 @pytest.fixture(scope="module")
