@@ -134,7 +134,7 @@ class Wallet(AbstractWallet):
             condition_list.append(make_assert_my_coin_id_condition(me["id"]))
         if fee:
             condition_list.append(make_assert_fee_condition(fee))
-        return clvm.to_sexp_f([puzzle_for_conditions(condition_list), []])
+        return Program.to([puzzle_for_conditions(condition_list), []])
 
     async def select_coins(
         self, amount, exclude: List[Coin] = None
@@ -292,7 +292,7 @@ class Wallet(AbstractWallet):
 
             pubkey, secretkey = keys
             code_ = [puzzle, solution.solution]
-            sexp = clvm.to_sexp_f(code_)
+            sexp = Program.to(code_)
 
             # Get AGGSIG conditions
             err, con, cost = conditions_for_solution(sexp)
@@ -313,7 +313,7 @@ class Wallet(AbstractWallet):
         aggsig = AugSchemeMPL.aggregate(signatures)
         solution_list: List[CoinSolution] = [
             CoinSolution(
-                coin_solution.coin, clvm.to_sexp_f([puzzle, coin_solution.solution])
+                coin_solution.coin, Program.to([puzzle, coin_solution.solution])
             )
             for (puzzle, coin_solution) in spends
         ]
@@ -449,7 +449,7 @@ class Wallet(AbstractWallet):
             else:
                 solution = self.make_solution(consumed=[output_created.name()])
             list_of_solutions.append(
-                CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
+                CoinSolution(coin, Program.to([puzzle, solution]))
             )
             new_sigs = await self.get_sigs_for_innerpuz_with_innersol(puzzle, solution)
             sigs = sigs + new_sigs

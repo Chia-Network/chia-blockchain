@@ -721,7 +721,7 @@ class CCWallet:
 
         main_coin_solution = CoinSolution(
             auditor,
-            clvm.to_sexp_f(
+            Program.to(
                 [
                     cc_wallet_puzzles.cc_make_puzzle(
                         inner_puzzle.get_tree_hash(), self.cc_info.my_core,
@@ -767,7 +767,7 @@ class CCWallet:
             list_of_solutions.append(
                 CoinSolution(
                     coin,
-                    clvm.to_sexp_f(
+                    Program.to(
                         [
                             cc_wallet_puzzles.cc_make_puzzle(
                                 coin_inner_puzzle.get_tree_hash(), self.cc_info.my_core,
@@ -915,7 +915,7 @@ class CCWallet:
             list_of_solutions.append(
                 CoinSolution(
                     coin,
-                    clvm.to_sexp_f(
+                    Program.to(
                         [
                             cc_wallet_puzzles.cc_make_puzzle(
                                 innerpuz.get_tree_hash(), self.cc_info.my_core

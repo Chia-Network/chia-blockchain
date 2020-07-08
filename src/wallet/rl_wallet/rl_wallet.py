@@ -433,7 +433,7 @@ class RLWallet:
         for puzzle, coin_solution in spends:
             solution_list.append(
                 CoinSolution(
-                    coin_solution.coin, clvm.to_sexp_f([puzzle, coin_solution.solution])
+                    coin_solution.coin, Program.to([puzzle, coin_solution.solution])
                 )
             )
 
@@ -476,7 +476,7 @@ class RLWallet:
         for puzzle, coin_solution in spends:
             solution_list.append(
                 CoinSolution(
-                    coin_solution.coin, clvm.to_sexp_f([puzzle, coin_solution.solution])
+                    coin_solution.coin, Program.to([puzzle, coin_solution.solution])
                 )
             )
 
@@ -533,7 +533,7 @@ class RLWallet:
 
         signature = secretkey.sign(solution.get_hash())
         list_of_coinsolutions.append(
-            CoinSolution(self.rl_coin_record.coin, clvm.to_sexp_f([puzzle, solution]))
+            CoinSolution(self.rl_coin_record.coin, Program.to([puzzle, solution]))
         )
 
         # Spend consolidating coin
@@ -544,7 +544,7 @@ class RLWallet:
             self.rl_coin_record.coin.amount,
         )
         list_of_coinsolutions.append(
-            CoinSolution(consolidating_coin, clvm.to_sexp_f([puzzle, solution]))
+            CoinSolution(consolidating_coin, Program.to([puzzle, solution]))
         )
         # Spend lock
         puzstring = (
@@ -558,7 +558,7 @@ class RLWallet:
         list_of_coinsolutions.append(
             CoinSolution(
                 Coin(self.rl_coin_record.coin, puzzle.get_hash(), uint64(0)),
-                clvm.to_sexp_f([puzzle, solution]),
+                Program.to([puzzle, solution]),
             )
         )
 
