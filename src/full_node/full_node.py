@@ -211,14 +211,28 @@ class FullNode:
 
         tip_hashes = [tip.header_hash for tip in tips]
         tip_infos = [
-            tup[0]
+            (tup[0], tup[1])
             for tup in list(
                 (await self.full_node_store.get_unfinished_blocks()).items()
             )
             if tup[1].prev_header_hash in tip_hashes
         ]
-        for chall, iters in tip_infos:
+        for ((chall, iters), _) in tip_infos:
             pos_info_requests.append(timelord_protocol.ProofOfSpaceInfo(chall, iters))
+
+        # Sends our best unfinished block (proof of space) to peer
+        for ((_, iters), block) in sorted(tip_infos, key=lambda t: t[0][1]):
+            if block.height < self.full_node_store.get_unfinished_block_leader()[0]:
+                continue
+            unfinished_block_msg = full_node_protocol.NewUnfinishedBlock(
+                block.prev_header_hash, iters, block.header_hash
+            )
+            yield OutboundMessage(
+                NodeType.FULL_NODE,
+                Message("new_unfinished_block", unfinished_block_msg),
+                delivery,
+            )
+            return
         for challenge_msg in challenge_requests:
             yield OutboundMessage(
                 NodeType.TIMELORD, Message("challenge_start", challenge_msg), delivery
@@ -235,6 +249,7 @@ class FullNode:
         Whenever we connect to another node / wallet, send them our current heads. Also send heads to farmers
         and challenges to timelords.
         """
+        self.log.warn("ON CONNECT")
         tips: List[Header] = self.blockchain.get_current_tips()
         for t in tips:
             request = full_node_protocol.NewTip(t.height, t.weight, t.header_hash)
@@ -1718,7 +1733,7 @@ class FullNode:
 
         self.log.info(f"Trying to connect to peers: {to_connect}")
         for peer in to_connect:
-            asyncio.create_task(self.server.start_client(peer, None))
+            asyncio.create_task(self.server.start_client(peer, self._on_connect))
 
     @api_request
     async def request_mempool_transactions(

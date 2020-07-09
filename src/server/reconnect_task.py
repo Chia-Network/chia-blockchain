@@ -1,6 +1,10 @@
 import asyncio
 import socket
+import logging
 from src.types.peer_info import PeerInfo
+
+
+log = logging.getLogger(__name__)
 
 
 def start_reconnect_task(server, peer_info_arg, log, auth):
@@ -22,7 +26,10 @@ def start_reconnect_task(server, peer_info_arg, log, auth):
 
             if peer_retry:
                 log.info(f"Reconnecting to peer {peer_info}")
-                await server.start_client(peer_info, None, auth=auth)
+                try:
+                    await server.start_client(peer_info, None, auth=auth)
+                except Exception as e:
+                    log.warning(f"Failed to connect to {peer_info} {e}")
             await asyncio.sleep(3)
 
     return asyncio.create_task(connection_check())

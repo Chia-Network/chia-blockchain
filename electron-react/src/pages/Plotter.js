@@ -346,7 +346,7 @@ const CreatePlot = () => {
   }
 
   var plot_count_options = [];
-  for (var i = 1; i < 10; i++) {
+  for (var i = 1; i < 30; i++) {
     plot_count_options.push(i);
   }
 

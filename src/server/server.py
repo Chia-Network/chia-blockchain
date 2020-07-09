@@ -125,6 +125,7 @@ class ChiaServer:
         An on connect method can also be specified, and this will be saved into the instance variables.
         """
         if self._pipeline_task.done():
+            self.log.warning("Starting client after server closed")
             return False
 
         ssl_context = ssl_context_for_client(self.root_path, self.config, auth=auth)
