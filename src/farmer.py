@@ -38,6 +38,8 @@ class Farmer:
         self.header_hash_to_pos: Dict[bytes32, ProofOfSpace] = {}
         self.challenges: Dict[uint128, List[farmer_protocol.ProofOfSpaceFinalized]] = {}
         self.challenge_to_weight: Dict[bytes32, uint128] = {}
+        self.challenge_to_height: Dict[bytes32, uint32] = {}
+        self.challenge_to_best_iters: Dict[bytes32, uint64] = {}
         self.challenge_to_estimates: Dict[bytes32, List[float]] = {}
         self.seen_challenges: Set[bytes32] = set()
         self.unfinished_challenges: Dict[uint128, List[bytes32]] = {}
@@ -146,12 +148,26 @@ class Farmer:
         This is a response from the harvester, for a NewChallenge. Here we check if the proof
         of space is sufficiently good, and if so, we ask for the whole proof.
         """
-
+        height: uint32 = self.challenge_to_height[challenge_response.challenge_hash]
         number_iters = await self._get_required_iters(
             challenge_response.challenge_hash,
             challenge_response.quality_string,
             challenge_response.plot_size,
         )
+        if height < 1000:  # As the difficulty adjusts, don't fetch all qualities
+            if challenge_response.challenge_hash not in self.challenge_to_best_iters:
+                self.challenge_to_best_iters[
+                    challenge_response.challenge_hash
+                ] = number_iters
+            elif (
+                number_iters
+                < self.challenge_to_best_iters[challenge_response.challenge_hash]
+            ):
+                self.challenge_to_best_iters[
+                    challenge_response.challenge_hash
+                ] = number_iters
+            else:
+                return
 
         estimate_secs: float = number_iters / self.proof_of_time_estimate_ips
         if challenge_response.challenge_hash not in self.challenge_to_estimates:
@@ -347,6 +363,9 @@ class Farmer:
         self.challenge_to_weight[
             proof_of_space_finalized.challenge_hash
         ] = proof_of_space_finalized.weight
+        self.challenge_to_height[
+            proof_of_space_finalized.challenge_hash
+        ] = proof_of_space_finalized.height
 
         if get_proofs:
             message = harvester_protocol.NewChallenge(
