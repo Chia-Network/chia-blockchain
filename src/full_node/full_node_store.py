@@ -160,10 +160,10 @@ class FullNodeStore:
         await cursor.close()
         await self.db.commit()
 
-    def set_unfinished_block_leader(self, key: Tuple[bytes32, uint64]) -> None:
+    def set_unfinished_block_leader(self, key: Tuple[uint32, uint64]) -> None:
         self.unfinished_blocks_leader = key
 
-    def get_unfinished_block_leader(self) -> Tuple[bytes32, uint64]:
+    def get_unfinished_block_leader(self) -> Tuple[uint32, uint64]:
         return self.unfinished_blocks_leader
 
     def set_proof_of_time_estimate_ips(self, estimate: uint64):

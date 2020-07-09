@@ -125,6 +125,14 @@ class FullNode:
                 self.broadcast_uncompact_blocks(uncompact_interval)
             )
 
+        for ((_, _), block) in (
+            await self.full_node_store.get_unfinished_blocks()
+        ).items():
+            if block.height > self.full_node_store.get_unfinished_block_leader()[0]:
+                self.full_node_store.set_unfinished_block_leader(
+                    (block.height, 999999999999)
+                )
+
     def _set_global_connections(self, global_connections: PeerConnections):
         self.global_connections = global_connections
 
@@ -249,7 +257,6 @@ class FullNode:
         Whenever we connect to another node / wallet, send them our current heads. Also send heads to farmers
         and challenges to timelords.
         """
-        self.log.warn("ON CONNECT")
         tips: List[Header] = self.blockchain.get_current_tips()
         for t in tips:
             request = full_node_protocol.NewTip(t.height, t.weight, t.header_hash)
