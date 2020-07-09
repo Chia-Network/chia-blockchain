@@ -92,9 +92,11 @@ class RpcServer:
         host = request["host"]
         port = request["port"]
         target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
-
+        on_connect = None
+        if hasattr(self.rpc_api.service, "_on_connect"):
+            on_connect = self.rpc_api.service._on_connect
         if getattr(self.rpc_api.service, "server", None) is None or not (
-            await self.rpc_api.service.server.start_client(target_node, None)
+            await self.rpc_api.service.server.start_client(target_node, on_connect)
         ):
             raise aiohttp.web.HTTPInternalServerError()
         return {"success": True}

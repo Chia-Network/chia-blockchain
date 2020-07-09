@@ -233,7 +233,8 @@ const createWindow = () => {
       type: "question",
       buttons: ["Yes", "No"],
       title: "Confirm",
-      message: "Are you sure you want to quit? Plotting and farming will stop."
+      message:
+        "Are you sure you want to quit? GUI Plotting and farming will stop."
     });
     if (choice == 1) {
       return;
