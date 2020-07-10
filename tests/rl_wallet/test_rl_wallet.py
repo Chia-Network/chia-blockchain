@@ -3,10 +3,9 @@ import pytest
 
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
-from src.util.ints import uint16, uint32, uint64
+from src.util.ints import uint16, uint64
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from tests.setup_nodes import setup_simulators_and_wallets
-from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 from tests.time_out_assert import time_out_assert
 
 
@@ -44,17 +43,6 @@ class TestCCWallet:
         for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        funds = sum(
-            [
-                calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(0, num_blocks)
-            ]
-        )
-        for i in range(0, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
-
-        await time_out_assert(15, wallet.get_confirmed_balance, funds)
-
         rl_admin: RLWallet = await RLWallet.create_rl_admin(
             wallet_node.wallet_state_manager
         )
@@ -74,6 +62,9 @@ class TestCCWallet:
         await rl_user.set_user_info(
             interval, limit, origin_id.hex(), admin_pubkey.hex()
         )
+
+        for i in range(0, num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
 
         for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
