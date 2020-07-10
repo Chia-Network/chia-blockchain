@@ -331,6 +331,13 @@ class WalletRpcApi:
                 except Exception as e:
                     log.error("FAILED2 {e}")
                     return {"success": False, "reason": str(e)}
+        if request["wallet_type"] == "rl_wallet":
+            if request["rl_type"] == "admin":
+                log.info("Create rl admin wallet")
+                # TODO create admin wallet
+            elif request["rl_type"] == "user":
+                log.info("Create rl user wallet")
+                # TODO create user wallet
 
     def get_wallet_config(self):
         return (
