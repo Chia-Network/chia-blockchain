@@ -258,6 +258,8 @@ class WalletStateManager:
             for index in range(start_index, unused + to_generate):
                 pubkey: G1Element = self.get_public_key(uint32(index))
                 puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
+                if puzzle is None:
+                    continue
                 puzzlehash: bytes32 = puzzle.get_tree_hash()
                 self.log.info(
                     f"Generating public key at index {index} puzzle hash {puzzlehash.hex()}"

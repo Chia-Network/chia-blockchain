@@ -31,6 +31,7 @@ def rl_puzzle_for_pk(
 
     hex_pk = pubkey.hex()
     clawback_pk_str = clawback_pk.hex()
+    origin_id = origin_id.hex()
 
     opcode_aggsig = hexlify(ConditionOpcode.AGG_SIG).decode("ascii")
     opcode_coin_block_age = hexlify(ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS).decode(
