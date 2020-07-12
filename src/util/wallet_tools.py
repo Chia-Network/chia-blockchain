@@ -3,7 +3,7 @@ from typing import List, Optional, Dict, Tuple
 import clvm
 from clvm.casts import int_to_bytes, int_from_bytes
 from os import urandom
-from blspy import ExtendedPrivateKey
+from blspy import PrivateKey, AugSchemeMPL
 
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
@@ -17,7 +17,7 @@ from src.util.condition_tools import (
     hash_key_pairs_for_conditions_dict,
     conditions_for_solution,
 )
-from src.wallet.BLSPrivateKey import BLSPrivateKey
+# from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.puzzles.p2_conditions import puzzle_for_conditions
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 from src.wallet.puzzles.puzzle_utils import (
@@ -37,14 +37,14 @@ class WalletTool:
     next_address = 0
     pubkey_num_lookup: Dict[str, int] = {}
 
-    def __init__(self, esk: Optional[ExtendedPrivateKey] = None):
+    def __init__(self, esk: Optional[PrivateKey] = None):
         self.current_balance = 0
         self.my_utxos: set = set()
         if esk is not None:
             self.extended_secret_key = esk
         else:
             self.seed = urandom(1024)
-            self.extended_secret_key = ExtendedPrivateKey.from_seed(self.seed)
+            self.extended_secret_key = PrivateKey.from_seed(self.seed)
         self.generator_lookups: Dict = {}
         self.name = "MyChiaWallet"
         self.puzzle_pk_cache: Dict = {}
@@ -53,7 +53,7 @@ class WalletTool:
     def get_next_public_key(self):
         pubkey = self.extended_secret_key.public_child(
             self.next_address
-        ).get_public_key()
+        ).get_g1()
         self.pubkey_num_lookup[bytes(pubkey)] = self.next_address
         self.next_address = self.next_address + 1
         return pubkey
@@ -66,7 +66,7 @@ class WalletTool:
             map(
                 lambda child: hash
                 == puzzle_for_pk(
-                    bytes(self.extended_secret_key.public_child(child).get_public_key())
+                    bytes(self.extended_secret_key.public_child(child).get_g1())
                 ).get_tree_hash(),
                 reversed(range(self.next_address)),
             )
@@ -75,16 +75,16 @@ class WalletTool:
     def get_keys(self, puzzle_hash):
         if puzzle_hash in self.puzzle_pk_cache:
             child = self.puzzle_pk_cache[puzzle_hash]
-            pubkey = self.extended_secret_key.public_child(child).get_public_key()
-            private = self.extended_secret_key.private_child(child).get_private_key()
+            private = self.extended_secret_key.derive_child(child)
+            pubkey = private.get_g1()
             return pubkey, private
         else:
             for child in range(self.next_address):
-                pubkey = self.extended_secret_key.public_child(child).get_public_key()
+                pubkey = self.extended_secret_key.public_child(child).get_g1()
                 if puzzle_hash == puzzle_for_pk(bytes(pubkey)).get_tree_hash():
                     return (
                         pubkey,
-                        self.extended_secret_key.private_child(child).get_private_key(),
+                        self.extended_secret_key.derive_child(child),
                     )
         raise RuntimeError(f"Do not have the keys for puzzle hash {puzzle_hash}")
 
@@ -94,7 +94,7 @@ class WalletTool:
     def get_first_puzzle(self):
         pubkey = self.extended_secret_key.public_child(
             self.next_address
-        ).get_public_key()
+        ).get_g1()
         puzzle = puzzle_for_pk(bytes(pubkey))
         self.puzzle_pk_cache[puzzle.get_tree_hash()] = 0
         return puzzle
@@ -112,11 +112,10 @@ class WalletTool:
         return puzzlehash
 
     def sign(self, value, pubkey):
-        privatekey = self.extended_secret_key.private_child(
+        privatekey = self.extended_secret_key.derive_child(
             self.pubkey_num_lookup[pubkey]
         ).get_private_key()
-        blskey = BLSPrivateKey(privatekey)
-        return blskey.sign(value)
+        return AugSchemeMPL.sign(privatekey, value)
 
     def make_solution(
         self, condition_dic: Dict[ConditionOpcode, List[ConditionVarPair]]
@@ -159,7 +158,7 @@ class WalletTool:
         if secretkey is None:
             pubkey, secretkey = self.get_keys(puzzle_hash)
         else:
-            pubkey = secretkey.get_public_key()
+            pubkey = secretkey.get_g1()
         puzzle = puzzle_for_pk(bytes(pubkey))
         if ConditionOpcode.CREATE_COIN not in condition_dic:
             condition_dic[ConditionOpcode.CREATE_COIN] = []
@@ -192,7 +191,6 @@ class WalletTool:
         puzzle: Program
         for puzzle, solution in spends:  # type: ignore # noqa
             pubkey, secretkey = self.get_keys(solution.coin.puzzle_hash)
-            secretkey = BLSPrivateKey(secretkey)
             code_ = [puzzle, solution.solution]
             sexp = Program.to(code_)
             err, con, cost = conditions_for_solution(sexp)
@@ -200,12 +198,13 @@ class WalletTool:
                 return
             conditions_dict = conditions_by_opcode(con)
 
-            for _ in hash_key_pairs_for_conditions_dict(
+            for pk, msg in hash_key_pairs_for_conditions_dict(
                 conditions_dict, bytes(solution.coin)
             ):
-                signature = secretkey.sign(_.message_hash)
+                # signature = secretkey.sign(_.message_hash)
+                signature = AugSchemeMPL.sign(secretkey, msg)
                 sigs.append(signature)
-        aggsig = BLSSignature.aggregate(sigs)
+        aggsig = AugSchemeMPL.aggregate(sigs)
         solution_list: List[CoinSolution] = [
             CoinSolution(
                 coin_solution.coin, clvm.to_sexp_f([puzzle, coin_solution.solution])

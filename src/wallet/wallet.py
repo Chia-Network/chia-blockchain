@@ -15,7 +15,7 @@ from src.util.condition_tools import (
     hash_key_pairs_for_conditions_dict,
 )
 from src.util.ints import uint64, uint32
-from src.wallet.BLSPrivateKey import BLSPrivateKey
+# from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.abstract_wallet import AbstractWallet
 from src.wallet.puzzles.p2_conditions import puzzle_for_conditions
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
@@ -292,7 +292,7 @@ class Wallet(AbstractWallet):
                 return None
 
             pubkey, secretkey = keys
-            secretkey = BLSPrivateKey(secretkey)
+            # secretkey = BLSPrivateKey(secretkey)
             code_ = [puzzle, solution.solution]
             sexp = clvm.to_sexp_f(code_)
 
@@ -402,7 +402,7 @@ class Wallet(AbstractWallet):
     ) -> List[BLSSignature]:
         puzzle_hash = innerpuz.get_tree_hash()
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
-        private = BLSPrivateKey(private)
+        # private = BLSPrivateKey(private)
         sigs: List[BLSSignature] = []
         code_ = [innerpuz, innersol]
         sexp = Program.to(code_)

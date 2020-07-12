@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Dict, List, Set, Optional, Callable, Tuple
 
-from blspy import Util, InsecureSignature, PrependSignature, PublicKey
+from blspy import Util, G1Element, G2Element
 from src.util.keychain import Keychain
 
 from src.consensus.constants import ConsensusConstants
@@ -66,7 +66,7 @@ class Farmer:
         self.pool_target = bytes.fromhex(pool_config["xch_target_puzzle_hash"])
         self.pool_sks_map: Dict = {}
         for key in self._get_private_keys():
-            self.pool_sks_map[bytes(key.get_public_key())] = key
+            self.pool_sks_map[bytes(key.get_g1())] = key
 
         assert len(self.wallet_target) == 32
         assert len(self.pool_target) == 32
@@ -108,14 +108,14 @@ class Farmer:
 
     def _get_public_keys(self):
         return [
-            epk.public_child(0).get_public_key()
+            epk.public_child(0).get_g1()
             for epk in self.keychain.get_all_public_keys()
         ]
 
     def _get_private_keys(self):
         return [
-            esk.private_child(0).get_private_key()
-            for esk, _ in self.keychain.get_all_private_keys()
+            sk.derive_child(0)
+            for sk, _ in self.keychain.get_all_private_keys()
         ]
 
     async def _get_required_iters(
@@ -251,7 +251,7 @@ class Farmer:
                 )
                 return
             pool_target: PoolTarget = PoolTarget(self.pool_target, uint32(0))
-            pool_target_signature: PrependSignature = self.pool_sks_map[
+            pool_target_signature: G2Element = self.pool_sks_map[
                 pool_pk
             ].sign_prepend(bytes(pool_target))
 
@@ -279,21 +279,17 @@ class Farmer:
         proof_of_space: bytes32 = self.header_hash_to_pos[header_hash]
         validates: bool = False
         for sk in self._get_private_keys():
-            pk = sk.get_public_key()
+            pk = sk.get_g1()
             if pk == response.farmer_pk:
                 agg_pk = ProofOfSpace.generate_plot_public_key(
                     response.harvester_pk, pk
                 )
                 assert agg_pk == proof_of_space.plot_public_key
-                new_m = bytes(agg_pk) + Util.hash256(header_hash)
-                farmer_share = sk.sign_insecure(new_m)
-                agg_sig = PrependSignature.from_insecure_sig(
-                    InsecureSignature.aggregate(
-                        [response.message_signature, farmer_share]
-                    )
-                )
+                header_hash256 = Util.hash256(header_hash)
+                farmer_share = AugSchemeMPL.sign(sk, header_hash256, agg_pk)
+                agg_sig = AugSchemeMPL.aggregate([response.message_signature, farmer_share])
+                validates = AugSchemeMPL.verify(agg_pk, header_hash256, agg_sig)
 
-                validates = agg_sig.verify([Util.hash256(header_hash)], [agg_pk])
                 if validates:
                     break
         assert validates

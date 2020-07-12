@@ -1,7 +1,7 @@
 from pathlib import Path
 from secrets import token_bytes
 import logging
-from blspy import PrivateKey, PublicKey
+from blspy import PrivateKey, G1Element
 from chiapos import DiskPlotter
 from datetime import datetime
 from src.types.proof_of_space import ProofOfSpace
@@ -19,14 +19,14 @@ from src.plotting.plot_tools import (
 log = logging.getLogger(__name__)
 
 
-def get_default_public_key() -> PublicKey:
+def get_default_public_key() -> G1Element:
     keychain: Keychain = Keychain()
-    epk = keychain.get_first_public_key()
-    if epk is None:
+    pk = keychain.get_first_public_key()
+    if pk is None:
         raise RuntimeError(
             "No keys, please run 'chia keys generate' or provide a public key with -f"
         )
-    return PublicKey.from_bytes(bytes(epk.public_child(0).get_public_key()))
+    return keychain.get_first_public_key()
 
 
 def create_plots(args, root_path, use_datetime=True):
@@ -56,13 +56,13 @@ def create_plots(args, root_path, use_datetime=True):
             f"If you want to use a specific seed, use the -s argument."
         )
 
-    farmer_public_key: PublicKey
+    farmer_public_key: G1Element
     if args.farmer_public_key is not None:
-        farmer_public_key = PublicKey.from_bytes(bytes.fromhex(args.farmer_public_key))
+        farmer_public_key = G1Element.from_bytes(bytes.fromhex(args.farmer_public_key))
     else:
         farmer_public_key = get_default_public_key()
 
-    pool_public_key: PublicKey
+    pool_public_key: G1Element
     if args.pool_public_key is not None:
         pool_public_key = bytes.fromhex(args.pool_public_key)
     else:
@@ -92,7 +92,7 @@ def create_plots(args, root_path, use_datetime=True):
 
         # The plot public key is the combination of the harvester and farmer keys
         plot_public_key = ProofOfSpace.generate_plot_public_key(
-            sk.get_public_key(), farmer_public_key
+            sk.get_g1(), farmer_public_key
         )
 
         # The plot seed is based on the harvester, farmer, and pool keys

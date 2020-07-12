@@ -17,7 +17,7 @@ from src.util.condition_tools import (
 )
 from src.util.json_util import dict_to_json_str
 from src.util.ints import uint64, uint32
-from src.wallet.BLSPrivateKey import BLSPrivateKey
+# from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.block_record import BlockRecord
 from src.wallet.cc_wallet.cc_info import CCInfo
 from src.wallet.cc_wallet.cc_wallet_puzzles import (
@@ -621,7 +621,7 @@ class CCWallet:
     ) -> List[BLSSignature]:
         puzzle_hash = innerpuz.get_tree_hash()
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
-        private = BLSPrivateKey(private)
+        # private = BLSPrivateKey(private)
         sigs: List[BLSSignature] = []
         code_ = [innerpuz, innersol]
         sexp = Program.to(code_)

@@ -1,6 +1,6 @@
 from typing import List, Dict, Optional, Tuple
 from pathlib import Path
-from blspy import PrivateKey, PublicKey
+from blspy import PrivateKey, G1Element
 from chiapos import DiskProver
 from dataclasses import dataclass
 import logging
@@ -15,9 +15,9 @@ log = logging.getLogger(__name__)
 @dataclass
 class PlotInfo:
     prover: DiskProver
-    pool_public_key: PublicKey
-    farmer_public_key: PublicKey
-    plot_public_key: PublicKey
+    pool_public_key: G1Element
+    farmer_public_key: G1Element
+    plot_public_key: G1Element
     harvester_sk: PrivateKey
     file_size: int
     time_modified: float
@@ -48,18 +48,18 @@ def get_plot_filenames(config: Dict) -> Dict[Path, List[Path]]:
     return all_files
 
 
-def parse_plot_info(memo: bytes) -> Tuple[PublicKey, PublicKey, PrivateKey]:
+def parse_plot_info(memo: bytes) -> Tuple[G1Element, G1Element, PrivateKey]:
     # Parses the plot info bytes into keys
     assert len(memo) == (48 + 48 + 32)
     return (
-        PublicKey.from_bytes(memo[:48]),
-        PublicKey.from_bytes(memo[48:96]),
+        G1Element.from_bytes(memo[:48]),
+        G1Element.from_bytes(memo[48:96]),
         PrivateKey.from_bytes(memo[96:]),
     )
 
 
 def stream_plot_info(
-    pool_public_key: PublicKey, farmer_public_key: PublicKey, harvester_sk: PrivateKey,
+    pool_public_key: G1Element, farmer_public_key: G1Element, harvester_sk: PrivateKey,
 ):
     # Streams the plot info keys into bytes
     data = bytes(pool_public_key) + bytes(farmer_public_key) + bytes(harvester_sk)
@@ -77,8 +77,8 @@ def add_plot_directory(str_path, root_path):
 
 def load_plots(
     provers: Dict[Path, PlotInfo],
-    farmer_public_keys: Optional[List[PublicKey]],
-    pool_public_keys: Optional[List[PublicKey]],
+    farmer_public_keys: Optional[List[G1Element]],
+    pool_public_keys: Optional[List[G1Element]],
     root_path: Path,
     open_no_key_filenames=False,
 ) -> Tuple[bool, Dict[Path, PlotInfo], List[Path], List[Path]]:
@@ -130,8 +130,8 @@ def load_plots(
                         continue
 
                 stat_info = filename.stat()
-                plot_public_key: PublicKey = ProofOfSpace.generate_plot_public_key(
-                    harvester_sk.get_public_key(), farmer_public_key
+                plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(
+                    harvester_sk.get_g1(), farmer_public_key
                 )
                 provers[filename] = PlotInfo(
                     prover,

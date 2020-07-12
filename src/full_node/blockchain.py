@@ -10,7 +10,6 @@ from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
 from src.consensus.block_rewards import calculate_base_fee
-from src.types.BLSSignature import BLSSignature
 from src.consensus.constants import ConsensusConstants
 from src.full_node.block_header_validation import (
     validate_unfinished_block_header,
@@ -579,12 +578,12 @@ class Blockchain:
 
             # 17. Verify the pool signature even if there are no transactions
             pool_target_m = bytes(block.header.data.pool_target)
-            hash_key_pairs = [
-                BLSSignature.PkMessagePair(
-                    block.proof_of_space.pool_public_key, std_hash(pool_target_m)
-                )
-            ]
-            if not block.header.data.aggregated_signature.validate(hash_key_pairs):
+            validates = AugSchemeMPL.validate(
+                block.proof_of_space.pool_public_key,
+                pool_target_m,
+                block.header.data.aggregated_signature
+            )
+            if not validates:
                 return Err.BAD_AGGREGATE_SIGNATURE
 
         return None
@@ -840,11 +839,8 @@ class Blockchain:
 
         # The pool signature on the pool target is checked here as well, since the pool signature is
         # aggregated along with the transaction signatures
-        hash_key_pairs = [
-            BLSSignature.PkMessagePair(
-                block.proof_of_space.pool_public_key, std_hash(pool_target_m)
-            )
-        ]
+        pairs_pks = [block.proof_of_space.pool_public_key]
+        pairs_msgs = [pool_target_m]
         for npc in npc_list:
             unspent = removal_coin_records[npc.coin_name]
             error = blockchain_check_conditions_dict(
@@ -852,15 +848,20 @@ class Blockchain:
             )
             if error:
                 return error
-            hash_key_pairs.extend(
-                hash_key_pairs_for_conditions_dict(npc.condition_dict, npc.coin_name)
-            )
+            pks0, msgs0 = hash_key_pairs_for_conditions_dict(npc.condition_dict, npc.coin_name)
+            pairs_pks.extend(pks0)
+            pairs_msgs.extend(msgs0)
 
         # Verify aggregated signature
         # TODO: move this to pre_validate_blocks_multiprocessing so we can sync faster
         if not block.header.data.aggregated_signature:
             return Err.BAD_AGGREGATE_SIGNATURE
-        if not block.header.data.aggregated_signature.validate(hash_key_pairs):
+        
+        validates = AugSchemeMPL.agg_verify(
+            pairs_pks, pairs_msgs,
+            block.header.data.aggregated_signature
+        )
+        if not validates:
             return Err.BAD_AGGREGATE_SIGNATURE
 
         return None

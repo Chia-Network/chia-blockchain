@@ -6,7 +6,6 @@ from src.util.keychain import (
     Keychain,
     bytes_from_mnemonic,
 )
-from src.types.BLSSignature import BLSPublicKey
 from src.consensus.coinbase import create_puzzlehash_for_pk
 
 command_list = [
@@ -99,8 +98,8 @@ def add_private_key_seed(mnemonic):
     try:
         entropy = bytes_from_mnemonic(mnemonic)
         passphrase = ""
-        esk = keychain.add_private_key(entropy, passphrase)
-        fingerprint = esk.get_public_key().get_fingerprint()
+        sk = keychain.add_private_key(entropy, passphrase)
+        fingerprint = sk.get_g1().get_fingerprint()
         print(
             f"Added private key with public key fingerprint {fingerprint} and mnemonic"
         )
@@ -139,11 +138,11 @@ def show_all_keys():
     print("Showing all private keys:")
     for sk, seed in private_keys:
         print("")
-        print("Fingerprint:", sk.get_public_key().get_fingerprint())
-        print("Extended Public key:", sk.get_extended_public_key())
-        print("Public key:", sk.get_public_key())
+        print("Fingerprint:", sk.get_g1().get_fingerprint())
+        # print("Extended Public key:", sk.get_extended_public_key())
+        print("Public key:", sk.get_g1())
         addr = create_puzzlehash_for_pk(
-            BLSPublicKey(sk.public_child(0).get_public_key())
+            sk.public_child(0).get_g1()
         ).hex()
         print("First address:", addr)
         print("Extended private key:", bytes(sk).hex())

@@ -5,7 +5,7 @@ from typing import Dict, Optional, Tuple, List, Callable
 import time
 import concurrent
 
-from blspy import PublicKey, Util, InsecureSignature
+from blspy import G1Element, G2Element, Util, AugSchemeMPL
 
 from chiapos import DiskProver
 from src.protocols import harvester_protocol
@@ -26,8 +26,8 @@ class Harvester:
     provers: Dict[Path, PlotInfo]
     failed_to_open_filenames: List[Path]
     no_key_filenames: List[Path]
-    farmer_public_keys: List[PublicKey]
-    pool_public_keys: List[PublicKey]
+    farmer_public_keys: List[G1Element]
+    pool_public_keys: List[G1Element]
     cached_challenges: List[harvester_protocol.NewChallenge]
     root_path: Path
     _is_shutdown: bool
@@ -290,7 +290,7 @@ class Harvester:
 
         plot_info = self.provers[filename]
         plot_public_key = ProofOfSpace.generate_plot_public_key(
-            plot_info.harvester_sk.get_public_key(), plot_info.farmer_public_key
+            plot_info.harvester_sk.get_g1(), plot_info.farmer_public_key
         )
 
         proof_of_space: ProofOfSpace = ProofOfSpace(
@@ -321,18 +321,18 @@ class Harvester:
 
         harvester_sk = plot_info.harvester_sk
         agg_pk = ProofOfSpace.generate_plot_public_key(
-            harvester_sk.get_public_key(), plot_info.farmer_public_key
+            harvester_sk.get_g1(), plot_info.farmer_public_key
         )
-        new_m = bytes(agg_pk) + Util.hash256(request.message)
+        new_m = Util.hash256(request.message)
 
         # This is only a partial signature. When combined with the farmer's half, it will
         # form a complete PrependSignature.
-        signature: InsecureSignature = harvester_sk.sign_insecure(new_m)
+        signature: G2Element = AugSchemeMPL.sign(harvester_sk, new_m, agg_pk)
 
         response: harvester_protocol.RespondSignature = harvester_protocol.RespondSignature(
             request.plot_id,
             request.message,
-            harvester_sk.get_public_key(),
+            harvester_sk.get_g1(),
             plot_info.farmer_public_key,
             signature,
         )

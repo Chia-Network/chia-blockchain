@@ -34,7 +34,6 @@ from src.protocols.wallet_protocol import GeneratorResponse
 from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
-from src.types.BLSSignature import BLSSignature
 from src.types.challenge import Challenge
 from src.types.coin import Coin, hash_coin_list
 from src.types.full_block import FullBlock
@@ -1241,13 +1240,13 @@ class FullNode:
                 SpendBundle
             ] = await self.mempool_manager.create_bundle_for_tip(target_tip)
         spend_bundle_fees = 0
-        aggregate_sig: BLSSignature = BLSSignature(bytes(request.pool_target_signature))
+        aggregate_sig: G2Element = request.pool_target_signature
         solution_program: Optional[Program] = None
 
         if spend_bundle:
             solution_program = best_solution_program(spend_bundle)
             spend_bundle_fees = spend_bundle.fees()
-            aggregate_sig = BLSSignature.aggregate(
+            aggregate_sig = AugSchemeMPL.aggregate(
                 [spend_bundle.aggregated_signature, aggregate_sig]
             )
 

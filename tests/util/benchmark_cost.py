@@ -9,7 +9,7 @@ from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.BLSSignature import BLSSignature
 from src.types.program import Program
-from src.wallet.BLSPrivateKey import BLSPrivateKey
+# from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 from src.util.wallet_tools import WalletTool
 
@@ -135,9 +135,7 @@ if __name__ == "__main__":
     public_keys = []
 
     for i in range(0, 1000):
-        private_key: BLSPrivateKey = BLSPrivateKey(
-            extended_secret_key.private_child(i).get_private_key()
-        )
+        private_key: PrivateKey = extended_secret_key.derive_child(i)
         public_key = private_key.public_key()
         solution = wallet_tool.make_solution(
             {
@@ -166,7 +164,7 @@ if __name__ == "__main__":
     print(f"Puzzle_time is: {puzzle_time}")
     print(f"Puzzle cost sum is: {clvm_cost}")
 
-    private_key = BLSPrivateKey(extended_secret_key.private_child(0).get_private_key())
+    private_key = extended_secret_key.derive_child(0)
     public_key = private_key.public_key()
     message = token_bytes()
     signature = private_key.sign(message)

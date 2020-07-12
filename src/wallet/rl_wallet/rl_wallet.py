@@ -8,7 +8,7 @@ from typing import Dict, Optional, List, Tuple, Any
 
 import clvm
 import json
-from blspy import ExtendedPrivateKey
+from blspy import PrivateKey
 from clvm_tools import binutils
 
 from src.server.server import ChiaServer
@@ -49,7 +49,7 @@ class RLInfo(Streamable):
 
 
 class RLWallet:
-    private_key: ExtendedPrivateKey
+    private_key: PrivateKey
     key_config: Dict
     config: Dict
     server: Optional[ChiaServer]
@@ -77,8 +77,8 @@ class RLWallet:
         assert unused is not None
 
         sk_hex = key_config["wallet_sk"]
-        private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
-        pubkey_bytes: bytes = bytes(private_key.public_child(unused).get_public_key())
+        private_key = PrivateKey.from_bytes(bytes.fromhex(sk_hex))
+        pubkey_bytes: bytes = bytes(private_key.public_child(unused).get_g1())
 
         rl_info = RLInfo("admin", pubkey_bytes, None, None, None, None, None, None)
         info_as_string = json.dumps(rl_info.to_json_dict())
@@ -127,9 +127,9 @@ class RLWallet:
             assert unused is not None
 
             sk_hex = key_config["wallet_sk"]
-            private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
+            private_key = PrivateKey.from_bytes(bytes.fromhex(sk_hex))
             pubkey_bytes: bytes = bytes(
-                private_key.public_child(unused).get_public_key()
+                private_key.public_child(unused).get_g1()
             )
 
             rl_info = RLInfo("user", None, pubkey_bytes, None, None, None, None, None)
@@ -173,7 +173,7 @@ class RLWallet:
         self.config = config
         self.key_config = key_config
         sk_hex = self.key_config["wallet_sk"]
-        self.private_key = ExtendedPrivateKey.from_bytes(bytes.fromhex(sk_hex))
+        self.private_key = PrivateKey.from_bytes(bytes.fromhex(sk_hex))
         if name:
             self.log = logging.getLogger(name)
         else:
@@ -344,8 +344,8 @@ class RLWallet:
         )
         if index_for_puzzlehash == -1:
             raise Exception("index_for_puzzlehash == -1")
-        pubkey = self.private_key.public_child(index_for_puzzlehash).get_public_key()
-        private = self.private_key.private_child(index_for_puzzlehash).get_private_key()
+        private = self.private_key.derive_child(index_for_puzzlehash)
+        pubkey = private.get_g1()
         return pubkey, private
 
     async def get_keys_pk(self, clawback_pubkey: bytes):
@@ -357,8 +357,9 @@ class RLWallet:
         )
         if index_for_pubkey == -1:
             raise Exception("index_for_pubkey == -1")
-        pubkey = self.private_key.public_child(index_for_pubkey).get_public_key()
-        private = self.private_key.private_child(index_for_pubkey).get_private_key()
+        private = self.private_key.derive_child(index_for_pubkey)
+        pubkey = private.get_g1()
+        
         return pubkey, private
 
     async def get_rl_coin(self) -> Optional[Coin]:

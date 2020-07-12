@@ -1,11 +1,9 @@
-from src.types.BLSSignature import BLSSignature
 from src.util.condition_tools import (
     conditions_by_opcode,
     hash_key_pairs_for_conditions_dict,
     conditions_for_solution,
 )
-from src.wallet.BLSPrivateKey import BLSPrivateKey
-
+from blspy import PrivateKey
 
 class KeyTool(dict):
     @classmethod
@@ -14,8 +12,8 @@ class KeyTool(dict):
 
     def add_secret_exponents(self, secret_exponents):
         for _ in secret_exponents:
-            bls_private_key = BLSPrivateKey.from_secret_exponent(_)
-            self[bls_private_key.public_key()] = bls_private_key
+            bls_private_key = PrivateKey.from_bytes(_.to_bytes(32, "big"))
+            self[bls_private_key.get_g1()] = bls_private_key
 
     def sign(self, aggsig_pair):
         bls_private_key = self.get(aggsig_pair.public_key)

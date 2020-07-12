@@ -10,10 +10,10 @@ from typing import Dict, List, Tuple, Optional
 from argparse import Namespace
 
 from blspy import (
-    PrependSignature,
-    PublicKey,
-    InsecureSignature,
+    G1Element,
+    G2Element,
     Util,
+    AugSchemeMPL
 )
 
 from chiavdf import prove
@@ -24,7 +24,6 @@ from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.consensus.constants import ConsensusConstants
 from src.cmds.init import create_default_chia_config, initialize_ssl
 from src.cmds.plots import create_plots
-from src.types.BLSSignature import BLSPublicKey
 from src.consensus import block_rewards, pot_iterations
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
 from src.consensus.block_rewards import calculate_block_reward
@@ -84,18 +83,16 @@ class BlockTools:
             self.keychain.delete_all_keys()
             self.farmer_pk = (
                 self.keychain.add_private_key(b"block_tools farmer key", "")
-                .public_child(0)
-                .get_public_key()
+                .derive_child(0)
+                .get_g1()
             )
             self.pool_pk = (
                 self.keychain.add_private_key(b"block_tools pool key", "")
-                .public_child(0)
-                .get_public_key()
+                .derive_child(0)
+                .get_g1()
             )
-            self.farmer_ph = create_puzzlehash_for_pk(
-                BLSPublicKey(bytes(self.farmer_pk))
-            )
-            self.pool_ph = create_puzzlehash_for_pk(BLSPublicKey(bytes(self.pool_pk)))
+            self.farmer_ph = create_puzzlehash_for_pk(self.farmer_pk)
+            self.pool_ph = create_puzzlehash_for_pk(self.pool_pk)
 
             plot_dir = get_plot_dir()
             mkdir(plot_dir)
@@ -124,13 +121,14 @@ class BlockTools:
             initialize_ssl(root_path)
             self.keychain = Keychain()
             self.use_any_pos = False
-            pk = self.keychain.get_all_public_keys()[0].public_child(0).get_public_key()
-            self.farmer_ph = create_puzzlehash_for_pk(BLSPublicKey(bytes(pk)))
-            self.pool_ph = create_puzzlehash_for_pk(BLSPublicKey(bytes(pk)))
+            ## TODO-ietf : pk = ...
+            pk = self.keychain.get_all_public_keys()[0].public_child(0).get_g1()
+            self.farmer_ph = create_puzzlehash_for_pk(pk)
+            self.pool_ph = create_puzzlehash_for_pk(pk)
 
         self.all_esks = self.keychain.get_all_private_keys()
-        self.all_pubkeys: List[PublicKey] = [
-            esk[0].public_child(0).get_public_key() for esk in self.all_esks
+        self.all_pubkeys: List[G1Element] = [
+            sk.derive_child(0).get_g1() for sk, _ in self.all_esks
         ]
         if len(self.all_pubkeys) == 0:
             raise RuntimeError("Keys not generated. Run `chia generate keys`")
@@ -139,32 +137,37 @@ class BlockTools:
         )
 
     def get_plot_signature(
-        self, header_data: HeaderData, plot_pk: PublicKey
-    ) -> Optional[PrependSignature]:
+        self, header_data: HeaderData, plot_pk: G1Element
+    ) -> Optional[G2Element]:
         """
         Returns the plot signature of the header data.
         """
-        farmer_sk = self.all_esks[0][0].private_child(0).get_private_key()
+        farmer_sk = self.all_esks[0][0].derive_child(0)
         for _, plot_info in self.plots.items():
             agg_pk = ProofOfSpace.generate_plot_public_key(
-                plot_info.harvester_sk.get_public_key(), plot_info.farmer_public_key
+                plot_info.harvester_sk.get_g1(), plot_info.farmer_public_key
             )
             if agg_pk == plot_pk:
-                m = bytes(agg_pk) + Util.hash256(header_data.get_hash())
-                harv_share = plot_info.harvester_sk.sign_insecure(m)
-                farm_share = farmer_sk.sign_insecure(m)
-                return PrependSignature.from_insecure_sig(
-                    InsecureSignature.aggregate([harv_share, farm_share])
-                )
+                m = Util.hash256(header_data.get_hash())
+                harv_share = AugSchemeMPL.sign(plot_info.harvester_sk, m, agg_pk)
+                farm_share = AugSchemeMPL.sign(farmer_sk, m, agg_pk)
+                return AugSchemeMPL.aggregate([harv_share, farm_share])
+                # m = bytes(agg_pk) + Util.hash256(header_data.get_hash())
+                # harv_share = plot_info.harvester_sk.sign_insecure(m)
+                # farm_share = farmer_sk.sign_insecure(m)
+                # return G2Element.from_insecure_sig(
+                #     InsecureSignature.aggregate([harv_share, farm_share])
+                # )
+                
         return None
 
     def get_pool_key_signature(
-        self, pool_target: PoolTarget, pool_pk: PublicKey
-    ) -> Optional[PrependSignature]:
+        self, pool_target: PoolTarget, pool_pk: G1Element
+    ) -> Optional[G2Element]:
         for esk, _ in self.all_esks:
-            sk = esk.private_child(0).get_private_key()
-            if sk.get_public_key() == pool_pk:
-                return sk.sign_prepend(bytes(pool_target))
+            sk = esk.derive_child(0)
+            if sk.get_g1() == pool_pk:
+                return AugSchemeMPL.sign(sk, bytes(pool_target))
         return None
 
     def get_farmer_wallet_tool(self):
@@ -503,7 +506,7 @@ class BlockTools:
         )
 
         plot_pk = ProofOfSpace.generate_plot_public_key(
-            selected_plot_info.harvester_sk.get_public_key(),
+            selected_plot_info.harvester_sk.get_g1(),
             selected_plot_info.farmer_public_key,
         )
         proof_of_space: ProofOfSpace = ProofOfSpace(
@@ -633,7 +636,7 @@ class BlockTools:
             generator_hash,
         )
 
-        header_hash_sig: PrependSignature = self.get_plot_signature(
+        header_hash_sig: G2Element = self.get_plot_signature(
             header_data, plot_pk
         )
 

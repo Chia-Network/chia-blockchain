@@ -277,7 +277,8 @@ class MempoolManager:
                 continue
 
             # Verify conditions, create hash_key list for aggsig check
-            hash_key_pairs = []
+            pks = []
+            msgs = []
             error: Optional[Err] = None
             for npc in npc_list:
                 coin_record: CoinRecord = removal_record_dict[npc.coin_name]
@@ -303,17 +304,19 @@ class MempoolManager:
                         potential_error = error
                     break
 
-                hash_key_pairs.extend(
-                    hash_key_pairs_for_conditions_dict(
+                pks0, msgs0 = hash_key_pairs_for_conditions_dict(
                         npc.condition_dict, npc.coin_name
-                    )
                 )
+                pks.extend(pks0)
+                msgs.extend(msgs0)
+
             if error:
                 errors.append(error)
                 continue
 
             # Verify aggregated signature
-            if not new_spend.aggregated_signature.validate(hash_key_pairs):
+            validates = AugSchemeMPL.agg_verify(pks, msgs, new_spend.aggregated_signature)
+            if not validates:
                 return None, MempoolInclusionStatus.FAILED, Err.BAD_AGGREGATE_SIGNATURE
 
             # Remove all conflicting Coins and SpendBundles

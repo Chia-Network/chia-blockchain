@@ -59,7 +59,7 @@ class WalletRpcApi:
             "/get_discrepancies_for_offer": self.get_discrepancies_for_offer,
             "/respond_to_offer": self.respond_to_offer,
             "/get_wallet_summaries": self.get_wallet_summaries,
-            "/get_public_keys": self.get_public_keys,
+            "/get_g1s": self.get_g1s,
             "/generate_mnemonic": self.generate_mnemonic,
             "/log_in": self.log_in,
             "/add_key": self.add_key,
@@ -504,9 +504,9 @@ class WalletRpcApi:
             response = {"success": success, "reason": reason}
         return response
 
-    async def get_public_keys(self, request: Dict):
+    async def get_g1s(self, request: Dict):
         fingerprints = [
-            (esk.get_public_key().get_fingerprint(), seed is not None)
+            (esk.get_g1().get_fingerprint(), seed is not None)
             for (esk, seed) in self.service.keychain.get_all_private_keys()
         ]
         response = {"success": True, "public_key_fingerprints": fingerprints}
@@ -515,7 +515,7 @@ class WalletRpcApi:
     async def get_private_key(self, request):
         fingerprint = request["fingerprint"]
         for esk, seed in self.service.keychain.get_all_private_keys():
-            if esk.get_public_key().get_fingerprint() == fingerprint:
+            if esk.get_g1().get_fingerprint() == fingerprint:
                 s = bytes_to_mnemonic(seed) if seed is not None else None
                 return {
                     "success": True,
@@ -546,7 +546,7 @@ class WalletRpcApi:
         else:
             return {"success": False}
 
-        fingerprint = esk.get_public_key().get_fingerprint()
+        fingerprint = esk.get_g1().get_fingerprint()
         await self.stop_wallet()
 
         # Makes sure the new key is added to config properly

@@ -3,22 +3,21 @@ import blspy
 from src.types.coin_solution import CoinSolution
 from src.types.spend_bundle import SpendBundle
 
-from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.puzzles import p2_delegated_puzzle
 from src.wallet.puzzles.puzzle_utils import make_create_coin_condition
 from tests.util.key_tool import KeyTool
 
-HIERARCHICAL_PRIVATE_KEY = blspy.ExtendedPrivateKey.from_seed(b"foo")
+HIERARCHICAL_PRIVATE_KEY = blspy.PrivateKey.from_seed(b"foo")
 
 
 def bls_private_key_for_index(index):
-    return BLSPrivateKey.from_bytes(
-        bytes(HIERARCHICAL_PRIVATE_KEY.private_child(index).get_private_key())
+    return blspy.PrivateKey.from_bytes(
+        bytes(HIERARCHICAL_PRIVATE_KEY.derive_child(index))
     )
 
 
 def public_key_bytes_for_index(index):
-    return bytes(HIERARCHICAL_PRIVATE_KEY.private_child(index).get_public_key())
+    return bytes(HIERARCHICAL_PRIVATE_KEY.derive_child(index).get_g1())
 
 
 def puzzle_program_for_index(index):

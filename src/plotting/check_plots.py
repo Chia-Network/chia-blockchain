@@ -1,7 +1,7 @@
 import logging
 from chiapos import Verifier
 from collections import Counter
-from blspy import PublicKey
+from blspy import G1Element
 from src.util.keychain import Keychain
 from src.util.config import load_config
 from src.plotting.plot_tools import load_plots
@@ -21,9 +21,10 @@ def check_plots(args, root_path):
     v = Verifier()
     log.info("Loading plots in config.yaml using plot_tools loading code\n")
     kc: Keychain = Keychain()
-    pks = [epk.public_child(0).get_public_key() for epk in kc.get_all_public_keys()]
+    # [!CHILD
+    pks = kc.get_all_public_keys()
     pool_public_keys = [
-        PublicKey.from_bytes(bytes.fromhex(pk))
+        G1Element.from_bytes(bytes.fromhex(pk))
         for pk in config["farmer"]["pool_public_keys"]
     ]
     _, provers, failed_to_open_filenames, no_key_filenames = load_plots(

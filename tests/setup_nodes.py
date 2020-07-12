@@ -146,7 +146,7 @@ async def setup_wallet_node(
     consensus_constants = constants_for_dic(dic)
     first_pk = keychain.get_first_public_key()
     assert first_pk is not None
-    db_path_key_suffix = str(first_pk.get_public_key().get_fingerprint())
+    db_path_key_suffix = str(first_pk.get_g1().get_fingerprint())
     db_name = f"test-wallet-db-{port}"
     db_path = bt.root_path / f"test-wallet-db-{port}-{db_path_key_suffix}"
     if db_path.exists():
