@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Dict, List, Set, Optional, Callable, Tuple
 
-from blspy import Util, G1Element, G2Element
+from blspy import G1Element, G2Element, AugSchemeMPL
 from src.util.keychain import Keychain
 
 from src.consensus.constants import ConsensusConstants
@@ -57,7 +57,10 @@ class Farmer:
 
         # This is the farmer configuration
         self.wallet_target = bytes.fromhex(self.config["xch_target_puzzle_hash"])
-        self.pool_public_keys = list(self.config["pool_public_keys"])
+        self.pool_public_keys = [
+            G1Element.from_bytes(bytes.fromhex(pk))
+            for pk in self.config["pool_public_keys"]
+        ]
 
         # This is the pool configuration, which should be moved out to the pool once it exists
         self.pool_target = bytes.fromhex(pool_config["xch_target_puzzle_hash"])
@@ -104,16 +107,10 @@ class Farmer:
             self.state_changed_callback(change)
 
     def _get_public_keys(self):
-        return [
-            child_sk.get_g1()
-            for child_sk, _ in self.keychain.get_all_private_keys()
-        ]
+        return [child_sk.get_g1() for child_sk, _ in self._get_private_keys()]
 
     def _get_private_keys(self):
-        return [
-            sk.derive_child(0)
-            for sk, _ in self.keychain.get_all_private_keys()
-        ]
+        return [sk.derive_child(0) for sk, _ in self.keychain.get_all_private_keys()]
 
     async def _get_required_iters(
         self, challenge_hash: bytes32, quality_string: bytes32, plot_size: uint8
@@ -248,9 +245,9 @@ class Farmer:
                 )
                 return
             pool_target: PoolTarget = PoolTarget(self.pool_target, uint32(0))
-            pool_target_signature: G2Element = self.pool_sks_map[
-                pool_pk
-            ].sign_prepend(bytes(pool_target))
+            pool_target_signature: G2Element = AugSchemeMPL.sign(
+                self.pool_sks_map[pool_pk], bytes(pool_target)
+            )
 
             request2 = farmer_protocol.RequestHeaderHash(
                 challenge_hash,
@@ -282,10 +279,11 @@ class Farmer:
                     response.harvester_pk, pk
                 )
                 assert agg_pk == proof_of_space.plot_public_key
-                header_hash256 = Util.hash256(header_hash)
-                farmer_share = AugSchemeMPL.sign(sk, header_hash256, agg_pk)
-                agg_sig = AugSchemeMPL.aggregate([response.message_signature, farmer_share])
-                validates = AugSchemeMPL.verify(agg_pk, header_hash256, agg_sig)
+                farmer_share = AugSchemeMPL.sign(sk, header_hash, agg_pk)
+                agg_sig = AugSchemeMPL.aggregate(
+                    [response.message_signature, farmer_share]
+                )
+                validates = AugSchemeMPL.verify(agg_pk, header_hash, agg_sig)
 
                 if validates:
                     break

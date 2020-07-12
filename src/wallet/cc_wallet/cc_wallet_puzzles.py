@@ -1,9 +1,9 @@
 from typing import Optional, Tuple
 
 from clvm_tools import binutils
+from blspy import AugSchemeMPL
 import clvm
 import string
-from src.types.BLSSignature import BLSSignature
 from src.types.program import Program
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution

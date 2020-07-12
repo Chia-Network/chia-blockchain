@@ -19,14 +19,15 @@ from src.plotting.plot_tools import (
 log = logging.getLogger(__name__)
 
 
+# TODO: eip2334
 def get_default_public_key() -> G1Element:
     keychain: Keychain = Keychain()
-    pk = keychain.get_first_public_key()
-    if pk is None:
+    sk_ent = keychain.get_first_private_key()
+    if sk_ent is None:
         raise RuntimeError(
             "No keys, please run 'chia keys generate' or provide a public key with -f"
         )
-    return keychain.get_first_public_key()
+    return sk_ent.derive_child(0).get_g1()
 
 
 def create_plots(args, root_path, use_datetime=True):

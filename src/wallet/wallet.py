@@ -2,7 +2,7 @@ import time
 from typing import Dict, Optional, List, Tuple, Set, Any
 import clvm
 import logging
-from blspy import G2Element
+from blspy import G2Element, AugSchemeMPL
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.program import Program
@@ -291,7 +291,6 @@ class Wallet(AbstractWallet):
                 return None
 
             pubkey, secretkey = keys
-            # secretkey = BLSPrivateKey(secretkey)
             code_ = [puzzle, solution.solution]
             sexp = clvm.to_sexp_f(code_)
 
@@ -401,7 +400,6 @@ class Wallet(AbstractWallet):
     ) -> List[G2Element]:
         puzzle_hash = innerpuz.get_tree_hash()
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
-        # private = BLSPrivateKey(private)
         sigs: List[G2Element] = []
         code_ = [innerpuz, innersol]
         sexp = Program.to(code_)

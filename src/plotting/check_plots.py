@@ -21,8 +21,9 @@ def check_plots(args, root_path):
     v = Verifier()
     log.info("Loading plots in config.yaml using plot_tools loading code\n")
     kc: Keychain = Keychain()
-    # [!CHILD
+    # TODO: eip2334
     pks = kc.get_all_public_keys()
+    pks = [sk.derive_child(0).get_g1() for sk, _ in kc.get_all_private_keys()]
     pool_public_keys = [
         G1Element.from_bytes(bytes.fromhex(pk))
         for pk in config["farmer"]["pool_public_keys"]

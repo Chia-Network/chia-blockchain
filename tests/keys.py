@@ -7,7 +7,7 @@ from src.wallet.puzzles import p2_delegated_puzzle
 from src.wallet.puzzles.puzzle_utils import make_create_coin_condition
 from tests.util.key_tool import KeyTool
 
-HIERARCHICAL_PRIVATE_KEY = blspy.PrivateKey.from_seed(b"foo")
+HIERARCHICAL_PRIVATE_KEY = blspy.PrivateKey.from_seed(bytes([1] * 32))
 
 
 def bls_private_key_for_index(index):

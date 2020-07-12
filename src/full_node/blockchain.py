@@ -5,6 +5,7 @@ from enum import Enum
 import multiprocessing
 import concurrent
 from typing import Dict, List, Optional, Set, Tuple
+from blspy import AugSchemeMPL
 
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
@@ -581,7 +582,7 @@ class Blockchain:
             validates = AugSchemeMPL.validate(
                 block.proof_of_space.pool_public_key,
                 pool_target_m,
-                block.header.data.aggregated_signature
+                block.header.data.aggregated_signature,
             )
             if not validates:
                 return Err.BAD_AGGREGATE_SIGNATURE
@@ -848,7 +849,9 @@ class Blockchain:
             )
             if error:
                 return error
-            pks0, msgs0 = hash_key_pairs_for_conditions_dict(npc.condition_dict, npc.coin_name)
+            pks0, msgs0 = hash_key_pairs_for_conditions_dict(
+                npc.condition_dict, npc.coin_name
+            )
             pairs_pks.extend(pks0)
             pairs_msgs.extend(msgs0)
 
@@ -856,10 +859,9 @@ class Blockchain:
         # TODO: move this to pre_validate_blocks_multiprocessing so we can sync faster
         if not block.header.data.aggregated_signature:
             return Err.BAD_AGGREGATE_SIGNATURE
-        
+
         validates = AugSchemeMPL.agg_verify(
-            pairs_pks, pairs_msgs,
-            block.header.data.aggregated_signature
+            pairs_pks, pairs_msgs, block.header.data.aggregated_signature
         )
         if not validates:
             return Err.BAD_AGGREGATE_SIGNATURE

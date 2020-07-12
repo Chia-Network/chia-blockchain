@@ -139,13 +139,10 @@ def show_all_keys():
     for sk, seed in private_keys:
         print("")
         print("Fingerprint:", sk.get_g1().get_fingerprint())
-        # print("Extended Public key:", sk.get_extended_public_key())
         print("Public key:", sk.get_g1())
-        addr = create_puzzlehash_for_pk(
-            sk.public_child(0).get_g1()
-        ).hex()
+        addr = create_puzzlehash_for_pk(sk.derive_child(0).get_g1()).hex()
         print("First address:", addr)
-        print("Extended private key:", bytes(sk).hex())
+        print("Private key:", bytes(sk).hex())
         if seed is not None:
             mnemonic = bytes_to_mnemonic(seed)
             mnemonic_string = mnemonic_to_string(mnemonic)

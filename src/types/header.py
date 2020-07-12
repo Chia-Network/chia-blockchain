@@ -5,7 +5,6 @@ from blspy import G2Element
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64, uint32, uint128
 from src.util.streamable import Streamable, streamable
-from src.types.BLSSignature import BLSSignature
 from src.types.pool_target import PoolTarget
 
 

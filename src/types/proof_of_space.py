@@ -54,9 +54,4 @@ class ProofOfSpace(Streamable):
     def generate_plot_public_key(
         harvester_pk: G1Element, farmer_pk: G1Element
     ) -> G1Element:
-        # Insecure aggregation is fine here, since the harvester can choose any public key
-        # she wants. Insecure refers to suceptibility to the rogue pk attack:
-        # https://crypto.stanford.edu/~dabo/pubs/papers/BLSmultisig.html
-        # This however, is not relevant since the consensus will just verify the 2/2 signature as
-        # if it was a normal signature.
         return harvester_pk + farmer_pk

@@ -10,18 +10,7 @@ from src.util.byte_types import hexstr_to_bytes
 from src.types.program import Program
 from src.util.hash import std_hash
 
-from blspy import (
-    # ChainCode,
-    # ExtendedPrivateKey,
-    # ExtendedPublicKey,
-    # InsecureSignature,
-    # PrependSignature,
-    PrivateKey,
-    # PublicKey,
-    G1Element,
-    G2Element
-    # Signature,
-)
+from blspy import PrivateKey, G1Element, G2Element
 
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64, int64, uint128, int512
@@ -39,7 +28,6 @@ size_hints = {
     "PrivateKey": PrivateKey.PRIVATE_KEY_SIZE,
     "G1Element": G1Element.SIZE,
     "G2Element": G2Element.SIZE,
-    
 }
 unhashable_types = [
     PrivateKey,

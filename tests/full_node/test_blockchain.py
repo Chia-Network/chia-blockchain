@@ -245,7 +245,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 blocks[9].header.data,
-                PrivateKey.from_seed(b"0").sign_prepend(b"random junk"),
+                PrivateKey.from_seed(bytes([5] * 32)).sign_prepend(b"random junk"),
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,

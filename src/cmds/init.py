@@ -7,7 +7,6 @@ from src.util.keychain import Keychain
 
 from src.util.config import unflatten_properties
 from pathlib import Path
-from blspy import G1Element
 from src.consensus.coinbase import create_puzzlehash_for_pk
 
 from src.util.config import (
@@ -42,17 +41,15 @@ def dict_add_new_default(
 
 def check_keys(new_root):
     keychain: Keychain = Keychain()
-    all_pubkeys = keychain.get_all_public_keys()
-    if not all_pubkeys:
+    all_sks = keychain.get_all_private_keys()
+    if len(all_sks) == 0:
         print(
             "No keys are present in the keychain. Generate them with 'chia keys generate'"
         )
         return
-    # TODO: child
-    all_targets = [
-        create_puzzlehash_for_pk(pk).hex()
-        for pk in all_pubkeys
-    ]
+    # TODO: use EIP2334 derivation
+    all_child_pubkeys = [sk[0].derive_child(0).get_g1() for sk in all_sks]
+    all_targets = [create_puzzlehash_for_pk(pk).hex() for pk in all_child_pubkeys]
 
     config: Dict = load_config(new_root, "config.yaml")
 
@@ -81,7 +78,7 @@ def check_keys(new_root):
             )
 
     # Set the pool pks in the farmer
-    all_pubkeys_hex = set(bytes(pk).hex() for pk in keychain.get_all_public_keys())
+    all_pubkeys_hex = set(bytes(pk).hex() for pk in all_child_pubkeys)
     if "pool_public_keys" in config["farmer"]:
         for pk_hex in config["farmer"]["pool_public_keys"]:
             # Add original ones in config

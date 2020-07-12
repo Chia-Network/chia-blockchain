@@ -1,6 +1,6 @@
 from typing import Optional, Tuple, List, Dict
 
-import blspy
+from blspy import G1Element
 import clvm
 from clvm.EvalError import EvalError
 from clvm.casts import int_from_bytes
@@ -73,12 +73,13 @@ def conditions_by_opcode(
 def hash_key_pairs_for_conditions_dict(
     conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
     coin_name: bytes32 = None,
-) -> Tuple[List[blspy.G1Element], List[bytes]]:
-    pks = []
-    msgs = []
+) -> Tuple[List[G1Element], List[bytes]]:
+    pks: List[G1Element] = []
+    msgs: List[bytes] = []
     for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
         # TODO: check types
         # assert len(_) == 3
+        assert cvp.var2 is not None
         pks.append(cvp.var1)
         msgs.append(cvp.var2)
     if coin_name is not None:

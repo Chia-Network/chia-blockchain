@@ -108,7 +108,7 @@ class Keychain:
     testing: bool
     user: str
 
-    def __init__(self, user: str = "user-1.8", testing: bool = False):
+    def __init__(self, user: str = "user-1.8.0", testing: bool = False):
         self.testing = testing
         self.user = user
 
@@ -121,9 +121,7 @@ class Keychain:
         else:
             return f"chia-{self.user}"
 
-    def _get_pk_and_entropy(
-        self, user: str
-    ) -> Optional[Tuple[G1Element, bytes]]:
+    def _get_pk_and_entropy(self, user: str) -> Optional[Tuple[G1Element, bytes]]:
         """
         Returns the keychain conntents for a specific 'user' (key index). The contents
         include an G1Element and the entropy required to generate the private key.
@@ -133,7 +131,11 @@ class Keychain:
         if read_str is None or len(read_str) == 0:
             return None
         str_bytes = bytes.fromhex(read_str)
-        return (G1Element.from_bytes(str_bytes[:G1Element.SIZE]), str_bytes[G1Element.SIZE:])
+        print("Read", read_str)
+        return (
+            G1Element.from_bytes(str_bytes[: G1Element.SIZE]),
+            str_bytes[G1Element.SIZE :],
+        )
 
     def _get_private_key_user(self, index: int):
         """
@@ -159,7 +161,7 @@ class Keychain:
     def add_private_key(self, entropy: bytes, passphrase: str) -> PrivateKey:
         """
         Adds a private key to the keychain, with the given entropy and passphrase. The
-        keychain itself will store the extended public key, and the entropy bytes,
+        keychain itself will store the public key, and the entropy bytes,
         but not the passphrase.
         """
         seed = entropy_to_seed(entropy, passphrase)
@@ -167,12 +169,11 @@ class Keychain:
         key = PrivateKey.from_seed(seed)
         fingerprint = key.get_g1().get_fingerprint()
 
-        if fingerprint in [
-            pk.get_fingerprint() for pk in self.get_all_public_keys()
-        ]:
+        if fingerprint in [pk.get_fingerprint() for pk in self.get_all_public_keys()]:
             # Prevents duplicate add
             return key
 
+        print("adding pk", bytes(key.get_g1()).hex())
         keyring.set_password(
             self._get_service(),
             self._get_private_key_user(index),
@@ -233,8 +234,8 @@ class Keychain:
         pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
         while index <= MAX_KEYS:
             if pkent is not None:
-                epk, ent = pkent
-                all_keys.append(epk)
+                pk, ent = pkent
+                all_keys.append(pk)
             index += 1
             pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
         return all_keys
@@ -247,8 +248,8 @@ class Keychain:
         pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
         while index <= MAX_KEYS:
             if pkent is not None:
-                epk, ent = pkent
-                return epk
+                pk, ent = pkent
+                return pk
             index += 1
             pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
         return None
@@ -280,7 +281,7 @@ class Keychain:
         pkent = None
         while True:
             try:
-                #pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
+                pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
                 keyring.delete_password(
                     self._get_service(), self._get_private_key_user(index)
                 )

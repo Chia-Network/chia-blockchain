@@ -10,6 +10,7 @@ from typing import AsyncGenerator, Dict, List, Optional, Tuple, Callable
 import aiosqlite
 from chiabip158 import PyBIP158
 from chiapos import Verifier
+from blspy import G2Element, AugSchemeMPL
 
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 from src.consensus.constants import ConsensusConstants

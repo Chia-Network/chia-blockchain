@@ -8,11 +8,10 @@ from typing import Dict, Optional, List, Tuple, Any
 
 import clvm
 import json
-from blspy import PrivateKey
+from blspy import PrivateKey, AugSchemeMPL
 from clvm_tools import binutils
 
 from src.server.server import ChiaServer
-from src.types.BLSSignature import BLSSignature
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.program import Program
@@ -78,7 +77,7 @@ class RLWallet:
 
         sk_hex = key_config["wallet_sk"]
         private_key = PrivateKey.from_bytes(bytes.fromhex(sk_hex))
-        pubkey_bytes: bytes = bytes(private_key.public_child(unused).get_g1())
+        pubkey_bytes: bytes = bytes(private_key.derive_child(unused).get_g1())
 
         rl_info = RLInfo("admin", pubkey_bytes, None, None, None, None, None, None)
         info_as_string = json.dumps(rl_info.to_json_dict())
@@ -128,9 +127,7 @@ class RLWallet:
 
             sk_hex = key_config["wallet_sk"]
             private_key = PrivateKey.from_bytes(bytes.fromhex(sk_hex))
-            pubkey_bytes: bytes = bytes(
-                private_key.public_child(unused).get_g1()
-            )
+            pubkey_bytes: bytes = bytes(private_key.derive_child(unused).get_g1())
 
             rl_info = RLInfo("user", None, pubkey_bytes, None, None, None, None, None)
             info_as_string = json.dumps(rl_info.to_json_dict())
@@ -359,7 +356,7 @@ class RLWallet:
             raise Exception("index_for_pubkey == -1")
         private = self.private_key.derive_child(index_for_pubkey)
         pubkey = private.get_g1()
-        
+
         return pubkey, private
 
     async def get_rl_coin(self) -> Optional[Coin]:
@@ -425,7 +422,7 @@ class RLWallet:
             signature = secretkey.sign(Program(solution.solution).get_hash())
             sigs.append(signature)
 
-        aggsig = BLSSignature.aggregate(sigs)
+        aggsig = AugSchemeMPL.aggregate(sigs)
 
         solution_list: List[CoinSolution] = []
         for puzzle, coin_solution in spends:
@@ -469,7 +466,7 @@ class RLWallet:
             pubkey, secretkey = await self.get_keys_pk(clawback_pubkey)
             signature = secretkey.sign(Program(solution.solution).get_hash())
             sigs.append(signature)
-        aggsig = BLSSignature.aggregate(sigs)
+        aggsig = AugSchemeMPL.aggregate(sigs)
         solution_list = []
         for puzzle, coin_solution in spends:
             solution_list.append(
@@ -560,7 +557,7 @@ class RLWallet:
             )
         )
 
-        aggsig = BLSSignature.aggregate([signature])
+        aggsig = AugSchemeMPL.aggregate([signature])
 
         return SpendBundle(list_of_coinsolutions, aggsig)
 

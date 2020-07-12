@@ -9,12 +9,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 from argparse import Namespace
 
-from blspy import (
-    G1Element,
-    G2Element,
-    Util,
-    AugSchemeMPL
-)
+from blspy import G1Element, G2Element, AugSchemeMPL
 
 from chiavdf import prove
 from chiabip158 import PyBIP158
@@ -78,7 +73,7 @@ class BlockTools:
             initialize_ssl(root_path)
             # No real plots supplied, so we will use the small test plots
             self.use_any_pos = True
-            self.keychain = Keychain("testing-1.8", True)
+            self.keychain = Keychain("testing-1.8.0", True)
             self.keychain.delete_all_keys()
             self.farmer_pk = (
                 self.keychain.add_private_key(b"block_tools farmer key", "")
@@ -120,14 +115,16 @@ class BlockTools:
             initialize_ssl(root_path)
             self.keychain = Keychain()
             self.use_any_pos = False
-            ## TODO-ietf : pk = ...
-            pk = self.keychain.get_all_public_keys()[0].public_child(0).get_g1()
+            sk_and_ent = self.keychain.get_first_private_key()
+            # TODO: eip2334
+            assert sk_and_ent is not None
+            pk = sk_and_ent[0].derive_child(0).get_g1()
             self.farmer_ph = create_puzzlehash_for_pk(pk)
             self.pool_ph = create_puzzlehash_for_pk(pk)
 
-        self.all_esks = self.keychain.get_all_private_keys()
+        self.all_sks = self.keychain.get_all_private_keys()
         self.all_pubkeys: List[G1Element] = [
-            sk.derive_child(0).get_g1() for sk, _ in self.all_esks
+            sk.derive_child(0).get_g1() for sk, _ in self.all_sks
         ]
         if len(self.all_pubkeys) == 0:
             raise RuntimeError("Keys not generated. Run `chia generate keys`")
@@ -141,39 +138,33 @@ class BlockTools:
         """
         Returns the plot signature of the header data.
         """
-        farmer_sk = self.all_esks[0][0].derive_child(0)
+        farmer_sk = self.all_sks[0][0].derive_child(0)
         for _, plot_info in self.plots.items():
             agg_pk = ProofOfSpace.generate_plot_public_key(
                 plot_info.harvester_sk.get_g1(), plot_info.farmer_public_key
             )
             if agg_pk == plot_pk:
-                m = Util.hash256(header_data.get_hash())
+                m = header_data.get_hash()
                 harv_share = AugSchemeMPL.sign(plot_info.harvester_sk, m, agg_pk)
                 farm_share = AugSchemeMPL.sign(farmer_sk, m, agg_pk)
                 return AugSchemeMPL.aggregate([harv_share, farm_share])
-                # m = bytes(agg_pk) + Util.hash256(header_data.get_hash())
-                # harv_share = plot_info.harvester_sk.sign_insecure(m)
-                # farm_share = farmer_sk.sign_insecure(m)
-                # return G2Element.from_insecure_sig(
-                #     InsecureSignature.aggregate([harv_share, farm_share])
-                # )
-                
+
         return None
 
     def get_pool_key_signature(
         self, pool_target: PoolTarget, pool_pk: G1Element
     ) -> Optional[G2Element]:
-        for esk, _ in self.all_esks:
-            sk = esk.derive_child(0)
-            if sk.get_g1() == pool_pk:
-                return AugSchemeMPL.sign(sk, bytes(pool_target))
+        for sk, _ in self.all_sks:
+            sk_child = sk.derive_child(0)
+            if sk_child.get_g1() == pool_pk:
+                return AugSchemeMPL.sign(sk_child, bytes(pool_target))
         return None
 
     def get_farmer_wallet_tool(self):
-        return WalletTool(self.all_esks[0][0])
+        return WalletTool(self.all_sks[0][0])
 
     def get_pool_wallet_tool(self):
-        return WalletTool(self.all_esks[1][0])
+        return WalletTool(self.all_sks[1][0])
 
     def get_consecutive_blocks(
         self,
@@ -635,9 +626,7 @@ class BlockTools:
             generator_hash,
         )
 
-        header_hash_sig: G2Element = self.get_plot_signature(
-            header_data, plot_pk
-        )
+        header_hash_sig: G2Element = self.get_plot_signature(header_data, plot_pk)
 
         header: Header = Header(header_data, header_hash_sig)
 

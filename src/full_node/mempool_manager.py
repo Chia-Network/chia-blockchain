@@ -5,6 +5,7 @@ import logging
 
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
+from blspy import G1Element, G2Element, AugSchemeMPL
 
 from src.consensus.constants import ConsensusConstants
 from src.types.condition_opcodes import ConditionOpcode
@@ -277,8 +278,8 @@ class MempoolManager:
                 continue
 
             # Verify conditions, create hash_key list for aggsig check
-            pks = []
-            msgs = []
+            pks: List[G1Element] = []
+            msgs: List[G2Element] = []
             error: Optional[Err] = None
             for npc in npc_list:
                 coin_record: CoinRecord = removal_record_dict[npc.coin_name]
@@ -305,7 +306,7 @@ class MempoolManager:
                     break
 
                 pks0, msgs0 = hash_key_pairs_for_conditions_dict(
-                        npc.condition_dict, npc.coin_name
+                    npc.condition_dict, npc.coin_name
                 )
                 pks.extend(pks0)
                 msgs.extend(msgs0)
@@ -315,7 +316,9 @@ class MempoolManager:
                 continue
 
             # Verify aggregated signature
-            validates = AugSchemeMPL.agg_verify(pks, msgs, new_spend.aggregated_signature)
+            validates = AugSchemeMPL.agg_verify(
+                pks, msgs, new_spend.aggregated_signature
+            )
             if not validates:
                 return None, MempoolInclusionStatus.FAILED, Err.BAD_AGGREGATE_SIGNATURE
 

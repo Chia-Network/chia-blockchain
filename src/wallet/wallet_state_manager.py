@@ -202,9 +202,7 @@ class WalletStateManager:
         pubkey = self.private_key.derive_child(index).get_g1()
         return pubkey
 
-    async def get_keys(
-        self, hash: bytes32
-    ) -> Optional[Tuple[G1Element, PrivateKey]]:
+    async def get_keys(self, hash: bytes32) -> Optional[Tuple[G1Element, PrivateKey]]:
         index_for_puzzlehash = await self.puzzle_store.index_for_puzzle_hash(hash)
         if index_for_puzzlehash == -1:
             raise ValueError(f"No key for this puzzlehash {hash})")

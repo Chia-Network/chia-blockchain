@@ -5,7 +5,7 @@ from typing import Dict, Optional, Tuple, List, Callable
 import time
 import concurrent
 
-from blspy import G1Element, G2Element, Util, AugSchemeMPL
+from blspy import G1Element, G2Element, AugSchemeMPL
 
 from chiapos import DiskProver
 from src.protocols import harvester_protocol
@@ -323,11 +323,10 @@ class Harvester:
         agg_pk = ProofOfSpace.generate_plot_public_key(
             harvester_sk.get_g1(), plot_info.farmer_public_key
         )
-        new_m = Util.hash256(request.message)
 
         # This is only a partial signature. When combined with the farmer's half, it will
         # form a complete PrependSignature.
-        signature: G2Element = AugSchemeMPL.sign(harvester_sk, new_m, agg_pk)
+        signature: G2Element = AugSchemeMPL.sign(harvester_sk, request.message, agg_pk)
 
         response: harvester_protocol.RespondSignature = harvester_protocol.RespondSignature(
             request.plot_id,

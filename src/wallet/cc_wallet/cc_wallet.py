@@ -3,7 +3,7 @@ import time
 
 import clvm
 from typing import Dict, Optional, List, Any, Set
-from blspy import G2Element
+from blspy import G2Element, AugSchemeMPL
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.condition_opcodes import ConditionOpcode
@@ -615,9 +615,7 @@ class CCWallet:
             self.log.info(f"Successfully selected coins: {used_coins}")
             return used_coins
 
-    async def get_sigs(
-        self, innerpuz: Program, innersol: Program
-    ) -> List[G2Element]:
+    async def get_sigs(self, innerpuz: Program, innersol: Program) -> List[G2Element]:
         puzzle_hash = innerpuz.get_tree_hash()
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
         sigs: List[G2Element] = []
@@ -625,7 +623,7 @@ class CCWallet:
         sexp = Program.to(code_)
         error, conditions, cost = conditions_dict_for_solution(sexp)
         if conditions is not None:
-            for msg in hash_key_pairs_for_conditions_dict(conditions)[1]:
+            for _, msg in hash_key_pairs_for_conditions_dict(conditions):
                 signature = AugSchemeMPL.sign(private, msg)
                 sigs.append(signature)
         return sigs

@@ -1,7 +1,7 @@
 import time
 from secrets import token_bytes
 
-from blspy import ExtendedPrivateKey
+from blspy import PrivateKey
 from clvm import run_program
 from clvm_tools import binutils
 
@@ -9,7 +9,6 @@ from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.BLSSignature import BLSSignature
 from src.types.program import Program
-# from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 from src.util.wallet_tools import WalletTool
 
@@ -128,14 +127,14 @@ if __name__ == "__main__":
     """
     wallet_tool = WalletTool()
     benchmark_all_operators()
-    extended_secret_key: ExtendedPrivateKey = ExtendedPrivateKey.from_seed(b"a")
+    secret_key: PrivateKey = PrivateKey.from_seed(bytes([2] * 32))
     puzzles = []
     solutions = []
     private_keys = []
     public_keys = []
 
     for i in range(0, 1000):
-        private_key: PrivateKey = extended_secret_key.derive_child(i)
+        private_key: PrivateKey = secret_key.derive_child(i)
         public_key = private_key.public_key()
         solution = wallet_tool.make_solution(
             {
@@ -164,7 +163,7 @@ if __name__ == "__main__":
     print(f"Puzzle_time is: {puzzle_time}")
     print(f"Puzzle cost sum is: {clvm_cost}")
 
-    private_key = extended_secret_key.derive_child(0)
+    private_key = secret_key.derive_child(0)
     public_key = private_key.public_key()
     message = token_bytes()
     signature = private_key.sign(message)
