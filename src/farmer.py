@@ -57,10 +57,7 @@ class Farmer:
 
         # This is the farmer configuration
         self.wallet_target = bytes.fromhex(self.config["xch_target_puzzle_hash"])
-        self.pool_public_keys = [
-            PublicKey.from_bytes(bytes.fromhex(pk))
-            for pk in self.config["pool_public_keys"]
-        ]
+        self.pool_public_keys = list(self.config["pool_public_keys"])
 
         # This is the pool configuration, which should be moved out to the pool once it exists
         self.pool_target = bytes.fromhex(pool_config["xch_target_puzzle_hash"])
@@ -108,8 +105,8 @@ class Farmer:
 
     def _get_public_keys(self):
         return [
-            epk.public_child(0).get_g1()
-            for epk in self.keychain.get_all_public_keys()
+            child_sk.get_g1()
+            for child_sk, _ in self.keychain.get_all_private_keys()
         ]
 
     def _get_private_keys(self):

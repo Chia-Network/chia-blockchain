@@ -51,7 +51,7 @@ class WalletTool:
         self.get_new_puzzle()
 
     def get_next_public_key(self):
-        pubkey = self.extended_secret_key.public_child(
+        pubkey = self.extended_secret_key.derive_child(
             self.next_address
         ).get_g1()
         self.pubkey_num_lookup[bytes(pubkey)] = self.next_address
@@ -198,9 +198,9 @@ class WalletTool:
                 return
             conditions_dict = conditions_by_opcode(con)
 
-            for pk, msg in hash_key_pairs_for_conditions_dict(
+            for msg in hash_key_pairs_for_conditions_dict(
                 conditions_dict, bytes(solution.coin)
-            ):
+            )[1]:
                 # signature = secretkey.sign(_.message_hash)
                 signature = AugSchemeMPL.sign(secretkey, msg)
                 sigs.append(signature)

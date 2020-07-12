@@ -24,7 +24,7 @@ class BLSPrivateKey:
         return BLSSignature(bytes(self.pk.sign_prepend_prehashed(message_hash)))
 
     def public_key(self) -> BLSPublicKey:
-        return self.pk.get_g1()
+        return BLSPublicKey(self.pk.get_public_key())
 
     def secret_exponent(self):
         return int.from_bytes(bytes(self), "big")

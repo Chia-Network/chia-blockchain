@@ -31,7 +31,6 @@ from src.consensus.coinbase import create_coinbase_coin, create_fees_coin
 from src.types.challenge import Challenge
 from src.types.classgroup import ClassgroupElement
 from src.types.full_block import FullBlock, additions_for_npc
-from src.types.BLSSignature import BLSSignature
 from src.types.coin import Coin, hash_coin_list
 from src.types.program import Program
 from src.types.header import Header, HeaderData
@@ -184,7 +183,7 @@ class BlockTools:
         seconds_per_block=None,
         seed: bytes = b"",
         reward_puzzlehash: bytes32 = None,
-        transaction_data_at_height: Dict[int, Tuple[Program, BLSSignature]] = None,
+        transaction_data_at_height: Dict[int, Tuple[Program, G2Element]] = None,
         fees: uint64 = uint64(0),
     ) -> List[FullBlock]:
         if transaction_data_at_height is None:
@@ -321,7 +320,7 @@ class BlockTools:
             timestamp += time_taken
 
             transactions: Optional[Program] = None
-            aggsig: Optional[BLSSignature] = None
+            aggsig: Optional[G2Element] = None
             if next_height in transaction_data_at_height:
                 transactions, aggsig = transaction_data_at_height[next_height]
 
@@ -382,7 +381,7 @@ class BlockTools:
         seed: bytes = b"",
         reward_puzzlehash: bytes32 = None,
         transactions: Program = None,
-        aggsig: BLSSignature = None,
+        aggsig: G2Element = None,
         fees: uint64 = uint64(0),
     ) -> FullBlock:
         """
@@ -441,7 +440,7 @@ class BlockTools:
         genesis: bool = False,
         reward_puzzlehash: bytes32 = None,
         transactions: Program = None,
-        aggsig: BLSSignature = None,
+        aggsig: G2Element = None,
         fees: uint64 = uint64(0),
     ) -> FullBlock:
         """
@@ -613,9 +612,9 @@ class BlockTools:
             pool_target, proof_of_space.pool_public_key
         )
         assert pool_target_signature is not None
-        final_aggsig: BLSSignature = BLSSignature(bytes(pool_target_signature))
+        final_aggsig: G2Element = pool_target_signature
         if aggsig is not None:
-            final_aggsig = BLSSignature.aggregate([final_aggsig, aggsig])
+            final_aggsig = AugSchemeMPL.aggregate([final_aggsig, aggsig])
 
         header_data: HeaderData = HeaderData(
             height,

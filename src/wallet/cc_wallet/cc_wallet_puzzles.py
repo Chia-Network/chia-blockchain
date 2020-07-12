@@ -120,7 +120,7 @@ def cc_generate_eve_spend(coin: Coin, full_puzzle: Program):
         coin.parent_coin_info, coin.puzzle_hash, coin.amount
     )
     list_of_solutions = [CoinSolution(coin, clvm.to_sexp_f([full_puzzle, solution]),)]
-    aggsig = BLSSignature.aggregate([])
+    aggsig = AugSchemeMPL.aggregate([])
     spend_bundle = SpendBundle(list_of_solutions, aggsig)
     return spend_bundle
 
