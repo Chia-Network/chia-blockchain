@@ -8,6 +8,7 @@ from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.path import mkdir, path_from_root
 from src.simulator.full_node_simulator import FullNodeSimulator
 from src.simulator.simulator_constants import test_constants
+from src.util.block_tools import BlockTools
 
 
 # See: https://bugs.python.org/issue29288
@@ -28,6 +29,7 @@ def service_kwargs_for_full_node(root_path):
         root_path=root_path,
         consensus_constants=test_constants,
         name=service_name,
+        bt=BlockTools(),
     )
 
     async def start_callback():

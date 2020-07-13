@@ -6,8 +6,8 @@ from typing import Dict, Optional, Tuple, List, Any
 import logging
 
 import clvm
+from blspy import AugSchemeMPL, G2Element
 
-from src.types.BLSSignature import BLSSignature
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.program import Program
@@ -552,7 +552,7 @@ class TradeManager:
                     ),
                     inner_solution,
                 )
-                aggsig = BLSSignature.aggregate([BLSSignature.aggregate(sig), aggsig])
+                aggsig = AugSchemeMPL.aggregate([sig, aggsig])
                 inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(
                     coloured_coin.puzzle_hash
                 )
@@ -647,8 +647,10 @@ class TradeManager:
                 )
             )
 
-            sig = await wallets[colour].get_sigs(auditor_inner_puzzle, innersol)
-            aggsig = BLSSignature.aggregate([BLSSignature.aggregate(sig), aggsig])
+            sigs: List[G2Element] = await wallets[colour].get_sigs(
+                auditor_inner_puzzle, innersol
+            )
+            aggsig = AugSchemeMPL.aggregate(sigs + [aggsig])
 
             solution = cc_wallet_puzzles.cc_make_solution(
                 core,

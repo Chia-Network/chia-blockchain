@@ -8,7 +8,7 @@ import asyncio
 
 import aiosqlite
 from chiabip158 import PyBIP158
-from blspy import PublicKey, ExtendedPrivateKey
+from blspy import PrivateKey, G1Element
 
 from src.consensus.constants import ConsensusConstants
 from src.types.coin import Coin
@@ -44,6 +44,7 @@ from src.types.program import Program
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.util.wallet_types import WalletType
 from src.consensus.find_fork_point import find_fork_point_in_chain
+from src.wallet.derive_keys import master_sk_to_wallet_sk
 
 
 class WalletStateManager:
@@ -81,14 +82,14 @@ class WalletStateManager:
 
     main_wallet: Wallet
     wallets: Dict[uint32, Any]
-    private_key: ExtendedPrivateKey
+    private_key: PrivateKey
 
     trade_manager: TradeManager
     generate_count: int
 
     @staticmethod
     async def create(
-        private_key: ExtendedPrivateKey,
+        private_key: PrivateKey,
         config: Dict,
         db_path: Path,
         constants: ConsensusConstants,
@@ -198,18 +199,15 @@ class WalletStateManager:
 
         return self
 
-    def get_public_key(self, index: uint32) -> PublicKey:
-        pubkey = self.private_key.public_child(index).get_public_key()
-        return pubkey
+    def get_public_key(self, index: uint32) -> G1Element:
+        return master_sk_to_wallet_sk(self.private_key, index).get_g1()
 
-    async def get_keys(
-        self, hash: bytes32
-    ) -> Optional[Tuple[PublicKey, ExtendedPrivateKey]]:
+    async def get_keys(self, hash: bytes32) -> Optional[Tuple[G1Element, PrivateKey]]:
         index_for_puzzlehash = await self.puzzle_store.index_for_puzzle_hash(hash)
-        if index_for_puzzlehash == -1:
+        if index_for_puzzlehash is None:
             raise ValueError(f"No key for this puzzlehash {hash})")
-        pubkey = self.private_key.public_child(index_for_puzzlehash).get_public_key()
-        private = self.private_key.private_child(index_for_puzzlehash).get_private_key()
+        private = master_sk_to_wallet_sk(self.private_key, index_for_puzzlehash)
+        pubkey = private.get_g1()
         return pubkey, private
 
     async def create_more_puzzle_hashes(self, from_zero: bool = False):
@@ -247,7 +245,7 @@ class WalletStateManager:
                 start_index = 0
 
             for index in range(start_index, unused + to_generate):
-                pubkey: PublicKey = self.get_public_key(uint32(index))
+                pubkey: G1Element = self.get_public_key(uint32(index))
                 puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
                 puzzlehash: bytes32 = puzzle.get_tree_hash()
                 self.log.info(

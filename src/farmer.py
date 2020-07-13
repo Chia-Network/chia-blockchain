@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Dict, List, Set, Optional, Callable, Tuple
 
-from blspy import Util, InsecureSignature, PrependSignature, PublicKey
+from blspy import G1Element, G2Element, AugSchemeMPL
 from src.util.keychain import Keychain
 
 from src.consensus.constants import ConsensusConstants
@@ -15,6 +15,7 @@ from src.types.sized_bytes import bytes32
 from src.types.pool_target import PoolTarget
 from src.util.api_decorators import api_request
 from src.util.ints import uint32, uint64, uint128, uint8
+from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
 
 log = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ class Farmer:
         self.seen_challenges: Set[bytes32] = set()
         self.unfinished_challenges: Dict[uint128, List[bytes32]] = {}
         self.current_weight: uint128 = uint128(0)
-        self.proof_of_time_estimate_ips: uint64 = uint64(10000)
+        self.proof_of_time_estimate_ips: uint64 = uint64(100000)
         self.constants = consensus_constants
         self._shut_down = False
         self.server = None
@@ -58,7 +59,7 @@ class Farmer:
         # This is the farmer configuration
         self.wallet_target = bytes.fromhex(self.config["xch_target_puzzle_hash"])
         self.pool_public_keys = [
-            PublicKey.from_bytes(bytes.fromhex(pk))
+            G1Element.from_bytes(bytes.fromhex(pk))
             for pk in self.config["pool_public_keys"]
         ]
 
@@ -66,7 +67,7 @@ class Farmer:
         self.pool_target = bytes.fromhex(pool_config["xch_target_puzzle_hash"])
         self.pool_sks_map: Dict = {}
         for key in self._get_private_keys():
-            self.pool_sks_map[bytes(key.get_public_key())] = key
+            self.pool_sks_map[bytes(key.get_g1())] = key
 
         assert len(self.wallet_target) == 32
         assert len(self.pool_target) == 32
@@ -107,15 +108,12 @@ class Farmer:
             self.state_changed_callback(change)
 
     def _get_public_keys(self):
-        return [
-            epk.public_child(0).get_public_key()
-            for epk in self.keychain.get_all_public_keys()
-        ]
+        return [child_sk.get_g1() for child_sk in self._get_private_keys()]
 
     def _get_private_keys(self):
-        return [
-            esk.private_child(0).get_private_key()
-            for esk, _ in self.keychain.get_all_private_keys()
+        all_sks = self.keychain.get_all_private_keys()
+        return [master_sk_to_farmer_sk(sk) for sk, _ in all_sks] + [
+            master_sk_to_pool_sk(sk) for sk, _ in all_sks
         ]
 
     async def _get_required_iters(
@@ -251,9 +249,9 @@ class Farmer:
                 )
                 return
             pool_target: PoolTarget = PoolTarget(self.pool_target, uint32(0))
-            pool_target_signature: PrependSignature = self.pool_sks_map[
-                pool_pk
-            ].sign_prepend(bytes(pool_target))
+            pool_target_signature: G2Element = AugSchemeMPL.sign(
+                self.pool_sks_map[pool_pk], bytes(pool_target)
+            )
 
             request2 = farmer_protocol.RequestHeaderHash(
                 challenge_hash,
@@ -279,21 +277,16 @@ class Farmer:
         proof_of_space: bytes32 = self.header_hash_to_pos[header_hash]
         validates: bool = False
         for sk in self._get_private_keys():
-            pk = sk.get_public_key()
+            pk = sk.get_g1()
             if pk == response.farmer_pk:
-                agg_pk = ProofOfSpace.generate_plot_public_key(
-                    response.harvester_pk, pk
-                )
+                agg_pk = ProofOfSpace.generate_plot_public_key(response.local_pk, pk)
                 assert agg_pk == proof_of_space.plot_public_key
-                new_m = bytes(agg_pk) + Util.hash256(header_hash)
-                farmer_share = sk.sign_insecure(new_m)
-                agg_sig = PrependSignature.from_insecure_sig(
-                    InsecureSignature.aggregate(
-                        [response.message_signature, farmer_share]
-                    )
+                farmer_share = AugSchemeMPL.sign(sk, header_hash, agg_pk)
+                agg_sig = AugSchemeMPL.aggregate(
+                    [response.message_signature, farmer_share]
                 )
+                validates = AugSchemeMPL.verify(agg_pk, header_hash, agg_sig)
 
-                validates = agg_sig.verify([Util.hash256(header_hash)], [agg_pk])
                 if validates:
                     break
         assert validates

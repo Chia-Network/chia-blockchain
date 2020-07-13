@@ -79,13 +79,21 @@ async def setup_full_node(
             30,
             config["target_peer_count"],
         )
-    FullNodeApi = FullNodeSimulator if simulator else FullNode
-    api = FullNodeApi(
-        config=config,
-        root_path=bt.root_path,
-        consensus_constants=consensus_constants,
-        name=f"full_node_{port}",
-    )
+    if not simulator:
+        api: FullNode = FullNode(
+            config=config,
+            root_path=bt.root_path,
+            consensus_constants=consensus_constants,
+            name=f"full_node_{port}",
+        )
+    else:
+        api = FullNodeSimulator(
+            config=config,
+            root_path=bt.root_path,
+            consensus_constants=consensus_constants,
+            name=f"full_node_sim_{port}",
+            bt=bt,
+        )
 
     started = asyncio.Event()
 
@@ -146,7 +154,7 @@ async def setup_wallet_node(
     consensus_constants = constants_for_dic(dic)
     first_pk = keychain.get_first_public_key()
     assert first_pk is not None
-    db_path_key_suffix = str(first_pk.get_public_key().get_fingerprint())
+    db_path_key_suffix = str(first_pk.get_fingerprint())
     db_name = f"test-wallet-db-{port}"
     db_path = bt.root_path / f"test-wallet-db-{port}-{db_path_key_suffix}"
     if db_path.exists():
@@ -263,7 +271,7 @@ async def setup_farmer(port, full_node_port: Optional[uint16] = None, dic={}):
     consensus_constants = constants_for_dic(dic)
 
     config["xch_target_puzzle_hash"] = bt.farmer_ph.hex()
-    config["pool_public_keys"] = [bytes(pk).hex() for pk in bt.all_pubkeys]
+    config["pool_public_keys"] = [bytes(pk).hex() for pk in bt.pool_pubkeys]
     config_pool["xch_target_puzzle_hash"] = bt.pool_ph.hex()
     if full_node_port:
         connect_peers = [PeerInfo(self_hostname, full_node_port)]

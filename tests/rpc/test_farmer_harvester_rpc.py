@@ -102,7 +102,7 @@ class TestRpc:
                 filename,
                 18,
                 stream_plot_info(
-                    bt.pool_pk, bt.farmer_pk, PrivateKey.from_seed(b"123")
+                    bt.pool_pk, bt.farmer_pk, PrivateKey.from_seed(bytes([4] * 32))
                 ),
                 token_bytes(32),
                 128,

@@ -2,7 +2,7 @@ import time
 from typing import Dict, Optional, List, Tuple, Set, Any
 import clvm
 import logging
-from src.types.BLSSignature import BLSSignature
+from blspy import G2Element, AugSchemeMPL
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.program import Program
@@ -12,10 +12,9 @@ from src.util.condition_tools import (
     conditions_for_solution,
     conditions_dict_for_solution,
     conditions_by_opcode,
-    hash_key_pairs_for_conditions_dict,
+    pkm_pairs_for_conditions_dict,
 )
 from src.util.ints import uint64, uint32
-from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.abstract_wallet import AbstractWallet
 from src.wallet.puzzles.p2_conditions import puzzle_for_conditions
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
@@ -292,7 +291,6 @@ class Wallet(AbstractWallet):
                 return None
 
             pubkey, secretkey = keys
-            secretkey = BLSPrivateKey(secretkey)
             code_ = [puzzle, solution.solution]
             sexp = clvm.to_sexp_f(code_)
 
@@ -305,14 +303,14 @@ class Wallet(AbstractWallet):
             conditions_dict = conditions_by_opcode(con)
 
             # Create signature
-            for pk_message in hash_key_pairs_for_conditions_dict(
+            for _, msg in pkm_pairs_for_conditions_dict(
                 conditions_dict, bytes(solution.coin)
             ):
-                signature = secretkey.sign(pk_message.message_hash)
+                signature = AugSchemeMPL.sign(secretkey, msg)
                 signatures.append(signature)
 
         # Aggregate signatures
-        aggsig = BLSSignature.aggregate(signatures)
+        aggsig = AugSchemeMPL.aggregate(signatures)
         solution_list: List[CoinSolution] = [
             CoinSolution(
                 coin_solution.coin, clvm.to_sexp_f([puzzle, coin_solution.solution])
@@ -399,17 +397,16 @@ class Wallet(AbstractWallet):
     # I think this should be a the default way the wallet gets signatures in sign_transaction()
     async def get_sigs_for_innerpuz_with_innersol(
         self, innerpuz: Program, innersol: Program
-    ) -> List[BLSSignature]:
+    ) -> List[G2Element]:
         puzzle_hash = innerpuz.get_tree_hash()
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
-        private = BLSPrivateKey(private)
-        sigs: List[BLSSignature] = []
+        sigs: List[G2Element] = []
         code_ = [innerpuz, innersol]
         sexp = Program.to(code_)
         error, conditions, cost = conditions_dict_for_solution(sexp)
         if conditions is not None:
-            for _ in hash_key_pairs_for_conditions_dict(conditions):
-                signature = private.sign(_.message_hash)
+            for _, msg in pkm_pairs_for_conditions_dict(conditions):
+                signature = AugSchemeMPL.sign(private, msg)
                 sigs.append(signature)
         return sigs
 
@@ -438,7 +435,7 @@ class Wallet(AbstractWallet):
 
         # Create coin solutions for each utxo
         output_created = None
-        sigs: List[BLSSignature] = []
+        sigs: List[G2Element] = []
         for coin in utxos:
             pubkey, secretkey = await self.wallet_state_manager.get_keys(
                 coin.puzzle_hash
@@ -457,6 +454,6 @@ class Wallet(AbstractWallet):
             new_sigs = await self.get_sigs_for_innerpuz_with_innersol(puzzle, solution)
             sigs = sigs + new_sigs
 
-        aggsig = BLSSignature.aggregate(sigs)
+        aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
         return spend_bundle

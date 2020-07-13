@@ -189,11 +189,11 @@ export const handle_message = (store, payload) => {
     }
   } else if (payload.command === "get_private_key") {
     const text =
-      "Extended private key: " +
-      payload.data.private_key.esk +
+      "Private key: " +
+      payload.data.private_key.sk +
       "\n" +
-      "Extended public key: " +
-      payload.data.private_key.epk +
+      "Public key: " +
+      payload.data.private_key.pk +
       "\n" +
       (payload.data.private_key.seed
         ? "seed: " + payload.data.private_key.seed

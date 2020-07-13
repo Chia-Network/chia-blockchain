@@ -1,6 +1,6 @@
 import unittest
 from secrets import token_bytes
-from blspy import ExtendedPrivateKey
+from blspy import PrivateKey
 from src.util.keychain import (
     Keychain,
     generate_mnemonic,
@@ -42,8 +42,8 @@ class TesKeychain(unittest.TestCase):
         assert len(kc.get_all_private_keys()) == 2
 
         seed_2 = entropy_to_seed(entropy_2, "")
-        seed_key_2 = ExtendedPrivateKey.from_seed(seed_2)
-        kc.delete_key_by_fingerprint(seed_key_2.get_public_key().get_fingerprint())
+        seed_key_2 = PrivateKey.from_seed(seed_2)
+        kc.delete_key_by_fingerprint(seed_key_2.get_g1().get_fingerprint())
         assert kc._get_free_private_key_index() == 1
         assert len(kc.get_all_private_keys()) == 1
 

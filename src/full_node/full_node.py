@@ -10,6 +10,7 @@ from typing import AsyncGenerator, Dict, List, Optional, Tuple, Callable
 import aiosqlite
 from chiabip158 import PyBIP158
 from chiapos import Verifier
+from blspy import G2Element, AugSchemeMPL
 
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 from src.consensus.constants import ConsensusConstants
@@ -34,7 +35,6 @@ from src.protocols.wallet_protocol import GeneratorResponse
 from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
-from src.types.BLSSignature import BLSSignature
 from src.types.challenge import Challenge
 from src.types.coin import Coin, hash_coin_list
 from src.types.full_block import FullBlock
@@ -240,7 +240,7 @@ class FullNode:
                 Message("new_unfinished_block", unfinished_block_msg),
                 delivery,
             )
-            return
+            break
         for challenge_msg in challenge_requests:
             yield OutboundMessage(
                 NodeType.TIMELORD, Message("challenge_start", challenge_msg), delivery
@@ -1203,11 +1203,11 @@ class FullNode:
         Creates a block body and header, with the proof of space, coinbase, and fee targets provided
         by the farmer, and sends the hash of the header data back to the farmer.
         """
-        plot_seed: bytes32 = request.proof_of_space.get_plot_seed()
+        plot_id: bytes32 = request.proof_of_space.get_plot_id()
 
         # Checks that the proof of space is valid
         quality_string: bytes = Verifier().validate_proof(
-            plot_seed,
+            plot_id,
             request.proof_of_space.size,
             request.challenge_hash,
             bytes(request.proof_of_space.proof),
@@ -1241,13 +1241,13 @@ class FullNode:
                 SpendBundle
             ] = await self.mempool_manager.create_bundle_for_tip(target_tip)
         spend_bundle_fees = 0
-        aggregate_sig: BLSSignature = BLSSignature(bytes(request.pool_target_signature))
+        aggregate_sig: G2Element = request.pool_target_signature
         solution_program: Optional[Program] = None
 
         if spend_bundle:
             solution_program = best_solution_program(spend_bundle)
             spend_bundle_fees = spend_bundle.fees()
-            aggregate_sig = BLSSignature.aggregate(
+            aggregate_sig = AugSchemeMPL.aggregate(
                 [spend_bundle.aggregated_signature, aggregate_sig]
             )
 

@@ -19,11 +19,11 @@ export async function hash_header(header) {
   buf = buf.concat(
     big_int_to_array(BigInt(header.data.pool_target.max_height), 4)
   );
-  buf = buf.concat(hex_to_array(header.data.aggregated_signature.sig));
+  buf = buf.concat(hex_to_array(header.data.aggregated_signature));
   buf = buf.concat(big_int_to_array(BigInt(header.data.cost), 8));
   buf = buf.concat(hex_to_array(header.data.extension_data));
   buf = buf.concat(hex_to_array(header.data.generator_hash));
-  buf = buf.concat(hex_to_array(header.harvester_signature));
+  buf = buf.concat(hex_to_array(header.plot_signature));
 
   let hash = await sha256(buf);
   return arr_to_hex(hash);

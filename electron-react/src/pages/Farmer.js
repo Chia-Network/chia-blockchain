@@ -386,7 +386,7 @@ const Plots = props => {
                 <TableRow>
                   <TableCell>Filename</TableCell>
                   <TableCell align="right">Size</TableCell>
-                  <TableCell align="right">Plot seed</TableCell>
+                  <TableCell align="right">Plot id</TableCell>
                   <TableCell align="right">Plot pk</TableCell>
                   <TableCell align="right">Pool pk</TableCell>
                   <TableCell align="right">Delete</TableCell>

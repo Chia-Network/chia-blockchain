@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List
 
-from blspy import PublicKey, InsecureSignature
+from blspy import G1Element, G2Element
 
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
@@ -17,8 +17,8 @@ Protocol between harvester and farmer.
 @dataclass(frozen=True)
 @cbor_message
 class HarvesterHandshake:
-    farmer_public_keys: List[PublicKey]
-    pool_public_keys: List[PublicKey]
+    farmer_public_keys: List[G1Element]
+    pool_public_keys: List[G1Element]
 
 
 @dataclass(frozen=True)
@@ -65,6 +65,6 @@ class RequestSignature:
 class RespondSignature:
     plot_id: str
     message: bytes32
-    harvester_pk: PublicKey
-    farmer_pk: PublicKey
-    message_signature: InsecureSignature
+    local_pk: G1Element
+    farmer_pk: G1Element
+    message_signature: G2Element
