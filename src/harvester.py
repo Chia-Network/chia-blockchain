@@ -1,11 +1,11 @@
 import logging
 import asyncio
 from pathlib import Path
-from typing import Dict, Optional, Tuple, List, Callable
+from typing import Dict, Optional, Tuple, List, Callable, Set
 import time
 import concurrent
 
-from blspy import PublicKey, Util, InsecureSignature
+from blspy import G1Element, G2Element, AugSchemeMPL
 
 from chiapos import DiskProver
 from src.protocols import harvester_protocol
@@ -24,10 +24,10 @@ log = logging.getLogger(__name__)
 class Harvester:
     config: Dict
     provers: Dict[Path, PlotInfo]
-    failed_to_open_filenames: List[Path]
-    no_key_filenames: List[Path]
-    farmer_public_keys: List[PublicKey]
-    pool_public_keys: List[PublicKey]
+    failed_to_open_filenames: Set[Path]
+    no_key_filenames: Set[Path]
+    farmer_public_keys: List[G1Element]
+    pool_public_keys: List[G1Element]
     cached_challenges: List[harvester_protocol.NewChallenge]
     root_path: Path
     _is_shutdown: bool
@@ -41,8 +41,8 @@ class Harvester:
 
         # From filename to prover
         self.provers = {}
-        self.failed_to_open_filenames = []
-        self.no_key_filenames = []
+        self.failed_to_open_filenames = set()
+        self.no_key_filenames = set()
 
         self._is_shutdown = False
         self.global_connections: Optional[PeerConnections] = None
@@ -87,7 +87,7 @@ class Harvester:
                     "pool_public_key": plot_info.pool_public_key,
                     "farmer_public_key": plot_info.farmer_public_key,
                     "plot_public_key": plot_info.plot_public_key,
-                    "harvester_sk": plot_info.harvester_sk,
+                    "local_sk": plot_info.local_sk,
                     "file_size": plot_info.file_size,
                     "time_modified": plot_info.time_modified,
                 }
@@ -108,6 +108,7 @@ class Harvester:
                 self.no_key_filenames,
             ) = load_plots(
                 self.provers,
+                self.failed_to_open_filenames,
                 self.farmer_public_keys,
                 self.pool_public_keys,
                 self.root_path,
@@ -248,7 +249,7 @@ class Harvester:
                     Delivery.RESPOND,
                 )
         log.info(
-            f"Time taken to lookup qualities in {len(awaitables)} plots: {time.time() - start}. "
+            f"{len(awaitables)} plots were eligible for farming for this challenge, time: {time.time() - start}. "
             f"Total {len(self.provers)} plots"
         )
 
@@ -278,7 +279,7 @@ class Harvester:
                     plot_info.pool_public_key,
                     plot_info.farmer_public_key,
                     plot_info.plot_public_key,
-                    plot_info.harvester_sk,
+                    plot_info.local_sk,
                     plot_info.file_size,
                     plot_info.time_modified,
                 )
@@ -290,7 +291,7 @@ class Harvester:
 
         plot_info = self.provers[filename]
         plot_public_key = ProofOfSpace.generate_plot_public_key(
-            plot_info.harvester_sk.get_public_key(), plot_info.farmer_public_key
+            plot_info.local_sk.get_g1(), plot_info.farmer_public_key
         )
 
         proof_of_space: ProofOfSpace = ProofOfSpace(
@@ -319,20 +320,19 @@ class Harvester:
         """
         plot_info = self.provers[Path(request.plot_id).resolve()]
 
-        harvester_sk = plot_info.harvester_sk
+        local_sk = plot_info.local_sk
         agg_pk = ProofOfSpace.generate_plot_public_key(
-            harvester_sk.get_public_key(), plot_info.farmer_public_key
+            local_sk.get_g1(), plot_info.farmer_public_key
         )
-        new_m = bytes(agg_pk) + Util.hash256(request.message)
 
         # This is only a partial signature. When combined with the farmer's half, it will
         # form a complete PrependSignature.
-        signature: InsecureSignature = harvester_sk.sign_insecure(new_m)
+        signature: G2Element = AugSchemeMPL.sign(local_sk, request.message, agg_pk)
 
         response: harvester_protocol.RespondSignature = harvester_protocol.RespondSignature(
             request.plot_id,
             request.message,
-            harvester_sk.get_public_key(),
+            local_sk.get_g1(),
             plot_info.farmer_public_key,
             signature,
         )

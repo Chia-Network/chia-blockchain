@@ -1,10 +1,11 @@
 import asyncio
 import time
 from pathlib import Path
+from secrets import token_bytes
 
 import aiosqlite
 import pytest
-from blspy import PrivateKey
+from blspy import PrivateKey, AugSchemeMPL
 
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.types.full_block import FullBlock
@@ -14,7 +15,6 @@ from src.util.ints import uint8, uint64, uint32
 from src.util.errors import Err
 from src.types.sized_bytes import bytes32
 from src.types.pool_target import PoolTarget
-from src.types.BLSSignature import BLSSignature
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.consensus.find_fork_point import find_fork_point_in_chain
@@ -107,7 +107,7 @@ class TestBlockValidation:
                     blocks[9].header.data.extension_data,
                     blocks[9].header.data.generator_hash,
                 ),
-                blocks[9].header.harvester_signature,
+                blocks[9].header.plot_signature,
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
@@ -245,7 +245,9 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 blocks[9].header.data,
-                PrivateKey.from_seed(b"0").sign_prepend(b"random junk"),
+                AugSchemeMPL.sign(
+                    PrivateKey.from_seed(bytes([5] * 32)), token_bytes(32)
+                ),
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
@@ -416,7 +418,7 @@ class TestBlockValidation:
             blocks[9].header.data.farmer_rewards_puzzle_hash,
             blocks[9].header.data.total_transaction_fees,
             pool_target,
-            BLSSignature(bytes(agg_sig)),
+            agg_sig,
             blocks[9].header.data.cost,
             blocks[9].header.data.extension_data,
             blocks[9].header.data.generator_hash,
@@ -462,7 +464,7 @@ class TestBlockValidation:
             blocks[9].header.data.farmer_rewards_puzzle_hash,
             blocks[9].header.data.total_transaction_fees,
             blocks[9].header.data.pool_target,
-            BLSSignature(bytes(agg_sig)),
+            agg_sig,
             blocks[9].header.data.cost,
             blocks[9].header.data.extension_data,
             blocks[9].header.data.generator_hash,

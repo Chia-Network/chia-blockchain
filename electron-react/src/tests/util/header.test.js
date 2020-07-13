@@ -57,7 +57,7 @@ describe("header", () => {
           total_iters: "168608294357",
           weight: "3520789508784128"
         },
-        harvester_signature:
+        plot_signature:
           "0x53d04fa0ee31bdc249e6db50161a6dc09d1c48ad011533b10a3eda25eb456a8b3562a1509b97f1931e334d5ed8ec6593133ecbbec5c423b733ea3cdfccc3022a7c09b0fc87fd4d0fd6cbfbedbb69d9fd43aab5c07e3452cb1f91524678340b50"
       });
 

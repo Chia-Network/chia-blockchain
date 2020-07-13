@@ -506,23 +506,23 @@ class WalletRpcApi:
 
     async def get_public_keys(self, request: Dict):
         fingerprints = [
-            (esk.get_public_key().get_fingerprint(), seed is not None)
-            for (esk, seed) in self.service.keychain.get_all_private_keys()
+            (sk.get_g1().get_fingerprint(), seed is not None)
+            for (sk, seed) in self.service.keychain.get_all_private_keys()
         ]
         response = {"success": True, "public_key_fingerprints": fingerprints}
         return response
 
     async def get_private_key(self, request):
         fingerprint = request["fingerprint"]
-        for esk, seed in self.service.keychain.get_all_private_keys():
-            if esk.get_public_key().get_fingerprint() == fingerprint:
+        for sk, seed in self.service.keychain.get_all_private_keys():
+            if sk.get_g1().get_fingerprint() == fingerprint:
                 s = bytes_to_mnemonic(seed) if seed is not None else None
                 return {
                     "success": True,
                     "private_key": {
                         "fingerprint": fingerprint,
-                        "esk": bytes(esk).hex(),
-                        "epk": bytes(esk.get_extended_public_key()).hex(),
+                        "sk": bytes(sk).hex(),
+                        "pk": bytes(sk.get_g1()).hex(),
                         "seed": s,
                     },
                 }
@@ -542,11 +542,11 @@ class WalletRpcApi:
             mnemonic = request["mnemonic"]
             entropy = bytes_from_mnemonic(mnemonic)
             passphrase = ""
-            esk = self.service.keychain.add_private_key(entropy, passphrase)
+            sk = self.service.keychain.add_private_key(entropy, passphrase)
         else:
             return {"success": False}
 
-        fingerprint = esk.get_public_key().get_fingerprint()
+        fingerprint = sk.get_g1().get_fingerprint()
         await self.stop_wallet()
 
         # Makes sure the new key is added to config properly

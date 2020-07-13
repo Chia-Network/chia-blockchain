@@ -7,7 +7,7 @@ from pathlib import Path
 import random
 import logging
 import traceback
-from blspy import ExtendedPrivateKey
+from blspy import PrivateKey
 
 from src.full_node.full_node import OutboundMessageGenerator
 from src.types.peer_info import PeerInfo
@@ -121,10 +121,10 @@ class WalletNode:
             )
             return False
 
-        private_key: Optional[ExtendedPrivateKey] = None
+        private_key: Optional[PrivateKey] = None
         if public_key_fingerprint is not None:
             for sk, _ in private_keys:
-                if sk.get_public_key().get_fingerprint() == public_key_fingerprint:
+                if sk.get_g1().get_fingerprint() == public_key_fingerprint:
                     private_key = sk
                     break
         else:
@@ -133,7 +133,7 @@ class WalletNode:
         if private_key is None:
             raise RuntimeError("Invalid fingerprint {public_key_fingerprint}")
 
-        db_path_key_suffix = str(private_key.get_public_key().get_fingerprint())
+        db_path_key_suffix = str(private_key.get_g1().get_fingerprint())
         path = path_from_root(
             self.root_path, f"{self.config['database_path']}-{db_path_key_suffix}"
         )

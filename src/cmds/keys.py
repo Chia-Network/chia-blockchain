@@ -6,7 +6,12 @@ from src.util.keychain import (
     Keychain,
     bytes_from_mnemonic,
 )
-from src.types.BLSSignature import BLSPublicKey
+from src.wallet.derive_keys import (
+    master_sk_to_pool_sk,
+    master_sk_to_farmer_sk,
+    master_sk_to_wallet_sk,
+)
+from src.util.ints import uint32
 from src.consensus.coinbase import create_puzzlehash_for_pk
 
 command_list = [
@@ -99,8 +104,8 @@ def add_private_key_seed(mnemonic):
     try:
         entropy = bytes_from_mnemonic(mnemonic)
         passphrase = ""
-        esk = keychain.add_private_key(entropy, passphrase)
-        fingerprint = esk.get_public_key().get_fingerprint()
+        sk = keychain.add_private_key(entropy, passphrase)
+        fingerprint = sk.get_g1().get_fingerprint()
         print(
             f"Added private key with public key fingerprint {fingerprint} and mnemonic"
         )
@@ -139,23 +144,29 @@ def show_all_keys():
     print("Showing all private keys:")
     for sk, seed in private_keys:
         print("")
-        print("Fingerprint:", sk.get_public_key().get_fingerprint())
-        print("Extended Public key:", sk.get_extended_public_key())
-        print("Public key:", sk.get_public_key())
-        addr = create_puzzlehash_for_pk(
-            BLSPublicKey(sk.public_child(0).get_public_key())
-        ).hex()
-        print("First address:", addr)
-        print("Extended private key:", bytes(sk).hex())
-        if seed is not None:
-            mnemonic = bytes_to_mnemonic(seed)
-            mnemonic_string = mnemonic_to_string(mnemonic)
-            print("Mnemonic seed:")
-            print(mnemonic_string)
-        else:
-            print(
-                "There is no mnemonic for this key, since it was imported without a seed. (Or migrated from keys.yaml)."
-            )
+        print("Fingerprint:", sk.get_g1().get_fingerprint())
+        print("Master public key (m):", sk.get_g1())
+        print("Master private key (m):", bytes(sk).hex())
+        print(
+            "Farmer public key (m/12381/8444/0/0)::",
+            master_sk_to_farmer_sk(sk).get_g1(),
+        )
+        print("Pool public key (m/12381/8444/1/0):", master_sk_to_pool_sk(sk).get_g1())
+        print(
+            "First wallet key (m/12381/8444/2/0):",
+            master_sk_to_wallet_sk(sk, uint32(0)).get_g1(),
+        )
+        print(
+            "First wallet address:",
+            create_puzzlehash_for_pk(
+                master_sk_to_wallet_sk(sk, uint32(0)).get_g1()
+            ).hex(),
+        )
+        assert seed is not None
+        mnemonic = bytes_to_mnemonic(seed)
+        mnemonic_string = mnemonic_to_string(mnemonic)
+        print("  Mnemonic seed:")
+        print(mnemonic_string)
 
 
 def delete(args):

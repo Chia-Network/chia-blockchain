@@ -5,6 +5,7 @@ import logging
 
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
+from blspy import G1Element, G2Element, AugSchemeMPL
 
 from src.consensus.constants import ConsensusConstants
 from src.types.condition_opcodes import ConditionOpcode
@@ -22,7 +23,7 @@ from src.full_node.coin_store import CoinStore
 from src.util.errors import Err
 from src.util.cost_calculator import calculate_cost_of_program
 from src.util.mempool_check_conditions import mempool_check_conditions_dict
-from src.util.condition_tools import hash_key_pairs_for_conditions_dict
+from src.util.condition_tools import pkm_pairs_for_conditions_dict
 from src.util.ints import uint64, uint32
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from sortedcontainers import SortedDict
@@ -277,7 +278,8 @@ class MempoolManager:
                 continue
 
             # Verify conditions, create hash_key list for aggsig check
-            hash_key_pairs = []
+            pks: List[G1Element] = []
+            msgs: List[G2Element] = []
             error: Optional[Err] = None
             for npc in npc_list:
                 coin_record: CoinRecord = removal_record_dict[npc.coin_name]
@@ -303,17 +305,21 @@ class MempoolManager:
                         potential_error = error
                     break
 
-                hash_key_pairs.extend(
-                    hash_key_pairs_for_conditions_dict(
-                        npc.condition_dict, npc.coin_name
-                    )
-                )
+                for pk, m in pkm_pairs_for_conditions_dict(
+                    npc.condition_dict, npc.coin_name
+                ):
+                    pks.append(pk)
+                    msgs.append(m)
+
             if error:
                 errors.append(error)
                 continue
 
             # Verify aggregated signature
-            if not new_spend.aggregated_signature.validate(hash_key_pairs):
+            validates = AugSchemeMPL.agg_verify(
+                pks, msgs, new_spend.aggregated_signature
+            )
+            if not validates:
                 return None, MempoolInclusionStatus.FAILED, Err.BAD_AGGREGATE_SIGNATURE
 
             # Remove all conflicting Coins and SpendBundles

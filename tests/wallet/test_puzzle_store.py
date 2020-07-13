@@ -36,7 +36,7 @@ class TestPuzzleStore:
                     DerivationRecord(
                         uint32(i),
                         token_bytes(32),
-                        PrivateKey.from_seed(token_bytes(5)).get_public_key(),
+                        PrivateKey.from_seed(token_bytes(32)).get_g1(),
                         WalletType.STANDARD_WALLET,
                         uint32(1),
                     )
@@ -45,7 +45,7 @@ class TestPuzzleStore:
                     DerivationRecord(
                         uint32(i),
                         token_bytes(32),
-                        PrivateKey.from_seed(token_bytes(5)).get_public_key(),
+                        PrivateKey.from_seed(token_bytes(32)).get_g1(),
                         WalletType.RATE_LIMITED,
                         uint32(2),
                     )

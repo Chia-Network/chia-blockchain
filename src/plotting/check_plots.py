@@ -1,11 +1,12 @@
 import logging
 from chiapos import Verifier
 from collections import Counter
-from blspy import PublicKey
+from blspy import G1Element
 from src.util.keychain import Keychain
 from src.util.config import load_config
 from src.plotting.plot_tools import load_plots
 from src.util.hash import std_hash
+from src.wallet.derive_keys import master_sk_to_farmer_sk
 
 
 log = logging.getLogger(__name__)
@@ -21,13 +22,13 @@ def check_plots(args, root_path):
     v = Verifier()
     log.info("Loading plots in config.yaml using plot_tools loading code\n")
     kc: Keychain = Keychain()
-    pks = [epk.public_child(0).get_public_key() for epk in kc.get_all_public_keys()]
+    pks = [master_sk_to_farmer_sk(sk).get_g1() for sk, _ in kc.get_all_private_keys()]
     pool_public_keys = [
-        PublicKey.from_bytes(bytes.fromhex(pk))
+        G1Element.from_bytes(bytes.fromhex(pk))
         for pk in config["farmer"]["pool_public_keys"]
     ]
     _, provers, failed_to_open_filenames, no_key_filenames = load_plots(
-        {}, pks, pool_public_keys, root_path, open_no_key_filenames=True,
+        {}, set(), pks, pool_public_keys, root_path, open_no_key_filenames=True,
     )
     if len(provers) > 0:
         log.info("")
@@ -42,7 +43,7 @@ def check_plots(args, root_path):
         log.info(f"Testing plot {plot_path} k={pr.get_size()}")
         log.info(f"\tPool public key: {plot_info.pool_public_key}")
         log.info(f"\tFarmer public key: {plot_info.farmer_public_key}")
-        log.info(f"\tHarvester sk: {plot_info.harvester_sk}")
+        log.info(f"\tLocal sk: {plot_info.local_sk}")
         total_proofs = 0
         try:
             for i in range(num):

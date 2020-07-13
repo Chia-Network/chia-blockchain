@@ -3,7 +3,7 @@ import time
 
 import clvm
 from typing import Dict, Optional, List, Any, Set
-from src.types.BLSSignature import BLSSignature
+from blspy import G2Element, AugSchemeMPL
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.condition_opcodes import ConditionOpcode
@@ -13,11 +13,10 @@ from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
 from src.util.condition_tools import (
     conditions_dict_for_solution,
-    hash_key_pairs_for_conditions_dict,
+    pkm_pairs_for_conditions_dict,
 )
 from src.util.json_util import dict_to_json_str
 from src.util.ints import uint64, uint32
-from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.block_record import BlockRecord
 from src.wallet.cc_wallet.cc_info import CCInfo
 from src.wallet.cc_wallet.cc_wallet_puzzles import (
@@ -616,19 +615,16 @@ class CCWallet:
             self.log.info(f"Successfully selected coins: {used_coins}")
             return used_coins
 
-    async def get_sigs(
-        self, innerpuz: Program, innersol: Program
-    ) -> List[BLSSignature]:
+    async def get_sigs(self, innerpuz: Program, innersol: Program) -> List[G2Element]:
         puzzle_hash = innerpuz.get_tree_hash()
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
-        private = BLSPrivateKey(private)
-        sigs: List[BLSSignature] = []
+        sigs: List[G2Element] = []
         code_ = [innerpuz, innersol]
         sexp = Program.to(code_)
         error, conditions, cost = conditions_dict_for_solution(sexp)
         if conditions is not None:
-            for _ in hash_key_pairs_for_conditions_dict(conditions):
-                signature = private.sign(_.message_hash)
+            for _, msg in pkm_pairs_for_conditions_dict(conditions):
+                signature = AugSchemeMPL.sign(private, msg)
                 sigs.append(signature)
         return sigs
 
@@ -655,7 +651,7 @@ class CCWallet:
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
     ) -> Optional[TransactionRecord]:
-        sigs: List[BLSSignature] = []
+        sigs: List[G2Element] = []
 
         # Get coins and calculate amount of change required
         if coins is None:
@@ -784,7 +780,7 @@ class CCWallet:
             list_of_solutions.append(create_spend_for_ephemeral(coin, auditor, 0))
             list_of_solutions.append(create_spend_for_auditor(auditor, coin))
 
-        aggsig = BLSSignature.aggregate(sigs)
+        aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
 
         tx_record = TransactionRecord(
@@ -887,7 +883,7 @@ class CCWallet:
         # Loop through coins and create solution for innerpuzzle
         list_of_solutions = []
         output_created = None
-        sigs: List[BLSSignature] = []
+        sigs: List[G2Element] = []
         for coin in cc_spends:
             if output_created is None:
                 newinnerpuzhash = await self.get_new_inner_hash()
@@ -931,7 +927,7 @@ class CCWallet:
             )
             sigs = sigs + await self.get_sigs(innerpuz, innersol)
 
-        aggsig = BLSSignature.aggregate(sigs)
+        aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
         return spend_bundle
 

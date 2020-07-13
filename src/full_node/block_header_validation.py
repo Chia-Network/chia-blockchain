@@ -46,10 +46,12 @@ async def validate_unfinished_block_header(
         # TODO: change numbers
 
         # 3. Check harvester signature of header data is valid based on harvester key
-        if not block_header.harvester_signature.verify(
-            [blspy.Util.hash256(block_header.data.get_hash())],
-            [proof_of_space.plot_public_key],
-        ):
+        validates = blspy.AugSchemeMPL.verify(
+            proof_of_space.plot_public_key,
+            block_header.data.get_hash(),
+            block_header.plot_signature,
+        )
+        if not validates:
             return (Err.INVALID_PLOT_SIGNATURE, None)
 
     # 4. If not genesis, the previous block must exist
@@ -236,10 +238,12 @@ def pre_validate_finished_block_header(constants: ConsensusConstants, data: byte
         return False, None
 
     # 9. Check harvester signature of header data is valid based on harvester key
-    if not block.header.harvester_signature.verify(
-        [blspy.Util.hash256(block.header.data.get_hash())],
-        [block.proof_of_space.plot_public_key],
-    ):
+    validates = blspy.AugSchemeMPL.verify(
+        block.proof_of_space.plot_public_key,
+        block.header.data.get_hash(),
+        block.header.plot_signature,
+    )
+    if not validates:
         return False, None
 
     # 10. Check proof of space based on challenge

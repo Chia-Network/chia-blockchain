@@ -9,7 +9,7 @@ import keyring as keyring_main
 import pkg_resources
 
 from bitstring import BitArray
-from blspy import ExtendedPrivateKey, ExtendedPublicKey
+from blspy import PrivateKey, G1Element
 from keyrings.cryptfile.cryptfile import CryptFileKeyring
 from src.util.hash import std_hash
 
@@ -96,9 +96,9 @@ def entropy_to_seed(entropy: bytes, passphrase):
 
 class Keychain:
     """
-    The keychain stores two types of keys: private keys, which are ExtendedPrivateKeys from blspy,
+    The keychain stores two types of keys: private keys, which are PrivateKeys from blspy,
     and private key seeds, which are bytes objects that are used as a seed to construct
-    ExtendedPrivateKeys. Private key seeds are converted to mnemonics when shown to users.
+    PrivateKeys. Private key seeds are converted to mnemonics when shown to users.
 
     Both types of keys are stored as hex strings in the python keyring, and the implementation of
     the keyring depends on OS. Both types of keys can be added, and get_private_keys returns a
@@ -108,7 +108,7 @@ class Keychain:
     testing: bool
     user: str
 
-    def __init__(self, user: str = "user-1.8", testing: bool = False):
+    def __init__(self, user: str = "user-1.8.0", testing: bool = False):
         self.testing = testing
         self.user = user
 
@@ -121,20 +121,20 @@ class Keychain:
         else:
             return f"chia-{self.user}"
 
-    def _get_pk_and_entropy(
-        self, user: str
-    ) -> Optional[Tuple[ExtendedPublicKey, bytes]]:
+    def _get_pk_and_entropy(self, user: str) -> Optional[Tuple[G1Element, bytes]]:
         """
         Returns the keychain conntents for a specific 'user' (key index). The contents
-        include an ExtendedPublicKey and the entropy required to generate the private key.
+        include an G1Element and the entropy required to generate the private key.
         Note that generating the actual private key also requires the passphrase.
         """
-        epks = ExtendedPublicKey.EXTENDED_PUBLIC_KEY_SIZE
         read_str = keyring.get_password(self._get_service(), user)
         if read_str is None or len(read_str) == 0:
             return None
         str_bytes = bytes.fromhex(read_str)
-        return (ExtendedPublicKey.from_bytes(str_bytes[:epks]), str_bytes[epks:])
+        return (
+            G1Element.from_bytes(str_bytes[: G1Element.SIZE]),
+            str_bytes[G1Element.SIZE :],
+        )
 
     def _get_private_key_user(self, index: int):
         """
@@ -147,41 +147,41 @@ class Keychain:
 
     def _get_free_private_key_index(self) -> int:
         """
-        Get the index of the first free spot  in the keychain.
+        Get the index of the first free spot in the keychain.
         """
         index = 0
         while True:
-            pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
+            pk = self._get_private_key_user(index)
+            pkent = self._get_pk_and_entropy(pk)
             if pkent is None:
                 return index
             index += 1
 
-    def add_private_key(self, entropy: bytes, passphrase: str) -> ExtendedPrivateKey:
+    def add_private_key(self, entropy: bytes, passphrase: str) -> PrivateKey:
         """
         Adds a private key to the keychain, with the given entropy and passphrase. The
-        keychain itself will store the extended public key, and the entropy bytes,
+        keychain itself will store the public key, and the entropy bytes,
         but not the passphrase.
         """
         seed = entropy_to_seed(entropy, passphrase)
         index = self._get_free_private_key_index()
-        key = ExtendedPrivateKey.from_seed(seed)
-        fingerprint = key.get_public_key().get_fingerprint()
-        if fingerprint in [
-            epk.get_public_key().get_fingerprint() for epk in self.get_all_public_keys()
-        ]:
+        key = PrivateKey.from_seed(seed)
+        fingerprint = key.get_g1().get_fingerprint()
+
+        if fingerprint in [pk.get_fingerprint() for pk in self.get_all_public_keys()]:
             # Prevents duplicate add
             return key
 
         keyring.set_password(
             self._get_service(),
             self._get_private_key_user(index),
-            bytes(key.get_extended_public_key()).hex() + entropy.hex(),
+            bytes(key.get_g1()).hex() + entropy.hex(),
         )
         return key
 
     def get_first_private_key(
         self, passphrases: List[str] = [""]
-    ) -> Optional[Tuple[ExtendedPrivateKey, Optional[bytes]]]:
+    ) -> Optional[Tuple[PrivateKey, bytes]]:
         """
         Returns the first key in the keychain that has one of the passed in passphrases.
         """
@@ -189,11 +189,11 @@ class Keychain:
         pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
         while index <= MAX_KEYS:
             if pkent is not None:
-                epk, ent = pkent
+                pk, ent = pkent
                 for pp in passphrases:
                     seed = entropy_to_seed(ent, pp)
-                    key = ExtendedPrivateKey.from_seed(seed)
-                    if key.get_extended_public_key() == epk:
+                    key = PrivateKey.from_seed(seed)
+                    if key.get_g1() == pk:
                         return (key, ent)
             index += 1
             pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
@@ -201,53 +201,53 @@ class Keychain:
 
     def get_all_private_keys(
         self, passphrases: List[str] = [""]
-    ) -> List[Tuple[ExtendedPrivateKey, bytes]]:
+    ) -> List[Tuple[PrivateKey, bytes]]:
         """
         Returns all private keys which can be retrieved, with the given passphrases.
         A tuple of key, and entropy bytes (i.e. mnemonic) is returned for each key.
         """
-        all_keys: List[Tuple[ExtendedPrivateKey, bytes]] = []
+        all_keys: List[Tuple[PrivateKey, bytes]] = []
 
         index = 0
         pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
         while index <= MAX_KEYS:
             if pkent is not None:
-                epk, ent = pkent
+                pk, ent = pkent
                 for pp in passphrases:
                     seed = entropy_to_seed(ent, pp)
-                    key = ExtendedPrivateKey.from_seed(seed)
-                    if key.get_extended_public_key() == epk:
+                    key = PrivateKey.from_seed(seed)
+                    if key.get_g1() == pk:
                         all_keys.append((key, ent))
             index += 1
             pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
         return all_keys
 
-    def get_all_public_keys(self) -> List[ExtendedPublicKey]:
+    def get_all_public_keys(self) -> List[G1Element]:
         """
-        Returns all extended public keys.
+        Returns all public keys.
         """
-        all_keys: List[Tuple[ExtendedPublicKey, bytes]] = []
+        all_keys: List[Tuple[G1Element, bytes]] = []
 
         index = 0
         pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
         while index <= MAX_KEYS:
             if pkent is not None:
-                epk, ent = pkent
-                all_keys.append(epk)
+                pk, ent = pkent
+                all_keys.append(pk)
             index += 1
             pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
         return all_keys
 
-    def get_first_public_key(self) -> Optional[ExtendedPublicKey]:
+    def get_first_public_key(self) -> Optional[G1Element]:
         """
-        Returns the first extended public key.
+        Returns the first public key.
         """
         index = 0
         pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
         while index <= MAX_KEYS:
             if pkent is not None:
-                epk, ent = pkent
-                return epk
+                pk, ent = pkent
+                return pk
             index += 1
             pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
         return None
@@ -261,8 +261,8 @@ class Keychain:
         pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
         while index <= MAX_KEYS:
             if pkent is not None:
-                epk, ent = pkent
-                if epk.get_public_key().get_fingerprint() == fingerprint:
+                pk, ent = pkent
+                if pk.get_fingerprint() == fingerprint:
                     keyring.delete_password(
                         self._get_service(), self._get_private_key_user(index)
                     )

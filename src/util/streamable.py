@@ -10,16 +10,7 @@ from src.util.byte_types import hexstr_to_bytes
 from src.types.program import Program
 from src.util.hash import std_hash
 
-from blspy import (
-    ChainCode,
-    ExtendedPrivateKey,
-    ExtendedPublicKey,
-    InsecureSignature,
-    PrependSignature,
-    PrivateKey,
-    PublicKey,
-    Signature,
-)
+from blspy import PrivateKey, G1Element, G2Element
 
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64, int64, uint128, int512
@@ -35,23 +26,13 @@ pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
 # TODO: Remove hack, this allows streaming these objects from binary
 size_hints = {
     "PrivateKey": PrivateKey.PRIVATE_KEY_SIZE,
-    "PublicKey": PublicKey.PUBLIC_KEY_SIZE,
-    "Signature": Signature.SIGNATURE_SIZE,
-    "InsecureSignature": InsecureSignature.SIGNATURE_SIZE,
-    "PrependSignature": PrependSignature.SIGNATURE_SIZE,
-    "ExtendedPublicKey": ExtendedPublicKey.EXTENDED_PUBLIC_KEY_SIZE,
-    "ExtendedPrivateKey": ExtendedPrivateKey.EXTENDED_PRIVATE_KEY_SIZE,
-    "ChainCode": ChainCode.CHAIN_CODE_KEY_SIZE,
+    "G1Element": G1Element.SIZE,
+    "G2Element": G2Element.SIZE,
 }
 unhashable_types = [
     PrivateKey,
-    PublicKey,
-    Signature,
-    PrependSignature,
-    InsecureSignature,
-    ExtendedPublicKey,
-    ExtendedPrivateKey,
-    ChainCode,
+    G1Element,
+    G2Element,
     Program,
 ]
 # JSON does not support big ints, so these types must be serialized differently in JSON

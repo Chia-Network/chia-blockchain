@@ -7,7 +7,6 @@ from clvm.casts import int_to_bytes
 
 from src.server.outbound_message import OutboundMessage
 from src.protocols import full_node_protocol
-from src.types.BLSSignature import BLSSignature
 from src.types.coin_solution import CoinSolution
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
@@ -16,7 +15,7 @@ from src.types.spend_bundle import SpendBundle
 from src.util.condition_tools import (
     conditions_for_solution,
     conditions_by_opcode,
-    hash_key_pairs_for_conditions_dict,
+    pkm_pairs_for_conditions_dict,
 )
 from src.util.ints import uint64
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
@@ -864,13 +863,10 @@ class TestMempool:
         assert con is not None
 
         conditions_dict = conditions_by_opcode(con)
-        hash_key_pairs = hash_key_pairs_for_conditions_dict(
-            conditions_dict, solution.coin.name()
-        )
-        assert len(hash_key_pairs) == 1
+        pkm_pairs = pkm_pairs_for_conditions_dict(conditions_dict, solution.coin.name())
+        assert len(pkm_pairs) == 1
 
-        pk_pair: BLSSignature.PkMessagePair = hash_key_pairs[0]
-        assert pk_pair.message_hash == solution.solution.first().get_tree_hash()
+        assert pkm_pairs[0][1] == solution.solution.first().get_tree_hash()
 
         spend_bundle = wallet_a.sign_transaction(unsigned)
         assert spend_bundle is not None

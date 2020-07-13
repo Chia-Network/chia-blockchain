@@ -8,12 +8,13 @@ from src.util.condition_tools import (
 from src.wallet.puzzles import p2_delegated_puzzle
 from src.wallet.puzzles.puzzle_utils import make_create_coin_condition
 from tests.keys import puzzle_program_for_index
+from src.util.ints import uint32
 
 
 def test_1():
-    puzzle_program_0 = puzzle_program_for_index(0)
-    puzzle_program_1 = puzzle_program_for_index(1)
-    puzzle_program_2 = puzzle_program_for_index(2)
+    puzzle_program_0 = puzzle_program_for_index(uint32(0))
+    puzzle_program_1 = puzzle_program_for_index(uint32(1))
+    puzzle_program_2 = puzzle_program_for_index(uint32(2))
 
     conditions = [
         make_create_coin_condition(std_hash(bytes(pp)), amount)
