@@ -12,6 +12,7 @@ from src.wallet.derive_keys import (
     master_sk_to_wallet_sk,
 )
 from src.util.ints import uint32
+from src.consensus.coinbase import create_puzzlehash_for_pk
 
 command_list = [
     "generate",
@@ -154,6 +155,12 @@ def show_all_keys():
         print(
             "First wallet key (m/12381/8444/2/0):",
             master_sk_to_wallet_sk(sk, uint32(0)).get_g1(),
+        )
+        print(
+            "First wallet address:",
+            create_puzzlehash_for_pk(
+                master_sk_to_wallet_sk(sk, uint32(0)).get_g1()
+            ).hex(),
         )
         assert seed is not None
         mnemonic = bytes_to_mnemonic(seed)

@@ -1,4 +1,4 @@
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Set
 from pathlib import Path
 from blspy import PrivateKey, G1Element
 from chiapos import DiskProver
@@ -80,14 +80,14 @@ def add_plot_directory(str_path, root_path):
 
 def load_plots(
     provers: Dict[Path, PlotInfo],
+    failed_to_open_filenames: Set[Path],
     farmer_public_keys: Optional[List[G1Element]],
     pool_public_keys: Optional[List[G1Element]],
     root_path: Path,
     open_no_key_filenames=False,
-) -> Tuple[bool, Dict[Path, PlotInfo], List[Path], List[Path]]:
+) -> Tuple[bool, Dict[Path, PlotInfo], Set[Path], Set[Path]]:
     config_file = load_config(root_path, "config.yaml", "harvester")
     changed = False
-    failed_to_open_filenames: List[Path] = []
     no_key_filenames: List[Path] = []
     log.info(f'Searching directories {config_file["plot_directories"]}')
 
@@ -103,6 +103,8 @@ def load_plots(
             if stat_info.st_mtime == provers[filename].time_modified:
                 total_size += stat_info.st_size
                 continue
+        if filename in failed_to_open_filenames:
+            continue
         if filename.exists():
             try:
                 prover = DiskProver(str(filename))
@@ -119,7 +121,7 @@ def load_plots(
                     log.warning(
                         f"Plot {filename} has a farmer public key that is not in the farmer's pk list."
                     )
-                    no_key_filenames.append(filename)
+                    no_key_filenames.add(filename)
                     if not open_no_key_filenames:
                         continue
 
@@ -130,7 +132,7 @@ def load_plots(
                     log.warning(
                         f"Plot {filename} has a pool public key that is not in the farmer's pool pk list."
                     )
-                    no_key_filenames.append(filename)
+                    no_key_filenames.add(filename)
                     if not open_no_key_filenames:
                         continue
 
@@ -153,7 +155,7 @@ def load_plots(
             except Exception as e:
                 tb = traceback.format_exc()
                 log.error(f"Failed to open file {filename}. {e} {tb}")
-                failed_to_open_filenames.append(filename)
+                failed_to_open_filenames.add(filename)
                 continue
             log.info(
                 f"Found plot {filename} of size {provers[filename].prover.get_size()}"

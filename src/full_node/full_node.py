@@ -240,7 +240,7 @@ class FullNode:
                 Message("new_unfinished_block", unfinished_block_msg),
                 delivery,
             )
-            return
+            break
         for challenge_msg in challenge_requests:
             yield OutboundMessage(
                 NodeType.TIMELORD, Message("challenge_start", challenge_msg), delivery

@@ -1,7 +1,7 @@
 import logging
 import asyncio
 from pathlib import Path
-from typing import Dict, Optional, Tuple, List, Callable
+from typing import Dict, Optional, Tuple, List, Callable, Set
 import time
 import concurrent
 
@@ -24,8 +24,8 @@ log = logging.getLogger(__name__)
 class Harvester:
     config: Dict
     provers: Dict[Path, PlotInfo]
-    failed_to_open_filenames: List[Path]
-    no_key_filenames: List[Path]
+    failed_to_open_filenames: Set[Path]
+    no_key_filenames: Set[Path]
     farmer_public_keys: List[G1Element]
     pool_public_keys: List[G1Element]
     cached_challenges: List[harvester_protocol.NewChallenge]
@@ -41,8 +41,8 @@ class Harvester:
 
         # From filename to prover
         self.provers = {}
-        self.failed_to_open_filenames = []
-        self.no_key_filenames = []
+        self.failed_to_open_filenames = set()
+        self.no_key_filenames = set()
 
         self._is_shutdown = False
         self.global_connections: Optional[PeerConnections] = None
@@ -108,6 +108,7 @@ class Harvester:
                 self.no_key_filenames,
             ) = load_plots(
                 self.provers,
+                self.failed_to_open_filenames,
                 self.farmer_public_keys,
                 self.pool_public_keys,
                 self.root_path,

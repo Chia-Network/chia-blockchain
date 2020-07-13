@@ -146,7 +146,7 @@ class BlockTools:
         if len(self.pool_pubkeys) == 0 or len(farmer_pubkeys) == 0:
             raise RuntimeError("Keys not generated. Run `chia generate keys`")
         _, self.plots, _, _ = load_plots(
-            {}, farmer_pubkeys, self.pool_pubkeys, root_path
+            {}, set(), farmer_pubkeys, self.pool_pubkeys, root_path
         )
 
     def get_plot_signature(
