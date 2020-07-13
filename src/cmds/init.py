@@ -53,19 +53,21 @@ def check_keys(new_root):
     config: Dict = load_config(new_root, "config.yaml")
     pool_child_pubkeys = [master_sk_to_pool_sk(sk).get_g1() for sk, _ in all_sks]
     all_targets = []
-    for i in range(100):
+    stop_searching_for_farmer = "xch_target_puzzle_hash" not in config["farmer"]
+    stop_searching_for_pool = "xch_target_puzzle_hash" not in config["pool"]
+    for i in range(500):
+        if stop_searching_for_farmer and stop_searching_for_pool and i > 0:
+            break
         for sk, _ in all_sks:
             all_targets.append(
                 create_puzzlehash_for_pk(
                     master_sk_to_wallet_sk(sk, uint32(i)).get_g1()
                 ).hex()
             )
-            if (
-                all_targets[-1]
-                == config["farmer"].get("xch_target_puzzle_hash")
-                == config["pool"].get("xch_target_puzzle_hash")
-            ):
-                break
+            if all_targets[-1] == config["farmer"].get("xch_target_puzzle_hash"):
+                stop_searching_for_farmer = True
+            if all_targets[-1] == config["pool"].get("xch_target_puzzle_hash"):
+                stop_searching_for_pool = True
 
     # Set the destinations
     if "xch_target_puzzle_hash" not in config["farmer"]:
@@ -74,26 +76,27 @@ def check_keys(new_root):
         )
         config["farmer"]["xch_target_puzzle_hash"] = all_targets[0]
     elif config["farmer"]["xch_target_puzzle_hash"] not in all_targets:
-        assert len(config["farmer"]["xch_target_puzzle_hash"]) == 64
         print(
             f"WARNING: farmer using a puzzle hash which we don't have the private"
-            f" keys for. Make sure you control the address "
-            f"{config['farmer']['xch_target_puzzle_hash']}"
+            f" keys for. Overriding "
+            f"{config['farmer']['xch_target_puzzle_hash']} with {all_targets[0]}"
         )
+        config["farmer"]["xch_target_puzzle_hash"] = all_targets[0]
 
-    if "pool" in config:
-        if "xch_target_puzzle_hash" not in config["pool"]:
-            print(
-                f"Setting the xch destination address for coinbase reward to {all_targets[0]}"
-            )
-            config["pool"]["xch_target_puzzle_hash"] = all_targets[0]
-        elif config["pool"]["xch_target_puzzle_hash"] not in all_targets:
-            assert len(config["pool"]["xch_target_puzzle_hash"]) == 64
-            print(
-                f"WARNING: pool using a puzzle hash which we don't have the private"
-                f" keys for. Make sure you control the address "
-                f"{config['pool']['xch_target_puzzle_hash']}"
-            )
+    if "pool" not in config:
+        config["pool"] = {}
+    if "xch_target_puzzle_hash" not in config["pool"]:
+        print(
+            f"Setting the xch destination address for coinbase reward to {all_targets[0]}"
+        )
+        config["pool"]["xch_target_puzzle_hash"] = all_targets[0]
+    elif config["pool"]["xch_target_puzzle_hash"] not in all_targets:
+        print(
+            f"WARNING: pool using a puzzle hash which we don't have the private"
+            f" keys for. Overriding "
+            f"{config['pool']['xch_target_puzzle_hash']} with {all_targets[0]}"
+        )
+        config["pool"]["xch_target_puzzle_hash"] = all_targets[0]
 
     # Set the pool pks in the farmer
     pool_pubkeys_hex = set(bytes(pk).hex() for pk in pool_child_pubkeys)
