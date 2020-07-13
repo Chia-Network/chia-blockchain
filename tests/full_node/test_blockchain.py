@@ -107,7 +107,7 @@ class TestBlockValidation:
                     blocks[9].header.data.extension_data,
                     blocks[9].header.data.generator_hash,
                 ),
-                blocks[9].header.harvester_signature,
+                blocks[9].header.plot_signature,
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,

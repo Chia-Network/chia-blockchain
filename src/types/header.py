@@ -33,7 +33,7 @@ class HeaderData(Streamable):
 @streamable
 class Header(Streamable):
     data: HeaderData
-    harvester_signature: G2Element
+    plot_signature: G2Element
 
     @property
     def height(self):

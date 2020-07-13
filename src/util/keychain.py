@@ -173,7 +173,6 @@ class Keychain:
             # Prevents duplicate add
             return key
 
-        print("adding pk", bytes(key.get_g1()).hex())
         keyring.set_password(
             self._get_service(),
             self._get_private_key_user(index),
@@ -183,7 +182,7 @@ class Keychain:
 
     def get_first_private_key(
         self, passphrases: List[str] = [""]
-    ) -> Optional[Tuple[PrivateKey, Optional[bytes]]]:
+    ) -> Optional[Tuple[PrivateKey, bytes]]:
         """
         Returns the first key in the keychain that has one of the passed in passphrases.
         """

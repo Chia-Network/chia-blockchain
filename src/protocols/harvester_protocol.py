@@ -65,6 +65,6 @@ class RequestSignature:
 class RespondSignature:
     plot_id: str
     message: bytes32
-    harvester_pk: G1Element
+    local_pk: G1Element
     farmer_pk: G1Element
     message_signature: G2Element

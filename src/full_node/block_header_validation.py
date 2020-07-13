@@ -49,7 +49,7 @@ async def validate_unfinished_block_header(
         validates = blspy.AugSchemeMPL.verify(
             proof_of_space.plot_public_key,
             block_header.data.get_hash(),
-            block_header.harvester_signature,
+            block_header.plot_signature,
         )
         if not validates:
             return (Err.INVALID_PLOT_SIGNATURE, None)
@@ -241,7 +241,7 @@ def pre_validate_finished_block_header(constants: ConsensusConstants, data: byte
     validates = blspy.AugSchemeMPL.verify(
         block.proof_of_space.plot_public_key,
         block.header.data.get_hash(),
-        block.header.harvester_signature,
+        block.header.plot_signature,
     )
     if not validates:
         return False, None

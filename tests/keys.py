@@ -1,4 +1,4 @@
-import blspy
+from blspy import PrivateKey
 
 from src.types.coin_solution import CoinSolution
 from src.types.spend_bundle import SpendBundle
@@ -6,25 +6,19 @@ from src.types.spend_bundle import SpendBundle
 from src.wallet.puzzles import p2_delegated_puzzle
 from src.wallet.puzzles.puzzle_utils import make_create_coin_condition
 from tests.util.key_tool import KeyTool
+from src.util.ints import uint32
+from src.wallet.derive_keys import master_sk_to_wallet_sk
 
-HIERARCHICAL_PRIVATE_KEY = blspy.PrivateKey.from_seed(bytes([1] * 32))
+MASTER_KEY = PrivateKey.from_seed(bytes([1] * 32))
 
 
-def bls_private_key_for_index(index):
-    return blspy.PrivateKey.from_bytes(
-        bytes(HIERARCHICAL_PRIVATE_KEY.derive_child(index))
+def puzzle_program_for_index(index: uint32):
+    return p2_delegated_puzzle.puzzle_for_pk(
+        master_sk_to_wallet_sk(MASTER_KEY, index).get_g1()
     )
 
 
-def public_key_bytes_for_index(index):
-    return bytes(HIERARCHICAL_PRIVATE_KEY.derive_child(index).get_g1())
-
-
-def puzzle_program_for_index(index):
-    return p2_delegated_puzzle.puzzle_for_pk(public_key_bytes_for_index(index))
-
-
-def puzzle_hash_for_index(index):
+def puzzle_hash_for_index(index: uint32):
     return puzzle_program_for_index(index).get_hash()
 
 
@@ -38,7 +32,7 @@ def conditions_for_payment(puzzle_hash_amount_pairs):
 
 def make_default_keyUtil():
     keychain = KeyTool()
-    private_keys = [bls_private_key_for_index(_) for _ in range(10)]
+    private_keys = [master_sk_to_wallet_sk(MASTER_KEY, uint32(i)) for i in range(10)]
     secret_exponents = [int.from_bytes(bytes(_), "big") for _ in private_keys]
     keychain.add_secret_exponents(secret_exponents)
     return keychain

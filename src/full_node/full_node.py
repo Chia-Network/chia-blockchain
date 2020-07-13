@@ -1203,11 +1203,11 @@ class FullNode:
         Creates a block body and header, with the proof of space, coinbase, and fee targets provided
         by the farmer, and sends the hash of the header data back to the farmer.
         """
-        plot_seed: bytes32 = request.proof_of_space.get_plot_seed()
+        plot_id: bytes32 = request.proof_of_space.get_plot_id()
 
         # Checks that the proof of space is valid
         quality_string: bytes = Verifier().validate_proof(
-            plot_seed,
+            plot_id,
             request.proof_of_space.size,
             request.challenge_hash,
             bytes(request.proof_of_space.proof),

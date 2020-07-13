@@ -15,6 +15,7 @@ from src.types.sized_bytes import bytes32
 from src.types.pool_target import PoolTarget
 from src.util.api_decorators import api_request
 from src.util.ints import uint32, uint64, uint128, uint8
+from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
 
 log = logging.getLogger(__name__)
 
@@ -110,7 +111,10 @@ class Farmer:
         return [child_sk.get_g1() for child_sk, _ in self._get_private_keys()]
 
     def _get_private_keys(self):
-        return [sk.derive_child(0) for sk, _ in self.keychain.get_all_private_keys()]
+        all_sks = self.keychain.get_all_private_keys()
+        return [master_sk_to_farmer_sk(sk) for sk, _ in all_sks] + [
+            master_sk_to_pool_sk(sk) for sk, _ in all_sks
+        ]
 
     async def _get_required_iters(
         self, challenge_hash: bytes32, quality_string: bytes32, plot_size: uint8
@@ -275,9 +279,7 @@ class Farmer:
         for sk in self._get_private_keys():
             pk = sk.get_g1()
             if pk == response.farmer_pk:
-                agg_pk = ProofOfSpace.generate_plot_public_key(
-                    response.harvester_pk, pk
-                )
+                agg_pk = ProofOfSpace.generate_plot_public_key(response.local_pk, pk)
                 assert agg_pk == proof_of_space.plot_public_key
                 farmer_share = AugSchemeMPL.sign(sk, header_hash, agg_pk)
                 agg_sig = AugSchemeMPL.aggregate(

@@ -44,6 +44,7 @@ from src.types.program import Program
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.util.wallet_types import WalletType
 from src.consensus.find_fork_point import find_fork_point_in_chain
+from src.wallet.derive_keys import master_sk_to_wallet_sk
 
 
 class WalletStateManager:
@@ -199,14 +200,13 @@ class WalletStateManager:
         return self
 
     def get_public_key(self, index: uint32) -> G1Element:
-        pubkey = self.private_key.derive_child(index).get_g1()
-        return pubkey
+        return master_sk_to_wallet_sk(self.private_key, index).get_g1()
 
     async def get_keys(self, hash: bytes32) -> Optional[Tuple[G1Element, PrivateKey]]:
         index_for_puzzlehash = await self.puzzle_store.index_for_puzzle_hash(hash)
-        if index_for_puzzlehash == -1:
+        if index_for_puzzlehash is None:
             raise ValueError(f"No key for this puzzlehash {hash})")
-        private = self.private_key.derive_child(index_for_puzzlehash)
+        private = master_sk_to_wallet_sk(self.private_key, index_for_puzzlehash)
         pubkey = private.get_g1()
         return pubkey, private
 

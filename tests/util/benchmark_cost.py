@@ -11,6 +11,8 @@ from src.types.BLSSignature import BLSSignature
 from src.types.program import Program
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 from src.util.wallet_tools import WalletTool
+from src.util.ints import uint32
+from src.wallet.derive_keys import master_sk_to_wallet_sk
 
 
 def float_to_str(f):
@@ -134,7 +136,7 @@ if __name__ == "__main__":
     public_keys = []
 
     for i in range(0, 1000):
-        private_key: PrivateKey = secret_key.derive_child(i)
+        private_key: PrivateKey = master_sk_to_wallet_sk(secret_key, uint32(i))
         public_key = private_key.public_key()
         solution = wallet_tool.make_solution(
             {
@@ -163,7 +165,7 @@ if __name__ == "__main__":
     print(f"Puzzle_time is: {puzzle_time}")
     print(f"Puzzle cost sum is: {clvm_cost}")
 
-    private_key = secret_key.derive_child(0)
+    private_key = master_sk_to_wallet_sk(secret_key, uint32(0))
     public_key = private_key.public_key()
     message = token_bytes()
     signature = private_key.sign(message)

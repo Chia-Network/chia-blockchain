@@ -32,6 +32,7 @@ from src.wallet.wallet import Wallet
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.derivation_record import DerivationRecord
+from src.wallet.derive_keys import master_sk_to_wallet_sk
 
 
 @dataclass(frozen=True)
@@ -77,7 +78,9 @@ class RLWallet:
 
         sk_hex = key_config["wallet_sk"]
         private_key = PrivateKey.from_bytes(bytes.fromhex(sk_hex))
-        pubkey_bytes: bytes = bytes(private_key.derive_child(unused).get_g1())
+        pubkey_bytes: bytes = bytes(
+            master_sk_to_wallet_sk(private_key, unused).get_g1()
+        )
 
         rl_info = RLInfo("admin", pubkey_bytes, None, None, None, None, None, None)
         info_as_string = json.dumps(rl_info.to_json_dict())
@@ -127,7 +130,9 @@ class RLWallet:
 
             sk_hex = key_config["wallet_sk"]
             private_key = PrivateKey.from_bytes(bytes.fromhex(sk_hex))
-            pubkey_bytes: bytes = bytes(private_key.derive_child(unused).get_g1())
+            pubkey_bytes: bytes = bytes(
+                master_sk_to_wallet_sk(private_key, unused).get_g1()
+            )
 
             rl_info = RLInfo("user", None, pubkey_bytes, None, None, None, None, None)
             info_as_string = json.dumps(rl_info.to_json_dict())
@@ -339,9 +344,9 @@ class RLWallet:
         index_for_puzzlehash = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
             puzzle_hash
         )
-        if index_for_puzzlehash == -1:
-            raise Exception("index_for_puzzlehash == -1")
-        private = self.private_key.derive_child(index_for_puzzlehash)
+        if index_for_puzzlehash is None:
+            raise Exception("index_for_puzzlehash is None")
+        private = master_sk_to_wallet_sk(self.private_key, index_for_puzzlehash)
         pubkey = private.get_g1()
         return pubkey, private
 
@@ -352,9 +357,9 @@ class RLWallet:
         index_for_pubkey = await self.wallet_state_manager.puzzle_store.index_for_pubkey(
             clawback_pubkey.hex()
         )
-        if index_for_pubkey == -1:
-            raise Exception("index_for_pubkey == -1")
-        private = self.private_key.derive_child(index_for_pubkey)
+        if index_for_pubkey is None:
+            raise Exception("index_for_pubkey is None")
+        private = master_sk_to_wallet_sk(self.private_key, index_for_pubkey)
         pubkey = private.get_g1()
 
         return pubkey, private

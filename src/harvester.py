@@ -87,7 +87,7 @@ class Harvester:
                     "pool_public_key": plot_info.pool_public_key,
                     "farmer_public_key": plot_info.farmer_public_key,
                     "plot_public_key": plot_info.plot_public_key,
-                    "harvester_sk": plot_info.harvester_sk,
+                    "local_sk": plot_info.local_sk,
                     "file_size": plot_info.file_size,
                     "time_modified": plot_info.time_modified,
                 }
@@ -278,7 +278,7 @@ class Harvester:
                     plot_info.pool_public_key,
                     plot_info.farmer_public_key,
                     plot_info.plot_public_key,
-                    plot_info.harvester_sk,
+                    plot_info.local_sk,
                     plot_info.file_size,
                     plot_info.time_modified,
                 )
@@ -290,7 +290,7 @@ class Harvester:
 
         plot_info = self.provers[filename]
         plot_public_key = ProofOfSpace.generate_plot_public_key(
-            plot_info.harvester_sk.get_g1(), plot_info.farmer_public_key
+            plot_info.local_sk.get_g1(), plot_info.farmer_public_key
         )
 
         proof_of_space: ProofOfSpace = ProofOfSpace(
@@ -319,19 +319,19 @@ class Harvester:
         """
         plot_info = self.provers[Path(request.plot_id).resolve()]
 
-        harvester_sk = plot_info.harvester_sk
+        local_sk = plot_info.local_sk
         agg_pk = ProofOfSpace.generate_plot_public_key(
-            harvester_sk.get_g1(), plot_info.farmer_public_key
+            local_sk.get_g1(), plot_info.farmer_public_key
         )
 
         # This is only a partial signature. When combined with the farmer's half, it will
         # form a complete PrependSignature.
-        signature: G2Element = AugSchemeMPL.sign(harvester_sk, request.message, agg_pk)
+        signature: G2Element = AugSchemeMPL.sign(local_sk, request.message, agg_pk)
 
         response: harvester_protocol.RespondSignature = harvester_protocol.RespondSignature(
             request.plot_id,
             request.message,
-            harvester_sk.get_g1(),
+            local_sk.get_g1(),
             plot_info.farmer_public_key,
             signature,
         )

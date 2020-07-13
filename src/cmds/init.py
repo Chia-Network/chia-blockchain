@@ -20,6 +20,7 @@ from src.util.path import mkdir
 import yaml
 
 from src.ssl.create_ssl import generate_selfsigned_cert
+from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
 
 
 def make_parser(parser: ArgumentParser):
@@ -47,19 +48,21 @@ def check_keys(new_root):
             "No keys are present in the keychain. Generate them with 'chia keys generate'"
         )
         return
-    # TODO: use EIP2334 derivation
-    all_child_pubkeys = [sk[0].derive_child(0).get_g1() for sk in all_sks]
-    all_targets = [create_puzzlehash_for_pk(pk).hex() for pk in all_child_pubkeys]
+
+    pool_child_pubkeys = [master_sk_to_pool_sk(sk).get_g1() for sk, _ in all_sks]
+    farmer_child_pubkeys = [master_sk_to_farmer_sk(sk).get_g1() for sk, _ in all_sks]
+    pool_targets = [create_puzzlehash_for_pk(pk).hex() for pk in pool_child_pubkeys]
+    farmer_targets = [create_puzzlehash_for_pk(pk).hex() for pk in farmer_child_pubkeys]
 
     config: Dict = load_config(new_root, "config.yaml")
 
     # Set the destinations
     if "xch_target_puzzle_hash" not in config["farmer"]:
         print(
-            f"Setting the xch destination address for coinbase fees reward to {all_targets[0]}"
+            f"Setting the xch destination address for coinbase fees reward to {farmer_targets[0]}"
         )
-        config["farmer"]["xch_target_puzzle_hash"] = all_targets[0]
-    elif config["farmer"]["xch_target_puzzle_hash"] not in all_targets:
+        config["farmer"]["xch_target_puzzle_hash"] = farmer_targets[0]
+    elif config["farmer"]["xch_target_puzzle_hash"] not in farmer_targets:
         assert len(config["farmer"]["xch_target_puzzle_hash"]) == 64
         print(
             "WARNING: farmer using a puzzle hash which we don't have the private keys for"
@@ -68,23 +71,23 @@ def check_keys(new_root):
     if "pool" in config:
         if "xch_target_puzzle_hash" not in config["pool"]:
             print(
-                f"Setting the xch destination address for coinbase reward to {all_targets[0]}"
+                f"Setting the xch destination address for coinbase reward to {pool_targets[0]}"
             )
-            config["pool"]["xch_target_puzzle_hash"] = all_targets[0]
-        elif config["pool"]["xch_target_puzzle_hash"] not in all_targets:
+            config["pool"]["xch_target_puzzle_hash"] = pool_targets[0]
+        elif config["pool"]["xch_target_puzzle_hash"] not in pool_targets:
             assert len(config["pool"]["xch_target_puzzle_hash"]) == 64
             print(
                 "WARNING: pool using a puzzle hash which we don't have the private keys for"
             )
 
     # Set the pool pks in the farmer
-    all_pubkeys_hex = set(bytes(pk).hex() for pk in all_child_pubkeys)
+    pool_pubkeys_hex = set(bytes(pk).hex() for pk in pool_child_pubkeys)
     if "pool_public_keys" in config["farmer"]:
         for pk_hex in config["farmer"]["pool_public_keys"]:
             # Add original ones in config
-            all_pubkeys_hex.add(pk_hex)
+            pool_pubkeys_hex.add(pk_hex)
 
-    config["farmer"]["pool_public_keys"] = all_pubkeys_hex
+    config["farmer"]["pool_public_keys"] = pool_pubkeys_hex
     save_config(new_root, "config.yaml", config)
 
 

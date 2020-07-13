@@ -7,6 +7,7 @@ import logging
 import traceback
 from src.types.proof_of_space import ProofOfSpace
 from src.util.config import load_config, save_config
+from src.wallet.derive_keys import master_sk_to_local_sk
 
 
 log = logging.getLogger(__name__)
@@ -18,7 +19,7 @@ class PlotInfo:
     pool_public_key: G1Element
     farmer_public_key: G1Element
     plot_public_key: G1Element
-    harvester_sk: PrivateKey
+    local_sk: PrivateKey
     file_size: int
     time_modified: float
 
@@ -59,10 +60,12 @@ def parse_plot_info(memo: bytes) -> Tuple[G1Element, G1Element, PrivateKey]:
 
 
 def stream_plot_info(
-    pool_public_key: G1Element, farmer_public_key: G1Element, harvester_sk: PrivateKey,
+    pool_public_key: G1Element,
+    farmer_public_key: G1Element,
+    local_master_sk: PrivateKey,
 ):
     # Streams the plot info keys into bytes
-    data = bytes(pool_public_key) + bytes(farmer_public_key) + bytes(harvester_sk)
+    data = bytes(pool_public_key) + bytes(farmer_public_key) + bytes(local_master_sk)
     assert len(data) == (48 + 48 + 32)
     return data
 
@@ -103,9 +106,11 @@ def load_plots(
         if filename.exists():
             try:
                 prover = DiskProver(str(filename))
-                (pool_public_key, farmer_public_key, harvester_sk,) = parse_plot_info(
-                    prover.get_memo()
-                )
+                (
+                    pool_public_key,
+                    farmer_public_key,
+                    local_master_sk,
+                ) = parse_plot_info(prover.get_memo())
                 # Only use plots that correct keys associated with them
                 if (
                     farmer_public_keys is not None
@@ -130,15 +135,16 @@ def load_plots(
                         continue
 
                 stat_info = filename.stat()
+                local_sk = master_sk_to_local_sk(local_master_sk)
                 plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(
-                    harvester_sk.get_g1(), farmer_public_key
+                    local_sk.get_g1(), farmer_public_key
                 )
                 provers[filename] = PlotInfo(
                     prover,
                     pool_public_key,
                     farmer_public_key,
                     plot_public_key,
-                    harvester_sk,
+                    local_sk,
                     stat_info.st_size,
                     stat_info.st_mtime,
                 )

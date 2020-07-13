@@ -11,6 +11,7 @@ from src.types.program import Program
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.spend_bundle import SpendBundle
+from src.util.ints import uint32
 from src.util.condition_tools import (
     conditions_by_opcode,
     hash_key_pairs_for_conditions_dict,
@@ -28,6 +29,7 @@ from src.wallet.puzzles.puzzle_utils import (
     make_assert_time_exceeds_condition,
     make_assert_fee_condition,
 )
+from src.wallet.derive_keys import master_sk_to_wallet_sk
 
 
 class WalletTool:
@@ -41,14 +43,14 @@ class WalletTool:
         if sk is not None:
             self.private_key = sk
         else:
-            self.private_kkey = PrivateKey.from_seed(token_bytes(32))
+            self.private_key = PrivateKey.from_seed(token_bytes(32))
         self.generator_lookups: Dict = {}
         self.name = "MyChiaWallet"
         self.puzzle_pk_cache: Dict = {}
         self.get_new_puzzle()
 
     def get_next_public_key(self):
-        pubkey = self.private_kkey.derive_child(self.next_address).get_g1()
+        pubkey = master_sk_to_wallet_sk(self.private_key, self.next_address).get_g1()
         self.pubkey_num_lookup[bytes(pubkey)] = self.next_address
         self.next_address = self.next_address + 1
         return pubkey
@@ -61,7 +63,7 @@ class WalletTool:
             map(
                 lambda child: hash
                 == puzzle_for_pk(
-                    bytes(self.private_key.derive_child(child).get_g1())
+                    master_sk_to_wallet_sk(self.private_key, uint32(child)).get_g1()
                 ).get_tree_hash(),
                 reversed(range(self.next_address)),
             )
@@ -70,16 +72,18 @@ class WalletTool:
     def get_keys(self, puzzle_hash):
         if puzzle_hash in self.puzzle_pk_cache:
             child = self.puzzle_pk_cache[puzzle_hash]
-            private = self.private_key.derive_child(child)
+            private = master_sk_to_wallet_sk(self.private_key, uint32(child))
             pubkey = private.get_g1()
             return pubkey, private
         else:
             for child in range(self.next_address):
-                pubkey = self.private_key.derive_child(child).get_g1()
+                pubkey = master_sk_to_wallet_sk(
+                    self.private_key, uint32(child)
+                ).get_g1()
                 if puzzle_hash == puzzle_for_pk(bytes(pubkey)).get_tree_hash():
                     return (
                         pubkey,
-                        self.private_key.derive_child(child),
+                        master_sk_to_wallet_sk(self.private_key, uint32(child)),
                     )
         raise RuntimeError(f"Do not have the keys for puzzle hash {puzzle_hash}")
 
@@ -87,7 +91,7 @@ class WalletTool:
         return puzzle_for_pk(pubkey)
 
     def get_first_puzzle(self):
-        pubkey = self.private_key.derive_child(self.next_address).get_g1()
+        pubkey = master_sk_to_wallet_sk(self.private_key, self.next_address).get_g1()
         puzzle = puzzle_for_pk(bytes(pubkey))
         self.puzzle_pk_cache[puzzle.get_tree_hash()] = 0
         return puzzle
@@ -105,7 +109,9 @@ class WalletTool:
         return puzzlehash
 
     def sign(self, value, pubkey):
-        privatekey = self.private_key.derive_child(self.pubkey_num_lookup[pubkey])
+        privatekey = master_sk_to_wallet_sk(
+            self.private_key, self.pubkey_num_lookup[pubkey]
+        )
         return AugSchemeMPL.sign(privatekey, value)
 
     def make_solution(

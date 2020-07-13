@@ -6,6 +6,7 @@ from src.util.keychain import Keychain
 from src.util.config import load_config
 from src.plotting.plot_tools import load_plots
 from src.util.hash import std_hash
+from src.wallet.derive_keys import master_sk_to_farmer_sk
 
 
 log = logging.getLogger(__name__)
@@ -21,9 +22,7 @@ def check_plots(args, root_path):
     v = Verifier()
     log.info("Loading plots in config.yaml using plot_tools loading code\n")
     kc: Keychain = Keychain()
-    # TODO: eip2334
-    pks = kc.get_all_public_keys()
-    pks = [sk.derive_child(0).get_g1() for sk, _ in kc.get_all_private_keys()]
+    pks = [master_sk_to_farmer_sk(sk).get_g1() for sk, _ in kc.get_all_private_keys()]
     pool_public_keys = [
         G1Element.from_bytes(bytes.fromhex(pk))
         for pk in config["farmer"]["pool_public_keys"]
@@ -44,7 +43,7 @@ def check_plots(args, root_path):
         log.info(f"Testing plot {plot_path} k={pr.get_size()}")
         log.info(f"\tPool public key: {plot_info.pool_public_key}")
         log.info(f"\tFarmer public key: {plot_info.farmer_public_key}")
-        log.info(f"\tHarvester sk: {plot_info.harvester_sk}")
+        log.info(f"\tLocal sk: {plot_info.local_sk}")
         total_proofs = 0
         try:
             for i in range(num):

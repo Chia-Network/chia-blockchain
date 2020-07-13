@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 from argparse import Namespace
 
-from blspy import G1Element, G2Element, AugSchemeMPL
+from blspy import G1Element, G2Element, AugSchemeMPL, PrivateKey
 
 from chiavdf import prove
 from chiabip158 import PyBIP158
@@ -43,6 +43,7 @@ from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from src.plotting.plot_tools import load_plots
 from src.util.logging import initialize_logging
 from src.util.wallet_tools import WalletTool
+from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
 
 
 def get_plot_dir():
@@ -75,16 +76,12 @@ class BlockTools:
             self.use_any_pos = True
             self.keychain = Keychain("testing-1.8.0", True)
             self.keychain.delete_all_keys()
-            self.farmer_pk = (
+            self.farmer_pk = master_sk_to_farmer_sk(
                 self.keychain.add_private_key(b"block_tools farmer key", "")
-                .derive_child(0)
-                .get_g1()
-            )
-            self.pool_pk = (
+            ).get_g1()
+            self.pool_pk = master_sk_to_pool_sk(
                 self.keychain.add_private_key(b"block_tools pool key", "")
-                .derive_child(0)
-                .get_g1()
-            )
+            ).get_g1()
             self.farmer_ph = create_puzzlehash_for_pk(self.farmer_pk)
             self.pool_ph = create_puzzlehash_for_pk(self.pool_pk)
 
@@ -105,9 +102,17 @@ class BlockTools:
             args.tmp_dir = temp_dir
             args.tmp2_dir = plot_dir
             args.final_dir = plot_dir
+            test_private_keys = [
+                PrivateKey.from_seed(std_hash(bytes([i]))) for i in range(args.num)
+            ]
             try:
                 # No datetime in the filename, to get deterministic filenames and not replot
-                create_plots(args, root_path, use_datetime=False)
+                create_plots(
+                    args,
+                    root_path,
+                    use_datetime=False,
+                    test_private_keys=test_private_keys,
+                )
             except KeyboardInterrupt:
                 shutil.rmtree(plot_dir, ignore_errors=True)
                 sys.exit(1)
@@ -116,21 +121,24 @@ class BlockTools:
             self.keychain = Keychain()
             self.use_any_pos = False
             sk_and_ent = self.keychain.get_first_private_key()
-            # TODO: eip2334
             assert sk_and_ent is not None
-            pk = sk_and_ent[0].derive_child(0).get_g1()
-            self.farmer_ph = create_puzzlehash_for_pk(pk)
-            self.pool_ph = create_puzzlehash_for_pk(pk)
+            self.farmer_ph = create_puzzlehash_for_pk(
+                master_sk_to_farmer_sk(sk_and_ent[0]).get_g1()
+            )
+            self.pool_ph = create_puzzlehash_for_pk(
+                master_sk_to_pool_sk(sk_and_ent[0]).get_g1()
+            )
 
         self.all_sks = self.keychain.get_all_private_keys()
-        self.all_pubkeys: List[G1Element] = [
-            sk.derive_child(0).get_g1() for sk, _ in self.all_sks
+        pool_pubkeys: List[G1Element] = [
+            master_sk_to_pool_sk(sk).get_g1() for sk, _ in self.all_sks
         ]
-        if len(self.all_pubkeys) == 0:
+        farmer_pubkeys: List[G1Element] = [
+            master_sk_to_farmer_sk(sk).get_g1() for sk, _ in self.all_sks
+        ]
+        if len(pool_pubkeys) == 0 or len(farmer_pubkeys) == 0:
             raise RuntimeError("Keys not generated. Run `chia generate keys`")
-        _, self.plots, _, _ = load_plots(
-            {}, self.all_pubkeys, self.all_pubkeys, root_path
-        )
+        _, self.plots, _, _ = load_plots({}, farmer_pubkeys, pool_pubkeys, root_path)
 
     def get_plot_signature(
         self, header_data: HeaderData, plot_pk: G1Element
@@ -138,14 +146,14 @@ class BlockTools:
         """
         Returns the plot signature of the header data.
         """
-        farmer_sk = self.all_sks[0][0].derive_child(0)
+        farmer_sk = master_sk_to_farmer_sk(self.all_sks[0][0])
         for _, plot_info in self.plots.items():
             agg_pk = ProofOfSpace.generate_plot_public_key(
-                plot_info.harvester_sk.get_g1(), plot_info.farmer_public_key
+                plot_info.local_sk.get_g1(), plot_info.farmer_public_key
             )
             if agg_pk == plot_pk:
                 m = header_data.get_hash()
-                harv_share = AugSchemeMPL.sign(plot_info.harvester_sk, m, agg_pk)
+                harv_share = AugSchemeMPL.sign(plot_info.local_sk, m, agg_pk)
                 farm_share = AugSchemeMPL.sign(farmer_sk, m, agg_pk)
                 return AugSchemeMPL.aggregate([harv_share, farm_share])
 
@@ -155,7 +163,7 @@ class BlockTools:
         self, pool_target: PoolTarget, pool_pk: G1Element
     ) -> Optional[G2Element]:
         for sk, _ in self.all_sks:
-            sk_child = sk.derive_child(0)
+            sk_child = master_sk_to_pool_sk(sk)
             if sk_child.get_g1() == pool_pk:
                 return AugSchemeMPL.sign(sk_child, bytes(pool_target))
         return None
@@ -452,9 +460,9 @@ class BlockTools:
                 # Allow passing in seed, to create reorgs and different chains
                 seeded_pn = random.randint(0, len(plots) - 1)
                 plot_info = plots[seeded_pn]
-                plot_seed = plot_info.prover.get_id()
+                plot_id = plot_info.prover.get_id()
                 ccp = ProofOfSpace.can_create_proof(
-                    plot_seed,
+                    plot_id,
                     challenge_hash,
                     test_constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"],
                 )
@@ -469,9 +477,9 @@ class BlockTools:
             for i in range(len(plots)):
                 plot_info = plots[i]
                 j = 0
-                plot_seed = plot_info.prover.get_id()
+                plot_id = plot_info.prover.get_id()
                 ccp = ProofOfSpace.can_create_proof(
-                    plot_seed,
+                    plot_id,
                     challenge_hash,
                     test_constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"],
                 )
@@ -496,8 +504,7 @@ class BlockTools:
         )
 
         plot_pk = ProofOfSpace.generate_plot_public_key(
-            selected_plot_info.harvester_sk.get_g1(),
-            selected_plot_info.farmer_public_key,
+            selected_plot_info.local_sk.get_g1(), selected_plot_info.farmer_public_key,
         )
         proof_of_space: ProofOfSpace = ProofOfSpace(
             challenge_hash,

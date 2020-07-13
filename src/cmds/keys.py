@@ -6,7 +6,7 @@ from src.util.keychain import (
     Keychain,
     bytes_from_mnemonic,
 )
-from src.consensus.coinbase import create_puzzlehash_for_pk
+from src.wallet.derive_keys import master_sk_to_pool_sk, master_sk_to_farmer_sk
 
 command_list = [
     "generate",
@@ -139,19 +139,15 @@ def show_all_keys():
     for sk, seed in private_keys:
         print("")
         print("Fingerprint:", sk.get_g1().get_fingerprint())
-        print("Public key:", sk.get_g1())
-        addr = create_puzzlehash_for_pk(sk.derive_child(0).get_g1()).hex()
-        print("First address:", addr)
-        print("Private key:", bytes(sk).hex())
-        if seed is not None:
-            mnemonic = bytes_to_mnemonic(seed)
-            mnemonic_string = mnemonic_to_string(mnemonic)
-            print("Mnemonic seed:")
-            print(mnemonic_string)
-        else:
-            print(
-                "There is no mnemonic for this key, since it was imported without a seed. (Or migrated from keys.yaml)."
-            )
+        print("Master public key:", sk.get_g1())
+        print("Pool public key:", master_sk_to_pool_sk(sk).get_g1())
+        print("Farmer public key:", master_sk_to_farmer_sk(sk).get_g1())
+        print("Master private key:", bytes(sk).hex())
+        assert seed is not None
+        mnemonic = bytes_to_mnemonic(seed)
+        mnemonic_string = mnemonic_to_string(mnemonic)
+        print("Mnemonic seed:")
+        print(mnemonic_string)
 
 
 def delete(args):

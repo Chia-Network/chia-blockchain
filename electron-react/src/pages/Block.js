@@ -55,7 +55,7 @@ class Block extends Component {
     super(props);
     this.state = {
       headerHash: "",
-      plotSeed: ""
+      plotId: ""
     };
   }
 
@@ -75,10 +75,10 @@ class Block extends Component {
       hex_to_array(this.props.block.proof_of_space.plot_public_key)
     );
     const bufHash = await sha256(buf);
-    const plotSeed = arr_to_hex(bufHash);
+    const plotId = arr_to_hex(bufHash);
     this.setState({
       headerHash,
-      plotSeed
+      plotId
     });
   }
 
@@ -109,7 +109,7 @@ class Block extends Component {
       diff = block.header.data.weight - prevHeader.data.weight;
     }
     const headerHash = "0x" + this.state.headerHash;
-    const plotSeed = "0x" + this.state.plotSeed;
+    const plotId = "0x" + this.state.plotId;
 
     const chia_cb = chia_formatter(
       parseFloat(calculate_block_reward(block.header.data.height)),
@@ -159,8 +159,8 @@ class Block extends Component {
       { name: "Plot Public Key", value: block.proof_of_space.plot_public_key },
       { name: "Pool Public Key", value: block.proof_of_space.pool_public_key },
       {
-        name: "Plot Seed",
-        value: plotSeed,
+        name: "Plot Id",
+        value: plotId,
         tooltip:
           "The seed used to create the plot, this depends on the pool pk and plot pk"
       },
