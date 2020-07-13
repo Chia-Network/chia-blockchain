@@ -249,7 +249,7 @@ class Harvester:
                     Delivery.RESPOND,
                 )
         log.info(
-            f"Time taken to lookup qualities in {len(awaitables)} plots: {time.time() - start}. "
+            f"{len(awaitables)} plots were eligible for farming for this challenge, time: {time.time() - start}. "
             f"Total {len(self.provers)} plots"
         )
 
