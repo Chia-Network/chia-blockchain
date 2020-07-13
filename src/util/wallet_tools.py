@@ -1,7 +1,5 @@
 from typing import List, Optional, Dict, Tuple
 
-import clvm
-from clvm.casts import int_to_bytes, int_from_bytes
 from secrets import token_bytes
 from blspy import PrivateKey, AugSchemeMPL
 
@@ -11,12 +9,13 @@ from src.types.program import Program
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.spend_bundle import SpendBundle
-from src.util.ints import uint32
+from src.util.clvm import int_to_bytes, int_from_bytes
 from src.util.condition_tools import (
     conditions_by_opcode,
     pkm_pairs_for_conditions_dict,
     conditions_for_solution,
 )
+from src.util.ints import uint32
 from src.wallet.puzzles.p2_conditions import puzzle_for_conditions
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 from src.wallet.puzzles.puzzle_utils import (

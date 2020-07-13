@@ -3,7 +3,6 @@ from time import time
 from typing import List, Tuple
 
 import pytest
-from clvm.casts import int_to_bytes
 
 from src.server.outbound_message import OutboundMessage
 from src.protocols import full_node_protocol
@@ -17,6 +16,7 @@ from src.util.condition_tools import (
     conditions_by_opcode,
     pkm_pairs_for_conditions_dict,
 )
+from src.util.clvm import int_to_bytes
 from src.util.ints import uint64
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from src.util.wallet_tools import WalletTool

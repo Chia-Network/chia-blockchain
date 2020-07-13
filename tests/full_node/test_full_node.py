@@ -1,6 +1,5 @@
 import asyncio
 import pytest
-from clvm.casts import int_to_bytes
 import random
 import time
 from typing import Dict
@@ -28,6 +27,7 @@ from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from src.util.wallet_tools import WalletTool
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.coin import hash_coin_list
+from src.util.clvm import int_to_bytes
 from src.util.config import load_config
 from src.util.merkle_set import (
     MerkleSet,

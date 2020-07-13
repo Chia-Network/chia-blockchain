@@ -2,11 +2,11 @@ from typing import Optional, Tuple
 
 from clvm_tools import binutils
 from blspy import AugSchemeMPL
-import clvm
 import string
 from src.types.program import Program
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
+from src.util.clvm import run_program
 
 
 # This is for spending an existing coloured coin
@@ -136,7 +136,7 @@ def get_output_discrepancy_for_puzzle_and_solution(coin, puzzle, solution):
 
 
 def get_output_amount_for_puzzle_and_solution(puzzle, solution):
-    conditions = clvm.run_program(puzzle, solution)[1]
+    conditions = run_program(puzzle, solution)[1]
     amount = 0
     while conditions != b"":
         opcode = conditions.first().first()

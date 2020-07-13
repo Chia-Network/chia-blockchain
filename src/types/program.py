@@ -1,22 +1,15 @@
 import io
 from typing import Any
 
-from clvm import to_sexp_f
-from clvm.serialize import sexp_from_stream, sexp_to_stream
-from clvm.subclass_sexp import BaseSExp
-
 from src.types.sized_bytes import bytes32
+from src.util.clvm import sexp_from_stream, sexp_to_stream, SExp
 from src.util.hash import std_hash
-
-SExp = to_sexp_f(1).__class__
 
 
 class Program(SExp):  # type: ignore # noqa
     """
     A thin wrapper around s-expression data intended to be invoked with "eval".
     """
-
-    code: BaseSExp
 
     def __init__(self, v):
         if isinstance(v, SExp):

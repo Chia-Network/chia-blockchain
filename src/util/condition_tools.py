@@ -1,16 +1,13 @@
 from typing import Optional, Tuple, List, Dict
 
 from blspy import G1Element
-import clvm
-from clvm.EvalError import EvalError
-from clvm.casts import int_from_bytes
-from clvm.subclass_sexp import BaseSExp
 
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.coin import Coin
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
+from src.util.clvm import BaseSExp, EvalError, int_from_bytes, run_program
 from src.util.ints import uint64
 from src.util.errors import Err, ConsensusError
 
@@ -124,7 +121,7 @@ def conditions_dict_for_solution(
 
 
 def conditions_for_solution(
-    solution_program, run_program=clvm.run_program
+    solution_program, run_program=run_program
 ) -> Tuple[Optional[Err], Optional[List[ConditionVarPair]], uint64]:
     # get the standard script for a puzzle hash and feed in the solution
     args = Program.to(solution_program)

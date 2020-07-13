@@ -1,6 +1,5 @@
 import time
 from typing import Dict, Optional, List, Tuple, Set, Any
-import clvm
 import logging
 from blspy import G2Element, AugSchemeMPL
 from src.types.coin import Coin
