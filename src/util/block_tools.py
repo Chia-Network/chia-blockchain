@@ -81,10 +81,10 @@ class BlockTools:
             self.keychain = Keychain("testing-1.8.0", True)
             self.keychain.delete_all_keys()
             self.farmer_master_sk = self.keychain.add_private_key(
-                b"block_tools farmer key", ""
+                b"block_tools farmer key 1.8", ""
             )
             self.pool_master_sk = self.keychain.add_private_key(
-                b"block_tools pool key", ""
+                b"block_tools pool key 1.8", ""
             )
             self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
             self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
