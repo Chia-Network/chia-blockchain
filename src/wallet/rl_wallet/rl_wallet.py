@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from secrets import token_bytes
 from typing import Dict, Optional, List, Tuple, Any
 
-import clvm
 import json
 from blspy import PrivateKey, AugSchemeMPL
 from clvm_tools import binutils

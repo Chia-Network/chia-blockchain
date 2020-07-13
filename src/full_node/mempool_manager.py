@@ -4,7 +4,6 @@ from typing import Dict, Optional, Tuple, List, Set
 import logging
 
 from chiabip158 import PyBIP158
-from clvm.casts import int_from_bytes
 from blspy import G1Element, G2Element, AugSchemeMPL
 
 from src.consensus.constants import ConsensusConstants
@@ -21,6 +20,7 @@ from src.full_node.mempool import Mempool
 from src.types.sized_bytes import bytes32
 from src.full_node.coin_store import CoinStore
 from src.util.errors import Err
+from src.util.clvm import int_from_bytes
 from src.util.cost_calculator import calculate_cost_of_program
 from src.util.mempool_check_conditions import mempool_check_conditions_dict
 from src.util.condition_tools import pkm_pairs_for_conditions_dict

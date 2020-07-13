@@ -8,7 +8,6 @@ from typing import Dict, List, Optional, Set, Tuple
 from blspy import AugSchemeMPL
 
 from chiabip158 import PyBIP158
-from clvm.casts import int_from_bytes
 
 from src.consensus.block_rewards import calculate_base_fee
 from src.consensus.constants import ConsensusConstants
@@ -30,6 +29,7 @@ from src.types.header import Header
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.util.blockchain_check_conditions import blockchain_check_conditions_dict
+from src.util.clvm import int_from_bytes
 from src.util.condition_tools import pkm_pairs_for_conditions_dict
 from src.util.cost_calculator import calculate_cost_of_program
 from src.util.errors import ConsensusError, Err

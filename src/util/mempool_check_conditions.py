@@ -1,8 +1,5 @@
 from typing import Optional, List, Dict, Tuple
 
-from clvm.EvalError import EvalError
-from clvm.casts import int_from_bytes
-
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
@@ -10,12 +7,12 @@ from src.types.coin_record import CoinRecord
 from src.types.name_puzzle_condition import NPC
 from src.full_node.mempool import Mempool
 from src.types.sized_bytes import bytes32
+from src.util.clvm import EvalError, int_from_bytes, run_program
 from src.util.condition_tools import ConditionOpcode, conditions_dict_for_solution
 from src.util.errors import Err
 import time
 
 from src.util.ints import uint64
-from clvm import run_program
 
 
 def mempool_assert_coin_consumed(

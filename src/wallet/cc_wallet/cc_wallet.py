@@ -1,7 +1,6 @@
 import logging
 import time
 
-import clvm
 from typing import Dict, Optional, List, Any, Set
 from blspy import G2Element, AugSchemeMPL
 from src.types.coin import Coin
@@ -11,6 +10,7 @@ from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
+from src.util.clvm import EvalError, run_program
 from src.util.condition_tools import (
     conditions_dict_for_solution,
     pkm_pairs_for_conditions_dict,
@@ -283,9 +283,9 @@ class CCWallet:
         """
         cost_sum = 0
         try:
-            cost_run, sexp = clvm.run_program(block_program, [])
+            cost_run, sexp = run_program(block_program, [])
             cost_sum += cost_run
-        except clvm.EvalError.EvalError:
+        except EvalError:
             return False
 
         for name_solution in sexp.as_iter():
@@ -306,7 +306,7 @@ class CCWallet:
                 cost_sum += cost_run
                 if error:
                     return False
-            except clvm.EvalError.EvalError:
+            except EvalError:
 
                 return False
             if conditions_dict is None:

@@ -5,7 +5,6 @@ from secrets import token_bytes
 from typing import Dict, Optional, Tuple, List, Any
 import logging
 
-import clvm
 from blspy import AugSchemeMPL, G2Element
 
 from src.types.coin import Coin

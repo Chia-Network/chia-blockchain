@@ -2,7 +2,6 @@ import asyncio
 import time
 from typing import Optional
 import pytest
-from clvm.casts import int_to_bytes
 
 from src.consensus.block_rewards import calculate_base_fee
 from src.full_node.blockchain import ReceiveBlockResult
@@ -15,6 +14,7 @@ from src.server.outbound_message import OutboundMessage
 from src.protocols import full_node_protocol
 from src.types.full_block import FullBlock
 from src.types.spend_bundle import SpendBundle
+from src.util.clvm import int_to_bytes
 from src.util.errors import Err
 from src.util.ints import uint64
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
