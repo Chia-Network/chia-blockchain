@@ -14,7 +14,7 @@ from src.types.spend_bundle import SpendBundle
 from src.util.ints import uint32
 from src.util.condition_tools import (
     conditions_by_opcode,
-    hash_key_pairs_for_conditions_dict,
+    pkm_pairs_for_conditions_dict,
     conditions_for_solution,
 )
 from src.wallet.puzzles.p2_conditions import puzzle_for_conditions
@@ -63,7 +63,9 @@ class WalletTool:
             map(
                 lambda child: hash
                 == puzzle_for_pk(
-                    master_sk_to_wallet_sk(self.private_key, uint32(child)).get_g1()
+                    bytes(
+                        master_sk_to_wallet_sk(self.private_key, uint32(child)).get_g1()
+                    )
                 ).get_tree_hash(),
                 reversed(range(self.next_address)),
             )
@@ -195,9 +197,9 @@ class WalletTool:
                 return
             conditions_dict = conditions_by_opcode(con)
 
-            for msg in hash_key_pairs_for_conditions_dict(
+            for _, msg in pkm_pairs_for_conditions_dict(
                 conditions_dict, bytes(solution.coin)
-            )[1]:
+            ):
                 signature = AugSchemeMPL.sign(secretkey, msg)
                 sigs.append(signature)
         aggsig = AugSchemeMPL.aggregate(sigs)

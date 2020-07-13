@@ -70,23 +70,20 @@ def conditions_by_opcode(
     return d
 
 
-def hash_key_pairs_for_conditions_dict(
+def pkm_pairs_for_conditions_dict(
     conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
     coin_name: bytes32 = None,
-) -> Tuple[List[G1Element], List[bytes]]:
-    pks: List[G1Element] = []
-    msgs: List[bytes] = []
+) -> List[Tuple[G1Element, bytes]]:
+    ret: List[Tuple[G1Element, bytes]] = []
     for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
         # TODO: check types
         # assert len(_) == 3
         assert cvp.var2 is not None
-        pks.append(cvp.var1)
-        msgs.append(cvp.var2)
+        ret.append((G1Element.from_bytes(cvp.var1), cvp.var2))
     if coin_name is not None:
         for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG_ME, []):
-            pks.append(cvp.var1)
-            msgs.append(cvp.var2 + coin_name)
-    return pks, msgs
+            ret.append((G1Element.from_bytes(cvp.var1), cvp.var2 + coin_name))
+    return ret
 
 
 def aggsig_in_conditions_dict(

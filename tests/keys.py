@@ -14,7 +14,7 @@ MASTER_KEY = PrivateKey.from_seed(bytes([1] * 32))
 
 def puzzle_program_for_index(index: uint32):
     return p2_delegated_puzzle.puzzle_for_pk(
-        master_sk_to_wallet_sk(MASTER_KEY, index).get_g1()
+        bytes(master_sk_to_wallet_sk(MASTER_KEY, index).get_g1())
     )
 
 

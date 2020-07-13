@@ -1,6 +1,6 @@
 from src.util.condition_tools import (
     conditions_by_opcode,
-    hash_key_pairs_for_conditions_dict,
+    pkm_pairs_for_conditions_dict,
     conditions_for_solution,
 )
 from blspy import PrivateKey, AugSchemeMPL
@@ -27,9 +27,7 @@ class KeyTool(dict):
         conditions = conditions_for_solution(solution)
         assert conditions[1] is not None
         conditions_dict = conditions_by_opcode(conditions[1])
-        for pk, msg in zip(
-            *hash_key_pairs_for_conditions_dict(conditions_dict, coin_name)
-        ):
+        for pk, msg in pkm_pairs_for_conditions_dict(conditions_dict, coin_name):
             signature = self.sign(pk, msg)
             signatures.append(signature)
         return AugSchemeMPL.aggregate(signatures)

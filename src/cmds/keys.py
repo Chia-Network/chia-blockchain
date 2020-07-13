@@ -6,7 +6,12 @@ from src.util.keychain import (
     Keychain,
     bytes_from_mnemonic,
 )
-from src.wallet.derive_keys import master_sk_to_pool_sk, master_sk_to_farmer_sk
+from src.wallet.derive_keys import (
+    master_sk_to_pool_sk,
+    master_sk_to_farmer_sk,
+    master_sk_to_wallet_sk,
+)
+from src.utils.ints import uint32
 
 command_list = [
     "generate",
@@ -139,14 +144,21 @@ def show_all_keys():
     for sk, seed in private_keys:
         print("")
         print("Fingerprint:", sk.get_g1().get_fingerprint())
-        print("Master public key:", sk.get_g1())
-        print("Pool public key:", master_sk_to_pool_sk(sk).get_g1())
-        print("Farmer public key:", master_sk_to_farmer_sk(sk).get_g1())
-        print("Master private key:", bytes(sk).hex())
+        print("Master public key (m):", sk.get_g1())
+        print("Master private key (m):", bytes(sk).hex())
+        print(
+            "Farmer public key (m/12381/8444/0/0)::",
+            master_sk_to_farmer_sk(sk).get_g1(),
+        )
+        print("Pool public key (m/12381/8444/1/0):", master_sk_to_pool_sk(sk).get_g1())
+        print(
+            "First wallet key (m/12381/8444/2/0):",
+            master_sk_to_wallet_sk(sk, uint32(0)).get_g1(),
+        )
         assert seed is not None
         mnemonic = bytes_to_mnemonic(seed)
         mnemonic_string = mnemonic_to_string(mnemonic)
-        print("Mnemonic seed:")
+        print("  Mnemonic seed:")
         print(mnemonic_string)
 
 

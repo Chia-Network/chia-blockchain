@@ -6,7 +6,7 @@ from typing import Dict, Optional, Tuple, List, Any
 import logging
 
 import clvm
-from blspy import AugSchemeMPL
+from blspy import AugSchemeMPL, G2Element
 
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
@@ -647,8 +647,10 @@ class TradeManager:
                 )
             )
 
-            sig = await wallets[colour].get_sigs(auditor_inner_puzzle, innersol)
-            aggsig = AugSchemeMPL.aggregate([sig, aggsig])
+            sigs: List[G2Element] = await wallets[colour].get_sigs(
+                auditor_inner_puzzle, innersol
+            )
+            aggsig = AugSchemeMPL.aggregate(sigs + [aggsig])
 
             solution = cc_wallet_puzzles.cc_make_solution(
                 core,

@@ -146,7 +146,7 @@ async def setup_wallet_node(
     consensus_constants = constants_for_dic(dic)
     first_pk = keychain.get_first_public_key()
     assert first_pk is not None
-    db_path_key_suffix = str(first_pk.get_g1().get_fingerprint())
+    db_path_key_suffix = str(first_pk.get_fingerprint())
     db_name = f"test-wallet-db-{port}"
     db_path = bt.root_path / f"test-wallet-db-{port}-{db_path_key_suffix}"
     if db_path.exists():
@@ -263,7 +263,7 @@ async def setup_farmer(port, full_node_port: Optional[uint16] = None, dic={}):
     consensus_constants = constants_for_dic(dic)
 
     config["xch_target_puzzle_hash"] = bt.farmer_ph.hex()
-    config["pool_public_keys"] = [bytes(pk).hex() for pk in bt.all_pubkeys]
+    config["pool_public_keys"] = [bytes(pk).hex() for pk in bt.pool_pubkeys]
     config_pool["xch_target_puzzle_hash"] = bt.pool_ph.hex()
     if full_node_port:
         connect_peers = [PeerInfo(self_hostname, full_node_port)]

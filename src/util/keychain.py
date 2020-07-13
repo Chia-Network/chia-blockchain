@@ -131,7 +131,6 @@ class Keychain:
         if read_str is None or len(read_str) == 0:
             return None
         str_bytes = bytes.fromhex(read_str)
-        print("Read", read_str)
         return (
             G1Element.from_bytes(str_bytes[: G1Element.SIZE]),
             str_bytes[G1Element.SIZE :],

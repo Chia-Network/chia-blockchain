@@ -13,7 +13,7 @@ from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
 from src.util.condition_tools import (
     conditions_dict_for_solution,
-    hash_key_pairs_for_conditions_dict,
+    pkm_pairs_for_conditions_dict,
 )
 from src.util.json_util import dict_to_json_str
 from src.util.ints import uint64, uint32
@@ -623,7 +623,7 @@ class CCWallet:
         sexp = Program.to(code_)
         error, conditions, cost = conditions_dict_for_solution(sexp)
         if conditions is not None:
-            for _, msg in hash_key_pairs_for_conditions_dict(conditions):
+            for _, msg in pkm_pairs_for_conditions_dict(conditions):
                 signature = AugSchemeMPL.sign(private, msg)
                 sigs.append(signature)
         return sigs

@@ -43,6 +43,10 @@ timelord.sanitizer_mode = True, the timelord will work on those challenges.
 - Use real plot sizes in UI instead of formula
 - Use chacha proof of space **(not on master yet)**
 - Plot refreshing happens during all new challenges, and only new/modified files are read
+- Updated blspy and use new IETF standard for bls signatures
+- HD keys now use EIP 2333 format instead of BIP32, for compatibility with other chains
+- Keys are now derived with the EIP 2334 (m/12381/8444/a/b).
+- Removed the ability to pass in sk_seed to plotting, to increase security
 
 ### Fixed
 - uPnP now works on Windows.

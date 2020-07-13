@@ -12,7 +12,7 @@ from src.util.condition_tools import (
     conditions_for_solution,
     conditions_dict_for_solution,
     conditions_by_opcode,
-    hash_key_pairs_for_conditions_dict,
+    pkm_pairs_for_conditions_dict,
 )
 from src.util.ints import uint64, uint32
 from src.wallet.abstract_wallet import AbstractWallet
@@ -303,9 +303,9 @@ class Wallet(AbstractWallet):
             conditions_dict = conditions_by_opcode(con)
 
             # Create signature
-            for msg in hash_key_pairs_for_conditions_dict(
+            for _, msg in pkm_pairs_for_conditions_dict(
                 conditions_dict, bytes(solution.coin)
-            )[1]:
+            ):
                 signature = AugSchemeMPL.sign(secretkey, msg)
                 signatures.append(signature)
 
@@ -405,7 +405,7 @@ class Wallet(AbstractWallet):
         sexp = Program.to(code_)
         error, conditions, cost = conditions_dict_for_solution(sexp)
         if conditions is not None:
-            for msg in hash_key_pairs_for_conditions_dict(conditions)[1]:
+            for _, msg in pkm_pairs_for_conditions_dict(conditions):
                 signature = AugSchemeMPL.sign(private, msg)
                 sigs.append(signature)
         return sigs

@@ -23,7 +23,7 @@ from src.full_node.coin_store import CoinStore
 from src.util.errors import Err
 from src.util.cost_calculator import calculate_cost_of_program
 from src.util.mempool_check_conditions import mempool_check_conditions_dict
-from src.util.condition_tools import hash_key_pairs_for_conditions_dict
+from src.util.condition_tools import pkm_pairs_for_conditions_dict
 from src.util.ints import uint64, uint32
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from sortedcontainers import SortedDict
@@ -305,11 +305,11 @@ class MempoolManager:
                         potential_error = error
                     break
 
-                pks0, msgs0 = hash_key_pairs_for_conditions_dict(
+                for pk, m in pkm_pairs_for_conditions_dict(
                     npc.condition_dict, npc.coin_name
-                )
-                pks.extend(pks0)
-                msgs.extend(msgs0)
+                ):
+                    pks.append(pk)
+                    msgs.append(m)
 
             if error:
                 errors.append(error)

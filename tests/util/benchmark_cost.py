@@ -1,13 +1,12 @@
 import time
 from secrets import token_bytes
 
-from blspy import PrivateKey
+from blspy import PrivateKey, AugSchemeMPL
 from clvm import run_program
 from clvm_tools import binutils
 
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
-from src.types.BLSSignature import BLSSignature
 from src.types.program import Program
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 from src.util.wallet_tools import WalletTool
@@ -147,7 +146,7 @@ if __name__ == "__main__":
                 ]
             }
         )
-        puzzle = puzzle_for_pk(public_key)
+        puzzle = puzzle_for_pk(bytes(public_key))
         puzzles.append(puzzle)
         solutions.append(solution)
         private_keys.append(private_key)
@@ -166,16 +165,17 @@ if __name__ == "__main__":
     print(f"Puzzle cost sum is: {clvm_cost}")
 
     private_key = master_sk_to_wallet_sk(secret_key, uint32(0))
-    public_key = private_key.public_key()
+    public_key = private_key.get_g1()
     message = token_bytes()
-    signature = private_key.sign(message)
-    pk_message_pair = BLSSignature.PkMessagePair(public_key, message)
+    signature = AugSchemeMPL.sign(private_key, message)
+    pk_message_pair = (public_key, message)
 
     # Run AggSig 1000 times
     agg_sig_start = time.time()
     agg_sig_cost = 0
     for i in range(0, 1000):
-        valid = signature.validate([pk_message_pair])
+        valid = AugSchemeMPL.verify(public_key, message, signature)
+        assert valid
         agg_sig_cost += 20
     agg_sig_end = time.time()
     agg_sig_time = agg_sig_end - agg_sig_start

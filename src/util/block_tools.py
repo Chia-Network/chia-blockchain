@@ -43,7 +43,11 @@ from src.util.mempool_check_conditions import get_name_puzzle_conditions
 from src.plotting.plot_tools import load_plots
 from src.util.logging import initialize_logging
 from src.util.wallet_tools import WalletTool
-from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
+from src.wallet.derive_keys import (
+    master_sk_to_farmer_sk,
+    master_sk_to_pool_sk,
+    master_sk_to_wallet_sk,
+)
 
 
 def get_plot_dir():
@@ -76,14 +80,14 @@ class BlockTools:
             self.use_any_pos = True
             self.keychain = Keychain("testing-1.8.0", True)
             self.keychain.delete_all_keys()
-            self.farmer_pk = master_sk_to_farmer_sk(
-                self.keychain.add_private_key(b"block_tools farmer key", "")
-            ).get_g1()
-            self.pool_pk = master_sk_to_pool_sk(
-                self.keychain.add_private_key(b"block_tools pool key", "")
-            ).get_g1()
-            self.farmer_ph = create_puzzlehash_for_pk(self.farmer_pk)
-            self.pool_ph = create_puzzlehash_for_pk(self.pool_pk)
+            self.farmer_master_sk = self.keychain.add_private_key(
+                b"block_tools farmer key", ""
+            )
+            self.pool_master_sk = self.keychain.add_private_key(
+                b"block_tools pool key", ""
+            )
+            self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
+            self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
 
             plot_dir = get_plot_dir()
             mkdir(plot_dir)
@@ -122,23 +126,28 @@ class BlockTools:
             self.use_any_pos = False
             sk_and_ent = self.keychain.get_first_private_key()
             assert sk_and_ent is not None
-            self.farmer_ph = create_puzzlehash_for_pk(
-                master_sk_to_farmer_sk(sk_and_ent[0]).get_g1()
-            )
-            self.pool_ph = create_puzzlehash_for_pk(
-                master_sk_to_pool_sk(sk_and_ent[0]).get_g1()
-            )
+            self.farmer_master_sk = sk_and_ent[0]
+            self.pool_master_sk = sk_and_ent[0]
+
+        self.farmer_ph = create_puzzlehash_for_pk(
+            master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
+        )
+        self.pool_ph = create_puzzlehash_for_pk(
+            master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
+        )
 
         self.all_sks = self.keychain.get_all_private_keys()
-        pool_pubkeys: List[G1Element] = [
+        self.pool_pubkeys: List[G1Element] = [
             master_sk_to_pool_sk(sk).get_g1() for sk, _ in self.all_sks
         ]
         farmer_pubkeys: List[G1Element] = [
             master_sk_to_farmer_sk(sk).get_g1() for sk, _ in self.all_sks
         ]
-        if len(pool_pubkeys) == 0 or len(farmer_pubkeys) == 0:
+        if len(self.pool_pubkeys) == 0 or len(farmer_pubkeys) == 0:
             raise RuntimeError("Keys not generated. Run `chia generate keys`")
-        _, self.plots, _, _ = load_plots({}, farmer_pubkeys, pool_pubkeys, root_path)
+        _, self.plots, _, _ = load_plots(
+            {}, farmer_pubkeys, self.pool_pubkeys, root_path
+        )
 
     def get_plot_signature(
         self, header_data: HeaderData, plot_pk: G1Element
@@ -169,10 +178,10 @@ class BlockTools:
         return None
 
     def get_farmer_wallet_tool(self):
-        return WalletTool(self.all_sks[0][0])
+        return WalletTool(self.farmer_master_sk)
 
     def get_pool_wallet_tool(self):
-        return WalletTool(self.all_sks[1][0])
+        return WalletTool(self.pool_master_sk)
 
     def get_consecutive_blocks(
         self,
@@ -513,6 +522,7 @@ class BlockTools:
             selected_plot_info.prover.get_size(),
             proof_xs,
         )
+
         number_iters: uint64 = pot_iterations.calculate_iterations(
             proof_of_space,
             difficulty,

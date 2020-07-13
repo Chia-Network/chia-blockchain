@@ -30,6 +30,7 @@ def calculate_iterations(
     of the quality. The quality must be retrieved from the proof.
     """
     quality: bytes32 = proof_of_space.verify_and_get_quality_string(num_zero_bits)
+    assert quality is not None
     return calculate_iterations_quality(
         quality, proof_of_space.size, difficulty, min_iterations
     )

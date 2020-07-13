@@ -108,7 +108,7 @@ class Farmer:
             self.state_changed_callback(change)
 
     def _get_public_keys(self):
-        return [child_sk.get_g1() for child_sk, _ in self._get_private_keys()]
+        return [child_sk.get_g1() for child_sk in self._get_private_keys()]
 
     def _get_private_keys(self):
         all_sks = self.keychain.get_all_private_keys()

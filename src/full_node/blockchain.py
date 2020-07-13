@@ -30,7 +30,7 @@ from src.types.header import Header
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.util.blockchain_check_conditions import blockchain_check_conditions_dict
-from src.util.condition_tools import hash_key_pairs_for_conditions_dict
+from src.util.condition_tools import pkm_pairs_for_conditions_dict
 from src.util.cost_calculator import calculate_cost_of_program
 from src.util.errors import ConsensusError, Err
 from src.util.hash import std_hash
@@ -579,7 +579,7 @@ class Blockchain:
 
             # 17. Verify the pool signature even if there are no transactions
             pool_target_m = bytes(block.header.data.pool_target)
-            validates = AugSchemeMPL.validate(
+            validates = AugSchemeMPL.verify(
                 block.proof_of_space.pool_public_key,
                 pool_target_m,
                 block.header.data.aggregated_signature,
@@ -705,7 +705,6 @@ class Blockchain:
         removal_counter = collections.Counter(removals)
         for k, v in removal_counter.items():
             if v > 1:
-                log.error(f"DOUBLE SPEND! 1 {k}")
                 return Err.DOUBLE_SPEND
 
         # Check if removals exist and were not previously spend. (unspent_db + diff_store + this_block)
@@ -759,7 +758,6 @@ class Blockchain:
                     # (We ignore all coins confirmed after fork)
                     if unspent.spent == 1 and unspent.spent_block_index <= fork_h:
                         # Spend in an ancestor block, so this is a double spend
-                        log.error(f"DOUBLE SPEND! 2 {unspent}")
                         return Err.DOUBLE_SPEND
                     # If it's a coinbase, check that it's not frozen
                     if unspent.coinbase == 1:
@@ -795,8 +793,6 @@ class Blockchain:
                 # and coins created after fork (additions_since_fork)>
                 if rem in removals_since_fork:
                     # This coin was spent in the fork
-                    log.error(f"DOUBLE SPEND! 3 {rem}")
-                    log.error(f"removals_since_fork: {removals_since_fork}")
                     return Err.DOUBLE_SPEND
 
         # Check fees
@@ -849,11 +845,11 @@ class Blockchain:
             )
             if error:
                 return error
-            pks0, msgs0 = hash_key_pairs_for_conditions_dict(
+            for pk, m in pkm_pairs_for_conditions_dict(
                 npc.condition_dict, npc.coin_name
-            )
-            pairs_pks.extend(pks0)
-            pairs_msgs.extend(msgs0)
+            ):
+                pairs_pks.append(pk)
+                pairs_msgs.append(m)
 
         # Verify aggregated signature
         # TODO: move this to pre_validate_blocks_multiprocessing so we can sync faster

@@ -15,7 +15,11 @@ from src.plotting.plot_tools import (
     stream_plot_info,
     add_plot_directory,
 )
-from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
+from src.wallet.derive_keys import (
+    master_sk_to_farmer_sk,
+    master_sk_to_pool_sk,
+    master_sk_to_local_sk,
+)
 
 
 log = logging.getLogger(__name__)
@@ -76,16 +80,16 @@ def create_plots(
     config = load_config(root_path, config_filename)
     plot_filenames = get_plot_filenames(config["harvester"])
     for i in range(num):
-        log.info("Starting plot {num}")
         # Generate a random master secret key
         if test_private_keys is not None:
-            sk: PrivateKey = test_private_keys[num]
+            assert len(test_private_keys) == num
+            sk: PrivateKey = test_private_keys[i]
         else:
             sk = PrivateKey.from_seed(token_bytes(32))
 
         # The plot public key is the combination of the harvester and farmer keys
         plot_public_key = ProofOfSpace.generate_plot_public_key(
-            sk.get_g1(), farmer_public_key
+            master_sk_to_local_sk(sk).get_g1(), farmer_public_key
         )
 
         # The plot id is based on the harvester, farmer, and pool keys
@@ -109,6 +113,7 @@ def create_plots(
                 config = add_plot_directory(str(args.final_dir.resolve()), root_path)
 
         if not full_path.exists():
+            log.info(f"Starting plot {num}")
             # Creates the plot. This will take a long time for larger plots.
             plotter: DiskPlotter = DiskPlotter()
             plotter.create_plot_disk(
