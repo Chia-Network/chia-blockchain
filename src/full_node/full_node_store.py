@@ -37,7 +37,7 @@ class FullNodeStore:
 
         await self.db.commit()
 
-        self.proof_of_time_estimate_ips = uint64(10000)
+        self.proof_of_time_estimate_ips = uint64(100000)
         self.proof_of_time_heights = {}
         self.unfinished_blocks_leader = (
             uint32(0),

@@ -10,8 +10,8 @@ from tests.time_out_assert import time_out_assert, time_out_assert_custom_interv
 
 test_constants, bt = make_test_constants_with_genesis(
     {
-        "DIFFICULTY_STARTING": 500,
-        "MIN_ITERS_STARTING": 500,
+        "DIFFICULTY_STARTING": 1000,
+        "MIN_ITERS_STARTING": 100000,
         "NUMBER_ZERO_BITS_CHALLENGE_SIG": 1,
     }
 )
@@ -40,7 +40,7 @@ class TestSimulation:
         node1, node2, _, _, _, _, _, _, _ = simulation
 
         # Use node2 to test node communication, since only node1 extends the chain.
-        await time_out_assert(300, node_height_at_least, True, node2, 7)
+        await time_out_assert(500, node_height_at_least, True, node2, 10)
 
         # Wait additional 2 minutes to get a compact block.
         max_height = node1.blockchain.lca_block.height

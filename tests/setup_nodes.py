@@ -79,13 +79,21 @@ async def setup_full_node(
             30,
             config["target_peer_count"],
         )
-    FullNodeApi = FullNodeSimulator if simulator else FullNode
-    api = FullNodeApi(
-        config=config,
-        root_path=bt.root_path,
-        consensus_constants=consensus_constants,
-        name=f"full_node_{port}",
-    )
+    if not simulator:
+        api: FullNode = FullNode(
+            config=config,
+            root_path=bt.root_path,
+            consensus_constants=consensus_constants,
+            name=f"full_node_{port}",
+        )
+    else:
+        api = FullNodeSimulator(
+            config=config,
+            root_path=bt.root_path,
+            consensus_constants=consensus_constants,
+            name=f"full_node_sim_{port}",
+            bt=bt,
+        )
 
     started = asyncio.Event()
 
