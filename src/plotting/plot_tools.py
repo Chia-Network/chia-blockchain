@@ -154,7 +154,7 @@ def load_plots(
                 tb = traceback.format_exc()
                 log.error(f"Failed to open file {filename}. {e} {tb}")
                 failed_to_open_filenames.append(filename)
-                break
+                continue
             log.info(
                 f"Found plot {filename} of size {provers[filename].prover.get_size()}"
             )

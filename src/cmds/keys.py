@@ -11,7 +11,7 @@ from src.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_wallet_sk,
 )
-from src.utils.ints import uint32
+from src.util.ints import uint32
 
 command_list = [
     "generate",

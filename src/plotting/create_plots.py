@@ -32,7 +32,7 @@ def get_default_farmer_public_key() -> G1Element:
         raise RuntimeError(
             "No keys, please run 'chia keys generate' or provide a public key with -f"
         )
-    return master_sk_to_farmer_sk(sk_ent).get_g1()
+    return master_sk_to_farmer_sk(sk_ent[0]).get_g1()
 
 
 def get_default_pool_public_key() -> G1Element:
@@ -42,7 +42,7 @@ def get_default_pool_public_key() -> G1Element:
         raise RuntimeError(
             "No keys, please run 'chia keys generate' or provide a public key with -f"
         )
-    return master_sk_to_pool_sk(sk_ent).get_g1()
+    return master_sk_to_pool_sk(sk_ent[0]).get_g1()
 
 
 def create_plots(
