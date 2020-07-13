@@ -121,7 +121,7 @@ def load_plots(
                     log.warning(
                         f"Plot {filename} has a farmer public key that is not in the farmer's pk list."
                     )
-                    no_key_filenames.add(filename)
+                    no_key_filenames.append(filename)
                     if not open_no_key_filenames:
                         continue
 
@@ -132,7 +132,7 @@ def load_plots(
                     log.warning(
                         f"Plot {filename} has a pool public key that is not in the farmer's pool pk list."
                     )
-                    no_key_filenames.add(filename)
+                    no_key_filenames.append(filename)
                     if not open_no_key_filenames:
                         continue
 
