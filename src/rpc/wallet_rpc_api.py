@@ -594,7 +594,7 @@ class WalletRpcApi:
                 fingerprint=fingerprint, skip_backup_import=True
             )
         elif type == "restore_backup":
-            file_path = request["file_path"]
+            file_path = Path(request["file_path"])
             started = await self.service._start(
                 fingerprint=fingerprint, backup_file=file_path
             )
