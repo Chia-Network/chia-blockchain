@@ -78,7 +78,7 @@ def check_plots(args, root_path):
     log.info("Summary")
     total_plots: int = sum(list(total_good_plots.values()))
     log.info(
-        f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024)} TB"
+        f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024):.5f} TB"
     )
     for (k, count) in sorted(dict(total_good_plots).items()):
         log.info(f"{count} plots of size {k}")
