@@ -114,15 +114,16 @@ def add_private_key_seed(mnemonic):
         return
 
 
-def mnemonic_to_string(mnemonic):
+def mnemonic_to_string(mnemonic_str):
     """
     Converts a menmonic to a user readable string in the terminal.
     """
+    mnemonic = mnemonic_str.split()
     mnemonics_string = ""
 
-    for i in range(0, 24):
+    for i in range(0, len(mnemonic)):
         mnemonics_string += f"{i + 1}) {mnemonic[i]}"
-        if i != 23:
+        if i != len(mnemonic) - 1:
             mnemonics_string += ", "
         if (i + 1) % 6 == 0:
             mnemonics_string += "\n"
