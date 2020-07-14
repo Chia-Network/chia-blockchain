@@ -1384,6 +1384,7 @@ class WalletStateManager:
         await self.action_store.create_action(
             name, wallet_id, type, callback, done, data
         )
+        self.tx_pending_changed()
 
     async def set_action_done(self, action_id: int):
         await self.action_store.action_done(action_id)
