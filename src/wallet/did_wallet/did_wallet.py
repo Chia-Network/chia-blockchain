@@ -443,8 +443,10 @@ class DIDWallet:
         )
         parent_info = await self.get_parent_for_coin(coin)
 
-        fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} (0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount}) {coin.amount} {innerpuz_str} {innersol})"
-        #breakpoint()
+        fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} \
+            (0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount})\
+            {coin.amount} {innerpuz_str} {innersol})"
+        # breakpoint()
         list_of_solutions = [
             CoinSolution(
                 coin,
@@ -501,7 +503,9 @@ class DIDWallet:
         )
         parent_info = await self.get_parent_for_coin(coin)
 
-        fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} (0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount}) {coin.amount} {innerpuz_str} {innersol})"
+        fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} \
+            (0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount}) \
+            {coin.amount} {innerpuz_str} {innersol})"
         # breakpoint()
         list_of_solutions = [
             CoinSolution(
@@ -569,7 +573,8 @@ class DIDWallet:
         spend_bundle=None,
     ):
         # innerpuz solution is (mode amount new_puz identity my_puz parent_innerpuzhash_amounts_for_recovery_ids)
-        innersol = f"(2 {coin.amount} 0x{puzhash} 0x{coin.name()} 0x{coin.puzzle_hash} {parent_innerpuzhash_amounts_for_recovery_ids})"
+        innersol = f"(2 {coin.amount} 0x{puzhash} 0x{coin.name()} \
+            0x{coin.puzzle_hash} {parent_innerpuzhash_amounts_for_recovery_ids})"
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz_str = self.did_info.current_inner
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
@@ -578,7 +583,9 @@ class DIDWallet:
         )
         parent_info = await self.get_parent_for_coin(coin)
 
-        fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} (0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount}) {coin.amount} {innerpuz_str} {innersol})"
+        fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} \
+            (0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount}) \
+            {coin.amount} {innerpuz_str} {innersol})"
         # breakpoint()
         list_of_solutions = [
             CoinSolution(
@@ -717,7 +724,8 @@ class DIDWallet:
         innersol = f"(0 {coin.amount} 0x{coin.puzzle_hash} 0x{coin.name()} 0x{coin.puzzle_hash})"
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz_str = binutils.disassemble(innerpuz)
-        fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} 0x{coin.parent_coin_info} {coin.amount} {innerpuz_str} {innersol})"
+        fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} \
+            0x{coin.parent_coin_info} {coin.amount} {innerpuz_str} {innersol})"
         # breakpoint()
         list_of_solutions = [
             CoinSolution(
