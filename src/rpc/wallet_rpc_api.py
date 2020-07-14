@@ -7,7 +7,6 @@ from typing import List, Optional, Tuple, Dict, Callable
 
 from src.util.byte_types import hexstr_to_bytes
 from src.util.keychain import (
-    bytes_from_mnemonic,
     generate_mnemonic,
     bytes_to_mnemonic,
 )
@@ -373,7 +372,9 @@ class WalletRpcApi:
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
         puzzle_hash = hexstr_to_bytes(request["innerpuzhash"])
         try:
-            tx = await wallet.generate_signed_transaction(request["amount"], puzzle_hash)
+            tx = await wallet.generate_signed_transaction(
+                request["amount"], puzzle_hash
+            )
         except Exception as e:
             data = {
                 "status": "FAILED",
@@ -540,9 +541,8 @@ class WalletRpcApi:
         if "mnemonic" in request:
             # Adding a key from 24 word mnemonic
             mnemonic = request["mnemonic"]
-            entropy = bytes_from_mnemonic(mnemonic)
             passphrase = ""
-            sk = self.service.keychain.add_private_key(entropy, passphrase)
+            sk = self.service.keychain.add_private_key(" ".join(mnemonic), passphrase)
         else:
             return {"success": False}
 

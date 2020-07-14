@@ -113,7 +113,7 @@ def create_plots(
                 config = add_plot_directory(str(args.final_dir.resolve()), root_path)
 
         if not full_path.exists():
-            log.info(f"Starting plot {num}")
+            log.info(f"Starting plot {i + 1}/{num}")
             # Creates the plot. This will take a long time for larger plots.
             plotter: DiskPlotter = DiskPlotter()
             plotter.create_plot_disk(

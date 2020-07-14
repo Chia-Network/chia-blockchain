@@ -447,9 +447,7 @@ class Wallet(AbstractWallet):
                 output_created = coin
             else:
                 solution = self.make_solution(consumed=[output_created.name()])
-            list_of_solutions.append(
-                CoinSolution(coin, Program.to([puzzle, solution]))
-            )
+            list_of_solutions.append(CoinSolution(coin, Program.to([puzzle, solution])))
             new_sigs = await self.get_sigs_for_innerpuz_with_innersol(puzzle, solution)
             sigs = sigs + new_sigs
 
