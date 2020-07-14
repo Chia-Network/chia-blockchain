@@ -120,6 +120,7 @@ export const add_new_key_action = mnemonic => {
         refreshAllState(dispatch);
       } else {
         const error = response.data.error;
+        dispatch(openDialog("Error", error));
       }
     });
   };
@@ -157,6 +158,7 @@ export const add_and_restore_from_backup = (mnemonic, file_path) => {
         refreshAllState(dispatch);
       } else {
         const error = response.data.error;
+        dispatch(openDialog("Error", error));
       }
     });
   };
@@ -215,7 +217,7 @@ export const login_action = fingerprint => {
           dispatch(changeEntranceMenu(presentRestoreBackup));
           // Go to restore from backup screen
         } else {
-          // Display error message
+          dispatch(openDialog("Error", error));
         }
       }
     });
@@ -333,6 +335,7 @@ export const create_cc_action = (amount, fee) => {
           dispatch(createState(true, false));
         } else {
           const error = response.data.error;
+          dispatch(openDialog("Error", error));
         }
       }
     );
@@ -351,6 +354,7 @@ export const create_cc_for_colour_action = (colour, fee) => {
           dispatch(format_message("get_wallets", {}));
         } else {
           const error = response.data.error;
+          dispatch(openDialog("Error", error));
         }
       }
     );

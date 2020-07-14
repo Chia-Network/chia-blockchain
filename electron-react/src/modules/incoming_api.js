@@ -1,6 +1,4 @@
 import { service_wallet_server } from "../util/service_names";
-import { statement } from "@babel/template";
-import { selectFingerprint } from "./message";
 
 export const Wallet = (id, name, type, data) => ({
   id: id,

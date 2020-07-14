@@ -74,11 +74,9 @@ const UIPart = props => {
     dispatch(resetMnemonic());
     dispatch(changeEntranceMenu(presentSelectKeys));
   }
-  const store = useStore();
   const dispatch = useDispatch();
 
   function enterMnemonic() {
-    var state = store.getState();
     dispatch(unselectFingerprint());
     dispatch(changeEntranceMenu(presentRestoreBackup));
   }
