@@ -88,7 +88,7 @@ def load_plots(
 ) -> Tuple[bool, Dict[Path, PlotInfo], Set[Path], Set[Path]]:
     config_file = load_config(root_path, "config.yaml", "harvester")
     changed = False
-    no_key_filenames: Set[Path] = []
+    no_key_filenames: Set[Path] = set()
     log.info(f'Searching directories {config_file["plot_directories"]}')
 
     plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(config_file)
@@ -121,7 +121,7 @@ def load_plots(
                     log.warning(
                         f"Plot {filename} has a farmer public key that is not in the farmer's pk list."
                     )
-                    no_key_filenames.append(filename)
+                    no_key_filenames.add(filename)
                     if not open_no_key_filenames:
                         continue
 
@@ -132,7 +132,7 @@ def load_plots(
                     log.warning(
                         f"Plot {filename} has a pool public key that is not in the farmer's pool pk list."
                     )
-                    no_key_filenames.append(filename)
+                    no_key_filenames.add(filename)
                     if not open_no_key_filenames:
                         continue
 

@@ -33,7 +33,7 @@ from src.types.proof_of_space import ProofOfSpace
 from src.types.proof_of_time import ProofOfTime
 from src.types.pool_target import PoolTarget
 from src.types.sized_bytes import bytes32
-from src.util.keychain import Keychain
+from src.util.keychain import Keychain, bytes_to_mnemonic
 from src.util.merkle_set import MerkleSet
 from src.util.ints import uint8, uint32, uint64, uint128, int512
 from src.util.hash import std_hash
@@ -81,10 +81,10 @@ class BlockTools:
             self.keychain = Keychain("testing-1.8.0", True)
             self.keychain.delete_all_keys()
             self.farmer_master_sk = self.keychain.add_private_key(
-                b"block_tools farmer key 1.8", ""
+                bytes_to_mnemonic(std_hash(b"block_tools farmer key")), ""
             )
             self.pool_master_sk = self.keychain.add_private_key(
-                b"block_tools pool key 1.8", ""
+                bytes_to_mnemonic(std_hash(b"block_tools pool key")), ""
             )
             self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
             self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
