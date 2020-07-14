@@ -5,7 +5,7 @@ import traceback
 from src.util.keychain import Keychain
 
 # See: https://bugs.python.org/issue29288
-u''.encode('idna')
+"".encode("idna")
 
 try:
     import uvloop
