@@ -6,7 +6,7 @@ dependencies = [
     "blspy==0.2c1",  # Signature library
     "chiavdf==0.12.19",  # timelord and vdf verification
     "chiabip158==0.15",  # bip158-style wallet filters
-    "chiapos==0.1b2",  # proof of space
+    "chiapos==0.12.23",  # proof of space
     "clvm==0.4",  # contract language
     "clvm-tools==0.1.1",  # clvm compiler tools
     "aiohttp==3.6.2",  # HTTP server for full node rpc
