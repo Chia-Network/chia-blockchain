@@ -326,9 +326,9 @@ export const create_cc_action = (amount, fee) => {
       response => {
         dispatch(closeProgress());
         dispatch(createState(true, false));
-
         if (response.data.success) {
           // Go to wallet
+          dispatch(format_message("get_wallets", {}));
           dispatch(showCreateBackup(true));
           dispatch(createState(true, false));
         } else {
