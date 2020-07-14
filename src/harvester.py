@@ -241,15 +241,18 @@ class Harvester:
                 awaitables.append(lookup_challenge(filename, plot_info.prover))
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
+        total_proofs_found = 0
         for sublist_awaitable in asyncio.as_completed(awaitables):
             for response in await sublist_awaitable:
+                total_proofs_found += 1
                 yield OutboundMessage(
                     NodeType.FARMER,
                     Message("challenge_response", response),
                     Delivery.RESPOND,
                 )
         log.info(
-            f"{len(awaitables)} plots were eligible for farming for this challenge, time: {time.time() - start}. "
+            f"{len(awaitables)} plots were eligible for farming {new_challenge.challenge_hash.hex()[:10]}..."
+            f" Found {total_proofs_found} proofs. Time: {time.time() - start}. "
             f"Total {len(self.provers)} plots"
         )
 
