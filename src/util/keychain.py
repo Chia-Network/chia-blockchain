@@ -35,24 +35,27 @@ def bip39_word_list() -> str:
     return pkg_resources.resource_string(__name__, "english.txt").decode()
 
 
-def generate_mnemonic() -> List[str]:
+def generate_mnemonic() -> str:
     mnemonic_bytes = token_bytes(32)
     mnemonic = bytes_to_mnemonic(mnemonic_bytes)
     return mnemonic
 
 
 def bytes_to_mnemonic(mnemonic_bytes: bytes):
-    seed_array = bytearray(mnemonic_bytes)
+    if len(mnemonic_bytes) not in [16, 20, 24, 28, 32]:
+        raise ValueError(
+            f"Data length should be one of the following: [16, 20, 24, 28, 32], but it is {len(mnemonic_bytes)}."
+        )
     word_list = bip39_word_list().splitlines()
+    CS = len(mnemonic_bytes) // 4
 
-    checksum = bytes(std_hash(mnemonic_bytes))
+    checksum = BitArray(bytes(std_hash(mnemonic_bytes)))[:CS]
 
-    seed_array.append(checksum[0])
-    bytes_for_mnemonic = bytes(seed_array)
-    bitarray = BitArray(bytes_for_mnemonic)
+    bitarray = BitArray(mnemonic_bytes) + checksum
     mnemonics = []
+    assert len(bitarray) % 11 == 0
 
-    for i in range(0, 24):
+    for i in range(0, len(bitarray) // 11):
         start = i * 11
         end = start + 11
         bits = bitarray[start:end]
@@ -60,35 +63,46 @@ def bytes_to_mnemonic(mnemonic_bytes: bytes):
         m_word = word_list[m_word_poition]
         mnemonics.append(m_word)
 
-    return mnemonics
+    return " ".join(mnemonics)
 
 
-def bytes_from_mnemonic(mnemonic: List[str]):
+def bytes_from_mnemonic(mnemonic_str: str):
+    mnemonic: List[str] = mnemonic_str.split(" ")
+    if len(mnemonic) not in [12, 15, 18, 21, 24]:
+        raise ValueError("Invalid mnemonic length")
+
     word_list = {word: i for i, word in enumerate(bip39_word_list().splitlines())}
     bit_array = BitArray()
-    for i in range(0, 24):
+    for i in range(0, len(mnemonic)):
         word = mnemonic[i]
         value = word_list[word]
         bit_array.append(BitArray(uint=value, length=11))
 
-    all_bytes = bit_array.bytes
-    entropy_bytes = all_bytes[:32]
-    checksum_bytes = all_bytes[32]
-    checksum = std_hash(entropy_bytes)
+    CS: int = len(mnemonic) // 3
+    ENT: int = len(mnemonic) * 11 - CS
+    assert len(bit_array) == len(mnemonic) * 11
+    assert ENT % 32 == 0
 
-    if checksum[0] != checksum_bytes:
+    entropy_bytes = bit_array[:ENT].bytes
+    checksum_bytes = bit_array[ENT:]
+    checksum = BitArray(std_hash(entropy_bytes))[:CS]
+
+    assert len(checksum_bytes) == CS
+
+    if checksum != checksum_bytes:
         raise ValueError("Invalid order of mnemonic words")
 
     return entropy_bytes
 
 
-def entropy_to_seed(entropy: bytes, passphrase):
+def mnemonic_to_seed(mnemonic: str, passphrase):
     """
     Uses BIP39 standard to derive a seed from entropy bytes.
     """
     salt_str: str = "mnemonic" + passphrase
     salt = unicodedata.normalize("NFKD", salt_str).encode("utf-8")
-    seed = pbkdf2_hmac("sha512", entropy, salt, 2048)
+    mnemonic_normalized = unicodedata.normalize("NFKD", mnemonic).encode("utf-8")
+    seed = pbkdf2_hmac("sha512", mnemonic_normalized, salt, 2048)
 
     assert len(seed) == 64
     return seed
@@ -108,7 +122,7 @@ class Keychain:
     testing: bool
     user: str
 
-    def __init__(self, user: str = "user-1.8.0", testing: bool = False):
+    def __init__(self, user: str = "user-chia-1.8", testing: bool = False):
         self.testing = testing
         self.user = user
 
@@ -157,13 +171,14 @@ class Keychain:
                 return index
             index += 1
 
-    def add_private_key(self, entropy: bytes, passphrase: str) -> PrivateKey:
+    def add_private_key(self, mnemonic: str, passphrase: str) -> PrivateKey:
         """
         Adds a private key to the keychain, with the given entropy and passphrase. The
         keychain itself will store the public key, and the entropy bytes,
         but not the passphrase.
         """
-        seed = entropy_to_seed(entropy, passphrase)
+        seed = mnemonic_to_seed(mnemonic, passphrase)
+        entropy = bytes_from_mnemonic(mnemonic)
         index = self._get_free_private_key_index()
         key = PrivateKey.from_seed(seed)
         fingerprint = key.get_g1().get_fingerprint()
@@ -191,7 +206,8 @@ class Keychain:
             if pkent is not None:
                 pk, ent = pkent
                 for pp in passphrases:
-                    seed = entropy_to_seed(ent, pp)
+                    mnemonic = bytes_to_mnemonic(ent)
+                    seed = mnemonic_to_seed(mnemonic, pp)
                     key = PrivateKey.from_seed(seed)
                     if key.get_g1() == pk:
                         return (key, ent)
@@ -214,7 +230,8 @@ class Keychain:
             if pkent is not None:
                 pk, ent = pkent
                 for pp in passphrases:
-                    seed = entropy_to_seed(ent, pp)
+                    mnemonic = bytes_to_mnemonic(ent)
+                    seed = mnemonic_to_seed(mnemonic, pp)
                     key = PrivateKey.from_seed(seed)
                     if key.get_g1() == pk:
                         all_keys.append((key, ent))

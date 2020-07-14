@@ -9,7 +9,7 @@ from src.server.connection import NodeType
 from src.server.server import ChiaServer
 from src.simulator.full_node_simulator import FullNodeSimulator
 from src.timelord_launcher import spawn_process, kill_processes
-from src.util.keychain import Keychain
+from src.util.keychain import Keychain, bytes_to_mnemonic
 from src.wallet.wallet_node import WalletNode
 from src.util.config import load_config
 from src.harvester import Harvester
@@ -150,7 +150,7 @@ async def setup_wallet_node(
 
     entropy = token_bytes(32)
     keychain = Keychain(entropy.hex(), True)
-    keychain.add_private_key(entropy, "")
+    keychain.add_private_key(bytes_to_mnemonic(entropy), "")
     consensus_constants = constants_for_dic(dic)
     first_pk = keychain.get_first_public_key()
     assert first_pk is not None

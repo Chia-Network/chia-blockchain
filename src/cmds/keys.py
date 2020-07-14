@@ -4,7 +4,6 @@ from src.util.keychain import (
     generate_mnemonic,
     bytes_to_mnemonic,
     Keychain,
-    bytes_from_mnemonic,
 )
 from src.wallet.derive_keys import (
     master_sk_to_pool_sk,
@@ -102,9 +101,8 @@ def add_private_key_seed(mnemonic):
     """
 
     try:
-        entropy = bytes_from_mnemonic(mnemonic)
         passphrase = ""
-        sk = keychain.add_private_key(entropy, passphrase)
+        sk = keychain.add_private_key(mnemonic, passphrase)
         fingerprint = sk.get_g1().get_fingerprint()
         print(
             f"Added private key with public key fingerprint {fingerprint} and mnemonic"
@@ -205,7 +203,7 @@ def handler(args, parser):
     elif command == "show":
         show_all_keys()
     elif command == "add":
-        add_private_key_seed(args.mnemonic)
+        add_private_key_seed(" ".join(args.mnemonic))
         check_keys(root_path)
     elif command == "delete":
         delete(args)
