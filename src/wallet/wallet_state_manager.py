@@ -189,7 +189,7 @@ class WalletStateManager:
                     genesis.prev_header_hash,
                     uint32(0),
                     genesis.weight,
-                    [],
+                    genesis.additions(),
                     [],
                     genesis_hb.header.data.total_iters,
                     genesis_challenge.get_hash(),
