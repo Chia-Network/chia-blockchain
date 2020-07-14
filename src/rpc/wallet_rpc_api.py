@@ -373,7 +373,7 @@ class WalletRpcApi:
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
         puzzle_hash = hexstr_to_bytes(request["innerpuzhash"])
         try:
-            tx = await wallet.cc_spend(request["amount"], puzzle_hash)
+            tx = await wallet.generate_signed_transaction(request["amount"], puzzle_hash)
         except Exception as e:
             data = {
                 "status": "FAILED",
