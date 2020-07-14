@@ -667,11 +667,11 @@ if __name__ == "__main__":
         bytes(
             bt.create_genesis_block(
                 consensus_constants,
-                bytes((20758).to_bytes(4, "big") + bytes([20758 % 256] * 28)),
+                bytes([0] * 32),
                 b"0",
                 bytes32(
                     bytes.fromhex(
-                        "30944219616695e48f7a9b54b38877104a1f5fbe85c61da2fbe35275418a64bc"
+                        "b2010728de33eb3cc84d7fd97b520ff087928999d47ba3b4c90532e90db954cb"
                     )
                 ),
             )
