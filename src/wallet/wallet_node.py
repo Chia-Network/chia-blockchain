@@ -130,9 +130,9 @@ class WalletNode:
             return False
 
         private_key: Optional[PrivateKey] = None
-        if public_key_fingerprint is not None:
+        if fingerprint is not None:
             for sk, _ in private_keys:
-                if sk.get_g1().get_fingerprint() == public_key_fingerprint:
+                if sk.get_g1().get_fingerprint() == fingerprint:
                     private_key = sk
                     break
         else:
