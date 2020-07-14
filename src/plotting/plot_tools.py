@@ -88,7 +88,7 @@ def load_plots(
 ) -> Tuple[bool, Dict[Path, PlotInfo], Set[Path], Set[Path]]:
     config_file = load_config(root_path, "config.yaml", "harvester")
     changed = False
-    no_key_filenames: Set[Path] = []
+    no_key_filenames: Set[Path] = set()
     log.info(f'Searching directories {config_file["plot_directories"]}')
 
     plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(config_file)
