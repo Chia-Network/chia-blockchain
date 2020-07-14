@@ -17,7 +17,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { useStyles } from "./CreateWallet";
-import { create_coloured_coin, create_cc_action } from "../modules/message";
+import { create_cc_action } from "../modules/message";
 import { chia_to_mojo } from "../util/chia";
 import { openDialog } from "../modules/dialogReducer";
 

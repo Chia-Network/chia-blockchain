@@ -1,20 +1,16 @@
-import React, { Component, useEffect } from "react";
+import React from "react";
 import Button from "@material-ui/core/Button";
 import CssBaseline from "@material-ui/core/CssBaseline";
-import Grid from "@material-ui/core/Grid";
 import Typography from "@material-ui/core/Typography";
-import { withTheme } from "@material-ui/styles";
 import Container from "@material-ui/core/Container";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { useSelector, useDispatch } from "react-redux";
-import CssTextField from "../../components/cssTextField";
 import myStyle from "../style";
 import {
   changeEntranceMenu,
   presentSelectKeys
 } from "../../modules/entranceMenu";
 import {
-  login_action,
   log_in_and_skip_import,
   add_new_key_action,
   log_in_and_import_backup,
@@ -30,7 +26,7 @@ const UIPart = props => {
 
   const dispatch = useDispatch();
   const classes = myStyle();
-  if (words.length == 0) {
+  if (words.length === 0) {
     words = null;
   }
 
