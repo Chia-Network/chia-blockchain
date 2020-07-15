@@ -7,7 +7,7 @@ from secrets import token_bytes
 from typing import Optional, List, Tuple, Any
 
 import json
-from blspy import PrivateKey, AugSchemeMPL
+from blspy import PrivateKey, AugSchemeMPL, G1Element
 from clvm_tools import binutils
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
@@ -70,7 +70,7 @@ class RLWallet(AbstractWallet):
 
 
         private_key = wallet_state_manager.private_key
-        pubkey_bytes: bytes = bytes(private_key.public_child(unused).get_public_key())
+        pubkey_bytes: bytes = bytes(private_key.derive_child(unused).get_g1())
 
         rl_info = RLInfo(
             "admin", pubkey_bytes, None, None, None, None, None, None, False
@@ -192,7 +192,7 @@ class RLWallet(AbstractWallet):
 
         rl_puzzle_hash = rl_puzzle.get_tree_hash()
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(
-            PrivateKey.from_bytes(self.rl_info.admin_pubkey).get_g1()
+            G1Element.from_bytes(self.rl_info.admin_pubkey)
         )
 
         assert index is not None
@@ -267,7 +267,7 @@ class RLWallet(AbstractWallet):
         rl_puzzle_hash = rl_puzzle.get_tree_hash()
 
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(
-            PublicKey.from_bytes(self.rl_info.user_pubkey)
+            G1Element.from_bytes(self.rl_info.user_pubkey)
         )
         assert index is not None
         record = DerivationRecord(
