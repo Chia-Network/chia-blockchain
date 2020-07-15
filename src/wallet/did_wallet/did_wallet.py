@@ -13,9 +13,7 @@ from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
-from src.util.condition_tools import (
-    conditions_dict_for_solution
-)
+from src.util.condition_tools import conditions_dict_for_solution
 from src.util.json_util import dict_to_json_str
 from src.util.ints import uint64, uint32
 from src.wallet.BLSPrivateKey import BLSPrivateKey
@@ -273,6 +271,14 @@ class DIDWallet:
         search_for_parent: bool = True
 
         inner_puzzle = await self.inner_puzzle_for_did_puzzle(coin.puzzle_hash)
+        new_info = DIDInfo(
+            self.did_info.my_core,
+            self.did_info.backup_ids,
+            self.did_info.parent_info,
+            inner_puzzle,
+        )
+        await self.save_info(new_info)
+
         future_parent = CCParent(
             coin.parent_coin_info,
             Program(binutils.assemble(inner_puzzle)).get_tree_hash(),
@@ -417,13 +423,10 @@ class DIDWallet:
         )
 
     async def get_new_puzzle(self) -> Program:
-        return self.puzzle_for_pk(
-            bytes(
-                await self.wallet_state_manager.get_unused_derivation_record(
-                    self.wallet_info.id
-                ).pubkey
-            )
+        devrec = await self.wallet_state_manager.get_unused_derivation_record(
+            self.wallet_info.id
         )
+        return self.puzzle_for_pk(bytes(devrec.pubkey))
 
     def get_my_ID(self):
         ret = did_wallet_puzzles.get_genesis_from_puzzle(self.did_info.my_core)
@@ -444,8 +447,8 @@ class DIDWallet:
         parent_info = await self.get_parent_for_coin(coin)
 
         fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} \
-            (0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount})\
-            {coin.amount} {innerpuz_str} {innersol})"
+(0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount})\
+{coin.amount} {innerpuz_str} {innersol})"
         # breakpoint()
         list_of_solutions = [
             CoinSolution(
@@ -504,8 +507,8 @@ class DIDWallet:
         parent_info = await self.get_parent_for_coin(coin)
 
         fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} \
-            (0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount}) \
-            {coin.amount} {innerpuz_str} {innersol})"
+(0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount}) \
+{coin.amount} {innerpuz_str} {innersol})"
         # breakpoint()
         list_of_solutions = [
             CoinSolution(
@@ -574,7 +577,7 @@ class DIDWallet:
     ):
         # innerpuz solution is (mode amount new_puz identity my_puz parent_innerpuzhash_amounts_for_recovery_ids)
         innersol = f"(2 {coin.amount} 0x{puzhash} 0x{coin.name()} \
-            0x{coin.puzzle_hash} {parent_innerpuzhash_amounts_for_recovery_ids})"
+0x{coin.puzzle_hash} {parent_innerpuzhash_amounts_for_recovery_ids})"
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz_str = self.did_info.current_inner
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
@@ -584,8 +587,8 @@ class DIDWallet:
         parent_info = await self.get_parent_for_coin(coin)
 
         fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} \
-            (0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount}) \
-            {coin.amount} {innerpuz_str} {innersol})"
+(0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount}) \
+{coin.amount} {innerpuz_str} {innersol})"
         # breakpoint()
         list_of_solutions = [
             CoinSolution(
@@ -725,7 +728,7 @@ class DIDWallet:
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz_str = binutils.disassemble(innerpuz)
         fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} \
-            0x{coin.parent_coin_info} {coin.amount} {innerpuz_str} {innersol})"
+0x{coin.parent_coin_info} {coin.amount} {innerpuz_str} {innersol})"
         # breakpoint()
         list_of_solutions = [
             CoinSolution(
@@ -757,13 +760,23 @@ class DIDWallet:
         self.log.info(f"Adding parent {name}: {parent}")
         current_list = self.did_info.parent_info.copy()
         current_list.append((name, parent))
-        cc_info: DIDInfo = DIDInfo(
+        did_info: DIDInfo = DIDInfo(
             self.did_info.my_core,
             self.did_info.backup_ids,
             current_list,
             self.did_info.current_inner,
         )
-        await self.save_info(cc_info)
+        await self.save_info(did_info)
+
+    async def update_recovery_list(self, recover_list):
+        did_info: DIDInfo = DIDInfo(
+            self.did_info.my_core,
+            recover_list,
+            self.did_info.parent_info,
+            self.did_info.current_inner,
+        )
+        await self.save_info(did_info)
+        await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
 
     async def save_info(self, did_info: DIDInfo):
         self.did_info = did_info
