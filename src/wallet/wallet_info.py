@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List
 from src.util.streamable import streamable, Streamable
-from src.util.ints import uint32
+from src.util.ints import uint32, uint8
 
 
 @dataclass(frozen=True)
@@ -19,7 +19,7 @@ class WalletInfo(Streamable):
 
     id: uint32
     name: str
-    type: int  # WalletType(type)
+    type: uint8  # WalletType(type)
     data: str
 
 
