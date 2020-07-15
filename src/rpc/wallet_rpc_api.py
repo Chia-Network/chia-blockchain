@@ -72,11 +72,10 @@ class WalletRpcApi:
             "/get_trade": self.get_trade,
             "/get_all_trades": self.get_all_trades,
             "/cancel_trade": self.cancel_trade,
-            "/create_backup": self.create_backup,
-            "/get_backup_info": self.get_backup_info,
+            "/rl_create_coin": self.rl_create_coin,
         }
 
-    async def admin_create_coin(self, request: Dict):
+    async def rl_create_coin(self, request: Dict):
         if self.service is None:
             return {"success": False}
         if self.service.wallet_state_manager is None:
