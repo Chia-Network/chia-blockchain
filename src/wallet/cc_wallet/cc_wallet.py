@@ -505,22 +505,7 @@ class CCWallet:
         for record in coins:
             amount += record.coin.amount
 
-        unconfirmed_removals: Dict[
-            bytes32, Coin
-        ] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
-            self.wallet_info.id
-        )
-        removal_amount = 0
-        for name, coin in unconfirmed_removals.items():
-            if await self.wallet_state_manager.does_coin_belong_to_wallet(
-                coin, self.wallet_info.id
-            ):
-                # Ignores eve coin
-                if coin.parent_coin_info.hex() != await self.get_colour():
-                    removal_amount += coin.amount
-        result = amount - removal_amount
-
-        return uint64(result)
+        return uint64(amount)
 
     async def get_pending_change_balance(self) -> uint64:
         unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(

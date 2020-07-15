@@ -23,8 +23,8 @@ import {
 } from "../modules/message";
 import {
   mojo_to_chia_string,
-  chia_to_mojo,
-  mojo_to_colouredcoin_string
+  mojo_to_colouredcoin_string,
+  colouredcoin_to_mojo
 } from "../util/chia";
 import { unix_to_short_date } from "../util/utils";
 import Accordion from "../components/Accordion";
@@ -468,8 +468,8 @@ const SendCard = props => {
       return;
     }
 
-    const amount = chia_to_mojo(amount_input.value);
-    const fee = chia_to_mojo(fee_input.value);
+    const amount = colouredcoin_to_mojo(amount_input.value);
+    const fee = colouredcoin_to_mojo(fee_input.value);
 
     if (
       puzzle_hash.includes("chia_addr") ||
