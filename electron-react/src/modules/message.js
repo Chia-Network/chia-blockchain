@@ -495,6 +495,19 @@ export const cc_spend = (wallet_id, puzzle_hash, amount, fee) => {
   return action;
 };
 
+// TODO: needs to include the fee
+export const admin_create_coin = (interval, limit, user_pubkey, amount, fee) => {
+  var action = walletMessage();
+  action.message.command = "admin_create_coin";
+  action.message.data = {
+    interval: interval,
+    limit: limit,
+    user_pubkey: user_pubkey,
+    amount: amount
+  };
+  return action;
+};
+
 export const logOut = (command, data) => ({ type: "LOG_OUT", command, data });
 
 export const incomingMessage = message => ({

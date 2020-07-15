@@ -151,15 +151,11 @@ class RLWallet(AbstractWallet):
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any, info: WalletInfo, name: str = None,
+        wallet_state_manager: Any, info: WalletInfo
     ):
         self = RLWallet()
 
         self.private_key = wallet_state_manager.private_key
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
 
         self.wallet_state_manager = wallet_state_manager
 

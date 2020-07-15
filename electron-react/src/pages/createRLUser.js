@@ -12,21 +12,29 @@ import {
 import {
   createState,
   changeCreateWallet,
-  CREATE_CC_WALLET_OPTIONS
+  CREATE_RL_WALLET_OPTIONS
 } from "../modules/createWalletReducer";
 import { useDispatch, useSelector } from "react-redux";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { useStyles } from "./CreateWallet";
-import { create_cc_action } from "../modules/message";
+import { create_rl_user } from "../modules/message";
 import { chia_to_mojo } from "../util/chia";
 import { openDialog } from "../modules/dialogReducer";
 
 export const customStyles = makeStyles(theme => ({
+  topTitleCard: {
+    paddingTop: theme.spacing(6),
+    paddingBottom: theme.spacing(1)
+  },
   input: {
     marginLeft: theme.spacing(3),
     marginRight: theme.spacing(3),
     paddingRight: theme.spacing(3),
     height: 56
+  },
+  inputTitleLeft: {
+    marginLeft: theme.spacing(3),
+    width: 400
   },
   send: {
     paddingLeft: "0px",
@@ -36,42 +44,29 @@ export const customStyles = makeStyles(theme => ({
     width: 150
   },
   card: {
-    paddingTop: theme.spacing(10),
-    height: 200
+    height: 100
   }
 }));
 
-export const CreateNewCCWallet = () => {
+export const CreateRLUserWallet = () => {
   const classes = useStyles();
   const custom = customStyles();
   const dispatch = useDispatch();
-  var amount_input = null;
-  var fee_input = null;
+  var name_input = null;
   var pending = useSelector(state => state.create_options.pending);
   var created = useSelector(state => state.create_options.created);
 
   function goBack() {
-    dispatch(changeCreateWallet(CREATE_CC_WALLET_OPTIONS));
+    dispatch(changeCreateWallet(CREATE_RL_WALLET_OPTIONS));
   }
 
+  // TODO: ABOVE IS DONE; BELOW IS A WORK-IN-PROGRESS
+
   function create() {
-    if (
-      amount_input.value === "" ||
-      Number(amount_input.value) === 0 ||
-      !Number(amount_input.value) ||
-      isNaN(Number(amount_input.value))
-    ) {
-      dispatch(openDialog("Please enter a valid numeric amount"));
-      return;
-    }
-    if (fee_input.value === "" || isNaN(Number(fee_input.value))) {
-      dispatch(openDialog("Please enter a valid numeric fee"));
-      return;
-    }
     dispatch(createState(true, true));
-    var amount = chia_to_mojo(amount_input.value);
-    var fee = chia_to_mojo(fee_input.value);
-    dispatch(create_cc_action(amount, fee));
+    var name = name_input.value;
+    // TODO: dispatch needs to include the other inputs
+    dispatch(create_rl_user(name));
   }
 
   return (
@@ -85,7 +80,16 @@ export const CreateNewCCWallet = () => {
           </Box>
           <Box flexGrow={1} className={classes.title}>
             <Typography component="h6" variant="h6">
-              Generate New Colour
+              Create Rate Limited User Wallet
+            </Typography>
+          </Box>
+        </Box>
+      </div>
+      <div className={custom.topTitleCard}>
+        <Box display="flex">
+          <Box flexGrow={1} className={custom.inputTitleLeft}>
+            <Typography variant="subtitle1">
+              Name Your Wallet
             </Typography>
           </Box>
         </Box>
@@ -95,27 +99,14 @@ export const CreateNewCCWallet = () => {
           <Box flexGrow={1}>
             <TextField
               className={custom.input}
-              id="filled-secondary" // lgtm [js/duplicate-html-id]
-              variant="filled"
-              color="secondary"
-              fullWidth
-              inputRef={input => {
-                amount_input = input;
-              }}
-              label="Amount"
-            />
-          </Box>
-          <Box flexGrow={1}>
-            <TextField
-              className={custom.input}
               id="filled-secondary"
               variant="filled"
               color="secondary"
               fullWidth
               inputRef={input => {
-                fee_input = input;
+                name_input = input;
               }}
-              label="Fee"
+              label="Name"
             />
           </Box>
           <Box>

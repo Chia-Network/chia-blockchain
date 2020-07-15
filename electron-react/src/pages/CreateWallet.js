@@ -15,13 +15,18 @@ import {
   changeCreateWallet,
   ALL_OPTIONS,
   CREATE_CC_WALLET_OPTIONS,
-  CRAETE_EXISTING_CC,
-  CREATE_NEW_CC
+  CREATE_EXISTING_CC,
+  CREATE_NEW_CC,
+  CREATE_RL_WALLET_OPTIONS,
+  CREATE_RL_ADMIN,
+  CREATE_RL_USER
 } from "../modules/createWalletReducer";
 import { useDispatch, useSelector } from "react-redux";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { CreateNewCCWallet } from "./createNewColouredCoin";
 import { CreateExistingCCWallet } from "./createExistingColouredCoin";
+import { CreateRLAdminWallet } from "./createRLAdmin";
+import { CreateRLUserWallet } from "./createRLUser";
 import InvertColorsIcon from "@material-ui/icons/InvertColors";
 
 export const useStyles = makeStyles(theme => ({
@@ -73,8 +78,12 @@ export const MainWalletList = () => {
   const dispatch = useDispatch();
   const classes = useStyles();
 
-  function select_option() {
+  function select_option_cc() {
     dispatch(changeCreateWallet(CREATE_CC_WALLET_OPTIONS));
+  }
+
+  function select_option_rl() {
+    dispatch(changeCreateWallet(CREATE_RL_WALLET_OPTIONS));
   }
 
   return (
@@ -85,11 +94,17 @@ export const MainWalletList = () => {
         </Typography>
       </div>
       <List>
-        <ListItem button onClick={select_option}>
+        <ListItem button onClick={select_option_cc}>
           <ListItemIcon>
             <InvertColorsIcon />
           </ListItemIcon>
           <ListItemText primary="Coloured Coin" />
+        </ListItem>
+        <ListItem button onClick={select_option_rl}>
+          <ListItemIcon>
+            <InvertColorsIcon />
+          </ListItemIcon>
+          <ListItemText primary="Rate Limited" />
         </ListItem>
       </List>
     </div>
@@ -109,7 +124,7 @@ export const CCListItems = () => {
   }
 
   function select_option_existing() {
-    dispatch(changeCreateWallet(CRAETE_EXISTING_CC));
+    dispatch(changeCreateWallet(CREATE_EXISTING_CC));
   }
 
   return (
@@ -146,6 +161,56 @@ export const CCListItems = () => {
   );
 };
 
+export const RLListItems = () => {
+  const classes = useStyles();
+  const dispatch = useDispatch();
+
+  function goBack() {
+    dispatch(changeCreateWallet(ALL_OPTIONS));
+  }
+
+  function select_option_admin() {
+    dispatch(changeCreateWallet(CREATE_RL_ADMIN));
+  }
+
+  function select_option_user() {
+    dispatch(changeCreateWallet(CREATE_RL_USER));
+  }
+
+  return (
+    <div>
+      <div className={classes.cardTitle}>
+        <Box display="flex">
+          <Box>
+            <Button onClick={goBack}>
+              <ArrowBackIosIcon> </ArrowBackIosIcon>
+            </Button>
+          </Box>
+          <Box flexGrow={1} className={classes.title}>
+            <Typography component="h6" variant="h6">
+              Rate Limited Options
+            </Typography>
+          </Box>
+        </Box>
+      </div>
+      <List>
+        <ListItem button onClick={select_option_admin}>
+          <ListItemIcon>
+            <InvertColorsIcon />
+          </ListItemIcon>
+          <ListItemText primary="Create admin wallet" />
+        </ListItem>
+        <ListItem button onClick={select_option_user}>
+          <ListItemIcon>
+            <InvertColorsIcon />
+          </ListItemIcon>
+          <ListItemText primary="Create user wallet" />
+        </ListItem>
+      </List>
+    </div>
+  );
+};
+
 const CreateViewSwitch = () => {
   const view = useSelector(state => state.create_options.view);
 
@@ -155,8 +220,14 @@ const CreateViewSwitch = () => {
     return <CCListItems></CCListItems>;
   } else if (view === CREATE_NEW_CC) {
     return <CreateNewCCWallet></CreateNewCCWallet>;
-  } else if (view === CRAETE_EXISTING_CC) {
+  } else if (view === CREATE_EXISTING_CC) {
     return <CreateExistingCCWallet></CreateExistingCCWallet>;
+  } else if (view === CREATE_RL_WALLET_OPTIONS) {
+    return <RLListItems></RLListItems>;
+  } else if (view === CREATE_RL_ADMIN) {
+    return <CreateRLAdminWallet></CreateRLAdminWallet>;
+  } else if (view === CREATE_RL_USER) {
+    return <CreateRLUserWallet></CreateRLUserWallet>;
   }
 };
 
