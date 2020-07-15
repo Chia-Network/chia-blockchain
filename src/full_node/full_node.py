@@ -873,7 +873,7 @@ class FullNode:
                 blocks: List[FullBlock] = await self.block_store.get_blocks_at(
                     [uint32(h)]
                 )
-                header_hash = self.blockchain.height_to_hash[h]
+                header_hash = self.blockchain.height_to_hash[uint32(h)]
                 for block in blocks:
                     assert block.proof_of_time is not None
                     if block.header_hash != header_hash:
