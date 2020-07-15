@@ -1,5 +1,4 @@
 import React, { Component } from "react";
-import CssBaseline from "@material-ui/core/CssBaseline";
 import Grid from "@material-ui/core/Grid";
 import { makeStyles, withStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
@@ -9,8 +8,6 @@ import Box from "@material-ui/core/Box";
 import {
   Paper,
   TableRow,
-  Drawer,
-  Divider,
   List,
   ListItem,
   ListItemText,
@@ -37,9 +34,6 @@ import TablePagination from "@material-ui/core/TablePagination";
 import RefreshIcon from "@material-ui/icons/Refresh";
 import Connections from "./Connections";
 
-import Plotter from "./Plotter";
-import { presentFarmer } from "../modules/farmer_menu";
-import { presentPlotter, changeFarmerMenu } from "../modules/farmer_menu";
 import { big_int_to_array, arr_to_hex, sha256 } from "../util/utils";
 import { mojo_to_chia_string } from "../util/chia";
 import HelpIcon from "@material-ui/icons/Help";
@@ -535,74 +529,35 @@ const FarmerContent = props => {
   const closeConnectionCallback = node_id => {
     dispatch(closeConnection(node_id));
   };
-
-  const to_present = useSelector(state => state.farmer_menu.view);
-
-  if (to_present === presentFarmer) {
-    return (
-      <Container maxWidth="lg" className={classes.container}>
-        <Grid container spacing={3}>
-          {/* Chart */}
-          <Grid item xs={12}>
-            <FarmerStatus
-              totalChiaFarmed={props.totalChiaFarmed}
-              biggestHeight={props.biggestHeight}
-            ></FarmerStatus>
-          </Grid>
-          <Grid item xs={12}>
-            <Challenges></Challenges>
-          </Grid>
-          <Grid item xs={12}>
-            <Plots></Plots>
-          </Grid>
-          <Grid item xs={12}>
-            <Connections
-              connections={connections}
-              connectionError={connectionError}
-              openConnection={openConnectionCallback}
-              closeConnection={closeConnectionCallback}
-            ></Connections>
-          </Grid>
+  return (
+    <Container maxWidth="lg" className={classes.container}>
+      <Grid container spacing={3}>
+        {/* Chart */}
+        <Grid item xs={12}>
+          <FarmerStatus
+            totalChiaFarmed={props.totalChiaFarmed}
+            biggestHeight={props.biggestHeight}
+          ></FarmerStatus>
         </Grid>
-      </Container>
-    );
-  } else {
-    return <Plotter></Plotter>;
-  }
-};
-
-const FarmerListItem = props => {
-  const dispatch = useDispatch();
-  const label = props.label;
-  const type = props.type;
-  function present() {
-    if (type === presentFarmer) {
-      dispatch(changeFarmerMenu(presentFarmer));
-    } else if (type === presentPlotter) {
-      dispatch(changeFarmerMenu(presentPlotter));
-    }
-  }
-
-  return (
-    <ListItem button onClick={present}>
-      <ListItemText primary={label} />
-    </ListItem>
+        <Grid item xs={12}>
+          <Challenges></Challenges>
+        </Grid>
+        <Grid item xs={12}>
+          <Plots></Plots>
+        </Grid>
+        <Grid item xs={12}>
+          <Connections
+            connections={connections}
+            connectionError={connectionError}
+            openConnection={openConnectionCallback}
+            closeConnection={closeConnectionCallback}
+          ></Connections>
+        </Grid>
+      </Grid>
+    </Container>
   );
 };
 
-const FarmerMenuList = () => {
-  return (
-    <List>
-      <FarmerListItem
-        label="Farmer & Harvester"
-        type={presentFarmer}
-      ></FarmerListItem>
-      <Divider />
-      <FarmerListItem label="Plotter" type={presentPlotter}></FarmerListItem>
-      <Divider />
-    </List>
-  );
-};
 class Farmer extends Component {
   constructor(props) {
     super(props);
@@ -671,19 +626,8 @@ class Farmer extends Component {
 
   render() {
     const classes = this.props.classes;
-    var open = true;
     return (
       <div className={classes.root}>
-        <CssBaseline />
-        <Drawer
-          variant="permanent"
-          classes={{
-            paper: classes.drawerPaper
-          }}
-          open={open}
-        >
-          <FarmerMenuList></FarmerMenuList>
-        </Drawer>
         <main className={classes.content}>
           <Container maxWidth="lg" className={classes.noPadding}>
             <FarmerContent

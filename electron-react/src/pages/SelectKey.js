@@ -16,6 +16,12 @@ import { log_in, delete_key, get_private_key } from "../modules/message";
 import Link from "@material-ui/core/Link";
 import Button from "@material-ui/core/Button";
 import VisibilityIcon from "@material-ui/icons/Visibility";
+import { delete_all_keys } from "../modules/message";
+import Dialog from "@material-ui/core/Dialog";
+import DialogActions from "@material-ui/core/DialogActions";
+import DialogContent from "@material-ui/core/DialogContent";
+import DialogContentText from "@material-ui/core/DialogContentText";
+import DialogTitle from "@material-ui/core/DialogTitle";
 import {
   changeEntranceMenu,
   presentOldWallet,
@@ -53,6 +59,13 @@ const useStyles = makeStyles(theme => ({
     marginTop: theme.spacing(2),
     marginBottom: theme.spacing(1)
   },
+  bottomButtonRed: {
+    width: 400,
+    height: 45,
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(1),
+    color: "red"
+  },
   logo: {
     marginTop: theme.spacing(8),
     marginBottom: theme.spacing(3)
@@ -82,6 +95,8 @@ const SelectKey = () => {
     state => state.wallet_state.public_key_fingerprints
   );
 
+  const [open, setOpen] = React.useState(false);
+
   const handleClick = fingerprint => {
     return () => dispatch(log_in(fingerprint));
   };
@@ -94,6 +109,20 @@ const SelectKey = () => {
       dispatch(delete_key(fingerprint));
     };
   };
+
+  const handleClickOpen = () => {
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+
+  const handleCloseDelete = () => {
+    handleClose();
+    dispatch(delete_all_keys());
+  };
+
   const goToMnemonics = () => {
     dispatch(changeEntranceMenu(presentOldWallet));
   };
@@ -187,8 +216,42 @@ const SelectKey = () => {
               Create a new private key
             </Button>
           </Link>
+          <Link onClick={handleClickOpen}>
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              color="primary"
+              className={classes.bottomButtonRed}
+            >
+              Delete all keys
+            </Button>
+          </Link>
         </div>
       </Container>
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">{"Delete all keys"}</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            Deleting all keys will permanatly remove the keys from your
+            computer, make sure you have backups. Are you sure you want to
+            continue?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} color="secondary">
+            Back
+          </Button>
+          <Button onClick={handleCloseDelete} color="secondary" autoFocus>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

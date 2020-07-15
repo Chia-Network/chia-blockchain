@@ -209,7 +209,7 @@ export const CreateOffer = () => {
       return;
     }
     let mojo = chia_to_mojo(amount_input.value);
-    if (wallets[wallet_id.value].type == "COLOURED_COIN") {
+    if (wallets[wallet_id.value].type === "COLOURED_COIN") {
       mojo = colouredcoin_to_mojo(amount_input.value);
     }
     var trade = null;
