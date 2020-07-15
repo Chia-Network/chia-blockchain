@@ -388,6 +388,14 @@ class WalletRpcApi:
                 "reason": "Failed to generate signed transaction",
             }
             return data
+        try:
+            await wallet.wallet_state_manager.add_pending_transaction(tx)
+        except Exception as e:
+            data = {
+                "status": "FAILED",
+                "reason": f"Failed to push transaction {e}",
+            }
+            return data
 
         sent = False
         start = time.time()

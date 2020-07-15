@@ -19,7 +19,11 @@ import {
   addTrade,
   resetTrades
 } from "../../modules/TradeReducer";
-import { chia_to_mojo, mojo_to_chia_string } from "../../util/chia";
+import {
+  chia_to_mojo,
+  mojo_to_chia_string,
+  colouredcoin_to_mojo
+} from "../../util/chia";
 import { openDialog } from "../../modules/dialogReducer";
 import isElectron from "is-electron";
 import { create_trade_action } from "../../modules/trade_messages";
@@ -204,7 +208,10 @@ export const CreateOffer = () => {
       dispatch(openDialog("", "Please select buy or sell "));
       return;
     }
-    const mojo = chia_to_mojo(amount_input.value);
+    let mojo = chia_to_mojo(amount_input.value);
+    if (wallets[wallet_id.value].type == "COLOURED_COIN") {
+      mojo = colouredcoin_to_mojo(amount_input.value);
+    }
     var trade = null;
     if (buy_or_sell.value === 1) {
       trade = newBuy(mojo, wallet_id.value);
