@@ -348,7 +348,10 @@ class WalletRpcApi:
                 log.info("Create rl user wallet")
                 try:
                     rl_user: RLWallet = await RLWallet.create_rl_user(wallet_state_manager)
-                    return {"success": True, "type": rl_user.wallet_info.type.name}
+
+                    return {"success": True,
+                            "type": rl_user.wallet_info.type.name,
+                            "pubkey": rl_user.rl_info.user_pubkey.hex()}
                 except Exception as e:
                     log.error("FAILED {e}")
                     return {"success": False, "reason": str(e)}
