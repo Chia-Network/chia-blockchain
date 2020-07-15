@@ -254,7 +254,6 @@ class WalletNode:
             yield msg
 
     def _num_needed_peers(self) -> int:
-        self.log.warning("NUM NEEDED PEERS")
         if self.wallet_state_manager is None:
             return 0
         assert self.server is not None
@@ -264,9 +263,7 @@ class WalletNode:
         if diff < 0:
             return 0
 
-        self.log.warning("Cekcing full node")
         if "full_node_peer" in self.config:
-            self.log.warning("in config")
             full_node_peer = PeerInfo(
                 self.config["full_node_peer"]["host"],
                 self.config["full_node_peer"]["port"],
@@ -278,9 +275,7 @@ class WalletNode:
             full_node_resolved = PeerInfo(
                 socket.gethostbyname(full_node_peer.host), full_node_peer.port
             )
-            self.log.warning(f"fnp {full_node_peer} {full_node_resolved} peers {peers}")
             if full_node_peer in peers or full_node_resolved in peers:
-                self.log.warning("in peers")
                 self.log.info(
                     f"Will not attempt to connect to other nodes, already connected to {full_node_peer}"
                 )
@@ -303,18 +298,14 @@ class WalletNode:
         """
         We have received a list of full node peers that we can connect to.
         """
-        self.log.warning(1)
         if self.server is None or self.wallet_state_manager is None:
             return
-        self.log.warning(2)
         conns = self.global_connections
         for peer in request.peer_list:
             conns.peers.add(peer)
 
-        self.log.warning(2.5)
         # Pseudo-message to close the connection
         yield OutboundMessage(NodeType.INTRODUCER, Message("", None), Delivery.CLOSE)
-        self.log.warning(3)
 
         unconnected = conns.get_unconnected_peers(
             recent_threshold=self.config["recent_peer_threshold"]
