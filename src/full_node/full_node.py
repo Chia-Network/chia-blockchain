@@ -648,6 +648,9 @@ class FullNode:
             blocks: List[FullBlock] = await self.block_store.get_blocks_at(
                 [new_proof_of_time.height]
             )
+            if new_proof_of_time.height not in self.blockchain.height_to_hash:
+                self.log.error(f"Height {new_proof_of_time.height} not found in height_to_hash.")
+                return
             header_hash = self.blockchain.height_to_hash[new_proof_of_time.height]
             for block in blocks:
                 assert block.proof_of_time is not None
