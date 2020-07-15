@@ -515,6 +515,20 @@ export const incomingMessage = message => ({
   message: message
 });
 
+export const create_rl_admin = (interval, limit, pubkey, amount) => {
+  var action = walletMessage();
+  action.message.command = "create_new_wallet";
+  action.message.data = {
+    wallet_type: "rl_wallet",
+    rl_type: "admin",
+    interval: interval,
+    limit: limit,
+    pubkey: pubkey,
+    amount: amount
+  };
+  return action;
+};
+
 export const add_plot_directory_and_refresh = dir => {
   return dispatch => {
     return async_api(dispatch, addPlotDirectory(dir), true).then(response => {
