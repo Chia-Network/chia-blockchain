@@ -162,6 +162,7 @@ class WalletNode:
                 await self.wallet_state_manager.import_backup_info(backup_file)
             else:
                 self.backup_initialized = False
+                await self.wallet_state_manager.close_all_stores()
                 self.wallet_state_manager = None
                 return False
 
