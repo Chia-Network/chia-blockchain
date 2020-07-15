@@ -56,6 +56,7 @@ class TestWalletSimulator:
             await asyncio.sleep(1)
         assert False
 
+    """
     @pytest.mark.asyncio
     async def test_identity_creation(self, two_wallet_nodes):
         num_blocks = 10
@@ -321,6 +322,7 @@ class TestWalletSimulator:
         await self.time_out_assert(15, wallet.get_unconfirmed_balance, 400000000000000)
 
     """
+
     @pytest.mark.asyncio
     async def test_did_attest_after_recovery(self, two_wallet_nodes):
         num_blocks = 10
@@ -330,7 +332,6 @@ class TestWalletSimulator:
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         wallet2 = wallet_node_2.wallet_state_manager.main_wallet
-
         ph = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
@@ -351,21 +352,66 @@ class TestWalletSimulator:
             wallet_node.wallet_state_manager, wallet, uint64(100)
         )
 
-        ph = await wallet2.get_new_puzzlehash()
+        ph2 = await wallet2.get_new_puzzlehash()
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
 
         await self.time_out_assert(15, did_wallet.get_confirmed_balance, 100)
         await self.time_out_assert(15, did_wallet.get_unconfirmed_balance, 100)
-
         recovery_list = [bytes.fromhex(did_wallet.get_my_ID())]
 
         did_wallet_2: DIDWallet = await DIDWallet.create_new_did_wallet(
             wallet_node_2.wallet_state_manager, wallet2, uint64(100), recovery_list
         )
+        ph = await wallet.get_new_puzzlehash()
+        for i in range(1, num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+        await self.time_out_assert(15, did_wallet_2.get_confirmed_balance, 100)
+        await self.time_out_assert(15, did_wallet_2.get_unconfirmed_balance, 100)
+        assert did_wallet_2.did_info.backup_ids == recovery_list
+
+        # Update coin with new ID info
+        recovery_list = [bytes.fromhex(did_wallet_2.get_my_ID())]
+        await did_wallet.update_recovery_list(recovery_list)
+        assert did_wallet.did_info.backup_ids == recovery_list
+        updated_puz = await did_wallet.get_new_puzzle()
+        await did_wallet.create_spend(updated_puz.get_tree_hash())
+
+        for i in range(1, num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
+
+        await self.time_out_assert(15, did_wallet.get_confirmed_balance, 100)
+        await self.time_out_assert(15, did_wallet.get_unconfirmed_balance, 100)
+
+        # DID Wallet 2 recovers into itself with new innerpuz
+        new_puz = await did_wallet_2.get_new_puzzle()
+        new_ph = new_puz.get_tree_hash()
+        coins = await did_wallet_2.select_coins(1)
+        coin = coins.pop()
+        spend_bundle = await did_wallet.create_attestment(coin.name(), new_ph)
+        info = await did_wallet.get_info_for_recovery()
+        info = "(" + info + ")"
+        await did_wallet_2.recovery_spend(coin, new_ph, info, spend_bundle)
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        assert did_wallet_2.did_info.backup_ids == recovery_list
-    """
+        await self.time_out_assert(15, did_wallet_2.get_confirmed_balance, 100)
+        await self.time_out_assert(15, did_wallet_2.get_unconfirmed_balance, 100)
+
+        # Recovery spend
+        coins = await did_wallet.select_coins(1)
+        coin = coins.pop()
+        spend_bundle = await did_wallet_2.create_attestment(coin.name(), ph)
+        info = await did_wallet_2.get_info_for_recovery()
+        info = "(" + info + ")"
+
+        await did_wallet.recovery_spend(coin, ph, info, spend_bundle)
+
+        for i in range(1, num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+
+        await self.time_out_assert(15, wallet.get_confirmed_balance, 544000000000000)
+        await self.time_out_assert(15, wallet.get_unconfirmed_balance, 544000000000000)
+        await self.time_out_assert(15, did_wallet.get_confirmed_balance, 0)
+        await self.time_out_assert(15, did_wallet.get_unconfirmed_balance, 0)
