@@ -63,6 +63,7 @@ class TestWalletSimulator:
             await asyncio.sleep(1)
         assert False
 
+    """
     @pytest.mark.asyncio
     async def test_identity_creation(self, two_wallet_nodes):
         num_blocks = 10
