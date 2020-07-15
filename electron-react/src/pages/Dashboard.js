@@ -7,24 +7,24 @@ import AppBar from "@material-ui/core/AppBar";
 import Toolbar from "@material-ui/core/Toolbar";
 import Typography from "@material-ui/core/Typography";
 import Divider from "@material-ui/core/Divider";
-import IconButton from "@material-ui/core/IconButton";
 import Container from "@material-ui/core/Container";
-import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
+import logo from "../assets/img/chia_logo.svg"; // Tell webpack this JS file uses this image
 import Wallets from "./Wallets";
-import MenuIcon from "@material-ui/icons/Menu";
 import { SideBar } from "./sidebar";
 import { useSelector } from "react-redux";
+import Plotter from "./Plotter";
 import {
   presentWallet,
   presentNode,
   presentFarmer,
-  presentTrading
+  presentTrading,
+  presentPlotter
 } from "../modules/mainMenu";
 import FullNode from "./FullNode";
 import Farmer from "./Farmer";
 import { TradeManger } from "./trading/TradeManager";
 
-const drawerWidth = 200;
+const drawerWidth = 100;
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -73,17 +73,6 @@ const useStyles = makeStyles(theme => ({
       duration: theme.transitions.duration.enteringScreen
     })
   },
-  drawerPaperClose: {
-    overflowX: "hidden",
-    transition: theme.transitions.create("width", {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen
-    }),
-    width: theme.spacing(7),
-    [theme.breakpoints.up("sm")]: {
-      width: theme.spacing(9)
-    }
-  },
   appBarSpacer: theme.mixins.toolbar,
   content: {
     flexGrow: 1,
@@ -112,6 +101,13 @@ const useStyles = makeStyles(theme => ({
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.enteringScreen
     })
+  },
+  logo: {
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    marginLeft: theme.spacing(2),
+    marginRight: theme.spacing(2),
+    width: "62px"
   }
 }));
 
@@ -124,6 +120,8 @@ const ComopnentSwitch = () => {
     return <FullNode></FullNode>;
   } else if (toPresent === presentFarmer) {
     return <Farmer></Farmer>;
+  } else if (toPresent === presentPlotter) {
+    return <Plotter></Plotter>;
   } else if (toPresent === presentTrading) {
     return <TradeManger></TradeManger>;
   }
@@ -132,14 +130,8 @@ const ComopnentSwitch = () => {
 
 export default function Dashboard() {
   const classes = useStyles();
-  const [open, setOpen] = React.useState(true);
+  const [open] = React.useState(true);
   const toPresent = useSelector(state => state.main_menu.view);
-  const handleDrawerOpen = () => {
-    setOpen(true);
-  };
-  const handleDrawerClose = () => {
-    setOpen(false);
-  };
   let title;
   if (toPresent === presentWallet) {
     title = "Wallets";
@@ -147,6 +139,10 @@ export default function Dashboard() {
     title = "Full Node";
   } else if (toPresent === presentFarmer) {
     title = "Farming";
+  } else if (toPresent === presentPlotter) {
+    title = "Plotting";
+  } else if (toPresent === presentTrading) {
+    title = "Trading";
   }
 
   return (
@@ -157,18 +153,6 @@ export default function Dashboard() {
         className={clsx(classes.appBar, open && classes.appBarShift)}
       >
         <Toolbar className={classes.toolbar}>
-          <IconButton
-            edge="start"
-            color="inherit"
-            aria-label="open drawer"
-            onClick={handleDrawerOpen}
-            className={clsx(
-              classes.menuButton,
-              open && classes.menuButtonHidden
-            )}
-          >
-            <MenuIcon />
-          </IconButton>
           <Typography
             component="h1"
             variant="h6"
@@ -183,14 +167,11 @@ export default function Dashboard() {
       <Drawer
         variant="permanent"
         classes={{
-          paper: clsx(classes.drawerPaper, !open && classes.drawerPaperClose)
+          paper: clsx(classes.drawerPaper)
         }}
-        open={open}
       >
         <div className={classes.toolbarIcon}>
-          <IconButton onClick={handleDrawerClose}>
-            <ChevronLeftIcon />
-          </IconButton>
+          <img className={classes.logo} src={logo} alt="Logo" />
         </div>
         <Divider />
         <SideBar></SideBar>

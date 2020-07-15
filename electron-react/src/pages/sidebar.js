@@ -1,137 +1,111 @@
 import React from "react";
-import ListItem from "@material-ui/core/ListItem";
-import ListItemIcon from "@material-ui/core/ListItemIcon";
-import ListItemText from "@material-ui/core/ListItemText";
 import {
   presentWallet,
   presentNode,
   presentFarmer,
   changeMainMenu,
-  presentTrading
+  presentTrading,
+  presentPlotter
 } from "../modules/mainMenu";
-import { delete_all_keys, logOut } from "../modules/message";
+import { useSelector } from "react-redux";
+import { logOut } from "../modules/message";
 import { useDispatch } from "react-redux";
 import List from "@material-ui/core/List";
 import Divider from "@material-ui/core/Divider";
-import AccountBalanceWalletIcon from "@material-ui/icons/AccountBalanceWallet";
-import AccountTreeIcon from "@material-ui/icons/AccountTree";
-import DonutLargeIcon from "@material-ui/icons/DonutLarge";
-import LockIcon from "@material-ui/icons/Lock";
-import DeleteForeverIcon from "@material-ui/icons/DeleteForever";
-import Button from "@material-ui/core/Button";
-import Dialog from "@material-ui/core/Dialog";
-import DialogActions from "@material-ui/core/DialogActions";
-import DialogContent from "@material-ui/core/DialogContent";
-import DialogContentText from "@material-ui/core/DialogContentText";
-import DialogTitle from "@material-ui/core/DialogTitle";
+
 import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
-import ImportExportIcon from "@material-ui/icons/ImportExport";
+import walletSidebarLogo from "../assets/img/wallet_sidebar.svg"; // Tell webpack this JS file uses this image
+import farmSidebarLogo from "../assets/img/farm_sidebar.svg";
+import helpSidebarLogo from "../assets/img/help_sidebar.svg";
+import homeSidebarLogo from "../assets/img/home_sidebar.svg";
+import plotSidebarLogo from "../assets/img/plot_sidebar.svg";
+import poolSidebarLogo from "../assets/img/pool_sidebar.svg";
+import { makeStyles } from "@material-ui/core/styles";
+
+const useStyles = makeStyles(theme => ({
+  div: {
+    textAlign: "center",
+    cursor: "pointer"
+  },
+  label: {
+    fontFamily: "Roboto",
+    fontWeight: "300",
+    fontSize: "16px",
+    fontStyle: "normal",
+    marginTop: "5px"
+  },
+  labelChosen: {
+    fontFamily: "Roboto",
+    fontWeight: "500",
+    fontSize: "16px",
+    fontStyle: "normal",
+    marginTop: "5px"
+  }
+}));
 
 const menuItems = [
   {
-    label: "Wallet",
-    present: presentWallet,
-    icon: <AccountBalanceWalletIcon></AccountBalanceWalletIcon>
-  },
-  {
     label: "Full Node",
     present: presentNode,
-    icon: <AccountTreeIcon></AccountTreeIcon>
+    icon: <img src={homeSidebarLogo} alt="Logo" />
   },
   {
-    label: "Farming",
+    label: "Wallet",
+    present: presentWallet,
+    icon: <img src={walletSidebarLogo} alt="Logo" />
+  },
+  {
+    label: "Plot",
+    present: presentPlotter,
+    icon: <img src={plotSidebarLogo} alt="Logo" />
+  },
+  {
+    label: "Farm",
     present: presentFarmer,
-    icon: <DonutLargeIcon></DonutLargeIcon>
+    icon: <img src={farmSidebarLogo} alt="Logo" />
   },
   {
-    label: "Trading",
+    label: "Trade",
     present: presentTrading,
-    icon: <ImportExportIcon></ImportExportIcon>
+    icon: <img src={poolSidebarLogo} alt="Logo" />
+  },
+  {
+    label: "Keys",
+    changeKeys: true,
+    icon: <img src={helpSidebarLogo} alt="Logo" />
   }
 ];
 
-const MenuItem = menuItem => {
+const MenuItem = (menuItem, currentView) => {
+  const classes = useStyles();
   const dispatch = useDispatch();
   const item = menuItem;
 
   function presentMe() {
-    dispatch(changeMainMenu(item.present));
+    if (item.changeKeys) {
+      dispatch(logOut("log_out", {}));
+      dispatch(changeEntranceMenu(presentSelectKeys));
+    } else {
+      dispatch(changeMainMenu(item.present));
+    }
   }
+  const labelClass =
+    currentView === item.present ? classes.labelChosen : classes.label;
 
   return (
-    <ListItem button onClick={presentMe} key={item.label}>
-      <ListItemIcon>{item.icon}</ListItemIcon>
-      <ListItemText primary={item.label} />
-    </ListItem>
+    <div className={classes.div} onClick={presentMe} key={item.label}>
+      {item.icon}
+      <p className={labelClass}>{item.label}</p>
+    </div>
   );
 };
 
 export const SideBar = () => {
-  const [open, setOpen] = React.useState(false);
-  const dispatch = useDispatch();
-
-  const handleClickOpen = () => {
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-  };
-
-  const handleCloseDelete = () => {
-    handleClose();
-    dispatch(delete_all_keys());
-  };
-
-  function changeKey() {
-    // console.log("Changing key");
-    dispatch(logOut("log_out", {}));
-    dispatch(changeEntranceMenu(presentSelectKeys));
-  }
-
+  const currentView = useSelector(state => state.main_menu.view);
   return (
     <div>
-      <List>{menuItems.map(item => MenuItem(item))}</List>
+      <List>{menuItems.map(item => MenuItem(item, currentView))}</List>
       <Divider />
-      <List>
-        <div>
-          <ListItem button onClick={handleClickOpen} key="0">
-            <ListItemIcon>
-              <DeleteForeverIcon />
-            </ListItemIcon>
-            <ListItemText primary="Delete All Keys" />
-          </ListItem>
-          <ListItem button onClick={changeKey} key="1">
-            <ListItemIcon>
-              <LockIcon />
-            </ListItemIcon>
-            <ListItemText primary="Change Key" />
-          </ListItem>
-        </div>
-      </List>
-      <Dialog
-        open={open}
-        onClose={handleClose}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title">{"Delete all keys"}</DialogTitle>
-        <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            Deleting all keys will permanatly remove the keys from your
-            computer, make sure you have backups. Are you sure you want to
-            continue?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} color="secondary">
-            Back
-          </Button>
-          <Button onClick={handleCloseDelete} color="secondary" autoFocus>
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
     </div>
   );
 };

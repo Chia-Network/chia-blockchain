@@ -27,5 +27,20 @@ html, body, #wrapper-id, #root, #app, #app>div, #provider-wrap {
   margin: 0px;
   padding: 0;
   top: 0px;
-  overflow: hidden; 
+  overflow: hidden;
+}
+@font-face {
+  font-family: Roboto;
+  src: url("../fonts/Roboto-Medium.ttf");
+  font-weight: 500;
+}
+@font-face {
+  font-family: Roboto;
+  src: url("../fonts/Roboto-Regular.ttf");
+  font-weight: 400;
+}
+@font-face {
+  font-family: Roboto;
+  src: url("../fonts/Roboto-Light.ttf");
+  font-weight: 300;
 }
