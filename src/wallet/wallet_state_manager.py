@@ -1315,6 +1315,7 @@ class WalletStateManager:
             await self.tx_store._clear_database()
             await self.puzzle_store._clear_database()
             await self.user_store._clear_database()
+            await self.basic_store._clear_database()
 
     def unlink_db(self):
         Path(self.db_path).unlink()
@@ -1349,7 +1350,7 @@ class WalletStateManager:
     async def get_wallet_for_colour(self, colour):
         for wallet_id in self.wallets:
             wallet = self.wallets[wallet_id]
-            if wallet.wallet_info.type == WalletType.COLOURED_COIN:
+            if wallet.wallet_info.type == WalletType.COLOURED_COIN.value:
                 if wallet.cc_info.my_core == cc_wallet_puzzles.cc_make_core(colour):
                     return wallet
         return None
