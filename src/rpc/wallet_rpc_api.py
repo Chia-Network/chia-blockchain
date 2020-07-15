@@ -334,7 +334,12 @@ class WalletRpcApi:
         if request["wallet_type"] == "rl_wallet":
             if request["rl_type"] == "admin":
                 log.info("Create rl admin wallet")
-                # TODO create admin wallet
+                try:
+                    rl_admin: RLWallet = await RLWallet.create_rl_admin(wallet_state_manager)
+                    return {"success": True, "type": rl_admin.wallet_info.type.name}
+                except Exception as e:
+                    log.error("FAILED {e}")
+                    return {"success": False, "reason": str(e)}
             elif request["rl_type"] == "user":
                 log.info("Create rl user wallet")
                 # TODO create user wallet
