@@ -328,8 +328,14 @@ class FullNodeRpcApi:
         weight_div_iters = delta_weight / delta_iters
         tips_adjustment_constant = 0.65
         network_space_constant = 2 ** 32  # 2^32
+        eligible_plots_filter_mult = (
+            2 ** self.service.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]
+        )
         network_space_bytes_estimate = (
-            weight_div_iters * network_space_constant * tips_adjustment_constant
+            weight_div_iters
+            * network_space_constant
+            * tips_adjustment_constant
+            * eligible_plots_filter_mult
         )
         return {"success": True, "space": uint128(int(network_space_bytes_estimate))}
 
