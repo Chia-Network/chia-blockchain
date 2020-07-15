@@ -76,6 +76,21 @@ class WalletRpcApi:
             "/get_backup_info": self.get_backup_info,
         }
 
+    async def admin_create_coin(self, request: Dict):
+        if self.service is None:
+            return {"success": False}
+        if self.service.wallet_state_manager is None:
+            return {"success": False}
+        wallet_id = uint32(int(request["wallet_id"]))
+        rl_admin = self.service.wallet_state_manager.wallets[wallet_id]
+        success = await rl_admin.admin_create_coin(
+            uint64(int(request["interval"])),
+            uint64(int(request["limit"])),
+            request["pubkey"],
+            uint64(int(request["amount"]))
+        )
+        return {"success": success}
+
     async def get_trade(self, request: Dict):
         if self.service is None:
             return {"success": False}
