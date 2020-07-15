@@ -641,15 +641,22 @@ class FullNode:
         self, new_proof_of_time: full_node_protocol.NewProofOfTime
     ) -> OutboundMessageGenerator:
         if new_proof_of_time.witness_type == 0:
+            # A honest sanitizer will always sanitize until the LCA block.
+            if new_proof_of_time.height >= self.blockchain.lca_block.height:
+                return
             # If we already have the compact PoT in a connected to header block, return
             blocks: List[FullBlock] = await self.block_store.get_blocks_at(
                 [new_proof_of_time.height]
             )
+            if new_proof_of_time.height not in self.blockchain.height_to_hash:
+                self.log.error(f"Height {new_proof_of_time.height} not found in height_to_hash.")
+                return
+            header_hash = self.blockchain.height_to_hash[new_proof_of_time.height]
             for block in blocks:
                 assert block.proof_of_time is not None
                 if (
                     block.proof_of_time.witness_type == 0
-                    and block.header_hash in self.blockchain.headers
+                    and block.header_hash == header_hash
                 ):
                     return
         else:
@@ -869,9 +876,10 @@ class FullNode:
                 blocks: List[FullBlock] = await self.block_store.get_blocks_at(
                     [uint32(h)]
                 )
+                header_hash = self.blockchain.height_to_hash[uint32(h)]
                 for block in blocks:
                     assert block.proof_of_time is not None
-                    if block.header_hash not in self.blockchain.headers:
+                    if block.header_hash != header_hash:
                         continue
 
                     if block.proof_of_time.witness_type != 0:
