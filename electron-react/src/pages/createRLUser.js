@@ -52,7 +52,7 @@ export const CreateRLUserWallet = () => {
   const classes = useStyles();
   const custom = customStyles();
   const dispatch = useDispatch();
-  var name_input = null;
+  // var name_input = null;
   var pending = useSelector(state => state.create_options.pending);
   var created = useSelector(state => state.create_options.created);
 
@@ -64,9 +64,9 @@ export const CreateRLUserWallet = () => {
 
   function create() {
     dispatch(createState(true, true));
-    var name = name_input.value;
+    // var name = name_input.value;
     // TODO: dispatch needs to include the other inputs
-    dispatch(create_rl_user(name));
+    dispatch(create_rl_user());
   }
 
   return (
@@ -96,19 +96,7 @@ export const CreateRLUserWallet = () => {
       </div>
       <div className={custom.card}>
         <Box display="flex">
-          <Box flexGrow={1}>
-            <TextField
-              className={custom.input}
-              id="filled-secondary"
-              variant="filled"
-              color="secondary"
-              fullWidth
-              inputRef={input => {
-                name_input = input;
-              }}
-              label="Name"
-            />
-          </Box>
+
           <Box>
             <Button
               onClick={create}
