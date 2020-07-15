@@ -346,7 +346,12 @@ class WalletRpcApi:
                     return {"success": False, "reason": str(e)}
             elif request["rl_type"] == "user":
                 log.info("Create rl user wallet")
-                # TODO create user wallet
+                try:
+                    rl_user: RLWallet = await RLWallet.create_rl_user(wallet_state_manager)
+                    return {"success": True, "type": rl_user.wallet_info.type.name}
+                except Exception as e:
+                    log.error("FAILED {e}")
+                    return {"success": False, "reason": str(e)}
 
     def get_wallet_config(self):
         return (
