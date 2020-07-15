@@ -72,23 +72,7 @@ class WalletRpcApi:
             "/get_trade": self.get_trade,
             "/get_all_trades": self.get_all_trades,
             "/cancel_trade": self.cancel_trade,
-            "/rl_create_coin": self.rl_create_coin,
         }
-
-    async def rl_create_coin(self, request: Dict):
-        if self.service is None:
-            return {"success": False}
-        if self.service.wallet_state_manager is None:
-            return {"success": False}
-        wallet_id = uint32(int(request["wallet_id"]))
-        rl_admin = self.service.wallet_state_manager.wallets[wallet_id]
-        success = await rl_admin.admin_create_coin(
-            uint64(int(request["interval"])),
-            uint64(int(request["limit"])),
-            request["pubkey"],
-            uint64(int(request["amount"]))
-        )
-        return {"success": success}
 
     async def get_trade(self, request: Dict):
         if self.service is None:
@@ -350,7 +334,13 @@ class WalletRpcApi:
                 log.info("Create rl admin wallet")
                 try:
                     rl_admin: RLWallet = await RLWallet.create_rl_admin(wallet_state_manager)
-                    return {"success": True, "type": rl_admin.wallet_info.type.name}
+                    success = await rl_admin.admin_create_coin(
+                        uint64(int(request["interval"])),
+                        uint64(int(request["limit"])),
+                        request["pubkey"],
+                        uint64(int(request["amount"]))
+                    )
+                    return {"success": success, "type": rl_admin.wallet_info.type.name}
                 except Exception as e:
                     log.error("FAILED {e}")
                     return {"success": False, "reason": str(e)}
