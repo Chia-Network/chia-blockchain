@@ -10,7 +10,7 @@ dependencies = [
     "clvm==0.4",  # contract language
     "clvm-tools==0.1.1",  # clvm compiler tools
     "aiohttp==3.6.2",  # HTTP server for full node rpc
-    "aiosqlite==0.13.0",  # asyncio wrapper for sqlite, to store blocks
+    "aiosqlite==0.15.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.7",  # Binary data management library
     "cbor2==5.1.0",  # Used for network wire format
     "colorlog==4.1.0",  # Adds color to logs
