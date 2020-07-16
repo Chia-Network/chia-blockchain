@@ -16,9 +16,14 @@ import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
 
 import {
-  // TODO: fill this in
+  send_transaction
 } from "../modules/message";
-
+import ExpansionPanel from "@material-ui/core/ExpansionPanel";
+import ExpansionPanelSummary from "@material-ui/core/ExpansionPanelSummary";
+import ExpansionPanelDetails from "@material-ui/core/ExpansionPanelDetails";
+import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
+import { Tooltip } from "@material-ui/core";
+import HelpIcon from "@material-ui/icons/Help";
 import {
   mojo_to_chia_string,
   chia_to_mojo
@@ -398,13 +403,6 @@ const SendCard = props => {
     }
   }
 
-  function farm() {
-    var address = address_input.value;
-    if (address !== "") {
-      dispatch(farm_block(address));
-    }
-  }
-
   function send() {
     if (sending_transaction) {
       return;
@@ -527,17 +525,6 @@ const SendCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
             <Box display="flex">
-              <Box flexGrow={1}>
-                <Button
-                  onClick={farm}
-                  className={classes.sendButton}
-                  style={config.local_test ? {} : { visibility: "hidden" }}
-                  variant="contained"
-                  color="primary"
-                >
-                  Farm
-                </Button>
-              </Box>
               <Box>
                 <Button
                   onClick={send}
@@ -635,7 +622,7 @@ const TransactionTable = props => {
                 {confirmed_to_string(tx.confirmed)}
               </TableCell>
               <TableCell className={classes.cell_short}>
-                {mojo_to_colouredcoin_string(tx.amount)}
+                {mojo_to_chia_string(tx.amount)}
               </TableCell>
               <TableCell className={classes.cell_short}>
                 {mojo_to_chia_string(tx.fee_amount)}
