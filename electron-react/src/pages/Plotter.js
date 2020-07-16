@@ -364,12 +364,11 @@ const CreatePlot = () => {
           <p>
             {" "}
             Using this tool, you can create plots, which are allocated space on
-            your hard drive used to farm and earn Chia. We recommend you keep
-            less than 200 plots. Also, temporary files are created during the
-            plotting process, which exceed the size of the final plot files, so
-            make sure you have enough space. Try to use a fast drive like an SSD
-            for the temporary foler, and a large slow hard drive (like external
-            HDD) for the final folder.
+            your hard drive used to farm and earn Chia. Also, temporary files
+            are created during the plotting process, which exceed the size of
+            the final plot files, so make sure you have enough space. Try to use
+            a fast drive like an SSD for the temporary foler, and a large slow
+            hard drive (like external HDD) for the final folder.
           </p>
         </Grid>
         <Grid item xs={12}>
