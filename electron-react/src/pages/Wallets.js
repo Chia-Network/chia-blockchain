@@ -23,6 +23,7 @@ import {
 } from "../modules/walletMenu";
 import { CreateWalletView } from "./CreateWallet";
 import ColouredWallet from "./ColouredWallet";
+import RateLimitedWallet from "./RateLimitedWallet";
 
 const drawerWidth = 180;
 
