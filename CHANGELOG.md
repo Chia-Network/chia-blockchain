@@ -8,6 +8,13 @@ for setuptools_scm/PEP 440 reasons.
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+- Addressed pre-Haswell Windows signatures failing.
+
 ## [1.0beta8] aka Beta 1.8 - 2020-07-16
 
 ### Added
@@ -84,7 +91,6 @@ farmer and full node protocols.
 - HD keys now use EIP 2333 format instead of BIP32, for compatibility with
 other chains.
 - Keys are now derived with the EIP 2334 (m/12381/8444/a/b).
-
 - Removed the ability to pass in sk_seed to plotting, to increase security.
 - Linux builds of chiavdf and blspy now use a fresh build of gmp 6.2.1.
 
